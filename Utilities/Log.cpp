@@ -8,7 +8,11 @@
 // Thread-specific log prefix provider
 thread_local std::string(*g_tls_log_prefix)() = nullptr;
 
-namespace _log
+#ifndef _MSC_VER
+constexpr DECLARE(bijective<logs::level, const char*>::map);
+#endif
+
+namespace logs
 {
 	struct listener
 	{
@@ -65,7 +69,7 @@ namespace _log
 	channel ARMv7("ARMv7");
 }
 
-void _log::channel::broadcast(const _log::channel& ch, _log::level sev, const char* fmt...)
+void logs::channel::broadcast(const logs::channel& ch, logs::level sev, const char* fmt...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -75,13 +79,13 @@ void _log::channel::broadcast(const _log::channel& ch, _log::level sev, const ch
 
 [[noreturn]] extern void catch_all_exceptions();
 
-_log::file_writer::file_writer(const std::string& name)
+logs::file_writer::file_writer(const std::string& name)
 {
 	try
 	{
 		if (!m_file.open(fs::get_config_dir() + name, fs::rewrite + fs::append))
 		{
-			throw fmt::exception("Can't create log file %s (error %d)", name, fs::error);
+			throw fmt::exception("Can't create log file %s (error %d)", name, fs::g_tls_error);
 		}
 	}
 	catch (...)
@@ -90,17 +94,17 @@ _log::file_writer::file_writer(const std::string& name)
 	}
 }
 
-void _log::file_writer::log(const std::string& text)
+void logs::file_writer::log(const std::string& text)
 {
 	m_file.write(text);
 }
 
-std::size_t _log::file_writer::size() const
+std::size_t logs::file_writer::size() const
 {
 	return m_file.pos();
 }
 
-void _log::file_listener::log(const _log::channel& ch, _log::level sev, const std::string& text)
+void logs::file_listener::log(const logs::channel& ch, logs::level sev, const std::string& text)
 {
 	std::string msg; msg.reserve(text.size() + 200);
 

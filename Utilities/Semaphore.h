@@ -35,7 +35,7 @@ public:
 
 	bool try_wait()
 	{
-		return LIKELY(m_value.compare_and_swap_test(1, 0));
+		return m_value.compare_and_swap_test(1, 0);
 	}
 
 	void post()

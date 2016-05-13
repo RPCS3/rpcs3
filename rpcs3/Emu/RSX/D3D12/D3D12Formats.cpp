@@ -1,6 +1,6 @@
+#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
-#ifdef _MSC_VER
 #include "D3D12Formats.h"
 #include "D3D12Utils.h"
 #include "Emu/RSX/GCM.h"

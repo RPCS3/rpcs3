@@ -3,6 +3,8 @@
 
 #include "VertexProgramDecompiler.h"
 
+#include <algorithm>
+
 std::string VertexProgramDecompiler::GetMask(bool is_sca)
 {
 	std::string ret;

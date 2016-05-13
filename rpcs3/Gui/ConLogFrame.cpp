@@ -2,6 +2,8 @@
 #include "stdafx_gui.h"
 #include "Gui/ConLogFrame.h"
 
+#include <chrono>
+
 enum
 {
 	id_log_copy,  // Copy log to ClipBoard
@@ -210,19 +212,19 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 
 				if (text[pos + 2] == ' ')
 				{
-					_log::level level;
+					logs::level level;
 					wxColour color;
 
 					switch (text[pos + 1].GetValue())
 					{
-					case 'A': level = _log::level::always; color.Set(0x00, 0xFF, 0xFF); break; // Cyan
-					case 'F': level = _log::level::fatal; color.Set(0xFF, 0x00, 0xFF); break; // Fuchsia
-					case 'E': level = _log::level::error; color.Set(0xFF, 0x00, 0x00); break; // Red
-					case 'U': level = _log::level::todo; color.Set(0xFF, 0x60, 0x00); break; // Orange
-					case 'S': level = _log::level::success; color.Set(0x00, 0xFF, 0x00); break; // Green
-					case 'W': level = _log::level::warning; color.Set(0xFF, 0xFF, 0x00); break; // Yellow
-					case '!': level = _log::level::notice; color.Set(0xFF, 0xFF, 0xFF); break; // White
-					case 'T': level = _log::level::trace; color.Set(0x80, 0x80, 0x80); break; // Gray
+					case 'A': level = logs::level::always; color.Set(0x00, 0xFF, 0xFF); break; // Cyan
+					case 'F': level = logs::level::fatal; color.Set(0xFF, 0x00, 0xFF); break; // Fuchsia
+					case 'E': level = logs::level::error; color.Set(0xFF, 0x00, 0x00); break; // Red
+					case 'U': level = logs::level::todo; color.Set(0xFF, 0x60, 0x00); break; // Orange
+					case 'S': level = logs::level::success; color.Set(0x00, 0xFF, 0x00); break; // Green
+					case 'W': level = logs::level::warning; color.Set(0xFF, 0xFF, 0x00); break; // Yellow
+					case '!': level = logs::level::notice; color.Set(0xFF, 0xFF, 0xFF); break; // White
+					case 'T': level = logs::level::trace; color.Set(0x80, 0x80, 0x80); break; // Gray
 					default: continue;
 					}
 

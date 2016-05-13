@@ -23,20 +23,20 @@
 #include <cstdint>
 #include <climits>
 #include <cstring>
+#include <exception>
 #include <string>
-#include <mutex>
-#include <condition_variable>
 #include <memory>
 #include <vector>
 #include <array>
 #include <functional>
-#include <algorithm>
-#include <unordered_set>
 #include <unordered_map>
-#include <chrono>
 
-using namespace std::string_literals;
-using namespace std::chrono_literals;
+// MSVC bug workaround
+#ifdef _MSC_VER
+namespace std { inline namespace literals { inline namespace chrono_literals {}}}
+#endif
+
+using namespace std::literals;
 
 // Obsolete, throw fmt::exception directly. Use 'HERE' macro, if necessary.
 #define EXCEPTION(format_str, ...) fmt::exception("%s(): " format_str HERE, __FUNCTION__, ##__VA_ARGS__)

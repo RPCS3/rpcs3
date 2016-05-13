@@ -5,6 +5,7 @@
 #include <cassert>
 #include <array>
 #include <memory>
+#include <algorithm>
 
 std::string v128::to_hex() const
 {

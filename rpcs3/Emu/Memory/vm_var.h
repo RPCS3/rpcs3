@@ -7,9 +7,9 @@ namespace vm
 	template<memory_location_t Location = vm::main>
 	struct page_allocator
 	{
-		static inline u32 alloc(u32 size, u32 align)
+		static inline vm::addr_t alloc(u32 size, u32 align)
 		{
-			return vm::alloc(size, Location, std::max<u32>(align, 4096));
+			return vm::cast(vm::alloc(size, Location, std::max<u32>(align, 4096)));
 		}
 
 		static inline void dealloc(u32 addr, u32 size = 0) noexcept
@@ -20,9 +20,9 @@ namespace vm
 
 	struct stack_allocator
 	{
-		static inline u32 alloc(u32 size, u32 align)
+		static inline vm::addr_t alloc(u32 size, u32 align)
 		{
-			return vm::stack_push(size, align);
+			return vm::cast(vm::stack_push(size, align));
 		}
 
 		static inline void dealloc(u32 addr, u32 size) noexcept
@@ -39,7 +39,7 @@ namespace vm
 
 	public:
 		_var_base()
-			: pointer(A::alloc(SIZE_32(T), ALIGN_32(T)), vm::addr)
+			: pointer(A::alloc(SIZE_32(T), ALIGN_32(T)))
 		{
 		}
 
@@ -71,7 +71,7 @@ namespace vm
 
 	public:
 		_var_base(u32 count)
-			: pointer(A::alloc(SIZE_32(T) * count, ALIGN_32(T)), vm::addr)
+			: pointer(A::alloc(SIZE_32(T) * count, ALIGN_32(T)))
 			, m_size(SIZE_32(T) * count)
 		{
 		}

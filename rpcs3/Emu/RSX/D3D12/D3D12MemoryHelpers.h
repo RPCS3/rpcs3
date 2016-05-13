@@ -3,6 +3,7 @@
 #include "d3dx12.h"
 #include "../Common/ring_buffer_helper.h"
 #include <list>
+#include <mutex>
 
 struct d3d12_data_heap : public data_heap
 {

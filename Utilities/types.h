@@ -407,12 +407,22 @@ struct ignore
 	}
 };
 
+// Simplified hash algorithm for pointers. May be used in std::unordered_(map|set).
+template<typename T, std::size_t Align = alignof(T)>
+struct pointer_hash
+{
+	std::size_t operator()(T* ptr) const
+	{
+		return reinterpret_cast<std::uintptr_t>(ptr) / Align;
+	}
+};
+
 // Contains value of any POD type with fixed size and alignment. TT<> is the type converter applied.
 // For example, `simple_t` may be used to remove endianness.
 template<template<typename> class TT, std::size_t S, std::size_t A = S>
 struct alignas(A) any_pod
 {
-	enum class byte : char {} data[S];
+	std::aligned_storage_t<S, A> data;
 
 	any_pod() = default;
 

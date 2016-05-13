@@ -15,6 +15,7 @@
 #include "SettingsDialog.h"
 
 #include <set>
+#include <unordered_set>
 
 // Node location
 using cfg_location = std::vector<const char*>;

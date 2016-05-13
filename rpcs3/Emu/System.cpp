@@ -9,7 +9,9 @@
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/PSP2/ARMv7Thread.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -21,6 +23,8 @@
 
 #include "../Crypto/unself.h"
 
+#include <thread>
+
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot");
 cfg::bool_entry g_cfg_autoexit(cfg::root.misc, "Exit RPCS3 when process finishes");
 
@@ -30,6 +34,8 @@ extern cfg::string_entry g_cfg_vfs_dev_bdvd;
 extern cfg::string_entry g_cfg_vfs_app_home;
 
 extern atomic_t<u32> g_thread_count;
+
+extern atomic_t<u32> g_ppu_core[2];
 
 extern u64 get_system_time();
 
@@ -59,6 +65,9 @@ void Emulator::Init()
 	
 	idm::init();
 	fxm::init();
+
+	g_ppu_core[0] = 0;
+	g_ppu_core[1] = 0;
 
 	// Reset defaults, cache them
 	cfg::root.from_default();
@@ -252,10 +261,10 @@ void Emulator::Load()
 		{
 			LOG_ERROR(LOADER, "Invalid or unsupported file format: %s", m_path);
 
-			LOG_WARNING(LOADER, "** ppu_exec_loader -> %s", bijective_find<elf_error>(ppu_exec, "???"));
-			LOG_WARNING(LOADER, "** ppu_prx_loader -> %s", bijective_find<elf_error>(ppu_prx, "???"));
-			LOG_WARNING(LOADER, "** spu_exec_loader -> %s", bijective_find<elf_error>(spu_exec, "???"));
-			LOG_WARNING(LOADER, "** arm_exec_loader -> %s", bijective_find<elf_error>(arm_exec, "???"));
+			LOG_WARNING(LOADER, "** ppu_exec_loader -> %s", ppu_exec.get_error());
+			LOG_WARNING(LOADER, "** ppu_prx_loader -> %s", ppu_prx.get_error());
+			LOG_WARNING(LOADER, "** spu_exec_loader -> %s", spu_exec.get_error());
+			LOG_WARNING(LOADER, "** arm_exec_loader -> %s", arm_exec.get_error());
 			return;
 		}
 
@@ -294,11 +303,11 @@ void Emulator::Run()
 	m_pause_amend_time = 0;
 	m_status = Running;
 
-	for (auto& thread : get_all_cpu_threads())
+	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
-		thread->state -= cpu_state::stop;
-		thread->lock_notify();
-	}
+		cpu.state -= cpu_state::stop;
+		cpu->lock_notify();
+	});
 
 	SendDbgCommand(DID_STARTED_EMU);
 }
@@ -323,10 +332,10 @@ bool Emulator::Pause()
 
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	for (auto& thread : get_all_cpu_threads())
+	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
-		thread->state += cpu_state::dbg_global_pause;
-	}
+		cpu.state += cpu_state::dbg_global_pause;
+	});
 
 	SendDbgCommand(DID_PAUSED_EMU);
 
@@ -357,11 +366,11 @@ void Emulator::Resume()
 
 	SendDbgCommand(DID_RESUME_EMU);
 
-	for (auto& thread : get_all_cpu_threads())
+	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
-		thread->state -= cpu_state::dbg_global_pause;
-		thread->lock_notify();
-	}
+		cpu.state -= cpu_state::dbg_global_pause;
+		cpu->lock_notify();
+	});
 
 	rpcs3::on_resume()();
 
@@ -383,11 +392,11 @@ void Emulator::Stop()
 	{
 		LV2_LOCK;
 
-		for (auto& thread : get_all_cpu_threads())
+		idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 		{
-			thread->state += cpu_state::dbg_global_stop;
-			thread->lock_notify();
-		}
+			cpu.state += cpu_state::dbg_global_stop;
+			cpu->lock_notify();
+		});
 	}
 
 	LOG_NOTICE(GENERAL, "All threads signaled...");
@@ -424,16 +433,3 @@ void Emulator::Stop()
 }
 
 Emulator Emu;
-
-DECLARE(idm::g_map);
-DECLARE(idm::g_id);
-DECLARE(idm::g_mutex);
-
-DECLARE(fxm::g_map);
-DECLARE(fxm::g_mutex);
-
-#ifndef _MSC_VER
-constexpr DECLARE(bijective<elf_error, const char*>::map);
-constexpr DECLARE(bijective<_log::level, const char*>::map);
-constexpr DECLARE(bijective<rsx::shader_language, const char*>::map);
-#endif

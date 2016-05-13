@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdarg>
-#include <string>
 #include <exception>
+#include <string>
 
 #include "Platform.h"
 #include "types.h"
@@ -14,7 +14,7 @@ namespace fmt
 
 	// Formatting function
 	template<typename... Args>
-	inline std::string format(const char* fmt, const Args&... args) noexcept
+	inline std::string format(const char* fmt, const Args&... args)
 	{
 		return unsafe_format(fmt, ::unveil<Args>::get(args)...);
 	}
@@ -34,7 +34,6 @@ namespace fmt
 	class exception : public exception_base
 	{
 	public:
-		// Formatting constructor
 		template<typename... Args>
 		exception(const char* fmt, const Args&... args)
 			: exception_base(fmt, ::unveil<Args>::get(args)...)

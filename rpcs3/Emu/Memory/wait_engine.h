@@ -1,61 +1,50 @@
 #pragma once
 
-#include <mutex>
-#include <condition_variable>
-#include <functional>
+#include "Utilities/types.h"
+#include "Utilities/Macro.h"
 
-class named_thread;
+class thread_ctrl;
 
 namespace vm
 {
-	using mutex_t = std::mutex;
-	using cond_t = std::condition_variable;
-
-	struct waiter
+	struct waiter_base
 	{
 		u32 addr;
 		u32 mask;
-		mutex_t* mutex;
-		cond_t* cond;
+		thread_ctrl* thread{};
 
-		std::function<bool()> pred;
-
-		~waiter();
-
+		void initialize(u32 addr, u32 size);
 		bool try_notify();
+
+	protected:
+		~waiter_base();
+
+		virtual bool test() = 0;
 	};
 
-	class waiter_lock
+	// Wait until pred() returns true, addr must be aligned to size which must be a power of 2.
+	// It's possible for pred() to be called from any thread once the waiter is registered.
+	template<typename F>
+	auto wait_op(u32 addr, u32 size, F&& pred) -> decltype(static_cast<void>(pred()))
 	{
-		waiter m_waiter;
-		std::unique_lock<mutex_t> m_lock;
+		if (LIKELY(pred())) return;
 
-	public:
-		waiter_lock(u32 addr, u32 size);
-
-		waiter* operator ->()
+		struct waiter : waiter_base
 		{
-			return &m_waiter;
-		}
+			std::conditional_t<sizeof(F) <= sizeof(void*), std::remove_reference_t<F>, F&&> func;
 
-		void wait();
+			waiter(F&& func)
+				: func(std::forward<F>(func))
+			{
+			}
 
-		~waiter_lock();
-	};
+			bool test() override
+			{
+				return func();
+			}
+		};
 
-	// Wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
-	template<typename F, typename... Args>
-	auto wait_op(u32 addr, u32 size, F&& pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
-	{
-		// Return immediately if condition passed (optimistic case)
-		if (pred(args...)) return;
-
-		waiter_lock lock(addr, size);
-
-		// Initialize predicate
-		lock->pred = WRAP_EXPR(pred(args...));
-
-		lock.wait();
+		waiter(std::forward<F>(pred)).initialize(addr, size);
 	}
 
 	// Notify waiters on specific addr, addr must be aligned to size which must be a power of 2

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <mutex>
 
 class thread_ctrl;
 
@@ -32,6 +33,9 @@ namespace vm
 		page_allocated          = (1 << 7),
 	};
 
+	// Address type
+	enum addr_t : u32 {};
+
 	struct access_violation : std::runtime_error
 	{
 		access_violation(u64 addr, const char* cause);
@@ -60,7 +64,7 @@ namespace vm
 	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
 
 	// Returns true if the current thread owns reservation
-	bool reservation_test(const thread_ctrl* current);
+	bool reservation_test(thread_ctrl* current);
 
 	// Break all reservations created by the current thread
 	void reservation_free();
@@ -133,11 +137,11 @@ namespace vm
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
 
 	// Get PS3/PSV virtual memory address from the provided pointer (nullptr always converted to 0)
-	inline u32 get_addr(const void* real_ptr)
+	inline vm::addr_t get_addr(const void* real_ptr)
 	{
 		if (!real_ptr)
 		{
-			return 0;
+			return vm::addr_t{};
 		}
 
 		const std::ptrdiff_t diff = static_cast<const u8*>(real_ptr) - g_base_addr;
@@ -145,7 +149,7 @@ namespace vm
 
 		if (res == diff)
 		{
-			return res;
+			return static_cast<vm::addr_t>(res);
 		}
 
 		throw fmt::exception("Not a virtual memory pointer (%p)", real_ptr);
@@ -166,34 +170,55 @@ namespace vm
 	template<>
 	struct cast_impl<u32>
 	{
-		static u32 cast(const u32& addr, const char* loc)
+		static vm::addr_t cast(u32 addr, const char* loc)
 		{
-			return addr;
+			return static_cast<vm::addr_t>(addr);
+		}
+
+		static vm::addr_t cast(u32 addr)
+		{
+			return static_cast<vm::addr_t>(addr);
 		}
 	};
 
 	template<>
 	struct cast_impl<u64>
 	{
-		static u32 cast(const u64& addr, const char* loc)
+		static vm::addr_t cast(u64 addr, const char* loc)
 		{
-			return fmt::narrow<u32>("Memory address out of range: 0x%llx%s", addr, loc);
+			return static_cast<vm::addr_t>(fmt::narrow<u32>("Memory address out of range: 0x%llx%s", addr, loc));
+		}
+
+		static vm::addr_t cast(u64 addr)
+		{
+			return static_cast<vm::addr_t>(fmt::narrow<u32>("Memory address out of range: 0x%llx", addr));
 		}
 	};
 
 	template<typename T, bool Se>
 	struct cast_impl<se_t<T, Se>>
 	{
-		static u32 cast(const se_t<T, Se>& addr, const char* loc)
+		static vm::addr_t cast(const se_t<T, Se>& addr, const char* loc)
 		{
 			return cast_impl<T>::cast(addr, loc);
+		}
+
+		static vm::addr_t cast(const se_t<T, Se>& addr)
+		{
+			return cast_impl<T>::cast(addr);
 		}
 	};
 
 	template<typename T>
-	u32 cast(const T& addr, const char* loc)
+	vm::addr_t cast(const T& addr, const char* loc)
 	{
 		return cast_impl<T>::cast(addr, loc);
+	}
+
+	template<typename T>
+	vm::addr_t cast(const T& addr)
+	{
+		return cast_impl<T>::cast(addr);
 	}
 
 	// Convert specified PS3/PSV virtual memory address to a pointer for common access

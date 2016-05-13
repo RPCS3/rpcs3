@@ -4,6 +4,8 @@
 #include "GLVertexProgram.h"
 #include "GLCommonDecompiler.h"
 
+#include <algorithm>
+
 std::string GLVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 {
 	return getFloatTypeNameImpl(elementCount);

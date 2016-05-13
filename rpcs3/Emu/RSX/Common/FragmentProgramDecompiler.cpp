@@ -4,6 +4,8 @@
 
 #include "FragmentProgramDecompiler.h"
 
+#include <algorithm>
+
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size) :
 	m_prog(prog),
 	m_size(size),
@@ -522,21 +524,21 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	while (true)
 	{
-		for (auto finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-		finded != m_end_offsets.end();
-			finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
+		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
+		found != m_end_offsets.end();
+			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
 		{
-			m_end_offsets.erase(finded);
+			m_end_offsets.erase(found);
 			m_code_level--;
 			AddCode("}");
 			m_loop_count--;
 		}
 
-		for (auto finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-		finded != m_else_offsets.end();
-			finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
+		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
+		found != m_else_offsets.end();
+			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
 		{
-			m_else_offsets.erase(finded);
+			m_else_offsets.erase(found);
 			m_code_level--;
 			AddCode("}");
 			AddCode("else");
@@ -644,7 +646,7 @@ std::string FragmentProgramDecompiler::Decompile()
 
 		if (dst.end) break;
 
-		Ensures(m_offset % sizeof(u32) == 0);
+		ENSURES(m_offset % sizeof(u32) == 0);
 		data += m_offset / sizeof(u32);
 	}
 

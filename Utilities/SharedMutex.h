@@ -32,6 +32,9 @@ class shared_mutex final
 	void lock_hard();
 	void unlock_notify();
 
+	void lock_upgrade_hard();
+	void lock_degrade_hard();
+
 public:
 	constexpr shared_mutex() = default;
 
@@ -42,15 +45,9 @@ public:
 
 	bool try_lock_shared()
 	{
-		auto ctrl = m_ctrl.load();
+		const u32 ctrl = m_ctrl.load();
 
-		if (UNLIKELY(ctrl >= SM_READER_MAX))
-		{
-			ctrl = 0;
-		}
-
-		// Weak attempt
-		return LIKELY(m_ctrl.compare_and_swap_test(ctrl, ctrl + 1));
+		return ctrl < SM_READER_MAX && m_ctrl.compare_and_swap_test(ctrl, ctrl + 1);
 	}
 
 	void lock_shared()
@@ -72,12 +69,12 @@ public:
 
 	bool try_lock()
 	{
-		return LIKELY(m_ctrl.compare_and_swap_test(0, SM_WRITER_LOCK));
+		return !m_ctrl && m_ctrl.compare_and_swap_test(0, SM_WRITER_LOCK);
 	}
 
 	void lock()
 	{
-		if (UNLIKELY(!try_lock()))
+		if (UNLIKELY(!m_ctrl.compare_and_swap_test(0, SM_WRITER_LOCK)))
 		{
 			lock_hard();
 		}
@@ -85,9 +82,37 @@ public:
 
 	void unlock()
 	{
-		if (UNLIKELY(m_ctrl.fetch_sub(SM_WRITER_LOCK) != SM_WRITER_LOCK))
+		m_ctrl &= ~SM_WRITER_LOCK;
+
+		if (UNLIKELY(m_ctrl))
 		{
 			unlock_notify();
+		}
+	}
+
+	bool try_lock_upgrade()
+	{
+		return m_ctrl == 1 && m_ctrl.compare_and_swap_test(1, SM_WRITER_LOCK);
+	}
+
+	bool try_lock_degrade()
+	{
+		return m_ctrl == SM_WRITER_LOCK && m_ctrl.compare_and_swap_test(SM_WRITER_LOCK, 1);
+	}
+
+	void lock_upgrade()
+	{
+		if (UNLIKELY(!m_ctrl.compare_and_swap_test(1, SM_WRITER_LOCK)))
+		{
+			lock_upgrade_hard();
+		}
+	}
+
+	void lock_degrade()
+	{
+		if (UNLIKELY(!m_ctrl.compare_and_swap_test(SM_WRITER_LOCK, 1)))
+		{
+			lock_degrade_hard();
 		}
 	}
 };
@@ -131,5 +156,25 @@ public:
 	~writer_lock()
 	{
 		m_mutex.unlock();
+	}
+};
+
+// Exclusive (writer) lock in the scope of shared (reader) lock.
+class upgraded_lock final
+{
+	shared_mutex& m_mutex;
+
+public:
+	upgraded_lock(const writer_lock&) = delete;
+
+	upgraded_lock(shared_mutex& mutex)
+		: m_mutex(mutex)
+	{
+		m_mutex.lock_upgrade();
+	}
+
+	~upgraded_lock()
+	{
+		m_mutex.lock_degrade();
 	}
 };
