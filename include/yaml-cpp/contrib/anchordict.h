@@ -12,11 +12,13 @@
 #include "../anchor.h"
 
 namespace YAML {
-/// AnchorDict
-/// . An object that stores and retrieves values correlating to anchor_t
-///   values.
-/// . Efficient implementation that can make assumptions about how anchor_t
-///   values are assigned by the Parser class.
+/**
+ * An object that stores and retrieves values correlating to {@link anchor_t}
+ * values.
+ *
+ * <p>Efficient implementation that can make assumptions about how
+ * {@code anchor_t} values are assigned by the {@link Parser} class.
+ */
 template <class T>
 class AnchorDict {
  public:
