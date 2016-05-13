@@ -7,15 +7,15 @@
 #pragma once
 #endif
 
-#include "ptr_stack.h"
 #include "setting.h"
 #include "yaml-cpp/emitterdef.h"
 #include "yaml-cpp/emittermanip.h"
+
 #include <cassert>
-#include <vector>
-#include <stack>
 #include <memory>
+#include <stack>
 #include <stdexcept>
+#include <vector>
 
 namespace YAML {
 struct FmtScope {
@@ -174,7 +174,7 @@ class EmitterState {
     }
   };
 
-  ptr_stack<Group> m_groups;
+  std::vector<std::unique_ptr<Group>> m_groups;
   std::size_t m_curIndent;
   bool m_hasAnchor;
   bool m_hasTag;

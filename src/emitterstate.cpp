@@ -53,28 +53,31 @@ void EmitterState::SetNonContent() { m_hasNonContent = true; }
 
 void EmitterState::SetLongKey() {
   assert(!m_groups.empty());
-  if (m_groups.empty())
+  if (m_groups.empty()) {
     return;
+  }
 
-  assert(m_groups.top().type == GroupType::Map);
-  m_groups.top().longKey = true;
+  assert(m_groups.back()->type == GroupType::Map);
+  m_groups.back()->longKey = true;
 }
 
 void EmitterState::ForceFlow() {
   assert(!m_groups.empty());
-  if (m_groups.empty())
+  if (m_groups.empty()) {
     return;
+  }
 
-  m_groups.top().flowType = FlowType::Flow;
+  m_groups.back()->flowType = FlowType::Flow;
 }
 
 void EmitterState::StartedNode() {
   if (m_groups.empty()) {
     m_docCount++;
   } else {
-    m_groups.top().childCount++;
-    if (m_groups.top().childCount % 2 == 0)
-      m_groups.top().longKey = false;
+    m_groups.back()->childCount++;
+    if (m_groups.back()->childCount % 2 == 0) {
+      m_groups.back()->longKey = false;
+    }
   }
 
   m_hasAnchor = false;
@@ -121,7 +124,7 @@ void EmitterState::StartedScalar() {
 void EmitterState::StartedGroup(GroupType::value type) {
   StartedNode();
 
-  const int lastGroupIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
+  const int lastGroupIndent = (m_groups.empty() ? 0 : m_groups.back()->indent);
   m_curIndent += lastGroupIndent;
 
   // TODO: Create move constructors for settings types to simplify transfer
@@ -134,32 +137,36 @@ void EmitterState::StartedGroup(GroupType::value type) {
   pGroup->modifiedSettings = std::move(m_modifiedSettings);
 
   // set up group
-  if (GetFlowType(type) == Block)
+  if (GetFlowType(type) == Block) {
     pGroup->flowType = FlowType::Block;
-  else
+  } else {
     pGroup->flowType = FlowType::Flow;
+  }
   pGroup->indent = GetIndent();
 
-  m_groups.push(std::move(pGroup));
+  m_groups.push_back(std::move(pGroup));
 }
 
 void EmitterState::EndedGroup(GroupType::value type) {
   if (m_groups.empty()) {
-    if (type == GroupType::Seq)
+    if (type == GroupType::Seq) {
       return SetError(ErrorMsg::UNEXPECTED_END_SEQ);
-    else
+    } else {
       return SetError(ErrorMsg::UNEXPECTED_END_MAP);
+    }
   }
 
   // get rid of the current group
   {
-    std::unique_ptr<Group> pFinishedGroup = m_groups.pop();
-    if (pFinishedGroup->type != type)
+    std::unique_ptr<Group> pFinishedGroup = std::move(m_groups.back());
+    m_groups.pop_back();
+    if (pFinishedGroup->type != type) {
       return SetError(ErrorMsg::UNMATCHED_GROUP_TAG);
+    }
   }
 
   // reset old settings
-  std::size_t lastIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
+  std::size_t lastIndent = (m_groups.empty() ? 0 : m_groups.back()->indent);
   assert(m_curIndent >= lastIndent);
   m_curIndent -= lastIndent;
 
@@ -171,37 +178,39 @@ void EmitterState::EndedGroup(GroupType::value type) {
 }
 
 EmitterNodeType::value EmitterState::CurGroupNodeType() const {
-  if (m_groups.empty())
+  if (m_groups.empty()) {
     return EmitterNodeType::NoType;
+  }
 
-  return m_groups.top().NodeType();
+  return m_groups.back()->NodeType();
 }
 
 GroupType::value EmitterState::CurGroupType() const {
-  return m_groups.empty() ? GroupType::NoType : m_groups.top().type;
+  return m_groups.empty() ? GroupType::NoType : m_groups.back()->type;
 }
 
 FlowType::value EmitterState::CurGroupFlowType() const {
-  return m_groups.empty() ? FlowType::NoType : m_groups.top().flowType;
+  return m_groups.empty() ? FlowType::NoType : m_groups.back()->flowType;
 }
 
 int EmitterState::CurGroupIndent() const {
-  return m_groups.empty() ? 0 : m_groups.top().indent;
+  return m_groups.empty() ? 0 : m_groups.back()->indent;
 }
 
 std::size_t EmitterState::CurGroupChildCount() const {
-  return m_groups.empty() ? m_docCount : m_groups.top().childCount;
+  return m_groups.empty() ? m_docCount : m_groups.back()->childCount;
 }
 
 bool EmitterState::CurGroupLongKey() const {
-  return m_groups.empty() ? false : m_groups.top().longKey;
+  return m_groups.empty() ? false : m_groups.back()->longKey;
 }
 
 int EmitterState::LastIndent() const {
-  if (m_groups.size() <= 1)
+  if (m_groups.size() <= 1) {
     return 0;
+  }
 
-  return m_curIndent - m_groups.top(-1).indent;
+  return m_curIndent - m_groups[m_groups.size() - 2]->indent;
 }
 
 void EmitterState::ClearModifiedSettings() { m_modifiedSettings.clear(); }
