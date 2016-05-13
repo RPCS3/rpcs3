@@ -5,6 +5,7 @@
 
 #include "cellAudio.h"
 #include "libmixer.h"
+#include <cmath>
 
 LOG_CHANNEL(libmixer);
 
@@ -355,7 +356,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 						auto v = vm::ptrl<s16>::make(p.m_addr); // 16-bit LE audio data
 						float left = 0.0f;
 						float right = 0.0f;
-						float speed = fabs(p.m_speed);
+						float speed = std::fabs(p.m_speed);
 						float fpos = 0.0f;
 						for (s32 i = 0; i < 256; i++) if (p.m_active)
 						{

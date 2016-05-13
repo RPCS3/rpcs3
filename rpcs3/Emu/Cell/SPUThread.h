@@ -4,6 +4,7 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "MFC.h"
+#include <cmath>
 
 class lv2_event_queue_t;
 struct lv2_spu_group_t;
@@ -383,7 +384,7 @@ struct spu_imm_table_t
 		{
 			for (s32 i = -155; i < 174; i++)
 			{
-				m_data[i + 155] = _mm_set1_ps(static_cast<float>(exp2(i)));
+				m_data[i + 155] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
 			}
 		}
 

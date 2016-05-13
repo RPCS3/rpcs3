@@ -5,6 +5,8 @@ extern "C"
 #include <libavutil/pixfmt.h>
 }
 
+#include <cmath>
+
 namespace rsx
 {
 	template<typename T>
@@ -32,8 +34,8 @@ namespace rsx
 	template<typename T>
 	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, bool input_is_swizzled)
 	{
-		u16 log2width = ::narrow<u16>(ceil(log2(width)));
-		u16 log2height = ::narrow<u16>(ceil(log2(height)));
+		u16 log2width = ::narrow<u16>(ceil(std::log2(width)));
+		u16 log2height = ::narrow<u16>(ceil(std::log2(height)));
 
 		// Max mask possible for square texture
 		u32 x_mask = 0x55555555;
