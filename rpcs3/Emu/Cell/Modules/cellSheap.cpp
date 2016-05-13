@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellSheap);
+logs::channel cellSheap("cellSheap", logs::level::notice);
 
 // Return Codes
 enum

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellVideoUpload);
+logs::channel cellVideoUpload("cellVideoUpload", logs::level::notice);
 
 s32 cellVideoUploadInitialize()
 {

@@ -7,7 +7,7 @@
 #include "Crypto/unself.h"
 #include "sysPrxForUser.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 extern u64 get_system_time();
 
@@ -59,7 +59,7 @@ s32 sys_spu_image_close(vm::ptr<sys_spu_image_t> img)
 		return CELL_EINVAL;
 	}
 
-	ASSERT(vm::dealloc(img->segs.addr(), vm::main)); // Current rough implementation
+	VERIFY(vm::dealloc(img->segs.addr(), vm::main)); // Current rough implementation
 	return CELL_OK;
 }
 

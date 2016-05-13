@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,7 +7,7 @@
 #include "sys_memory.h"
 #include "sys_vm.h"
 
-LOG_CHANNEL(sys_vm);
+logs::channel sys_vm("sys_vm", logs::level::notice);
 
 s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {

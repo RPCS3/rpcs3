@@ -4,7 +4,7 @@
 
 #include "sysPrxForUser.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {

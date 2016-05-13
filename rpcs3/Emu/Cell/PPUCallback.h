@@ -193,6 +193,7 @@ template<typename RT, typename... T> inline RT cb_call(PPUThread& CPU, u32 pc, u
 }
 
 #include <queue>
+#include <mutex>
 
 class CallbackManager
 {

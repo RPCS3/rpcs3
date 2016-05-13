@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellSysconf);
+logs::channel cellSysconf("cellSysconf", logs::level::notice);
 
 s32 cellSysconfAbort()
 {

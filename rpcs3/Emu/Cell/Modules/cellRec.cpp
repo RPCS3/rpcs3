@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellRec);
+logs::channel cellRec("cellRec", logs::level::notice);
 
 s32 cellRecOpen()
 {

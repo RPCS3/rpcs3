@@ -4,7 +4,7 @@
 
 #include "cellScreenshot.h"
 
-LOG_CHANNEL(cellScreenshot);
+logs::channel cellScreenshot("cellScreenshot", logs::level::notice);
 
 s32 cellScreenShotSetParameter() //const CellScreenShotSetParam *param
 {

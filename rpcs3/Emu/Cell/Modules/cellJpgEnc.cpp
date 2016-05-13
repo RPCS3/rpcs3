@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellJpgEnc);
+logs::channel cellJpgEnc("cellJpgEnc", logs::level::notice);
 
 // Error Codes
 enum

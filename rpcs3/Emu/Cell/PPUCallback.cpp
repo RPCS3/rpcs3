@@ -6,6 +6,8 @@
 #include "PPUThread.h"
 #include "PPUCallback.h"
 
+#include <condition_variable>
+
 void CallbackManager::Register(check_cb_t func)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
@@ -24,8 +26,10 @@ void CallbackManager::Async(async_cb_t func)
 
 	m_async_cb.emplace(std::move(func));
 
-	m_cb_thread->notify();
+	(*m_cb_thread)->notify();
 }
+
+extern std::condition_variable& get_current_thread_cv();
 
 CallbackManager::check_cb_t CallbackManager::Check()
 {

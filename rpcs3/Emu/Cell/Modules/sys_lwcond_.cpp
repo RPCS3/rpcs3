@@ -7,7 +7,7 @@
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "sysPrxForUser.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
 {

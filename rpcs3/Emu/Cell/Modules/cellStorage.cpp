@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-extern _log::channel cellSysutil;
+extern logs::channel cellSysutil;
 
 s32 cellStorageDataImportMove()
 {

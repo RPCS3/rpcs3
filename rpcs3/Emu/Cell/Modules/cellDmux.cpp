@@ -6,7 +6,9 @@
 #include "cellPamf.h"
 #include "cellDmux.h"
 
-LOG_CHANNEL(cellDmux);
+#include <thread>
+
+logs::channel cellDmux("cellDmux", logs::level::notice);
 
 PesHeader::PesHeader(DemuxerStream& stream)
 	: pts(CODEC_TS_INVALID)
@@ -142,7 +144,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 	u32 addr;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		ASSERT(!is_full(size));
+		VERIFY(!is_full(size));
 
 		if (put + size + 128 > memAddr + memSize)
 		{
@@ -183,7 +185,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		put_count++;
 	}
 
-	ASSERT(entries.push(addr, &dmux->is_closed));
+	VERIFY(entries.push(addr, &dmux->is_closed));
 }
 
 void ElementaryStream::push(DemuxerStream& stream, u32 size)
@@ -447,7 +449,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 						if (es.raw_data.size() > 1024 * 1024)
 						{
 							stream = backup;
-							std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+							std::this_thread::sleep_for(1ms); // hack
 							continue;
 						}
 
@@ -543,7 +545,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 						if (es.isfull(old_size))
 						{
 							stream = backup;
-							std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+							std::this_thread::sleep_for(1ms); // hack
 							continue;
 						}
 
@@ -711,7 +713,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					{
 						if (Emu.IsStopped() || dmux.is_closed) break;
 
-						std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+						std::this_thread::sleep_for(1ms); // hack
 					}
 
 					es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false, 0);
@@ -759,7 +761,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 	dmux.dmuxCb->cpu_init();
 	dmux.dmuxCb->state -= cpu_state::stop;
-	dmux.dmuxCb->lock_notify();
+	(*dmux.dmuxCb)->lock_notify();
 }
 
 s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
@@ -865,7 +867,7 @@ s32 cellDmuxClose(u32 handle)
 			return CELL_OK;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		std::this_thread::sleep_for(1ms); // hack
 	}
 
 	idm::remove<PPUThread>(dmux->dmuxCb->id);
@@ -886,7 +888,7 @@ s32 cellDmuxSetStream(u32 handle, u32 streamAddress, u32 streamSize, b8 disconti
 
 	if (dmux->is_running.exchange(true))
 	{
-		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(1ms); // hack
 		return CELL_DMUX_ERROR_BUSY;
 	}
 
@@ -943,7 +945,7 @@ s32 cellDmuxResetStreamAndWaitDone(u32 handle)
 			cellDmux.warning("cellDmuxResetStreamAndWaitDone(%d) aborted", handle);
 			return CELL_OK;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		std::this_thread::sleep_for(1ms); // hack
 	}
 
 	return CELL_OK;

@@ -10,7 +10,9 @@
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(cellGame);
+#include <thread>
+
+logs::channel cellGame("cellGame", logs::level::notice);
 
 // Normal content directory (if is_temporary is not involved):
 // contentInfo = dir
@@ -308,7 +310,7 @@ ppu_error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentIn
 		}
 
 		// Create PARAM.SFO
-		fs::file(dir + "/PARAM.SFO", fs::rewrite).write(psf::save_object(prm->sfo));
+		psf::save_object(fs::file(dir + "/PARAM.SFO", fs::rewrite), prm->sfo);
 
 		// Disable deletion
 		prm->is_temporary = false;
@@ -555,7 +557,7 @@ ppu_error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 	std::string&& value = psf::get_string(prm->sfo, key);
 	value.resize(bufsize - 1);
 
-	std::copy_n(value.c_str(), value.size() + 1, buf.get_ptr());
+	std::memcpy(buf.get_ptr(), value.c_str(), bufsize);
 
 	return CELL_OK;
 }

@@ -3,7 +3,7 @@
 
 #include "sceNpCommerce2.h"
 
-LOG_CHANNEL(sceNpCommerce2);
+logs::channel sceNpCommerce2("sceNpCommerce2", logs::level::notice);
 
 s32 sceNpCommerce2ExecuteStoreBrowse()
 {

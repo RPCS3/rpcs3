@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,7 +7,9 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_event_flag.h"
 
-LOG_CHANNEL(sys_event_flag);
+#include <algorithm>
+
+logs::channel sys_event_flag("sys_event_flag", logs::level::notice);
 
 extern u64 get_system_time();
 
@@ -28,8 +29,8 @@ void lv2_event_flag_t::notify_all(lv2_lock_t)
 			// save pattern
 			ppu.GPR[4] = clear_pattern(bitptn, mode);
 
-			ASSERT(!thread->state.test_and_set(cpu_state::signal));
-			thread->notify();
+			VERIFY(!thread->state.test_and_set(cpu_state::signal));
+			(*thread)->notify();
 
 			return true;
 		}
@@ -291,8 +292,8 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		// clear "mode" as a sign of cancellation
 		ppu.GPR[5] = 0;
 
-		ASSERT(!thread->state.test_and_set(cpu_state::signal));
-		thread->notify();
+		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		(*thread)->notify();
 	}
 
 	eflag->sq.clear();

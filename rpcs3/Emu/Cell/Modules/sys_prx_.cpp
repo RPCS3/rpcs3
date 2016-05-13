@@ -5,7 +5,7 @@
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "sysPrxForUser.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 s64 sys_prx_exitspawn_with_level()
 {

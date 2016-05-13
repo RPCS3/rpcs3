@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_rsx.h"
 
-LOG_CHANNEL(sys_rsx);
+logs::channel sys_rsx("sys_rsx", logs::level::notice);
 
 s32 sys_rsx_device_open()
 {

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellOskDialog);
+logs::channel cellOskDialog("cellOskDialog", logs::level::notice);
 
 s32 cellOskDialogLoadAsync()
 {

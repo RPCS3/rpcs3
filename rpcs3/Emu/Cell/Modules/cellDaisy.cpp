@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellDaisy);
+logs::channel cellDaisy("cellDaisy", logs::level::notice);
 
 s32 _ZN4cell5Daisy17LFQueue2PushCloseEPNS0_8LFQueue2EPFiPvjE()
 {

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -7,7 +8,7 @@
 
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(cellNetCtl);
+logs::channel cellNetCtl("cellNetCtl", logs::level::notice);
 
 cfg::map_entry<s32> g_cfg_net_status(cfg::root.net, "Connection status",
 {

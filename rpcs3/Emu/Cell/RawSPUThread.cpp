@@ -31,7 +31,7 @@ void RawSPUThread::on_init()
 		// Install correct SPU index and LS address
 		const_cast<u32&>(index) = id;
 		const_cast<u32&>(offset) = vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000);
-		ASSERT(offset);
+		VERIFY(offset);
 
 		SPUThread::on_init();
 	}
@@ -101,7 +101,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 		}))
 		{
 			state -= cpu_state::stop;
-			lock_notify();
+			(*this)->lock_notify();
 		}
 	};
 

@@ -6,7 +6,9 @@
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
 
-extern _log::channel cellSysutil;
+#include <thread>
+
+extern logs::channel cellSysutil;
 
 s32 cellMsgDialogOpen()
 {

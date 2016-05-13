@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_tty.h"
 
-LOG_CHANNEL(sys_tty);
+logs::channel sys_tty("sys_tty", logs::level::notice);
 
 extern fs::file g_tty;
 

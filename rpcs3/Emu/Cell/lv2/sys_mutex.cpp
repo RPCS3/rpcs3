@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,7 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_mutex.h"
 
-LOG_CHANNEL(sys_mutex);
+logs::channel sys_mutex("sys_mutex", logs::level::notice);
 
 extern u64 get_system_time();
 
@@ -21,8 +20,8 @@ void lv2_mutex_t::unlock(lv2_lock_t)
 		// pick new owner; protocol is ignored in current implementation
 		owner = std::static_pointer_cast<cpu_thread>(sq.front()->shared_from_this());
 
-		ASSERT(!owner->state.test_and_set(cpu_state::signal));
-		owner->notify();
+		VERIFY(!owner->state.test_and_set(cpu_state::signal));
+		(*owner)->notify();
 	}
 }
 

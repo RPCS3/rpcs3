@@ -8,7 +8,9 @@
 
 #include "Emu/Memory/wait_engine.h"
 
-LOG_CHANNEL(cellSync);
+#include <thread>
+
+logs::channel cellSync("cellSync", logs::level::notice);
 
 namespace _sync
 {
@@ -32,12 +34,12 @@ ppu_error_code cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexInitialize(mutex=*0x%x)", mutex);
 
-	if (!mutex)
+	if (UNLIKELY(!mutex))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!mutex.aligned())
+	if (UNLIKELY(!mutex.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -51,12 +53,12 @@ ppu_error_code cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexLock(mutex=*0x%x)", mutex);
 
-	if (!mutex)
+	if (UNLIKELY(!mutex))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!mutex.aligned())
+	if (UNLIKELY(!mutex.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -76,12 +78,12 @@ ppu_error_code cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexTryLock(mutex=*0x%x)", mutex);
 
-	if (!mutex)
+	if (UNLIKELY(!mutex))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!mutex.aligned())
+	if (UNLIKELY(!mutex.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -98,12 +100,12 @@ ppu_error_code cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexUnlock(mutex=*0x%x)", mutex);
 
-	if (!mutex)
+	if (UNLIKELY(!mutex))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!mutex.aligned())
+	if (UNLIKELY(!mutex.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -119,17 +121,17 @@ ppu_error_code cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 t
 {
 	cellSync.trace("cellSyncBarrierInitialize(barrier=*0x%x, total_count=%d)", barrier, total_count);
 
-	if (!barrier)
+	if (UNLIKELY(!barrier))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!barrier.aligned())
+	if (UNLIKELY(!barrier.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	if (!total_count || total_count > 32767)
+	if (UNLIKELY(!total_count || total_count > 32767))
 	{
 		return CELL_SYNC_ERROR_INVAL;
 	}
@@ -144,12 +146,12 @@ ppu_error_code cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierNotify(barrier=*0x%x)", barrier);
 
-	if (!barrier)
+	if (UNLIKELY(!barrier))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!barrier.aligned())
+	if (UNLIKELY(!barrier.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -165,12 +167,12 @@ ppu_error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierTryNotify(barrier=*0x%x)", barrier);
 
-	if (!barrier)
+	if (UNLIKELY(!barrier))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!barrier.aligned())
+	if (UNLIKELY(!barrier.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -191,12 +193,12 @@ ppu_error_code cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierWait(barrier=*0x%x)", barrier);
 
-	if (!barrier)
+	if (UNLIKELY(!barrier))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!barrier.aligned())
+	if (UNLIKELY(!barrier.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -214,12 +216,12 @@ ppu_error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierTryWait(barrier=*0x%x)", barrier);
 
-	if (!barrier)
+	if (UNLIKELY(!barrier))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!barrier.aligned())
+	if (UNLIKELY(!barrier.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -240,17 +242,17 @@ ppu_error_code cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buf
 {
 	cellSync.trace("cellSyncRwmInitialize(rwm=*0x%x, buffer=*0x%x, buffer_size=0x%x)", rwm, buffer, buffer_size);
 
-	if (!rwm || !buffer)
+	if (UNLIKELY(!rwm || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!rwm.aligned() || buffer % 128)
+	if (UNLIKELY(!rwm.aligned() || buffer % 128))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	if (buffer_size % 128 || buffer_size > 0x4000)
+	if (UNLIKELY(buffer_size % 128 || buffer_size > 0x4000))
 	{
 		return CELL_SYNC_ERROR_INVAL;
 	}
@@ -269,12 +271,12 @@ ppu_error_code cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 {
 	cellSync.trace("cellSyncRwmRead(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
-	if (!rwm || !buffer)
+	if (UNLIKELY(!rwm || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!rwm.aligned())
+	if (UNLIKELY(!rwm.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -300,12 +302,12 @@ ppu_error_code cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer
 {
 	cellSync.trace("cellSyncRwmTryRead(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
-	if (!rwm || !buffer)
+	if (UNLIKELY(!rwm || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!rwm.aligned())
+	if (UNLIKELY(!rwm.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -334,12 +336,12 @@ ppu_error_code cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 {
 	cellSync.trace("cellSyncRwmWrite(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
-	if (!rwm || !buffer)
+	if (UNLIKELY(!rwm || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!rwm.aligned())
+	if (UNLIKELY(!rwm.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -365,12 +367,12 @@ ppu_error_code cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buff
 {
 	cellSync.trace("cellSyncRwmTryWrite(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
-	if (!rwm || !buffer)
+	if (UNLIKELY(!rwm || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!rwm.aligned())
+	if (UNLIKELY(!rwm.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -396,22 +398,22 @@ ppu_error_code cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8>
 {
 	cellSync.trace("cellSyncQueueInitialize(queue=*0x%x, buffer=*0x%x, size=0x%x, depth=0x%x)", queue, buffer, size, depth);
 
-	if (!queue)
+	if (UNLIKELY(!queue))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (size && !buffer)
+	if (UNLIKELY(size && !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned() || buffer % 16)
+	if (UNLIKELY(!queue.aligned() || buffer % 16))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	if (!depth || size % 16)
+	if (UNLIKELY(!depth || size % 16))
 	{
 		return CELL_SYNC_ERROR_INVAL;
 	}
@@ -431,12 +433,12 @@ ppu_error_code cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> bu
 {
 	cellSync.trace("cellSyncQueuePush(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -462,12 +464,12 @@ ppu_error_code cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::cptr<void>
 {
 	cellSync.trace("cellSyncQueueTryPush(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -496,12 +498,12 @@ ppu_error_code cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buff
 {
 	cellSync.trace("cellSyncQueuePop(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -527,12 +529,12 @@ ppu_error_code cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> b
 {
 	cellSync.trace("cellSyncQueueTryPop(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -561,12 +563,12 @@ ppu_error_code cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buf
 {
 	cellSync.trace("cellSyncQueuePeek(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -592,12 +594,12 @@ ppu_error_code cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> 
 {
 	cellSync.trace("cellSyncQueueTryPeek(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -626,12 +628,12 @@ ppu_error_code cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 {
 	cellSync.trace("cellSyncQueueSize(queue=*0x%x)", queue);
 
-	if (!queue)
+	if (UNLIKELY(!queue))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -645,12 +647,12 @@ ppu_error_code cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 {
 	cellSync.trace("cellSyncQueueClear(queue=*0x%x)", queue);
 
-	if (!queue)
+	if (UNLIKELY(!queue))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -713,30 +715,30 @@ ppu_error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cpt
 {
 	cellSync.warning("cellSyncLFQueueInitialize(queue=*0x%x, buffer=*0x%x, size=0x%x, depth=0x%x, direction=%d, eaSignal=*0x%x)", queue, buffer, size, depth, direction, eaSignal);
 
-	if (!queue)
+	if (UNLIKELY(!queue))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
 	if (size)
 	{
-		if (!buffer)
+		if (UNLIKELY(!buffer))
 		{
 			return CELL_SYNC_ERROR_NULL_POINTER;
 		}
 
-		if (size > 0x4000 || size % 16)
+		if (UNLIKELY(size > 0x4000 || size % 16))
 		{
 			return CELL_SYNC_ERROR_INVAL;
 		}
 	}
 
-	if (!depth || depth > 0x7fff || direction > 3)
+	if (UNLIKELY(!depth || depth > 0x7fff || direction > 3))
 	{
 		return CELL_SYNC_ERROR_INVAL;
 	}
 
-	if (!queue.aligned() || buffer % 16)
+	if (UNLIKELY(!queue.aligned() || buffer % 16))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -764,7 +766,7 @@ ppu_error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cpt
 
 		if (old)
 		{
-			if (sdk_ver > 0x17ffff && old != 2)
+			if (UNLIKELY(sdk_ver > 0x17ffff && old != 2))
 			{
 				return CELL_SYNC_ERROR_STAT;
 			}
@@ -777,7 +779,7 @@ ppu_error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cpt
 			{
 				for (const auto& data : vm::_ref<u64[16]>(queue.addr()))
 				{
-					if (data)
+					if (UNLIKELY(data))
 					{
 						return CELL_SYNC_ERROR_STAT;
 					}
@@ -793,14 +795,14 @@ ppu_error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cpt
 
 	if (old_value == 2)
 	{
-		if (queue->m_size != size || queue->m_depth != depth || queue->m_buffer != buffer)
+		if (UNLIKELY(queue->m_size != size || queue->m_depth != depth || queue->m_buffer != buffer))
 		{
 			return CELL_SYNC_ERROR_INVAL;
 		}
 
 		if (sdk_ver > 0x17ffff)
 		{
-			if (queue->m_eaSignal != eaSignal || queue->m_direction != direction)
+			if (UNLIKELY(queue->m_eaSignal != eaSignal || queue->m_direction != direction))
 			{
 				return CELL_SYNC_ERROR_INVAL;
 			}
@@ -822,7 +824,7 @@ ppu_error_code _cellSyncLFQueueGetPushPointer(PPUThread& ppu, vm::ptr<CellSyncLF
 {
 	cellSync.warning("_cellSyncLFQueueGetPushPointer(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
-	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
+	if (UNLIKELY(queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU))
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -906,7 +908,7 @@ ppu_error_code _cellSyncLFQueueGetPushPointer(PPUThread& ppu, vm::ptr<CellSyncLF
 			}
 		}
 
-		ASSERT(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
+		VERIFY(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
 		var1 = 1;
 	}
 }
@@ -923,7 +925,7 @@ ppu_error_code _cellSyncLFQueueCompletePushPointer(PPUThread& ppu, vm::ptr<CellS
 {
 	cellSync.warning("_cellSyncLFQueueCompletePushPointer(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
 
-	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
+	if (UNLIKELY(queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU))
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -997,7 +999,7 @@ ppu_error_code _cellSyncLFQueueCompletePushPointer(PPUThread& ppu, vm::ptr<CellS
 
 			if (var9 > 1 && (u32)var8 > 1)
 			{
-				ASSERT(16 - var2 <= 1);
+				VERIFY(16 - var2 <= 1);
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1029,11 +1031,11 @@ ppu_error_code _cellSyncLFQueueCompletePushPointer(PPUThread& ppu, vm::ptr<CellS
 
 		if (queue->push2.compare_and_swap_test(old, push2))
 		{
-			ASSERT(var2 + var4 < 16);
+			VERIFY(var2 + var4 < 16);
 			if (var6 != -1)
 			{
-				ASSERT(queue->push3.compare_and_swap_test(old2, push3));
-				ASSERT(fpSendSignal);
+				VERIFY(queue->push3.compare_and_swap_test(old2, push3));
+				VERIFY(fpSendSignal);
 				return NOT_AN_ERROR(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
 			}
 			else
@@ -1064,12 +1066,12 @@ ppu_error_code _cellSyncLFQueuePushBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue>
 	// cellSyncLFQueuePush has 1 in isBlocking param, cellSyncLFQueueTryPush has 0
 	cellSync.warning("_cellSyncLFQueuePushBody(queue=*0x%x, buffer=*0x%x, isBlocking=%d)", queue, buffer, isBlocking);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned() || buffer % 16)
+	if (UNLIKELY(!queue.aligned() || buffer % 16))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1098,7 +1100,7 @@ ppu_error_code _cellSyncLFQueuePushBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue>
 			break;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		std::this_thread::sleep_for(1ms); // hack
 	}
 
 	const s32 depth = queue->m_depth;
@@ -1121,7 +1123,7 @@ ppu_error_code _cellSyncLFQueueGetPopPointer(PPUThread& ppu, vm::ptr<CellSyncLFQ
 {
 	cellSync.warning("_cellSyncLFQueueGetPopPointer(queue=*0x%x, pointer=*0x%x, isBlocking=%d, arg4=%d, useEventQueue=%d)", queue, pointer, isBlocking, arg4, useEventQueue);
 
-	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
+	if (UNLIKELY(queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU))
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1205,7 +1207,7 @@ ppu_error_code _cellSyncLFQueueGetPopPointer(PPUThread& ppu, vm::ptr<CellSyncLFQ
 			}
 		}
 
-		ASSERT(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
+		VERIFY(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
 		var1 = 1;
 	}
 }
@@ -1223,7 +1225,7 @@ ppu_error_code _cellSyncLFQueueCompletePopPointer(PPUThread& ppu, vm::ptr<CellSy
 	// arguments copied from _cellSyncLFQueueCompletePushPointer + unknown argument (noQueueFull taken from LFQueue2CompletePopPointer)
 	cellSync.warning("_cellSyncLFQueueCompletePopPointer(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
 
-	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
+	if (UNLIKELY(queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU))
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1301,7 +1303,7 @@ ppu_error_code _cellSyncLFQueueCompletePopPointer(PPUThread& ppu, vm::ptr<CellSy
 
 			if (var9 > 1 && (u32)var8 > 1)
 			{
-				ASSERT(16 - var2 <= 1);
+				VERIFY(16 - var2 <= 1);
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1331,8 +1333,8 @@ ppu_error_code _cellSyncLFQueueCompletePopPointer(PPUThread& ppu, vm::ptr<CellSy
 		{
 			if (var6 != -1)
 			{
-				ASSERT(queue->pop3.compare_and_swap_test(old2, pop3));
-				ASSERT(fpSendSignal);
+				VERIFY(queue->pop3.compare_and_swap_test(old2, pop3));
+				VERIFY(fpSendSignal);
 				return NOT_AN_ERROR(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
 			}
 			else
@@ -1363,12 +1365,12 @@ ppu_error_code _cellSyncLFQueuePopBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue> 
 	// cellSyncLFQueuePop has 1 in isBlocking param, cellSyncLFQueueTryPop has 0
 	cellSync.warning("_cellSyncLFQueuePopBody(queue=*0x%x, buffer=*0x%x, isBlocking=%d)", queue, buffer, isBlocking);
 
-	if (!queue || !buffer)
+	if (UNLIKELY(!queue || !buffer))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned() || buffer % 16)
+	if (UNLIKELY(!queue.aligned() || buffer % 16))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1397,7 +1399,7 @@ ppu_error_code _cellSyncLFQueuePopBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue> 
 			break;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		std::this_thread::sleep_for(1ms); // hack
 	}
 
 	const s32 depth = queue->m_depth;
@@ -1420,12 +1422,12 @@ ppu_error_code cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 {
 	cellSync.warning("cellSyncLFQueueClear(queue=*0x%x)", queue);
 
-	if (!queue)
+	if (UNLIKELY(!queue))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1471,12 +1473,12 @@ ppu_error_code cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> 
 {
 	cellSync.warning("cellSyncLFQueueSize(queue=*0x%x, size=*0x%x)", queue, size);
 
-	if (!queue || !size)
+	if (UNLIKELY(!queue || !size))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1508,12 +1510,12 @@ ppu_error_code cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32>
 {
 	cellSync.trace("cellSyncLFQueueDepth(queue=*0x%x, depth=*0x%x)", queue, depth);
 
-	if (!queue || !depth)
+	if (UNLIKELY(!queue || !depth))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1527,12 +1529,12 @@ ppu_error_code _cellSyncLFQueueGetSignalAddress(vm::cptr<CellSyncLFQueue> queue,
 {
 	cellSync.trace("_cellSyncLFQueueGetSignalAddress(queue=*0x%x, ppSignal=**0x%x)", queue, ppSignal);
 
-	if (!queue || !ppSignal)
+	if (UNLIKELY(!queue || !ppSignal))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1546,12 +1548,12 @@ ppu_error_code cellSyncLFQueueGetDirection(vm::cptr<CellSyncLFQueue> queue, vm::
 {
 	cellSync.trace("cellSyncLFQueueGetDirection(queue=*0x%x, direction=*0x%x)", queue, direction);
 
-	if (!queue || !direction)
+	if (UNLIKELY(!queue || !direction))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1565,12 +1567,12 @@ ppu_error_code cellSyncLFQueueGetEntrySize(vm::cptr<CellSyncLFQueue> queue, vm::
 {
 	cellSync.trace("cellSyncLFQueueGetEntrySize(queue=*0x%x, entry_size=*0x%x)", queue, entry_size);
 
-	if (!queue || !entry_size)
+	if (UNLIKELY(!queue || !entry_size))
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (!queue.aligned())
+	if (UNLIKELY(!queue.aligned()))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}

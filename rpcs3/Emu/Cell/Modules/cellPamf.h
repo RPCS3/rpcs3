@@ -400,6 +400,8 @@ CHECK_SIZE(CellPamfReader, 128);
 
 s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute);
 
+#include <mutex>
+#include <condition_variable>
 
 extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;
 extern const std::function<bool()> SQUEUE_NEVER_EXIT;
@@ -462,8 +464,8 @@ public:
 
 		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
 
 			if (sync.push_lock)
 			{
@@ -492,9 +494,9 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
-			Expects(sync.push_lock);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
+			EXPECTS(sync.push_lock);
 			sync.push_lock = 0;
 			sync.count++;
 		});
@@ -525,8 +527,8 @@ public:
 
 		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
 
 			if (!sync.count)
 			{
@@ -555,9 +557,9 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
-			Expects(sync.pop_lock);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
+			EXPECTS(sync.pop_lock);
 			sync.pop_lock = 0;
 			sync.position++;
 			sync.count--;
@@ -589,13 +591,13 @@ public:
 
 	bool peek(T& data, u32 start_pos, const std::function<bool()>& test_exit)
 	{
-		Expects(start_pos < sq_size);
+		EXPECTS(start_pos < sq_size);
 		u32 pos = 0;
 
 		while (u32 res = m_sync.atomic_op([&pos, start_pos](squeue_sync_var_t& sync) -> u32
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
 
 			if (sync.count <= start_pos)
 			{
@@ -624,9 +626,9 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
-			Expects(sync.pop_lock);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
+			EXPECTS(sync.pop_lock);
 			sync.pop_lock = 0;
 		});
 
@@ -665,7 +667,7 @@ public:
 	public:
 		T& operator [] (u32 index)
 		{
-			Expects(index < m_count);
+			EXPECTS(index < m_count);
 			index += m_pos;
 			index = index < sq_size ? index : index - sq_size;
 			return m_data[index];
@@ -678,8 +680,8 @@ public:
 
 		while (m_sync.atomic_op([&pos, &count](squeue_sync_var_t& sync) -> u32
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
 
 			if (sync.pop_lock || sync.push_lock)
 			{
@@ -701,9 +703,9 @@ public:
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
-			Expects(sync.pop_lock && sync.push_lock);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
+			EXPECTS(sync.pop_lock && sync.push_lock);
 			sync.pop_lock = 0;
 			sync.push_lock = 0;
 		});
@@ -716,8 +718,8 @@ public:
 	{
 		while (m_sync.atomic_op([](squeue_sync_var_t& sync) -> u32
 		{
-			Expects(sync.count <= sq_size);
-			Expects(sync.position < sq_size);
+			EXPECTS(sync.count <= sq_size);
+			EXPECTS(sync.position < sq_size);
 
 			if (sync.pop_lock || sync.push_lock)
 			{

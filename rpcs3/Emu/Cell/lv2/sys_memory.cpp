@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -7,7 +6,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_memory.h"
 
-LOG_CHANNEL(sys_memory);
+logs::channel sys_memory("sys_memory", logs::level::notice);
 
 s32 sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
@@ -150,28 +149,27 @@ s32 sys_memory_free(u32 addr)
 	const auto area = vm::get(vm::user_space);
 
 	// Check all memory containers
-	for (auto& ct : idm::get_all<lv2_memory_container_t>())
+	const auto ct = idm::select<lv2_memory_container_t>([&](u32, lv2_memory_container_t& ct)
 	{
-		auto found = ct->allocs.find(addr);
+		return ct.allocs.count(addr) != 0;
+	});
 
-		if (found != ct->allocs.end())
+	if (ct)
+	{
+		const u32 size = ct->allocs.at(addr);
+
+		if (!area->dealloc(addr))
 		{
-			const u32 size = found->second;
-
-			if (!area->dealloc(addr))
-			{
-				throw EXCEPTION("Memory not deallocated (cid=0x%x, addr=0x%x, size=0x%x)", ct->id, addr, size);
-			}
-
-			// Return memory
-			ct->used -= size;
-			ct->allocs.erase(found);
-
-			// Fix "physical" memory
-			area->used += size;
-
-			return CELL_OK;
+			throw EXCEPTION("Memory not deallocated (cid=0x%x, addr=0x%x, size=0x%x)", ct->id, addr, size);
 		}
+
+		ct->allocs.erase(addr);
+
+		// Return "memory"
+		ct->used -= size;
+		area->used += size;
+
+		return CELL_OK;
 	}
 
 	if (!area->dealloc(addr))
@@ -205,10 +203,10 @@ s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	u32 reserved = 0;
 
 	// Check all memory containers
-	for (auto& ct : idm::get_all<lv2_memory_container_t>())
+	idm::select<lv2_memory_container_t>([&](u32, lv2_memory_container_t& ct)
 	{
-		reserved += ct->size;
-	}
+		reserved += ct.size;
+	});
 
 	const auto area = vm::get(vm::user_space);
 	
@@ -236,10 +234,10 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	u32 reserved = 0;
 
 	// Check all memory containers
-	for (auto& ct : idm::get_all<lv2_memory_container_t>())
+	idm::select<lv2_memory_container_t>([&](u32, lv2_memory_container_t& ct)
 	{
-		reserved += ct->size;
-	}
+		reserved += ct.size;
+	});
 
 	const auto area = vm::get(vm::user_space);
 

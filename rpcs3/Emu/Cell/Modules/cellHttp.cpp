@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellHttp);
+logs::channel cellHttp("cellHttp", logs::level::notice);
 
 s32 cellHttpInit()
 {

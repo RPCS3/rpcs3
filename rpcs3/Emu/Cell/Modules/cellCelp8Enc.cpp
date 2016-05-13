@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellCelp8Enc);
+logs::channel cellCelp8Enc("cellCelp8Enc", logs::level::notice);
 
 // Return Codes
 enum

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -9,7 +8,9 @@
 #include "sys_mutex.h"
 #include "sys_cond.h"
 
-LOG_CHANNEL(sys_cond);
+#include <algorithm>
+
+logs::channel sys_cond("sys_cond", logs::level::notice);
 
 extern u64 get_system_time();
 
@@ -24,8 +25,8 @@ void lv2_cond_t::notify(lv2_lock_t, cpu_thread* thread)
 	{
 		mutex->owner = std::static_pointer_cast<cpu_thread>(thread->shared_from_this());
 
-		ASSERT(!thread->state.test_and_set(cpu_state::signal));
-		thread->notify();
+		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		(*thread)->notify();
 	}
 }
 

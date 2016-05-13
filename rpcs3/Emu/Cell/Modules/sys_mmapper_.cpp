@@ -5,7 +5,7 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "sysPrxForUser.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 void sysPrxForUser_sys_mmapper_init()
 {

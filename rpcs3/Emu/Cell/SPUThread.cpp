@@ -18,9 +18,13 @@
 
 #include "Emu/Memory/wait_engine.h"
 
+#include <cmath>
 #include <cfenv>
+#include <thread>
 
 extern u64 get_timebased_time();
+
+extern std::mutex& get_current_thread_mutex();
 
 enum class spu_decoder_type
 {
@@ -54,12 +58,71 @@ void spu_int_ctrl_t::set(u64 ints)
 		if (tag && tag->handler)
 		{
 			tag->handler->signal++;
-			tag->handler->thread->notify();
+			(*tag->handler->thread)->notify();
 		}
 	}
 }
 
 const spu_imm_table_t g_spu_imm;
+
+spu_imm_table_t::scale_table_t::scale_table_t()
+{
+	for (s32 i = -155; i < 174; i++)
+	{
+		m_data[i + 155] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
+	}
+}
+
+spu_imm_table_t::spu_imm_table_t()
+{
+	for (u32 i = 0; i < sizeof(fsm) / sizeof(fsm[0]); i++)
+	{
+		for (u32 j = 0; j < 4; j++)
+		{
+			fsm[i]._u32[j] = (i & (1 << j)) ? 0xffffffff : 0;
+		}
+	}
+
+	for (u32 i = 0; i < sizeof(fsmh) / sizeof(fsmh[0]); i++)
+	{
+		for (u32 j = 0; j < 8; j++)
+		{
+			fsmh[i]._u16[j] = (i & (1 << j)) ? 0xffff : 0;
+		}
+	}
+
+	for (u32 i = 0; i < sizeof(fsmb) / sizeof(fsmb[0]); i++)
+	{
+		for (u32 j = 0; j < 16; j++)
+		{
+			fsmb[i]._u8[j] = (i & (1 << j)) ? 0xff : 0;
+		}
+	}
+
+	for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
+	{
+		for (u32 j = 0; j < 16; j++)
+		{
+			sldq_pshufb[i]._u8[j] = static_cast<u8>(j - i);
+		}
+	}
+
+	for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
+	{
+		for (u32 j = 0; j < 16; j++)
+		{
+			srdq_pshufb[i]._u8[j] = (j + i > 15) ? 0xff : static_cast<u8>(j + i);
+		}
+	}
+
+	for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
+	{
+		for (u32 j = 0; j < 16; j++)
+		{
+			rldq_pshufb[i]._u8[j] = static_cast<u8>((j - i) & 0xf);
+		}
+	}
+}
 
 std::string SPUThread::get_name() const
 {
@@ -188,7 +251,7 @@ SPUThread::SPUThread(const std::string& name, u32 index)
 	, index(index)
 	, offset(vm::alloc(0x40000, vm::main))
 {
-	Ensures(offset);
+	ENSURES(offset);
 }
 
 void SPUThread::push_snr(u32 number, u32 value)
@@ -477,18 +540,13 @@ void SPUThread::set_events(u32 mask)
 		throw EXCEPTION("Unimplemented events (0x%x)", unimpl);
 	}
 
-	// set new events, get old event mask
+	// Set new events, get old event mask
 	const u32 old_stat = ch_event_stat.fetch_or(mask);
 
-	// notify if some events were set
-	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING)
+	// Notify if some events were set
+	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING && ch_event_stat & SPU_EVENT_WAITING)
 	{
-		std::lock_guard<std::mutex> lock(get_current_thread_mutex());
-
-		if (ch_event_stat & SPU_EVENT_WAITING)
-		{
-			notify();
-		}
+		(*this)->lock_notify();
 	}
 }
 
@@ -540,30 +598,14 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	auto read_channel = [&](spu_channel_t& channel)
 	{
-		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
-
-		while (true)
+		if (!channel.try_pop(out))
 		{
-			if (channel.try_pop(out))
-			{
-				return true;
-			}
+			cpu_thread_lock{*this}, thread_ctrl::wait(WRAP_EXPR(state & cpu_state::stop || channel.try_pop(out)));
 
-			CHECK_EMU_STATUS;
-
-			if (state & cpu_state::stop)
-			{
-				return false;
-			}
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
-			}
-
-			get_current_thread_cv().wait(lock);
+			return !state.test(cpu_state::stop);
 		}
+
+		return true;
 	};
 
 	switch (ch)
@@ -1103,7 +1145,7 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 	case 0x001:
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		std::this_thread::sleep_for(1ms); // hack
 		return true;
 	}
 
@@ -1195,7 +1237,7 @@ bool SPUThread::stop_and_signal(u32 code)
 				return false;
 			}
 
-			group->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+			group->cv.wait_for(lv2_lock, 1ms);
 		}
 
 		// change group status
@@ -1261,7 +1303,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state -= cpu_state::suspend;
-				thread->lock_notify();
+				(*thread)->lock_notify();
 			}
 		}
 
@@ -1300,7 +1342,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_state::stop;
-				thread->lock_notify();
+				(*thread)->lock_notify();
 			}
 		}
 
@@ -1404,7 +1446,7 @@ void SPUThread::fast_call(u32 ls_addr)
 	custom_task = std::move(old_task);
 }
 
-void SPUThread::RegisterHleFunction(u32 addr, std::function<bool(SPUThread&SPU)> function)
+void SPUThread::RegisterHleFunction(u32 addr, std::function<bool(SPUThread&)> function)
 {
 	m_addr_to_hle_function_map[addr] = function;
 	_ref<u32>(addr) = 0x00000003; // STOP 3

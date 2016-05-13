@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -7,7 +8,7 @@
 
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(cellSysutil);
+logs::channel cellSysutil("cellSysutil", logs::level::notice);
 
 // Temporarily
 using sys_callbacks_t = std::array<std::pair<vm::ptr<CellSysutilCallback>, vm::ptr<void>>, 4>;
@@ -53,43 +54,47 @@ cfg::map_entry<s32> g_cfg_sys_language(cfg::root.sys, "Language",
 	{ "English (UK)", CELL_SYSUTIL_LANG_ENGLISH_GB },
 });
 
-static const char* get_systemparam_id_name(s32 id)
-{
-	static thread_local char tls_id_name[16]; // for test
-
-	switch (id)
-	{
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG: return "ID_LANG";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN: return "ID_ENTER_BUTTON_ASSIGN";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT: return "ID_DATE_FORMAT";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT: return "ID_TIME_FORMAT";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE: return "ID_TIMEZONE";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME: return "ID_SUMMERTIME";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL: return "ID_GAME_PARENTAL_LEVEL";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT: return "ID_GAME_PARENTAL_LEVEL0_RESTRICT";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT: return "ID_CURRENT_USER_HAS_NP_ACCOUNT";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ: return "ID_CAMERA_PLFREQ";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE: return "ID_PAD_RUMBLE";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE: return "ID_KEYBOARD_TYPE";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD: return "ID_JAPANESE_KEYBOARD_ENTRY_METHOD";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD: return "ID_CHINESE_KEYBOARD_ENTRY_METHOD";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF: return "ID_PAD_AUTOOFF";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME: return "ID_NICKNAME";
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME: return "ID_CURRENT_USERNAME";
-	}
-
-	std::snprintf(tls_id_name, sizeof(tls_id_name), "0x%04X", id);
-	return tls_id_name;
-}
-
 enum class systemparam_id_name : s32 {};
 
 template<>
 struct unveil<systemparam_id_name, void>
 {
-	static inline const char* get(systemparam_id_name arg)
+	struct temp
 	{
-		return get_systemparam_id_name((s32)arg);
+		s32 value;
+		char buf[12];
+
+		temp(systemparam_id_name value)
+			: value(s32(value))
+		{
+		}
+	};
+
+	static inline const char* get(temp&& in)
+	{
+		switch (in.value)
+		{
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG: return "ID_LANG";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN: return "ID_ENTER_BUTTON_ASSIGN";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT: return "ID_DATE_FORMAT";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT: return "ID_TIME_FORMAT";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE: return "ID_TIMEZONE";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME: return "ID_SUMMERTIME";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL: return "ID_GAME_PARENTAL_LEVEL";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT: return "ID_GAME_PARENTAL_LEVEL0_RESTRICT";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT: return "ID_CURRENT_USER_HAS_NP_ACCOUNT";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ: return "ID_CAMERA_PLFREQ";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE: return "ID_PAD_RUMBLE";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE: return "ID_KEYBOARD_TYPE";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD: return "ID_JAPANESE_KEYBOARD_ENTRY_METHOD";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD: return "ID_CHINESE_KEYBOARD_ENTRY_METHOD";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF: return "ID_PAD_AUTOOFF";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME: return "ID_NICKNAME";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME: return "ID_CURRENT_USERNAME";
+		}
+
+		std::snprintf(in.buf, sizeof(in.buf), "!0x%04X", in.value);
+		return in.buf;
 	}
 };
 
@@ -170,7 +175,7 @@ s32 cellSysutilGetSystemParamInt(s32 id, vm::ptr<s32> value)
 
 s32 cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 {
-	cellSysutil.trace("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, get_systemparam_id_name(id), buf, bufsize);
+	cellSysutil.trace("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, systemparam_id_name(id), buf, bufsize);
 
 	memset(buf.get_ptr(), 0, bufsize);
 
@@ -255,7 +260,7 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
 	const std::string& cache_id = param->cacheId;
-	ASSERT(cache_id.size() < sizeof(param->cacheId));
+	VERIFY(cache_id.size() < sizeof(param->cacheId));
 	
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
 	strcpy_trunc(param->getCachePath, cache_path);

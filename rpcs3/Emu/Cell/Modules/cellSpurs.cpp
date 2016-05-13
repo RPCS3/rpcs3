@@ -15,7 +15,7 @@
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
-LOG_CHANNEL(cellSpurs);
+logs::channel cellSpurs("cellSpurs", logs::level::notice);
 
 // TODO
 struct cell_error_t
@@ -29,6 +29,28 @@ struct cell_error_t
 };
 
 #define CHECK_SUCCESS(expr) if (cell_error_t error{expr}) throw fmt::exception("Failure: %s -> 0x%x" HERE, #expr, error.value)
+
+static u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, const std::string& name, std::function<void(PPUThread&)> task)
+{
+	const auto ppu = idm::make_ptr<PPUThread>(name);
+
+	ppu->prio = prio;
+	ppu->stack_size = stacksize;
+	ppu->custom_task = std::move(task);
+	ppu->cpu_init();
+
+	if (entry)
+	{
+		ppu->pc = vm::read32(entry);
+		ppu->GPR[2] = vm::read32(entry + 4); // rtoc
+	}
+
+	ppu->GPR[3] = arg;
+	ppu->state -= cpu_state::stop;
+	(*ppu)->lock_notify();
+
+	return ppu->id;
+}
 
 //----------------------------------------------------------------------------
 // Function prototypes
@@ -588,7 +610,7 @@ void _spurs::handler_entry(PPUThread& ppu, vm::ptr<CellSpurs> spurs)
 
 		if ((spurs->flags1 & SF1_EXIT_IF_NO_WORK) == 0)
 		{
-			ASSERT(spurs->handlerExiting == 1);
+			VERIFY(spurs->handlerExiting == 1);
 
 			return sys_ppu_thread_exit(ppu, 0);
 		}
@@ -651,16 +673,16 @@ s32 _spurs::wakeup_shutdown_completion_waiter(PPUThread& ppu, vm::ptr<CellSpurs>
 	{
 		wklF->hook(ppu, spurs, wid, wklF->hookArg);
 
-		ASSERT(wklEvent->load() & 0x01);
-		ASSERT(wklEvent->load() & 0x02);
-		ASSERT((wklEvent->load() & 0x20) == 0);
+		VERIFY(wklEvent->load() & 0x01);
+		VERIFY(wklEvent->load() & 0x02);
+		VERIFY((wklEvent->load() & 0x20) == 0);
 		wklEvent->fetch_or(0x20);
 	}
 
 	s32 rc = CELL_OK;
 	if (!wklF->hook || wklEvent->load() & 0x10)
 	{
-		ASSERT(wklF->x28 == 2);
+		VERIFY(wklF->x28 == 2);
 		rc = sys_semaphore_post((u32)wklF->sem, 1);
 	}
 
@@ -1027,7 +1049,7 @@ s32 _spurs::initialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, u
 
 	// Import SPURS kernel
 	spurs->spuImg.type        = SYS_SPU_IMAGE_TYPE_USER;
-	spurs->spuImg.segs        = { vm::alloc(0x40000, vm::main), vm::addr };
+	spurs->spuImg.segs        = vm::cast(vm::alloc(0x40000, vm::main));
 	spurs->spuImg.entry_point = isSecond ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR;
 	spurs->spuImg.nsegs       = 1;
 
@@ -2117,8 +2139,8 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	u32 index = wnum & 0xf;
 	if (wnum <= 15)
 	{
-		ASSERT((spurs->wklCurrentContention[wnum] & 0xf) == 0);
-		ASSERT((spurs->wklPendingContention[wnum] & 0xf) == 0);
+		VERIFY((spurs->wklCurrentContention[wnum] & 0xf) == 0);
+		VERIFY((spurs->wklPendingContention[wnum] & 0xf) == 0);
 		spurs->wklState1[wnum] = 1;
 		spurs->wklStatus1[wnum] = 0;
 		spurs->wklEvent1[wnum] = 0;
@@ -2153,8 +2175,8 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	}
 	else
 	{
-		ASSERT((spurs->wklCurrentContention[index] & 0xf0) == 0);
-		ASSERT((spurs->wklPendingContention[index] & 0xf0) == 0);
+		VERIFY((spurs->wklCurrentContention[index] & 0xf0) == 0);
+		VERIFY((spurs->wklPendingContention[index] & 0xf0) == 0);
 		spurs->wklState2[index] = 1;
 		spurs->wklStatus2[index] = 0;
 		spurs->wklEvent2[index] = 0;
@@ -2233,7 +2255,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 		v = mask | (0x80000000u >> wnum);
 	});
 
-	ASSERT(res_wkl <= 31);
+	VERIFY(res_wkl <= 31);
 	spurs->wklState(wnum).exchange(2);
 	spurs->sysSrvMsgUpdateWorkload.exchange(0xff);
 	spurs->sysSrvMessage.exchange(0xff);

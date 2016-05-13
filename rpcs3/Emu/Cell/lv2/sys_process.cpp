@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -22,7 +21,9 @@
 #include "sys_fs.h"
 #include "sys_process.h"
 
-LOG_CHANNEL(sys_process);
+#include <thread>
+
+logs::channel sys_process("sys_process", logs::level::notice);
 
 s32 process_getpid()
 {
@@ -61,7 +62,7 @@ s32 sys_process_exit(s32 status)
 	{
 		CHECK_EMU_STATUS;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(1ms);
 	}
 
 	return CELL_OK;
@@ -88,7 +89,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_LWMUTEX_OBJECT: *nump = idm::get_count<lv2_lwmutex_t>(); break;
 	case SYS_TIMER_OBJECT: *nump = idm::get_count<lv2_timer_t>(); break;
 	case SYS_SEMAPHORE_OBJECT: *nump = idm::get_count<lv2_sema_t>(); break;
-	case SYS_FS_FD_OBJECT: throw EXCEPTION("SYS_FS_FD_OBJECT");
+	case SYS_FS_FD_OBJECT: *nump = idm::get_count<lv2_fs_object_t>(); break;
 	case SYS_LWCOND_OBJECT: *nump = idm::get_count<lv2_lwcond_t>(); break;
 	case SYS_EVENT_FLAG_OBJECT: *nump = idm::get_count<lv2_event_flag_t>(); break;
 
@@ -101,6 +102,17 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	return CELL_OK;
 }
 
+#include <set>
+
+template<typename T>
+void idm_get_set(std::set<u32>& out)
+{
+	idm::select<T>([&](u32 id, T&)
+	{
+		out.emplace(id);
+	});
+}
+
 s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
 {
 	sys_process.error("sys_process_get_id(object=0x%x, buffer=*0x%x, size=%d, set_size=*0x%x)", object, buffer, size, set_size);
@@ -109,24 +121,24 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 
 	switch (object)
 	{
-	case SYS_MEM_OBJECT: objects = idm::get_set<lv2_memory_t>(); break;
-	case SYS_MUTEX_OBJECT: objects = idm::get_set<lv2_mutex_t>(); break;
-	case SYS_COND_OBJECT: objects = idm::get_set<lv2_cond_t>(); break;
-	case SYS_RWLOCK_OBJECT: objects = idm::get_set<lv2_rwlock_t>(); break;
-	case SYS_INTR_TAG_OBJECT: objects = idm::get_set<lv2_int_tag_t>(); break;
-	case SYS_INTR_SERVICE_HANDLE_OBJECT: objects = idm::get_set<lv2_int_serv_t>(); break;
-	case SYS_EVENT_QUEUE_OBJECT: objects = idm::get_set<lv2_event_queue_t>(); break;
-	case SYS_EVENT_PORT_OBJECT: objects = idm::get_set<lv2_event_port_t>(); break;
+	case SYS_MEM_OBJECT: idm_get_set<lv2_memory_t>(objects); break;
+	case SYS_MUTEX_OBJECT: idm_get_set<lv2_mutex_t>(objects); break;
+	case SYS_COND_OBJECT: idm_get_set<lv2_cond_t>(objects); break;
+	case SYS_RWLOCK_OBJECT: idm_get_set<lv2_rwlock_t>(objects); break;
+	case SYS_INTR_TAG_OBJECT: idm_get_set<lv2_int_tag_t>(objects); break;
+	case SYS_INTR_SERVICE_HANDLE_OBJECT: idm_get_set<lv2_int_serv_t>(objects); break;
+	case SYS_EVENT_QUEUE_OBJECT: idm_get_set<lv2_event_queue_t>(objects); break;
+	case SYS_EVENT_PORT_OBJECT: idm_get_set<lv2_event_port_t>(objects); break;
 	case SYS_TRACE_OBJECT: throw EXCEPTION("SYS_TRACE_OBJECT");
 	case SYS_SPUIMAGE_OBJECT: throw EXCEPTION("SYS_SPUIMAGE_OBJECT");
-	case SYS_PRX_OBJECT: objects = idm::get_set<lv2_prx_t>(); break;
+	case SYS_PRX_OBJECT: idm_get_set<lv2_prx_t>(objects); break;
 	case SYS_SPUPORT_OBJECT: throw EXCEPTION("SYS_SPUPORT_OBJECT");
-	case SYS_LWMUTEX_OBJECT: objects = idm::get_set<lv2_lwmutex_t>(); break;
-	case SYS_TIMER_OBJECT: objects = idm::get_set<lv2_timer_t>(); break;
-	case SYS_SEMAPHORE_OBJECT: objects = idm::get_set<lv2_sema_t>(); break;
-	case SYS_FS_FD_OBJECT: throw EXCEPTION("SYS_FS_FD_OBJECT");
-	case SYS_LWCOND_OBJECT: objects = idm::get_set<lv2_lwcond_t>(); break;
-	case SYS_EVENT_FLAG_OBJECT: objects = idm::get_set<lv2_event_flag_t>(); break;
+	case SYS_LWMUTEX_OBJECT: idm_get_set<lv2_lwmutex_t>(objects); break;
+	case SYS_TIMER_OBJECT: idm_get_set<lv2_timer_t>(objects); break;
+	case SYS_SEMAPHORE_OBJECT: idm_get_set<lv2_sema_t>(objects); break;
+	case SYS_FS_FD_OBJECT: idm_get_set<lv2_fs_object_t>(objects); break;
+	case SYS_LWCOND_OBJECT: idm_get_set<lv2_lwcond_t>(objects); break;
+	case SYS_EVENT_FLAG_OBJECT: idm_get_set<lv2_event_flag_t>(objects); break;
 
 	default:
 	{

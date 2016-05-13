@@ -5,7 +5,7 @@
 
 #include "sys_lv2dbg.h"
 
-LOG_CHANNEL(sys_lv2dbg);
+logs::channel sys_lv2dbg("sys_lv2dbg", logs::level::notice);
 
 s32 sys_dbg_read_ppu_thread_context(u64 id, vm::ptr<sys_dbg_ppu_thread_context_t> ppu_context)
 {

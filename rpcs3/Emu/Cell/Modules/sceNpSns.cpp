@@ -3,7 +3,7 @@
 
 #include "sceNpSns.h"
 
-LOG_CHANNEL(sceNpSns);
+logs::channel sceNpSns("sceNpSns", logs::level::notice);
 
 s32 sceNpSnsFbInit(vm::ptr<const SceNpSnsFbInitParams> params)
 {

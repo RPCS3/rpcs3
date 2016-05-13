@@ -5,7 +5,7 @@
 #include "sceNp.h"
 #include "sceNpClans.h"
 
-LOG_CHANNEL(sceNpClans);
+logs::channel sceNpClans("sceNpClans", logs::level::notice);
 
 s32 sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {

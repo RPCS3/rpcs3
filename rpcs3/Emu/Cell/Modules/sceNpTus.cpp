@@ -4,7 +4,7 @@
 #include "sceNp.h"
 #include "sceNpTus.h"
 
-LOG_CHANNEL(sceNpTus);
+logs::channel sceNpTus("sceNpTus", logs::level::notice);
 
 s32 sceNpTusInit()
 {

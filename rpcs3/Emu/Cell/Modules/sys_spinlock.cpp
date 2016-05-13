@@ -6,7 +6,7 @@
 
 #include "Emu/Memory/wait_engine.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 {

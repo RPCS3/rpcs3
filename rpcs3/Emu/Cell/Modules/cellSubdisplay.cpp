@@ -3,7 +3,7 @@
 
 #include "cellSubdisplay.h"
 
-LOG_CHANNEL(cellSubdisplay);
+logs::channel cellSubdisplay("cellSubdisplay", logs::level::notice);
 
 s32 cellSubDisplayInit()
 {

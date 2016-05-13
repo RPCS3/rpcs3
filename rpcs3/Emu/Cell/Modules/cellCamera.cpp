@@ -1,11 +1,12 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellCamera.h"
 
-LOG_CHANNEL(cellCamera);
+logs::channel cellCamera("cellCamera", logs::level::notice);
 
 cfg::map_entry<bool> g_cfg_camera(cfg::root.io, "Camera",
 {

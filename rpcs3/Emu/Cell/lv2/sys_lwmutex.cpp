@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,7 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
 
-LOG_CHANNEL(sys_lwmutex);
+logs::channel sys_lwmutex("sys_lwmutex", logs::level::notice);
 
 extern u64 get_system_time();
 
@@ -22,8 +21,8 @@ void lv2_lwmutex_t::unlock(lv2_lock_t)
 	if (sq.size())
 	{
 		auto& thread = sq.front();
-		ASSERT(!thread->state.test_and_set(cpu_state::signal));
-		thread->notify();
+		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		(*thread)->notify();
 
 		sq.pop_front();
 	}

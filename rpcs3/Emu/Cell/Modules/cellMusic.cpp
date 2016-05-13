@@ -5,7 +5,7 @@
 
 #include "cellMusic.h"
 
-LOG_CHANNEL(cellMusic);
+logs::channel cellMusic("cellMusic", logs::level::notice);
 
 struct music2_t
 {

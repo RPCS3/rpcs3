@@ -4,7 +4,7 @@
 
 #include "cellFiber.h"
 
-LOG_CHANNEL(cellFiber);
+logs::channel cellFiber("cellFiber", logs::level::notice);
 
 s32 _cellFiberPpuInitialize()
 {

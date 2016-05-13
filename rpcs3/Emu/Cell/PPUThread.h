@@ -66,9 +66,9 @@ public:
 	u64 LR{}; // Link Register
 	u64 CTR{}; // Counter Register
 	u32 VRSAVE{};
-	u32 PC{};
 
-	s32 prio = 0; // Thread priority
+	u32 pc = 0;
+	u32 prio = -1; // Thread priority
 	u32 stack_addr = 0; // Stack address
 	u32 stack_size = 0; // Stack size
 	bool is_joinable = true;
@@ -191,7 +191,7 @@ struct ppu_gpr_cast_impl<vm::_ptr_base<T, AT>, void>
 
 	static inline vm::_ptr_base<T, AT> from(const u64 reg)
 	{
-		return{ ppu_gpr_cast_impl<AT>::from(reg), vm::addr };
+		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
 	}
 };
 
@@ -205,7 +205,7 @@ struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
 
 	static inline vm::_ref_base<T, AT> from(const u64 reg)
 	{
-		return{ ppu_gpr_cast_impl<AT>::from(reg), vm::addr };
+		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
 	}
 };
 

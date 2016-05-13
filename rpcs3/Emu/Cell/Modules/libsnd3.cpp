@@ -3,7 +3,7 @@
 
 #include "libsnd3.h"
 
-LOG_CHANNEL(libsnd3);
+logs::channel libsnd3("libsnd3", logs::level::notice);
 
 s32 cellSnd3Init(u32 maxVoice, u32 samples, vm::ptr<CellSnd3RequestQueueCtx> queue)
 {

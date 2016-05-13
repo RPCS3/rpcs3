@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellImeJp);
+logs::channel cellImeJp("cellImeJp", logs::level::notice);
 
 // Return Codes
 enum

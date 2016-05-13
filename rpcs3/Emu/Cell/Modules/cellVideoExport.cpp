@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellVideoExport);
+logs::channel cellVideoExport("cellVideoExport", logs::level::notice);
 
 s32 cellVideoExportProgress()
 {

@@ -2,6 +2,8 @@
 
 #include "SPUAnalyser.h"
 
+#include <mutex>
+
 // SPU Recompiler instance base (must be global or PS3 process-local)
 class spu_recompiler_base
 {

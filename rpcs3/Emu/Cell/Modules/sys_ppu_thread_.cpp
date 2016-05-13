@@ -5,7 +5,7 @@
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "sysPrxForUser.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 extern u32 ppu_alloc_tls();
 extern void ppu_free_tls(u32 addr);

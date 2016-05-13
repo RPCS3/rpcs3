@@ -8,7 +8,7 @@
 
 #include "cellFont.h"
 
-LOG_CHANNEL(cellFont);
+logs::channel cellFont("cellFont", logs::level::notice);
 
 // Functions
 s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
