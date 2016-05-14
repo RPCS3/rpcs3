@@ -234,9 +234,10 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 	long i = GetFirstSelected();
 	if (i < 0) return;
 
-	wxMessageDialog *dial = new wxMessageDialog(NULL, wxT("Permanently delete game files?"), wxT("Confirm Delete"), wxYES_NO | wxNO_DEFAULT);
-
-	if(dial->ShowModal() == wxID_YES) fs::remove_all(vfs::get(m_path) + this->GetItemText(i, 6).ToStdString());
+	if (wxMessageBox("Permanently delete game files?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
+	{
+		fs::remove_all(vfs::get(m_path) + this->GetItemText(i, 6).ToStdString());
+	}
 
 	Refresh();
 }
