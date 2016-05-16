@@ -233,8 +233,11 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 {
 	long i = GetFirstSelected();
 	if (i < 0) return;
-	
-	fs::remove_all(vfs::get(m_path) + this->GetItemText(i, 6).ToStdString());
+
+	if (wxMessageBox("Permanently delete game files?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
+	{
+		fs::remove_all(vfs::get(m_path) + this->GetItemText(i, 6).ToStdString());
+	}
 
 	Refresh();
 }
