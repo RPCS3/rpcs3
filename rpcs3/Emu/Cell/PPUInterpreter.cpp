@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
+#include <cmath>
 
 // TODO: fix rol8 and rol16 for __GNUG__ (probably with __asm__)
 inline u8 rol8(const u8 x, const u8 n) { return x << n | x >> (8 - n); }
@@ -135,7 +136,7 @@ public:
 	{
 		for (s32 i = -31; i < 32; i++)
 		{
-			m_data[i + 31] = _mm_set1_ps(static_cast<float>(exp2(i)));
+			m_data[i + 31] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
 		}
 	}
 
