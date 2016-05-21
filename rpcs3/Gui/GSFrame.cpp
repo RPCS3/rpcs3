@@ -107,7 +107,7 @@ void GSFrame::flip(draw_context_t)
 	{
 		std::string title = fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec());
 
-		if (!Emu.GetTitle().empty())
+		if (!m_render.empty())
 			title += " | " + m_render;
 			
 		if (!Emu.GetTitle().empty())
