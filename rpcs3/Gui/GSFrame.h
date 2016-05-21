@@ -5,6 +5,7 @@
 class GSFrame : public wxFrame, public GSFrameBase
 {
 	u64 m_frames = 0;
+	std::string m_render;
 
 public:
 	GSFrame(const wxString& title, int w, int h);

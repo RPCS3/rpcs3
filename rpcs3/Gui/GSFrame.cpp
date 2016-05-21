@@ -15,6 +15,7 @@ END_EVENT_TABLE()
 GSFrame::GSFrame(const wxString& title, int w, int h)
 	: wxFrame(nullptr, wxID_ANY, "GSFrame[" + title + "]")
 {
+	m_render = title;
 	SetIcon(wxGetApp().m_MainFrame->GetIcon());
 
 	SetClientSize(w, h);
@@ -106,6 +107,9 @@ void GSFrame::flip(draw_context_t)
 	{
 		std::string title = fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec());
 
+		if (!Emu.GetTitle().empty())
+			title += " | " + m_render;
+			
 		if (!Emu.GetTitle().empty())
 			title += " | " + Emu.GetTitle();
 
