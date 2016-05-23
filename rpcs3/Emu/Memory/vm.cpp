@@ -5,7 +5,7 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/ARMv7/ARMv7Thread.h"
+#include "Emu/PSP2/ARMv7Thread.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -93,66 +93,15 @@ namespace vm
 
 	std::vector<std::shared_ptr<block_t>> g_locations; // memory locations
 
-	//using reservation_mutex_t = std::mutex;
-
-	class reservation_mutex_t
+	access_violation::access_violation(u64 addr, const char* cause)
+		: std::runtime_error(fmt::exception("Access violation %s address 0x%llx", cause, addr))
 	{
-		atomic_t<bool> m_lock{ false };
-		std::thread::id m_owner{};
+		g_tls_fault_count &= ~(1ull << 63);
+	}
 
-		std::condition_variable m_cv;
-		std::mutex m_mutex;
+	using reservation_mutex_t = std::mutex;
 
-	public:
-		bool do_notify = false;
-
-		never_inline void lock()
-		{
-			std::unique_lock<std::mutex> lock(m_mutex, std::defer_lock);
-
-			while (m_lock.exchange(true) == true)
-			{
-				if (m_owner == std::this_thread::get_id())
-				{
-					throw EXCEPTION("Deadlock");
-				}
-
-				if (!lock)
-				{
-					lock.lock();
-					continue;
-				}
-
-				m_cv.wait_for(lock, std::chrono::milliseconds(1));
-			}
-
-			m_owner = std::this_thread::get_id();
-			do_notify = true;
-		}
-
-		never_inline void unlock()
-		{
-			if (m_owner != std::this_thread::get_id())
-			{
-				throw EXCEPTION("Mutex not owned");
-			}
-
-			m_owner = {};
-
-			if (m_lock.exchange(false) == false)
-			{
-				throw EXCEPTION("Lost lock");
-			}
-
-			if (do_notify)
-			{
-				std::lock_guard<std::mutex> lock(m_mutex);
-				m_cv.notify_one();
-			}
-		}
-	};
-
-	const thread_ctrl* volatile g_reservation_owner = nullptr;
+	thread_ctrl* volatile g_reservation_owner = nullptr;
 
 	u32 g_reservation_addr = 0;
 	u32 g_reservation_size = 0;
@@ -160,14 +109,6 @@ namespace vm
 	thread_local bool g_tls_did_break_reservation = false;
 
 	reservation_mutex_t g_reservation_mutex;
-
-
-
-	access_violation::access_violation(u64 addr, const char* cause)
-		: std::runtime_error(fmt::exception("Access violation %s address 0x%llx", cause, addr))
-	{
-		g_tls_fault_count &= ~(1ull << 63);
-	}
 
 	void _reservation_set(u32 addr, bool no_access = false)
 	{
@@ -320,7 +261,7 @@ namespace vm
 		return true;
 	}
 
-	bool reservation_test(const thread_ctrl* current)
+	bool reservation_test(thread_ctrl* current)
 	{
 		const auto owner = g_reservation_owner;
 

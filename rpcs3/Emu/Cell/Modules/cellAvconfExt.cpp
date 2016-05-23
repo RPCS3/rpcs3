@@ -6,7 +6,7 @@
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
 
-LOG_CHANNEL(cellAvconfExt);
+logs::channel cellAvconfExt("cellAvconfExt", logs::level::notice);
 
 vm::gvar<f32> g_gamma; // TODO
 

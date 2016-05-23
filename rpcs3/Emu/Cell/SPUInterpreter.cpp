@@ -5,7 +5,8 @@
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
 
-#include <fenv.h>
+#include <cmath>
+#include <cfenv>
 
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
@@ -942,8 +943,8 @@ void spu_interpreter_fast::FI(SPUThread& spu, spu_opcode_t op)
 	const auto mask_sf = _mm_set1_epi32(0x000003ff); // step fraction mask
 	const auto mask_yf = _mm_set1_epi32(0x0007ffff); // Y fraction mask (bits 13..31)
 	const auto base = _mm_or_ps(_mm_and_ps(spu.gpr[op.rb].vf, mask_bf), _mm_castsi128_ps(_mm_set1_epi32(0x3f800000)));
-	const auto step = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(spu.gpr[op.rb].vi, mask_sf)), _mm_set1_ps(exp2f(-13)));
-	const auto y = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(spu.gpr[op.ra].vi, mask_yf)), _mm_set1_ps(exp2f(-19)));
+	const auto step = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(spu.gpr[op.rb].vi, mask_sf)), _mm_set1_ps(std::exp2(-13.f)));
+	const auto y = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(spu.gpr[op.ra].vi, mask_yf)), _mm_set1_ps(std::exp2(-19.f)));
 	spu.gpr[op.rt].vf = _mm_or_ps(_mm_and_ps(mask_se, spu.gpr[op.rb].vf), _mm_andnot_ps(mask_se, _mm_sub_ps(base, _mm_mul_ps(step, y))));
 }
 
@@ -1409,9 +1410,9 @@ void spu_interpreter_precise::FRSQEST(SPUThread& spu, spu_opcode_t op)
 			result = extended(0, 0x7FFFFF);
 		}
 		else if (isextended(a))
-			result = 0.5f / sqrtf(fabsf(ldexpf_extended(a, -2)));
+			result = 0.5f / std::sqrt(std::fabs(ldexpf_extended(a, -2)));
 		else
-			result = 1 / sqrtf(fabsf(a));
+			result = 1 / std::sqrt(std::fabs(a));
 		spu.gpr[op.rt]._f[i] = result;
 	}
 }
@@ -1502,9 +1503,9 @@ static void FA_FS(SPUThread& spu, spu_opcode_t op, bool sub)
 		else
 		{
 			result = a + b;
-			if (result == copysignf(FLOAT_MAX_NORMAL, result))
+			if (result == std::copysign(FLOAT_MAX_NORMAL, result))
 			{
-				result = ldexpf_extended(ldexpf(a, -1) + ldexpf(b, -1), 1);
+				result = ldexpf_extended(std::ldexp(a, -1) + std::ldexp(b, -1), 1);
 				if (isextended(result))
 					spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
 			}
@@ -1515,7 +1516,7 @@ static void FA_FS(SPUThread& spu, spu_opcode_t op, bool sub)
 			}
 			else if (result == 0.0f)
 			{
-				if (fabsf(a) != fabsf(b))
+				if (std::fabs(a) != std::fabs(b))
 					spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
 				result = +0.0f;
 			}
@@ -1560,7 +1561,7 @@ void spu_interpreter_precise::FM(SPUThread& spu, spu_opcode_t op)
 					result = ldexpf_extended(a, -1) * b;
 				else
 					result = a * ldexpf_extended(b, -1);
-				if (result == copysignf(FLOAT_MAX_NORMAL, result))
+				if (result == std::copysign(FLOAT_MAX_NORMAL, result))
 				{
 					spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
 					result = extended(sign, 0x7FFFFF);
@@ -1572,13 +1573,13 @@ void spu_interpreter_precise::FM(SPUThread& spu, spu_opcode_t op)
 		else
 		{
 			result = a * b;
-			if (result == copysignf(FLOAT_MAX_NORMAL, result))
+			if (result == std::copysign(FLOAT_MAX_NORMAL, result))
 			{
 				feclearexcept(FE_ALL_EXCEPT);
 				if (fexpf(a) > fexpf(b))
-					result = ldexpf(a, -1) * b;
+					result = std::ldexp(a, -1) * b;
 				else
-					result = a * ldexpf(b, -1);
+					result = a * std::ldexp(b, -1);
 				result = ldexpf_extended(result, 1);
 				if (isextended(result))
 					spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
@@ -1638,12 +1639,12 @@ static void DFASM(SPUThread& spu, spu_opcode_t op, DoubleOp operation)
 		if (isdenormal(a))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
-			a = copysign(0.0, a);
+			a = std::copysign(0.0, a);
 		}
 		if (isdenormal(b))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
-			b = copysign(0.0, b);
+			b = std::copysign(0.0, b);
 		}
 		double result;
 		if (std::isnan(a) || std::isnan(b))
@@ -1698,17 +1699,17 @@ static void DFMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 		if (isdenormal(a))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
-			a = copysign(0.0, a);
+			a = std::copysign(0.0, a);
 		}
 		if (isdenormal(b))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
-			b = copysign(0.0, b);
+			b = std::copysign(0.0, b);
 		}
 		if (isdenormal(c))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
-			c = copysign(0.0, c);
+			c = std::copysign(0.0, c);
 		}
 		double result;
 		if (std::isnan(a) || std::isnan(b) || std::isnan(c))
@@ -1857,9 +1858,9 @@ void spu_interpreter_precise::CFLTS(SPUThread& spu, spu_opcode_t op)
 		const float a = spu.gpr[op.ra]._f[i];
 		float scaled;
 		if ((fexpf(a) - 127) + scale >= 32)
-			scaled = copysignf(4294967296.0f, a);
+			scaled = std::copysign(4294967296.0f, a);
 		else
-			scaled = ldexpf(a, scale);
+			scaled = std::ldexp(a, scale);
 		s32 result;
 		if (scaled >= 2147483648.0f)
 			result = 0x7FFFFFFF;
@@ -1879,9 +1880,9 @@ void spu_interpreter_precise::CFLTU(SPUThread& spu, spu_opcode_t op)
 		const float a = spu.gpr[op.ra]._f[i];
 		float scaled;
 		if ((fexpf(a) - 127) + scale >= 32)
-			scaled = copysignf(4294967296.0f, a);
+			scaled = std::copysign(4294967296.0f, a);
 		else
-			scaled = ldexpf(a, scale);
+			scaled = std::ldexp(a, scale);
 		u32 result;
 		if (scaled >= 4294967296.0f)
 			result = 0xFFFFFFFF;
@@ -2002,9 +2003,9 @@ static void FMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 				}
 				else
 				{
-					result = fmaf(new_a, new_b, ldexpf_extended(c, -2));
+					result = std::fma(new_a, new_b, ldexpf_extended(c, -2));
 				}
-				if (fabsf(result) >= ldexpf(1.0f, 127))
+				if (std::fabs(result) >= std::ldexp(1.0f, 127))
 				{
 					spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
 					result = extended(sign, 0x7FFFFF);
@@ -2033,8 +2034,8 @@ static void FMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 			}
 			else
 			{
-				result = fmaf(ldexpf(a, -1), ldexpf(b, -1), ldexpf_extended(c, -2));
-				if (fabsf(result) >= ldexpf(1.0f, 127))
+				result = std::fma(std::ldexp(a, -1), std::ldexp(b, -1), ldexpf_extended(c, -2));
+				if (std::fabs(result) >= std::ldexp(1.0f, 127))
 				{
 					spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
 					result = extended(sign, 0x7FFFFF);
@@ -2048,15 +2049,15 @@ static void FMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 		else
 		{
 			feclearexcept(FE_ALL_EXCEPT);
-			result = fmaf(a, b, c);
+			result = std::fma(a, b, c);
 			if (fetestexcept(FE_OVERFLOW))
 			{
 				spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
 				if (fexpf(a) > fexpf(b))
-					result = fmaf(ldexpf(a, -2), b, ldexpf(c, -2));
+					result = std::fma(std::ldexp(a, -2), b, std::ldexp(c, -2));
 				else
-					result = fmaf(a, ldexpf(b, -2), ldexpf(c, -2));
-				if (fabsf(result) >= ldexpf(1.0f, 127))
+					result = std::fma(a, std::ldexp(b, -2), std::ldexp(c, -2));
+				if (fabsf(result) >= std::ldexp(1.0f, 127))
 				{
 					spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
 					result = extended(sign, 0x7FFFFF);

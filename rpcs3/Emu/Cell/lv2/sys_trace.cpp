@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_trace.h"
 
-LOG_CHANNEL(sys_trace);
+logs::channel sys_trace("sys_trace", logs::level::notice);
 
 s32 sys_trace_create()
 {

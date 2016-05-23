@@ -3,7 +3,7 @@
 
 #include "cellWebBrowser.h"
 
-extern _log::channel cellSysutil;
+extern logs::channel cellSysutil;
 
 s32 cellWebBrowserActivate()
 {

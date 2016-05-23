@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellSysmodule);
+logs::channel cellSysmodule("cellSysmodule", logs::level::notice);
 
 enum
 {

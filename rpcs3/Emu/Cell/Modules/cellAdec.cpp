@@ -15,7 +15,9 @@ extern "C"
 #include "cellPamf.h"
 #include "cellAdec.h"
 
-LOG_CHANNEL(cellAdec);
+#include <thread>
+
+logs::channel cellAdec("cellAdec", logs::level::notice);
 
 AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
 	: type(type)
@@ -468,7 +470,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 
 	adec.adecCb->cpu_init();
 	adec.adecCb->state -= cpu_state::stop;
-	adec.adecCb->lock_notify();
+	(*adec.adecCb)->lock_notify();
 }
 
 bool adecCheckType(s32 type)
@@ -569,7 +571,7 @@ s32 cellAdecClose(u32 handle)
 	{
 		CHECK_EMU_STATUS;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		std::this_thread::sleep_for(1ms); // hack
 	}
 
 	idm::remove<PPUThread>(adec->adecCb->id);
@@ -682,7 +684,7 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	AdecFrame af;
 	if (!adec->frames.try_pop(af))
 	{
-		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(1ms); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
@@ -798,7 +800,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 	AdecFrame af;
 	if (!adec->frames.try_peek(af))
 	{
-		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(1ms); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 

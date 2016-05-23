@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-extern _log::channel sysPrxForUser;
+extern logs::channel sysPrxForUser;
 
 extern fs::file g_tty;
 

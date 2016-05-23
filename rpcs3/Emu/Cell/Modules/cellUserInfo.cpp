@@ -6,7 +6,7 @@
 
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(cellUserInfo);
+logs::channel cellUserInfo("cellUserInfo", logs::level::notice);
 
 s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {

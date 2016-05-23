@@ -6,6 +6,8 @@
 #include "Loader/PSF.h"
 #include "SettingsDialog.h"
 
+#include <algorithm>
+
 static const std::string m_class_name = "GameViewer";
 
 // Auxiliary classes

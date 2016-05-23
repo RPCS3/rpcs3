@@ -243,8 +243,6 @@ private:
 public:
 	u32 disasm(u32 pc) override;
 
-	void TDI(ppu_opcode_t op);
-	void TWI(ppu_opcode_t op);
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);
 	void VADDCUW(ppu_opcode_t op);
@@ -389,6 +387,8 @@ public:
 	void VUPKLSB(ppu_opcode_t op);
 	void VUPKLSH(ppu_opcode_t op);
 	void VXOR(ppu_opcode_t op);
+	void TDI(ppu_opcode_t op);
+	void TWI(ppu_opcode_t op);
 	void MULLI(ppu_opcode_t op);
 	void SUBFIC(ppu_opcode_t op);
 	void CMPLI(ppu_opcode_t op);
@@ -582,6 +582,8 @@ public:
 	void LD(ppu_opcode_t op);
 	void LDU(ppu_opcode_t op);
 	void LWA(ppu_opcode_t op);
+	void STD(ppu_opcode_t op);
+	void STDU(ppu_opcode_t op);
 	void FDIVS(ppu_opcode_t op);
 	void FSUBS(ppu_opcode_t op);
 	void FADDS(ppu_opcode_t op);
@@ -592,8 +594,6 @@ public:
 	void FMSUBS(ppu_opcode_t op);
 	void FNMSUBS(ppu_opcode_t op);
 	void FNMADDS(ppu_opcode_t op);
-	void STD(ppu_opcode_t op);
-	void STDU(ppu_opcode_t op);
 	void MTFSB1(ppu_opcode_t op);
 	void MCRFS(ppu_opcode_t op);
 	void MTFSB0(ppu_opcode_t op);

@@ -9,11 +9,15 @@
 #include "Emu/Cell/lv2/sys_spu.h"
 #include "cellSpurs.h"
 
+#include <thread>
+
 //----------------------------------------------------------------------------
 // Externs
 //----------------------------------------------------------------------------
 
-extern _log::channel cellSpurs;
+extern logs::channel cellSpurs;
+
+extern std::mutex& get_current_thread_mutex();
 
 //----------------------------------------------------------------------------
 // Function prototypes
@@ -685,7 +689,7 @@ bool spursKernelEntry(SPUThread& spu)
 {
 	while (true)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(100ms);
 		CHECK_EMU_STATUS;
 	}
 
@@ -861,7 +865,7 @@ void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 			// The system service blocks by making a reservation and waiting on the lock line reservation lost event.
 			CHECK_EMU_STATUS;
 			if (!lock) lock.lock();
-			get_current_thread_cv().wait_for(lock, std::chrono::milliseconds(1));
+			get_current_thread_cv().wait_for(lock, 1ms);
 			continue;
 		}
 

@@ -3,6 +3,7 @@
 #include <stack>
 #include <deque>
 #include <set>
+#include <mutex>
 #include "GCM.h"
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
@@ -52,13 +53,18 @@ namespace rsx
 }
 
 template<>
-struct bijective<rsx::shader_language, const char*>
+struct unveil<rsx::shader_language>
 {
-	static constexpr bijective_pair<rsx::shader_language, const char*> map[]
+	static inline const char* get(rsx::shader_language in)
 	{
-		{ rsx::shader_language::glsl, "glsl" },
-		{ rsx::shader_language::hlsl, "hlsl" },
-	};
+		switch (in)
+		{
+		case rsx::shader_language::glsl: return "glsl";
+		case rsx::shader_language::hlsl: return "hlsl";
+		}
+
+		return "";
+	}
 };
 
 namespace rsx

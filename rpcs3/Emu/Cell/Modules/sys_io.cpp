@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(sys_io);
+logs::channel sys_io("sys_io", logs::level::notice);
 
 extern void cellPad_init();
 extern void cellKb_init();

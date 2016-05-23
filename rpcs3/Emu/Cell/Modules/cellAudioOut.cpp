@@ -3,7 +3,7 @@
 
 #include "cellAudioOut.h"
 
-extern _log::channel cellSysutil;
+extern logs::channel cellSysutil;
 
 s32 cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 {

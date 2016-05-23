@@ -21,6 +21,8 @@
 
 #include "Utilities/Thread.h"
 
+#include <thread>
+
 #ifndef _WIN32
 #include "frame_icon.xpm"
 #endif

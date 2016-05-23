@@ -12,6 +12,8 @@
 #include "Utilities/GSL.h"
 #include "Utilities/StrUtil.h"
 
+#include <thread>
+
 #define CMD_DEBUG 0
 
 cfg::bool_entry g_cfg_rsx_write_color_buffers(cfg::root.video, "Write Color Buffers");
@@ -40,7 +42,7 @@ namespace rsx
 
 	void shaders_cache::load(const std::string &path, shader_language lang)
 	{
-		const std::string lang_name = bijective_find<shader_language>(lang, "");
+		const std::string lang_name(::unveil<shader_language>::get(lang));
 
 		auto extract_hash = [](const std::string &string)
 		{
@@ -174,7 +176,7 @@ namespace rsx
 			}
 			throw EXCEPTION("Wrong vector size");
 		case vertex_base_type::cmp: return sizeof(u16) * 4;
-		case vertex_base_type::ub256: Expects(size == 4); return sizeof(u8) * 4;
+		case vertex_base_type::ub256: EXPECTS(size == 4); return sizeof(u8) * 4;
 		}
 		throw EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
 	}
@@ -561,7 +563,7 @@ namespace rsx
 		}
 		else
 		{
-			Expects(0);
+			EXPECTS(0);
 			//std::lock_guard<std::mutex> lock{ m_mtx_task };
 
 			//internal_task_entry &front = m_internal_tasks.front();

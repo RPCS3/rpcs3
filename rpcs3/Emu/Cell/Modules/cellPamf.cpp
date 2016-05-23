@@ -12,12 +12,12 @@ bool squeue_test_exit()
 	return Emu.IsStopped();
 }
 
-LOG_CHANNEL(cellPamf);
+logs::channel cellPamf("cellPamf", logs::level::notice);
 
 s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 {
 	// convert type and ch to EsFilterId
-	Expects(ch < 16);
+	EXPECTS(ch < 16);
 	pEsFilterId.supplementalInfo1 = type == CELL_PAMF_STREAM_TYPE_AVC;
 	pEsFilterId.supplementalInfo2 = 0;
 	
@@ -117,7 +117,7 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream type correctly
-	Expects(stream < (u32)pSelf->pAddr->stream_count);
+	EXPECTS(stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -138,7 +138,7 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream channel correctly
-	Expects(stream < (u32)pSelf->pAddr->stream_count);
+	EXPECTS(stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -146,29 +146,29 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 	case 0x1b: // AVC
 	case 0x02: // M2V
 	{
-		Expects((header.fid_major & 0xf0) == 0xe0 && header.fid_minor == 0);
+		EXPECTS((header.fid_major & 0xf0) == 0xe0 && header.fid_minor == 0);
 		return header.fid_major % 16;
 	}
 		
 	case 0xdc: // ATRAC3PLUS
 	{
-		Expects(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0);
+		EXPECTS(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0);
 		return header.fid_minor % 16;
 	}
 		
 	case 0x80: // LPCM
 	{
-		Expects(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0x40);
+		EXPECTS(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0x40);
 		return header.fid_minor % 16;
 	}
 	case 0x81: // AC3
 	{
-		Expects(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0x30);
+		EXPECTS(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0x30);
 		return header.fid_minor % 16;
 	}
 	case 0xdd:
 	{
-		Expects(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0x20);
+		EXPECTS(header.fid_major == 0xbd && (header.fid_minor & 0xf0) == 0x20);
 		return header.fid_minor % 16;
 	}
 	}
@@ -454,7 +454,7 @@ s32 cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodec
 
 	// always returns CELL_OK
 
-	Expects((u32)pSelf->stream < (u32)pSelf->pAddr->stream_count);
+	EXPECTS((u32)pSelf->stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
 	pEsFilterId->filterIdMajor = header.fid_major;
 	pEsFilterId->filterIdMinor = header.fid_minor;
@@ -467,7 +467,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 {
 	cellPamf.warning("cellPamfReaderGetStreamInfo(pSelf=*0x%x, pInfo=*0x%x, size=%d)", pSelf, pInfo, size);
 
-	Expects((u32)pSelf->stream < (u32)pSelf->pAddr->stream_count);
+	EXPECTS((u32)pSelf->stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
 	const u8 type = pamfGetStreamType(pSelf, pSelf->stream);
 	const u8 ch = pamfGetStreamChannel(pSelf, pSelf->stream);

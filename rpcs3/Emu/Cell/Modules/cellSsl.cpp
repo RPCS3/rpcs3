@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellSsl);
+logs::channel cellSsl("cellSsl", logs::level::notice);
 
 s32 cellSslInit()
 {

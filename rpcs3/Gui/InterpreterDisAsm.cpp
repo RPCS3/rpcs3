@@ -2,15 +2,17 @@
 #include "stdafx_gui.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "rpcs3.h"
 #include "InterpreterDisAsm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/ARMv7/ARMv7Thread.h"
+#include "Emu/Cell/RawSPUThread.h"
+#include "Emu/PSP2/ARMv7Thread.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDisAsm.h"
-#include "Emu/ARMv7/ARMv7DisAsm.h"
+#include "Emu/PSP2/ARMv7DisAsm.h"
 
 #include "InstructionEditor.h"
 #include "RegisterEditor.h"
@@ -23,7 +25,7 @@ u32 InterpreterDisAsmFrame::GetPc() const
 {
 	switch (cpu->type)
 	{
-	case cpu_type::ppu: return static_cast<PPUThread*>(cpu)->PC;
+	case cpu_type::ppu: return static_cast<PPUThread*>(cpu)->pc;
 	case cpu_type::spu: return static_cast<SPUThread*>(cpu)->pc;
 	case cpu_type::arm: return static_cast<ARMv7Thread*>(cpu)->PC;
 	}
@@ -121,10 +123,10 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 	m_choice_units->Freeze();
 	m_choice_units->Clear();
 
-	for (auto& t : get_all_cpu_threads())
+	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([&](u32, cpu_thread& cpu)
 	{
-		m_choice_units->Append(t->get_name(), t.get());
-	}
+		m_choice_units->Append(cpu.get_name(), &cpu);
+	});
 
 	m_choice_units->Thaw();
 }
@@ -437,7 +439,7 @@ void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 	if (cpu && cpu->state.test(cpu_state_pause))
 	{
 		cpu->state -= cpu_state::dbg_pause;
-		cpu->lock_notify();
+		(*cpu)->lock_notify();
 	}
 }
 
@@ -459,7 +461,7 @@ void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 			return state.test_and_reset(cpu_state::dbg_pause);
 		}))
 		{
-			cpu->lock_notify();
+			(*cpu)->lock_notify();
 		}
 	}
 }

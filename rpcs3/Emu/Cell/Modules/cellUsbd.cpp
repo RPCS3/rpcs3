@@ -3,7 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "cellUsbd.h"
 
-LOG_CHANNEL(cellUsbd);
+logs::channel cellUsbd("cellUsbd", logs::level::notice);
 
 s32 cellUsbdInit()
 {

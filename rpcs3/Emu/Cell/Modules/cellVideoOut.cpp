@@ -1,10 +1,11 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellVideoOut.h"
 
-extern _log::channel cellSysutil;
+extern logs::channel cellSysutil;
 
 cfg::map_entry<u8> g_cfg_video_out_resolution(cfg::root.video, "Resolution", "1280x720",
 {

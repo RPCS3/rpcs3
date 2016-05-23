@@ -1,14 +1,14 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/IdManager.h"
-
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
-#include "Emu/ARMv7/ARMv7Thread.h"
 #include "CPUThread.h"
 
+#include <mutex>
+#include <condition_variable>
+
 thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
+
+extern std::mutex& get_current_thread_mutex();
+extern std::condition_variable& get_current_thread_cv();
 
 void cpu_thread::on_task()
 {
@@ -61,7 +61,7 @@ void cpu_thread::on_task()
 void cpu_thread::on_stop()
 {
 	state += cpu_state::exit;
-	lock_notify();
+	(*this)->lock_notify();
 }
 
 cpu_thread::~cpu_thread()
@@ -120,36 +120,4 @@ bool cpu_thread::check_status()
 	}
 
 	return false;
-}
-
-[[noreturn]] void cpu_thread::xsleep()
-{
-	throw std::runtime_error("cpu_thread: sleep()/awake() inconsistency");
-}
-
-std::vector<std::shared_ptr<cpu_thread>> get_all_cpu_threads()
-{
-	std::vector<std::shared_ptr<cpu_thread>> result;
-
-	for (auto& t : idm::get_all<PPUThread>())
-	{
-		result.emplace_back(t);
-	}
-
-	for (auto& t : idm::get_all<SPUThread>())
-	{
-		result.emplace_back(t);
-	}
-
-	for (auto& t : idm::get_all<RawSPUThread>())
-	{
-		result.emplace_back(t);
-	}
-
-	for (auto& t : idm::get_all<ARMv7Thread>())
-	{
-		result.emplace_back(t);
-	}
-
-	return result;
 }

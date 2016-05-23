@@ -6,7 +6,7 @@
 #include "Emu/Io/KeyboardHandler.h"
 #include "cellKb.h"
 
-extern _log::channel sys_io;
+extern logs::channel sys_io;
 
 s32 cellKbInit(u32 max_connect)
 {

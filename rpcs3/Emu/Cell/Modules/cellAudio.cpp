@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -8,7 +9,9 @@
 #include "Emu/Audio/AudioThread.h"
 #include "cellAudio.h"
 
-LOG_CHANNEL(cellAudio);
+#include <thread>
+
+logs::channel cellAudio("cellAudio", logs::level::notice);
 
 cfg::bool_entry g_cfg_audio_dump_to_file(cfg::root.audio, "Dump to file");
 cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16 bit");

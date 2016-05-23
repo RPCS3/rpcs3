@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_set>
+
 // Regarded as a Debugger Enchantment
 namespace debug
 {

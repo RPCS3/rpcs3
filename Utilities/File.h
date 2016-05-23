@@ -10,9 +10,6 @@
 
 namespace fs
 {
-	// Error code returned
-	extern thread_local uint error;
-
 	// File open mode flags
 	enum struct open_mode : u32
 	{
@@ -265,6 +262,13 @@ namespace fs
 			return read(&str[0], str.size()) == str.size();
 		}
 
+		// Read std::string
+		bool read(std::string& str, std::size_t size) const
+		{
+			str.resize(size);
+			return read(&str[0], size) == size;
+		}
+
 		// Read POD, sizeof(T) is used
 		template<typename T>
 		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(T& data) const
@@ -277,6 +281,14 @@ namespace fs
 		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(std::vector<T>& vec) const
 		{
 			return read(vec.data(), sizeof(T) * vec.size()) == sizeof(T) * vec.size();
+		}
+
+		// Read POD std::vector
+		template<typename T>
+		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(std::vector<T>& vec, std::size_t size) const
+		{
+			vec.resize(size);
+			return read(vec.data(), sizeof(T) * size) == sizeof(T) * size;
 		}
 
 		// Read POD (experimental)
@@ -432,4 +444,16 @@ namespace fs
 
 	// Get size of all files recursively
 	u64 get_dir_size(const std::string& path);
+
+	enum class error : uint
+	{
+		ok = 0,
+
+		inval,
+		noent,
+		exist,
+	};
+
+	// Error code returned
+	extern thread_local error g_tls_error;
 }

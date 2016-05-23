@@ -6,7 +6,7 @@
 #include "Crypto/unedat.h"
 #include "sceNp.h"
 
-LOG_CHANNEL(sceNp);
+logs::channel sceNp("sceNp", logs::level::notice);
 
 s32 sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {

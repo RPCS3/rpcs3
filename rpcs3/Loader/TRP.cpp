@@ -16,7 +16,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 
 	const std::string& local_path = vfs::get(dest);
 
-	if (!fs::create_dir(local_path) && fs::error != EEXIST)
+	if (!fs::create_dir(local_path) && fs::g_tls_error != fs::error::exist)
 	{
 		return false;
 	}

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,20 +7,20 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_interrupt.h"
 
-LOG_CHANNEL(sys_interrupt);
+logs::channel sys_interrupt("sys_interrupt", logs::level::notice);
 
 void lv2_int_serv_t::join(PPUThread& ppu, lv2_lock_t lv2_lock)
 {
 	// Use is_joining to stop interrupt thread and signal
 	thread->is_joining = true;
-	thread->notify();
+	(*thread)->notify();
 
 	// Start joining
 	while (!(thread->state & cpu_state::exit))
 	{
 		CHECK_EMU_STATUS;
 
-		get_current_thread_cv().wait_for(lv2_lock, std::chrono::milliseconds(1));
+		get_current_thread_cv().wait_for(lv2_lock, 1ms);
 	}
 
 	// Cleanup
@@ -93,7 +92,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 
 	it->custom_task = [handler, arg1, arg2](PPUThread& ppu)
 	{
-		const u32 pc   = ppu.PC;
+		const u32 pc   = ppu.pc;
 		const u32 rtoc = ppu.GPR[2];
 
 		LV2_LOCK;
@@ -128,7 +127,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	};
 
 	it->state -= cpu_state::stop;
-	it->lock_notify();
+	(*it)->lock_notify();
 
 	*ih = handler->id;
 

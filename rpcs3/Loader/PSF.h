@@ -20,22 +20,12 @@ namespace psf
 
 	public:
 		// Construct string entry, assign the value
-		entry(format type, u32 max_size, const std::string& value = {})
-			: m_type(type)
-			, m_max_size(max_size)
-			, m_value_string(value)
-		{
-			Expects(type == format::string || type == format::array);
-			Expects(max_size);
-		}
+		entry(format type, u32 max_size, const std::string& value = {});
 
 		// Construct integer entry, assign the value
-		entry(u32 value)
-			: m_type(format::integer)
-			, m_max_size(sizeof(u32))
-			, m_value_integer(value)
-		{
-		}
+		entry(u32 value);
+
+		~entry();
 
 		const std::string& as_string() const;
 		u32 as_integer() const;
@@ -51,24 +41,11 @@ namespace psf
 	// Define PSF registry as a sorted map of entries:
 	using registry = std::map<std::string, entry>;
 
-	// Load PSF registry from SFO binary data
-	registry load_object(const std::vector<char>&);
-
-	// Load PSF registry from SFO file, if opened
-	inline registry load_object(const fs::file& f)
-	{
-		if (f)
-		{
-			return load_object(f.to_vector<char>());
-		}
-		else
-		{
-			return registry{};
-		}
-	}
+	// Load PSF registry from SFO binary format
+	registry load_object(const fs::file&);
 
 	// Convert PSF registry to SFO binary format
-	std::vector<char> save_object(const registry&);
+	void save_object(const fs::file&, const registry&);
 
 	// Get string value or default value
 	std::string get_string(const registry& psf, const std::string& key, const std::string& def = {});

@@ -4,7 +4,7 @@
 
 #include "cellGem.h"
 
-LOG_CHANNEL(cellGem);
+logs::channel cellGem("cellGem", logs::level::notice);
 
 struct gem_t
 {

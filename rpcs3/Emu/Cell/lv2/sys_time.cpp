@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -45,7 +44,7 @@ const g_time_aux_info = []() -> time_aux_info_t // initialize time-related value
 
 #endif
 
-LOG_CHANNEL(sys_time);
+logs::channel sys_time("sys_time", logs::level::notice);
 
 static const u64 g_timebase_freq = /*79800000*/ 80000000; // 80 Mhz
 

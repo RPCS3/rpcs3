@@ -3,7 +3,7 @@
 #include "types.h"
 #include "Atomic.h"
 
-namespace _log
+namespace logs
 {
 	enum class level : uint
 	{
@@ -79,27 +79,27 @@ namespace _log
 }
 
 template<>
-struct bijective<_log::level, const char*>
+struct bijective<logs::level, const char*>
 {
-	static constexpr bijective_pair<_log::level, const char*> map[]
+	static constexpr bijective_pair<logs::level, const char*> map[]
 	{
-		{ _log::level::always, "Nothing" },
-		{ _log::level::fatal, "Fatal" },
-		{ _log::level::error, "Error" },
-		{ _log::level::todo, "TODO" },
-		{ _log::level::success, "Success" },
-		{ _log::level::warning, "Warning" },
-		{ _log::level::notice, "Notice" },
-		{ _log::level::trace, "Trace" },
+		{ logs::level::always, "Nothing" },
+		{ logs::level::fatal, "Fatal" },
+		{ logs::level::error, "Error" },
+		{ logs::level::todo, "TODO" },
+		{ logs::level::success, "Success" },
+		{ logs::level::warning, "Warning" },
+		{ logs::level::notice, "Notice" },
+		{ logs::level::trace, "Trace" },
 	};
 };
 
 // Legacy:
 
-#define LOG_SUCCESS(ch, fmt, ...) _log::ch.success(fmt, ##__VA_ARGS__)
-#define LOG_NOTICE(ch, fmt, ...)  _log::ch.notice (fmt, ##__VA_ARGS__)
-#define LOG_WARNING(ch, fmt, ...) _log::ch.warning(fmt, ##__VA_ARGS__)
-#define LOG_ERROR(ch, fmt, ...)   _log::ch.error  (fmt, ##__VA_ARGS__)
-#define LOG_TODO(ch, fmt, ...)    _log::ch.todo   (fmt, ##__VA_ARGS__)
-#define LOG_TRACE(ch, fmt, ...)   _log::ch.trace  (fmt, ##__VA_ARGS__)
-#define LOG_FATAL(ch, fmt, ...)   _log::ch.fatal  (fmt, ##__VA_ARGS__)
+#define LOG_SUCCESS(ch, fmt, ...) logs::ch.success(fmt, ##__VA_ARGS__)
+#define LOG_NOTICE(ch, fmt, ...)  logs::ch.notice (fmt, ##__VA_ARGS__)
+#define LOG_WARNING(ch, fmt, ...) logs::ch.warning(fmt, ##__VA_ARGS__)
+#define LOG_ERROR(ch, fmt, ...)   logs::ch.error  (fmt, ##__VA_ARGS__)
+#define LOG_TODO(ch, fmt, ...)    logs::ch.todo   (fmt, ##__VA_ARGS__)
+#define LOG_TRACE(ch, fmt, ...)   logs::ch.trace  (fmt, ##__VA_ARGS__)
+#define LOG_FATAL(ch, fmt, ...)   logs::ch.fatal  (fmt, ##__VA_ARGS__)

@@ -10,16 +10,6 @@ u32 PPUDisAsm::disasm(u32 pc)
 	return 4;
 }
 
-void PPUDisAsm::TDI(ppu_opcode_t op)
-{
-	DisAsm_INT1_R1_IMM("tdi", op.bo, op.ra, op.simm16);
-}
-
-void PPUDisAsm::TWI(ppu_opcode_t op)
-{
-	DisAsm_INT1_R1_IMM("twi", op.bo, op.ra, op.simm16);
-}
-
 void PPUDisAsm::MFVSCR(ppu_opcode_t op)
 {
 	DisAsm_V1("mfvscr", op.vd);
@@ -738,6 +728,16 @@ void PPUDisAsm::VUPKLSH(ppu_opcode_t op)
 void PPUDisAsm::VXOR(ppu_opcode_t op)
 {
 	DisAsm_V3("vxor", op.vd, op.va, op.vb);
+}
+
+void PPUDisAsm::TDI(ppu_opcode_t op)
+{
+	DisAsm_INT1_R1_IMM("tdi", op.bo, op.ra, op.simm16);
+}
+
+void PPUDisAsm::TWI(ppu_opcode_t op)
+{
+	DisAsm_INT1_R1_IMM("twi", op.bo, op.ra, op.simm16);
 }
 
 void PPUDisAsm::MULLI(ppu_opcode_t op)
@@ -1949,6 +1949,16 @@ void PPUDisAsm::LWA(ppu_opcode_t op)
 	DisAsm_R2_IMM("lwa", op.rd, op.ra, op.ds * 4);
 }
 
+void PPUDisAsm::STD(ppu_opcode_t op)
+{
+	DisAsm_R2_IMM("std", op.rs, op.ra, op.ds * 4);
+}
+
+void PPUDisAsm::STDU(ppu_opcode_t op)
+{
+	DisAsm_R2_IMM("stdu", op.rs, op.ra, op.ds * 4);
+}
+
 void PPUDisAsm::FDIVS(ppu_opcode_t op)
 {
 	DisAsm_F3_RC("fdivs", op.frd, op.fra, op.frb, op.rc);
@@ -1997,16 +2007,6 @@ void PPUDisAsm::FNMSUBS(ppu_opcode_t op)
 void PPUDisAsm::FNMADDS(ppu_opcode_t op)
 {
 	DisAsm_F4_RC("fnmadds", op.frd, op.fra, op.frc, op.frb, op.rc);
-}
-
-void PPUDisAsm::STD(ppu_opcode_t op)
-{
-	DisAsm_R2_IMM("std", op.rs, op.ra, op.ds * 4);
-}
-
-void PPUDisAsm::STDU(ppu_opcode_t op)
-{
-	DisAsm_R2_IMM("stdu", op.rs, op.ra, op.ds * 4);
 }
 
 void PPUDisAsm::MTFSB1(ppu_opcode_t op)

@@ -69,6 +69,19 @@ static time_t to_time(const FILETIME& ft)
 	return to_time(v);
 }
 
+static fs::error to_error(DWORD e)
+{
+	switch (e)
+	{
+	case ERROR_FILE_NOT_FOUND: return fs::error::noent;
+	case ERROR_PATH_NOT_FOUND: return fs::error::noent;
+	case ERROR_ALREADY_EXISTS: return fs::error::exist;
+	case ERROR_FILE_EXISTS: return fs::error::exist;
+	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
+	default: throw fmt::exception("Unknown Win32 error: %u.", e);
+	}
+}
+
 #else
 
 #include <sys/mman.h>
@@ -87,11 +100,22 @@ static time_t to_time(const FILETIME& ft)
 #include <sys/sendfile.h>
 #endif
 
+static fs::error to_error(int e)
+{
+	switch (e)
+	{
+	case ENOENT: return fs::error::noent;
+	case EEXIST: return fs::error::exist;
+	case EINVAL: return fs::error::inval;
+	default: throw fmt::exception("Unknown system error: %d.", e);
+	}
+}
+
 #endif
 
 namespace fs
 {
-	thread_local uint error = 0;
+	thread_local error g_tls_error = error::ok;
 
 	class device_manager final
 	{
@@ -146,7 +170,7 @@ std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 
 std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	Expects(name.size() > 2 && name[0] == '/' && name[1] == '/' && name.find('/', 2) == -1);
+	EXPECTS(name.size() > 2 && name[0] == '/' && name[1] == '/' && name.find('/', 2) == -1);
 
 	return get_device_manager().set_device(name, device);
 }
@@ -178,26 +202,26 @@ std::string fs::get_parent_dir(const std::string& path)
 static const auto test_get_parent_dir = []() -> bool
 {
 	// Success:
-	ASSERT(fs::get_parent_dir("/x/y///") == "/x");
-	ASSERT(fs::get_parent_dir("/x/y/") == "/x");
-	ASSERT(fs::get_parent_dir("/x/y") == "/x");
-	ASSERT(fs::get_parent_dir("x:/y") == "x:");
-	ASSERT(fs::get_parent_dir("//x/y") == "//x");
+	VERIFY(fs::get_parent_dir("/x/y///") == "/x");
+	VERIFY(fs::get_parent_dir("/x/y/") == "/x");
+	VERIFY(fs::get_parent_dir("/x/y") == "/x");
+	VERIFY(fs::get_parent_dir("x:/y") == "x:");
+	VERIFY(fs::get_parent_dir("//x/y") == "//x");
 
 	// Failure:
-	ASSERT(fs::get_parent_dir("").empty());
-	ASSERT(fs::get_parent_dir("x/").empty());
-	ASSERT(fs::get_parent_dir("x").empty());
-	ASSERT(fs::get_parent_dir("x///").empty());
-	ASSERT(fs::get_parent_dir("/x/").empty());
-	ASSERT(fs::get_parent_dir("/x").empty());
-	ASSERT(fs::get_parent_dir("/").empty());
-	ASSERT(fs::get_parent_dir("//").empty());
-	ASSERT(fs::get_parent_dir("//x").empty());
-	ASSERT(fs::get_parent_dir("//x/").empty());
-	ASSERT(fs::get_parent_dir("///").empty());
-	ASSERT(fs::get_parent_dir("///x").empty());
-	ASSERT(fs::get_parent_dir("///x/").empty());
+	VERIFY(fs::get_parent_dir("").empty());
+	VERIFY(fs::get_parent_dir("x/").empty());
+	VERIFY(fs::get_parent_dir("x").empty());
+	VERIFY(fs::get_parent_dir("x///").empty());
+	VERIFY(fs::get_parent_dir("/x/").empty());
+	VERIFY(fs::get_parent_dir("/x").empty());
+	VERIFY(fs::get_parent_dir("/").empty());
+	VERIFY(fs::get_parent_dir("//").empty());
+	VERIFY(fs::get_parent_dir("//x").empty());
+	VERIFY(fs::get_parent_dir("//x/").empty());
+	VERIFY(fs::get_parent_dir("///").empty());
+	VERIFY(fs::get_parent_dir("///x").empty());
+	VERIFY(fs::get_parent_dir("///x/").empty());
 
 	return false;
 }();
@@ -213,14 +237,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
 	if (!GetFileAttributesExW(to_wchar(path).get(), GetFileExInfoStandard, &attrs))
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -234,7 +251,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -260,14 +277,7 @@ bool fs::exists(const std::string& path)
 #ifdef _WIN32
 	if (GetFileAttributesW(to_wchar(path).get()) == INVALID_FILE_ATTRIBUTES)
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -276,7 +286,7 @@ bool fs::exists(const std::string& path)
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -296,7 +306,7 @@ bool fs::is_file(const std::string& path)
 
 		if (info.is_directory)
 		{
-			fs::error = EEXIST;
+			g_tls_error = error::exist;
 			return false;
 		}
 
@@ -307,21 +317,14 @@ bool fs::is_file(const std::string& path)
 	const DWORD attrs = GetFileAttributesW(to_wchar(path).get());
 	if (attrs == INVALID_FILE_ATTRIBUTES)
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 #else
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 #endif
@@ -333,7 +336,7 @@ bool fs::is_file(const std::string& path)
 	if (S_ISDIR(file_info.st_mode))
 #endif
 	{
-		fs::error = EEXIST;
+		g_tls_error = error::exist;
 		return false;
 	}
 
@@ -352,7 +355,7 @@ bool fs::is_dir(const std::string& path)
 
 		if (info.is_directory == false)
 		{
-			fs::error = EEXIST;
+			g_tls_error = error::exist;
 			return false;
 		}
 
@@ -363,21 +366,14 @@ bool fs::is_dir(const std::string& path)
 	const DWORD attrs = GetFileAttributesW(to_wchar(path).get());
 	if (attrs == INVALID_FILE_ATTRIBUTES)
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 #else
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 #endif
@@ -388,7 +384,7 @@ bool fs::is_dir(const std::string& path)
 	if (!S_ISDIR(file_info.st_mode))
 #endif
 	{
-		fs::error = EEXIST;
+		g_tls_error = error::exist;
 		return false;
 	}
 
@@ -405,14 +401,7 @@ bool fs::create_dir(const std::string& path)
 #ifdef _WIN32
 	if (!CreateDirectoryW(to_wchar(path).get(), NULL))
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_ALREADY_EXISTS: fs::error = EEXIST; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -420,7 +409,7 @@ bool fs::create_dir(const std::string& path)
 #else
 	if (::mkdir(path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -450,13 +439,7 @@ bool fs::remove_dir(const std::string& path)
 #ifdef _WIN32
 	if (!RemoveDirectoryW(to_wchar(path).get()))
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -464,7 +447,7 @@ bool fs::remove_dir(const std::string& path)
 #else
 	if (::rmdir(path.c_str()) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -489,13 +472,7 @@ bool fs::rename(const std::string& from, const std::string& to)
 #ifdef _WIN32
 	if (!MoveFileW(to_wchar(from).get(), to_wchar(to).get()))
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u.\nFrom: %s\nTo: %s" HERE, error, from, to);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -503,7 +480,7 @@ bool fs::rename(const std::string& from, const std::string& to)
 #else
 	if (::rename(from.c_str(), to.c_str()) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -523,13 +500,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 #ifdef _WIN32
 	if (!CopyFileW(to_wchar(from).get(), to_wchar(to).get(), !overwrite))
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u.\nFrom: %s\nTo: %s" HERE, error, from, to);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -540,7 +511,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	const int input = ::open(from.c_str(), O_RDONLY);
 	if (input == -1)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -550,7 +521,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 		const int err = errno;
 
 		::close(input);
-		fs::error = err;
+		g_tls_error = to_error(err);
 		return false;
 	}
 
@@ -569,7 +540,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 
 		::close(input);
 		::close(output);
-		fs::error = err;
+		g_tls_error = to_error(err);
 		return false;
 	}
 
@@ -589,14 +560,7 @@ bool fs::remove_file(const std::string& path)
 #ifdef _WIN32
 	if (!DeleteFileW(to_wchar(path).get()))
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -604,7 +568,7 @@ bool fs::remove_file(const std::string& path)
 #else
 	if (::unlink(path.c_str()) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -624,14 +588,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -641,13 +598,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 	// Seek and truncate
 	if (!SetFilePointerEx(handle, distance, NULL, FILE_BEGIN) || !SetEndOfFile(handle))
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_NEGATIVE_SEEK: fs::error = EINVAL; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (length=0x%llx)." HERE, error, length);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		CloseHandle(handle);
 		return false;
 	}
@@ -657,7 +608,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 #else
 	if (::truncate(path.c_str(), length) != 0)
 	{
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -672,7 +623,7 @@ void fs::file::xnull() const
 
 void fs::file::xfail() const
 {
-	throw fmt::exception("Unexpected fs::file error %u", fs::error);
+	throw fmt::exception("Unexpected fs::error %u", g_tls_error);
 }
 
 bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
@@ -704,7 +655,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 	{
 		if (mode & fs::excl)
 		{
-			fs::error = EINVAL;
+			g_tls_error = error::inval;
 			return false;
 		}
 
@@ -715,15 +666,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_FILE_EXISTS:    fs::error = EEXIST; break;
-		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -747,12 +690,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			FILE_BASIC_INFO basic_info;
 			if (!GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO)))
 			{
-				// TODO: convert Win32 error code to errno
-				switch (DWORD error = GetLastError())
-				{
-				case 0:
-				default: throw fmt::exception("Win32 error: %u." HERE, error);
-				}
+				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			stat_t info;
@@ -773,47 +711,22 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			pos.QuadPart = 0;
 			if (!SetFilePointerEx(m_handle, pos, &old, FILE_CURRENT)) // get old position
 			{
-				// TODO: convert Win32 error code to errno
-				switch (DWORD error = GetLastError())
-				{
-				case 0:
-				default: throw fmt::exception("Unknown Win32 error: %u." HERE, error);
-				}
-
+				g_tls_error = to_error(GetLastError());
 				return false;
 			}
 
 			pos.QuadPart = length;
 			if (!SetFilePointerEx(m_handle, pos, NULL, FILE_BEGIN)) // set new position
 			{
-				// TODO: convert Win32 error code to errno
-				switch (DWORD error = GetLastError())
-				{
-				case ERROR_NEGATIVE_SEEK: fs::error = EINVAL; break;
-				default: throw fmt::exception("Unknown Win32 error: %u." HERE, error);
-				}
-
+				g_tls_error = to_error(GetLastError());
 				return false;
 			}
 
 			const BOOL result = SetEndOfFile(m_handle); // change file size
 
-			if (!result)
+			if (!result || !SetFilePointerEx(m_handle, old, NULL, FILE_BEGIN)) // restore position
 			{
-				// TODO: convert Win32 error code to errno
-				switch (DWORD error = GetLastError())
-				{
-				case 0:
-				default: throw fmt::exception("Unknown Win32 error: %u." HERE, error);
-				}
-			}
-
-			if (!SetFilePointerEx(m_handle, old, NULL, FILE_BEGIN) && result) // restore position
-			{
-				if (DWORD error = GetLastError())
-				{
-					throw fmt::exception("Win32 error: %u." HERE, error);
-				}
+				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return result != FALSE;
@@ -823,16 +736,12 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 		{
 			// TODO (call ReadFile multiple times if count is too big)
 			const int size = ::narrow<int>(count, "Too big count" HERE);
-			Expects(size >= 0);
+			EXPECTS(size >= 0);
 
 			DWORD nread;
 			if (!ReadFile(m_handle, buffer, size, &nread, NULL))
 			{
-				switch (DWORD error = GetLastError())
-				{
-				case 0:
-				default: throw fmt::exception("Win32 error: %u." HERE, error);
-				}
+				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return nread;
@@ -842,16 +751,12 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 		{
 			// TODO (call WriteFile multiple times if count is too big)
 			const int size = ::narrow<int>(count, "Too big count" HERE);
-			Expects(size >= 0);
+			EXPECTS(size >= 0);
 
 			DWORD nwritten;
 			if (!WriteFile(m_handle, buffer, size, &nwritten, NULL))
 			{
-				switch (DWORD error = GetLastError())
-				{
-				case 0:
-				default: throw fmt::exception("Win32 error: %u." HERE, error);
-				}
+				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return nwritten;
@@ -870,11 +775,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 
 			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
 			{
-				switch (DWORD error = GetLastError())
-				{
-				case 0:
-				default: throw fmt::exception("Win32 error: %u." HERE, error);
-				}
+				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return pos.QuadPart;
@@ -885,11 +786,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			LARGE_INTEGER size;
 			if (!GetFileSizeEx(m_handle, &size))
 			{
-				switch (DWORD error = GetLastError())
-				{
-				case 0:
-				default: throw fmt::exception("Win32 error: %u." HERE, error);
-				}
+				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return size.QuadPart;
@@ -913,8 +810,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 
 	if (fd == -1)
 	{
-		// TODO: errno
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -938,11 +834,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			struct ::stat file_info;
 			if (::fstat(m_fd, &file_info) != 0)
 			{
-				switch (int error = errno)
-				{
-				case 0:
-				default: throw fmt::exception("Unknown error: %d." HERE, error);
-				}
+				throw fmt::exception("System error: %d." HERE, errno);
 			}
 
 			stat_t info;
@@ -960,12 +852,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 		{
 			if (::ftruncate(m_fd, length) != 0)
 			{
-				switch (int error = errno)
-				{
-				case 0:
-				default: throw fmt::exception("Unknown error: %d." HERE, error);
-				}
-
+				g_tls_error = to_error(errno);
 				return false;
 			}
 
@@ -977,11 +864,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			const auto result = ::read(m_fd, buffer, count);
 			if (result == -1)
 			{
-				switch (int error = errno)
-				{
-				case 0:
-				default: throw fmt::exception("Unknown error: %d." HERE, error);
-				}
+				throw fmt::exception("System error: %d." HERE, errno);
 			}
 
 			return result;
@@ -992,11 +875,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			const auto result = ::write(m_fd, buffer, count);
 			if (result == -1)
 			{
-				switch (int error = errno)
-				{
-				case 0:
-				default: throw fmt::exception("Unknown error: %d." HERE, error);
-				}
+				throw fmt::exception("System error: %d." HERE, errno);
 			}
 
 			return result;
@@ -1013,11 +892,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			const auto result = ::lseek(m_fd, offset, mode);
 			if (result == -1)
 			{
-				switch (int error = errno)
-				{
-				case 0:
-				default: throw fmt::exception("Unknown error: %d." HERE, error);
-				}
+				throw fmt::exception("System error: %d." HERE, errno);
 			}
 
 			return result;
@@ -1028,11 +903,7 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 			struct ::stat file_info;
 			if (::fstat(m_fd, &file_info) != 0)
 			{
-				switch (int error = errno)
-				{
-				case 0:
-				default: throw fmt::exception("Unknown error: %d." HERE, error);
-				}
+				throw fmt::exception("System error: %d." HERE, errno);
 			}
 
 			return file_info.st_size;
@@ -1049,7 +920,7 @@ fs::file::file(const void* ptr, std::size_t size)
 {
 	class memory_stream : public file_base
 	{
-		u64 m_pos{}; // TODO: read/seek could modify m_pos atomically
+		u64 m_pos{};
 
 		const char* const m_ptr;
 		const u64 m_size;
@@ -1063,26 +934,26 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		fs::stat_t stat() override
 		{
-			throw std::logic_error("memory_stream doesn't support stat()");
+			throw std::logic_error("Not supported" HERE);
 		}
 
 		bool trunc(u64 length) override
 		{
-			throw std::logic_error("memory_stream doesn't support trunc()");
+			throw std::logic_error("Not allowed" HERE);
 		}
 
 		u64 read(void* buffer, u64 count) override
 		{
 			const u64 start = m_pos;
 			const u64 end = seek(count, fs::seek_cur);
-			const u64 read_size = end >= start ? end - start : throw std::logic_error("memory_stream::read(): overflow");
+			const u64 read_size = end >= start ? end - start : throw std::logic_error("Stream overflow" HERE);
 			std::memcpy(buffer, m_ptr + start, read_size);
 			return read_size;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			throw std::logic_error("memory_stream is not writable");
+			throw std::logic_error("Not allowed" HERE);
 		}
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
@@ -1091,7 +962,7 @@ fs::file::file(const void* ptr, std::size_t size)
 				whence == fs::seek_set ? m_pos = std::min<u64>(offset, m_size) :
 				whence == fs::seek_cur ? m_pos = std::min<u64>(offset + m_pos, m_size) :
 				whence == fs::seek_end ? m_pos = std::min<u64>(offset + m_size, m_size) :
-				throw std::logic_error("memory_stream::seek(): invalid whence");
+				throw fmt::exception("Invalid whence (0x%x)" HERE, whence);
 		}
 
 		u64 size() override
@@ -1127,14 +998,7 @@ bool fs::dir::open(const std::string& path)
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
-		// TODO: convert Win32 error code to errno
-		switch (DWORD error = GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
-		default: throw fmt::exception("Unknown Win32 error: %u." HERE, error);
-		}
-
+		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
@@ -1179,11 +1043,12 @@ bool fs::dir::open(const std::string& path)
 				WIN32_FIND_DATAW found;
 				if (!FindNextFileW(m_handle, &found))
 				{
-					switch (DWORD error = GetLastError())
+					if (ERROR_NO_MORE_FILES == GetLastError())
 					{
-					case ERROR_NO_MORE_FILES: return false;
-					default: throw fmt::exception("Unknown Win32 error: %u." HERE, error);
+						return false;
 					}
+
+					throw fmt::exception("Win32 error: %u." HERE, GetLastError());
 				}
 
 				add_entry(found);
@@ -1205,8 +1070,7 @@ bool fs::dir::open(const std::string& path)
 
 	if (!ptr)
 	{
-		// TODO: errno
-		fs::error = errno;
+		g_tls_error = to_error(errno);
 		return false;
 	}
 
@@ -1236,11 +1100,7 @@ bool fs::dir::open(const std::string& path)
 			struct ::stat file_info;
 			if (::fstatat(::dirfd(m_dd), found->d_name, &file_info, 0) != 0)
 			{
-				switch (int error = errno)
-				{
-				case 0:
-				default: throw fmt::exception("Unknown error: %d." HERE, error);
-				}
+				throw fmt::exception("System error: %d." HERE, errno);
 			}
 
 			info.name = found->d_name;

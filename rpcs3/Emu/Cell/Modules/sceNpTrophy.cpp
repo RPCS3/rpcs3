@@ -12,7 +12,7 @@
 
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(sceNpTrophy);
+logs::channel sceNpTrophy("sceNpTrophy", logs::level::notice);
 
 struct trophy_context_t
 {
@@ -269,7 +269,7 @@ s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
 	
 	// TODO: rXmlDocument can open only real file
-	ASSERT(!fs::get_virtual_device(path)); 
+	VERIFY(!fs::get_virtual_device(path)); 
 	rXmlDocument doc;
 	doc.Load(path);
 
@@ -399,7 +399,7 @@ s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceN
 	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
 
 	// TODO: rXmlDocument can open only real file
-	ASSERT(!fs::get_virtual_device(path));
+	VERIFY(!fs::get_virtual_device(path));
 	rXmlDocument doc; 
 	doc.Load(path);
 

@@ -4,7 +4,7 @@
 
 #include "cellMic.h"
 
-LOG_CHANNEL(cellMic);
+logs::channel cellMic("cellMic", logs::level::notice);
 
 s32 cellMicInit()
 {

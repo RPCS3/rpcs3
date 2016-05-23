@@ -7,7 +7,7 @@
 #include "png.h"
 #include "cellPngDec.h"
 
-LOG_CHANNEL(cellPngDec);
+logs::channel cellPngDec("cellPngDec", logs::level::notice);
 
 // cellPngDec aliases to improve readability
 using PPHandle           = vm::pptr<PngHandle>;

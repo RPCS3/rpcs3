@@ -7,6 +7,8 @@
 #include "rsx_utils.h"
 #include "Emu/Cell/PPUCallback.h"
 
+#include <thread>
+
 cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 {
 	{ "Off", 0. },
@@ -43,7 +45,7 @@ namespace rsx
 				if (Emu.IsStopped())
 					break;
 
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(1ms);
 			}
 		}
 
@@ -253,7 +255,7 @@ namespace rsx
 				return;
 			}
 
-			vm::ps3::ptr<CellGcmReportData> result = { get_address(offset, location), vm::addr };
+			vm::ps3::ptr<CellGcmReportData> result = vm::cast(get_address(offset, location));
 
 			result->timer = rsx->timestamp();
 

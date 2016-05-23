@@ -3,7 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUOpcodes.h"
 
-LOG_CHANNEL(sys_libc);
+logs::channel sys_libc("sys_libc", logs::level::notice);
 
 namespace sys_libc_func
 {

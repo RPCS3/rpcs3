@@ -5,8 +5,6 @@ extern "C"
 #include <libavutil/pixfmt.h>
 }
 
-#include <cmath>
-
 namespace rsx
 {
 	template<typename T>
@@ -26,6 +24,12 @@ namespace rsx
 		}
 	}
 
+	//
+	static inline u32 ceil_log2(u32 value)
+	{
+		return value <= 1 ? 0 : ::cntlz32((value - 1) << 1) ^ 31;
+	}
+
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
 	*       - Input can be swizzled or linear, bool flag handles conversion to and from
 	*       - It will handle any width and height that are a power of 2, square or non square
@@ -34,8 +38,8 @@ namespace rsx
 	template<typename T>
 	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, bool input_is_swizzled)
 	{
-		u16 log2width = ::narrow<u16>(ceil(std::log2(width)));
-		u16 log2height = ::narrow<u16>(ceil(std::log2(height)));
+		u32 log2width = ceil_log2(width);
+		u32 log2height = ceil_log2(height);
 
 		// Max mask possible for square texture
 		u32 x_mask = 0x55555555;

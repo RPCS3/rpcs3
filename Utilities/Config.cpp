@@ -5,7 +5,7 @@
 
 namespace cfg
 {
-	_log::channel cfg("CFG", _log::level::notice);
+	logs::channel cfg("CFG", logs::level::notice);
 
 	entry_base::entry_base(type _type)
 		: m_type(_type)

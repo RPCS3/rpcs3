@@ -152,7 +152,7 @@ public:
 	{
 		auto var_blocks = fmt::split(var, { "." });
 
-		Expects(var_blocks.size() != 0);
+		EXPECTS(var_blocks.size() != 0);
 
 		name = var_blocks[0];
 

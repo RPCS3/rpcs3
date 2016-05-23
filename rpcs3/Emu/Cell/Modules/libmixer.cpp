@@ -5,9 +5,11 @@
 
 #include "cellAudio.h"
 #include "libmixer.h"
-#include <cmath>
 
-LOG_CHANNEL(libmixer);
+#include <cmath>
+#include <thread>
+
+logs::channel libmixer("libmixer", logs::level::notice);
 
 // TODO: use fxm
 SurMixerConfig g_surmx;
@@ -332,7 +334,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 			if (g_surmx.mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+				std::this_thread::sleep_for(1ms); // hack
 				continue;
 			}
 
@@ -448,7 +450,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	ppu->cpu_init();
 	ppu->state -= cpu_state::stop;
-	ppu->lock_notify();
+	(*ppu)->lock_notify();
 
 	return CELL_OK;
 }

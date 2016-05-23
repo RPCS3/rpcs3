@@ -1,6 +1,6 @@
+#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
-#ifdef _MSC_VER
 #include "D3D12GSRender.h"
 #include <d2d1_3.h>
 #include <dwrite_3.h>

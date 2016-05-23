@@ -4,7 +4,6 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "MFC.h"
-#include <cmath>
 
 class lv2_event_queue_t;
 struct lv2_spu_group_t;
@@ -380,13 +379,7 @@ struct spu_imm_table_t
 		std::array<__m128, 155 + 174> m_data;
 
 	public:
-		scale_table_t()
-		{
-			for (s32 i = -155; i < 174; i++)
-			{
-				m_data[i + 155] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
-			}
-		}
+		scale_table_t();
 
 		force_inline __m128 operator [] (s32 scale) const
 		{
@@ -395,56 +388,7 @@ struct spu_imm_table_t
 	}
 	const scale;
 
-	spu_imm_table_t()
-	{
-		for (u32 i = 0; i < sizeof(fsm) / sizeof(fsm[0]); i++)
-		{
-			for (u32 j = 0; j < 4; j++)
-			{
-				fsm[i]._u32[j] = (i & (1 << j)) ? 0xffffffff : 0;
-			}
-		}
-
-		for (u32 i = 0; i < sizeof(fsmh) / sizeof(fsmh[0]); i++)
-		{
-			for (u32 j = 0; j < 8; j++)
-			{
-				fsmh[i]._u16[j] = (i & (1 << j)) ? 0xffff : 0;
-			}
-		}
-
-		for (u32 i = 0; i < sizeof(fsmb) / sizeof(fsmb[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++)
-			{
-				fsmb[i]._u8[j] = (i & (1 << j)) ? 0xff : 0;
-			}
-		}
-
-		for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++)
-			{
-				sldq_pshufb[i]._u8[j] = static_cast<u8>(j - i);
-			}
-		}
-
-		for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++)
-			{
-				srdq_pshufb[i]._u8[j] = (j + i > 15) ? 0xff : static_cast<u8>(j + i);
-			}
-		}
-
-		for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++)
-			{
-				rldq_pshufb[i]._u8[j] = static_cast<u8>((j - i) & 0xf);
-			}
-		}
-	}
+	spu_imm_table_t();
 };
 
 extern const spu_imm_table_t g_spu_imm;
@@ -646,7 +590,7 @@ public:
 		return *_ptr<T>(lsa);
 	}
 
-	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function);
+	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread&)> function);
 	void UnregisterHleFunction(u32 addr);
 	void UnregisterHleFunctions(u32 start_addr, u32 end_addr);
 };

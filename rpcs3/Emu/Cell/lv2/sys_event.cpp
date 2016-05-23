@@ -1,25 +1,26 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "sys_process.h"
 #include "sys_event.h"
-#include "IPC.h"
 
-LOG_CHANNEL(sys_event);
+logs::channel sys_event("sys_event", logs::level::notice);
 
-template<> DECLARE(ipc_manager<lv2_event_queue_t>::g_ipc) {};
+template<> DECLARE(ipc_manager<lv2_event_queue_t, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
 std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
 {
-	auto make_expr = WRAP_EXPR(idm::import<lv2_event_queue_t>(WRAP_EXPR(std::make_shared<lv2_event_queue_t>(protocol, type, name, ipc_key, size))));
+	auto queue = std::make_shared<lv2_event_queue_t>(protocol, type, name, ipc_key, size);
+
+	auto make_expr = WRAP_EXPR(idm::import<lv2_event_queue_t>(WRAP_EXPR(queue)));
 
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
 	{
@@ -28,7 +29,12 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 typ
 	}
 
 	// IPC queue
-	return ipc_manager<lv2_event_queue_t>::add(ipc_key, make_expr);
+	if (ipc_manager<lv2_event_queue_t, u64>::add(ipc_key, make_expr))
+	{
+		return queue;
+	}
+
+	return nullptr;
 }
 
 std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
@@ -39,12 +45,12 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
 		return{};
 	}
 
-	return ipc_manager<lv2_event_queue_t>::get(ipc_key);
+	return ipc_manager<lv2_event_queue_t, u64>::get(ipc_key);
 }
 
 void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3)
 {
-	Expects(m_sq.empty() || m_events.empty());
+	EXPECTS(m_sq.empty() || m_events.empty());
 
 	// save event if no waiters
 	if (m_sq.empty())
@@ -77,15 +83,15 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 		throw fmt::exception("Unexpected (queue.type=%d, thread.type=%d)" HERE, type, thread->type);
 	}
 
-	ASSERT(!thread->state.test_and_set(cpu_state::signal));
-	thread->notify();
+	VERIFY(!thread->state.test_and_set(cpu_state::signal));
+	(*thread)->notify();
 
 	return m_sq.pop_front();
 }
 
 lv2_event_queue_t::event_type lv2_event_queue_t::pop(lv2_lock_t)
 {
-	Expects(m_events.size());
+	EXPECTS(m_events.size());
 	auto result = m_events.front();
 	m_events.pop_front();
 	return result;
@@ -171,7 +177,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 		}
 
 		thread->state += cpu_state::signal;
-		thread->notify();
+		(*thread)->notify();
 	}
 
 	return CELL_OK;
@@ -270,7 +276,7 @@ s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> 
 
 	if (ppu.GPR[3])
 	{
-		Ensures(!idm::check<lv2_event_queue_t>(equeue_id));
+		ENSURES(!idm::check<lv2_event_queue_t>(equeue_id));
 		return CELL_ECANCELED;
 	}
 

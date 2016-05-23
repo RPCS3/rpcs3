@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -7,7 +6,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_mmapper.h"
 
-LOG_CHANNEL(sys_mmapper);
+logs::channel sys_mmapper("sys_mmapper", logs::level::notice);
 
 s32 sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
 {
@@ -334,24 +333,26 @@ s32 sys_mmapper_unmap_memory(u32 addr, vm::ptr<u32> mem_id)
 		return CELL_EINVAL;
 	}
 
-	for (auto& mem : idm::get_all<lv2_memory_t>())
+	const auto mem = idm::select<lv2_memory_t>([&](u32, lv2_memory_t& mem)
 	{
-		if (mem->addr == addr)
-		{
-			if (!area->dealloc(addr))
-			{
-				throw EXCEPTION("Deallocation failed (mem_id=0x%x, addr=0x%x)", mem->id, addr);
-			}
+		return mem.addr == addr;
+	});
 
-			mem->addr = 0;
-
-			*mem_id = mem->id;
-
-			return CELL_OK;
-		}
+	if (!mem)
+	{
+		return CELL_EINVAL;
 	}
 
-	return CELL_EINVAL;
+	if (!area->dealloc(addr))
+	{
+		throw EXCEPTION("Deallocation failed (mem_id=0x%x, addr=0x%x)", mem->id, addr);
+	}
+
+	mem->addr = 0;
+
+	*mem_id = mem->id;
+
+	return CELL_OK;
 }
 
 s32 sys_mmapper_enable_page_fault_notification(u32 addr, u32 eq)

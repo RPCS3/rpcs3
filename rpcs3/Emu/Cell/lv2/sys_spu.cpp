@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -12,7 +11,7 @@
 #include "sys_event.h"
 #include "sys_spu.h"
 
-LOG_CHANNEL(sys_spu);
+logs::channel sys_spu("sys_spu", logs::level::notice);
 
 void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr)
 {
@@ -20,7 +19,7 @@ void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr)
 
 	if (loader != elf_error::ok)
 	{
-		throw fmt::exception("Failed to load SPU image: %s" HERE, bijective_find<elf_error>(loader, "???"));
+		throw fmt::exception("Failed to load SPU image: %s" HERE, loader.get_error());
 	}
 
 	for (const auto& prog : loader.progs)
@@ -323,7 +322,7 @@ s32 sys_spu_thread_group_start(u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_state::stop;
-			thread->lock_notify();
+			(*thread)->lock_notify();
 		}
 	}
 
@@ -421,7 +420,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_state::suspend;
-			thread->lock_notify();
+			(*thread)->lock_notify();
 		}
 	}
 
@@ -504,7 +503,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 		if (thread)
 		{
 			thread->state += cpu_state::stop;
-			thread->lock_notify();
+			(*thread)->lock_notify();
 		}
 	}
 
@@ -563,7 +562,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 		CHECK_EMU_STATUS;
 
-		group->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		group->cv.wait_for(lv2_lock, 1ms);
 	}
 
 	switch (group->join_state & ~SPU_TGJSF_IS_JOINING)

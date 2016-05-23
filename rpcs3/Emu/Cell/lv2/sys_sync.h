@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Utilities/SleepQueue.h"
+#include <mutex>
+#include <condition_variable>
 
 namespace vm { using namespace ps3; }
 
@@ -43,7 +45,6 @@ enum
 	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
 };
 
-extern std::mutex& get_current_thread_mutex();
 extern std::condition_variable& get_current_thread_cv();
 
 // Simple class for global mutex to pass unique_lock and check it
@@ -56,8 +57,8 @@ struct lv2_lock_t
 	lv2_lock_t(type& lv2_lock)
 		: ref(lv2_lock)
 	{
-		Expects(ref.owns_lock());
-		Expects(ref.mutex() == &mutex);
+		EXPECTS(ref.owns_lock());
+		EXPECTS(ref.mutex() == &mutex);
 	}
 
 	operator type&() const

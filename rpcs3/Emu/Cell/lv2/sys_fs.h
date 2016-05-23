@@ -2,6 +2,9 @@
 
 #include "Utilities/Thread.h"
 
+#include <mutex>
+#include <condition_variable>
+
 namespace vm { using namespace ps3; }
 
 #pragma pack(push, 4)

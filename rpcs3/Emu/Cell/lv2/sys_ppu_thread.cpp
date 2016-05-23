@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,7 +7,9 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_ppu_thread.h"
 
-LOG_CHANNEL(sys_ppu_thread);
+#include <thread>
+
+logs::channel sys_ppu_thread("sys_ppu_thread", logs::level::notice);
 
 void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 {
@@ -29,6 +30,7 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 	//}
 
 	ppu.state += cpu_state::exit;
+	//ppu.handle_interrupt();
 
 	// Delete detached thread
 	if (!ppu.is_joinable)
@@ -73,6 +75,8 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 		return CELL_EDEADLK;
 	}
 
+	ppu.sleep();
+
 	// mark joining
 	thread->is_joining = true;
 
@@ -81,8 +85,10 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	{
 		CHECK_EMU_STATUS;
 
-		get_current_thread_cv().wait_for(lv2_lock, std::chrono::milliseconds(1));
+		get_current_thread_cv().wait_for(lv2_lock, 1ms);
 	}
+
+	ppu.awake();
 
 	// get exit status from the register
 	if (vptr) *vptr = thread->GPR[3];
@@ -219,28 +225,6 @@ s32 sys_ppu_thread_restart(u32 thread_id)
 	return CELL_OK;
 }
 
-u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, const std::string& name, std::function<void(PPUThread&)> task)
-{
-	const auto ppu = idm::make_ptr<PPUThread>(name);
-
-	ppu->prio = prio;
-	ppu->stack_size = stacksize;
-	ppu->custom_task = std::move(task);
-	ppu->cpu_init();
-
-	if (entry)
-	{
-		ppu->PC = vm::read32(entry);
-		ppu->GPR[2] = vm::read32(entry + 4); // rtoc
-	}
-
-	ppu->GPR[3] = arg;
-	ppu->state -= cpu_state::stop;
-	ppu->lock_notify();
-
-	return ppu->id;
-}
-
 s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
 {
 	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)",
@@ -267,13 +251,14 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 	ppu->stack_size = std::max<u32>(stacksize, 0x4000);
 	ppu->cpu_init();
 
-	ppu->PC = vm::read32(param->entry);
+	ppu->pc = vm::read32(param->entry);
 	ppu->GPR[2] = vm::read32(param->entry + 4); // rtoc
 	ppu->GPR[3] = arg;
 	ppu->GPR[4] = unk; // actually unknown
 	ppu->GPR[13] = param->tls;
 
 	ppu->is_joinable = is_joinable;
+	//ppu->state += cpu_state::interrupt;
 
 	*thread_id = ppu->id;
 
@@ -294,7 +279,7 @@ s32 sys_ppu_thread_start(u32 thread_id)
 	}
 
 	thread->state -= cpu_state::stop;
-	thread->lock_notify();
+	(*thread)->lock_notify();
 
 	return CELL_OK;
 }

@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellVoice);
+logs::channel cellVoice("cellVoice", logs::level::notice);
 
 // Error Codes
 enum

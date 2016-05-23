@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellSpudll);
+logs::channel cellSpudll("cellSpudll", logs::level::notice);
 
 s32 cellSpudllGetImageSize(vm::ptr<u32> psize, vm::cptr<void> so_elf, vm::cptr<struct CellSpudllHandleConfig> config)
 {

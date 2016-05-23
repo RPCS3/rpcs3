@@ -21,7 +21,7 @@ namespace
 	constexpr void copy(gsl::span<T1> dst, gsl::span<T2> src)
 	{
 		static_assert(std::is_convertible<T1, T2>::value, "Cannot convert source and destination span type.");
-		Expects(dst.size() == src.size());
+		EXPECTS(dst.size() == src.size());
 		std::copy(src.begin(), src.end(), dst.begin());
 	}
 

@@ -1,6 +1,6 @@
+#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
-#ifdef _MSC_VER
 #include "Utilities/Config.h"
 #include "D3D12GSRender.h"
 #include <wrl/client.h>
@@ -43,13 +43,13 @@ HMODULE D3DCompiler;
 
 void loadD3D12FunctionPointers()
 {
-	ASSERT(D3D12Module = LoadLibrary(L"d3d12.dll"));
+	VERIFY(D3D12Module = LoadLibrary(L"d3d12.dll"));
 	wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
 	wrapD3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(D3D12Module, "D3D12GetDebugInterface");
 	wrapD3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(D3D12Module, "D3D12SerializeRootSignature");
-	ASSERT(D3D11Module = LoadLibrary(L"d3d11.dll"));
+	VERIFY(D3D11Module = LoadLibrary(L"d3d11.dll"));
 	wrapD3D11On12CreateDevice = (PFN_D3D11ON12_CREATE_DEVICE)GetProcAddress(D3D11Module, "D3D11On12CreateDevice");
-	ASSERT(D3DCompiler = LoadLibrary(L"d3dcompiler_47.dll"));
+	VERIFY(D3DCompiler = LoadLibrary(L"d3dcompiler_47.dll"));
 	wrapD3DCompile = (pD3DCompile)GetProcAddress(D3DCompiler, "D3DCompile");
 }
 
@@ -486,7 +486,7 @@ void D3D12GSRender::flip(int buffer)
 	if (!is_flip_surface_in_global_memory(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
 	{
 		resource_storage &storage = get_current_resource_storage();
-		ASSERT(storage.ram_framebuffer == nullptr);
+		VERIFY(storage.ram_framebuffer == nullptr);
 
 		size_t w = 0, h = 0, row_pitch = 0;
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Utilities/Config.h"
 #include "PPUFunction.h"
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
@@ -207,15 +206,9 @@ inline RT ppu_execute_function_or_callback(const char* name, PPUThread& ppu, Arg
 	{
 		return Func(std::forward<Args>(args)...);
 	}
-	catch (const std::exception&)
-	{
-		LOG_ERROR(PPU, "Function '%s' aborted", ppu.last_function);
-		ppu.last_function = previous_function;
-		throw;
-	}
 	catch (...)
 	{
-		LOG_WARNING(PPU, "Function '%s' aborted", ppu.last_function);
+		LOG_ERROR(PPU, "Function call '%s' aborted", ppu.last_function);
 		ppu.last_function = previous_function;
 		throw;
 	}

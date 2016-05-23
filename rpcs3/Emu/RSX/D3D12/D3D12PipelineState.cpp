@@ -1,6 +1,6 @@
+#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
-#ifdef _MSC_VER
 #include "Utilities/Config.h"
 #include "D3D12PipelineState.h"
 #include "D3D12GSRender.h"

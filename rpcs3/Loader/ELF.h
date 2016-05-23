@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../Utilities/types.h"
 #include "../../Utilities/File.h"
 
 enum class elf_os : u8
@@ -155,26 +156,31 @@ enum class elf_error
 
 // ELF loader error information
 template<>
-struct bijective<elf_error, const char*>
+struct unveil<elf_error>
 {
-	static constexpr bijective_pair<elf_error, const char*> map[]
+	static inline const char* get(elf_error error)
 	{
-		{ elf_error::ok, "" },
+		switch (error)
+		{
+		case elf_error::ok: return "OK";
 
-		{ elf_error::stream, "Invalid stream" },
-		{ elf_error::stream_header, "Failed to read ELF header" },
-		{ elf_error::stream_phdrs, "Failed to read ELF program headers" },
-		{ elf_error::stream_shdrs, "Failed to read ELF section headers" },
-		{ elf_error::stream_data, "Failed to read ELF program data" },
+		case elf_error::stream: return "Invalid stream";
+		case elf_error::stream_header: return "Failed to read ELF header";
+		case elf_error::stream_phdrs: return "Failed to read ELF program headers";
+		case elf_error::stream_shdrs: return "Failed to read ELF section headers";
+		case elf_error::stream_data: return "Failed to read ELF program data";
 
-		{ elf_error::header_magic, "Not an ELF" },
-		{ elf_error::header_version, "Invalid or unsupported ELF format" },
-		{ elf_error::header_class, "Invalid ELF class" },
-		{ elf_error::header_machine, "Invalid ELF machine" },
-		{ elf_error::header_endianness, "Invalid ELF data (endianness)" },
-		{ elf_error::header_type, "Invalid ELF type" },
-		{ elf_error::header_os, "Invalid ELF OS ABI" },
-	};
+		case elf_error::header_magic: return "Not an ELF";
+		case elf_error::header_version: return "Invalid or unsupported ELF format";
+		case elf_error::header_class: return "Invalid ELF class";
+		case elf_error::header_machine: return "Invalid ELF machine";
+		case elf_error::header_endianness: return "Invalid ELF data (endianness)";
+		case elf_error::header_type: return "Invalid ELF type";
+		case elf_error::header_os: return "Invalid ELF OS ABI";
+
+		default: throw error;
+		}
+	}
 };
 
 // ELF loader with specified parameters.
@@ -185,7 +191,7 @@ class elf_loader
 {
 	elf_error m_error{};
 
-	elf_error error(elf_error e)
+	elf_error set_error(elf_error e)
 	{
 		return m_error = e;
 	}
@@ -213,57 +219,57 @@ public:
 	{
 		// Check stream
 		if (!stream)
-			return error(elf_error::stream);
+			return set_error(elf_error::stream);
 
 		// Read ELF header
 		stream.seek(offset);
 		if (!stream.read(header))
-			return error(elf_error::stream_header);
+			return set_error(elf_error::stream_header);
 
 		// Check magic
 		if (header.e_magic != "\177ELF"_u32)
-			return error(elf_error::header_magic);
+			return set_error(elf_error::header_magic);
 
 		// Check class
 		if (header.e_class != (std::is_same<sz_t, u32>::value ? 1 : 2))
-			return error(elf_error::header_class);
+			return set_error(elf_error::header_class);
 
 		// Check endianness
 		if (header.e_data != (std::is_same<en_t<u32>, le_t<u32>>::value ? 1 : 2))
-			return error(elf_error::header_endianness);
+			return set_error(elf_error::header_endianness);
 
 		// Check machine
 		if (header.e_machine != Machine)
-			return error(elf_error::header_machine);
+			return set_error(elf_error::header_machine);
 
 		// Check OS only if specified (hack)
 		if (OS != elf_os::none && header.e_os_abi != OS)
-			return error(elf_error::header_os);
+			return set_error(elf_error::header_os);
 
 		// Check type only if specified (hack)
 		if (Type != elf_type::none && header.e_type != Type)
-			return error(elf_error::header_type);
+			return set_error(elf_error::header_type);
 
 		// Check version and other params
 		if (header.e_curver != 1 || header.e_version != 1 || header.e_ehsize != sizeof(ehdr_t))
-			return error(elf_error::header_version);
+			return set_error(elf_error::header_version);
 
 		if (header.e_phnum && header.e_phentsize != sizeof(phdr_t))
-			return error(elf_error::header_version);
+			return set_error(elf_error::header_version);
 
 		if (header.e_shnum && header.e_shentsize != sizeof(shdr_t))
-			return error(elf_error::header_version);
+			return set_error(elf_error::header_version);
 
 		// Load program headers
 		std::vector<phdr_t> _phdrs(header.e_phnum);
 		stream.seek(offset + header.e_phoff);
 		if (!stream.read(_phdrs))
-			return error(elf_error::stream_phdrs);
+			return set_error(elf_error::stream_phdrs);
 
 		shdrs.resize(header.e_shnum);
 		stream.seek(offset + header.e_shoff);
 		if (!stream.read(shdrs))
-			return error(elf_error::stream_shdrs);
+			return set_error(elf_error::stream_shdrs);
 
 		progs.clear();
 		progs.reserve(_phdrs.size());
@@ -275,7 +281,7 @@ public:
 			progs.back().bin.resize(hdr.p_filesz);
 			stream.seek(offset + hdr.p_offset);
 			if (!stream.read(progs.back().bin))
-				return error(elf_error::stream_data);
+				return set_error(elf_error::stream_data);
 		}
 
 		shdrs.shrink_to_fit();
@@ -332,6 +338,11 @@ public:
 
 	// Return error code
 	operator elf_error() const
+	{
+		return m_error;
+	}
+
+	elf_error get_error() const
 	{
 		return m_error;
 	}

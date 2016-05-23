@@ -16,7 +16,9 @@ extern "C"
 #include "cellPamf.h"
 #include "cellVdec.h"
 
-LOG_CHANNEL(cellVdec);
+#include <thread>
+
+logs::channel cellVdec("cellVdec", logs::level::notice);
 
 vm::gvar<s32> _cell_vdec_prx_ver; // ???
 
@@ -541,7 +543,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 
 	vdec.vdecCb->cpu_init();
 	vdec.vdecCb->state -= cpu_state::stop;
-	vdec.vdecCb->lock_notify();
+	(*vdec.vdecCb)->lock_notify();
 }
 
 s32 cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
@@ -594,7 +596,7 @@ s32 cellVdecClose(u32 handle)
 	{
 		CHECK_EMU_STATUS;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		std::this_thread::sleep_for(1ms); // hack
 	}
 
 	idm::remove<PPUThread>(vdec->vdecCb->id);
@@ -676,7 +678,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	VdecFrame vf;
 	if (!vdec->frames.try_pop(vf))
 	{
-		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(1ms); // hack
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 
@@ -800,13 +802,13 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	VdecFrame vf;
 	if (!vdec->frames.try_peek(vf))
 	{
-		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(1ms); // hack
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 
 	AVFrame& frame = *vf.data;
 
-	const vm::ptr<CellVdecPicItem> info{ vdec->memAddr + vdec->memBias, vm::addr };
+	const vm::ptr<CellVdecPicItem> info = vm::cast(vdec->memAddr + vdec->memBias);
 
 	vdec->memBias += 512;
 	if (vdec->memBias + 512 > vdec->memSize)
@@ -834,7 +836,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 	if (vdec->type == CELL_VDEC_CODEC_TYPE_AVC)
 	{
-		const vm::ptr<CellVdecAvcInfo> avc{ info.addr() + SIZE_32(CellVdecPicItem), vm::addr };
+		const vm::ptr<CellVdecAvcInfo> avc = vm::cast(info.addr() + SIZE_32(CellVdecPicItem));
 
 		avc->horizontalSize = frame.width;
 		avc->verticalSize = frame.height;

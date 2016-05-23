@@ -1263,9 +1263,11 @@ const bool s_self_test = []() -> bool
 	return true;
 }();
 
+#include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <exception>
+#include <chrono>
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
@@ -1278,17 +1280,20 @@ struct thread_ctrl::internal
 	task_stack atexit;
 
 	std::exception_ptr exception; // Caught exception
+
+	std::chrono::high_resolution_clock::time_point time_limit;
 };
 
-// Temporarily until better interface is implemented
-extern std::condition_variable& get_current_thread_cv()
-{
-	return thread_ctrl::get_current()->get_data()->cond;
-}
+thread_local thread_ctrl::internal* g_tls_internal = nullptr;
 
 extern std::mutex& get_current_thread_mutex()
 {
-	return thread_ctrl::get_current()->get_data()->mutex;
+	return g_tls_internal->mutex;
+}
+
+extern std::condition_variable& get_current_thread_cv()
+{
+	return g_tls_internal->cond;
 }
 
 // TODO
@@ -1296,10 +1301,64 @@ extern atomic_t<u32> g_thread_count(0);
 
 extern thread_local std::string(*g_tls_log_prefix)();
 
+void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
+{
+	reinterpret_cast<std::thread&>(ctrl->m_thread) = std::thread([ctrl, task = std::move(task)]
+	{
+		try
+		{
+			ctrl->initialize();
+			task.exec();
+		}
+		catch (...)
+		{
+			ctrl->initialize_once();
+			ctrl->m_data->exception = std::current_exception();
+		}
+
+		ctrl->finalize();
+	});
+}
+
+void thread_ctrl::wait_start(u64 timeout)
+{
+	initialize_once();
+
+	m_data->time_limit = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(timeout);
+}
+
+bool thread_ctrl::wait_wait(u64 timeout)
+{
+	initialize_once();
+
+	std::unique_lock<std::mutex> lock(m_data->mutex, std::adopt_lock);
+
+	if (timeout && m_data->cond.wait_until(lock, m_data->time_limit) == std::cv_status::timeout)
+	{
+		lock.release();
+		return false;
+	}
+
+	m_data->cond.wait(lock);
+	lock.release();
+	return true;
+}
+
+void thread_ctrl::test()
+{
+	if (m_data && m_data->exception)
+	{
+		std::rethrow_exception(m_data->exception);
+	}
+}
+
 void thread_ctrl::initialize()
 {
+	initialize_once(); // TODO (temporarily)
+
 	// Initialize TLS variable
 	g_tls_this_thread = this;
+	g_tls_internal = this->m_data;
 
 	g_tls_log_prefix = []
 	{
@@ -1339,12 +1398,6 @@ void thread_ctrl::initialize()
 #endif
 }
 
-void thread_ctrl::set_exception() noexcept
-{
-	initialize_once();
-	m_data->exception = std::current_exception();
-}
-
 void thread_ctrl::finalize() noexcept
 {
 	// TODO
@@ -1355,30 +1408,43 @@ void thread_ctrl::finalize() noexcept
 
 	--g_thread_count;
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 	ULONG64 time;
-	QueryThreadCycleTime(m_thread.native_handle(), &time);
+	QueryThreadCycleTime(GetCurrentThread(), &time);
 	LOG_NOTICE(GENERAL, "Thread time: %f Gc", time / 1000000000.);
 #endif
 }
 
-task_stack& thread_ctrl::get_atexit() const
+void thread_ctrl::push_atexit(task_stack task)
 {
 	initialize_once();
-	return m_data->atexit;
+	m_data->atexit.push(std::move(task));
+}
+
+thread_ctrl::thread_ctrl(std::string&& name)
+	: m_name(std::move(name))
+{
+	CHECK_STORAGE(std::thread, m_thread);
+
+#pragma push_macro("new")
+#undef new
+	new (&m_thread) std::thread;
+#pragma pop_macro("new")
 }
 
 thread_ctrl::~thread_ctrl()
 {
-	if (m_thread.joinable())
+	if (reinterpret_cast<std::thread&>(m_thread).joinable())
 	{
-		m_thread.detach();
+		reinterpret_cast<std::thread&>(m_thread).detach();
 	}
 
 	delete m_data;
+
+	reinterpret_cast<std::thread&>(m_thread).~thread();
 }
 
-void thread_ctrl::initialize_once() const
+void thread_ctrl::initialize_once()
 {
 	if (UNLIKELY(!m_data))
 	{
@@ -1393,33 +1459,37 @@ void thread_ctrl::initialize_once() const
 
 void thread_ctrl::join()
 {
-	if (LIKELY(m_thread.joinable()))
+	// Increase contention counter
+	const u32 _j = m_joining++;
+
+	if (LIKELY(_j >= 0x80000000))
 	{
-		// Increase contention counter
-		if (UNLIKELY(m_joining++))
+		// Already joined (signal condition)
+		m_joining = 0x80000000;
+	}
+	else if (LIKELY(_j == 0))
+	{
+		// Winner joins the thread
+		reinterpret_cast<std::thread&>(m_thread).join();
+
+		// Notify others if necessary
+		if (UNLIKELY(m_joining.exchange(0x80000000) != 1))
 		{
-			// Hard way
 			initialize_once();
 
-			std::unique_lock<std::mutex> lock(m_data->mutex);
-			m_data->join.wait(lock, WRAP_EXPR(!m_thread.joinable()));
+			// Serialize for reliable notification
+			m_data->mutex.lock();
+			m_data->mutex.unlock();
+			m_data->join.notify_all();
 		}
-		else
-		{
-			// Winner joins the thread
-			m_thread.join();
+	}
+	else
+	{
+		// Hard way
+		initialize_once();
 
-			// Notify others if necessary
-			if (UNLIKELY(m_joining > 1))
-			{
-				initialize_once();
-
-				// Serialize for reliable notification
-				m_data->mutex.lock();
-				m_data->mutex.unlock();
-				m_data->join.notify_all();
-			}
-		}
+		std::unique_lock<std::mutex> lock(m_data->mutex);
+		m_data->join.wait(lock, WRAP_EXPR(m_joining >= 0x80000000));
 	}
 
 	if (UNLIKELY(m_data && m_data->exception))
@@ -1428,7 +1498,18 @@ void thread_ctrl::join()
 	}
 }
 
-void thread_ctrl::lock_notify() const
+void thread_ctrl::lock()
+{
+	initialize_once();
+	m_data->mutex.lock();
+}
+
+void thread_ctrl::unlock()
+{
+	m_data->mutex.unlock();
+}
+
+void thread_ctrl::lock_notify()
 {
 	if (UNLIKELY(g_tls_this_thread == this))
 	{
@@ -1443,16 +1524,19 @@ void thread_ctrl::lock_notify() const
 	m_data->cond.notify_one();
 }
 
-void thread_ctrl::notify() const
+void thread_ctrl::notify()
 {
-	initialize_once();
 	m_data->cond.notify_one();
 }
 
-thread_ctrl::internal* thread_ctrl::get_data() const
+void thread_ctrl::set_exception(std::exception_ptr e)
 {
-	initialize_once();
-	return m_data;
+	m_data->exception = e;
+}
+
+void thread_ctrl::sleep(u64 useconds)
+{
+	std::this_thread::sleep_for(std::chrono::microseconds(useconds));
 }
 
 
@@ -1462,7 +1546,6 @@ named_thread::named_thread()
 
 named_thread::~named_thread()
 {
-	LOG_TRACE(GENERAL, "%s", __func__);
 }
 
 std::string named_thread::get_name() const

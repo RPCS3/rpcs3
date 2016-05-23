@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -9,7 +8,9 @@
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 
-LOG_CHANNEL(sys_lwcond);
+#include <algorithm>
+
+logs::channel sys_lwcond("sys_lwcond", logs::level::notice);
 
 extern u64 get_system_time();
 
@@ -29,8 +30,8 @@ void lv2_lwcond_t::notify(lv2_lock_t, cpu_thread* thread, const std::shared_ptr<
 		mutex->signaled--;
 	}
 
-	ASSERT(!thread->state.test_and_set(cpu_state::signal));
-	thread->notify();
+	VERIFY(!thread->state.test_and_set(cpu_state::signal));
+	(*thread)->notify();
 }
 
 s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)

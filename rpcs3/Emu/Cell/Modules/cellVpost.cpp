@@ -10,7 +10,7 @@ extern "C"
 
 #include "cellVpost.h"
 
-LOG_CHANNEL(cellVpost);
+logs::channel cellVpost("cellVpost", logs::level::notice);
 
 s32 cellVpostQueryAttr(vm::cptr<CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
 {

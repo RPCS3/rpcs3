@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -9,7 +8,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_prx.h"
 
-LOG_CHANNEL(sys_prx);
+logs::channel sys_prx("sys_prx", logs::level::notice);
 
 s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {

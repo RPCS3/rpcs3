@@ -1,6 +1,6 @@
+#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
-#ifdef _MSC_VER
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
 #define STRINGIFY(x) #x

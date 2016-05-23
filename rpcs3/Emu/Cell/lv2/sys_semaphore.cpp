@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,7 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_semaphore.h"
 
-LOG_CHANNEL(sys_semaphore);
+logs::channel sys_semaphore("sys_semaphore", logs::level::notice);
 
 extern u64 get_system_time();
 
@@ -174,8 +173,8 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 		count--;
 
 		auto& thread = sem->sq.front();
-		ASSERT(!thread->state.test_and_set(cpu_state::signal));
-		thread->notify();
+		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		(*thread)->notify();
 
 		sem->sq.pop_front();
 	}

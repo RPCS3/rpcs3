@@ -8,7 +8,7 @@
 
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(cellFs);
+logs::channel cellFs("cellFs", logs::level::notice);
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
@@ -527,7 +527,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 				}
 			}
 
-			file->cv.wait_for(lock, std::chrono::milliseconds(1));
+			file->cv.wait_for(lock, 1ms);
 		}
 
 		file->st_status.compare_and_swap(SSS_STOPPED, SSS_INITIALIZED);
@@ -688,7 +688,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 	{
 		CHECK_EMU_STATUS;
 
-		file->cv.wait_for(lock, std::chrono::milliseconds(1));
+		file->cv.wait_for(lock, 1ms);
 	}
 	
 	return CELL_OK;

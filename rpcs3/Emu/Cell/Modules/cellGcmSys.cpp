@@ -8,7 +8,9 @@
 #include "Emu/RSX/GSRender.h"
 #include "cellGcmSys.h"
 
-LOG_CHANNEL(cellGcmSys);
+#include <thread>
+
+logs::channel cellGcmSys("cellGcmSys", logs::level::notice);
 
 extern s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count);
 
@@ -933,7 +935,7 @@ s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags)
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
 
-	ASSERT(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
+	VERIFY(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
 
 	return gcmMapEaIoAddress(ea, io, size, true);
 }
@@ -1257,7 +1259,7 @@ static std::pair<u32, u32> getNextCommandBufferBeginEnd(u32 current)
 static u32 getOffsetFromAddress(u32 address)
 {
 	const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
-	Expects(upper != 0xFFFF);
+	EXPECTS(upper != 0xFFFF);
 	return (upper << 20) | (address & 0xFFFFF);
 }
 

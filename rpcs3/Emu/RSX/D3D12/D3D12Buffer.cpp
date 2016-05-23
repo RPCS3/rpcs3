@@ -1,6 +1,6 @@
+#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
-#ifdef _MSC_VER
 
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
@@ -78,7 +78,7 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 	u32 vertex_count = get_vertex_count(vertex_ranges);
 	size_t offset_in_vertex_buffers_buffer = 0;
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
-	Expects(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
+	EXPECTS(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -350,7 +350,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 		return std::make_tuple(true, index_count, upload_vertex_attributes(first_count_commands, command_list));
 	}
 
-	Expects(draw_command == rsx::draw_command::indexed);
+	EXPECTS(draw_command == rsx::draw_command::indexed);
 
 	// Index count
 	size_t index_count = get_index_count(draw_mode, gsl::narrow<int>(get_vertex_count(first_count_commands)));

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -9,9 +8,13 @@
 #include "sys_process.h"
 #include "sys_timer.h"
 
-LOG_CHANNEL(sys_timer);
+#include <thread>
+
+logs::channel sys_timer("sys_timer", logs::level::notice);
 
 extern u64 get_system_time();
+
+extern std::mutex& get_current_thread_mutex();
 
 void lv2_timer_t::on_task()
 {
@@ -51,7 +54,7 @@ void lv2_timer_t::on_task()
 			continue;
 		}
 
-		get_current_thread_cv().wait_for(lock, std::chrono::milliseconds(1));
+		get_current_thread_cv().wait_for(lock, 1ms);
 	}
 }
 
@@ -64,7 +67,7 @@ void lv2_timer_t::on_stop()
 {
 	// Signal thread using invalid state and join
 	state = -1;
-	lock_notify();
+	(*this)->lock_notify();
 	named_thread::on_stop();
 }
 
@@ -170,7 +173,7 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 	timer->period = period;
 	timer->state  = SYS_TIMER_STATE_RUN;
 
-	timer->lock_notify();
+	(*timer)->lock_notify();
 
 	return CELL_OK;
 }
@@ -244,6 +247,8 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 	return CELL_OK;
 }
 
+#include <thread>
+
 s32 sys_timer_sleep(u32 sleep_time)
 {
 	sys_timer.trace("sys_timer_sleep(sleep_time=%d)", sleep_time);
@@ -258,7 +263,7 @@ s32 sys_timer_sleep(u32 sleep_time)
 	{
 		CHECK_EMU_STATUS;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(1ms);
 	}
 	
 	if (useconds > passed)
@@ -281,7 +286,7 @@ s32 sys_timer_usleep(const u64 sleep_time)
 	{
 		CHECK_EMU_STATUS;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(1ms);
 	}
 
 	if (sleep_time > passed)

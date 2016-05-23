@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -8,7 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_rwlock.h"
 
-LOG_CHANNEL(sys_rwlock);
+logs::channel sys_rwlock("sys_rwlock", logs::level::notice);
 
 extern u64 get_system_time();
 
@@ -19,8 +18,8 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 	{
 		writer = std::static_pointer_cast<cpu_thread>(wsq.front()->shared_from_this());
 
-		ASSERT(!writer->state.test_and_set(cpu_state::signal));
-		writer->notify();
+		VERIFY(!writer->state.test_and_set(cpu_state::signal));
+		(*writer)->notify();
 
 		return wsq.pop_front();
 	}
@@ -32,8 +31,8 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 
 		for (auto& thread : rsq)
 		{
-			ASSERT(!thread->state.test_and_set(cpu_state::signal));
-			thread->notify();
+			VERIFY(!thread->state.test_and_set(cpu_state::signal));
+			(*thread)->notify();
 		}
 
 		return rsq.clear();

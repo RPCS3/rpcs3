@@ -14,7 +14,7 @@ typedef const char *HostCode;
 
 #include "cellL10n.h"
 
-LOG_CHANNEL(cellL10n);
+logs::channel cellL10n("cellL10n", logs::level::notice);
 
 // Translate code id to code name. some codepage may has another name.
 // If this makes your compilation fail, try replace the string code with one in "iconv -l"

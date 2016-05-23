@@ -40,7 +40,6 @@ public:
 
 	const std::string name;
 	const cpu_type type;
-
 	const id_value<> id{};
 
 	cpu_thread(cpu_type type, const std::string& name);
@@ -48,35 +47,33 @@ public:
 	// Public thread state
 	atomic_t<bitset_t<cpu_state>> state{ cpu_state::stop };
 
-	// Recursively enter sleep state
-	void sleep()
-	{
-		if (!++m_sleep) xsleep();
-	}
+	// Public recursive sleep state counter
+	atomic_t<u32> sleep_counter{};
 
-	// Leave sleep state
-	void awake()
-	{
-		if (!m_sleep--) xsleep();
-	}
+	// Object associated with sleep state, possibly synchronization primitive (mutex, semaphore, etc.)
+	atomic_t<void*> owner{};
 
 	// Process thread state, return true if the checker must return
 	bool check_status();
 
-	virtual std::string dump() const = 0; // Print CPU state
+	// Increse sleep counter
+	void sleep()
+	{
+		if (!sleep_counter++) return; //handle_interrupt();
+	}
+
+	// Decrese sleep counter
+	void awake()
+	{
+		if (!--sleep_counter) owner = nullptr;
+	}
+
+	// Print CPU state
+	virtual std::string dump() const = 0;
 	virtual void cpu_init() {}
 	virtual void cpu_task() = 0;
 	virtual bool handle_interrupt() { return false; }
-
-private:
-	[[noreturn]] void xsleep();
-
-	// Sleep/Awake counter
-	atomic_t<u32> m_sleep{};
 };
-
-extern std::mutex& get_current_thread_mutex();
-extern std::condition_variable& get_current_thread_cv();
 
 inline cpu_thread* get_current_cpu_thread() noexcept
 {
@@ -85,4 +82,26 @@ inline cpu_thread* get_current_cpu_thread() noexcept
 	return g_tls_current_cpu_thread;
 }
 
-extern std::vector<std::shared_ptr<cpu_thread>> get_all_cpu_threads();
+// Helper for cpu_thread.
+// 1) Calls sleep() and locks the thread in the constructor.
+// 2) Calls awake() and unlocks the thread in the destructor.
+class cpu_thread_lock final
+{
+	cpu_thread& m_thread;
+
+public:
+	cpu_thread_lock(const cpu_thread_lock&) = delete;
+
+	cpu_thread_lock(cpu_thread& thread)
+		: m_thread(thread)
+	{
+		m_thread.sleep();
+		m_thread->lock();
+	}
+
+	~cpu_thread_lock()
+	{
+		m_thread.awake();
+		m_thread->unlock();
+	}
+};

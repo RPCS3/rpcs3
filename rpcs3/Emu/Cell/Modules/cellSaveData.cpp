@@ -7,7 +7,9 @@
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
 
-LOG_CHANNEL(cellSaveData);
+#include <algorithm>
+
+logs::channel cellSaveData("cellSaveData", logs::level::notice);
 
 // cellSaveData aliases (only for cellSaveData.cpp)
 using PSetList = vm::ptr<CellSaveDataSetList>;
@@ -609,7 +611,7 @@ static never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, 
 	// Write PARAM.SFO
 	if (psf.size())
 	{
-		fs::file(sfo_path, fs::rewrite).write(psf::save_object(psf));
+		psf::save_object(fs::file(sfo_path, fs::rewrite), psf);
 	}
 
 	return CELL_OK;

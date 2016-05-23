@@ -59,17 +59,27 @@ public:
 	// Remove thread from the sleep queue
 	void leave()
 	{
-		auto it = std::find(m_queue.begin(), m_queue.end(), &m_thread);
-		
-		if (it != m_queue.end())
+		for (auto it = m_queue.begin(), end = m_queue.end(); it != end; it++)
 		{
-			m_queue.erase(it);
+			if (*it == &m_thread)
+			{
+				m_queue.erase(it);
+				return;
+			}
 		}
 	}
 
 	// Check whether the thread exists in the sleep queue
 	explicit operator bool() const
 	{
-		return std::find(m_queue.begin(), m_queue.end(), &m_thread) != m_queue.end();
+		for (auto it = m_queue.begin(), end = m_queue.end(); it != end; it++)
+		{
+			if (*it == &m_thread)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 };

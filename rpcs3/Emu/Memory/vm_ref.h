@@ -2,9 +2,6 @@
 
 namespace vm
 {
-	// Tag which allows to construct vm objects from the address value
-	static struct addr_tag_t {} constexpr addr{};
-
 	template<typename T, typename AT>
 	class _ptr_base;
 
@@ -26,12 +23,12 @@ namespace vm
 
 		_ref_base(const _ref_base&) = default;
 
-		constexpr _ref_base(addr_type addr, const addr_tag_t&)
+		_ref_base(vm::addr_t addr)
 			: m_addr(addr)
 		{
 		}
 
-		constexpr addr_type addr() const
+		addr_type addr() const
 		{
 			return m_addr;
 		}
@@ -44,7 +41,7 @@ namespace vm
 		// convert to vm pointer
 		vm::_ptr_base<T, u32> ptr() const
 		{
-			return{ vm::cast(m_addr, HERE), vm::addr };
+			return vm::cast(m_addr, HERE);
 		}
 
 		operator simple_t<T>() const

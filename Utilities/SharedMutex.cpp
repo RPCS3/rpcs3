@@ -140,6 +140,34 @@ void shared_mutex::unlock_notify()
 	}
 }
 
+void shared_mutex::lock_upgrade_hard()
+{
+	unlock_shared();
+	lock();
+}
+
+void shared_mutex::lock_degrade_hard()
+{
+	initialize_once();
+
+	std::unique_lock<std::mutex> lock(m_data->mutex);
+
+	m_ctrl -= SM_WRITER_LOCK - 1;
+
+	if (m_data->rq_size)
+	{
+		// Notify all readers
+		lock.unlock();
+		m_data->rcv.notify_all();
+	}
+	else if (m_data->wq_size)
+	{
+		// Notify next exclusive owner
+		lock.unlock();
+		m_data->wcv.notify_one();
+	}
+}
+
 void shared_mutex::initialize_once()
 {
 	if (UNLIKELY(!m_data))

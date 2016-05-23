@@ -179,7 +179,7 @@ namespace cfg
 			for (const auto& v : init)
 			{
 				// Ensure elements are unique
-				ASSERT(map.emplace(v.first, v.second).second);
+				VERIFY(map.emplace(v.first, v.second).second);
 			}
 
 			return map;
@@ -529,4 +529,4 @@ namespace cfg
 }
 
 // Registered log channel
-#define LOG_CHANNEL(name) _log::channel name(#name, _log::level::notice); namespace _log { cfg::enum_entry<_log::level, true> name(cfg::root.log, #name, ::name.enabled); }
+#define LOG_CHANNEL(name) extern logs::channel name; namespace logs { static cfg::enum_entry<logs::level, true> name(cfg::root.log, #name, ::name.enabled); }

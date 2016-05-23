@@ -4,9 +4,11 @@
 #include "CgBinaryProgram.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 
+#include <algorithm>
+
 void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 {
-	Expects(m_opcode < 70);
+	EXPECTS(m_opcode < 70);
 	std::string op_name = "";
 
 	if (dst.dest_reg == 63)
@@ -223,7 +225,7 @@ void CgBinaryDisasm::TaskFP()
 {
 	m_size = 0;
 	u32* data = (u32*)&m_buffer[m_offset];
-	Expects((m_buffer_size - m_offset) % sizeof(u32) == 0);
+	EXPECTS((m_buffer_size - m_offset) % sizeof(u32) == 0);
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{
 		data[i] = se_storage<u32>::swap(data[i]); // WTF, cannot use be_t<> there?
@@ -471,7 +473,7 @@ void CgBinaryDisasm::TaskFP()
 			break;
 		}
 
-		Ensures(m_step % sizeof(u32) == 0);
+		ENSURES(m_step % sizeof(u32) == 0);
 		data += m_step / sizeof(u32);
 	}
 }

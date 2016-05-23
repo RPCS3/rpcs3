@@ -7,6 +7,8 @@
 #include "SPUInterpreter.h"
 #include "SPUASMJITRecompiler.h"
 
+#include <cmath>
+
 #define ASMJIT_STATIC
 #define ASMJIT_DEBUG
 
@@ -1962,8 +1964,8 @@ void spu_recompiler::CFLTS(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
 	const XmmLink& vi = XmmAlloc();
-	if (op.i8 != 173) c->mulps(va, XmmConst(_mm_set1_ps(exp2f(static_cast<s16>(173 - op.i8))))); // scale
-	c->movaps(vi, XmmConst(_mm_set1_ps(exp2f(31))));
+	if (op.i8 != 173) c->mulps(va, XmmConst(_mm_set1_ps(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
+	c->movaps(vi, XmmConst(_mm_set1_ps(std::exp2(31.f))));
 	c->cmpps(vi, va, 2);
 	c->cvttps2dq(va, va); // convert to ints with truncation
 	c->pxor(va, vi); // fix result saturation (0x80000000 -> 0x7fffffff)
@@ -1976,16 +1978,16 @@ void spu_recompiler::CFLTU(spu_opcode_t op)
 	const XmmLink& vs = XmmAlloc();
 	const XmmLink& vs2 = XmmAlloc();
 	const XmmLink& vs3 = XmmAlloc();
-	if (op.i8 != 173) c->mulps(va, XmmConst(_mm_set1_ps(exp2f(static_cast<s16>(173 - op.i8))))); // scale
+	if (op.i8 != 173) c->mulps(va, XmmConst(_mm_set1_ps(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
 	c->maxps(va, XmmConst(_mm_set1_ps(0.0f))); // saturate
 	c->movaps(vs, va); // copy scaled value
 	c->movaps(vs2, va);
-	c->movaps(vs3, XmmConst(_mm_set1_ps(exp2f(31))));
+	c->movaps(vs3, XmmConst(_mm_set1_ps(std::exp2(31.f))));
 	c->subps(vs2, vs3);
 	c->cmpps(vs3, vs, 2);
 	c->andps(vs2, vs3);
 	c->cvttps2dq(va, va);
-	c->cmpps(vs, XmmConst(_mm_set1_ps(exp2f(32))), 5);
+	c->cmpps(vs, XmmConst(_mm_set1_ps(std::exp2(32.f))), 5);
 	c->cvttps2dq(vs2, vs2);
 	c->por(va, vs);
 	c->por(va, vs2);
@@ -1996,7 +1998,7 @@ void spu_recompiler::CSFLT(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 	c->cvtdq2ps(va, va); // convert to floats
-	if (op.i8 != 155) c->mulps(va, XmmConst(_mm_set1_ps(exp2f(static_cast<s16>(op.i8 - 155))))); // scale
+	if (op.i8 != 155) c->mulps(va, XmmConst(_mm_set1_ps(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))))); // scale
 	c->movaps(SPU_OFF_128(gpr[op.rt]), va);
 }
 
@@ -2008,9 +2010,9 @@ void spu_recompiler::CUFLT(spu_opcode_t op)
 	c->pand(va, XmmConst(_mm_set1_epi32(0x7fffffff)));
 	c->cvtdq2ps(va, va); // convert to floats
 	c->psrad(v1, 31); // generate mask from sign bit
-	c->andps(v1, XmmConst(_mm_set1_ps(exp2f(31)))); // generate correction component
+	c->andps(v1, XmmConst(_mm_set1_ps(std::exp2(31.f)))); // generate correction component
 	c->addps(va, v1); // add correction component
-	if (op.i8 != 155) c->mulps(va, XmmConst(_mm_set1_ps(exp2f(static_cast<s16>(op.i8 - 155))))); // scale
+	if (op.i8 != 155) c->mulps(va, XmmConst(_mm_set1_ps(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))))); // scale
 	c->movaps(SPU_OFF_128(gpr[op.rt]), va);
 }
 

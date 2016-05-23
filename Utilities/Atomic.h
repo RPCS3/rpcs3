@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "Platform.h"
 
 // Helper class, provides access to compiler-specific atomic intrinsics
 template<typename T, std::size_t Size>
@@ -744,9 +745,9 @@ public:
 
 		while (true)
 		{
-			func(_new = old, args...);
+			func((_new = old), args...);
 
-			if (atomic_storage<type>::compare_exchange(m_data, old, _new)) return old;
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) return old;
 		}
 	}
 
@@ -765,9 +766,9 @@ public:
 
 		while (true)
 		{
-			func(_new = old, args...);
+			func((_new = old), args...);
 
-			if (atomic_storage<type>::compare_exchange(m_data, old, _new)) return _new;
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) return _new;
 		}
 	}
 
@@ -786,9 +787,9 @@ public:
 
 		while (true)
 		{
-			RT&& result = func(_new = old, args...);
+			RT&& result = func((_new = old), args...);
 
-			if (atomic_storage<type>::compare_exchange(m_data, old, _new)) return std::move(result);
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) return std::move(result);
 		}
 	}
 
@@ -800,9 +801,9 @@ public:
 
 		while (true)
 		{
-			func(_new = old, args...);
+			func((_new = old), args...);
 
-			if (atomic_storage<type>::compare_exchange(m_data, old, _new)) return;
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) return;
 		}
 	}
 

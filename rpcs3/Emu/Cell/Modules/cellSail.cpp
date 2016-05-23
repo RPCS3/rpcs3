@@ -5,7 +5,7 @@
 #include "cellSail.h"
 #include "cellPamf.h"
 
-LOG_CHANNEL(cellSail);
+logs::channel cellSail("cellSail", logs::level::notice);
 
 void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
@@ -818,7 +818,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 					u32 buffer = vm::alloc(size, vm::main);
 					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
-					ASSERT(f.read(buf, size) == size);
+					VERIFY(f.read(buf, size) == size);
 					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
 					u32 reader = cellPamfReaderInitialize(sp, bufPtr, size, 0);

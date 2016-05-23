@@ -14,7 +14,7 @@
 #include <unistd.h>
 #endif
 
-LOG_CHANNEL(libnet);
+logs::channel libnet("libnet", logs::level::notice);
 
 // We map host sockets to sequential IDs to return as FDs because syscalls using
 // socketselect(), etc. expect socket FDs to be under 1024.
@@ -127,7 +127,7 @@ namespace sys_net
 		{
 			g_tls_net_data.set(vm::alloc(sizeof(decltype(g_tls_net_data)::type), vm::main));
 
-			thread_ctrl::at_exit([addr = g_tls_net_data.addr()]
+			thread_ctrl::atexit([addr = g_tls_net_data.addr()]
 			{
 				vm::dealloc_verbose_nothrow(addr, vm::main);
 			});

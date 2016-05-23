@@ -1,10 +1,17 @@
 #include "stdafx.h"
 #include "IdManager.h"
 
+DECLARE(idm::g_map);
+DECLARE(idm::g_id);
+DECLARE(idm::g_mutex);
+
+DECLARE(fxm::g_map);
+DECLARE(fxm::g_mutex);
+
 std::vector<id_manager::typeinfo>& id_manager::typeinfo::access()
 {
 	static std::vector<typeinfo> list;
-
+	
 	return list;
 }
 

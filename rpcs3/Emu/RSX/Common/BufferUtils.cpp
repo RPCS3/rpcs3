@@ -48,7 +48,7 @@ namespace
 
 void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride)
 {
-	Expects(vector_element_count > 0);
+	EXPECTS(vector_element_count > 0);
 
 	switch (type)
 	{
@@ -98,7 +98,7 @@ std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> 
 	T min_index = -1;
 	T max_index = 0;
 
-	Expects(dst.size_bytes() >= src.size_bytes());
+	EXPECTS(dst.size_bytes() >= src.size_bytes());
 
 	size_t dst_idx = 0;
 	for (T index : src)
@@ -124,7 +124,7 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 	T min_index = -1;
 	T max_index = 0;
 
-	Expects(dst.size() >= 3 * (src.size() - 2));
+	EXPECTS(dst.size() >= 3 * (src.size() - 2));
 
 	const T index0 = src[0];
 	if (!is_primitive_restart_enabled || index0 != -1) // Cut
@@ -174,7 +174,7 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 	T min_index = -1;
 	T max_index = 0;
 
-	Expects(4 * dst.size_bytes() >= 6 * src.size_bytes());
+	EXPECTS(4 * dst.size_bytes() >= 6 * src.size_bytes());
 
 	size_t dst_idx = 0;
 	while (!src.empty())
@@ -353,7 +353,7 @@ std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 
 
-	Expects(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
+	EXPECTS(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
 
 	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
 	u32 primitive_restart_index = rsx::method_registers[NV4097_SET_RESTART_INDEX];
@@ -363,7 +363,7 @@ std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic
 	{
 		const std::tuple<u32, u32> &range = first_count_arguments[i];
 		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
-		Expects(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+		EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
 	}
 	u32 first = std::get<0>(first_count_arguments.front());
 	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
@@ -415,7 +415,7 @@ std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, g
 	{
 		const std::tuple<u32, u32> &range = first_count_arguments[i];
 		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
-		Expects(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+		EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
 	}
 	u32 first = std::get<0>(first_count_arguments.front());
 	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
@@ -438,7 +438,7 @@ std::tuple<u16, u16> write_index_array_data_to_buffer_untouched(gsl::span<u16, g
 	{
 		const std::tuple<u32, u32> &range = first_count_arguments[i];
 		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
-		Expects(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+		EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
 	}
 	u32 first = std::get<0>(first_count_arguments.front());
 	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;

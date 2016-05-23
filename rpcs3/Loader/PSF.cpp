@@ -3,7 +3,7 @@
 
 namespace psf
 {
-	_log::channel log("PSF", _log::level::notice);
+	logs::channel log("PSF", logs::level::notice);
 
 	struct header_t
 	{
@@ -23,28 +23,49 @@ namespace psf
 		le_t<u32> data_off;
 	};
 
+
+	entry::entry(format type, u32 max_size, const std::string& value)
+		: m_type(type)
+		, m_max_size(max_size)
+		, m_value_string(value)
+	{
+		EXPECTS(type == format::string || type == format::array);
+		EXPECTS(max_size);
+	}
+
+	entry::entry(u32 value)
+		: m_type(format::integer)
+		, m_max_size(sizeof(u32))
+		, m_value_integer(value)
+	{
+	}
+
+	entry::~entry()
+	{
+	}
+
 	const std::string& entry::as_string() const
 	{
-		Expects(m_type == format::string || m_type == format::array);
+		EXPECTS(m_type == format::string || m_type == format::array);
 		return m_value_string;
 	}
 
 	u32 entry::as_integer() const
 	{
-		Expects(m_type == format::integer);
+		EXPECTS(m_type == format::integer);
 		return m_value_integer;
 	}
 
 	entry& entry::operator =(const std::string& value)
 	{
-		Expects(m_type == format::string || m_type == format::array);
+		EXPECTS(m_type == format::string || m_type == format::array);
 		m_value_string = value;
 		return *this;
 	}
 
 	entry& entry::operator =(u32 value)
 	{
-		Expects(m_type == format::integer);
+		EXPECTS(m_type == format::integer);
 		m_value_integer = value;
 		return *this;
 	}
@@ -64,73 +85,75 @@ namespace psf
 		throw fmt::exception("Invalid format (0x%x)" HERE, m_type);
 	}
 
-	registry load_object(const std::vector<char>& data)
+	registry load_object(const fs::file& stream)
 	{
 		registry result;
 
 		// Hack for empty input (TODO)
-		if (data.empty())
+		if (!stream)
 		{
 			return result;
 		}
 
 		// Check size
-		Expects(data.size() >= sizeof(header_t));
-		Expects((std::uintptr_t)data.data() % 8 == 0);
+		EXPECTS(stream.size() >= sizeof(header_t));
 
 		// Get header
-		const header_t& header = reinterpret_cast<const header_t&>(data[0]);
+		header_t header;
+		EXPECTS(stream.read(header));
 
 		// Check magic and version
-		Expects(header.magic == "\0PSF"_u32);
-		Expects(header.version == 0x101);
-		Expects(sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table);
-		Expects(header.off_key_table <= header.off_data_table);
-		Expects(header.off_data_table <= data.size());
+		EXPECTS(header.magic == "\0PSF"_u32);
+		EXPECTS(header.version == 0x101);
+		EXPECTS(sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table);
+		EXPECTS(header.off_key_table <= header.off_data_table);
+		EXPECTS(header.off_data_table <= stream.size());
 
-		// Get indices (alignment should be fine)
-		const def_table_t* indices = reinterpret_cast<const def_table_t*>(data.data() + sizeof(header_t));
+		// Get indices
+		std::vector<def_table_t> indices;
+		EXPECTS(stream.read(indices, header.entries_num));
+
+		// Get keys
+		std::string keys;
+		EXPECTS(stream.seek(header.off_key_table) == header.off_key_table);
+		EXPECTS(stream.read(keys, header.off_data_table - header.off_key_table));
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
-			Expects(indices[i].key_off < header.off_data_table - header.off_key_table);
+			EXPECTS(indices[i].key_off < header.off_data_table - header.off_key_table);
 
-			// Get key name range
-			const auto name_ptr = data.begin() + header.off_key_table + indices[i].key_off;
-			const auto name_end = std::find(name_ptr , data.begin() + header.off_data_table, '\0');
+			// Get key name (null-terminated string)
+			std::string key(keys.data() + indices[i].key_off);
 
-			// Get name (must be unique)
-			std::string key(name_ptr, name_end);
+			EXPECTS(result.count(key) == 0);
+			EXPECTS(indices[i].param_len <= indices[i].param_max);
+			EXPECTS(indices[i].data_off < stream.size() - header.off_data_table);
+			EXPECTS(indices[i].param_max < stream.size() - indices[i].data_off);
 
-			Expects(result.count(key) == 0);
-			Expects(indices[i].param_len <= indices[i].param_max);
-			Expects(indices[i].data_off < data.size() - header.off_data_table);
-			Expects(indices[i].param_max < data.size() - indices[i].data_off);
-
-			// Get data pointer
-			const auto value_ptr = data.begin() + header.off_data_table + indices[i].data_off;
+			// Seek data pointer
+			stream.seek(header.off_data_table + indices[i].data_off);
 
 			if (indices[i].param_fmt == format::integer && indices[i].param_max == sizeof(u32) && indices[i].param_len == sizeof(u32))
 			{
 				// Integer data
+				le_t<u32> value;
+				EXPECTS(stream.read(value));
+
 				result.emplace(std::piecewise_construct,
 					std::forward_as_tuple(std::move(key)),
-					std::forward_as_tuple(reinterpret_cast<const le_t<u32>&>(*value_ptr)));
+					std::forward_as_tuple(value));
 			}
 			else if (indices[i].param_fmt == format::string || indices[i].param_fmt == format::array)
 			{
 				// String/array data
 				std::string value;
+				EXPECTS(stream.read(value, indices[i].param_len));
 
 				if (indices[i].param_fmt == format::string)
 				{
 					// Find null terminator
-					value.assign(value_ptr, std::find(value_ptr, value_ptr + indices[i].param_len, '\0'));
-				}
-				else
-				{
-					value.assign(value_ptr, value_ptr + indices[i].param_len);
+					value.resize(std::strlen(value.c_str()));
 				}
 
 				result.emplace(std::piecewise_construct,
@@ -147,7 +170,7 @@ namespace psf
 		return result;
 	}
 
-	std::vector<char> save_object(const registry& psf)
+	void save_object(const fs::file& stream, const psf::registry& psf)
 	{
 		std::vector<def_table_t> indices; indices.reserve(psf.size());
 
@@ -182,20 +205,18 @@ namespace psf
 		header.entries_num = ::narrow<u32>(psf.size());
 
 		// Save header and indices
-		std::vector<char> result; result.reserve(header.off_data_table + data_offset);
-
-		result.insert(result.end(), (char*)&header, (char*)&header + sizeof(header_t));
-		result.insert(result.end(), (char*)indices.data(), (char*)indices.data() + sizeof(def_table_t) * psf.size());
+		stream.write(header);
+		stream.write(indices);
 
 		// Save key table
 		for (const auto& entry : psf)
 		{
-			result.insert(result.end(), entry.first.begin(), entry.first.end());
-			result.push_back('\0');
+			stream.write(entry.first);
+			stream.write('\0');
 		}
 
-		// Insert zero padding
-		result.insert(result.end(), header.off_data_table - result.size(), '\0');
+		// Skip padding
+		stream.seek(header.off_data_table);
 
 		// Save data
 		for (const auto& entry : psf)
@@ -206,7 +227,7 @@ namespace psf
 			if (fmt == format::integer && max == sizeof(u32))
 			{
 				const le_t<u32> value = entry.second.as_integer();
-				result.insert(result.end(), (char*)&value, (char*)&value + sizeof(u32));
+				stream.write(value);
 			}
 			else if (fmt == format::string || fmt == format::array)
 			{
@@ -219,16 +240,14 @@ namespace psf
 					log.error("Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
 				}
 
-				result.insert(result.end(), value.begin(), value.begin() + size);
-				result.insert(result.end(), max - size, '\0'); // Write zeros up to max_size
+				stream.write(value);
+				stream.seek(max - size, fs::seek_cur); // Skip up to max_size
 			}
 			else
 			{
 				throw EXCEPTION("Invalid entry format (key='%s', fmt=0x%x)", entry.first, fmt);
 			}
 		}
-
-		return result;
 	}
 
 	std::string get_string(const registry& psf, const std::string& key, const std::string& def)
