@@ -38,38 +38,35 @@ namespace util
 	{
 		while (true)
 		{
-			NtWaitForKeyedEvent(NULL, &key, FALSE, NULL);
-
 			u32 read = key.load();
 			u32 copy = read;
 
-			while (pred(read), read != copy)
+			while (func(read), read != copy)
 			{
 				read = key.compare_and_swap(copy, read);
 				
 				if (copy == read)
 				{
-					break;
+					return;
 				}
 				
 				copy = read;
 			}
+
+			NtWaitForKeyedEvent(NULL, &key, FALSE, NULL);
 		}
 	}
 
 	// Try to wake up a thread.
 	inline bool keyed_post(atomic_t<u32>& key, u32 acknowledged_value)
 	{
-		LARGE_INTEGER zero;
-		zero.QuadPart = 0;
+		LARGE_INTEGER timeout;
+		timeout.QuadPart = -50;
 
-		while (UNLIKELY(NtReleaseKeyedEvent(NULL, &key, FALSE, &zero) == WAIT_TIMEOUT))
+		while (UNLIKELY(NtReleaseKeyedEvent(NULL, &key, FALSE, &timeout) != ERROR_SUCCESS))
 		{
 			if (key.load() != acknowledged_value)
 				return false;
-
-			//NtReleaseKeyedEvent(NULL, &key, FALSE, NULL);
-			//return true;
 		}
 
 		return true;

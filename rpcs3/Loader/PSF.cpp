@@ -216,7 +216,7 @@ namespace psf
 		}
 
 		// Skip padding
-		stream.seek(header.off_data_table);
+		stream.trunc(stream.seek(header.off_data_table));
 
 		// Save data
 		for (const auto& entry : psf)
@@ -241,7 +241,7 @@ namespace psf
 				}
 
 				stream.write(value);
-				stream.seek(max - size, fs::seek_cur); // Skip up to max_size
+				stream.trunc(stream.seek(max - size, fs::seek_cur)); // Skip up to max_size
 			}
 			else
 			{

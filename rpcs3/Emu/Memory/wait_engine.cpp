@@ -22,13 +22,34 @@ namespace vm
 		this->mask = ~(size - 1);
 		this->thread = thread_ctrl::get_current();
 
+		struct waiter final
 		{
-			writer_lock lock(s_mutex);
-			s_waiters.emplace(this);
-		}
+			waiter_base* m_ptr;
+			thread_ctrl* m_thread;
+
+			waiter(waiter_base* ptr)
+				: m_ptr(ptr)
+				, m_thread(ptr->thread)
+			{
+				// Initialize waiter
+				writer_lock{s_mutex}, s_waiters.emplace(m_ptr);
+
+				m_thread->lock();
+			}
+
+			~waiter()
+			{
+				// Reset thread
+				atomic_storage<thread_ctrl*>::store(m_ptr->thread, nullptr);
+				m_thread->unlock();
+
+				// Remove waiter
+				writer_lock{s_mutex}, s_waiters.erase(m_ptr);
+			}
+		};
 
 		// Wait until thread == nullptr
-		thread_lock(), thread_ctrl::wait(WRAP_EXPR(!thread || test()));
+		waiter{this}, thread_ctrl::wait(WRAP_EXPR(!thread || test()));
 	}
 
 	bool waiter_base::try_notify()
@@ -64,12 +85,6 @@ namespace vm
 		_t->unlock();
 		_t->notify();
 		return true;
-	}
-
-	waiter_base::~waiter_base()
-	{
-		writer_lock lock(s_mutex);
-		s_waiters.erase(this);
 	}
 
 	void notify_at(u32 addr, u32 size)
@@ -111,7 +126,7 @@ namespace vm
 			while (!Emu.IsStopped())
 			{
 				// Poll waiters periodically (TODO)
-				while (notify_all() && !Emu.IsPaused())
+				while (notify_all() && !Emu.IsPaused() && !Emu.IsStopped())
 				{
 					thread_ctrl::sleep(50);
 				}

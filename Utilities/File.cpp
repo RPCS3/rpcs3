@@ -1169,7 +1169,7 @@ const std::string& fs::get_executable_dir()
 		wchar_t buf[2048];
 		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
 		{
-			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_executable_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 	
