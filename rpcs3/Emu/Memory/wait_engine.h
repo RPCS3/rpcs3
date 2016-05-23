@@ -17,8 +17,6 @@ namespace vm
 		bool try_notify();
 
 	protected:
-		~waiter_base();
-
 		virtual bool test() = 0;
 	};
 
