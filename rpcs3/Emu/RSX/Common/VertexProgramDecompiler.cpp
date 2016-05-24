@@ -561,7 +561,7 @@ std::string VertexProgramDecompiler::Decompile()
 		{
 		case RSX_SCA_OPCODE_NOP: break;
 		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
-		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
+		case RSX_SCA_OPCODE_RCP: SetDSTSca("rcp_legacy($s)"); break;
 		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
 		case RSX_SCA_OPCODE_RSQ: SetDSTSca("rsq_legacy($s)"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
