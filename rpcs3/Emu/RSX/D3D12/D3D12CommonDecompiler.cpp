@@ -48,24 +48,32 @@ std::string getFunctionImp(FUNCTION f)
 		return "$t.Sample($tsampler, ($0.x / $0.w))";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
 		return "$t.SampleLevel($tsampler, $0.x, $1)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
+		return "$t.SampleGrad($tsampler, $0.x, $1, $2)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
 		return "$t.Sample($tsampler, $0.xy * $t_scale)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
 		return "$t.Sample($tsampler, ($0.xy / $0.w) * $t_scale)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
 		return "$t.SampleLevel($tsampler, $0.xy * $t_scale, $1)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD:
+		return "$t.SampleGrad($tsampler, $0.xy, $1, $2)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
 		return "$t.Sample($tsampler, $0.xyz)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
 		return "$t.Sample($tsampler, ($0.xyz / $0.w))";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
 		return "$t.SampleLevel($tsampler, $0.xyz, $1)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD:
+		return "$t.SampleGrad($tsampler, $0.xyz, $1, $2)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D:
 		return "$t.Sample($tsampler, $0.xyz)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ:
 		return "$t.Sample($tsampler, ($0.xyz / $0.w))";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD:
 		return "$t.SampleLevel($tsampler, $0.xyz, $1)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD:
+		return "$t.SampleGrad($tsampler, $0.xyz, $1, $2)";
 	case FUNCTION::FUNCTION_DFDX:
 		return "ddx($0)";
 	case FUNCTION::FUNCTION_DFDY:
