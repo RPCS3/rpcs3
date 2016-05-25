@@ -57,7 +57,7 @@ KernelExplorer::KernelExplorer(wxWindow* parent)
 void KernelExplorer::Update()
 {
 	m_tree->DeleteAllItems();
-	const u32 total_memory_usage = vm::get(vm::user_space)->used.load();
+	const u32 total_memory_usage = vm::get(vm::user_space)->used();
 
 	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
@@ -198,22 +198,22 @@ void KernelExplorer::Update()
 	}
 
 	// Memory Containers
-	if (const u32 count = idm::get_count<lv2_memory_container_t>())
+	if (const u32 count = idm::get_count<lv2_memory_container>())
 	{
 		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Containers (%zu)", count));
 
-		idm::select<lv2_memory_container_t>([&](u32 id, lv2_memory_container_t&)
+		idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container&)
 		{
 			m_tree->AppendItem(node, fmt::format("Memory Container: ID = 0x%08x", id));
 		});
 	}
 
 	// Memory Objects
-	if (const u32 count = idm::get_count<lv2_memory_t>())
+	if (const u32 count = idm::get_count<lv2_memory>())
 	{
 		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Objects (%zu)", count));
 
-		idm::select<lv2_memory_t>([&](u32 id, lv2_memory_t&)
+		idm::select<lv2_memory>([&](u32 id, lv2_memory&)
 		{
 			m_tree->AppendItem(node, fmt::format("Memory Object: ID = 0x%08x", id));
 		});

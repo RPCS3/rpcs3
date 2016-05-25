@@ -74,7 +74,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 
 	switch(object)
 	{
-	case SYS_MEM_OBJECT: *nump = idm::get_count<lv2_memory_t>(); break;
+	case SYS_MEM_OBJECT: *nump = idm::get_count<lv2_memory>(); break;
 	case SYS_MUTEX_OBJECT: *nump = idm::get_count<lv2_mutex_t>(); break;
 	case SYS_COND_OBJECT: *nump = idm::get_count<lv2_cond_t>(); break;
 	case SYS_RWLOCK_OBJECT: *nump = idm::get_count<lv2_rwlock_t>(); break;
@@ -121,7 +121,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 
 	switch (object)
 	{
-	case SYS_MEM_OBJECT: idm_get_set<lv2_memory_t>(objects); break;
+	case SYS_MEM_OBJECT: idm_get_set<lv2_memory>(objects); break;
 	case SYS_MUTEX_OBJECT: idm_get_set<lv2_mutex_t>(objects); break;
 	case SYS_COND_OBJECT: idm_get_set<lv2_cond_t>(objects); break;
 	case SYS_RWLOCK_OBJECT: idm_get_set<lv2_rwlock_t>(objects); break;

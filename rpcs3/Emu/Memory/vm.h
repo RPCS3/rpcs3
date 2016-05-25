@@ -1,7 +1,6 @@
 #pragma once
 
 #include <map>
-#include <mutex>
 
 class thread_ctrl;
 
@@ -80,13 +79,13 @@ namespace vm
 	bool check_addr(u32 addr, u32 size = 1);
 
 	// Search and map memory in specified memory location (don't pass alignment smaller than 4096)
-	u32 alloc(u32 size, memory_location_t location, u32 align = 4096);
+	u32 alloc(u32 size, memory_location_t location, u32 align = 4096, u32 sup = 0);
 
 	// Map memory at specified address (in optionally specified memory location)
-	u32 falloc(u32 addr, u32 size, memory_location_t location = any);
+	u32 falloc(u32 addr, u32 size, memory_location_t location = any, u32 sup = 0);
 
-	// Unmap memory at specified address (in optionally specified memory location)
-	bool dealloc(u32 addr, memory_location_t location = any);
+	// Unmap memory at specified address (in optionally specified memory location), return size
+	u32 dealloc(u32 addr, memory_location_t location = any, u32* sup_out = nullptr);
 
 	// dealloc() with no return value and no exceptions
 	void dealloc_verbose_nothrow(u32 addr, memory_location_t location = any) noexcept;
@@ -94,46 +93,41 @@ namespace vm
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
-		std::map<u32, u32> m_map; // addr -> size mapping of mapped locations
-		std::mutex m_mutex;
+		std::map<u32, u32> m_map; // Mapped memory: addr -> size
+		std::unordered_map<u32, u32> m_sup; // Supplementary info for allocations
 
-		bool try_alloc(u32 addr, u32 size);
+		bool try_alloc(u32 addr, u32 size, u32 sup);
 
 	public:
-		block_t(u32 addr, u32 size, u64 flags = 0)
-			: addr(addr)
-			, size(size)
-			, flags(flags)
-			, used(0)
-		{
-		}
+		block_t(u32 addr, u32 size, u64 flags = 0);
 
 		~block_t();
 
 	public:
-		const u32 addr; // start address
-		const u32 size; // total size
-		const u64 flags; // currently unused
-
-		atomic_t<u32> used; // amount of memory used, may be increased manually to prevent some memory from allocating
+		const u32 addr; // Start address
+		const u32 size; // Total size
+		const u64 flags; // Currently unused
 
 		// Search and map memory (don't pass alignment smaller than 4096)
-		u32 alloc(u32 size, u32 align = 4096);
+		u32 alloc(u32 size, u32 align = 4096, u32 sup = 0);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size);
+		u32 falloc(u32 addr, u32 size, u32 sup = 0);
 
-		// Unmap memory at specified location previously returned by alloc()
-		bool dealloc(u32 addr);
+		// Unmap memory at specified location previously returned by alloc(), return size
+		u32 dealloc(u32 addr, u32* sup_out = nullptr);
+
+		// Get allocated memory count
+		u32 used();
 	};
 
-	// create new memory block with specified parameters and return it
+	// Create new memory block with specified parameters and return it
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags = 0);
 
-	// delete existing memory block with specified start address
-	std::shared_ptr<block_t> unmap(u32 addr);
+	// Delete existing memory block with specified start address, return it
+	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty = false);
 
-	// get memory block associated with optionally specified memory location or optionally specified address
+	// Get memory block associated with optionally specified memory location or optionally specified address
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
 
 	// Get PS3/PSV virtual memory address from the provided pointer (nullptr always converted to 0)

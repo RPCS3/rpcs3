@@ -15,7 +15,7 @@ ppu_error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 po
 		return CELL_EINVAL;
 	}
 
-	if (cid != SYS_MEMORY_CONTAINER_ID_INVALID && !idm::check<lv2_memory_container_t>(cid))
+	if (cid != SYS_MEMORY_CONTAINER_ID_INVALID && !idm::check<lv2_memory_container>(cid))
 	{
 		return CELL_ESRCH;
 	}

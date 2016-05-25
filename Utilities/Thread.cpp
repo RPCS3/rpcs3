@@ -12,6 +12,7 @@
 #define _XOPEN_SOURCE
 #define __USE_GNU
 #endif
+#include <errno.h>
 #include <signal.h>
 #include <ucontext.h>
 #endif
