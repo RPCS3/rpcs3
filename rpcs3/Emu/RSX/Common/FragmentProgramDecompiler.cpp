@@ -402,13 +402,13 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); return true;
 	case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); return true;
-	case RSX_FP_OPCODE_REFL: LOG_ERROR(RSX, "Unimplemented SCB instruction: REFL"); return true; // TODO: Is this in the right category?
+	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL)); return true;
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
 	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
 	case RSX_FP_OPCODE_LIT: SetDst("lit_legacy($0)"); return true;
 	case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); return true;
-	case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); return true; // TODO: Is this in the right category?
+	case RSX_FP_OPCODE_LRP: SetDst(getFloatTypeName(4) + "($2 * (1 - $0) + $1 * $0)"); return true;
 	case RSX_FP_OPCODE_LG2: SetDst("log2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
 	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
