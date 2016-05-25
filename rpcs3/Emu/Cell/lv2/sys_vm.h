@@ -1,6 +1,8 @@
 #pragma once
 
-#include "sys_sync.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/Cell/ErrorCodes.h"
+#include "Emu/IdManager.h"
 
 enum : u64
 {
@@ -8,6 +10,8 @@ enum : u64
 	SYS_VM_STATE_UNUSED    = 1ull,
 	SYS_VM_STATE_ON_MEMORY = 2ull,
 	SYS_VM_STATE_STORED    = 4ull,
+
+	SYS_VM_POLICY_AUTO_RECOMMENDED = 1ull,
 };
 
 struct sys_vm_statistics_t
@@ -22,16 +26,16 @@ struct sys_vm_statistics_t
 };
 
 // SysCalls
-s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr);
-s32 sys_vm_unmap(u32 addr);
-s32 sys_vm_append_memory(u32 addr, u32 size);
-s32 sys_vm_return_memory(u32 addr, u32 size);
-s32 sys_vm_lock(u32 addr, u32 size);
-s32 sys_vm_unlock(u32 addr, u32 size);
-s32 sys_vm_touch(u32 addr, u32 size);
-s32 sys_vm_flush(u32 addr, u32 size);
-s32 sys_vm_invalidate(u32 addr, u32 size);
-s32 sys_vm_store(u32 addr, u32 size);
-s32 sys_vm_sync(u32 addr, u32 size);
-s32 sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result);
-s32 sys_vm_get_statistics(u32 addr, vm::ptr<sys_vm_statistics_t> stat);
+ppu_error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ps3::ptr<u32> addr);
+ppu_error_code sys_vm_unmap(u32 addr);
+ppu_error_code sys_vm_append_memory(u32 addr, u32 size);
+ppu_error_code sys_vm_return_memory(u32 addr, u32 size);
+ppu_error_code sys_vm_lock(u32 addr, u32 size);
+ppu_error_code sys_vm_unlock(u32 addr, u32 size);
+ppu_error_code sys_vm_touch(u32 addr, u32 size);
+ppu_error_code sys_vm_flush(u32 addr, u32 size);
+ppu_error_code sys_vm_invalidate(u32 addr, u32 size);
+ppu_error_code sys_vm_store(u32 addr, u32 size);
+ppu_error_code sys_vm_sync(u32 addr, u32 size);
+ppu_error_code sys_vm_test(u32 addr, u32 size, vm::ps3::ptr<u64> result);
+ppu_error_code sys_vm_get_statistics(u32 addr, vm::ps3::ptr<sys_vm_statistics_t> stat);
