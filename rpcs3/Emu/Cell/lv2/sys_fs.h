@@ -7,8 +7,6 @@
 
 namespace vm { using namespace ps3; }
 
-#pragma pack(push, 4)
-
 // Error Codes
 enum : s32
 {
@@ -136,20 +134,22 @@ struct CellFsStat
 	be_t<s32> mode;
 	be_t<s32> uid;
 	be_t<s32> gid;
-	be_t<s64> atime;
-	be_t<s64> mtime;
-	be_t<s64> ctime;
-	be_t<u64> size;
-	be_t<u64> blksize;
+	be_t<s64, 4> atime;
+	be_t<s64, 4> mtime;
+	be_t<s64, 4> ctime;
+	be_t<u64, 4> size;
+	be_t<u64, 4> blksize;
 };
+
+CHECK_SIZE_ALIGN(CellFsStat, 52, 4);
 
 struct CellFsUtimbuf
 {
-	be_t<s64> actime;
-	be_t<s64> modtime;
+	be_t<s64, 4> actime;
+	be_t<s64, 4> modtime;
 };
 
-#pragma pack(pop)
+CHECK_SIZE_ALIGN(CellFsUtimbuf, 16, 4);
 
 // Stream Support Status (st_status)
 enum : u32

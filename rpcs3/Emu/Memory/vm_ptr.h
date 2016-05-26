@@ -130,6 +130,18 @@ namespace vm
 			return aligned(ALIGN_32(T));
 		}
 
+		// Get type size
+		static constexpr u32 size()
+		{
+			return SIZE_32(T);
+		}
+
+		// Get type alignment
+		static constexpr u32 align()
+		{
+			return ALIGN_32(T);
+		}
+
 		// Test address for arbitrary alignment: (addr & (align - 1)) != 0
 		explicit_bool_t operator %(u32 align) const
 		{
@@ -266,9 +278,11 @@ namespace vm
 
 	// Native endianness pointer to LE data
 	template<typename T, typename AT = u32> using ptrl = _ptr_base<to_le_t<T>, AT>;
+	template<typename T, typename AT = u32> using cptrl = ptrl<const T, AT>;
 
 	// Native endianness pointer to BE data
 	template<typename T, typename AT = u32> using ptrb = _ptr_base<to_be_t<T>, AT>;
+	template<typename T, typename AT = u32> using cptrb = ptrb<const T, AT>;
 
 	// BE pointer to LE data
 	template<typename T, typename AT = u32> using bptrl = _ptr_base<to_le_t<T>, to_be_t<AT>>;
@@ -286,24 +300,19 @@ namespace vm
 	{
 		// Default pointer type for PS3 HLE functions (Native endianness pointer to BE data)
 		template<typename T, typename AT = u32> using ptr = ptrb<T, AT>;
+		template<typename T, typename AT = u32> using cptr = ptr<const T, AT>;
 
 		// Default pointer to pointer type for PS3 HLE functions (Native endianness pointer to BE pointer to BE data)
 		template<typename T, typename AT = u32, typename AT2 = u32> using pptr = ptr<ptr<T, AT2>, AT>;
+		template<typename T, typename AT = u32, typename AT2 = u32> using cpptr = pptr<const T, AT, AT2>;
 
 		// Default pointer type for PS3 HLE structures (BE pointer to BE data)
 		template<typename T, typename AT = u32> using bptr = bptrb<T, AT>;
+		template<typename T, typename AT = u32> using bcptr = bptr<const T, AT>;
 
 		// Default pointer to pointer type for PS3 HLE structures (BE pointer to BE pointer to BE data)
 		template<typename T, typename AT = u32, typename AT2 = u32> using bpptr = bptr<ptr<T, AT2>, AT>;
-
-		// Native endianness pointer to const BE data
-		template<typename T, typename AT = u32> using cptr = ptr<const T, AT>;
-
-		// BE pointer to const BE data
-		template<typename T, typename AT = u32> using bcptr = bptr<const T, AT>;
-
-		template<typename T, typename AT = u32> using cpptr = pptr<const T, AT>;
-		template<typename T, typename AT = u32> using bcpptr = bpptr<const T, AT>;
+		template<typename T, typename AT = u32, typename AT2 = u32> using bcpptr = bpptr<const T, AT, AT2>;
 
 		// Perform static_cast (for example, vm::ptr<void> to vm::ptr<char>)
 		template<typename CT, typename T, typename AT, typename = decltype(static_cast<to_be_t<CT>*>(std::declval<T*>()))>
@@ -324,23 +333,18 @@ namespace vm
 	{
 		// Default pointer type for PSV HLE functions (Native endianness pointer to LE data)
 		template<typename T> using ptr = ptrl<T>;
+		template<typename T> using cptr = ptr<const T>;
 
 		// Default pointer to pointer type for PSV HLE functions (Native endianness pointer to LE pointer to LE data)
 		template<typename T> using pptr = ptr<ptr<T>>;
+		template<typename T> using cpptr = pptr<const T>;
 
 		// Default pointer type for PSV HLE structures (LE pointer to LE data)
 		template<typename T> using lptr = lptrl<T>;
+		template<typename T> using lcptr = lptr<const T>;
 
 		// Default pointer to pointer type for PSV HLE structures (LE pointer to LE pointer to LE data)
 		template<typename T> using lpptr = lptr<ptr<T>>;
-
-		// Native endianness pointer to const LE data
-		template<typename T> using cptr = ptr<const T>;
-
-		// LE pointer to const LE data
-		template<typename T> using lcptr = lptr<const T>;
-
-		template<typename T> using cpptr = pptr<const T>;
 		template<typename T> using lcpptr = lpptr<const T>;
 
 		// Perform static_cast (for example, vm::ptr<void> to vm::ptr<char>)

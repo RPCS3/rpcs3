@@ -34,6 +34,12 @@ struct bijective_pair
 	T2 v2;
 };
 
+template<typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
+struct se_storage;
+
+template<typename T, bool Se = true, std::size_t Align = alignof(T)>
+class se_t;
+
 // Specialization with static constexpr bijective_pair<T1, T2> map[] member expected
 template<typename T1, typename T2>
 struct bijective;
