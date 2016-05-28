@@ -666,8 +666,8 @@ void VKGSRender::clear_surface(u32 mask)
 {
 	//TODO: Build clear commands into current renderpass descriptor set
 	if (!(mask & 0xF3)) return;
-
 	if (m_current_present_image== 0xFFFF) return;
+	if (!rsx::method_registers[NV4097_SET_SURFACE_FORMAT]) return;
 
 	init_buffers();
 

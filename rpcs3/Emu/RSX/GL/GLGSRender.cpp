@@ -453,6 +453,7 @@ void GLGSRender::on_exit()
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
 	//LOG_NOTICE(Log::RSX, "nv4097_clear_surface(0x%x)", arg);
+	if (!rsx::method_registers[NV4097_SET_SURFACE_FORMAT]) return;
 
 	if ((arg & 0xf3) == 0)
 	{
