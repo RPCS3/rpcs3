@@ -276,7 +276,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 
 void VKFragmentProgram::Compile()
 {
-	fs::file(fs::get_config_dir() + "FragmentProgram.frag", fs::rewrite).write(shader);
+	fs::file(fs::get_config_dir() + "FragmentProgram.spirv", fs::rewrite).write(shader);
 
 	std::vector<u32> spir_v;
 	if (!vk::compile_glsl_to_spv(shader, vk::glsl::glsl_fragment_program, spir_v))
