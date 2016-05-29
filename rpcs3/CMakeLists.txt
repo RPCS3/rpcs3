@@ -94,7 +94,6 @@ if(NOT MSVC)
 endif()
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
-#find_package(LLVM CONFIG) # TODO
 
 include("${wxWidgets_USE_FILE}")
 
@@ -111,7 +110,6 @@ ${GLEW_INCLUDE_DIR}
 ${wxWidgets_INCLUDE_DIRS}
 ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
-${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
 "${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
@@ -135,19 +133,6 @@ if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
 endif()
 
-if(NOT LLVM_FOUND)
-	Message("LLVM not found! LLVM 3.6 is required. RPCS3 will be compiled without LLVM support.")
-elseif(${LLVM_PACKAGE_VERSION} VERSION_LESS "3.6" OR ${LLVM_PACKAGE_VERSION} VERSION_EQUAL "3.7" OR ${LLVM_PACKAGE_VERSION} VERSION_GREATER "3.7")
-	Message("LLVM ${LLVM_PACKAGE_VERSION} is not supported! LLVM 3.6 is required. RPCS3 will be compiled without LLVM support.")
-else()
-	add_definitions(${LLVM_DEFINITIONS})
-	add_definitions(-DLLVM_AVAILABLE)
-	if (CMAKE_BUILD_TYPE STREQUAL "Release")
-		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler)
-	else()
-		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler mcdisassembler)
-	endif()
-endif()
 
 link_directories(
 "${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
@@ -202,9 +187,6 @@ else()
 	if (NOT APPLE)
 		target_link_libraries(rpcs3  vulkan glslang OSDependent OGLCompiler SPIRV)
 	endif()
-endif()
-if(LLVM_FOUND)
-	target_link_libraries(rpcs3  ${LLVM_LIBS})
 endif()
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
