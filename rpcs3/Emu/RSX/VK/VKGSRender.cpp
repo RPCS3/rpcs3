@@ -377,6 +377,8 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	vk::set_current_renderer(m_swap_chain->get_device());
 
 	m_swap_chain->init_swapchain(m_frame->client_width(), m_frame->client_height());
+	m_swap_image_width = m_frame->client_width();
+	m_swap_image_height = m_frame->client_height();
 
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device));
@@ -970,6 +972,43 @@ static const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
 
 void VKGSRender::init_buffers(bool skip_reading)
 {
+	if (m_swap_image_height != m_frame->client_height() ||
+		m_swap_image_width != m_frame->client_width())
+	{
+		//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
+		if (!!m_frame->client_height() && !!m_frame->client_width())
+		{
+			//Re-acquire ownership of the swapchain images from the presentation engine
+			//Will have to block until rendering is completed
+			VkFence presentWaitFence = VK_NULL_HANDLE;
+			VkFenceCreateInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+			vkCreateFence((*m_device), &infos, nullptr, &presentWaitFence);
+			CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), UINT64_MAX, VK_NULL_HANDLE, presentWaitFence, &m_current_present_image));
+			CHECK_RESULT(vkWaitForFences((*m_device), 1, &presentWaitFence, VK_TRUE, UINT64_MAX));
+			vkDestroyFence((*m_device), presentWaitFence, nullptr);
+
+			m_swap_chain->init_swapchain(m_frame->client_width(), m_frame->client_height());
+			m_swap_image_width = m_frame->client_width();
+			m_swap_image_height = m_frame->client_height();
+
+			for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
+			{
+				vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
+
+				VkClearColorValue clear_color{};
+				auto range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+				vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(i), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+				vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
+					VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
+			}
+		}
+	}
+
 	prepare_rtts();
 
 	if (!skip_reading)
@@ -1027,13 +1066,9 @@ void VKGSRender::prepare_rtts()
 		return;
 
 	m_rtts_dirty = false;
-	bool reconfigure_render_pass = true;
 
 	if (m_surface.format != surface_format)
-	{
 		m_surface.unpack(surface_format);
-		reconfigure_render_pass = true;
-	}
 
 	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
 	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];

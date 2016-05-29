@@ -42,6 +42,9 @@ private:
 
 	vk::render_device *m_device;
 	vk::swap_chain* m_swap_chain;
+
+	int m_swap_image_width;
+	int m_swap_image_height;
 	//buffer
 
 	vk::vk_data_heap m_uniform_buffer_ring_info;
@@ -57,7 +60,6 @@ private:
 
 	vk::command_pool m_command_buffer_pool;
 	vk::command_buffer m_command_buffer;
-
 
 	std::array<VkRenderPass, 120> m_render_passes;
 	VkDescriptorSetLayout descriptor_layouts;

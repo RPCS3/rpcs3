@@ -834,7 +834,7 @@ namespace vk
 			swap_info.imageExtent.width = width;
 			swap_info.imageExtent.height = height;
 
-			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
+			CHECK_RESULT(createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain));
 
 			if (old_swapchain)
 				destroySwapchainKHR(dev, old_swapchain, nullptr);
