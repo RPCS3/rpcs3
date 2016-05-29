@@ -477,7 +477,23 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
-	case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); return true;
+	case RSX_FP_OPCODE_TXD:
+		switch (m_prog.get_texture_dimension(dst.tex_num))
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD));
+			return true;
+		case rsx::texture_dimension_extended::texture_dimension_2d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD));
+			return true;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD));
+			return true;
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD));
+			return true;
+		}
+		return false;
 	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXL:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
