@@ -150,8 +150,7 @@ const g_ppu_scale_table;
 
 bool ppu_interpreter::MFVSCR(PPUThread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "MFVSCR is unimplemented");
-	return true;
+	throw std::runtime_error("MFVSCR" HERE);
 }
 
 bool ppu_interpreter::MTVSCR(PPUThread& ppu, ppu_opcode_t op)
@@ -2652,8 +2651,7 @@ bool ppu_interpreter::EQV(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ECIWX(PPUThread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "ECIWX is unimplemented");
-	return true;
+	throw std::runtime_error("ECIWX" HERE);
 }
 
 bool ppu_interpreter::LHZUX(PPUThread& ppu, ppu_opcode_t op)
