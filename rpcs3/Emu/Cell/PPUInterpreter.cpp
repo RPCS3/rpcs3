@@ -150,12 +150,13 @@ const g_ppu_scale_table;
 
 bool ppu_interpreter::MFVSCR(PPUThread& ppu, ppu_opcode_t op)
 {
-	throw std::runtime_error("MFVSCR" HERE);
+	LOG_WARNING(PPU, "MFVSCR is unimplemented");
+	return true;
 }
 
 bool ppu_interpreter::MTVSCR(PPUThread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "MTVSCR");
+	LOG_WARNING(PPU, "MTVSCR is unimplemented");
 	return true;
 }
 
@@ -2271,6 +2272,7 @@ bool ppu_interpreter::LDUX(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBST(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBST is unimplemented");
 	return true;
 }
 
@@ -2349,6 +2351,7 @@ bool ppu_interpreter::LDARX(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBF(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBF is unimplemented");
 	return true;
 }
 
@@ -2605,6 +2608,7 @@ bool ppu_interpreter::MULLW(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBTST(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBTST is unimplemented");
 	return true;
 }
 
@@ -2628,6 +2632,7 @@ bool ppu_interpreter::ADD(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBT(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBT is unimplemented");
 	return true;
 }
 
@@ -2647,7 +2652,8 @@ bool ppu_interpreter::EQV(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ECIWX(PPUThread& ppu, ppu_opcode_t op)
 {
-	throw std::runtime_error("ECIWX" HERE);
+	LOG_WARNING(PPU, "ECIWX is unimplemented");
+	return true;
 }
 
 bool ppu_interpreter::LHZUX(PPUThread& ppu, ppu_opcode_t op)
@@ -2693,6 +2699,7 @@ bool ppu_interpreter::LWAX(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DST(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DST is unimplemented");
 	return true;
 }
 
@@ -2734,6 +2741,7 @@ bool ppu_interpreter::LWAUX(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DSTST(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DSTST is unimplemented");
 	return true;
 }
 
@@ -2761,7 +2769,8 @@ bool ppu_interpreter::ORC(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ECOWX(PPUThread& ppu, ppu_opcode_t op)
 {
-	throw std::runtime_error("ECOWX" HERE);
+	LOG_WARNING(PPU, "ECOWX is unimplemented");
+	return true;
 }
 
 bool ppu_interpreter::STHUX(PPUThread& ppu, ppu_opcode_t op)
@@ -2825,6 +2834,7 @@ bool ppu_interpreter::MTSPR(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBI(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBI is unimplemented");
 	return true;
 }
 
@@ -3181,6 +3191,7 @@ bool ppu_interpreter::LVRXL(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DSS(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DSS is unimplemented");
 	return true;
 }
 
@@ -3266,6 +3277,7 @@ bool ppu_interpreter::EXTSW(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ICBI(PPUThread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "ICBI is unimplemented");
 	return true;
 }
 
