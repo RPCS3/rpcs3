@@ -2767,8 +2767,7 @@ bool ppu_interpreter::ORC(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ECOWX(PPUThread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "ECOWX is unimplemented");
-	return true;
+	throw std::runtime_error("ECOWX" HERE);
 }
 
 bool ppu_interpreter::STHUX(PPUThread& ppu, ppu_opcode_t op)
