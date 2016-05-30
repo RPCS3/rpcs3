@@ -150,7 +150,9 @@ const g_ppu_scale_table;
 
 bool ppu_interpreter::MFVSCR(PPUThread& ppu, ppu_opcode_t op)
 {
-	throw std::runtime_error("MFVSCR" HERE);
+	ppu.VR[op.vd].clear();
+	ppu.VR[op.vd]._u32[0] = ppu.VSCR;
+	return true;
 }
 
 bool ppu_interpreter::MTVSCR(PPUThread& ppu, ppu_opcode_t op)

@@ -65,7 +65,8 @@ public:
 
 	u64 LR{}; // Link Register
 	u64 CTR{}; // Counter Register
-	u32 VRSAVE{};
+	u32 VRSAVE{}; // Vector Save and Restore Register
+	u32 VSCR{}; // Vector Status and Control Register
 
 	u32 pc = 0;
 	u32 prio = -1; // Thread priority
