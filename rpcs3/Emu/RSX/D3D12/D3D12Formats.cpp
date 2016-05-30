@@ -303,12 +303,12 @@ DXGI_FORMAT get_color_surface_format(rsx::surface_color_format format)
 	switch (format)
 	{
 	case rsx::surface_color_format::r5g6b5: return DXGI_FORMAT_B5G6R5_UNORM;
-	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
-	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-			return DXGI_FORMAT_B8G8R8X8_UNORM; //BIT.TRIP Runner2 use this
-	case rsx::surface_color_format::a8b8g8r8:
+		return DXGI_FORMAT_B8G8R8X8_UNORM;
+	case rsx::surface_color_format::a8b8g8r8: return DXGI_FORMAT_B8G8R8A8_UNORM;
+	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 	case rsx::surface_color_format::a8r8g8b8: return DXGI_FORMAT_R8G8B8A8_UNORM;
 	case rsx::surface_color_format::b8: return DXGI_FORMAT_R8_UNORM;
 	case rsx::surface_color_format::g8b8: return DXGI_FORMAT_R8G8_UNORM;
