@@ -44,7 +44,7 @@ namespace vk
 		case CELL_GCM_LEQUAL:
 			return VK_COMPARE_OP_LESS_OR_EQUAL;
 		case CELL_GCM_GEQUAL:
-			return VK_COMPARE_OP_EQUAL;
+			return VK_COMPARE_OP_GREATER_OR_EQUAL;
 		case CELL_GCM_EQUAL:
 			return VK_COMPARE_OP_EQUAL;
 		case CELL_GCM_ALWAYS:
