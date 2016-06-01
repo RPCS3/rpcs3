@@ -5,6 +5,8 @@
 
 #include <cmath>
 
+inline u32 rol32(const u32 x, const u32 n) { return x << n | x >> (32 - n); }
+inline u64 rol64(const u64 x, const u64 n) { return x << n | x >> (64 - n); }
 inline u64 dup32(const u32 x) { return x | static_cast<u64>(x) << 32; }
 
 #if defined(__GNUG__)
@@ -24,10 +26,6 @@ inline s64 MULH64(s64 a, s64 b)
 #endif
 
 #if defined(_MSC_VER)
-#define rol8 _rotl8
-#define rol16 _rotl16
-#define rol32 _rotl
-#define rol64 _rotl64
 #define UMULH64 __umulh
 #define MULH64 __mulh
 #else
@@ -40,18 +38,6 @@ inline u8 rol8(u8 x, u8 n)
 inline u16 rol16(u16 x, u16 n)
 {
 	__asm__("rolw %1, %0" : "+g" (x) : "I" ((unsigned char)n));
-	return x;
-}
-
-inline u32 rol32(u32 x, u32 n)
-{
-	__asm__("roll %1, %0" : "+g" (x) : "I" ((unsigned char)n));
-	return x;
-}
-
-inline u64 rol64(u64 x, u64 n)
-{
-	__asm__("rolq %1, %0" : "+g" (x) : "J" ((unsigned char)n));
 	return x;
 }
 #endif
