@@ -42,7 +42,7 @@ before_install:
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     elif [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      export CXX="clang++-3.6" CC="clang-3.6";
+      export CXX="clang++-3.8" CC="clang-3.8";
     fi;
 # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
@@ -69,7 +69,7 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    - llvm-toolchain-precise-3.6
+#    - llvm-toolchain-precise-3.8
     - kubuntu-backports
     packages:
     - cmake
@@ -77,12 +77,12 @@ addons:
     - freeglut3-dev
 #    - libglew-dev apt version is too old
     - libc6-dev
-    - llvm-3.6
-    - llvm-3.6-dev
+#    - llvm-3.8
+#    - llvm-3.8-dev
     - libedit-dev
     - g++-5
     - gcc-5
-    - clang-3.6
+#    - clang-3.8
     - libstdc++-4.8-dev
     - lib32stdc++6
     - zlib1g-dev
