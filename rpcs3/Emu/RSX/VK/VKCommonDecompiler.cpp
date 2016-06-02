@@ -30,7 +30,7 @@ namespace vk
 		case FUNCTION::FUNCTION_DP2:
 			return "vec4(dot($0.xy, $1.xy))";
 		case FUNCTION::FUNCTION_DP2A:
-			return "";
+			return "vec4(dot($0.xy, $1.xy) + $2.x)";
 		case FUNCTION::FUNCTION_DP3:
 			return "vec4(dot($0.xyz, $1.xyz))";
 		case FUNCTION::FUNCTION_DP4:
