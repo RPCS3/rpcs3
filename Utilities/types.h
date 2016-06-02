@@ -423,6 +423,15 @@ struct pointer_hash
 	}
 };
 
+template<typename T, std::size_t Shift = 0>
+struct value_hash
+{
+	std::size_t operator()(T value) const
+	{
+		return static_cast<std::size_t>(value) >> Shift;
+	}
+};
+
 // Contains value of any POD type with fixed size and alignment. TT<> is the type converter applied.
 // For example, `simple_t` may be used to remove endianness.
 template<template<typename> class TT, std::size_t S, std::size_t A = S>

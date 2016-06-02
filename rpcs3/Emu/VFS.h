@@ -2,9 +2,16 @@
 
 namespace vfs
 {
-	// Print mounted directories
-	void dump();
+	// VFS type
+	enum class type
+	{
+		ps3,
+		psv,
+	};
 
-	// Convert PS3/PSV path to fs-compatible path
-	std::string get(const std::string& vpath);
+	// Mount VFS device
+	bool mount(const std::string& dev_name, const std::string& path);
+
+	// Convert VFS path to fs path
+	std::string get(const std::string& vpath, type _type = type::ps3);
 }

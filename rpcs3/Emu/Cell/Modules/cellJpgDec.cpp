@@ -51,7 +51,7 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 		if (!file_s) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
 		current_subHandle.fileSize = file_s.size();
-		current_subHandle.fd = idm::make<lv2_file_t>(std::move(file_s), 0, 0);
+		current_subHandle.fd = idm::make<lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0);
 		break;
 	}
 	}
@@ -78,7 +78,7 @@ s32 cellJpgDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_JPGDEC_ERROR_FATAL;
 	}
 
-	idm::remove<lv2_file_t>(subHandle_data->fd);
+	idm::remove<lv2_file>(subHandle_data->fd);
 	idm::remove<CellJpgDecSubHandle>(subHandle);
 
 	return CELL_OK;
@@ -110,7 +110,7 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 
 	case CELL_JPGDEC_FILE:
 	{
-		auto file = idm::get<lv2_file_t>(fd);
+		auto file = idm::get<lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(buffer.get(), fileSize);
 		break;
@@ -189,7 +189,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 
 	case CELL_JPGDEC_FILE:
 	{
-		auto file = idm::get<lv2_file_t>(fd);
+		auto file = idm::get<lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(jpg.get(), fileSize);
 		break;
