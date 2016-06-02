@@ -377,7 +377,7 @@ void GLGSRender::on_init_thread()
 	m_vao.create();
 	m_vbo.create();
 	m_ebo.create();
-	m_scale_offset_buffer.create(18 * sizeof(float));
+	m_scale_offset_buffer.create(32 * sizeof(float));
 	m_vertex_constants_buffer.create(512 * 4 * sizeof(float));
 	m_fragment_constants_buffer.create();
 
@@ -585,11 +585,17 @@ bool GLGSRender::load_program()
 	if (fragment_constants_sz > max_buffer_sz)
 		max_buffer_sz = fragment_constants_sz;
 
+	u32 is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
+	u8 alpha_ref_raw = (u8)(rsx::method_registers[NV4097_SET_ALPHA_REF] & 0xFF);
+	float alpha_ref = alpha_ref_raw / 255.f;
+
 	std::vector<u8> client_side_buf(max_buffer_sz);
 
 	fill_scale_offset_data(client_side_buf.data(), false);
 	memcpy(client_side_buf.data() + 16 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
 	memcpy(client_side_buf.data() + 17 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
+	memcpy(client_side_buf.data() + 18 * sizeof(float), &is_alpha_tested, sizeof(u32));
+	memcpy(client_side_buf.data() + 19 * sizeof(float), &alpha_ref, sizeof(float));
 	m_scale_offset_buffer.data(m_scale_offset_buffer.size(), nullptr);
 	m_scale_offset_buffer.sub_data(0, m_scale_offset_buffer.size(), client_side_buf.data());
 
