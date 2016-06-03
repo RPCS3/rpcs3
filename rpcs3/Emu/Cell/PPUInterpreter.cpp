@@ -26,6 +26,8 @@ inline s64 MULH64(s64 a, s64 b)
 #endif
 
 #if defined(_MSC_VER)
+#define rol8 _rotl8
+#define rol16 _rotl16
 #define UMULH64 __umulh
 #define MULH64 __mulh
 #else
