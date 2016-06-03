@@ -124,7 +124,12 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 {
-	sys_fs.trace("sys_fs_read(fd=%d, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
+	sys_fs.trace("sys_fs_read(fd=%d, buf=*0x%x, nbytes=0x%llx, nread=*0x%x)", fd, buf, nbytes, nread);
+
+	if (!buf)
+	{
+		return CELL_EFAULT;
+	}
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
