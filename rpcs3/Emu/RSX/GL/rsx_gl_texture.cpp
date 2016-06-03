@@ -136,7 +136,7 @@ namespace
 		case CELL_GCM_TEXTURE_A1R5G5B5:
 		case CELL_GCM_TEXTURE_R5G6B5:
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-		case CELL_GCM_TEXTURE_R6G5B5: return { GL_ALPHA, GL_GREEN, GL_RED, GL_BLUE };
+		case CELL_GCM_TEXTURE_R6G5B5:
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		case CELL_GCM_TEXTURE_DEPTH16:
@@ -464,12 +464,8 @@ namespace rsx
 			glTexParameteri(m_target, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.zfunc()]);
 
 			glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, (GLint)tex.bias());
-			
-			if (m_target != GL_TEXTURE_RECTANGLE)
-			{
-				glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-				glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
-			}
+			glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+			glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 
 			int min_filter = gl_tex_min_filter(tex.min_filter());
 			
