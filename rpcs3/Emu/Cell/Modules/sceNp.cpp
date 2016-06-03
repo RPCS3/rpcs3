@@ -1445,9 +1445,16 @@ s32 sceNpSignalingGetPeerNetInfoResult()
 	return CELL_OK;
 }
 
-s32 sceNpUtilCmpNpId()
+s32 sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.warning("sceNpUtilCmpNpId(id1=*0x%x, id2=*0x%x)", id1, id2);
+
+	// TODO: Improve the comparison.
+	if (strcmp(id1->handle.data, id2->handle.data) != 0)
+	{
+		return SCE_NP_UTIL_ERROR_NOT_MATCH;
+	}
+
 	return CELL_OK;
 }
 

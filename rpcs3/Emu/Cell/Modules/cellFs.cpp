@@ -1017,9 +1017,10 @@ s32 cellFsChangeFileSizeWithoutAllocation()
 	throw EXCEPTION("");
 }
 
-s32 cellFsAllocateFileAreaWithoutZeroFill()
+s32 cellFsAllocateFileAreaWithoutZeroFill(vm::cptr<char> path, u64 size)
 {
-	throw EXCEPTION("");
+	cellFs.warning("cellFsAllocateFileAreaWithoutZeroFill(path=*0x%x, size=0x%llx)", path, size);
+	return sys_fs_truncate(path, size);
 }
 
 s32 cellFsChangeFileSizeByFdWithoutAllocation()
