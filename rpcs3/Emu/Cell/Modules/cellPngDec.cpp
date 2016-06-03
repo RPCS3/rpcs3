@@ -587,11 +587,10 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 	// Check if the outputWidthByte is smaller than the intended output length of a line. For example an image might be in RGB, but we need to output 4 components, so we need to perform alpha padding.
 	else if (stream->out_param.outputWidthByte < (stream->out_param.outputWidth * stream->out_param.outputComponents))
 	{
-		// Not sure what to do, when a fixed alpha value isn't specified, but specifying full opaque seems to cause no issues currently. Logging this just in case.
+		// If fixed alpha is not specified in such a case, the default value for the alpha is 0xFF (255)
 		if (!stream->fixed_alpha)
 		{
-			cellPngDec.error("Fixed alpha not specified for padding. Please notify a developer of this.");
-			stream->fixed_alpha_colour = 255;
+			stream->fixed_alpha_colour = 0xFF;
 		}
 
 		// We need to fill alpha (before or after, depending on the output colour format) using the fixed alpha value passed by the game.

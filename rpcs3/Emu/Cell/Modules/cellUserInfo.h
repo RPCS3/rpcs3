@@ -3,15 +3,29 @@
 namespace vm { using namespace ps3; }
 
 // Return Codes
-enum
+enum CellUserInfoError : s32
 {
 	CELL_USERINFO_RET_OK          = 0,
 	CELL_USERINFO_RET_CANCEL      = 1,
-	CELL_USERINFO_ERROR_BUSY      = 0x8002c301,
-	CELL_USERINFO_ERROR_INTERNAL  = 0x8002c302,
-	CELL_USERINFO_ERROR_PARAM     = 0x8002c303,
-	CELL_USERINFO_ERROR_NOUSER    = 0x8002c304,
+	CELL_USERINFO_ERROR_BUSY      = ERROR_CODE(0x8002c301),
+	CELL_USERINFO_ERROR_INTERNAL  = ERROR_CODE(0x8002c302),
+	CELL_USERINFO_ERROR_PARAM     = ERROR_CODE(0x8002c303),
+	CELL_USERINFO_ERROR_NOUSER    = ERROR_CODE(0x8002c304),
 };
+
+template<>
+inline const char* ppu_error_code::print(CellUserInfoError error)
+{
+	switch (error)
+	{
+		STR_CASE(CELL_USERINFO_ERROR_BUSY);
+		STR_CASE(CELL_USERINFO_ERROR_INTERNAL);
+		STR_CASE(CELL_USERINFO_ERROR_PARAM);
+		STR_CASE(CELL_USERINFO_ERROR_NOUSER);
+	}
+
+	return nullptr;
+}
 
 // Enums
 enum CellUserInfoParamSize

@@ -25,7 +25,7 @@
 
 #include <thread>
 
-cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot");
+cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
 cfg::bool_entry g_cfg_autoexit(cfg::root.misc, "Exit RPCS3 when process finishes");
 
 std::string g_cfg_defaults;
