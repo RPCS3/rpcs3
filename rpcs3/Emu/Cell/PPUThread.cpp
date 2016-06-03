@@ -18,7 +18,7 @@ cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder"
 {
 	{ "Interpreter (precise)", ppu_decoder_type::precise },
 	{ "Interpreter (fast)", ppu_decoder_type::fast },
-	{ "Recompiler (LLVM)", ppu_decoder_type::llvm },
+	//{ "Recompiler (LLVM)", ppu_decoder_type::llvm },
 });
 
 const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
