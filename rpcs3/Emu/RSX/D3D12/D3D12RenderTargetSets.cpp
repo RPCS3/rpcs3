@@ -123,6 +123,8 @@ namespace
 
 void D3D12GSRender::clear_surface(u32 arg)
 {
+	if (!rsx::method_registers[NV4097_SET_SURFACE_FORMAT]) return;
+
 	std::chrono::time_point<std::chrono::system_clock> start_duration = std::chrono::system_clock::now();
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_start = std::chrono::system_clock::now();

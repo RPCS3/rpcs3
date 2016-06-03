@@ -19,6 +19,12 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	case rsx::surface_color_format::a8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1 };
 
+	//These formats discard their alpha component (always 1)
+	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
@@ -30,13 +36,14 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		return{ ::gl::texture::type::f32, ::gl::texture::format::rgba, true, 4, 4 };
 
 	case rsx::surface_color_format::b8:
-	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::red, false, 1, 1 };
+
 	case rsx::surface_color_format::g8b8:
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, false, 2, 1 };
+
 	case rsx::surface_color_format::x32:
-	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+		return{ ::gl::texture::type::f32, ::gl::texture::format::red, false, 1, 4 };
+
 	case rsx::surface_color_format::a8b8g8r8:
 	default:
 		LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", color_format);
