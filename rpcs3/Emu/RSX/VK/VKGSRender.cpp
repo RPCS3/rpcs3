@@ -44,7 +44,7 @@ namespace vk
 		case CELL_GCM_LEQUAL:
 			return VK_COMPARE_OP_LESS_OR_EQUAL;
 		case CELL_GCM_GEQUAL:
-			return VK_COMPARE_OP_EQUAL;
+			return VK_COMPARE_OP_GREATER_OR_EQUAL;
 		case CELL_GCM_EQUAL:
 			return VK_COMPARE_OP_EQUAL;
 		case CELL_GCM_ALWAYS:
@@ -54,38 +54,51 @@ namespace vk
 		}
 	}
 
-	VkFormat get_compatible_surface_format(rsx::surface_color_format color_format)
+	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format)
 	{
 		switch (color_format)
 		{
 		case rsx::surface_color_format::r5g6b5:
-			return VK_FORMAT_R5G6B5_UNORM_PACK16;
+			return std::make_pair(VK_FORMAT_R5G6B5_UNORM_PACK16, vk::default_component_map());
 
 		case rsx::surface_color_format::a8r8g8b8:
-			return VK_FORMAT_B8G8R8A8_UNORM;
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 
-		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
-			LOG_ERROR(RSX, "Format 0x%X may be buggy.", color_format);
-			return VK_FORMAT_B8G8R8A8_UNORM;
-
-		case rsx::surface_color_format::w16z16y16x16:
-			return VK_FORMAT_R16G16B16A16_SFLOAT;
-
-		case rsx::surface_color_format::w32z32y32x32:
-			return VK_FORMAT_R32G32B32A32_SFLOAT;
-
-		case rsx::surface_color_format::b8:
-		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
-		case rsx::surface_color_format::g8b8:
-		case rsx::surface_color_format::x32:
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::a8b8g8r8:
+		{
+			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, no_alpha);
+		}
+
+		case rsx::surface_color_format::w16z16y16x16:
+			return std::make_pair(VK_FORMAT_R16G16B16A16_SFLOAT, vk::default_component_map());
+
+		case rsx::surface_color_format::w32z32y32x32:
+			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map());
+
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		{
+			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, no_alpha);
+		}
+
+		case rsx::surface_color_format::b8:
+			return std::make_pair(VK_FORMAT_R8_UNORM, vk::default_component_map());
+		
+		case rsx::surface_color_format::g8b8:
+			return std::make_pair(VK_FORMAT_R8G8_UNORM, vk::default_component_map());
+
+		case rsx::surface_color_format::x32:
+			return std::make_pair(VK_FORMAT_R32_SFLOAT, vk::default_component_map());
+
 		default:
 			LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", color_format);
-			return VK_FORMAT_B8G8R8A8_UNORM;
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 		}
 	}
 
@@ -546,7 +559,7 @@ namespace
 void VKGSRender::end()
 {
 	size_t idx = vk::get_render_pass_location(
-		vk::get_compatible_surface_format(m_surface.color_format),
+		vk::get_compatible_surface_format(m_surface.color_format).first,
 		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
 		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
@@ -666,8 +679,8 @@ void VKGSRender::clear_surface(u32 mask)
 {
 	//TODO: Build clear commands into current renderpass descriptor set
 	if (!(mask & 0xF3)) return;
-
 	if (m_current_present_image== 0xFFFF) return;
+	if (!rsx::method_registers[NV4097_SET_SURFACE_FORMAT]) return;
 
 	init_buffers();
 
@@ -875,7 +888,7 @@ bool VKGSRender::load_program()
 		properties.ds.depthTestEnable = VK_FALSE;
 
 	size_t idx = vk::get_render_pass_location(
-		vk::get_compatible_surface_format(m_surface.color_format),
+		vk::get_compatible_surface_format(m_surface.color_format).first,
 		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
 		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
 	properties.render_pass = m_render_passes[idx];
@@ -1085,7 +1098,7 @@ void VKGSRender::prepare_rtts()
 		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 	}
 
-	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(m_surface.color_format), vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format), (u8)draw_buffers.size());
+	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(m_surface.color_format).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format), (u8)draw_buffers.size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
 	m_framebuffer_to_clean.push_back(std::make_unique<vk::framebuffer>(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
