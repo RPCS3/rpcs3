@@ -149,6 +149,7 @@ VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask)
 		return { map_table[remap_r], map_table[remap_g], map_table[remap_b], map_table[remap_a] };
 	}
 
+	case CELL_GCM_TEXTURE_D8R8G8B8:
 	case CELL_GCM_TEXTURE_D1R5G5B5:
 		return { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
 
@@ -163,7 +164,7 @@ VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask)
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		return { VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ZERO };
 
-	case CELL_GCM_TEXTURE_D8R8G8B8:
+
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 	{
 		VkComponentSwizzle map_table[] = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
