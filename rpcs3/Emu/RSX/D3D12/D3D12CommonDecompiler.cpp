@@ -42,6 +42,8 @@ std::string getFunctionImp(FUNCTION f)
 		return "float4(1., 1., 1., 1.)";
 	case FUNCTION::FUNCTION_FRACT:
 		return "frac($0)";
+	case FUNCTION::FUNCTION_REFL:
+		return "($0 - 2.0 * (dot($0, $1)) * $1)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
 		return "$t.Sample($tsampler, $0.x)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
