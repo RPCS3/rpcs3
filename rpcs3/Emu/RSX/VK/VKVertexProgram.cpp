@@ -125,9 +125,13 @@ static const reg_info reg_table[] =
 	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
 	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
+
+	//Disable user clip planes until they are properly handled
+
+	//{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
+	//{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
+	//{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
+
 	{ "tc0", true, "dst_reg7", "", false },
 	{ "tc1", true, "dst_reg8", "", false },
 	{ "tc2", true, "dst_reg9", "", false },

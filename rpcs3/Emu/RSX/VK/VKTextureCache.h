@@ -159,7 +159,7 @@ namespace vk
 			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
 				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
-					vk::default_component_map(),
+					rtt_texture->native_layout,
 					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT)));
 				return m_temporary_image_view.back().get();
 			}
