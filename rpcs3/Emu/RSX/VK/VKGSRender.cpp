@@ -934,9 +934,14 @@ bool VKGSRender::load_program()
 		stream_vector((char*)buf + 48, 0, 0, 0, (u32&)one);
 	}
 
-	memset((char*)buf+64, 0, 8);
+	u32 is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
+	u8 alpha_ref_raw = (u8)(rsx::method_registers[NV4097_SET_ALPHA_REF] & 0xFF);
+	float alpha_ref = alpha_ref_raw / 255.f;
+
 	memcpy((char*)buf + 64, &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
 	memcpy((char*)buf + 68, &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
+	memcpy((char*)buf + 72, &is_alpha_tested, sizeof(u32));
+	memcpy((char*)buf + 76, &alpha_ref, sizeof(float));
 	m_uniform_buffer_ring_info.unmap();
 
 	const size_t vertex_constants_offset = m_uniform_buffer_ring_info.alloc<256>(512 * 4 * sizeof(float));
