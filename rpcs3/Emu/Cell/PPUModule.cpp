@@ -8,10 +8,13 @@
 
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUAnalyser.h"
 
 #include "Emu/Cell/lv2/sys_prx.h"
 
 #include <unordered_set>
+
+const ppu_decoder<ppu_itype> s_ppu_itype;
 
 LOG_CHANNEL(cellAdec);
 LOG_CHANNEL(cellAtrac);

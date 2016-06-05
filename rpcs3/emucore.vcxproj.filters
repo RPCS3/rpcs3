@@ -1396,6 +1396,9 @@
     <ClInclude Include="Emu\Cell\PPUModule.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUAnalyser.h">
+      <Filter>Emu\Cell</Filter>
+    </ClInclude>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>

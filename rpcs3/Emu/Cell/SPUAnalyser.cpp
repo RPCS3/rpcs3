@@ -1,24 +1,20 @@
 #include "stdafx.h"
-
-#include "Crypto/sha1.h"
-#include "SPURecompiler.h"
 #include "SPUAnalyser.h"
+#include "SPURecompiler.h"
+#include "SPUOpcodes.h"
 
-const spu_decoder<spu_itype::type> s_spu_itype;
+const spu_decoder<spu_itype> s_spu_itype;
 
 std::shared_ptr<spu_function_t> SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size)
 {
-	for (auto found = m_db.find(key); found != m_db.end() && found->first == key; found++)
+	for (auto found = m_db.equal_range(key); found.first != found.second; found.first++)
 	{
-		if (found->second->size > max_size)
-		{
-			continue;
-		}
+		const auto& func = found.first->second;
 
 		// Compare binary data explicitly (TODO: optimize)
-		if (std::equal(found->second->data.begin(), found->second->data.end(), data))
+		if (LIKELY(func->size <= max_size) && std::memcmp(func->data.data(), data, func->size) == 0)
 		{
-			return found->second;
+			return func;
 		}
 	}
 
@@ -85,8 +81,6 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 
 		const auto type = s_spu_itype.decode(op.opcode);
 
-		using namespace spu_itype;
-
 		// Find existing function
 		if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
 		{
@@ -97,8 +91,8 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		// Additional analysis at the beginning of the block
 		if (start != entry && start == pos)
 		{
-			// Possible jump table
-			std::vector<u32> jt_abs, jt_rel;
+			std::vector<u32> jt_abs;
+			std::vector<u32> jt_rel;
 
 			for (; pos < limit; pos += 4)
 			{
@@ -106,7 +100,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 
 				if (target % 4)
 				{
-					// Misaligned address: abort analysis
+					// Address cannot be misaligned: abort jt scan
 					break;
 				}
 
@@ -172,15 +166,16 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 			break;
 		}
 		
-		if (type == &type::BI || type == &type::IRET) // Branch Indirect
+		if (type == BI || type == IRET) // Branch Indirect
 		{
-			if (type == &type::IRET) LOG_ERROR(SPU, "[0x%05x] Interrupt Return", pos);
+			if (type == IRET) LOG_ERROR(SPU, "[0x%05x] Interrupt Return", pos);
 
-			blocks.emplace(start); start = pos + 4;
+			blocks.emplace(start);
+			start = pos + 4;
 		}
-		else if (type == &type::BR || type == &type::BRA) // Branch Relative/Absolute
+		else if (type == BR || type == BRA) // Branch Relative/Absolute
 		{
-			const u32 target = spu_branch_target(type == &type::BR ? pos : 0, op.i16);
+			const u32 target = spu_branch_target(type == BR ? pos : 0, op.i16);
 
 			// Add adjacent function because it always could be
 			adjacent.emplace(target);
@@ -190,11 +185,12 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 				blocks.emplace(target);
 			}
 
-			blocks.emplace(start); start = pos + 4;
+			blocks.emplace(start);
+			start = pos + 4;
 		}
-		else if (type == &type::BRSL || type == &type::BRASL) // Branch Relative/Absolute and Set Link
+		else if (type == BRSL || type == BRASL) // Branch Relative/Absolute and Set Link
 		{
-			const u32 target = spu_branch_target(type == &type::BRSL ? pos : 0, op.i16);
+			const u32 target = spu_branch_target(type == BRSL ? pos : 0, op.i16);
 
 			if (target == pos + 4)
 			{
@@ -215,11 +211,11 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 				if (op.rt != 0) LOG_ERROR(SPU, "[0x%05x] Function call without $LR", pos);
 			}
 		}
-		else if (type == &type::BISL || type == &type::BISLED) // Branch Indirect and Set Link
+		else if (type == BISL || type == BISLED) // Branch Indirect and Set Link
 		{
 			if (op.rt != 0) LOG_ERROR(SPU, "[0x%05x] Indirect function call without $LR", pos);
 		}
-		else if (type == &type::BRNZ || type == &type::BRZ || type == &type::BRHNZ || type == &type::BRHZ) // Branch Relative if (Not) Zero (Half)word
+		else if (type == BRNZ || type == BRZ || type == BRHNZ || type == BRHZ) // Branch Relative if (Not) Zero (Half)word
 		{
 			const u32 target = spu_branch_target(pos, op.i16);
 
@@ -231,24 +227,9 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 				blocks.emplace(target);
 			}
 		}
-		else if (type == &type::BINZ || type == &type::BIZ || type == &type::BIHNZ || type == &type::BIHZ) // Branch Indirect if (Not) Zero (Half)word
-		{
-		}
-		else if (type == &type::HBR || type == &type::HBRA || type == &type::HBRR) // Hint for Branch
-		{
-		}
-		else if (type == &type::STQA || type == &type::STQD || type == &type::STQR || type == &type::STQX || type == &type::FSCRWR || type == &type::MTSPR || type == &type::WRCH) // Store
-		{
-		}
-		else if (type == &type::HEQ || type == &type::HEQI || type == &type::HGT || type == &type::HGTI || type == &type::HLGT || type == &type::HLGTI) // Halt
-		{
-		}
-		else if (type == &type::STOP || type == &type::STOPD || type == &type::NOP || type == &type::LNOP || type == &type::SYNC || type == &type::DSYNC) // Miscellaneous
-		{
-		}
 		else // Other instructions (writing rt reg)
 		{
-			const u32 rt = type == &type::SELB || type == &type::SHUFB || type == &type::MPYA || type == &type::FNMS || type == &type::FMA || type == &type::FMS ? +op.rc : +op.rt;
+			const u32 rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
 
 			// Analyse link register access
 			if (rt == 0)
@@ -258,7 +239,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 			// Analyse stack pointer access
 			if (rt == 1)
 			{
-				if (type == &type::ILA && pos < ila_sp_pos)
+				if (type == ILA && pos < ila_sp_pos)
 				{
 					// set minimal ila $SP,* instruction position
 					ila_sp_pos = pos;
@@ -274,21 +255,19 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 
 		const auto type = s_spu_itype.decode(op.opcode);
 
-		using namespace spu_itype;
-
-		if (!type) // Invalid instruction
+		if (type == BRSL || type == BRASL) // Branch Relative/Absolute and Set Link
 		{
-			break;
-		}
-		else if (type == &type::BRSL || type == &type::BRASL) // Branch Relative/Absolute and Set Link
-		{
-			const u32 target = spu_branch_target(type == &type::BRSL ? pos : 0, op.i16);
+			const u32 target = spu_branch_target(type == BRSL ? pos : 0, op.i16);
 
 			if (target != pos + 4 && target > entry && limit > target)
 			{
 				// Narrow the limit
 				limit = target;
 			}
+		}
+		else if (!type) // Invalid instruction
+		{
+			break;
 		}
 	}
 
