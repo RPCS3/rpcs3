@@ -73,10 +73,10 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 
 	switch (src[n].reg_type)
 	{
-	case 1: //temp
+	case RSX_VP_REGISTER_TYPE_TEMP:
 		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "tmp" + std::to_string(src[n].tmp_src));
 		break;
-	case 2: //input
+	case RSX_VP_REGISTER_TYPE_INPUT:
 		if (d1.input_src < (sizeof(reg_table) / sizeof(reg_table[0])))
 		{
 			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[d1.input_src], d1.input_src);
@@ -87,7 +87,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "in_unk", d1.input_src);
 		}
 		break;
-	case 3: //const
+	case RSX_VP_REGISTER_TYPE_CONSTANT:
 		m_parr.AddParam(PF_PARAM_UNIFORM, getFloatTypeName(4), std::string("vc[468]"));
 		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
 		break;
