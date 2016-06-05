@@ -340,12 +340,12 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
 	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(ppu_decoder_modes), rbox_ppu_decoder));
-	rbox_ppu_decoder->Enable(2, false); // TODO
+	//rbox_ppu_decoder->Enable(2, false); // TODO
 
 	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU Decoder" });
 	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(spu_decoder_modes), rbox_spu_decoder));
-	rbox_spu_decoder->Enable(3, false); // TODO
+	//rbox_spu_decoder->Enable(3, false); // TODO
 
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load liblv2.sprx only" }, chbox_core_load_liblv2));

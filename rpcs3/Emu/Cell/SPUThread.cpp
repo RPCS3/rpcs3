@@ -39,7 +39,7 @@ cfg::map_entry<spu_decoder_type> g_cfg_spu_decoder(cfg::root.core, "SPU Decoder"
 	{ "Interpreter (precise)", spu_decoder_type::precise },
 	{ "Interpreter (fast)", spu_decoder_type::fast },
 	{ "Recompiler (ASMJIT)", spu_decoder_type::asmjit },
-	{ "Recompiler (LLVM)", spu_decoder_type::llvm },
+	//{ "Recompiler (LLVM)", spu_decoder_type::llvm },
 });
 
 const spu_decoder<spu_interpreter_precise> s_spu_interpreter_precise;
