@@ -641,6 +641,12 @@
     <ClCompile Include="Emu\Cell\PPUModule.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\CPU\CPUTranslator.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -1398,6 +1404,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUAnalyser.h">
       <Filter>Emu\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUTranslator.h">
+      <Filter>Emu\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\CPU\CPUTranslator.h">
+      <Filter>Emu\CPU</Filter>
     </ClInclude>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h">
       <Filter>Header Files</Filter>

@@ -192,18 +192,18 @@ void SPUThread::cpu_task()
 		return custom_task(*this);
 	}
 
+	if (g_cfg_spu_decoder.get() == spu_decoder_type::asmjit)
+	{
+		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
+		return spu_recompiler_base::enter(*this);
+	}
+
 	g_tls_log_prefix = []
 	{
 		const auto cpu = static_cast<SPUThread*>(get_current_cpu_thread());
 
 		return fmt::format("%s [0x%05x]", cpu->get_name(), cpu->pc);
 	};
-
-	if (g_cfg_spu_decoder.get() == spu_decoder_type::asmjit)
-	{
-		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
-		return spu_recompiler_base::enter(*this);
-	}
 
 	// Select opcode table
 	const auto& table = *(

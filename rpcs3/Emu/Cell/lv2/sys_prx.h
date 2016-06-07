@@ -79,6 +79,7 @@ struct lv2_prx_t
 	bool is_started = false;
 
 	std::unordered_map<u32, u32> specials;
+	std::vector<std::pair<u32, u32>> func;
 
 	vm::ptr<s32(int argc, vm::ptr<void> argv)> start = vm::null;
 	vm::ptr<s32(int argc, vm::ptr<void> argv)> stop = vm::null;

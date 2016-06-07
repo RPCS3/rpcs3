@@ -178,7 +178,7 @@ namespace vm
 
 		_ptr_base operator --(int)
 		{
-			_ptr_base result = m_addr;
+			_ptr_base result = *this;
 			m_addr = vm::cast(m_addr, HERE) - SIZE_32(T);
 			return result;
 		}

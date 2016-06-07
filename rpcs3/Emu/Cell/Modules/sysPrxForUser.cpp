@@ -74,7 +74,7 @@ void sys_initialize_tls(PPUThread& ppu, u64 main_thread_id, u32 tls_seg_addr, u3
 	// Allocate TLS for main thread
 	ppu.GPR[13] = ppu_alloc_tls() + 0x7000 + TLS_SYS;
 
-	sysPrxForUser.notice("TLS initialized (addr=0x%x, size=0x%x, max=0x%zu)", g_tls_addr - 0x30, g_tls_size, g_tls_max);
+	sysPrxForUser.notice("TLS initialized (addr=0x%x, size=0x%x, max=0x%x)", g_tls_addr - 0x30, g_tls_size, g_tls_max);
 
 	// TODO
 	g_spu_printf_agcb = vm::null;

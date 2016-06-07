@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Emu/Cell/Common.h"
-#include "Emu/CPU/CPUThread.h"
-#include "Emu/Memory/vm.h"
+#include "Common.h"
+#include "../CPU/CPUThread.h"
+#include "../Memory/vm.h"
 
 class PPUThread final : public cpu_thread
 {

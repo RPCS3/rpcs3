@@ -53,7 +53,7 @@ inline __m128i sse_cmpgt_epu32(__m128i A, __m128i B)
 	return _mm_cmpgt_epi32(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
 }
 
-inline __m128 sse_exp2_ps(__m128 A)
+extern __m128 sse_exp2_ps(__m128 A)
 {
 	const auto x0 = _mm_max_ps(_mm_min_ps(A, _mm_set1_ps(127.4999961f)), _mm_set1_ps(-127.4999961f));
 	const auto x1 = _mm_add_ps(x0, _mm_set1_ps(0.5f));
@@ -65,7 +65,7 @@ inline __m128 sse_exp2_ps(__m128 A)
 	return _mm_mul_ps(_mm_add_ps(_mm_add_ps(x6, x6), _mm_set1_ps(1.0f)), _mm_castsi128_ps(_mm_slli_epi32(_mm_add_epi32(x2, _mm_set1_epi32(127)), 23)));
 }
 
-inline __m128 sse_log2_ps(__m128 A)
+extern __m128 sse_log2_ps(__m128 A)
 {
 	const auto _1 = _mm_set1_ps(1.0f);
 	const auto _c = _mm_set1_ps(1.442695040f);
@@ -79,6 +79,125 @@ inline __m128 sse_log2_ps(__m128 A)
 	const auto x7 = _mm_rcp_ps(_mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(_mm_set1_ps(-35.67227983f), x5), _mm_set1_ps(312.0937664f)), x5), _mm_set1_ps(-769.6919436f)));
 	const auto x8 = _mm_cvtepi32_ps(_mm_sub_epi32(_mm_srli_epi32(_mm_castps_si128(x0), 23), _mm_set1_epi32(127)));
 	return _mm_add_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(x5, x6), x7), x4), _c), _mm_add_ps(_mm_mul_ps(x4, _c), x8));
+}
+
+extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
+{
+	const auto index = _mm_andnot_si128(C, _mm_set1_epi8(0x1f));
+	const auto mask = _mm_cmpgt_epi8(index, _mm_set1_epi8(0xf));
+	const auto sa = _mm_shuffle_epi8(A, index);
+	const auto sb = _mm_shuffle_epi8(B, index);
+	return _mm_or_si128(_mm_and_si128(mask, sa), _mm_andnot_si128(mask, sb));
+}
+
+extern __m128i sse_altivec_lvsl(u64 addr)
+{
+	alignas(16) static const u64 lvsl_values[0x10][2] =
+	{
+		{ 0x08090A0B0C0D0E0F, 0x0001020304050607 },
+		{ 0x090A0B0C0D0E0F10, 0x0102030405060708 },
+		{ 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
+		{ 0x0B0C0D0E0F101112, 0x030405060708090A },
+		{ 0x0C0D0E0F10111213, 0x0405060708090A0B },
+		{ 0x0D0E0F1011121314, 0x05060708090A0B0C },
+		{ 0x0E0F101112131415, 0x060708090A0B0C0D },
+		{ 0x0F10111213141516, 0x0708090A0B0C0D0E },
+		{ 0x1011121314151617, 0x08090A0B0C0D0E0F },
+		{ 0x1112131415161718, 0x090A0B0C0D0E0F10 },
+		{ 0x1213141516171819, 0x0A0B0C0D0E0F1011 },
+		{ 0x131415161718191A, 0x0B0C0D0E0F101112 },
+		{ 0x1415161718191A1B, 0x0C0D0E0F10111213 },
+		{ 0x15161718191A1B1C, 0x0D0E0F1011121314 },
+		{ 0x161718191A1B1C1D, 0x0E0F101112131415 },
+		{ 0x1718191A1B1C1D1E, 0x0F10111213141516 },
+	};
+
+	return _mm_load_si128((__m128i*)lvsl_values[addr & 0xf]);
+}
+
+extern __m128i sse_altivec_lvsr(u64 addr)
+{
+	alignas(16) static const u64 lvsr_values[0x10][2] =
+	{
+		{ 0x18191A1B1C1D1E1F, 0x1011121314151617 },
+		{ 0x1718191A1B1C1D1E, 0x0F10111213141516 },
+		{ 0x161718191A1B1C1D, 0x0E0F101112131415 },
+		{ 0x15161718191A1B1C, 0x0D0E0F1011121314 },
+		{ 0x1415161718191A1B, 0x0C0D0E0F10111213 },
+		{ 0x131415161718191A, 0x0B0C0D0E0F101112 },
+		{ 0x1213141516171819, 0x0A0B0C0D0E0F1011 },
+		{ 0x1112131415161718, 0x090A0B0C0D0E0F10 },
+		{ 0x1011121314151617, 0x08090A0B0C0D0E0F },
+		{ 0x0F10111213141516, 0x0708090A0B0C0D0E },
+		{ 0x0E0F101112131415, 0x060708090A0B0C0D },
+		{ 0x0D0E0F1011121314, 0x05060708090A0B0C },
+		{ 0x0C0D0E0F10111213, 0x0405060708090A0B },
+		{ 0x0B0C0D0E0F101112, 0x030405060708090A },
+		{ 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
+		{ 0x090A0B0C0D0E0F10, 0x0102030405060708 },
+	};
+
+	return _mm_load_si128((__m128i*)lvsr_values[addr & 0xf]);
+}
+
+static const __m128i lvlx_masks[0x10] =
+{
+	_mm_set_epi8(0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf),
+	_mm_set_epi8(0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1),
+	_mm_set_epi8(0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1),
+	_mm_set_epi8(0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1),
+	_mm_set_epi8(0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1),
+	_mm_set_epi8(0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+};
+
+static const __m128i lvrx_masks[0x10] =
+{
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8),
+	_mm_set_epi8(-1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9),
+	_mm_set_epi8(-1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa),
+	_mm_set_epi8(-1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb),
+	_mm_set_epi8(-1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc),
+	_mm_set_epi8(-1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd),
+	_mm_set_epi8(-1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe),
+};
+
+extern __m128i sse_cellbe_lvlx(u64 addr)
+{
+	return _mm_shuffle_epi8(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvlx_masks[addr & 0xf]);
+}
+
+extern void sse_cellbe_stvlx(u64 addr, __m128i a)
+{
+	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
+}
+
+extern __m128i sse_cellbe_lvrx(u64 addr)
+{
+	return _mm_shuffle_epi8(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvrx_masks[addr & 0xf]);
+}
+
+extern void sse_cellbe_stvrx(u64 addr, __m128i a)
+{
+	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
 }
 
 template<typename T>
@@ -807,11 +926,7 @@ bool ppu_interpreter::VOR(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VPERM(PPUThread& ppu, ppu_opcode_t op)
 {
-	const auto index = _mm_andnot_si128(ppu.VR[op.vc].vi, _mm_set1_epi8(0x1f));
-	const auto mask = _mm_cmpgt_epi8(index, _mm_set1_epi8(0xf));
-	const auto sa = _mm_shuffle_epi8(ppu.VR[op.va].vi, index);
-	const auto sb = _mm_shuffle_epi8(ppu.VR[op.vb].vi, index);
-	ppu.VR[op.vd].vi = _mm_or_si128(_mm_and_si128(mask, sa), _mm_andnot_si128(mask, sb));
+	ppu.VR[op.vd].vi = sse_altivec_vperm(ppu.VR[op.va].vi, ppu.VR[op.vb].vi, ppu.VR[op.vc].vi);
 	return true;
 }
 
@@ -2052,29 +2167,7 @@ bool ppu_interpreter::TW(PPUThread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVSL(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-
-	static const u64 lvsl_values[0x10][2] =
-	{
-		{ 0x08090A0B0C0D0E0F, 0x0001020304050607 },
-		{ 0x090A0B0C0D0E0F10, 0x0102030405060708 },
-		{ 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
-		{ 0x0B0C0D0E0F101112, 0x030405060708090A },
-		{ 0x0C0D0E0F10111213, 0x0405060708090A0B },
-		{ 0x0D0E0F1011121314, 0x05060708090A0B0C },
-		{ 0x0E0F101112131415, 0x060708090A0B0C0D },
-		{ 0x0F10111213141516, 0x0708090A0B0C0D0E },
-		{ 0x1011121314151617, 0x08090A0B0C0D0E0F },
-		{ 0x1112131415161718, 0x090A0B0C0D0E0F10 },
-		{ 0x1213141516171819, 0x0A0B0C0D0E0F1011 },
-		{ 0x131415161718191A, 0x0B0C0D0E0F101112 },
-		{ 0x1415161718191A1B, 0x0C0D0E0F10111213 },
-		{ 0x15161718191A1B1C, 0x0D0E0F1011121314 },
-		{ 0x161718191A1B1C1D, 0x0E0F101112131415 },
-		{ 0x1718191A1B1C1D1E, 0x0F10111213141516 },
-	};
-
-	ppu.VR[op.vd]._u64[0] = lvsl_values[addr & 0xf][0];
-	ppu.VR[op.vd]._u64[1] = lvsl_values[addr & 0xf][1];
+	ppu.VR[op.vd].vi = sse_altivec_lvsl(addr);
 	return true;
 }
 
@@ -2218,29 +2311,7 @@ bool ppu_interpreter::CMPL(PPUThread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVSR(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-
-	static const u64 lvsr_values[0x10][2] =
-	{
-		{ 0x18191A1B1C1D1E1F, 0x1011121314151617 },
-		{ 0x1718191A1B1C1D1E, 0x0F10111213141516 },
-		{ 0x161718191A1B1C1D, 0x0E0F101112131415 },
-		{ 0x15161718191A1B1C, 0x0D0E0F1011121314 },
-		{ 0x1415161718191A1B, 0x0C0D0E0F10111213 },
-		{ 0x131415161718191A, 0x0B0C0D0E0F101112 },
-		{ 0x1213141516171819, 0x0A0B0C0D0E0F1011 },
-		{ 0x1112131415161718, 0x090A0B0C0D0E0F10 },
-		{ 0x1011121314151617, 0x08090A0B0C0D0E0F },
-		{ 0x0F10111213141516, 0x0708090A0B0C0D0E },
-		{ 0x0E0F101112131415, 0x060708090A0B0C0D },
-		{ 0x0D0E0F1011121314, 0x05060708090A0B0C },
-		{ 0x0C0D0E0F10111213, 0x0405060708090A0B },
-		{ 0x0B0C0D0E0F101112, 0x030405060708090A },
-		{ 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
-		{ 0x090A0B0C0D0E0F10, 0x0102030405060708 },
-	};
-
-	ppu.VR[op.vd]._u64[0] = lvsr_values[addr & 0xf][0];
-	ppu.VR[op.vd]._u64[1] = lvsr_values[addr & 0xf][1];
+	ppu.VR[op.vd].vi = sse_altivec_lvsr(addr);
 	return true;
 }
 
@@ -2867,10 +2938,7 @@ bool ppu_interpreter::DIVW(PPUThread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVLX(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u32 eb = addr & 0xf;
-
-	ppu.VR[op.vd].clear();
-	for (u32 i = 0; i < 16u - eb; ++i) ppu.VR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i, HERE));
+	ppu.VR[op.vd].vi = sse_cellbe_lvlx(addr);
 	return true;
 }
 
@@ -2934,10 +3002,7 @@ bool ppu_interpreter::SRD(PPUThread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVRX(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u8 eb = addr & 0xf;
-
-	ppu.VR[op.vd].clear();
-	for (u32 i = 16 - eb; i < 16; ++i) ppu.VR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16, HERE));
+	ppu.VR[op.vd].vi = sse_cellbe_lvrx(addr);
 	return true;
 }
 
@@ -3005,9 +3070,7 @@ bool ppu_interpreter::LFDUX(PPUThread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STVLX(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u32 eb = addr & 0xf;
-
-	for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i, HERE), ppu.VR[op.vs]._u8[15 - i]);
+	sse_cellbe_stvlx(addr, ppu.VR[op.vs].vi);
 	return true;
 }
 
@@ -3055,9 +3118,7 @@ bool ppu_interpreter::STFSX(PPUThread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STVRX(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u8 eb = addr & 0xf;
-
-	for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16, HERE), ppu.VR[op.vs]._u8[15 - i]);
+	sse_cellbe_stvrx(addr, ppu.VR[op.vs].vi);
 	return true;
 }
 
@@ -3116,12 +3177,7 @@ bool ppu_interpreter::STFDUX(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::LVLXL(PPUThread& ppu, ppu_opcode_t op)
 {
-	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u32 eb = addr & 0xf;
-
-	ppu.VR[op.vd].clear();
-	for (u32 i = 0; i < 16u - eb; ++i) ppu.VR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i, HERE));
-	return true;
+	return LVLX(ppu, op);
 }
 
 bool ppu_interpreter::LHBRX(PPUThread& ppu, ppu_opcode_t op)
@@ -3171,12 +3227,7 @@ bool ppu_interpreter::SRAD(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::LVRXL(PPUThread& ppu, ppu_opcode_t op)
 {
-	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u8 eb = addr & 0xf;
-
-	ppu.VR[op.vd].clear();
-	for (u32 i = 16 - eb; i < 16; ++i) ppu.VR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16, HERE));
-	return true;
+	return LVRX(ppu, op);
 }
 
 bool ppu_interpreter::DSS(PPUThread& ppu, ppu_opcode_t op)
@@ -3213,11 +3264,7 @@ bool ppu_interpreter::EIEIO(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::STVLXL(PPUThread& ppu, ppu_opcode_t op)
 {
-	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u32 eb = addr & 0xf;
-
-	for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i, HERE), ppu.VR[op.vs]._u8[15 - i]);
-	return true;
+	return STVLX(ppu, op);
 }
 
 bool ppu_interpreter::STHBRX(PPUThread& ppu, ppu_opcode_t op)
@@ -3236,11 +3283,7 @@ bool ppu_interpreter::EXTSH(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::STVRXL(PPUThread& ppu, ppu_opcode_t op)
 {
-	const u64 addr = op.ra ? ppu.GPR[op.ra] + ppu.GPR[op.rb] : ppu.GPR[op.rb];
-	const u8 eb = addr & 0xf;
-
-	for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16, HERE), ppu.VR[op.vs]._u8[15 - i]);
-	return true;
+	return STVRX(ppu, op);
 }
 
 bool ppu_interpreter::EXTSB(PPUThread& ppu, ppu_opcode_t op)
@@ -3529,7 +3572,9 @@ bool ppu_interpreter::FSQRTS(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FRES(PPUThread& ppu, ppu_opcode_t op)
 {
-	ppu.FPR[op.frd] = f32(1.0 / ppu.FPR[op.frb]);
+	f32 value = f32(ppu.FPR[op.frb]);
+	_mm_store_ss(&value, _mm_rcp_ss(_mm_load_ss(&value)));
+	ppu.FPR[op.frd] = value;
 	VERIFY(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 	return true;
 }
@@ -3633,14 +3678,14 @@ bool ppu_interpreter::FRSP(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTIW(PPUThread& ppu, ppu_opcode_t op)
 {
-	(s32&)ppu.FPR[op.frd] = std::lrint(ppu.FPR[op.frb]);
+	(s32&)ppu.FPR[op.frd] = s32(ppu.FPR[op.frb]);
 	VERIFY(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 	return true;
 }
 
 bool ppu_interpreter::FCTIWZ(PPUThread& ppu, ppu_opcode_t op)
 {
-	(s32&)ppu.FPR[op.frd] = static_cast<s32>(ppu.FPR[op.frb]);
+	(s32&)ppu.FPR[op.frd] = _mm_cvttsd_si32(_mm_load_sd(&ppu.FPR[op.frb]));
 	VERIFY(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 	return true;
 }
@@ -3689,7 +3734,9 @@ bool ppu_interpreter::FMUL(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FRSQRTE(PPUThread& ppu, ppu_opcode_t op)
 {
-	ppu.FPR[op.frd] = 1.0 / std::sqrt(ppu.FPR[op.frb]);
+	f32 value = f32(ppu.FPR[op.frb]);
+	_mm_store_ss(&value, _mm_rsqrt_ss(_mm_load_ss(&value)));
+	ppu.FPR[op.frd] = value;
 	VERIFY(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 	return true;
 }
@@ -3758,14 +3805,14 @@ bool ppu_interpreter::FABS(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTID(PPUThread& ppu, ppu_opcode_t op)
 {
-	(s64&)ppu.FPR[op.frd] = std::llrint(ppu.FPR[op.frb]);
+	(s64&)ppu.FPR[op.frd] = s64(ppu.FPR[op.frb]);
 	VERIFY(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 	return true;
 }
 
 bool ppu_interpreter::FCTIDZ(PPUThread& ppu, ppu_opcode_t op)
 {
-	(s64&)ppu.FPR[op.frd] = static_cast<s64>(ppu.FPR[op.frb]);
+	(s64&)ppu.FPR[op.frd] = _mm_cvttsd_si64(_mm_load_sd(&ppu.FPR[op.frb]));
 	VERIFY(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 	return true;
 }
@@ -3779,5 +3826,5 @@ bool ppu_interpreter::FCFID(PPUThread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::UNK(PPUThread& ppu, ppu_opcode_t op)
 {
-	throw fmt::exception("Unknown/Illegal opcode: 0x%08x" HERE, op.opcode);
+	throw fmt::exception("Unknown/Illegal opcode: 0x%08x (pc=0x%x)" HERE, op.opcode, ppu.pc);
 }
