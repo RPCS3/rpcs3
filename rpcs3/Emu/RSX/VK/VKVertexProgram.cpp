@@ -35,6 +35,8 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
+	OS << "	uint alpha_test;\n";
+	OS << "	float alpha_ref;\n";
 	OS << "};" << std::endl;
 
 	vk::glsl::program_input in;
@@ -80,8 +82,19 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					in.type = vk::glsl::input_type_texel_buffer;
 
 					this->inputs.push_back(in);
+					
+					bool is_int = false;
+					for (auto &attrib : rsx_vertex_program.rsx_vertex_inputs)
+					{
+						if (attrib.location == std::get<0>(item))
+						{
+							if (attrib.int_type) is_int = true;
+							break;
+						}
+					}
 
-					OS << "layout(set = 0, binding=" << 3 + location++ << ")" << "	uniform samplerBuffer" << " " << PI.name << "_buffer;" << std::endl;
+					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
+					OS << "layout(set = 0, binding=" << 3 + location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;" << std::endl;
 				}
 			}
 		}
@@ -169,9 +182,13 @@ namespace vk
 			if (real_input.location != PI.location)
 				continue;
 
+			std::string vecType = "	vec4 ";
+			if (real_input.int_type)
+				vecType = "	ivec4 ";
+
 			if (!real_input.is_array)
 			{
-				OS << "	vec4 " << PI.name << " = texelFetch(" << PI.name << "_buffer, 0);" << std::endl;
+				OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0);" << std::endl;
 				return;
 			}
 
@@ -179,15 +196,15 @@ namespace vk
 			{
 				if (real_input.is_modulo)
 				{
-					OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex %" << real_input.frequency << ");" << std::endl;
+					OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex %" << real_input.frequency << ");" << std::endl;
 					return;
 				}
 
-				OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex /" << real_input.frequency << ");" << std::endl;
+				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex /" << real_input.frequency << ");" << std::endl;
 				return;
 			}
 
-			OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba;" << std::endl;
+			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba;" << std::endl;
 			return;
 		}
 
