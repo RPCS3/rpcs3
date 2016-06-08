@@ -11,6 +11,7 @@ namespace vk
 		VkPipelineInputAssemblyStateCreateInfo ia;
 		VkPipelineDepthStencilStateCreateInfo ds;
 		VkPipelineColorBlendAttachmentState att_state[4];
+		VkPipelineColorBlendStateCreateInfo cs;
 		VkRenderPass render_pass;
 		int num_targets;
 
