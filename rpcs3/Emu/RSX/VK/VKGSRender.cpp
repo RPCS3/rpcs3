@@ -894,8 +894,8 @@ bool VKGSRender::load_program()
 
 	if (rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE])
 	{
-		properties.cs.LogicOpEnable = true;
-		properties.cs.LogicOp = get_logic_op(rsx::method_registers[NV4097_SET_LOGIC_OP]);
+		properties.cs.logicOpEnable = true;
+		properties.cs.logicOp = vk::get_logic_op(rsx::method_registers[NV4097_SET_LOGIC_OP]);
 	}
 
 	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
