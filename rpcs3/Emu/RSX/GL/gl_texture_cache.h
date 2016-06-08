@@ -109,9 +109,6 @@ namespace gl
 				{
 					if (w && h && mipmap && (tex.h != h || tex.w != w || tex.mipmap != mipmap))
 					{
-						LOG_ERROR(RSX, "Texture params are invalid for block starting 0x%X!", tex.data_addr);
-						LOG_ERROR(RSX, "Params passed w=%d, h=%d, mip=%d, found w=%d, h=%d, mip=%d", w, h, mipmap, tex.w, tex.h, tex.mipmap);
-
 						continue;
 					}
 
@@ -240,7 +237,6 @@ namespace gl
 
 				if (region_overlaps(rtt_aligned_base, (rtt_aligned_base + rtt_block_sz), base, base+size))
 				{
-					LOG_NOTICE(RSX, "Dirty RTT FOUND addr=0x%X", base);
 					rtt.is_dirty = true;
 					if (rtt.locked)
 					{
@@ -322,8 +318,6 @@ namespace gl
 						rtt.data_addr = base;
 						rtt.is_dirty = true;
 
-						LOG_NOTICE(RSX, "New RTT created for block 0x%X + 0x%X", (u32)rtt.data_addr, rtt.block_sz);
-
 						lock_memory_region((u32)rtt.data_addr, rtt.block_sz);
 						rtt.locked = true;
 
@@ -342,10 +336,8 @@ namespace gl
 
 				if (region->locked && region->block_sz != size)
 				{
-					LOG_NOTICE(RSX, "Unlocking RTT since size has changed!");
 					unlock_memory_region((u32)region->data_addr, region->block_sz);
 
-					LOG_NOTICE(RSX, "Locking down RTT after size change!");
 					region->block_sz = size;
 					lock_memory_region((u32)region->data_addr, region->block_sz);
 					region->locked = true;
@@ -517,7 +509,6 @@ namespace gl
 				if (tex.protected_block_start <= address &&
 					tex.protected_block_sz >(address - tex.protected_block_start))
 				{
-					LOG_NOTICE(RSX, "Texture object is dirty! %d", tex.gl_id);
 					unlock_gl_object(tex);
 
 					invalidate_rtts_in_range((u32)tex.data_addr, tex.block_sz);
@@ -541,7 +532,6 @@ namespace gl
 					u32 offset = address - rtt_aligned_base;
 					if (offset >= rtt_block_sz) continue;
 
-					LOG_NOTICE(RSX, "Dirty non-texture RTT FOUND! addr=0x%X", rtt.data_addr);
 					rtt.is_dirty = true;
 
 					unlock_memory_region(rtt_aligned_base, rtt_block_sz);
