@@ -2,7 +2,15 @@
 #include "GCM.h"
 #include "RSXTexture.h"
 
-enum
+enum register_type
+{
+	RSX_FP_REGISTER_TYPE_TEMP = 0,
+	RSX_FP_REGISTER_TYPE_INPUT = 1,
+	RSX_FP_REGISTER_TYPE_CONSTANT = 2,
+	RSX_FP_REGISTER_TYPE_UNKNOWN = 3,
+};
+
+enum fp_opcode
 {
 	RSX_FP_OPCODE_NOP        = 0x00, // No-Operation
 	RSX_FP_OPCODE_MOV        = 0x01, // Move
