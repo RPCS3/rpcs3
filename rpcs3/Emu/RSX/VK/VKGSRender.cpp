@@ -180,7 +180,31 @@ namespace vk
 			return{};
 		}
 	}
-
+	
+	VkLogicOp get_logic_op(u32 op)
+	{
+		switch (op)
+		{
+		case CELL_GCM_CLEAR: return VK_LOGIC_OP_CLEAR;
+		case CELL_GCM_AND: return VK_LOGIC_OP_AND;
+		case CELL_GCM_AND_REVERSE: return VK_LOGIC_OP_AND_REVERSE;
+		case CELL_GCM_COPY: return VK_LOGIC_OP_COPY;
+		case CELL_GCM_AND_INVERTED: return VK_LOGIC_OP_AND_INVERTED;
+		case CELL_GCM_NOOP: return VK_LOGIC_OP_NO_OP;
+		case CELL_GCM_XOR: return VK_LOGIC_OP_XOR;
+		case CELL_GCM_OR: return VK_LOGIC_OP_OR;
+		case CELL_GCM_NOR: return VK_LOGIC_OP_NOR;
+		case CELL_GCM_EQUIV: return VK_LOGIC_OP_EQUIVALENT;
+		case CELL_GCM_INVERT: return VK_LOGIC_OP_INVERT;
+		case CELL_GCM_OR_REVERSE: return VK_LOGIC_OP_OR_REVERSE;
+		case CELL_GCM_COPY_INVERTED: return VK_LOGIC_OP_COPY_INVERTED;
+		case CELL_GCM_OR_INVERTED: return VK_LOGIC_OP_OR_INVERTED;
+		case CELL_GCM_NAND: return VK_LOGIC_OP_NAND;
+		default:
+			throw EXCEPTION("Unknown logic op 0x%X", op);
+		}
+	}
+	
 	VkBlendFactor get_blend_factor(u16 factor)
 	{
 		switch (factor)
@@ -868,7 +892,11 @@ bool VKGSRender::load_program()
 		}
 	}
 
-
+	if (rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE])
+	{
+		properties.cs.logicOpEnable = true;
+		properties.cs.logicOp = vk::get_logic_op(rsx::method_registers[NV4097_SET_LOGIC_OP]);
+	}
 
 	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	properties.ds.depthWriteEnable = (!!rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? VK_TRUE : VK_FALSE;
