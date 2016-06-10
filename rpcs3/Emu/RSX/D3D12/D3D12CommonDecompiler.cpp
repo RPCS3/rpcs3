@@ -138,5 +138,69 @@ void insert_d3d12_legacy_function(std::ostream& OS)
 	OS << "	result.z = clamped_val.x > 0.0 ? exp(clamped_val.w * log(max(clamped_val.y, 1.E-10))) : 0.0;\n";
 	OS << "	return result;\n";
 	OS << "}\n\n";
+
+	OS << "uint packSnorm2x16(float2 val)";
+	OS << "{\n";
+	OS << "	uint high_bits = round(clamp(val.x, -1., 1.) * 32767.);\n";
+	OS << "	uint low_bits = round(clamp(val.y, -1., 1.) * 32767.);\n";
+	OS << "	return (high_bits << 16)|low_bits;\n";
+	OS << "}\n\n";
+
+	OS << "uint packSnorm4x8(float4 val)";
+	OS << "{\n";
+	OS << "	uint high_bits_a = round(clamp(val.x, -1., 1.) * 127.);\n";
+	OS << "	uint high_bits_b = round(clamp(val.y, -1., 1.) * 127.);\n";
+	OS << "	uint low_bits_a = round(clamp(val.z, -1., 1.) * 127.);\n";
+	OS << "	uint low_bits_b = round(clamp(val.z, -1., 1.) * 127.);\n";
+	OS << "	return (high_bits_a << 24)|(high_bits_b << 16)|(low_bits_a << 8)|low_bits_b;\n";
+	OS << "}\n\n";
+
+	OS << "float2 unpackSnorm2x16(uint val)";
+	OS << "{\n";
+	OS << "	float high = clamp((val >> 16) / 32767., -1., 1.);\n";
+	OS << "	float low = clamp((val & 0x0000FFFF) / 32767., -1., 1.);\n";
+	OS << "	return float2(high, low);\n";
+	OS << "}\n\n";
+
+	OS << "float4 unpackSnorm4x8(uint val)";
+	OS << "{\n";
+	OS << "	float high_a = clamp((val >> 24) / 127., -1., 1.);\n";
+	OS << "	float high_b = clamp(((val >> 16) & 0xFF) / 127., -1., 1.);\n";
+	OS << "	float low_a = clamp(((val >> 8) & 0xFF) / 127., -1., 1.);\n";
+	OS << "	float low_b = clamp((val & 0xFF) / 127., -1., 1.);\n";
+	OS << "	return float4(high_a, high_b, low_a, low_b);\n";
+	OS << "}\n\n";
+
+	OS << "uint packUnorm4x8(float4 val)";
+	OS << "{\n";
+	OS << "	uint high_bits_a = round(clamp(val.x, -1., 1.) * 255.);\n";
+	OS << "	uint high_bits_b = round(clamp(val.y, -1., 1.) * 255.);\n";
+	OS << "	uint low_bits_a = round(clamp(val.z, -1., 1.) * 255.);\n";
+	OS << "	uint low_bits_b = round(clamp(val.z, -1., 1.) * 255.);\n";
+	OS << "	return (high_bits_a << 24)|(high_bits_b << 16)|(low_bits_a << 8)|low_bits_b;\n";
+	OS << "}\n\n";
+
+	OS << "float4 unpackUnorm4x8(uint val)";
+	OS << "{\n";
+	OS << "	float high_a = clamp((val >> 24) / 255., -1., 1.);\n";
+	OS << "	float high_b = clamp(((val >> 16) & 0xFF) / 255., -1., 1.);\n";
+	OS << "	float low_a = clamp(((val >> 8) & 0xFF) / 255., -1., 1.);\n";
+	OS << "	float low_b = clamp((val & 0xFF) / 255., -1., 1.);\n";
+	OS << "	return float4(high_a, high_b, low_a, low_b);\n";
+	OS << "}\n\n";
+
+	/**
+	* There is no easy way to do this in a shader since we cant recast the f16 blocks to u16
+	* Fake it and hope the program requests the corresponding f16 unpack
+	**/
+	OS << "uint packHalf2x16(float2 val)";
+	OS << "{\n";
+	OS << "	return packSnorm2x16(val / 6.1E+5);\n";
+	OS << "}\n\n";
+
+	OS << "float2 unpackHalf2x16(uint val)";
+	OS << "{\n";
+	OS << "	return unpackSnorm2x16(val) * 6.1E+5;\n";
+	OS << "}\n\n";
 }
 #endif
