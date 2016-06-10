@@ -872,13 +872,21 @@ bool VKGSRender::load_program()
 
 	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	properties.ds.depthWriteEnable = (!!rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? VK_TRUE : VK_FALSE;
-	properties.ds.depthBoundsTestEnable = VK_FALSE;
 	properties.ds.back.failOp = VK_STENCIL_OP_KEEP;
 	properties.ds.back.passOp = VK_STENCIL_OP_KEEP;
 	properties.ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
 	properties.ds.stencilTestEnable = VK_FALSE;
 	properties.ds.front = properties.ds.back;
 
+	if (!!rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE])
+	{
+		properties.ds.depthBoundsTestEnable = VK_TRUE;
+		properties.ds.minDepthBounds = (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN];
+		properties.ds.maxDepthBounds = (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX];
+	}
+	else
+		properties.ds.depthBoundsTestEnable = VK_FALSE;
+	
 	if (!!rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE])
 	{
 		properties.ds.depthTestEnable = VK_TRUE;
