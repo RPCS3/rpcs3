@@ -217,6 +217,23 @@ namespace vk
 			throw EXCEPTION("Unknown blend op: 0x%X", op);
 		}
 	}
+	
+	VkStencilOp get_stencil_op(u32 op)
+	{
+		switch (op)
+		{
+		case CELL_GCM_KEEP: return VK_STENCIL_OP_KEEP;
+		case CELL_GCM_ZERO: return VK_STENCIL_OP_ZERO;
+		case CELL_GCM_REPLACE: return VK_STENCIL_OP_REPLACE;
+		case CELL_GCM_INCR: return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+		case CELL_GCM_DECR: return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+		case CELL_GCM_INVERT: return VK_STENCIL_OP_INVERT;
+		case CELL_GCM_INCR_WRAP: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+		case CELL_GCM_DECR_WRAP: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+		default:
+			throw EXCEPTION("Unknown stencil op: 0x%X", op);
+		}
+	}
 }
 
 
@@ -873,12 +890,28 @@ bool VKGSRender::load_program()
 	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	properties.ds.depthWriteEnable = (!!rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? VK_TRUE : VK_FALSE;
 	properties.ds.depthBoundsTestEnable = VK_FALSE;
-	properties.ds.back.failOp = VK_STENCIL_OP_KEEP;
-	properties.ds.back.passOp = VK_STENCIL_OP_KEEP;
-	properties.ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
-	properties.ds.stencilTestEnable = VK_FALSE;
-	properties.ds.front = properties.ds.back;
 
+	if (!!rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE])
+	{
+		properties.ds.stencilTestEnable = VK_TRUE;
+		properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
+		properties.ds.front.passOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
+		properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
+		properties.ds.front.compareOp = vk::compare_op(rsx::method_registers[NV4097_SET_STENCIL_FUNC]);
+
+		if (!!rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE])
+		{
+			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL]);
+			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
+			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL]);
+			properties.ds.back.compareOp = vk::compare_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC]);
+		}
+		else
+			properties.ds.back = properties.ds.front;
+	}
+	else
+		properties.ds.stencilTestEnable = VK_FALSE;
+		
 	if (!!rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE])
 	{
 		properties.ds.depthTestEnable = VK_TRUE;
