@@ -268,11 +268,11 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	switch (src.reg_type)
 	{
-	case 0: //tmp
+	case RSX_FP_REGISTER_TYPE_TEMP:
 		ret += AddReg(src.tmp_reg_index, src.fp16);
 		break;
 
-	case 1: //input
+	case RSX_FP_REGISTER_TYPE_INPUT:
 	{
 		static const std::string reg_table[] =
 		{
@@ -302,11 +302,11 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 	}
 	break;
 
-	case 2: //const
+	case RSX_FP_REGISTER_TYPE_CONSTANT:
 		ret += AddConst();
 		break;
 
-	case 3: // ??? Used by a few games, what is it?
+	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
 		LOG_ERROR(RSX, "Src type 3 used, please report this to a developer.");
 		break;
 

@@ -1,56 +1,63 @@
 #pragma once
 
+enum vp_reg_type
+{
+	RSX_VP_REGISTER_TYPE_TEMP = 1,
+	RSX_VP_REGISTER_TYPE_INPUT = 2,
+	RSX_VP_REGISTER_TYPE_CONSTANT = 3,
+};
+
 enum sca_opcode
 {
-	RSX_SCA_OPCODE_NOP = 0x00,
-	RSX_SCA_OPCODE_MOV = 0x01,
-	RSX_SCA_OPCODE_RCP = 0x02,
-	RSX_SCA_OPCODE_RCC = 0x03,
-	RSX_SCA_OPCODE_RSQ = 0x04,
-	RSX_SCA_OPCODE_EXP = 0x05,
-	RSX_SCA_OPCODE_LOG = 0x06,
-	RSX_SCA_OPCODE_LIT = 0x07,
-	RSX_SCA_OPCODE_BRA = 0x08,
-	RSX_SCA_OPCODE_BRI = 0x09,
-	RSX_SCA_OPCODE_CAL = 0x0a,
-	RSX_SCA_OPCODE_CLI = 0x0b,
-	RSX_SCA_OPCODE_RET = 0x0c,
-	RSX_SCA_OPCODE_LG2 = 0x0d,
-	RSX_SCA_OPCODE_EX2 = 0x0e,
-	RSX_SCA_OPCODE_SIN = 0x0f,
-	RSX_SCA_OPCODE_COS = 0x10,
-	RSX_SCA_OPCODE_BRB = 0x11,
-	RSX_SCA_OPCODE_CLB = 0x12,
-	RSX_SCA_OPCODE_PSH = 0x13,
-	RSX_SCA_OPCODE_POP = 0x14
+	RSX_SCA_OPCODE_NOP = 0x00, // No-Operation
+	RSX_SCA_OPCODE_MOV = 0x01, // Move (copy)
+	RSX_SCA_OPCODE_RCP = 0x02, // Reciprocal
+	RSX_SCA_OPCODE_RCC = 0x03, // Reciprocal clamped
+	RSX_SCA_OPCODE_RSQ = 0x04, // Reciprocal square root
+	RSX_SCA_OPCODE_EXP = 0x05, // Exponential base 2 (low-precision)
+	RSX_SCA_OPCODE_LOG = 0x06, // Logarithm base 2 (low-precision)
+	RSX_SCA_OPCODE_LIT = 0x07, // Lighting calculation
+	RSX_SCA_OPCODE_BRA = 0x08, // Branch
+	RSX_SCA_OPCODE_BRI = 0x09, // Branch by CC register
+	RSX_SCA_OPCODE_CAL = 0x0a, // Subroutine call
+	RSX_SCA_OPCODE_CLI = 0x0b, // Subroutine call by CC register
+	RSX_SCA_OPCODE_RET = 0x0c, // Return from subroutine
+	RSX_SCA_OPCODE_LG2 = 0x0d, // Logarithm base 2
+	RSX_SCA_OPCODE_EX2 = 0x0e, // Exponential base 2
+	RSX_SCA_OPCODE_SIN = 0x0f, // Sine function
+	RSX_SCA_OPCODE_COS = 0x10, // Cosine function
+	RSX_SCA_OPCODE_BRB = 0x11, // Branch by Boolean constant
+	RSX_SCA_OPCODE_CLB = 0x12, // Subroutine call by Boolean constant
+	RSX_SCA_OPCODE_PSH = 0x13, // Push onto stack
+	RSX_SCA_OPCODE_POP = 0x14, // Pop from stack
 };
 
 enum vec_opcode
 {
-	RSX_VEC_OPCODE_NOP = 0x00,
-	RSX_VEC_OPCODE_MOV = 0x01,
-	RSX_VEC_OPCODE_MUL = 0x02,
-	RSX_VEC_OPCODE_ADD = 0x03,
-	RSX_VEC_OPCODE_MAD = 0x04,
-	RSX_VEC_OPCODE_DP3 = 0x05,
-	RSX_VEC_OPCODE_DPH = 0x06,
-	RSX_VEC_OPCODE_DP4 = 0x07,
-	RSX_VEC_OPCODE_DST = 0x08,
-	RSX_VEC_OPCODE_MIN = 0x09,
-	RSX_VEC_OPCODE_MAX = 0x0a,
-	RSX_VEC_OPCODE_SLT = 0x0b,
-	RSX_VEC_OPCODE_SGE = 0x0c,
-	RSX_VEC_OPCODE_ARL = 0x0d,
-	RSX_VEC_OPCODE_FRC = 0x0e,
-	RSX_VEC_OPCODE_FLR = 0x0f,
-	RSX_VEC_OPCODE_SEQ = 0x10,
-	RSX_VEC_OPCODE_SFL = 0x11,
-	RSX_VEC_OPCODE_SGT = 0x12,
-	RSX_VEC_OPCODE_SLE = 0x13,
-	RSX_VEC_OPCODE_SNE = 0x14,
-	RSX_VEC_OPCODE_STR = 0x15,
-	RSX_VEC_OPCODE_SSG = 0x16,
-	RSX_VEC_OPCODE_TXL = 0x19
+	RSX_VEC_OPCODE_NOP = 0x00, // No-Operation
+	RSX_VEC_OPCODE_MOV = 0x01, // Move
+	RSX_VEC_OPCODE_MUL = 0x02, // Multiply
+	RSX_VEC_OPCODE_ADD = 0x03, // Addition
+	RSX_VEC_OPCODE_MAD = 0x04, // Multiply-Add
+	RSX_VEC_OPCODE_DP3 = 0x05, // 3-component Dot Product
+	RSX_VEC_OPCODE_DPH = 0x06, // Homogeneous Dot Product
+	RSX_VEC_OPCODE_DP4 = 0x07, // 4-component Dot Product
+	RSX_VEC_OPCODE_DST = 0x08, // Calculate distance vector
+	RSX_VEC_OPCODE_MIN = 0x09, // Minimum
+	RSX_VEC_OPCODE_MAX = 0x0a, // Maximum
+	RSX_VEC_OPCODE_SLT = 0x0b, // Set-If-LessThan
+	RSX_VEC_OPCODE_SGE = 0x0c, // Set-If-GreaterEqual
+	RSX_VEC_OPCODE_ARL = 0x0d, // Load to address register (round down)
+	RSX_VEC_OPCODE_FRC = 0x0e, // Extract fractional part (fraction)
+	RSX_VEC_OPCODE_FLR = 0x0f, // Round down (floor)
+	RSX_VEC_OPCODE_SEQ = 0x10, // Set-If-Equal
+	RSX_VEC_OPCODE_SFL = 0x11, // Set-If-False
+	RSX_VEC_OPCODE_SGT = 0x12, // Set-If-GreaterThan
+	RSX_VEC_OPCODE_SLE = 0x13, // Set-If-LessEqual
+	RSX_VEC_OPCODE_SNE = 0x14, // Set-If-NotEqual
+	RSX_VEC_OPCODE_STR = 0x15, // Set-If-True
+	RSX_VEC_OPCODE_SSG = 0x16, // Convert postive values to 1 and negative values to -1
+	RSX_VEC_OPCODE_TXL = 0x19, // Texture fetch
 };
 
 union D0
