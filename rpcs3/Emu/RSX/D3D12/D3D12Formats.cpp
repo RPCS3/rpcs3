@@ -128,8 +128,6 @@ D3D12_COMPARISON_FUNC get_compare_func(u32 op)
 	case CELL_GCM_NOTEQUAL: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
 	case CELL_GCM_GEQUAL: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	case CELL_GCM_ALWAYS: return D3D12_COMPARISON_FUNC_ALWAYS;
-	case CELL_GCM_ZERO:
-		break;
 	}
 	throw EXCEPTION("Invalid or unsupported compare func (0x%x)", op);
 }
