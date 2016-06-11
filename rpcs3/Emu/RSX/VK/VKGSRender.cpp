@@ -917,9 +917,17 @@ bool VKGSRender::load_program()
 
 	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	properties.ds.depthWriteEnable = (!!rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? VK_TRUE : VK_FALSE;
-	properties.ds.depthBoundsTestEnable = VK_FALSE;
 
-	if (!!rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE])
+	if (rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE])
+	{
+		properties.ds.depthBoundsTestEnable = VK_TRUE;
+		properties.ds.minDepthBounds = (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN];
+		properties.ds.maxDepthBounds = (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX];
+	}
+	else
+		properties.ds.depthBoundsTestEnable = VK_FALSE;
+
+	if (rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE])
 	{
 		properties.ds.stencilTestEnable = VK_TRUE;
 		properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
@@ -927,7 +935,7 @@ bool VKGSRender::load_program()
 		properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
 		properties.ds.front.compareOp = vk::compare_op(rsx::method_registers[NV4097_SET_STENCIL_FUNC]);
 
-		if (!!rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE])
+		if (rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE])
 		{
 			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL]);
 			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
