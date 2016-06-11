@@ -453,7 +453,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	}
 
 
-#define RING_BUFFER_SIZE 16 * 1024 * 1024
+#define RING_BUFFER_SIZE 16 * 1024 * DESCRIPTOR_MAX_DRAW_CALLS
 	m_uniform_buffer_ring_info.init(RING_BUFFER_SIZE);
 	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
@@ -465,9 +465,9 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
-	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3000 };
-	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 16000 };
-	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 16000 };
+	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS };
+	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 16 * DESCRIPTOR_MAX_DRAW_CALLS };
+	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 16 * DESCRIPTOR_MAX_DRAW_CALLS };
 
 	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
 
@@ -548,6 +548,24 @@ void VKGSRender::begin()
 	//TODO: Fence sync, ring-buffers, etc
 	//CHECK_RESULT(vkDeviceWaitIdle((*m_device)));
 
+	//Ease resource pressure if the number of draw calls becomes too high
+	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS)
+	{
+		close_and_submit_command_buffer({}, m_submit_fence);
+		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+		vkResetDescriptorPool(*m_device, descriptor_pool, 0);
+		CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+		CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+		open_command_buffer();
+
+		m_used_descriptors = 0;
+		m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
+		m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
+		m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
+		m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
+	}
+
 	VkDescriptorSetAllocateInfo alloc_info = {};
 	alloc_info.descriptorPool = descriptor_pool;
 	alloc_info.descriptorSetCount = 1;
@@ -555,7 +573,6 @@ void VKGSRender::begin()
 	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 
 	VkDescriptorSet new_descriptor_set;
-
 	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
 
 	descriptor_sets = new_descriptor_set;
@@ -573,6 +590,7 @@ void VKGSRender::begin()
 	//TODO: Set up other render-state parameters into the program pipeline
 
 	m_draw_calls++;
+	m_used_descriptors++;
 }
 
 namespace
@@ -1282,5 +1300,6 @@ void VKGSRender::flip(int buffer)
 	open_command_buffer();
 
 	m_draw_calls = 0;
+	m_used_descriptors = 0;
 	m_frame->flip(m_context);
 }
