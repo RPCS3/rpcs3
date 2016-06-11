@@ -469,7 +469,7 @@ namespace gl
 		{
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
-			glBufferData((GLenum)target_, size, data_, GL_STREAM_COPY);
+			glBufferData((GLenum)target_, size, data_, GL_STREAM_DRAW);
 			m_size = size;
 		}
 
@@ -566,6 +566,99 @@ namespace gl
 		void unmap()
 		{
 			glUnmapBuffer((GLenum)current_target());
+		}
+	};
+
+	class ring_buffer
+	{
+		buffer storage_buffer;
+		u32 m_data_loc = 0;
+		u32 m_size;
+
+		u32 m_mapped_block_size = 0;
+		u32 m_mapped_block_offset;
+		u32 m_mapped_reserve_offset;
+		u32 m_mapped_bytes_available;
+		void *m_mapped_base = nullptr;
+
+	public:
+		ring_buffer(u32 initial_size)
+		{
+			storage_buffer.create();
+			storage_buffer.data(initial_size);
+			m_size = initial_size;
+		}
+
+		void destroy()
+		{
+			storage_buffer.remove();
+		}
+
+		std::pair<void*, u32> alloc_and_map(u32 size)
+		{
+			size = (size + 255) & ~255;
+
+			//storage_buffer.bind(storage_buffer.current_target());
+			glBindBuffer(GL_TEXTURE_BUFFER, storage_buffer.id());
+			u32 limit = m_data_loc + size;
+			if (limit > m_size)
+			{
+				//Orphan this buffer and have the driver allocate a new one instead of looping back to the front.
+				//Hopefully, the driver will track usage here and re-use if sync is not a problem
+				if (size > m_size)
+					m_size = size;
+
+				storage_buffer.data(m_size, nullptr);
+				m_data_loc = 0;
+			}
+
+			void *ptr = glMapBufferRange(GL_TEXTURE_BUFFER, m_data_loc, size, GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+			u32 offset = m_data_loc;
+			m_data_loc += size;
+			return std::make_pair(ptr, offset);
+		}
+
+		void unmap()
+		{
+			//storage_buffer.unmap();
+			glUnmapBuffer(GL_TEXTURE_BUFFER);
+			m_mapped_block_size = 0;
+			m_mapped_base = 0;
+		}
+
+		void reserve_and_map(u32 max_size)
+		{
+			max_size = (max_size + 4095) & ~4095;
+			auto mapping = alloc_and_map(max_size);
+			m_mapped_base = mapping.first;
+			m_mapped_block_offset = mapping.second;
+			m_mapped_reserve_offset = 0;
+			m_mapped_bytes_available = max_size;
+		}
+
+		std::pair<void*, u32> alloc_from_reserve(u32 size)
+		{
+			size = (size + 255) & ~255;
+
+			if (m_mapped_bytes_available < size || !m_mapped_base)
+			{
+				if (m_mapped_base)
+					unmap();
+
+				reserve_and_map((size > 4096) ? size : 4096);
+			}
+
+			void *ptr = (char*)m_mapped_base + m_mapped_reserve_offset;
+			u32 offset = m_mapped_reserve_offset + m_mapped_block_offset;
+			m_mapped_reserve_offset += size;
+			m_mapped_bytes_available -= size;
+
+			return std::make_pair(ptr, offset);
+		}
+
+		buffer& get_buffer()
+		{
+			return storage_buffer;
 		}
 	};
 
@@ -1140,11 +1233,11 @@ namespace gl
 			if (get_target() != target::textureBuffer)
 				throw EXCEPTION("OpenGL error: texture cannot copy from buffer");
 
-			if (!offset)
+/*			if (!offset)
 			{
 				copy_from(buf, gl_format_type);
 				return;
-			}
+			}*/
 
 			if (glTextureBufferRangeEXT == nullptr)
 				throw EXCEPTION("OpenGL error: partial buffer access for textures is unsupported on your system");

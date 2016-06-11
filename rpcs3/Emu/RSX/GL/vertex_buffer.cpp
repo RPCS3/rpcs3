@@ -158,7 +158,7 @@ void GLGSRender::set_vertex_buffer()
 	//initialize vertex attributes
 
 	//merge all vertex arrays
-	std::vector<u8> vertex_arrays_data;
+	//std::vector<u8> vertex_arrays_data;
 
 	const std::string reg_table[] =
 	{
@@ -175,6 +175,15 @@ void GLGSRender::set_vertex_buffer()
 	std::vector<u8> vertex_index_array;
 	vertex_draw_count = 0;
 	u32 min_index, max_index;
+
+	u32 max_vertex_attrib_size = 0;
+	for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+	{
+		if (vertex_arrays_info[index].size == 0)
+			continue;
+
+		max_vertex_attrib_size += (vertex_arrays_info[index].size << 2);
+	}
 
 	if (draw_command == rsx::draw_command::indexed)
 	{
@@ -207,6 +216,7 @@ void GLGSRender::set_vertex_buffer()
 		}
 
 		vertex_draw_count = (u32)(inline_vertex_array.size() * sizeof(u32)) / stride;
+		m_attrib_ring_buffer->reserve_and_map(vertex_draw_count * max_vertex_attrib_size);
 
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -228,12 +238,11 @@ void GLGSRender::set_vertex_buffer()
 			u32 data_size = element_size * vertex_draw_count;
 			u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 
-			auto &buffer = m_gl_attrib_buffers[index].buffer;
-			auto &texture = m_gl_attrib_buffers[index].texture;
+			auto &texture = m_gl_attrib_buffers[index];
 
-			vertex_arrays_data.resize(data_size);
 			u8 *src = reinterpret_cast<u8*>(inline_vertex_array.data());
-			u8 *dst = vertex_arrays_data.data();
+			auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+			u8 *dst = static_cast<u8*>(mapping.first);
 
 			src += offsets[index];
 			prepare_buffer_for_writing(dst, vertex_info.type, vertex_info.size, vertex_draw_count);
@@ -255,14 +264,10 @@ void GLGSRender::set_vertex_buffer()
 				dst += element_size;
 			}
 
-			buffer->data(data_size, nullptr);
-			buffer->sub_data(0, data_size, vertex_arrays_data.data());
-
-			//Attach buffer to texture
-			texture->copy_from(*buffer, gl_type);
+			texture.copy_from(m_attrib_ring_buffer->get_buffer(), gl_type, mapping.second, data_size);
 
 			//Link texture to uniform
-			m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
+			m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
 			if (!is_primitive_native(draw_mode))
 			{
 				std::tie(vertex_draw_count, vertex_index_array) = get_index_array_for_emulated_non_indexed_draw({ { 0, vertex_draw_count } }, draw_mode);
@@ -280,6 +285,8 @@ void GLGSRender::set_vertex_buffer()
 
 	if (draw_command == rsx::draw_command::array || draw_command == rsx::draw_command::indexed)
 	{
+		m_attrib_ring_buffer->reserve_and_map(vertex_draw_count * max_vertex_attrib_size);
+
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			int location;
@@ -298,12 +305,16 @@ void GLGSRender::set_vertex_buffer()
 			if (vertex_arrays_info[index].size > 0)
 			{
 				auto &vertex_info = vertex_arrays_info[index];
-				// Active vertex array
-				std::vector<gsl::byte> vertex_array;
 
 				// Fill vertex_array
 				u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-				vertex_array.resize(vertex_draw_count * element_size);
+				//vertex_array.resize(vertex_draw_count * element_size);
+				
+				u32 data_size = vertex_draw_count * element_size;
+				u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
+				auto &texture = m_gl_attrib_buffers[index];
+
+				u32 buffer_offset = 0;
 
 				// Get source pointer
 				u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
@@ -313,9 +324,13 @@ void GLGSRender::set_vertex_buffer()
 
 				if (draw_command == rsx::draw_command::array)
 				{
+					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+					gsl::byte *dst = static_cast<gsl::byte*>(mapping.first);
+					buffer_offset = mapping.second;
+
 					size_t offset = 0;
-					gsl::span<gsl::byte> dest_span(vertex_array);
-					prepare_buffer_for_writing(vertex_array.data(), vertex_info.type, vertex_info.size, vertex_draw_count);
+					gsl::span<gsl::byte> dest_span(dst, data_size);
+					prepare_buffer_for_writing(dst, vertex_info.type, vertex_info.size, vertex_draw_count);
 
 					for (const auto &first_count : first_count_commands)
 					{
@@ -325,30 +340,21 @@ void GLGSRender::set_vertex_buffer()
 				}
 				if (draw_command == rsx::draw_command::indexed)
 				{
-					vertex_array.resize((max_index + 1) * element_size);
-					gsl::span<gsl::byte> dest_span(vertex_array);
-					prepare_buffer_for_writing(vertex_array.data(), vertex_info.type, vertex_info.size, vertex_draw_count);
+					data_size = (max_index + 1) * element_size;
+					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+					gsl::byte *dst = static_cast<gsl::byte*>(mapping.first);
+					buffer_offset = mapping.second;
+
+					gsl::span<gsl::byte> dest_span(dst, data_size);
+					prepare_buffer_for_writing(dst, vertex_info.type, vertex_info.size, vertex_draw_count);
 
 					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride, rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size));
 				}
 
-				size_t size = vertex_array.size();
-				size_t position = vertex_arrays_data.size();
-				vertex_arrays_data.resize(position + size);
-
-				u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-
-				auto &buffer = m_gl_attrib_buffers[index].buffer;
-				auto &texture = m_gl_attrib_buffers[index].texture;
-
-				buffer->data(static_cast<u32>(size), nullptr);
-				buffer->sub_data(0, static_cast<u32>(size), vertex_array.data());
-
-				//Attach buffer to texture
-				texture->copy_from(*buffer, gl_type);
+				texture.copy_from(m_attrib_ring_buffer->get_buffer(), gl_type, buffer_offset, data_size);
 
 				//Link texture to uniform
-				m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
+				m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -364,17 +370,16 @@ void GLGSRender::set_vertex_buffer()
 					const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 					const size_t data_size = vertex_data.size();
 
-					auto &buffer = m_gl_attrib_buffers[index].buffer;
-					auto &texture = m_gl_attrib_buffers[index].texture;
+					auto &texture = m_gl_attrib_buffers[index];
 
-					buffer->data(data_size, nullptr);
-					buffer->sub_data(0, data_size, vertex_data.data());
+					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+					u8 *dst = static_cast<u8*>(mapping.first);
 
-					//Attach buffer to texture
-					texture->copy_from(*buffer, gl_type);
+					memcpy(dst, vertex_data.data(), data_size);
+					texture.copy_from(m_attrib_ring_buffer->get_buffer(), gl_type, mapping.second, data_size);
 
 					//Link texture to uniform
-					m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
+					m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
 					break;
 				}
 				default:
@@ -396,10 +401,7 @@ void GLGSRender::set_vertex_buffer()
 		}
 	}
 
-	//	glDraw* will fail without at least attrib0 defined if we are on compatibility profile
-	//	Someone should really test AMD behaviour here, Nvidia is too permissive. There is no buffer currently bound, but on NV it works ok
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+	m_attrib_ring_buffer->unmap();
 
 	if (draw_command == rsx::draw_command::indexed)
 	{

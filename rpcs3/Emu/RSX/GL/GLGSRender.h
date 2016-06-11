@@ -25,14 +25,10 @@ private:
 	rsx::surface_info m_surface;
 	gl_render_targets m_rtts;
 
-	struct texture_buffer_pair
-	{
-		gl::texture *texture;
-		gl::buffer *buffer;
-	}
-	m_gl_attrib_buffers[rsx::limits::vertex_count];
-
 	gl::gl_texture_cache m_gl_texture_cache;
+
+	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
+	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
 
 public:
 	gl::fbo draw_fbo;

@@ -299,7 +299,8 @@ void GLGSRender::end()
 	 * samplers. So far only sampler2D has been largely used, hiding the problem. This call shall also degrade performance further
 	 * if used every draw call. Fixes shader validation issues on AMD.
 	 */
-	m_program->validate();
+	if (g_cfg_rsx_debug_output)
+		m_program->validate();
 
 	if (draw_command == rsx::draw_command::indexed)
 	{
@@ -388,18 +389,13 @@ void GLGSRender::on_init_thread()
 	m_vao.array_buffer = m_vbo;
 	m_vao.element_array_buffer = m_ebo;
 
-	for (texture_buffer_pair &attrib_buffer : m_gl_attrib_buffers)
+	for (gl::texture &tex : m_gl_attrib_buffers)
 	{
-		gl::texture *&tex = attrib_buffer.texture;
-		tex = new gl::texture(gl::texture::target::textureBuffer);
-		tex->create();
-		tex->set_target(gl::texture::target::textureBuffer);
-
-		gl::buffer *&buf = attrib_buffer.buffer;
-		buf = new gl::buffer();
-		buf->create();
+		tex.create();
+		tex.set_target(gl::texture::target::textureBuffer);
 	}
 
+	m_attrib_ring_buffer.reset(new gl::ring_buffer(16 * 0x100000));
 	m_gl_texture_cache.initialize_rtt_cache();
 }
 
@@ -436,18 +432,12 @@ void GLGSRender::on_exit()
 	if (m_fragment_constants_buffer)
 		m_fragment_constants_buffer.remove();
 
-	for (texture_buffer_pair &attrib_buffer : m_gl_attrib_buffers)
+	for (gl::texture &tex : m_gl_attrib_buffers)
 	{
-		gl::texture *&tex = attrib_buffer.texture;
-		tex->remove();
-		delete tex;
-		tex = nullptr;
-
-		gl::buffer *&buf = attrib_buffer.buffer;
-		buf->remove();
-		delete buf;
-		buf = nullptr;
+		tex.remove();
 	}
+
+	m_attrib_ring_buffer->destroy();
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
