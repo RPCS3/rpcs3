@@ -930,6 +930,9 @@ bool VKGSRender::load_program()
 	if (rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE])
 	{
 		properties.ds.stencilTestEnable = VK_TRUE;
+		properties.ds.front.writeMask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
+		properties.ds.front.compareMask = rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK];
+		properties.ds.front.reference = rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF];
 		properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
 		properties.ds.front.passOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
 		properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
