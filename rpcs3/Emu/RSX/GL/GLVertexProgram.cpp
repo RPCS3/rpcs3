@@ -173,7 +173,7 @@ void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rs
 		return;
 	}
 
-	OS << "	vec4 " << PI.name << " = vec4(0., 0., 0., 1.);" << std::endl;
+	OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID).rgba;" << std::endl;
 }
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
