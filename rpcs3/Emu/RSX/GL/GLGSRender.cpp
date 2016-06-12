@@ -381,6 +381,7 @@ void GLGSRender::on_init_thread()
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
 	m_vao.create();
 
 	for (gl::texture &tex : m_gl_attrib_buffers)

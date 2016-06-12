@@ -645,9 +645,10 @@ namespace gl
 			m_mapped_bytes_available = max_size;
 		}
 
-		std::pair<void*, u32> alloc_from_reserve(u32 size)
+		std::pair<void*, u32> alloc_from_reserve(u32 size, u32 alignment = 16)
 		{
-			size = (size + 15) & ~15;
+			alignment -= 1;
+			size = (size + alignment) & ~alignment;
 
 			if (m_mapped_bytes_available < size || !m_mapped_base)
 			{
@@ -669,7 +670,7 @@ namespace gl
 			m_mapped_reserve_offset += size;
 			m_mapped_bytes_available -= size;
 
-			EXPECTS((offset & 15) == 0);
+			EXPECTS((offset & alignment) == 0);
 			return std::make_pair(ptr, offset);
 		}
 

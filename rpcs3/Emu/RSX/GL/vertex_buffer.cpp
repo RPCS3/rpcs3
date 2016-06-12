@@ -253,7 +253,7 @@ u32 GLGSRender::set_vertex_buffer()
 			auto &texture = m_gl_attrib_buffers[index];
 
 			u8 *src = reinterpret_cast<u8*>(inline_vertex_array.data());
-			auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+			auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 			u8 *dst = static_cast<u8*>(mapping.first);
 
 			src += offsets[index];
@@ -337,7 +337,7 @@ u32 GLGSRender::set_vertex_buffer()
 
 				if (draw_command == rsx::draw_command::array)
 				{
-					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 					gsl::byte *dst = static_cast<gsl::byte*>(mapping.first);
 					buffer_offset = mapping.second;
 
@@ -354,7 +354,7 @@ u32 GLGSRender::set_vertex_buffer()
 				if (draw_command == rsx::draw_command::indexed)
 				{
 					data_size = (max_index + 1) * element_size;
-					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 					gsl::byte *dst = static_cast<gsl::byte*>(mapping.first);
 					buffer_offset = mapping.second;
 
@@ -385,7 +385,7 @@ u32 GLGSRender::set_vertex_buffer()
 
 					auto &texture = m_gl_attrib_buffers[index];
 
-					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size);
+					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 					u8 *dst = static_cast<u8*>(mapping.first);
 
 					memcpy(dst, vertex_data.data(), data_size);

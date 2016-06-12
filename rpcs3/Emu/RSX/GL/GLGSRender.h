@@ -36,6 +36,8 @@ private:
 	u32 m_begin_time = 0;
 	u32 m_draw_time = 0;
 	u32 m_vertex_upload_time = 0;
+	
+	GLint m_min_texbuffer_alignment = 256;
 
 public:
 	gl::fbo draw_fbo;
