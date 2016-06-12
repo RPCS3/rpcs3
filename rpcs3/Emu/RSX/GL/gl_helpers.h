@@ -372,7 +372,9 @@ namespace gl
 			pixel_pack = GL_PIXEL_PACK_BUFFER,
 			pixel_unpack = GL_PIXEL_UNPACK_BUFFER,
 			array = GL_ARRAY_BUFFER,
-			element_array = GL_ELEMENT_ARRAY_BUFFER
+			element_array = GL_ELEMENT_ARRAY_BUFFER,
+			uniform = GL_UNIFORM_BUFFER,
+			texture = GL_TEXTURE_BUFFER
 		};
 		enum class access
 		{
@@ -421,6 +423,8 @@ namespace gl
 				case target::pixel_unpack: pname = GL_PIXEL_UNPACK_BUFFER_BINDING; break;
 				case target::array: pname = GL_ARRAY_BUFFER_BINDING; break;
 				case target::element_array: pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
+				case target::uniform: pname = GL_UNIFORM_BUFFER_BINDING; break;
+				case target::texture: pname = GL_TEXTURE_BUFFER_BINDING; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -462,6 +466,13 @@ namespace gl
 		void create(GLsizeiptr size, const void* data_ = nullptr)
 		{
 			create();
+			data(size, data_);
+		}
+
+		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
+		{
+			create();
+			m_target = target_;
 			data(size, data_);
 		}
 
@@ -572,6 +583,7 @@ namespace gl
 	class ring_buffer
 	{
 		buffer storage_buffer;
+		buffer::target m_target;
 		u32 m_data_loc = 0;
 		u32 m_size;
 
@@ -582,11 +594,12 @@ namespace gl
 		void *m_mapped_base = nullptr;
 
 	public:
-		ring_buffer(u32 initial_size)
+		ring_buffer(u32 initial_size, buffer::target target)
 		{
 			storage_buffer.create();
 			storage_buffer.data(initial_size);
 			m_size = initial_size;
+			m_target = target;
 		}
 
 		void destroy()
@@ -598,13 +611,10 @@ namespace gl
 		{
 			size = (size + 255) & ~255;
 
-			//storage_buffer.bind(storage_buffer.current_target());
-			glBindBuffer(GL_TEXTURE_BUFFER, storage_buffer.id());
+			glBindBuffer((GLenum)m_target, storage_buffer.id());
 			u32 limit = m_data_loc + size;
 			if (limit > m_size)
 			{
-				//Orphan this buffer and have the driver allocate a new one instead of looping back to the front.
-				//Hopefully, the driver will track usage here and re-use if sync is not a problem
 				if (size > m_size)
 					m_size = size;
 
@@ -612,7 +622,7 @@ namespace gl
 				m_data_loc = 0;
 			}
 
-			void *ptr = glMapBufferRange(GL_TEXTURE_BUFFER, m_data_loc, size, GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+			void *ptr = glMapBufferRange((GLenum)m_target, m_data_loc, size, GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
 			u32 offset = m_data_loc;
 			m_data_loc += size;
 			return std::make_pair(ptr, offset);
@@ -620,8 +630,7 @@ namespace gl
 
 		void unmap()
 		{
-			//storage_buffer.unmap();
-			glUnmapBuffer(GL_TEXTURE_BUFFER);
+			glUnmapBuffer((GLenum)m_target);
 			m_mapped_block_size = 0;
 			m_mapped_base = 0;
 		}
@@ -638,21 +647,29 @@ namespace gl
 
 		std::pair<void*, u32> alloc_from_reserve(u32 size)
 		{
-			size = (size + 255) & ~255;
+			size = (size + 15) & ~15;
 
 			if (m_mapped_bytes_available < size || !m_mapped_base)
 			{
 				if (m_mapped_base)
+				{
+					//This doesn't really work for some reason, probably since the caller should bind the target
+					//before making this call as the block may be reallocated
+					LOG_ERROR(RSX, "reserved allocation exceeded. check for corruption!");
 					unmap();
+				}
 
 				reserve_and_map((size > 4096) ? size : 4096);
 			}
+
+			EXPECTS(m_mapped_bytes_available >= size);
 
 			void *ptr = (char*)m_mapped_base + m_mapped_reserve_offset;
 			u32 offset = m_mapped_reserve_offset + m_mapped_block_offset;
 			m_mapped_reserve_offset += size;
 			m_mapped_bytes_available -= size;
 
+			EXPECTS((offset & 15) == 0);
 			return std::make_pair(ptr, offset);
 		}
 

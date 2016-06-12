@@ -7,6 +7,7 @@
 #include "../Common/BufferUtils.h"
 
 extern cfg::bool_entry g_cfg_rsx_debug_output;
+extern cfg::bool_entry g_cfg_rsx_overlay;
 
 #define DUMP_VERTEX_DATA 0
 
@@ -69,6 +70,8 @@ void GLGSRender::begin()
 	}
 
 	init_buffers();
+
+	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
 
 	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
 	bool color_mask_b = !!(color_mask & 0xff);
@@ -241,6 +244,10 @@ void GLGSRender::begin()
 	{
 		__glcheck glPrimitiveRestartIndex(rsx::method_registers[NV4097_SET_RESTART_INDEX]);
 	}
+
+	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	m_begin_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
+	m_draw_calls++;
 }
 
 namespace
@@ -266,8 +273,6 @@ void GLGSRender::end()
 		return;
 	}
 
-	//LOG_NOTICE(Log::RSX, "draw()");
-
 	draw_fbo.bind();
 	m_program->use();
 
@@ -292,13 +297,11 @@ void GLGSRender::end()
 		}
 	}
 
-	set_vertex_buffer();
+	u32 offset_in_index_buffer = set_vertex_buffer();
+	m_vao.bind();
 
-	/**
-	 * Validate fails if called right after linking a program because the VS and FS both use textures bound using different
-	 * samplers. So far only sampler2D has been largely used, hiding the problem. This call shall also degrade performance further
-	 * if used every draw call. Fixes shader validation issues on AMD.
-	 */
+	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
+
 	if (g_cfg_rsx_debug_output)
 		m_program->validate();
 
@@ -307,18 +310,21 @@ void GLGSRender::end()
 		rsx::index_array_type indexed_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 
 		if (indexed_type == rsx::index_array_type::u32)
-			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_INT, nullptr);
+			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_INT, (GLvoid *)(offset_in_index_buffer));
 		if (indexed_type == rsx::index_array_type::u16)
-			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
+			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, (GLvoid *)(offset_in_index_buffer));
 	}
 	else if (!is_primitive_native(draw_mode))
 	{
-		__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
+		__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, (GLvoid *)(offset_in_index_buffer));
 	}
 	else
 	{
 		draw_fbo.draw_arrays(draw_mode, vertex_draw_count);
 	}
+
+	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 
 	write_buffers();
 
@@ -376,18 +382,6 @@ void GLGSRender::on_init_thread()
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	m_vao.create();
-	m_vbo.create();
-	m_ebo.create();
-	m_scale_offset_buffer.create(32 * sizeof(float));
-	m_vertex_constants_buffer.create(512 * 4 * sizeof(float));
-	m_fragment_constants_buffer.create();
-
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_scale_offset_buffer.id());
-	glBindBufferBase(GL_UNIFORM_BUFFER, 1, m_vertex_constants_buffer.id());
-	glBindBufferBase(GL_UNIFORM_BUFFER, 2, m_fragment_constants_buffer.id());
-
-	m_vao.array_buffer = m_vbo;
-	m_vao.element_array_buffer = m_ebo;
 
 	for (gl::texture &tex : m_gl_attrib_buffers)
 	{
@@ -395,7 +389,11 @@ void GLGSRender::on_init_thread()
 		tex.set_target(gl::texture::target::textureBuffer);
 	}
 
-	m_attrib_ring_buffer.reset(new gl::ring_buffer(16 * 0x100000));
+	m_attrib_ring_buffer.reset(new gl::ring_buffer(16 * 0x100000, gl::buffer::target::texture));
+	m_uniform_ring_buffer.reset(new gl::ring_buffer(16 * 0x100000, gl::buffer::target::uniform));
+	m_index_ring_buffer.reset(new gl::ring_buffer(0x100000, gl::buffer::target::element_array));
+
+	m_vao.element_array_buffer = m_index_ring_buffer->get_buffer();
 	m_gl_texture_cache.initialize_rtt_cache();
 }
 
@@ -414,23 +412,8 @@ void GLGSRender::on_exit()
 	if (m_flip_tex_color)
 		m_flip_tex_color.remove();
 
-	if (m_vbo)
-		m_vbo.remove();
-
-	if (m_ebo)
-		m_ebo.remove();
-
 	if (m_vao)
 		m_vao.remove();
-
-	if (m_scale_offset_buffer)
-		m_scale_offset_buffer.remove();
-
-	if (m_vertex_constants_buffer)
-		m_vertex_constants_buffer.remove();
-
-	if (m_fragment_constants_buffer)
-		m_fragment_constants_buffer.remove();
 
 	for (gl::texture &tex : m_gl_attrib_buffers)
 	{
@@ -438,6 +421,8 @@ void GLGSRender::on_exit()
 	}
 
 	m_attrib_ring_buffer->destroy();
+	m_uniform_ring_buffer->destroy();
+	m_index_ring_buffer->destroy();
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
@@ -570,32 +555,47 @@ bool GLGSRender::load_program()
 
 	(m_program.recreate() += { fp.compile(), vp.compile() }).make();
 #endif
-	size_t max_buffer_sz =(size_t) m_vertex_constants_buffer.size();
-	size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	if (fragment_constants_sz > max_buffer_sz)
-		max_buffer_sz = fragment_constants_sz;
+	u32 fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	fragment_constants_sz = std::max(32U, fragment_constants_sz);
+	u32 max_buffer_sz = 8192 + 512 + fragment_constants_sz;
 
 	u32 is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
 	u8 alpha_ref_raw = (u8)(rsx::method_registers[NV4097_SET_ALPHA_REF] & 0xFF);
 	float alpha_ref = alpha_ref_raw / 255.f;
 
-	std::vector<u8> client_side_buf(max_buffer_sz);
+	u8 *buf;
+	u32 scale_offset_offset;
+	u32 vertex_constants_offset;
+	u32 fragment_constants_offset;
 
-	fill_scale_offset_data(client_side_buf.data(), false);
-	memcpy(client_side_buf.data() + 16 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
-	memcpy(client_side_buf.data() + 17 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
-	memcpy(client_side_buf.data() + 18 * sizeof(float), &is_alpha_tested, sizeof(u32));
-	memcpy(client_side_buf.data() + 19 * sizeof(float), &alpha_ref, sizeof(float));
-	m_scale_offset_buffer.data(m_scale_offset_buffer.size(), nullptr);
-	m_scale_offset_buffer.sub_data(0, m_scale_offset_buffer.size(), client_side_buf.data());
+	m_uniform_ring_buffer->reserve_and_map(max_buffer_sz);
+	auto mapping = m_uniform_ring_buffer->alloc_from_reserve(512);
+	buf = static_cast<u8*>(mapping.first);
+	scale_offset_offset = mapping.second;
 
-	fill_vertex_program_constants_data(client_side_buf.data());
-	m_vertex_constants_buffer.data(m_vertex_constants_buffer.size(), nullptr);
-	m_vertex_constants_buffer.sub_data(0, m_vertex_constants_buffer.size(), client_side_buf.data());
+	fill_scale_offset_data(buf, false);
+	memcpy(buf + 16 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
+	memcpy(buf + 17 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
+	memcpy(buf + 18 * sizeof(float), &is_alpha_tested, sizeof(u32));
+	memcpy(buf + 19 * sizeof(float), &alpha_ref, sizeof(float));
 
-	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(client_side_buf.data()), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
-	m_fragment_constants_buffer.data(fragment_constants_sz, nullptr);
-	m_fragment_constants_buffer.sub_data(0, fragment_constants_sz, client_side_buf.data());
+	mapping = m_uniform_ring_buffer->alloc_from_reserve(512 * 16);
+	buf = static_cast<u8*>(mapping.first);
+	vertex_constants_offset = mapping.second;
+
+	fill_vertex_program_constants_data(buf);
+
+	mapping = m_uniform_ring_buffer->alloc_from_reserve(fragment_constants_sz);
+	buf = static_cast<u8*>(mapping.first);
+	fragment_constants_offset = mapping.second;
+
+	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
+
+	m_uniform_ring_buffer->unmap();
+
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, m_uniform_ring_buffer->get_buffer().id(), scale_offset_offset, 512);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 1, m_uniform_ring_buffer->get_buffer().id(), vertex_constants_offset, 512 * 16);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 2, m_uniform_ring_buffer->get_buffer().id(), fragment_constants_offset, fragment_constants_sz);
 
 	return true;
 }
@@ -714,6 +714,26 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_frame->flip(m_context);
+	
+	if (g_cfg_rsx_overlay)
+	{
+		//TODO: Display overlay in a cross-platform manner
+		//Core context throws wgl font functions out of the window as they use display lists
+		//Only show debug info if the user really requests it
+
+		if (g_cfg_rsx_debug_output)
+		{
+			std::string message =
+				"draw_calls: " + std::to_string(m_draw_calls) + ", " + "draw_call_setup: " + std::to_string(m_begin_time) + "us, " + "vertex_upload_time: " + std::to_string(m_vertex_upload_time) + "us, " + "draw_call_execution: " + std::to_string(m_draw_time) + "us";
+
+			LOG_ERROR(RSX, message.c_str());
+		}
+	}
+
+	m_draw_calls = 0;
+	m_begin_time = 0;
+	m_draw_time = 0;
+	m_vertex_upload_time = 0;
 
 	for (auto &tex : m_rtts.invalidated_resources)
 	{
