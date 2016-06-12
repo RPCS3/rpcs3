@@ -208,7 +208,7 @@ namespace vk
 			return;
 		}
 
-		OS << "	vec4 " << PI.name << " = vec4(0., 0., 0., 1.);" << std::endl;
+		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba;" << std::endl;
 	}
 }
 

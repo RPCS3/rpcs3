@@ -14,6 +14,7 @@
 #include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
 
+#define DESCRIPTOR_MAX_DRAW_CALLS 1024
 extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 namespace rsx
@@ -1212,7 +1213,7 @@ namespace vk
 		{
 			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = 0;
-			infos.maxSets = 1000;
+			infos.maxSets = DESCRIPTOR_MAX_DRAW_CALLS;
 			infos.poolSizeCount = size_descriptors_count;
 			infos.pPoolSizes = sizes;
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
