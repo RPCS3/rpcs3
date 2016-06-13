@@ -162,12 +162,12 @@ inline Emitter& Emitter::WriteStreamable(T value) {
 
 template <>
 inline void Emitter::SetStreamablePrecision<float>(std::stringstream& stream) {
-  stream.precision(GetFloatPrecision());
+  stream.precision(static_cast<std::streamsize>(GetFloatPrecision()));
 }
 
 template <>
 inline void Emitter::SetStreamablePrecision<double>(std::stringstream& stream) {
-  stream.precision(GetDoublePrecision());
+  stream.precision(static_cast<std::streamsize>(GetDoublePrecision()));
 }
 
 // overloads of insertion

@@ -112,7 +112,9 @@ class Exception : public std::runtime_error {
  public:
   Exception(const Mark& mark_, const std::string& msg_)
       : std::runtime_error(build_what(mark_, msg_)), mark(mark_), msg(msg_) {}
-  virtual ~Exception() throw() {}
+  virtual ~Exception() noexcept {}
+
+  Exception(const Exception&) = default;
 
   Mark mark;
   std::string msg;
@@ -163,7 +165,7 @@ class TypedKeyNotFound : public KeyNotFound {
  public:
   TypedKeyNotFound(const Mark& mark_, const T& key_)
       : KeyNotFound(mark_, key_), key(key_) {}
-  virtual ~TypedKeyNotFound() throw() {}
+  virtual ~TypedKeyNotFound() noexcept {}
 
   T key;
 };

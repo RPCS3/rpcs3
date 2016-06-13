@@ -58,7 +58,7 @@ class YAML_CPP_API Node {
   bool IsMap() const { return Type() == NodeType::Map; }
 
   // bool conversions
-  YAML_CPP_OPERATOR_BOOL();
+  YAML_CPP_OPERATOR_BOOL()
   bool operator!() const { return !IsDefined(); }
 
   // access
