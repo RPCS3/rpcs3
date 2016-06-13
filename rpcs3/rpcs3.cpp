@@ -96,7 +96,7 @@ cfg::map_entry<std::function<std::shared_ptr<GSRender>()>> g_cfg_gs_render(cfg::
 	{ "Null", PURE_EXPR(std::make_shared<NullGSRender>()) },
 	{ "OpenGL", PURE_EXPR(std::make_shared<GLGSRender>()) },
 #ifdef _MSC_VER
-	{ "Direct3D 12", PURE_EXPR(std::make_shared<D3D12GSRender>()) },
+	{ "D3D12", PURE_EXPR(std::make_shared<D3D12GSRender>()) },
 	{ "Vulkan", PURE_EXPR(std::make_shared<VKGSRender>()) },
 #endif
 });

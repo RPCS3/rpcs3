@@ -274,7 +274,7 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 
 void VKVertexProgram::Compile()
 {
-	fs::file(fs::get_config_dir() + "shaderlog/" + "VertexProgram.spirv", fs::rewrite).write(shader);
+	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram.spirv", fs::rewrite).write(shader);
 
 	std::vector<u32> spir_v;
 	if (!vk::compile_glsl_to_spv(shader, vk::glsl::glsl_vertex_program, spir_v))
