@@ -7,6 +7,7 @@
 #pragma once
 #endif
 
+#include <array>
 #include <limits>
 #include <list>
 #include <map>
@@ -238,6 +239,40 @@ struct convert<std::list<T> > {
       rhs.push_back(it->as<T>());
 #endif
     return true;
+  }
+};
+
+// std::array
+template <typename T, std::size_t N>
+struct convert<std::array<T, N>> {
+  static Node encode(const std::array<T, N>& rhs) {
+    Node node(NodeType::Sequence);
+    for (const auto& element : rhs) {
+      node.push_back(element);
+    }
+    return node;
+  }
+
+  static bool decode(const Node& node, std::array<T, N>& rhs) {
+    if (!isNodeValid(node)) {
+      return false;
+    }
+
+    for (auto i = 0u; i < node.size(); ++i) {
+#if defined(__GNUC__) && __GNUC__ < 4
+      // workaround for GCC 3:
+      rhs[i] = node[i].template as<T>();
+#else
+      rhs[i] = node[i].as<T>();
+#endif
+    }
+    return true;
+  }
+
+private:
+
+  static bool isNodeValid(const Node& node) {
+    return node.IsSequence() && node.size() == N;
   }
 };
 
