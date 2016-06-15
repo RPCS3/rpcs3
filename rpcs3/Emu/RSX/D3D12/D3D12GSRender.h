@@ -123,6 +123,8 @@ private:
 	u32 m_current_transform_constants_buffer_descriptor_id;
 	ComPtr<ID3D12DescriptorHeap> m_current_texture_descriptors;
 	ComPtr<ID3D12DescriptorHeap> m_current_sampler_descriptors;
+	size_t vram_size;
+
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
