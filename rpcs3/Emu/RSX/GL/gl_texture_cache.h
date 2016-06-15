@@ -62,12 +62,20 @@ namespace gl
 		std::vector<gl_cached_texture> texture_cache;
 		std::vector<cached_rtt> rtt_cache;
 		u32 frame_ctr;
+		std::pair<u64, u64> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
+		u32 max_tex_address = 0;
 
 		bool lock_memory_region(u32 start, u32 size)
 		{
 			static const u32 memory_page_size = 4096;
 			start = start & ~(memory_page_size - 1);
 			size = (u32)align(size, memory_page_size);
+
+			if (start < texture_cache_range.first)
+				texture_cache_range = std::make_pair(start, texture_cache_range.second);
+
+			if ((start+size) > texture_cache_range.second)
+				texture_cache_range = std::make_pair(texture_cache_range.first, (start+size));
 
 			return vm::page_protect(start, size, 0, 0, vm::page_writable);
 		}
@@ -500,6 +508,10 @@ namespace gl
 
 		bool mark_as_dirty(u32 address)
 		{
+			if (address < texture_cache_range.first ||
+				address > texture_cache_range.second)
+				return false;
+
 			bool response = false;
 
 			for (gl_cached_texture &tex: texture_cache)
