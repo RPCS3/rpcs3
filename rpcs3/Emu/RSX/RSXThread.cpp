@@ -35,12 +35,12 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	std::string shaders_cache::path_to_root()
+	std::string old_shaders_cache::shaders_cache::path_to_root()
 	{
 		return fs::get_executable_dir() + "data/";
 	}
 
-	void shaders_cache::load(const std::string &path, shader_language lang)
+	void old_shaders_cache::shaders_cache::load(const std::string &path, shader_language lang)
 	{
 		const std::string lang_name(::unveil<shader_language>::get(lang));
 
@@ -82,7 +82,7 @@ namespace rsx
 		}
 	}
 
-	void shaders_cache::load(shader_language lang)
+	void old_shaders_cache::shaders_cache::load(shader_language lang)
 	{
 		std::string root = path_to_root();
 
@@ -741,6 +741,24 @@ namespace rsx
 				result.unnormalized_coords |= (1 << i);
 		}
 		result.set_texture_dimension(texture_dimensions);
+
+		return result;
+	}
+
+	raw_program thread::get_raw_program() const
+	{
+		raw_program result;
+
+		u32 fp_info = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
+
+		result.state.output_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
+		result.state.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
+
+		result.vertex_shader.ucode_ptr = transform_program;
+		result.vertex_shader.offset = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
+
+		result.fragment_shader.ucode_ptr = vm::base(rsx::get_address(fp_info & ~0x3, (fp_info & 0x3) - 1));
+		result.fragment_shader.offset = 0;
 
 		return result;
 	}

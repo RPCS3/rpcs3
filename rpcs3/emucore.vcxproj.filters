@@ -854,6 +854,9 @@
     <ClCompile Include="Emu\PSP2\Modules\sceVoiceQoS.cpp">
       <Filter>Emu\PSP2\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_cache.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1623,6 +1626,9 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\sync.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_cache.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

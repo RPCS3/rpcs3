@@ -407,7 +407,7 @@ namespace
 
 VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 {
-	shaders_cache.load(rsx::shader_language::glsl);
+	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 
 	m_thread_context.createInstance("RPCS3");
 	m_thread_context.makeCurrentInstance(1);
