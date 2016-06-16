@@ -41,7 +41,6 @@ public:
 	gl::fbo draw_fbo;
 
 private:
-	GLProgramBuffer m_prog_buffer;
 
 	//buffer
 	gl::fbo m_flip_fbo;

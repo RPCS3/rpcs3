@@ -427,7 +427,7 @@ void GLGSRender::on_exit()
 {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
-	m_prog_buffer.clear();
+	programs_cache.clear();
 
 	if (draw_fbo)
 		draw_fbo.remove();
@@ -542,8 +542,8 @@ bool GLGSRender::load_program()
 	m_program->use();
 
 	// u32 fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	info.fragment_shader.decompiled->constants.size() * sizeof(f32) * 4;
-	u32 fragment_constants_sz = fragment_constants_sz = std::max(32U, fragment_constants_sz);
+	u32 fragment_constants_sz = info.fragment_shader.decompiled->constants.size() * sizeof(f32) * 4;
+	fragment_constants_sz = std::max(32U, fragment_constants_sz);
 	u32 max_buffer_sz = 8192 + 512 + fragment_constants_sz;
 
 	u32 is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
