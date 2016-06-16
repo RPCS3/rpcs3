@@ -25,14 +25,19 @@ private:
 	rsx::surface_info m_surface;
 	gl_render_targets m_rtts;
 
-	struct texture_buffer_pair
-	{
-		gl::texture *texture;
-		gl::buffer *buffer;
-	}
-	m_gl_attrib_buffers[rsx::limits::vertex_count];
-
 	gl::gl_texture_cache m_gl_texture_cache;
+
+	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
+	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
+	std::unique_ptr<gl::ring_buffer> m_uniform_ring_buffer;
+	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
+
+	u32 m_draw_calls = 0;
+	u32 m_begin_time = 0;
+	u32 m_draw_time = 0;
+	u32 m_vertex_upload_time = 0;
+	
+	GLint m_min_texbuffer_alignment = 256;
 
 public:
 	gl::fbo draw_fbo;
@@ -44,12 +49,7 @@ private:
 	gl::fbo m_flip_fbo;
 	gl::texture m_flip_tex_color;
 
-	gl::buffer m_scale_offset_buffer;
-	gl::buffer m_vertex_constants_buffer;
-	gl::buffer m_fragment_constants_buffer;
-
-	gl::buffer m_vbo;
-	gl::buffer m_ebo;
+	//vaos are mandatory for core profile
 	gl::vao m_vao;
 
 public:
@@ -58,7 +58,7 @@ public:
 private:
 	static u32 enable(u32 enable, u32 cap);
 	static u32 enable(u32 enable, u32 cap, u32 index);
-	void set_vertex_buffer();
+	u32 set_vertex_buffer();
 
 public:
 	bool load_program();
