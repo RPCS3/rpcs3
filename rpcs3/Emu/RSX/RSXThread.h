@@ -5,6 +5,7 @@
 #include <set>
 #include <mutex>
 #include "GCM.h"
+#include "rsx_cache.h"
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
@@ -45,22 +46,25 @@ extern frame_capture_data frame_debug;
 
 namespace rsx
 {
-	enum class shader_language
+	namespace old_shaders_cache
 	{
-		glsl,
-		hlsl,
-	};
+		enum class shader_language
+		{
+			glsl,
+			hlsl,
+		};
+	}
 }
 
 template<>
-struct unveil<rsx::shader_language>
+struct unveil<rsx::old_shaders_cache::shader_language>
 {
-	static inline const char* get(rsx::shader_language in)
+	static inline const char* get(rsx::old_shaders_cache::shader_language in)
 	{
 		switch (in)
 		{
-		case rsx::shader_language::glsl: return "glsl";
-		case rsx::shader_language::hlsl: return "hlsl";
+		case rsx::old_shaders_cache::shader_language::glsl: return "glsl";
+		case rsx::old_shaders_cache::shader_language::hlsl: return "hlsl";
 		}
 
 		return "";
@@ -83,52 +87,55 @@ namespace rsx
 		};
 	}
 
-	struct decompiled_shader
+	namespace old_shaders_cache
 	{
-		std::string code;
-	};
-
-	struct finalized_shader
-	{
-		u64 ucode_hash;
-		std::string code;
-	};
-
-	template<typename Type, typename KeyType = u64, typename Hasher = std::hash<KeyType>>
-	struct cache
-	{
-	private:
-		std::unordered_map<KeyType, Type, Hasher> m_entries;
-
-	public:
-		const Type* find(u64 key) const
+		struct decompiled_shader
 		{
-			auto found = m_entries.find(key);
+			std::string code;
+		};
 
-			if (found == m_entries.end())
-				return nullptr;
-
-			return &found->second;
-		}
-
-		void insert(KeyType key, const Type &shader)
+		struct finalized_shader
 		{
-			m_entries.insert({ key, shader });
-		}
-	};
+			u64 ucode_hash;
+			std::string code;
+		};
 
-	struct shaders_cache
-	{
-		cache<decompiled_shader> decompiled_fragment_shaders;
-		cache<decompiled_shader> decompiled_vertex_shaders;
-		cache<finalized_shader> finailized_fragment_shaders;
-		cache<finalized_shader> finailized_vertex_shaders;
+		template<typename Type, typename KeyType = u64, typename Hasher = std::hash<KeyType>>
+		struct cache
+		{
+		private:
+			std::unordered_map<KeyType, Type, Hasher> m_entries;
 
-		void load(const std::string &path, shader_language lang);
-		void load(shader_language lang);
+		public:
+			const Type* find(u64 key) const
+			{
+				auto found = m_entries.find(key);
 
-		static std::string path_to_root();
-	};
+				if (found == m_entries.end())
+					return nullptr;
+
+				return &found->second;
+			}
+
+			void insert(KeyType key, const Type &shader)
+			{
+				m_entries.insert({ key, shader });
+			}
+		};
+
+		struct shaders_cache
+		{
+			cache<decompiled_shader> decompiled_fragment_shaders;
+			cache<decompiled_shader> decompiled_vertex_shaders;
+			cache<finalized_shader> finailized_fragment_shaders;
+			cache<finalized_shader> finailized_vertex_shaders;
+
+			void load(const std::string &path, shader_language lang);
+			void load(shader_language lang);
+
+			static std::string path_to_root();
+		};
+	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
@@ -201,7 +208,8 @@ namespace rsx
 		std::stack<u32> m_call_stack;
 
 	public:
-		struct shaders_cache shaders_cache;
+		old_shaders_cache::shaders_cache shaders_cache;
+		rsx::programs_cache programs_cache;
 
 		CellGcmControl* ctrl = nullptr;
 
@@ -376,6 +384,7 @@ namespace rsx
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
 
+		struct raw_program get_raw_program() const;
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);

@@ -61,6 +61,31 @@
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="emucore.vcxproj">
       <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
@@ -77,6 +102,7 @@
     <ClInclude Include="Emu\RSX\GL\gl_render_targets.h" />
     <ClInclude Include="Emu\RSX\GL\gl_texture_cache.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
+    <ClInclude Include="Emu\RSX\GL\rsx_gl_cache.h" />
     <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />
   </ItemGroup>
   <ItemGroup>
@@ -87,6 +113,7 @@
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\gl_render_targets.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\RSX\GL\rsx_gl_cache.cpp" />
     <ClCompile Include="Emu\RSX\GL\rsx_gl_texture.cpp" />
     <ClCompile Include="Emu\RSX\GL\vertex_buffer.cpp" />
   </ItemGroup>

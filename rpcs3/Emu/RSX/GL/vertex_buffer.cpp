@@ -235,7 +235,7 @@ u32 GLGSRender::set_vertex_buffer()
 			auto &vertex_info = vertex_arrays_info[index];
 
 			int location;
-			if (!m_program->uniforms.has_location(reg_table[index] + "_buffer", &location))
+			if (!m_program->attribs.has_location(rsx::vertex_program::input_attrib_names[index], &location))
 				continue;
 
 			if (!vertex_info.size) // disabled, bind a null sampler
@@ -303,7 +303,7 @@ u32 GLGSRender::set_vertex_buffer()
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			int location;
-			if (!m_program->uniforms.has_location(reg_table[index] + "_buffer", &location))
+			if (!m_program->attribs.has_location(rsx::vertex_program::input_attrib_names[index], &location))
 				continue;
 
 			bool enabled = !!(input_mask & (1 << index));
