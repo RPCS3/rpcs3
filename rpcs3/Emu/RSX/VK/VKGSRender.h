@@ -69,6 +69,9 @@ private:
 	std::vector<std::unique_ptr<vk::framebuffer> > m_framebuffer_to_clean;
 	std::vector<std::unique_ptr<vk::sampler> > m_sampler_to_clean;
 
+	u32 m_client_width = 0;
+	u32 m_client_height = 0;
+
 	u32 m_draw_calls = 0;
 	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;

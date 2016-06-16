@@ -430,7 +430,9 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swap_chain->get_device());
 
-	m_swap_chain->init_swapchain(m_frame->client_width(), m_frame->client_height());
+	m_client_width = m_frame->client_width();
+	m_client_height = m_frame->client_height();
+	m_swap_chain->init_swapchain(m_client_width, m_client_height);
 
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device));
@@ -1135,13 +1137,9 @@ void VKGSRender::prepare_rtts()
 		return;
 
 	m_rtts_dirty = false;
-	bool reconfigure_render_pass = true;
 
 	if (m_surface.format != surface_format)
-	{
 		m_surface.unpack(surface_format);
-		reconfigure_render_pass = true;
-	}
 
 	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
 	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
@@ -1202,18 +1200,27 @@ void VKGSRender::prepare_rtts()
 
 void VKGSRender::flip(int buffer)
 {
-	//LOG_NOTICE(Log::RSX, "flip(%d)", buffer);
-	u32 buffer_width = gcm_buffers[buffer].width;
-	u32 buffer_height = gcm_buffers[buffer].height;
-	u32 buffer_pitch = gcm_buffers[buffer].pitch;
+	bool resize_screen = false;
 
-	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
-
-	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
-
-	coordi aspect_ratio;
-	if (1) //enable aspect ratio
+	if (m_client_height != m_frame->client_height() ||
+		m_client_width != m_frame->client_width())
 	{
+		if (!!m_frame->client_height() && !!m_frame->client_width())
+			resize_screen = true;
+	}
+
+	if (!resize_screen)
+	{
+		u32 buffer_width = gcm_buffers[buffer].width;
+		u32 buffer_height = gcm_buffers[buffer].height;
+		u32 buffer_pitch = gcm_buffers[buffer].pitch;
+
+		rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
+		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
+
+		coordi aspect_ratio;
+
 		sizei csize = { m_frame->client_width(), m_frame->client_height() };
 		sizei new_size = csize;
 
@@ -1233,52 +1240,111 @@ void VKGSRender::flip(int buffer)
 		}
 
 		aspect_ratio.size = new_size;
+
+		VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);
+
+		//Prepare surface for new frame
+		CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), 0, m_present_semaphore, VK_NULL_HANDLE, &m_current_present_image));
+
+		//Blit contents to screen..
+		VkImage image_to_flip = nullptr;
+
+		if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
+			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0])->value;
+		else if (std::get<1>(m_rtts.m_bound_render_targets[1]) != nullptr)
+			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1])->value;
+
+		VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
+		if (image_to_flip)
+		{
+			vk::copy_scaled_image(m_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				buffer_width, buffer_height, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+		}
+		else
+		{
+			//No draw call was issued!
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+			VkClearColorValue clear_black = { 0 };
+			vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL, range);
+			vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_GENERAL, &clear_black, 1, &range);
+			vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, range);
+		}
+
+		close_and_submit_command_buffer({ m_present_semaphore }, m_submit_fence);
+		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+		VkPresentInfoKHR present = {};
+		present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		present.pNext = nullptr;
+		present.swapchainCount = 1;
+		present.pSwapchains = &swap_chain;
+		present.pImageIndices = &m_current_present_image;
+		CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
 	}
 	else
 	{
-		aspect_ratio.size = { m_frame->client_width(), m_frame->client_height() };
+		/**
+		* Since we are about to destroy the old swapchain and its images, we just discard the commandbuffer.
+		* Waiting for the commands to process does not work reliably as the fence can be signaled before swap images are released
+		* and there are no explicit methods to ensure that the presentation engine is not using the images at all.
+		*/
+
+		CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
+
+		//Will have to block until rendering is completed
+		VkFence resize_fence = VK_NULL_HANDLE;
+		VkFenceCreateInfo infos = {};
+		infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+		vkQueueWaitIdle(m_swap_chain->get_present_queue());
+		vkDeviceWaitIdle(*m_device);
+
+		vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
+
+		//Wait for all grpahics tasks to complete
+		VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+		VkSubmitInfo submit_infos = {};
+		submit_infos.commandBufferCount = 0;
+		submit_infos.pCommandBuffers = nullptr;
+		submit_infos.pWaitDstStageMask = &pipe_stage_flags;
+		submit_infos.pWaitSemaphores = nullptr;
+		submit_infos.waitSemaphoreCount = 0;
+		submit_infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &submit_infos, resize_fence));
+
+		vkWaitForFences((*m_device), 1, &resize_fence, VK_TRUE, UINT64_MAX);
+		vkResetFences((*m_device), 1, &resize_fence);
+
+		vkDeviceWaitIdle(*m_device);
+
+		//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
+		m_client_width = m_frame->client_width();
+		m_client_height = m_frame->client_height();
+		m_swap_chain->init_swapchain(m_client_width, m_client_height);
+
+		//Prepare new swapchain images for use
+		CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+		open_command_buffer();
+
+		for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
+		{
+			vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+				vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
+
+			VkClearColorValue clear_color{};
+			auto range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+			vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(i), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+			vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
+				VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
+		}
+
+		//Flush the command buffer
+		close_and_submit_command_buffer({}, resize_fence);
+		CHECK_RESULT(vkWaitForFences((*m_device), 1, &resize_fence, VK_TRUE, UINT64_MAX));
+		vkDestroyFence((*m_device), resize_fence, nullptr);
 	}
-
-	VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);
-
-	//Prepare surface for new frame
-	CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), 0, m_present_semaphore, VK_NULL_HANDLE, &m_current_present_image));
-
-
-	//Blit contents to screen..
-	VkImage image_to_flip = nullptr;
-
-	if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
-		image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0])->value;
-	else if (std::get<1>(m_rtts.m_bound_render_targets[1]) != nullptr)
-		image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1])->value;
-
-	VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
-	if (image_to_flip)
-	{
-		vk::copy_scaled_image(m_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			buffer_width, buffer_height, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
-	}
-	else
-	{
-		//No draw call was issued!
-		VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
-		VkClearColorValue clear_black = { 0 };
-		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL, range);
-		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_GENERAL, &clear_black, 1, &range);
-		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, range);
-	}
-
-	close_and_submit_command_buffer({ m_present_semaphore }, m_submit_fence);
-	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
-
-	VkPresentInfoKHR present = {};
-	present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	present.pNext = nullptr;
-	present.swapchainCount = 1;
-	present.pSwapchains = &swap_chain;
-	present.pImageIndices = &m_current_present_image;
-	CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
 
 	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
 	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
