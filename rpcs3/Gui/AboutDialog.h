@@ -1,4 +1,5 @@
 #pragma once
+#include "rpcs3_version.h"
 
 class AboutDialog : public wxDialog
 {
@@ -30,7 +31,7 @@ public:
 		t_descr->SetForegroundColour(wxColor(255, 255, 255));
 		t_descr->SetPosition(wxPoint(12, 50));
 
-		wxStaticText* t_version = new wxStaticText(this, wxID_ANY, wxString::Format(_PRGNAME_ " Version: " _PRGVER_ "-" RPCS3_GIT_VERSION));
+		wxStaticText* t_version = new wxStaticText(this, wxID_ANY, std::string(_PRGNAME_ " Version: ") + rpcs3::version.to_string());
 		t_version->SetBackgroundColour(wxColor(100, 100, 100));
 		t_version->SetForegroundColour(wxColor(200, 200, 200));
 		t_version->SetPosition(wxPoint(12, 66));
