@@ -258,6 +258,17 @@ namespace vk
 			throw EXCEPTION("Unknown stencil op: 0x%X", op);
 		}
 	}
+	
+	VkFrontFace get_front_face_ccw(u32 ffv)
+	{
+		switch (ffv)
+		{ 
+		case CELL_GCM_CW: return VK_FRONT_FACE_CLOCKWISE;
+		case CELL_GCM_CCW: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		default:
+			throw EXCEPTION("Unknown front face value: 0x%X", ffv);
+		}
+	}
 }
 
 
@@ -977,6 +988,29 @@ bool VKGSRender::load_program()
 	else
 		properties.ds.depthTestEnable = VK_FALSE;
 
+	if (!!rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE])
+	{
+		switch (rsx::method_registers[NV4097_SET_CULL_FACE])
+		{
+		case CELL_GCM_FRONT:
+			properties.rs.cullMode = VK_CULL_MODE_FRONT_BIT;
+			break;
+		case CELL_GCM_BACK:
+			properties.rs.cullMode = VK_CULL_MODE_BACK_BIT;
+			break;
+		case CELL_GCM_FRONT_AND_BACK:
+			properties.rs.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
+			break;
+		default:
+			properties.rs.cullMode = VK_CULL_MODE_NONE;
+			break;
+		}
+	}
+	else
+		properties.rs.cullMode = VK_CULL_MODE_NONE;
+	
+	properties.rs.frontFace = vk::get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]);
+	
 	size_t idx = vk::get_render_pass_location(
 		vk::get_compatible_surface_format(m_surface.color_format).first,
 		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
