@@ -582,7 +582,7 @@ bool GLGSRender::load_program()
 
 	glBindBufferRange(GL_UNIFORM_BUFFER, 0, m_uniform_ring_buffer->get_buffer().id(), scale_offset_offset, 512);
 	glBindBufferRange(GL_UNIFORM_BUFFER, 1, m_uniform_ring_buffer->get_buffer().id(), vertex_constants_offset, 512 * 16);
-	glBindBufferRange(GL_UNIFORM_BUFFER, 2, m_uniform_ring_buffer->get_buffer().id(), fragment_constants_offset, fragment_constants_sz);
+	//glBindBufferRange(GL_UNIFORM_BUFFER, 2, m_uniform_ring_buffer->get_buffer().id(), fragment_constants_offset, fragment_constants_sz);
 
 	return true;
 }
