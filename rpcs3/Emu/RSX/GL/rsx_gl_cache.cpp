@@ -7,7 +7,7 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 {
 	rsx::complete_shader result;
 	result.decompiled = &shader;
-	result.code = "#version 420\n\n";
+	result.code = "#version 430\n\n";
 
 	if (shader.raw->type == rsx::program_type::vertex)
 	{
@@ -80,6 +80,7 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 
 	std::string prepare;
 	std::string finalize;
+	int location = 1;
 
 	switch (shader.raw->type)
 	{
@@ -244,10 +245,12 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 	case rsx::program_type::vertex:
 
 		result.code += "out vec4 wpos;\n";
-
+		
+		// TODO
 		if (1)
 		{
 			finalize += "\tgl_Position = o0;\n";
+			finalize += "\tgl_Position = gl_Position * viewport_matrix;\n";
 		}
 		else
 		{
@@ -261,7 +264,12 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 		{
 			if (shader.input_attributes & (1 << index))
 			{
-				result.code += "in vec4 " + rsx::vertex_program::input_attrib_names[index] + ";\n";
+				// result.code += "in vec4 " + rsx::vertex_program::input_attrib_names[index] + ";\n";
+
+				// TODO: use actual information about vertex inputs
+				result.code += "layout(location=" + std::to_string(location++) + ") uniform samplerBuffer " + rsx::vertex_program::input_attrib_names[index] + "_buffer" + ";\n";
+				result.code += "vec4 " + rsx::vertex_program::input_attrib_names[index]
+					+ " = texelFetch(" + rsx::vertex_program::input_attrib_names[index] + "_buffer, gl_VertexID).rgba;\n";
 			}
 		}
 
