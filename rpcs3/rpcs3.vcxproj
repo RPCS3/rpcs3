@@ -84,8 +84,10 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <PreBuildEvent>
-      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
-      <Message>Updating git-version.h</Message>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
     </PreBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;..\wxWidgets\include\msvc;..\wxWidgets\include;..\3rdparty\XAudio2_7;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
