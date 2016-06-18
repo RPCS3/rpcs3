@@ -22,7 +22,7 @@ namespace rsx
 		decompile_language lang;
 
 		void*(*compile_shader)(program_type type, const std::string &code);
-		complete_shader(*complete_shader)(const decompiled_shader &shader, program_state state);
+		rsx::complete_shader(*complete_shader)(const decompiled_shader &shader, program_state state);
 		void*(*make_program)(const void *vertex_shader, const void *fragment_shader);
 		void(*remove_program)(void *ptr);
 		void(*remove_shader)(void *ptr);
@@ -55,7 +55,7 @@ namespace rsx
 
 		~programs_cache();
 
-		program_info get(raw_program &raw_program, decompile_language lang);
+		program_info get(raw_program raw_program_, decompile_language lang);
 		void clear();
 	};
 }

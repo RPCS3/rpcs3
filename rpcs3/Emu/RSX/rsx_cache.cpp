@@ -25,7 +25,7 @@ namespace rsx
 			.write(raw_shader.ucode.data(), raw_shader.ucode.size());
 
 			rsx::decompiled_shader decompiled_shader = decompile(raw_shader, ctxt.lang);
-			auto &inserted = m_entries.insert({ raw_shader, entry_t{ decompiled_shader } }).first;
+			auto inserted = m_entries.insert({ raw_shader, entry_t{ decompiled_shader } }).first;
 			inserted->second.decompiled.raw = &inserted->first;
 			entry = &inserted->second;
 		}
@@ -74,15 +74,15 @@ namespace rsx
 		clear();
 	}
 
-	program_info programs_cache::get(raw_program &raw_program, decompile_language lang)
+	program_info programs_cache::get(raw_program raw_program_, decompile_language lang)
 	{
-		raw_program.vertex_shader.type = program_type::vertex;
-		raw_program.fragment_shader.type = program_type::fragment;
+		raw_program_.vertex_shader.type = program_type::vertex;
+		raw_program_.fragment_shader.type = program_type::fragment;
 
-		analyze_raw_shader(raw_program.vertex_shader);
-		analyze_raw_shader(raw_program.fragment_shader);
+		analyze_raw_shader(raw_program_.vertex_shader);
+		analyze_raw_shader(raw_program_.fragment_shader);
 
-		auto found = m_program_cache.find(raw_program);
+		auto found = m_program_cache.find(raw_program_);
 
 		if (found != m_program_cache.end())
 		{
@@ -91,10 +91,10 @@ namespace rsx
 
 		program_info result;
 
-		result.vertex_shader = m_vertex_shaders_cache.get(context, raw_program.vertex_shader, raw_program.state);
-		result.fragment_shader = m_vertex_shaders_cache.get(context, raw_program.fragment_shader, raw_program.state);
+		result.vertex_shader = m_vertex_shaders_cache.get(context, raw_program_.vertex_shader, raw_program_.state);
+		result.fragment_shader = m_vertex_shaders_cache.get(context, raw_program_.fragment_shader, raw_program_.state);
 		result.program = context.make_program(result.vertex_shader.complete->user_data, result.fragment_shader.complete->user_data);
-		m_program_cache.insert({ raw_program, result });
+		m_program_cache.insert({ raw_program_, result });
 
 		return result;
 	}
