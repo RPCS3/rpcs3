@@ -576,13 +576,41 @@ bool GLGSRender::load_program()
 	buf = static_cast<u8*>(mapping.first);
 	fragment_constants_offset = mapping.second;
 
-	//m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
+	// fill fragment constants
+	if (!info.fragment_shader.decompiled->constants.empty())
+	{
+		u32 buffer_offset = 0;
+
+		static const __m128i mask = _mm_set_epi8(
+			0xE, 0xF, 0xC, 0xD,
+			0xA, 0xB, 0x8, 0x9,
+			0x6, 0x7, 0x4, 0x5,
+			0x2, 0x3, 0x0, 0x1);
+
+		auto ucode = (const rsx::fragment_program::ucode_instr*)info.fragment_shader.decompiled->raw->ucode_ptr;
+
+		for (const auto& constant : info.fragment_shader.decompiled->constants)
+		{
+			const void *data = ucode + (u32)(constant.id / (sizeof(f32) * 4));
+			const __m128i &vector = _mm_loadu_si128((const __m128i*)data);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_stream_si128((__m128i*)((char*)buf + buffer_offset), shuffled_vector);
+
+			//float x = ((float*)((char*)buf + buffer_offset))[0];
+			//float y = ((float*)((char*)buf + buffer_offset))[1];
+			//float z = ((float*)((char*)buf + buffer_offset))[2];
+			//float w = ((float*)((char*)buf + buffer_offset))[3];
+
+			//LOG_WARNING(RSX, "fc%u = {%g, %g, %g, %g}", constant.id, x, y, z, w);
+			buffer_offset += 4 * sizeof(f32);
+		}
+	}
 
 	m_uniform_ring_buffer->unmap();
 
 	glBindBufferRange(GL_UNIFORM_BUFFER, 0, m_uniform_ring_buffer->get_buffer().id(), scale_offset_offset, 512);
 	glBindBufferRange(GL_UNIFORM_BUFFER, 1, m_uniform_ring_buffer->get_buffer().id(), vertex_constants_offset, 512 * 16);
-	//glBindBufferRange(GL_UNIFORM_BUFFER, 2, m_uniform_ring_buffer->get_buffer().id(), fragment_constants_offset, fragment_constants_sz);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 2, m_uniform_ring_buffer->get_buffer().id(), fragment_constants_offset, fragment_constants_sz);
 
 	return true;
 }
