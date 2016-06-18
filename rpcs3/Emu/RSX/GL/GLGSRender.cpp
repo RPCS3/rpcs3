@@ -3,6 +3,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
+#include "rsx_gl_cache.h"
+#include "../rsx_utils.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
 
@@ -26,7 +28,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
 {
-	shaders_cache.load(rsx::shader_language::glsl);
+	init_glsl_cache_program_context(programs_cache.context);
 }
 
 u32 GLGSRender::enable(u32 condition, u32 cap)
@@ -277,24 +279,47 @@ void GLGSRender::end()
 	m_program->use();
 
 	//setup textures
-	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		int location;
-		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
+		int texture_index = 0;
+		for (int i = 0; i < rsx::limits::textures_count; ++i)
 		{
 			if (!textures[i].enabled())
 			{
-				glActiveTexture(GL_TEXTURE0 + i);
-				glBindTexture(GL_TEXTURE_2D, 0);
-				glProgramUniform1i(m_program->id(), location, i);
 				continue;
 			}
 
-			m_gl_textures[i].set_target(get_gl_target_for_texture(textures[i]));
+			int location;
+			if (m_program->uniforms.has_location("texture" + std::to_string(i), &location))
+			{
+				glProgramUniform1i(m_program->id(), location, texture_index);
+				m_gl_textures[i].init(texture_index, textures[i]);
 
-			__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i], m_rtts);
-			glProgramUniform1i(m_program->id(), location, i);
+				texture_index++;
+
+				if (m_program->uniforms.has_location("texture" + std::to_string(i) + "_cm", &location))
+				{
+					if (textures[i].format() & CELL_GCM_TEXTURE_UN)
+					{
+						//glProgramUniform4f(m_program->id(), location, textures[i].width(), textures[i].height(), textures[i].depth(), 1.0f);
+					}
+				}
+			}
 		}
+		/*
+		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+		{
+			if (vertex_textures[i].enabled())
+			{
+				int location;
+				if (m_program->uniforms.has_location("vtexture" + std::to_string(i), &location))
+				{
+					glProgramUniform1i(m_program->id(), location, texture_index);
+					m_gl_vertex_textures[i].init(texture_index, vertex_textures[i]);
+					texture_index++;
+				}
+			}
+		}
+		*/
 	}
 
 	u32 offset_in_index_buffer = set_vertex_buffer();
@@ -402,7 +427,7 @@ void GLGSRender::on_exit()
 {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
-	m_prog_buffer.clear();
+	programs_cache.clear();
 
 	if (draw_fbo)
 		draw_fbo.remove();
@@ -512,51 +537,12 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 
 bool GLGSRender::load_program()
 {
-#if 1
-	RSXVertexProgram vertex_program = get_current_vertex_program();
-	RSXFragmentProgram fragment_program = get_current_fragment_program();
+	rsx::program_info info = programs_cache.get(get_raw_program(), rsx::decompile_language::glsl);
+	m_program = (gl::glsl::program*)info.program;
+	m_program->use();
 
-	__glcheck m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
-	__glcheck m_program->use();
-
-#else
-	std::vector<u32> vertex_program;
-	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
-	vertex_program.reserve((512 - transform_program_start) * 4);
-
-	for (int i = transform_program_start; i < 512; ++i)
-	{
-		vertex_program.resize((i - transform_program_start) * 4 + 4);
-		memcpy(vertex_program.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
-
-		D3 d3;
-		d3.HEX = transform_program[i * 4 + 3];
-
-		if (d3.end)
-			break;
-	}
-
-	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
-
-	std::string fp_shader; ParamArray fp_parr; u32 fp_size;
-	GLFragmentDecompilerThread decompile_fp(fp_shader, fp_parr,
-		rsx::get_address(shader_program & ~0x3, (shader_program & 0x3) - 1), fp_size, rsx::method_registers[NV4097_SET_SHADER_CONTROL]);
-
-	std::string vp_shader; ParamArray vp_parr;
-	GLVertexDecompilerThread decompile_vp(vertex_program, vp_shader, vp_parr);
-	decompile_fp.Task();
-	decompile_vp.Task();
-
-	LOG_NOTICE(RSX, "fp: %s", fp_shader.c_str());
-	LOG_NOTICE(RSX, "vp: %s", vp_shader.c_str());
-
-	static bool first = true;
-	gl::glsl::shader fp(gl::glsl::shader::type::fragment, fp_shader);
-	gl::glsl::shader vp(gl::glsl::shader::type::vertex, vp_shader);
-
-	(m_program.recreate() += { fp.compile(), vp.compile() }).make();
-#endif
-	u32 fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	// u32 fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	u32 fragment_constants_sz = info.fragment_shader.decompiled->constants.size() * sizeof(f32) * 4;
 	fragment_constants_sz = std::max(32U, fragment_constants_sz);
 	u32 max_buffer_sz = 8192 + 512 + fragment_constants_sz;
 
@@ -590,7 +576,35 @@ bool GLGSRender::load_program()
 	buf = static_cast<u8*>(mapping.first);
 	fragment_constants_offset = mapping.second;
 
-	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
+	// fill fragment constants
+	if (!info.fragment_shader.decompiled->constants.empty())
+	{
+		u32 buffer_offset = 0;
+
+		static const __m128i mask = _mm_set_epi8(
+			0xE, 0xF, 0xC, 0xD,
+			0xA, 0xB, 0x8, 0x9,
+			0x6, 0x7, 0x4, 0x5,
+			0x2, 0x3, 0x0, 0x1);
+
+		auto ucode = (const rsx::fragment_program::ucode_instr*)info.fragment_shader.decompiled->raw->ucode_ptr;
+
+		for (const auto& constant : info.fragment_shader.decompiled->constants)
+		{
+			const void *data = ucode + (u32)(constant.id / (sizeof(f32) * 4));
+			const __m128i &vector = _mm_loadu_si128((const __m128i*)data);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_stream_si128((__m128i*)((char*)buf + buffer_offset), shuffled_vector);
+
+			//float x = ((float*)((char*)buf + buffer_offset))[0];
+			//float y = ((float*)((char*)buf + buffer_offset))[1];
+			//float z = ((float*)((char*)buf + buffer_offset))[2];
+			//float w = ((float*)((char*)buf + buffer_offset))[3];
+
+			//LOG_WARNING(RSX, "fc%u = {%g, %g, %g, %g}", constant.id, x, y, z, w);
+			buffer_offset += 4 * sizeof(f32);
+		}
+	}
 
 	m_uniform_ring_buffer->unmap();
 

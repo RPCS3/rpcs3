@@ -14,8 +14,6 @@
 class GLGSRender : public GSRender
 {
 private:
-	GLFragmentProgram m_fragment_prog;
-	GLVertexProgram m_vertex_prog;
 
 	rsx::gl::texture m_gl_textures[rsx::limits::textures_count];
 	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
@@ -43,7 +41,6 @@ public:
 	gl::fbo draw_fbo;
 
 private:
-	GLProgramBuffer m_prog_buffer;
 
 	//buffer
 	gl::fbo m_flip_fbo;
