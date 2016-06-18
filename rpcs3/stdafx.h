@@ -42,7 +42,6 @@ using namespace std::literals;
 #define EXCEPTION(format_str, ...) fmt::exception("%s(): " format_str HERE, __FUNCTION__, ##__VA_ARGS__)
 
 #define _PRGNAME_ "RPCS3"
-#define _PRGVER_ "0.0.0.9"
 
 #include "Utilities/types.h"
 #include "Utilities/Macro.h"

@@ -2,7 +2,7 @@
 #include "stdafx_gui.h"
 #include "rpcs3.h"
 #include "MainFrame.h"
-#include "git-version.h"
+#include "rpcs3_version.h"
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -69,7 +69,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-	SetLabel(_PRGNAME_ " v" _PRGVER_ "-" RPCS3_GIT_VERSION);
+	SetLabel(std::string(_PRGNAME_ " v") + rpcs3::version.to_string());
 
 	wxMenuBar* menubar = new wxMenuBar();
 
@@ -158,7 +158,7 @@ MainFrame::MainFrame()
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
 	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
 
-	LOG_NOTICE(GENERAL, "%s", _PRGNAME_ " v" _PRGVER_ "-" RPCS3_GIT_VERSION);
+	LOG_NOTICE(GENERAL, "%s", (std::string(_PRGNAME_ " v") + rpcs3::version.to_string()).c_str());
 	LOG_NOTICE(GENERAL, "");
 }
 

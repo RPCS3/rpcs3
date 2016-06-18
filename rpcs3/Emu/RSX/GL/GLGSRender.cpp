@@ -608,6 +608,11 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
 
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_STENCIL_TEST);
+		
 	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 	bool skip_read = false;
@@ -653,13 +658,6 @@ void GLGSRender::flip(int buffer)
 		__glcheck m_flip_fbo.draw_buffer(m_flip_fbo.color);
 
 		m_flip_fbo.bind();
-
-		glDisable(GL_SCISSOR_TEST);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_STENCIL_TEST);
-		glDisable(GL_BLEND);
-		glDisable(GL_LOGIC_OP);
-		glDisable(GL_CULL_FACE);
 
 		if (buffer_region.tile)
 		{
