@@ -200,11 +200,11 @@ void GLGSRender::begin()
 	__glcheck glPolygonOffset((f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR],
 		(f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_BIAS]);
 
-	//NV4097_SET_SPECULAR_ENABLE
-	//NV4097_SET_TWO_SIDE_LIGHT_EN
+	__glcheck enable(rsx::method_registers[NV4097_SET_SPECULAR_ENABLE], GL_LIGHTING);
+	__glcheck glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, rsx::method_registers[NV4097_SET_TWO_SIDE_LIGHT_EN]);
+	__glcheck glEdgeFlag(rsx::method_registers[NV4097_SET_EDGE_FLAG]);
 	//NV4097_SET_FLAT_SHADE_OP
-	//NV4097_SET_EDGE_FLAG
-
+	
 	u32 clip_plane_control = rsx::method_registers[NV4097_SET_USER_CLIP_PLANE_CONTROL];
 	u8 clip_plane_0 = clip_plane_control & 0xf;
 	u8 clip_plane_1 = (clip_plane_control >> 4) & 0xf;
