@@ -91,15 +91,9 @@ extern void arm_execute_function(ARMv7Thread& cpu, u32 index)
 			{
 				func(cpu);
 			}
-			catch (EmulationStopped)
-			{
-				LOG_WARNING(ARMv7, "Function '%s' aborted", cpu.last_function);
-				cpu.last_function = previous_function;
-				throw;
-			}
 			catch (...)
 			{
-				LOG_ERROR(ARMv7, "Function '%s' aborted", cpu.last_function);
+				logs::ARMv7.format(Emu.IsStopped() ? logs::level::warning : logs::level::error, "Function '%s' aborted", cpu.last_function);
 				cpu.last_function = previous_function;
 				throw;
 			}

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Utilities/Thread.h"
-#include "Utilities/BitSet.h"
+#include "../Utilities/Thread.h"
+#include "../Utilities/BitSet.h"
 
 // CPU Thread Type
 enum class cpu_type : u32

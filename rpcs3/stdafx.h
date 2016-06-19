@@ -8,9 +8,9 @@
 
 #define NOMINMAX
 
-#ifndef __STDC_CONSTANT_MACROS
-#define __STDC_CONSTANT_MACROS
-#endif
+//#ifndef __STDC_CONSTANT_MACROS
+//#define __STDC_CONSTANT_MACROS
+//#endif
 
 #if defined(MSVC_CRT_MEMLEAK_DETECTION) && defined(_DEBUG) && !defined(DBG_NEW)
 	#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )

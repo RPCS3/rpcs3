@@ -20,10 +20,6 @@ env:
    # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
    - coverity_scan_script_test_mode=false
 
-branches:
-  except:
-    - ppu_recompiler
-
 matrix:
  exclude:
   - os: osx

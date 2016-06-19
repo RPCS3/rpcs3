@@ -56,11 +56,7 @@ LOG_CHANNEL(sys_vm);
 
 extern std::string ppu_get_syscall_name(u64 code);
 
-static void null_func(PPUThread& ppu)
-{
-	LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(ppu.GPR[11]));
-	ppu.GPR[3] = 0;
-}
+static constexpr ppu_function_t null_func = nullptr;
 
 // UNS = Unused
 // ROOT = Root
@@ -920,23 +916,28 @@ extern void ppu_execute_syscall(PPUThread& ppu, u64 code)
 	}
 
 	// If autopause occures, check_status() will hold the thread till unpaused.
-	if (debug::autopause::pause_syscall(code) && ppu.check_status()) throw cpu_state::ret;
+	if (debug::autopause::pause_syscall(code) && ppu.check_status())
+	{
+		throw cpu_state::ret;
+	}
 
 	const auto previous_function = ppu.last_function; // TODO: use gsl::finally or something
 	
 	try
 	{
-		g_ppu_syscall_table[code](ppu);
-	}
-	catch (EmulationStopped)
-	{
-		LOG_WARNING(PPU, "Syscall '%s' (%llu) aborted", ppu_get_syscall_name(code), code);
-		ppu.last_function = previous_function;
-		throw;
+		if (auto func = g_ppu_syscall_table[code])
+		{
+			func(ppu);
+		}
+		else
+		{
+			LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(code));
+			ppu.GPR[3] = 0;
+		}
 	}
 	catch (...)
 	{
-		LOG_ERROR(PPU, "Syscall '%s' (%llu) aborted", ppu_get_syscall_name(code), code);
+		logs::PPU.format(Emu.IsStopped() ? logs::level::warning : logs::level::error, "Syscall '%s' (%llu) aborted", ppu_get_syscall_name(code), code);
 		ppu.last_function = previous_function;
 		throw;
 	}
