@@ -9,6 +9,7 @@
 #include <chrono>
 #include <locale>
 #include <codecvt>
+#include <cmath>
 #include "d3dx12.h"
 #include <d3d11on12.h>
 #include "D3D12Formats.h"
@@ -166,6 +167,7 @@ D3D12GSRender::D3D12GSRender()
 		// Adapter with specified name
 		if (adapter_name == desc.Description)
 		{
+			vram_size = desc.DedicatedVideoMemory != 0 ? desc.DedicatedVideoMemory : desc.DedicatedSystemMemory;
 			break;
 		}
 
@@ -243,7 +245,7 @@ D3D12GSRender::D3D12GSRender()
 
 	m_rtts.init(m_device.Get());
 	m_readback_resources.init(m_device.Get(), 1024 * 1024 * 128, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST);
-	m_buffer_data.init(m_device.Get(), 1024 * 1024 * 896, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+	m_buffer_data.init(m_device.Get(), std::min((size_t)(1024 * 1024 * 896), (size_t)(vram_size - (1024 * 1024 * 128))), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
 
 	CHECK_HRESULT(
 		m_device->CreateCommittedResource(
