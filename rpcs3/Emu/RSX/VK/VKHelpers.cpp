@@ -43,15 +43,38 @@ namespace vk
 		result.device_local = VK_MAX_MEMORY_TYPES;
 		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
 
+		bool host_visible_cached = false;
+		u32  host_visible_vram_size = 0;
+		u32  device_local_vram_size = 0;
+
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
+			VkMemoryHeap &heap = memory_properties.memoryHeaps[memory_properties.memoryTypes[i].heapIndex];
+			
 			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			if (is_device_local)
-				result.device_local = i;
+			{
+				if (device_local_vram_size < heap.size)
+				{
+					result.device_local = i;
+					device_local_vram_size = heap.size;
+				}
+			}
+
 			bool is_host_visible = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 			bool is_host_coherent = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			bool is_cached = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+			
 			if (is_host_coherent && is_host_visible)
-				result.host_visible_coherent = i;
+			{
+				if ((is_cached && !host_visible_cached) ||
+					(host_visible_vram_size < heap.size))
+				{
+					result.host_visible_coherent = i;
+					host_visible_vram_size = heap.size;
+					host_visible_cached = is_cached;
+				}
+			}
 		}
 
 		if (result.device_local == VK_MAX_MEMORY_TYPES) throw EXCEPTION("GPU doesn't support device local memory");
