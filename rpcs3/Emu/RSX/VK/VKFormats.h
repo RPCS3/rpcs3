@@ -14,6 +14,7 @@ namespace vk
 	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format format);
 	VkStencilOp get_stencil_op(u32 op);
 	VkLogicOp get_logic_op(u32 op);
+	VkFrontFace get_front_face_ccw(u32 ffv);
 
 	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter);
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter);
