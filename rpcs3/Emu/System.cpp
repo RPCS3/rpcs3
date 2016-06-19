@@ -395,7 +395,10 @@ void Emulator::Stop()
 		idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 		{
 			cpu.state += cpu_state::dbg_global_stop;
-			cpu->lock_notify();
+			cpu->lock();
+			cpu->set_exception(std::make_exception_ptr(EmulationStopped()));
+			cpu->unlock();
+			cpu->notify();
 		});
 	}
 

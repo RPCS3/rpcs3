@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_event.h"
 #include "sysPrxForUser.h"
 
 extern logs::channel sysPrxForUser;
@@ -29,8 +31,30 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 		return res;
 	}
 
+	if (flags & SYS_PPU_THREAD_CREATE_INTERRUPT)
+	{
+		return CELL_OK;
+	}
+
 	// Run the thread
-	return flags & SYS_PPU_THREAD_CREATE_INTERRUPT ? CELL_OK : sys_ppu_thread_start(static_cast<u32>(*thread_id));
+	if (s32 res = sys_ppu_thread_start(static_cast<u32>(*thread_id)))
+	{
+		return res;
+	}
+
+	// Dirty hack for sound: confirm the creation of _mxr000 event queue
+	if (std::memcmp(threadname.get_ptr(), "_cellsurMixerMain", 18) == 0)
+	{
+		while (!idm::select<lv2_event_queue_t>([](u32, lv2_event_queue_t& eq)
+		{
+			return eq.name == "_mxr000\0"_u64;
+		}))
+		{
+			thread_ctrl::sleep(50000);
+		}
+	}
+
+	return CELL_OK;
 }
 
 s32 sys_ppu_thread_get_id(PPUThread& ppu, vm::ptr<u64> thread_id)

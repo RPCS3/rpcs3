@@ -102,6 +102,23 @@ enum x64_reg_t : u32
 	X64_IMM16,
 	X64_IMM32,
 
+	X64_BIT_O = 0x90,
+	X64_BIT_NO,
+	X64_BIT_C,
+	X64_BIT_NC,
+	X64_BIT_Z,
+	X64_BIT_NZ,
+	X64_BIT_BE,
+	X64_BIT_NBE,
+	X64_BIT_S,
+	X64_BIT_NS,
+	X64_BIT_P,
+	X64_BIT_NP,
+	X64_BIT_L,
+	X64_BIT_NL,
+	X64_BIT_LE,
+	X64_BIT_NLE,
+
 	X64R_ECX = X64R_CL,
 };
 
@@ -109,16 +126,22 @@ enum x64_op_t : u32
 {
 	X64OP_NONE,
 	X64OP_LOAD, // obtain and put the value into x64 register
+	X64OP_LOAD_BE,
 	X64OP_STORE, // take the value from x64 register or an immediate and use it
+	X64OP_STORE_BE,
 	X64OP_MOVS,
 	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
-	X64OP_LOAD_AND_STORE, // lock and [mem], reg
-	X64OP_LOAD_OR_STORE,  // lock or  [mem], reg (TODO)
-	X64OP_LOAD_XOR_STORE, // lock xor [mem], reg (TODO)
-	X64OP_INC, // lock inc [mem] (TODO)
-	X64OP_DEC, // lock dec [mem] (TODO)
+	X64OP_AND, // lock and [mem], ...
+	X64OP_OR,  // lock or  [mem], ...
+	X64OP_XOR, // lock xor [mem], ...
+	X64OP_INC, // lock inc [mem]
+	X64OP_DEC, // lock dec [mem]
+	X64OP_ADD, // lock add [mem], ...
+	X64OP_ADC, // lock adc [mem], ...
+	X64OP_SUB, // lock sub [mem], ...
+	X64OP_SBB, // lock sbb [mem], ...
 };
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
@@ -321,6 +344,56 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			}
 			break;
 		}
+		case 0x90:
+		case 0x91:
+		case 0x92:
+		case 0x93:
+		case 0x94:
+		case 0x95:
+		case 0x96:
+		case 0x97:
+		case 0x98:
+		case 0x9a:
+		case 0x9b:
+		case 0x9c:
+		case 0x9d:
+		case 0x9e:
+		case 0x9f:
+		{
+			if (!lock) // SETcc
+			{
+				out_op = X64OP_STORE;
+				out_reg = x64_reg_t(X64_BIT_O + op2 - 0x90); // 0x90 .. 0x9f
+				out_size = 1;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		case 0x38:
+		{
+			out_length++, code++;
+
+			switch (op3)
+			{
+			case 0xf0:
+			case 0xf1:
+			{
+				if (!repne) // MOVBE
+				{
+					out_op = op3 == 0xf0 ? X64OP_LOAD_BE : X64OP_STORE_BE;
+					out_reg = get_modRM_reg(code, rex);
+					out_size = get_op_size(rex, oso);
+					out_length += get_modRM_size(code);
+					return;
+				}
+
+				break;
+			}
+			}
+
+			break;
+		}
 		}
 
 		break;
@@ -329,7 +402,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 	{
 		if (!oso)
 		{
-			out_op = X64OP_LOAD_AND_STORE;
+			out_op = X64OP_AND;
 			out_reg = rex & 8 ? get_modRM_reg(code, rex) : get_modRM_reg_lh(code);
 			out_size = 1;
 			out_length += get_modRM_size(code);
@@ -341,13 +414,70 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 	{
 		if (true)
 		{
-			out_op = X64OP_LOAD_AND_STORE;
+			out_op = X64OP_AND;
 			out_reg = get_modRM_reg(code, rex);
 			out_size = get_op_size(rex, oso);
 			out_length += get_modRM_size(code);
 			return;
 		}
 		break;
+	}
+	case 0x80:
+	{
+		switch (auto mod_code = get_modRM_reg(code, 0))
+		{
+		//case 0: out_op = X64OP_ADD; break; // TODO: strange info in instruction manual
+		case 1: out_op = X64OP_OR; break;
+		case 2: out_op = X64OP_ADC; break;
+		case 3: out_op = X64OP_SBB; break;
+		case 4: out_op = X64OP_AND; break;
+		case 5: out_op = X64OP_SUB; break;
+		case 6: out_op = X64OP_XOR; break;
+		default: out_op = X64OP_NONE; break; // CMP
+		}
+
+		out_reg = X64_IMM8;
+		out_size = 1;
+		out_length += get_modRM_size(code) + 1;
+		return;
+	}
+	case 0x81:
+	{
+		switch (auto mod_code = get_modRM_reg(code, 0))
+		{
+		case 0: out_op = X64OP_ADD; break;
+		case 1: out_op = X64OP_OR; break;
+		case 2: out_op = X64OP_ADC; break;
+		case 3: out_op = X64OP_SBB; break;
+		case 4: out_op = X64OP_AND; break;
+		case 5: out_op = X64OP_SUB; break;
+		case 6: out_op = X64OP_XOR; break;
+		default: out_op = X64OP_NONE; break; // CMP
+		}
+
+		out_reg = oso ? X64_IMM16 : X64_IMM32;
+		out_size = get_op_size(rex, oso);
+		out_length += get_modRM_size(code) + (oso ? 2 : 4);
+		return;
+	}
+	case 0x83:
+	{
+		switch (auto mod_code = get_modRM_reg(code, 0))
+		{
+		case 0: out_op = X64OP_ADD; break;
+		case 1: out_op = X64OP_OR; break;
+		case 2: out_op = X64OP_ADC; break;
+		case 3: out_op = X64OP_SBB; break;
+		case 4: out_op = X64OP_AND; break;
+		case 5: out_op = X64OP_SUB; break;
+		case 6: out_op = X64OP_XOR; break;
+		default: out_op = X64OP_NONE; break; // CMP
+		}
+
+		out_reg = X64_IMM8;
+		out_size = get_op_size(rex, oso);
+		out_length += get_modRM_size(code) + 1;
+		return;
 	}
 	case 0x86:
 	{
@@ -459,7 +589,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 	}
 	case 0xc6:
 	{
-		if (!lock && !oso && get_modRM_reg(code, 0) == X64R_RAX) // MOV r8/m8, imm8
+		if (!lock && !oso && get_modRM_reg(code, 0) == 0) // MOV r8/m8, imm8
 		{
 			out_op = X64OP_STORE;
 			out_reg = X64_IMM8;
@@ -471,7 +601,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 	}
 	case 0xc7:
 	{
-		if (!lock && get_modRM_reg(code, 0) == X64R_RAX) // MOV r/m, imm16/imm32 (16, 32, 64)
+		if (!lock && get_modRM_reg(code, 0) == 0) // MOV r/m, imm16/imm32 (16, 32, 64)
 		{
 			out_op = X64OP_STORE;
 			out_reg = oso ? X64_IMM16 : X64_IMM32;
@@ -599,6 +729,9 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 		switch (d_size)
 		{
 		case 1: out_value = (u8)imm_value; return true;
+		case 2: out_value = (u16)imm_value; return true; // sign-extended
+		case 4: out_value = (u32)imm_value; return true; // sign-extended
+		case 8: out_value = (u64)imm_value; return true; // sign-extended
 		}
 	}
 	else if (reg == X64_IMM16)
@@ -625,6 +758,29 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 		out_value = (u32)RCX(context);
 		return true;
 	}
+	else if (reg >= X64_BIT_O && reg <= X64_BIT_NLE)
+	{
+		const u32 _cf = EFLAGS(context) & 0x1;
+		const u32 _zf = EFLAGS(context) & 0x40;
+		const u32 _sf = EFLAGS(context) & 0x80;
+		const u32 _of = EFLAGS(context) & 0x800;
+		const u32 _pf = EFLAGS(context) & 0x4;
+		const u32 _l = (_sf << 4) ^ _of; // SF != OF
+
+		switch (reg & ~1)
+		{
+		case X64_BIT_O: out_value = !!_of ^ (reg & 1); break;
+		case X64_BIT_C: out_value = !!_cf ^ (reg & 1); break;
+		case X64_BIT_Z: out_value = !!_zf ^ (reg & 1); break;
+		case X64_BIT_BE: out_value = !!(_cf | _zf) ^ (reg & 1); break;
+		case X64_BIT_S: out_value = !!_sf ^ (reg & 1); break;
+		case X64_BIT_P: out_value = !!_pf ^ (reg & 1); break;
+		case X64_BIT_L: out_value = !!_l ^ (reg & 1); break;
+		case X64_BIT_LE: out_value = !!(_l | _zf) ^ (reg & 1); break;
+		}
+
+		return true;
+	}
 
 	LOG_ERROR(MEMORY, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", reg, d_size, i_size);
 	return false;
@@ -649,7 +805,7 @@ bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 v
 	return false;
 }
 
-bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y)
+bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y, bool carry = true)
 {
 	switch (d_size)
 	{
@@ -664,11 +820,11 @@ bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y)
 	const u64 diff = x - y;
 	const u64 summ = x + y;
 
-	if (((x & y) | ((x ^ y) & ~summ)) & sign)
+	if (carry && ((x & y) | ((x ^ y) & ~summ)) & sign)
 	{
 		EFLAGS(context) |= 0x1; // set CF
 	}
-	else
+	else if (carry)
 	{
 		EFLAGS(context) &= ~0x1; // clear CF
 	}
@@ -833,9 +989,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		switch (op)
 		{
 		case X64OP_LOAD:
+		case X64OP_LOAD_BE:
 		{
 			u32 value;
-			if (is_writing || !thread->read_reg(addr, value) || !put_x64_reg_value(context, reg, d_size, se_storage<u32>::swap(value)))
+			if (is_writing || !thread->read_reg(addr, value) || !put_x64_reg_value(context, reg, d_size, op == X64OP_LOAD ? se_storage<u32>::swap(value) : value))
 			{
 				return false;
 			}
@@ -843,9 +1000,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			break;
 		}
 		case X64OP_STORE:
+		case X64OP_STORE_BE:
 		{
 			u64 reg_value;
-			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !thread->write_reg(addr, se_storage<u32>::swap((u32)reg_value)))
+			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap((u32)reg_value) : (u32)reg_value))
 			{
 				return false;
 			}
@@ -881,8 +1039,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		switch (op)
 		{
 		case X64OP_STORE:
+		case X64OP_STORE_BE:
 		{
-			if (d_size == 16)
+			if (d_size == 16 && op == X64OP_STORE)
 			{
 				if (reg - X64R_XMM0 >= 16)
 				{
@@ -900,7 +1059,44 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				return false;
 			}
 
-			std::memcpy(vm::base_priv(addr), &reg_value, d_size);
+			if (op == X64OP_STORE_BE && d_size == 2)
+			{
+				reg_value = se_storage<u16>::swap((u16)reg_value);
+			}
+			else if (op == X64OP_STORE_BE && d_size == 4)
+			{
+				reg_value = se_storage<u32>::swap((u32)reg_value);
+			}
+			else if (op == X64OP_STORE_BE && d_size == 8)
+			{
+				reg_value = se_storage<u64>::swap(reg_value);
+			}
+			else if (op == X64OP_STORE_BE)
+			{
+				return false;	
+			}
+
+			if (d_size == 1)
+			{
+				*(volatile u8*)vm::base_priv(addr) = (u8)reg_value;
+			}
+			else if (d_size == 2 && addr % 2 == 0)
+			{
+				*(volatile u16*)vm::base_priv(addr) = (u16)reg_value; 
+			}
+			else if (d_size == 4 && addr % 4 == 0)
+			{
+				*(volatile u32*)vm::base_priv(addr) = (u32)reg_value;
+			}
+			else if (d_size == 8 && addr % 8 == 0)
+			{
+				*(volatile u64*)vm::base_priv(addr) = (u64)reg_value;
+			}
+			else
+			{
+				std::memcpy(vm::base_priv(addr), &reg_value, d_size);
+			}
+			
 			break;
 		}
 		case X64OP_MOVS:
@@ -1060,7 +1256,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			}
 			break;
 		}
-		case X64OP_LOAD_AND_STORE:
+		case X64OP_AND:
 		{
 			u64 value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
@@ -1078,6 +1274,182 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			}
 
 			if (!set_x64_cmp_flags(context, d_size, value, 0))
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_OR:
+		{
+			u64 value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: value = *(atomic_t<u8>*)vm::base_priv(addr) |= (u8)value; break;
+			case 2: value = *(atomic_t<u16>*)vm::base_priv(addr) |= (u16)value; break;
+			case 4: value = *(atomic_t<u32>*)vm::base_priv(addr) |= (u32)value; break;
+			case 8: value = *(atomic_t<u64>*)vm::base_priv(addr) |= (u64)value; break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, value, 0))
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_XOR:
+		{
+			u64 value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: value = *(atomic_t<u8>*)vm::base_priv(addr) ^= (u8)value; break;
+			case 2: value = *(atomic_t<u16>*)vm::base_priv(addr) ^= (u16)value; break;
+			case 4: value = *(atomic_t<u32>*)vm::base_priv(addr) ^= (u32)value; break;
+			case 8: value = *(atomic_t<u64>*)vm::base_priv(addr) ^= (u64)value; break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, value, 0))
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_INC:
+		{
+			u64 value;
+
+			switch (d_size)
+			{
+			case 1: value = ++*(atomic_t<u8>*)vm::base_priv(addr); break;
+			case 2: value = ++*(atomic_t<u16>*)vm::base_priv(addr); break;
+			case 4: value = ++*(atomic_t<u32>*)vm::base_priv(addr); break;
+			case 8: value = ++*(atomic_t<u64>*)vm::base_priv(addr); break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, value, 1, false)) // ???
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_DEC:
+		{
+			u64 value;
+
+			switch (d_size)
+			{
+			case 1: value = --*(atomic_t<u8>*)vm::base_priv(addr); break;
+			case 2: value = --*(atomic_t<u16>*)vm::base_priv(addr); break;
+			case 4: value = --*(atomic_t<u32>*)vm::base_priv(addr); break;
+			case 8: value = --*(atomic_t<u64>*)vm::base_priv(addr); break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, value, -1, false)) // ???
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_ADD:
+		{
+			u64 value, new_value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: new_value = *(atomic_t<u8>*)vm::base_priv(addr) += (u8)value; break;
+			case 2: new_value = *(atomic_t<u16>*)vm::base_priv(addr) += (u16)value; break;
+			case 4: new_value = *(atomic_t<u32>*)vm::base_priv(addr) += (u32)value; break;
+			case 8: new_value = *(atomic_t<u64>*)vm::base_priv(addr) += (u64)value; break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, new_value, value)) // ???
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_ADC:
+		{
+			u64 value, new_value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: new_value = *(atomic_t<u8>*)vm::base_priv(addr) += (u8)(value + (EFLAGS(context) & 1)); break;
+			case 2: new_value = *(atomic_t<u16>*)vm::base_priv(addr) += (u16)(value + (EFLAGS(context) & 1)); break;
+			case 4: new_value = *(atomic_t<u32>*)vm::base_priv(addr) += (u32)(value + (EFLAGS(context) & 1)); break;
+			case 8: new_value = *(atomic_t<u64>*)vm::base_priv(addr) += (u64)(value + (EFLAGS(context) & 1)); break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, new_value, value + (EFLAGS(context) & 1))) // ???
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_SUB:
+		{
+			u64 value, new_value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: new_value = *(atomic_t<u8>*)vm::base_priv(addr) -= (u8)value; break;
+			case 2: new_value = *(atomic_t<u16>*)vm::base_priv(addr) -= (u16)value; break;
+			case 4: new_value = *(atomic_t<u32>*)vm::base_priv(addr) -= (u32)value; break;
+			case 8: new_value = *(atomic_t<u64>*)vm::base_priv(addr) -= (u64)value; break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, new_value, 0 - value)) // ???
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_SBB:
+		{
+			u64 value, new_value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: new_value = *(atomic_t<u8>*)vm::base_priv(addr) -= (u8)(value + (EFLAGS(context) & 1)); break;
+			case 2: new_value = *(atomic_t<u16>*)vm::base_priv(addr) -= (u16)(value + (EFLAGS(context) & 1)); break;
+			case 4: new_value = *(atomic_t<u32>*)vm::base_priv(addr) -= (u32)(value + (EFLAGS(context) & 1)); break;
+			case 8: new_value = *(atomic_t<u64>*)vm::base_priv(addr) -= (u64)(value + (EFLAGS(context) & 1)); break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, new_value, 0 - (value + (EFLAGS(context) & 1)))) // ???
 			{
 				return false;
 			}

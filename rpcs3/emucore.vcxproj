@@ -114,6 +114,12 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Emu\CPU\CPUTranslator.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Emu\PSP2\ARMv7Module.cpp" />
     <ClCompile Include="Emu\Cell\lv2\lv2.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_cond.cpp" />
@@ -424,6 +430,9 @@
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
+    <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
+    <ClInclude Include="Emu\Cell\PPUTranslator.h" />
+    <ClInclude Include="Emu\CPU\CPUTranslator.h" />
     <ClInclude Include="Emu\IPC.h" />
     <ClInclude Include="Emu\PSP2\ARMv7Callback.h" />
     <ClInclude Include="Emu\PSP2\ARMv7DisAsm.h" />

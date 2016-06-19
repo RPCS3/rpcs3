@@ -13,9 +13,7 @@ logs::channel sys_ppu_thread("sys_ppu_thread", logs::level::notice);
 
 void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 {
-	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
-
-	LV2_LOCK;
+	sys_ppu_thread.warning("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	// TODO: Should we really unlock mutexes?
 
@@ -29,13 +27,17 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 	//	}
 	//}
 
-	ppu.state += cpu_state::exit;
-	//ppu.handle_interrupt();
-
-	// Delete detached thread
-	if (!ppu.is_joinable)
 	{
-		idm::remove<PPUThread>(ppu.id);
+		LV2_LOCK;
+
+		ppu.state += cpu_state::exit;
+		//ppu.handle_interrupt();
+
+		// Delete detached thread
+		if (!ppu.is_joinable)
+		{
+			idm::remove<PPUThread>(ppu.id);
+		}
 	}
 
 	// Throw if this syscall was not called directly by the SC instruction (hack)

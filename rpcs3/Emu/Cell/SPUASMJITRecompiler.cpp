@@ -209,7 +209,7 @@ void spu_recompiler::compile(spu_function_t& f)
 	compiler.endFunc();
 
 	// Compile and store function address
-	f.compiled = asmjit_cast<spu_jit_func_t>(compiler.make());
+	f.compiled = asmjit_cast<decltype(f.compiled)>(compiler.make());
 
 	// Add ASMJIT logs
 	log += logger.getString();
