@@ -215,13 +215,42 @@ void GLGSRender::begin()
 	u8 clip_plane_4 = (clip_plane_control >> 16) & 0xf;
 	u8 clip_plane_5 = (clip_plane_control >> 20) & 0xf;
 
-	//TODO
-	if (__glcheck enable(clip_plane_0, GL_CLIP_DISTANCE0)) {}
-	if (__glcheck enable(clip_plane_1, GL_CLIP_DISTANCE1)) {}
-	if (__glcheck enable(clip_plane_2, GL_CLIP_DISTANCE2)) {}
-	if (__glcheck enable(clip_plane_3, GL_CLIP_DISTANCE3)) {}
-	if (__glcheck enable(clip_plane_4, GL_CLIP_DISTANCE4)) {}
-	if (__glcheck enable(clip_plane_5, GL_CLIP_DISTANCE5)) {}
+	auto set_clip_plane_control = [&](int index, u8 control)
+	{
+		int value = 0;
+		int location;
+		if (m_program->uniforms.has_location("uc_m" + std::to_string(index), &location))
+		{
+			switch (control)
+			{
+			default:
+				LOG_ERROR(RSX, "bad clip plane control (0x%x)", control);
+
+			case CELL_GCM_USER_CLIP_PLANE_DISABLE:
+				value = 0;
+				break;
+
+			case CELL_GCM_USER_CLIP_PLANE_ENABLE_GE:
+				value = 1;
+				break;
+
+			case CELL_GCM_USER_CLIP_PLANE_ENABLE_LT:
+				value = -1;
+				break;
+			}
+
+			__glcheck m_program->uniforms[location] = value;
+		}
+
+		__glcheck enable(value, GL_CLIP_DISTANCE0 + index);
+	};
+
+	set_clip_plane_control(0, clip_plane_0);
+	set_clip_plane_control(1, clip_plane_1);
+	set_clip_plane_control(2, clip_plane_2);
+	set_clip_plane_control(3, clip_plane_3);
+	set_clip_plane_control(4, clip_plane_4);
+	set_clip_plane_control(5, clip_plane_5);
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
 
