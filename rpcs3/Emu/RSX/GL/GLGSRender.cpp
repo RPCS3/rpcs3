@@ -685,42 +685,14 @@ bool GLGSRender::load_program()
 
 	m_uniform_ring_buffer.unmap();
 
-	/*
-	{
-		
-		m_uniform_ring_buffer.bind();
-
-		auto buffer_range = m_uniform_ring_buffer.allocate(
-			align(sizeof(glsl_matrix_buffer), m_uniform_buffer_offset_align) +
-			align(sizeof(glsl_vertex_constants_buffer), m_uniform_buffer_offset_align));
-
-		gl::allocator allocator{ m_uniform_ring_buffer, buffer_range };
-
-		matrix_buffer_range = allocator.allocate(sizeof(glsl_matrix_buffer), m_uniform_buffer_offset_align);
-		vertex_constants_buffer_range = allocator.allocate(sizeof(glsl_vertex_constants_buffer), m_uniform_buffer_offset_align);
-
-		glsl_matrix_buffer *buffer = allocator.get<glsl_matrix_buffer>(matrix_buffer_range);
-		fill_scale_offset_data(buffer, false);
-		fill_matrix_buffer(buffer);
-		fill_vertex_program_constants_data(allocator.get<glsl_vertex_constants_buffer>(vertex_constants_buffer_range));
-
-		if (contains_fragment_constants)
-		{
-			//fragment_constants_buffer_range = allocator.allocate(info.fragment_shader.decompiled->constants.size() * sizeof(f32) * 4);
-		}
-	}
-
-	if (contains_fragment_constants)
-	{
-		//m_uniform_ring_buffer.bind_range(2, fragment_constants_buffer_range);
-	}
-	*/
-
 	m_uniform_ring_buffer.bind_range(0, scale_offset_offset, sizeof(glsl_matrix_buffer));
 	m_uniform_ring_buffer.bind_range(1, vertex_constants_offset, sizeof(glsl_vertex_constants_buffer));
-	m_uniform_ring_buffer.bind_range(2, fragment_constants_offset, fragment_constants_size);
 
-	__glcheck 0;
+	if (fragment_constants_size)
+	{
+		m_uniform_ring_buffer.bind_range(2, fragment_constants_offset, fragment_constants_size);
+	}
+
 	return true;
 }
 
