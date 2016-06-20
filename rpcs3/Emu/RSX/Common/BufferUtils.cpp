@@ -453,6 +453,10 @@ void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
 	_mm_stream_si128((__m128i*)dst, vector);
 }
 
+void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w)
+{
+	stream_vector(dst, (u32&)x, (u32&)y, (u32&)z, (u32&)w);
+}
 void stream_vector_from_memory(void *dst, void *src)
 {
 	const __m128i &vector = _mm_loadu_si128((__m128i*)src);

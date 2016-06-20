@@ -247,17 +247,16 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 		result.code += "out vec4 wpos;\n";
 		
 		// TODO
-		if (1)
+		if (0)
 		{
 			finalize += "\tgl_Position = o0;\n";
-			finalize += "\tgl_Position = gl_Position * viewport_matrix;\n";
 		}
 		else
 		{
 			finalize +=
 				"	wpos = window_matrix * viewport_matrix * vec4(o0.xyz, 1.0);\n"
 				"	gl_Position = normalize_matrix * vec4(wpos.xyz, 1.0);\n"
-				"	gl_Position.w = wpos.w = o0.w;\n";
+				"	gl_Position.w = o0.w;\n";
 		}
 
 		for (std::size_t index = 0; index < 16; ++index)

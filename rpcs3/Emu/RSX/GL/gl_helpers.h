@@ -47,7 +47,7 @@ namespace gl
 			}
 		}
 	};
-#define __glcheck gl::__glcheck_impl_t{ __FILE__, __FUNCTION__, __LINE__ },
+#define __glcheck ::gl::__glcheck_impl_t{ __FILE__, __FUNCTION__, __LINE__ },
 #else
 #define __glcheck
 #endif
@@ -496,6 +496,11 @@ namespace gl
 			glBindBuffer((GLenum)target_, m_id);
 		}
 
+		void bind() const
+		{
+			bind(current_target());
+		}
+
 		target current_target() const
 		{
 			return m_target;
@@ -580,12 +585,9 @@ namespace gl
 		}
 	};
 
-	class ring_buffer
+	class ring_buffer : public buffer
 	{
-		buffer storage_buffer;
-		buffer::target m_target;
 		u32 m_data_loc = 0;
-		u32 m_size;
 
 		u32 m_mapped_block_size = 0;
 		u32 m_mapped_block_offset;
@@ -594,50 +596,39 @@ namespace gl
 		void *m_mapped_base = nullptr;
 
 	public:
-		ring_buffer(u32 initial_size, buffer::target target)
+		std::pair<void*, u32> alloc_and_map(u32 alloc_size)
 		{
-			storage_buffer.create();
-			storage_buffer.data(initial_size);
-			m_size = initial_size;
-			m_target = target;
-		}
+			alloc_size = align(alloc_size, 0x100);
 
-		void destroy()
-		{
-			storage_buffer.remove();
-		}
-
-		std::pair<void*, u32> alloc_and_map(u32 size)
-		{
-			size = (size + 255) & ~255;
-
-			glBindBuffer((GLenum)m_target, storage_buffer.id());
-			u32 limit = m_data_loc + size;
-			if (limit > m_size)
+			buffer::bind();
+			u32 limit = m_data_loc + alloc_size;
+			if (limit > buffer::size())
 			{
-				if (size > m_size)
-					m_size = size;
+				if (alloc_size > buffer::size())
+				{
+					buffer::data(alloc_size);
+				}
 
-				storage_buffer.data(m_size, nullptr);
 				m_data_loc = 0;
 			}
 
-			void *ptr = glMapBufferRange((GLenum)m_target, m_data_loc, size, GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+			void *ptr = glMapBufferRange((GLenum)buffer::current_target(), m_data_loc, alloc_size,
+				GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
 			u32 offset = m_data_loc;
-			m_data_loc += size;
+			m_data_loc += alloc_size;
 			return std::make_pair(ptr, offset);
 		}
 
 		void unmap()
 		{
-			glUnmapBuffer((GLenum)m_target);
+			buffer::unmap();
 			m_mapped_block_size = 0;
 			m_mapped_base = 0;
 		}
 
 		void reserve_and_map(u32 max_size)
 		{
-			max_size = (max_size + 4095) & ~4095;
+			max_size = align(max_size, 0x1000);
 			auto mapping = alloc_and_map(max_size);
 			m_mapped_base = mapping.first;
 			m_mapped_block_offset = mapping.second;
@@ -647,8 +638,7 @@ namespace gl
 
 		std::pair<void*, u32> alloc_from_reserve(u32 size, u32 alignment = 16)
 		{
-			alignment -= 1;
-			size = (size + alignment) & ~alignment;
+			size = align(size, alignment);
 
 			if (m_mapped_bytes_available < size || !m_mapped_base)
 			{
@@ -670,13 +660,13 @@ namespace gl
 			m_mapped_reserve_offset += size;
 			m_mapped_bytes_available -= size;
 
-			EXPECTS((offset & alignment) == 0);
+			EXPECTS((offset & (alignment - 1)) == 0);
 			return std::make_pair(ptr, offset);
 		}
 
-		buffer& get_buffer()
+		void bind_range(u32 index, u32 offset, u32 size) const
 		{
-			return storage_buffer;
+			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
 		}
 	};
 
