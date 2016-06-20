@@ -23,6 +23,7 @@ __Windows__
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
 * [Cmake 3.1.0+](http://www.cmake.org/download/) (required; add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (required; add to PATH)
+* [Vulkan SDK 1.0.5.0](https://vulkan.lunarg.com/signin) (optional; needed for debug layers)
 
 __Linux__
 * GCC 5.1+ or Clang 3.5.0+
