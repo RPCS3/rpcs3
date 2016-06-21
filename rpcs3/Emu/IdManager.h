@@ -80,20 +80,30 @@ namespace id_manager
 		static std::vector<typeinfo>& access();
 
 		// Add to the global list
-		static u32 add_type(typeinfo info);
+		static u32 add_type();
 
 	public:
-		void(*on_init)(void*);
-		void(*on_stop)(void*);
+		void(*on_init)(void*) = nullptr;
+		void(*on_stop)(void*) = nullptr;
 
 		// Get type index
 		template<typename T>
 		static inline u32 get_index()
 		{
-			// Forbid forward declarations (It'd be better to allow them sometimes but it seems too dangerous)
+			return registered<T>::index;
+		}
+
+		// Register functions
+		template<typename T>
+		static inline void update()
+		{
+			// Forbid forward declarations
 			static constexpr auto size = sizeof(std::conditional_t<std::is_void<T>::value, void*, T>);
 
-			return registered<T>::index;
+			auto& info = access()[get_index<T>()];
+
+			info.on_init = [](void* ptr) { return_ id_manager::on_init<T>::func(static_cast<T*>(ptr)); };
+			info.on_stop = [](void* ptr) { return_ id_manager::on_stop<T>::func(static_cast<T*>(ptr)); };
 		}
 
 		// Read all registered types
@@ -101,14 +111,16 @@ namespace id_manager
 		{
 			return access();
 		}
+
+		template<typename T>
+		static inline auto get_stop()
+		{
+			return access()[get_index<T>()].on_stop;
+		}
 	};
 
 	template<typename T>
-	const u32 typeinfo::registered<T>::index = typeinfo::add_type(
-	{
-		PURE_EXPR(id_manager::on_init<T>::func(static_cast<T*>(ptr)), void* ptr),
-		PURE_EXPR(id_manager::on_stop<T>::func(static_cast<T*>(ptr)), void* ptr),
-	});
+	const u32 typeinfo::registered<T>::index = typeinfo::add_type();
 }
 
 // Object manager for emulated process. Multiple objects of specified arbitrary type are given unique IDs.
@@ -198,6 +210,9 @@ class idm
 	template<typename T, typename F>
 	static map_type::pointer create_id(F&& provider)
 	{
+		id_manager::typeinfo::update<T>();
+		id_manager::typeinfo::update<typename id_manager::id_traits<T>::tag>();
+
 		writer_lock lock(g_mutex);
 
 		if (auto place = allocate_id(get_tag<T>(), id_manager::id_traits<T>::min, id_manager::id_traits<T>::max))
@@ -374,7 +389,7 @@ public:
 
 		if (LIKELY(ptr))
 		{
-			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
 		}
 
 		return ptr.operator bool();
@@ -388,7 +403,7 @@ public:
 
 		if (LIKELY(ptr))
 		{
-			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
 		}
 
 		return{ ptr, static_cast<T*>(ptr.get()) };
@@ -414,7 +429,7 @@ public:
 			g_map[get_type<T>()].erase(id);
 		}
 		
-		id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+		id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
 
 		return{ ptr, static_cast<T*>(ptr.get()) };
 	}
@@ -447,6 +462,8 @@ public:
 	template<typename T, typename Make = T, typename... Args>
 	static std::enable_if_t<std::is_constructible<Make, Args...>::value, std::shared_ptr<T>> make(Args&&... args)
 	{
+		id_manager::typeinfo::update<T>();
+
 		std::shared_ptr<T> ptr;
 		{
 			writer_lock lock(g_mutex);
@@ -471,6 +488,8 @@ public:
 	template<typename T, typename Make = T, typename... Args>
 	static std::enable_if_t<std::is_constructible<Make, Args...>::value, std::shared_ptr<T>> make_always(Args&&... args)
 	{
+		id_manager::typeinfo::update<T>();
+
 		std::shared_ptr<T> ptr;
 		std::shared_ptr<void> old;
 		{
@@ -495,6 +514,8 @@ public:
 	template<typename T, typename F>
 	static auto import(F&& provider) -> decltype(static_cast<std::shared_ptr<T>>(provider()))
 	{
+		id_manager::typeinfo::update<T>();
+
 		std::shared_ptr<T> ptr;
 		{
 			writer_lock lock(g_mutex);
@@ -519,6 +540,8 @@ public:
 	template<typename T, typename F>
 	static auto import_always(F&& provider) -> decltype(static_cast<std::shared_ptr<T>>(provider()))
 	{
+		id_manager::typeinfo::update<T>();
+
 		std::shared_ptr<T> ptr;
 		std::shared_ptr<void> old;
 		{
@@ -543,6 +566,8 @@ public:
 	template<typename T, typename Make = T, typename... Args>
 	static std::enable_if_t<std::is_constructible<Make, Args...>::value, std::shared_ptr<T>> get_always(Args&&... args)
 	{
+		id_manager::typeinfo::update<T>();
+
 		std::shared_ptr<T> ptr;
 		{
 			writer_lock lock(g_mutex);
@@ -591,7 +616,7 @@ public:
 		
 		if (ptr)
 		{
-			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
 		}
 
 		return ptr.operator bool();
@@ -605,7 +630,7 @@ public:
 
 		if (ptr)
 		{
-			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
 		}
 		
 		return{ ptr, static_cast<T*>(ptr.get()) };

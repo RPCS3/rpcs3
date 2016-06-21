@@ -15,11 +15,11 @@ std::vector<id_manager::typeinfo>& id_manager::typeinfo::access()
 	return list;
 }
 
-u32 id_manager::typeinfo::add_type(typeinfo info)
+u32 id_manager::typeinfo::add_type()
 {
 	auto& list = access();
 
-	list.emplace_back(info);
+	list.emplace_back();
 
 	return ::size32(list) - 1;
 }
