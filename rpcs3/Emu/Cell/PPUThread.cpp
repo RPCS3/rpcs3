@@ -535,16 +535,6 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		return vm::reservation_update(addr, &data, sizeof(data));
 	}
 
-	static bool sraw_carry(s32 arg, u64 shift)
-	{
-		return (arg < 0) && (shift > 31 || (arg >> shift << shift) != arg);
-	}
-
-	static bool srad_carry(s64 arg, u64 shift)
-	{
-		return (arg < 0) && (shift > 63 || (arg >> shift << shift) != arg);
-	}
-
 	static bool adde_carry(u64 a, u64 b, bool c)
 	{
 		return _addcarry_u64(c, a, b, nullptr) != 0;
@@ -704,8 +694,6 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		{ "__ldarx", (u64)&ldarx },
 		{ "__stwcx", (u64)&stwcx },
 		{ "__stdcx", (u64)&stdcx },
-		{ "__sraw_get_ca", (u64)&sraw_carry },
-		{ "__srad_get_ca", (u64)&srad_carry },
 		{ "__adde_get_ca", (u64)&adde_carry },
 		{ "__vexptefp", (u64)&sse_exp2_ps },
 		{ "__vlogefp", (u64)&sse_log2_ps },
@@ -761,7 +749,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		if (::mprotect(ptr, size, PROT_READ | PROT_WRITE | PROT_EXEC))
 #endif
 		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate code section '%s', error %u", sec_name.data(), GetLastError());
+			LOG_FATAL(GENERAL, "LLVM: Failed to allocate code section '%s'", sec_name.data());
 			return nullptr;
 		}
 
@@ -780,7 +768,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		if (::mprotect(ptr, size, PROT_READ | PROT_WRITE))
 #endif
 		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate data section '%s', error %u", sec_name.data(), GetLastError());
+			LOG_FATAL(GENERAL, "LLVM: Failed to allocate data section '%s'", sec_name.data());
 			return nullptr;
 		}
 		

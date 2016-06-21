@@ -609,8 +609,8 @@ void PPUTranslator::MTVSCR(ppu_opcode_t op)
 
 void PPUTranslator::VADDCUW(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi32, op.va, op.vb));
-	SetVr(op.vd, m_ir->CreateLShr(m_ir->CreateAdd(ab[0], ab[1]), 32));
+	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
+	SetVr(op.vd, ZExt(m_ir->CreateICmpULT(m_ir->CreateAdd(ab[0], ab[1]), ab[0]), GetType<u32[4]>()));
 }
 
 void PPUTranslator::VADDFP(ppu_opcode_t op)
@@ -867,10 +867,10 @@ void PPUTranslator::VCTSXS(ppu_opcode_t op)
 {
 	const auto b = GetVr(op.vb, VrType::vf);
 	const auto scaled = Scale(b, op.vuimm);
-	const auto is_nan = m_ir->CreateFCmpUNO(b, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0))); // NaN -> 0.0
+	//const auto is_nan = m_ir->CreateFCmpUNO(b, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0))); // NaN -> 0.0
 	const auto sat_l = m_ir->CreateFCmpOLT(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), -std::pow(2, 31)))); // TODO ???
 	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), std::pow(2, 31))));
-	const auto converted = m_ir->CreateFPToSI(FP_SAT_OP(sat_l, FP_SAT_OP(is_nan, scaled)), GetType<s32[4]>());
+	const auto converted = m_ir->CreateFPToSI(FP_SAT_OP(sat_l, scaled), GetType<s32[4]>());
 	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat(4, m_ir->getInt32(0x7fffffff)), converted));
 	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
 }
@@ -879,10 +879,10 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 {
 	const auto b = GetVr(op.vb, VrType::vf);
 	const auto scaled = Scale(b, op.vuimm);
-	const auto is_nan = m_ir->CreateFCmpUNO(b, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0))); // NaN -> 0.0
+	//const auto is_nan = m_ir->CreateFCmpUNO(b, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0))); // NaN -> 0.0
 	const auto sat_l = m_ir->CreateFCmpOLT(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0)));
 	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), std::pow(2, 32)))); // TODO ???
-	const auto converted = m_ir->CreateFPToUI(FP_SAT_OP(sat_l, FP_SAT_OP(is_nan, scaled)), GetType<u32[4]>());
+	const auto converted = m_ir->CreateFPToUI(FP_SAT_OP(sat_l, scaled), GetType<u32[4]>());
 	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat(4, m_ir->getInt32(0xffffffff)), converted));
 	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
 }
@@ -901,7 +901,6 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 {
 	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
 	SetVr(op.vd, m_ir->CreateFAdd(m_ir->CreateFMul(acb[0], acb[1]), acb[2]));
-	//SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.fmuladd.v4f32", acb[0], acb[1], acb[2]));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
@@ -1118,65 +1117,56 @@ void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 
 void PPUTranslator::VMULESB(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = SExt(Shuffle(GetVrs(VrType::vi8, op.va, op.vb), {}, { 0, 2, 4, 6, 8, 10, 12, 14 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(ab[0], 8), m_ir->CreateAShr(ab[1], 8)));
 }
 
 void PPUTranslator::VMULESH(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = SExt(Shuffle(GetVrs(VrType::vi16, op.va, op.vb), {}, { 0, 2, 4, 6 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(ab[0], 16), m_ir->CreateAShr(ab[1], 16)));
 }
 
 void PPUTranslator::VMULEUB(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = ZExt(Shuffle(GetVrs(VrType::vi8, op.va, op.vb), {}, { 0, 2, 4, 6, 8, 10, 12, 14 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(ab[0], 8), m_ir->CreateLShr(ab[1], 8)));
 }
 
 void PPUTranslator::VMULEUH(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = ZExt(Shuffle(GetVrs(VrType::vi16, op.va, op.vb), {}, { 0, 2, 4, 6 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(ab[0], 16), m_ir->CreateLShr(ab[1], 16)));
 }
 
 void PPUTranslator::VMULOSB(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = SExt(Shuffle(GetVrs(VrType::vi8, op.va, op.vb), {}, { 1, 3, 5, 7, 9, 11, 13, 15 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(m_ir->CreateShl(ab[0], 8), 8), m_ir->CreateAShr(m_ir->CreateShl(ab[1], 8), 8)));
 }
 
 void PPUTranslator::VMULOSH(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = SExt(Shuffle(GetVrs(VrType::vi16, op.va, op.vb), {}, { 1, 3, 5, 7 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(m_ir->CreateShl(ab[0], 16), 16), m_ir->CreateAShr(m_ir->CreateShl(ab[1], 16), 16)));
 }
 
 void PPUTranslator::VMULOUB(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = ZExt(Shuffle(GetVrs(VrType::vi8, op.va, op.vb), {}, { 1, 3, 5, 7, 9, 11, 13, 15 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(m_ir->CreateShl(ab[0], 8), 8), m_ir->CreateLShr(m_ir->CreateShl(ab[1], 8), 8)));
 }
 
 void PPUTranslator::VMULOUH(ppu_opcode_t op)
 {
-	// TODO
-	const auto ab = ZExt(Shuffle(GetVrs(VrType::vi16, op.va, op.vb), {}, { 1, 3, 5, 7 }));
-	SetVr(op.vd, m_ir->CreateMul(ab[0], ab[1]));
+	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
+	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(m_ir->CreateShl(ab[0], 16), 16), m_ir->CreateLShr(m_ir->CreateShl(ab[1], 16), 16)));
 }
 
 void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 {
 	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
 	SetVr(op.vd, m_ir->CreateFSub(acb[2], m_ir->CreateFMul(acb[0], acb[1])));
-	//SetVr(op.vd, m_ir->CreateFNeg(Call(GetType<f32[4]>(), "llvm.fmuladd.v4f32", acb[0], acb[1], m_ir->CreateFNeg(acb[2]))));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
@@ -2445,7 +2435,6 @@ void PPUTranslator::LVEWX(ppu_opcode_t op)
 	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -4);
 	const auto pos = m_ir->CreateLShr(m_ir->CreateXor(m_ir->CreateAnd(addr, 15), m_is_be ? 0 : 15), 2);
 	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(4, m_ir->getInt32(0)), ReadMemory(addr, GetType<u32>(), true, 4), pos));
-	//Call(GetType<void>(), "__trace", m_ir->getInt64(0));
 }
 
 void PPUTranslator::MULHD(ppu_opcode_t op)
@@ -2481,7 +2470,8 @@ void PPUTranslator::LBZX(ppu_opcode_t op)
 
 void PPUTranslator::LVX(ppu_opcode_t op)
 {
-	SetVr(op.vd, ReadMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -16), GetType<u32[4]>(), true, 16));
+	const auto data = ReadMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -16), GetType<u8[16]>(), m_is_be, 16);
+	SetVr(op.vd, m_is_be ? data : Shuffle(data, nullptr, { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }));
 }
 
 void PPUTranslator::NEG(ppu_opcode_t op)
@@ -2520,7 +2510,7 @@ void PPUTranslator::SUBFE(ppu_opcode_t op)
 	const auto c = GetCarry();
 	const auto result = m_ir->CreateAdd(m_ir->CreateAdd(a, b), ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, result);
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, b, c));
+	SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, b, c)); // TODO
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__subfe_get_ov", a, b, c));
 }
@@ -2532,7 +2522,7 @@ void PPUTranslator::ADDE(ppu_opcode_t op)
 	const auto c = GetCarry();
 	const auto result = m_ir->CreateAdd(m_ir->CreateAdd(a, b), ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, result);
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, b, c));
+	SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, b, c)); // TODO
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__adde_get_ov", a, b, c));
 }
@@ -2648,7 +2638,9 @@ void PPUTranslator::STBX(ppu_opcode_t op)
 
 void PPUTranslator::STVX(ppu_opcode_t op)
 {
-	WriteMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -16), GetVr(op.vs, VrType::vi32), true, 16);
+	const auto value = GetVr(op.vs, VrType::vi8);
+	const auto data = m_is_be ? value : Shuffle(value, nullptr, { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 });
+	WriteMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -16), data, m_is_be, 16);
 }
 
 void PPUTranslator::SUBFME(ppu_opcode_t op)
@@ -3084,23 +3076,22 @@ void PPUTranslator::SRAW(ppu_opcode_t op)
 {
 	const auto shift_num = m_ir->CreateAnd(GetGpr(op.rb), 0x3f);
 	const auto shift_arg = GetGpr(op.rs, 32);
-	const auto result = m_ir->CreateAShr(SExt(shift_arg), shift_num);
+	const auto arg_ext = SExt(shift_arg);
+	const auto result = m_ir->CreateAShr(arg_ext, shift_num);
 	SetGpr(op.ra, result);
-	//const auto carry_mask = m_ir->CreateNot(m_ir->CreateShl(m_ir->getInt64(-1), shift_num));
-	//SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(m_ir->CreateAnd(shift_arg, carry_mask), m_ir->getInt64(0))));
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__sraw_get_ca", shift_arg, shift_num));
+	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt32(0)), m_ir->CreateICmpNE(arg_ext, m_ir->CreateShl(result, shift_num))));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::SRAD(ppu_opcode_t op)
 {
-	const auto shift_num = m_ir->CreateAnd(GetGpr(op.rb), 0x7f);
+	const auto shift_num = ZExt(m_ir->CreateAnd(GetGpr(op.rb), 0x7f)); // i128
 	const auto shift_arg = GetGpr(op.rs);
-	const auto result = Trunc(m_ir->CreateAShr(SExt(shift_arg), ZExt(shift_num)));
+	const auto arg_ext = SExt(shift_arg); // i128
+	const auto res_128 = m_ir->CreateAShr(arg_ext, shift_num); // i128
+	const auto result = Trunc(res_128);
 	SetGpr(op.ra, result);
-	//const auto carry_mask = m_ir->CreateNot(m_ir->CreateShl(m_ir->getInt64(-1), shift_num));
-	//SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateOr(overshift, m_ir->CreateICmpNE(m_ir->CreateAnd(shift_arg, carry_mask), m_ir->getInt64(0)))));
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__srad_get_ca", shift_arg, shift_num));
+	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(arg_ext, m_ir->CreateShl(result, shift_num))));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
@@ -3116,10 +3107,10 @@ void PPUTranslator::DSS(ppu_opcode_t op)
 void PPUTranslator::SRAWI(ppu_opcode_t op)
 {
 	const auto shift_arg = GetGpr(op.rs, 32);
-	const auto result = m_ir->CreateAShr(SExt(shift_arg), op.sh32);
+	const auto res_32 = m_ir->CreateAShr(shift_arg, op.sh32);
+	const auto result = SExt(res_32);
 	SetGpr(op.ra, result);
-	//SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt32(0)), m_ir->CreateICmpNE(m_ir->CreateAnd(shift_arg, ~(~0ull << op.sh32)), m_ir->getInt32(0))));
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__sraw_get_ca", shift_arg, m_ir->getInt64(op.sh32)));
+	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt32(0)), m_ir->CreateICmpNE(shift_arg, m_ir->CreateShl(res_32, op.sh32))));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
@@ -3128,8 +3119,7 @@ void PPUTranslator::SRADI(ppu_opcode_t op)
 	const auto shift_arg = GetGpr(op.rs);
 	const auto result = m_ir->CreateAShr(shift_arg, op.sh64);
 	SetGpr(op.ra, result);
-	//SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(m_ir->CreateAnd(shift_arg, ~(~0ull << op.sh64)), m_ir->getInt64(0))));
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__srad_get_ca", shift_arg, m_ir->getInt64(op.sh32)));
+	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(shift_arg, m_ir->CreateShl(result, op.sh64))));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 

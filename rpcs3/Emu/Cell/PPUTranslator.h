@@ -294,13 +294,6 @@ public:
 	// Create shuffle instruction with constant args
 	llvm::Value* Shuffle(llvm::Value* left, llvm::Value* right, std::initializer_list<u32> indices);
 
-	template<std::size_t N>
-	std::array<llvm::Value*, N> Shuffle(std::array<llvm::Value*, N> left, std::array<llvm::Value*, N> right, std::initializer_list<u32> indices)
-	{
-		for (std::size_t i = 0; i < N; i++) left[i] = Shuffle(left[i], right[i], indices);
-		return left;
-	}
-
 	// Create sign extension (with double size if type is nullptr)
 	llvm::Value* SExt(llvm::Value* value, llvm::Type* = nullptr);
 
@@ -404,6 +397,12 @@ public:
 	llvm::Type* GetType()
 	{
 		return TypeGen<T>::get(m_context);
+	}
+
+	template<typename T>
+	llvm::PointerType* GetPtrType()
+	{
+		return TypeGen<T>::get(m_context)->getPointerTo();
 	}
 
 	// Get an undefined value with specified type
