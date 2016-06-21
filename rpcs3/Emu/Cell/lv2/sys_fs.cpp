@@ -140,7 +140,8 @@ s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	*nread = file->file.read(buf.get_ptr(), nbytes);
+	std::unique_ptr<u8[]> local_buf(new u8[nbytes]);
+	std::memcpy(buf.get_ptr(), local_buf.get(), *nread = file->file.read(local_buf.get(), nbytes));
 
 	return CELL_OK;
 }
@@ -160,7 +161,9 @@ s32 sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite)
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	*nwrite = file->file.write(buf.get_ptr(), nbytes);
+	std::unique_ptr<u8[]> local_buf(new u8[nbytes]);
+	std::memcpy(local_buf.get(), buf.get_ptr(), nbytes);
+	*nwrite = file->file.write(local_buf.get(), nbytes);
 
 	return CELL_OK;
 }
