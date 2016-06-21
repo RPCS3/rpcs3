@@ -152,7 +152,7 @@ class PPUTranslator final //: public CPUTranslator
 	// Memory base
 	llvm::Value* m_base;
 
-	// Thread context (obtained by __context)
+	// Thread context
 	llvm::Value* m_thread;
 
 	// Thread context struct
@@ -432,6 +432,9 @@ public:
 
 	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, u64 base, u64 entry);
 	~PPUTranslator();
+
+	// Get thread context struct type
+	llvm::Type* GetContextType();
 
 	// Add function
 	void AddFunction(u64 addr, llvm::Function* func, llvm::FunctionType* type = nullptr);

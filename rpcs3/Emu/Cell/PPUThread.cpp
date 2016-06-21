@@ -33,7 +33,7 @@ struct ppu_addr_hash
 	}
 };
 
-static std::unordered_map<u32, void(*)(), ppu_addr_hash> s_ppu_compiled;
+static std::unordered_map<u32, void(*)(PPUThread&), ppu_addr_hash> s_ppu_compiled;
 
 
 
@@ -109,7 +109,7 @@ void PPUThread::cpu_task()
 
 		if (found != s_ppu_compiled.end())
 		{
-			return found->second();
+			return found->second(*this);
 		}
 	}
 
@@ -430,7 +430,7 @@ static std::vector<RUNTIME_FUNCTION> s_unwind;
 
 struct MemoryManager final : llvm::RTDyldMemoryManager
 {
-	static PPUThread* context(u64 addr)
+	static PPUThread* context(u64 addr) // Unused
 	{
 		//trace(addr);
 		return static_cast<PPUThread*>(get_current_cpu_thread());
@@ -447,16 +447,14 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 	}
 
-	static void hack(u32 index)
+	static void hlecall(PPUThread& ppu, u32 index)
 	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
 		ppu_execute_function(ppu, index);
 		if (ppu.state.load() && ppu.check_status()) throw cpu_state::ret; // Temporarily
 	}
 
-	static void syscall(u64 code)
+	static void syscall(PPUThread& ppu, u64 code)
 	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
 		ppu_execute_syscall(ppu, code);
 		if (ppu.state.load() && ppu.check_status()) throw cpu_state::ret; // Temporarily
 	}
@@ -466,13 +464,13 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		return (u32)get_timebased_time();
 	}
 
-	static void call(u32 addr)
+	static void call(PPUThread& ppu, u32 addr)
 	{
 		const auto found = s_ppu_compiled.find(addr);
 
 		if (found != s_ppu_compiled.end())
 		{
-			return found->second();
+			return found->second(ppu);
 		}
 
 		const auto op = vm::read32(addr).value();
@@ -481,7 +479,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		// Allow HLE callbacks without compiling them
 		if (itype == ppu_itype::HACK && vm::read32(addr + 4) == ppu_instructions::BLR())
 		{
-			return hack(op & 0x3ffffff);
+			return hlecall(ppu, op & 0x3ffffff);
 		}
 
 		trap(addr);
@@ -683,10 +681,9 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 	std::unordered_map<std::string, u64> table
 	{
 		{ "__memory", (u64)vm::base(0) },
-		{ "__context", (u64)&context },
 		{ "__trap", (u64)&trap },
 		{ "__trace", (u64)&trace },
-		{ "__hlecall", (u64)&hack },
+		{ "__hlecall", (u64)&hlecall },
 		{ "__syscall", (u64)&syscall },
 		{ "__get_tbl", (u64)&tbl },
 		{ "__call", (u64)&call },
@@ -839,14 +836,10 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 
 	using namespace llvm;
 
+	// Initialization
 	InitializeNativeTarget();
 	InitializeNativeTargetAsmPrinter();
 	LLVMLinkInMCJIT();
-
-	// Initialization
-	const auto _pi8 = Type::getInt8PtrTy(g_context);
-	const auto _void = Type::getVoidTy(g_context);
-	const auto _func = FunctionType::get(Type::getVoidTy(g_context), false);
 
 	// Create LLVM module
 	std::unique_ptr<Module> module = std::make_unique<Module>(name, g_context);
@@ -856,6 +849,10 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	
 	// Initialize translator
 	std::unique_ptr<PPUTranslator> translator = std::make_unique<PPUTranslator>(g_context, module.get(), 0, entry);
+
+	// Define some types
+	const auto _void = Type::getVoidTy(g_context);
+	const auto _func = FunctionType::get(_void, { translator->GetContextType()->getPointerTo() }, false);
 
 	// Initialize function list
 	for (const auto& info : funcs)
@@ -971,7 +968,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 		if (info.second)
 		{
 			const std::uintptr_t link = engine->getFunctionAddress(fmt::format("__sub_%x", info.first));
-			s_ppu_compiled.emplace(info.first, (void(*)())link);
+			s_ppu_compiled.emplace(info.first, (void(*)(PPUThread&))link);
 
 			LOG_NOTICE(PPU, "** Function __sub_%x -> 0x%llx (addr=0x%x, size=0x%x)", info.first, link, info.first, info.second);
 		}
