@@ -14,8 +14,6 @@
 class GLGSRender : public GSRender
 {
 private:
-	GLFragmentProgram m_fragment_prog;
-	GLVertexProgram m_vertex_prog;
 
 	rsx::gl::texture m_gl_textures[rsx::limits::textures_count];
 	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
@@ -28,9 +26,9 @@ private:
 	gl::gl_texture_cache m_gl_texture_cache;
 
 	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
-	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
-	std::unique_ptr<gl::ring_buffer> m_uniform_ring_buffer;
-	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
+	gl::ring_buffer m_attrib_ring_buffer;
+	gl::ring_buffer m_uniform_ring_buffer;
+	gl::ring_buffer m_index_ring_buffer;
 
 	u32 m_draw_calls = 0;
 	u32 m_begin_time = 0;
@@ -38,12 +36,12 @@ private:
 	u32 m_vertex_upload_time = 0;
 	
 	GLint m_min_texbuffer_alignment = 256;
+	GLint m_uniform_buffer_offset_align = 256;
 
 public:
 	gl::fbo draw_fbo;
 
 private:
-	GLProgramBuffer m_prog_buffer;
 
 	//buffer
 	gl::fbo m_flip_fbo;

@@ -203,14 +203,14 @@ u32 GLGSRender::set_vertex_buffer()
 		vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
 		u32 block_sz = vertex_draw_count * type_size;
 		
-		auto mapping = m_index_ring_buffer->alloc_and_map(block_sz);
+		auto mapping = m_index_ring_buffer.alloc_and_map(block_sz);
 		void *ptr = mapping.first;
 		offset_in_index_buffer = mapping.second;
 
 		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), gsl::narrow<u32>(block_sz) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, type, draw_mode, first_count_commands);
 
-		m_index_ring_buffer->unmap();
+		m_index_ring_buffer.unmap();
 	}
 
 	if (draw_command == rsx::draw_command::inlined_array)
@@ -228,14 +228,14 @@ u32 GLGSRender::set_vertex_buffer()
 		}
 
 		vertex_draw_count = (u32)(inline_vertex_array.size() * sizeof(u32)) / stride;
-		m_attrib_ring_buffer->reserve_and_map(vertex_draw_count * max_vertex_attrib_size);
+		m_attrib_ring_buffer.reserve_and_map(vertex_draw_count * max_vertex_attrib_size);
 
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			auto &vertex_info = vertex_arrays_info[index];
 
 			int location;
-			if (!m_program->uniforms.has_location(reg_table[index] + "_buffer", &location))
+			if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[index] + "_buffer", &location))
 				continue;
 
 			if (!vertex_info.size) // disabled, bind a null sampler
@@ -253,7 +253,7 @@ u32 GLGSRender::set_vertex_buffer()
 			auto &texture = m_gl_attrib_buffers[index];
 
 			u8 *src = reinterpret_cast<u8*>(inline_vertex_array.data());
-			auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
+			auto mapping = m_attrib_ring_buffer.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 			u8 *dst = static_cast<u8*>(mapping.first);
 
 			src += offsets[index];
@@ -276,13 +276,13 @@ u32 GLGSRender::set_vertex_buffer()
 				dst += element_size;
 			}
 
-			texture.copy_from(m_attrib_ring_buffer->get_buffer(), gl_type, mapping.second, data_size);
+			texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
 
 			//Link texture to uniform
 			m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
 			if (!is_primitive_native(draw_mode))
 			{
-				std::tie(vertex_draw_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw({ { 0, vertex_draw_count } }, draw_mode, *m_index_ring_buffer);
+				std::tie(vertex_draw_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw({ { 0, vertex_draw_count } }, draw_mode, m_index_ring_buffer);
 			}
 		}
 	}
@@ -298,12 +298,12 @@ u32 GLGSRender::set_vertex_buffer()
 	if (draw_command == rsx::draw_command::array || draw_command == rsx::draw_command::indexed)
 	{
 		u32 verts_allocated = std::max(vertex_draw_count, max_index + 1);
-		m_attrib_ring_buffer->reserve_and_map(verts_allocated * max_vertex_attrib_size);
+		m_attrib_ring_buffer.reserve_and_map(verts_allocated * max_vertex_attrib_size);
 
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			int location;
-			if (!m_program->uniforms.has_location(reg_table[index] + "_buffer", &location))
+			if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[index] + "_buffer", &location))
 				continue;
 
 			bool enabled = !!(input_mask & (1 << index));
@@ -337,7 +337,7 @@ u32 GLGSRender::set_vertex_buffer()
 
 				if (draw_command == rsx::draw_command::array)
 				{
-					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
+					auto mapping = m_attrib_ring_buffer.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 					gsl::byte *dst = static_cast<gsl::byte*>(mapping.first);
 					buffer_offset = mapping.second;
 
@@ -354,7 +354,7 @@ u32 GLGSRender::set_vertex_buffer()
 				if (draw_command == rsx::draw_command::indexed)
 				{
 					data_size = (max_index + 1) * element_size;
-					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
+					auto mapping = m_attrib_ring_buffer.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 					gsl::byte *dst = static_cast<gsl::byte*>(mapping.first);
 					buffer_offset = mapping.second;
 
@@ -364,7 +364,7 @@ u32 GLGSRender::set_vertex_buffer()
 					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride, rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size));
 				}
 
-				texture.copy_from(m_attrib_ring_buffer->get_buffer(), gl_type, buffer_offset, data_size);
+				texture.copy_from(m_attrib_ring_buffer, gl_type, buffer_offset, data_size);
 
 				//Link texture to uniform
 				m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
@@ -385,11 +385,11 @@ u32 GLGSRender::set_vertex_buffer()
 
 					auto &texture = m_gl_attrib_buffers[index];
 
-					auto mapping = m_attrib_ring_buffer->alloc_from_reserve(data_size, m_min_texbuffer_alignment);
+					auto mapping = m_attrib_ring_buffer.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 					u8 *dst = static_cast<u8*>(mapping.first);
 
 					memcpy(dst, vertex_data.data(), data_size);
-					texture.copy_from(m_attrib_ring_buffer->get_buffer(), gl_type, mapping.second, data_size);
+					texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
 
 					//Link texture to uniform
 					m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
@@ -411,11 +411,11 @@ u32 GLGSRender::set_vertex_buffer()
 
 		if (draw_command == rsx::draw_command::array && !is_primitive_native(draw_mode))
 		{
-			std::tie(vertex_draw_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(first_count_commands, draw_mode, *m_index_ring_buffer);
+			std::tie(vertex_draw_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(first_count_commands, draw_mode, m_index_ring_buffer);
 		}
 	}
 
-	m_attrib_ring_buffer->unmap();
+	m_attrib_ring_buffer.unmap();
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 

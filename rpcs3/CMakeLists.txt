@@ -128,6 +128,8 @@ ${LLVM_INCLUDE_DIRS}
 # Includes 3rdparty stuff that isn't included yet
 "${RPCS3_SRC_DIR}/../3rdparty/GL"
 "${RPCS3_SRC_DIR}/../3rdparty/stblib"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 )
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2_7") # Slimmed down version of minidx9 for XAudio2_7 only
@@ -204,6 +206,8 @@ endif()
 if(LLVM_FOUND)
 	target_link_libraries(rpcs3  ${LLVM_LIBS})
 endif()
+
+target_link_libraries(rpcs3 rsx_decompiler shader_code)
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 cotire(rpcs3)

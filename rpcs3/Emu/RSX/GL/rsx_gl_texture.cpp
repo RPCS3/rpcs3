@@ -296,14 +296,14 @@ namespace rsx
 				int mip_level = 0;
 				if (dim == rsx::texture_dimension_extended::texture_dimension_1d)
 				{
-					glTexStorage1D(GL_TEXTURE_1D, mipmap_count, get_sized_internal_format(format), width);
+					__glcheck glTexStorage1D(GL_TEXTURE_1D, mipmap_count, get_sized_internal_format(format), width);
 					if (!is_compressed_format(format))
 					{
 						const auto &format_type = get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
-							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							__glcheck glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
 						}
 					}
 					else
@@ -311,7 +311,7 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
 						}
 					}
 					return;
@@ -319,14 +319,14 @@ namespace rsx
 
 				if (dim == rsx::texture_dimension_extended::texture_dimension_2d)
 				{
-					glTexStorage2D(GL_TEXTURE_2D, mipmap_count, get_sized_internal_format(format), width, height);
+					__glcheck glTexStorage2D(GL_TEXTURE_2D, mipmap_count, get_sized_internal_format(format), width, height);
 					if (!is_compressed_format(format))
 					{
 						const auto &format_type = get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
-							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							__glcheck glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
 						}
 					}
 					else
@@ -334,7 +334,7 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
 						}
 					}
 					return;
@@ -342,7 +342,7 @@ namespace rsx
 
 				if (dim == rsx::texture_dimension_extended::texture_dimension_cubemap)
 				{
-					glTexStorage2D(GL_TEXTURE_CUBE_MAP, mipmap_count, get_sized_internal_format(format), width, height);
+					__glcheck glTexStorage2D(GL_TEXTURE_CUBE_MAP, mipmap_count, get_sized_internal_format(format), width, height);
 					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
 					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
 					// mip_level % mipmap_per_layer will always be equal to mip_level
@@ -352,7 +352,7 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+							__glcheck glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
 							mip_level++;
 						}
 					}
@@ -361,7 +361,7 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
 							mip_level++;
 						}
 					}
@@ -370,14 +370,14 @@ namespace rsx
 
 				if (dim == rsx::texture_dimension_extended::texture_dimension_3d)
 				{
-					glTexStorage3D(GL_TEXTURE_3D, mipmap_count, get_sized_internal_format(format), width, height, depth);
+					__glcheck glTexStorage3D(GL_TEXTURE_3D, mipmap_count, get_sized_internal_format(format), width, height, depth);
 					if (!is_compressed_format(format))
 					{
 						const auto &format_type = get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
-							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							__glcheck glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
 						}
 					}
 					else
@@ -385,7 +385,7 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, get_sized_internal_format(format), size, layout.data.data());
 						}
 					}
 					return;
@@ -406,13 +406,39 @@ namespace rsx
 
 		void texture::init(int index, rsx::texture& tex)
 		{
+			switch (tex.dimension())
+			{
+			case rsx::texture_dimension::dimension3d:
+				if (!tex.depth())
+				{
+					return;
+				}
+
+			case rsx::texture_dimension::dimension2d:
+				if (!tex.height())
+				{
+					return;
+				}
+
+			case rsx::texture_dimension::dimension1d:
+				if (!tex.width())
+				{
+					return;
+				}
+
+				break;
+			}
+
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 
 			//We can't re-use texture handles if using immutable storage
-			if (m_id) remove();
-			create();
+			if (m_id)
+			{
+				__glcheck remove();
+			}
+			__glcheck create();
 
-			glActiveTexture(GL_TEXTURE0 + index);
+			__glcheck glActiveTexture(GL_TEXTURE0 + index);
 			bind();
 
 			u32 full_format = tex.format();
@@ -420,8 +446,8 @@ namespace rsx
 			u32 format = full_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			bool is_swizzled = !!(~full_format & CELL_GCM_TEXTURE_LN);
 
-			::gl::pixel_pack_settings().apply();
-			::gl::pixel_unpack_settings().apply();
+			__glcheck ::gl::pixel_pack_settings().apply();
+			__glcheck ::gl::pixel_unpack_settings().apply();
 
 			u32 aligned_pitch = tex.pitch();
 
@@ -429,8 +455,9 @@ namespace rsx
 			std::vector<gsl::byte> data_upload_buf(texture_data_sz);
 			u32 block_sz = get_pitch_modifier(format);
 
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-			create_and_fill_texture(tex.get_extended_texture_dimension(), tex.get_exact_mipmap_count(), format, tex.width(), tex.height(), tex.depth(), get_subresources_layout(tex), is_swizzled, data_upload_buf);
+			__glcheck glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+			__glcheck create_and_fill_texture(tex.get_extended_texture_dimension(), tex.get_exact_mipmap_count(), format, tex.width(), tex.height(), tex.depth(), get_subresources_layout(tex), is_swizzled, data_upload_buf);
 
 			const std::array<GLenum, 4>& glRemap = get_swizzle_remap(format);
 
@@ -443,29 +470,28 @@ namespace rsx
 				u8 remap_g = (tex.remap() >> 4) & 0x3;
 				u8 remap_b = (tex.remap() >> 6) & 0x3;
 
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
 			}
 			else
 			{
-
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
-				glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
 			}
 
-			glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
-			glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
-			glTexParameteri(m_target, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
 
-			glTexParameteri(m_target, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.zfunc()]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.zfunc()]);
 
-			glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.bias());
-			glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-			glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+			__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 
 			int min_filter = gl_tex_min_filter(tex.min_filter());
 			
@@ -478,9 +504,9 @@ namespace rsx
 				}
 			}
 
-			glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
-			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
-			glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
+			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
 		}
 
 		void texture::bind()
