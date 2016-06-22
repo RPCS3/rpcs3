@@ -307,7 +307,7 @@ void GLGSRender::end()
 
 	//setup textures
 	{
-		int texture_index = 0;
+		//int texture_index = 0;
 		for (int i = 0; i < rsx::limits::textures_count; ++i)
 		{
 			int location;
@@ -322,10 +322,13 @@ void GLGSRender::end()
 					continue;
 				}
 
-				__glcheck glProgramUniform1i(m_program->id(), location, i);
-				__glcheck m_gl_textures[i].init(i, textures[i]);
+				m_gl_textures[i].set_target(get_gl_target_for_texture(textures[i]));
+				__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i], m_rtts);
 
-				texture_index++;
+				__glcheck glProgramUniform1i(m_program->id(), location, i);
+				//__glcheck m_gl_textures[i].init(i, textures[i]);
+
+				//texture_index++;
 
 				if (m_program->uniforms.has_location("texture" + std::to_string(i) + "_cm", &location))
 				{
