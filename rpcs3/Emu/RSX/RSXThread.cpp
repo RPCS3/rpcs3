@@ -751,8 +751,39 @@ namespace rsx
 
 		u32 fp_info = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 
+		result.state.input_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
 		result.state.output_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
 		result.state.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
+		result.state.divider_op = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
+		 
+		result.state.is_array = 0;
+		result.state.is_int = 0;
+
+		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		{
+			bool is_int = false;
+
+			if (vertex_arrays_info[index].size > 0)
+			{
+				result.state.is_array |= 1 << index;
+				is_int = is_int_type(vertex_arrays_info[index].type);
+				result.state.frequency[index] = vertex_arrays_info[index].frequency;
+			}
+			else if (register_vertex_info[index].size > 0)
+			{
+				is_int = is_int_type(register_vertex_info[index].type);
+				result.state.frequency[index] = register_vertex_info[index].frequency;
+			}
+			else
+			{
+				result.state.frequency[index] = 0;
+			}
+
+			if (is_int)
+			{
+				result.state.is_int |= 1 << index;
+			}
+		}
 
 		result.vertex_shader.ucode_ptr = transform_program;
 		result.vertex_shader.offset = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
