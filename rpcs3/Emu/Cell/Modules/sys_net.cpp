@@ -541,13 +541,13 @@ namespace sys_net
 			case OP_SO_SNDLOWAT:
 			{
 				u32 sendlowmark = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDTIMEO, (char*)&sendlowmark, sizeof(sendlowmark));
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDLOWAT, (char*)&sendlowmark, sizeof(sendlowmark));
 				break;
 			}
 			case OP_SO_RCVLOWAT:
 			{
 				u32 recvlowmark = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVTIMEO, (char*)&recvlowmark, sizeof(recvlowmark));
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVLOWAT, (char*)&recvlowmark, sizeof(recvlowmark));
 				break;
 			}
 			default:
