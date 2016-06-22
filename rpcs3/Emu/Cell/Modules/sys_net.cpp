@@ -514,7 +514,42 @@ namespace sys_net
 				ret = ioctlsocket(sock->s, FIONBIO, &mode);
 				break;
 			}
-
+			case OP_SO_SNDBUF:
+			{
+				u32 sendbuff = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDBUF, (const char*)&sendbuff, sizeof(sendbuff));
+				break;
+			}
+			case OP_SO_RCVBUF:
+			{
+				u32 recvbuff = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVBUF, (const char*)&recvbuff, sizeof(recvbuff));
+				break;
+			}
+			case OP_SO_SNDTIMEO:
+			{
+				u32 sendtimeout = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDTIMEO, (char*)&sendtimeout, sizeof(sendtimeout));
+				break;
+			}
+			case OP_SO_RCVTIMEO:
+			{
+				u32 recvtimeout = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVTIMEO, (char*)&recvtimeout, sizeof(recvtimeout));
+				break;
+			}
+			case OP_SO_SNDLOWAT:
+			{
+				u32 sendlowmark = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDTIMEO, (char*)&sendlowmark, sizeof(sendlowmark));
+				break;
+			}
+			case OP_SO_RCVLOWAT:
+			{
+				u32 recvlowmark = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVTIMEO, (char*)&recvlowmark, sizeof(recvlowmark));
+				break;
+			}
 			default:
 				throw EXCEPTION("Unknown socket option for Win32: 0x%x", optname);
 			}
