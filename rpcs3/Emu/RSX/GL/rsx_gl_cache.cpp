@@ -259,17 +259,65 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 				"	gl_Position.w = o0.w;\n";
 		}
 
-		for (std::size_t index = 0; index < 16; ++index)
 		{
-			if (shader.input_attributes & (1 << index))
-			{
-				// result.code += "in vec4 " + rsx::vertex_program::input_attrib_names[index] + ";\n";
+			std::string code_end;
 
-				// TODO: use actual information about vertex inputs
-				result.code += "layout(location=" + std::to_string(location++) + ") uniform samplerBuffer " + rsx::vertex_program::input_attrib_names[index] + "_buffer" + ";\n";
-				result.code += "vec4 " + rsx::vertex_program::input_attrib_names[index]
-					+ " = texelFetch(" + rsx::vertex_program::input_attrib_names[index] + "_buffer, gl_VertexID).rgba;\n";
+			for (std::size_t index = 0; index < 16; ++index)
+			{
+				if (shader.input_attributes & (1 << index))
+				{
+					// result.code += "in vec4 " + rsx::vertex_program::input_attrib_names[index] + ";\n";
+
+					// TODO: use actual information about vertex inputs
+					const std::string &attrib_name = rsx::vertex_program::input_attrib_names[index];
+
+					result.code += "uniform ";
+
+					if (state.is_int & (1 << index))
+					{
+						result.code += "isamplerBuffer ";
+						code_end += "ivec4 ";
+					}
+					else
+					{
+						result.code += "samplerBuffer ";
+						code_end += "vec4 ";
+					}
+
+					result.code += attrib_name + "_buffer" + ";\n";
+
+					code_end += attrib_name + ";\n";
+
+					std::string vertex_id;
+
+					if (state.is_array & (1 << index))
+					{
+						vertex_id = "gl_VertexID";
+
+						if (state.frequency[index] > 1)
+						{
+							if (state.divider_op & (1 << index))
+							{
+								vertex_id += " % ";
+							}
+							else
+							{
+								vertex_id += " / ";
+							}
+
+							vertex_id += std::to_string(state.frequency[index]);
+						}
+					}
+					else
+					{
+						vertex_id = "0";
+					}
+
+					prepare += '\t' + attrib_name + " = texelFetch(" + attrib_name + "_buffer, " + vertex_id + ");\n";
+				}
 			}
+
+			result.code += code_end;
 		}
 
 		{
