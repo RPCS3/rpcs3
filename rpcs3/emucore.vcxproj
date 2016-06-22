@@ -64,36 +64,19 @@
       <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <PreBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">Updating git-version.h</Message>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">Updating git-version.h</Message>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating git-version.h</Message>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating git-version.h</Message>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">Updating git-version.h</Message>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Message>Updating git-version.h</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\ps3emu_api\ps3emu_api.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
     <ClCompile Include="..\Utilities\dynamic_library.cpp" />
+    <ClCompile Include="..\Utilities\JIT.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\Log.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -404,6 +387,7 @@
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
+    <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
     <ClInclude Include="..\Utilities\sync.h" />
     <ClInclude Include="..\Utilities\Platform.h" />

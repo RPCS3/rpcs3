@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef LLVM_AVAILABLE
+
 #include <unordered_map>
 #include <map>
 #include <unordered_set>
@@ -830,3 +832,5 @@ public:
 
 	void UNK(ppu_opcode_t op);
 };
+
+#endif
