@@ -621,7 +621,7 @@ namespace sys_net
 			}
 
 			default:
-				throw EXCEPTION("Unknown TCP option for Win32: 0x%x", optname);
+				throw EXCEPTION("Unknown TCP option for Unix: 0x%x", optname);
 			}
 		}
 #endif
