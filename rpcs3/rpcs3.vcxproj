@@ -67,10 +67,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)-dbg</TargetName>
+    <LibraryPath>$(SolutionDir)lib\Debug-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)-dbg</TargetName>
+    <LibraryPath>$(SolutionDir)lib\Debug-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)bin\</OutDir>
@@ -81,6 +83,7 @@
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LinkIncremental>false</LinkIncremental>
     <RunCodeAnalysis>false</RunCodeAnalysis>
+    <LibraryPath>$(SolutionDir)lib\Release-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <PreBuildEvent>

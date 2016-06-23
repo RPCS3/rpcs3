@@ -160,17 +160,9 @@ u32 GLGSRender::set_vertex_buffer()
 	//initialize vertex attributes
 	//merge all vertex arrays
 
-	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
+	static const u32 texture_index_offset = rsx::limits::textures_count + rsx::limits::vertex_textures_count;
 
-	const std::string reg_table[] =
-	{
-		"in_pos", "in_weight", "in_normal",
-		"in_diff_color", "in_spec_color",
-		"in_fog",
-		"in_point_size", "in_7",
-		"in_tc0", "in_tc1", "in_tc2", "in_tc3",
-		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
-	};
+	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
 
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
 	u32 min_index = 0, max_index = 0;
@@ -185,7 +177,9 @@ u32 GLGSRender::set_vertex_buffer()
 	for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 	{
 		if (vertex_arrays_info[index].size == 0)
+		{
 			continue;
+		}
 
 		max_vertex_attrib_size += 16;
 	}
@@ -240,9 +234,9 @@ u32 GLGSRender::set_vertex_buffer()
 
 			if (!vertex_info.size) // disabled, bind a null sampler
 			{
-				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
+				glActiveTexture(GL_TEXTURE0 + index + texture_index_offset);
 				glBindTexture(GL_TEXTURE_BUFFER, 0);
-				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
+				glProgramUniform1i(m_program->id(), location, index + texture_index_offset);
 				continue;
 			}
 
@@ -279,7 +273,7 @@ u32 GLGSRender::set_vertex_buffer()
 			texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
 
 			//Link texture to uniform
-			m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
+			m_program->uniforms.texture(location, index + texture_index_offset, texture);
 			if (!is_primitive_native(draw_mode))
 			{
 				std::tie(vertex_draw_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw({ { 0, vertex_draw_count } }, draw_mode, m_index_ring_buffer);
@@ -309,9 +303,9 @@ u32 GLGSRender::set_vertex_buffer()
 			bool enabled = !!(input_mask & (1 << index));
 			if (!enabled)
 			{
-				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
+				glActiveTexture(GL_TEXTURE0 + index + texture_index_offset);
 				glBindTexture(GL_TEXTURE_BUFFER, 0);
-				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
+				glProgramUniform1i(m_program->id(), location, index + texture_index_offset);
 				continue;
 			}
 
@@ -367,7 +361,7 @@ u32 GLGSRender::set_vertex_buffer()
 				texture.copy_from(m_attrib_ring_buffer, gl_type, buffer_offset, data_size);
 
 				//Link texture to uniform
-				m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
+				m_program->uniforms.texture(location, index + texture_index_offset, texture);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -392,7 +386,7 @@ u32 GLGSRender::set_vertex_buffer()
 					texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
 
 					//Link texture to uniform
-					m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
+					m_program->uniforms.texture(location, index + texture_index_offset, texture);
 					break;
 				}
 				default:
@@ -402,9 +396,9 @@ u32 GLGSRender::set_vertex_buffer()
 			}
 			else
 			{
-				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
+				glActiveTexture(GL_TEXTURE0 + index + texture_index_offset);
 				glBindTexture(GL_TEXTURE_BUFFER, 0);
-				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
+				glProgramUniform1i(m_program->id(), location, index + texture_index_offset);
 				continue;
 			}
 		}
