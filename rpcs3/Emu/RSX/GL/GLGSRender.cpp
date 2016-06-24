@@ -307,27 +307,38 @@ void GLGSRender::end()
 
 	//setup textures
 	{
-		int texture_index = 0;
+		//int texture_index = 0;
 		for (int i = 0; i < rsx::limits::textures_count; ++i)
 		{
-			if (!textures[i].enabled())
-			{
-				continue;
-			}
-
 			int location;
 			if (m_program->uniforms.has_location("texture" + std::to_string(i), &location))
 			{
-				__glcheck glProgramUniform1i(m_program->id(), location, texture_index);
-				__glcheck m_gl_textures[i].init(texture_index, textures[i]);
+				if (!textures[i].enabled())
+				{
+					glActiveTexture(GL_TEXTURE0 + i);
+					glBindTexture(GL_TEXTURE_2D, 0);
+					glProgramUniform1i(m_program->id(), location, i);
 
-				texture_index++;
+					continue;
+				}
+
+				m_gl_textures[i].set_target(get_gl_target_for_texture(textures[i]));
+				__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i], m_rtts);
+
+				__glcheck glProgramUniform1i(m_program->id(), location, i);
+				//__glcheck m_gl_textures[i].init(i, textures[i]);
+
+				//texture_index++;
 
 				if (m_program->uniforms.has_location("texture" + std::to_string(i) + "_cm", &location))
 				{
 					if (textures[i].format() & CELL_GCM_TEXTURE_UN)
 					{
-						//glProgramUniform4f(m_program->id(), location, textures[i].width(), textures[i].height(), textures[i].depth(), 1.0f);
+						u32 width = std::max<u32>(textures[i].width(), 1);
+						u32 height = std::max<u32>(textures[i].height(), 1);
+						u32 depth = std::max<u32>(textures[i].depth(), 1);
+
+						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
 					}
 				}
 			}
@@ -348,8 +359,6 @@ void GLGSRender::end()
 		}
 		*/
 	}
-
-	__glcheck 0;
 
 	u32 offset_in_index_buffer = set_vertex_buffer();
 	m_vao.bind();
@@ -430,8 +439,6 @@ void GLGSRender::set_viewport()
 	}
 
 	glEnable(GL_SCISSOR_TEST);
-
-	__glcheck 0;
 }
 
 void GLGSRender::on_init_thread()
@@ -685,8 +692,6 @@ bool GLGSRender::load_program()
 		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(fragment_constants_size, m_uniform_buffer_offset_align);
 		fragment_constants_offset = mapping.second;
 
-		u32 buffer_offset = 0;
-
 		static const __m128i mask = _mm_set_epi8(
 			0xE, 0xF, 0xC, 0xD,
 			0xA, 0xB, 0x8, 0x9,
@@ -695,20 +700,23 @@ bool GLGSRender::load_program()
 
 		auto ucode = (const rsx::fragment_program::ucode_instr *)info.fragment_shader.decompiled->raw->ucode_ptr;
 
+		auto dst = (const rsx::fragment_program::ucode_instr *)mapping.first;
+
 		for (const auto& constant : info.fragment_shader.decompiled->constants)
 		{
-			const void *data = ucode + u32(constant.id / sizeof(rsx::fragment_program::ucode_instr));
-			const __m128i &vector = _mm_loadu_si128((const __m128i*)data);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_stream_si128((__m128i*)((char*)mapping.first + buffer_offset), shuffled_vector);
+			const void *src = ucode + u32(constant.id / sizeof(*ucode));
 
-			//float x = ((float*)((char*)mapping.first + buffer_offset))[0];
-			//float y = ((float*)((char*)mapping.first + buffer_offset))[1];
-			//float z = ((float*)((char*)mapping.first + buffer_offset))[2];
-			//float w = ((float*)((char*)mapping.first + buffer_offset))[3];
+			const __m128i &vector = _mm_loadu_si128((const __m128i*)src);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_stream_si128((__m128i*)dst, shuffled_vector);
+
+			float x = ((float*)dst)[0];
+			float y = ((float*)dst)[1];
+			float z = ((float*)dst)[2];
+			float w = ((float*)dst)[3];
 
 			//LOG_WARNING(RSX, "fc%u = {%g, %g, %g, %g}", constant.id, x, y, z, w);
-			buffer_offset += 4 * sizeof(f32);
+			++dst;
 		}
 	}
 
