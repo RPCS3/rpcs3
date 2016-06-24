@@ -13,6 +13,54 @@ namespace rsx
 		size_t get_packed_pitch(surface_color_format format, u32 width);
 	}
 
+    template <typename T, typename... Args, typename... DownloadArgs>
+    concept bool SurfaceStoreClass = requires(T t,
+                                              typename T::surface_storage_type &rtt,
+                                              surface_depth_format ds_format,
+                                              surface_color_format color_format,
+                                              u32 address,
+                                              size_t width, size_t height,
+                                              typename T::command_list_type cmdlist,
+                                              typename T::download_buffer_object dbo,
+                                              Args&& ... extra_params,
+                                              DownloadArgs&&... extra_params2
+                                              )
+    {
+        /// structure containing texture.
+        typename T::surface_storage_type;
+        /// pointer or reference to texture owned by a surface_storage_type.
+        typename T::surface_type;
+        /// void for backend without command list
+        typename T::command_list_type;
+        ///  used by issue_download_command and map_downloaded_buffer functions to handle sync
+        typename T::download_buffer_object;
+        /// returns underlying surface pointer from a storage type.
+        { T::get(rtt) } -> typename T::surface_type;
+        /// checks if the given surface has the given format and size.
+        { T::ds_has_format_width_height(rtt, ds_format, width, height)} -> bool;
+        /// checks if the given surface has the given format and size.
+        { T::rtt_has_format_width_height(rtt, color_format, 1, 1)} -> bool;
+        /// create a new surface_storage_type holding surface from passed parameters.
+        { T::create_new_surface(address, color_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
+        { T::create_new_surface(address, ds_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
+        /// makes a sampleable surface from color render target one.
+        { T::prepare_rtt_for_sampling(cmdlist, T::get(rtt))} -> void;
+        /// makes a render target surface from a sampleable one.
+        { T::prepare_rtt_for_drawing(cmdlist, T::get(rtt))} -> void;
+        /// makes a sampleable surface from a depth stencil one.
+        { T::prepare_rtt_for_sampling(cmdlist, T::get(rtt))} -> void;
+        /// makes a depth stencil surface from a sampleable one.
+        { T::prepare_rtt_for_drawing(cmdlist, T::get(rtt))} -> void;
+        /// generates command to download the given surface to some mappable buffer.
+        { T::issue_download_command(T::get(rtt), color_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
+        { T::issue_depth_download_command(T::get(rtt), ds_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
+        { T::issue_stencil_download_command(T::get(rtt), width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
+        /// maps a download_buffer_object.
+        { T::map_downloaded_buffer(dbo)} -> gsl::span<const gsl::byte>;
+        /// unmaps it.
+        { T::unmap_downloaded_buffer(dbo)} -> void;
+};
+
 	/**
 	 * Helper for surface (ie color and depth stencil render target) management.
 	 * It handles surface creation and storage. Backend should only retrieve pointer to surface.
@@ -20,31 +68,8 @@ namespace rsx
 	 * wants to sample a previous surface.
 	 * Please note that the backend is still responsible for creating framebuffer/descriptors
 	 * and need to inform surface_store everytime surface format/size/addresses change.
-	 *
-	 * Since it's a template it requires a trait with the followings:
-	 * - type surface_storage_type which is a structure containing texture.
-	 * - type surface_type which is a pointer to storage_type or a reference.
-	 * - type command_list_type that can be void for backend without command list
-	 * - type download_buffer_object used by issue_download_command and map_downloaded_buffer functions to handle sync
-	 *
-	 * - a member function static surface_type(const surface_storage_type&) that returns underlying surface pointer from a storage type.
-	 * - 2 member functions static surface_storage_type create_new_surface(u32 address, Surface_color_format/Surface_depth_format format, size_t width, size_t height,...)
-	 * used to create a new surface_storage_type holding surface from passed parameters.
-	 * - a member function static prepare_rtt_for_drawing(command_list, surface_type) that makes a sampleable surface a color render target one.
-	 * - a member function static prepare_rtt_for_drawing(command_list, surface_type) that makes a render target surface a sampleable one.
-	 * - a member function static prepare_ds_for_drawing that does the same for depth stencil surface.
-	 * - a member function static prepare_ds_for_sampling that does the same for depth stencil surface.
-	 * - a member function static bool rtt_has_format_width_height(const surface_storage_type&, Surface_color_format surface_color_format, size_t width, size_t height)
-	 * that checks if the given surface has the given format and size
-	 * - a member function static bool ds_has_format_width_height that does the same for ds
-	 * - a member function static download_buffer_object issue_download_command(surface_type, Surface_color_format color_format, size_t width, size_t height,...)
-	 * that generates command to download the given surface to some mappable buffer.
-	 * - a member function static issue_depth_download_command that does the same for depth surface
-	 * - a member function static issue_stencil_download_command that does the same for stencil surface
-	 * - a member function gsl::span<const gsl::byte> map_downloaded_buffer(download_buffer_object, ...) that maps a download_buffer_object
-	 * - a member function static unmap_downloaded_buffer that unmaps it.
 	 */
-	template<typename Traits>
+    template<typename Traits> requires SurfaceStoreClass<Traits>
 	struct surface_store
 	{
 		template<typename T, typename U>
