@@ -17,7 +17,12 @@ set(PNG_TESTS  OFF CACHE BOOL "Build tests." FORCE)
 
 add_definitions(-DCMAKE_BUILD)
 
-add_subdirectory( 3rdparty/libpng )
+# select libpng version
+option(WITH_SYSTEM_LIBPNG "libpng" OFF)
+if(NOT WITH_SYSTEM_LIBPNG)
+	add_subdirectory( 3rdparty/libpng )
+endif()
+
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
