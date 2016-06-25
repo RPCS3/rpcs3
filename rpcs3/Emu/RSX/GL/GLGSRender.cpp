@@ -311,7 +311,7 @@ void GLGSRender::end()
 		for (int i = 0; i < rsx::limits::textures_count; ++i)
 		{
 			int location;
-			if (m_program->uniforms.has_location("texture" + std::to_string(i), &location))
+			if (m_program->uniforms.has_location("ftexture" + std::to_string(i), &location))
 			{
 				if (!textures[i].enabled())
 				{
@@ -330,7 +330,7 @@ void GLGSRender::end()
 
 				//texture_index++;
 
-				if (m_program->uniforms.has_location("texture" + std::to_string(i) + "_cm", &location))
+				if (m_program->uniforms.has_location("ftexture" + std::to_string(i) + "_cm", &location))
 				{
 					if (textures[i].format() & CELL_GCM_TEXTURE_UN)
 					{
@@ -657,6 +657,15 @@ static void fill_matrix_buffer(glsl_matrix_buffer *buffer)
 
 bool GLGSRender::load_program()
 {
+	if (0)
+	{
+		RSXVertexProgram vertex_program = get_current_vertex_program();
+		RSXFragmentProgram fragment_program = get_current_fragment_program();
+
+		GLProgramBuffer prog_buffer;
+		__glcheck prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
+	}
+
 	rsx::program_info info = programs_cache.get(get_raw_program(), rsx::decompile_language::glsl);
 	m_program = (gl::glsl::program*)info.program;
 	m_program->use();

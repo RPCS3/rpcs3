@@ -747,7 +747,7 @@ namespace rsx
 
 	raw_program thread::get_raw_program() const
 	{
-		raw_program result;
+		raw_program result{};
 
 		u32 fp_info = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 
@@ -755,7 +755,7 @@ namespace rsx
 		result.state.output_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
 		result.state.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 		result.state.divider_op = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
-		 
+
 		result.state.is_array = 0;
 		result.state.is_int = 0;
 
@@ -782,6 +782,27 @@ namespace rsx
 			if (is_int)
 			{
 				result.state.is_int |= 1 << index;
+			}
+		}
+
+		for (u8 index = 0; index < rsx::limits::textures_count; ++index)
+		{
+			if (!textures[index].enabled())
+			{
+				result.state.textures[index] = rsx::texture_target::none;
+				continue;
+			}
+
+			switch (textures[index].get_extended_texture_dimension())
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d: result.state.textures[index] = rsx::texture_target::_1; break;
+			case rsx::texture_dimension_extended::texture_dimension_2d: result.state.textures[index] = rsx::texture_target::_2; break;
+			case rsx::texture_dimension_extended::texture_dimension_3d: result.state.textures[index] = rsx::texture_target::_3; break;
+			case rsx::texture_dimension_extended::texture_dimension_cubemap: result.state.textures[index] = rsx::texture_target::cube; break;
+
+			default:
+				result.state.textures[index] = rsx::texture_target::none;
+				break;
 			}
 		}
 

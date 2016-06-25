@@ -92,7 +92,7 @@ namespace rsx
 		program_info result;
 
 		result.vertex_shader = m_vertex_shaders_cache.get(context, raw_program_.vertex_shader, raw_program_.state);
-		result.fragment_shader = m_vertex_shaders_cache.get(context, raw_program_.fragment_shader, raw_program_.state);
+		result.fragment_shader = m_fragment_shader_cache.get(context, raw_program_.fragment_shader, raw_program_.state);
 		result.program = context.make_program(result.vertex_shader.complete->user_data, result.fragment_shader.complete->user_data);
 		m_program_cache.insert({ raw_program_, result });
 
