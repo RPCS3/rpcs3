@@ -134,6 +134,8 @@ public:
 	u32 stack_addr = 0;
 	u32 stack_size = 0;
 
+	const std::string m_name;
+
 	std::function<void(ARMv7Thread&)> custom_task;
 
 	const char* last_function = nullptr;

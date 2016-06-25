@@ -70,7 +70,7 @@ static std::unordered_map<u32, ppu_function_t, ppu_addr_hash> s_ppu_compiled; //
 
 std::string PPUThread::get_name() const
 {
-	return fmt::format("PPU[0x%x] Thread (%s)", id, name);
+	return fmt::format("PPU[0x%x] Thread (%s)", id, m_name);
 }
 
 std::string PPUThread::dump() const
@@ -298,7 +298,8 @@ PPUThread::~PPUThread()
 }
 
 PPUThread::PPUThread(const std::string& name)
-	: cpu_thread(cpu_type::ppu, name)
+	: cpu_thread(cpu_type::ppu)
+	, m_name(name)
 {
 }
 

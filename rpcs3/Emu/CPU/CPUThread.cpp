@@ -68,9 +68,8 @@ cpu_thread::~cpu_thread()
 {
 }
 
-cpu_thread::cpu_thread(cpu_type type, const std::string& name)
+cpu_thread::cpu_thread(cpu_type type)
 	: type(type)
-	, name(name)
 {
 }
 

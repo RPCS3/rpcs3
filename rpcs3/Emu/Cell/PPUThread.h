@@ -75,6 +75,8 @@ public:
 	bool is_joinable = true;
 	bool is_joining = false;
 
+	const std::string m_name; // Thread name
+
 	std::function<void(PPUThread&)> custom_task;
 
 	// Function name can be stored here. Used to print the last called function.
