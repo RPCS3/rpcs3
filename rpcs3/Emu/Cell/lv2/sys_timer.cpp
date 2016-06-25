@@ -271,6 +271,7 @@ s32 sys_timer_sleep(u32 sleep_time)
 		std::this_thread::sleep_for(std::chrono::microseconds(useconds - passed));
 	}
 
+	CHECK_EMU_STATUS;
 	return CELL_OK;
 }
 
@@ -294,5 +295,6 @@ s32 sys_timer_usleep(const u64 sleep_time)
 		std::this_thread::sleep_for(std::chrono::microseconds(sleep_time - passed));
 	}
 
+	CHECK_EMU_STATUS;
 	return CELL_OK;
 }

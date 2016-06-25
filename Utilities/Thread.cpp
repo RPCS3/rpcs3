@@ -299,8 +299,9 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		switch (op2)
 		{
 		case 0x11:
+		case 0x29:
 		{
-			if (!repe && !repne && !oso) // MOVUPS xmm/m, xmm
+			if (!repe && !repne) // MOVUPS/MOVAPS/MOVUPD/MOVAPD xmm/m, xmm
 			{
 				out_op = X64OP_STORE;
 				out_reg = get_modRM_reg_xmm(code, rex);

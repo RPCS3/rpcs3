@@ -18,6 +18,7 @@ public:
 	virtual std::string dump() const override;
 	virtual void cpu_init() override;
 	virtual void cpu_task() override;
+	virtual void cpu_task_main();
 	virtual ~ARMv7Thread() override;
 
 	ARMv7Thread(const std::string& name);

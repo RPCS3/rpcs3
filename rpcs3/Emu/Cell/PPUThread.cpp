@@ -16,7 +16,7 @@
 #include "llvm/IR/LLVMContext.h"
 //#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
-//#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LegacyPassManager.h"
 //#include "llvm/IR/Module.h"
 //#include "llvm/IR/Function.h"
@@ -27,6 +27,7 @@
 //#include "llvm/Analysis/LoopInfo.h"
 //#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/Lint.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -63,7 +64,7 @@ struct ppu_addr_hash
 	}
 };
 
-static std::unordered_map<u32, void(*)(PPUThread&), ppu_addr_hash> s_ppu_compiled;
+static std::unordered_map<u32, ppu_function_t, ppu_addr_hash> s_ppu_compiled; // TODO
 
 
 
@@ -126,13 +127,11 @@ void PPUThread::cpu_task()
 {
 	//SetHostRoundingMode(FPSCR_RN_NEAR);
 
-	if (custom_task)
-	{
-		if (check_status()) return;
+	return custom_task ? custom_task(*this) : fast_call(pc, static_cast<u32>(GPR[2]));
+}
 
-		return custom_task(*this);
-	}
-
+void PPUThread::cpu_task_main()
+{
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
 		const auto found = s_ppu_compiled.find(pc);
@@ -311,39 +310,54 @@ be_t<u64>* PPUThread::get_stack_arg(s32 i, u64 align)
 
 void PPUThread::fast_call(u32 addr, u32 rtoc)
 {
-	auto old_PC = pc;
-	auto old_stack = GPR[1];
-	auto old_rtoc = GPR[2];
-	auto old_LR = LR;
-	auto old_task = std::move(custom_task);
+	const auto old_PC = pc;
+	const auto old_stack = GPR[1];
+	const auto old_rtoc = GPR[2];
+	const auto old_LR = LR;
+	const auto old_task = std::move(custom_task);
+	const auto old_func = last_function;
 
 	pc = addr;
 	GPR[2] = rtoc;
 	LR = Emu.GetCPUThreadStop();
 	custom_task = nullptr;
+	last_function = nullptr;
 
 	try
 	{
-		cpu_task();
+		cpu_task_main();
+
+		if (GPR[1] != old_stack && !state.test(cpu_state::ret) && !state.test(cpu_state::exit)) // GPR[1] shouldn't change
+		{
+			throw fmt::exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, GPR[1], old_stack);
+		}
 	}
 	catch (cpu_state _s)
 	{
 		state += _s;
 		if (_s != cpu_state::ret) throw;
 	}
+	catch (EmulationStopped)
+	{
+		if (last_function) LOG_WARNING(PPU, "'%s' aborted", last_function);
+		last_function = old_func;
+		throw;
+	}
+	catch (...)
+	{
+		if (last_function) LOG_ERROR(PPU, "'%s' aborted", last_function);
+		last_function = old_func;
+		throw;
+	}
 
 	state -= cpu_state::ret;
 
 	pc = old_PC;
-
-	if (GPR[1] != old_stack) // GPR[1] shouldn't change
-	{
-		throw EXCEPTION("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, GPR[1], old_stack);
-	}
-
+	GPR[1] = old_stack;
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	custom_task = std::move(old_task);
+	last_function = old_func;
 
 	//if (custom_task)
 	//{
@@ -357,6 +371,10 @@ const ppu_decoder<ppu_itype> s_ppu_itype;
 extern u64 get_timebased_time();
 extern void ppu_execute_syscall(PPUThread& ppu, u64 code);
 extern void ppu_execute_function(PPUThread& ppu, u32 index);
+extern ppu_function_t ppu_get_syscall(u64 code);
+extern std::string ppu_get_syscall_name(u64 code);
+extern ppu_function_t ppu_get_function(u32 index);
+extern std::string ppu_get_module_function_name(u32 index);
 
 extern __m128 sse_exp2_ps(__m128 A);
 extern __m128 sse_log2_ps(__m128 A);
@@ -378,23 +396,6 @@ static void ppu_trace(u64 addr)
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 }
 
-static void ppu_hlecall(PPUThread& ppu, u32 index)
-{
-	ppu_execute_function(ppu, index);
-	if (ppu.state.load() && ppu.check_status()) throw cpu_state::ret; // Temporarily
-}
-
-static void ppu_syscall(PPUThread& ppu, u64 code)
-{
-	ppu_execute_syscall(ppu, code);
-	if (ppu.state.load() && ppu.check_status()) throw cpu_state::ret; // Temporarily
-}
-
-static u32 ppu_tbl()
-{
-	return (u32)get_timebased_time();
-}
-
 static void ppu_call(PPUThread& ppu, u32 addr)
 {
 	const auto found = s_ppu_compiled.find(addr);
@@ -410,7 +411,7 @@ static void ppu_call(PPUThread& ppu, u32 addr)
 	// Allow HLE callbacks without compiling them
 	if (itype == ppu_itype::HACK && vm::read32(addr + 4) == ppu_instructions::BLR())
 	{
-		return ppu_hlecall(ppu, op & 0x3ffffff);
+		return ppu_execute_function(ppu, op & 0x3ffffff);
 	}
 
 	ppu_trap(addr);
@@ -506,9 +507,9 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 		{ "__memptr", (u64)&vm::g_base_addr },
 		{ "__trap", (u64)&ppu_trap },
 		{ "__trace", (u64)&ppu_trace },
-		{ "__hlecall", (u64)&ppu_hlecall },
-		{ "__syscall", (u64)&ppu_syscall },
-		{ "__get_tbl", (u64)&ppu_tbl },
+		{ "__hlecall", (u64)&ppu_execute_function },
+		{ "__syscall", (u64)&ppu_execute_syscall },
+		{ "__get_tbl", (u64)&get_timebased_time },
 		{ "__call", (u64)&ppu_call },
 		{ "__lwarx", (u64)&ppu_lwarx },
 		{ "__ldarx", (u64)&ppu_ldarx },
@@ -576,7 +577,6 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	pm.add(createGVNPass());
 	pm.add(createDeadStoreEliminationPass());
 	pm.add(createSCCPPass());
-	//pm.addPass(new SyscallAnalysisPass()); // Requires constant propagation
 	pm.add(createInstructionCombiningPass());
 	pm.add(createInstructionSimplifierPass());
 	pm.add(createAggressiveDCEPass());
@@ -588,7 +588,55 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	{
 		if (info.second)
 		{
-			pm.run(*translator->TranslateToIR(info.first, info.first + info.second, vm::_ptr<u32>(info.first)));
+			const auto func = translator->TranslateToIR(info.first, info.first + info.second, vm::_ptr<u32>(info.first));
+
+			// Run optimization passes
+			pm.run(*func);
+
+			const auto _syscall = module->getFunction("__syscall");
+			const auto _hlecall = module->getFunction("__hlecall");
+
+			for (auto i = inst_begin(*func), end = inst_end(*func); i != end;)
+			{
+				const auto inst = &*i++;
+
+				if (const auto ci = dyn_cast<CallInst>(inst))
+				{
+					const auto cif = ci->getCalledFunction();
+					const auto op1 = ci->getNumArgOperands() > 1 ? ci->getArgOperand(1) : nullptr;
+
+					if (cif == _syscall && op1 && isa<ConstantInt>(op1))
+					{
+						// Try to determine syscall using the value from r11 (requires constant propagation)
+						const u64 index = cast<ConstantInt>(op1)->getZExtValue();
+
+						if (const auto ptr = ppu_get_syscall(index))
+						{
+							const auto n = ppu_get_syscall_name(index);
+							const auto f = cast<Function>(module->getOrInsertFunction(n, _func));
+							link_table.emplace(n, reinterpret_cast<std::uintptr_t>(ptr));
+
+							// Call the syscall directly
+							ReplaceInstWithInst(ci, CallInst::Create(f, {ci->getArgOperand(0)}));
+						}
+					}
+
+					if (cif == _hlecall && op1 && isa<ConstantInt>(op1))
+					{
+						const u32 index = static_cast<u32>(cast<ConstantInt>(op1)->getZExtValue());
+
+						if (const auto ptr = ppu_get_function(index))
+						{
+							const auto n = ppu_get_module_function_name(index);
+							const auto f = cast<Function>(module->getOrInsertFunction(n, _func));
+							link_table.emplace(n, reinterpret_cast<std::uintptr_t>(ptr));
+
+							// Call the function directly
+							ReplaceInstWithInst(ci, CallInst::Create(f, {ci->getArgOperand(0)}));
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -598,9 +646,6 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	mpm.add(createStripDeadPrototypesPass());
 	//mpm.add(createFunctionInliningPass());
 	mpm.run(*module);
-
-	// TODO: replacing __syscall/__hlecall
-	// TODO: improve __call and s_ppu_compiled
 
 	std::string result;
 	raw_string_ostream out(result);
@@ -638,7 +683,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 		if (info.second)
 		{
 			const std::uintptr_t link = jit->get(fmt::format("__sub_%x", info.first));
-			s_ppu_compiled.emplace(info.first, (void(*)(PPUThread&))link);
+			s_ppu_compiled.emplace(info.first, (ppu_function_t)link);
 
 			LOG_NOTICE(PPU, "** Function __sub_%x -> 0x%llx (addr=0x%x, size=0x%x)", info.first, link, info.first, info.second);
 		}
