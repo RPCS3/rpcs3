@@ -105,6 +105,16 @@ else()
 	set(PLATFORM_ARCH "linux/x86_64")
 endif()
 
+# select libpng version
+if(USE_SYSTEM_LIBPNG)
+	message("-- RPCS3: using system libpng")
+	find_package(PNG REQUIRED)
+	include_directories("${PNG_INCLUDE_DIRS}")
+else()
+	message("-- RPCS3: using builtin libpng")
+	include_directories("${RPCS3_SRC_DIR}/../3rdparty/libpng")
+endif()
+
 include_directories(
 ${GLEW_INCLUDE_DIR}
 ${wxWidgets_INCLUDE_DIRS}
@@ -138,14 +148,6 @@ if(USE_SYSTEM_FFMPEG)
 else()
 	message("-- RPCS3: using builtin ppsspp-ffmpeg")
 	include_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include")
-endif()
-
-# select libpng version
-if(USE_SYSTEM_LIBPNG)
-	message("-- RPCS3: using system libpng")
-else()
-	message("-- RPCS3: using builtin libpng")
-	include_directories("${RPCS3_SRC_DIR}/../3rdparty/libpng")
 endif()
 
 if(WIN32)
