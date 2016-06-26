@@ -15,6 +15,7 @@ namespace vk
 	VkStencilOp get_stencil_op(u32 op);
 	VkLogicOp get_logic_op(u32 op);
 	VkFrontFace get_front_face_ccw(u32 ffv);
+	VkBorderColor get_border_color(u8 color);
 
 	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter);
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter);
