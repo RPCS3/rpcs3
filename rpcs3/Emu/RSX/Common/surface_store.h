@@ -41,8 +41,8 @@ namespace rsx
         /// checks if the given surface has the given format and size.
         { T::rtt_has_format_width_height(rtt, color_format, 1, 1)} -> bool;
         /// create a new surface_storage_type holding surface from passed parameters.
-        { T::create_new_surface(address, color_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
-        { T::create_new_surface(address, ds_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
+        //{ T::create_new_surface(address, color_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
+        //{ T::create_new_surface(address, ds_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
         /// makes a sampleable surface from color render target one.
         { T::prepare_rtt_for_sampling(cmdlist, T::get(rtt))} -> void;
         /// makes a render target surface from a sampleable one.
@@ -52,13 +52,13 @@ namespace rsx
         /// makes a depth stencil surface from a sampleable one.
         { T::prepare_rtt_for_drawing(cmdlist, T::get(rtt))} -> void;
         /// generates command to download the given surface to some mappable buffer.
-        { T::issue_download_command(T::get(rtt), color_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
-        { T::issue_depth_download_command(T::get(rtt), ds_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
-        { T::issue_stencil_download_command(T::get(rtt), width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
+        //{ T::issue_download_command(T::get(rtt), color_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
+        //{ T::issue_depth_download_command(T::get(rtt), ds_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
+        //{ T::issue_stencil_download_command(T::get(rtt), width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
         /// maps a download_buffer_object.
-        { T::map_downloaded_buffer(dbo)} -> gsl::span<const gsl::byte>;
+        /*{ T::map_downloaded_buffer(dbo)} -> gsl::span<const gsl::byte>;
         /// unmaps it.
-        { T::unmap_downloaded_buffer(dbo)} -> void;
+        { T::unmap_downloaded_buffer(dbo)} -> void;*/
 };
 
 	/**
