@@ -71,6 +71,8 @@ VkBorderColor get_border_color(u8 color)
 		return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 	else
 		return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+		
+	// TODO: VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
 }
 
 VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap)
