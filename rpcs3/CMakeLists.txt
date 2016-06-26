@@ -108,7 +108,7 @@ endif()
 # select libpng version
 if(USE_SYSTEM_LIBPNG)
 	message("-- RPCS3: using system libpng")
-	find_package(PNG REQUIRED)
+	find_package(PNG "1.6.23" REQUIRED)
 	include_directories("${PNG_INCLUDE_DIRS}")
 else()
 	message("-- RPCS3: using builtin libpng")
