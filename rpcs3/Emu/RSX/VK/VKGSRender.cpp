@@ -655,7 +655,7 @@ void VKGSRender::end()
 				vk::vk_wrap_mode(textures[i].wrap_s()), vk::vk_wrap_mode(textures[i].wrap_t()), vk::vk_wrap_mode(textures[i].wrap_r()),
 				!!(textures[i].format() & CELL_GCM_TEXTURE_UN),
 				textures[i].bias(), vk::max_aniso(textures[i].max_aniso()), textures[i].min_lod(), textures[i].max_lod(),
-				min_filter, vk::get_mag_filter(textures[i].mag_filter()), mip_mode
+				min_filter, vk::get_mag_filter(textures[i].mag_filter()), mip_mode, vk::get_border_color(textures[i].border_color())
 				));
 			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 		}
