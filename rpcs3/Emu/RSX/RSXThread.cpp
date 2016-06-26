@@ -342,18 +342,30 @@ namespace rsx
 
 	void thread::begin()
 	{
+		draw_inline_vertex_array = false;
+		inline_vertex_array.clear();
 		first_count_commands.clear();
+		draw_command = rsx::draw_command::none;
 		draw_mode = to_primitive_type(method_registers[NV4097_SET_BEGIN_END]);
 	}
 
 	void thread::end()
 	{
+		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		{
+			register_vertex_info[index].size = 0;
+			register_vertex_data[index].clear();
+		}
+
 		transform_constants.clear();
 
 		if (capture_current_frame)
 		{
 			for (const auto &first_count : first_count_commands)
+			{
 				vertex_draw_count += first_count.second;
+			}
+
 			capture_frame("Draw " + std::to_string(vertex_draw_count));
 			vertex_draw_count = 0;
 		}
@@ -755,8 +767,6 @@ namespace rsx
 		result.state.output_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
 		result.state.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 		result.state.divider_op = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
-
-		result.state.is_array = 0;
 		result.state.is_int = 0;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
@@ -765,7 +775,6 @@ namespace rsx
 
 			if (vertex_arrays_info[index].size > 0)
 			{
-				result.state.is_array |= 1 << index;
 				is_int = is_int_type(vertex_arrays_info[index].type);
 				result.state.frequency[index] = vertex_arrays_info[index].frequency;
 			}

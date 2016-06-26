@@ -90,7 +90,7 @@ namespace rsx
 			//find begin of data
 			size_t begin = id + index * element_size_in_words;
 
-			size_t position = 0;//entry.size();
+			size_t position = entry.size();
 			entry.resize(position + element_size);
 
 			memcpy(entry.data() + position, method_registers + begin, element_size);
@@ -226,17 +226,47 @@ namespace rsx
 			}
 		};
 
-		force_inline void set_begin_end(thread* rsx, u32 arg)
+		force_inline void set_begin_end(thread* rsxthr, u32 arg)
 		{
 			if (arg)
 			{
-				rsx->draw_inline_vertex_array = false;
-				rsx->inline_vertex_array.clear();
-				rsx->begin();
+				rsxthr->begin();
 				return;
 			}
 
-			rsx->end();
+			u32 max_vertex_count = 0;
+
+			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+			{
+				auto &vertex_info = rsxthr->register_vertex_info[index];
+
+				if (vertex_info.size > 0)
+				{
+					auto &vertex_data = rsxthr->register_vertex_data[index];
+
+					u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
+					u32 element_count = vertex_data.size() / element_size;
+
+					vertex_info.frequency = element_count;
+					rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION] |= 1 << index;
+
+					if (rsxthr->draw_command == rsx::draw_command::none)
+					{
+						max_vertex_count = std::max<u32>(max_vertex_count, element_count);
+					}
+				}
+			}
+
+			if (rsxthr->draw_command == rsx::draw_command::none && max_vertex_count)
+			{
+				rsxthr->draw_command = rsx::draw_command::array;
+				rsxthr->first_count_commands.push_back(std::make_pair(0, max_vertex_count));
+			}
+
+			if (!rsxthr->first_count_commands.empty())
+			{
+				rsxthr->end();
+			}
 		}
 
 		force_inline void get_report(thread* rsx, u32 arg)

@@ -463,11 +463,22 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 
 					std::string vertex_id;
 
-					if (state.is_array & (1 << index))
+					if (state.frequency[index] == 1)
+					{
+						if (state.divider_op & (1 << index))
+						{
+							vertex_id += "0";
+						}
+						else
+						{
+							vertex_id += "gl_VertexID";
+						}
+					}
+					else
 					{
 						vertex_id = "gl_VertexID";
 
-						if (state.frequency[index] > 1)
+						if (state.frequency[index])
 						{
 							if (state.divider_op & (1 << index))
 							{
@@ -480,10 +491,6 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 
 							vertex_id += std::to_string(state.frequency[index]);
 						}
-					}
-					else
-					{
-						vertex_id = "0";
 					}
 
 					prepare += '\t' + attrib_name + " = texelFetch(" + attrib_name + "_buffer, " + vertex_id + ");\n";
