@@ -571,7 +571,7 @@ namespace vk
 			info.minFilter = min_filter;
 			info.mipmapMode = mipmap_mode;
 			info.compareOp = VK_COMPARE_OP_NEVER;
-			info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+			info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
 			CHECK_RESULT(vkCreateSampler(m_device, &info, nullptr, &value));
 		}
