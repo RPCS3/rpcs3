@@ -329,7 +329,7 @@ void D3D12GSRender::end()
 	m_timers.program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
 	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_shared_root_signature.Get());
-	get_current_resource_storage().command_list->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
+	get_current_resource_storage().command_list->OMSetStencilRef(rsx::method_registers.stencil_func_ref());
 
 	std::chrono::time_point<std::chrono::system_clock> constants_duration_start = std::chrono::system_clock::now();
 
@@ -425,8 +425,8 @@ void D3D12GSRender::end()
 	m_timers.texture_duration += std::chrono::duration_cast<std::chrono::microseconds>(texture_duration_end - texture_duration_start).count();
 	set_rtt_and_ds(get_current_resource_storage().command_list.Get());
 
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+	int clip_w = rsx::method_registers.surface_clip_width();
+	int clip_h = rsx::method_registers.surface_clip_height();
 
 	D3D12_VIEWPORT viewport =
 	{
@@ -434,12 +434,13 @@ void D3D12GSRender::end()
 		0.f,
 		(float)clip_w,
 		(float)clip_h,
-		(f32&)rsx::method_registers[NV4097_SET_CLIP_MIN],
-		(f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]
+		rsx::method_registers.clip_min(),
+		rsx::method_registers.clip_max(),
 	};
 	get_current_resource_storage().command_list->RSSetViewports(1, &viewport);
 
-	get_current_resource_storage().command_list->RSSetScissorRects(1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
+	get_current_resource_storage().command_list->RSSetScissorRects(1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(),
+		rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 
 	get_current_resource_storage().command_list->IASetPrimitiveTopology(get_primitive_topology(draw_mode));
 
@@ -485,7 +486,7 @@ void D3D12GSRender::flip(int buffer)
 	ID3D12Resource *resource_to_flip;
 	float viewport_w, viewport_h;
 
-	if (!is_flip_surface_in_global_memory(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
+	if (!is_flip_surface_in_global_memory(rsx::method_registers.surface_color_target()))
 	{
 		resource_storage &storage = get_current_resource_storage();
 		VERIFY(storage.ram_framebuffer == nullptr);
@@ -577,7 +578,7 @@ void D3D12GSRender::flip(int buffer)
 	shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	shader_resource_view_desc.Texture2D.MipLevels = 1;
-	if (is_flip_surface_in_global_memory(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
+	if (is_flip_surface_in_global_memory(rsx::method_registers.surface_color_target()))
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	else
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
@@ -622,7 +623,7 @@ void D3D12GSRender::flip(int buffer)
 
 	if (!g_cfg_rsx_overlay)
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backbuffer[m_swap_chain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	if (is_flip_surface_in_global_memory(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])) && resource_to_flip != nullptr)
+	if (is_flip_surface_in_global_memory(rsx::method_registers.surface_color_target()) && resource_to_flip != nullptr)
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource_to_flip, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());

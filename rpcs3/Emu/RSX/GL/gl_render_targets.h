@@ -42,30 +42,6 @@ namespace rsx
 		color_format surface_color_format_to_gl(rsx::surface_color_format color_format);
 		depth_format surface_depth_format_to_gl(rsx::surface_depth_format depth_format);
 		u8 get_pixel_size(rsx::surface_depth_format format);
-
-		const u32 mr_color_offset[rsx::limits::color_buffers_count] =
-		{
-			NV4097_SET_SURFACE_COLOR_AOFFSET,
-			NV4097_SET_SURFACE_COLOR_BOFFSET,
-			NV4097_SET_SURFACE_COLOR_COFFSET,
-			NV4097_SET_SURFACE_COLOR_DOFFSET
-		};
-
-		const u32 mr_color_dma[rsx::limits::color_buffers_count] =
-		{
-			NV4097_SET_CONTEXT_DMA_COLOR_A,
-			NV4097_SET_CONTEXT_DMA_COLOR_B,
-			NV4097_SET_CONTEXT_DMA_COLOR_C,
-			NV4097_SET_CONTEXT_DMA_COLOR_D
-		};
-
-		const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
-		{
-			NV4097_SET_SURFACE_PITCH_A,
-			NV4097_SET_SURFACE_PITCH_B,
-			NV4097_SET_SURFACE_PITCH_C,
-			NV4097_SET_SURFACE_PITCH_D
-		};
 	}
 }
 

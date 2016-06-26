@@ -1687,5 +1687,8 @@
     <ClInclude Include="..\Utilities\JIT.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_vertex_data.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

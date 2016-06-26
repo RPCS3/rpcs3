@@ -56,21 +56,6 @@ namespace
 		throw EXCEPTION("Wrong color_target (%d)", color_target);
 	}
 
-	std::array<float, 4> get_clear_color(u32 clear_color)
-	{
-		u8 clear_a = clear_color >> 24;
-		u8 clear_r = clear_color >> 16;
-		u8 clear_g = clear_color >> 8;
-		u8 clear_b = clear_color;
-		return
-		{
-			clear_r / 255.0f,
-			clear_g / 255.0f,
-			clear_b / 255.0f,
-			clear_a / 255.0f
-		};
-	}
-
 	u8 get_clear_stencil(u32 register_value)
 	{
 		return register_value & 0xff;
@@ -123,8 +108,6 @@ namespace
 
 void D3D12GSRender::clear_surface(u32 arg)
 {
-	if (!rsx::method_registers[NV4097_SET_SURFACE_FORMAT]) return;
-
 	std::chrono::time_point<std::chrono::system_clock> start_duration = std::chrono::system_clock::now();
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_start = std::chrono::system_clock::now();
@@ -139,25 +122,32 @@ void D3D12GSRender::clear_surface(u32 arg)
 
 		if (arg & 0x1)
 		{
-			u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
-			u32 max_depth_value = get_max_depth_value(m_surface.depth_format);
+			u32 clear_depth = rsx::method_registers.z_clear_value();
+			u32 max_depth_value = get_max_depth_value(rsx::method_registers.surface_depth_fmt());
 			get_current_resource_storage().command_list->ClearDepthStencilView(m_rtts.current_ds_handle, D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0,
-				1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
+				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 		}
 
 		if (arg & 0x2)
-			get_current_resource_storage().command_list->ClearDepthStencilView(m_rtts.current_ds_handle, D3D12_CLEAR_FLAG_STENCIL, 0.f, get_clear_stencil(rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE]),
-				1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
+			get_current_resource_storage().command_list->ClearDepthStencilView(m_rtts.current_ds_handle, D3D12_CLEAR_FLAG_STENCIL, 0.f, get_clear_stencil(rsx::method_registers.stencil_clear_value()),
+				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 	}
 
 	if (arg & 0xF0)
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.current_rtts_handle);
-		size_t rtt_index = get_num_rtt(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
+		size_t rtt_index = get_num_rtt(rsx::method_registers.surface_color_target());
 		get_current_resource_storage().render_targets_descriptors_heap_index += rtt_index;
+		std::array<float, 4> clear_color =
+		{
+			rsx::method_registers.clear_color_r() / 255.f,
+			rsx::method_registers.clear_color_g() / 255.f,
+			rsx::method_registers.clear_color_b() / 255.f,
+			rsx::method_registers.clear_color_a() / 255.f,
+		};
 		for (unsigned i = 0; i < rtt_index; i++)
-			get_current_resource_storage().command_list->ClearRenderTargetView(handle.Offset(i, m_descriptor_stride_rtv), get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]).data(),
-				1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
+			get_current_resource_storage().command_list->ClearRenderTargetView(handle.Offset(i, m_descriptor_stride_rtv), clear_color.data(),
+				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 	}
 
 	std::chrono::time_point<std::chrono::system_clock> end_duration = std::chrono::system_clock::now();
@@ -174,28 +164,27 @@ void D3D12GSRender::clear_surface(u32 arg)
 
 void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlist)
 {
-	// check if something has changed
-	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
-
 	// Exit early if there is no rtt changes
 	if (!m_rtts_dirty)
 		return;
 	m_rtts_dirty = false;
 
-
-	if (m_surface.format != surface_format)
-		m_surface.unpack(surface_format);
-
-	std::array<float, 4> clear_color = get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]);
+	std::array<float, 4> clear_color =
+	{
+		rsx::method_registers.clear_color_r() / 255.f,
+		rsx::method_registers.clear_color_g() / 255.f,
+		rsx::method_registers.clear_color_b() / 255.f,
+		rsx::method_registers.clear_color_a() / 255.f,
+	};
 	m_rtts.prepare_render_target(copycmdlist,
-		rsx::method_registers[NV4097_SET_SURFACE_FORMAT],
-		rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL], rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL],
-		rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
+		rsx::method_registers.surface_color(), rsx::method_registers.surface_depth_fmt(),
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height(),
+		rsx::method_registers.surface_color_target(),
 		get_color_surface_addresses(), get_zeta_surface_address(),
 		m_device.Get(), clear_color, 1.f, 0);
 
 	// write descriptors
-	DXGI_FORMAT dxgi_format = get_color_surface_format(m_surface.color_format);
+	DXGI_FORMAT dxgi_format = get_color_surface_format(rsx::method_registers.surface_color());
 	D3D12_RENDER_TARGET_VIEW_DESC rtt_view_desc = {};
 	rtt_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	rtt_view_desc.Format = dxgi_format;
@@ -203,7 +192,7 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 	m_rtts.current_rtts_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)get_current_resource_storage().render_targets_descriptors_heap_index * m_descriptor_stride_rtv);
 	size_t rtt_index = 0;
-	for (u8 i : get_rtt_indexes(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
+	for (u8 i : get_rtt_indexes(rsx::method_registers.surface_color_target()))
 	{
 		if (std::get<1>(m_rtts.m_bound_render_targets[i]) == nullptr)
 			continue;
@@ -219,14 +208,14 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * m_descriptor_stride_dsv);
 	get_current_resource_storage().depth_stencil_descriptor_heap_index += 1;
 	D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc = {};
-	depth_stencil_view_desc.Format = get_depth_stencil_surface_format(m_surface.depth_format);
+	depth_stencil_view_desc.Format = get_depth_stencil_surface_format(rsx::method_registers.surface_depth_fmt());
 	depth_stencil_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	m_device->CreateDepthStencilView(std::get<1>(m_rtts.m_bound_depth_stencil), &depth_stencil_view_desc, m_rtts.current_ds_handle);
 }
 
 void D3D12GSRender::set_rtt_and_ds(ID3D12GraphicsCommandList *command_list)
 {
-	UINT num_rtt = get_num_rtt(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
+	UINT num_rtt = get_num_rtt(rsx::method_registers.surface_color_target());
 	D3D12_CPU_DESCRIPTOR_HANDLE* ds_handle = (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr) ? &m_rtts.current_ds_handle : nullptr;
 	command_list->OMSetRenderTargets((UINT)num_rtt, &m_rtts.current_rtts_handle, true, ds_handle);
 }
@@ -250,8 +239,8 @@ namespace
 		rsx::surface_color_format color_surface_format
 		)
 	{
-		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+		int clip_w = rsx::method_registers.surface_clip_width();
+		int clip_h = rsx::method_registers.surface_clip_height();
 
 		DXGI_FORMAT dxgi_format = get_color_surface_format(color_surface_format);
 		size_t row_pitch = get_aligned_pitch(color_surface_format, clip_w);
@@ -300,42 +289,25 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	// Add all buffer write
 	// Cell can't make any assumption about readyness of color/depth buffer
 	// Except when a semaphore is written by RSX
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+	int clip_w = rsx::method_registers.surface_clip_width();
+	int clip_h = rsx::method_registers.surface_clip_height();
 
 	size_t depth_row_pitch = align(clip_w * 4, 256);
 	size_t depth_buffer_offset_in_heap = 0;
 
-	u32 context_dma_color[] =
-	{
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A],
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B],
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C],
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D],
-	};
-	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
-
-	u32 offset_color[] =
-	{
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET],
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET],
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET],
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET]
-	};
-	u32 offset_zeta = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
 
 	u32 address_color[] =
 	{
-		rsx::get_address(offset_color[0], context_dma_color[0]),
-		rsx::get_address(offset_color[1], context_dma_color[1]),
-		rsx::get_address(offset_color[2], context_dma_color[2]),
-		rsx::get_address(offset_color[3], context_dma_color[3]),
+		rsx::get_address(rsx::method_registers.surface_a_offset(), rsx::method_registers.surface_a_dma()),
+		rsx::get_address(rsx::method_registers.surface_b_offset(), rsx::method_registers.surface_b_dma()),
+		rsx::get_address(rsx::method_registers.surface_c_offset(), rsx::method_registers.surface_c_dma()),
+		rsx::get_address(rsx::method_registers.surface_d_offset(), rsx::method_registers.surface_d_dma()),
 	};
-	u32 address_z = rsx::get_address(offset_zeta, m_context_dma_z);
+	u32 address_z = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
 
 	bool need_transfer = false;
 
-	if (m_context_dma_z && g_cfg_rsx_write_depth_buffer)
+	if (rsx::method_registers.surface_z_dma() && g_cfg_rsx_write_depth_buffer)
 	{
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
 		get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(m_readback_resources.get_heap(), { depth_buffer_offset_in_heap,{ DXGI_FORMAT_R32_TYPELESS, (UINT)clip_w, (UINT)clip_h, 1, (UINT)depth_row_pitch } }), 0, 0, 0,
@@ -349,11 +321,11 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	size_t color_buffer_offset_in_heap[4];
 	if (g_cfg_rsx_write_color_buffers)
 	{
-		for (u8 i : get_rtt_indexes(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
+		for (u8 i : get_rtt_indexes(rsx::method_registers.surface_color_target()))
 		{
 			if (!address_color[i])
 				continue;
-			color_buffer_offset_in_heap[i] = download_to_readback_buffer(m_device.Get(), get_current_resource_storage().command_list.Get(), m_readback_resources, std::get<1>(m_rtts.m_bound_render_targets[i]), m_surface.color_format);
+			color_buffer_offset_in_heap[i] = download_to_readback_buffer(m_device.Get(), get_current_resource_storage().command_list.Get(), m_readback_resources, std::get<1>(m_rtts.m_bound_render_targets[i]), rsx::method_registers.surface_color());
 			invalidate_address(address_color[i]);
 			need_transfer = true;
 		}
@@ -390,8 +362,8 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 
 	if (g_cfg_rsx_write_color_buffers)
 	{
-		size_t srcPitch = get_aligned_pitch(m_surface.color_format, clip_w);
-		size_t dstPitch = get_packed_pitch(m_surface.color_format, clip_w);
+		size_t srcPitch = get_aligned_pitch(rsx::method_registers.surface_color(), clip_w);
+		size_t dstPitch = get_packed_pitch(rsx::method_registers.surface_color(), clip_w);
 
 		void *dest_buffer[] =
 		{
@@ -401,7 +373,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 			vm::base(address_color[3]),
 		};
 
-		for (u8 i : get_rtt_indexes(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
+		for (u8 i : get_rtt_indexes(rsx::method_registers.surface_color_target()))
 		{
 			if (!address_color[i])
 				continue;
@@ -413,19 +385,15 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 
 std::array<std::vector<gsl::byte>, 4> D3D12GSRender::copy_render_targets_to_memory()
 {
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-	rsx::surface_info surface = {};
-	surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
-	return m_rtts.get_render_targets_data(surface.color_format, clip_w, clip_h, m_device.Get(), m_command_queue.Get(), m_readback_resources, get_current_resource_storage());
+	int clip_w = rsx::method_registers.surface_clip_width();
+	int clip_h = rsx::method_registers.surface_clip_height();
+	return m_rtts.get_render_targets_data(rsx::method_registers.surface_color(), clip_w, clip_h, m_device.Get(), m_command_queue.Get(), m_readback_resources, get_current_resource_storage());
 }
 
 std::array<std::vector<gsl::byte>, 2> D3D12GSRender::copy_depth_stencil_buffer_to_memory()
 {
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-	rsx::surface_info surface = {};
-	surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
-	return m_rtts.get_depth_stencil_data(surface.depth_format, clip_w, clip_h, m_device.Get(), m_command_queue.Get(), m_readback_resources, get_current_resource_storage());
+	int clip_w = rsx::method_registers.surface_clip_width();
+	int clip_h = rsx::method_registers.surface_clip_height();
+	return m_rtts.get_depth_stencil_data(rsx::method_registers.surface_depth_fmt(), clip_w, clip_h, m_device.Get(), m_command_queue.Get(), m_readback_resources, get_current_resource_storage());
 }
 #endif

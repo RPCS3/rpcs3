@@ -164,7 +164,7 @@ u32 GLGSRender::set_vertex_buffer()
 
 	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
 
-	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
+	u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 	u32 min_index = 0, max_index = 0;
 	u32 max_vertex_attrib_size = 0;
 	u32 offset_in_index_buffer = 0;
@@ -176,7 +176,7 @@ u32 GLGSRender::set_vertex_buffer()
 	
 	for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 	{
-		if (vertex_arrays_info[index].size || register_vertex_info[index].size)
+		if (rsx::method_registers.vertex_arrays_info[index].size || rsx::method_registers.register_vertex_info[index].size)
 		{
 			max_vertex_attrib_size += 16;
 		}
@@ -184,7 +184,7 @@ u32 GLGSRender::set_vertex_buffer()
 
 	if (draw_command == rsx::draw_command::indexed)
 	{
-		rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		rsx::index_array_type type = rsx::method_registers.index_type();
 		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 		for (const auto& first_count : first_count_commands)
 		{
@@ -212,7 +212,7 @@ u32 GLGSRender::set_vertex_buffer()
 
 		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
-			const auto &info = vertex_arrays_info[i];
+			const auto &info = rsx::method_registers.vertex_arrays_info[i];
 			if (!info.size) continue;
 
 			offsets[i] = stride;
@@ -224,7 +224,7 @@ u32 GLGSRender::set_vertex_buffer()
 
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			auto &vertex_info = vertex_arrays_info[index];
+			auto &vertex_info = rsx::method_registers.vertex_arrays_info[index];
 
 			int location;
 			if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[index] + "_buffer", &location))
@@ -307,9 +307,9 @@ u32 GLGSRender::set_vertex_buffer()
 				continue;
 			}
 
-			if (vertex_arrays_info[index].size > 0)
+			if (rsx::method_registers.vertex_arrays_info[index].size > 0)
 			{
-				auto &vertex_info = vertex_arrays_info[index];
+				auto &vertex_info = rsx::method_registers.vertex_arrays_info[index];
 
 				// Fill vertex_array
 				u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
@@ -322,8 +322,8 @@ u32 GLGSRender::set_vertex_buffer()
 				u32 buffer_offset = 0;
 
 				// Get source pointer
-				u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-				u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
+				u32 base_offset = rsx::method_registers.vertex_data_base_offset();
+				u32 offset = rsx::method_registers.vertex_arrays_info[index].offset();
 				u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
 				const gsl::byte *src_ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
 
@@ -361,10 +361,10 @@ u32 GLGSRender::set_vertex_buffer()
 				//Link texture to uniform
 				m_program->uniforms.texture(location, index + texture_index_offset, texture);
 			}
-			else if (register_vertex_info[index].size > 0)
+			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
-				auto &vertex_data = register_vertex_data[index];
-				auto &vertex_info = register_vertex_info[index];
+				auto &vertex_data = rsx::method_registers.register_vertex_data[index];
+				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
 
 				switch (vertex_info.type)
 				{

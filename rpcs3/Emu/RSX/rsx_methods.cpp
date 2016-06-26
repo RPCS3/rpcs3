@@ -8,6 +8,7 @@
 #include "Emu/Cell/PPUCallback.h"
 
 #include <thread>
+#include <cassert>
 
 cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 {
@@ -21,7 +22,7 @@ cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 
 namespace rsx
 {
-	u32 method_registers[0x10000 >> 2];
+	rsx_state method_registers;
 	rsx_method_t methods[0x10000 >> 2]{};
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -40,7 +41,7 @@ namespace rsx
 		force_inline void semaphore_acquire(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			while (vm::ps3::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
+			while (vm::ps3::read32(rsx->label_addr + method_registers.semaphore_offset_406e()) != arg)
 			{
 				if (Emu.IsStopped())
 					break;
@@ -52,7 +53,7 @@ namespace rsx
 		force_inline void semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET], arg);
+			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_406e(), arg);
 		}
 	}
 
@@ -61,13 +62,13 @@ namespace rsx
 		force_inline void texture_read_semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
+			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(), arg);
 		}
 
 		force_inline void back_end_write_semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET],
+			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(),
 				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
 		}
 
@@ -78,14 +79,14 @@ namespace rsx
 			static const size_t element_size = (count * sizeof(type));
 			static const size_t element_size_in_words = element_size / sizeof(u32);
 
-			auto& info = rsx->register_vertex_info[index];
+			auto& info = rsx::method_registers.register_vertex_info[index];
 
 			info.type = vertex_data_type_from_element_type<type>::type;
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
 
-			auto& entry = rsx->register_vertex_data[index];
+			auto& entry = rsx::method_registers.register_vertex_data[index];
 
 			//find begin of data
 			size_t begin = id + index * element_size_in_words;
@@ -93,7 +94,7 @@ namespace rsx
 			size_t position = entry.size();
 			entry.resize(position + element_size);
 
-			memcpy(entry.data() + position, method_registers + begin, element_size);
+			memcpy(entry.data() + position, &method_registers[begin], element_size);
 		}
 
 		template<u32 index>
@@ -164,7 +165,7 @@ namespace rsx
 		{
 			force_inline static void impl(thread* rsx, u32 arg)
 			{
-				auto& info = rsx->vertex_arrays_info[index];
+				auto& info = rsx::method_registers.vertex_arrays_info[index];
 				info.unpack_array(arg);
 			}
 		};
@@ -199,15 +200,7 @@ namespace rsx
 		{
 			force_inline static void impl(thread* rsxthr, u32 arg)
 			{
-				u32 load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
-
-				static const size_t count = 4;
-				static const size_t size = count * sizeof(f32);
-
-				size_t reg = index / 4;
-				size_t subreg = index % 4;
-
-				memcpy(rsxthr->transform_constants[load + reg].rgba + subreg, method_registers + NV4097_SET_TRANSFORM_CONSTANT + reg * count + subreg, sizeof(f32));
+				method_registers.set_transform_constant(index, arg);
 				rsxthr->m_transform_constants_dirty = true;
 			}
 		};
@@ -217,12 +210,7 @@ namespace rsx
 		{
 			force_inline static void impl(thread* rsx, u32 arg)
 			{
-				u32& load = method_registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
-
-				static const size_t count = 4;
-				static const size_t size = count * sizeof(u32);
-
-				memcpy(rsx->transform_program + load++ * count, method_registers + NV4097_SET_TRANSFORM_PROGRAM + index * count, size);
+				method_registers.commit_4_transform_program_instructions(index);
 			}
 		};
 
@@ -238,17 +226,16 @@ namespace rsx
 
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
-				auto &vertex_info = rsxthr->register_vertex_info[index];
+				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
 
 				if (vertex_info.size > 0)
 				{
-					auto &vertex_data = rsxthr->register_vertex_data[index];
+					auto &vertex_data = rsx::method_registers.register_vertex_data[index];
 
 					u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 					u32 element_count = vertex_data.size() / element_size;
 
 					vertex_info.frequency = element_count;
-					rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION] |= 1 << index;
 
 					if (rsxthr->draw_command == rsx::draw_command::none)
 					{
@@ -273,13 +260,13 @@ namespace rsx
 		{
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
-			u32 report_dma = method_registers[NV4097_SET_CONTEXT_DMA_REPORT];
+			blit_engine::context_dma report_dma = method_registers.context_dma_report();
 			u32 location;
 
 			switch (report_dma)
 			{
-			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT: location = CELL_GCM_LOCATION_LOCAL; break;
-			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN: location = CELL_GCM_LOCATION_MAIN; break;
+			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_LOCATION_LOCAL; break;
+			case blit_engine::context_dma::report_location_main: location = CELL_GCM_LOCATION_MAIN; break;
 			default:
 				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", report_dma);
 				return;
@@ -347,16 +334,15 @@ namespace rsx
 		{
 			force_inline static void impl(u32 arg)
 			{
-				u32 point = method_registers[NV308A_POINT];
-				u16 x = point;
-				u16 y = point >> 16;
+				u16 x = method_registers.nv308a_x();
+				u16 y = method_registers.nv308a_y();
 
 				if (y)
 				{
 					LOG_ERROR(RSX, "%s: y is not null (0x%x)", __FUNCTION__, y);
 				}
 
-				u32 address = get_address(method_registers[NV3062_SET_OFFSET_DESTIN] + (x << 2) + index * 4, method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]);
+				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + (x << 2) + index * 4, method_registers.blit_engine_output_location_nv3062());
 				vm::ps3::write32(address, arg);
 			}
 		};
@@ -366,70 +352,65 @@ namespace rsx
 	{
 		never_inline void image_in(thread *rsx, u32 arg)
 		{
-			u32 operation = method_registers[NV3089_SET_OPERATION];
+			rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
-			u32 clip_x = method_registers[NV3089_CLIP_POINT] & 0xffff;
-			u32 clip_y = method_registers[NV3089_CLIP_POINT] >> 16;
-			u32 clip_w = method_registers[NV3089_CLIP_SIZE] & 0xffff;
-			u32 clip_h = method_registers[NV3089_CLIP_SIZE] >> 16;
+			u32 clip_x = method_registers.blit_engine_clip_x();
+			u32 clip_y = method_registers.blit_engine_clip_y();
+			u32 clip_w = method_registers.blit_engine_clip_width();
+			u32 clip_h = method_registers.blit_engine_clip_height();
 
-			u32 out_x = method_registers[NV3089_IMAGE_OUT_POINT] & 0xffff;
-			u32 out_y = method_registers[NV3089_IMAGE_OUT_POINT] >> 16;
-			u32 out_w = method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff;
-			u32 out_h = method_registers[NV3089_IMAGE_OUT_SIZE] >> 16;
+			u32 out_x = method_registers.blit_engine_output_x();
+			u32 out_y = method_registers.blit_engine_output_y();
+			u32 out_w = method_registers.blit_engine_clip_width();
+			u32 out_h = method_registers.blit_engine_output_height();
 
-			u16 in_w = method_registers[NV3089_IMAGE_IN_SIZE];
-			u16 in_h = method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
-			u16 in_pitch = method_registers[NV3089_IMAGE_IN_FORMAT];
-			u8 in_origin = method_registers[NV3089_IMAGE_IN_FORMAT] >> 16;
-			u8 in_inter = method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
-			u32 src_color_format = method_registers[NV3089_SET_COLOR_FORMAT];
+			u16 in_w = method_registers.blit_engine_input_width();
+			u16 in_h = method_registers.blit_engine_output_height();
+			u16 in_pitch = method_registers.blit_engine_input_pitch();
+			blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
+			blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
+			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
-			f32 in_x = (method_registers[NV3089_IMAGE_IN] & 0xffff) / 16.f;
-			f32 in_y = (method_registers[NV3089_IMAGE_IN] >> 16) / 16.f;
+			f32 in_x = method_registers.blit_engine_in_x();
+			f32 in_y = method_registers.blit_engine_in_y();
 
-			if (in_origin != CELL_GCM_TRANSFER_ORIGIN_CORNER)
+			if (in_origin != blit_engine::transfer_origin::corner)
 			{
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", in_origin);
 			}
 
-			if (in_inter != CELL_GCM_TRANSFER_INTERPOLATOR_ZOH && in_inter != CELL_GCM_TRANSFER_INTERPOLATOR_FOH)
-			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", in_inter);
-			}
-
-			if (operation != CELL_GCM_TRANSFER_OPERATION_SRCCOPY)
+			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", operation);
 			}
 
-			const u32 src_offset = method_registers[NV3089_IMAGE_IN_OFFSET];
-			const u32 src_dma = method_registers[NV3089_SET_CONTEXT_DMA_IMAGE];
+			const u32 src_offset = method_registers.blit_engine_input_offset();
+			const u32 src_dma = method_registers.blit_engine_input_location();
 
 			u32 dst_offset;
 			u32 dst_dma = 0;
-			u16 dst_color_format;
+			rsx::blit_engine::transfer_destination_format dst_color_format;
 			u32 out_pitch = 0;
 			u32 out_aligment = 64;
 
-			switch (method_registers[NV3089_SET_CONTEXT_SURFACE])
+			switch (method_registers.blit_engine_context_surface())
 			{
-			case CELL_GCM_CONTEXT_SURFACE2D:
-				dst_dma = method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN];
-				dst_offset = method_registers[NV3062_SET_OFFSET_DESTIN];
-				dst_color_format = method_registers[NV3062_SET_COLOR_FORMAT];
-				out_pitch = method_registers[NV3062_SET_PITCH] >> 16;
-				out_aligment = method_registers[NV3062_SET_PITCH] & 0xffff;
+			case blit_engine::context_surface::surface2d:
+				dst_dma = method_registers.blit_engine_output_location_nv3062();
+				dst_offset = method_registers.blit_engine_output_offset_nv3062();
+				dst_color_format = method_registers.blit_engine_nv3062_color_format();
+				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
+				out_aligment = method_registers.blit_engine_output_alignment_nv3062();
 				break;
 
-			case CELL_GCM_CONTEXT_SWIZZLE2D:
-				dst_dma = method_registers[NV309E_SET_CONTEXT_DMA_IMAGE];
-				dst_offset = method_registers[NV309E_SET_OFFSET];
-				dst_color_format = method_registers[NV309E_SET_FORMAT];
+			case blit_engine::context_surface::swizzle2d:
+				dst_dma = method_registers.blit_engine_nv309E_location();
+				dst_offset = method_registers.blit_engine_nv309E_offset();
+				dst_color_format = method_registers.blit_engine_output_format_nv309E();
 				break;
 
 			default:
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", method_registers[NV3089_SET_CONTEXT_SURFACE]);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", method_registers.blit_engine_context_surface());
 				return;
 			}
 
@@ -464,8 +445,8 @@ namespace rsx
 				}
 			}
 
-			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
-			u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
+			u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
+			u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
 
 			u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
 			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
@@ -498,14 +479,14 @@ namespace rsx
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
 			u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address + out_offset);
 
-			if (dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 &&
-				dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8)
+			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
+				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", dst_color_format);
 			}
 
-			if (src_color_format != CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 &&
-				src_color_format != CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8)
+			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
+				src_color_format != rsx::blit_engine::transfer_source_format::a8r8g8b8)
 			{
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", src_color_format);
 			}
@@ -516,18 +497,21 @@ namespace rsx
 
 			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
 
-			AVPixelFormat in_format = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-			AVPixelFormat out_format = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+			AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+			AVPixelFormat out_format = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
 
-			f32 scale_x = 1048576.f / method_registers[NV3089_DS_DX];
-			f32 scale_y = 1048576.f / method_registers[NV3089_DT_DY];
+			f32 scale_x = 1048576.f / method_registers.blit_engine_ds_dx();
+			f32 scale_y = 1048576.f / method_registers.blit_engine_dt_dy();
 
 			u32 convert_w = (u32)(scale_x * in_w);
 			u32 convert_h = (u32)(scale_y * in_h);
 
 			bool need_clip =
-				method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_IN_SIZE] ||
-				method_registers[NV3089_CLIP_POINT] || convert_w != out_w || convert_h != out_h;
+				method_registers.blit_engine_clip_width() != method_registers.blit_engine_input_width() ||
+				method_registers.blit_engine_clip_height() != method_registers.blit_engine_input_height() ||
+				method_registers.blit_engine_clip_x() > 0 ||
+				method_registers.blit_engine_clip_y() > 0 ||
+				convert_w != out_w || convert_h != out_h;
 
 			bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
 
@@ -549,7 +533,7 @@ namespace rsx
 				}
 			}
 
-			if (method_registers[NV3089_SET_CONTEXT_SURFACE] != CELL_GCM_CONTEXT_SWIZZLE2D)
+			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
 				if (need_convert || need_clip)
 				{
@@ -558,7 +542,7 @@ namespace rsx
 						if (need_convert)
 						{
 							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
-								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
 							clip_image(pixels_dst + out_offset, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
@@ -570,7 +554,7 @@ namespace rsx
 					else
 					{
 						convert_scale_image(pixels_dst + out_offset, out_format, out_w, out_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 				}
 				else
@@ -600,7 +584,7 @@ namespace rsx
 						if (need_convert)
 						{
 							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
-								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
 							clip_image(temp2, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
@@ -612,14 +596,14 @@ namespace rsx
 					else
 					{
 						convert_scale_image(temp2, out_format, out_w, out_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter ? true : false);
+							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 
 					pixels_src = temp2.get();
 				}
 
-				u8 sw_width_log2 = method_registers[NV309E_SET_FORMAT] >> 16;
-				u8 sw_height_log2 = method_registers[NV309E_SET_FORMAT] >> 24;
+				u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
+				u8 sw_height_log2 = method_registers.nv309e_sw_height_log2();
 
 				// 0 indicates height of 1 pixel
 				sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
@@ -676,12 +660,12 @@ namespace rsx
 	{
 		force_inline void buffer_notify(u32 arg)
 		{
-			u32 in_pitch = method_registers[NV0039_PITCH_IN];
-			u32 out_pitch = method_registers[NV0039_PITCH_OUT];
-			const u32 line_length = method_registers[NV0039_LINE_LENGTH_IN];
-			const u32 line_count = method_registers[NV0039_LINE_COUNT];
-			const u8 out_format = method_registers[NV0039_FORMAT] >> 8;
-			const u8 in_format = method_registers[NV0039_FORMAT];
+			u32 in_pitch = method_registers.nv0039_input_pitch();
+			u32 out_pitch = method_registers.nv0039_output_pitch();
+			const u32 line_length = method_registers.nv0039_line_length();
+			const u32 line_count = method_registers.nv0039_line_count();
+			const u8 out_format = method_registers.nv0039_output_format();
+			const u8 in_format = method_registers.nv0039_input_format();
 			const u32 notify = arg;
 
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
@@ -700,11 +684,11 @@ namespace rsx
 				out_pitch = line_length;
 			}
 
-			u32 src_offset = method_registers[NV0039_OFFSET_IN];
-			u32 src_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN];
+			u32 src_offset = method_registers.nv0039_input_offset();
+			u32 src_dma = method_registers.nv0039_input_location();
 
-			u32 dst_offset = method_registers[NV0039_OFFSET_OUT];
-			u32 dst_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT];
+			u32 dst_offset = method_registers.nv0039_output_offset();
+			u32 dst_dma = method_registers.nv0039_output_location();
 
 			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
 			const u8 *src = (u8*)vm::base(get_address(src_offset, src_dma));

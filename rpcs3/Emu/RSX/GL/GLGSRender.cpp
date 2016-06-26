@@ -71,6 +71,125 @@ u32 GLGSRender::enable(u32 condition, u32 cap, u32 index)
 
 extern CellGcmContextData current_context;
 
+namespace
+{
+	GLenum comparaison_op(rsx::comparaison_function op)
+	{
+		switch (op)
+		{
+		case rsx::comparaison_function::never: return GL_NEVER;
+		case rsx::comparaison_function::less: return GL_LESS;
+		case rsx::comparaison_function::equal: return GL_EQUAL;
+		case rsx::comparaison_function::less_or_equal: return GL_LEQUAL;
+		case rsx::comparaison_function::greater: return GL_GREATER;
+		case rsx::comparaison_function::not_equal: return GL_NOTEQUAL;
+		case rsx::comparaison_function::greater_or_equal: return GL_GEQUAL;
+		case rsx::comparaison_function::always: return GL_ALWAYS;
+		}
+		throw;
+	}
+
+	GLenum stencil_op(rsx::stencil_op op)
+	{
+		switch (op)
+		{
+		case rsx::stencil_op::keep: return GL_KEEP;
+		case rsx::stencil_op::zero: return GL_ZERO;
+		case rsx::stencil_op::replace: return GL_REPLACE;
+		case rsx::stencil_op::incr: return GL_INCR;
+		case rsx::stencil_op::decr: return GL_DECR;
+		case rsx::stencil_op::incr_wrap: return GL_INCR_WRAP;
+		case rsx::stencil_op::decr_wrap: return GL_DECR_WRAP;
+		}
+		throw;
+	}
+
+	GLenum blend_equation(rsx::blend_equation op)
+	{
+		switch (op)
+		{
+			// Note : maybe add is signed on gl
+		case rsx::blend_equation::add: return GL_FUNC_ADD;
+		case rsx::blend_equation::min: return GL_MIN;
+		case rsx::blend_equation::max: return GL_MAX;
+		case rsx::blend_equation::substract: return GL_FUNC_SUBTRACT;
+		case rsx::blend_equation::reverse_substract: return GL_FUNC_REVERSE_SUBTRACT;
+		case rsx::blend_equation::reverse_substract_signed: throw "unsupported";
+		case rsx::blend_equation::add_signed: throw "unsupported";
+		case rsx::blend_equation::reverse_add_signed: throw "unsupported";
+		}
+		throw;
+	}
+
+	GLenum blend_factor(rsx::blend_factor op)
+	{
+		switch (op)
+		{
+		case rsx::blend_factor::zero: return GL_ZERO;
+		case rsx::blend_factor::one: return GL_ONE;
+		case rsx::blend_factor::src_color: return GL_SRC_COLOR;
+		case rsx::blend_factor::one_minus_src_color: return GL_ONE_MINUS_SRC_COLOR;
+		case rsx::blend_factor::dst_color: return GL_DST_COLOR;
+		case rsx::blend_factor::one_minus_dst_color: return GL_ONE_MINUS_DST_COLOR;
+		case rsx::blend_factor::src_alpha: return GL_SRC_ALPHA;
+		case rsx::blend_factor::one_minus_src_alpha: return GL_ONE_MINUS_SRC_ALPHA;
+		case rsx::blend_factor::dst_alpha: return GL_DST_ALPHA;
+		case rsx::blend_factor::one_minus_dst_alpha: return GL_ONE_MINUS_DST_ALPHA;
+		case rsx::blend_factor::src_alpha_saturate: return GL_SRC_ALPHA_SATURATE;
+		case rsx::blend_factor::constant_color: return GL_CONSTANT_COLOR;
+		case rsx::blend_factor::one_minus_constant_color: return GL_ONE_MINUS_CONSTANT_COLOR;
+		case rsx::blend_factor::constant_alpha: return GL_CONSTANT_ALPHA;
+		case rsx::blend_factor::one_minus_constant_alpha: return GL_ONE_MINUS_CONSTANT_ALPHA;
+		}
+		throw;
+	}
+
+	GLenum logic_op(rsx::logic_op op)
+	{
+		switch (op)
+		{
+		case rsx::logic_op::logic_clear: return GL_CLEAR;
+		case rsx::logic_op::logic_and: return GL_AND;
+		case rsx::logic_op::logic_and_reverse: return GL_AND_REVERSE;
+		case rsx::logic_op::logic_copy: return GL_COPY;
+		case rsx::logic_op::logic_and_inverted: return GL_AND_INVERTED;
+		case rsx::logic_op::logic_noop: return GL_NOOP;
+		case rsx::logic_op::logic_xor: return GL_XOR;
+		case rsx::logic_op::logic_or : return GL_OR;
+		case rsx::logic_op::logic_nor: return GL_NOR;
+		case rsx::logic_op::logic_equiv: return GL_EQUIV;
+		case rsx::logic_op::logic_invert: return GL_INVERT;
+		case rsx::logic_op::logic_or_reverse: return GL_OR_REVERSE;
+		case rsx::logic_op::logic_copy_inverted: return GL_COPY_INVERTED;
+		case rsx::logic_op::logic_or_inverted: return GL_OR_INVERTED;
+		case rsx::logic_op::logic_nand: return GL_NAND;
+		case rsx::logic_op::logic_set: return GL_SET;
+		}
+		throw;
+	}
+
+	GLenum front_face(rsx::front_face op)
+	{
+		switch (op)
+		{
+		case rsx::front_face::cw: return GL_CW;
+		case rsx::front_face::ccw: return GL_CCW;
+		}
+		throw;
+	}
+
+	GLenum cull_face(rsx::cull_face op)
+	{
+		switch (op)
+		{
+		case rsx::cull_face::front: return GL_FRONT;
+		case rsx::cull_face::back: return GL_BACK;
+		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
+		}
+		throw;
+	}
+}
+
 void GLGSRender::begin()
 {
 	rsx::thread::begin();
@@ -79,127 +198,110 @@ void GLGSRender::begin()
 
 	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
 
-	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
-	bool color_mask_b = !!(color_mask & 0xff);
-	bool color_mask_g = !!((color_mask >> 8) & 0xff);
-	bool color_mask_r = !!((color_mask >> 16) & 0xff);
-	bool color_mask_a = !!((color_mask >> 24) & 0xff);
+	bool color_mask_b = rsx::method_registers.color_mask_b();
+	bool color_mask_g = rsx::method_registers.color_mask_g();
+	bool color_mask_r = rsx::method_registers.color_mask_r();
+	bool color_mask_a = rsx::method_registers.color_mask_a();
 
 	__glcheck glColorMask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
-	__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
+	__glcheck glDepthMask(rsx::method_registers.depth_write_enabled());
+	__glcheck glStencilMask(rsx::method_registers.stencil_mask());
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
+	if (__glcheck enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
-		__glcheck glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
-		__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
+		__glcheck glDepthFunc(comparaison_op(rsx::method_registers.depth_func()));
+		__glcheck glDepthMask(rsx::method_registers.depth_write_enabled());
 	}
 
-	if (glDepthBoundsEXT && (__glcheck enable(rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE], GL_DEPTH_BOUNDS_TEST_EXT)))
+	if (glDepthBoundsEXT && (__glcheck enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
 	{
-		__glcheck glDepthBoundsEXT((f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN], (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX]);
+		__glcheck glDepthBoundsEXT(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
-	__glcheck glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]);
-	__glcheck enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
+	__glcheck glDepthRange(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
+	__glcheck enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND))
+	if (__glcheck enable(rsx::method_registers.blend_enabled(), GL_BLEND))
 	{
-		u32 sfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR];
-		u32 dfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR];
-		u16 sfactor_rgb = sfactor;
-		u16 sfactor_a = sfactor >> 16;
-		u16 dfactor_rgb = dfactor;
-		u16 dfactor_a = dfactor >> 16;
-
-		__glcheck glBlendFuncSeparate(sfactor_rgb, dfactor_rgb, sfactor_a, dfactor_a);
+		__glcheck glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
 
 		if (m_surface.color_format == rsx::surface_color_format::w16z16y16x16) //TODO: check another color formats
 		{
-			u32 blend_color = rsx::method_registers[NV4097_SET_BLEND_COLOR];
-			u32 blend_color2 = rsx::method_registers[NV4097_SET_BLEND_COLOR2];
-
-			u16 blend_color_r = blend_color;
-			u16 blend_color_g = blend_color >> 16;
-			u16 blend_color_b = blend_color2;
-			u16 blend_color_a = blend_color2 >> 16;
+			u16 blend_color_r = rsx::method_registers.blend_color_16b_r();
+			u16 blend_color_g = rsx::method_registers.blend_color_16b_g();
+			u16 blend_color_b = rsx::method_registers.blend_color_16b_b();
+			u16 blend_color_a = rsx::method_registers.blend_color_16b_a();
 
 			__glcheck glBlendColor(blend_color_r / 65535.f, blend_color_g / 65535.f, blend_color_b / 65535.f, blend_color_a / 65535.f);
 		}
 		else
 		{
-			u32 blend_color = rsx::method_registers[NV4097_SET_BLEND_COLOR];
-			u8 blend_color_r = blend_color;
-			u8 blend_color_g = blend_color >> 8;
-			u8 blend_color_b = blend_color >> 16;
-			u8 blend_color_a = blend_color >> 24;
+			u8 blend_color_r = rsx::method_registers.blend_color_8b_r();
+			u8 blend_color_g = rsx::method_registers.blend_color_8b_g();
+			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
+			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
 
 			__glcheck glBlendColor(blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f);
 		}
 
-		u32 equation = rsx::method_registers[NV4097_SET_BLEND_EQUATION];
-		u16 equation_rgb = equation;
-		u16 equation_a = equation >> 16;
-
-		__glcheck glBlendEquationSeparate(equation_rgb, equation_a);
+		__glcheck glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
+			blend_equation(rsx::method_registers.blend_equation_a()));
 	}
 	
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE], GL_STENCIL_TEST))
+	if (__glcheck enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
 	{
-		__glcheck glStencilFunc(rsx::method_registers[NV4097_SET_STENCIL_FUNC], rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF],
-			rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK]);
-		__glcheck glStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL], rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL],
-			rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
+		__glcheck glStencilFunc(comparaison_op(rsx::method_registers.stencil_func()), rsx::method_registers.stencil_func_ref(),
+			rsx::method_registers.stencil_func_mask());
+		__glcheck glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
+			stencil_op(rsx::method_registers.stencil_op_zpass()));
 
-		if (rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE])
-		{
-			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_MASK]);
-			__glcheck glStencilFuncSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC],
-				rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_REF], rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_MASK]);
-			__glcheck glStencilOpSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL],
-				rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL], rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
+		if (rsx::method_registers.two_sided_stencil_test_enabled()) {
+			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
+			__glcheck glStencilFuncSeparate(GL_BACK, comparaison_op(rsx::method_registers.back_stencil_func()),
+				rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
+			__glcheck glStencilOpSeparate(GL_BACK, stencil_op(rsx::method_registers.back_stencil_op_fail()),
+				stencil_op(rsx::method_registers.back_stencil_op_zfail()), stencil_op(rsx::method_registers.back_stencil_op_zpass()));
 		}
 	}
 
-	if (u32 blend_mrt = rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT])
-	{
-		__glcheck enable(blend_mrt & 2, GL_BLEND, 1);
-		__glcheck enable(blend_mrt & 4, GL_BLEND, 2);
-		__glcheck enable(blend_mrt & 8, GL_BLEND, 3);
-	}
+	__glcheck enable(rsx::method_registers.blend_enabled_surface_1(), GL_BLEND, 1);
+	__glcheck enable(rsx::method_registers.blend_enabled_surface_2(), GL_BLEND, 2);
+	__glcheck enable(rsx::method_registers.blend_enabled_surface_3(), GL_BLEND, 3);
 	
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_COLOR_LOGIC_OP))
+	if (__glcheck enable(rsx::method_registers.logic_op_enabled(), GL_COLOR_LOGIC_OP))
 	{
-		__glcheck glLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]);
+		__glcheck glLogicOp(logic_op(rsx::method_registers.logic_operation()));
 	}
 
-	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
-	__glcheck glLineWidth((line_width >> 3) + (line_width & 7) / 8.f);
-	__glcheck enable(rsx::method_registers[NV4097_SET_LINE_SMOOTH_ENABLE], GL_LINE_SMOOTH);
+	__glcheck glLineWidth(rsx::method_registers.line_width());
+	__glcheck enable(rsx::method_registers.line_smooth_enabled(), GL_LINE_SMOOTH);
 
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
 
-	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_POINT_ENABLE], GL_POLYGON_OFFSET_POINT);
-	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_LINE_ENABLE], GL_POLYGON_OFFSET_LINE);
-	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
+	__glcheck enable(rsx::method_registers.poly_offset_point_enabled(), GL_POLYGON_OFFSET_POINT);
+	__glcheck enable(rsx::method_registers.poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
+	__glcheck enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
 
-	__glcheck glPolygonOffset((f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR],
-		(f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_BIAS]);
+	__glcheck glPolygonOffset(rsx::method_registers.poly_offset_scale(),
+		rsx::method_registers.poly_offset_bias());
 
 	//NV4097_SET_SPECULAR_ENABLE
 	//NV4097_SET_TWO_SIDE_LIGHT_EN
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
+	if (__glcheck enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
 	{
-		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
+		__glcheck glCullFace(cull_face(rsx::method_registers.cull_face_mode()));
 	}
 
-	__glcheck glFrontFace(get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE] ^ 1));
+	__glcheck glFrontFace(front_face(rsx::method_registers.front_face_mode()));
 
-	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
+	__glcheck enable(rsx::method_registers.poly_smooth_enabled(), GL_POLYGON_SMOOTH);
 
 	//NV4097_SET_COLOR_KEY_COLOR
 	//NV4097_SET_SHADER_CONTROL
@@ -207,9 +309,9 @@ void GLGSRender::begin()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE], GL_PRIMITIVE_RESTART))
+	if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 	{
-		__glcheck glPrimitiveRestartIndex(rsx::method_registers[NV4097_SET_RESTART_INDEX]);
+		__glcheck glPrimitiveRestartIndex(rsx::method_registers.restart_index());
 	}
 
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
@@ -252,15 +354,14 @@ void GLGSRender::end()
 		return;
 	}
 
-	u32 clip_plane_control = rsx::method_registers[NV4097_SET_USER_CLIP_PLANE_CONTROL];
-	u8 clip_plane_0 = clip_plane_control & 0xf;
-	u8 clip_plane_1 = (clip_plane_control >> 4) & 0xf;
-	u8 clip_plane_2 = (clip_plane_control >> 8) & 0xf;
-	u8 clip_plane_3 = (clip_plane_control >> 12) & 0xf;
-	u8 clip_plane_4 = (clip_plane_control >> 16) & 0xf;
-	u8 clip_plane_5 = (clip_plane_control >> 20) & 0xf;
+	rsx::user_clip_plane_op clip_plane_0 = rsx::method_registers.clip_plane_0_enabled();
+	rsx::user_clip_plane_op clip_plane_1 = rsx::method_registers.clip_plane_1_enabled();
+	rsx::user_clip_plane_op clip_plane_2 = rsx::method_registers.clip_plane_2_enabled();
+	rsx::user_clip_plane_op clip_plane_3 = rsx::method_registers.clip_plane_3_enabled();
+	rsx::user_clip_plane_op clip_plane_4 = rsx::method_registers.clip_plane_4_enabled();
+	rsx::user_clip_plane_op clip_plane_5 = rsx::method_registers.clip_plane_5_enabled();
 
-	auto set_clip_plane_control = [&](int index, u8 control)
+	auto set_clip_plane_control = [&](int index, rsx::user_clip_plane_op control)
 	{
 		int value = 0;
 		int location;
@@ -271,15 +372,15 @@ void GLGSRender::end()
 			default:
 				LOG_ERROR(RSX, "bad clip plane control (0x%x)", control);
 
-			case CELL_GCM_USER_CLIP_PLANE_DISABLE:
+			case rsx::user_clip_plane_op::disable:
 				value = 0;
 				break;
 
-			case CELL_GCM_USER_CLIP_PLANE_ENABLE_GE:
+			case rsx::user_clip_plane_op::greather_or_equal:
 				value = 1;
 				break;
 
-			case CELL_GCM_USER_CLIP_PLANE_ENABLE_LT:
+			case rsx::user_clip_plane_op::less_than:
 				value = -1;
 				break;
 			}
@@ -307,7 +408,7 @@ void GLGSRender::end()
 			int location;
 			if (m_program->uniforms.has_location("ftexture" + std::to_string(i), &location))
 			{
-				if (!textures[i].enabled())
+				if (!rsx::method_registers.fragment_textures[i].enabled())
 				{
 					glActiveTexture(GL_TEXTURE0 + i);
 					glBindTexture(GL_TEXTURE_2D, 0);
@@ -316,18 +417,18 @@ void GLGSRender::end()
 					continue;
 				}
 
-				m_gl_textures[i].set_target(get_gl_target_for_texture(textures[i]));
+				m_gl_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]));
 
-				__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i], m_rtts);
+				__glcheck m_gl_texture_cache.upload_texture(i, rsx::method_registers.fragment_textures[i], m_gl_textures[i], m_rtts);
 				__glcheck glProgramUniform1i(m_program->id(), location, i);
 
 				if (m_program->uniforms.has_location("ftexture" + std::to_string(i) + "_cm", &location))
 				{
-					if (textures[i].format() & CELL_GCM_TEXTURE_UN)
+					if (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN)
 					{
-						u32 width = std::max<u32>(textures[i].width(), 1);
-						u32 height = std::max<u32>(textures[i].height(), 1);
-						u32 depth = std::max<u32>(textures[i].depth(), 1);
+						u32 width = std::max<u32>(rsx::method_registers.fragment_textures[i].width(), 1);
+						u32 height = std::max<u32>(rsx::method_registers.fragment_textures[i].height(), 1);
+						u32 depth = std::max<u32>(rsx::method_registers.fragment_textures[i].depth(), 1);
 
 						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
 					}
@@ -340,7 +441,7 @@ void GLGSRender::end()
 			int location;
 			if (m_program->uniforms.has_location("vtexture" + std::to_string(i), &location))
 			{
-				if (!textures[i].enabled())
+				if (!rsx::method_registers.fragment_textures[i].enabled())
 				{
 					glActiveTexture(GL_TEXTURE0 + i);
 					glBindTexture(GL_TEXTURE_2D, 0);
@@ -349,18 +450,18 @@ void GLGSRender::end()
 					continue;
 				}
 
-				m_gl_vertex_textures[i].set_target(get_gl_target_for_texture(vertex_textures[i]));
+				m_gl_vertex_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.vertex_textures[i]));
 
-				__glcheck m_gl_texture_cache.upload_texture(i, vertex_textures[i], m_gl_vertex_textures[i], m_rtts);
+				__glcheck m_gl_texture_cache.upload_texture(i, rsx::method_registers.vertex_textures[i], m_gl_vertex_textures[i], m_rtts);
 				__glcheck glProgramUniform1i(m_program->id(), location, i);
 
 				if (m_program->uniforms.has_location("vtexture" + std::to_string(i) + "_cm", &location))
 				{
-					if (textures[i].format() & CELL_GCM_TEXTURE_UN)
+					if (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN)
 					{
-						u32 width = std::max<u32>(textures[i].width(), 1);
-						u32 height = std::max<u32>(textures[i].height(), 1);
-						u32 depth = std::max<u32>(textures[i].depth(), 1);
+						u32 width = std::max<u32>(rsx::method_registers.fragment_textures[i].width(), 1);
+						u32 height = std::max<u32>(rsx::method_registers.fragment_textures[i].height(), 1);
+						u32 depth = std::max<u32>(rsx::method_registers.fragment_textures[i].depth(), 1);
 
 						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
 					}
@@ -381,7 +482,7 @@ void GLGSRender::end()
 
 	if (draw_command == rsx::draw_command::indexed)
 	{
-		rsx::index_array_type indexed_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		rsx::index_array_type indexed_type = rsx::method_registers.index_type();
 
 		if (indexed_type == rsx::index_array_type::u32)
 		{
@@ -415,24 +516,17 @@ void GLGSRender::end()
 
 void GLGSRender::set_viewport()
 {
-	u32 viewport_horizontal = rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL];
-	u32 viewport_vertical = rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL];
+	u16 viewport_x = rsx::method_registers.viewport_origin_x();
+	u16 viewport_y = rsx::method_registers.viewport_origin_y();
+	u16 viewport_w = rsx::method_registers.viewport_width();
+	u16 viewport_h = rsx::method_registers.viewport_height();
 
-	u16 viewport_x = viewport_horizontal & 0xffff;
-	u16 viewport_y = viewport_vertical & 0xffff;
-	u16 viewport_w = viewport_horizontal >> 16;
-	u16 viewport_h = viewport_vertical >> 16;
+	u16 scissor_x = rsx::method_registers.scissor_origin_x();
+	u16 scissor_w = rsx::method_registers.scissor_width();
+	u16 scissor_y = rsx::method_registers.scissor_origin_y();
+	u16 scissor_h = rsx::method_registers.scissor_height();
 
-	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
-	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
-	u16 scissor_x = scissor_horizontal;
-	u16 scissor_w = scissor_horizontal >> 16;
-	u16 scissor_y = scissor_vertical;
-	u16 scissor_h = scissor_vertical >> 16;
-
-	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
-
-	rsx::window_origin shader_window_origin = rsx::to_window_origin((shader_window >> 12) & 0xf);
+	rsx::window_origin shader_window_origin = rsx::method_registers.shader_window_origin();
 
 	if (shader_window_origin == rsx::window_origin::bottom)
 	{
@@ -441,7 +535,7 @@ void GLGSRender::set_viewport()
 	}
 	else
 	{
-		u16 shader_window_height = shader_window & 0xfff;
+		u16 shader_window_height = rsx::method_registers.shader_window_height();
 
 		__glcheck glViewport(viewport_x, shader_window_height - viewport_y - viewport_h + 1, viewport_w, viewport_h);
 		__glcheck glScissor(scissor_x, shader_window_height - scissor_y - scissor_h + 1, scissor_w, scissor_h);
@@ -519,10 +613,7 @@ void GLGSRender::on_exit()
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
 	//LOG_NOTICE(Log::RSX, "nv4097_clear_surface(0x%x)", arg);
-	if (!rsx::method_registers[NV4097_SET_SURFACE_FORMAT])
-	{
-		return;
-	}
+	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 
 	if ((arg & 0xf3) == 0)
 	{
@@ -543,13 +634,13 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 	GLbitfield mask = 0;
 
-	rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
+	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (arg & 0x1)
 	{
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
-		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
+		u32 clear_depth = rsx::method_registers.z_clear_value();
 
 		glDepthMask(GL_TRUE);
 		glClearDepth(double(clear_depth) / max_depth_value);
@@ -558,9 +649,9 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 	if (surface_depth_format == rsx::surface_depth_format::z24s8 && (arg & 0x2))
 	{
-		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
+		u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 
-		__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
+		__glcheck glStencilMask(rsx::method_registers.stencil_mask());
 		glClearStencil(clear_stencil);
 
 		mask |= GLenum(gl::buffers::stencil);
@@ -568,11 +659,10 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 	if (arg & 0xf0)
 	{
-		u32 clear_color = rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE];
-		u8 clear_a = clear_color >> 24;
-		u8 clear_r = clear_color >> 16;
-		u8 clear_g = clear_color >> 8;
-		u8 clear_b = clear_color;
+		u8 clear_a = rsx::method_registers.clear_color_a();
+		u8 clear_r = rsx::method_registers.clear_color_r();
+		u8 clear_g = rsx::method_registers.clear_color_g();
+		u8 clear_b = rsx::method_registers.clear_color_b();
 
 		glColorMask(((arg & 0x20) ? 1 : 0), ((arg & 0x40) ? 1 : 0), ((arg & 0x80) ? 1 : 0), ((arg & 0x10) ? 1 : 0));
 		glClearColor(clear_r / 255.f, clear_g / 255.f, clear_b / 255.f, clear_a / 255.f);
@@ -638,18 +728,13 @@ static void fill_matrix_buffer(glsl_matrix_buffer *buffer)
 	rsx::fill_viewport_matrix(buffer->viewport_matrix, true);
 	rsx::fill_window_matrix(buffer->window_matrix, true);
 
-	u32 viewport_horizontal = rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL];
-	u32 viewport_vertical = rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL];
+	f32 viewport_x = rsx::method_registers.viewport_origin_x();
+	f32 viewport_y = rsx::method_registers.viewport_origin_y();
+	f32 viewport_w = rsx::method_registers.viewport_width();
+	f32 viewport_h = rsx::method_registers.viewport_height();
 
-	f32 viewport_x = f32(viewport_horizontal & 0xffff);
-	f32 viewport_y = f32(viewport_vertical & 0xffff);
-	f32 viewport_w = f32(viewport_horizontal >> 16);
-	f32 viewport_h = f32(viewport_vertical >> 16);
-
-	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
-
-	rsx::window_origin shader_window_origin = rsx::to_window_origin((shader_window >> 12) & 0xf);
-	u16 shader_window_height = shader_window & 0xfff;
+	rsx::window_origin shader_window_origin = rsx::method_registers.shader_window_origin();
+	u16 shader_window_height = rsx::method_registers.shader_window_height();
 
 	f32 left = viewport_x;
 	f32 right = viewport_x + viewport_w;
@@ -683,10 +768,11 @@ static void fill_matrix_buffer(glsl_matrix_buffer *buffer)
 
 static void fill_fragment_state_buffer(glsl_fragment_state_buffer *buffer)
 {
-	std::memcpy(&buffer->fog_param0, rsx::method_registers + NV4097_SET_FOG_PARAMS, sizeof(float) * 2);
+	const float fog_params[2] = { rsx::method_registers.fog_params_0(), rsx::method_registers.fog_params_1() };
+	std::memcpy(&buffer->fog_param0, fog_params, sizeof(float) * 2);
 
-	buffer->alpha_test = rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE];
-	buffer->alpha_ref = rsx::method_registers[NV4097_SET_ALPHA_REF] / 255.f;
+	buffer->alpha_test = rsx::method_registers.alpha_test_enabled();
+	buffer->alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 }
 
 bool GLGSRender::load_program()

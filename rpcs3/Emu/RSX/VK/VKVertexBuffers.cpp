@@ -301,7 +301,7 @@ VKGSRender::upload_vertex_data()
 		"in_tc4_buffer", "in_tc5_buffer", "in_tc6_buffer", "in_tc7_buffer"
 	};
 
-	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
+	u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 
 	size_t offset_in_index_buffer = -1;
 	vertex_draw_count = 0;
@@ -324,7 +324,7 @@ VKGSRender::upload_vertex_data()
 
 	if (draw_command == rsx::draw_command::indexed || primitives_emulated)
 	{
-		rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		rsx::index_array_type type = rsx::method_registers.index_type();
 		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 		
 		if (is_indexed_draw)	//Could be emulated or not, emulated array vertex count already computed above
@@ -368,7 +368,7 @@ VKGSRender::upload_vertex_data()
 
 		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
-			const auto &info = vertex_arrays_info[i];
+			const auto &info = rsx::method_registers.vertex_arrays_info[i];
 			if (!info.size) continue;
 
 			offsets[i] = stride;
@@ -379,7 +379,7 @@ VKGSRender::upload_vertex_data()
 
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			auto &vertex_info = vertex_arrays_info[index];
+			auto &vertex_info = rsx::method_registers.vertex_arrays_info[index];
 
 			if (!m_program->has_uniform(reg_table[index]))
 				continue;
@@ -448,9 +448,9 @@ VKGSRender::upload_vertex_data()
 				continue;
 			}
 
-			if (vertex_arrays_info[index].size > 0)
+			if (rsx::method_registers.vertex_arrays_info[index].size > 0)
 			{
-				auto &vertex_info = vertex_arrays_info[index];
+				auto &vertex_info = rsx::method_registers.vertex_arrays_info[index];
 
 				// Fill vertex_array
 				u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
@@ -461,8 +461,8 @@ VKGSRender::upload_vertex_data()
 				bool requires_expansion = vk::requires_component_expansion(vertex_info.type, vertex_info.size);
 
 				// Get source pointer
-				u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-				u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
+				u32 base_offset = rsx::method_registers.vertex_data_base_offset();
+				u32 offset = rsx::method_registers.vertex_arrays_info[index].offset();
 				u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
 				const gsl::byte *src_ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
 
@@ -505,11 +505,11 @@ VKGSRender::upload_vertex_data()
 				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, upload_size));
 				m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
 			}
-			else if (register_vertex_info[index].size > 0)
+			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
 				//Untested!
-				auto &vertex_data = register_vertex_data[index];
-				auto &vertex_info = register_vertex_info[index];
+				auto &vertex_data = rsx::method_registers.register_vertex_data[index];
+				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
 
 				switch (vertex_info.type)
 				{
