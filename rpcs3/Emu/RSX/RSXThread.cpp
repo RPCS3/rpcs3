@@ -767,6 +767,8 @@ namespace rsx
 		result.state.output_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
 		result.state.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 		result.state.divider_op = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
+		result.state.alpha_func = rsx::method_registers[NV4097_SET_ALPHA_FUNC];
+		result.state.fog_mode = (u32)rsx::to_fog_mode(rsx::method_registers[NV4097_SET_FOG_MODE]);
 		result.state.is_int = 0;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
@@ -798,9 +800,14 @@ namespace rsx
 		{
 			if (!textures[index].enabled())
 			{
+				result.state.textures_alpha_kill[index] = 0;
+				result.state.textures_zfunc[index] = 0;
 				result.state.textures[index] = rsx::texture_target::none;
 				continue;
 			}
+
+			result.state.textures_alpha_kill[index] = textures[index].alpha_kill_enabled() ? 1 : 0;
+			result.state.textures_zfunc[index] = textures[index].zfunc();
 
 			switch (textures[index].get_extended_texture_dimension())
 			{

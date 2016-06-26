@@ -516,8 +516,6 @@ namespace rsx
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.zfunc()]);
-
 			__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));

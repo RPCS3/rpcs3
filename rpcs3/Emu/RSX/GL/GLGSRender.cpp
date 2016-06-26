@@ -92,12 +92,6 @@ void GLGSRender::begin()
 	__glcheck glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]);
 	__glcheck enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 
-	if (!!rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE])
-	{
-		//TODO: NV4097_SET_ALPHA_REF must be converted to f32
-		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
-	}
-
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND))
 	{
 		u32 sfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR];
@@ -609,6 +603,15 @@ struct alignas(4) glsl_fragment_constants_buffer
 	float fc[2048][4];
 };
 
+//binding 3
+struct alignas(4) glsl_fragment_state_buffer
+{
+	float fog_param0;
+	float fog_param1;
+	uint alpha_test;
+	float alpha_ref;
+};
+
 static void fill_matrix_buffer(glsl_matrix_buffer *buffer)
 {
 	rsx::fill_viewport_matrix(buffer->viewport_matrix, true);
@@ -657,6 +660,14 @@ static void fill_matrix_buffer(glsl_matrix_buffer *buffer)
 	rsx::fill_scale_offset_matrix(buffer->normalize_matrix, true, offset_x, offset_y, offset_z, scale_x, scale_y, scale_z);
 }
 
+static void fill_fragment_state_buffer(glsl_fragment_state_buffer *buffer)
+{
+	std::memcpy(&buffer->fog_param0, rsx::method_registers + NV4097_SET_FOG_PARAMS, sizeof(float) * 2);
+
+	buffer->alpha_test = rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE];
+	buffer->alpha_ref = rsx::method_registers[NV4097_SET_ALPHA_REF] / 255.f;
+}
+
 bool GLGSRender::load_program()
 {
 	if (0)
@@ -678,6 +689,7 @@ bool GLGSRender::load_program()
 	u32 max_buffer_sz =
 		align(sizeof(glsl_matrix_buffer), m_uniform_buffer_offset_align) +
 		align(sizeof(glsl_vertex_constants_buffer), m_uniform_buffer_offset_align) +
+		align(sizeof(glsl_fragment_state_buffer), m_uniform_buffer_offset_align) +
 		align(fragment_constants_size, m_uniform_buffer_offset_align);
 
 	m_uniform_ring_buffer.reserve_and_map(max_buffer_sz);
@@ -685,6 +697,7 @@ bool GLGSRender::load_program()
 	u32 scale_offset_offset;
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
+	u32 fragment_state_offset;
 
 	{
 		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(sizeof(glsl_matrix_buffer), m_uniform_buffer_offset_align);
@@ -696,6 +709,12 @@ bool GLGSRender::load_program()
 		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(sizeof(glsl_vertex_constants_buffer), m_uniform_buffer_offset_align);
 		fill_vertex_program_constants_data(mapping.first);
 		vertex_constants_offset = mapping.second;
+	}
+
+	{
+		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(sizeof(glsl_fragment_state_buffer), m_uniform_buffer_offset_align);
+		fill_fragment_state_buffer((glsl_fragment_state_buffer *)mapping.first);
+		fragment_state_offset = mapping.second;
 	}
 
 	if (fragment_constants_size)
@@ -744,6 +763,8 @@ bool GLGSRender::load_program()
 	{
 		m_uniform_ring_buffer.bind_range(2, fragment_constants_offset, fragment_constants_size);
 	}
+
+	m_uniform_ring_buffer.bind_range(3, fragment_state_offset, sizeof(glsl_fragment_state_buffer));
 
 	return true;
 }

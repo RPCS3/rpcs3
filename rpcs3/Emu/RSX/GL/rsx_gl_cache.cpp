@@ -173,6 +173,15 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 			"\tmat4 normalize_matrix;\n"
 			"};\n";
 	}
+	else if (shader.raw->type == rsx::program_type::fragment)
+	{
+		result.code += "layout(std140, binding = 3) uniform StateParameters\n{\n"
+			"\tfloat fog_param0;\n"
+			"\tfloat fog_param1;\n"
+			"\tuint alpha_test;\n"
+			"\tfloat alpha_ref;\n"
+			"};\n";
+	}
 
 	if (!shader.constants.empty())
 	{
@@ -331,6 +340,43 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 		}
 
 		{
+			if (~state.output_attributes & CELL_GCM_ATTRIB_OUTPUT_MASK_FOG)
+			{
+				result.code += "vec4 fog = vec4(0.0);\n";
+			}
+
+			result.code += "vec4 fogc;\n";
+
+			std::string body;
+			switch ((rsx::fog_mode)state.fog_mode)
+			{
+			case rsx::fog_mode::linear:
+				body = "fog_param1 * fog.x + (fog_param0 - 1.0), fog_param1 * fog.x + (fog_param0 - 1.0)";
+				break;
+			case rsx::fog_mode::exponential:
+				body = "11.084 * (fog_param1 * fog.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog.x + fog_param0 - 1.5))";
+				break;
+			case rsx::fog_mode::exponential2:
+				body = "4.709 * (fog_param1 * fog.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog.x + fog_param0 - 1.5), 2.0))";
+				break;
+			case rsx::fog_mode::linear_abs:
+				body = "fog_param1 * abs(fog.x) + (fog_param0 - 1.0), fog_param1 * abs(fog.x) + (fog_param0 - 1.0)";
+				break;
+			case rsx::fog_mode::exponential_abs:
+				body = "11.084 * (fog_param1 * abs(fog.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog.x) + fog_param0 - 1.5))";
+				break;
+			case rsx::fog_mode::exponential2_abs:
+				body = "4.709 * (fog_param1 * abs(fog.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog.x) + fog_param0 - 1.5), 2.0))";
+				break;
+
+			default:
+				body = "0.0, 0.0";
+			}
+
+			prepare += "\tfogc = clamp(vec4(" + body + ", 0.0, 0.0), 0.0, 1.0);\n";
+		}
+
+		{
 			u32 diffuse_color = state.output_attributes & (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
 			u32 specular_color = state.output_attributes & (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
 
@@ -417,6 +463,64 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 				result.code += "in vec4 " + rsx::vertex_program::output_attrib_names[index] + ";\n";
 			}
 		}
+
+		{
+			auto make_comparsion_test = [](rsx::comparaison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
+			{
+				if (compare_func == rsx::comparaison_function::always)
+				{
+					return{};
+				}
+
+				if (compare_func == rsx::comparaison_function::never)
+				{
+					return "\tdiscard;\n";
+				}
+
+				std::string compare;
+
+				switch (compare_func)
+				{
+				case rsx::comparaison_function::equal:
+					compare = "==";
+					break;
+
+				case rsx::comparaison_function::not_equal:
+					compare = "!=";
+					break;
+
+				case rsx::comparaison_function::less_or_equal:
+					compare = "<=";
+					break;
+
+				case rsx::comparaison_function::less:
+					compare = "<";
+					break;
+
+				case rsx::comparaison_function::greater:
+					compare = ">";
+					break;
+
+				case rsx::comparaison_function::greater_or_equal:
+					compare = ">=";
+					break;
+				}
+
+				return "\tif (" + test + "!(" + a + " " + compare + " " + b + ")) discard;\n";
+			};
+
+			for (u8 index = 0; index < 16; ++index)
+			{
+				if (state.textures_alpha_kill[index])
+				{
+					std::string index_string = std::to_string(index);
+					std::string fetch_texture = "texture_fetch(" + index_string + ", tex" + index_string + " * ftexture" + index_string + "_cm).a";
+					finalize += make_comparsion_test((rsx::comparaison_function)state.textures_zfunc[index], "", "0", fetch_texture);
+				}
+			}
+
+			finalize += make_comparsion_test((rsx::comparaison_function)state.alpha_func, "alpha_test != 0 && ", "ocol.a", "alpha_ref");
+		}
 		break;
 
 	case rsx::program_type::vertex:
@@ -501,6 +605,12 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 		}
 
 		{
+			if (state.output_attributes & CELL_GCM_ATTRIB_OUTPUT_MASK_FOG)
+			{
+				result.code += "out vec4 fog;\n";
+				finalize += "\tfog = o5.xxxx;\n";
+			}
+
 			auto map_register = [&](int to, int from)
 			{
 				if (shader.output_attributes & (1 << from))
@@ -512,11 +622,11 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 				{
 					result.code += "out vec4 " + rsx::vertex_program::output_attrib_names[to] + ";\n";
 
-					if ((1 << to) == CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE && shader.output_attributes & (1 << 1))
+					if (to == CELL_GCM_ATTRIB_OUTPUT_BACKDIFFUSE && shader.output_attributes & (1 << 1))
 					{
 						finalize += "\t" + rsx::vertex_program::output_attrib_names[to] + " = o1;\n";
 					}
-					else if ((1 << to) == CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR && shader.output_attributes & (1 << 2))
+					else if (to == CELL_GCM_ATTRIB_OUTPUT_BACKSPECULAR && shader.output_attributes & (1 << 2))
 					{
 						finalize += "\t" + rsx::vertex_program::output_attrib_names[to] + " = o2;\n";
 					}
@@ -527,19 +637,19 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 				}
 			};
 
-			map_register(0, 1);
-			map_register(1, 2);
-			map_register(2, 3);
-			map_register(3, 4);
-			map_register(14, 7);
-			map_register(15, 8);
-			map_register(16, 9);
-			map_register(17, 10);
-			map_register(18, 11);
-			map_register(19, 12);
-			map_register(20, 13);
-			map_register(21, 14);
-			map_register(12, 15);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_FRONTDIFFUSE, 1);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_FRONTSPECULAR, 2);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_BACKDIFFUSE, 3);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_BACKSPECULAR, 4);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX0, 7);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX1, 8);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX2, 9);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX3, 10);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX4, 11);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX5, 12);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX6, 13);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX7, 14);
+			map_register(CELL_GCM_ATTRIB_OUTPUT_TEX8, 15);
 
 			if (shader.output_attributes & (1 << 5))
 			{
@@ -587,11 +697,6 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 					finalize += "\tgl_ClipDistance[5] = uc_m5 * o6.w;\n";
 				}
 			}
-
-			if (state.output_attributes & CELL_GCM_ATTRIB_OUTPUT_MASK_FOG)
-			{
-				//TODO
-			}
 		}
 		break;
 
@@ -602,7 +707,7 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 	result.code += "\n";
 	result.code += shader.code;
 
-	result.code += "void main()\n{\n" + prepare + "\t" + shader.entry_function + "();\n" + finalize + "}";
+	result.code += "void main()\n{\n" + prepare + "\n\t" + shader.entry_function + "();\n\n" + finalize + "}";
 	return result;
 }
 
