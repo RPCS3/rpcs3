@@ -18,8 +18,8 @@ set(PNG_TESTS  OFF CACHE BOOL "Build tests." FORCE)
 add_definitions(-DCMAKE_BUILD)
 
 # select libpng version
-option(WITH_SYSTEM_LIBPNG "libpng" OFF)
-if(NOT WITH_SYSTEM_LIBPNG)
+option(USE_SYSTEM_LIBPNG "libpng" OFF)
+if(NOT USE_SYSTEM_LIBPNG)
 	add_subdirectory( 3rdparty/libpng )
 endif()
 

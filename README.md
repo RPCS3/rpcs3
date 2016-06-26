@@ -50,13 +50,13 @@ When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop no
 
 ##### CMake Build Options
 
-- ```-DWITH_SYSTEM_LIBPNG=ON/OFF``` (default = OFF) </br>
+- ```-DUSE_SYSTEM_LIBPNG=ON/OFF``` (default = *OFF*) </br>
 Build against the shared libpng instead of using the builtin one. libpng 1.6.21 or higher required. Try this option if you get version conflict errors or only see black game icons.</br>
 Debian & Ubuntu: ```sudo apt-get install libpng16-16 libpng-dev``` </br>
 Arch: ```sudo pacman -S libpng```
 
-- ```-DWITH_SYSTEM_FFMPEG=ON/OFF``` (default = OFF) </br>
-Build against the shared ffmpeg libraries instead of using the builtin patched version. Try this if the builtin version breaks OpenGL for you, before reporting issues. </br>
+- ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*) </br>
+Build against the shared ffmpeg libraries instead of using the builtin patched version. Try this if the builtin version breaks OpenGL for you before reporting issues. </br>
 Debian & Ubuntu: ```sudo apt-get install ffmpeg libavcodec-ffmpeg-dev libavformat-ffmpeg-dev libavutil-ffmpeg-dev libswresample-ffmpeg-dev libswscale-ffmpeg-dev``` </br>
 Arch: ```sudo pacman -S ffmpeg```
 

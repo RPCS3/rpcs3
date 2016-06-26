@@ -131,8 +131,8 @@ ${LLVM_INCLUDE_DIRS}
 )
 
 # select ffmpeg version
-option(WITH_SYSTEM_FFMPEG "ffmpeg" OFF)
-if(WITH_SYSTEM_FFMPEG)
+option(USE_SYSTEM_FFMPEG "ffmpeg" OFF)
+if(USE_SYSTEM_FFMPEG)
 	message("-- RPCS3: using system ffmpeg")
 	include_directories("/usr/include")
 else()
@@ -141,7 +141,7 @@ else()
 endif()
 
 # select libpng version
-if(WITH_SYSTEM_LIBPNG)
+if(USE_SYSTEM_LIBPNG)
 	message("-- RPCS3: using system libpng")
 else()
 	message("-- RPCS3: using builtin libpng")
@@ -169,7 +169,7 @@ link_directories(
 "${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
 )
 
-if(NOT WITH_SYSTEM_FFMPEG)
+if(NOT USE_SYSTEM_FFMPEG)
 	if(MSVC OR NOT WIN32)
 		link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
 	endif()
@@ -218,12 +218,12 @@ if(WIN32)
 else()
 	target_link_libraries(rpcs3  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
 	target_link_libraries(rpcs3  ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
-	if (WITH_SYSTEM_FFMPEG)
+	if (USE_SYSTEM_FFMPEG)
 		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswresample.so libswscale.so)
 	else()
 		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a -ldl)
 	endif()
-	if (WITH_SYSTEM_LIBPNG)
+	if (USE_SYSTEM_LIBPNG)
 		target_link_libraries(rpcs3  libpng16.so)
 	else()
 		target_link_libraries(rpcs3  png16_static)
