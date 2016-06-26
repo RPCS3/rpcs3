@@ -54,28 +54,30 @@ namespace program_hash_util
 	};
 }
 
-template <typename T, typename... Args>
-concept bool ProgramBuilderClass()
+template <typename T>
+concept bool ProgramBuilderClass = requires(T t, RSXFragmentProgram rsx_fp, RSXVertexProgram rsx_vp,
+	typename T::vertex_program_type new_vp_shader, typename T::fragment_program_type new_fp_shader)
 {
-	return requires(T t, RSXFragmentProgram rsx_fp, RSXVertexProgram rsx_vp,
-		typename T::vertex_program_type new_vp_shader, typename T::fragment_program_type new_fp_shader,
-		typename T::pipeline_properties prop, Args... args)
-	{
-		/// encapsulating monolithic program.
-		typename T::pipeline_storage_type;
-		/// encapsulate various state info relevant to program compilation (alpha test, primitive type,...)
-		typename T::pipeline_properties;
-		/// encapsulate vertex program info.It should provide an Id member.
-		typename T::vertex_program_type;
-		/// encapsulate fragment program info. It should provide an Id member and a fragment constant offset vector.
-		typename T::fragment_program_type;
-		///
-		{ T::recompile_fragment_program(rsx_fp, new_fp_shader, 1) } -> void;
-		{ T::recompile_vertex_program(rsx_vp, new_vp_shader, 1) } -> void;
+	/// encapsulating monolithic program.
+	typename T::pipeline_storage_type;
+	/// encapsulate various state info relevant to program compilation (alpha test, primitive type,...)
+	typename T::pipeline_properties;
+	/// encapsulate vertex program info.It should provide an Id member.
+	typename T::vertex_program_type;
+	/// encapsulate fragment program info. It should provide an Id member and a fragment constant offset vector.
+	typename T::fragment_program_type;
+	///
+	{ T::recompile_fragment_program(rsx_fp, new_fp_shader, 1) } -> void;
+	{ T::recompile_vertex_program(rsx_vp, new_vp_shader, 1) } -> void;
+};
 
-		//{ T::build_pipeline(new_vp_shader, new_fp_shader, prop, args...)} -> typename T::pipeline_storage_type;
-	};
-}
+template<typename T, typename... Args>
+concept bool HasBuildPipeline = requires(typename T::vertex_program_type new_vp_shader, typename T::fragment_program_type new_fp_shader,
+	typename T::pipeline_properties prop, Args... args)
+{
+	{ T::build_pipeline(new_vp_shader, new_fp_shader, prop, args...)} -> typename T::pipeline_storage_type;
+};
+
 
 /**
 * Cache for program help structure (blob, string...)
@@ -87,7 +89,7 @@ concept bool ProgramBuilderClass()
 * - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, size_t ID);
 * - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData);
 */
-template<typename backend_traits> requires ProgramBuilderClass<backend_traits>()
+template<typename backend_traits> requires ProgramBuilderClass<backend_traits>
 class program_state_cache
 {
 	using pipeline_storage_type = typename backend_traits::pipeline_storage_type;
@@ -199,7 +201,7 @@ public:
 		const RSXFragmentProgram& fragmentShader,
 		const pipeline_properties& pipelineProperties,
 		Args&& ...args
-		)
+		) requires HasBuildPipeline<backend_traits, Args...>
 	{
 		// TODO : use tie and implicit variable declaration syntax with c++17
 		const auto &vp_search = search_vertex_program(vertexShader);

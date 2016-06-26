@@ -13,17 +13,15 @@ namespace rsx
 		size_t get_packed_pitch(surface_color_format format, u32 width);
 	}
 
-    template <typename T, typename... Args, typename... DownloadArgs>
-    concept bool SurfaceStoreClass = requires(T t,
+    template <typename T,  typename... DownloadArgs>
+    concept bool SurfaceStoreClass = requires(
                                               typename T::surface_storage_type &rtt,
                                               surface_depth_format ds_format,
                                               surface_color_format color_format,
                                               u32 address,
                                               size_t width, size_t height,
                                               typename T::command_list_type cmdlist,
-                                              typename T::download_buffer_object dbo,
-                                              Args&& ... extra_params,
-                                              DownloadArgs&&... extra_params2
+                                              typename T::download_buffer_object dbo
                                               )
     {
         /// structure containing texture.
@@ -32,17 +30,14 @@ namespace rsx
         typename T::surface_type;
         /// void for backend without command list
         typename T::command_list_type;
-        ///  used by issue_download_command and map_downloaded_buffer functions to handle sync
-        typename T::download_buffer_object;
+		///  used by issue_download_command and map_downloaded_buffer functions to handle sync
+		typename T::download_buffer_object;
         /// returns underlying surface pointer from a storage type.
         { T::get(rtt) } -> typename T::surface_type;
         /// checks if the given surface has the given format and size.
         { T::ds_has_format_width_height(rtt, ds_format, width, height)} -> bool;
         /// checks if the given surface has the given format and size.
-        { T::rtt_has_format_width_height(rtt, color_format, 1, 1)} -> bool;
-        /// create a new surface_storage_type holding surface from passed parameters.
-        //{ T::create_new_surface(address, color_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
-        //{ T::create_new_surface(address, ds_format, width, height, std::forward<Args>(extra_params)...)} -> typename T::surface_storage_type;
+        { T::rtt_has_format_width_height(rtt, color_format, width, height)} -> bool;
         /// makes a sampleable surface from color render target one.
         { T::prepare_rtt_for_sampling(cmdlist, T::get(rtt))} -> void;
         /// makes a render target surface from a sampleable one.
@@ -51,14 +46,39 @@ namespace rsx
         { T::prepare_rtt_for_sampling(cmdlist, T::get(rtt))} -> void;
         /// makes a depth stencil surface from a sampleable one.
         { T::prepare_rtt_for_drawing(cmdlist, T::get(rtt))} -> void;
-        /// generates command to download the given surface to some mappable buffer.
-        //{ T::issue_download_command(T::get(rtt), color_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
-        //{ T::issue_depth_download_command(T::get(rtt), ds_format, width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
-        //{ T::issue_stencil_download_command(T::get(rtt), width, height, std::forward<DownloadArgs>(extra_params2)...)} -> typename T::download_buffer_object;
         /// maps a download_buffer_object.
         /*{ T::map_downloaded_buffer(dbo)} -> gsl::span<const gsl::byte>;
         /// unmaps it.
         { T::unmap_downloaded_buffer(dbo)} -> void;*/
+};
+
+template<typename T, typename... Args>
+concept bool HasCreateNewSurface = requires(
+	surface_depth_format ds_format,
+	surface_color_format color_format,
+	u32 address,
+	size_t width, size_t height,
+	Args ... extra_params)
+{
+	/// create a new surface_storage_type holding surface from passed parameters.
+	{ T::create_new_surface(address, color_format, width, height, extra_params...)} -> typename T::surface_storage_type;
+	{ T::create_new_surface(address, ds_format, width, height, extra_params...)} -> typename T::surface_storage_type;
+};
+
+template<typename T, typename... Args>
+concept bool HasDownloadCommands = requires(
+	typename T::surface_type rtt,
+	surface_depth_format ds_format,
+	surface_color_format color_format,
+	size_t width, size_t height,
+	typename T::download_buffer_object dbo,
+	Args... extra_params
+)
+{
+	/// generates command to download the given surface to some mappable buffer.
+	{ T::issue_download_command(T::get(rtt), color_format, width, height, extra_params...)} -> typename T::download_buffer_object;
+	{ T::issue_depth_download_command(T::get(rtt), ds_format, width, height, extra_params...)} -> typename T::download_buffer_object;
+	{ T::issue_stencil_download_command(T::get(rtt), width, height, extra_params...)} -> typename T::download_buffer_object;
 };
 
 	/**
@@ -170,7 +190,7 @@ namespace rsx
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
 			surface_target set_surface_target,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
-			Args&&... extra_params)
+			Args&&... extra_params) requires HasCreateNewSurface<Traits, Args...>
 		{
 			u32 clip_width = clip_horizontal_reg >> 16;
 			u32 clip_height = clip_vertical_reg >> 16;
@@ -244,7 +264,7 @@ namespace rsx
 		std::array<std::vector<gsl::byte>, 4> get_render_targets_data(
 			surface_color_format color_format, size_t width, size_t height,
 			Args&& ...args
-			)
+			) //requires HasDownloadCommands<Args...>
 		{
 			std::array<download_buffer_object, 4> download_data = {};
 
@@ -333,7 +353,7 @@ namespace rsx
 		std::array<std::vector<gsl::byte>, 2> get_depth_stencil_data(
 			surface_depth_format depth_format, size_t width, size_t height,
 			Args&& ...args
-			)
+			) //requires HasDownloadCommands<Args...>
 		{
 			std::array<std::vector<gsl::byte>, 2> result = {};
 			if (std::get<0>(m_bound_depth_stencil) == 0)
