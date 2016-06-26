@@ -478,16 +478,24 @@ void GLGSRender::on_exit()
 	programs_cache.clear();
 
 	if (draw_fbo)
+	{
 		draw_fbo.remove();
+	}
 
 	if (m_flip_fbo)
+	{
 		m_flip_fbo.remove();
+	}
 
 	if (m_flip_tex_color)
+	{
 		m_flip_tex_color.remove();
+	}
 
 	if (m_vao)
+	{
 		m_vao.remove();
+	}
 
 	for (gl::texture &tex : m_gl_attrib_buffers)
 	{
@@ -539,7 +547,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		mask |= GLenum(gl::buffers::depth);
 	}
 
-	if (surface_depth_format == rsx::surface_depth_format::z24s8 && arg & 0x2)
+	if (surface_depth_format == rsx::surface_depth_format::z24s8 && (arg & 0x2))
 	{
 		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
 
@@ -719,12 +727,16 @@ bool GLGSRender::load_program()
 			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
 			_mm_stream_si128((__m128i*)dst, shuffled_vector);
 
-			float x = ((float*)dst)[0];
-			float y = ((float*)dst)[1];
-			float z = ((float*)dst)[2];
-			float w = ((float*)dst)[3];
+			if (0)
+			{
+				float x = ((float*)dst)[0];
+				float y = ((float*)dst)[1];
+				float z = ((float*)dst)[2];
+				float w = ((float*)dst)[3];
 
-			//LOG_WARNING(RSX, "fc%u = {%g, %g, %g, %g}", constant.id, x, y, z, w);
+				LOG_WARNING(RSX, "fc%u = {%g, %g, %g, %g}", constant.id, x, y, z, w);
+			}
+
 			++dst;
 		}
 	}
@@ -744,7 +756,6 @@ bool GLGSRender::load_program()
 
 void GLGSRender::flip(int buffer)
 {
-	//LOG_NOTICE(Log::RSX, "flip(%d)", buffer);
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
@@ -753,33 +764,37 @@ void GLGSRender::flip(int buffer)
 	glDisable(GL_SCISSOR_TEST);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_STENCIL_TEST);
-		
-	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
-	bool skip_read = false;
+	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+	u32 absolute_address = buffer_region.address + buffer_region.base;
+
+	if (0)
+	{
+		LOG_NOTICE(RSX, "flip(%d) -> 0x%x [0x%x]", buffer, absolute_address, rsx::get_address(gcm_buffers[1 - buffer].offset, CELL_GCM_LOCATION_LOCAL));
+	}
+
+	gl::texture *render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address);
 
 	/**
 	 * Calling read_buffers will overwrite cached content
 	 */
-	if (draw_fbo)
+
+	__glcheck m_flip_fbo.recreate();
+	m_flip_fbo.bind();
+
+	auto *flip_fbo = &m_flip_fbo;
+
+	if (render_target_texture)
 	{
-		skip_read = true;
-		/*
-		for (uint i = 0; i < rsx::limits::color_buffers_count; ++i)
-		{
-			u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
-
-			if (color_address == buffer_address)
-			{
-				skip_read = true;
-				__glcheck draw_fbo.draw_buffer(draw_fbo.color[i]);
-				break;
-			}
-		}
-		*/
+		__glcheck m_flip_fbo.color = *render_target_texture;
+		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
 	}
-
-	if (!skip_read)
+	else if (draw_fbo)
+	{
+		//HACK! it's here, because textures cache isn't implemented correctly!
+		flip_fbo = &draw_fbo;
+	}
+	else
 	{
 		if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
 		{
@@ -791,14 +806,7 @@ void GLGSRender::flip(int buffer)
 				.format(gl::texture::format::bgra);
 
 			m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch / 4);
-
-			__glcheck m_flip_fbo.recreate();
-			__glcheck m_flip_fbo.color = m_flip_tex_color;
 		}
-
-		__glcheck m_flip_fbo.draw_buffer(m_flip_fbo.color);
-
-		m_flip_fbo.bind();
 
 		if (buffer_region.tile)
 		{
@@ -810,6 +818,9 @@ void GLGSRender::flip(int buffer)
 		{
 			__glcheck m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		}
+
+		m_flip_fbo.color = m_flip_tex_color;
+		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
 	}
 
 	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
@@ -844,14 +855,7 @@ void GLGSRender::flip(int buffer)
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);
 
-	if (!skip_read)
-	{
-		__glcheck m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical());
-	}
-	else
-	{
-		__glcheck draw_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical());
-	}
+	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical());
 
 	m_frame->flip(m_context);
 	
