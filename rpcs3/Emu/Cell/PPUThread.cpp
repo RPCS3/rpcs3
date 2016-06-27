@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
+#include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -56,17 +57,16 @@ cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder"
 const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
 
-struct ppu_addr_hash
+const auto s_ppu_compiled = static_cast<ppu_function_t*>(memory_helper::reserve_memory(0x200000000));
+
+extern void ppu_register_function_at(u32 addr, ppu_function_t ptr)
 {
-	u32 operator()(u32 value) const
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		return value / sizeof(32);
+		memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, sizeof(ppu_function_t));
+		s_ppu_compiled[addr / 4] = ptr;
 	}
-};
-
-static std::unordered_map<u32, ppu_function_t, ppu_addr_hash> s_ppu_compiled; // TODO
-
-
+}
 
 std::string PPUThread::get_name() const
 {
@@ -134,12 +134,7 @@ void PPUThread::cpu_task_main()
 {
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		const auto found = s_ppu_compiled.find(pc);
-
-		if (found != s_ppu_compiled.end())
-		{
-			return found->second(*this);
-		}
+		return s_ppu_compiled[pc / 4](*this);
 	}
 
 	g_tls_log_prefix = []
@@ -397,27 +392,6 @@ static void ppu_trace(u64 addr)
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 }
 
-static void ppu_call(PPUThread& ppu, u32 addr)
-{
-	const auto found = s_ppu_compiled.find(addr);
-
-	if (found != s_ppu_compiled.end())
-	{
-		return found->second(ppu);
-	}
-
-	const auto op = vm::read32(addr).value();
-	const auto itype = s_ppu_itype.decode(op);
-
-	// Allow HLE callbacks without compiling them
-	if (itype == ppu_itype::HACK && vm::read32(addr + 4) == ppu_instructions::BLR())
-	{
-		return ppu_execute_function(ppu, op & 0x3ffffff);
-	}
-
-	ppu_trap(addr);
-}
-
 static __m128 sse_rcp_ps(__m128 A)
 {
 	return _mm_rcp_ps(A);
@@ -511,7 +485,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 		{ "__hlecall", (u64)&ppu_execute_function },
 		{ "__syscall", (u64)&ppu_execute_syscall },
 		{ "__get_tbl", (u64)&get_timebased_time },
-		{ "__call", (u64)&ppu_call },
+		{ "__call", (u64)s_ppu_compiled },
 		{ "__lwarx", (u64)&ppu_lwarx },
 		{ "__ldarx", (u64)&ppu_ldarx },
 		{ "__stwcx", (u64)&ppu_stwcx },
@@ -676,17 +650,19 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 		return;
 	}
 
-	s_ppu_compiled.clear();
+	memory_helper::free_reserved_memory(s_ppu_compiled, 0x200000000); // TODO
 
-	// Get function addresses
+	// Get and install function addresses
 	for (const auto& info : funcs)
 	{
+		const u32 addr = info.first;
 		if (info.second)
 		{
-			const std::uintptr_t link = jit->get(fmt::format("__sub_%x", info.first));
-			s_ppu_compiled.emplace(info.first, (ppu_function_t)link);
+			const std::uintptr_t link = jit->get(fmt::format("__sub_%x", addr));
+			memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, sizeof(ppu_function_t));
+			s_ppu_compiled[addr / 4] = (ppu_function_t)link;
 
-			LOG_NOTICE(PPU, "** Function __sub_%x -> 0x%llx (addr=0x%x, size=0x%x)", info.first, link, info.first, info.second);
+			LOG_NOTICE(PPU, "** Function __sub_%x -> 0x%llx (addr=0x%x, size=0x%x)", addr, link, addr, info.second);
 		}
 	}
 

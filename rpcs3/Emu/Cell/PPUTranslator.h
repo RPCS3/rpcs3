@@ -157,6 +157,9 @@ class PPUTranslator final //: public CPUTranslator
 	// Thread context
 	llvm::Value* m_thread;
 
+	// Callable functions
+	llvm::Value* m_call;
+
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 

@@ -82,6 +82,9 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base, u64
 	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // CR[0..31]
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
+
+	// Callable
+	m_call = new GlobalVariable(*module, ArrayType::get(FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false)->getPointerTo(), 0x40000000), true, GlobalValue::ExternalLinkage, 0, "__call");
 }
 
 PPUTranslator::~PPUTranslator()
@@ -265,8 +268,7 @@ Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* 
 		}
 
 		m_ir->SetInsertPoint(_default);
-		Call(GetType<void>(), "__call", m_thread, _ctr);
-		m_ir->CreateRetVoid();
+		CallFunction(0, true, _ctr);
 	}
 
 	//for (auto i = inst_begin(*m_function), end = inst_end(*m_function); i != end;)
@@ -321,7 +323,17 @@ void PPUTranslator::CallFunction(u64 target, bool tail, Value* indirect)
 
 	const auto callee_type = func ? m_func_types[target] : nullptr;
 
-	const auto result = func ? m_ir->CreateCall(func, {m_thread}) : Call(GetType<void>(), "__call", m_thread, indirect ? indirect : m_ir->getInt64(target));
+	if (func)
+	{
+		m_ir->CreateCall(func, {m_thread});
+	}
+	else
+	{
+		const auto addr = indirect ? indirect : (Value*)m_ir->getInt64(target);
+		const auto pos = m_ir->CreateLShr(addr, 2, "", true);
+		const auto ptr = m_ir->CreateGEP(m_call, {m_ir->getInt64(0), pos});
+		m_ir->CreateCall(m_ir->CreateLoad(ptr), {m_thread});
+	}
 
 	if (!tail)
 	{

@@ -3,20 +3,20 @@
 namespace memory_helper
 {
 	/**
-	* Reserve size bytes of virtual memory and returns it.
+	* Reserve `size` bytes of virtual memory and returns it.
 	* The memory should be commited before usage.
 	*/
-	void* reserve_memory(size_t size);
+	void* reserve_memory(std::size_t size);
 
 	/**
-	* Commit page_size bytes of virtual memory starting at pointer.
+	* Commit `size` bytes of virtual memory starting at pointer.
 	* That is, bake reserved memory with physical memory.
 	* pointer should belong to a range of reserved memory.
 	*/
-	void commit_page_memory(void* pointer, size_t page_size);
+	void commit_page_memory(void* pointer, std::size_t size);
 
 	/**
-	* Free memory alloced via reserve_memory.
+	* Decommit all memory committed via commit_page_memory.
 	*/
-	void free_reserved_memory(void* pointer, size_t size);
+	void free_reserved_memory(void* pointer, std::size_t size);
 }
