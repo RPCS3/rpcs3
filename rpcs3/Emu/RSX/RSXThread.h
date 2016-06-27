@@ -197,6 +197,7 @@ namespace rsx
 
 	enum class draw_command
 	{
+		none,
 		array,
 		inlined_array,
 		indexed,

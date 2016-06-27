@@ -2363,7 +2363,7 @@ s32 ppu_error_code::report(s32 error, const char* text)
 		{
 			if (auto func = static_cast<PPUThread*>(thread)->last_function)
 			{
-				LOG_ERROR(PPU, "Function '%s' failed with 0x%08x : %s", func, error, text);
+				LOG_ERROR(PPU, "'%s' failed with 0x%08x : %s", func, error, text);
 			}
 			else
 			{

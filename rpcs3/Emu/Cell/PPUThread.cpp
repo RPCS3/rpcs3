@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
+#include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -7,6 +8,37 @@
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
+
+#ifdef LLVM_AVAILABLE
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
+#include "llvm/Support/FormattedStream.h"
+#include "llvm/IR/LLVMContext.h"
+//#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/LegacyPassManager.h"
+//#include "llvm/IR/Module.h"
+//#include "llvm/IR/Function.h"
+//#include "llvm/Analysis/Passes.h"
+//#include "llvm/Analysis/BasicAliasAnalysis.h"
+//#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+//#include "llvm/Analysis/LoopInfo.h"
+//#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/Lint.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Vectorize.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+#include "Utilities/JIT.h"
+#include "PPUTranslator.h"
+#endif
 
 enum class ppu_decoder_type
 {
@@ -25,21 +57,20 @@ cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder"
 const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
 
-struct ppu_addr_hash
+const auto s_ppu_compiled = static_cast<ppu_function_t*>(memory_helper::reserve_memory(0x200000000));
+
+extern void ppu_register_function_at(u32 addr, ppu_function_t ptr)
 {
-	u32 operator()(u32 value) const
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		return value / sizeof(32);
+		memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, sizeof(ppu_function_t));
+		s_ppu_compiled[addr / 4] = ptr;
 	}
-};
-
-static std::unordered_map<u32, void(*)(), ppu_addr_hash> s_ppu_compiled;
-
-
+}
 
 std::string PPUThread::get_name() const
 {
-	return fmt::format("PPU[0x%x] Thread (%s)", id, name);
+	return fmt::format("PPU[0x%x] Thread (%s)", id, m_name);
 }
 
 std::string PPUThread::dump() const
@@ -96,21 +127,14 @@ void PPUThread::cpu_task()
 {
 	//SetHostRoundingMode(FPSCR_RN_NEAR);
 
-	if (custom_task)
-	{
-		if (check_status()) return;
+	return custom_task ? custom_task(*this) : fast_call(pc, static_cast<u32>(GPR[2]));
+}
 
-		return custom_task(*this);
-	}
-
+void PPUThread::cpu_task_main()
+{
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		const auto found = s_ppu_compiled.find(pc);
-
-		if (found != s_ppu_compiled.end())
-		{
-			return found->second();
-		}
+		return s_ppu_compiled[pc / 4](*this);
 	}
 
 	g_tls_log_prefix = []
@@ -269,7 +293,8 @@ PPUThread::~PPUThread()
 }
 
 PPUThread::PPUThread(const std::string& name)
-	: cpu_thread(cpu_type::ppu, name)
+	: cpu_thread(cpu_type::ppu)
+	, m_name(name)
 {
 }
 
@@ -281,39 +306,54 @@ be_t<u64>* PPUThread::get_stack_arg(s32 i, u64 align)
 
 void PPUThread::fast_call(u32 addr, u32 rtoc)
 {
-	auto old_PC = pc;
-	auto old_stack = GPR[1];
-	auto old_rtoc = GPR[2];
-	auto old_LR = LR;
-	auto old_task = std::move(custom_task);
+	const auto old_PC = pc;
+	const auto old_stack = GPR[1];
+	const auto old_rtoc = GPR[2];
+	const auto old_LR = LR;
+	const auto old_task = std::move(custom_task);
+	const auto old_func = last_function;
 
 	pc = addr;
 	GPR[2] = rtoc;
 	LR = Emu.GetCPUThreadStop();
 	custom_task = nullptr;
+	last_function = nullptr;
 
 	try
 	{
-		cpu_task();
+		cpu_task_main();
+
+		if (GPR[1] != old_stack && !state.test(cpu_state::ret) && !state.test(cpu_state::exit)) // GPR[1] shouldn't change
+		{
+			throw fmt::exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, GPR[1], old_stack);
+		}
 	}
 	catch (cpu_state _s)
 	{
 		state += _s;
 		if (_s != cpu_state::ret) throw;
 	}
+	catch (EmulationStopped)
+	{
+		if (last_function) LOG_WARNING(PPU, "'%s' aborted", last_function);
+		last_function = old_func;
+		throw;
+	}
+	catch (...)
+	{
+		if (last_function) LOG_ERROR(PPU, "'%s' aborted", last_function);
+		last_function = old_func;
+		throw;
+	}
 
 	state -= cpu_state::ret;
 
 	pc = old_PC;
-
-	if (GPR[1] != old_stack) // GPR[1] shouldn't change
-	{
-		throw EXCEPTION("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, GPR[1], old_stack);
-	}
-
+	GPR[1] = old_stack;
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	custom_task = std::move(old_task);
+	last_function = old_func;
 
 	//if (custom_task)
 	//{
@@ -322,59 +362,15 @@ void PPUThread::fast_call(u32 addr, u32 rtoc)
 	//}
 }
 
-#ifdef LLVM_AVAILABLE
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#endif
-//#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/TargetSelect.h"
-//#include "llvm/Support/Host.h"
-#include "llvm/Support/FormattedStream.h"
-//#include "llvm/Support/Debug.h"
-//#include "llvm/CodeGen/CommandFlags.h"
-//#include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/LLVMContext.h"
-//#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Verifier.h"
-//#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/LegacyPassManager.h"
-//#include "llvm/IR/Module.h"
-//#include "llvm/IR/Function.h"
-//#include "llvm/Analysis/Passes.h"
-//#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
-//#include "llvm/Analysis/LoopInfo.h"
-//#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/Lint.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Vectorize.h"
-
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/JITEventListener.h"
-//#include "llvm/Object/ObjectFile.h"
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
-#include "PPUTranslator.h"
-
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#endif
-
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
 extern u64 get_timebased_time();
 extern void ppu_execute_syscall(PPUThread& ppu, u64 code);
 extern void ppu_execute_function(PPUThread& ppu, u32 index);
+extern ppu_function_t ppu_get_syscall(u64 code);
+extern std::string ppu_get_syscall_name(u64 code);
+extern ppu_function_t ppu_get_function(u32 index);
+extern std::string ppu_get_module_function_name(u32 index);
 
 extern __m128 sse_exp2_ps(__m128 A);
 extern __m128 sse_log2_ps(__m128 A);
@@ -386,329 +382,121 @@ extern __m128i sse_cellbe_lvrx(u64 addr);
 extern void sse_cellbe_stvlx(u64 addr, __m128i a);
 extern void sse_cellbe_stvrx(u64 addr, __m128i a);
 
-struct Listener final : llvm::JITEventListener
+[[noreturn]] static void ppu_trap(u64 addr)
 {
-	virtual void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
-	{
-		const llvm::StringRef elf = obj.getData();
-		fs::file(fs::get_config_dir() + "LLVM.obj", fs::rewrite)
-			.write(elf.data(), elf.size());
-	}
-};
+	throw fmt::exception("Trap! (0x%llx)", addr);
+}
 
-static Listener s_listener;
-
-// Memory size: 512 MB
-static const u64 s_memory_size = 0x20000000;
-
-// Try to reserve a portion of virtual memory in the first 2 GB address space, if possible.
-static void* const s_memory = []() -> void*
+static void ppu_trace(u64 addr)
 {
-#ifdef _WIN32
-	for (u64 addr = 0x1000000; addr <= 0x60000000; addr += 0x1000000)
-	{
-		if (VirtualAlloc((void*)addr, s_memory_size, MEM_RESERVE, PAGE_NOACCESS))
-		{
-			return (void*)addr;
-		}
-	}
+	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
+}
 
-	return VirtualAlloc(NULL, s_memory_size, MEM_RESERVE, PAGE_NOACCESS);
+static __m128 sse_rcp_ps(__m128 A)
+{
+	return _mm_rcp_ps(A);
+}
+
+static __m128 sse_rsqrt_ps(__m128 A)
+{
+	return _mm_rsqrt_ps(A);
+}
+
+static float sse_rcp_ss(float A)
+{
+	_mm_store_ss(&A, _mm_rcp_ss(_mm_load_ss(&A)));
+	return A;
+}
+
+static float sse_rsqrt_ss(float A)
+{
+	_mm_store_ss(&A, _mm_rsqrt_ss(_mm_load_ss(&A)));
+	return A;
+}
+
+static u32 ppu_lwarx(u32 addr)
+{
+	be_t<u32> reg_value;
+	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
+	return reg_value;
+}
+
+static u64 ppu_ldarx(u32 addr)
+{
+	be_t<u64> reg_value;
+	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
+	return reg_value;
+}
+
+static bool ppu_stwcx(u32 addr, u32 reg_value)
+{
+	const be_t<u32> data = reg_value;
+	return vm::reservation_update(addr, &data, sizeof(data));
+}
+
+static bool ppu_stdcx(u32 addr, u64 reg_value)
+{
+	const be_t<u64> data = reg_value;
+	return vm::reservation_update(addr, &data, sizeof(data));
+}
+
+static bool adde_carry(u64 a, u64 b, bool c)
+{
+#ifdef _MSC_VER
+	return _addcarry_u64(c, a, b, nullptr) != 0;
 #else
-	return ::mmap((void*)0x10000000, s_memory_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	bool result;
+	__asm__("addb $0xff, %[c] \n adcq %[a], %[b] \n setb %[result]" : [a] "+&r" (a), [b] "+&r" (b), [c] "+&r" (c), [result] "=r" (result));
+	return result;
 #endif
-}();
+}
 
-// EH frames
-static u8* s_unwind_info;
-static u64 s_unwind_size;
-
-#ifdef _WIN32
-// Custom .pdata section replacement
-static std::vector<RUNTIME_FUNCTION> s_unwind;
-#endif
-
-struct MemoryManager final : llvm::RTDyldMemoryManager
+// Interpreter call for simple vector instructions
+static __m128i ppu_vec3op(decltype(&ppu_interpreter::UNK) func, __m128i _a, __m128i _b, __m128i _c)
 {
-	static PPUThread* context(u64 addr)
+	PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
+	ppu.VR[21].vi = _a;
+	ppu.VR[22].vi = _b;
+	ppu.VR[23].vi = _c;
+
+	ppu_opcode_t op{};
+	op.vd = 20;
+	op.va = 21;
+	op.vb = 22;
+	op.vc = 23;
+	func(ppu, op);
+
+	return ppu.VR[20].vi;
+}
+
+extern void ppu_initialize(const std::string& name, const std::vector<std::pair<u32, u32>>& funcs, u32 entry)
+{
+	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm || funcs.empty())
 	{
-		//trace(addr);
-		return static_cast<PPUThread*>(get_current_cpu_thread());
+		return;
 	}
 
-	[[noreturn]] static void trap(u64 addr)
+	std::unordered_map<std::string, std::uintptr_t> link_table
 	{
-		LOG_ERROR(PPU, "Trap! (0x%llx)", addr);
-		throw fmt::exception("Trap! (0x%llx)", addr);
-	}
-
-	static void trace(u64 addr)
-	{
-		LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
-	}
-
-	static void hack(u32 index)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		ppu_execute_function(ppu, index);
-		if (ppu.state.load() && ppu.check_status()) throw cpu_state::ret; // Temporarily
-	}
-
-	static void syscall(u64 code)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		ppu_execute_syscall(ppu, code);
-		if (ppu.state.load() && ppu.check_status()) throw cpu_state::ret; // Temporarily
-	}
-
-	static u32 tbl()
-	{
-		return (u32)get_timebased_time();
-	}
-
-	static void call(u32 addr)
-	{
-		const auto found = s_ppu_compiled.find(addr);
-
-		if (found != s_ppu_compiled.end())
-		{
-			return found->second();
-		}
-
-		const auto op = vm::read32(addr).value();
-		const auto itype = s_ppu_itype.decode(op);
-
-		// Allow HLE callbacks without compiling them
-		if (itype == ppu_itype::HACK && vm::read32(addr + 4) == ppu_instructions::BLR())
-		{
-			return hack(op & 0x3ffffff);
-		}
-
-		trap(addr);
-	}
-
-	static __m128 sse_rcp_ps(__m128 A)
-	{
-		return _mm_rcp_ps(A);
-	}
-
-	static __m128 sse_rsqrt_ps(__m128 A)
-	{
-		return _mm_rsqrt_ps(A);
-	}
-
-	static float sse_rcp_ss(float A)
-	{
-		_mm_store_ss(&A, _mm_rcp_ss(_mm_load_ss(&A)));
-		return A;
-	}
-
-	static float sse_rsqrt_ss(float A)
-	{
-		_mm_store_ss(&A, _mm_rsqrt_ss(_mm_load_ss(&A)));
-		return A;
-	}
-
-	static u32 lwarx(u32 addr)
-	{
-		be_t<u32> reg_value;
-		vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
-		return reg_value;
-	}
-
-	static u64 ldarx(u32 addr)
-	{
-		be_t<u64> reg_value;
-		vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
-		return reg_value;
-	}
-
-	static bool stwcx(u32 addr, u32 reg_value)
-	{
-		const be_t<u32> data = reg_value;
-		return vm::reservation_update(addr, &data, sizeof(data));
-	}
-
-	static bool stdcx(u32 addr, u64 reg_value)
-	{
-		const be_t<u64> data = reg_value;
-		return vm::reservation_update(addr, &data, sizeof(data));
-	}
-
-	static bool adde_carry(u64 a, u64 b, bool c)
-	{
-		return _addcarry_u64(c, a, b, nullptr) != 0;
-	}
-
-	// Interpreter call for simple vector instructions
-	static __m128i vec3op(decltype(&ppu_interpreter::UNK) func, __m128i _a, __m128i _b, __m128i _c)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		ppu.VR[21].vi = _a;
-		ppu.VR[22].vi = _b;
-		ppu.VR[23].vi = _c;
-
-		ppu_opcode_t op{};
-		op.vd = 20;
-		op.va = 21;
-		op.vb = 22;
-		op.vc = 23;
-		func(ppu, op);
-
-		return ppu.VR[20].vi;
-	}
-
-	// Interpreter call for simple vector instructions with immediate
-	static __m128i veciop(decltype(&ppu_interpreter::UNK) func, ppu_opcode_t op, __m128i _b)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		ppu.VR[22].vi = _b;
-
-		op.vd = 20;
-		op.vb = 22; 
-		func(ppu, op);
-
-		return ppu.VR[20].vi;
-	}
-
-	// Interpreter call for FP instructions
-	static f64 fpop(decltype(&ppu_interpreter::UNK) func, f64 _a, f64 _b, f64 _c)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		ppu.FPR[21] = _a;
-		ppu.FPR[22] = _b;
-		ppu.FPR[23] = _c;
-
-		ppu_opcode_t op{};
-		op.frd = 20;
-		op.fra = 21;
-		op.frb = 22;
-		op.frc = 23;
-		func(ppu, op);
-
-		return ppu.FPR[20];
-	}
-
-	// Interpreter call for GPR instructions writing result to RA
-	static u64 aimmop(decltype(&ppu_interpreter::UNK) func, ppu_opcode_t op, u64 _s)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		const u64 a = ppu.GPR[op.ra];
-		const u64 s = ppu.GPR[op.rs];
-		ppu.GPR[op.rs] = _s;
-
-		func(ppu, op);
-
-		const u64 r = ppu.GPR[op.ra];
-		ppu.GPR[op.ra] = a;
-		ppu.GPR[op.rs] = s;
-		return r;
-	}
-
-	// Interpreter call for GPR instructions writing result to RA
-	static u64 aimmbop(decltype(&ppu_interpreter::UNK) func, ppu_opcode_t op, u64 _s, u64 _b)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		const u64 a = ppu.GPR[op.ra];
-		const u64 s = ppu.GPR[op.rs];
-		const u64 b = ppu.GPR[op.rb];
-		ppu.GPR[op.rs] = _s;
-		ppu.GPR[op.rb] = _b;
-
-		func(ppu, op);
-
-		const u64 r = ppu.GPR[op.ra];
-		ppu.GPR[op.ra] = a;
-		ppu.GPR[op.rs] = s;
-		ppu.GPR[op.rb] = b;
-		return r;
-	}
-
-	// Interpreter call for GPR instructions writing result to RA (destructive)
-	static u64 aaimmop(decltype(&ppu_interpreter::UNK) func, ppu_opcode_t op, u64 _s, u64 _a)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		const u64 s = ppu.GPR[op.rs];
-		const u64 a = ppu.GPR[op.ra];
-		ppu.GPR[op.rs] = _s;
-		ppu.GPR[op.ra] = _a;
-
-		func(ppu, op);
-
-		const u64 r = ppu.GPR[op.ra];
-		ppu.GPR[op.rs] = s;
-		ppu.GPR[op.ra] = a;
-		return r;
-	}
-
-	static u64 immaop(decltype(&ppu_interpreter::UNK) func, ppu_opcode_t op, u64 _a)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		const u64 a = ppu.GPR[op.ra];
-		const u64 d = ppu.GPR[op.rd];
-		ppu.GPR[op.ra] = _a;
-
-		func(ppu, op);
-
-		const u64 r = ppu.GPR[op.rd];
-		ppu.GPR[op.ra] = a;
-		ppu.GPR[op.rd] = d;
-		return r;
-	}
-
-	static u64 immabop(decltype(&ppu_interpreter::UNK) func, ppu_opcode_t op, u64 _a, u64 _b)
-	{
-		PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-		const u64 a = ppu.GPR[op.ra];
-		const u64 b = ppu.GPR[op.rb];
-		const u64 d = ppu.GPR[op.rd];
-		ppu.GPR[op.ra] = _a;
-		ppu.GPR[op.rb] = _b;
-
-		func(ppu, op);
-
-		const u64 r = ppu.GPR[op.rd];
-		ppu.GPR[op.ra] = a;
-		ppu.GPR[op.rb] = b;
-		ppu.GPR[op.rd] = d;
-		return r;
-	}
-
-	// No operation on specific u64 value (silly optimization barrier)
-	static u64 nop64(u64 value)
-	{
-		return value;
-	}
-
-	std::unordered_map<std::string, u64> table
-	{
-		{ "__memory", (u64)vm::base(0) },
-		{ "__context", (u64)&context },
-		{ "__trap", (u64)&trap },
-		{ "__trace", (u64)&trace },
-		{ "__hlecall", (u64)&hack },
-		{ "__syscall", (u64)&syscall },
-		{ "__get_tbl", (u64)&tbl },
-		{ "__call", (u64)&call },
-		{ "__lwarx", (u64)&lwarx },
-		{ "__ldarx", (u64)&ldarx },
-		{ "__stwcx", (u64)&stwcx },
-		{ "__stdcx", (u64)&stdcx },
+		{ "__memory", (u64)vm::g_base_addr },
+		{ "__memptr", (u64)&vm::g_base_addr },
+		{ "__trap", (u64)&ppu_trap },
+		{ "__trace", (u64)&ppu_trace },
+		{ "__hlecall", (u64)&ppu_execute_function },
+		{ "__syscall", (u64)&ppu_execute_syscall },
+		{ "__get_tbl", (u64)&get_timebased_time },
+		{ "__call", (u64)s_ppu_compiled },
+		{ "__lwarx", (u64)&ppu_lwarx },
+		{ "__ldarx", (u64)&ppu_ldarx },
+		{ "__stwcx", (u64)&ppu_stwcx },
+		{ "__stdcx", (u64)&ppu_stdcx },
+		{ "__vec3op", (u64)&ppu_vec3op },
 		{ "__adde_get_ca", (u64)&adde_carry },
 		{ "__vexptefp", (u64)&sse_exp2_ps },
 		{ "__vlogefp", (u64)&sse_log2_ps },
 		{ "__vperm", (u64)&sse_altivec_vperm },
 		{ "__vrefp", (u64)&sse_rcp_ps },
 		{ "__vrsqrtefp", (u64)&sse_rsqrt_ps },
-		{ "__vec3op", (u64)&vec3op },
-		{ "__veciop", (u64)&veciop },
-		{ "__aimmop", (u64)&aimmop },
-		{ "__aimmbop", (u64)&aimmbop },
-		{ "__aaimmop", (u64)&aaimmop },
-		{ "__immaop", (u64)&immaop },
-		{ "__immabop", (u64)&immabop },
-		{ "__fpop", (u64)&fpop },
-		{ "__nop64", (u64)&nop64 },
 		{ "__lvsl", (u64)&sse_altivec_lvsl },
 		{ "__lvsr", (u64)&sse_altivec_lvsr },
 		{ "__lvlx", (u64)&sse_cellbe_lvlx },
@@ -719,150 +507,30 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		{ "__frsqrte", (u64)&sse_rsqrt_ss },
 	};
 
-	virtual u64 getSymbolAddress(const std::string& name) override
-	{
-		if (u64 addr = RTDyldMemoryManager::getSymbolAddress(name))
-		{
-			LOG_ERROR(GENERAL, "LLVM: Linkage requested %s -> 0x%016llx", name, addr);
-			return addr;
-		}
-
-		const auto found = table.find(name);
-
-		if (found != table.end())
-		{
-			return found->second;
-		}
-
-		LOG_FATAL(GENERAL, "LLVM: Linkage failed for %s", name);
-		return (u64)trap;
-	}
-
-	virtual u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
-	{
-		// Simple allocation (TODO)
-		const auto ptr = m_next; m_next = (void*)::align((u64)m_next + size, 4096);
-
-#ifdef _WIN32
-		if (!VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE))
-#else
-		if (::mprotect(ptr, size, PROT_READ | PROT_WRITE | PROT_EXEC))
-#endif
-		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate code section '%s'", sec_name.data());
-			return nullptr;
-		}
-
-		LOG_SUCCESS(GENERAL, "LLVM: Code section '%s' allocated -> 0x%p", sec_name.data(), ptr);
-		return (u8*)ptr;
-	}
-
-	virtual u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
-	{
-		// Simple allocation (TODO)
-		const auto ptr = m_next; m_next = (void*)::align((u64)m_next + size, 4096);
-
-#ifdef _WIN32
-		if (!VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE))
-#else
-		if (::mprotect(ptr, size, PROT_READ | PROT_WRITE))
-#endif
-		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate data section '%s'", sec_name.data());
-			return nullptr;
-		}
-		
-		LOG_SUCCESS(GENERAL, "LLVM: Data section '%s' allocated -> 0x%p", sec_name.data(), ptr);
-		return (u8*)ptr;
-	}
-
-	virtual bool finalizeMemory(std::string* = nullptr) override
-	{
-		// TODO: make sections read-only when necessary
-		return false;
-	}
-
-	virtual void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
-	{
-		s_unwind_info = addr;
-		s_unwind_size = size;
-
-		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
-	}
-
-	virtual void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
-	{
-		LOG_ERROR(GENERAL, "deregisterEHFrames() called"); // Not expected
-
-		return RTDyldMemoryManager::deregisterEHFrames(addr, load_addr, size);
-	}
-
-	~MemoryManager()
-	{
-#ifdef _WIN32
-		if (!RtlDeleteFunctionTable(s_unwind.data()))
-		{
-			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable(addr=0x%p) failed! Error %u", s_unwind_info, GetLastError());
-		}
-
-		if (!VirtualFree(s_memory, 0, MEM_DECOMMIT))
-		{
-			LOG_FATAL(GENERAL, "VirtualFree(0x%p) failed! Error %u", s_memory, GetLastError());
-		}
-#else
-		if (::mprotect(s_memory, s_memory_size, PROT_NONE))
-		{
-			LOG_FATAL(GENERAL, "mprotect(0x%p) failed! Error %d", s_memory, errno);
-		}
-
-		// TODO: unregister EH frames if necessary
-#endif
-	}
-
-private:
-	void* m_next = s_memory;
-};
-
-llvm::LLVMContext g_context;
-
-extern void ppu_initialize(const std::string& name, const std::vector<std::pair<u32, u32>>& funcs, u32 entry)
-{
-	if (!s_memory)
-	{
-		throw std::runtime_error("LLVM: Memory not allocated, report to the developers." HERE);
-	}
-
-	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm || funcs.empty())
-	{
-		return;
-	}
-
+#ifdef LLVM_AVAILABLE
 	using namespace llvm;
 
-	InitializeNativeTarget();
-	InitializeNativeTargetAsmPrinter();
-	LLVMLinkInMCJIT();
-
-	// Initialization
-	const auto _pi8 = Type::getInt8PtrTy(g_context);
-	const auto _void = Type::getVoidTy(g_context);
-	const auto _func = FunctionType::get(Type::getVoidTy(g_context), false);
-
 	// Create LLVM module
-	std::unique_ptr<Module> module = std::make_unique<Module>(name, g_context);
+	std::unique_ptr<Module> module = std::make_unique<Module>(name, g_llvm_ctx);
 
 	// Initialize target
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 	
 	// Initialize translator
-	std::unique_ptr<PPUTranslator> translator = std::make_unique<PPUTranslator>(g_context, module.get(), 0, entry);
+	std::unique_ptr<PPUTranslator> translator = std::make_unique<PPUTranslator>(g_llvm_ctx, module.get(), 0, entry);
+
+	// Define some types
+	const auto _void = Type::getVoidTy(g_llvm_ctx);
+	const auto _func = FunctionType::get(_void, { translator->GetContextType()->getPointerTo() }, false);
 
 	// Initialize function list
 	for (const auto& info : funcs)
 	{
 		if (info.second)
 		{
-			translator->AddFunction(info.first, cast<Function>(module->getOrInsertFunction(fmt::format("__sub_%x", info.first), _func)));
+			const auto f = cast<Function>(module->getOrInsertFunction(fmt::format("__sub_%x", info.first), _func));
+			f->addAttribute(1, Attribute::NoAlias);
+			translator->AddFunction(info.first, f);
 		}
 
 		translator->AddBlockInfo(info.first);
@@ -877,18 +545,15 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	pm.add(createTailCallEliminationPass());
 	pm.add(createReassociatePass());
 	pm.add(createInstructionCombiningPass());
-	//pm.add(new DominatorTreeWrapperPass());
-	//pm.add(createInstructionCombiningPass());
-	//pm.add(new MemoryDependenceAnalysis());
+	//pm.add(createBasicAAWrapperPass());
+	pm.add(new MemoryDependenceAnalysis());
+	pm.add(createLICMPass());
+	pm.add(createLoopInstSimplifyPass());
+	pm.add(createGVNPass());
 	pm.add(createDeadStoreEliminationPass());
-	//pm.add(createGVNPass());
-	//pm.add(createBBVectorizePass());
-	//pm.add(new LoopInfo());
-	//pm.add(new ScalarEvolution());
-
 	pm.add(createSCCPPass());
-	//pm.addPass(new SyscallAnalysisPass()); // Requires constant propagation
 	pm.add(createInstructionCombiningPass());
+	pm.add(createInstructionSimplifierPass());
 	pm.add(createAggressiveDCEPass());
 	pm.add(createCFGSimplificationPass());
 	//pm.add(createLintPass()); // Check
@@ -898,30 +563,63 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	{
 		if (info.second)
 		{
-			pm.run(*translator->TranslateToIR(info.first, info.first + info.second, vm::_ptr<u32>(info.first)));
+			const auto func = translator->TranslateToIR(info.first, info.first + info.second, vm::_ptr<u32>(info.first));
+
+			// Run optimization passes
+			pm.run(*func);
+
+			const auto _syscall = module->getFunction("__syscall");
+			const auto _hlecall = module->getFunction("__hlecall");
+
+			for (auto i = inst_begin(*func), end = inst_end(*func); i != end;)
+			{
+				const auto inst = &*i++;
+
+				if (const auto ci = dyn_cast<CallInst>(inst))
+				{
+					const auto cif = ci->getCalledFunction();
+					const auto op1 = ci->getNumArgOperands() > 1 ? ci->getArgOperand(1) : nullptr;
+
+					if (cif == _syscall && op1 && isa<ConstantInt>(op1))
+					{
+						// Try to determine syscall using the value from r11 (requires constant propagation)
+						const u64 index = cast<ConstantInt>(op1)->getZExtValue();
+
+						if (const auto ptr = ppu_get_syscall(index))
+						{
+							const auto n = ppu_get_syscall_name(index);
+							const auto f = cast<Function>(module->getOrInsertFunction(n, _func));
+							link_table.emplace(n, reinterpret_cast<std::uintptr_t>(ptr));
+
+							// Call the syscall directly
+							ReplaceInstWithInst(ci, CallInst::Create(f, {ci->getArgOperand(0)}));
+						}
+					}
+
+					if (cif == _hlecall && op1 && isa<ConstantInt>(op1))
+					{
+						const u32 index = static_cast<u32>(cast<ConstantInt>(op1)->getZExtValue());
+
+						if (const auto ptr = ppu_get_function(index))
+						{
+							const auto n = ppu_get_module_function_name(index);
+							const auto f = cast<Function>(module->getOrInsertFunction(n, _func));
+							link_table.emplace(n, reinterpret_cast<std::uintptr_t>(ptr));
+
+							// Call the function directly
+							ReplaceInstWithInst(ci, CallInst::Create(f, {ci->getArgOperand(0)}));
+						}
+					}
+				}
+			}
 		}
 	}
-
-	//static auto s_current = &PPUTranslator::UNK;
-
-	//for (const auto& info : s_test)
-	//{
-	//	const u64 pseudo_addr = (u64)&info.first + INT64_MIN;
-
-	//	s_current = info.second;
-	//	const auto func = translator->TranslateToIR(pseudo_addr, pseudo_addr, nullptr, [](PPUTranslator* _this)
-	//	{
-	//		(_this->*s_current)(op);
-	//		_this->ReturnFromFunction();
-	//	});
-
-	//	pm.run(*func);
-	//}
 
 	legacy::PassManager mpm;
 
 	// Remove unused functions, structs, global variables, etc
 	mpm.add(createStripDeadPrototypesPass());
+	//mpm.add(createFunctionInliningPass());
 	mpm.run(*module);
 
 	std::string result;
@@ -944,98 +642,30 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 
 	Module* module_ptr = module.get();
 
-	std::shared_ptr<ExecutionEngine> engine(EngineBuilder(std::move(module))
-		.setErrorStr(&result)
-		.setMCJITMemoryManager(std::make_unique<MemoryManager>())
-		.setOptLevel(llvm::CodeGenOpt::Aggressive)
-		.setRelocationModel(Reloc::PIC_)
-		.setCodeModel((u64)s_memory <= 0x60000000 ? CodeModel::Medium : CodeModel::Large)
-		.setMCPU(sys::getHostCPUName())
-		.create());
+	const auto jit = fxm::make<jit_compiler>(std::move(module), std::move(link_table));
 
-	if (!engine)
+	if (!jit)
 	{
-		throw fmt::exception("LLVM: Failed to create ExecutionEngine: %s", result);
+		LOG_FATAL(PPU, "LLVM: Multiple modules are not yet supported");
+		return;
 	}
 
-	engine->setProcessAllSections(true);
-	//engine->setVerifyModules(true);
-	engine->RegisterJITEventListener(&s_listener);
-	engine->finalizeObject();
+	memory_helper::free_reserved_memory(s_ppu_compiled, 0x200000000); // TODO
 
-	s_ppu_compiled.clear();
-
-	// Get function addresses
+	// Get and install function addresses
 	for (const auto& info : funcs)
 	{
+		const u32 addr = info.first;
 		if (info.second)
 		{
-			const std::uintptr_t link = engine->getFunctionAddress(fmt::format("__sub_%x", info.first));
-			s_ppu_compiled.emplace(info.first, (void(*)())link);
+			const std::uintptr_t link = jit->get(fmt::format("__sub_%x", addr));
+			memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, sizeof(ppu_function_t));
+			s_ppu_compiled[addr / 4] = (ppu_function_t)link;
 
-			LOG_NOTICE(PPU, "** Function __sub_%x -> 0x%llx (addr=0x%x, size=0x%x)", info.first, link, info.first, info.second);
+			LOG_NOTICE(PPU, "** Function __sub_%x -> 0x%llx (addr=0x%x, size=0x%x)", addr, link, addr, info.second);
 		}
 	}
 
-	// Delete IR to lower memory consumption
-	for (auto& func : module_ptr->functions())
-	{
-		func.deleteBody();
-	}
-
-#ifdef _WIN32
-	// Register .xdata UNWIND_INFO (.pdata section is empty for some reason)
-	std::set<u64> func_set;
-
-	for (const auto& pair : s_ppu_compiled)
-	{
-		// Get addresses
-		func_set.emplace((u64)pair.second);
-	}
-
-	func_set.emplace(::align(*--func_set.end() + 4096, 4096));
-
-	const u64 base = (u64)s_memory;
-	const u8* bits = s_unwind_info;
-
-	s_unwind.clear();
-	s_unwind.reserve(s_ppu_compiled.size());
-
-	for (auto it = func_set.begin(), end = --func_set.end(); it != end; it++)
-	{
-		const u64 addr = *it;
-		const u64 next = *func_set.upper_bound(addr);
-
-		// Generate RUNTIME_FUNCTION record
-		RUNTIME_FUNCTION uw;
-		uw.BeginAddress = static_cast<u32>(addr - base);
-		uw.EndAddress   = static_cast<u32>(next - base);
-		uw.UnwindData   = static_cast<u32>((u64)bits - base);
-		s_unwind.emplace_back(uw);
-
-		// Parse .xdata record
-		VERIFY(*bits++ == 1); // Version and flags
-		bits++; // Size of prolog
-		const u8 count = *bits++; // Count of unwind codes
-		bits++; // Frame Reg + Off
-		bits += ::align(count, 2) * sizeof(u16); // UNWIND_CODE array
-		while (!*bits && bits < s_unwind_info + s_unwind_size) bits++; // Skip strange zero padding (???)
-	}
-
-	VERIFY(bits == s_unwind_info + s_unwind_size);
-	VERIFY(RtlAddFunctionTable(s_unwind.data(), (DWORD)s_unwind.size(), base));
-	LOG_SUCCESS(GENERAL, "LLVM: UNWIND_INFO registered (addr=0x%p, size=0x%llx)", s_unwind_info, s_unwind_size);
-#endif
-
-	fxm::import<ExecutionEngine>(WRAP_EXPR(engine));
-
 	LOG_SUCCESS(PPU, "LLVM: Compilation finished (%s)", sys::getHostCPUName().data());
-}
-
-#else
-
-extern void ppu_initialize(const std::string& name, const std::vector<std::pair<u32, u32>>& funcs, u32 entry)
-{
-}
-
 #endif
+}

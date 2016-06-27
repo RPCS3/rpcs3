@@ -18,6 +18,7 @@ public:
 	virtual std::string dump() const override;
 	virtual void cpu_init() override;
 	virtual void cpu_task() override;
+	virtual void cpu_task_main();
 	virtual ~ARMv7Thread() override;
 
 	ARMv7Thread(const std::string& name);
@@ -132,6 +133,8 @@ public:
 	u32 prio = -1;
 	u32 stack_addr = 0;
 	u32 stack_size = 0;
+
+	const std::string m_name;
 
 	std::function<void(ARMv7Thread&)> custom_task;
 

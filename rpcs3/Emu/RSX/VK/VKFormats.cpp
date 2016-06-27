@@ -65,6 +65,16 @@ VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
 	throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
 }
 
+VkBorderColor get_border_color(u8 color)
+{
+	if ((color / 0x10) >= 0x8) 
+		return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	else
+		return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+		
+	// TODO: VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
+}
+
 VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap)
 {
 	switch (gcm_wrap)

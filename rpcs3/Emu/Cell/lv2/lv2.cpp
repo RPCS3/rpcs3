@@ -910,40 +910,36 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 
 extern void ppu_execute_syscall(PPUThread& ppu, u64 code)
 {
-	if (code >= g_ppu_syscall_table.size())
+	if (code < g_ppu_syscall_table.size())
 	{
-		throw fmt::exception("Invalid syscall number (%llu)", code);
-	}
+		// If autopause occures, check_status() will hold the thread till unpaused.
+		if (debug::autopause::pause_syscall(code) && ppu.check_status()) throw cpu_state::ret;
 
-	// If autopause occures, check_status() will hold the thread till unpaused.
-	if (debug::autopause::pause_syscall(code) && ppu.check_status())
-	{
-		throw cpu_state::ret;
-	}
-
-	const auto previous_function = ppu.last_function; // TODO: use gsl::finally or something
-	
-	try
-	{
 		if (auto func = g_ppu_syscall_table[code])
 		{
 			func(ppu);
+			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_get_syscall_name(code), code, ppu.GPR[3]);
 		}
 		else
 		{
 			LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(code));
 			ppu.GPR[3] = 0;
 		}
-	}
-	catch (...)
-	{
-		logs::PPU.format(Emu.IsStopped() ? logs::level::warning : logs::level::error, "Syscall '%s' (%llu) aborted", ppu_get_syscall_name(code), code);
-		ppu.last_function = previous_function;
-		throw;
+
+		return;
 	}
 
-	LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_get_syscall_name(code), code, ppu.GPR[3]);
-	ppu.last_function = previous_function;
+	throw fmt::exception("Invalid syscall number (%llu)", code);
+}
+
+extern ppu_function_t ppu_get_syscall(u64 code)
+{
+	if (code < g_ppu_syscall_table.size())
+	{
+		return g_ppu_syscall_table[code];
+	}
+
+	return nullptr;
 }
 
 DECLARE(lv2_lock_t::mutex);

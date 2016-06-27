@@ -42,7 +42,7 @@ namespace utils
 	void *dynamic_library::get_impl(const std::string &name) const
 	{
 #ifdef _WIN32
-		return GetProcAddress((HMODULE)m_handle, name.c_str());
+		return (void*)GetProcAddress((HMODULE)m_handle, name.c_str());
 #else
 		return dlsym(m_handle, (char *)name.c_str());
 #endif

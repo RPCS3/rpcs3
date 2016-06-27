@@ -125,8 +125,21 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 // Function lookup table. Not supposed to grow after emulation start.
 std::vector<ppu_function_t> g_ppu_function_cache;
 
+// Function name cache in format %s.%s (module name, function name)
+std::vector<std::string> g_ppu_function_names;
+
 // Function NID cache for autopause. Autopause tool should probably be rewritten.
 std::vector<u32> g_ppu_fnid_cache;
+
+extern std::string ppu_get_module_function_name(u32 index)
+{
+	if (index < g_ppu_function_names.size())
+	{
+		return g_ppu_function_names[index];
+	}
+
+	return fmt::format(".%u", index);
+}
 
 extern void ppu_execute_function(PPUThread& ppu, u32 index)
 {
@@ -137,26 +150,23 @@ extern void ppu_execute_function(PPUThread& ppu, u32 index)
 
 		if (const auto func = g_ppu_function_cache[index])
 		{
-			const auto previous_function = ppu.last_function; // TODO: use gsl::finally or something, but only if it's equally fast
-
-			try
-			{
-				func(ppu);
-			}
-			catch (...)
-			{
-				logs::HLE.format(Emu.IsStopped() ? logs::level::warning : logs::level::error, "Function '%s' aborted", ppu.last_function);
-				ppu.last_function = previous_function;
-				throw;
-			}
-
-			LOG_TRACE(HLE, "Function '%s' finished, r3=0x%llx", ppu.last_function, ppu.GPR[3]);
-			ppu.last_function = previous_function;
+			func(ppu);
+			LOG_TRACE(HLE, "'%s' finished, r3=0x%llx", ppu_get_module_function_name(index), ppu.GPR[3]);
 			return;
 		}
 	}
 
 	throw fmt::exception("Function not registered (index %u)" HERE, index);
+}
+
+extern ppu_function_t ppu_get_function(u32 index)
+{
+	if (index < g_ppu_function_cache.size())
+	{
+		return g_ppu_function_cache[index];
+	}
+
+	return nullptr;
 }
 
 extern u32 ppu_generate_id(const char* name)
@@ -312,7 +322,10 @@ static void ppu_initialize_modules()
 
 	// Reinitialize function cache
 	g_ppu_function_cache = ppu_function_manager::get();
-	g_ppu_fnid_cache = std::vector<u32>(g_ppu_function_cache.size());
+	g_ppu_function_names.clear();
+	g_ppu_function_names.resize(g_ppu_function_cache.size());
+	g_ppu_fnid_cache.clear();
+	g_ppu_fnid_cache.resize(g_ppu_function_cache.size());
 	
 	// "Use" all the modules for correct linkage
 	for (auto& module : registered)
@@ -322,6 +335,7 @@ static void ppu_initialize_modules()
 		for (auto& function : module->functions)
 		{
 			LOG_TRACE(LOADER, "** 0x%08X: %s", function.first, function.second.name);
+			g_ppu_function_names.at(function.second.index) = fmt::format("%s.%s", module->name, function.second.name);
 			g_ppu_fnid_cache.at(function.second.index) = function.first;
 		}
 
@@ -1531,10 +1545,12 @@ void ppu_exec_loader::load() const
 				{
 					// TODO
 					const u32 index = ::size32(g_ppu_function_cache);
+					const std::string& fname = ppu_get_function_name(module.first, fnid);
 					g_ppu_function_cache.emplace_back();
+					g_ppu_function_names.emplace_back(fmt::format("%s.%s", module.first, fname));
 					g_ppu_fnid_cache.emplace_back(fnid);
 
-					LOG_ERROR(LOADER, "Unknown function '%s' in module '%s' (index %u)", ppu_get_function_name(module.first, fnid), module.first, index);
+					LOG_ERROR(LOADER, "Unknown function '%s' in module '%s' (index %u)", fname, module.first, index);
 
 					for (auto& import : entry.second.second)
 					{
@@ -1544,11 +1560,11 @@ void ppu_exec_loader::load() const
 
 							if (!ppu_patch_import_stub(stub, index))
 							{
-								LOG_ERROR(LOADER, "Failed to inject code for function '%s' in module '%s' (0x%x)", ppu_get_function_name(module.first, fnid), module.first, stub);
+								LOG_ERROR(LOADER, "Failed to inject code for function '%s' in module '%s' (0x%x)", fname, module.first, stub);
 							}
 							else
 							{
-								LOG_NOTICE(LOADER, "Injected hack for function '%s' in module '%s' (*0x%x)", ppu_get_function_name(module.first, fnid), module.first, stub);
+								LOG_NOTICE(LOADER, "Injected hack for function '%s' in module '%s' (*0x%x)", fname, module.first, stub);
 							}
 						}
 

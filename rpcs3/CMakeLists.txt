@@ -166,6 +166,9 @@ else()
 	else()
 		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
 	endif()
+	if (NOT MSVC)
+		set_source_files_properties(${RPCS3_SRC_DIR}/../Utilities/JIT.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
+	endif()
 endif()
 
 link_directories(

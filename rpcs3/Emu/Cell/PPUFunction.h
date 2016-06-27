@@ -4,7 +4,12 @@
 
 using ppu_function_t = void(*)(PPUThread&);
 
-#define BIND_FUNC(func) [](PPUThread& ppu){ ppu.last_function = #func; ppu_func_detail::do_call(ppu, func); }
+#define BIND_FUNC(func) static_cast<ppu_function_t>([](PPUThread& ppu){\
+	const auto old_f = ppu.last_function;\
+	ppu.last_function = #func;\
+	ppu_func_detail::do_call(ppu, func);\
+	ppu.last_function = old_f;\
+})
 
 struct ppu_va_args_t
 {

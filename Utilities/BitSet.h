@@ -10,6 +10,7 @@ struct bitset_t
 {
 	using type = simple_t<T>;
 	using under = std::underlying_type_t<type>;
+	enum class raw_type : under {};
 
 	static constexpr auto bitsize = BitSize;
 
@@ -20,8 +21,8 @@ struct bitset_t
 	{
 	}
 
-	constexpr bitset_t(under raw_value, const std::nothrow_t&)
-		: m_value(static_cast<T>(raw_value))
+	constexpr bitset_t(raw_type raw_value)
+		: m_value(static_cast<T>(static_cast<under>(raw_value)))
 	{
 	}
 
@@ -38,42 +39,42 @@ struct bitset_t
 
 	bitset_t& operator +=(bitset_t rhs)
 	{
-		return *this = { _value() | rhs._value(), std::nothrow };
+		return *this = static_cast<raw_type>(_value() | rhs._value());
 	}
 
 	bitset_t& operator -=(bitset_t rhs)
 	{
-		return *this = { _value() & ~rhs._value(), std::nothrow };
+		return *this = static_cast<raw_type>(_value() & ~rhs._value());
 	}
 
 	bitset_t& operator &=(bitset_t rhs)
 	{
-		return *this = { _value() & rhs._value(), std::nothrow };
+		return *this = static_cast<raw_type>(_value() & rhs._value());
 	}
 
 	bitset_t& operator ^=(bitset_t rhs)
 	{
-		return *this = { _value() ^ rhs._value(), std::nothrow };
+		return *this = static_cast<raw_type>(_value() ^ rhs._value());
 	}
 
 	friend constexpr bitset_t operator +(bitset_t lhs, bitset_t rhs)
 	{
-		return{ lhs._value() | rhs._value(), std::nothrow };
+		return static_cast<raw_type>(lhs._value() | rhs._value());
 	}
 
 	friend constexpr bitset_t operator -(bitset_t lhs, bitset_t rhs)
 	{
-		return{ lhs._value() & ~rhs._value(), std::nothrow };
+		return static_cast<raw_type>(lhs._value() & ~rhs._value());
 	}
 
 	friend constexpr bitset_t operator &(bitset_t lhs, bitset_t rhs)
 	{
-		return{ lhs._value() & rhs._value(), std::nothrow };
+		return static_cast<raw_type>(lhs._value() & rhs._value());
 	}
 
 	friend constexpr bitset_t operator ^(bitset_t lhs, bitset_t rhs)
 	{
-		return{ lhs._value() ^ rhs._value(), std::nothrow };
+		return static_cast<raw_type>(lhs._value() ^ rhs._value());
 	}
 
 	bool test(bitset_t rhs) const
@@ -87,7 +88,7 @@ struct bitset_t
 	{
 		const under v = _value();
 		const under s = rhs._value();
-		*this = { v | s, std::nothrow };
+		*this = static_cast<raw_type>(v | s);
 		return (v & s) != 0;
 	}
 
@@ -95,7 +96,7 @@ struct bitset_t
 	{
 		const under v = _value();
 		const under s = rhs._value();
-		*this = { v & ~s, std::nothrow };
+		*this = static_cast<raw_type>(v & ~s);
 		return (v & s) != 0;
 	}
 
@@ -103,7 +104,7 @@ struct bitset_t
 	{
 		const under v = _value();
 		const under s = rhs._value();
-		*this = { v ^ s, std::nothrow };
+		*this = static_cast<raw_type>(v ^ s);
 		return (v & s) != 0;
 	}
 
@@ -133,17 +134,18 @@ template<typename T, typename CT>
 struct atomic_add<bitset_t<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
 {
 	using under = typename bitset_t<T>::under;
+	using raw_type = typename bitset_t<T>::raw_type;
 
 	static inline bitset_t<T> op1(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::fetch_or(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::fetch_or(reinterpret_cast<under&>(left), right._value()));
 	}
 
 	static constexpr auto fetch_op = &op1;
 
 	static inline bitset_t<T> op2(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::or_fetch(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::or_fetch(reinterpret_cast<under&>(left), right._value()));
 	}
 
 	static constexpr auto op_fetch = &op2;
@@ -154,17 +156,18 @@ template<typename T, typename CT>
 struct atomic_sub<bitset_t<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
 {
 	using under = typename bitset_t<T>::under;
+	using raw_type = typename bitset_t<T>::raw_type;
 
 	static inline bitset_t<T> op1(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), ~right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), ~right._value()));
 	}
 
 	static constexpr auto fetch_op = &op1;
 
 	static inline bitset_t<T> op2(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), ~right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), ~right._value()));
 	}
 
 	static constexpr auto op_fetch = &op2;
@@ -175,17 +178,18 @@ template<typename T, typename CT>
 struct atomic_and<bitset_t<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
 {
 	using under = typename bitset_t<T>::under;
+	using raw_type = typename bitset_t<T>::raw_type;
 
 	static inline bitset_t<T> op1(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), right._value()));
 	}
 
 	static constexpr auto fetch_op = &op1;
 
 	static inline bitset_t<T> op2(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), right._value()));
 	}
 
 	static constexpr auto op_fetch = &op2;
@@ -196,17 +200,18 @@ template<typename T, typename CT>
 struct atomic_xor<bitset_t<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
 {
 	using under = typename bitset_t<T>::under;
+	using raw_type = typename bitset_t<T>::raw_type;
 
 	static inline bitset_t<T> op1(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::fetch_xor(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::fetch_xor(reinterpret_cast<under&>(left), right._value()));
 	}
 
 	static constexpr auto fetch_op = &op1;
 
 	static inline bitset_t<T> op2(bitset_t<T>& left, bitset_t<T> right)
 	{
-		return{ atomic_storage<under>::xor_fetch(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+		return static_cast<raw_type>(atomic_storage<under>::xor_fetch(reinterpret_cast<under&>(left), right._value()));
 	}
 
 	static constexpr auto op_fetch = &op2;

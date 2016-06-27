@@ -127,6 +127,8 @@ enum x64_op_t : u32
 	X64OP_NONE,
 	X64OP_LOAD, // obtain and put the value into x64 register
 	X64OP_LOAD_BE,
+	X64OP_LOAD_CMP,
+	X64OP_LOAD_TEST,
 	X64OP_STORE, // take the value from x64 register or an immediate and use it
 	X64OP_STORE_BE,
 	X64OP_MOVS,
@@ -297,8 +299,9 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		switch (op2)
 		{
 		case 0x11:
+		case 0x29:
 		{
-			if (!repe && !repne && !oso) // MOVUPS xmm/m, xmm
+			if (!repe && !repne) // MOVUPS/MOVAPS/MOVUPD/MOVAPD xmm/m, xmm
 			{
 				out_op = X64OP_STORE;
 				out_reg = get_modRM_reg_xmm(code, rex);
@@ -433,7 +436,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		case 4: out_op = X64OP_AND; break;
 		case 5: out_op = X64OP_SUB; break;
 		case 6: out_op = X64OP_XOR; break;
-		default: out_op = X64OP_NONE; break; // CMP
+		default: out_op = X64OP_LOAD_CMP; break;
 		}
 
 		out_reg = X64_IMM8;
@@ -452,7 +455,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		case 4: out_op = X64OP_AND; break;
 		case 5: out_op = X64OP_SUB; break;
 		case 6: out_op = X64OP_XOR; break;
-		default: out_op = X64OP_NONE; break; // CMP
+		default: out_op = X64OP_LOAD_CMP; break;
 		}
 
 		out_reg = oso ? X64_IMM16 : X64_IMM32;
@@ -471,7 +474,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		case 4: out_op = X64OP_AND; break;
 		case 5: out_op = X64OP_SUB; break;
 		case 6: out_op = X64OP_XOR; break;
-		default: out_op = X64OP_NONE; break; // CMP
+		default: out_op = X64OP_LOAD_CMP; break;
 		}
 
 		out_reg = X64_IMM8;
@@ -610,6 +613,32 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			return;
 		}
 		break;
+	}
+	case 0xf6:
+	{
+		switch (auto mod_code = get_modRM_reg(code, 0))
+		{
+		case 0: out_op = X64OP_LOAD_TEST; break;
+		default: out_op = X64OP_NONE; break; // TODO...
+		}
+
+		out_reg = X64_IMM8;
+		out_size = 1;
+		out_length += get_modRM_size(code) + 1;
+		return;
+	}
+	case 0xf7:
+	{
+		switch (auto mod_code = get_modRM_reg(code, 0))
+		{
+		case 0: out_op = X64OP_LOAD_TEST; break;
+		default: out_op = X64OP_NONE; break; // TODO...
+		}
+
+		out_reg = oso ? X64_IMM16 : X64_IMM32;
+		out_size = get_op_size(rex, oso);
+		out_length += get_modRM_size(code) + (oso ? 2 : 4);
+		return;
 	}
 	}
 
@@ -990,9 +1019,43 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		{
 		case X64OP_LOAD:
 		case X64OP_LOAD_BE:
+		case X64OP_LOAD_CMP:
+		case X64OP_LOAD_TEST:
 		{
 			u32 value;
-			if (is_writing || !thread->read_reg(addr, value) || !put_x64_reg_value(context, reg, d_size, op == X64OP_LOAD ? se_storage<u32>::swap(value) : value))
+			if (is_writing || !thread->read_reg(addr, value))
+			{
+				return false;
+			}
+
+			if (op != X64OP_LOAD_BE)
+			{
+				value = se_storage<u32>::swap(value);
+			}
+
+			if (op == X64OP_LOAD_CMP)
+			{
+				u64 rvalue;
+				if (!get_x64_reg_value(context, reg, d_size, i_size, rvalue) || !set_x64_cmp_flags(context, d_size, value, rvalue))
+				{
+					return false;
+				}
+
+				break;
+			}
+
+			if (op == X64OP_LOAD_TEST)
+			{
+				u64 rvalue;
+				if (!get_x64_reg_value(context, reg, d_size, i_size, rvalue) || !set_x64_cmp_flags(context, d_size, value & rvalue, 0))
+				{
+					return false;
+				}
+
+				break;
+			}
+
+			if (!put_x64_reg_value(context, reg, d_size, value))
 			{
 				return false;
 			}
@@ -1003,7 +1066,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_STORE_BE:
 		{
 			u64 reg_value;
-			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap((u32)reg_value) : (u32)reg_value))
+			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value))
+			{
+				return false;
+			}
+
+			if (!thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap((u32)reg_value) : (u32)reg_value))
 			{
 				return false;
 			}

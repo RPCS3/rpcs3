@@ -200,20 +200,7 @@ public:
 template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(Args...)>>
 inline RT ppu_execute_function_or_callback(const char* name, PPUThread& ppu, Args&&... args)
 {
-	const auto previous_function = ppu.last_function; // TODO
-
-	try
-	{
-		return Func(std::forward<Args>(args)...);
-	}
-	catch (...)
-	{
-		LOG_ERROR(PPU, "Function call '%s' aborted", ppu.last_function);
-		ppu.last_function = previous_function;
-		throw;
-	}
-
-	ppu.last_function = previous_function;
+	return Func(std::forward<Args>(args)...);
 }
 
 #define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(#func, ppu, __VA_ARGS__)

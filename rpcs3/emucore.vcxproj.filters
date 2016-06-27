@@ -872,6 +872,15 @@
     <ClCompile Include="..\ps3emu_api\ps3emu_api.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\version.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3_version.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\JIT.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1665,6 +1674,15 @@
     </ClInclude>
     <ClInclude Include="..\ps3emu_api\ps3emu_api.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3_version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\JIT.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

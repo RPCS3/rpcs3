@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef LLVM_AVAILABLE
+
 #include <unordered_map>
 #include <map>
 #include <unordered_set>
@@ -152,8 +154,11 @@ class PPUTranslator final //: public CPUTranslator
 	// Memory base
 	llvm::Value* m_base;
 
-	// Thread context (obtained by __context)
+	// Thread context
 	llvm::Value* m_thread;
+
+	// Callable functions
+	llvm::Value* m_call;
 
 	// Thread context struct
 	llvm::StructType* m_thread_type;
@@ -432,6 +437,9 @@ public:
 
 	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, u64 base, u64 entry);
 	~PPUTranslator();
+
+	// Get thread context struct type
+	llvm::Type* GetContextType();
 
 	// Add function
 	void AddFunction(u64 addr, llvm::Function* func, llvm::FunctionType* type = nullptr);
@@ -827,3 +835,5 @@ public:
 
 	void UNK(ppu_opcode_t op);
 };
+
+#endif

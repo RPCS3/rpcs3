@@ -89,9 +89,11 @@ void idm::clear()
 	// Call recorded finalization functions for all IDs
 	for (std::size_t i = 0; i < g_map.size(); i++)
 	{
+		const auto on_stop = id_manager::typeinfo::get()[i].on_stop;
+
 		for (auto& id : g_map[i])
 		{
-			id_manager::typeinfo::get()[i].on_stop(id.second.get());
+			on_stop(id.second.get());
 		}
 
 		g_map[i].clear();
