@@ -176,12 +176,10 @@ u32 GLGSRender::set_vertex_buffer()
 	
 	for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 	{
-		if (vertex_arrays_info[index].size == 0)
+		if (vertex_arrays_info[index].size || register_vertex_info[index].size)
 		{
-			continue;
+			max_vertex_attrib_size += 16;
 		}
-
-		max_vertex_attrib_size += 16;
 	}
 
 	if (draw_command == rsx::draw_command::indexed)
@@ -292,7 +290,7 @@ u32 GLGSRender::set_vertex_buffer()
 	if (draw_command == rsx::draw_command::array || draw_command == rsx::draw_command::indexed)
 	{
 		u32 verts_allocated = std::max(vertex_draw_count, max_index + 1);
-		m_attrib_ring_buffer.reserve_and_map(verts_allocated * max_vertex_attrib_size);
+		__glcheck m_attrib_ring_buffer.reserve_and_map(verts_allocated * max_vertex_attrib_size);
 
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -365,7 +363,6 @@ u32 GLGSRender::set_vertex_buffer()
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
-				//Untested!
 				auto &vertex_data = register_vertex_data[index];
 				auto &vertex_info = register_vertex_info[index];
 

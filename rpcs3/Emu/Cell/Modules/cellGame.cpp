@@ -684,27 +684,32 @@ s32 cellGameThemeInstallFromBuffer()
 
 s32 cellDiscGameGetBootDiscInfo()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellDiscGameRegisterDiscChangeCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellDiscGameUnregisterDiscChangeCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellGameRegisterDiscChangeCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellGameUnregisterDiscChangeCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 

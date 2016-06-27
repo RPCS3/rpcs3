@@ -342,18 +342,30 @@ namespace rsx
 
 	void thread::begin()
 	{
+		draw_inline_vertex_array = false;
+		inline_vertex_array.clear();
 		first_count_commands.clear();
+		draw_command = rsx::draw_command::none;
 		draw_mode = to_primitive_type(method_registers[NV4097_SET_BEGIN_END]);
 	}
 
 	void thread::end()
 	{
+		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		{
+			register_vertex_info[index].size = 0;
+			register_vertex_data[index].clear();
+		}
+
 		transform_constants.clear();
 
 		if (capture_current_frame)
 		{
 			for (const auto &first_count : first_count_commands)
+			{
 				vertex_draw_count += first_count.second;
+			}
+
 			capture_frame("Draw " + std::to_string(vertex_draw_count));
 			vertex_draw_count = 0;
 		}
@@ -747,7 +759,7 @@ namespace rsx
 
 	raw_program thread::get_raw_program() const
 	{
-		raw_program result;
+		raw_program result{};
 
 		u32 fp_info = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 
@@ -755,8 +767,8 @@ namespace rsx
 		result.state.output_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
 		result.state.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 		result.state.divider_op = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
-		 
-		result.state.is_array = 0;
+		result.state.alpha_func = rsx::method_registers[NV4097_SET_ALPHA_FUNC];
+		result.state.fog_mode = (u32)rsx::to_fog_mode(rsx::method_registers[NV4097_SET_FOG_MODE]);
 		result.state.is_int = 0;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
@@ -765,7 +777,6 @@ namespace rsx
 
 			if (vertex_arrays_info[index].size > 0)
 			{
-				result.state.is_array |= 1 << index;
 				is_int = is_int_type(vertex_arrays_info[index].type);
 				result.state.frequency[index] = vertex_arrays_info[index].frequency;
 			}
@@ -782,6 +793,32 @@ namespace rsx
 			if (is_int)
 			{
 				result.state.is_int |= 1 << index;
+			}
+		}
+
+		for (u8 index = 0; index < rsx::limits::textures_count; ++index)
+		{
+			if (!textures[index].enabled())
+			{
+				result.state.textures_alpha_kill[index] = 0;
+				result.state.textures_zfunc[index] = 0;
+				result.state.textures[index] = rsx::texture_target::none;
+				continue;
+			}
+
+			result.state.textures_alpha_kill[index] = textures[index].alpha_kill_enabled() ? 1 : 0;
+			result.state.textures_zfunc[index] = textures[index].zfunc();
+
+			switch (textures[index].get_extended_texture_dimension())
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d: result.state.textures[index] = rsx::texture_target::_1; break;
+			case rsx::texture_dimension_extended::texture_dimension_2d: result.state.textures[index] = rsx::texture_target::_2; break;
+			case rsx::texture_dimension_extended::texture_dimension_3d: result.state.textures[index] = rsx::texture_target::_3; break;
+			case rsx::texture_dimension_extended::texture_dimension_cubemap: result.state.textures[index] = rsx::texture_target::cube; break;
+
+			default:
+				result.state.textures[index] = rsx::texture_target::none;
+				break;
 			}
 		}
 

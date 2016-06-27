@@ -78,6 +78,7 @@ namespace vm
 
 		_var_base(_var_base&& right)
 			: pointer(right)
+			, m_size(right.m_size)
 		{
 			reinterpret_cast<u32&>(static_cast<pointer&>(right)) = 0;
 		}

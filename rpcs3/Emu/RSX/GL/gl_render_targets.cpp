@@ -83,57 +83,69 @@ void GLGSRender::init_buffers(bool skip_reading)
 	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
 	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
 
-
 	set_viewport();
 
 	if (draw_fbo && !m_rtts_dirty)
+	{
 		return;
+	}
 
 	m_rtts_dirty = false;
 
-	m_rtts.prepare_render_target(nullptr, surface_format, clip_horizontal, clip_vertical, rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
+	if (0)
+	{
+		LOG_NOTICE(RSX, "render to -> 0x%x", get_color_surface_addresses()[0]);
+	}
+
+	m_rtts.prepare_render_target(nullptr, surface_format, clip_horizontal, clip_vertical,
+		rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
 		get_color_surface_addresses(), get_zeta_surface_address());
 
 	draw_fbo.recreate();
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		if (std::get<0>(m_rtts.m_bound_render_targets[i]) != 0)
+		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
+		{
 			__glcheck draw_fbo.color[i] = *std::get<1>(m_rtts.m_bound_render_targets[i]);
+		}
 	}
 
-	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
+	if (std::get<0>(m_rtts.m_bound_depth_stencil))
+	{
 		__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
+	}
 
 	__glcheck draw_fbo.check();
-	__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
 
-
+	//HACK: read_buffer shouldn't be there
 	switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
 	case rsx::surface_target::none: break;
 
 	case rsx::surface_target::surface_a:
 		__glcheck draw_fbo.draw_buffer(draw_fbo.color[0]);
+		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 
 	case rsx::surface_target::surface_b:
-	{
 		__glcheck draw_fbo.draw_buffer(draw_fbo.color[1]);
 		__glcheck draw_fbo.read_buffer(draw_fbo.color[1]);
 		break;
-	}
 
 	case rsx::surface_target::surfaces_a_b:
 		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1] });
+		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 
 	case rsx::surface_target::surfaces_a_b_c:
 		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2] });
+		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 
 	case rsx::surface_target::surfaces_a_b_c_d:
 		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2], draw_fbo.color[3] });
+		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 	}
 }
