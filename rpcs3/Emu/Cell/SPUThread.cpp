@@ -126,7 +126,7 @@ spu_imm_table_t::spu_imm_table_t()
 
 std::string SPUThread::get_name() const
 {
-	return fmt::format("%sSPU[0x%x] Thread (%s)", offset > RAW_SPU_BASE_ADDR ? "Raw" : "", id, name);
+	return fmt::format("%sSPU[0x%x] Thread (%s)", offset > RAW_SPU_BASE_ADDR ? "Raw" : "", id, m_name);
 }
 
 std::string SPUThread::dump() const
@@ -240,14 +240,16 @@ SPUThread::~SPUThread()
 }
 
 SPUThread::SPUThread(const std::string& name)
-	: cpu_thread(cpu_type::spu, name)
+	: cpu_thread(cpu_type::spu)
+	, m_name(name)
 	, index(0)
 	, offset(0)
 {
 }
 
 SPUThread::SPUThread(const std::string& name, u32 index)
-	: cpu_thread(cpu_type::spu, name)
+	: cpu_thread(cpu_type::spu)
+	, m_name(name)
 	, index(index)
 	, offset(vm::alloc(0x40000, vm::main))
 {

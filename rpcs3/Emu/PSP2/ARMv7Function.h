@@ -4,7 +4,12 @@
 
 using arm_function_t = void(*)(ARMv7Thread&);
 
-#define BIND_FUNC(func) [](ARMv7Thread& cpu){ cpu.last_function = #func; arm_func_detail::do_call(cpu, func); }
+#define BIND_FUNC(func) static_cast<arm_function_t>([](ARMv7Thread& cpu){\
+	const auto old_f = cpu.last_function;\
+	cpu.last_function = #func;\
+	arm_func_detail::do_call(cpu, func);\
+	cpu.last_function = old_f;\
+})
 
 struct arm_va_args_t
 {

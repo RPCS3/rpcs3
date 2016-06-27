@@ -11,6 +11,7 @@ public:
 	virtual std::string dump() const override;
 	virtual void cpu_init() override;
 	virtual void cpu_task() override;
+	virtual void cpu_task_main();
 	virtual bool handle_interrupt() override;
 	virtual ~PPUThread() override;
 
@@ -73,6 +74,8 @@ public:
 	u32 stack_size = 0; // Stack size
 	bool is_joinable = true;
 	bool is_joining = false;
+
+	const std::string m_name; // Thread name
 
 	std::function<void(PPUThread&)> custom_task;
 

@@ -2186,7 +2186,7 @@ void spu_recompiler::BR(spu_opcode_t op)
 		c->mov(*addr, target | 0x2000000);
 		//c->cmp(asmjit::host::dword_ptr(*ls, m_pos), 0x32); // compare instruction opcode with BR-to-self
 		//c->je(labels[target / 4]);
-		c->lock().or_(SPU_OFF_32(state), make_bitset(cpu_state::stop, cpu_state::ret)._value());
+		c->lock().or_(SPU_OFF_16(state), make_bitset(cpu_state::stop, cpu_state::ret)._value());
 		c->jmp(*end);
 		c->unuse(*addr);
 		return;

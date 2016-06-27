@@ -4,7 +4,7 @@
 #include "../Utilities/BitSet.h"
 
 // CPU Thread Type
-enum class cpu_type : u32
+enum class cpu_type : u8
 {
 	ppu, // PPU Thread
 	spu, // SPU Thread
@@ -12,7 +12,7 @@ enum class cpu_type : u32
 };
 
 // CPU Thread State flags
-enum struct cpu_state : u32
+enum struct cpu_state : u16
 {
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
@@ -38,17 +38,16 @@ public:
 	virtual void on_stop() override;
 	virtual ~cpu_thread() override;
 
-	const std::string name;
-	const cpu_type type;
 	const id_value<> id{};
+	const cpu_type type;
 
-	cpu_thread(cpu_type type, const std::string& name);
+	cpu_thread(cpu_type type);
+
+	// Public recursive sleep state counter
+	atomic_t<u8> sleep_counter{};
 
 	// Public thread state
 	atomic_t<bitset_t<cpu_state>> state{ cpu_state::stop };
-
-	// Public recursive sleep state counter
-	atomic_t<u32> sleep_counter{};
 
 	// Object associated with sleep state, possibly synchronization primitive (mutex, semaphore, etc.)
 	atomic_t<void*> owner{};

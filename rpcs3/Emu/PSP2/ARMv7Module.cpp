@@ -79,27 +79,26 @@ extern std::string arm_get_variable_name(const std::string& module, u32 vnid);
 // Function lookup table. Not supposed to grow after emulation start.
 std::vector<arm_function_t> g_arm_function_cache;
 
+std::vector<std::string> g_arm_function_names;
+
+extern std::string arm_get_module_function_name(u32 index)
+{
+	if (index < g_arm_function_names.size())
+	{
+		return g_arm_function_names[index];
+	}
+
+	return fmt::format(".%u", index);
+}
+
 extern void arm_execute_function(ARMv7Thread& cpu, u32 index)
 {
 	if (index < g_arm_function_cache.size())
 	{
 		if (const auto func = g_arm_function_cache[index])
 		{
-			const auto previous_function = cpu.last_function; // TODO: use gsl::finally or something
-
-			try
-			{
-				func(cpu);
-			}
-			catch (...)
-			{
-				logs::ARMv7.format(Emu.IsStopped() ? logs::level::warning : logs::level::error, "Function '%s' aborted", cpu.last_function);
-				cpu.last_function = previous_function;
-				throw;
-			}
-
-			LOG_TRACE(ARMv7, "Function '%s' finished, r0=0x%x", cpu.last_function, cpu.GPR[0]);
-			cpu.last_function = previous_function;
+			func(cpu);
+			LOG_TRACE(ARMv7, "Function '%s' finished, r0=0x%x", arm_get_module_function_name(index), cpu.GPR[0]);
 			return;
 		}
 	}
@@ -220,6 +219,8 @@ static void arm_initialize_modules()
 
 	// Reinitialize function cache
 	g_arm_function_cache = arm_function_manager::get();
+	g_arm_function_names.clear();
+	g_arm_function_names.resize(g_arm_function_cache.size());
 
 	// "Use" all the modules for correct linkage
 	for (auto& module : registered)
@@ -229,6 +230,7 @@ static void arm_initialize_modules()
 		for (auto& function : module->functions)
 		{
 			LOG_TRACE(LOADER, "** 0x%08X: %s", function.first, function.second.name);
+			g_arm_function_names.at(function.second.index) = fmt::format("%s.%s", module->name, function.second.name);
 		}
 
 		for (auto& variable : module->variables)
@@ -555,6 +557,7 @@ void arm_exec_loader::load() const
 					// TODO
 					index = ::size32(g_arm_function_cache);
 					g_arm_function_cache.emplace_back();
+					g_arm_function_names.emplace_back(fmt::format("%s.%s", module_name, fname));
 
 					LOG_ERROR(LOADER, "** Unknown function '%s' in module '%s' (*0x%x) -> index %u", fname, module_name, faddr, index);
 				}

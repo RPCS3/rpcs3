@@ -553,6 +553,8 @@ public:
 	const u32 index; // SPU index
 	const u32 offset; // SPU LS offset
 
+	const std::string m_name; // Thread name
+
 	std::function<void(SPUThread&)> custom_task;
 	std::exception_ptr pending_exception;
 

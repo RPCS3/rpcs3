@@ -82,10 +82,18 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base, u64
 	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // CR[0..31]
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
+
+	// Callable
+	m_call = new GlobalVariable(*module, ArrayType::get(FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false)->getPointerTo(), 0x40000000), true, GlobalValue::ExternalLinkage, 0, "__call");
 }
 
 PPUTranslator::~PPUTranslator()
 {
+}
+
+Type* PPUTranslator::GetContextType()
+{
+	return m_thread_type;
 }
 
 void PPUTranslator::AddFunction(u64 addr, Function* func, FunctionType* type)
@@ -114,7 +122,8 @@ Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* 
 	m_ir = &builder;
 
 	/* Create context variables */
-	m_thread = Call(m_thread_type->getPointerTo(), AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadOnly}), "__context", m_ir->getInt64(start_addr));
+	//m_thread = Call(m_thread_type->getPointerTo(), AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadOnly}), "__context", m_ir->getInt64(start_addr));
+	m_thread = &*m_function->getArgumentList().begin();
 	
 	// Non-volatile registers with special meaning (TODO)
 	m_g_gpr[1] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 1, ".sp");
@@ -259,8 +268,7 @@ Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* 
 		}
 
 		m_ir->SetInsertPoint(_default);
-		Call(GetType<void>(), "__call", _ctr);
-		m_ir->CreateRetVoid();
+		CallFunction(0, true, _ctr);
 	}
 
 	//for (auto i = inst_begin(*m_function), end = inst_end(*m_function); i != end;)
@@ -315,25 +323,21 @@ void PPUTranslator::CallFunction(u64 target, bool tail, Value* indirect)
 
 	const auto callee_type = func ? m_func_types[target] : nullptr;
 
-	// Prepare function arguments
-	std::vector<Value*> args;
-
-	if (!callee_type)
+	if (func)
 	{
-		// Prepare args for untyped function
+		m_ir->CreateCall(func, {m_thread});
 	}
-
-	// Call the function
-	const auto result = func ? m_ir->CreateCall(func, args) : Call(GetType<void>(), "__call", indirect ? indirect : m_ir->getInt64(target));
+	else
+	{
+		const auto addr = indirect ? indirect : (Value*)m_ir->getInt64(target);
+		const auto pos = m_ir->CreateLShr(addr, 2, "", true);
+		const auto ptr = m_ir->CreateGEP(m_call, {m_ir->getInt64(0), pos});
+		m_ir->CreateCall(m_ir->CreateLoad(ptr), {m_thread});
+	}
 
 	if (!tail)
 	{
 		UndefineVolatileRegisters();
-	}
-
-	if (!callee_type)
-	{
-		// Get result from untyped function
 	}
 
 	if (tail)
@@ -1746,13 +1750,13 @@ void PPUTranslator::BC(ppu_opcode_t op)
 
 void PPUTranslator::HACK(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__hlecall", m_ir->getInt32(op.opcode & 0x3ffffff));
+	Call(GetType<void>(), "__hlecall", m_thread, m_ir->getInt32(op.opcode & 0x3ffffff));
 	UndefineVolatileRegisters();
 }
 
 void PPUTranslator::SC(ppu_opcode_t op)
 {
-	Call(GetType<void>(), fmt::format(op.lev == 0 ? "__syscall" : "__lv%ucall", +op.lev), m_ir->CreateLoad(m_gpr[11]));
+	Call(GetType<void>(), fmt::format(op.lev == 0 ? "__syscall" : "__lv%ucall", +op.lev), m_thread, m_ir->CreateLoad(m_gpr[11]));
 	UndefineVolatileRegisters();
 }
 

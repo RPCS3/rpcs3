@@ -37,6 +37,8 @@ namespace id_manager
 	{
 		static inline void func(T*)
 		{
+			// Forbid forward declarations
+			static constexpr auto size = sizeof(std::conditional_t<std::is_void<T>::value, void*, T>);
 		}
 	};
 
@@ -45,7 +47,7 @@ namespace id_manager
 	{
 		static inline void func(T* ptr)
 		{
-			ptr->on_init();
+			if (ptr) ptr->on_init();
 		}
 	};
 
@@ -55,6 +57,8 @@ namespace id_manager
 	{
 		static inline void func(T*)
 		{
+			// Forbid forward declarations
+			static constexpr auto size = sizeof(std::conditional_t<std::is_void<T>::value, void*, T>);
 		}
 	};
 
@@ -63,7 +67,7 @@ namespace id_manager
 	{
 		static inline void func(T* ptr)
 		{
-			ptr->on_stop();
+			if (ptr) ptr->on_stop();
 		}
 	};
 
@@ -97,9 +101,6 @@ namespace id_manager
 		template<typename T>
 		static inline void update()
 		{
-			// Forbid forward declarations
-			static constexpr auto size = sizeof(std::conditional_t<std::is_void<T>::value, void*, T>);
-
 			auto& info = access()[get_index<T>()];
 
 			info.on_init = [](void* ptr) { return_ id_manager::on_init<T>::func(static_cast<T*>(ptr)); };
@@ -110,12 +111,6 @@ namespace id_manager
 		static inline const auto& get()
 		{
 			return access();
-		}
-
-		template<typename T>
-		static inline auto get_stop()
-		{
-			return access()[get_index<T>()].on_stop;
 		}
 	};
 
@@ -257,6 +252,7 @@ public:
 		if (auto pair = create_id<T>(WRAP_EXPR(std::make_shared<Make>(std::forward<Args>(args)...))))
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_stop<T>::func(nullptr);
 			return{ pair->second, static_cast<T*>(pair->second.get()) };
 		}
 
@@ -270,6 +266,7 @@ public:
 		if (auto pair = create_id<T>(WRAP_EXPR(std::make_shared<Make>(std::forward<Args>(args)...))))
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_stop<T>::func(nullptr);
 			return pair->first;
 		}
 
@@ -283,6 +280,7 @@ public:
 		if (auto pair = create_id<T>(WRAP_EXPR(ptr)))
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_stop<T>::func(nullptr);
 			return pair->first;
 		}
 
@@ -296,6 +294,7 @@ public:
 		if (auto pair = create_id<T>(std::forward<F>(provider)))
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_stop<T>::func(nullptr);
 			return { pair->second, static_cast<T*>(pair->second.get()) };
 		}
 
@@ -389,7 +388,7 @@ public:
 
 		if (LIKELY(ptr))
 		{
-			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
+			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 		}
 
 		return ptr.operator bool();
@@ -403,7 +402,7 @@ public:
 
 		if (LIKELY(ptr))
 		{
-			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
+			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 		}
 
 		return{ ptr, static_cast<T*>(ptr.get()) };
@@ -429,7 +428,7 @@ public:
 			g_map[get_type<T>()].erase(id);
 		}
 		
-		id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
+		id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 
 		return{ ptr, static_cast<T*>(ptr.get()) };
 	}
@@ -479,6 +478,7 @@ public:
 		if (ptr)
 		{
 			id_manager::on_init<T>::func(ptr.get());
+			id_manager::on_stop<T>::func(nullptr);
 		}
 
 		return ptr;
@@ -531,6 +531,7 @@ public:
 		if (ptr)
 		{
 			id_manager::on_init<T>::func(ptr.get());
+			id_manager::on_stop<T>::func(nullptr);
 		}
 
 		return ptr;
@@ -585,6 +586,7 @@ public:
 		}
 
 		id_manager::on_init<T>::func(ptr.get());
+		id_manager::on_stop<T>::func(nullptr);
 		return ptr;
 	}
 
@@ -616,7 +618,7 @@ public:
 		
 		if (ptr)
 		{
-			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
+			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 		}
 
 		return ptr.operator bool();
@@ -630,7 +632,7 @@ public:
 
 		if (ptr)
 		{
-			id_manager::typeinfo::get_stop<T>()(static_cast<T*>(ptr.get()));
+			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 		}
 		
 		return{ ptr, static_cast<T*>(ptr.get()) };

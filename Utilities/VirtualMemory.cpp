@@ -25,21 +25,21 @@ namespace memory_helper
 		return ret;
 	}
 
-	void commit_page_memory(void* pointer, size_t page_size)
+	void commit_page_memory(void* pointer, size_t size)
 	{
 #ifdef _WIN32
-		VERIFY(VirtualAlloc((u8*)pointer, page_size, MEM_COMMIT, PAGE_READWRITE) != NULL);
+		VERIFY(VirtualAlloc(pointer, size, MEM_COMMIT, PAGE_READWRITE) != NULL);
 #else
-		VERIFY(mprotect((u8*)pointer, page_size, PROT_READ | PROT_WRITE) != -1);
+		VERIFY(mprotect((void*)((u64)pointer & -4096), size, PROT_READ | PROT_WRITE) != -1);
 #endif
 	}
 
 	void free_reserved_memory(void* pointer, size_t size)
 	{
 #ifdef _WIN32
-		VERIFY(VirtualFree(pointer, 0, MEM_RELEASE) != 0);
+		VERIFY(VirtualFree(pointer, 0, MEM_DECOMMIT) != 0);
 #else
-		VERIFY(munmap(pointer, size) == 0);
+		VERIFY(mprotect(pointer, size, PROT_NONE) != -1);
 #endif
 	}
 }

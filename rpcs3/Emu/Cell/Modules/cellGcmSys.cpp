@@ -13,6 +13,7 @@
 logs::channel cellGcmSys("cellGcmSys", logs::level::notice);
 
 extern s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count);
+extern void ppu_register_function_at(u32 addr, ppu_function_t ptr);
 
 const u32 tiled_pitches[] = {
 	0x00000000, 0x00000200, 0x00000300, 0x00000400,
@@ -384,6 +385,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	vm::write32(gcm_info.context_addr + 0x44, 0xabadcafe);
 	vm::write32(gcm_info.context_addr + 0x48, ppu_instructions::HACK(FIND_FUNC(cellGcmCallback)));
 	vm::write32(gcm_info.context_addr + 0x4c, ppu_instructions::BLR());
+	ppu_register_function_at(gcm_info.context_addr + 0x48, BIND_FUNC(cellGcmCallback));
 
 	vm::_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	context->set(gcm_info.context_addr);
