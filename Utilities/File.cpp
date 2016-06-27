@@ -1207,7 +1207,7 @@ const std::string& fs::get_executable_dir()
 	return s_dir;
 }
 
-void fs::remove_all(const std::string& path)
+void fs::remove_all(const std::string& path, bool remove_root)
 {
 	for (const auto& entry : dir(path))
 	{
@@ -1227,7 +1227,10 @@ void fs::remove_all(const std::string& path)
 		}
 	}
 
-	remove_dir(path);
+	if (remove_root)
+	{
+		remove_dir(path);
+	}
 }
 
 u64 fs::get_dir_size(const std::string& path)
