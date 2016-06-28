@@ -41,15 +41,14 @@ D3D12_BLEND get_blend_factor(u16 factor)
 	case CELL_GCM_CONSTANT_COLOR:
 	case CELL_GCM_CONSTANT_ALPHA:
 	{
-		return D3D12_BLEND_ONE;	
-		LOG_ERROR(RSX,"Constant color/alpha blending detected and using BLEND_ONE approximation");
+		LOG_ERROR(RSX,"Constant blend factor not supported. Using ONE instead");
+		return D3D12_BLEND_ONE;
 	}
 	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
 	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: 
 	{
+		LOG_ERROR(RSX,"Inv Constant blend factor not supported. Using ZERO instead");
 		return D3D12_BLEND_ZERO;
-		LOG_ERROR(RSX,"Inv Constant color/alpha blending detected and using BLEND_ZERO approximation");
-		
 	}
 	}
 	throw EXCEPTION("Invalid blend factor (0x%x)", factor);
@@ -73,15 +72,14 @@ D3D12_BLEND get_blend_factor_alpha(u16 factor)
 	case CELL_GCM_CONSTANT_COLOR:
 	case CELL_GCM_CONSTANT_ALPHA:
 	{
-		return D3D12_BLEND_ONE;	
-		LOG_ERROR(RSX,"Constant color/alpha blending detected and using BLEND_ONE approximation");
+		LOG_ERROR(RSX,"Constant blend factor not supported. Using ONE instead");
+		return D3D12_BLEND_ONE;
 	}
 	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
 	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: 
 	{
+		LOG_ERROR(RSX,"Inv Constant blend factor not supported. Using ZERO instead");
 		return D3D12_BLEND_ZERO;
-		LOG_ERROR(RSX,"Inv Constant color/alpha blending detected and using BLEND_ZERO approximation");
-		
 	}
 	}
 	throw EXCEPTION("Invalid blend alpha factor (0x%x)", factor);
