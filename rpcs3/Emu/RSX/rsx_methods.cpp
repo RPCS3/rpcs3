@@ -433,6 +433,37 @@ namespace rsx
 				return;
 			}
 
+			if (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
+			{
+				//HACK: it's extension of the flip-hack. remove this when textures cache would be properly implemented
+				for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
+				{
+					u32 begin = rsx->gcm_buffers[i].offset;
+
+					if (dst_offset < begin || !begin)
+					{
+						continue;
+					}
+
+					if (rsx->gcm_buffers[i].width < 720 || rsx->gcm_buffers[i].height < 480)
+					{
+						continue;
+					}
+
+					if (begin == dst_offset)
+					{
+						return;
+					}
+
+					u32 end = begin + rsx->gcm_buffers[i].height * rsx->gcm_buffers[i].pitch;
+
+					if (dst_offset < end)
+					{
+						return;
+					}
+				}
+			}
+
 			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
 			u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
 
