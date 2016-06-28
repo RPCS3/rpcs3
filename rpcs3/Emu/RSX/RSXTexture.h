@@ -84,9 +84,6 @@ namespace rsx
 		u32 border_color() const;
 		u16 depth() const;
 		u32 pitch() const;
-
-		//custom info
-		u8 index() const;
 	};
 
 	class vertex_texture
@@ -102,12 +99,12 @@ namespace rsx
 		u32 offset() const;
 
 		// Format
-		u8   location() const;
+		u8 location() const;
 		bool cubemap() const;
-		u8   border_type() const;
-		u8   dimension() const;
-		u8   format() const;
-		u16  mipmap() const;
+		u8 border_type() const;
+		rsx::texture_dimension dimension() const;
+		u8 format() const;
+		u16 mipmap() const;
 
 		// Address
 		u8 unsigned_remap() const;
@@ -118,16 +115,16 @@ namespace rsx
 
 		// Control0
 		bool enabled() const;
-		u16  min_lod() const;
-		u16  max_lod() const;
-		u8   max_aniso() const;
+		u16 min_lod() const;
+		u16 max_lod() const;
+		rsx::texture_max_anisotropy max_aniso() const;
 		bool alpha_kill_enabled() const;
 
 		// Filter
 		u16 bias() const;
-		u8  min_filter() const;
-		u8  mag_filter() const;
-		u8  convolution_filter() const;
+		rsx::texture_minify_filter min_filter() const;
+		rsx::texture_magnify_filter mag_filter() const;
+		u8 convolution_filter() const;
 		bool a_signed() const;
 		bool r_signed() const;
 		bool g_signed() const;
@@ -142,7 +139,7 @@ namespace rsx
 		u16 depth() const;
 		u32 pitch() const;
 
-		//custom info
-		u8 index() const;
+		rsx::texture_dimension_extended get_extended_texture_dimension() const;
+		u16 get_exact_mipmap_count() const;
 	};
 }

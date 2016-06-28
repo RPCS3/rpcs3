@@ -235,6 +235,18 @@ namespace
 		}
 		throw EXCEPTION("Unknow texture target");
 	}
+
+	GLenum get_gl_target_for_texture(const rsx::vertex_texture& tex)
+	{
+		switch (tex.get_extended_texture_dimension())
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d: return GL_TEXTURE_1D;
+		case rsx::texture_dimension_extended::texture_dimension_2d: return GL_TEXTURE_2D;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
+		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
+		}
+		throw EXCEPTION("Unknow texture target");
+	}
 }
 
 void GLGSRender::end()
@@ -295,7 +307,6 @@ void GLGSRender::end()
 
 	//setup textures
 	{
-		//int texture_index = 0;
 		for (int i = 0; i < rsx::limits::textures_count; ++i)
 		{
 			int location;
@@ -311,12 +322,9 @@ void GLGSRender::end()
 				}
 
 				m_gl_textures[i].set_target(get_gl_target_for_texture(textures[i]));
+
 				__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i], m_rtts);
-
 				__glcheck glProgramUniform1i(m_program->id(), location, i);
-				//__glcheck m_gl_textures[i].init(i, textures[i]);
-
-				//texture_index++;
 
 				if (m_program->uniforms.has_location("ftexture" + std::to_string(i) + "_cm", &location))
 				{
@@ -331,21 +339,39 @@ void GLGSRender::end()
 				}
 			}
 		}
-		/*
+		
 		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 		{
-			if (vertex_textures[i].enabled())
+			int location;
+			if (m_program->uniforms.has_location("vtexture" + std::to_string(i), &location))
 			{
-				int location;
-				if (m_program->uniforms.has_location("vtexture" + std::to_string(i), &location))
+				if (!textures[i].enabled())
 				{
-					glProgramUniform1i(m_program->id(), location, texture_index);
-					m_gl_vertex_textures[i].init(texture_index, vertex_textures[i]);
-					texture_index++;
+					glActiveTexture(GL_TEXTURE0 + i);
+					glBindTexture(GL_TEXTURE_2D, 0);
+					glProgramUniform1i(m_program->id(), location, i);
+
+					continue;
+				}
+
+				m_gl_vertex_textures[i].set_target(get_gl_target_for_texture(vertex_textures[i]));
+
+				__glcheck m_gl_texture_cache.upload_texture(i, vertex_textures[i], m_gl_vertex_textures[i], m_rtts);
+				__glcheck glProgramUniform1i(m_program->id(), location, i);
+
+				if (m_program->uniforms.has_location("vtexture" + std::to_string(i) + "_cm", &location))
+				{
+					if (textures[i].format() & CELL_GCM_TEXTURE_UN)
+					{
+						u32 width = std::max<u32>(textures[i].width(), 1);
+						u32 height = std::max<u32>(textures[i].height(), 1);
+						u32 depth = std::max<u32>(textures[i].depth(), 1);
+
+						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
+					}
 				}
 			}
 		}
-		*/
 	}
 
 	u32 offset_in_index_buffer = set_vertex_buffer();
