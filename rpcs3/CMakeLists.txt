@@ -105,6 +105,16 @@ else()
 	set(PLATFORM_ARCH "linux/x86_64")
 endif()
 
+# select libpng version
+if(USE_SYSTEM_LIBPNG)
+	message("-- RPCS3: using system libpng")
+	find_package(PNG "1.6.23" REQUIRED)
+	include_directories("${PNG_INCLUDE_DIRS}")
+else()
+	message("-- RPCS3: using builtin libpng")
+	include_directories("${RPCS3_SRC_DIR}/../3rdparty/libpng")
+endif()
+
 include_directories(
 ${GLEW_INCLUDE_DIR}
 ${wxWidgets_INCLUDE_DIRS}
@@ -112,14 +122,12 @@ ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
-"${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
-"${RPCS3_SRC_DIR}/../3rdparty/libpng"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
@@ -131,6 +139,18 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 )
+
+# select ffmpeg version
+option(USE_SYSTEM_FFMPEG "ffmpeg" OFF)
+if(USE_SYSTEM_FFMPEG)
+	message("-- RPCS3: using system ffmpeg")
+	find_package(FFMPEG REQUIRED)
+	include_directories("${FFMPEG_INCLUDE_DIR}")
+else()
+	message("-- RPCS3: using builtin ppsspp-ffmpeg")
+	include_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include")
+endif()
+
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2_7") # Slimmed down version of minidx9 for XAudio2_7 only
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
@@ -155,8 +175,10 @@ link_directories(
 "${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
 )
 
-if(MSVC OR NOT WIN32)
-	link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
+if(NOT USE_SYSTEM_FFMPEG)
+	if(MSVC OR NOT WIN32)
+		link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
+	endif()
 endif()
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
@@ -201,7 +223,18 @@ if(WIN32)
 	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
 	target_link_libraries(rpcs3  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
-	target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a -ldl png16_static ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3  ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+	if (USE_SYSTEM_FFMPEG)
+		link_libraries(${FFMPEG_LIBRARY_DIR})
+		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswresample.so libswscale.so)
+	else()
+		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a -ldl)
+	endif()
+	if (USE_SYSTEM_LIBPNG)
+		target_link_libraries(rpcs3  ${PNG_LIBRARIES})
+	else()
+		target_link_libraries(rpcs3  png16_static)
+	endif()
 	if (NOT APPLE)
 		target_link_libraries(rpcs3  vulkan glslang OSDependent OGLCompiler SPIRV)
 	endif()

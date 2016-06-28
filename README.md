@@ -48,5 +48,17 @@ If you want to build with LLVM, then LLVM 3.8 is required.
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=...` (or wherever llvm brew was installed) to cmake invocation.
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
 
+##### CMake Build Options
+
+- ```-DUSE_SYSTEM_LIBPNG=ON/OFF``` (default = *OFF*) </br>
+Build against the shared libpng instead of using the builtin one. libpng 1.6.21 or higher required. Try this option if you get version conflict errors or only see black game icons.</br>
+Debian & Ubuntu: ```sudo apt-get install libpng16-16 libpng-dev``` </br>
+Arch: ```sudo pacman -S libpng```
+
+- ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*) </br>
+Build against the shared ffmpeg libraries instead of using the builtin patched version. Try this if the builtin version breaks OpenGL for you before reporting issues. </br>
+Debian & Ubuntu: ```sudo apt-get install ffmpeg libavcodec-ffmpeg-dev libavformat-ffmpeg-dev libavutil-ffmpeg-dev libswresample-ffmpeg-dev libswscale-ffmpeg-dev``` </br>
+Arch: ```sudo pacman -S ffmpeg```
+
 ### Support
 * [Donate by PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=MPJ3S9XQXCE3G)
