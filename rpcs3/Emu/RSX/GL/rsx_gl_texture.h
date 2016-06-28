@@ -3,6 +3,7 @@
 
 namespace rsx
 {
+	class vertex_texture;
 	class texture;
 
 	namespace gl
@@ -38,6 +39,7 @@ namespace rsx
 			}
 
 			void init(int index, rsx::texture& tex);
+			void init(int index, rsx::vertex_texture& tex);
 			
 			/**
 			* If a format is marked as mandating expansion, any request to have the data uploaded to the GPU shall require that the pixel data

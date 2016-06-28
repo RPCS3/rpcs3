@@ -351,13 +351,13 @@ namespace rsx
 
 	void thread::end()
 	{
+		transform_constants.clear();
+
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			register_vertex_info[index].size = 0;
 			register_vertex_data[index].clear();
 		}
-
-		transform_constants.clear();
 
 		if (capture_current_frame)
 		{
@@ -468,14 +468,19 @@ namespace rsx
 				u32 reg = cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT ? first_cmd : first_cmd + i;
 				u32 value = args[i];
 
-				LOG_TRACE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+				//LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 
 				method_registers[reg] = value;
+
 				if (capture_current_frame)
+				{
 					frame_debug.command_queue.push_back(std::make_pair(reg, value));
+				}
 
 				if (auto method = methods[reg])
+				{
 					method(this, value);
+				}
 			}
 
 			ctrl->get = get + (count + 1) * 4;
@@ -818,6 +823,27 @@ namespace rsx
 
 			default:
 				result.state.textures[index] = rsx::texture_target::none;
+				break;
+			}
+		}
+
+		for (u8 index = 0; index < rsx::limits::vertex_textures_count; ++index)
+		{
+			if (!textures[index].enabled())
+			{
+				result.state.vertex_textures[index] = rsx::texture_target::none;
+				continue;
+			}
+
+			switch (textures[index].get_extended_texture_dimension())
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d: result.state.vertex_textures[index] = rsx::texture_target::_1; break;
+			case rsx::texture_dimension_extended::texture_dimension_2d: result.state.vertex_textures[index] = rsx::texture_target::_2; break;
+			case rsx::texture_dimension_extended::texture_dimension_3d: result.state.vertex_textures[index] = rsx::texture_target::_3; break;
+			case rsx::texture_dimension_extended::texture_dimension_cubemap: result.state.vertex_textures[index] = rsx::texture_target::cube; break;
+
+			default:
+				result.state.vertex_textures[index] = rsx::texture_target::none;
 				break;
 			}
 		}
