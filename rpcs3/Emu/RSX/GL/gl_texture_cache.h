@@ -424,7 +424,8 @@ namespace gl
 			}
 		}
 
-		void upload_texture(int index, rsx::texture &tex, rsx::gl::texture &gl_texture, gl_render_targets &m_rtts)
+		template<typename RsxTextureType>
+		void upload_texture(int index, RsxTextureType &tex, rsx::gl::texture &gl_texture, gl_render_targets &m_rtts)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
@@ -458,7 +459,7 @@ namespace gl
 
 			if (texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
-				texptr->bind();				
+				texptr->bind();
 				return;
 			}
 

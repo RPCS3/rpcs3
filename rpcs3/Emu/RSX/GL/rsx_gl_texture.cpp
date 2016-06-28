@@ -536,6 +536,111 @@ namespace rsx
 			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
 		}
 
+		void texture::init(int index, rsx::vertex_texture& tex)
+		{
+			switch (tex.dimension())
+			{
+			case rsx::texture_dimension::dimension3d:
+				if (!tex.depth())
+				{
+					return;
+				}
+
+			case rsx::texture_dimension::dimension2d:
+				if (!tex.height())
+				{
+					return;
+				}
+
+			case rsx::texture_dimension::dimension1d:
+				if (!tex.width())
+				{
+					return;
+				}
+
+				break;
+			}
+
+			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+
+			//We can't re-use texture handles if using immutable storage
+			if (m_id)
+			{
+				__glcheck remove();
+			}
+			__glcheck create();
+
+			__glcheck glActiveTexture(GL_TEXTURE0 + index);
+			bind();
+
+			u32 full_format = tex.format();
+
+			u32 format = full_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+			bool is_swizzled = !!(~full_format & CELL_GCM_TEXTURE_LN);
+
+			__glcheck::gl::pixel_pack_settings().apply();
+			__glcheck::gl::pixel_unpack_settings().apply();
+
+			u32 aligned_pitch = tex.pitch();
+
+			size_t texture_data_sz = get_placed_texture_storage_size(tex, 256);
+			std::vector<gsl::byte> data_upload_buf(texture_data_sz);
+			u32 block_sz = get_pitch_modifier(format);
+
+			__glcheck glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+			__glcheck create_and_fill_texture(tex.get_extended_texture_dimension(), tex.get_exact_mipmap_count(), format, tex.width(), tex.height(), tex.depth(), get_subresources_layout(tex), is_swizzled, data_upload_buf);
+
+			const std::array<GLenum, 4>& glRemap = get_swizzle_remap(format);
+
+			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.get_exact_mipmap_count() - 1);
+
+			/*
+			if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
+			{
+				u8 remap_a = tex.remap() & 0x3;
+				u8 remap_r = (tex.remap() >> 2) & 0x3;
+				u8 remap_g = (tex.remap() >> 4) & 0x3;
+				u8 remap_b = (tex.remap() >> 6) & 0x3;
+
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
+			}
+			else
+			{
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
+			}
+
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
+			*/
+
+			__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+
+			int min_filter = gl_tex_min_filter(tex.min_filter());
+
+			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
+			{
+				if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
+				{
+					LOG_WARNING(RSX, "Texture %d, target 0x%X, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
+					min_filter = GL_LINEAR;
+				}
+			}
+
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
+			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
+		}
+
 		void texture::bind()
 		{
 			glBindTexture(m_target, m_id);
