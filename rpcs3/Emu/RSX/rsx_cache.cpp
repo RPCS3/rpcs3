@@ -25,7 +25,7 @@ namespace rsx
 			//analyze_raw_shader(raw_shader);
 
 			std::string shader_name_base =
-				fmt::format("%016llx", raw_shader.hash()) +
+				fmt::format("%lld.%016llx", ++m_index, raw_shader.hash()) +
 				(raw_shader.type == rsx::program_type::fragment ? ".fp" : ".vp");
 
 			fs::file{ m_path + shader_name_base + ".ucode", fs::rewrite }
@@ -36,7 +36,7 @@ namespace rsx
 			fs::file{ m_path + shader_name_base + (ctxt.lang == rsx::decompile_language::glsl ? ".glsl" : ".hlsl"), fs::rewrite }
 				.write(decompiled_shader.code);
 
-			auto inserted = m_entries.insert({ raw_shader, entry_t{ decompiled_shader } }).first;
+			auto inserted = m_entries.insert({ raw_shader, entry_t{ m_index, decompiled_shader } }).first;
 			inserted->second.decompiled.raw = &inserted->first;
 			entry = &inserted->second;
 		}
@@ -56,7 +56,7 @@ namespace rsx
 			info.complete = &entry->complete.insert({ state, complete_shader }).first->second;
 			info.complete->user_data = nullptr;
 
-			const std::string hash_combination = fmt::format("%016llx.%016llx", raw_shader.hash(), state.hash());
+			const std::string hash_combination = fmt::format("%lld.%016llx.%016llx", entry->index, raw_shader.hash(), state.hash());
 
 			std::string shader_name =
 				hash_combination +

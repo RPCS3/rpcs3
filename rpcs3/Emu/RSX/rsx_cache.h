@@ -32,12 +32,14 @@ namespace rsx
 	{
 		struct entry_t
 		{
+			std::int64_t index;
 			decompiled_shader decompiled;
 			std::unordered_map<program_state, complete_shader, hasher> complete;
 		};
 
 		std::unordered_map<raw_shader, entry_t, hasher> m_entries;
 		std::string m_path;
+		std::int64_t m_index = -1;
 
 	public:
 		void path(const std::string &path_);
