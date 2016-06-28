@@ -299,9 +299,21 @@ namespace rsx
 		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 3) & 0x1);
 	}
 
-	u8 vertex_texture::dimension() const
+	rsx::texture_dimension vertex_texture::dimension() const
 	{
-		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
+		return rsx::to_texture_dimension((method_registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
+	}
+
+	rsx::texture_dimension_extended vertex_texture::get_extended_texture_dimension() const
+	{
+		switch (dimension())
+		{
+		case rsx::texture_dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
+		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
+
+		default: ASSUME(0);
+		}
 	}
 
 	u8 vertex_texture::format() const
@@ -312,6 +324,12 @@ namespace rsx
 	u16 vertex_texture::mipmap() const
 	{
 		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 16) & 0xffff);
+	}
+
+	u16 vertex_texture::get_exact_mipmap_count() const
+	{
+		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
+		return std::min(mipmap(), max_mipmap_count);
 	}
 
 	u8 vertex_texture::unsigned_remap() const
@@ -341,7 +359,7 @@ namespace rsx
 
 	bool vertex_texture::enabled() const
 	{
-		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
+		return location() <= 1 && ((method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
 	}
 
 	u16 vertex_texture::min_lod() const
@@ -354,9 +372,9 @@ namespace rsx
 		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
 	}
 
-	u8 vertex_texture::max_aniso() const
+	rsx::texture_max_anisotropy vertex_texture::max_aniso() const
 	{
-		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
+		return rsx::to_texture_max_anisotropy((method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
 	}
 
 	bool vertex_texture::alpha_kill_enabled() const
@@ -369,14 +387,14 @@ namespace rsx
 		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
 	}
 
-	u8  vertex_texture::min_filter() const
+	rsx::texture_minify_filter vertex_texture::min_filter() const
 	{
-		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
+		return rsx::to_texture_minify_filter((method_registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
 	}
 
-	u8  vertex_texture::mag_filter() const
+	rsx::texture_magnify_filter vertex_texture::mag_filter() const
 	{
-		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
+		return rsx::to_texture_magnify_filter((method_registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
 	}
 
 	u8 vertex_texture::convolution_filter() const

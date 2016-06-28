@@ -127,7 +127,6 @@ static void insert_texture_lod_fetch_function(std::string &dst, const rsx::decom
 	dst += "}\n";
 }
 
-
 static void insert_texture_proj_fetch_function(std::string &dst, const rsx::decompiled_shader &shader, const rsx::program_state &state)
 {
 	if (shader.textures.empty())
@@ -237,26 +236,6 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 
 	result.code += "\n";
 
-	for (const rsx::texture_info& texture : shader.textures)
-	{
-		result.code += "uniform vec4 " + texture.name + "_cm = vec4(1.0);\n";
-
-		rsx::texture_target target = state.textures[texture.id];
-
-
-		result.code += "uniform sampler";
-
-		switch (target)
-		{
-		default:
-		case rsx::texture_target::_1: result.code += "1D"; break;
-		case rsx::texture_target::_2: result.code += "2D"; break;
-		case rsx::texture_target::_3: result.code += "3D"; break;
-		case rsx::texture_target::cube: result.code += "Cube"; break;
-		}
-		result.code += " " + texture.name + ";\n";
-	}
-
 	std::string prepare;
 	std::string finalize;
 	int location = 1;
@@ -264,6 +243,24 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 	switch (shader.raw->type)
 	{
 	case rsx::program_type::fragment:
+		for (const rsx::texture_info& texture : shader.textures)
+		{
+			result.code += "uniform vec4 " + texture.name + "_cm = vec4(1.0);\n";
+			rsx::texture_target target = state.textures[texture.id];
+
+			result.code += "uniform sampler";
+
+			switch (target)
+			{
+			default:
+			case rsx::texture_target::_1: result.code += "1D"; break;
+			case rsx::texture_target::_2: result.code += "2D"; break;
+			case rsx::texture_target::_3: result.code += "3D"; break;
+			case rsx::texture_target::cube: result.code += "Cube"; break;
+			}
+			result.code += " " + texture.name + ";\n";
+		}
+
 		insert_texture_fetch_function(result.code, shader, state);
 		insert_texture_bias_fetch_function(result.code, shader, state);
 		insert_texture_grad_fetch_function(result.code, shader, state);
@@ -524,20 +521,33 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 		break;
 
 	case rsx::program_type::vertex:
+		for (const rsx::texture_info& texture : shader.textures)
+		{
+			result.code += "uniform vec4 " + texture.name + "_cm = vec4(1.0);\n";
+
+			rsx::texture_target target = state.vertex_textures[texture.id];
+
+			result.code += "uniform sampler";
+
+			switch (target)
+			{
+			default:
+			case rsx::texture_target::_1: result.code += "1D"; break;
+			case rsx::texture_target::_2: result.code += "2D"; break;
+			case rsx::texture_target::_3: result.code += "3D"; break;
+			case rsx::texture_target::cube: result.code += "Cube"; break;
+			}
+			result.code += " " + texture.name + ";\n";
+		}
+
+		insert_texture_lod_fetch_function(result.code, shader, state);
+
 		result.code += "out vec4 wpos;\n";
-		
-		// TODO
-		if (0)
-		{
-			finalize += "\tgl_Position = o0;\n";
-		}
-		else
-		{
-			finalize +=
-				"	wpos = window_matrix * viewport_matrix * vec4(o0.xyz, 1.0);\n"
-				"	gl_Position = normalize_matrix * vec4(wpos.xyz, 1.0);\n"
-				"	gl_Position.w = o0.w;\n";
-		}
+
+		finalize +=
+			"	wpos = window_matrix * viewport_matrix * vec4(o0.xyz, 1.0);\n"
+			"	gl_Position = normalize_matrix * vec4(wpos.xyz, 1.0);\n"
+			"	gl_Position.w = o0.w;\n";
 
 		{
 			std::string code_end;

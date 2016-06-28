@@ -433,6 +433,37 @@ namespace rsx
 				return;
 			}
 
+			if (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
+			{
+				//HACK: it's extension of the flip-hack. remove this when textures cache would be properly implemented
+				for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
+				{
+					u32 begin = rsx->gcm_buffers[i].offset;
+
+					if (dst_offset < begin || !begin)
+					{
+						continue;
+					}
+
+					if (rsx->gcm_buffers[i].width < 720 || rsx->gcm_buffers[i].height < 480)
+					{
+						continue;
+					}
+
+					if (begin == dst_offset)
+					{
+						return;
+					}
+
+					u32 end = begin + rsx->gcm_buffers[i].height * rsx->gcm_buffers[i].pitch;
+
+					if (dst_offset < end)
+					{
+						return;
+					}
+				}
+			}
+
 			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
 			u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
 
@@ -645,31 +676,51 @@ namespace rsx
 	{
 		force_inline void buffer_notify(u32 arg)
 		{
-			const u32 inPitch = method_registers[NV0039_PITCH_IN];
-			const u32 outPitch = method_registers[NV0039_PITCH_OUT];
-			const u32 lineLength = method_registers[NV0039_LINE_LENGTH_IN];
-			const u32 lineCount = method_registers[NV0039_LINE_COUNT];
-			const u8 outFormat = method_registers[NV0039_FORMAT] >> 8;
-			const u8 inFormat = method_registers[NV0039_FORMAT];
+			u32 in_pitch = method_registers[NV0039_PITCH_IN];
+			u32 out_pitch = method_registers[NV0039_PITCH_OUT];
+			const u32 line_length = method_registers[NV0039_LINE_LENGTH_IN];
+			const u32 line_count = method_registers[NV0039_LINE_COUNT];
+			const u8 out_format = method_registers[NV0039_FORMAT] >> 8;
+			const u8 in_format = method_registers[NV0039_FORMAT];
 			const u32 notify = arg;
 
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
-			if (inFormat != 0x01 || outFormat != 0x01)
+			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", inFormat, outFormat);
+				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
-			if (lineCount == 1 && !inPitch && !outPitch && !notify)
+			if (!in_pitch)
 			{
-				std::memcpy(
-					vm::base(get_address(method_registers[NV0039_OFFSET_OUT], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT])),
-					vm::base(get_address(method_registers[NV0039_OFFSET_IN], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN])),
-					lineLength);
+				in_pitch = line_length;
+			}
+
+			if (!out_pitch)
+			{
+				out_pitch = line_length;
+			}
+
+			u32 src_offset = method_registers[NV0039_OFFSET_IN];
+			u32 src_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN];
+
+			u32 dst_offset = method_registers[NV0039_OFFSET_OUT];
+			u32 dst_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT];
+
+			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
+			const u8 *src = (u8*)vm::base(get_address(src_offset, src_dma));
+
+			if (in_pitch == out_pitch && out_pitch == line_length)
+			{
+				std::memcpy(dst, src, line_length * line_count);
 			}
 			else
 			{
-				LOG_ERROR(RSX, "NV0039_OFFSET_IN: bad offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
-					method_registers[NV0039_OFFSET_IN], method_registers[NV0039_OFFSET_OUT], inPitch, outPitch, lineLength, lineCount, inFormat, outFormat, notify);
+				for (u32 i = 0; i < line_count; ++i)
+				{
+					std::memcpy(dst, src, line_length);
+					dst += out_pitch;
+					src += in_pitch;
+				}
 			}
 		}
 	}

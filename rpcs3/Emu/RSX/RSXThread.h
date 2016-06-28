@@ -268,7 +268,7 @@ namespace rsx
 
 		u32 tiles_addr;
 		u32 zculls_addr;
-		vm::ps3::ptr<CellGcmDisplayInfo> gcm_buffers;
+		vm::ps3::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
 		u32 gcm_buffers_count;
 		u32 gcm_current_buffer;
 		u32 ctxt_addr;
