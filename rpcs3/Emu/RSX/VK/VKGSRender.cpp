@@ -262,12 +262,12 @@ namespace vk
 	VkFrontFace get_front_face_ccw(u32 ffv)
 	{
 		switch (ffv)
-		{ 
+		{
+		default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
 		case CELL_GCM_CW: return VK_FRONT_FACE_CLOCKWISE;
 		case CELL_GCM_CCW: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		default:
-			throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 		}
+		throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 	}
 }
 
