@@ -94,6 +94,11 @@ DXGI_FORMAT get_depth_samplable_surface_format(rsx::surface_depth_format format)
 BOOL get_front_face_ccw(u32 set_front_face_value);
 
 /**
+* Convert cull face value to a D3D12_CULL_MODE telling wheter cull face is front or back
+*/
+D3D12_CULL_MODE get_cull_face(u32 set_cull_face_value);
+
+/**
  * Convert index type to DXGI_FORMAT
  */
 DXGI_FORMAT get_index_type(rsx::index_array_type index_type);

@@ -197,23 +197,11 @@ void D3D12GSRender::load_program()
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
 	};
 	prop.Rasterization = CD3D12_RASTERIZER_DESC;
+	
 	if (!!rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE])
 	{
-		switch (rsx::method_registers[NV4097_SET_CULL_FACE])
-		{
-		case CELL_GCM_FRONT:
-			prop.Rasterization.CullMode = D3D12_CULL_MODE_FRONT;
-			break;
-		case CELL_GCM_BACK:
-			prop.Rasterization.CullMode = D3D12_CULL_MODE_BACK;
-			break;
-		default:
-			prop.Rasterization.CullMode = D3D12_CULL_MODE_NONE;
-			break;
-		}
+		prop.Rasterization.CullMode = get_cull_face(rsx::method_registers[NV4097_SET_CULL_FACE]);
 	}
-	else
-		prop.Rasterization.CullMode = D3D12_CULL_MODE_NONE;
 
 	prop.Rasterization.FrontCounterClockwise = get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]);
 
