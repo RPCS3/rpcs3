@@ -12,21 +12,8 @@ add_custom_command(OUTPUT something_that_never_exists
 	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.0) # TODO: the same for (apple) clang
-		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
-	endif()
-	# Warnings
-	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-	add_compile_options(-ftemplate-depth=1024)
-	if(APPLE)
-		add_compile_options(-stdlib=libc++)
-	endif()
-	if(WIN32)
-		add_compile_options(-pthread)
-	endif()
-endif()
+# Check for a sufficient compiler and set build options
+include(ConfigureCompiler)
 
 if(WIN32)
 	add_definitions(-DUNICODE)
