@@ -21,7 +21,18 @@ namespace
 		case rsx::surface_depth_format::z16: return 0xFFFF;
 		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
 		}
-		throw EXCEPTION("Unknow depth format");
+		throw EXCEPTION("Unknown depth format");
+	}
+	
+	u32 get_front_face_ccw(u32 ffv)
+	{
+		switch (ffv)
+		{
+		default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
+		case CELL_GCM_CW: return GL_CW;
+		case CELL_GCM_CCW: return GL_CCW;
+		}
+		throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 	}
 }
 
@@ -169,20 +180,6 @@ void GLGSRender::begin()
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
 
-	//TODO
-	/*
-	glcheck(glFogi(GL_FOG_MODE, rsx::method_registers[NV4097_SET_FOG_MODE]));
-	f32 fog_p0 = (f32&)rsx::method_registers[NV4097_SET_FOG_PARAMS + 0];
-	f32 fog_p1 = (f32&)rsx::method_registers[NV4097_SET_FOG_PARAMS + 1];
-
-	f32 fog_start = (2 * fog_p0 - (fog_p0 - 2) / fog_p1) / (fog_p0 - 1);
-	f32 fog_end = (2 * fog_p0 - 1 / fog_p1) / (fog_p0 - 1);
-
-	glFogf(GL_FOG_START, fog_start);
-	glFogf(GL_FOG_END, fog_end);
-	*/
-	//NV4097_SET_FOG_PARAMS
-
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_POINT_ENABLE], GL_POLYGON_OFFSET_POINT);
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_LINE_ENABLE], GL_POLYGON_OFFSET_LINE);
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
@@ -195,14 +192,12 @@ void GLGSRender::begin()
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
 
-	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
-
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
 	{
 		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
 	}
 
-	__glcheck glFrontFace(rsx::method_registers[NV4097_SET_FRONT_FACE] ^ 1);
+	__glcheck glFrontFace(get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]));
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
 
@@ -233,7 +228,7 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
 		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
 		}
-		throw EXCEPTION("Unknow texture target");
+		throw EXCEPTION("Unknown texture target");
 	}
 
 	GLenum get_gl_target_for_texture(const rsx::vertex_texture& tex)
@@ -245,7 +240,7 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
 		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
 		}
-		throw EXCEPTION("Unknow texture target");
+		throw EXCEPTION("Unknown texture target");
 	}
 }
 
