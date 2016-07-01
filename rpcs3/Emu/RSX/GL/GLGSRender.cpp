@@ -197,7 +197,7 @@ void GLGSRender::begin()
 		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
 	}
 
-	__glcheck glFrontFace(get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]));
+	__glcheck glFrontFace(get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE] ^ 1));
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
 
