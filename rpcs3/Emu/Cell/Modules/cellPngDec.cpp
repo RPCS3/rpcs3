@@ -7,6 +7,18 @@
 #include "png.h"
 #include "cellPngDec.h"
 
+#if PNG_LIBPNG_VER_MAJOR >= 1 && (PNG_LIBPNG_VER_MINOR < 5 \
+|| (PNG_LIBPNG_VER_MINOR == 5 && PNG_LIBPNG_VER_RELEASE < 7))
+#define PNG_ERROR_ACTION_NONE 1
+#define PNG_RGB_TO_GRAY_DEFAULT (-1)
+#endif
+
+#if PNG_LIBPNG_VER_MAJOR >= 1 && PNG_LIBPNG_VER_MINOR >= 5
+typedef png_bytep iCCP_profile_type;
+#else
+typedef png_charp iCCP_profile_type;
+#endif
+
 logs::channel cellPngDec("cellPngDec", logs::level::notice);
 
 // cellPngDec aliases to improve readability
@@ -128,8 +140,8 @@ be_t<u32> pngDecGetChunkInformation(PStream stream, bool IDAT = false)
 	s32 compression_type;
 	s32 unit;
 	u16* hist;
-	u32 proflen;
-	png_bytep profile;
+	png_uint_32 proflen;
+	iCCP_profile_type profile;
 	png_bytep trans_alpha;
 	png_charp units;
 	png_charp name;
@@ -209,7 +221,7 @@ be_t<u32> pngDecGetChunkInformation(PStream stream, bool IDAT = false)
 		chunk_information |= 1 << 11; // sRGB
 	}
 
-	if (png_get_iCCP(stream->png_ptr, stream->info_ptr, &name, &compression_type, &profile, &proflen))
+	if (png_get_iCCP(stream->png_ptr, stream->info_ptr, &name, &compression_type, &profile, (png_uint_32*)&proflen))
 	{
 		chunk_information |= 1 << 12; // iCCP
 	}
