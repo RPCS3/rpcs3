@@ -154,10 +154,15 @@ void D3D12GSRender::load_program()
 	default:
 		break;
 	}
+	if (!!(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE]))
+	{
+		prop.DepthStencil.DepthEnable = TRUE;
+		prop.DepthStencil.DepthFunc = get_compare_func(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
+	}
+	else
+		prop.DepthStencil.DepthEnable = FALSE;
 
-	prop.DepthStencil.DepthEnable = !!(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE]);
 	prop.DepthStencil.DepthWriteMask = !!(rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-	prop.DepthStencil.DepthFunc = get_compare_func(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
 	prop.DepthStencil.StencilEnable = !!(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE]);
 	prop.DepthStencil.StencilReadMask = rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK];
 	prop.DepthStencil.StencilWriteMask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
