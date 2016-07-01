@@ -67,6 +67,12 @@ void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 
 			OS << "layout(location=" << reg.reg_location << ") in " << PT.type << " " << var_name << ";" << std::endl;
 		}
+
+		if (m_prog.front_back_color_enabled)
+		{
+			OS << "layout(location=11) in vec4 front_diff_color;" << std::endl;
+			OS << "layout(location=12) in vec4 front_spec_color;" << std::endl;
+		}
 	}
 }
 
@@ -205,6 +211,19 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 			if (PI.name == "fogc")
 			{
 				vk::insert_fog_declaration(OS, m_prog.fog_equation);
+				return;
+			}
+			
+			if (m_prog.front_back_color_enabled)
+			{
+				if (PI.name == "spec_color" && m_prog.back_color_specular_output)
+				{
+					OS << "	vec4 spec_color = gl_FrontFacing ? vec4(front_spec_color) : vec4(spec_color);\n";
+				}
+				if (PI.name == "diff_color" && m_prog.back_color_diffuse_output)
+				{
+					OS << "	vec4 diff_color = gl_FrontFacing ? vec4(front_diff_color) : vec4(diff_color);\n";
+				}
 				return;
 			}
 		}
