@@ -387,6 +387,11 @@ extern void sse_cellbe_stvrx(u64 addr, __m128i a);
 	throw fmt::exception("Trap! (0x%llx)", addr);
 }
 
+[[noreturn]] static void ppu_unreachable(u64 addr)
+{
+	throw fmt::exception("Unreachable! (0x%llx)", addr);
+}
+
 static void ppu_trace(u64 addr)
 {
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
@@ -469,10 +474,18 @@ static __m128i ppu_vec3op(decltype(&ppu_interpreter::UNK) func, __m128i _a, __m1
 	return ppu.VR[20].vi;
 }
 
-extern void ppu_initialize(const std::string& name, const std::vector<std::pair<u32, u32>>& funcs, u32 entry)
+extern void ppu_initialize(const std::string& name, const std::vector<ppu_function>& funcs, u32 entry)
 {
 	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm || funcs.empty())
 	{
+		if (!Emu.GetCPUThreadStop())
+		{
+			auto ppu_thr_stop_data = vm::ptr<u32>::make(vm::alloc(2 * 4, vm::main));
+			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
+			ppu_thr_stop_data[0] = ppu_instructions::HACK(1);
+			ppu_thr_stop_data[1] = ppu_instructions::BLR();
+		}
+		
 		return;
 	}
 
@@ -481,6 +494,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 		{ "__memory", (u64)vm::g_base_addr },
 		{ "__memptr", (u64)&vm::g_base_addr },
 		{ "__trap", (u64)&ppu_trap },
+		{ "__end", (u64)&ppu_unreachable },
 		{ "__trace", (u64)&ppu_trace },
 		{ "__hlecall", (u64)&ppu_execute_function },
 		{ "__syscall", (u64)&ppu_execute_syscall },
@@ -526,14 +540,20 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	// Initialize function list
 	for (const auto& info : funcs)
 	{
-		if (info.second)
+		if (info.size)
 		{
-			const auto f = cast<Function>(module->getOrInsertFunction(fmt::format("__sub_%x", info.first), _func));
+			const auto f = cast<Function>(module->getOrInsertFunction(fmt::format("__0x%x", info.addr), _func));
 			f->addAttribute(1, Attribute::NoAlias);
-			translator->AddFunction(info.first, f);
+			translator->AddFunction(info.addr, f);
 		}
-
-		translator->AddBlockInfo(info.first);
+		
+		for (const auto& b : info.blocks)
+		{
+			if (b.second)
+			{
+				translator->AddBlockInfo(b.first);
+			}
+		}
 	}
 
 	legacy::FunctionPassManager pm(module.get());
@@ -561,9 +581,9 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	// Translate functions
 	for (const auto& info : funcs)
 	{
-		if (info.second)
+		if (info.size)
 		{
-			const auto func = translator->TranslateToIR(info.first, info.first + info.second, vm::_ptr<u32>(info.first));
+			const auto func = translator->TranslateToIR(info, vm::_ptr<u32>(info.addr));
 
 			// Run optimization passes
 			pm.run(*func);
@@ -655,14 +675,12 @@ extern void ppu_initialize(const std::string& name, const std::vector<std::pair<
 	// Get and install function addresses
 	for (const auto& info : funcs)
 	{
-		const u32 addr = info.first;
-		if (info.second)
+		if (info.size)
 		{
-			const std::uintptr_t link = jit->get(fmt::format("__sub_%x", addr));
-			memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, sizeof(ppu_function_t));
-			s_ppu_compiled[addr / 4] = (ppu_function_t)link;
+			const std::uintptr_t link = jit->get(fmt::format("__0x%x", info.addr));
+			ppu_register_function_at(info.addr, (ppu_function_t)link);
 
-			LOG_NOTICE(PPU, "** Function __sub_%x -> 0x%llx (addr=0x%x, size=0x%x)", addr, link, addr, info.second);
+			LOG_NOTICE(PPU, "** Function __0x%x -> 0x%llx (size=0x%x, toc=0x%x, attr %#x)", info.addr, link, info.size, info.toc, info.attr);
 		}
 	}
 

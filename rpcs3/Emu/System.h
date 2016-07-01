@@ -136,6 +136,7 @@ public:
 	void ResetInfo()
 	{
 		m_info = {};
+		m_cpu_thr_stop = 0;
 	}
 
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)

@@ -14,10 +14,6 @@
 
 #include <unordered_set>
 #include <algorithm>
-#include "yaml-cpp/yaml.h"
-
-const ppu_decoder<ppu_itype> s_ppu_itype;
-//const ppu_decoder<ppu_iname> s_ppu_iname;
 
 LOG_CHANNEL(cellAdec);
 LOG_CHANNEL(cellAtrac);
@@ -120,7 +116,7 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
 
 extern void sys_initialize_tls(PPUThread&, u64, u32, u32, u32);
 
-extern void ppu_initialize(const std::string& name, const std::vector<std::pair<u32, u32>>& set, u32 entry);
+extern void ppu_initialize(const std::string& name, const std::vector<ppu_function>& set, u32 entry);
 
 // Function lookup table. Not supposed to grow after emulation start.
 std::vector<ppu_function_t> g_ppu_function_cache;
@@ -350,7 +346,7 @@ static void ppu_initialize_modules()
 // Detect import stub at specified address and inject HACK instruction with index immediate.
 static bool ppu_patch_import_stub(u32 addr, u32 index)
 {
-	const auto data = vm::cptr<u32>::make(addr);
+	const auto data = vm::_ptr<u32>(addr);
 
 	using namespace ppu_instructions;
 
@@ -366,10 +362,10 @@ static bool ppu_patch_import_stub(u32 addr, u32 index)
 		data[6] == MTCTR(r0) &&
 		data[7] == BCTR())
 	{
-		std::memset(vm::base(addr), 0, 32);
-		vm::write32(addr + 0, STD(r2, r1, 0x28)); // Save RTOC
-		vm::write32(addr + 4, HACK(index));
-		vm::write32(addr + 8, BLR());
+		data[0] = STD(r2, r1, 0x28); // Save RTOC
+		data[1] = HACK(index);
+		data[2] = BLR();
+		std::fill(data + 3, data + 8, NOP());
 		return true;
 	}
 
@@ -397,9 +393,9 @@ static bool ppu_patch_import_stub(u32 addr, u32 index)
 			sub[0xd] == MTLR(r0) &&
 			sub[0xe] == BLR())
 		{
-			vm::write32(addr + 0, HACK(index));
-			vm::write32(addr + 4, BLR());
-			vm::write32(addr + 8, 0);
+			data[0] = HACK(index);
+			data[1] = BLR();
+			data[2] = NOP();
 			return true;
 		}
 	}
@@ -422,13 +418,13 @@ static bool ppu_patch_import_stub(u32 addr, u32 index)
 		data[0xe] == MTLR(r0) &&
 		data[0xf] == BLR())
 	{
-		std::memset(vm::base(addr), 0, 64);
-		vm::write32(addr + 0, HACK(index));
-		vm::write32(addr + 4, BLR());
+		data[0] = HACK(index);
+		data[1] = BLR();
+		std::fill(data + 2, data + 16, NOP());
 		return true;
 	}
 
-	if (vm::check_addr(addr, 64) &&
+	if (vm::check_addr(addr, 60) &&
 		data[0x0] == MFLR(r0) &&
 		data[0x1] == STD(r0, r1, 0x10) &&
 		data[0x2] == STDU(r1, r1, -0x80) &&
@@ -445,9 +441,9 @@ static bool ppu_patch_import_stub(u32 addr, u32 index)
 		data[0xd] == MTLR(r0) &&
 		data[0xe] == BLR())
 	{
-		std::memset(vm::base(addr), 0, 64);
-		vm::write32(addr + 0, HACK(index));
-		vm::write32(addr + 4, BLR());
+		data[0] = HACK(index);
+		data[1] = BLR();
+		std::fill(data + 2, data + 15, NOP());
 		return true;
 	}
 
@@ -467,9 +463,9 @@ static bool ppu_patch_import_stub(u32 addr, u32 index)
 		data[0xc] == LD(r2, r1, 0x28) &&
 		data[0xd] == BLR())
 	{
-		std::memset(vm::base(addr), 0, 56);
-		vm::write32(addr + 0, HACK(index));
-		vm::write32(addr + 4, BLR());
+		data[0] = HACK(index);
+		data[1] = BLR();
+		std::fill(data + 2, data + 14, NOP());
 		return true;
 	}
 
@@ -670,15 +666,11 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 	return result;
 }
 
-static u32 ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 imports_start, u32 imports_end)
+static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 imports_start, u32 imports_end)
 {
-	u32 result = imports_start;
-
 	for (u32 addr = imports_start; addr < imports_end;)
 	{
 		const auto& lib = vm::_ref<const ppu_prx_module_info>(addr);
-
-		result = std::min<u32>(result, lib.name.addr());
 
 		const std::string module_name(lib.name.get_ptr());
 
@@ -737,404 +729,13 @@ static u32 ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 i
 
 		addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 	}
-
-	return result;
-}
-
-// Returns max branch address of jumptable
-never_inline static u32 ppu_is_jumptable(vm::ptr<u32>& start_ptr, u32 start, u32 end)
-{
-	u32 max_addr = 0;
-
-	if (end - start_ptr.addr() < 8)
-	{
-		return 0;
-	}
-
-	for (vm::ptr<u32> ptr = start_ptr; ptr.addr() < end; ptr++)
-	{
-		const u32 addr = start_ptr.addr() + *ptr;
-
-		if (addr % 4 || addr < start || addr >= end)
-		{
-			if (ptr - start_ptr < 2)
-			{
-				return 0;
-			}
-
-			start_ptr = ptr;
-			return max_addr;
-		}
-
-		max_addr = std::max<u32>(max_addr, addr);
-	}
-
-	start_ptr = vm::cast(end);
-	return max_addr;
-}
-
-// Guess whether the function cannot be divided at specific position `split`
-static bool ppu_is_coherent(u32 start, u32 end, u32 split)
-{
-	// Check if the block before `split` is directly connected (can fall through)
-	for (vm::ptr<u32> rptr = vm::cast(split - 4);; rptr--)
-	{
-		const u32 _last = *rptr;
-
-		// Skip NOPs
-		if (_last == ppu_instructions::NOP())
-		{
-			if (rptr.addr() == start) return true;
-			continue;
-		}
-
-		switch (const auto type = s_ppu_itype.decode(_last))
-		{
-		case ppu_itype::UNK:
-		case ppu_itype::TD:
-		case ppu_itype::TDI:
-		case ppu_itype::TW:
-		case ppu_itype::TWI:
-		{
-			break;
-		}
-
-		case ppu_itype::B:
-		{
-			if (ppu_opcode_t{_last}.lk) return true;
-			break;
-		}
-
-		case ppu_itype::BC:
-		case ppu_itype::BCLR:
-		{
-			if (ppu_opcode_t{_last}.lk || (ppu_opcode_t{_last}.bo & 0x14) != 0x14) return true;
-			break;
-		}
-
-		case ppu_itype::BCCTR:
-		{
-			if (ppu_opcode_t{_last}.lk || (ppu_opcode_t{_last}.bo & 0x10) == 0) return true;
-			break;
-		}
-
-		default:
-		{
-			return true;
-		}
-		}
-
-		break;
-	}
-
-	// Find branches from one part to another
-	for (vm::ptr<u32> ptr = vm::cast(start); ptr.addr() < split; ptr++)
-	{
-		const u32 value = *ptr;
-		const auto type = s_ppu_itype.decode(value);
-
-		const ppu_opcode_t op{value};
-
-		if (type == ppu_itype::B || type == ppu_itype::BC)
-		{
-			const u32 target = ppu_branch_target(op.aa ? 0 : ptr.addr(), type == ppu_itype::B ? +op.ll : +op.simm16);
-
-			if (target % 4 == 0 && target >= split && target < end)
-			{
-				return !op.lk;
-			}
-		}
-
-		if (type == ppu_itype::BCCTR && !op.lk)
-		{
-			const u32 max = ppu_is_jumptable(++ptr, start, end);
-
-			if (max && max >= split)
-			{
-				return true;
-			}
-
-			ptr--;
-		}
-	}
-
-	// TODO: ???
-	return false;
-}
-
-static std::vector<std::pair<u32, u32>> ppu_analyse(u32 start, u32 end, const std::vector<std::pair<u32, u32>>& segs, u32 rtoc)
-{
-	// Function entries (except the last one)
-	std::set<u32> result
-	{
-		end,
-	};
-
-	// Instruction usage stats
-	//std::unordered_map<const char*, u64> stats;
-
-	// Jumptable entries (addr->size)
-	std::unordered_map<u32, u32> jts;
-
-	// Block entries
-	std::set<u32> blocks;
-
-	// First pass; Detect branch + link instructions
-	for (vm::ptr<u32> ptr = vm::cast(start); ptr.addr() < end; ptr++)
-	{
-		const u32 value = *ptr;
-		const auto type = s_ppu_itype.decode(value);
-		//const auto name = s_ppu_iname.decode(value);
-
-		const ppu_opcode_t op{value};
-
-		if (type == ppu_itype::B || type == ppu_itype::BC)
-		{
-			const u32 target = ppu_branch_target(op.aa ? 0 : ptr.addr(), type == ppu_itype::B ? +op.ll : +op.simm16);
-
-			if (op.lk && target % 4 == 0 && target >= start && target < end && target != ptr.addr())
-			{
-				LOG_NOTICE(PPU, "BCall: 0x%x -> 0x%x", ptr, target);
-				result.emplace(target);
-			}
-
-			if (!op.lk && target % 4 == 0 && target >= start && target < end)
-			{
-				blocks.emplace(target);
-			}
-		}
-		
-		if (type == ppu_itype::BCCTR && !op.lk)
-		{
-			const auto jt = ++ptr;
-
-			if (ppu_is_jumptable(ptr, start, end))
-			{
-				LOG_NOTICE(PPU, "JTable: 0x%x .. 0x%x", jt, ptr);
-				jts.emplace(jt.addr(), ptr.addr() - jt.addr());
-
-				for (auto _ptr = jt; _ptr != ptr; _ptr++)
-				{
-					blocks.emplace(jt.addr() + *_ptr);
-				}
-			}
-			else
-			{
-				LOG_NOTICE(PPU, "BCCTR: 0x%x", ptr - 1);
-			}
-
-			ptr--;
-		}
-
-		//stats[name]++;
-	}
-
-	// Find OPD table
-	for (const auto& seg : segs)
-	{
-		for (vm::ptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
-		{
-			if (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && ptr[1] == rtoc)
-			{
-				while (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && !jts.count(ptr[0]) /*&& ptr[1] == rtoc*/)
-				{
-					LOG_NOTICE(PPU, "OPD: 0x%x -> 0x%x (rtoc=0x%x)", ptr, ptr[0], ptr[1]);
-					result.emplace(ptr[0]);
-					ptr += 2;
-				}
-
-				break;
-			}
-		}
-	}
-
-	// Find more block entries
-	for (const auto& seg : segs)
-	{
-		for (vm::ptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
-		{
-			const u32 value = *ptr;
-
-			if (value % 4 == 0 && value >= start && value < end)
-			{
-				blocks.emplace(value);
-			}
-		}
-	}
-
-	// Detect tail calls
-	std::deque<u32> task{result.begin(), result.end()};
-
-	while (!task.empty())
-	{
-		const u32 f_start = task.front();
-		const auto f_up = result.upper_bound(f_start);
-
-		if (f_up != result.end()) for (vm::ptr<u32> ptr = vm::cast(f_start); ptr.addr() < *f_up; ptr++)
-		{
-			const u32 value = *ptr;
-			const auto type = s_ppu_itype.decode(value);
-
-			const ppu_opcode_t op{value};
-
-			if (type == ppu_itype::B || type == ppu_itype::BC)
-			{
-				const u32 target = ppu_branch_target(op.aa ? 0 : ptr.addr(), type == ppu_itype::B ? +op.ll : +op.simm16);
-
-				if (!op.lk && target % 4 == 0 && target >= start && target < end && (target < f_start || target >= *f_up))
-				{
-					auto _lower = result.lower_bound(target);
-
-					if (*_lower == target || _lower == result.begin())
-					{
-						continue;
-					}
-
-					const u32 f2_end = *_lower;
-					const u32 f2_start = *--_lower;
-
-					if (ppu_is_coherent(f2_start, f2_end, target))
-					{
-						continue;
-					}
-
-					LOG_NOTICE(LOADER, "Tail call: 0x%x -> 0x%x", ptr, target);
-					result.emplace(target);
-
-					// Rescan two new functions if the insertion took place
-					task.push_back(target);
-					task.push_back(f2_start);
-				}
-			}
-		}
-
-		task.pop_front();
-	}
-
-	// Fill (addr, size) vector
-	std::vector<std::pair<u32, u32>> vr;
-
-	for (auto it = result.begin(), end = --result.end(); it != end; it++)
-	{
-		const u32 addr = *it;
-		const auto _up = result.upper_bound(addr);
-
-		// Set initial (addr, size)
-		vr.emplace_back(std::make_pair(addr, *_up - addr));
-
-		// Analyse function against its end
-		for (u32& size = vr.back().second; size;)
-		{
-			const auto next = result.upper_bound(addr + size);
-
-			if (next != result.end() && ppu_is_coherent(addr, *next, addr + size))
-			{
-				// Extend and check again
-				const u32 new_size = *next - addr;
-
-				LOG_NOTICE(LOADER, "Extended: 0x%x (0x%x --> 0x%x)", addr, size, new_size);
-				size = new_size;
-				continue;
-			}
-
-			break;
-		}
-	}
-
-	// Add blocks as (addr, 0) // TODO
-	for (auto value : blocks)
-	{
-		vr.emplace_back(std::make_pair(value, 0));
-	}
-
-	// Print some stats
-	//{
-	//	std::multimap<u64, const char*, std::greater<u64>> sorted;
-
-	//	for (const auto& pair : stats)
-	//		sorted.emplace(pair.second, pair.first);
-
-	//	for (const auto& stat : sorted)
-	//		LOG_NOTICE(PPU, "Stats: (%llu) %s", stat.first, stat.second);
-	//}
-
-	return vr;
-}
-
-static void ppu_validate(const std::string& fname, const std::vector<std::pair<u32, u32>>& funcs, u32 reloc)
-{
-	// Load custom PRX configuration if available
-	if (fs::file yml{fname + ".yml"})
-	{
-		const auto cfg = YAML::Load(yml.to_string());
-
-		u32 index = 0;
-
-		// Validate detected functions using information provided
-		for (const auto func : cfg["functions"])
-		{
-			const u32 addr = func["addr"].as<u32>(-1);
-			const u32 size = func["size"].as<u32>(0);
-
-			if (addr != -1 && index < funcs.size())
-			{
-				u32 found = funcs[index].first - reloc;
-
-				while (addr > found && index + 1 < funcs.size())
-				{
-					LOG_ERROR(LOADER, "%s.yml : validation failed at 0x%x (0x%x, 0x%x)", fname, found, addr, size);
-					index++;
-					found = funcs[index].first - reloc;
-				}
-
-				if (addr < found)
-				{
-					LOG_ERROR(LOADER, "%s.yml : function not found (0x%x, 0x%x)", fname, addr, size);
-					continue;
-				}
-
-				if (size && size < funcs[index].second)
-				{
-					LOG_WARNING(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", fname, found, funcs[index].second, addr, size);
-				}
-
-				if (size > funcs[index].second)
-				{
-					LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", fname, found, funcs[index].second, addr, size);
-				}
-
-				index++;
-			}
-			else
-			{
-				LOG_ERROR(LOADER, "%s.yml : function not found at the end (0x%x, 0x%x)", fname, addr, size);
-				break;
-			}
-		}
-
-		if (!index)
-		{
-			return; // ???
-		}
-
-		while (index < funcs.size())
-		{
-			if (funcs[index].second)
-			{
-				LOG_ERROR(LOADER, "%s.yml : function not covered at 0x%x (size=0x%x)", fname, funcs[index].first, funcs[index].second);
-			}
-
-			index++;
-		}
-
-		LOG_SUCCESS(LOADER, "%s.yml : validation completed", fname);
-	}
 }
 
 template<>
 std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 {
 	std::vector<std::pair<u32, u32>> segments;
+	std::vector<std::pair<u32, u32>> sections; // Unused
 
 	for (const auto& prog : progs)
 	{
@@ -1269,17 +870,9 @@ std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 
-		const std::initializer_list<u32> addr_list
-		{
-			ppu_load_imports(link, lib_info->imports_start, lib_info->imports_end),
+		ppu_load_imports(link, lib_info->imports_start, lib_info->imports_end);
 
-			lib_info.addr(),
-			lib_info->imports_start,
-			lib_info->exports_start,
-		};
-
-		// Get functions
-		prx->func = ppu_analyse(segments[0].first, std::min(addr_list), segments, lib_info->toc);
+		prx->funcs = ppu_analyse(segments, sections, 0, lib_info->toc);
 	}
 	else
 	{
@@ -1309,9 +902,11 @@ void ppu_exec_loader::load() const
 	// Segment info
 	std::vector<std::pair<u32, u32>> segments;
 
+	// Section info (optional)
+	std::vector<std::pair<u32, u32>> sections;
+
 	// Functions
-	std::vector<std::pair<u32, u32>> exec_set;
-	u32 exec_end{};
+	std::vector<ppu_function> exec_set;
 
 	// Allocate memory at fixed positions
 	for (const auto& prog : progs)
@@ -1333,8 +928,20 @@ void ppu_exec_loader::load() const
 
 			segments.emplace_back(std::make_pair(addr, size));
 
-			if (prog.p_flags & 1) // Test EXEC flag
-				exec_end = addr + size;
+			//if (prog.p_flags & 1) exec_end = addr + size; // Test EXEC flag
+		}
+	}
+
+	for (const auto& s : shdrs)
+	{
+		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+
+		const u32 addr = vm::cast(s.sh_addr);
+		const u32 size = vm::cast(s.sh_size);
+
+		if (s.sh_type == 1 && addr && size)
+		{
+			sections.emplace_back(std::make_pair(addr, size));
 		}
 	}
 
@@ -1422,6 +1029,8 @@ void ppu_exec_loader::load() const
 
 				LOG_NOTICE(LOADER, "* libent_start = *0x%x", proc_prx_param.libent_start);
 				LOG_NOTICE(LOADER, "* libstub_start = *0x%x", proc_prx_param.libstub_start);
+				LOG_NOTICE(LOADER, "* unk0 = 0x%x", proc_prx_param.unk0);
+				LOG_NOTICE(LOADER, "* unk2 = 0x%x", proc_prx_param.unk2);
 
 				if (proc_prx_param.magic != 0x1b434cec)
 				{
@@ -1429,10 +1038,7 @@ void ppu_exec_loader::load() const
 				}
 
 				ppu_load_exports(link, proc_prx_param.libent_start, proc_prx_param.libent_end);
-
-				const u32 min_addr = ppu_load_imports(link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
-
-				exec_end = std::min<u32>(min_addr, exec_end);
+				ppu_load_imports(link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
 			}
 			break;
 		}
@@ -1481,9 +1087,9 @@ void ppu_exec_loader::load() const
 				}
 
 				// Add functions
-				exec_set.insert(exec_set.end(), prx->func.begin(), prx->func.end());
+				exec_set.insert(exec_set.end(), prx->funcs.begin(), prx->funcs.end());
 
-				ppu_validate(lle_dir + '/' + name, prx->func, prx->func[0].first);
+				ppu_validate(lle_dir + '/' + name, prx->funcs, prx->funcs[0].addr);
 			}
 			else
 			{
@@ -1615,8 +1221,7 @@ void ppu_exec_loader::load() const
 	}
 
 	// Analyse executable
-	const u32 entry_rtoc = vm::read32(vm::cast(header.e_entry, HERE) + 4);
-	const auto funcs = ppu_analyse(segments[0].first, exec_end, segments, entry_rtoc);
+	const auto funcs = ppu_analyse(segments, sections, static_cast<u32>(header.e_entry), 0);
 
 	ppu_validate(vfs::get(Emu.GetPath()), funcs, 0);
 
@@ -1627,11 +1232,6 @@ void ppu_exec_loader::load() const
 
 	// TODO: adjust for liblv2 loading option
 	using namespace ppu_instructions;
-
-	auto ppu_thr_stop_data = vm::ptr<u32>::make(vm::alloc(2 * 4, vm::main));
-	Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
-	ppu_thr_stop_data[0] = HACK(1);
-	ppu_thr_stop_data[1] = BLR();
 
 	static const int branch_size = 10 * 4;
 
@@ -1690,7 +1290,10 @@ void ppu_exec_loader::load() const
 	make_branch(entry, static_cast<u32>(header.e_entry), true);
 
 	// Register entry function (addr, size)
-	exec_set.emplace_back(std::make_pair(entry.addr() & -0x1000, entry.addr() & 0xfff));
+	ppu_function entry_func;
+	entry_func.addr = entry.addr() & -0x1000;
+	entry_func.size = entry.addr() & 0xfff;
+	exec_set.emplace_back(entry_func);
 
 	// Initialize recompiler
 	ppu_initialize("", exec_set, static_cast<u32>(header.e_entry));
