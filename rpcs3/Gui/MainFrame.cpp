@@ -20,6 +20,9 @@
 #include "Crypto/unpkg.h"
 
 #include "Utilities/Thread.h"
+#include "Utilities/StrUtil.h"
+
+#include "../Crypto/unself.h"
 
 #include <thread>
 
@@ -52,6 +55,7 @@ enum IDs
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
 	id_tools_string_search,
+	id_tools_decrypt_sprx_libraries,
 	id_tools_cg_disasm,
 	id_help_about,
 	id_update_dbg
@@ -109,6 +113,8 @@ MainFrame::MainFrame()
 	menu_tools->Append(id_tools_memory_viewer, "&Memory Viewer")->Enable(false);
 	menu_tools->Append(id_tools_rsx_debugger, "&RSX Debugger")->Enable(false);
 	menu_tools->Append(id_tools_string_search, "&String Search")->Enable(false);
+	menu_tools->AppendSeparator();
+	menu_tools->Append(id_tools_decrypt_sprx_libraries, "&Decrypt SPRX libraries");
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "&Help");
@@ -143,6 +149,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigVFS, this, id_config_vfs_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
+	Bind(wxEVT_MENU, &MainFrame::DecryptSPRXLibraries, this, id_tools_decrypt_sprx_libraries);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
@@ -335,6 +342,50 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 	Emu.Load();
 
 	LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
+}
+
+void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
+{
+	wxFileDialog ctrl(this, L"Select SPRX files", wxEmptyString, wxEmptyString,
+		"SPRX files (*.sprx)|*sprx",
+		wxFD_OPEN | wxFD_MULTIPLE);
+
+	if (ctrl.ShowModal() == wxID_CANCEL)
+	{
+		return;
+	}
+
+	wxArrayString modules;
+	ctrl.GetPaths(modules);
+
+	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
+
+	for (const wxString& module : modules)
+	{
+		std::string prx_path = fmt::ToUTF8(module);
+		const std::string& prx_dir = fs::get_parent_dir(prx_path);
+
+		if (IsSelf(prx_path))
+		{
+			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
+			const std::string& prx_ext = fmt::to_upper(prx_path.substr(prx_ext_pos != -1 ? prx_ext_pos : prx_path.size()));
+			const std::string& prx_name = prx_path.substr(prx_dir.size());
+
+			prx_path.erase(prx_path.size() - 4, 1); // change *.sprx to *.prx
+
+			if (DecryptSelf(prx_path, prx_dir + prx_name))
+			{
+				LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+			}
+
+			else
+			{
+				LOG_ERROR(GENERAL, "Failed to decrypt %s", prx_dir + prx_name);
+			}
+		}
+	}
+
+	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
