@@ -269,6 +269,18 @@ namespace vk
 		}
 		throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 	}
+
+	VkCullModeFlags get_cull_face(u32 cfv)
+	{
+		switch (cfv)
+		{
+		case CELL_GCM_FRONT: return VK_CULL_MODE_FRONT_BIT;
+		case CELL_GCM_BACK: return VK_CULL_MODE_BACK_BIT;
+		case CELL_GCM_FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
+		default: return VK_CULL_MODE_NONE;
+		}
+		throw EXCEPTION("Unknown cull face value: 0x%X", cfv);
+	}
 }
 
 
@@ -992,24 +1004,8 @@ bool VKGSRender::load_program()
 
 	if (!!rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE])
 	{
-		switch (rsx::method_registers[NV4097_SET_CULL_FACE])
-		{
-		case CELL_GCM_FRONT:
-			properties.rs.cullMode = VK_CULL_MODE_FRONT_BIT;
-			break;
-		case CELL_GCM_BACK:
-			properties.rs.cullMode = VK_CULL_MODE_BACK_BIT;
-			break;
-		case CELL_GCM_FRONT_AND_BACK:
-			properties.rs.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
-			break;
-		default:
-			properties.rs.cullMode = VK_CULL_MODE_NONE;
-			break;
-		}
+		properties.rs.cullMode = vk::get_cull_face(rsx::method_registers[NV4097_SET_CULL_FACE]);
 	}
-	else
-		properties.rs.cullMode = VK_CULL_MODE_NONE;
 	
 	properties.rs.frontFace = vk::get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]);
 	

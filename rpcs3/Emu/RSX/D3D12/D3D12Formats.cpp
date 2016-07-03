@@ -382,6 +382,17 @@ BOOL get_front_face_ccw(u32 ffv)
 	throw EXCEPTION("Invalid front face value (0x%x)", ffv);
 }
 
+D3D12_CULL_MODE get_cull_face(u32 cfv) 
+{
+	switch (cfv)
+	{
+	case CELL_GCM_FRONT: return D3D12_CULL_MODE_FRONT;
+	case CELL_GCM_BACK:  return D3D12_CULL_MODE_BACK;
+	default: return D3D12_CULL_MODE_NONE;
+	}
+	throw EXCEPTION("Invalid cull face value (0x%x)", cfv);
+}
+
 DXGI_FORMAT get_index_type(rsx::index_array_type index_type)
 {
 	switch (index_type)
