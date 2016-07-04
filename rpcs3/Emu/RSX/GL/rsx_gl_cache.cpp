@@ -370,7 +370,14 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 				body = "0.0, 0.0";
 			}
 
-			prepare += "\tfogc = clamp(vec4(" + body + ", 0.0, 0.0), 0.0, 1.0);\n";
+			if (0)
+			{
+				prepare += "\tfogc = vec4(0.0);\n";
+			}
+			else
+			{
+				prepare += "\tfogc = clamp(vec4(" + body + ", 0.0, 0.0), 0.0, 1.0);\n";
+			}
 		}
 
 		{
@@ -390,10 +397,10 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 			if (diffuse_color == (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) &&
 				specular_color == (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR))
 			{
-				prepare += "\tif (gl_FrontFacing)\n\t{";
+				prepare += "\tif (gl_FrontFacing)\n\t{\n";
 				prepare += "\t\tcol0 = front_diffuse_color;\n";
 				prepare += "\t\tcol1 = front_specular_color;\n";
-				prepare += "\t}\nelse\n\t{\n";
+				prepare += "\t}\n\telse\n\t{\n";
 				prepare += "\t\tcol0 = back_diffuse_color;\n";
 				prepare += "\t\tcol1 = back_specular_color;\n";
 				prepare += "\t}";
