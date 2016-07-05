@@ -468,7 +468,7 @@ namespace rsx
 
 				//LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 
-				method_registers[reg] = value;
+				method_registers.decode(reg, value);
 
 				if (capture_current_frame)
 				{

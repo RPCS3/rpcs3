@@ -600,6 +600,7 @@
     <ClInclude Include="Emu\DbgCommand.h" />
     <ClInclude Include="Emu\Memory\wait_engine.h" />
     <ClInclude Include="Emu\RSX\rsx_cache.h" />
+    <ClInclude Include="Emu\RSX\rsx_decode.h" />
     <ClInclude Include="Emu\RSX\rsx_vertex_data.h" />
     <ClInclude Include="Emu\VFS.h" />
     <ClInclude Include="Emu\GameInfo.h" />
