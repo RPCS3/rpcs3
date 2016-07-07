@@ -109,23 +109,26 @@ void PPUTranslator::AddBlockInfo(u64 addr)
 	m_block_info.emplace(addr);
 }
 
-Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* bin, void(*custom)(PPUTranslator*))
+Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin, void(*custom)(PPUTranslator*))
 {
-	m_function = m_func_list[start_addr];
-	m_function_type = m_func_types[start_addr];
-	m_start_addr = start_addr;
-	m_end_addr = end_addr;
+	m_function = m_func_list[info.addr];
+	m_function_type = m_func_types[info.addr];
+	m_start_addr = info.addr;
+	m_end_addr = info.addr + info.size;
 	m_blocks.clear();
 	m_value_usage.clear();
+	std::fill(std::begin(m_globals), std::end(m_globals), nullptr);
+	std::fill(std::begin(m_locals), std::end(m_locals), nullptr);
 
 	IRBuilder<> builder(BasicBlock::Create(m_context, "__entry", m_function));
 	m_ir = &builder;
 
 	/* Create context variables */
-	//m_thread = Call(m_thread_type->getPointerTo(), AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadOnly}), "__context", m_ir->getInt64(start_addr));
+	//m_thread = Call(m_thread_type->getPointerTo(), AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadOnly}), "__context", m_ir->getInt64(info.addr));
 	m_thread = &*m_function->getArgumentList().begin();
 	
 	// Non-volatile registers with special meaning (TODO)
+	if (info.attr & ppu_attr::uses_r0) m_g_gpr[0] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 0, ".r0g");
 	m_g_gpr[1] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 1, ".sp");
 	m_g_gpr[2] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 2, ".rtoc");
 	m_g_gpr[13] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 13, ".tls");
@@ -202,8 +205,9 @@ Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* 
 	m_ir->CreateStore(m_ir->getFalse(), m_vscr_sat); // VSCR.SAT
 	m_ir->CreateStore(m_ir->getTrue(), m_vscr_nj);
 
-	// TODO: only loaded r12 (extended argument for program initialization)
-	m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 12)), m_gpr[12]);
+	// TODO: only loaded r0 and r12 (r12 is extended argument for program initialization)
+	if (!m_g_gpr[0]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 0)), m_gpr[0]);
+	if (!m_g_gpr[12]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 12)), m_gpr[12]);
 
 	m_jtr = BasicBlock::Create(m_context, "__jtr", m_function);
 
@@ -212,13 +216,13 @@ Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* 
 	m_ir->CreateBr(start);
 	m_ir->SetInsertPoint(start);
 
-	for (m_current_addr = start_addr; m_current_addr < end_addr;)
+	for (m_current_addr = m_start_addr; m_current_addr < m_end_addr;)
 	{
 		// Preserve current address (m_current_addr may be changed by the decoder)
 		const u64 addr = m_current_addr;
 
 		// Translate opcode
-		const u32 op = *(m_bin = bin + (addr - start_addr) / sizeof(u32));
+		const u32 op = *(m_bin = bin + (addr - m_start_addr) / sizeof(u32));
 		(this->*(s_ppu_decoder.decode(op)))({op});
 
 		// Calculate next address if necessary
@@ -243,7 +247,7 @@ Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* 
 	// Finalize past-the-end block
 	if (!m_ir->GetInsertBlock()->getTerminator())
 	{
-		Call(GetType<void>(), "__end", m_ir->getInt64(end_addr));
+		Call(GetType<void>(), "__end", m_ir->getInt64(m_end_addr));
 		m_ir->CreateUnreachable();
 	}
 
@@ -256,7 +260,7 @@ Function* PPUTranslator::TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* 
 	else
 	{
 		// Get block entries
-		const std::vector<u64> cases{m_block_info.upper_bound(start_addr), m_block_info.lower_bound(end_addr)};
+		const std::vector<u64> cases{m_block_info.upper_bound(m_start_addr), m_block_info.lower_bound(m_end_addr)};
 
 		const auto _ctr = m_ir->CreateLoad(m_reg_ctr);
 		const auto _default = BasicBlock::Create(m_context, "__jtr.def", m_function);
@@ -594,7 +598,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 
 void PPUTranslator::CompilationError(const std::string& error)
 {
-	LOG_ERROR(PPU, "0x%08llx: Error: %s", m_current_addr, error);
+	LOG_ERROR(PPU, "[0x%08llx] 0x%08llx: Error: %s", m_start_addr, m_current_addr, error);
 }
 
 
@@ -3095,7 +3099,7 @@ void PPUTranslator::SRAD(ppu_opcode_t op)
 	const auto res_128 = m_ir->CreateAShr(arg_ext, shift_num); // i128
 	const auto result = Trunc(res_128);
 	SetGpr(op.ra, result);
-	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(arg_ext, m_ir->CreateShl(result, shift_num))));
+	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(arg_ext, m_ir->CreateShl(res_128, shift_num))));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
@@ -3916,7 +3920,7 @@ void PPUTranslator::FCFID(ppu_opcode_t op)
 
 void PPUTranslator::UNK(ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "0x%08llx: Unknown/illegal opcode 0x%08x", m_current_addr, op.opcode);
+	CompilationError(fmt::format("Unknown/illegal opcode 0x%08x", op.opcode));
 	m_ir->CreateUnreachable();
 }
 

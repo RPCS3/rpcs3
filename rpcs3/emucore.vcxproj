@@ -97,6 +97,7 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
