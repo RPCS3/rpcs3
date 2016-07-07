@@ -1036,6 +1036,260 @@ rsx::surface_color_format rsx::to_surface_color_format(u8 in)
 	throw EXCEPTION("unknow surface color format %x", in);
 }
 
+rsx::stencil_op rsx::to_stencil_op(u16 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_KEEP: return rsx::stencil_op::keep;
+	case CELL_GCM_REPLACE: return rsx::stencil_op::replace;
+	case CELL_GCM_INCR: return rsx::stencil_op::incr;
+	case CELL_GCM_DECR: return rsx::stencil_op::decr;
+	case CELL_GCM_INCR_WRAP: return rsx::stencil_op::incr_wrap;
+	case CELL_GCM_DECR_WRAP: return rsx::stencil_op::decr_wrap;
+	case CELL_GCM_ZERO: return rsx::stencil_op::zero;
+	}
+	throw EXCEPTION("unknow stencil op %x", in);
+}
+
+rsx::blend_equation rsx::to_blend_equation(u16 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_FUNC_ADD: return rsx::blend_equation::add;
+	case CELL_GCM_MIN: return rsx::blend_equation::min;
+	case CELL_GCM_MAX: return rsx::blend_equation::max;
+	case CELL_GCM_FUNC_SUBTRACT: return rsx::blend_equation::substract;
+	case CELL_GCM_FUNC_REVERSE_SUBTRACT: return rsx::blend_equation::reverse_substract;
+	case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED: return rsx::blend_equation::reverse_substract_signed;
+	case CELL_GCM_FUNC_ADD_SIGNED: return rsx::blend_equation::add_signed;
+	case CELL_GCM_FUNC_REVERSE_ADD_SIGNED: return rsx::blend_equation::reverse_add_signed;
+	}
+	throw EXCEPTION("unknow blend eq %x", in);
+}
+
+rsx::blend_factor rsx::to_blend_factor(u16 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_ZERO: return rsx::blend_factor::zero;
+	case CELL_GCM_ONE: return rsx::blend_factor::one;
+	case CELL_GCM_SRC_COLOR: return rsx::blend_factor::src_color;
+	case CELL_GCM_ONE_MINUS_SRC_COLOR: return rsx::blend_factor::one_minus_src_color;
+	case CELL_GCM_SRC_ALPHA: return rsx::blend_factor::src_alpha;
+	case CELL_GCM_ONE_MINUS_SRC_ALPHA: return rsx::blend_factor::one_minus_src_alpha;
+	case CELL_GCM_DST_ALPHA: return rsx::blend_factor::dst_alpha;
+	case CELL_GCM_ONE_MINUS_DST_ALPHA: return rsx::blend_factor::one_minus_dst_alpha;
+	case CELL_GCM_DST_COLOR: return rsx::blend_factor::dst_color;
+	case CELL_GCM_ONE_MINUS_DST_COLOR: return rsx::blend_factor::one_minus_dst_color;
+	case CELL_GCM_SRC_ALPHA_SATURATE: return rsx::blend_factor::src_alpha_saturate;
+	case CELL_GCM_CONSTANT_COLOR: return rsx::blend_factor::constant_color;
+	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR: return rsx::blend_factor::one_minus_constant_color;
+	case CELL_GCM_CONSTANT_ALPHA: return rsx::blend_factor::constant_alpha;
+	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: return rsx::blend_factor::one_minus_constant_alpha;
+	}
+	throw EXCEPTION("unknow blend factor %x", in);
+}
+
+rsx::logic_op rsx::to_logic_op(u16 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_CLEAR: return rsx::logic_op::logic_clear;
+	case CELL_GCM_AND: return rsx::logic_op::logic_and;
+	case CELL_GCM_AND_REVERSE: return rsx::logic_op::logic_and_reverse;
+	case CELL_GCM_COPY: return rsx::logic_op::logic_copy;
+	case CELL_GCM_AND_INVERTED: return rsx::logic_op::logic_and_inverted;
+	case CELL_GCM_NOOP: return rsx::logic_op::logic_noop;
+	case CELL_GCM_XOR: return rsx::logic_op::logic_xor;
+	case CELL_GCM_OR: return rsx::logic_op::logic_or;
+	case CELL_GCM_NOR: return rsx::logic_op::logic_nor;
+	case CELL_GCM_EQUIV: return rsx::logic_op::logic_equiv;
+	case CELL_GCM_INVERT: return rsx::logic_op::logic_invert;
+	case CELL_GCM_OR_REVERSE: return rsx::logic_op::logic_or_reverse;
+	case CELL_GCM_COPY_INVERTED: return rsx::logic_op::logic_copy_inverted;
+	case CELL_GCM_OR_INVERTED: return rsx::logic_op::logic_or_inverted;
+	case CELL_GCM_NAND: return rsx::logic_op::logic_nand;
+	case CELL_GCM_SET: return rsx::logic_op::logic_set;
+	}
+	throw EXCEPTION("unknow logic op %x", in);
+}
+
+rsx::front_face rsx::to_front_face(u16 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_CW: return rsx::front_face::cw;
+	case CELL_GCM_CCW: return rsx::front_face::ccw;
+	}
+	throw EXCEPTION("unknow front face %x", in);
+}
+
+rsx::cull_face rsx::to_cull_face(u16 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_FRONT_AND_BACK: return rsx::cull_face::front_and_back;
+	case CELL_GCM_FRONT: return rsx::cull_face::front;
+	case CELL_GCM_BACK: return rsx::cull_face::back;
+	}
+	throw EXCEPTION("unknow cull face %x", in);
+}
+
+enum
+{
+	CELL_GCM_TRANSFER_ORIGIN_CENTER = 1,
+	CELL_GCM_TRANSFER_ORIGIN_CORNER = 2,
+
+	CELL_GCM_TRANSFER_INTERPOLATOR_ZOH = 0,
+	CELL_GCM_TRANSFER_INTERPOLATOR_FOH = 1,
+};
+
+rsx::blit_engine::transfer_origin rsx::blit_engine::to_transfer_origin(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TRANSFER_ORIGIN_CENTER: return rsx::blit_engine::transfer_origin::center;
+	case CELL_GCM_TRANSFER_ORIGIN_CORNER: return rsx::blit_engine::transfer_origin::corner;
+	}
+	throw EXCEPTION("unknow tranfer origin %x", in);
+}
+
+rsx::blit_engine::transfer_interpolator rsx::blit_engine::to_transfer_interpolator(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TRANSFER_INTERPOLATOR_ZOH: return rsx::blit_engine::transfer_interpolator::zoh;
+	case CELL_GCM_TRANSFER_INTERPOLATOR_FOH: return rsx::blit_engine::transfer_interpolator::foh;
+	}
+	throw EXCEPTION("unknow tranfer interpolator %x", in);
+}
+
+enum
+{
+	CELL_GCM_TRANSFER_OPERATION_SRCCOPY_AND = 0,
+	CELL_GCM_TRANSFER_OPERATION_ROP_AND = 1,
+	CELL_GCM_TRANSFER_OPERATION_BLEND_AND = 2,
+	CELL_GCM_TRANSFER_OPERATION_SRCCOPY = 3,
+	CELL_GCM_TRANSFER_OPERATION_SRCCOPY_PREMULT = 4,
+	CELL_GCM_TRANSFER_OPERATION_BLEND_PREMULT = 5,
+};
+
+rsx::blit_engine::transfer_operation rsx::blit_engine::to_transfer_operation(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TRANSFER_OPERATION_SRCCOPY_AND: return rsx::blit_engine::transfer_operation::srccopy_and;
+	case CELL_GCM_TRANSFER_OPERATION_ROP_AND: return rsx::blit_engine::transfer_operation::rop_and;
+	case CELL_GCM_TRANSFER_OPERATION_BLEND_AND: return rsx::blit_engine::transfer_operation::blend_and;
+	case CELL_GCM_TRANSFER_OPERATION_SRCCOPY: return rsx::blit_engine::transfer_operation::srccopy;
+	case CELL_GCM_TRANSFER_OPERATION_SRCCOPY_PREMULT: return rsx::blit_engine::transfer_operation::srccopy_premult;
+	case CELL_GCM_TRANSFER_OPERATION_BLEND_PREMULT: return rsx::blit_engine::transfer_operation::blend_premult;
+	}
+	throw EXCEPTION("unknow tranfer operation %x", in);
+}
+
+enum
+{
+	CELL_GCM_TRANSFER_SCALE_FORMAT_A1R5G5B5 = 1,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_X1R5G5B5 = 2,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8 = 3,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_X8R8G8B8 = 4,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_CR8YB8CB8YA8 = 5,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_YB8CR8YA8CB8 = 6,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 = 7,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_Y8 = 8,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_AY8 = 9,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_EYB8ECR8EYA8ECB8 = 10,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_ECR8EYB8ECB8EYA8 = 11,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_A8B8G8R8 = 12,
+	CELL_GCM_TRANSFER_SCALE_FORMAT_X8B8G8R8 = 13,
+};
+
+rsx::blit_engine::transfer_source_format rsx::blit_engine::to_transfer_source_format(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_A1R5G5B5: return rsx::blit_engine::transfer_source_format::a1r5g5b5;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_X1R5G5B5: return rsx::blit_engine::transfer_source_format::x1r5g5b5;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8: return rsx::blit_engine::transfer_source_format::a8r8g8b8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_X8R8G8B8: return rsx::blit_engine::transfer_source_format::x8r8g8b8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_CR8YB8CB8YA8: return rsx::blit_engine::transfer_source_format::cr8yb8cb8ya8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_YB8CR8YA8CB8: return rsx::blit_engine::transfer_source_format::yb8cr8ya8cb8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5: return rsx::blit_engine::transfer_source_format::r5g6b5;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_Y8: return rsx::blit_engine::transfer_source_format::y8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_AY8: return rsx::blit_engine::transfer_source_format::ay8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_EYB8ECR8EYA8ECB8: return rsx::blit_engine::transfer_source_format::eyb8ecr8eya8ecb8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_ECR8EYB8ECB8EYA8: return rsx::blit_engine::transfer_source_format::ecr8eyb8ecb8eya8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_A8B8G8R8: return rsx::blit_engine::transfer_source_format::a8b8g8r8;
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_X8B8G8R8: return rsx::blit_engine::transfer_source_format::x8b8g8r8;
+	}
+	throw EXCEPTION("unknow transfer source format %x", in);
+}
+
+enum
+{
+	// Destination Format conversions
+	CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 = 4,
+	CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8 = 10,
+	CELL_GCM_TRANSFER_SURFACE_FORMAT_Y32 = 11,
+};
+
+rsx::blit_engine::transfer_destination_format rsx::blit_engine::to_transfer_destination_format(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5: return rsx::blit_engine::transfer_destination_format::r5g6b5;
+	case CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8: return rsx::blit_engine::transfer_destination_format::a8r8g8b8;
+	case CELL_GCM_TRANSFER_SURFACE_FORMAT_Y32: return rsx::blit_engine::transfer_destination_format::y32;
+	}
+	throw EXCEPTION("unknow transfer destination format %x", in);
+}
+
+enum
+{
+	CELL_GCM_CONTEXT_SURFACE2D = 0x313371C3,
+	CELL_GCM_CONTEXT_SWIZZLE2D = 0x31337A73,
+};
+
+rsx::blit_engine::context_surface rsx::blit_engine::to_context_surface(u32 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_CONTEXT_SURFACE2D: return rsx::blit_engine::context_surface::surface2d;
+	case CELL_GCM_CONTEXT_SWIZZLE2D: return rsx::blit_engine::context_surface::swizzle2d;
+	}
+	throw EXCEPTION("unknow context surface %x", in);
+}
+
+rsx::blit_engine::context_dma rsx::blit_engine::to_context_dma(u32 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT: return rsx::blit_engine::context_dma::to_memory_get_report;
+	case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN: return rsx::blit_engine::context_dma::report_location_main;
+	}
+	throw EXCEPTION("unknow context dma %x", in);
+}
+
+enum
+{
+	CELL_GCM_USER_CLIP_PLANE_DISABLE = 0,
+	CELL_GCM_USER_CLIP_PLANE_ENABLE_LT = 1,
+	CELL_GCM_USER_CLIP_PLANE_ENABLE_GE = 2,
+};
+
+rsx::user_clip_plane_op rsx::to_user_clip_plane_op(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_USER_CLIP_PLANE_DISABLE: return rsx::user_clip_plane_op::disable;
+	case CELL_GCM_USER_CLIP_PLANE_ENABLE_LT: return rsx::user_clip_plane_op::less_than;
+	case CELL_GCM_USER_CLIP_PLANE_ENABLE_GE: return rsx::user_clip_plane_op::greather_or_equal;
+	}
+	throw EXCEPTION("unknow user clip plane %x", in);
+}
+
+
 // Various parameter pretty printing function
 namespace
 {

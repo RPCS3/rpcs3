@@ -18,8 +18,12 @@ namespace rsx
 	{
 	protected:
 		u8 m_index;
+		std::array<u32, 0x10000 / 4> &registers;
 
 	public:
+		texture(u8 idx, std::array<u32, 0x10000 / 4> &r);
+		texture() = delete;
+
 		//initialize texture registers with default values
 		void init(u8 index);
 
@@ -90,8 +94,12 @@ namespace rsx
 	{
 	protected:
 		u8 m_index;
+		std::array<u32, 0x10000 / 4> &registers;
 
 	public:
+		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r);
+		vertex_texture() = delete;
+
 		//initialize texture registers with default values
 		void init(u8 index);
 

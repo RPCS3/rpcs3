@@ -6,79 +6,79 @@
 #include "Emu/RSX/GCM.h"
 
 
-D3D12_BLEND_OP get_blend_op(u16 op)
+D3D12_BLEND_OP get_blend_op(rsx::blend_equation op)
 {
 	switch (op)
 	{
-	case CELL_GCM_FUNC_ADD: return D3D12_BLEND_OP_ADD;
-	case CELL_GCM_FUNC_SUBTRACT: return D3D12_BLEND_OP_SUBTRACT;
-	case CELL_GCM_FUNC_REVERSE_SUBTRACT: return D3D12_BLEND_OP_REV_SUBTRACT;
-	case CELL_GCM_MIN: return D3D12_BLEND_OP_MIN;
-	case CELL_GCM_MAX: return D3D12_BLEND_OP_MAX;
-	case CELL_GCM_FUNC_ADD_SIGNED:
-	case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
-	case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
+	case rsx::blend_equation::add: return D3D12_BLEND_OP_ADD;
+	case rsx::blend_equation::substract: return D3D12_BLEND_OP_SUBTRACT;
+	case rsx::blend_equation::reverse_substract: return D3D12_BLEND_OP_REV_SUBTRACT;
+	case rsx::blend_equation::min: return D3D12_BLEND_OP_MIN;
+	case rsx::blend_equation::max: return D3D12_BLEND_OP_MAX;
+	case rsx::blend_equation::add_signed:
+	case rsx::blend_equation::reverse_add_signed:
+	case rsx::blend_equation::reverse_substract_signed:
 		break;
 	}
 	throw EXCEPTION("Invalid or unsupported blend op (0x%x)", op);
 }
 
-D3D12_BLEND get_blend_factor(u16 factor)
+D3D12_BLEND get_blend_factor(rsx::blend_factor factor)
 {
 	switch (factor)
 	{
-	case CELL_GCM_ZERO: return D3D12_BLEND_ZERO;
-	case CELL_GCM_ONE: return D3D12_BLEND_ONE;
-	case CELL_GCM_SRC_COLOR: return D3D12_BLEND_SRC_COLOR;
-	case CELL_GCM_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_COLOR;
-	case CELL_GCM_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
-	case CELL_GCM_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
-	case CELL_GCM_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
-	case CELL_GCM_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
-	case CELL_GCM_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
-	case CELL_GCM_ONE_MINUS_DST_COLOR: return D3D12_BLEND_INV_DEST_COLOR;
-	case CELL_GCM_SRC_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
-	case CELL_GCM_CONSTANT_COLOR:
-	case CELL_GCM_CONSTANT_ALPHA:
+	case rsx::blend_factor::zero: return D3D12_BLEND_ZERO;
+	case rsx::blend_factor::one: return D3D12_BLEND_ONE;
+	case rsx::blend_factor::src_color: return D3D12_BLEND_SRC_COLOR;
+	case rsx::blend_factor::one_minus_src_color: return D3D12_BLEND_INV_SRC_COLOR;
+	case rsx::blend_factor::src_alpha: return D3D12_BLEND_SRC_ALPHA;
+	case rsx::blend_factor::one_minus_src_alpha: return D3D12_BLEND_INV_SRC_ALPHA;
+	case rsx::blend_factor::dst_alpha: return D3D12_BLEND_DEST_ALPHA;
+	case rsx::blend_factor::one_minus_dst_alpha: return D3D12_BLEND_INV_DEST_ALPHA;
+	case rsx::blend_factor::dst_color: return D3D12_BLEND_DEST_COLOR;
+	case rsx::blend_factor::one_minus_dst_color: return D3D12_BLEND_INV_DEST_COLOR;
+	case rsx::blend_factor::src_alpha_saturate: return D3D12_BLEND_SRC_ALPHA_SAT;
+	case rsx::blend_factor::constant_color:
+	case rsx::blend_factor::constant_alpha:
 	{
-		LOG_ERROR(RSX,"Constant blend factor not supported. Using ONE instead");
+		LOG_ERROR(RSX, "Constant blend factor not supported. Using ONE instead");
 		return D3D12_BLEND_ONE;
 	}
-	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
-	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: 
+	case rsx::blend_factor::one_minus_constant_color:
+	case rsx::blend_factor::one_minus_constant_alpha:
 	{
-		LOG_ERROR(RSX,"Inv Constant blend factor not supported. Using ZERO instead");
+		LOG_ERROR(RSX, "Inv Constant blend factor not supported. Using ZERO instead");
 		return D3D12_BLEND_ZERO;
 	}
 	}
 	throw EXCEPTION("Invalid blend factor (0x%x)", factor);
 }
 
-D3D12_BLEND get_blend_factor_alpha(u16 factor)
+D3D12_BLEND get_blend_factor_alpha(rsx::blend_factor factor)
 {
 	switch (factor)
 	{
-	case CELL_GCM_ZERO: return D3D12_BLEND_ZERO;
-	case CELL_GCM_ONE: return D3D12_BLEND_ONE;
-	case CELL_GCM_SRC_COLOR: return D3D12_BLEND_SRC_ALPHA;
-	case CELL_GCM_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_ALPHA;
-	case CELL_GCM_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
-	case CELL_GCM_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
-	case CELL_GCM_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
-	case CELL_GCM_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
-	case CELL_GCM_DST_COLOR: return D3D12_BLEND_DEST_ALPHA;
-	case CELL_GCM_ONE_MINUS_DST_COLOR: return D3D12_BLEND_INV_DEST_ALPHA;
-	case CELL_GCM_SRC_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
-	case CELL_GCM_CONSTANT_COLOR:
-	case CELL_GCM_CONSTANT_ALPHA:
+	case rsx::blend_factor::zero: return D3D12_BLEND_ZERO;
+	case rsx::blend_factor::one: return D3D12_BLEND_ONE;
+	case rsx::blend_factor::src_color: return D3D12_BLEND_SRC_ALPHA;
+	case rsx::blend_factor::one_minus_src_color: return D3D12_BLEND_INV_SRC_ALPHA;
+	case rsx::blend_factor::src_alpha: return D3D12_BLEND_SRC_ALPHA;
+	case rsx::blend_factor::one_minus_src_alpha: return D3D12_BLEND_INV_SRC_ALPHA;
+	case rsx::blend_factor::dst_alpha: return D3D12_BLEND_DEST_ALPHA;
+	case rsx::blend_factor::one_minus_dst_alpha: return D3D12_BLEND_INV_DEST_ALPHA;
+	case rsx::blend_factor::dst_color: return D3D12_BLEND_DEST_ALPHA;
+	case rsx::blend_factor::one_minus_dst_color: return D3D12_BLEND_INV_DEST_ALPHA;
+	case rsx::blend_factor::src_alpha_saturate: return D3D12_BLEND_SRC_ALPHA_SAT;
+	case rsx::blend_factor::constant_color:
+	case rsx::blend_factor::constant_alpha:
 	{
-		LOG_ERROR(RSX,"Constant blend factor not supported. Using ONE instead");
+		LOG_ERROR(RSX, "Constant blend factor not supported. Using ONE instead");
 		return D3D12_BLEND_ONE;
 	}
-	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
-	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: 
+	case rsx::blend_factor::one_minus_constant_color:
+	case rsx::blend_factor::one_minus_constant_alpha:
 	{
-		LOG_ERROR(RSX,"Inv Constant blend factor not supported. Using ZERO instead");
+		LOG_ERROR(RSX, "Inv Constant blend factor not supported. Using ZERO instead");
 		return D3D12_BLEND_ZERO;
 	}
 	}
@@ -88,25 +88,25 @@ D3D12_BLEND get_blend_factor_alpha(u16 factor)
 /**
 * Convert GCM logic op code to D3D12 one
 */
-D3D12_LOGIC_OP get_logic_op(u32 op)
+D3D12_LOGIC_OP get_logic_op(rsx::logic_op op)
 {
 	switch (op)
 	{
-	case CELL_GCM_CLEAR: return D3D12_LOGIC_OP_CLEAR;
-	case CELL_GCM_AND: return D3D12_LOGIC_OP_AND;
-	case CELL_GCM_AND_REVERSE: return D3D12_LOGIC_OP_AND_REVERSE;
-	case CELL_GCM_COPY: return D3D12_LOGIC_OP_COPY;
-	case CELL_GCM_AND_INVERTED: return D3D12_LOGIC_OP_AND_INVERTED;
-	case CELL_GCM_NOOP: return D3D12_LOGIC_OP_NOOP;
-	case CELL_GCM_XOR: return D3D12_LOGIC_OP_XOR;
-	case CELL_GCM_OR: return D3D12_LOGIC_OP_OR;
-	case CELL_GCM_NOR: return D3D12_LOGIC_OP_NOR;
-	case CELL_GCM_EQUIV: return D3D12_LOGIC_OP_EQUIV;
-	case CELL_GCM_INVERT: return D3D12_LOGIC_OP_INVERT;
-	case CELL_GCM_OR_REVERSE: return D3D12_LOGIC_OP_OR_REVERSE;
-	case CELL_GCM_COPY_INVERTED: return D3D12_LOGIC_OP_COPY_INVERTED;
-	case CELL_GCM_OR_INVERTED: return D3D12_LOGIC_OP_OR_INVERTED;
-	case CELL_GCM_NAND: return D3D12_LOGIC_OP_NAND;
+	case rsx::logic_op::logic_clear: return D3D12_LOGIC_OP_CLEAR;
+	case rsx::logic_op::logic_and: return D3D12_LOGIC_OP_AND;
+	case rsx::logic_op::logic_and_reverse: return D3D12_LOGIC_OP_AND_REVERSE;
+	case rsx::logic_op::logic_copy: return D3D12_LOGIC_OP_COPY;
+	case rsx::logic_op::logic_and_inverted: return D3D12_LOGIC_OP_AND_INVERTED;
+	case rsx::logic_op::logic_noop: return D3D12_LOGIC_OP_NOOP;
+	case rsx::logic_op::logic_xor: return D3D12_LOGIC_OP_XOR;
+	case rsx::logic_op::logic_or: return D3D12_LOGIC_OP_OR;
+	case rsx::logic_op::logic_nor: return D3D12_LOGIC_OP_NOR;
+	case rsx::logic_op::logic_equiv: return D3D12_LOGIC_OP_EQUIV;
+	case rsx::logic_op::logic_invert: return D3D12_LOGIC_OP_INVERT;
+	case rsx::logic_op::logic_or_reverse: return D3D12_LOGIC_OP_OR_REVERSE;
+	case rsx::logic_op::logic_copy_inverted: return D3D12_LOGIC_OP_COPY_INVERTED;
+	case rsx::logic_op::logic_or_inverted: return D3D12_LOGIC_OP_OR_INVERTED;
+	case rsx::logic_op::logic_nand: return D3D12_LOGIC_OP_NAND;
 	}
 	throw EXCEPTION("Invalid logic op (0x%x)", op);
 }
@@ -114,34 +114,34 @@ D3D12_LOGIC_OP get_logic_op(u32 op)
 /**
 * Convert GCM stencil op code to D3D12 one
 */
-D3D12_STENCIL_OP get_stencil_op(u32 op)
+D3D12_STENCIL_OP get_stencil_op(rsx::stencil_op op)
 {
 	switch (op)
 	{
-	case CELL_GCM_KEEP: return D3D12_STENCIL_OP_KEEP;
-	case CELL_GCM_ZERO: return D3D12_STENCIL_OP_ZERO;
-	case CELL_GCM_REPLACE: return D3D12_STENCIL_OP_REPLACE;
-	case CELL_GCM_INCR: return D3D12_STENCIL_OP_INCR_SAT;
-	case CELL_GCM_DECR: return D3D12_STENCIL_OP_DECR_SAT;
-	case CELL_GCM_INVERT: return D3D12_STENCIL_OP_INVERT;
-	case CELL_GCM_INCR_WRAP: return D3D12_STENCIL_OP_INCR;
-	case CELL_GCM_DECR_WRAP: return D3D12_STENCIL_OP_DECR;
+	case rsx::stencil_op::keep: return D3D12_STENCIL_OP_KEEP;
+	case rsx::stencil_op::zero: return D3D12_STENCIL_OP_ZERO;
+	case rsx::stencil_op::replace: return D3D12_STENCIL_OP_REPLACE;
+	case rsx::stencil_op::incr: return D3D12_STENCIL_OP_INCR_SAT;
+	case rsx::stencil_op::decr: return D3D12_STENCIL_OP_DECR_SAT;
+	case rsx::stencil_op::invert: return D3D12_STENCIL_OP_INVERT;
+	case rsx::stencil_op::incr_wrap: return D3D12_STENCIL_OP_INCR;
+	case rsx::stencil_op::decr_wrap: return D3D12_STENCIL_OP_DECR;
 	}
 	throw EXCEPTION("Invalid stencil op (0x%x)", op);
 }
 
-D3D12_COMPARISON_FUNC get_compare_func(u32 op)
+D3D12_COMPARISON_FUNC get_compare_func(rsx::comparaison_function op)
 {
 	switch (op)
 	{
-	case CELL_GCM_NEVER: return D3D12_COMPARISON_FUNC_NEVER;
-	case CELL_GCM_LESS: return D3D12_COMPARISON_FUNC_LESS;
-	case CELL_GCM_EQUAL: return D3D12_COMPARISON_FUNC_EQUAL;
-	case CELL_GCM_LEQUAL: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	case CELL_GCM_GREATER: return D3D12_COMPARISON_FUNC_GREATER;
-	case CELL_GCM_NOTEQUAL: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-	case CELL_GCM_GEQUAL: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-	case CELL_GCM_ALWAYS: return D3D12_COMPARISON_FUNC_ALWAYS;
+	case rsx::comparaison_function::never: return D3D12_COMPARISON_FUNC_NEVER;
+	case rsx::comparaison_function::less: return D3D12_COMPARISON_FUNC_LESS;
+	case rsx::comparaison_function::equal: return D3D12_COMPARISON_FUNC_EQUAL;
+	case rsx::comparaison_function::less_or_equal: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case rsx::comparaison_function::greater: return D3D12_COMPARISON_FUNC_GREATER;
+	case rsx::comparaison_function::not_equal: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case rsx::comparaison_function::greater_or_equal: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case rsx::comparaison_function::always: return D3D12_COMPARISON_FUNC_ALWAYS;
 	}
 	throw EXCEPTION("Invalid or unsupported compare func (0x%x)", op);
 }
@@ -371,24 +371,23 @@ DXGI_FORMAT get_depth_samplable_surface_format(rsx::surface_depth_format format)
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-BOOL get_front_face_ccw(u32 ffv)
+BOOL get_front_face_ccw(rsx::front_face ffv)
 {
 	switch (ffv)
 	{
-	default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
-	case CELL_GCM_CW: return FALSE;
-	case CELL_GCM_CCW: return TRUE;
+	case rsx::front_face::cw: return FALSE;
+	case rsx::front_face::ccw: return TRUE;
 	}
 	throw EXCEPTION("Invalid front face value (0x%x)", ffv);
 }
 
-D3D12_CULL_MODE get_cull_face(u32 cfv) 
+D3D12_CULL_MODE get_cull_face(rsx::cull_face cfv)
 {
 	switch (cfv)
 	{
-	case CELL_GCM_FRONT: return D3D12_CULL_MODE_FRONT;
-	case CELL_GCM_BACK:  return D3D12_CULL_MODE_BACK;
-	default: return D3D12_CULL_MODE_NONE;
+		case rsx::cull_face::front: return D3D12_CULL_MODE_FRONT;
+		case rsx::cull_face::back: return D3D12_CULL_MODE_BACK;
+		case rsx::cull_face::front_and_back: return D3D12_CULL_MODE_NONE;
 	}
 	throw EXCEPTION("Invalid cull face value (0x%x)", cfv);
 }
@@ -489,13 +488,13 @@ DXGI_FORMAT get_vertex_attribute_format(rsx::vertex_base_type type, u8 size)
 	throw EXCEPTION("Invalid or unsupported type or size (type=0x%x, size=0x%x)", type, size);
 }
 
-D3D12_RECT get_scissor(u32 horizontal, u32 vertical)
+D3D12_RECT get_scissor(u16 clip_origin_x, u16 clip_origin_y, u16 clip_w, u16 clip_h)
 {
 	return{
-		horizontal & 0xFFFF,
-		vertical & 0xFFFF,
-		(horizontal & 0xFFFF) + (horizontal >> 16),
-		(vertical & 0xFFFF) + (vertical >> 16)
+		clip_origin_x,
+		clip_origin_y,
+		clip_w,
+		clip_h,
 	};
 }
 #endif

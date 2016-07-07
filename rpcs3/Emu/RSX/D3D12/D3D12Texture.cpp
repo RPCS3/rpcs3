@@ -6,6 +6,7 @@
 #include "../Common/TextureUtils.h"
 // For clarity this code deals with texture but belongs to D3D12GSRender class
 #include "D3D12Formats.h"
+#include "../rsx_methods.h"
 
 namespace
 {
@@ -174,7 +175,7 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			continue;
 		m_textures_dirty[i] = false;
 
-		if (!textures[i].enabled())
+		if (!rsx::method_registers.fragment_textures[i].enabled())
 		{
 			// Now fill remaining texture slots with dummy texture/sampler
 
@@ -205,13 +206,13 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 
 			continue;
 		}
-		size_t w = textures[i].width(), h = textures[i].height();
+		size_t w = rsx::method_registers.fragment_textures[i].width(), h = rsx::method_registers.fragment_textures[i].height();
 //		if (!w || !h) continue;
 
-		const u32 texaddr = rsx::get_address(textures[i].offset(), textures[i].location());
+		const u32 texaddr = rsx::get_address(rsx::method_registers.fragment_textures[i].offset(), rsx::method_registers.fragment_textures[i].location());
 
-		const u8 format = textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-		bool is_swizzled = !(textures[i].format() & CELL_GCM_TEXTURE_LN);
+		const u8 format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+		bool is_swizzled = !(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_LN);
 
 		ID3D12Resource *vram_texture;
 		std::pair<texture_entry, ComPtr<ID3D12Resource> > *cached_texture = m_texture_cache.find_data_if_available(texaddr);
@@ -225,13 +226,13 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 		{
 			is_depth_stencil_texture = true;
 		}
-		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].depth(), textures[i].get_exact_mipmap_count())))
+		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, rsx::method_registers.fragment_textures[i].depth(), rsx::method_registers.fragment_textures[i].get_exact_mipmap_count())))
 		{
 			if (cached_texture->first.m_is_dirty)
 			{
 				command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(cached_texture->second.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
-				update_existing_texture(textures[i], command_list, m_buffer_data, cached_texture->second.Get());
-				m_texture_cache.protect_data(texaddr, texaddr, get_texture_size(textures[i]));
+				update_existing_texture(rsx::method_registers.fragment_textures[i], command_list, m_buffer_data, cached_texture->second.Get());
+				m_texture_cache.protect_data(texaddr, texaddr, get_texture_size(rsx::method_registers.fragment_textures[i]));
 			}
 			vram_texture = cached_texture->second.Get();
 		}
@@ -239,14 +240,14 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 		{
 			if (cached_texture != nullptr)
 				get_current_resource_storage().dirty_textures.push_back(m_texture_cache.remove_from_cache(texaddr));
-			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), command_list, m_buffer_data);
+			ComPtr<ID3D12Resource> tex = upload_single_texture(rsx::method_registers.fragment_textures[i], m_device.Get(), command_list, m_buffer_data);
 			std::wstring name = L"texture_@" + std::to_wstring(texaddr);
 			tex->SetName(name.c_str());
 			vram_texture = tex.Get();
-			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].depth(), textures[i].get_exact_mipmap_count(), tex);
+			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(rsx::method_registers.fragment_textures[i]), format, w, h, rsx::method_registers.fragment_textures[i].depth(), rsx::method_registers.fragment_textures[i].get_exact_mipmap_count(), tex);
 		}
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = get_srv_descriptor_with_dimensions(textures[i]);
+		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = get_srv_descriptor_with_dimensions(rsx::method_registers.fragment_textures[i]);
 		shared_resource_view_desc.Format = get_texture_format(format);
 
 		switch (format)
@@ -339,10 +340,10 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 		{
 
 
-			u8 remap_a = textures[i].remap() & 0x3;
-			u8 remap_r = (textures[i].remap() >> 2) & 0x3;
-			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
-			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
+			u8 remap_a = rsx::method_registers.fragment_textures[i].remap() & 0x3;
+			u8 remap_r = (rsx::method_registers.fragment_textures[i].remap() >> 2) & 0x3;
+			u8 remap_g = (rsx::method_registers.fragment_textures[i].remap() >> 4) & 0x3;
+			u8 remap_b = (rsx::method_registers.fragment_textures[i].remap() >> 6) & 0x3;
 
 			if (is_render_target)
 			{
@@ -399,7 +400,7 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			.Offset((UINT)i, m_descriptor_stride_srv_cbv_uav)
 			);
 
-		m_device->CreateSampler(&get_sampler_desc(textures[i]),
+		m_device->CreateSampler(&get_sampler_desc(rsx::method_registers.fragment_textures[i]),
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(m_current_sampler_descriptors->GetCPUDescriptorHandleForHeapStart())
 			.Offset((UINT)i, m_descriptor_stride_samplers));
 	}

@@ -61,8 +61,6 @@ private:
 	data_cache m_texture_cache;
 	bool invalidate_address(u32 addr);
 
-	rsx::surface_info m_surface;
-
 	RSXVertexProgram m_vertex_program;
 	RSXFragmentProgram m_fragment_program;
 	PipelineStateObjectCache m_pso_cache;

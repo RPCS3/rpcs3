@@ -78,10 +78,8 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 
 void GLGSRender::init_buffers(bool skip_reading)
 {
-	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
-
-	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
-	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
+	u16 clip_horizontal = rsx::method_registers.surface_clip_width();
+	u16 clip_vertical = rsx::method_registers.surface_clip_height();
 
 	set_viewport();
 
@@ -97,8 +95,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 		LOG_NOTICE(RSX, "render to -> 0x%x", get_color_surface_addresses()[0]);
 	}
 
-	m_rtts.prepare_render_target(nullptr, surface_format, clip_horizontal, clip_vertical,
-		rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
+	m_rtts.prepare_render_target(nullptr, rsx::method_registers.surface_color(), rsx::method_registers.surface_depth_fmt(),  clip_horizontal, clip_vertical,
+		rsx::method_registers.surface_color_target(),
 		get_color_surface_addresses(), get_zeta_surface_address());
 
 	draw_fbo.recreate();
@@ -119,7 +117,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	__glcheck draw_fbo.check();
 
 	//HACK: read_buffer shouldn't be there
-	switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+	switch (rsx::method_registers.surface_color_target())
 	{
 	case rsx::surface_target::none: break;
 
@@ -152,20 +150,49 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 std::array<std::vector<gsl::byte>, 4> GLGSRender::copy_render_targets_to_memory()
 {
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-	rsx::surface_info surface = {};
-	surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
-	return m_rtts.get_render_targets_data(surface.color_format, clip_w, clip_h);
+	int clip_w = rsx::method_registers.surface_clip_width();
+	int clip_h = rsx::method_registers.surface_clip_height();
+	return m_rtts.get_render_targets_data(rsx::method_registers.surface_color(), clip_w, clip_h);
 }
 
 std::array<std::vector<gsl::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_memory()
 {
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-	rsx::surface_info surface = {};
-	surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
-	return m_rtts.get_depth_stencil_data(surface.depth_format, clip_w, clip_h);
+	int clip_w = rsx::method_registers.surface_clip_width();
+	int clip_h = rsx::method_registers.surface_clip_height();
+	return m_rtts.get_depth_stencil_data(rsx::method_registers.surface_depth_fmt(), clip_w, clip_h);
+}
+
+namespace
+{
+	std::array<u32, 4> get_offsets()
+	{
+		return{
+			rsx::method_registers.surface_a_offset(),
+			rsx::method_registers.surface_b_offset(),
+			rsx::method_registers.surface_c_offset(),
+			rsx::method_registers.surface_d_offset(),
+		};
+	}
+
+	std::array<u32, 4> get_locations()
+	{
+		return{
+			rsx::method_registers.surface_a_dma(),
+			rsx::method_registers.surface_b_dma(),
+			rsx::method_registers.surface_c_dma(),
+			rsx::method_registers.surface_d_dma(),
+		};
+	}
+
+	std::array<u32, 4> get_pitchs()
+	{
+		return{
+			rsx::method_registers.surface_a_pitch(),
+			rsx::method_registers.surface_b_pitch(),
+			rsx::method_registers.surface_c_pitch(),
+			rsx::method_registers.surface_d_pitch(),
+		};
+	}
 }
 
 void GLGSRender::read_buffers()
@@ -181,14 +208,18 @@ void GLGSRender::read_buffers()
 
 		auto read_color_buffers = [&](int index, int count)
 		{
-			u32 width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-			u32 height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+			u32 width = rsx::method_registers.surface_clip_width();
+			u32 height = rsx::method_registers.surface_clip_height();
+
+			const std::array<u32, 4> offsets = get_offsets();
+			const std::array<u32, 4 > locations = get_locations();
+			const std::array<u32, 4 > pitchs = get_pitchs();
 
 			for (int i = index; i < index + count; ++i)
 			{
-				u32 offset = rsx::method_registers[rsx::internals::mr_color_offset[i]];
-				u32 location = rsx::method_registers[rsx::internals::mr_color_dma[i]];
-				u32 pitch = rsx::method_registers[rsx::internals::mr_color_pitch[i]];
+				u32 offset = offsets[i];
+				u32 location = locations[i];
+				u32 pitch = pitchs[i];
 
 				if (pitch <= 64)
 					continue;
@@ -219,7 +250,7 @@ void GLGSRender::read_buffers()
 			}
 		};
 
-		switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+		switch (rsx::method_registers.surface_color_target())
 		{
 		case rsx::surface_target::none:
 			break;
@@ -249,12 +280,12 @@ void GLGSRender::read_buffers()
 	if (g_cfg_rsx_read_depth_buffer)
 	{
 		//TODO: use pitch
-		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
+		u32 pitch = rsx::method_registers.surface_z_pitch();
 
 		if (pitch <= 64)
 			return;
 
-		u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+		u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
 		bool in_cache = m_gl_texture_cache.explicit_writeback((*std::get<1>(m_rtts.m_bound_depth_stencil)), depth_address, pitch);
 
 		if (in_cache)
@@ -269,7 +300,7 @@ void GLGSRender::read_buffers()
 		__glcheck pbo_depth.create(m_surface.width * m_surface.height * pixel_size);
 		__glcheck pbo_depth.map([&](GLubyte* pixels)
 		{
-			u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+			u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
 
 			if (m_surface.depth_format == rsx::surface_depth_format::z16)
 			{
@@ -309,14 +340,18 @@ void GLGSRender::write_buffers()
 
 		auto write_color_buffers = [&](int index, int count)
 		{
-			u32 width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-			u32 height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+			u32 width = rsx::method_registers.surface_clip_width();
+			u32 height = rsx::method_registers.surface_clip_height();
+
+			std::array<u32, 4> offsets = get_offsets();
+			const std::array<u32, 4 > locations = get_locations();
+			const std::array<u32, 4 > pitchs = get_pitchs();
 
 			for (int i = index; i < index + count; ++i)
 			{
-				u32 offset = rsx::method_registers[rsx::internals::mr_color_offset[i]];
-				u32 location = rsx::method_registers[rsx::internals::mr_color_dma[i]];
-				u32 pitch = rsx::method_registers[rsx::internals::mr_color_pitch[i]];
+				u32 offset = offsets[i];
+				u32 location = locations[i];
+				u32 pitch = pitchs[i];
 
 				if (pitch <= 64)
 					continue;
@@ -334,7 +369,7 @@ void GLGSRender::write_buffers()
 			}
 		};
 
-		switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+		switch (rsx::method_registers.surface_color_target())
 		{
 		case rsx::surface_target::none:
 			break;
@@ -364,13 +399,13 @@ void GLGSRender::write_buffers()
 	if (g_cfg_rsx_write_depth_buffer)
 	{
 		//TODO: use pitch
-		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
+		u32 pitch = rsx::method_registers.surface_z_pitch();
 
 		if (pitch <= 64)
 			return;
 
 		auto depth_format = rsx::internals::surface_depth_format_to_gl(m_surface.depth_format);
-		u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+		u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
 		u32 range = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height() * 2;
 
 		if (m_surface.depth_format != rsx::surface_depth_format::z16) range *= 2;
