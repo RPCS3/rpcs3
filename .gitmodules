@@ -23,12 +23,6 @@
 	path = 3rdparty/libpng
 	url = https://github.com/DHrpcs3/libpng
 	ignore = dirty
-[submodule "Vulkan/glslang"]
-	path = Vulkan/glslang
-	url = https://github.com/KhronosGroup/glslang.git
-[submodule "Vulkan/Vulkan-LoaderAndValidationLayers"]
-	path = Vulkan/Vulkan-LoaderAndValidationLayers
-	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
 [submodule "Utilities/yaml-cpp"]
 	path = Utilities/yaml-cpp
 	url = https://github.com/DHrpcs3/yaml-cpp

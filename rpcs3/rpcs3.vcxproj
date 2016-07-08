@@ -107,7 +107,7 @@
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>GLGSRender.lib;rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <BaseAddress>0x10000</BaseAddress>
@@ -183,20 +183,11 @@
     <ClInclude Include="XInputPadHandler.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D3D12GSRender.vcxproj">
-      <Project>{fac9b17b-f4b8-4b75-8aeb-c8c7cb92b078}</Project>
-    </ProjectReference>
     <ProjectReference Include="emucore.vcxproj">
       <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
     </ProjectReference>
-    <ProjectReference Include="GLGSRender.vcxproj">
-      <Project>{3384223a-6d97-4799-9862-359f85312892}</Project>
-    </ProjectReference>
     <ProjectReference Include="OpenAL.vcxproj">
       <Project>{30a05c4d-f5fd-421c-a864-17a64bdeaa75}</Project>
-    </ProjectReference>
-    <ProjectReference Include="VKGSRender.vcxproj">
-      <Project>{3ee5f075-b546-42c4-b6a8-e3ccef38b78d}</Project>
     </ProjectReference>
     <ProjectReference Include="XAudio.vcxproj">
       <Project>{78cb2f39-b809-4a06-8329-8c0a19119d3d}</Project>

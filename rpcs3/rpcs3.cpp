@@ -33,11 +33,7 @@
 #include "Emu/RSX/GL/GLGSRender.h"
 #include "Emu/Audio/Null/NullAudioThread.h"
 #include "Emu/Audio/AL/OpenALThread.h"
-#ifdef _MSC_VER
-#include "Emu/RSX/D3D12/D3D12GSRender.h"
-#endif
 #ifdef _WIN32
-#include "Emu/RSX/VK/VKGSRender.h"
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #include <wx/msw/wrapwin.h>
 #endif
@@ -94,12 +90,6 @@ cfg::map_entry<std::function<std::shared_ptr<GSRender>()>> g_cfg_gs_render(cfg::
 {
 	{ "Null", PURE_EXPR(std::make_shared<NullGSRender>()) },
 	{ "OpenGL", PURE_EXPR(std::make_shared<GLGSRender>()) },
-#ifdef _MSC_VER
-	{ "D3D12", PURE_EXPR(std::make_shared<D3D12GSRender>()) },
-#endif
-#ifdef _WIN32
-	{ "Vulkan", PURE_EXPR(std::make_shared<VKGSRender>()) },
-#endif
 });
 
 cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render(cfg::root.audio, "Renderer", "OpenAL",

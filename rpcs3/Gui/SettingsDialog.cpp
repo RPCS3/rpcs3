@@ -4,14 +4,6 @@
 #include "Loader/ELF.h"
 #include "Emu/System.h"
 
-#ifdef _MSC_VER
-#include <Windows.h>
-#undef GetHwnd
-#include <d3d12.h>
-#include <wrl/client.h>
-#include <dxgi1_4.h>
-#endif
-
 #include "SettingsDialog.h"
 
 #include <set>
@@ -258,7 +250,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
-	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter");
 	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Resolution");
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Aspect ratio");
 	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Frame limit");
@@ -283,7 +274,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	wxRadioBox* rbox_ppu_decoder;
 	wxRadioBox* rbox_spu_decoder;
 	wxComboBox* cbox_gs_render = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_gs_d3d_adapter = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_resolution = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_aspect = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_frame_limit = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
@@ -404,35 +394,12 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at System Call" }, chbox_dbg_ap_systemcall));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at Function Call" }, chbox_dbg_ap_functioncall));
 
-#ifdef _MSC_VER
-	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
-
-	if (SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory))))
-	{
-		Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
-
-		for (UINT id = 0; dxgi_factory->EnumAdapters(id, adapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; id++)
-		{
-			DXGI_ADAPTER_DESC desc;
-			adapter->GetDesc(&desc);
-			cbox_gs_d3d_adapter->Append(desc.Description);
-		}
-
-		pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "D3D12", "Adapter" }, cbox_gs_d3d_adapter));
-	}
-	else
-#endif
-	{
-		cbox_gs_d3d_adapter->Enable(false);
-	}
-
 	// Core
 	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_core_lle->Add(s_module_search_box, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_gs_d3d_adapter->Add(cbox_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_aspect->Add(cbox_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_frame_limit->Add(cbox_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -464,7 +431,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	// Graphics
 	s_subpanel_graphics1->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(s_round_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
