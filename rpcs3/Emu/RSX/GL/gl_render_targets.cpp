@@ -187,13 +187,13 @@ void GLGSRender::read_buffers()
 			for (int i = index; i < index + count; ++i)
 			{
 				u32 offset = rsx::method_registers[rsx::internals::mr_color_offset[i]];
-				u32 location = rsx::method_registers[rsx::internals::mr_color_dma[i]];
+				u32 dma = rsx::method_registers[rsx::internals::mr_color_dma[i]];
 				u32 pitch = rsx::method_registers[rsx::internals::mr_color_pitch[i]];
 
 				if (pitch <= 64)
 					continue;
 
-				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+				rsx::tiled_region color_buffer = get_tiled_address_dma(offset, dma);
 				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
 
 				bool success = m_gl_texture_cache.explicit_writeback((*std::get<1>(m_rtts.m_bound_render_targets[i])), texaddr, pitch);
@@ -254,7 +254,7 @@ void GLGSRender::read_buffers()
 		if (pitch <= 64)
 			return;
 
-		u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+		u32 depth_address = rsx::get_address_dma(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
 		bool in_cache = m_gl_texture_cache.explicit_writeback((*std::get<1>(m_rtts.m_bound_depth_stencil)), depth_address, pitch);
 
 		if (in_cache)
@@ -269,7 +269,7 @@ void GLGSRender::read_buffers()
 		__glcheck pbo_depth.create(m_surface.width * m_surface.height * pixel_size);
 		__glcheck pbo_depth.map([&](GLubyte* pixels)
 		{
-			u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+			u32 depth_address = rsx::get_address_dma(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
 
 			if (m_surface.depth_format == rsx::surface_depth_format::z16)
 			{
@@ -315,13 +315,13 @@ void GLGSRender::write_buffers()
 			for (int i = index; i < index + count; ++i)
 			{
 				u32 offset = rsx::method_registers[rsx::internals::mr_color_offset[i]];
-				u32 location = rsx::method_registers[rsx::internals::mr_color_dma[i]];
+				u32 dma = rsx::method_registers[rsx::internals::mr_color_dma[i]];
 				u32 pitch = rsx::method_registers[rsx::internals::mr_color_pitch[i]];
 
 				if (pitch <= 64)
 					continue;
 
-				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+				rsx::tiled_region color_buffer = get_tiled_address_dma(offset, dma);
 				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
 				u32 range = pitch * height;
 
@@ -370,7 +370,7 @@ void GLGSRender::write_buffers()
 			return;
 
 		auto depth_format = rsx::internals::surface_depth_format_to_gl(m_surface.depth_format);
-		u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+		u32 depth_address = rsx::get_address_dma(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
 		u32 range = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height() * 2;
 
 		if (m_surface.depth_format != rsx::surface_depth_format::z16) range *= 2;

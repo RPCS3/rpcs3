@@ -344,7 +344,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 		return;
 	}
 
-	const auto buffers = render->gcm_buffers;
+	const auto buffers = rsx::state.display_buffers;
 	if(!buffers)
 		return;
 
@@ -587,7 +587,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 	if (const auto render = fxm::get<GSRender>())
 	{
 		u32 realAddr;
-		if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
+		if (RSXIOMem.getRealAddr(rsx::state.context->control.get.load(), realAddr))
 		{
 			m_addr = realAddr;
 			t_addr->SetValue(wxString::Format("%08x", m_addr));
@@ -602,7 +602,7 @@ void RSXDebugger::GoToPut(wxCommandEvent& event)
 	if (const auto render = fxm::get<GSRender>())
 	{
 		u32 realAddr;
-		if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
+		if (RSXIOMem.getRealAddr(rsx::state.context->control.put.load(), realAddr))
 		{
 			m_addr = realAddr;
 			t_addr->SetValue(wxString::Format("%08x", m_addr));
@@ -678,15 +678,15 @@ void RSXDebugger::GetBuffers()
 		return;
 	}
 
+	if (!vm::check_addr(rsx::state.display_buffers.addr()))
+		return;
+
 	// Draw Buffers
 	// TODO: Currently it only supports color buffers
-	for (u32 bufferId=0; bufferId < render->gcm_buffers_count; bufferId++)
+	for (u32 bufferId=0; bufferId < rsx::state.display_buffers_count; bufferId++)
 	{
-		if(!vm::check_addr(render->gcm_buffers.addr()))
-			continue;
-
-		auto buffers = render->gcm_buffers;
-		u32 RSXbuffer_addr = render->local_mem_addr + buffers[bufferId].offset;
+		auto &buffers = rsx::state.display_buffers;
+		u32 RSXbuffer_addr = rsx::state.frame_buffer.addr() + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;

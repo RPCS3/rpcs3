@@ -34,6 +34,7 @@ namespace vm { using namespace ps3; }
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
+	state_t state;
 
 	std::string old_shaders_cache::shaders_cache::path_to_root()
 	{
@@ -97,27 +98,41 @@ namespace rsx
 		}
 	}
 
-	u32 get_address(u32 offset, u32 location)
+	u32 get_address(u32 offset, u8 location)
 	{
-		u32 res = 0;
-
 		switch (location)
 		{
-		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
-		{
-			//TODO: don't use not named constants like 0xC0000000
-			res = 0xC0000000 + offset;
-			break;
+			return rsx::state.frame_buffer.addr() + offset;
+
+		case CELL_GCM_LOCATION_MAIN:
+			//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
+			//{
+			//	_mm_mfence(); // probably doesn't have any effect on current implementation
+			//}
+
+			if (u32 result = RSXIOMem.RealAddr(offset))
+			{
+				return result;
+			}
+
+			throw EXCEPTION("%s(offset=0x%x, location=0x%x): RSXIO memory not mapped", __FUNCTION__, offset, location);
 		}
 
-		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
-		case CELL_GCM_LOCATION_MAIN:
+		throw EXCEPTION("%s(offset=0x%x, location=0x%x): Invalid location", __FUNCTION__, offset, location);
+	}
+
+	u32 get_address_dma(u32 offset, u32 dma)
+	{
+		switch (dma)
 		{
-			res = (u32)RSXIOMem.RealAddr(offset); // TODO: Error Check?
-			if (res == 0)
+		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
+			return rsx::state.frame_buffer.addr() + offset;
+
+		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
+			if (u32 result = RSXIOMem.RealAddr(offset))
 			{
-				throw EXCEPTION("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
+				return result;
 			}
 
 			//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
@@ -125,15 +140,31 @@ namespace rsx
 			//	_mm_mfence(); // probably doesn't have any effect on current implementation
 			//}
 
+			throw EXCEPTION("%s(offset=0x%x, dma=0x%x): RSXIO memory not mapped", __FUNCTION__, offset, dma);
+
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT:
+			return rsx::state.frame_buffer.ptr(&rsx::frame_buffer_t::reports).addr() + offset;
+
+		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
+			return rsx::state.context.ptr(&rsx::context_t::reports).addr() + offset;
+
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
+			return rsx::state.context.ptr(&rsx::context_t::notifies).addr() + offset;
+
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
+			//TODO
 			break;
-		}
-		default:
-		{
-			throw EXCEPTION("Invalid location (offset=0x%x, location=0x%x)", offset, location);
-		}
+
+		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
+		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
+			return rsx::state.context.ptr(&rsx::context_t::semaphores).addr() + offset;
+
+		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
+		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
+			return rsx::state.device.addr() + offset;
 		}
 
-		return res;
+		throw EXCEPTION("%s(offset=0x%x, dma=0x%x): Invalid dma", __FUNCTION__, offset, dma);
 	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
@@ -377,24 +408,24 @@ namespace rsx
 
 		reset();
 
-		last_flip_time = get_system_time() - 1000000;
+		rsx::state.last_flip_time = get_system_time() - 1000000;
 
 		scope_thread vblank("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
-			vblank_count = 0;
+			rsx::state.vblank_count = 0;
 
 			// TODO: exit condition
 			while (!Emu.IsStopped())
 			{
-				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
+				if (get_system_time() - start_time > rsx::state.vblank_count * 1000000 / 60)
 				{
-					vblank_count++;
+					rsx::state.vblank_count++;
 
-					if (vblank_handler)
+					if (rsx::state.vblank_handler)
 					{
-						Emu.GetCallbackManager().Async([func = vblank_handler](PPUThread& ppu)
+						Emu.GetCallbackManager().Async([func = rsx::state.vblank_handler](PPUThread& ppu)
 						{
 							func(ppu, 1);
 						});
@@ -403,17 +434,19 @@ namespace rsx
 					continue;
 				}
 
-				std::this_thread::sleep_for(1ms); // hack
+				std::this_thread::yield();
 			}
 		});
+
+		auto &ctrl = state.context->control;
 
 		// TODO: exit condition
 		while (true)
 		{
 			CHECK_EMU_STATUS;
 
-			const u32 get = ctrl->get;
-			const u32 put = ctrl->put;
+			const u32 get = ctrl.get;
+			const u32 put = ctrl.put;
 
 			if (put == get || !Emu.IsRunning())
 			{
@@ -428,7 +461,7 @@ namespace rsx
 			{
 				u32 offs = cmd & 0x1fffffff;
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				ctrl->get = offs;
+				ctrl.get = offs;
 				continue;
 			}
 			if (cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -436,7 +469,7 @@ namespace rsx
 				m_call_stack.push(get + 4);
 				u32 offs = cmd & ~3;
 				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				ctrl->get = offs;
+				ctrl.get = offs;
 				continue;
 			}
 			if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -444,13 +477,13 @@ namespace rsx
 				u32 get = m_call_stack.top();
 				m_call_stack.pop();
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-				ctrl->get = get;
+				ctrl.get = get;
 				continue;
 			}
 
 			if (cmd == 0) //nop
 			{
-				ctrl->get = get + 4;
+				ctrl.get = get + 4;
 				continue;
 			}
 
@@ -483,7 +516,7 @@ namespace rsx
 				}
 			}
 
-			ctrl->get = get + (count + 1) * 4;
+			ctrl.get = get + (count + 1) * 4;
 		}
 	}
 
@@ -576,7 +609,7 @@ namespace rsx
 	{
 		if (m_internal_tasks.empty())
 		{
-			std::this_thread::sleep_for(1ms);
+			std::this_thread::yield();
 		}
 		else
 		{
@@ -656,10 +689,10 @@ namespace rsx
 		};
 		return
 		{
-			rsx::get_address(offset_color[0], context_dma_color[0]),
-			rsx::get_address(offset_color[1], context_dma_color[1]),
-			rsx::get_address(offset_color[2], context_dma_color[2]),
-			rsx::get_address(offset_color[3], context_dma_color[3]),
+			context_dma_color[0] ? rsx::get_address_dma(offset_color[0], context_dma_color[0]) : 0,
+			context_dma_color[1] ? rsx::get_address_dma(offset_color[1], context_dma_color[1]) : 0,
+			context_dma_color[2] ? rsx::get_address_dma(offset_color[2], context_dma_color[2]) : 0,
+			context_dma_color[2] ? rsx::get_address_dma(offset_color[3], context_dma_color[3]) : 0,
 		};
 	}
 
@@ -667,7 +700,7 @@ namespace rsx
 	{
 		u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 		u32 offset_zeta = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
-		return rsx::get_address(offset_zeta, m_context_dma_z);
+		return offset_zeta ? rsx::get_address_dma(offset_zeta, m_context_dma_z) : 0;
 	}
 
 	RSXVertexProgram thread::get_current_vertex_program() const
@@ -923,9 +956,22 @@ namespace rsx
 
 		method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
 
-		method_registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
 		rsx::method_registers[NV4097_SET_TWO_SIDE_LIGHT_EN] = true;
 		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = CELL_GCM_ALWAYS;
+
+		method_registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
+		method_registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
+
+		method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		method_registers[NV309E_SET_CONTEXT_DMA_IMAGE] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+
+		method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		method_registers[NV4097_SET_CONTEXT_DMA_ZETA] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
 
 		// Reset vertex attrib array
 		for (int i = 0; i < limits::vertex_count; i++)
@@ -945,14 +991,8 @@ namespace rsx
 		}
 	}
 
-	void thread::init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
+	void thread::init()
 	{
-		ctrl = vm::_ptr<CellGcmControl>(ctrlAddress);
-		this->ioAddress = ioAddress;
-		this->ioSize = ioSize;
-		local_mem_addr = localAddress;
-		flip_status = 0;
-
 		m_used_gcm_commands.clear();
 
 		on_init_rsx();
@@ -961,7 +1001,7 @@ namespace rsx
 
 	GcmTileInfo *thread::find_tile(u32 offset, u32 location)
 	{
-		for (GcmTileInfo &tile : tiles)
+		for (GcmTileInfo &tile : state.unpacked_tiles)
 		{
 			if (!tile.binded || tile.location != location)
 			{
@@ -977,7 +1017,23 @@ namespace rsx
 		return nullptr;
 	}
 
-	tiled_region thread::get_tiled_address(u32 offset, u32 location)
+	tiled_region thread::get_tiled_address_dma(u32 offset, u32 dma)
+	{
+		u32 address = get_address_dma(offset, dma);
+
+		GcmTileInfo *tile = find_tile(offset, dma & 1);
+		u32 base = 0;
+
+		if (tile)
+		{
+			base = offset - tile->offset;
+			address = get_address_dma(tile->offset, dma);
+		}
+
+		return{ address, base, tile, (u8*)vm::base(address) };
+	}
+
+	tiled_region thread::get_tiled_address(u32 offset, u8 location)
 	{
 		u32 address = get_address(offset, location);
 

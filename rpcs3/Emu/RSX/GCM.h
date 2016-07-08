@@ -592,13 +592,22 @@ enum
 // GPU Class Handles
 enum
 {
+	CELL_GCM_CONTEXT_SURFACE2D = 0x313371C3,
+	CELL_GCM_CONTEXT_SWIZZLE2D = 0x31337A73,
+};
+
+enum
+{
 	CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER   = 0xFEED0000, // Local memory
 	CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER    = 0xFEED0001, // Main memory
-	CELL_GCM_CONTEXT_SURFACE2D                 = 0x313371C3,
-	CELL_GCM_CONTEXT_SWIZZLE2D                 = 0x31337A73,
 	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT  = 0x66626660,
 	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN  = 0xBAD68000,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 = 0x66604200,
 	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0         = 0x6660420F,
+	CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW          = 0x66606660,
+	CELL_GCM_CONTEXT_DMA_SEMAPHORE_R           = 0x66616661,
+	CELL_GCM_CONTEXT_DMA_DEVICE_RW             = 0x56616660,
+	CELL_GCM_CONTEXT_DMA_DEVICE_R              = 0x56616661
 };
 
 struct CellGcmControl
@@ -627,15 +636,7 @@ struct CellGcmContextData
 	vm::ps3::bptr<u32> begin;
 	vm::ps3::bptr<u32> end;
 	vm::ps3::bptr<u32> current;
-	vm::ps3::bptr<CellGcmContextCallback> callback;
-};
-
-struct gcmInfo
-{
-	u32 config_addr;
-	u32 context_addr;
-	u32 control_addr;
-	u32 label_addr;
+	vm::ps3::bpptr<CellGcmContextCallback> callback;
 };
 
 struct CellGcmSurface

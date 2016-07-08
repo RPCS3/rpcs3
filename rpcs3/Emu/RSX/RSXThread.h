@@ -87,6 +87,113 @@ namespace rsx
 		};
 	}
 
+	struct semaphore_t
+	{
+		be_t<u32> value;
+		be_t<u32> padding;
+		be_t<u64> timestamp;
+	};
+
+	struct notify_t
+	{
+		be_t<u64> timestamp;
+		be_t<u64> zero;
+	};
+
+	union device_t
+	{
+		u8 raw[0x1000];
+	};
+
+	union control_t;
+
+	using callback_t = s32(u32, u32);
+
+	union control_t
+	{
+		struct
+		{
+			vm::ps3::bptr<u32> begin;
+			vm::ps3::bptr<u32> end;
+			vm::ps3::bptr<u32> current;
+			vm::ps3::bpptr<callback_t> callback;
+
+			atomic_be_t<u32> put;
+			atomic_be_t<u32> get;
+			atomic_be_t<u32> ref;
+		};
+
+		//for gcm capability
+		struct
+		{
+			CellGcmContextData data;
+			CellGcmControl control;
+		};
+
+		u8 raw[0x1000];
+	};
+
+	union driver_info_t
+	{
+		struct
+		{
+			be_t<u32> version_driver;
+			be_t<u32> version_gpu;
+			be_t<u32> memory_size;
+			be_t<u32> hardware_channel;
+			be_t<u32> nvcore_frequency;
+			be_t<u32> memory_frequency;
+		};
+
+		u8 raw[0x4000];
+	};
+
+	struct context_t
+	{
+		control_t control;
+		driver_info_t driver_info;
+		semaphore_t semaphores[0x100];
+		notify_t notifies[0x40];
+		CellGcmReportData reports[0x800];
+	};
+
+	struct frame_buffer_t
+	{
+		CellGcmReportData reports[0x100000];
+	};
+
+	//TODO: separate gcm and rsx data
+	struct state_t
+	{
+		vm::ps3::ptr<device_t> device;
+		vm::ps3::ptr<context_t> context; //TODO: support for multiply contexts
+
+		vm::ps3::ptr<void(u32)> flip_handler = vm::null;
+		vm::ps3::ptr<void(u32)> user_handler = vm::null;
+		vm::ps3::ptr<void(u32)> vblank_handler = vm::null;
+
+		u64 last_flip_time;
+		u64 vblank_count;
+		u32 flip_status;
+		u32 flip_mode;
+		u32 debug_level;
+		u32 io_size;
+
+		vm::ps3::ptr<frame_buffer_t> frame_buffer;
+		u32 frame_buffer_size;
+
+		vm::ps3::ptr<CellGcmTileInfo> tiles;
+		vm::ps3::ptr<CellGcmZcullInfo> zculls;
+		vm::ps3::ptr<CellGcmDisplayInfo> display_buffers;
+		u32 display_buffers_count;
+		u32 current_display_buffer;
+
+		GcmTileInfo unpacked_tiles[limits::tiles_count];
+		GcmZcullInfo unpacked_zculls[limits::zculls_count];
+	};
+
+	extern state_t state;
+
 	namespace old_shaders_cache
 	{
 		struct decompiled_shader
@@ -139,7 +246,8 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location);
+	u32 get_address(u32 offset, u8 location);
+	u32 get_address_dma(u32 offset, u32 dma);
 
 	struct tiled_region
 	{
@@ -212,12 +320,7 @@ namespace rsx
 		old_shaders_cache::shaders_cache shaders_cache;
 		rsx::programs_cache programs_cache;
 
-		CellGcmControl* ctrl = nullptr;
-
 		Timer timer_sync;
-
-		GcmTileInfo tiles[limits::tiles_count];
-		GcmZcullInfo zculls[limits::zculls_count];
 
 		rsx::texture textures[limits::textures_count];
 		rsx::vertex_texture vertex_textures[limits::vertex_textures_count];
@@ -260,23 +363,11 @@ namespace rsx
 		void capture_frame(const std::string &name);
 
 	public:
-		u32 ioAddress, ioSize;
-		int flip_status;
-		int flip_mode;
-		int debug_level;
 		int frequency_mode;
 
-		u32 tiles_addr;
-		u32 zculls_addr;
-		vm::ps3::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
-		u32 gcm_buffers_count;
-		u32 gcm_current_buffer;
-		u32 ctxt_addr;
-		u32 label_addr;
 		rsx::draw_command draw_command;
 		primitive_type draw_mode;
 
-		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];
 
 		bool draw_inline_vertex_array;
@@ -294,13 +385,6 @@ namespace rsx
 		u32 draw_array_count;
 		u32 draw_array_first;
 		double fps_limit = 59.94;
-
-	public:
-		u64 last_flip_time;
-		vm::ps3::ptr<void(u32)> flip_handler = vm::null;
-		vm::ps3::ptr<void(u32)> user_handler = vm::null;
-		vm::ps3::ptr<void(u32)> vblank_handler = vm::null;
-		u64 vblank_count;
 
 	public:
 		std::set<u32> m_used_gcm_commands;
@@ -388,9 +472,10 @@ namespace rsx
 		struct raw_program get_raw_program() const;
 	public:
 		void reset();
-		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
+		void init();
 
-		tiled_region get_tiled_address(u32 offset, u32 location);
+		tiled_region get_tiled_address(u32 offset, u8 location);
+		tiled_region get_tiled_address_dma(u32 offset, u32 dma);
 		GcmTileInfo *find_tile(u32 offset, u32 location);
 
 		u32 ReadIO32(u32 addr);
