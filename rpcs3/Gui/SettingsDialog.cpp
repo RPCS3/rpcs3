@@ -16,6 +16,7 @@
 
 #include <set>
 #include <unordered_set>
+#include <algorithm>
 
 // Node location
 using cfg_location = std::vector<const char*>;
@@ -250,7 +251,10 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 
 	// Core
 	wxStaticBoxSizer* s_round_core_lle = new wxStaticBoxSizer(wxVERTICAL, p_core, "Load libraries");
-	wxCheckListBox* chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, wxLB_EXTENDED);
+	chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, wxLB_EXTENDED);
+	chbox_list_core_lle->Bind(wxEVT_CHECKLISTBOX, &SettingsDialog::OnModuleListItemToggled, this);
+	wxTextCtrl* s_module_search_box = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, {});
+	s_module_search_box->Bind(wxEVT_TEXT, &SettingsDialog::OnSearchBoxTextChanged, this);
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
@@ -311,30 +315,46 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
 
-	std::vector<std::string> lle_module_list;
 	{
+		// Sort string vector alphabetically
+		static const auto sort_string_vector = [](std::vector<std::string>& vec)
+		{
+			std::sort(vec.begin(), vec.end(), [](const std::string &str1, const std::string &str2) { return str1 < str2; });
+		};
+
 		auto&& data = loaded["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
+		sort_string_vector(data);
 
 		// List selected modules first
 		for (const auto& unk : data)
 		{
+			lle_module_list.insert(lle_module_list.end(), std::pair<std::string, bool>(unk, true));
 			chbox_list_core_lle->Check(chbox_list_core_lle->Append(unk));
-			lle_module_list.push_back(unk);
 		}
 
 		const std::string& lle_dir = vfs::get("/dev_flash/sys/external/"); // TODO
 
 		std::unordered_set<std::string> set(data.begin(), data.end());
+		std::vector<std::string> lle_module_list_unselected;
 
 		for (const auto& prxf : fs::dir(lle_dir))
 		{
 			// List found unselected modules
 			if (!prxf.is_directory && ppu_prx_loader(fs::file(lle_dir + prxf.name)) == elf_error::ok && !set.count(prxf.name))
 			{
-				chbox_list_core_lle->Check(chbox_list_core_lle->Append(prxf.name), false);
-				lle_module_list.push_back(prxf.name);
+				lle_module_list_unselected.push_back(prxf.name);
 			}
 		}
+
+		sort_string_vector(lle_module_list_unselected);
+
+		for (const auto& prxf : lle_module_list_unselected)
+		{
+			lle_module_list.insert(lle_module_list.end(), std::pair<std::string, bool>(prxf, false));
+			chbox_list_core_lle->Check(chbox_list_core_lle->Append(prxf), false);
+		}
+
+		lle_module_list_unselected.clear();
 	}
 
 	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
@@ -364,7 +384,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug output" }, chbox_gs_debug_output));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "3D Monitor" }, chbox_gs_3dmonitor));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug overlay" }, chbox_gs_overlay));
-	
+
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Audio", "Renderer" }, cbox_audio_out));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Dump to file" }, chbox_audio_dump));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Convert to 16 bit" }, chbox_audio_conv));
@@ -408,6 +428,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 
 	// Core
 	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_core_lle->Add(s_module_search_box, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -493,7 +514,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	s_b_panel->Add(new wxButton(this, wxID_OK), wxSizerFlags().Border(wxALL, 5).Bottom());
 	s_b_panel->Add(new wxButton(this, wxID_CANCEL), wxSizerFlags().Border(wxALL, 5).Bottom());
 
-	// Resize panels 
+	// Resize panels
 	SetSizerAndFit(s_subpanel_core, false);
 	SetSizerAndFit(s_subpanel_graphics, false);
 	SetSizerAndFit(s_subpanel_io, false);
@@ -509,11 +530,11 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	{
 		std::set<std::string> lle_selected;
 
-		for (auto i = 0; i < lle_module_list.size(); i++)
+		for (auto& i : lle_module_list)
 		{
-			if (chbox_list_core_lle->IsChecked(i))
+			if (i.second) // selected
 			{
-				lle_selected.emplace(lle_module_list[i]);
+				lle_selected.emplace(i.first);
 			}
 		}
 
@@ -533,5 +554,55 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 		config.seek(0);
 		config.trunc(0);
 		config.write(out.c_str(), out.size());
+	}
+}
+
+void SettingsDialog::OnModuleListItemToggled(wxCommandEvent &event)
+{
+	lle_module_list[fmt::ToUTF8(event.GetString())] = chbox_list_core_lle->IsChecked(event.GetSelection());
+}
+
+void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
+{
+	// helper to preserve alphabetically order while inserting items
+	int item_index = 0;
+
+	if (event.GetString().IsEmpty())
+	{
+		for (auto& i : lle_module_list)
+		{
+			if (i.second)
+			{
+				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, item_index));
+				item_index++;
+			}
+
+			else
+			{
+				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, chbox_list_core_lle->GetCount()), false);
+			}
+		}
+	}
+
+	chbox_list_core_lle->Clear();
+
+	wxString search_term = event.GetString().Lower();
+	item_index = 0;
+
+	for (auto& i : lle_module_list)
+	{
+		if (fmt::FromUTF8(i.first).Find(search_term) != wxString::npos)
+		{
+			if (i.second)
+			{
+				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, item_index));
+				item_index++;
+			}
+
+			else
+			{
+				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, chbox_list_core_lle->GetCount()), false);
+			}
+		}
 	}
 }

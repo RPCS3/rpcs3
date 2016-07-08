@@ -15,13 +15,13 @@
 	branch = release_36
 [submodule "rsx_program_decompiler"]
 	path = rsx_program_decompiler
-	url = https://github.com/RPCS3/rsx_program_decompiler
+	url = https://github.com/DHrpcs3/rsx_program_decompiler
 [submodule "GSL"]
 	path = 3rdparty/GSL
 	url = https://github.com/Microsoft/GSL.git
 [submodule "libpng"]
 	path = 3rdparty/libpng
-	url = https://github.com/RPCS3/libpng
+	url = https://github.com/DHrpcs3/libpng
 	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
@@ -31,7 +31,7 @@
 	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
 [submodule "Utilities/yaml-cpp"]
 	path = Utilities/yaml-cpp
-	url = https://github.com/RPCS3/yaml-cpp
+	url = https://github.com/DHrpcs3/yaml-cpp
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml
-	url = https://github.com/RPCS3/pugixml
+	url = https://github.com/DHrpcs3/pugixml

@@ -9,6 +9,7 @@
 #include <array>
 
 #include "../rpcs3/Emu/Cell/PPUOpcodes.h"
+#include "../rpcs3/Emu/Cell/PPUAnalyser.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -448,7 +449,7 @@ public:
 	void AddBlockInfo(u64 addr);
 
 	// Parses PPU opcodes and translate them into LLVM IR
-	llvm::Function* TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* bin, void(*custom)(PPUTranslator*) = nullptr);
+	llvm::Function* TranslateToIR(const ppu_function& info, be_t<u32>* bin, void(*custom)(PPUTranslator*) = nullptr);
 
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);

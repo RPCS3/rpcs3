@@ -41,7 +41,7 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 	}
 
 	// Throw if this syscall was not called directly by the SC instruction (hack)
-	if (ppu.GPR[11] != 41 || ppu.custom_task)
+	if (ppu.LR == 0 || ppu.GPR[11] != 41 || ppu.custom_task)
 	{
 		throw cpu_state::exit;
 	}

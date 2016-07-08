@@ -590,6 +590,57 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		}
 		break;
 	}
+	case 0xc4: // 3-byte VEX prefix
+	case 0xc5: // 2-byte VEX prefix
+	{
+		// Last prefix byte: op2 or op3
+		const u8 opx = op1 == 0xc5 ? op2 : op3;
+
+		// Implied prefixes
+		rex |= op2 & 0x80 ? 0 : 0x4; // REX.R
+		rex |= op1 == 0xc4 && op3 & 0x80 ? 0x8 : 0; // REX.W ???
+		oso = (opx & 0x3) == 0x1;
+		repe = (opx & 0x3) == 0x2;
+		repne = (opx & 0x3) == 0x3;
+
+		const u8 vopm = op1 == 0xc5 ? 1 : op2 & 0x1f;
+		const u8 vop1 = op1 == 0xc5 ? op3 : code[2];
+		const u8 vlen = (opx & 0x4) ? 32 : 16;
+		const u8 vreg = (~opx >> 3) & 0xf;
+		out_length += op1 == 0xc5 ? 2 : 3;
+		code += op1 == 0xc5 ? 2 : 3;
+
+		if (vopm == 0x1) switch (vop1) // Implied leading byte 0x0F
+		{
+		case 0x11:
+		case 0x29:
+		{
+			if (!repe && !repne) // VMOVAPS/VMOVAPD/VMOVUPS/VMOVUPD mem,reg
+			{
+				out_op = X64OP_STORE;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = vlen;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		case 0x7f:
+		{
+			if (repe || oso) // VMOVDQU/VMOVDQA mem,reg
+			{
+				out_op = X64OP_STORE;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = vlen;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		}
+
+		break;
+	}
 	case 0xc6:
 	{
 		if (!lock && !oso && get_modRM_reg(code, 0) == 0) // MOV r8/m8, imm8

@@ -1,5 +1,33 @@
 #pragma once
 
+#include <map>
+
+#include "../Utilities/BitSet.h"
+
+// PPU Function Attributes
+enum class ppu_attr : u32
+{
+	known_size,
+	no_return,
+	no_size,
+	uses_r0,
+};
+
+// PPU Function Information
+struct ppu_function
+{
+	u32 addr{};
+	u32 toc{};
+	u32 size{};
+	bitset_t<ppu_attr> attr{};
+
+	std::map<u32, u32> blocks; // Basic blocks: addr -> size
+};
+
+extern void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc);
+
+extern std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 entry, u32 lib_toc);
+
 // PPU Instruction Type
 struct ppu_itype
 {
@@ -396,19 +424,18 @@ struct ppu_itype
 	}
 };
 
+// Encode instruction name: 6 bits per character (0x20..0x5f), max 10
+static constexpr u64 ppu_iname_encode(const char* ptr, u64 value = 0)
+{
+	return *ptr == '\0' ? value : ppu_iname_encode(ptr + 1, (*ptr - 0x20) | (value << 6));
+}
+
 struct ppu_iname
 {
-	// Aggregate to store instruction name
-	struct type { const char* name; };
+#define NAME(x) x = ppu_iname_encode(#x),
 
-	// Enable address-of operator for ppu_decoder<>
-	friend constexpr const char* operator &(type value)
+	enum type : u64
 	{
-		return value.name;
-	}
-
-#define NAME(x) static constexpr type x{#x};
-
 	NAME(UNK)
 	NAME(MFVSCR)
 	NAME(MTVSCR)
@@ -790,6 +817,13 @@ struct ppu_iname
 	NAME(FCTID)
 	NAME(FCTIDZ)
 	NAME(FCFID)
+	};
 
 #undef NAME
+
+	// Enable address-of operator for ppu_decoder<>
+	friend constexpr type operator &(type value)
+	{
+		return value;
+	}
 };
