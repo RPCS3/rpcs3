@@ -760,10 +760,6 @@ namespace rsx
 				func(ppu, arg);
 			});
 		}
-		else
-		{
-			throw EXCEPTION("User handler not set");
-		}
 	}
 
 	struct __rsx_methods_t
