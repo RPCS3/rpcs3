@@ -340,7 +340,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 		for (const auto& prxf : fs::dir(lle_dir))
 		{
 			// List found unselected modules
-			if (!prxf.is_directory && ppu_prx_loader(fs::file(lle_dir + prxf.name)) == elf_error::ok && !set.count(prxf.name))
+			if (!prxf.is_directory && ppu_prx_object(fs::file(lle_dir + prxf.name)) == elf_error::ok && !set.count(prxf.name))
 			{
 				lle_module_list_unselected.push_back(prxf.name);
 			}

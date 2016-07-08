@@ -2022,15 +2022,15 @@ s32 spursTasksetLoadElf(SPUThread& spu, u32* entryPoint, u32* lowestLoadAddr, u6
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	const spu_exec_loader loader(fs::file(vm::base(vm::cast(elfAddr, HERE)), u32(0 - elfAddr)));
+	const spu_exec_object obj(fs::file(vm::base(vm::cast(elfAddr, HERE)), u32(0 - elfAddr)));
 
-	if (loader != elf_error::ok)
+	if (obj != elf_error::ok)
 	{
 		return CELL_SPURS_TASK_ERROR_NOEXEC;
 	}
 
 	u32 _lowestLoadAddr = CELL_SPURS_TASK_BOTTOM;
-	for (const auto& prog : loader.progs)
+	for (const auto& prog : obj.progs)
 	{
 		if (prog.p_paddr >= CELL_SPURS_TASK_BOTTOM)
 		{
@@ -2051,7 +2051,7 @@ s32 spursTasksetLoadElf(SPUThread& spu, u32* entryPoint, u32* lowestLoadAddr, u6
 		}
 	}
 
-	for (const auto& prog : loader.progs)
+	for (const auto& prog : obj.progs)
 	{
 		if (prog.p_paddr >= CELL_SPURS_TASK_BOTTOM) // ???
 		{
@@ -2067,7 +2067,7 @@ s32 spursTasksetLoadElf(SPUThread& spu, u32* entryPoint, u32* lowestLoadAddr, u6
 		}
 	}
 
-	*entryPoint = loader.header.e_entry;
+	*entryPoint = obj.header.e_entry;
 	if (lowestLoadAddr) *lowestLoadAddr = _lowestLoadAddr;
 
 	return CELL_OK;

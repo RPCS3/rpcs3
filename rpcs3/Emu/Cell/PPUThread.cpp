@@ -566,7 +566,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	pm.add(createReassociatePass());
 	pm.add(createInstructionCombiningPass());
 	//pm.add(createBasicAAWrapperPass());
-	pm.add(new MemoryDependenceAnalysis());
+	//pm.add(new MemoryDependenceAnalysis());
 	pm.add(createLICMPass());
 	pm.add(createLoopInstSimplifyPass());
 	pm.add(createGVNPass());

@@ -234,12 +234,11 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 	return false;
 }
 
-template<>
-void spu_exec_loader::load() const
+void spu_load_exec(const spu_exec_object& elf)
 {
 	auto spu = idm::make_ptr<RawSPUThread>("TEST_SPU");
 
-	for (const auto& prog : progs)
+	for (const auto& prog : elf.progs)
 	{
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
@@ -248,5 +247,5 @@ void spu_exec_loader::load() const
 	}
 
 	spu->cpu_init();
-	spu->npc = header.e_entry;
+	spu->npc = elf.header.e_entry;
 }

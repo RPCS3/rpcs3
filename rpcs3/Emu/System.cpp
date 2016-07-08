@@ -39,6 +39,11 @@ extern atomic_t<u32> g_ppu_core[2];
 
 extern u64 get_system_time();
 
+extern void ppu_load_exec(const ppu_exec_object&);
+extern void spu_load_exec(const spu_exec_object&);
+extern void arm_load_exec(const arm_exec_object&);
+extern std::shared_ptr<struct lv2_prx_t> ppu_load_prx(const ppu_prx_object&);
+
 fs::file g_tty;
 
 namespace rpcs3
@@ -173,10 +178,10 @@ void Emulator::Load()
 		}
 
 		const fs::file elf_file(m_path);
-		ppu_exec_loader ppu_exec;
-		ppu_prx_loader ppu_prx;
-		spu_exec_loader spu_exec;
-		arm_exec_loader arm_exec;
+		ppu_exec_object ppu_exec;
+		ppu_prx_object ppu_prx;
+		spu_exec_object spu_exec;
+		arm_exec_object arm_exec;
 
 		if (!elf_file)
 		{
@@ -230,7 +235,7 @@ void Emulator::Load()
 
 			vfs::dump();
 
-			ppu_exec.load();
+			ppu_load_exec(ppu_exec);
 
 			Emu.GetCallbackManager().Init();
 			fxm::import<GSRender>(PURE_EXPR(Emu.GetCallbacks().get_gs_render())); // TODO: must be created in appropriate sys_rsx syscall
@@ -240,7 +245,7 @@ void Emulator::Load()
 			// PPU PRX (experimental)
 			m_status = Ready;
 			vm::ps3::init();
-			ppu_prx.load();
+			ppu_load_prx(ppu_prx);
 			GetCallbackManager().Init();
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
@@ -248,23 +253,23 @@ void Emulator::Load()
 			// SPU executable (experimental)
 			m_status = Ready;
 			vm::ps3::init();
-			spu_exec.load();
+			spu_load_exec(spu_exec);
 		}
 		else if (arm_exec.open(elf_file) == elf_error::ok)
 		{
 			// ARMv7 executable
 			m_status = Ready;
 			vm::psv::init();
-			arm_exec.load();
+			arm_load_exec(arm_exec);
 		}
 		else
 		{
 			LOG_ERROR(LOADER, "Invalid or unsupported file format: %s", m_path);
 
-			LOG_WARNING(LOADER, "** ppu_exec_loader -> %s", ppu_exec.get_error());
-			LOG_WARNING(LOADER, "** ppu_prx_loader -> %s", ppu_prx.get_error());
-			LOG_WARNING(LOADER, "** spu_exec_loader -> %s", spu_exec.get_error());
-			LOG_WARNING(LOADER, "** arm_exec_loader -> %s", arm_exec.get_error());
+			LOG_WARNING(LOADER, "** ppu_exec -> %s", ppu_exec.get_error());
+			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
+			LOG_WARNING(LOADER, "** spu_exec -> %s", spu_exec.get_error());
+			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
 			return;
 		}
 

@@ -731,13 +731,12 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 	}
 }
 
-template<>
-std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
+std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 {
 	std::vector<std::pair<u32, u32>> segments;
-	std::vector<std::pair<u32, u32>> sections; // Unused
+	std::vector<std::pair<u32, u32>> sections;
 
-	for (const auto& prog : progs)
+	for (const auto& prog : elf.progs)
 	{
 		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
@@ -775,8 +774,30 @@ std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 		}
 	}
 
+	for (const auto& s : elf.shdrs)
+	{
+		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+
+		const u32 addr = vm::cast(s.sh_addr);
+		const u32 size = vm::cast(s.sh_size);
+
+		if (s.sh_type == 1 && addr && size)
+		{
+			for (auto i = 0; i < segments.size(); i++)
+			{
+				const u32 saddr = static_cast<u32>(elf.progs[i].p_vaddr);
+				if (addr >= addr && addr < saddr + elf.progs[i].p_memsz)
+				{
+					// "Relocate" section
+					sections.emplace_back(std::make_pair(addr - saddr + segments[i].first, size));
+					break;
+				}
+			}
+		}
+	}
+
 	// Do relocations
-	for (auto& prog : progs)
+	for (auto& prog : elf.progs)
 	{
 		switch (const u32 p_type = prog.p_type)
 		{
@@ -831,9 +852,27 @@ std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 				}
 
 				case 10:
+				{
+					const u32 value = vm::_ref<ppu_bf_t<u32, 6, 24>>(raddr) = static_cast<u32>(rdata - raddr) >> 2;
+					LOG_WARNING(LOADER, "**** RELOCATION(10): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
+					break;
+				}
+
 				case 44:
+				{
+					const u64 value = vm::_ref<u64>(raddr) = rdata - raddr;
+					LOG_TRACE(LOADER, "**** RELOCATION(44): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
+					break;
+				}
+
 				case 57:
-				default: LOG_ERROR(LOADER, "**** RELOCATION(%u): Illegal/Unknown type! (addr=0x%x)", type, raddr);
+				{
+					const u16 value = vm::_ref<ppu_bf_t<u16, 0, 14>>(raddr) = static_cast<u16>(rdata) >> 2;
+					LOG_WARNING(LOADER, "**** RELOCATION(57): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
+					break;
+				}
+
+				default: LOG_ERROR(LOADER, "**** RELOCATION(%u): Illegal/Unknown type! (addr=0x%x; 0x%llx)", type, raddr, rdata);
 				}
 			}
 
@@ -848,7 +887,7 @@ std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 	// Create new PRX object
 	auto prx = idm::make_ptr<lv2_prx_t>();
 
-	if (!progs.empty() && progs[0].p_paddr)
+	if (!elf.progs.empty() && elf.progs[0].p_paddr)
 	{
 		struct ppu_prx_library_info
 		{
@@ -863,7 +902,7 @@ std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 		};
 
 		// Access library information (TODO)
-		const auto& lib_info = vm::cptr<ppu_prx_library_info>(vm::cast(segments[0].first + progs[0].p_paddr - progs[0].p_offset, HERE));
+		const auto& lib_info = vm::cptr<ppu_prx_library_info>(vm::cast(segments[0].first + elf.progs[0].p_paddr - elf.progs[0].p_offset, HERE));
 		const auto& lib_name = std::string(lib_info->name);
 
 		LOG_WARNING(LOADER, "Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
@@ -872,7 +911,7 @@ std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 
 		ppu_load_imports(link, lib_info->imports_start, lib_info->imports_end);
 
-		prx->funcs = ppu_analyse(segments, sections, 0, lib_info->toc);
+		prx->funcs = ppu_analyse(segments, sections, prx->specials[0xbc9a0086], lib_info->toc);
 	}
 	else
 	{
@@ -886,8 +925,7 @@ std::shared_ptr<lv2_prx_t> ppu_prx_loader::load() const
 	return prx;
 }
 
-template<>
-void ppu_exec_loader::load() const
+void ppu_load_exec(const ppu_exec_object& elf)
 {
 	ppu_initialize_modules();
 
@@ -909,7 +947,7 @@ void ppu_exec_loader::load() const
 	std::vector<ppu_function> exec_set;
 
 	// Allocate memory at fixed positions
-	for (const auto& prog : progs)
+	for (const auto& prog : elf.progs)
 	{
 		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
@@ -932,7 +970,7 @@ void ppu_exec_loader::load() const
 		}
 	}
 
-	for (const auto& s : shdrs)
+	for (const auto& s : elf.shdrs)
 	{
 		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
@@ -946,7 +984,7 @@ void ppu_exec_loader::load() const
 	}
 
 	// Load other programs
-	for (auto& prog : progs)
+	for (auto& prog : elf.progs)
 	{
 		switch (const u32 p_type = prog.p_type)
 		{
@@ -1057,28 +1095,28 @@ void ppu_exec_loader::load() const
 
 	if (g_cfg_load_liblv2)
 	{
-		const ppu_prx_loader loader = fs::file(lle_dir + "/liblv2.sprx");
+		const ppu_prx_object obj = fs::file(lle_dir + "/liblv2.sprx");
 
-		if (loader == elf_error::ok)
+		if (obj == elf_error::ok)
 		{
-			start_funcs.push_back(loader.load()->start.addr());
+			start_funcs.push_back(ppu_load_prx(obj)->start.addr());
 		}
 		else
 		{
-			throw fmt::exception("Failed to load liblv2.sprx: %s", loader.get_error());
+			throw fmt::exception("Failed to load liblv2.sprx: %s", obj.get_error());
 		}
 	}
 	else
 	{
 		for (const auto& name : g_cfg_load_libs.get_set())
 		{
-			const ppu_prx_loader loader = fs::file(lle_dir + '/' + name);
+			const ppu_prx_object obj = fs::file(lle_dir + '/' + name);
 
-			if (loader == elf_error::ok)
+			if (obj == elf_error::ok)
 			{
 				LOG_WARNING(LOADER, "Loading library: %s", name);
 
-				const auto prx = loader.load();
+				const auto prx = ppu_load_prx(obj);
 
 				// Register start function
 				if (prx->start)
@@ -1093,7 +1131,7 @@ void ppu_exec_loader::load() const
 			}
 			else
 			{
-				LOG_FATAL(LOADER, "Failed to load %s: %s", name, loader.get_error());
+				LOG_FATAL(LOADER, "Failed to load %s: %s", name, obj.get_error());
 			}
 		}
 	}
@@ -1221,7 +1259,7 @@ void ppu_exec_loader::load() const
 	}
 
 	// Analyse executable
-	const auto funcs = ppu_analyse(segments, sections, static_cast<u32>(header.e_entry), 0);
+	const auto funcs = ppu_analyse(segments, sections, static_cast<u32>(elf.header.e_entry), 0);
 
 	ppu_validate(vfs::get(Emu.GetPath()), funcs, 0);
 
@@ -1287,7 +1325,7 @@ void ppu_exec_loader::load() const
 	*entry++ = MR(r12, r19);
 
 	// Branch to initialization
-	make_branch(entry, static_cast<u32>(header.e_entry), true);
+	make_branch(entry, static_cast<u32>(elf.header.e_entry), true);
 
 	// Register entry function (addr, size)
 	ppu_function entry_func;
@@ -1296,7 +1334,7 @@ void ppu_exec_loader::load() const
 	exec_set.emplace_back(entry_func);
 
 	// Initialize recompiler
-	ppu_initialize("", exec_set, static_cast<u32>(header.e_entry));
+	ppu_initialize("", exec_set, static_cast<u32>(elf.header.e_entry));
 
 	auto ppu = idm::make_ptr<PPUThread>("main_thread");
 

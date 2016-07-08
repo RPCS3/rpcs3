@@ -2,7 +2,8 @@
 
 #include <map>
 
-#include "../Utilities/BitSet.h"
+#include "Utilities/BitSet.h"
+#include "Utilities/BEType.h"
 
 // PPU Function Attributes
 enum class ppu_attr : u32
@@ -22,6 +23,27 @@ struct ppu_function
 	bitset_t<ppu_attr> attr{};
 
 	std::map<u32, u32> blocks; // Basic blocks: addr -> size
+};
+
+// Aux
+struct ppu_pattern
+{
+	be_t<u32> opcode;
+	be_t<u32> mask;
+
+	ppu_pattern() = default;
+
+	ppu_pattern(u32 op)
+		: opcode(op)
+		, mask(0xffffffff)
+	{
+	}
+
+	ppu_pattern(u32 op, u32 ign)
+		: opcode(op & ~ign)
+		, mask(~ign)
+	{
+	}
 };
 
 extern void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc);

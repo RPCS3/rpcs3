@@ -355,8 +355,7 @@ static void arm_patch_refs(u32 refs, u32 addr)
 	
 }
 
-template<>
-void arm_exec_loader::load() const
+void arm_load_exec(const arm_exec_object& elf)
 {
 	arm_initialize_modules();
 
@@ -373,7 +372,7 @@ void arm_exec_loader::load() const
 	u32 tls_fsize{};
 	u32 tls_vsize{};
 
-	for (const auto& prog : progs)
+	for (const auto& prog : elf.progs)
 	{
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
@@ -397,7 +396,7 @@ void arm_exec_loader::load() const
 		}
 	}
 
-	if (!module_info) module_info.set(start_addr + header.e_entry);
+	if (!module_info) module_info.set(start_addr + elf.header.e_entry);
 	if (!libent) libent.set(start_addr + module_info->libent_top);
 	if (!libstub) libstub.set(start_addr + module_info->libstub_top);
 

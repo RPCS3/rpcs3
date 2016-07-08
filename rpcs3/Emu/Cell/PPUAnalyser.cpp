@@ -80,12 +80,231 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 	}
 }
 
+static u32 ppu_test(const vm::cptr<u32> ptr, vm::cptr<void> fend, std::initializer_list<ppu_pattern> pat)
+{
+	vm::cptr<u32> cur = ptr;
+
+	for (auto& p : pat)
+	{
+		if (cur >= fend)
+		{
+			return 0;
+		}
+
+		if (*cur == ppu_instructions::NOP())
+		{
+			cur++;
+
+			if (cur >= fend)
+			{
+				return 0;
+			}
+		}
+
+		if ((*cur & p.mask) != p.opcode)
+		{
+			return 0;
+		}
+
+		cur++;
+	}
+
+	return cur.addr() - ptr.addr();
+}
+
+static u32 ppu_test(vm::cptr<u32> ptr, vm::cptr<void> fend, std::initializer_list<std::initializer_list<ppu_pattern>> pats)
+{
+	for (auto pat : pats)
+	{
+		if (const u32 len = ppu_test(ptr, fend, pat))
+		{
+			return len;
+		}
+	}
+
+	return 0;
+}
+
+namespace ppu_patterns
+{
+	using namespace ppu_instructions;
+
+	const std::initializer_list<ppu_pattern> abort1
+	{
+		{ STDU(r1, r1, -0xc0) },
+		{ MFLR(r0) },
+		{ STD(r26, r1, 0x90) },
+		{ STD(r27, r1, 0x98) },
+		{ STD(r28, r1, 0xa0) },
+		{ STD(r29, r1, 0xa8) },
+		{ STD(r30, r1, 0xb0) },
+		{ STD(r31, r1, 0xb8) },
+		{ STD(r0, r1, 0xd0) },
+		{ LI(r3, 4) },
+		{ LI(r4, 0) },
+		{ LI(r11, 0x3dc) },
+		{ SC(0) },
+		{ MR(r29, r1) },
+		{ CLRLDI(r29, r29, 32) },
+		{ LWZ(r4, r2, 0), 0xffff },
+		{ ADDI(r31, r1, 0x70) },
+		{ LI(r3, 1) },
+		{ LI(r5, 0x19) },
+		{ MR(r6, r31) },
+		{ LWZ(r28, r29, 4) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ ADDI(r26, r1, 0x78) },
+		{ LD(r3, r28, 0x10) },
+		{ MR(r4, r26) },
+		{ B(0, false, true), 0x3fffffc }, // .hex2str
+		{ LI(r5, 0x10) },
+		{ CLRLDI(r4, r3, 32) },
+		{ MR(r6, r31) },
+		{ LI(r3, 1) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LWZ(r27, r2, 0), 0xffff },
+		{ LI(r3, 1) },
+		{ LI(r5, 1) },
+		{ MR(r4, r27) },
+		{ MR(r6, r31) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LD(r28, r28, 0) },
+		{ CMPDI(cr7, r28, 0) },
+		{ BEQ(cr7, +0x6c) },
+		{ LWZ(r30, r2, 0), 0xffff },
+		{ LI(r3, 1) },
+		{ MR(r4, r30) },
+		{ LI(r5, 0x19) },
+		{ MR(r6, r31) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ CLRLDI(r29, r28, 32) },
+		{ CLRLDI(r4, r26, 32) },
+		{ LD(r3, r29, 0x10) },
+		{ 0, 0xffffffff }, // .hex2str
+		{ LI(r5, 0x10) },
+		{ CLRLDI(r4, r3, 32) },
+		{ MR(r6, r31) },
+		{ LI(r3, 1) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LI(r3, 1) },
+		{ MR(r4, r27) },
+		{ LI(r5, 1) },
+		{ MR(r6, r31) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LD(r28, r29, 0) },
+		{ CMPDI(cr7, r28, 0) },
+		{ BNE(cr7, -0x60) },
+		{ LWZ(r4, r2, 0), 0xffff },
+		{ MR(r6, r31) },
+		{ LI(r3, 1) },
+		{ LI(r5, 0x27) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LI(r3, 1) },
+		{ B(0, false, true), 0x3fffffc }, // .sys_process_exit
+		{ LD(r2, r1, 0x28) },
+		{ LI(r3, 1) },
+		{ B(0, false, true), 0x3fffffc }, // .exit
+	};
+
+	const std::initializer_list<ppu_pattern> abort2
+	{
+		{ STDU(r1, r1, -0xc0) },
+		{ MFLR(r0) },
+		{ STD(r27, r1, 0x98) },
+		{ STD(r28, r1, 0xa0) },
+		{ STD(r29, r1, 0xa8) },
+		{ STD(r30, r1, 0xb0) },
+		{ STD(r31, r1, 0xb8) },
+		{ STD(r0, r1, 0xd0) },
+		{ MR(r9, r1) },
+		{ CLRLDI(r9, r9, 32) },
+		{ LWZ(r4, r2, 0), 0xffff },
+		{ ADDI(r31, r1, 0x70) },
+		{ LI(r3, 1) },
+		{ LI(r5, 0x19) },
+		{ MR(r6, r31) },
+		{ LWZ(r29, r9, 4) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ ADDI(r27, r1, 0x78) },
+		{ LD(r3, r29, 0x10) },
+		{ MR(r4, r27) },
+		{ B(0, false, true), 0x3fffffc }, // .hex2str
+		{ LI(r5, 0x10) },
+		{ CLRLDI(r4, r3, 32) },
+		{ MR(r6, r31) },
+		{ LI(r3, 1) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LWZ(r28, r2, 0), 0xffff },
+		{ LI(r3, 1) },
+		{ LI(r5, 1) },
+		{ MR(r4, r28) },
+		{ MR(r6, r31) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LD(r29, r29, 0) },
+		{ CMPDI(cr7, r29, 0) },
+		{ BEQ(cr7, +0x6c) },
+		{ LWZ(r30, r2, 0), 0xffff },
+		{ LI(r3, 1) },
+		{ MR(r4, r30) },
+		{ LI(r5, 0x19) },
+		{ MR(r6, r31) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ CLRLDI(r29, r29, 32) },
+		{ CLRLDI(r4, r27, 32) },
+		{ LD(r3, r29, 0x10) },
+		{ 0, 0xffffffff }, // .hex2str
+		{ LI(r5, 0x10) },
+		{ CLRLDI(r4, r3, 32) },
+		{ MR(r6, r31) },
+		{ LI(r3, 1) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LI(r3, 1) },
+		{ MR(r4, r28) },
+		{ LI(r5, 1) },
+		{ MR(r6, r31) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LD(r29, r29, 0) },
+		{ CMPDI(cr7, r29, 0) },
+		{ BNE(cr7, -0x60) },
+		{ LWZ(r4, r2, 0), 0xffff },
+		{ MR(r6, r31) },
+		{ LI(r3, 1) },
+		{ LI(r5, 0x27) },
+		{ LI(r11, 0x193) },
+		{ SC(0) },
+		{ LI(r3, 1) },
+		{ B(0, false, true), 0x3fffffc }, // .sys_process_exit
+		{ LD(r2, r1, 0x28) },
+		{ LI(r3, 1) },
+		{ B(0, false, true), 0x3fffffc }, // .exit
+	};
+
+	const std::initializer_list<std::initializer_list<ppu_pattern>> abort
+	{
+		abort1,
+		abort2,
+	};
+}
+
 std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 entry, u32 lib_toc)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].first;
 	const u32 end = segs[0].first + segs[0].second;
-	const u32 start_toc = entry ? +vm::read32(entry + 4) : lib_toc;
+	const u32 start_toc = entry && !lib_toc ? +vm::read32(entry + 4) : lib_toc;
 
 	// Known TOCs (usually only 1)
 	std::unordered_set<u32> TOCs;
@@ -186,26 +405,98 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Otherwise, register initial set of functions (likely including the entry point)
 	add_toc(start_toc);
 
-	// Find eh_frame section
+	// Find .eh_frame section
 	for (const auto& sec : secs)
 	{
-		const u32 sec_end = sec.first + sec.second;
+		u32 sec_end = sec.first + sec.second;
 
-		if (sec.first + 32 >= sec_end || vm::read64(sec.first) != 0x0000001c00000000 || vm::read16(sec.first + 8) != 0x017a)
+		// Probe
+		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr.addr() < sec_end;)
 		{
-			continue;
+			if (ptr % 4 || ptr.addr() < sec.first || ptr.addr() >= sec_end)
+			{
+				sec_end = 0;
+				break;
+			}
+
+			const u32 size = ptr[0] + 4;
+
+			if (size == 4 && ptr.addr() == sec_end - 4)
+			{
+				// Null terminator
+				break;
+			}
+
+			if (size % 4 || size < 0x10 || size > sec_end - ptr.addr())
+			{
+				sec_end = 0;
+				break;
+			}
+
+			if (ptr[1])
+			{
+				const u32 cie_off = ptr.addr() - ptr[1] + 4;
+
+				if (cie_off % 4 || cie_off < sec.first || cie_off >= sec_end)
+				{
+					sec_end = 0;
+					break;
+				}
+			}
+
+			ptr = vm::cast(ptr.addr() + size);
 		}
 
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr.addr() < sec_end - 4; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
+		// Mine
+		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr.addr() < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
 		{
-			if (const u32 off = ptr[1])
+			if (ptr[0] == 0)
 			{
-				const u32 addr = ptr[3] + (ptr + 2).addr(); // Function offset (64 bit)
-				const u32 size = ptr[5]; // Function size (64 bit)
+				// Null terminator
+				break;
+			}
 
-				LOG_NOTICE(PPU, ".eh_frame: [0x%x] 0x%x, 0x%x (size=0x%x)", ptr, ptr[0], ptr[1], size);
+			if (ptr[1] == 0)
+			{
+				// CIE
+				LOG_NOTICE(PPU, ".eh_frame: [0x%x] CIE 0x%x", ptr, ptr[0]);
+			}
+			else
+			{
+				// Get associated CIE (currently unused)
+				const vm::cptr<u32> cie = vm::cast(ptr.addr() - ptr[1] + 4);
 
-				if (!ptr[3]) continue; // TODO (some entries have zero offset)
+				u32 addr = 0;
+				u32 size = 0;
+
+				if ((ptr[2] == -1 || ptr[2] == 0) && ptr[4] == 0)
+				{
+					addr = ptr[3] + ptr.addr() + 8;
+					size = ptr[5];
+				}
+				else if (ptr[2] == 0 && ptr[3] == 0)
+				{
+				}
+				else if (ptr[2] != -1 && ptr[4])
+				{
+					addr = ptr[2];
+					size = ptr[3];
+				}
+				else
+				{
+					LOG_ERROR(PPU, ".eh_frame: [0x%x] 0x%x, 0x%x, 0x%x, 0x%x, 0x%x", ptr, ptr[0], ptr[1], ptr[2], ptr[3], ptr[4]);
+					continue;
+				}
+
+				LOG_NOTICE(PPU, ".eh_frame: [0x%x] FDE 0x%x (cie=*0x%x, addr=0x%x, size=0x%x)", ptr, ptr[0], cie, addr, size);
+
+				if (!addr) continue; // TODO (some entries have zero offset)
+
+				if (addr % 4 || addr < start || addr >= end)
+				{
+					LOG_ERROR(PPU, ".eh_frame: Invalid function 0x%x", addr);
+					continue;
+				}
 
 				auto& func = add_func(addr, 0, ptr.addr());
 				func.attr += ppu_attr::known_size;
@@ -230,11 +521,15 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			if (ptr + 1 <= fend && (ptr[0] & 0xfc000001) == B({}, {}))
 			{
 				// Simple gate
-				func.size = 0x4;
-				func.blocks.emplace(func.addr, func.size);
 				const u32 target = ppu_branch_target(ptr[0] & 0x2 ? 0 : ptr.addr(), s32(ptr[0]) << 6 >> 6);
-				add_func(target, func.toc, func.addr);
-				continue;
+				
+				if (target >= start && target < end)
+				{
+					func.size = 0x4;
+					func.blocks.emplace(func.addr, func.size);
+					add_func(target, func.toc, func.addr);
+					continue;
+				}
 			}
 
 			if (ptr + 4 <= fend &&
@@ -244,13 +539,17 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				(ptr[3] & 0xfc000001) == B({}, {}))
 			{
 				// TOC change gate
-				func.size = 0x10;
-				func.blocks.emplace(func.addr, func.size);
 				const u32 new_toc = func.toc && func.toc != -1 ? func.toc + (ptr[1] << 16) + s16(ptr[2]) : 0;
 				const u32 target = ppu_branch_target(ptr[3] & 0x2 ? 0 : (ptr + 3).addr(), s32(ptr[3]) << 6 >> 6);
-				add_func(target, new_toc, func.addr);
-				add_toc(new_toc);
-				continue;
+
+				if (target >= start && target < end)
+				{
+					func.size = 0x10;
+					func.blocks.emplace(func.addr, func.size);
+					add_func(target, new_toc, func.addr);
+					add_toc(new_toc);
+					continue;
+				}
 			}
 
 			if (ptr + 8 <= fend &&
@@ -267,6 +566,15 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				func.size = 0x20;
 				func.blocks.emplace(func.addr, func.size);
 				continue;
+			}
+
+			if (const u32 len = ppu_test(ptr, fend, ppu_patterns::abort))
+			{
+				// Function .abort
+				LOG_NOTICE(PPU, "Function [0x%x]: 'abort'", func.addr);
+				func.attr += ppu_attr::no_return;
+				func.attr += ppu_attr::known_size;
+				func.size = len;
 			}
 
 			if (ptr + 3 <= fend &&
@@ -350,6 +658,13 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				else if (type == ppu_itype::B || type == ppu_itype::BC)
 				{
 					const u32 target = ppu_branch_target(op.aa ? 0 : iaddr, type == ppu_itype::B ? +op.ll : +op.simm16);
+
+					if (target < start || target >= end)
+					{
+						LOG_WARNING(PPU, "[0x%x] Invalid branch at 0x%x -> 0x%x", func.addr, iaddr, target);
+						continue;
+					}
+
 					const bool is_call = op.lk && target != iaddr;
 					const auto pfunc = is_call ? &add_func(target, 0, func.addr) : nullptr;
 
@@ -537,9 +852,12 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				{
 					const u32 target = ppu_branch_target(op.aa ? 0 : iaddr, type == ppu_itype::B ? +op.ll : +op.simm16);
 
-					if (target < func.addr || target >= func.addr + func.size)
+					if (target >= start && target < end)
 					{
-						add_func(target, func.toc, func.addr);
+						if (target < func.addr || target >= func.addr + func.size)
+						{
+							add_func(target, func.toc, func.addr);
+						}
 					}
 				}
 				else if (type == ppu_itype::BCCTR && !op.lk)

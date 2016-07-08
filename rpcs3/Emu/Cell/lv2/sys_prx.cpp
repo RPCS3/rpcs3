@@ -8,20 +8,22 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_prx.h"
 
+extern std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object&);
+
 logs::channel sys_prx("sys_prx", logs::level::notice);
 
 s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sys_prx.warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
 
-	const ppu_prx_loader loader = fs::file(vfs::get(path));
+	const ppu_prx_object obj = fs::file(vfs::get(path));
 
-	if (loader != elf_error::ok)
+	if (obj != elf_error::ok)
 	{
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = loader.load();
+	const auto prx = ppu_load_prx(obj);
 
 	if (!prx)
 	{

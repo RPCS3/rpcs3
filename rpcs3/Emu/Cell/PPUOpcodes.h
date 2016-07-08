@@ -586,6 +586,11 @@ namespace ppu_instructions
 			r12, r13, r14, r15, r16, r17, r18, r19, r20, r21,
 			r22, r23, r24, r25, r26, r27, r28, r29, r30, r31,
 		};
+
+		enum
+		{
+			cr0, cr1, cr2, cr3, cr4, cr5, cr6, cr7,
+		};
 	}
 
 	using namespace fields;
@@ -595,7 +600,7 @@ namespace ppu_instructions
 	inline u32 ORI(u32 rt, u32 ra, u32 ui) { ppu_opcode_t op{ 0x18u << 26 }; op.rd = rt; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 ORIS(u32 rt, u32 ra, u32 ui) { ppu_opcode_t op{ 0x19u << 26 }; op.rd = rt; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 OR(u32 ra, u32 rs, u32 rb, bool rc = false) { ppu_opcode_t op{ 0x1fu << 26 | 0x1bcu << 1 }; op.rs = rs; op.ra = ra; op.rb = rb; op.rc = rc; return op.opcode; }
-	inline u32 SC(u32 lev) { ppu_opcode_t op{ 0x11u << 26 }; op.lev = lev; return op.opcode; }
+	inline u32 SC(u32 lev) { ppu_opcode_t op{ 0x11u << 26 | 1 << 1 }; op.lev = lev; return op.opcode; }
 	inline u32 B(s32 li, bool aa = false, bool lk = false) { ppu_opcode_t op{ 0x12u << 26 }; op.ll = li; op.aa = aa; op.lk = lk; return op.opcode; }
 	inline u32 BC(u32 bo, u32 bi, s32 bd, bool aa = false, bool lk = false) { ppu_opcode_t op{ 0x10u << 26 }; op.bo = bo; op.bi = bi; op.ds = bd / 4; op.aa = aa; op.lk = lk; return op.opcode; }
 	inline u32 BCLR(u32 bo, u32 bi, u32 bh, bool lk = false) { ppu_opcode_t op{ 0x13u << 26 | 0x10u << 1 }; op.bo = bo; op.bi = bi; op.bh = bh; op.lk = lk; return op.opcode; }
@@ -607,8 +612,8 @@ namespace ppu_instructions
 	inline u32 STDU(u32 rs, u32 ra, s32 si) { ppu_opcode_t op{ 0x3eu << 26 | 1 }; op.rs = rs; op.ra = ra; op.ds = si / 4; return op.opcode; }
 	inline u32 LD(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x3au << 26 }; op.rd = rt; op.ra = ra; op.ds = si / 4; return op.opcode; }
 	inline u32 LDU(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x3au << 26 | 1 }; op.rd = rt; op.ra = ra; op.ds = si / 4; return op.opcode; }
-	//inline u32 CMPI(u32 bf, u32 l, u32 ra, u32 ui) { ppu_opcode_t op{ 0xbu << 26 }; op.crfd = bf; op.l10 = l; op.ra = ra; op.uimm16 = ui; return op.opcode; }
-	//inline u32 CMPLI(u32 bf, u32 l, u32 ra, u32 ui) { ppu_opcode_t op{ 0xau << 26 }; op.crfd = bf; op.l10 = l; op.ra = ra; op.uimm16 = ui; return op.opcode; }
+	inline u32 CMPI(u32 bf, u32 l, u32 ra, u32 ui) { ppu_opcode_t op{ 0xbu << 26 }; op.crfd = bf; op.l10 = l; op.ra = ra; op.uimm16 = ui; return op.opcode; }
+	inline u32 CMPLI(u32 bf, u32 l, u32 ra, u32 ui) { ppu_opcode_t op{ 0xau << 26 }; op.crfd = bf; op.l10 = l; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc = false) { ppu_opcode_t op{ 30 << 26 }; op.ra = ra; op.rs = rs; op.sh64 = sh; op.mbe64 = mb; op.rc = rc; return op.opcode; }
 
 	namespace implicts
@@ -627,21 +632,21 @@ namespace ppu_instructions
 		inline u32 MFLR(u32 reg) { return MFSPR(reg, 8 << 5); }
 		inline u32 MTLR(u32 reg) { return MTSPR(8 << 5, reg); }
 
-		//inline u32 BNE(u32 cr, s32 imm) { return BC(4, 2 | cr << 2, imm); }
-		//inline u32 BEQ(u32 cr, s32 imm) { return BC(12, 2 | cr << 2, imm); }
-		//inline u32 BGT(u32 cr, s32 imm) { return BC(12, 1 | cr << 2, imm); }
-		//inline u32 BNE(s32 imm) { return BNE(cr0, imm); }
-		//inline u32 BEQ(s32 imm) { return BEQ(cr0, imm); }
-		//inline u32 BGT(s32 imm) { return BGT(cr0, imm); }
+		inline u32 BNE(u32 cr, s32 imm) { return BC(4, 2 | cr << 2, imm); }
+		inline u32 BEQ(u32 cr, s32 imm) { return BC(12, 2 | cr << 2, imm); }
+		inline u32 BGT(u32 cr, s32 imm) { return BC(12, 1 | cr << 2, imm); }
+		inline u32 BNE(s32 imm) { return BNE(cr0, imm); }
+		inline u32 BEQ(s32 imm) { return BEQ(cr0, imm); }
+		inline u32 BGT(s32 imm) { return BGT(cr0, imm); }
 
-		//inline u32 CMPDI(u32 cr, u32 reg, u32 imm) { return CMPI(cr, 1, reg, imm); }
-		//inline u32 CMPDI(u32 reg, u32 imm) { return CMPDI(cr0, reg, imm); }
-		//inline u32 CMPWI(u32 cr, u32 reg, u32 imm) { return CMPI(cr, 0, reg, imm); }
-		//inline u32 CMPWI(u32 reg, u32 imm) { return CMPWI(cr0, reg, imm); }
-		//inline u32 CMPLDI(u32 cr, u32 reg, u32 imm) { return CMPLI(cr, 1, reg, imm); }
-		//inline u32 CMPLDI(u32 reg, u32 imm) { return CMPLDI(cr0, reg, imm); }
-		//inline u32 CMPLWI(u32 cr, u32 reg, u32 imm) { return CMPLI(cr, 0, reg, imm); }
-		//inline u32 CMPLWI(u32 reg, u32 imm) { return CMPLWI(cr0, reg, imm); }
+		inline u32 CMPDI(u32 cr, u32 reg, u32 imm) { return CMPI(cr, 1, reg, imm); }
+		inline u32 CMPDI(u32 reg, u32 imm) { return CMPDI(cr0, reg, imm); }
+		inline u32 CMPWI(u32 cr, u32 reg, u32 imm) { return CMPI(cr, 0, reg, imm); }
+		inline u32 CMPWI(u32 reg, u32 imm) { return CMPWI(cr0, reg, imm); }
+		inline u32 CMPLDI(u32 cr, u32 reg, u32 imm) { return CMPLI(cr, 1, reg, imm); }
+		inline u32 CMPLDI(u32 reg, u32 imm) { return CMPLDI(cr0, reg, imm); }
+		inline u32 CMPLWI(u32 cr, u32 reg, u32 imm) { return CMPLI(cr, 0, reg, imm); }
+		inline u32 CMPLWI(u32 reg, u32 imm) { return CMPLWI(cr0, reg, imm); }
 
 		inline u32 EXTRDI(u32 x, u32 y, u32 n, u32 b) { return RLDICL(x, y, b + n, 64 - b, false); }
 		inline u32 SRDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 64 - n, n, false); }
