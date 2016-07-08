@@ -26,13 +26,19 @@ namespace
 	
 	u32 get_front_face_ccw(u32 ffv)
 	{
+		rsx::window_origin shader_window_origin = rsx::to_window_origin((rsx::method_registers[NV4097_SET_SHADER_WINDOW] >> 12) & 0xf);
+
+		if (shader_window_origin == rsx::window_origin::bottom)
+		{
+			ffv ^= 1;
+		}
+
 		switch (ffv)
 		{
 		default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
 		case CELL_GCM_CW: return GL_CW;
 		case CELL_GCM_CCW: return GL_CCW;
 		}
-		throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 	}
 }
 
@@ -163,6 +169,7 @@ void GLGSRender::begin()
 
 	if (u32 blend_mrt = rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT])
 	{
+		__glcheck enable(blend_mrt & 1, GL_BLEND, 0);
 		__glcheck enable(blend_mrt & 2, GL_BLEND, 1);
 		__glcheck enable(blend_mrt & 4, GL_BLEND, 2);
 		__glcheck enable(blend_mrt & 8, GL_BLEND, 3);
@@ -197,7 +204,7 @@ void GLGSRender::begin()
 		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
 	}
 
-	__glcheck glFrontFace(get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE] ^ 1));
+	__glcheck glFrontFace(get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]));
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
 
@@ -697,7 +704,9 @@ bool GLGSRender::load_program()
 		RSXFragmentProgram fragment_program = get_current_fragment_program();
 
 		GLProgramBuffer prog_buffer;
-		__glcheck prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
+		m_program = &prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
+
+		return true;
 	}
 
 	rsx::program_info info = programs_cache.get(get_raw_program(), rsx::decompile_language::glsl);
@@ -792,21 +801,21 @@ bool GLGSRender::load_program()
 
 void GLGSRender::flip(int buffer)
 {
-	u32 buffer_width = gcm_buffers[buffer].width;
-	u32 buffer_height = gcm_buffers[buffer].height;
-	u32 buffer_pitch = gcm_buffers[buffer].pitch;
+	u32 buffer_width = rsx::state.display_buffers[buffer].width;
+	u32 buffer_height = rsx::state.display_buffers[buffer].height;
+	u32 buffer_pitch = rsx::state.display_buffers[buffer].pitch;
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDisable(GL_SCISSOR_TEST);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_STENCIL_TEST);
 
-	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+	rsx::tiled_region buffer_region = get_tiled_address(rsx::state.display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	u32 absolute_address = buffer_region.address + buffer_region.base;
 
 	if (0)
 	{
-		LOG_NOTICE(RSX, "flip(%d) -> 0x%x [0x%x]", buffer, absolute_address, rsx::get_address(gcm_buffers[1 - buffer].offset, CELL_GCM_LOCATION_LOCAL));
+		LOG_NOTICE(RSX, "flip(%d) -> 0x%x [0x%x]", buffer, absolute_address, rsx::get_address(rsx::state.display_buffers[1 - buffer].offset, CELL_GCM_LOCATION_LOCAL));
 	}
 
 	gl::texture *render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address);
@@ -891,7 +900,7 @@ void GLGSRender::flip(int buffer)
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);
 
-	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical());
+	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
 	m_frame->flip(m_context);
 	
