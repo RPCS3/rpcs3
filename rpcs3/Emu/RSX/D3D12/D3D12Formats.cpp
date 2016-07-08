@@ -493,8 +493,8 @@ D3D12_RECT get_scissor(u16 clip_origin_x, u16 clip_origin_y, u16 clip_w, u16 cli
 	return{
 		clip_origin_x,
 		clip_origin_y,
-		clip_w,
-		clip_h,
+		clip_origin_x + clip_w,
+		clip_origin_y + clip_h,
 	};
 }
 #endif
