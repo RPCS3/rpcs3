@@ -32,27 +32,31 @@ namespace rsx
 
 	namespace nv406e
 	{
-		force_inline void set_reference(thread* rsx, u32 arg)
+		force_inline void set_reference(u32 arg)
 		{
-			rsx->ctrl->ref.exchange(arg);
+			rsx::state.context->control.ref.exchange(arg);
 		}
 
 		force_inline void semaphore_acquire(thread* rsx, u32 arg)
 		{
-			//TODO: dma
-			while (vm::ps3::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
+			vm::ps3::ptr<rsx::semaphore_t> semaphore = vm::cast(get_address_dma(method_registers[NV406E_SEMAPHORE_OFFSET], method_registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE]));
+
+			while (semaphore->value != arg)
 			{
 				if (Emu.IsStopped())
+				{
 					break;
+				}
 
-				std::this_thread::sleep_for(1ms);
+				std::this_thread::yield();
 			}
 		}
 
 		force_inline void semaphore_release(thread* rsx, u32 arg)
 		{
-			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET], arg);
+			vm::ps3::ptr<rsx::semaphore_t> semaphore = vm::cast(get_address_dma(method_registers[NV406E_SEMAPHORE_OFFSET], method_registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE]));
+			semaphore->timestamp = rsx->timestamp();
+			semaphore->value = arg;
 		}
 	}
 
@@ -60,15 +64,16 @@ namespace rsx
 	{
 		force_inline void texture_read_semaphore_release(thread* rsx, u32 arg)
 		{
-			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
+			rsx::semaphore_t& result = rsx::state.context->semaphores[method_registers[NV4097_SET_SEMAPHORE_OFFSET] / sizeof(CellGcmReportData)];
+			result.timestamp = rsx->timestamp();
+			result.value = arg;
 		}
 
 		force_inline void back_end_write_semaphore_release(thread* rsx, u32 arg)
 		{
-			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET],
-				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
+			rsx::semaphore_t& result = rsx::state.context->semaphores[method_registers[NV4097_SET_SEMAPHORE_OFFSET] / sizeof(CellGcmReportData)];
+			result.timestamp = rsx->timestamp();
+			result.value = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 		}
 
 		//fire only when all data passed to rsx cmd buffer
@@ -274,18 +279,8 @@ namespace rsx
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
 			u32 report_dma = method_registers[NV4097_SET_CONTEXT_DMA_REPORT];
-			u32 location;
 
-			switch (report_dma)
-			{
-			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT: location = CELL_GCM_LOCATION_LOCAL; break;
-			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN: location = CELL_GCM_LOCATION_MAIN; break;
-			default:
-				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", report_dma);
-				return;
-			}
-
-			vm::ps3::ptr<CellGcmReportData> result = vm::cast(get_address(offset, location));
+			vm::ps3::ptr<CellGcmReportData> result = vm::cast(get_address_dma(offset, report_dma));
 
 			result->timer = rsx->timestamp();
 
@@ -356,7 +351,7 @@ namespace rsx
 					LOG_ERROR(RSX, "%s: y is not null (0x%x)", __FUNCTION__, y);
 				}
 
-				u32 address = get_address(method_registers[NV3062_SET_OFFSET_DESTIN] + (x << 2) + index * 4, method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]);
+				u32 address = get_address_dma(method_registers[NV3062_SET_OFFSET_DESTIN] + (x << 2) + index * 4, method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]);
 				vm::ps3::write32(address, arg);
 			}
 		};
@@ -438,14 +433,14 @@ namespace rsx
 				//HACK: it's extension of the flip-hack. remove this when textures cache would be properly implemented
 				for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 				{
-					u32 begin = rsx->gcm_buffers[i].offset;
+					u32 begin = state.display_buffers[i].offset;
 
 					if (dst_offset < begin || !begin)
 					{
 						continue;
 					}
 
-					if (rsx->gcm_buffers[i].width < 720 || rsx->gcm_buffers[i].height < 480)
+					if (state.display_buffers[i].width < 720 || state.display_buffers[i].height < 480)
 					{
 						continue;
 					}
@@ -455,7 +450,7 @@ namespace rsx
 						return;
 					}
 
-					u32 end = begin + rsx->gcm_buffers[i].height * rsx->gcm_buffers[i].pitch;
+					u32 end = begin + state.display_buffers[i].height * state.display_buffers[i].pitch;
 
 					if (dst_offset < end)
 					{
@@ -470,8 +465,8 @@ namespace rsx
 			u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
 			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
-			u32 dst_address = get_address(dst_offset + out_offset, dst_dma);
+			tiled_region src_region = rsx->get_tiled_address_dma(src_offset + in_offset, src_dma);
+			u32 dst_address = get_address_dma(dst_offset + out_offset, dst_dma);
 
 			if (out_pitch == 0)
 			{
@@ -706,8 +701,8 @@ namespace rsx
 			u32 dst_offset = method_registers[NV0039_OFFSET_OUT];
 			u32 dst_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT];
 
-			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
-			const u8 *src = (u8*)vm::base(get_address(src_offset, src_dma));
+			u8 *dst = (u8*)vm::base(get_address_dma(dst_offset, dst_dma));
+			const u8 *src = (u8*)vm::base(get_address_dma(src_offset, src_dma));
 
 			if (in_pitch == out_pitch && out_pitch == line_length)
 			{
@@ -739,19 +734,18 @@ namespace rsx
 			Emu.Pause();
 		}
 
-		rsx->gcm_current_buffer = arg;
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
 		rsx->reset();
 
-		rsx->last_flip_time = get_system_time() - 1000000;
-		rsx->gcm_current_buffer = arg;
-		rsx->flip_status = 0;
+		state.last_flip_time = get_system_time() - 1000000;
+		state.current_display_buffer = arg;
+		state.flip_status = 0;
 
-		if (rsx->flip_handler)
+		if (state.flip_handler)
 		{
-			Emu.GetCallbackManager().Async([func = rsx->flip_handler](PPUThread& ppu)
+			Emu.GetCallbackManager().Async([func = state.flip_handler](PPUThread& ppu)
 			{
 				func(ppu, 1);
 			});
@@ -769,9 +763,9 @@ namespace rsx
 
 	void user_command(thread* rsx, u32 arg)
 	{
-		if (rsx->user_handler)
+		if (state.user_handler)
 		{
-			Emu.GetCallbackManager().Async([func = rsx->user_handler, arg](PPUThread& ppu)
+			Emu.GetCallbackManager().Async([func = state.user_handler, arg](PPUThread& ppu)
 			{
 				func(ppu, arg);
 			});

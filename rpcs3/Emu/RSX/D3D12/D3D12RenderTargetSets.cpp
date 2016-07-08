@@ -326,12 +326,12 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 
 	u32 address_color[] =
 	{
-		rsx::get_address(offset_color[0], context_dma_color[0]),
-		rsx::get_address(offset_color[1], context_dma_color[1]),
-		rsx::get_address(offset_color[2], context_dma_color[2]),
-		rsx::get_address(offset_color[3], context_dma_color[3]),
+		rsx::get_address_dma(offset_color[0], context_dma_color[0]),
+		rsx::get_address_dma(offset_color[1], context_dma_color[1]),
+		rsx::get_address_dma(offset_color[2], context_dma_color[2]),
+		rsx::get_address_dma(offset_color[3], context_dma_color[3]),
 	};
-	u32 address_z = rsx::get_address(offset_zeta, m_context_dma_z);
+	u32 address_z = rsx::get_address_dma(offset_zeta, m_context_dma_z);
 
 	bool need_transfer = false;
 
