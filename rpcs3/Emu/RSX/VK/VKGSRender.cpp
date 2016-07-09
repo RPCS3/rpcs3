@@ -47,6 +47,8 @@ namespace vk
 			return VK_COMPARE_OP_GREATER_OR_EQUAL;
 		case rsx::comparaison_function::equal:
 			return VK_COMPARE_OP_EQUAL;
+		case rsx::comparaison_function::not_equal:
+			return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparaison_function::always:
 			return VK_COMPARE_OP_ALWAYS;
 		default:
