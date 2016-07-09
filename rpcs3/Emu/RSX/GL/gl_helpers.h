@@ -1509,6 +1509,7 @@ namespace gl
 	};
 
 	GLenum draw_mode(rsx::primitive_type in);
+	bool   is_primitive_native(rsx::primitive_type in);
 
 	enum class indices_type
 	{

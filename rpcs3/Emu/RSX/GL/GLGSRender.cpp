@@ -497,7 +497,7 @@ void GLGSRender::end()
 			throw std::logic_error("bad index array type");
 		}
 	}
-	else if (!is_primitive_native(draw_mode))
+	else if (!gl::is_primitive_native(draw_mode))
 	{
 		__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, (GLvoid *)(std::ptrdiff_t)offset_in_index_buffer);
 	}

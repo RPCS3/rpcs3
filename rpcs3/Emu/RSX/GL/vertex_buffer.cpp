@@ -131,7 +131,7 @@ namespace
 	std::tuple<u32, u32> get_index_array_for_emulated_non_indexed_draw(const std::vector<std::pair<u32, u32>> &first_count_commands, rsx::primitive_type primitive_mode, gl::ring_buffer &dst)
 	{
 		u32 vertex_draw_count = 0;
-		assert(!is_primitive_native(primitive_mode));
+		assert(!gl::is_primitive_native(primitive_mode));
 
 		for (const auto &pair : first_count_commands)
 		{
@@ -152,6 +152,32 @@ namespace
 
 		dst.unmap();
 		return std::make_tuple(vertex_draw_count, mapping.second);
+	}
+
+	std::tuple<u32, u32, u32> upload_index_buffer(void *ptr, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32>> first_count_commands, u32 initial_vertex_count)
+	{
+		u32 min_index, max_index, vertex_draw_count = initial_vertex_count;
+
+		if (gl::is_primitive_native(draw_mode))
+		{
+			if (type == rsx::index_array_type::u16)
+				std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u16>{(u16*)ptr, vertex_draw_count}, first_count_commands);
+			else
+				std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u32>{(u32*)ptr, vertex_draw_count}, first_count_commands);
+
+		}
+		else
+		{
+			vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
+			
+			u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+			u32 block_sz = vertex_draw_count * type_size;
+			
+			gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), gsl::narrow<u32>(block_sz) };
+			std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, type, draw_mode, first_count_commands);
+		}
+
+		return std::make_tuple(min_index, max_index, vertex_draw_count);
 	}
 }
 
@@ -186,21 +212,18 @@ u32 GLGSRender::set_vertex_buffer()
 	{
 		rsx::index_array_type type = rsx::method_registers.index_type();
 		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+		
 		for (const auto& first_count : first_count_commands)
 		{
 			vertex_draw_count += first_count.second;
 		}
 
-		// Index count
-		vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
-		u32 block_sz = vertex_draw_count * type_size;
-		
-		auto mapping = m_index_ring_buffer.alloc_and_map(block_sz);
+		u32 max_size = get_index_count(draw_mode, vertex_draw_count) * type_size;
+		auto mapping = m_index_ring_buffer.alloc_and_map(max_size);
 		void *ptr = mapping.first;
 		offset_in_index_buffer = mapping.second;
 
-		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), gsl::narrow<u32>(block_sz) };
-		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, type, draw_mode, first_count_commands);
+		std::tie(min_index, max_index, vertex_draw_count) = upload_index_buffer(ptr, type, draw_mode, first_count_commands, vertex_draw_count);
 
 		m_index_ring_buffer.unmap();
 	}
@@ -272,7 +295,8 @@ u32 GLGSRender::set_vertex_buffer()
 
 			//Link texture to uniform
 			m_program->uniforms.texture(location, index + texture_index_offset, texture);
-			if (!is_primitive_native(draw_mode))
+			
+			if (!gl::is_primitive_native(draw_mode))
 			{
 				std::tie(vertex_draw_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw({ { 0, vertex_draw_count } }, draw_mode, m_index_ring_buffer);
 			}
@@ -343,6 +367,7 @@ u32 GLGSRender::set_vertex_buffer()
 						offset += first_count.second * element_size;
 					}
 				}
+
 				if (draw_command == rsx::draw_command::indexed)
 				{
 					data_size = (max_index + 1) * element_size;
@@ -400,7 +425,7 @@ u32 GLGSRender::set_vertex_buffer()
 			}
 		}
 
-		if (draw_command == rsx::draw_command::array && !is_primitive_native(draw_mode))
+		if (draw_command == rsx::draw_command::array && !gl::is_primitive_native(draw_mode))
 		{
 			std::tie(vertex_draw_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(first_count_commands, draw_mode, m_index_ring_buffer);
 		}
