@@ -250,7 +250,7 @@ namespace rsx
 				rsxthr->first_count_commands.push_back(std::make_pair(0, max_vertex_count));
 			}
 
-			if (!rsxthr->vertex_draw_count)
+			if (!(rsxthr->first_count_commands.empty() && rsxthr->inline_vertex_array.empty()))
 			{
 				rsxthr->end();
 			}
