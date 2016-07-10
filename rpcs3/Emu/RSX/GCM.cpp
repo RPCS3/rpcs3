@@ -1118,6 +1118,7 @@ rsx::front_face rsx::to_front_face(u16 in)
 {
 	switch (in)
 	{
+	default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
 	case CELL_GCM_CW: return rsx::front_face::cw;
 	case CELL_GCM_CCW: return rsx::front_face::ccw;
 	}
