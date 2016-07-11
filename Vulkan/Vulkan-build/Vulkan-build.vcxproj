@@ -39,23 +39,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
-msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release
-    </NMakeBuildCommandLine>
-    <NMakeCleanCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
+    <NMakeBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF -DBUILD_LAYERS=OFF -DBUILD_VKJSON=OFF ../Vulkan-LoaderAndValidationLayers
+msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF -DBUILD_LAYERS=OFF -DBUILD_VKJSON=OFF ../Vulkan-LoaderAndValidationLayers
 msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
+    <NMakeReBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF -DBUILD_LAYERS=OFF -DBUILD_VKJSON=OFF ../Vulkan-LoaderAndValidationLayers
 msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release
     </NMakeReBuildCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
-msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug
-    </NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
-msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug
-    </NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
+    <NMakeBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF -DBUILD_LAYERS=OFF -DBUILD_VKJSON=OFF ../Vulkan-LoaderAndValidationLayers
+msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF -DBUILD_LAYERS=OFF -DBUILD_VKJSON=OFF ../Vulkan-LoaderAndValidationLayers
+msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF -DBUILD_LAYERS=OFF -DBUILD_VKJSON=OFF ../Vulkan-LoaderAndValidationLayers
 msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug</NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>
