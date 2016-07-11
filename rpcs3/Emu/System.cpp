@@ -204,6 +204,7 @@ void Emulator::Load()
 			const auto _psf = psf::load_object(fs::file(elf_dir + "/../PARAM.SFO"));
 			m_title = psf::get_string(_psf, "TITLE", m_path);
 			m_title_id = psf::get_string(_psf, "TITLE_ID");
+			fs::get_data_dir(m_title_id, m_path);
 
 			LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 			LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
