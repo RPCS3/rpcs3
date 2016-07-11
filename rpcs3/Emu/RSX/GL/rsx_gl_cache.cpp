@@ -272,15 +272,11 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 
 		if (state.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 		{
-			if (0)
+			if (shader.temporary_registers.find({ "r0" }) != shader.temporary_registers.end())
 			{
-				finalize += "\tocol = vec4(1.0, 0.0, 1.0, 1.0);\n";
-			}
-			else
-			{
+				//Some shaders only write to gl_FragDepth and ignore color output
 				finalize += "\tocol = r0;\n";
 			}
-
 			if (shader.temporary_registers.find({ "r2" }) != shader.temporary_registers.end())
 			{
 				result.code += "layout(location = 1) out vec4 ocol1;\n";

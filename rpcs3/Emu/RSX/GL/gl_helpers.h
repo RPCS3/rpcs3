@@ -1732,8 +1732,6 @@ namespace gl
 
 		class shader
 		{
-			GLuint m_id = GL_NONE;
-
 		public:
 			enum class type
 			{
@@ -1741,6 +1739,13 @@ namespace gl
 				vertex = GL_VERTEX_SHADER,
 				geometry = GL_GEOMETRY_SHADER
 			};
+
+		private:
+
+			GLuint m_id = GL_NONE;
+			type shader_type = type::vertex;
+
+		public:
 
 			shader() = default;
 
@@ -1777,12 +1782,28 @@ namespace gl
 			void create(type type_)
 			{
 				m_id = glCreateShader((GLenum)type_);
+				shader_type = type_;
 			}
 
 			void source(const std::string& src) const
 			{
 				const char* str = src.c_str();
 				const GLint length = (GLint)src.length();
+
+				{
+					std::string base_name = "shaderlog/VertexProgram";
+					switch (shader_type)
+					{
+					case type::fragment:
+						base_name = "shaderlog/FragmentProgram";
+						break;
+					case type::geometry:
+						base_name = "shaderlog/GeometryProgram";
+						break;
+					}
+
+					fs::file(fs::get_config_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
+				}
 
 				glShaderSource(m_id, 1, &str, &length);
 			}
