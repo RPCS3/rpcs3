@@ -1,4 +1,5 @@
 #include "File.h"
+#include "Hash.h"
 #include "StrFmt.h"
 #include "Macro.h"
 #include "SharedMutex.h"
@@ -1158,6 +1159,45 @@ const std::string& fs::get_config_dir()
 	}();
 
 	return s_dir;
+}
+
+std::string fs::get_data_dir(const std::string& elf_path, const std::string& title_id)
+{
+	static const std::string s_dir = []
+	{
+		std::string dir = get_config_dir();
+		dir += "/data/";
+
+		if (!is_dir(dir) && !create_path(dir))
+		{
+			return get_config_dir();
+		}
+
+		return dir;
+	}();
+
+	std::string base_dir = "/" + hash::GetPathHashWithFilename(elf_path, 20) + "/";
+
+	if (!title_id.empty())
+	{
+		// ensure the title id has no dash, the IDs from the GameViewer for example have a dashes in it
+		std::string _title_id = title_id;
+		_title_id.erase(std::remove(_title_id.begin(), _title_id.end(), '-'), _title_id.end());
+
+		base_dir = "/" + _title_id + base_dir;
+		_title_id.clear();
+	}
+
+	base_dir = s_dir + "/" + base_dir;
+
+	create_path(base_dir);
+
+	// create a text file which holds the location of the source file
+	fs::file file(base_dir + "/info.txt", fs::read + fs::write + fs::create);
+	file.write(elf_path);
+	file.close();
+
+	return base_dir;
 }
 
 const std::string& fs::get_executable_dir()

@@ -436,6 +436,9 @@ namespace fs
 	// Get configuration directory
 	const std::string& get_config_dir();
 
+	// Get data directory of given ELF file, optimally include the title id in that path
+	std::string get_data_dir(const std::string& elf_path, const std::string& title_id = std::string());
+
 	// Get executable directory
 	const std::string& get_executable_dir();
 

@@ -210,6 +210,15 @@ void Emulator::Load()
 			LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 			LOG_NOTICE(LOADER, "");
 
+			// Load game configuration if available
+			std::string game_config = fs::get_data_dir(m_path, m_title_id) + "/config.yml";
+			if (fs::file cfg_file{ game_config })
+			{
+				LOG_NOTICE(LOADER, "Game config: %s", game_config);
+				cfg::root.from_string(cfg_file.to_string());
+			}
+			game_config.clear();
+
 			LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
 
 			// Mount /dev_bdvd/
