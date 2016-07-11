@@ -786,6 +786,7 @@ namespace rsx
 			{
 				is_int = is_int_type(rsx::method_registers.register_vertex_info[index].type);
 				result.state.frequency[index] = rsx::method_registers.register_vertex_info[index].frequency;
+				result.state.divider_op |= (1 << index);
 			}
 			else
 			{
