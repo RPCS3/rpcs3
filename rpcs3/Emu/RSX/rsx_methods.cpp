@@ -723,6 +723,14 @@ namespace rsx
 			Emu.Pause();
 		}
 
+		if (double limit = g_cfg_rsx_frame_limit.get())
+		{
+			if (limit < 0) limit = rsx->fps_limit; // TODO
+
+			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
+			rsx->timer_sync.Start();
+		}
+		
 		rsx->gcm_current_buffer = arg;
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
@@ -739,15 +747,6 @@ namespace rsx
 			{
 				func(ppu, 1);
 			});
-		}
-
-		if (double limit = g_cfg_rsx_frame_limit.get())
-		{
-			if (limit < 0) limit = rsx->fps_limit; // TODO
-
-			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
-			rsx->timer_sync.Start();
-			rsx->local_transform_constants.clear();
 		}
 	}
 
