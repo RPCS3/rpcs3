@@ -23,17 +23,6 @@ namespace
 		}
 		throw EXCEPTION("Unknown depth format");
 	}
-	
-	u32 get_front_face_ccw(u32 ffv)
-	{
-		switch (ffv)
-		{
-		default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
-		case CELL_GCM_CW: return GL_CW;
-		case CELL_GCM_CCW: return GL_CCW;
-		}
-		throw EXCEPTION("Unknown front face value: 0x%X", ffv);
-	}
 }
 
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
@@ -170,10 +159,14 @@ namespace
 
 	GLenum front_face(rsx::front_face op)
 	{
+		GLenum mask = 0;
+		if (rsx::to_window_origin((rsx::method_registers[NV4097_SET_SHADER_WINDOW] >> 12) & 0xf) == rsx::window_origin::bottom)
+			mask = 1;
+
 		switch (op)
 		{
-		case rsx::front_face::cw: return GL_CW;
-		case rsx::front_face::ccw: return GL_CCW;
+		case rsx::front_face::cw: return GL_CW ^ mask;
+		case rsx::front_face::ccw: return GL_CCW ^ mask;
 		}
 		throw;
 	}
