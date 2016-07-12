@@ -367,14 +367,15 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		}
 	};
 
-	// Get next function address
+	// Get next reliable function address
 	auto get_limit = [&](u32 addr) -> u32
 	{
-		const auto found = funcs.lower_bound(addr);
-
-		if (found != funcs.end())
+		for (auto it = funcs.lower_bound(addr), end = funcs.end(); it != end; it++)
 		{
-			return found->first;
+			if (it->second.attr & ppu_attr::known_addr)
+			{
+				return it->first;
+			}
 		}
 
 		return end;
@@ -396,6 +397,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				TOCs.emplace(toc);
 				
 				auto& func = add_func(addr, toc, ptr.addr());
+				func.attr += ppu_attr::known_addr;
 			}
 
 			break;
@@ -469,13 +471,14 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				u32 addr = 0;
 				u32 size = 0;
 
-				if ((ptr[2] == -1 || ptr[2] == 0) && ptr[4] == 0)
+				if (ptr[2] == 0 && ptr[3] == 0)
+				{
+					size = ptr[5];
+				}
+				else if ((ptr[2] == -1 || ptr[2] == 0) && ptr[4] == 0)
 				{
 					addr = ptr[3] + ptr.addr() + 8;
 					size = ptr[5];
-				}
-				else if (ptr[2] == 0 && ptr[3] == 0)
-				{
 				}
 				else if (ptr[2] != -1 && ptr[4])
 				{
@@ -499,6 +502,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				}
 
 				auto& func = add_func(addr, 0, ptr.addr());
+				func.attr += ppu_attr::known_addr;
 				func.attr += ppu_attr::known_size;
 				func.size = size;
 			}
@@ -565,6 +569,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				// The most used simple import stub
 				func.size = 0x20;
 				func.blocks.emplace(func.addr, func.size);
+				func.attr += ppu_attr::known_addr;
+				func.attr += ppu_attr::known_size;
 				continue;
 			}
 
@@ -592,12 +598,20 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			func.blocks.emplace(vm::cast(func.addr), 0);
 		}
 
+		// Get function limit
+		const u32 func_end = get_limit(func.addr + 1);
+
 		// Block analysis workload
 		std::vector<std::reference_wrapper<std::pair<const u32, u32>>> block_queue;
 
 		// Add new block for analysis
 		auto add_block = [&](u32 addr) -> bool
 		{
+			if (addr < func.addr || addr >= func_end)
+			{
+				return false;
+			}
+
 			const auto _pair = func.blocks.emplace(addr, 0);
 
 			if (_pair.second)
@@ -611,7 +625,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 		for (auto& block : func.blocks)
 		{
-			if (!block.second)
+			if (!block.second && block.first < func_end)
 			{
 				block_queue.emplace_back(block);
 			}
@@ -620,7 +634,11 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		// TODO: lower priority?
 		if (func.attr & ppu_attr::no_size)
 		{
-			const u32 next = get_limit(func.blocks.crbegin()->first + 1);
+			// Get next function
+			const auto _next = funcs.lower_bound(func.blocks.crbegin()->first + 1);
+
+			// Get limit
+			const u32 func_end2 = _next == funcs.end() ? func_end : std::min<u32>(_next->first, func_end);
 
 			// Find more block entries
 			for (const auto& seg : segs)
@@ -629,7 +647,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				{
 					const u32 value = *ptr;
 
-					if (value % 4 == 0 && value >= func.addr && value < next)
+					if (value % 4 == 0 && value >= func.addr && value < func_end2)
 					{
 						add_block(value);
 					}
@@ -644,7 +662,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		{
 			auto& block = block_queue[j].get();
 
-			for (vm::cptr<u32> _ptr = vm::cast(block.first); _ptr.addr() < end;)
+			for (vm::cptr<u32> _ptr = vm::cast(block.first); _ptr.addr() < func_end;)
 			{
 				const u32 iaddr = _ptr.addr();
 				const ppu_opcode_t op{*_ptr++};
@@ -685,7 +703,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					{
 						// Nothing
 					}
-					else if (is_call || target < func.addr/* || target >= get_limit(_ptr.addr())*/)
+					else if (is_call || target < func.addr || target >= func_end)
 					{
 						// Add function call (including obvious tail call)
 						add_func(target, 0, func.addr);
@@ -719,7 +737,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					{
 						// Analyse jumptable (TODO)
 						const u32 jt_addr = _ptr.addr();
-						const u32 jt_end = end;
+						const u32 jt_end = func_end;
 
 						for (; _ptr.addr() < jt_end; _ptr++)
 						{
@@ -771,6 +789,11 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				continue;
 			}
 
+			// Just set the max
+			func.size = std::max<u32>(func.size, block.first + block.second - func.addr);
+			continue;
+
+			// Disabled (TODO)
 			if (expected == block.first)
 			{
 				func.size += block.second;
@@ -869,13 +892,15 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		}
 	}
 
-	// Function shrinkage (TODO: it's potentially dangerous but improvable)
+	// Function shrinkage, disabled (TODO: it's potentially dangerous but improvable)
 	for (auto& _pair : funcs)
 	{
 		auto& func = _pair.second;
 
-		// Next function start
-		const u32 next = get_limit(_pair.first + 1);
+		// Get next function addr
+		const auto _next = funcs.lower_bound(_pair.first + 1);
+
+		const u32 next = _next == funcs.end() ? end : _next->first;
 
 		// Just ensure that functions don't overlap
 		if (func.addr + func.size > next)
