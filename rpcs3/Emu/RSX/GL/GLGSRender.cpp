@@ -425,6 +425,11 @@ void GLGSRender::end()
 
 						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
 					}
+					else
+					{
+						//This shader may have been re-used with a different texture config. Have to reset this
+						glProgramUniform4f(m_program->id(), location, 1.f, 1.f, 1.f, 1.f);
+					}
 				}
 			}
 		}
@@ -457,6 +462,11 @@ void GLGSRender::end()
 						u32 depth = std::max<u32>(rsx::method_registers.fragment_textures[i].depth(), 1);
 
 						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
+					}
+					else
+					{
+						//This shader may have been re-used with a different texture config. Have to reset this
+						glProgramUniform4f(m_program->id(), location, 1.f, 1.f, 1.f, 1.f);
 					}
 				}
 			}
