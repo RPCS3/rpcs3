@@ -108,6 +108,9 @@ namespace
 
 void D3D12GSRender::clear_surface(u32 arg)
 {
+	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
+	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
+	
 	std::chrono::time_point<std::chrono::system_clock> start_duration = std::chrono::system_clock::now();
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_start = std::chrono::system_clock::now();
