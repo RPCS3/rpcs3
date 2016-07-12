@@ -10,7 +10,7 @@ using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
 
-/* Interpreter Call Macro */
+/* Interpreter Call Macro (unused) */
 
 #define VEC3OP(name) SetVr(op.vd, Call(GetType<u32[4]>(), "__vec3op",\
 	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
@@ -1081,13 +1081,15 @@ void PPUTranslator::VMSUMSHM(ppu_opcode_t op)
 
 void PPUTranslator::VMSUMSHS(ppu_opcode_t op)
 {
-	// TODO (very rare)
-	/**/ return_ VEC3OP(VMSUMSHS);
-	//const auto a = GetVr(op.va, VrType::vi16);
-	//const auto b = GetVr(op.vb, VrType::vi16);
-	//const auto c = GetVr(op.vc, VrType::vi32);
-	//SetVr(op.vd, Call(GetType<u32[4]>(), m_pure_attr, "__vmsumshs", a, b, c));
-	//SetSat(Call(GetType<bool>(), m_pure_attr, "__vmsumshs_get_sat", a, b, c));
+	const auto ab = SExt(GetVrs(VrType::vi16, op.va, op.vb));
+	const auto p = m_ir->CreateMul(ab[0], ab[1]);
+	const auto c = GetVr(op.vc, VrType::vi32);
+	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
+	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
+	const auto result = Add({ SExt(c), SExt(e0), SExt(e1) });
+	const auto saturated = SaturateSigned(result, -0x80000000ll, 0x7fffffff);
+	SetVr(op.vd, saturated.first);
+	SetSat(IsNotZero(saturated.second));
 }
 
 void PPUTranslator::VMSUMUBM(ppu_opcode_t op)
@@ -1114,13 +1116,15 @@ void PPUTranslator::VMSUMUHM(ppu_opcode_t op)
 
 void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 {
-	// TODO (very rare)
-	/**/ return_ VEC3OP(VMSUMUHS);
-	//const auto a = GetVr(op.va, VrType::vi16);
-	//const auto b = GetVr(op.vb, VrType::vi16);
-	//const auto c = GetVr(op.vc, VrType::vi32);
-	//SetVr(op.vd, Call(GetType<u32[4]>(), m_pure_attr, "__vmsumuhs", a, b, c));
-	//SetSat(Call(GetType<bool>(), m_pure_attr, "__vmsumuhs_get_sat", a, b, c));
+	const auto ab = ZExt(GetVrs(VrType::vi16, op.va, op.vb));
+	const auto p = m_ir->CreateMul(ab[0], ab[1]);
+	const auto c = GetVr(op.vc, VrType::vi32);
+	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
+	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
+	const auto result = Add({ ZExt(c), ZExt(e0), ZExt(e1) });
+	const auto saturated = Saturate(result, ICmpInst::ICMP_UGT, m_ir->getInt64(0xffffffff));
+	SetVr(op.vd, saturated.first);
+	SetSat(IsNotZero(saturated.second));
 }
 
 void PPUTranslator::VMULESB(ppu_opcode_t op)
@@ -1275,7 +1279,10 @@ void PPUTranslator::VPKUWUS(ppu_opcode_t op)
 
 void PPUTranslator::VREFP(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<f32[4]>(), m_pure_attr, "__vrefp", GetVr(op.vb, VrType::vf)));
+	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), GetVr(op.vb, VrType::vf));
+	FastMathFlags x; x.setAllowReciprocal();
+	cast<Instruction>(result)->setFastMathFlags(x);
+	SetVr(op.vd, result);
 }
 
 void PPUTranslator::VRFIM(ppu_opcode_t op)
@@ -1318,7 +1325,10 @@ void PPUTranslator::VRLW(ppu_opcode_t op)
 
 void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<f32[4]>(), m_pure_attr, "__vrsqrtefp", GetVr(op.vb, VrType::vf)));
+	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), Call(GetType<f32[4]>(), "llvm.sqrt.v4f32", GetVr(op.vb, VrType::vf)));
+	FastMathFlags x; x.setAllowReciprocal();
+	cast<Instruction>(result)->setFastMathFlags(x);
+	SetVr(op.vd, result);
 }
 
 void PPUTranslator::VSEL(ppu_opcode_t op)
@@ -1551,7 +1561,6 @@ void PPUTranslator::VSUBUWS(ppu_opcode_t op)
 
 void PPUTranslator::VSUMSWS(ppu_opcode_t op)
 {
-	// TODO (rare)
 	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
 	const auto a = SExt(ab[0]);
 	const auto b = SExt(m_ir->CreateExtractElement(ab[1], m_ir->getInt32(m_is_be ? 3 : 0)));
@@ -1566,7 +1575,6 @@ void PPUTranslator::VSUMSWS(ppu_opcode_t op)
 
 void PPUTranslator::VSUM2SWS(ppu_opcode_t op)
 {
-	// TODO (rare)
 	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
 	const auto b = SExt(Shuffle(ab[1], nullptr, { 1, 3 }));
 	const auto a = SExt(ab[0]);
@@ -1579,27 +1587,32 @@ void PPUTranslator::VSUM2SWS(ppu_opcode_t op)
 
 void PPUTranslator::VSUM4SBS(ppu_opcode_t op)
 {
-	// TODO (very rare)
-	/**/ return_ VEC2OP(VSUM4SBS);
-	//const auto a = GetVr(op.va, VrType::vi8);
-	//const auto b = GetVr(op.vb, VrType::vi32);
-	//SetVr(op.vd, Call(GetType<u32[4]>(), m_pure_attr, "__vsum4sbs", a, b));
-	//SetSat(Call(GetType<bool>(), m_pure_attr, "__vsum4sbs_get_sat", a, b));
+	const auto a = SExt(GetVr(op.va, VrType::vi8), GetType<s32[16]>());
+	const auto b = GetVr(op.vb, VrType::vi32);
+	const auto e0 = Shuffle(a, nullptr, { 0, 4, 8, 12 });
+	const auto e1 = Shuffle(a, nullptr, { 1, 5, 9, 13 });
+	const auto e2 = Shuffle(a, nullptr, { 2, 6, 10, 14 });
+	const auto e3 = Shuffle(a, nullptr, { 3, 7, 11, 15 });
+	const auto result = m_ir->CreateAdd(SExt(b), SExt(Add({ e0, e1, e2, e3 }))); // Summ, (e0+e1+e2+e3) is small
+	const auto saturated = SaturateSigned(result, -0x80000000ll, 0x7fffffff);
+	SetVr(op.vd, saturated.first);
+	SetSat(IsNotZero(saturated.second));
 }
 
 void PPUTranslator::VSUM4SHS(ppu_opcode_t op)
 {
-	// TODO (very rare)
-	/**/ return_ VEC2OP(VSUM4SHS);
-	//const auto a = GetVr(op.va, VrType::vi16);
-	//const auto b = GetVr(op.vb, VrType::vi32);
-	//SetVr(op.vd, Call(GetType<u32[4]>(), m_pure_attr, "__vsum4shs", a, b));
-	//SetSat(Call(GetType<bool>(), m_pure_attr, "__vsum4shs_get_sat", a, b));
+	const auto a = SExt(GetVr(op.va, VrType::vi16));
+	const auto b = GetVr(op.vb, VrType::vi32);
+	const auto e0 = Shuffle(a, nullptr, { 0, 2, 4, 6 });
+	const auto e1 = Shuffle(a, nullptr, { 1, 3, 5, 7 });
+	const auto result = m_ir->CreateAdd(SExt(b), SExt(Add({ e0, e1 }))); // Summ, (e0+e1) is small
+	const auto saturated = SaturateSigned(result, -0x80000000ll, 0x7fffffff);
+	SetVr(op.vd, saturated.first);
+	SetSat(IsNotZero(saturated.second));
 }
 
 void PPUTranslator::VSUM4UBS(ppu_opcode_t op)
 {
-	// TODO
 	const auto a = ZExt(GetVr(op.va, VrType::vi8), GetType<u32[16]>());
 	const auto b = GetVr(op.vb, VrType::vi32);
 	const auto e0 = Shuffle(a, nullptr, { 0, 4, 8, 12 });
@@ -3435,7 +3448,9 @@ void PPUTranslator::FSQRTS(ppu_opcode_t op)
 void PPUTranslator::FRES(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb, 32);
-	const auto result = Call(GetType<f32>(), m_pure_attr, "__fre", b);
+	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), b);
+	FastMathFlags x; x.setAllowReciprocal();
+	cast<Instruction>(result)->setFastMathFlags(x);
 	SetFpr(op.frd, result);
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
@@ -3757,7 +3772,9 @@ void PPUTranslator::FMUL(ppu_opcode_t op)
 void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb, 32);
-	const auto result = Call(GetType<f32>(), m_pure_attr, "__frsqrte", b);
+	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), Call(GetType<f32>(), "llvm.sqrt.f32", b));
+	FastMathFlags x; x.setAllowReciprocal();
+	cast<Instruction>(result)->setFastMathFlags(x);
 	SetFpr(op.frd, result);
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);

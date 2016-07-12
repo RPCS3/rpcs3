@@ -397,28 +397,6 @@ static void ppu_trace(u64 addr)
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 }
 
-static __m128 sse_rcp_ps(__m128 A)
-{
-	return _mm_rcp_ps(A);
-}
-
-static __m128 sse_rsqrt_ps(__m128 A)
-{
-	return _mm_rsqrt_ps(A);
-}
-
-static float sse_rcp_ss(float A)
-{
-	_mm_store_ss(&A, _mm_rcp_ss(_mm_load_ss(&A)));
-	return A;
-}
-
-static float sse_rsqrt_ss(float A)
-{
-	_mm_store_ss(&A, _mm_rsqrt_ss(_mm_load_ss(&A)));
-	return A;
-}
-
 static u32 ppu_lwarx(u32 addr)
 {
 	be_t<u32> reg_value;
@@ -456,24 +434,6 @@ static bool adde_carry(u64 a, u64 b, bool c)
 #endif
 }
 
-// Interpreter call for simple vector instructions
-static __m128i ppu_vec3op(decltype(&ppu_interpreter::UNK) func, __m128i _a, __m128i _b, __m128i _c)
-{
-	PPUThread& ppu = static_cast<PPUThread&>(*get_current_cpu_thread());
-	ppu.VR[21].vi = _a;
-	ppu.VR[22].vi = _b;
-	ppu.VR[23].vi = _c;
-
-	ppu_opcode_t op{};
-	op.vd = 20;
-	op.va = 21;
-	op.vb = 22;
-	op.vc = 23;
-	func(ppu, op);
-
-	return ppu.VR[20].vi;
-}
-
 extern void ppu_initialize(const std::string& name, const std::vector<ppu_function>& funcs, u32 entry)
 {
 	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm || funcs.empty())
@@ -504,21 +464,16 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 		{ "__ldarx", (u64)&ppu_ldarx },
 		{ "__stwcx", (u64)&ppu_stwcx },
 		{ "__stdcx", (u64)&ppu_stdcx },
-		{ "__vec3op", (u64)&ppu_vec3op },
 		{ "__adde_get_ca", (u64)&adde_carry },
 		{ "__vexptefp", (u64)&sse_exp2_ps },
 		{ "__vlogefp", (u64)&sse_log2_ps },
 		{ "__vperm", (u64)&sse_altivec_vperm },
-		{ "__vrefp", (u64)&sse_rcp_ps },
-		{ "__vrsqrtefp", (u64)&sse_rsqrt_ps },
 		{ "__lvsl", (u64)&sse_altivec_lvsl },
 		{ "__lvsr", (u64)&sse_altivec_lvsr },
 		{ "__lvlx", (u64)&sse_cellbe_lvlx },
 		{ "__lvrx", (u64)&sse_cellbe_lvrx },
 		{ "__stvlx", (u64)&sse_cellbe_stvlx },
 		{ "__stvrx", (u64)&sse_cellbe_stvrx },
-		{ "__fre", (u64)&sse_rcp_ss },
-		{ "__frsqrte", (u64)&sse_rsqrt_ss },
 	};
 
 #ifdef LLVM_AVAILABLE
@@ -577,7 +532,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	pm.add(createAggressiveDCEPass());
 	pm.add(createCFGSimplificationPass());
 	//pm.add(createLintPass()); // Check
-	
+
 	// Translate functions
 	for (const auto& info : funcs)
 	{

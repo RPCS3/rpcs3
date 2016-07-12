@@ -853,7 +853,7 @@ std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 
 				case 10:
 				{
-					const u32 value = vm::_ref<ppu_bf_t<u32, 6, 24>>(raddr) = static_cast<u32>(rdata - raddr) >> 2;
+					const u32 value = vm::_ref<ppu_bf_t<be_t<u32>, 6, 24>>(raddr) = static_cast<u32>(rdata - raddr) >> 2;
 					LOG_WARNING(LOADER, "**** RELOCATION(10): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
 					break;
 				}
@@ -867,7 +867,7 @@ std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 
 				case 57:
 				{
-					const u16 value = vm::_ref<ppu_bf_t<u16, 0, 14>>(raddr) = static_cast<u16>(rdata) >> 2;
+					const u16 value = vm::_ref<ppu_bf_t<be_t<u16>, 0, 14>>(raddr) = static_cast<u16>(rdata) >> 2;
 					LOG_WARNING(LOADER, "**** RELOCATION(57): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
@@ -1325,12 +1325,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	*entry++ = MR(r12, r19);
 
 	// Branch to initialization
-	make_branch(entry, static_cast<u32>(elf.header.e_entry), true);
+	make_branch(entry, static_cast<u32>(elf.header.e_entry), false);
 
 	// Register entry function (addr, size)
 	ppu_function entry_func;
 	entry_func.addr = entry.addr() & -0x1000;
 	entry_func.size = entry.addr() & 0xfff;
+	entry_func.attr += ppu_attr::entry_point;
 	exec_set.emplace_back(entry_func);
 
 	// Initialize recompiler

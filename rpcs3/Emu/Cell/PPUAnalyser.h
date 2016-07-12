@@ -12,6 +12,7 @@ enum class ppu_attr : u32
 	no_return,
 	no_size,
 	uses_r0,
+	entry_point,
 };
 
 // PPU Function Information
