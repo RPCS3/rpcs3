@@ -23,17 +23,6 @@ namespace
 		}
 		throw EXCEPTION("Unknown depth format");
 	}
-	
-	u32 get_front_face_ccw(u32 ffv)
-	{
-		switch (ffv)
-		{
-		default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
-		case CELL_GCM_CW: return GL_CW;
-		case CELL_GCM_CCW: return GL_CCW;
-		}
-		throw EXCEPTION("Unknown front face value: 0x%X", ffv);
-	}
 }
 
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
@@ -170,10 +159,14 @@ namespace
 
 	GLenum front_face(rsx::front_face op)
 	{
+		GLenum mask = 0;
+		if (rsx::to_window_origin((rsx::method_registers[NV4097_SET_SHADER_WINDOW] >> 12) & 0xf) == rsx::window_origin::bottom)
+			mask = 1;
+
 		switch (op)
 		{
-		case rsx::front_face::cw: return GL_CW;
-		case rsx::front_face::ccw: return GL_CCW;
+		case rsx::front_face::cw: return GL_CW ^ mask;
+		case rsx::front_face::ccw: return GL_CCW ^ mask;
 		}
 		throw;
 	}
@@ -432,6 +425,11 @@ void GLGSRender::end()
 
 						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
 					}
+					else
+					{
+						//This shader may have been re-used with a different texture config. Have to reset this
+						glProgramUniform4f(m_program->id(), location, 1.f, 1.f, 1.f, 1.f);
+					}
 				}
 			}
 		}
@@ -465,6 +463,11 @@ void GLGSRender::end()
 
 						glProgramUniform4f(m_program->id(), location, 1.f / width, 1.f / height, 1.f / depth, 1.0f);
 					}
+					else
+					{
+						//This shader may have been re-used with a different texture config. Have to reset this
+						glProgramUniform4f(m_program->id(), location, 1.f, 1.f, 1.f, 1.f);
+					}
 				}
 			}
 		}
@@ -497,7 +500,7 @@ void GLGSRender::end()
 			throw std::logic_error("bad index array type");
 		}
 	}
-	else if (!is_primitive_native(draw_mode))
+	else if (!gl::is_primitive_native(draw_mode))
 	{
 		__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, (GLvoid *)(std::ptrdiff_t)offset_in_index_buffer);
 	}
