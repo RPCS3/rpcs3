@@ -388,7 +388,6 @@ u32 GLGSRender::set_vertex_buffer()
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
-				auto &vertex_data = rsx::method_registers.register_vertex_data[index];
 				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
 
 				switch (vertex_info.type)
@@ -397,14 +396,14 @@ u32 GLGSRender::set_vertex_buffer()
 				{
 					const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 					const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-					const size_t data_size = vertex_data.size();
+					const size_t data_size = element_size;
 
 					auto &texture = m_gl_attrib_buffers[index];
 
 					auto mapping = m_attrib_ring_buffer.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 					u8 *dst = static_cast<u8*>(mapping.first);
 
-					memcpy(dst, vertex_data.data(), data_size);
+					memcpy(dst, vertex_info.data.data(), element_size);
 					texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
 
 					//Link texture to uniform

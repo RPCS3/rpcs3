@@ -508,18 +508,17 @@ VKGSRender::upload_vertex_data()
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
 				//Untested!
-				auto &vertex_data = rsx::method_registers.register_vertex_data[index];
 				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
 
 				switch (vertex_info.type)
 				{
 				case rsx::vertex_base_type::f:
 				{
-					size_t data_size = vertex_data.size();
+					size_t data_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 					const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
 
 					u32 offset_in_attrib_buffer = 0;
-					void *data_ptr = vertex_data.data();
+					void *data_ptr = vertex_info.data.data();
 
 					if (vk::requires_component_expansion(vertex_info.type, vertex_info.size))
 					{
@@ -530,14 +529,14 @@ VKGSRender::upload_vertex_data()
 						offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
 						void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
 
-						vk::expand_array_components<float, 3, 4, 1>(reinterpret_cast<float*>(vertex_data.data()), dst, num_stored_verts);
+						vk::expand_array_components<float, 3, 4, 1>(reinterpret_cast<float*>(vertex_info.data.data()), dst, num_stored_verts);
 						m_attrib_ring_info.unmap();
 					}
 					else
 					{
 						offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
 						void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
-						memcpy(dst, vertex_data.data(), data_size);
+						memcpy(dst, vertex_info.data.data(), data_size);
 						m_attrib_ring_info.unmap();
 					}
 

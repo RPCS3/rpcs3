@@ -59,6 +59,19 @@ namespace
 		return vertex_buffer_view;
 	}
 
+	D3D12_SHADER_RESOURCE_VIEW_DESC get_vertex_attribute_srv(const rsx::vertex_base_type type, u8 size, UINT64 offset_in_vertex_buffers_buffer, UINT buffer_size)
+	{
+		u32 element_size = rsx::get_vertex_type_size_on_host(type, size);
+		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
+			get_vertex_attribute_format(type, size),
+			D3D12_SRV_DIMENSION_BUFFER,
+			get_component_mapping_from_vector_size(size)
+		};
+		vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
+		vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
+		return vertex_buffer_view;
+	}
+
 	template<int N>
 	UINT64 get_next_multiple_of(UINT64 val)
 	{
@@ -120,20 +133,19 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 		else if (rsx::method_registers.register_vertex_info[index].size > 0)
 		{
 			// In register vertex attribute
-			const rsx::data_array_format_info &info = rsx::method_registers.register_vertex_info[index];
-			const std::vector<u8> &data = rsx::method_registers.register_vertex_data[index];
+			const rsx::register_vertex_data_info &info = rsx::method_registers.register_vertex_info[index];
 
 			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
-			UINT buffer_size = gsl::narrow<UINT>(data.size());
+			UINT buffer_size = element_size;
 			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
 			void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			memcpy(mapped_buffer, data.data(), data.size());
+			memcpy(mapped_buffer, info.data.data(), buffer_size);
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 			command_list->CopyBufferRegion(m_vertex_buffer_data.Get(), offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
 
-			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(info, offset_in_vertex_buffers_buffer, buffer_size));
+			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(info.type, info.size, offset_in_vertex_buffers_buffer, buffer_size));
 			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
 		}
 	}
