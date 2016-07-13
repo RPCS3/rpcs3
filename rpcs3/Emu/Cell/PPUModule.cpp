@@ -911,7 +911,7 @@ std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 
 		ppu_load_imports(link, lib_info->imports_start, lib_info->imports_end);
 
-		prx->funcs = ppu_analyse(segments, sections, prx->specials[0xbc9a0086], lib_info->toc);
+		prx->funcs = ppu_analyse(segments, sections, lib_info->toc);
 	}
 	else
 	{
@@ -1259,7 +1259,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Analyse executable
-	const auto funcs = ppu_analyse(segments, sections, static_cast<u32>(elf.header.e_entry), 0);
+	const auto funcs = ppu_analyse(segments, sections, 0);
 
 	ppu_validate(vfs::get(Emu.GetPath()), funcs, 0);
 

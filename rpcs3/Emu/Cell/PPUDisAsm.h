@@ -13,7 +13,7 @@ public:
 private:
 	u32 DisAsmBranchTarget(const s32 imm)
 	{
-		return ppu_branch_target(dump_pc, imm);
+		return dump_pc + (imm & ~3);
 	}
 
 private:

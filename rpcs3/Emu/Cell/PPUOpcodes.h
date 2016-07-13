@@ -56,17 +56,9 @@ union ppu_opcode_t
 	ppu_bf_t<u32, 7, 8> flm; // 7..14
 	ppu_bf_t<u32, 6, 1> l6; // 6
 	ppu_bf_t<u32, 15, 1> l15; // 15
+	cf_t<ppu_bf_t<s32, 16, 14>, ff_t<u32, 0, 2>> bt14;
+	cf_t<ppu_bf_t<s32, 6, 24>, ff_t<u32, 0, 2>> bt24;
 };
-
-inline u32 ppu_branch_target(u32 pc, u32 imm)
-{
-	return pc + (imm & ~0x3u);
-}
-
-inline u64 ppu_branch_target(u64 pc, u64 imm)
-{
-	return pc + (imm & ~0x3ull);
-}
 
 inline u64 ppu_rotate_mask(u32 mb, u32 me)
 {

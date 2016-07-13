@@ -1897,7 +1897,7 @@ bool ppu_interpreter::BC(PPUThread& ppu, ppu_opcode_t op)
 	if (ctr_ok && cond_ok)
 	{
 		const u32 nextLR = ppu.pc + 4;
-		ppu.pc = ppu_branch_target((op.aa ? 0 : ppu.pc), op.simm16);
+		ppu.pc = (op.aa ? 0 : ppu.pc) + op.bt14;
 		if (op.lk) ppu.LR = nextLR;
 		return false;
 	}
@@ -1927,7 +1927,7 @@ bool ppu_interpreter::SC(PPUThread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::B(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u32 nextLR = ppu.pc + 4;
-	ppu.pc = ppu_branch_target(op.aa ? 0 : ppu.pc, op.ll);
+	ppu.pc = (op.aa ? 0 : ppu.pc) + op.bt24;
 	if (op.lk) ppu.LR = nextLR;
 	return false;
 }
@@ -1954,7 +1954,7 @@ bool ppu_interpreter::BCLR(PPUThread& ppu, ppu_opcode_t op)
 	if (ctr_ok && cond_ok)
 	{
 		const u32 nextLR = ppu.pc + 4;
-		ppu.pc = ppu_branch_target(0, (u32)ppu.LR);
+		ppu.pc = (u32)ppu.LR & ~3;
 		if (op.lk) ppu.LR = nextLR;
 		return false;
 	}
@@ -2023,7 +2023,7 @@ bool ppu_interpreter::BCCTR(PPUThread& ppu, ppu_opcode_t op)
 	if (op.bo & 0x10 || ppu.CR[op.bi] == ((op.bo & 0x8) != 0))
 	{
 		const u32 nextLR = ppu.pc + 4;
-		ppu.pc = ppu_branch_target(0, (u32)ppu.CTR);
+		ppu.pc = (u32)ppu.CTR & ~3;
 		if (op.lk) ppu.LR = nextLR;
 		return false;
 	}

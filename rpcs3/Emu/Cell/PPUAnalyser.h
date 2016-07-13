@@ -50,7 +50,7 @@ struct ppu_pattern
 
 extern void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc);
 
-extern std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 entry, u32 lib_toc);
+extern std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc);
 
 // PPU Instruction Type
 struct ppu_itype

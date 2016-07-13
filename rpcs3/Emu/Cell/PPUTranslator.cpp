@@ -1734,7 +1734,7 @@ void PPUTranslator::ADDIS(ppu_opcode_t op)
 
 void PPUTranslator::BC(ppu_opcode_t op)
 {
-	const u64 target = ppu_branch_target(op.aa ? 0 : m_current_addr, op.simm16);
+	const u64 target = (op.aa ? 0 : m_current_addr) + op.bt14;
 
 	const auto cond = CheckBranchCondition(op.bo, op.bi);
 	
@@ -1742,7 +1742,7 @@ void PPUTranslator::BC(ppu_opcode_t op)
 	{
 		// Local branch
 
-		if (op.lk)
+		if (op.lk && target != m_current_addr)
 		{
 			CompilationError("BCL: local branch");
 			Call(GetType<void>(), "__trace", m_ir->getInt64(m_current_addr));
@@ -1779,13 +1779,13 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 void PPUTranslator::B(ppu_opcode_t op)
 {
-	const u64 target = ppu_branch_target(op.aa ? 0 : m_current_addr, op.ll);
+	const u64 target = (op.aa ? 0 : m_current_addr) + op.bt24;
 
 	if ((target > m_start_addr && target < m_end_addr) || (target == m_start_addr && !op.lk))
 	{
 		// Local branch
 
-		if (op.lk)
+		if (op.lk && target != m_current_addr)
 		{
 			CompilationError("BL: local branch");
 			Call(GetType<void>(), "__trace", m_ir->getInt64(m_current_addr));
@@ -1880,58 +1880,56 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 {
 	UseCondition(CheckBranchCondition(op.bo | 0x4, op.bi));
 
-	const auto jt_addr = m_current_addr + 4;
-	const auto jt_data = m_bin + 1;
+	// Jumptable: sorted set of possible targets
+	std::set<u64> targets;
 
 	// Detect a possible jumptable
-	for (u64 i = 0, addr = jt_addr; addr < m_end_addr; i++, addr += sizeof(u32))
+	for (u64 jt_addr = (m_current_addr += sizeof(u32)); m_current_addr < m_end_addr; m_current_addr += sizeof(u32))
 	{
-		const u64 target = jt_addr + static_cast<s32>(jt_data[i]);
+		const u64 target = jt_addr + static_cast<s32>(*++m_bin);
 
-		// Check jumptable entry conditions
-		if (target % 4 || target < m_start_addr || target >= m_end_addr)
+		if (target == jt_addr)
 		{
-			if (i >= 2)
-			{
-				// Fix next instruction address
-				m_current_addr = addr;
-
-				if (!op.lk)
-				{
-					// Get sorted set of possible targets
-					const std::set<s32> cases(jt_data, jt_data + i);
-
-					// Create switch with special default case
-					const auto _default = BasicBlock::Create(m_context, fmt::format("loc_%llx.def", m_current_addr/* - m_start_addr*/), m_function);
-					const auto _switch = m_ir->CreateSwitch(m_ir->CreateLoad(m_reg_ctr), _default, ::size32(cases));
-
-					for (const s32 offset : cases)
-					{
-						const u64 target = jt_addr + offset;
-						_switch->addCase(m_ir->getInt64(target), GetBasicBlock(target));
-					}
-
-					m_ir->SetInsertPoint(_default);
-					Trap(m_current_addr);
-					return;
-				}
-				else
-				{
-					CompilationError("BCCTRL with a jt");
-				}
-			}
-
 			break;
 		}
+
+		if (target % 4 || target < m_start_addr || target >= m_end_addr)
+		{
+			break;
+		}
+
+		targets.emplace(target);
 	}
 
 	if (!op.lk)
 	{
-		// Indirect branch
-		m_ir->CreateBr(m_jtr);
+		if (!targets.empty())
+		{
+			// Create switch with special default case
+			const auto _default = BasicBlock::Create(m_context, fmt::format("loc_%llx.def", m_current_addr/* - m_start_addr*/), m_function);
+			const auto _switch = m_ir->CreateSwitch(m_ir->CreateLoad(m_reg_ctr), _default, ::size32(targets));
+
+			for (const u64 target : targets)
+			{
+				_switch->addCase(m_ir->getInt64(target), GetBasicBlock(target));
+			}
+
+			m_ir->SetInsertPoint(_default);
+			Trap(m_current_addr);
+		}
+		else
+		{
+			// Indirect branch
+			m_ir->CreateBr(m_jtr);
+		}
 	}
 	else
 	{
+		if (!targets.empty())
+		{
+			CompilationError("BCCTRL with a jumptable");
+		}
+
 		// Indirect call
 		CallFunction(0, false, m_ir->CreateLoad(m_reg_ctr));
 	}
