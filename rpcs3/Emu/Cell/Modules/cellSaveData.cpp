@@ -78,7 +78,7 @@ static never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, 
 
 		for (const auto& entry : fs::dir(base_dir))
 		{
-			if (entry.is_directory)
+			if (!entry.is_directory)
 			{
 				continue;
 			}
