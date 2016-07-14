@@ -207,7 +207,11 @@ ppu_error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm:
 	}
 	else
 	{
-		throw fmt::exception("cellGameBootCheck(): Unknown CATEGORY: %s", category);
+		// Hack: When there is no (or unknown) CATEGORY returned, instead of throwing an exception
+		// we assume it's a disk game.
+		*type = CELL_GAME_GAMETYPE_DISC;
+		*attributes = 0;
+		cellGame.error("cellGameBootCheck(): Unknown CATEGORY: %s", category);
 	}
 
 	return CELL_GAME_RET_OK;
