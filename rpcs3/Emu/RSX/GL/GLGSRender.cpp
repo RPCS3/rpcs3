@@ -780,16 +780,8 @@ static void fill_fragment_state_buffer(glsl_fragment_state_buffer *buffer)
 
 bool GLGSRender::load_program()
 {
-	if (0)
-	{
-		RSXVertexProgram vertex_program = get_current_vertex_program();
-		RSXFragmentProgram fragment_program = get_current_fragment_program();
-
-		GLProgramBuffer prog_buffer;
-		__glcheck prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
-	}
-
-	rsx::program_info info = programs_cache.get(get_raw_program(), rsx::decompile_language::glsl);
+	rsx::raw_program prog = get_raw_program();
+	rsx::program_info info = programs_cache.get(prog, rsx::decompile_language::glsl);
 	m_program = (gl::glsl::program*)info.program;
 	m_program->use();
 
@@ -838,7 +830,9 @@ bool GLGSRender::load_program()
 			0x6, 0x7, 0x4, 0x5,
 			0x2, 0x3, 0x0, 0x1);
 
-		auto ucode = (const rsx::fragment_program::ucode_instr *)info.fragment_shader.decompiled->raw->ucode_ptr;
+		//The shader may be the same, but the value of the constants (and the shader location in memory) may have changed
+		//Point to the current shader location, not the cached version
+		auto ucode = (const rsx::fragment_program::ucode_instr *)prog.fragment_shader.ucode_ptr;
 
 		auto dst = (const rsx::fragment_program::ucode_instr *)mapping.first;
 
