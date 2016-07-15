@@ -361,11 +361,11 @@ namespace rsx
 
 			u32 out_x = method_registers.blit_engine_output_x();
 			u32 out_y = method_registers.blit_engine_output_y();
-			u32 out_w = method_registers.blit_engine_clip_width();
+			u32 out_w = method_registers.blit_engine_output_width();
 			u32 out_h = method_registers.blit_engine_output_height();
 
 			u16 in_w = method_registers.blit_engine_input_width();
-			u16 in_h = method_registers.blit_engine_output_height();
+			u16 in_h = method_registers.blit_engine_input_height();
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 			blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
 			blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
