@@ -11,6 +11,12 @@ struct gem_t
 	CellGemAttribute attribute;
 };
 
+s32 cellGemAttributeInit()
+{
+	UNIMPLEMENTED_FUNC(cellGem);
+	return CELL_OK;
+}
+
 s32 cellGemCalibrate()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
@@ -178,6 +184,12 @@ s32 cellGemGetTrackerHue()
 	return CELL_OK;
 }
 
+s32 cellGemGetVideoConvertSize()
+{
+	UNIMPLEMENTED_FUNC(cellGem);
+	return CELL_OK;
+}
+
 s32 cellGemHSVtoRGB()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
@@ -266,6 +278,18 @@ s32 cellGemUpdateStart()
 	return CELL_OK;
 }
 
+s32 cellGemVideoConvertAttributeInit()
+{
+	UNIMPLEMENTED_FUNC(cellGem);
+	return CELL_OK;
+}
+
+s32 cellGemVideoConvertAttributeInitRgba()
+{
+	UNIMPLEMENTED_FUNC(cellGem);
+	return CELL_OK;
+}
+
 s32 cellGemWriteExternalPort()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
@@ -274,6 +298,7 @@ s32 cellGemWriteExternalPort()
 
 DECLARE(ppu_module_manager::cellGem)("libgem", []()
 {
+	REG_FUNC(libgem, cellGemAttributeInit);
 	REG_FUNC(libgem, cellGemCalibrate);
 	REG_FUNC(libgem, cellGemClearStatusFlags);
 	REG_FUNC(libgem, cellGemConvertVideoFinish);
@@ -297,6 +322,7 @@ DECLARE(ppu_module_manager::cellGem)("libgem", []()
 	REG_FUNC(libgem, cellGemGetState);
 	REG_FUNC(libgem, cellGemGetStatusFlags);
 	REG_FUNC(libgem, cellGemGetTrackerHue);
+	REG_FUNC(libgem, cellGemGetVideoConvertSize);
 	REG_FUNC(libgem, cellGemHSVtoRGB);
 	REG_FUNC(libgem, cellGemInit);
 	REG_FUNC(libgem, cellGemInvalidateCalibration);
@@ -310,5 +336,7 @@ DECLARE(ppu_module_manager::cellGem)("libgem", []()
 	REG_FUNC(libgem, cellGemTrackHues);
 	REG_FUNC(libgem, cellGemUpdateFinish);
 	REG_FUNC(libgem, cellGemUpdateStart);
+	REG_FUNC(libgem, cellGemVideoConvertAttributeInit);
+	REG_FUNC(libgem, cellGemVideoConvertAttributeInitRgba);
 	REG_FUNC(libgem, cellGemWriteExternalPort);
 });
