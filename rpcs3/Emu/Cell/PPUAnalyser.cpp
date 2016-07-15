@@ -383,24 +383,36 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find OPD section
 	for (const auto& sec : secs)
 	{
-		u32 sec_end = sec.first + sec.second;
+		vm::cptr<void> sec_end = vm::cast(sec.first + sec.second);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr.addr() < sec_end; ptr += 2)
+		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr += 2)
 		{
+			if (ptr + 6 <= sec_end && !ptr[0] && !ptr[2] && ptr[1] == ptr[4] && ptr[3] == ptr[5])
+			{
+				// Special OPD format case (some homebrews)
+				ptr += 4;
+			}
+
+			if (ptr + 2 > sec_end)
+			{
+				sec_end.set(0);
+				break;
+			}
+
 			const u32 addr = ptr[0];
 			const u32 _toc = ptr[1];
 
 			// TODO: improve TOC constraints
 			if (_toc % 4 || _toc == 0 || _toc >= 0x40000000 || (_toc >= start && _toc < end))
 			{
-				sec_end = 0;
+				sec_end.set(0);
 				break;
 			}
 
 			if (addr % 4 || addr < start || addr >= end || addr == _toc)
 			{
-				sec_end = 0;
+				sec_end.set(0);
 				break;
 			}
 		}
@@ -408,8 +420,11 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		if (sec_end) LOG_NOTICE(PPU, "Reading OPD section at 0x%x...", sec.first);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr.addr() < sec_end; ptr += 2)
+		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr += 2)
 		{
+			// Special case: see "Probe"
+			if (!ptr[0]) ptr += 4;
+
 			// Add function and TOC
 			const u32 addr = ptr[0];
 			const u32 toc = ptr[1];
@@ -430,28 +445,28 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find .eh_frame section
 	for (const auto& sec : secs)
 	{
-		u32 sec_end = sec.first + sec.second;
+		vm::cptr<void> sec_end = vm::cast(sec.first + sec.second);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr.addr() < sec_end;)
+		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end;)
 		{
-			if (ptr % 4 || ptr.addr() < sec.first || ptr.addr() >= sec_end)
+			if (ptr % 4 || ptr.addr() < sec.first || ptr >= sec_end)
 			{
-				sec_end = 0;
+				sec_end.set(0);
 				break;
 			}
 
 			const u32 size = ptr[0] + 4;
 
-			if (size == 4 && ptr.addr() == sec_end - 4)
+			if (size == 4 && ptr + 1 == sec_end)
 			{
 				// Null terminator
 				break;
 			}
 
-			if (size % 4 || size < 0x10 || size > sec_end - ptr.addr())
+			if (size % 4 || size < 0x10 || ptr + size / 4 > sec_end)
 			{
-				sec_end = 0;
+				sec_end.set(0);
 				break;
 			}
 
@@ -459,9 +474,9 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			{
 				const u32 cie_off = ptr.addr() - ptr[1] + 4;
 
-				if (cie_off % 4 || cie_off < sec.first || cie_off >= sec_end)
+				if (cie_off % 4 || cie_off < sec.first || cie_off >= sec_end.addr())
 				{
-					sec_end = 0;
+					sec_end.set(0);
 					break;
 				}
 			}
@@ -472,7 +487,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		if (sec_end && sec.second > 4) LOG_NOTICE(PPU, "Reading .eh_frame section at 0x%x...", sec.first);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr.addr() < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
+		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
 		{
 			if (ptr[0] == 0)
 			{
@@ -903,6 +918,17 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					// Jumptable (do not touch entries)
 					break;
 				}
+			}
+		}
+
+		// Finalization: decrease known function size (TODO)
+		if (func.attr & ppu_attr::known_size)
+		{
+			const auto last = func.blocks.crbegin();
+
+			if (last != func.blocks.crend())
+			{
+				func.size = std::min<u32>(func.size, last->first + last->second - func.addr);
 			}
 		}
 	}
