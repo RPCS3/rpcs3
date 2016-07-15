@@ -28,15 +28,15 @@ namespace vk
 		default:
 			abort();
 		case FUNCTION::FUNCTION_DP2:
-			return "vec4(dot($0.xy, $1.xy).xxxx)";
+			return "dot($0.xy, $1.xy).xxxx";
 		case FUNCTION::FUNCTION_DP2A:
-			return "vec4((dot($0.xy, $1.xy) + $2.x).xxxx)";
+			return "(dot($0.xy, $1.xy) + $2.x).xxxx";
 		case FUNCTION::FUNCTION_DP3:
-			return "vec4(dot($0.xyz, $1.xyz).xxxx)";
+			return "dot($0.xyz, $1.xyz).xxxx";
 		case FUNCTION::FUNCTION_DP4:
-			return "vec4(dot($0, $1).xxxx)";
+			return "dot($0, $1).xxxx";
 		case FUNCTION::FUNCTION_DPH:
-			return "vec4(dot(vec4($0.xyz, 1.0), $1).xxxx)";
+			return "dot(vec4($0.xyz, 1.0), $1).xxxx";
 		case FUNCTION::FUNCTION_SFL:
 			return "vec4(0., 0., 0., 0.)";
 		case FUNCTION::FUNCTION_STR:
