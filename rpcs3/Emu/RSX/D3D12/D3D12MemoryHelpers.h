@@ -68,17 +68,17 @@ public:
 
 struct texture_entry
 {
-	u8 m_format;
+	rsx::texture::format m_format;
 	bool m_is_dirty;
 	size_t m_width;
 	size_t m_height;
 	size_t m_mipmap;
 	size_t m_depth;
 
-	texture_entry() : m_format(0), m_width(0), m_height(0), m_depth(0), m_is_dirty(true)
+	texture_entry() : m_format(rsx::texture::format::b8), m_width(0), m_height(0), m_depth(0), m_is_dirty(true)
 	{}
 
-	texture_entry(u8 f, size_t w, size_t h, size_t d, size_t m) : m_format(f), m_width(w), m_height(h), m_depth(d), m_is_dirty(false), m_mipmap(m)
+	texture_entry(rsx::texture::format f, size_t w, size_t h, size_t d, size_t m) : m_format(f), m_width(w), m_height(h), m_depth(d), m_is_dirty(false), m_mipmap(m)
 	{}
 
 	bool operator==(const texture_entry &other)
@@ -108,7 +108,7 @@ public:
 	data_cache(const data_cache&) = delete;
 	data_cache(data_cache&&) = delete;
 
-	void store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t d, size_t m, ComPtr<ID3D12Resource> data);
+	void store_and_protect_data(u64 key, u32 start, size_t size, rsx::texture::format format, size_t w, size_t h, size_t d, size_t m, ComPtr<ID3D12Resource> data);
 
 	/**
 	* Make memory from start to start + size write protected.

@@ -134,107 +134,104 @@ D3D12_COMPARISON_FUNC get_compare_func(rsx::comparison_function op)
 	throw EXCEPTION("Invalid or unsupported compare func (0x%x)", op);
 }
 
-DXGI_FORMAT get_texture_format(u8 format)
+DXGI_FORMAT get_texture_format(rsx::texture::format format)
 {
 	switch (format)
 	{
-	case CELL_GCM_TEXTURE_B8: return DXGI_FORMAT_R8_UNORM;
-	case CELL_GCM_TEXTURE_A1R5G5B5: return DXGI_FORMAT_B5G5R5A1_UNORM;
-	case CELL_GCM_TEXTURE_A4R4G4B4: return DXGI_FORMAT_B4G4R4A4_UNORM;
-	case CELL_GCM_TEXTURE_R5G6B5: return DXGI_FORMAT_B5G6R5_UNORM;
-	case CELL_GCM_TEXTURE_A8R8G8B8: return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return DXGI_FORMAT_BC1_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return DXGI_FORMAT_BC2_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return DXGI_FORMAT_BC3_UNORM;
-	case CELL_GCM_TEXTURE_G8B8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
-	case CELL_GCM_TEXTURE_R6G5B5: return DXGI_FORMAT_B5G6R5_UNORM;
-	case CELL_GCM_TEXTURE_DEPTH24_D8: return DXGI_FORMAT_R32_UINT; // Untested
-	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return DXGI_FORMAT_R32_FLOAT; // Untested
-	case CELL_GCM_TEXTURE_DEPTH16: return DXGI_FORMAT_R16_UINT; // Untested
-	case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return DXGI_FORMAT_R16_FLOAT; // Untested
-	case CELL_GCM_TEXTURE_X16: return DXGI_FORMAT_R16_UNORM;
-	case CELL_GCM_TEXTURE_Y16_X16: return DXGI_FORMAT_R16G16_UNORM;
-	case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return DXGI_FORMAT_R16G16_FLOAT;
-	case CELL_GCM_TEXTURE_X32_FLOAT: return DXGI_FORMAT_R32_FLOAT;
-	case CELL_GCM_TEXTURE_R5G5B5A1: return DXGI_FORMAT_B5G5R5A1_UNORM;
-	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-	case CELL_GCM_TEXTURE_D1R5G5B5: return DXGI_FORMAT_B5G5R5A1_UNORM;
-	case CELL_GCM_TEXTURE_D8R8G8B8: return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return DXGI_FORMAT_R8G8_B8G8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return DXGI_FORMAT_R8G8_SNORM;
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return DXGI_FORMAT_R8G8_B8G8_UNORM;
-		break;
+	case rsx::texture::format::b8: return DXGI_FORMAT_R8_UNORM;
+	case rsx::texture::format::a1r5g5b5: return DXGI_FORMAT_B5G5R5A1_UNORM;
+	case rsx::texture::format::a4r4g4b4: return DXGI_FORMAT_B4G4R4A4_UNORM;
+	case rsx::texture::format::r5g6b5: return DXGI_FORMAT_B5G6R5_UNORM;
+	case rsx::texture::format::a8r8g8b8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case rsx::texture::format::compressed_dxt1: return DXGI_FORMAT_BC1_UNORM;
+	case rsx::texture::format::compressed_dxt23: return DXGI_FORMAT_BC2_UNORM;
+	case rsx::texture::format::compressed_dxt45: return DXGI_FORMAT_BC3_UNORM;
+	case rsx::texture::format::g8b8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
+	case rsx::texture::format::r6g5b5: return DXGI_FORMAT_B5G6R5_UNORM;
+	case rsx::texture::format::d24_8: return DXGI_FORMAT_R32_UINT; // Untested
+	case rsx::texture::format::d24_8_float:	return DXGI_FORMAT_R32_FLOAT; // Untested
+	case rsx::texture::format::d16: return DXGI_FORMAT_R16_UINT; // Untested
+	case rsx::texture::format::d16_float: return DXGI_FORMAT_R16_FLOAT; // Untested
+	case rsx::texture::format::x16: return DXGI_FORMAT_R16_UNORM;
+	case rsx::texture::format::y16x16: return DXGI_FORMAT_R16G16_UNORM;
+	case rsx::texture::format::y16x16_float: return DXGI_FORMAT_R16G16_FLOAT;
+	case rsx::texture::format::x32float: return DXGI_FORMAT_R32_FLOAT;
+	case rsx::texture::format::r5g5b5a1: return DXGI_FORMAT_B5G5R5A1_UNORM;
+	case rsx::texture::format::w16z16y16x16_float: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case rsx::texture::format::w32z32y32x32_float: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case rsx::texture::format::d1r5g5b5: return DXGI_FORMAT_B5G5R5A1_UNORM;
+	case rsx::texture::format::d8r8g8b8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case rsx::texture::format::compressed_b8r8_g8r8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
+	case rsx::texture::format::compressed_r8b8_r8g8: return DXGI_FORMAT_R8G8_B8G8_UNORM;
+	case rsx::texture::format::compressed_hilo_8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
+	case rsx::texture::format::compressed_hilo_s8: return DXGI_FORMAT_R8G8_SNORM;
 	}
 	throw EXCEPTION("Invalid or unsupported texture format (0x%x)", format);
 }
 
-UINT get_texture_max_aniso(rsx::texture_max_anisotropy aniso)
+UINT get_texture_max_aniso(rsx::texture::max_anisotropy aniso)
 {
 	switch (aniso)
 	{
-	case rsx::texture_max_anisotropy::x1: return 1;
-	case rsx::texture_max_anisotropy::x2: return 2;
-	case rsx::texture_max_anisotropy::x4: return 4;
-	case rsx::texture_max_anisotropy::x6: return 6;
-	case rsx::texture_max_anisotropy::x8: return 8;
-	case rsx::texture_max_anisotropy::x10: return 10;
-	case rsx::texture_max_anisotropy::x12: return 12;
-	case rsx::texture_max_anisotropy::x16: return 16;
+	case rsx::texture::max_anisotropy::x1: return 1;
+	case rsx::texture::max_anisotropy::x2: return 2;
+	case rsx::texture::max_anisotropy::x4: return 4;
+	case rsx::texture::max_anisotropy::x6: return 6;
+	case rsx::texture::max_anisotropy::x8: return 8;
+	case rsx::texture::max_anisotropy::x10: return 10;
+	case rsx::texture::max_anisotropy::x12: return 12;
+	case rsx::texture::max_anisotropy::x16: return 16;
 	}
 	throw EXCEPTION("Invalid texture max aniso (0x%x)", aniso);
 }
 
-D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture_wrap_mode wrap)
+D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture::wrap_mode wrap)
 {
 	switch (wrap)
 	{
-	case rsx::texture_wrap_mode::wrap: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	case rsx::texture_wrap_mode::mirror: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-	case rsx::texture_wrap_mode::clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case rsx::texture_wrap_mode::border: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	case rsx::texture_wrap_mode::clamp: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case rsx::texture_wrap_mode::mirror_once_border: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case rsx::texture_wrap_mode::mirror_once_clamp: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture::wrap_mode::wrap: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case rsx::texture::wrap_mode::mirror: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+	case rsx::texture::wrap_mode::clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case rsx::texture::wrap_mode::border: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	case rsx::texture::wrap_mode::clamp: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case rsx::texture::wrap_mode::mirror_once_clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture::wrap_mode::mirror_once_border: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture::wrap_mode::mirror_once_clamp: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	}
 	throw EXCEPTION("Invalid texture wrap mode (0x%x)", wrap);
 }
 
 namespace
 {
-	void get_min_filter(rsx::texture_minify_filter min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip)
+	void get_min_filter(rsx::texture::minify_filter min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip)
 	{
 		switch (min_filter)
 		{
-		case rsx::texture_minify_filter::nearest:
+		case rsx::texture::minify_filter::nearest:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case rsx::texture_minify_filter::linear:
+		case rsx::texture::minify_filter::linear:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case rsx::texture_minify_filter::nearest_nearest:
+		case rsx::texture::minify_filter::nearest_nearest:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case rsx::texture_minify_filter::linear_nearest:
+		case rsx::texture::minify_filter::linear_nearest:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case rsx::texture_minify_filter::nearest_linear:
+		case rsx::texture::minify_filter::nearest_linear:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
-		case rsx::texture_minify_filter::linear_linear:
+		case rsx::texture::minify_filter::linear_linear:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
-		case rsx::texture_minify_filter::convolution_min:
+		case rsx::texture::minify_filter::convolution_min:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
@@ -242,19 +239,19 @@ namespace
 		throw EXCEPTION("Invalid max filter");
 	}
 
-	D3D12_FILTER_TYPE get_mag_filter(rsx::texture_magnify_filter mag_filter)
+	D3D12_FILTER_TYPE get_mag_filter(rsx::texture::magnify_filter mag_filter)
 	{
 		switch (mag_filter)
 		{
-		case rsx::texture_magnify_filter::nearest: return D3D12_FILTER_TYPE_POINT;
-		case rsx::texture_magnify_filter::linear: return D3D12_FILTER_TYPE_LINEAR;
-		case rsx::texture_magnify_filter::convolution_mag: return D3D12_FILTER_TYPE_LINEAR;
+		case rsx::texture::magnify_filter::nearest: return D3D12_FILTER_TYPE_POINT;
+		case rsx::texture::magnify_filter::linear: return D3D12_FILTER_TYPE_LINEAR;
+		case rsx::texture::magnify_filter::convolution_mag: return D3D12_FILTER_TYPE_LINEAR;
 		}
 		throw EXCEPTION("Invalid mag filter");
 	}
 }
 
-D3D12_FILTER get_texture_filter(rsx::texture_minify_filter min_filter, rsx::texture_magnify_filter mag_filter)
+D3D12_FILTER get_texture_filter(rsx::texture::minify_filter min_filter, rsx::texture::magnify_filter mag_filter)
 {
 	D3D12_FILTER_TYPE min, mip;
 	get_min_filter(min_filter, min, mip);

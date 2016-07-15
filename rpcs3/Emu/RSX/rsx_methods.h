@@ -73,12 +73,8 @@ namespace rsx
 
 	struct rsx_state
 	{
-	private:
-		std::array<u32, 0x10000 / 4> registers;
-
-	public:
-		std::array<texture, 16> fragment_textures;
-		std::array<vertex_texture, 4> vertex_textures;
+		std::array<texture_t, 16> fragment_textures;
+		std::array<vertex_texture_t, 4> vertex_textures;
 
 		u32 m_transform_program_pointer;
 

@@ -129,7 +129,7 @@ namespace vk
 	}
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
-		const std::vector<rsx_subresource_layout> subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		const std::vector<rsx_subresource_layout> subresource_layout, rsx::texture::format format, bool is_swizzled, u16 mipmap_count,
 		vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer)
 	{
 		u32 mipmap_level = 0;
@@ -275,7 +275,7 @@ namespace vk
 		create(device, format, usage, tiling, width, height, mipmaps, gpu_only, swizzle);
 	}
 
-	void texture::init(rsx::texture& tex, vk::command_buffer &cmd, bool ignore_checks)
+	void texture::init(rsx::texture_t& tex, vk::command_buffer &cmd, bool ignore_checks)
 	{
 		VkImageViewType best_type = VK_IMAGE_VIEW_TYPE_2D;
 		
@@ -368,7 +368,7 @@ namespace vk
 				const std::vector<rsx_subresource_layout> &subresources_layout = get_subresources_layout(tex);
 				for (const rsx_subresource_layout &layout : subresources_layout)
 				{
-					upload_texture_subresource(mapped, layout, tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), !(tex.format() & CELL_GCM_TEXTURE_LN), layout_alignment[0].first);
+					upload_texture_subresource(mapped, layout, tex.format(), tex.layout() == rsx::texture::layout::swizzled, layout_alignment[0].first);
 				}
 				vkUnmapMemory((*owner), vram_allocation);
 			}
@@ -401,7 +401,7 @@ namespace vk
 				for (const rsx_subresource_layout &layout : subresources_layout)
 				{
 					const auto &dst_layout = layout_offset_info[idx++];
-					upload_texture_subresource(mapped.subspan(dst_layout.first), layout, tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), !(tex.format() & CELL_GCM_TEXTURE_LN), dst_layout.second);
+					upload_texture_subresource(mapped.subspan(dst_layout.first), layout, tex.format(), tex.layout() == rsx::texture::layout::swizzled, dst_layout.second);
 				}
 				vkUnmapMemory((*owner), vram_allocation);
 			}

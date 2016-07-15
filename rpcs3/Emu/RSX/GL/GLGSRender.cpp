@@ -314,7 +314,7 @@ void GLGSRender::begin()
 
 namespace
 {
-	GLenum get_gl_target_for_texture(const rsx::texture& tex)
+	GLenum get_gl_target_for_texture(const rsx::texture_t& tex)
 	{
 		switch (tex.get_extended_texture_dimension())
 		{
@@ -326,7 +326,7 @@ namespace
 		throw EXCEPTION("Unknown texture target");
 	}
 
-	GLenum get_gl_target_for_texture(const rsx::vertex_texture& tex)
+	GLenum get_gl_target_for_texture(const rsx::vertex_texture_t& tex)
 	{
 		switch (tex.get_extended_texture_dimension())
 		{
@@ -417,7 +417,7 @@ void GLGSRender::end()
 
 				if (m_program->uniforms.has_location("ftexture" + std::to_string(i) + "_cm", &location))
 				{
-					if (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN)
+					if (rsx::method_registers.fragment_textures[i].normalization() == rsx::texture::coordinates::unnormalized)
 					{
 						u32 width = std::max<u32>(rsx::method_registers.fragment_textures[i].width(), 1);
 						u32 height = std::max<u32>(rsx::method_registers.fragment_textures[i].height(), 1);
@@ -455,7 +455,7 @@ void GLGSRender::end()
 
 				if (m_program->uniforms.has_location("vtexture" + std::to_string(i) + "_cm", &location))
 				{
-					if (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN)
+					if (rsx::method_registers.fragment_textures[i].normalization() == rsx::texture::coordinates::unnormalized)
 					{
 						u32 width = std::max<u32>(rsx::method_registers.fragment_textures[i].width(), 1);
 						u32 height = std::max<u32>(rsx::method_registers.fragment_textures[i].height(), 1);

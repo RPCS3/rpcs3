@@ -131,6 +131,18 @@ namespace rsx
 	std::string print_transfer_interpolator(blit_engine::transfer_interpolator op);
 	std::string print_shading_mode(shading_mode op);
 	std::string print_polygon_mode(polygon_mode op);
+	std::string to_string(texture::format format);
+	std::string to_string(texture::border_type in);
+	std::string to_string(texture::layout in);
+	std::string to_string(texture::coordinates in);
+	std::string to_string(texture::dimension in);
+	std::string to_string(texture::wrap_mode wrap);
+	std::string to_string(texture::zfunc op);
+	std::string to_string(texture::unsigned_remap op);
+	std::string to_string(texture::signed_remap op);
+	std::string to_string(texture::minify_filter op);
+	std::string to_string(texture::magnify_filter op);
+	std::string to_string(texture::component_remap op);
 
 template<uint32_t Register>
 struct registers_decoder
@@ -2499,6 +2511,680 @@ EXPAND_RANGE_16(0, VERTEX_DATA4F)
 EXPAND_RANGE_16(0, VERTEX_DATA2S)
 EXPAND_RANGE_16(0, VERTEX_DATA4S)
 
+template<u32 index>
+struct fragment_texture_image_rect_helper : public split_reg_half_uint_decode
+{
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u16, u16> &&decoded_values)
+	{
+		state.fragment_textures[index].m_width = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_height = std::get<0>(decoded_values);
+	}
+
+	static std::string dump(std::tuple<u16, u16>&& decoded_values)
+	{
+		return "Texture " + std::to_string(index) + ": width = " + std::to_string(std::get<1>(decoded_values)) + " height = " + std::to_string(std::get<0>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct fragment_texture_control3_helper
+{
+	static std::tuple<u32, u16> decode(u32 value)
+	{
+		return std::make_tuple(value & 0xfffff, value >> 20);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u32, u16> &&decoded_values)
+	{
+		state.fragment_textures[index].m_depth = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_pitch = std::get<0>(decoded_values);
+	}
+
+	static std::string dump(std::tuple<u32, u16>&& decoded_values)
+	{
+		return "Texture " + std::to_string(index) +
+			" depth = " + std::to_string(std::get<1>(decoded_values)) +
+			" pitch = " + std::to_string(std::get<0>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct fragment_texture_control0_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(!!((value >> 2) & 0x1),
+			rsx::texture::to_texture_max_anisotropy((value >> 4) & 0x7),
+			static_cast<u16>((value >> 7) & 0xfff),
+			static_cast<u16>((value >> 19) & 0xfff),
+			!!((value >> 31) & 0x1)
+			);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<bool, rsx::texture::max_anisotropy, u16, u16, bool> &&decoded_values)
+	{
+		state.fragment_textures[index].m_alpha_kill_enabled = std::get<0>(decoded_values);
+		state.fragment_textures[index].m_max_aniso = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_max_lod = std::get<2>(decoded_values);
+		state.fragment_textures[index].m_min_lod = std::get<3>(decoded_values);
+		state.fragment_textures[index].m_enabled = std::get<4>(decoded_values);
+	}
+
+	static std::string get_texture_max_aniso_name(rsx::texture::max_anisotropy aniso)
+	{
+		switch (aniso)
+		{
+		case rsx::texture::max_anisotropy::x1: return "1";
+		case rsx::texture::max_anisotropy::x2: return "2";
+		case rsx::texture::max_anisotropy::x4: return "4";
+		case rsx::texture::max_anisotropy::x6: return "6";
+		case rsx::texture::max_anisotropy::x8: return "8";
+		case rsx::texture::max_anisotropy::x10: return "10";
+		case rsx::texture::max_anisotropy::x12: return "12";
+		case rsx::texture::max_anisotropy::x16: return "16";
+		}
+		throw;
+	}
+
+	static std::string dump(std::tuple<bool, rsx::texture::max_anisotropy, u16, u16, bool>&& decoded_values)
+	{
+		std::string result = "Texture " + std::to_string(index);
+		if (std::get<4>(decoded_values))
+		{
+			result += " min lod = " + std::to_string(std::get<3>(decoded_values)) +
+				" max lod = " + std::to_string(std::get<2>(decoded_values)) +
+				" max aniso = " + get_texture_max_aniso_name(std::get<1>(decoded_values)) +
+				" alpha kill = " + print_boolean(std::get<0>(decoded_values));
+		}
+		else
+			result += " (disabled)";
+		return result;
+	}
+};
+
+template<u32 index>
+struct fragment_texture_offset_helper
+{
+	static u32 decode(u32 value)
+	{
+		return value;
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, u32 &&decoded_values)
+	{
+		state.fragment_textures[index].m_offset = decoded_values;
+	}
+
+	static std::string dump(u32&& decoded_values)
+	{
+		return "Texture " + std::to_string(index) + ": Offset @" + std::to_string(decoded_values);
+	}
+};
+
+template<u32 index>
+struct fragment_texture_format_helper
+{
+	static auto decode(u32 value)
+	{
+		const auto fmt = rsx::texture::to_texture_format((value >> 8) & 0xff);
+		return std::make_tuple(static_cast<u8>((value & 0x3) - 1),
+			!!((value >> 2) & 0x1),
+			rsx::texture::to_border_type((value >> 3) & 0x1),
+			rsx::texture::to_texture_dimension((value >> 4) & 0xf),
+			std::get<0>(fmt),
+			std::get<1>(fmt),
+			std::get<2>(fmt),
+			static_cast<u16>(value >> 16)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u8, bool, rsx::texture::border_type, rsx::texture::dimension, rsx::texture::format, rsx::texture::layout, rsx::texture::coordinates, u16> &&decoded_values)
+	{
+		state.fragment_textures[index].m_location = std::get<0>(decoded_values);
+		state.fragment_textures[index].m_cubemap = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_border_type = std::get<2>(decoded_values);
+		state.fragment_textures[index].m_dimension = std::get<3>(decoded_values);
+		state.fragment_textures[index].m_format = std::get<4>(decoded_values);
+		state.fragment_textures[index].m_layout = std::get<5>(decoded_values);
+		state.fragment_textures[index].m_normalization = std::get<6>(decoded_values);
+		state.fragment_textures[index].m_mipmap = std::get<7>(decoded_values);
+	}
+
+	static std::string dump(std::tuple<u8, bool, rsx::texture::border_type, rsx::texture::dimension, rsx::texture::format, rsx::texture::layout, rsx::texture::coordinates, u16>&& decoded_values)
+	{
+		return "Texture " + std::to_string(index) + ": location = " + std::to_string(std::get<0>(decoded_values)) +
+			(std::get<1>(decoded_values) ? " cubemap " : "") +
+			" border type = " + to_string(std::get<2>(decoded_values)) +
+			" dimension = " + to_string(std::get<3>(decoded_values)) +
+			" format = " + to_string(std::get<4>(decoded_values)) +
+			to_string(std::get<5>(decoded_values)) + to_string(std::get<6>(decoded_values)) +
+			" mipmap levels = " + std::to_string(std::get<7>(decoded_values));
+	}
+};
+
+
+template<u32 index>
+struct fragment_texture_address_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(
+			rsx::texture::to_texture_wrap_mode(value & 0xf),
+			static_cast<u8>((value >> 4) & 0xf),
+			rsx::texture::to_texture_wrap_mode((value >> 8) & 0xf),
+			rsx::texture::to_unsigned_remap((value >> 12) & 0xf),
+			rsx::texture::to_texture_wrap_mode((value >> 16) & 0xf),
+			!!((value >> 20) & 0x1),
+			!!((value >> 21) & 0x1),
+			!!((value >> 22) & 0x1),
+			!!((value >> 23) & 0x1),
+			rsx::texture::to_signed_remap((value >> 24) & 0xf),
+			rsx::texture::to_texture_zfunc((value >> 28) & 0xf)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state,
+		std::tuple<rsx::texture::wrap_mode, u8, rsx::texture::wrap_mode, rsx::texture::unsigned_remap, rsx::texture::wrap_mode, bool, bool, bool, bool, rsx::texture::signed_remap, rsx::texture::zfunc> &&decoded_values)
+	{
+		state.fragment_textures[index].m_wrap_s = std::get<0>(decoded_values);
+		state.fragment_textures[index].m_aniso_bias = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_wrap_t = std::get<2>(decoded_values);
+		state.fragment_textures[index].m_unsigned_remap = std::get<3>(decoded_values);
+		state.fragment_textures[index].m_wrap_r = std::get<4>(decoded_values);
+		state.fragment_textures[index].m_gamma_r = std::get<5>(decoded_values);
+		state.fragment_textures[index].m_gamma_g = std::get<6>(decoded_values);
+		state.fragment_textures[index].m_gamma_b = std::get<7>(decoded_values);
+		state.fragment_textures[index].m_gamma_a = std::get<8>(decoded_values);
+		state.fragment_textures[index].m_signed_remap = std::get<9>(decoded_values);
+		state.fragment_textures[index].m_zfunc = std::get<10>(decoded_values);
+	}
+
+	static std::string dump(
+		std::tuple<rsx::texture::wrap_mode, u8, rsx::texture::wrap_mode, rsx::texture::unsigned_remap, rsx::texture::wrap_mode, bool, bool, bool, bool, rsx::texture::signed_remap, rsx::texture::zfunc>&& decoded_values)
+	{
+		return "Texture " + std::to_string(index) + ": wrap_s = " + to_string(std::get<0>(decoded_values)) +
+			" wrap_t = " + to_string(std::get<2>(decoded_values)) +
+			" wrap_r = " + to_string(std::get<4>(decoded_values)) +
+			" unsigned remap = " + to_string(std::get<3>(decoded_values)) +
+			" zfunc = " + to_string(std::get<10>(decoded_values)) +
+			" gamma r = " + print_boolean(std::get<5>(decoded_values)) +
+			" g = " + print_boolean(std::get<6>(decoded_values)) +
+			" b = " + print_boolean(std::get<7>(decoded_values)) +
+			" a = " + print_boolean(std::get<8>(decoded_values)) +
+			" aniso bias = " + std::to_string(std::get<1>(decoded_values)) +
+			" signed remap = " + to_string(std::get<9>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct fragment_texture_filter_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(
+			static_cast<u16>(value & 0x1fff),
+			static_cast<u8>((value >> 13) & 0x7),
+			rsx::texture::to_texture_minify_filter((value >> 16) & 0x7),
+			rsx::texture::to_texture_magnify_filter((value >> 24) & 0x7),
+			!!((value >> 28) & 0x1),
+			!!((value >> 29) & 0x1),
+			!!((value >> 30) & 0x1),
+			!!((value >> 31) & 0x1)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state,
+		std::tuple<u16, u8, rsx::texture::minify_filter, rsx::texture::magnify_filter, bool, bool, bool, bool> &&decoded_values)
+	{
+		state.fragment_textures[index].m_bias = std::get<0>(decoded_values);
+		state.fragment_textures[index].m_convolution_filter = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_min_filter = std::get<2>(decoded_values);
+		state.fragment_textures[index].m_mag_filter = std::get<3>(decoded_values);
+		state.fragment_textures[index].m_a_signed = std::get<4>(decoded_values);
+		state.fragment_textures[index].m_r_signed = std::get<5>(decoded_values);
+		state.fragment_textures[index].m_g_signed = std::get<6>(decoded_values);
+		state.fragment_textures[index].m_b_signed = std::get<7>(decoded_values);
+	}
+
+	static std::string dump(
+		std::tuple<u16, u8, rsx::texture::minify_filter, rsx::texture::magnify_filter, bool, bool, bool, bool>&& decoded_values)
+	{
+		return "Texture " + std::to_string(index) +
+			" bias = " + std::to_string(std::get<0>(decoded_values)) +
+			" min_filter = " + to_string(std::get<2>(decoded_values)) +
+			" mag_filter = " + to_string(std::get<3>(decoded_values)) +
+			" convolution_filter = " + std::to_string(std::get<1>(decoded_values)) + "(???)" +
+			" a_signed = " + std::to_string(std::get<4>(decoded_values)) +
+			" r_signed = " + std::to_string(std::get<5>(decoded_values)) +
+			" g_signed = " + std::to_string(std::get<6>(decoded_values)) +
+			" b_signed = " + std::to_string(std::get<7>(decoded_values));
+	}
+};
+
+
+template<u32 index>
+struct fragment_texture_border_color_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(value & 0xff,
+			(value >> 8) & 0xff,
+			(value >> 16) & 0xff,
+			(value >> 24) & 0xff
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state,
+		std::tuple<u8, u8, u8, u8> &&decoded_values)
+	{
+		state.fragment_textures[index].m_border_color_a = std::get<0>(decoded_values);
+		state.fragment_textures[index].m_border_color_r = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_border_color_g = std::get<2>(decoded_values);
+		state.fragment_textures[index].m_border_color_b = std::get<3>(decoded_values);
+	}
+
+	static std::string dump(
+		std::tuple<u8, u8, u8, u8>&& decoded_values)
+	{
+		return "Texture " + std::to_string(index) +
+			" border color A = " + std::to_string(std::get<0>(decoded_values)) +
+			" R = " + std::to_string(std::get<1>(decoded_values)) +
+			" G = " + std::to_string(std::get<2>(decoded_values)) +
+			" B = " + std::to_string(std::get<3>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct fragment_texture_control1_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(rsx::texture::to_component_remap(value & 0x3),
+			rsx::texture::to_component_remap((value >> 2) & 0x3),
+			rsx::texture::to_component_remap((value >> 4) & 0x3),
+			rsx::texture::to_component_remap((value >> 6) & 0x3)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state,
+		std::tuple<rsx::texture::component_remap, rsx::texture::component_remap, rsx::texture::component_remap, rsx::texture::component_remap> &&decoded_values)
+	{
+		state.fragment_textures[index].m_remap_0 = std::get<0>(decoded_values);
+		state.fragment_textures[index].m_remap_1 = std::get<1>(decoded_values);
+		state.fragment_textures[index].m_remap_2 = std::get<2>(decoded_values);
+		state.fragment_textures[index].m_remap_3 = std::get<3>(decoded_values);
+	}
+
+	static std::string dump(
+		std::tuple<rsx::texture::component_remap, rsx::texture::component_remap, rsx::texture::component_remap, rsx::texture::component_remap> && decoded_values)
+	{
+		return "Texture " + std::to_string(index) +
+			" Component 0 = " + to_string(std::get<0>(decoded_values)) +
+			" Component 1 = " + to_string(std::get<1>(decoded_values)) +
+			" Component 2 = " + to_string(std::get<2>(decoded_values)) +
+			" Component 3 = " + to_string(std::get<3>(decoded_values));
+	}
+};
+
+#define TEXTURE_IMAGE_RECT(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_IMAGE_RECT + 8 * (index)> : public fragment_texture_image_rect_helper<index> {};
+#define DECLARE_TEXTURE_IMAGE_RECT(index) \
+	NV4097_SET_TEXTURE_IMAGE_RECT + 8 * (index),
+
+#define TEXTURE_CONTROL3(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_CONTROL3 + index> : public fragment_texture_control3_helper<index> {};
+#define DECLARE_TEXTURE_CONTROL3(index) \
+	NV4097_SET_TEXTURE_CONTROL3 + index,
+
+#define TEXTURE_CONTROL0(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_CONTROL0 + 8 * (index)> : public fragment_texture_control0_helper<index> {};
+#define DECLARE_TEXTURE_CONTROL0(index) \
+	NV4097_SET_TEXTURE_CONTROL0 + 8 * (index),
+
+#define TEXTURE_OFFSET(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_OFFSET + 8 * (index)> : public fragment_texture_offset_helper<index> {};
+#define DECLARE_TEXTURE_OFFSET(index) \
+	NV4097_SET_TEXTURE_OFFSET + 8 * (index),
+
+#define TEXTURE_FORMAT(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_FORMAT + 8 * (index)> : public fragment_texture_format_helper<index> {};
+#define DECLARE_TEXTURE_FORMAT(index) \
+	NV4097_SET_TEXTURE_FORMAT + 8 * (index),
+
+#define TEXTURE_ADDRESS(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_ADDRESS + 8 * (index)> : public fragment_texture_address_helper<index> {};
+#define DECLARE_TEXTURE_ADDRESS(index) \
+	NV4097_SET_TEXTURE_ADDRESS + 8 * (index),
+
+#define TEXTURE_FILTER(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_FILTER + 8 * (index)> : public fragment_texture_filter_helper<index> {};
+#define DECLARE_TEXTURE_FILTER(index) \
+	NV4097_SET_TEXTURE_FILTER + 8 * (index),
+
+#define TEXTURE_BORDER_COLOR(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_BORDER_COLOR + 8 * (index)> : public fragment_texture_border_color_helper<index> {};
+#define DECLARE_TEXTURE_BORDER_COLOR(index) \
+	NV4097_SET_TEXTURE_BORDER_COLOR + 8 * (index),
+
+#define TEXTURE_CONTROL1(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_CONTROL1 + 8 * (index)> : public fragment_texture_control1_helper<index> {};
+#define DECLARE_TEXTURE_CONTROL1(index) \
+	NV4097_SET_TEXTURE_CONTROL1 + 8 * (index),
+
+
+EXPAND_RANGE_16(0, TEXTURE_IMAGE_RECT)
+EXPAND_RANGE_16(0, TEXTURE_OFFSET)
+EXPAND_RANGE_16(0, TEXTURE_CONTROL0)
+EXPAND_RANGE_16(0, TEXTURE_CONTROL3)
+EXPAND_RANGE_16(0, TEXTURE_FORMAT)
+EXPAND_RANGE_16(0, TEXTURE_ADDRESS)
+EXPAND_RANGE_16(0, TEXTURE_FILTER)
+EXPAND_RANGE_16(0, TEXTURE_BORDER_COLOR)
+EXPAND_RANGE_16(0, TEXTURE_CONTROL1)
+
+
+template<u32 index>
+struct vertex_texture_offset_helper
+{
+	static u32 decode(u32 value)
+	{
+		return value;
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, u32 &&decoded_values)
+	{
+		state.vertex_textures[index].m_offset = decoded_values;
+	}
+
+	static std::string dump(u32&& decoded_values)
+	{
+		return "Vertex texture " + std::to_string(index) + ": Offset @" + std::to_string(decoded_values);
+	}
+};
+
+
+template<u32 index>
+struct vertex_texture_format_helper
+{
+	static auto decode(u32 value)
+	{
+		const auto fmt = rsx::texture::to_texture_format((value >> 8) & 0xff);
+		return std::make_tuple(static_cast<u8>((value & 0x3) - 1),
+			!!((value >> 2) & 0x1),
+			rsx::texture::to_border_type((value >> 3) & 0x1),
+			rsx::texture::to_texture_dimension((value >> 4) & 0xf),
+			std::get<0>(fmt),
+			std::get<1>(fmt),
+			std::get<2>(fmt),
+			static_cast<u16>(value >> 16)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u8, bool, rsx::texture::border_type, rsx::texture::dimension, rsx::texture::format, rsx::texture::layout, rsx::texture::coordinates, u16> &&decoded_values)
+	{
+		state.vertex_textures[index].m_location = std::get<0>(decoded_values);
+		state.vertex_textures[index].m_cubemap = std::get<1>(decoded_values);
+		state.vertex_textures[index].m_border_type = std::get<2>(decoded_values);
+		state.vertex_textures[index].m_dimension = std::get<3>(decoded_values);
+		state.vertex_textures[index].m_format = std::get<4>(decoded_values);
+		state.vertex_textures[index].m_layout = std::get<5>(decoded_values);
+//		state.vertex_textures[index].m_normalization = std::get<6>(decoded_values);
+		state.vertex_textures[index].m_mipmap = std::get<7>(decoded_values);
+	}
+
+	static std::string dump(std::tuple<u8, bool, rsx::texture::border_type, rsx::texture::dimension, rsx::texture::format, rsx::texture::layout, rsx::texture::coordinates, u16>&& decoded_values)
+	{
+		return "Vertex texture " + std::to_string(index) + ": location = " + std::to_string(std::get<0>(decoded_values)) +
+			(std::get<1>(decoded_values) ? " cubemap " : "") +
+			" border type = " + to_string(std::get<2>(decoded_values)) +
+			" dimension = " + to_string(std::get<3>(decoded_values)) +
+			" format = " + to_string(std::get<4>(decoded_values)) +
+			to_string(std::get<5>(decoded_values)) + to_string(std::get<6>(decoded_values)) +
+			" mipmap levels = " + std::to_string(std::get<7>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct vertex_texture_address_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(
+			static_cast<u8>((value >> 4) & 0xf),
+			rsx::texture::to_unsigned_remap((value >> 12) & 0xf),
+			!!((value >> 20) & 0x1),
+			!!((value >> 21) & 0x1),
+			!!((value >> 22) & 0x1),
+			!!((value >> 23) & 0x1),
+			rsx::texture::to_signed_remap((value >> 24) & 0xf),
+			rsx::texture::to_texture_zfunc((value >> 28) & 0xf)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state,
+		std::tuple<u8,rsx::texture::unsigned_remap, bool, bool, bool, bool, rsx::texture::signed_remap, rsx::texture::zfunc> &&decoded_values)
+	{
+		state.vertex_textures[index].m_aniso_bias = std::get<0>(decoded_values);
+		state.vertex_textures[index].m_unsigned_remap = std::get<1>(decoded_values);
+		state.vertex_textures[index].m_gamma_r = std::get<2>(decoded_values);
+		state.vertex_textures[index].m_gamma_g = std::get<3>(decoded_values);
+		state.vertex_textures[index].m_gamma_b = std::get<4>(decoded_values);
+		state.vertex_textures[index].m_gamma_a = std::get<5>(decoded_values);
+		state.vertex_textures[index].m_signed_remap = std::get<6>(decoded_values);
+		state.vertex_textures[index].m_zfunc = std::get<7>(decoded_values);
+	}
+
+	static std::string dump(
+		std::tuple<u8, rsx::texture::unsigned_remap, bool, bool, bool, bool, rsx::texture::signed_remap, rsx::texture::zfunc>&& decoded_values)
+	{
+		return "Vertex texture " + std::to_string(index) + ": unsigned remap = " + to_string(std::get<1>(decoded_values)) +
+			" zfunc = " + to_string(std::get<7>(decoded_values)) +
+			" gamma r = " + print_boolean(std::get<2>(decoded_values)) +
+			" g = " + print_boolean(std::get<3>(decoded_values)) +
+			" b = " + print_boolean(std::get<4>(decoded_values)) +
+			" a = " + print_boolean(std::get<5>(decoded_values)) +
+			" aniso bias = " + std::to_string(std::get<0>(decoded_values)) +
+			" signed remap = " + to_string(std::get<6>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct vertex_texture_control0_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(!!((value >> 2) & 0x1),
+			rsx::texture::to_texture_max_anisotropy((value >> 4) & 0x7),
+			static_cast<u16>((value >> 7) & 0xfff),
+			static_cast<u16>((value >> 19) & 0xfff),
+			!!((value >> 31) & 0x1)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<bool, rsx::texture::max_anisotropy, u16, u16, bool> &&decoded_values)
+	{
+		state.vertex_textures[index].m_alpha_kill_enabled = std::get<0>(decoded_values);
+		state.vertex_textures[index].m_max_aniso = std::get<1>(decoded_values);
+		state.vertex_textures[index].m_max_lod = std::get<2>(decoded_values);
+		state.vertex_textures[index].m_min_lod = std::get<3>(decoded_values);
+		state.vertex_textures[index].m_enabled = std::get<4>(decoded_values);
+	}
+
+	static std::string get_texture_max_aniso_name(rsx::texture::max_anisotropy aniso)
+	{
+		switch (aniso)
+		{
+		case rsx::texture::max_anisotropy::x1: return "1";
+		case rsx::texture::max_anisotropy::x2: return "2";
+		case rsx::texture::max_anisotropy::x4: return "4";
+		case rsx::texture::max_anisotropy::x6: return "6";
+		case rsx::texture::max_anisotropy::x8: return "8";
+		case rsx::texture::max_anisotropy::x10: return "10";
+		case rsx::texture::max_anisotropy::x12: return "12";
+		case rsx::texture::max_anisotropy::x16: return "16";
+		}
+		throw;
+	}
+
+	static std::string dump(std::tuple<bool, rsx::texture::max_anisotropy, u16, u16, bool>&& decoded_values)
+	{
+		std::string result = "Vertex texture " + std::to_string(index);
+		if (std::get<4>(decoded_values))
+		{
+			result += " min lod = " + std::to_string(std::get<3>(decoded_values)) +
+				" max lod = " + std::to_string(std::get<2>(decoded_values)) +
+				" max aniso = " + get_texture_max_aniso_name(std::get<1>(decoded_values)) +
+				" alpha kill = " + print_boolean(std::get<0>(decoded_values));
+		}
+		else
+			result += " (disabled)";
+		return result;
+	}
+};
+
+template<u32 index>
+struct vertex_texture_filter_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(
+			static_cast<u16>(value & 0x1fff),
+			static_cast<u8>((value >> 13) & 0x7),
+			rsx::texture::to_texture_minify_filter((value >> 16) & 0x7),
+			rsx::texture::to_texture_magnify_filter((value >> 24) & 0x7),
+			!!((value >> 28) & 0x1),
+			!!((value >> 29) & 0x1),
+			!!((value >> 30) & 0x1),
+			!!((value >> 31) & 0x1)
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state,
+		std::tuple<u16, u8, rsx::texture::minify_filter, rsx::texture::magnify_filter, bool, bool, bool, bool> &&decoded_values)
+	{
+		state.vertex_textures[index].m_bias = std::get<0>(decoded_values);
+		state.vertex_textures[index].m_convolution_filter = std::get<1>(decoded_values);
+		state.vertex_textures[index].m_min_filter = std::get<2>(decoded_values);
+		state.vertex_textures[index].m_mag_filter = std::get<3>(decoded_values);
+		state.vertex_textures[index].m_a_signed = std::get<4>(decoded_values);
+		state.vertex_textures[index].m_r_signed = std::get<5>(decoded_values);
+		state.vertex_textures[index].m_g_signed = std::get<6>(decoded_values);
+		state.vertex_textures[index].m_b_signed = std::get<7>(decoded_values);
+	}
+
+	static std::string dump(
+		std::tuple<u16, u8, rsx::texture::minify_filter, rsx::texture::magnify_filter, bool, bool, bool, bool>&& decoded_values)
+	{
+		return "Vertex texture " + std::to_string(index) +
+			" bias = " + std::to_string(std::get<0>(decoded_values)) +
+			" min_filter = " + to_string(std::get<2>(decoded_values)) +
+			" mag_filter = " + to_string(std::get<3>(decoded_values)) +
+			" convolution_filter = " + std::to_string(std::get<1>(decoded_values)) + "(???)" +
+			" a_signed = " + std::to_string(std::get<4>(decoded_values)) +
+			" r_signed = " + std::to_string(std::get<5>(decoded_values)) +
+			" g_signed = " + std::to_string(std::get<6>(decoded_values)) +
+			" b_signed = " + std::to_string(std::get<7>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct vertex_texture_image_rect_helper : public split_reg_half_uint_decode
+{
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u16, u16> &&decoded_values)
+	{
+		state.vertex_textures[index].m_width = std::get<1>(decoded_values);
+		state.vertex_textures[index].m_height = std::get<0>(decoded_values);
+	}
+
+	static std::string dump(std::tuple<u16, u16>&& decoded_values)
+	{
+		return "Vertex texture " + std::to_string(index) + ": width = " + std::to_string(std::get<1>(decoded_values)) + " height = " + std::to_string(std::get<0>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct vertex_texture_border_color_helper
+{
+	static auto decode(u32 value)
+	{
+		return std::make_tuple(value & 0xff,
+			(value >> 8) & 0xff,
+			(value >> 16) & 0xff,
+			(value >> 24) & 0xff
+		);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state,
+		std::tuple<u8, u8, u8, u8> &&decoded_values)
+	{
+		state.vertex_textures[index].m_border_color_a = std::get<0>(decoded_values);
+		state.vertex_textures[index].m_border_color_r = std::get<1>(decoded_values);
+		state.vertex_textures[index].m_border_color_g = std::get<2>(decoded_values);
+		state.vertex_textures[index].m_border_color_b = std::get<3>(decoded_values);
+	}
+
+	static std::string dump(
+		std::tuple<u8, u8, u8, u8>&& decoded_values)
+	{
+		return "Vertex texture " + std::to_string(index) +
+			" border color A = " + std::to_string(std::get<0>(decoded_values)) +
+			" R = " + std::to_string(std::get<1>(decoded_values)) +
+			" G = " + std::to_string(std::get<2>(decoded_values)) +
+			" B = " + std::to_string(std::get<3>(decoded_values));
+	}
+};
+
+template<u32 index>
+struct vertex_texture_control3_helper
+{
+	static std::tuple<u32, u16> decode(u32 value)
+	{
+		return std::make_tuple(value & 0xfffff, value >> 20);
+	}
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u32, u16> &&decoded_values)
+	{
+		state.vertex_textures[index].m_depth = std::get<1>(decoded_values);
+		state.vertex_textures[index].m_pitch = std::get<0>(decoded_values);
+	}
+
+	static std::string dump(std::tuple<u32, u16>&& decoded_values)
+	{
+		return "Vertex texture " + std::to_string(index) +
+			" depth = " + std::to_string(std::get<1>(decoded_values)) +
+			" pitch = " + std::to_string(std::get<0>(decoded_values));
+	}
+};
+
+
+#define VERTEX_TEXTURE_OFFSET(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_OFFSET + 8 * (index)> : public vertex_texture_offset_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_OFFSET(index) \
+	NV4097_SET_VERTEX_TEXTURE_OFFSET + 8 * (index),
+#define VERTEX_TEXTURE_FORMAT(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_FORMAT + 8 * (index)> : public vertex_texture_format_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_FORMAT(index) \
+	NV4097_SET_VERTEX_TEXTURE_FORMAT + 8 * (index),
+#define VERTEX_TEXTURE_ADDRESS(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_ADDRESS + 8 * (index)> : public vertex_texture_address_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_ADDRESS(index) \
+	NV4097_SET_VERTEX_TEXTURE_ADDRESS + 8 * (index),
+#define VERTEX_TEXTURE_CONTROL0(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 8 * (index)> : public vertex_texture_control0_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_CONTROL0(index) \
+	NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 8 * (index),
+#define VERTEX_TEXTURE_FILTER(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_FILTER + 8 * (index)> : public vertex_texture_filter_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_FILTER(index) \
+	NV4097_SET_VERTEX_TEXTURE_FILTER + 8 * (index),
+#define VERTEX_TEXTURE_IMAGE_RECT(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 8 * (index)> : public vertex_texture_image_rect_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_IMAGE_RECT(index) \
+	NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + 8 * (index),
+#define VERTEX_TEXTURE_BORDER_COLOR(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 8 * (index)> : public vertex_texture_border_color_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_BORDER_COLOR(index) \
+	NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 8 * (index),
+#define VERTEX_TEXTURE_CONTROL3(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 8 * (index)> : public vertex_texture_control3_helper<index> {};
+#define DECLARE_VERTEX_TEXTURE_CONTROL3(index) \
+	NV4097_SET_VERTEX_TEXTURE_CONTROL3 + 8 * (index),
+
+
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_OFFSET)
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_FORMAT)
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_ADDRESS)
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_CONTROL0)
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_FILTER)
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_IMAGE_RECT)
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_BORDER_COLOR)
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_CONTROL3)
+
 constexpr std::integer_sequence<u32,
 	NV4097_SET_VIEWPORT_HORIZONTAL,
 	NV4097_SET_VIEWPORT_VERTICAL,
@@ -2653,6 +3339,23 @@ constexpr std::integer_sequence<u32,
 	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4F)
 	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA2S)
 	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4S)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_IMAGE_RECT)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_OFFSET)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_CONTROL0)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_CONTROL3)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_FORMAT)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_ADDRESS)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_FILTER)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_BORDER_COLOR)
+	EXPAND_RANGE_16(0, DECLARE_TEXTURE_CONTROL1)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_OFFSET)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_FORMAT)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_ADDRESS)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_CONTROL0)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_FILTER)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_IMAGE_RECT)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_BORDER_COLOR)
+	EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_CONTROL3)
 	EXPAND_RANGE_32(0, DECLARE_TRANSFORM_CONSTANT)
 	NV4097_SET_TRANSFORM_CONSTANT_LOAD,
 	EXPAND_RANGE_512(0, DECLARE_TRANSFORM_PROGRAM)

@@ -832,17 +832,6 @@ rsx::fog_mode rsx::to_fog_mode(u32 in)
 	throw EXCEPTION("Unknown fog mode 0x%x", in);
 }
 
-rsx::texture_dimension rsx::to_texture_dimension(u8 in)
-{
-	switch (in)
-	{
-	case 1: return rsx::texture_dimension::dimension1d;
-	case 2: return rsx::texture_dimension::dimension2d;
-	case 3: return rsx::texture_dimension::dimension3d;
-	}
-	throw EXCEPTION("Unknown texture dimension %d", in);
-}
-
 namespace rsx
 {
 std::string print_boolean(bool b)
@@ -1210,6 +1199,172 @@ std::string print_polygon_mode(polygon_mode op)
 	throw;
 }
 
+std::string to_string(texture::format format)
+{
+	switch (format)
+	{
+	case texture::format::compressed_hilo_8: return "CELL_GCM_TEXTURE_COMPRESSED_HILO8";
+	case texture::format::compressed_hilo_s8: return "CELL_GCM_TEXTURE_COMPRESSED_HILO_S8";
+	case texture::format::b8: return "CELL_GCM_TEXTURE_B8";
+	case texture::format::a1r5g5b5: return "CELL_GCM_TEXTURE_A1R5G5B5";
+	case texture::format::a4r4g4b4: return "CELL_GCM_TEXTURE_A4R4G4B4";
+	case texture::format::r5g6b5: return "CELL_GCM_TEXTURE_R5G6B5";
+	case texture::format::a8r8g8b8: return "CELL_GCM_TEXTURE_A8R8G8B8";
+	case texture::format::compressed_dxt1: return "CELL_GCM_TEXTURE_COMPRESSED_DXT1";
+	case texture::format::compressed_dxt23: return "CELL_GCM_TEXTURE_COMPRESSED_DXT23";
+	case texture::format::compressed_dxt45: return "CELL_GCM_TEXTURE_COMPRESSED_DXT45";
+	case texture::format::g8b8: return "CELL_GCM_TEXTURE_G8B8";
+	case texture::format::r6g5b5: return "CELL_GCM_TEXTURE_R6G5B5";
+	case texture::format::d24_8: return "CELL_GCM_TEXTURE_DEPTH24_D8";
+	case texture::format::d24_8_float: return "CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT";
+	case texture::format::d16: return "CELL_GCM_TEXTURE_DEPTH16";
+	case texture::format::d16_float: return "CELL_GCM_TEXTURE_DEPTH16_FLOAT";
+	case texture::format::x16: return "CELL_GCM_TEXTURE_X16";
+	case texture::format::y16x16: return "CELL_GCM_TEXTURE_Y16_X16";
+	case texture::format::r5g5b5a1: return "CELL_GCM_TEXTURE_R5G5B5A1";
+	case texture::format::w16z16y16x16_float: return "CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT";
+	case texture::format::w32z32y32x32_float: return "CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT";
+	case texture::format::x32float: return "CELL_GCM_TEXTURE_X32_FLOAT";
+	case texture::format::d1r5g5b5: return "CELL_GCM_TEXTURE_D1R5G5B5";
+	case texture::format::d8r8g8b8: return "CELL_GCM_TEXTURE_D8R8G8B8";
+	case texture::format::y16x16_float: return "CELL_GCM_TEXTURE_Y16_X16_FLOAT";
+	case texture::format::compressed_b8r8_g8r8: return "CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8";
+	case texture::format::compressed_r8b8_r8g8: return "CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8";
+	}
+	throw;
+}
+
+std::string to_string(texture::border_type in)
+{
+	switch (in)
+	{
+	case texture::border_type::color: return "color";
+	case texture::border_type::texture: return "texture";
+	}
+	throw;
+}
+
+std::string to_string(texture::layout in)
+{
+	switch (in)
+	{
+	case texture::layout::linear: return "linear";
+	case texture::layout::swizzled: return "swizzled";
+	}
+	throw;
+}
+
+std::string to_string(texture::coordinates in)
+{
+	switch (in)
+	{
+	case texture::coordinates::normalized: return "normalized";
+	case texture::coordinates::unnormalized: return "unormalized";
+	}
+	throw;
+}
+
+std::string to_string(texture::dimension in)
+{
+	switch (in)
+	{
+	case texture::dimension::dimension1d: return "1D";
+	case texture::dimension::dimension2d: return "2D";
+	case texture::dimension::dimension3d: return "3D";
+	}
+	throw;
+}
+
+std::string to_string(texture::wrap_mode wrap)
+{
+	switch (wrap)
+	{
+	case texture::wrap_mode::wrap: return "WRAP";
+	case texture::wrap_mode::mirror: return "MIRROR";
+	case texture::wrap_mode::clamp_to_edge: return "CLAMP_TO_EDGE";
+	case texture::wrap_mode::border: return "BORDER";
+	case texture::wrap_mode::clamp: return "CLAMP";
+	case texture::wrap_mode::mirror_once_clamp_to_edge: return "MIRROR_ONCE_CLAMP_TO_EDGE";
+	case texture::wrap_mode::mirror_once_border: return "MIRROR_ONCE_BORDER";
+	case texture::wrap_mode::mirror_once_clamp: return "MIRROR_ONCE_CLAMP";
+	}
+	throw;
+}
+
+std::string to_string(texture::zfunc op)
+{
+	switch (op)
+	{
+	case texture::zfunc::never: return "Never";
+	case texture::zfunc::less: return "Less";
+	case texture::zfunc::equal: return "Equal";
+	case texture::zfunc::lequal: return "LEqual";
+	case texture::zfunc::greater: return "Greater";
+	case texture::zfunc::notequal: return "NotEqual";
+	case texture::zfunc::gequal: return "GreaterOrEqual";
+	case texture::zfunc::always: return "Always";
+	}
+	throw;
+}
+
+std::string to_string(texture::unsigned_remap op)
+{
+	switch (op)
+	{
+	case texture::unsigned_remap::biased: return "biased";
+	case texture::unsigned_remap::normal: return "normal";
+	}
+	throw;
+}
+
+std::string to_string(texture::signed_remap op)
+{
+	switch (op)
+	{
+	case texture::signed_remap::clamped: return "clamped";
+	case texture::signed_remap::normal: return "normal";
+	}
+	throw;
+}
+
+std::string to_string(texture::minify_filter op)
+{
+	switch (op)
+	{
+	case texture::minify_filter::linear: return "linear";
+	case texture::minify_filter::linear_linear: return "linear_linear";
+	case texture::minify_filter::linear_nearest: return "linear_nearest";
+	case texture::minify_filter::nearest: return "nearest";
+	case texture::minify_filter::nearest_linear: return "nearest_linear";
+	case texture::minify_filter::nearest_nearest: return "nearest";
+	case texture::minify_filter::convolution_min: return "convolution min";
+	}
+	throw;
+}
+
+std::string to_string(texture::magnify_filter op)
+{
+	switch (op)
+	{
+	case texture::magnify_filter::linear: return "linear";
+	case texture::magnify_filter::nearest: return "nearest";
+	case texture::magnify_filter::convolution_mag: return "linear";
+	}
+	throw;
+}
+
+std::string to_string(texture::component_remap op)
+{
+	switch (op)
+	{
+	case texture::component_remap::A: return "A";
+	case texture::component_remap::R: return "R";
+	case texture::component_remap::G: return "G";
+	case texture::component_remap::B: return "B";
+	}
+	throw;
+}
+
 } // end namespace rsx
 
 enum
@@ -1279,64 +1434,216 @@ enum
 	CELL_GCM_TEXTURE_CONVOLUTION_MAG = 4,
 };
 
-rsx::texture_wrap_mode rsx::to_texture_wrap_mode(u8 in)
+namespace rsx
+{
+namespace texture
+{
+dimension to_texture_dimension(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_TEXTURE_WRAP: return rsx::texture_wrap_mode::wrap;
-	case CELL_GCM_TEXTURE_MIRROR: return rsx::texture_wrap_mode::mirror;
-	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return rsx::texture_wrap_mode::clamp_to_edge;
-	case CELL_GCM_TEXTURE_BORDER: return rsx::texture_wrap_mode::border;
-	case CELL_GCM_TEXTURE_CLAMP: return rsx::texture_wrap_mode::clamp;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return rsx::texture_wrap_mode::mirror_once_clamp_to_edge;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return rsx::texture_wrap_mode::mirror_once_border;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return rsx::texture_wrap_mode::mirror_once_clamp;
+	case 1: return dimension::dimension1d;
+	case 2: return dimension::dimension2d;
+	case 3: return dimension::dimension3d;
+	}
+	throw EXCEPTION("Wrong texture dimension %d", in);
+}
+
+wrap_mode to_texture_wrap_mode(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_WRAP: return wrap_mode::wrap;
+	case CELL_GCM_TEXTURE_MIRROR: return wrap_mode::mirror;
+	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return wrap_mode::clamp_to_edge;
+	case CELL_GCM_TEXTURE_BORDER: return wrap_mode::border;
+	case CELL_GCM_TEXTURE_CLAMP: return wrap_mode::clamp;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return wrap_mode::mirror_once_clamp_to_edge;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return wrap_mode::mirror_once_border;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return wrap_mode::mirror_once_clamp;
 	}
 	throw EXCEPTION("Unknown wrap mode 0x%x", in);
 }
 
-rsx::texture_max_anisotropy rsx::to_texture_max_anisotropy(u8 in)
+max_anisotropy to_texture_max_anisotropy(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_TEXTURE_MAX_ANISO_1: return rsx::texture_max_anisotropy::x1;
-	case CELL_GCM_TEXTURE_MAX_ANISO_2: return rsx::texture_max_anisotropy::x2;
-	case CELL_GCM_TEXTURE_MAX_ANISO_4: return rsx::texture_max_anisotropy::x4;
-	case CELL_GCM_TEXTURE_MAX_ANISO_6: return rsx::texture_max_anisotropy::x6;
-	case CELL_GCM_TEXTURE_MAX_ANISO_8: return rsx::texture_max_anisotropy::x8;
-	case CELL_GCM_TEXTURE_MAX_ANISO_10: return rsx::texture_max_anisotropy::x10;
-	case CELL_GCM_TEXTURE_MAX_ANISO_12: return rsx::texture_max_anisotropy::x12;
-	case CELL_GCM_TEXTURE_MAX_ANISO_16: return rsx::texture_max_anisotropy::x16;
+	case CELL_GCM_TEXTURE_MAX_ANISO_1: return max_anisotropy::x1;
+	case CELL_GCM_TEXTURE_MAX_ANISO_2: return max_anisotropy::x2;
+	case CELL_GCM_TEXTURE_MAX_ANISO_4: return max_anisotropy::x4;
+	case CELL_GCM_TEXTURE_MAX_ANISO_6: return max_anisotropy::x6;
+	case CELL_GCM_TEXTURE_MAX_ANISO_8: return max_anisotropy::x8;
+	case CELL_GCM_TEXTURE_MAX_ANISO_10: return max_anisotropy::x10;
+	case CELL_GCM_TEXTURE_MAX_ANISO_12: return max_anisotropy::x12;
+	case CELL_GCM_TEXTURE_MAX_ANISO_16: return max_anisotropy::x16;
 	}
 	throw EXCEPTION("Unknown anisotropy max mode 0x%x", in);
 }
 
-rsx::texture_minify_filter rsx::to_texture_minify_filter(u8 in)
+minify_filter to_texture_minify_filter(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_TEXTURE_NEAREST: return rsx::texture_minify_filter::nearest;
-	case CELL_GCM_TEXTURE_LINEAR: return rsx::texture_minify_filter::linear;
-	case CELL_GCM_TEXTURE_NEAREST_NEAREST: return rsx::texture_minify_filter::nearest_nearest;
-	case CELL_GCM_TEXTURE_LINEAR_NEAREST: return rsx::texture_minify_filter::linear_nearest;
-	case CELL_GCM_TEXTURE_NEAREST_LINEAR: return rsx::texture_minify_filter::nearest_linear;
-	case CELL_GCM_TEXTURE_LINEAR_LINEAR: return rsx::texture_minify_filter::linear_linear;
-	case CELL_GCM_TEXTURE_CONVOLUTION_MIN: return rsx::texture_minify_filter::linear_linear;
+	case CELL_GCM_TEXTURE_NEAREST: return minify_filter::nearest;
+	case CELL_GCM_TEXTURE_LINEAR: return minify_filter::linear;
+	case CELL_GCM_TEXTURE_NEAREST_NEAREST: return minify_filter::nearest_nearest;
+	case CELL_GCM_TEXTURE_LINEAR_NEAREST: return minify_filter::linear_nearest;
+	case CELL_GCM_TEXTURE_NEAREST_LINEAR: return minify_filter::nearest_linear;
+	case CELL_GCM_TEXTURE_LINEAR_LINEAR: return minify_filter::linear_linear;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MIN: return minify_filter::linear_linear;
 	}
 	throw EXCEPTION("Unknown minify filter 0x%x", in);
 }
 
 
-rsx::texture_magnify_filter rsx::to_texture_magnify_filter(u8 in)
+magnify_filter to_texture_magnify_filter(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_TEXTURE_NEAREST: return rsx::texture_magnify_filter::nearest;
-	case CELL_GCM_TEXTURE_LINEAR: return rsx::texture_magnify_filter::linear;
-	case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return rsx::texture_magnify_filter::convolution_mag;
+	case CELL_GCM_TEXTURE_NEAREST: return magnify_filter::nearest;
+	case CELL_GCM_TEXTURE_LINEAR: return magnify_filter::linear;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return magnify_filter::convolution_mag;
 	}
 	throw EXCEPTION("Unknown magnify filter 0x%x", in);
 }
+
+// Note : this needs more test
+border_type to_border_type(u32 in)
+{
+	switch (in)
+	{
+	case 0: return border_type::color;
+	case 1: return border_type::texture;
+	}
+	throw EXCEPTION("unknow border type %x", in);
+}
+
+enum
+{
+	// Swizzle Flag
+	CELL_GCM_TEXTURE_SZ = 0x00,
+	CELL_GCM_TEXTURE_LN = 0x20,
+
+	// Normalization Flag
+	CELL_GCM_TEXTURE_NR = 0x00,
+	CELL_GCM_TEXTURE_UN = 0x40,
+};
+
+std::tuple<format, layout, coordinates> to_texture_format(u32 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return std::make_tuple(format::compressed_b8r8_g8r8, layout::swizzled, coordinates::normalized);
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return std::make_tuple(format::compressed_b8r8_g8r8, layout::swizzled, coordinates::normalized);
+	}
+
+	coordinates coordinates = !!(in & CELL_GCM_TEXTURE_UN) ? coordinates::unnormalized : coordinates::normalized;
+	layout layout = !!(in & CELL_GCM_TEXTURE_LN) ? layout::linear : layout::swizzled;
+	u32 purged_format = in & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	switch (purged_format)
+	{
+	case CELL_GCM_TEXTURE_B8: return std::make_tuple(format::b8, layout, coordinates);
+	case CELL_GCM_TEXTURE_A1R5G5B5: return std::make_tuple(format::a1r5g5b5, layout, coordinates);
+	case CELL_GCM_TEXTURE_A4R4G4B4: return std::make_tuple(format::a4r4g4b4, layout, coordinates);
+	case CELL_GCM_TEXTURE_R5G6B5: return std::make_tuple(format::r5g6b5, layout, coordinates);
+	case CELL_GCM_TEXTURE_A8R8G8B8: return std::make_tuple(format::a8r8g8b8, layout, coordinates);
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return std::make_tuple(format::compressed_dxt1, layout, coordinates);
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return std::make_tuple(format::compressed_dxt23, layout, coordinates);
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return std::make_tuple(format::compressed_dxt45, layout, coordinates);
+	case CELL_GCM_TEXTURE_G8B8: return std::make_tuple(format::g8b8, layout, coordinates);
+	case CELL_GCM_TEXTURE_R6G5B5: return std::make_tuple(format::r6g5b5, layout, coordinates);
+	case CELL_GCM_TEXTURE_DEPTH24_D8: return std::make_tuple(format::d24_8, layout, coordinates);
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return std::make_tuple(format::d24_8_float, layout, coordinates);
+	case CELL_GCM_TEXTURE_DEPTH16: return std::make_tuple(format::d16, layout, coordinates);
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return std::make_tuple(format::d16_float, layout, coordinates);
+	case CELL_GCM_TEXTURE_X16: return std::make_tuple(format::x16, layout, coordinates);
+	case CELL_GCM_TEXTURE_Y16_X16: return std::make_tuple(format::y16x16, layout, coordinates);
+	case CELL_GCM_TEXTURE_R5G5B5A1: return std::make_tuple(format::r5g5b5a1, layout, coordinates);
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return std::make_tuple(format::compressed_hilo_8, layout, coordinates);
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return std::make_tuple(format::compressed_hilo_s8, layout, coordinates);
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return std::make_tuple(format::w16z16y16x16_float, layout, coordinates);
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return std::make_tuple(format::w32z32y32x32_float, layout, coordinates);
+	case CELL_GCM_TEXTURE_X32_FLOAT: return std::make_tuple(format::x32float, layout, coordinates);
+	case CELL_GCM_TEXTURE_D1R5G5B5: return std::make_tuple(format::d1r5g5b5, layout, coordinates);
+	case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(format::d8r8g8b8, layout, coordinates);
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(format::y16x16_float, layout, coordinates);
+	}
+	throw EXCEPTION("unknow texture format %x", in);
+}
+
+enum
+{
+	CELL_GCM_TEXTURE_ZFUNC_NEVER = 0,
+	CELL_GCM_TEXTURE_ZFUNC_LESS = 1,
+	CELL_GCM_TEXTURE_ZFUNC_EQUAL = 2,
+	CELL_GCM_TEXTURE_ZFUNC_LEQUAL = 3,
+	CELL_GCM_TEXTURE_ZFUNC_GREATER = 4,
+	CELL_GCM_TEXTURE_ZFUNC_NOTEQUAL = 5,
+	CELL_GCM_TEXTURE_ZFUNC_GEQUAL = 6,
+	CELL_GCM_TEXTURE_ZFUNC_ALWAYS = 7,
+};
+
+zfunc to_texture_zfunc(u32 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_ZFUNC_NEVER: return zfunc::never;
+	case CELL_GCM_TEXTURE_ZFUNC_LESS: return zfunc::less;
+	case CELL_GCM_TEXTURE_ZFUNC_EQUAL: return zfunc::equal;
+	case CELL_GCM_TEXTURE_ZFUNC_LEQUAL: return zfunc::lequal;
+	case CELL_GCM_TEXTURE_ZFUNC_GREATER: return zfunc::greater;
+	case CELL_GCM_TEXTURE_ZFUNC_NOTEQUAL: return zfunc::notequal;
+	case CELL_GCM_TEXTURE_ZFUNC_GEQUAL: return zfunc::gequal;
+	case CELL_GCM_TEXTURE_ZFUNC_ALWAYS: return zfunc::always;
+	}
+	throw EXCEPTION("unknow zfunc %x", in);
+}
+
+enum
+{
+	CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL = 0,
+	CELL_GCM_TEXTURE_UNSIGNED_REMAP_BIASED = 1,
+
+	CELL_GCM_TEXTURE_SIGNED_REMAP_NORMAL = 0x0,
+	CELL_GCM_TEXTURE_SIGNED_REMAP_CLAMPED = 0x3,
+};
+
+unsigned_remap to_unsigned_remap(u32 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL: return unsigned_remap::normal;
+	case CELL_GCM_TEXTURE_UNSIGNED_REMAP_BIASED: return unsigned_remap::biased;
+	}
+	throw EXCEPTION("unknow unsigned remap %x", in);
+}
+
+signed_remap to_signed_remap(u32 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_SIGNED_REMAP_NORMAL: return signed_remap::normal;
+	case CELL_GCM_TEXTURE_SIGNED_REMAP_CLAMPED: return signed_remap::clamped;
+	}
+	throw EXCEPTION("unknow signed remap %x", in);
+}
+
+component_remap to_component_remap(u32 in)
+{
+	switch (in)
+	{
+	case 0: return component_remap::A;
+	case 1: return component_remap::R;
+	case 2: return component_remap::G;
+	case 3: return component_remap::B;
+	}
+	throw EXCEPTION("unknow component remap %x", in);
+}
+
+
+} // end namespace texture
+} // end namespace rsx
 
 rsx::surface_target rsx::to_surface_target(u8 in)
 {
@@ -1758,244 +2065,7 @@ rsx::polygon_mode rsx::to_polygon_mode(u32 in)
 // Various parameter pretty printing function
 namespace
 {
-	std::string ptr_to_string(u32 ptr)
-	{
-		return fmt::format("0x%08x", ptr);
-	}
 
-	std::string dma_mode(u32 arg)
-	{
-		switch (arg)
-		{
-		case CELL_GCM_LOCATION_LOCAL:
-		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER: return "Local memory";
-		case CELL_GCM_LOCATION_MAIN:
-		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER: return "Main memory";
-		}
-		return "Error";
-	}
-
-	std::string texture_dimension(u8 dim)
-	{
-		switch (rsx::to_texture_dimension(dim))
-		{
-		case rsx::texture_dimension::dimension1d: return "1D";
-		case rsx::texture_dimension::dimension2d: return "2D";
-		case rsx::texture_dimension::dimension3d: return "3D";
-		}
-		return "";
-	}
-
-	std::string get_vertex_attribute_format(u8 type)
-	{
-		switch (rsx::to_vertex_base_type(type))
-		{
-		case rsx::vertex_base_type::s1: return "Signed short normalized";
-		case rsx::vertex_base_type::f: return "Float";
-		case rsx::vertex_base_type::sf: return "Half float";
-		case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
-		case rsx::vertex_base_type::s32k: return "Signed short unormalized";
-		case rsx::vertex_base_type::cmp: return "CMP";
-		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
-		}
-	}
-
-	std::string unpack_vertex_format(u32 arg)
-	{
-		u32 frequency = arg >> 16;
-		u32 stride = (arg >> 8) & 0xff;
-		u32 size = (arg >> 4) & 0xf;
-		u32 type = arg & 0xf;
-		if (size == 0)
-			return "(disabled)";
-
-		return "Type = " + get_vertex_attribute_format(type) + " size = " + std::to_string(size) + " stride = " + std::to_string(stride) + " frequency = " + std::to_string(frequency);
-	}
-
-	std::string transform_constant(size_t index, u32 arg)
-	{
-		return "Transform constant " + std::to_string(index) + ": " + std::to_string(arg) + "/" + std::to_string((float&)arg);
-	}
-
-	std::string texture_offset(size_t index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) + ": Offset @" + ptr_to_string(arg);
-	}
-
-	std::string texture_size(size_t index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) + ": width = " + std::to_string(arg & 0xffff) + " height = " + std::to_string(arg >> 16);
-	}
-
-	static std::string get_texture_format_name(u32 format)
-	{
-		switch (format)
-		{
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return "CELL_GCM_TEXTURE_COMPRESSED_HILO8";
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return "CELL_GCM_TEXTURE_COMPRESSED_HILO_S8";
-		case CELL_GCM_TEXTURE_B8: return "CELL_GCM_TEXTURE_B8";
-		case CELL_GCM_TEXTURE_A1R5G5B5: return "CELL_GCM_TEXTURE_A1R5G5B5";
-		case CELL_GCM_TEXTURE_A4R4G4B4: return "CELL_GCM_TEXTURE_A4R4G4B4";
-		case CELL_GCM_TEXTURE_R5G6B5: return "CELL_GCM_TEXTURE_R5G6B5";
-		case CELL_GCM_TEXTURE_A8R8G8B8: return "CELL_GCM_TEXTURE_A8R8G8B8";
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return "CELL_GCM_TEXTURE_COMPRESSED_DXT1";
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return "CELL_GCM_TEXTURE_COMPRESSED_DXT23";
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return "CELL_GCM_TEXTURE_COMPRESSED_DXT45";
-		case CELL_GCM_TEXTURE_G8B8: return "CELL_GCM_TEXTURE_G8B8";
-		case CELL_GCM_TEXTURE_R6G5B5: return "CELL_GCM_TEXTURE_R6G5B5";
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return "CELL_GCM_TEXTURE_DEPTH24_D8";
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return "CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT";
-		case CELL_GCM_TEXTURE_DEPTH16: return "CELL_GCM_TEXTURE_DEPTH16";
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return "CELL_GCM_TEXTURE_DEPTH16_FLOAT";
-		case CELL_GCM_TEXTURE_X16: return "CELL_GCM_TEXTURE_X16";
-		case CELL_GCM_TEXTURE_Y16_X16: return "CELL_GCM_TEXTURE_Y16_X16";
-		case CELL_GCM_TEXTURE_R5G5B5A1: return "CELL_GCM_TEXTURE_R5G5B5A1";
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return "CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT";
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return "CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT";
-		case CELL_GCM_TEXTURE_X32_FLOAT: return "CELL_GCM_TEXTURE_X32_FLOAT";
-		case CELL_GCM_TEXTURE_D1R5G5B5: return "CELL_GCM_TEXTURE_D1R5G5B5";
-		case CELL_GCM_TEXTURE_D8R8G8B8: return "CELL_GCM_TEXTURE_D8R8G8B8";
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return "CELL_GCM_TEXTURE_Y16_X16_FLOAT";
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return "CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8";
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return "CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8";
-		}
-		return "Error";
-	}
-
-	std::string texture_format(size_t index, u32 arg)
-	{
-		int format = ((arg >> 8) & 0xFF);
-		return "Texture " + std::to_string(index) + ": location = " + ptr_to_string((arg & 0x3) - 1) +
-			(((arg >> 2) & 0x1) ? " cubemap " : "") +
-			" border type = " + std::to_string((arg >> 3) & 0x1) +
-			" dimension = " + std::to_string((arg >> 4) & 0xF) +
-			" format = " + get_texture_format_name(format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN)) +
-			((format & CELL_GCM_TEXTURE_LN) ? "" : " swizzled") +
-			((format & CELL_GCM_TEXTURE_UN) ? " unormalized coordinates" : "") +
-			" mipmap levels = " + std::to_string((arg >> 16) & 0xFFFF);
-	}
-
-	std::string get_texture_wrap_mode(u8 wrap)
-	{
-		switch (rsx::to_texture_wrap_mode(wrap))
-		{
-		case rsx::texture_wrap_mode::wrap: return "WRAP";
-		case rsx::texture_wrap_mode::mirror: return "MIRROR";
-		case rsx::texture_wrap_mode::clamp_to_edge: return "CLAMP_TO_EDGE";
-		case rsx::texture_wrap_mode::border: return "BORDER";
-		case rsx::texture_wrap_mode::clamp: return "CLAMP";
-		case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return "MIRROR_ONCE_CLAMP_TO_EDGE";
-		case rsx::texture_wrap_mode::mirror_once_border: return "MIRROR_ONCE_BORDER";
-		case rsx::texture_wrap_mode::mirror_once_clamp: return "MIRROR_ONCE_CLAMP";
-		}
-		return "Error";
-	}
-
-	std::string get_zfunc_name(u8 op)
-	{
-		switch (op)
-		{
-		case 0: return "Never";
-		case 1: return "Less";
-		case 2: return "Equal";
-		case 3: return "LEqual";
-		case 4: return "Greater";
-		case 5: return "NotEqual";
-		case 6: return "GreaterOrEqual";
-		case 7: return "Always";
-		}
-		return "Error";
-	}
-
-	std::string texture_address(size_t index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) + ": wrap_s = " + get_texture_wrap_mode(arg & 0xF) +
-			" wrap_t = " + get_texture_wrap_mode((arg >> 8) & 0xF) +
-			" wrap_r = " + get_texture_wrap_mode((arg >> 16) & 0xF) +
-			" unsigned remap = " + std::to_string((arg >> 12) & 0xF) +
-			" zfunc = " + get_zfunc_name((arg >> 28) & 0xF) +
-			" gamma = " + std::to_string((arg >> 20) & 0xF) +
-			" aniso bias = " + std::to_string((arg >> 4) & 0xF) +
-			" signed remap = " + std::to_string((arg >> 24) & 0xF);
-	}
-
-	std::string get_texture_max_aniso_name(u8 aniso)
-	{
-		switch (rsx::to_texture_max_anisotropy(aniso))
-		{
-		case rsx::texture_max_anisotropy::x1: return "1";
-		case rsx::texture_max_anisotropy::x2: return "2";
-		case rsx::texture_max_anisotropy::x4: return "4";
-		case rsx::texture_max_anisotropy::x6: return "6";
-		case rsx::texture_max_anisotropy::x8: return "8";
-		case rsx::texture_max_anisotropy::x10: return "10";
-		case rsx::texture_max_anisotropy::x12: return "12";
-		case rsx::texture_max_anisotropy::x16: return "16";
-		}
-		return "Error";
-	}
-
-	std::string texture_control0(size_t index, u32 arg)
-	{
-		std::string result = "Texture " + std::to_string(index);
-		if ((arg >> 31) & 0x1)
-		{
-			result += " min lod = " + std::to_string((arg >> 19) & 0xFFF) +
-				" max lod = " + std::to_string((arg >> 7) & 0xFFF) +
-				" max aniso = " + get_texture_max_aniso_name((arg >> 4) & 0x7) +
-				" alpha kill = " + (((arg >> 2) & 0x1) ? "true" : "false");
-		}
-		else
-			result += " (disabled)";
-		return result;
-	}
-
-	std::string get_remap_channel(u8 op) noexcept
-	{
-		switch (op)
-		{
-		case 0: return "A";
-		case 1: return "R";
-		case 2: return "G";
-		case 3: return "B";
-		}
-		return "Error";
-	}
-
-	std::string texture_control1(size_t index, u32 arg) noexcept
-	{
-		return "Texture " + std::to_string(index) +
-			" Component 0 = " + get_remap_channel(arg & 0x3) +
-			" Component 1 = " + get_remap_channel((arg >> 2) & 0x3) +
-			" Component 2 = " + get_remap_channel((arg >> 4) & 0x3) +
-			" Component 3 = " + get_remap_channel((arg >> 6) & 0x3);
-	}
-
-	std::string texture_control3(size_t index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) +
-			" depth = " + std::to_string(arg >> 20) +
-			" pitch = " + std::to_string(arg & 0xFFFFF);
-	}
-
-	std::string texture_border_color(size_t index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) +
-			" border color = " + std::to_string(arg);
-	}
-
-	std::string texture_filter(size_t index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) +
-			" bias = " + std::to_string(arg & 0x1fff) +
-			" min_filter = " + std::to_string((arg >> 16) & 0x7) +
-			" mag_filter = " + std::to_string((arg >> 24) & 0x7) +
-			" convolution_filter = " + std::to_string((arg >> 13) & 0xF) +
-			" a_signed = " + std::to_string((arg >> 28) & 0x1) +
-			" r_signed = " + std::to_string((arg >> 29) & 0x1) +
-			" g_signed = " + std::to_string((arg >> 30) & 0x1) +
-			" b_signed = " + std::to_string((arg >> 31) & 0x1);
-	}
 
 	namespace
 	{

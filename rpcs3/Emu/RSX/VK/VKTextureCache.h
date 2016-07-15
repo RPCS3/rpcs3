@@ -155,7 +155,7 @@ namespace vk
 			m_cache.resize(0);
 		}
 
-		vk::image_view* upload_texture(command_buffer cmd, rsx::texture &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
+		vk::image_view* upload_texture(command_buffer cmd, rsx::texture_t &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
@@ -184,10 +184,9 @@ namespace vk
 				return cto.uploaded_image_view.get();
 			}
 
-			u32 raw_format = tex.format();
-			u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+			rsx::texture::format format = tex.format();
 
-			VkComponentMapping mapping = vk::get_component_mapping(format, tex.remap());
+			VkComponentMapping mapping = vk::get_component_mapping(format, tex.remap_0(), tex.remap_1(), tex.remap_2(), tex.remap_3());
 			VkFormat vk_format = get_compatible_sampler_format(format);
 
 			VkImageType image_type;
@@ -237,10 +236,10 @@ namespace vk
 			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 
 			cto.uploaded_image_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), cto.uploaded_texture->value, image_view_type, vk_format,
-				vk::get_component_mapping(tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), tex.remap()),
+				vk::get_component_mapping(tex.format(), tex.remap_0(), tex.remap_1(), tex.remap_2(), tex.remap_3()),
 				subresource_range);
 
-			copy_mipmaped_image_using_buffer(cmd, cto.uploaded_texture->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), tex.get_exact_mipmap_count(),
+			copy_mipmaped_image_using_buffer(cmd, cto.uploaded_texture->value, get_subresources_layout(tex), format, (tex.layout() == rsx::texture::layout::swizzled), tex.get_exact_mipmap_count(),
 				upload_heap, upload_buffer);
 
 			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);

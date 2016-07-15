@@ -155,65 +155,6 @@ namespace rsx
 
 	fog_mode to_fog_mode(u32 in);
 
-	enum class texture_dimension : u8
-	{
-		dimension1d,
-		dimension2d,
-		dimension3d,
-	};
-
-	texture_dimension to_texture_dimension(u8 in);
-
-	enum class texture_wrap_mode : u8
-	{
-		wrap,
-		mirror,
-		clamp_to_edge,
-		border,
-		clamp,
-		mirror_once_clamp_to_edge,
-		mirror_once_border,
-		mirror_once_clamp,
-	};
-
-	texture_wrap_mode to_texture_wrap_mode(u8 in);
-
-	enum class texture_max_anisotropy : u8
-	{
-		x1,
-		x2,
-		x4,
-		x6,
-		x8,
-		x10,
-		x12,
-		x16,
-	};
-
-	texture_max_anisotropy to_texture_max_anisotropy(u8 in);
-
-	enum class texture_minify_filter : u8
-	{
-		nearest, ///< no filtering, mipmap base level
-		linear, ///< linear filtering, mipmap base level
-		nearest_nearest, ///< no filtering, closest mipmap level
-		linear_nearest, ///< linear filtering, closest mipmap level
-		nearest_linear, ///< no filtering, linear mix between closest mipmap levels
-		linear_linear, ///< linear filtering, linear mix between closest mipmap levels
-		convolution_min, ///< Unknown mode but looks close to linear_linear
-	};
-
-	texture_minify_filter to_texture_minify_filter(u8 in);
-
-	enum class texture_magnify_filter : u8
-	{
-		nearest, ///< no filtering
-		linear, ///< linear filtering
-		convolution_mag, ///< Unknown mode but looks close to linear
-	};
-
-	texture_magnify_filter to_texture_magnify_filter(u8 in);
-
 	enum class stencil_op : u8
 	{
 		keep,
@@ -327,6 +268,161 @@ namespace rsx
 	};
 
 	polygon_mode to_polygon_mode(u32 in);
+
+	namespace texture
+	{
+		enum class dimension : u8
+		{
+			dimension1d,
+			dimension2d,
+			dimension3d,
+		};
+
+		dimension to_texture_dimension(u8 in);
+
+		enum class wrap_mode : u8
+		{
+			wrap,
+			mirror,
+			clamp_to_edge,
+			border,
+			clamp,
+			mirror_once_clamp_to_edge,
+			mirror_once_border,
+			mirror_once_clamp,
+		};
+
+		wrap_mode to_texture_wrap_mode(u8 in);
+
+		enum class max_anisotropy : u8
+		{
+			x1,
+			x2,
+			x4,
+			x6,
+			x8,
+			x10,
+			x12,
+			x16,
+		};
+
+		max_anisotropy to_texture_max_anisotropy(u8 in);
+
+		enum class minify_filter : u8
+		{
+			nearest, ///< no filtering, mipmap base level
+			linear, ///< linear filtering, mipmap base level
+			nearest_nearest, ///< no filtering, closest mipmap level
+			linear_nearest, ///< linear filtering, closest mipmap level
+			nearest_linear, ///< no filtering, linear mix between closest mipmap levels
+			linear_linear, ///< linear filtering, linear mix between closest mipmap levels
+			convolution_min, ///< Unknow mode but looks close to linear_linear
+		};
+
+		minify_filter to_texture_minify_filter(u8 in);
+
+		enum class magnify_filter : u8
+		{
+			nearest, ///< no filtering
+			linear, ///< linear filtering
+			convolution_mag, ///< Unknow mode but looks close to linear
+		};
+
+		magnify_filter to_texture_magnify_filter(u8 in);
+
+		enum class border_type : u8
+		{
+			texture,
+			color,
+		};
+
+		border_type to_border_type(u32 in);
+
+		enum class format : u8
+		{
+			b8,
+			a1r5g5b5,
+			a4r4g4b4,
+			r5g6b5,
+			a8r8g8b8,
+			compressed_dxt1,
+			compressed_dxt23,
+			compressed_dxt45,
+			g8b8,
+			r6g5b5,
+			d24_8,
+			d24_8_float,
+			d16,
+			d16_float,
+			x16,
+			y16x16,
+			r5g5b5a1,
+			compressed_hilo_8,
+			compressed_hilo_s8,
+			w16z16y16x16_float,
+			w32z32y32x32_float,
+			x32float,
+			d1r5g5b5,
+			d8r8g8b8,
+			y16x16_float,
+			compressed_b8r8_g8r8,
+			compressed_r8b8_r8g8,
+		};
+
+		enum class layout : u8
+		{
+			linear,
+			swizzled,
+		};
+
+		enum class coordinates : u8
+		{
+			normalized,
+			unnormalized,
+		};
+
+		std::tuple<format, layout, coordinates> to_texture_format(u32 in);
+
+		enum class zfunc : u8
+		{
+			never,
+			less,
+			equal,
+			lequal,
+			greater,
+			notequal,
+			gequal,
+			always,
+		};
+
+		zfunc to_texture_zfunc(u32 in);
+
+		enum class unsigned_remap : u8
+		{
+			normal,
+			biased,
+		};
+
+		unsigned_remap to_unsigned_remap(u32 in);
+
+		enum class signed_remap : u8
+		{
+			normal,
+			clamped,
+		};
+
+		signed_remap to_signed_remap(u32 in);
+
+		enum class component_remap : u8
+		{
+			A,
+			R,
+			G,
+			B
+		};
+
+		component_remap to_component_remap(u32 in);
+	}
 
 	namespace blit_engine
 	{
@@ -464,14 +560,6 @@ enum
 	CELL_GCM_TEXTURE_Y16_X16_FLOAT          = 0x9F,
 	CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8   = 0xAD,
 	CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8   = 0xAE,
-
-	// Swizzle Flag
-	CELL_GCM_TEXTURE_SZ = 0x00,
-	CELL_GCM_TEXTURE_LN = 0x20,
-	
-	// Normalization Flag
-	CELL_GCM_TEXTURE_NR = 0x00,
-	CELL_GCM_TEXTURE_UN = 0x40,
 };
 
 // GCM Surface
@@ -484,21 +572,6 @@ enum
 
 enum
 {
-	CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL = 0,
-	CELL_GCM_TEXTURE_UNSIGNED_REMAP_BIASED = 1,
-
-	CELL_GCM_TEXTURE_SIGNED_REMAP_NORMAL = 0x0,
-	CELL_GCM_TEXTURE_SIGNED_REMAP_CLAMPED = 0x3,
-
-	CELL_GCM_TEXTURE_ZFUNC_NEVER = 0,
-	CELL_GCM_TEXTURE_ZFUNC_LESS = 1,
-	CELL_GCM_TEXTURE_ZFUNC_EQUAL = 2,
-	CELL_GCM_TEXTURE_ZFUNC_LEQUAL = 3,
-	CELL_GCM_TEXTURE_ZFUNC_GREATER = 4,
-	CELL_GCM_TEXTURE_ZFUNC_NOTEQUAL = 5,
-	CELL_GCM_TEXTURE_ZFUNC_GEQUAL = 6,
-	CELL_GCM_TEXTURE_ZFUNC_ALWAYS = 7,
-
 	CELL_GCM_TEXTURE_GAMMA_R = 1 << 0,
 	CELL_GCM_TEXTURE_GAMMA_G = 1 << 1,
 	CELL_GCM_TEXTURE_GAMMA_B = 1 << 2,

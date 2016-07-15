@@ -19,7 +19,7 @@ extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 namespace rsx
 {
-	class texture;
+	class texture_t;
 }
 
 namespace vk
@@ -66,7 +66,7 @@ namespace vk
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect);
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_width, u32 src_height, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect);
 
-	VkFormat get_compatible_sampler_format(u32 format);
+	VkFormat get_compatible_sampler_format(rsx::texture::format format);
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
@@ -451,7 +451,7 @@ namespace vk
 		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps = 1, bool gpu_only = false, VkComponentMapping swizzle = default_component_map());
 		void destroy();
 
-		void init(rsx::texture &tex, vk::command_buffer &cmd, bool ignore_checks = false);
+		void init(rsx::texture_t &tex, vk::command_buffer &cmd, bool ignore_checks = false);
 		void flush(vk::command_buffer & cmd);
 
 		//Fill with debug color 0xFF
@@ -1331,6 +1331,6 @@ namespace vk
 	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
-		const std::vector<rsx_subresource_layout> subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		const std::vector<rsx_subresource_layout> subresource_layout, rsx::texture::format format, bool is_swizzled, u16 mipmap_count,
 		vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer);
 }

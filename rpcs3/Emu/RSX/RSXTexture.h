@@ -14,18 +14,66 @@ namespace rsx
 		texture_dimension_3d = 3,
 	};
 
-	class texture
+	class texture_t
 	{
-	protected:
-		u8 m_index;
-		std::array<u32, 0x10000 / 4> &registers;
-
 	public:
-		texture(u8 idx, std::array<u32, 0x10000 / 4> &r);
-		texture() = delete;
-
 		//initialize texture registers with default values
-		void init(u8 index);
+		void init();
+
+		u32 m_offset;
+		u8 m_location : 2;
+		bool m_cubemap : 1;
+		rsx::texture::border_type m_border_type;
+		rsx::texture::dimension m_dimension : 2;
+		rsx::texture::format m_format;
+		rsx::texture::layout m_layout : 1;
+		rsx::texture::coordinates m_normalization : 1;
+		u16 m_mipmap;
+		rsx::texture::wrap_mode m_wrap_r : 3;
+		rsx::texture::wrap_mode m_wrap_s : 3;
+		rsx::texture::wrap_mode m_wrap_t : 3;
+		rsx::texture::zfunc m_zfunc : 3;
+		rsx::texture::unsigned_remap m_unsigned_remap: 1;
+		rsx::texture::signed_remap m_signed_remap: 1;
+		u8 m_aniso_bias : 4;
+		bool m_gamma_r : 1;
+		bool m_gamma_g : 1;
+		bool m_gamma_b : 1;
+		bool m_gamma_a : 1;
+
+		u16 m_bias : 13;
+		rsx::texture::minify_filter m_min_filter : 3;
+		rsx::texture::magnify_filter m_mag_filter : 2;
+		u8 m_convolution_filter : 3;
+		bool m_a_signed : 1;
+		bool m_r_signed : 1;
+		bool m_g_signed : 1;
+		bool m_b_signed : 1;
+
+		bool m_enabled : 1;
+
+		u16 m_width;
+		u16 m_height;
+
+		u16 m_depth : 12;
+		u32 m_pitch : 20;
+
+		bool m_alpha_kill_enabled : 1;
+		u16 m_min_lod : 12;
+		u16 m_max_lod : 12;
+		rsx::texture::max_anisotropy m_max_aniso : 3;
+
+		// border color
+		u8 m_border_color_r;
+		u8 m_border_color_g;
+		u8 m_border_color_b;
+		u8 m_border_color_a;
+
+		// remap
+		rsx::texture::component_remap m_remap_0 : 2;
+		rsx::texture::component_remap m_remap_1 : 2;
+		rsx::texture::component_remap m_remap_2 : 2;
+		rsx::texture::component_remap m_remap_3 : 2;
 
 		// Offset
 		u32 offset() const;
@@ -33,15 +81,17 @@ namespace rsx
 		// Format
 		u8   location() const;
 		bool cubemap() const;
-		u8   border_type() const;
-		rsx::texture_dimension   dimension() const;
+		rsx::texture::border_type   border_type() const;
+		rsx::texture::dimension   dimension() const;
+		rsx::texture::coordinates normalization() const;
+		rsx::texture::layout layout() const;
 		/**
 		 * 2d texture can be either plane or cubemap texture depending on cubemap bit.
 		 * Since cubemap is a format per se in all gfx API this function directly returns
 		 * cubemap as a separate dimension.
 		 */
 		rsx::texture_dimension_extended get_extended_texture_dimension() const;
-		u8   format() const;
+		rsx::texture::format   format() const;
 		bool is_compressed_format() const;
 		u16  mipmap() const;
 		/**
@@ -51,29 +101,31 @@ namespace rsx
 		u16 get_exact_mipmap_count() const;
 
 		// Address
-		rsx::texture_wrap_mode wrap_s() const;
-		rsx::texture_wrap_mode wrap_t() const;
-		rsx::texture_wrap_mode wrap_r() const;
-		u8 unsigned_remap() const;
-		u8 zfunc() const;
-		u8 gamma() const;
+		rsx::texture::wrap_mode wrap_s() const;
+		rsx::texture::wrap_mode wrap_t() const;
+		rsx::texture::wrap_mode wrap_r() const;
+		rsx::texture::unsigned_remap unsigned_remap() const;
+		rsx::texture::zfunc zfunc() const;
 		u8 aniso_bias() const;
-		u8 signed_remap() const;
+		rsx::texture::signed_remap signed_remap() const;
 
 		// Control0
 		bool enabled() const;
 		u16  min_lod() const;
 		u16  max_lod() const;
-		rsx::texture_max_anisotropy   max_aniso() const;
+		rsx::texture::max_anisotropy   max_aniso() const;
 		bool alpha_kill_enabled() const;
 
 		// Control1
-		u32 remap() const;
+		rsx::texture::component_remap remap_0() const;
+		rsx::texture::component_remap remap_1() const;
+		rsx::texture::component_remap remap_2() const;
+		rsx::texture::component_remap remap_3() const;
 
 		// Filter
 		float bias() const;
-		rsx::texture_minify_filter  min_filter() const;
-		rsx::texture_magnify_filter  mag_filter() const;
+		rsx::texture::minify_filter  min_filter() const;
+		rsx::texture::magnify_filter  mag_filter() const;
 		u8  convolution_filter() const;
 		bool a_signed() const;
 		bool r_signed() const;
@@ -85,23 +137,75 @@ namespace rsx
 		u16 height() const;
 
 		// Border Color
-		u32 border_color() const;
+		u8 border_color_a() const;
+		u8 border_color_r() const;
+		u8 border_color_g() const;
+		u8 border_color_b() const;
+
 		u16 depth() const;
 		u32 pitch() const;
 	};
 
-	class vertex_texture
+	class vertex_texture_t
 	{
-	protected:
-		u8 m_index;
-		std::array<u32, 0x10000 / 4> &registers;
-
 	public:
-		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r);
-		vertex_texture() = delete;
+		vertex_texture_t();
 
 		//initialize texture registers with default values
-		void init(u8 index);
+		void init();
+
+		u32 m_offset;
+		u8 m_location : 2;
+
+		bool m_enabled : 1;
+
+		u16 m_mipmap;
+		rsx::texture::zfunc m_zfunc : 3;
+		rsx::texture::unsigned_remap m_unsigned_remap : 1;
+		rsx::texture::signed_remap m_signed_remap : 1;
+		u8 m_aniso_bias : 4;
+		bool m_gamma_r : 1;
+		bool m_gamma_g : 1;
+		bool m_gamma_b : 1;
+		bool m_gamma_a : 1;
+
+		u16 m_bias : 13;
+		rsx::texture::minify_filter m_min_filter : 3;
+		rsx::texture::magnify_filter m_mag_filter : 2;
+		u8 m_convolution_filter : 3;
+		bool m_a_signed : 1;
+		bool m_r_signed : 1;
+		bool m_g_signed : 1;
+		bool m_b_signed : 1;
+
+		bool m_cubemap : 1;
+		rsx::texture::border_type m_border_type;
+		rsx::texture::dimension m_dimension : 2;
+		rsx::texture::format m_format;
+		rsx::texture::layout m_layout;
+
+		u16 m_width;
+		u16 m_height;
+
+		u16 m_depth : 12;
+		u32 m_pitch : 20;
+
+		bool m_alpha_kill_enabled : 1;
+		u16 m_min_lod : 12;
+		u16 m_max_lod : 12;
+		rsx::texture::max_anisotropy m_max_aniso : 3;
+
+		// border color
+		u8 m_border_color_r;
+		u8 m_border_color_g;
+		u8 m_border_color_b;
+		u8 m_border_color_a;
+
+		// remap
+		rsx::texture::component_remap m_remap_0 : 2;
+		rsx::texture::component_remap m_remap_1 : 2;
+		rsx::texture::component_remap m_remap_2 : 2;
+		rsx::texture::component_remap m_remap_3 : 2;
 
 		// Offset
 		u32 offset() const;
@@ -109,29 +213,31 @@ namespace rsx
 		// Format
 		u8 location() const;
 		bool cubemap() const;
-		u8 border_type() const;
-		rsx::texture_dimension dimension() const;
-		u8 format() const;
+		rsx::texture::border_type border_type() const;
+		rsx::texture::dimension dimension() const;
+		rsx::texture::format format() const;
+		rsx::texture::layout layout() const;
+		rsx::texture::coordinates normalization() const;
 		u16 mipmap() const;
 
 		// Address
-		u8 unsigned_remap() const;
-		u8 zfunc() const;
+		rsx::texture::unsigned_remap unsigned_remap() const;
+		rsx::texture::zfunc zfunc() const;
 		u8 gamma() const;
 		u8 aniso_bias() const;
-		u8 signed_remap() const;
+		rsx::texture::signed_remap signed_remap() const;
 
 		// Control0
 		bool enabled() const;
 		u16 min_lod() const;
 		u16 max_lod() const;
-		rsx::texture_max_anisotropy max_aniso() const;
+		rsx::texture::max_anisotropy max_aniso() const;
 		bool alpha_kill_enabled() const;
 
 		// Filter
 		u16 bias() const;
-		rsx::texture_minify_filter min_filter() const;
-		rsx::texture_magnify_filter mag_filter() const;
+		rsx::texture::minify_filter min_filter() const;
+		rsx::texture::magnify_filter mag_filter() const;
 		u8 convolution_filter() const;
 		bool a_signed() const;
 		bool r_signed() const;
