@@ -264,15 +264,10 @@ namespace vk
 
 	VkFrontFace get_front_face(rsx::front_face ffv)
 	{
-		u32 mask = 1;
-
-		if (rsx::to_window_origin((rsx::method_registers[NV4097_SET_SHADER_WINDOW] >> 12) & 0xf) == rsx::window_origin::bottom)
-			mask = 0;
-
 		switch (ffv)
 		{
-		case rsx::front_face::cw: return (VkFrontFace)(VK_FRONT_FACE_CLOCKWISE ^ mask);
-		case rsx::front_face::ccw: return (VkFrontFace)(VK_FRONT_FACE_COUNTER_CLOCKWISE ^ mask);
+		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
+		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		default:
 			throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 		}
