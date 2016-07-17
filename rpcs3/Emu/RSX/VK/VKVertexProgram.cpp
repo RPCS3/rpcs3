@@ -275,10 +275,12 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		OS << "	front_diff_color = dst_reg1;\n";
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg1"))
+			OS << "	front_diff_color = dst_reg1;\n";
 
 	if (insert_back_specular && insert_front_specular)
-		OS << "	front_spec_color = dst_reg2;\n";
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
+			OS << "	front_spec_color = dst_reg2;\n";
 
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
 	OS << "}" << std::endl;

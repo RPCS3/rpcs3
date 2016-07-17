@@ -234,10 +234,12 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 
 	//If 2 sided lighting is active and only back is written, copy the value to the front side (Outrun online arcade)
 	if (insert_front_diffuse && insert_back_diffuse)
-		OS << "	Out.dst_reg3 = dst_reg1;\n";
+		if (m_parr.HasParam(PF_PARAM_NONE, "float4", "dst_reg1"))
+			OS << "	Out.dst_reg3 = dst_reg1;\n";
 
 	if (insert_front_specular && insert_back_specular)
-		OS << "	Out.dst_reg4 = dst_reg2;\n";
+		if (m_parr.HasParam(PF_PARAM_NONE, "float4", "dst_reg2"))
+			OS << "	Out.dst_reg4 = dst_reg2;\n";
 
 	OS << "	Out.dst_reg0 = mul(Out.dst_reg0, scaleOffsetMat);" << std::endl;
 	OS << "	return Out;" << std::endl;
