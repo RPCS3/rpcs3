@@ -80,6 +80,8 @@ static fs::error to_error(DWORD e)
 	case ERROR_ALREADY_EXISTS: return fs::error::exist;
 	case ERROR_FILE_EXISTS: return fs::error::exist;
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
+	case ERROR_DIRECTORY: return fs::error::inval;
+	case ERROR_INVALID_NAME: return fs::error::inval;
 	default: throw fmt::exception("Unknown Win32 error: %u.", e);
 	}
 }

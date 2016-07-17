@@ -65,7 +65,7 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 	if (buffer.file)
 	{
 		// Get the file
-		auto file = idm::get<lv2_file_t>(buffer.fd);
+		auto file = idm::get<lv2_file>(buffer.fd);
 
 		// Read the data
 		file->file.read(out, length);
@@ -364,7 +364,7 @@ s32 pngDecOpen(PPUThread& ppu, PHandle handle, PPStream png_stream, PSrc source,
 		}
 
 		// Get the file descriptor
-		buffer->fd = idm::make<lv2_file_t>(std::move(file_stream), 0, 0);
+		buffer->fd = idm::make<lv2_file>(stream->source.fileName.get_ptr(), std::move(file_stream), 0, 0);
 
 		// Indicate that we need to read from a file stream
 		buffer->file = true;
@@ -447,7 +447,7 @@ s32 pngDecClose(PPUThread& ppu, PHandle handle, PStream stream)
 	// Remove the file descriptor, if a file descriptor was used for decoding
 	if (stream->buffer->file)
 	{
-		idm::remove<lv2_file_t>(stream->buffer->fd);
+		idm::remove<lv2_file>(stream->buffer->fd);
 	}
 
 	// Deallocate the PNG buffer structure used to decode from memory, if we decoded from memory

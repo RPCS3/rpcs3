@@ -332,7 +332,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 			chbox_list_core_lle->Check(chbox_list_core_lle->Append(unk));
 		}
 
-		const std::string& lle_dir = vfs::get("/dev_flash/sys/external/"); // TODO
+		const std::string& lle_dir = Emu.GetLibDir(); // TODO
 
 		std::unordered_set<std::string> set(data.begin(), data.end());
 		std::vector<std::string> lle_module_list_unselected;

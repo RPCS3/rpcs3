@@ -61,7 +61,7 @@ s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpe
 		if (!file_s) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
 		current_subHandle.fileSize = file_s.size();
-		current_subHandle.fd = idm::make<lv2_file_t>(std::move(file_s), 0, 0);
+		current_subHandle.fd = idm::make<lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0);
 		break;
 	}
 	}
@@ -97,7 +97,7 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 
 	case CELL_GIFDEC_FILE:
 	{
-		auto file = idm::get<lv2_file_t>(fd);
+		auto file = idm::get<lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(buffer, sizeof(buffer));
 		break;
@@ -181,7 +181,7 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 
 	case CELL_GIFDEC_FILE:
 	{
-		auto file = idm::get<lv2_file_t>(fd);
+		auto file = idm::get<lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(gif.get(), fileSize);
 		break;
@@ -283,7 +283,7 @@ s32 cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
 {
 	cellGifDec.warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
 
-	idm::remove<lv2_file_t>(subHandle->fd);
+	idm::remove<lv2_file>(subHandle->fd);
 
 	vm::dealloc(subHandle.addr());
 

@@ -253,7 +253,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	pkg_f.seek(0);
 
 	// Get full path
-	const auto& local_path = vfs::get("/dev_hdd0/game/") + std::string(std::begin(title_id), std::end(title_id));
+	const auto& local_path = Emu.GetGameDir() + std::string(std::begin(title_id), std::end(title_id));
 
 	if (!fs::create_dir(local_path))
 	{

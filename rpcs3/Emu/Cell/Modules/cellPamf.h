@@ -253,8 +253,6 @@ struct CellPamfLpcmInfo
 
 
 
-#pragma pack(push, 1) // file data
-
 struct PamfStreamHeader
 {
 	u8 type;
@@ -341,7 +339,7 @@ struct PamfStreamHeader
 	};
 };
 
-CHECK_SIZE(PamfStreamHeader, 48);
+CHECK_SIZE_ALIGN(PamfStreamHeader, 48, 4);
 
 struct PamfHeader
 {
@@ -349,31 +347,33 @@ struct PamfHeader
 	u32 version; //"0041" (is it const?)
 	be_t<u32> data_offset; //== 2048 >> 11, PAMF headers seem to be always 2048 bytes in size
 	be_t<u32> data_size; //== ((fileSize - 2048) >> 11)
-	u64 reserved[8];
+	u32 reserved[16];
 	be_t<u32> table_size; //== size of mapping-table
 	u16 reserved1;
 	be_t<u16> start_pts_high;
-	be_t<u32> start_pts_low; //Presentation Time Stamp (start)
+	be_t<u32, 2> start_pts_low; //Presentation Time Stamp (start)
 	be_t<u16> end_pts_high;
-	be_t<u32> end_pts_low; //Presentation Time Stamp (end)
-	be_t<u32> mux_rate_max; //== 0x01D470 (400 bps per unit, == 48000000 bps)
-	be_t<u32> mux_rate_min; //== 0x0107AC (?????)
+	be_t<u32, 2> end_pts_low; //Presentation Time Stamp (end)
+	be_t<u32, 2> mux_rate_max; //== 0x01D470 (400 bps per unit, == 48000000 bps)
+	be_t<u32, 2> mux_rate_min; //== 0x0107AC (?????)
 	u16 reserved2; // ?????
 	u8 reserved3;
 	u8 stream_count; //total stream count (reduced to 1 byte)
 	be_t<u16> unk1; //== 1 (?????)
-	be_t<u32> table_data_size; //== table_size - 0x20 == 0x14 + (0x30 * total_stream_num) (?????)
+	be_t<u32, 2> table_data_size; //== table_size - 0x20 == 0x14 + (0x30 * total_stream_num) (?????)
 	//TODO: check relative offset of stream structs (could be from 0x0c to 0x14, currently 0x14)
 	be_t<u16> start_pts_high2; //????? (probably same values)
-	be_t<u32> start_pts_low2; //?????
+	be_t<u32, 2> start_pts_low2; //?????
 	be_t<u16> end_pts_high2; //?????
-	be_t<u32> end_pts_low2; //?????
+	be_t<u32, 2> end_pts_low2; //?????
 	be_t<u32> unk2; //== 0x10000 (?????)
 	be_t<u16> unk3; // ?????
 	be_t<u16> unk4; // == stream_count
 	//==========================
 	PamfStreamHeader stream_headers[256];
 };
+
+CHECK_SIZE_ALIGN(PamfHeader, 136 + sizeof(PamfHeader::stream_headers), 4);
 
 struct PamfEpHeader
 {
@@ -383,9 +383,7 @@ struct PamfEpHeader
 	be_t<u32> rpnOffset;
 };
 
-CHECK_SIZE(PamfEpHeader, 12);
-
-#pragma pack(pop)
+CHECK_SIZE_ALIGN(PamfEpHeader, 12, 4);
 
 // not directly accessed by virtual CPU, fields are unknown
 struct CellPamfReader

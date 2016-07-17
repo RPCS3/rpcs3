@@ -229,7 +229,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 353: return "sys_memory_get_user_memory_stat";
 	case 356: return "sys_memory_allocate_colored";
 	case 361: return "sys_memory_allocate_from_container_colored";
-	case 362: return "sys_mmapper_allocate_memory_from_container";
+	case 362: return "sys_mmapper_allocate_shared_memory_from_container";
 	case 367: return "sys_uart_initialize";
 	case 368: return "sys_uart_receive";
 	case 369: return "sys_uart_send";

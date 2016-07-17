@@ -58,8 +58,13 @@ s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 {
 	cellFs.trace("cellFsReaddir(fd=0x%x, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
 
+	if (!dir || !nread)
+	{
+		return CELL_EFAULT;
+	}
+
 	// call the syscall
-	return dir && nread ? sys_fs_readdir(fd, dir, nread) : CELL_FS_EFAULT;
+	return sys_fs_readdir(fd, dir, nread);
 }
 
 s32 cellFsClosedir(u32 fd)
@@ -132,8 +137,13 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 {
 	cellFs.trace("cellFsLseek(fd=0x%x, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
+	if (!pos)
+	{
+		return CELL_EFAULT;
+	}
+
 	// call the syscall
-	return pos ? sys_fs_lseek(fd, offset, whence, pos) : CELL_FS_EFAULT;
+	return sys_fs_lseek(fd, offset, whence, pos);
 }
 
 s32 cellFsFsync(u32 fd)
@@ -147,8 +157,13 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 {
 	cellFs.trace("cellFsFGetBlockSize(fd=0x%x, sector_size=*0x%x, block_size=*0x%x)", fd, sector_size, block_size);
 
+	if (!sector_size || !block_size)
+	{
+		return CELL_EFAULT;
+	}
+
 	// call the syscall
-	return sector_size && block_size ? sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>{}, vm::var<u64>{}) : CELL_FS_EFAULT;
+	return sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>{}, vm::var<u64>{});
 }
 
 s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
@@ -205,11 +220,11 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 {
 	cellFs.warning("cellFsGetDirectoryEntries(fd=%d, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
 
-	const auto directory = idm::get<lv2_dir_t>(fd);
+	const auto directory = idm::get<lv2_dir>(fd);
 
 	if (!directory)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
 	u32 count = 0;
@@ -246,474 +261,278 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 	return CELL_OK;
 }
 
-s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
+ppu_error_code cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
 {
 	cellFs.trace("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, buffer_size=0x%llx, nread=*0x%x)", fd, offset, buf, buffer_size, nread);
 
-	// TODO: use single sys_fs_fcntl syscall
-
-	const auto file = idm::get<lv2_file_t>(fd);
-
-	if (!file || file->flags & CELL_FS_O_WRONLY)
+	if (fd - 3 > 252)
 	{
-		return CELL_FS_EBADF;
+		if (nread) *nread = 0;
+		return CELL_EBADF;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mutex);
+	vm::var<lv2_file_op_rw> arg;
 
-	const auto old_pos = file->file.pos(); file->file.seek(offset);
+	arg->_vtable = vm::cast(0xfa8a0000); // Intentionally wrong (provide correct vtable if necessary)
+	
+	arg->op = 0x8000000a;
+	arg->fd = fd;
+	arg->buf = buf;
+	arg->offset = offset;
+	arg->size = buffer_size;
 
-	const auto read = file->file.read(buf.get_ptr(), buffer_size);
+	// Call the syscall
+	const s32 rc = sys_fs_fcntl(fd, 0x8000000a, arg, arg.size());
 
-	file->file.seek(old_pos);
+	// Write size read
+	if (nread) *nread = rc && rc != CELL_EFSSPECIFIC ? 0 : arg->out_size.value();
 
-	if (nread)
-	{
-		*nread = read;
-	}
-
-	return CELL_OK;
+	return NOT_AN_ERROR(rc ? rc : arg->out_code.value());
 }
 
-s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size, vm::ptr<u64> nwrite)
+ppu_error_code cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size, vm::ptr<u64> nwrite)
 {
 	cellFs.trace("cellFsWriteWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, data_size=0x%llx, nwrite=*0x%x)", fd, offset, buf, data_size, nwrite);
 
-	// TODO: use single sys_fs_fcntl syscall
-
-	const auto file = idm::get<lv2_file_t>(fd);
-
-	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
+	if (!buf)
 	{
-		return CELL_FS_EBADF;
+		if (nwrite) *nwrite = 0;
+		return CELL_EFAULT;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mutex);
-
-	const auto old_pos = file->file.pos(); file->file.seek(offset);
-
-	const auto written = file->file.write(buf.get_ptr(), data_size);
-
-	file->file.seek(old_pos);
-
-	if (nwrite)
+	if (fd - 3 > 252)
 	{
-		*nwrite = written;
+		if (nwrite) *nwrite = 0;
+		return CELL_EBADF;
 	}
 
-	return CELL_OK;
+	vm::var<lv2_file_op_rw> arg;
+
+	arg->_vtable = vm::cast(0xfa8b0000); // Intentionally wrong (provide correct vtable if necessary)
+	
+	arg->op = 0x8000000b;
+	arg->fd = fd;
+	arg->buf = vm::const_ptr_cast<void>(buf);
+	arg->offset = offset;
+	arg->size = data_size;
+
+	// Call the syscall
+	const s32 rc = sys_fs_fcntl(fd, 0x8000000b, arg, arg.size());
+
+	// Write size written
+	if (nwrite) *nwrite = rc && rc != CELL_EFSSPECIFIC ? 0 : arg->out_size.value();
+
+	return NOT_AN_ERROR(rc ? rc : arg->out_code.value());
 }
 
 s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 {
-	cellFs.warning("cellFsStReadInit(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
+	cellFs.todo("cellFsStReadInit(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
 
 	if (ringbuf->copy & ~CELL_FS_ST_COPYLESS)
 	{
-		return CELL_FS_EINVAL;
+		return CELL_EINVAL;
 	}
 
 	if (ringbuf->block_size & 0xfff) // check if a multiple of sector size
 	{
-		return CELL_FS_EINVAL;
+		return CELL_EINVAL;
 	}
 
 	if (ringbuf->ringbuf_size % ringbuf->block_size) // check if a multiple of block_size
 	{
-		return CELL_FS_EINVAL;
+		return CELL_EINVAL;
 	}
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 	
 	if (file->flags & CELL_FS_O_WRONLY)
 	{
-		return CELL_FS_EPERM;
+		return CELL_EPERM;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mutex);
-
-	if (!file->st_status.compare_and_swap_test(SSS_NOT_INITIALIZED, SSS_INITIALIZED))
-	{
-		return CELL_FS_EBUSY;
-	}
-
-	file->st_ringbuf_size = ringbuf->ringbuf_size;
-	file->st_block_size = ringbuf->ringbuf_size;
-	file->st_trans_rate = ringbuf->transfer_rate;
-	file->st_copyless = ringbuf->copy == CELL_FS_ST_COPYLESS;
-
-	const u64 alloc_size = align(file->st_ringbuf_size, file->st_ringbuf_size < 1024 * 1024 ? 64 * 1024 : 1024 * 1024);
-
-	file->st_buffer = vm::alloc(static_cast<u32>(alloc_size), vm::main);
-	file->st_read_size = 0;
-	file->st_total_read = 0;
-	file->st_copied = 0;
+	// TODO
 
 	return CELL_OK;
 }
 
 s32 cellFsStReadFinish(u32 fd)
 {
-	cellFs.warning("cellFsStReadFinish(fd=%d)", fd);
+	cellFs.todo("cellFsStReadFinish(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF; // ???
+		return CELL_EBADF; // ???
 	}
 
-	std::lock_guard<std::mutex> lock(file->mutex);
-
-	if (!file->st_status.compare_and_swap_test(SSS_INITIALIZED, SSS_NOT_INITIALIZED))
-	{
-		return CELL_FS_ENXIO;
-	}
-
-	vm::dealloc(file->st_buffer, vm::main);
+	// TODO
 
 	return CELL_OK;
 }
 
 s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
-	cellFs.warning("cellFsStReadGetRingBuf(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
+	cellFs.todo("cellFsStReadGetRingBuf(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	if (file->st_status == SSS_NOT_INITIALIZED)
-	{
-		return CELL_FS_ENXIO;
-	}
-
-	ringbuf->ringbuf_size = file->st_ringbuf_size;
-	ringbuf->block_size = file->st_block_size;
-	ringbuf->transfer_rate = file->st_trans_rate;
-	ringbuf->copy = file->st_copyless ? CELL_FS_ST_COPYLESS : CELL_FS_ST_COPY;
+	// TODO
 
 	return CELL_OK;
 }
 
 s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 {
-	cellFs.warning("cellFsStReadGetRingBuf(fd=%d, status=*0x%x)", fd, status);
+	cellFs.todo("cellFsStReadGetRingBuf(fd=%d, status=*0x%x)", fd, status);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	switch (file->st_status.load())
-	{
-	case SSS_INITIALIZED:
-	case SSS_STOPPED:
-	{
-		*status = CELL_FS_ST_INITIALIZED | CELL_FS_ST_STOP;
-		break;
-	}
-	case SSS_STARTED:
-	{
-		*status = CELL_FS_ST_INITIALIZED | CELL_FS_ST_PROGRESS;
-		break;
-	}
-	default:
-	{
-		*status = CELL_FS_ST_NOT_INITIALIZED | CELL_FS_ST_STOP;
-		break;
-	}
-	}
+	// TODO
 
 	return CELL_OK;
 }
 
 s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 {
-	cellFs.warning("cellFsStReadGetRingBuf(fd=%d, regid=*0x%x)", fd, regid);
+	cellFs.todo("cellFsStReadGetRingBuf(fd=%d, regid=*0x%x)", fd, regid);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	if (file->st_status == SSS_NOT_INITIALIZED)
-	{
-		return CELL_FS_ENXIO;
-	}
-
-	*regid = file->st_total_read - file->st_copied;
+	// TODO
 
 	return CELL_OK;
 }
 
 s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 {
-	cellFs.warning("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
+	cellFs.todo("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	switch (auto status = file->st_status.compare_and_swap(SSS_INITIALIZED, SSS_STARTED))
-	{
-	case SSS_NOT_INITIALIZED:
-	{
-		return CELL_FS_ENXIO;
-	}
-
-	case SSS_STARTED:
-	{
-		return CELL_FS_EBUSY;
-	}
-	}
-
-	offset = std::min<u64>(file->file.size(), offset);
-	size = std::min<u64>(file->file.size() - offset, size);
-
-	file->st_read_size = size;
-
-	file->st_thread = thread_ctrl::spawn("FS ST Thread", [=]()
-	{
-		std::unique_lock<std::mutex> lock(file->mutex);
-
-		while (file->st_status == SSS_STARTED && !Emu.IsStopped())
-		{
-			// check free space in buffer and available data in stream
-			if (file->st_total_read - file->st_copied <= file->st_ringbuf_size - file->st_block_size && file->st_total_read < file->st_read_size)
-			{
-				// get buffer position
-				const u32 position = vm::cast(file->st_buffer + file->st_total_read % file->st_ringbuf_size, HERE);
-
-				// read data
-				auto old = file->file.pos();
-				file->file.seek(offset + file->st_total_read);
-				auto res = file->file.read(vm::base(position), file->st_block_size);
-				file->file.seek(old);
-
-				// notify
-				file->st_total_read += res;
-				file->cv.notify_one();
-			}
-
-			// check callback condition if set
-			if (file->st_callback.load().func)
-			{
-				const u64 available = file->st_total_read - file->st_copied;
-
-				if (available >= file->st_callback.load().size)
-				{
-					const auto func = file->st_callback.exchange({}).func;
-
-					Emu.GetCallbackManager().Async([=](PPUThread& ppu)
-					{
-						func(ppu, fd, available);
-					});
-				}
-			}
-
-			file->cv.wait_for(lock, 1ms);
-		}
-
-		file->st_status.compare_and_swap(SSS_STOPPED, SSS_INITIALIZED);
-		file->st_read_size = 0;
-		file->st_total_read = 0;
-		file->st_copied = 0;
-		file->st_callback.store({});
-	});
+	// TODO
 
 	return CELL_OK;
 }
 
 s32 cellFsStReadStop(u32 fd)
 {
-	cellFs.warning("cellFsStReadStop(fd=%d)", fd);
+	cellFs.todo("cellFsStReadStop(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	switch (auto status = file->st_status.compare_and_swap(SSS_STARTED, SSS_STOPPED))
-	{
-	case SSS_NOT_INITIALIZED:
-	{
-		return CELL_FS_ENXIO;
-	}
-
-	case SSS_INITIALIZED:
-	case SSS_STOPPED:
-	{
-		return CELL_OK;
-	}
-	}
-
-	file->cv.notify_all();
-	file->st_thread->join();
+	// TODO
 
 	return CELL_OK;
 }
 
 s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 {
-	cellFs.warning("cellFsStRead(fd=%d, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
+	cellFs.todo("cellFsStRead(fd=%d, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
 	
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	if (file->st_status == SSS_NOT_INITIALIZED || file->st_copyless)
-	{
-		return CELL_FS_ENXIO;
-	}
+	// TODO
 
-	const u64 copied = file->st_copied;
-	const u32 position = vm::cast(file->st_buffer + copied % file->st_ringbuf_size, HERE);
-	const u64 total_read = file->st_total_read;
-	const u64 copy_size = (*rsize = std::min<u64>(size, total_read - copied)); // write rsize
-	
-	// copy data
-	const u64 first_size = std::min<u64>(copy_size, file->st_ringbuf_size - (position - file->st_buffer));
-	std::memcpy(buf.get_ptr(), vm::base(position), first_size);
-	std::memcpy((buf + first_size).get_ptr(), vm::base(file->st_buffer), copy_size - first_size);
-
-	// notify
-	file->st_copied += copy_size;
-	file->cv.notify_one();
-
-	// check end of stream
-	return total_read < file->st_read_size ? CELL_OK : CELL_FS_ERANGE;
+	return CELL_OK;
 }
 
 s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 {
-	cellFs.warning("cellFsStReadGetCurrentAddr(fd=%d, addr=*0x%x, size=*0x%x)", fd, addr, size);
+	cellFs.todo("cellFsStReadGetCurrentAddr(fd=%d, addr=*0x%x, size=*0x%x)", fd, addr, size);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	if (file->st_status == SSS_NOT_INITIALIZED || !file->st_copyless)
-	{
-		return CELL_FS_ENXIO;
-	}
+	// TODO
 
-	const u64 copied = file->st_copied;
-	const u32 position = vm::cast(file->st_buffer + copied % file->st_ringbuf_size, HERE);
-	const u64 total_read = file->st_total_read;
-
-	if ((*size = std::min<u64>(file->st_ringbuf_size - (position - file->st_buffer), total_read - copied)))
-	{
-		*addr = position;
-	}
-	else
-	{
-		*addr = 0;
-	}
-
-	// check end of stream
-	return total_read < file->st_read_size ? CELL_OK : CELL_FS_ERANGE;
+	return CELL_OK;
 }
 
 s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 {
-	cellFs.warning("cellFsStReadPutCurrentAddr(fd=%d, addr=*0x%x, size=0x%llx)", fd, addr, size);
+	cellFs.todo("cellFsStReadPutCurrentAddr(fd=%d, addr=*0x%x, size=0x%llx)", fd, addr, size);
 	
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	if (file->st_status == SSS_NOT_INITIALIZED || !file->st_copyless)
-	{
-		return CELL_FS_ENXIO;
-	}
+	// TODO
 
-	const u64 copied = file->st_copied;
-	const u64 total_read = file->st_total_read;
-
-	// notify
-	file->st_copied += size;
-	file->cv.notify_one();
-
-	// check end of stream
-	return total_read < file->st_read_size ? CELL_OK : CELL_FS_ERANGE;
+	return CELL_OK;
 }
 
 s32 cellFsStReadWait(u32 fd, u64 size)
 {
-	cellFs.warning("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
+	cellFs.todo("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
 	
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	if (file->st_status == SSS_NOT_INITIALIZED)
-	{
-		return CELL_FS_ENXIO;
-	}
-
-	std::unique_lock<std::mutex> lock(file->mutex);
-
-	// wait for size availability or stream end
-	while (file->st_total_read - file->st_copied < size && file->st_total_read < file->st_read_size)
-	{
-		CHECK_EMU_STATUS;
-
-		file->cv.wait_for(lock, 1ms);
-	}
+	// TODO
 	
 	return CELL_OK;
 }
 
-s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
+s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void(s32 xfd, u64 xsize)> func)
 {
-	cellFs.warning("cellFsStReadWaitCallback(fd=%d, size=0x%llx, func=*0x%x)", fd, size, func);
+	cellFs.todo("cellFsStReadWaitCallback(fd=%d, size=0x%llx, func=*0x%x)", fd, size, func);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
-	if (file->st_status == SSS_NOT_INITIALIZED)
-	{
-		return CELL_FS_ENXIO;
-	}
-
-	if (!file->st_callback.compare_and_swap_test({}, { size, func }))
-	{
-		return CELL_FS_EIO;
-	}
+	// TODO
 	
 	return CELL_OK;
 }
@@ -831,7 +650,7 @@ s32 cellFsSdataOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<vo
 
 	if (flags != CELL_FS_O_RDONLY)
 	{
-		return CELL_FS_EINVAL;
+		return CELL_EINVAL;
 	}
 
 	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, vm::make_var<be_t<u32>[2]>({ 0x180, 0x10 }), 8);
@@ -866,6 +685,12 @@ s32 cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u64 offs
 
 using fs_aio_cb_t = vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u64 size)>;
 
+// temporarily
+struct lv2_fs_mount_point
+{
+	std::mutex mutex;
+};
+
 void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 {
 	cellFs.notice("FS AIO Request(%d): fd=%d, offset=0x%llx, buf=*0x%x, size=0x%llx, user_data=0x%llx", xid, aio->fd, aio->offset, aio->buf, aio->size, aio->user_data);
@@ -873,21 +698,21 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 	s32 error = CELL_OK;
 	u64 result = 0;
 
-	const auto file = idm::get<lv2_file_t>(aio->fd);
+	const auto file = idm::get<lv2_file>(aio->fd);
 
 	if (!file || (!write && file->flags & CELL_FS_O_WRONLY) || (write && !(file->flags & CELL_FS_O_ACCMODE)))
 	{
-		error = CELL_FS_EBADF;
+		error = CELL_EBADF;
 	}
 	else
 	{
-		std::lock_guard<std::mutex> lock(file->mutex);
+		std::lock_guard<std::mutex> lock(file->mp->mutex);
 
 		const auto old_pos = file->file.pos(); file->file.seek(aio->offset);
 
 		result = write
-			? file->file.write(aio->buf.get_ptr(), aio->size)
-			: file->file.read(aio->buf.get_ptr(), aio->size);
+			? file->op_write(aio->buf, aio->size)
+			: file->op_read(aio->buf, aio->size);
 
 		file->file.seek(old_pos);
 	}
@@ -949,11 +774,11 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 s32 cellFsAioCancel(s32 id)
 {
-	cellFs.warning("cellFsAioCancel(id=%d) -> CELL_FS_EINVAL", id);
+	cellFs.warning("cellFsAioCancel(id=%d) -> CELL_EINVAL", id);
 
-	// TODO: cancelled requests return CELL_FS_ECANCELED through their own callbacks
+	// TODO: cancelled requests return CELL_ECANCELED through their own callbacks
 
-	return CELL_FS_EINVAL;
+	return CELL_EINVAL;
 }
 
 s32 cellFsSetDefaultContainer(u32 id, u32 total_limit)
@@ -967,11 +792,11 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 {
 	cellFs.todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
-	const auto file = idm::get<lv2_file_t>(fd);
+	const auto file = idm::get<lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_FS_EBADF;
+		return CELL_EBADF;
 	}
 
 	return CELL_OK;
@@ -1020,6 +845,7 @@ s32 cellFsChangeFileSizeWithoutAllocation()
 s32 cellFsAllocateFileAreaWithoutZeroFill(vm::cptr<char> path, u64 size)
 {
 	cellFs.warning("cellFsAllocateFileAreaWithoutZeroFill(path=*0x%x, size=0x%llx)", path, size);
+
 	return sys_fs_truncate(path, size);
 }
 
@@ -1099,7 +925,7 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsAllocateFileAreaByFdWithInitialData);
 	REG_FUNC(sys_fs, cellFsTruncate2);
 	REG_FUNC(sys_fs, cellFsChangeFileSizeWithoutAllocation);
-	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill);
+	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill, MFF_FORCED_HLE);
 	REG_FUNC(sys_fs, cellFsChangeFileSizeByFdWithoutAllocation);
 	REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
 	REG_FUNC(sys_fs, cellFsRegisterConversionCallback);

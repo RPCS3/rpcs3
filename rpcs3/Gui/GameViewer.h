@@ -63,7 +63,6 @@ class GameViewer : public wxListView
 {
 	int m_sortColumn;
 	bool m_sortAscending;
-	std::string m_path;
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;

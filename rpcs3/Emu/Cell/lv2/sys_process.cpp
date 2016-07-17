@@ -74,7 +74,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 
 	switch(object)
 	{
-	case SYS_MEM_OBJECT: *nump = idm::get_count<lv2_memory_t>(); break;
+	case SYS_MEM_OBJECT: *nump = idm::get_count<lv2_memory>(); break;
 	case SYS_MUTEX_OBJECT: *nump = idm::get_count<lv2_mutex_t>(); break;
 	case SYS_COND_OBJECT: *nump = idm::get_count<lv2_cond_t>(); break;
 	case SYS_RWLOCK_OBJECT: *nump = idm::get_count<lv2_rwlock_t>(); break;
@@ -89,7 +89,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_LWMUTEX_OBJECT: *nump = idm::get_count<lv2_lwmutex_t>(); break;
 	case SYS_TIMER_OBJECT: *nump = idm::get_count<lv2_timer_t>(); break;
 	case SYS_SEMAPHORE_OBJECT: *nump = idm::get_count<lv2_sema_t>(); break;
-	case SYS_FS_FD_OBJECT: *nump = idm::get_count<lv2_fs_object_t>(); break;
+	case SYS_FS_FD_OBJECT: *nump = idm::get_count<lv2_fs_object>(); break;
 	case SYS_LWCOND_OBJECT: *nump = idm::get_count<lv2_lwcond_t>(); break;
 	case SYS_EVENT_FLAG_OBJECT: *nump = idm::get_count<lv2_event_flag_t>(); break;
 
@@ -121,7 +121,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 
 	switch (object)
 	{
-	case SYS_MEM_OBJECT: idm_get_set<lv2_memory_t>(objects); break;
+	case SYS_MEM_OBJECT: idm_get_set<lv2_memory>(objects); break;
 	case SYS_MUTEX_OBJECT: idm_get_set<lv2_mutex_t>(objects); break;
 	case SYS_COND_OBJECT: idm_get_set<lv2_cond_t>(objects); break;
 	case SYS_RWLOCK_OBJECT: idm_get_set<lv2_rwlock_t>(objects); break;
@@ -136,7 +136,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_LWMUTEX_OBJECT: idm_get_set<lv2_lwmutex_t>(objects); break;
 	case SYS_TIMER_OBJECT: idm_get_set<lv2_timer_t>(objects); break;
 	case SYS_SEMAPHORE_OBJECT: idm_get_set<lv2_sema_t>(objects); break;
-	case SYS_FS_FD_OBJECT: idm_get_set<lv2_fs_object_t>(objects); break;
+	case SYS_FS_FD_OBJECT: idm_get_set<lv2_fs_object>(objects); break;
 	case SYS_LWCOND_OBJECT: idm_get_set<lv2_lwcond_t>(objects); break;
 	case SYS_EVENT_FLAG_OBJECT: idm_get_set<lv2_event_flag_t>(objects); break;
 

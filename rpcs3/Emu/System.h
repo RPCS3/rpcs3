@@ -172,6 +172,9 @@ public:
 
 	bool BootGame(const std::string& path, bool direct = false);
 
+	static std::string GetGameDir();
+	static std::string GetLibDir();
+
 	void Load();
 	void Run();
 	bool Pause();
