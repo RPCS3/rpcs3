@@ -992,28 +992,29 @@ bool VKGSRender::load_program()
 	properties.rs.rasterizerDiscardEnable = VK_FALSE;
 	properties.rs.depthBiasEnable = VK_FALSE;
 
-	if (rsx::method_registers.cull_face_enabled())
-	{
-		switch (rsx::method_registers.cull_face_mode())
-		{
-		case rsx::cull_face::front:
-			properties.rs.cullMode = VK_CULL_MODE_FRONT_BIT;
-			break;
-		case rsx::cull_face::back:
-			properties.rs.cullMode = VK_CULL_MODE_BACK_BIT;
-			break;
-		case rsx::cull_face::front_and_back:
-			properties.rs.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
-			break;
-		default:
-			properties.rs.cullMode = VK_CULL_MODE_NONE;
-			break;
-		}
-	}
-	else
-		properties.rs.cullMode = VK_CULL_MODE_NONE;
+//	if (rsx::method_registers.cull_face_enabled())
+//	{
+//		switch (rsx::method_registers.cull_face_mode())
+//		{
+//		case rsx::cull_face::front:
+//			properties.rs.cullMode = VK_CULL_MODE_FRONT_BIT;
+//			break;
+//		case rsx::cull_face::back:
+//			properties.rs.cullMode = VK_CULL_MODE_BACK_BIT;
+//			break;
+//		case rsx::cull_face::front_and_back:
+//			properties.rs.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
+//			break;
+//		default:
+//			properties.rs.cullMode = VK_CULL_MODE_NONE;
+//			break;
+//		}
+//	}
+//	else
+//		properties.rs.cullMode = VK_CULL_MODE_NONE;
 
 	properties.rs.frontFace = vk::get_front_face(rsx::method_registers.front_face_mode());
+	properties.rs.cullMode = VK_CULL_MODE_NONE;
 
 	size_t idx = vk::get_render_pass_location(
 		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
