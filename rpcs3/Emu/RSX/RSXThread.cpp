@@ -468,7 +468,7 @@ namespace rsx
 
 				//LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 
-				method_registers[reg] = value;
+				method_registers.decode(reg, value);
 
 				if (capture_current_frame)
 				{
@@ -738,6 +738,8 @@ namespace rsx
 		result.front_back_color_enabled = !rsx::method_registers.two_side_light_en();
 		result.back_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
 		result.back_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
+		result.front_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE);
+		result.front_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR);
 		result.alpha_func = rsx::method_registers.alpha_func();
 		result.fog_equation = rsx::method_registers.fog_equation();
 		result.origin_mode = rsx::method_registers.shader_window_origin();
