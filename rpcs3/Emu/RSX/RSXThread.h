@@ -9,6 +9,8 @@
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
+#include "rsx_methods.h"
+#include "rsx_trace.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
@@ -16,33 +18,8 @@
 
 extern u64 get_system_time();
 
-struct frame_capture_data
-{
-	struct draw_state
-	{
-		std::string name;
-		std::pair<std::string, std::string> programs;
-		size_t width = 0, height = 0;
-		rsx::surface_color_format color_format;
-		std::array<std::vector<gsl::byte>, 4> color_buffer;
-		rsx::surface_depth_format depth_format;
-		std::array<std::vector<gsl::byte>, 2> depth_stencil;
-		rsx::index_array_type index_type;
-		std::vector<gsl::byte> index;
-		u32 vertex_count;
-	};
-	std::vector<std::pair<u32, u32> > command_queue;
-	std::vector<draw_state> draw_calls;
-
-	void reset()
-	{
-		command_queue.clear();
-		draw_calls.clear();
-	}
-};
-
 extern bool user_asked_for_frame_capture;
-extern frame_capture_data frame_debug;
+extern rsx::frame_capture_data frame_debug;
 
 namespace rsx
 {

@@ -1693,5 +1693,8 @@
     <ClInclude Include="Emu\RSX\rsx_decode.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_trace.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

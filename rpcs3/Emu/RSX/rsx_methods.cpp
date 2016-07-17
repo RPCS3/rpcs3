@@ -770,6 +770,22 @@ namespace rsx
 		return{ T(N, std::forward<Args>(arg))... };
 	}
 
+	rsx_state & rsx_state::operator=(const rsx_state & in)
+	{
+		registers = in.registers;
+		transform_program = in.transform_program;
+		transform_constants = in.transform_constants;
+		register_vertex_info = in.register_vertex_info;
+		for (int i = 0; i < 16; i++)
+		{
+			vertex_arrays_info[i].size = in.vertex_arrays_info[i].size;
+			vertex_arrays_info[i].stride = in.vertex_arrays_info[i].stride;
+			vertex_arrays_info[i].frequency = in.vertex_arrays_info[i].frequency;
+			vertex_arrays_info[i].type = in.vertex_arrays_info[i].type;
+		}
+		return *this;
+	}
+
 	rsx_state::rsx_state() :
 		fragment_textures(fill_array<texture>(registers, std::make_index_sequence<16>())),
 		vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
