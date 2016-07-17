@@ -210,37 +210,12 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 {
 	OS << "	PixelInput Out = (PixelInput)0;" << std::endl;
-
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
-
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
-
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", i.src_reg))
-		{
-			if (i.name == "front_diff_color")
-				insert_front_diffuse = false;
-
-			if (i.name == "front_spec_color")
-				insert_front_specular = false;
-
 			OS << "	Out." << i.src_reg << " = " << i.src_reg << ";" << std::endl;
-		}
 	}
-
-	//If 2 sided lighting is active and only back is written, copy the value to the front side (Outrun online arcade)
-	if (insert_front_diffuse && insert_back_diffuse)
-		if (m_parr.HasParam(PF_PARAM_NONE, "float4", "dst_reg1"))
-			OS << "	Out.dst_reg3 = dst_reg1;\n";
-
-	if (insert_front_specular && insert_back_specular)
-		if (m_parr.HasParam(PF_PARAM_NONE, "float4", "dst_reg2"))
-			OS << "	Out.dst_reg4 = dst_reg2;\n";
-
 	OS << "	Out.dst_reg0 = mul(Out.dst_reg0, scaleOffsetMat);" << std::endl;
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;

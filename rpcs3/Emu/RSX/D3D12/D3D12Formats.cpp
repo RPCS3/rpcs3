@@ -41,14 +41,14 @@ D3D12_BLEND get_blend_factor(rsx::blend_factor factor)
 	case rsx::blend_factor::constant_color:
 	case rsx::blend_factor::constant_alpha:
 	{
-		LOG_ERROR(RSX, "Constant blend factor not supported. Using ZERO instead");
-		return D3D12_BLEND_ZERO;
+		LOG_ERROR(RSX, "Constant blend factor not supported. Using ONE instead");
+		return D3D12_BLEND_ONE;
 	}
 	case rsx::blend_factor::one_minus_constant_color:
 	case rsx::blend_factor::one_minus_constant_alpha:
 	{
-		LOG_ERROR(RSX, "Inv Constant blend factor not supported. Using ONE instead");
-		return D3D12_BLEND_ONE;
+		LOG_ERROR(RSX, "Inv Constant blend factor not supported. Using ZERO instead");
+		return D3D12_BLEND_ZERO;
 	}
 	}
 	throw EXCEPTION("Invalid blend factor (0x%x)", factor);
