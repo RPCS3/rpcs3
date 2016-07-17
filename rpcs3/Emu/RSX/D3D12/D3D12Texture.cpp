@@ -286,12 +286,51 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			break;
 
 		case CELL_GCM_TEXTURE_G8B8:
-			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2);
+		{
+			u8 remap_a = rsx::method_registers.fragment_textures[i].remap() & 0x3;
+			u8 remap_r = (rsx::method_registers.fragment_textures[i].remap() >> 2) & 0x3;
+			u8 remap_g = (rsx::method_registers.fragment_textures[i].remap() >> 4) & 0x3;
+			u8 remap_b = (rsx::method_registers.fragment_textures[i].remap() >> 6) & 0x3;
+
+			if (is_render_target)
+			{
+				// ARGB format
+				// Data comes from RTT, stored as RGBA already
+				const int RemapValue[4] =
+				{
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2
+				};
+
+				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					RemapValue[remap_r],
+					RemapValue[remap_g],
+					RemapValue[remap_b],
+					RemapValue[remap_a]);
+			}
+			else
+			{
+				// ARGB format
+				// Data comes from RSX mem, stored as ARGB already
+				const int RemapValue[4] =
+				{
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1
+				};
+
+				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					RemapValue[remap_r],
+					RemapValue[remap_g],
+					RemapValue[remap_b],
+					RemapValue[remap_a]);
+			}
+
 			break;
+		}
 
 		case CELL_GCM_TEXTURE_R6G5B5: // TODO: Remap it to another format here, so it's not glitched out
 			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
@@ -338,8 +377,6 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 		case CELL_GCM_TEXTURE_A8R8G8B8:
 		case CELL_GCM_TEXTURE_D8R8G8B8:
 		{
-
-
 			u8 remap_a = rsx::method_registers.fragment_textures[i].remap() & 0x3;
 			u8 remap_r = (rsx::method_registers.fragment_textures[i].remap() >> 2) & 0x3;
 			u8 remap_g = (rsx::method_registers.fragment_textures[i].remap() >> 4) & 0x3;
