@@ -262,12 +262,17 @@ namespace vk
 		}
 	}
 
-	VkFrontFace get_front_face_ccw(rsx::front_face ffv)
+	VkFrontFace get_front_face(rsx::front_face ffv)
 	{
+		u32 mask = 1;
+
+		if (rsx::to_window_origin((rsx::method_registers[NV4097_SET_SHADER_WINDOW] >> 12) & 0xf) == rsx::window_origin::bottom)
+			mask = 0;
+
 		switch (ffv)
 		{
-		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
-		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		case rsx::front_face::cw: return (VkFrontFace)(VK_FRONT_FACE_CLOCKWISE ^ mask);
+		case rsx::front_face::ccw: return (VkFrontFace)(VK_FRONT_FACE_COUNTER_CLOCKWISE ^ mask);
 		default:
 			throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 		}
@@ -307,6 +312,7 @@ namespace
 		color_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		color_attachement_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		color_attachement_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 		for (u32 i = 0; i < number_of_color_surface; ++i)
 		{
 			attachments.push_back(color_attachement_description);
@@ -867,7 +873,6 @@ bool VKGSRender::load_program()
 
 	vk::pipeline_props properties = {};
 
-
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	bool unused;
 	properties.ia.topology = vk::get_appropriate_topology(draw_mode, unused);
@@ -986,6 +991,12 @@ bool VKGSRender::load_program()
 	else
 		properties.ds.depthTestEnable = VK_FALSE;
 
+	properties.rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
+	properties.rs.depthClampEnable = VK_FALSE;
+	properties.rs.rasterizerDiscardEnable = VK_FALSE;
+	properties.rs.depthBiasEnable = VK_FALSE;
+
 	if (rsx::method_registers.cull_face_enabled())
 	{
 		switch (rsx::method_registers.cull_face_mode())
@@ -1007,12 +1018,13 @@ bool VKGSRender::load_program()
 	else
 		properties.rs.cullMode = VK_CULL_MODE_NONE;
 
-	properties.rs.frontFace = vk::get_front_face_ccw(rsx::method_registers.front_face_mode());
+	properties.rs.frontFace = vk::get_front_face(rsx::method_registers.front_face_mode());
 
 	size_t idx = vk::get_render_pass_location(
 		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
 		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
 		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
+	
 	properties.render_pass = m_render_passes[idx];
 
 	properties.num_targets = m_draw_buffers_count;

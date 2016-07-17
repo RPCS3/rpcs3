@@ -129,8 +129,8 @@ struct reg_info
 static const reg_info reg_table[] =
 {
 	{ "gl_Position", false, "dst_reg0", "", false },
-	{ "diff_color", true, "dst_reg1", "", false },
-	{ "spec_color", true, "dst_reg2", "", false },
+	{ "back_diff_color", true, "dst_reg1", "", false },
+	{ "back_spec_color", true, "dst_reg2", "", false },
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
 	{ "fog_c", true, "dst_reg5", ".xxxx", true },
@@ -159,18 +159,32 @@ static const reg_info reg_table[] =
 
 void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+
+	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+
 	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
 		{
+			if (i.name == "front_diff_color")
+				insert_front_diffuse = false;
+
+			if (i.name == "front_spec_color")
+				insert_front_specular = false;
+
 			const vk::varying_register_t &reg = vk::get_varying_register(i.name);
-			
-	//		if (i.name == "fogc")
-	//			OS << "layout(location=" << reg.reg_location << ") out vec4 fog_c;" << std::endl;
-	//		else
-				OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";" << std::endl;
+			OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";" << std::endl;
 		}
 	}
+
+	if (insert_back_diffuse && insert_front_diffuse)
+		OS << "layout(location=" << vk::get_varying_register("front_diff_color").reg_location << ") out vec4 front_diff_color;" << std::endl;
+
+	if (insert_back_specular && insert_front_specular)
+		OS << "layout(location=" << vk::get_varying_register("front_spec_color").reg_location << ") out vec4 front_spec_color;" << std::endl;
 }
 
 namespace vk
@@ -240,11 +254,31 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
+	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+
 	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
+		{
+			if (i.name == "front_spec_color")
+				insert_front_diffuse = false;
+
+			if (i.name == "front_spec_color")
+				insert_front_specular = false;
+
 			OS << "	" << i.name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+		}
 	}
+
+	if (insert_back_diffuse && insert_front_diffuse)
+		OS << "	front_diff_color = dst_reg1;\n";
+
+	if (insert_back_specular && insert_front_specular)
+		OS << "	front_spec_color = dst_reg2;\n";
 
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
 	OS << "}" << std::endl;

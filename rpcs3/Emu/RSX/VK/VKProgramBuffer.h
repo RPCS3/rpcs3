@@ -29,6 +29,7 @@ namespace vk
 				return false;
 			if (memcmp(&rs, &other.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
 				return false;
+
 			return num_targets == other.num_targets;
 		}
 	};
@@ -55,6 +56,7 @@ namespace std
 			size_t seed = hash<unsigned>()(pipelineProperties.num_targets);
 			seed ^= hash_struct(pipelineProperties.ia);
 			seed ^= hash_struct(pipelineProperties.ds);
+			seed ^= hash_struct(pipelineProperties.rs);
 			seed ^= hash_struct(pipelineProperties.att_state[0]);
 			return hash<size_t>()(seed);
 		}
@@ -125,21 +127,12 @@ struct VKTraits
 		cb.attachmentCount = 1;
 		cb.pAttachments = pipelineProperties.att_state;
 
-		VkPipelineRasterizationStateCreateInfo rs = {};
-		rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rs.polygonMode = VK_POLYGON_MODE_FILL;
-		rs.cullMode = VK_CULL_MODE_NONE;
-		rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rs.depthClampEnable = VK_FALSE;
-		rs.rasterizerDiscardEnable = VK_FALSE;
-		rs.depthBiasEnable = VK_FALSE;
-
 		VkPipeline pipeline;
 		VkGraphicsPipelineCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		info.pVertexInputState = &vi;
 		info.pInputAssemblyState = &pipelineProperties.ia;
-		info.pRasterizationState = &rs;
+		info.pRasterizationState = &pipelineProperties.rs;
 		info.pColorBlendState = &cb;
 		info.pMultisampleState = &ms;
 		info.pViewportState = &vp;
