@@ -5,6 +5,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "rsx_utils.h"
+#include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 
 #include <thread>
@@ -200,17 +201,7 @@ namespace rsx
 		{
 			force_inline static void impl(thread* rsxthr, u32 arg)
 			{
-				method_registers.set_transform_constant(index, arg);
 				rsxthr->m_transform_constants_dirty = true;
-			}
-		};
-
-		template<u32 index>
-		struct set_transform_program
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				method_registers.commit_4_transform_program_instructions(index);
 			}
 		};
 
@@ -764,6 +755,167 @@ namespace rsx
 		}
 	}
 
+	template<typename T, size_t... N, typename Args>
+	std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...> seq)
+	{
+		return{ T(N, std::forward<Args>(arg))... };
+	}
+
+	rsx_state::rsx_state() :
+		fragment_textures(fill_array<texture>(registers, std::make_index_sequence<16>())),
+		vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
+		register_vertex_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>())),
+		vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
+	{
+
+	}
+
+	rsx_state::~rsx_state()
+	{
+
+	}
+
+	void rsx_state::reset()
+	{
+		//setup method registers
+		std::memset(registers.data(), 0, registers.size() * sizeof(u32));
+
+		m_primitive_type = primitive_type::triangles;
+		m_transform_program_pointer = 0;
+
+		m_color_mask_r = true;
+		m_color_mask_g = true;
+		m_color_mask_b = true;
+		m_color_mask_a = true;
+
+		m_scissor_width = 4096;
+		m_scissor_height = 4096;
+		m_scissor_origin_x = 0;
+		m_scissor_origin_y = 0;
+
+		m_alpha_test_enabled = false;
+		m_alpha_func = rsx::comparaison_function::always;
+		m_alpha_ref = 0;
+
+		m_blend_enabled = false;
+		m_blend_enabled_surface_1 = false;
+		m_blend_enabled_surface_2 = false;
+		m_blend_enabled_surface_3 = false;
+		m_blend_func_sfactor_rgb = rsx::blend_factor::one;
+		m_blend_func_sfactor_a = rsx::blend_factor::one;
+		m_blend_func_dfactor_rgb = rsx::blend_factor::one;
+		m_blend_func_dfactor_a = rsx::blend_factor::one;
+
+		m_blend_color_16b_a = 0;
+		m_blend_color_16b_b = 0;
+		m_blend_color = 0;
+
+		m_blend_equation_rgb = rsx::blend_equation::add;
+		m_blend_equation_a = rsx::blend_equation::add;
+
+		m_stencil_test_enabled = false;
+		m_two_sided_stencil_test_enabled = false;
+		m_stencil_mask = 0xff;
+		m_stencil_func = rsx::comparaison_function::always;
+		m_stencil_func_ref = 0;
+		m_stencil_func_mask = 0xff;
+		m_stencil_op_fail = rsx::stencil_op::keep;
+		m_stencil_op_zfail = rsx::stencil_op::keep;
+		m_stencil_op_zpass = rsx::stencil_op::keep;
+
+		m_back_stencil_mask = 0xff;
+		m_back_stencil_func = rsx::comparaison_function::always;
+		m_back_stencil_func_ref = 0;
+		m_back_stencil_func_mask = 0xff;
+		m_back_stencil_op_fail = rsx::stencil_op::keep;
+		m_back_stencil_op_zfail = rsx::stencil_op::keep;
+		m_back_stencil_op_zpass = rsx::stencil_op::keep;
+
+		m_shading_mode = rsx::shading_mode::smooth;
+
+		m_logic_op_enabled = false;
+		m_logic_operation = rsx::logic_op::logic_copy;
+
+		m_depth_bounds_test_enabled = false;
+		m_depth_bounds_min = 0.f;
+		m_depth_bounds_max = 1.f;
+
+		m_clip_min = 0.f;
+		m_clip_max = 1.f;
+
+		m_line_width = 1.f;
+
+		// These defaults were found using After Burner Climax (which never set fog mode despite using fog input)
+		m_fog_equation = rsx::fog_mode::linear;
+		m_fog_params_0 = 1.f;
+		m_fog_params_1 = 1.f;
+
+		m_depth_test_enabled = false;
+		m_depth_func = rsx::comparaison_function::less;
+		m_depth_write_enabled = true;
+
+		m_poly_offset_scale = 0.f;
+		m_poly_offset_bias = 0.f;
+
+		m_front_polygon_mode = rsx::polygon_mode::fill;
+		m_back_polygon_mode = rsx::polygon_mode::fill;
+
+		m_cull_face_enabled = false;
+		m_cull_face_mode = rsx::cull_face::back;
+		m_front_face_mode = rsx::front_face::ccw;
+		m_restart_index_enabled = false;
+		m_restart_index = -1;
+
+		m_clear_rect_origin_x = 0;
+		m_clear_rect_origin_y = 0;
+		m_clear_rect_width = 4096;
+		m_clear_rect_height = 4096;
+
+		m_z_clear_value = -1;
+		m_stencil_clear_value = -1;
+
+		m_context_dma_report = rsx::blit_engine::context_dma::to_memory_get_report;
+		m_two_side_light_enabled = true;
+		m_alpha_func = rsx::comparaison_function::always;
+
+		// Reset vertex attrib array
+		for (int i = 0; i < 16; i++)
+		{
+			vertex_arrays_info[i].size = 0;
+		}
+
+		// Construct Textures
+		for (int i = 0; i < 16; i++)
+		{
+			fragment_textures[i].init(i);
+		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			vertex_textures[i].init(i);
+		}
+	}
+
+namespace
+{
+	template<u32... opcode>
+	auto create_commit_functions_table(const std::integer_sequence<u32, opcode...> &)
+	{
+		return std::unordered_map<uint32_t, void(*)(rsx_state&, u32)>{ {opcode, commit<opcode>}... };
+	}
+
+	auto reg_decoder = create_commit_functions_table(opcode_list);
+}
+
+	void rsx_state::decode(u32 reg, u32 value)
+	{
+		const auto &It = reg_decoder.find(reg);
+		if (It != reg_decoder.end())
+			(It->second)(*this, value);
+		else
+			registers[reg] = value;
+	}
+
 	struct __rsx_methods_t
 	{
 		using rsx_impl_method_t = void(*)(u32);
@@ -890,7 +1042,6 @@ namespace rsx
 			bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 			bind_range<NV4097_SET_VERTEX_DATA4S_M + 1, 2, 16, nv4097::set_vertex_data4s_m>();
 			bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
-			bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
 			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
 			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 			bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
