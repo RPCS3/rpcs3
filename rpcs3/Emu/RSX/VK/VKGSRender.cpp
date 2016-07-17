@@ -264,15 +264,10 @@ namespace vk
 
 	VkFrontFace get_front_face(rsx::front_face ffv)
 	{
-		u32 mask = 1;
-
-		if (rsx::to_window_origin((rsx::method_registers[NV4097_SET_SHADER_WINDOW] >> 12) & 0xf) == rsx::window_origin::bottom)
-			mask = 0;
-
 		switch (ffv)
 		{
-		case rsx::front_face::cw: return (VkFrontFace)(VK_FRONT_FACE_CLOCKWISE ^ mask);
-		case rsx::front_face::ccw: return (VkFrontFace)(VK_FRONT_FACE_COUNTER_CLOCKWISE ^ mask);
+		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
+		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		default:
 			throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 		}
@@ -997,28 +992,29 @@ bool VKGSRender::load_program()
 	properties.rs.rasterizerDiscardEnable = VK_FALSE;
 	properties.rs.depthBiasEnable = VK_FALSE;
 
-	if (rsx::method_registers.cull_face_enabled())
-	{
-		switch (rsx::method_registers.cull_face_mode())
-		{
-		case rsx::cull_face::front:
-			properties.rs.cullMode = VK_CULL_MODE_FRONT_BIT;
-			break;
-		case rsx::cull_face::back:
-			properties.rs.cullMode = VK_CULL_MODE_BACK_BIT;
-			break;
-		case rsx::cull_face::front_and_back:
-			properties.rs.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
-			break;
-		default:
-			properties.rs.cullMode = VK_CULL_MODE_NONE;
-			break;
-		}
-	}
-	else
-		properties.rs.cullMode = VK_CULL_MODE_NONE;
+//	if (rsx::method_registers.cull_face_enabled())
+//	{
+//		switch (rsx::method_registers.cull_face_mode())
+//		{
+//		case rsx::cull_face::front:
+//			properties.rs.cullMode = VK_CULL_MODE_FRONT_BIT;
+//			break;
+//		case rsx::cull_face::back:
+//			properties.rs.cullMode = VK_CULL_MODE_BACK_BIT;
+//			break;
+//		case rsx::cull_face::front_and_back:
+//			properties.rs.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
+//			break;
+//		default:
+//			properties.rs.cullMode = VK_CULL_MODE_NONE;
+//			break;
+//		}
+//	}
+//	else
+//		properties.rs.cullMode = VK_CULL_MODE_NONE;
 
 	properties.rs.frontFace = vk::get_front_face(rsx::method_registers.front_face_mode());
+	properties.rs.cullMode = VK_CULL_MODE_NONE;
 
 	size_t idx = vk::get_render_pass_location(
 		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
