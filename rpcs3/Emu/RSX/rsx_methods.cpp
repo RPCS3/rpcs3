@@ -658,10 +658,10 @@ namespace rsx
 
 	namespace nv0039
 	{
-		force_inline void buffer_notify(u32 arg)
+		never_inline void buffer_notify(u32 arg)
 		{
-			u32 in_pitch = method_registers.nv0039_input_pitch();
-			u32 out_pitch = method_registers.nv0039_output_pitch();
+			s32 in_pitch = method_registers.nv0039_input_pitch();
+			s32 out_pitch = method_registers.nv0039_output_pitch();
 			const u32 line_length = method_registers.nv0039_line_length();
 			const u32 line_count = method_registers.nv0039_line_count();
 			const u8 out_format = method_registers.nv0039_output_format();
@@ -673,6 +673,9 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
+
+			LOG_NOTICE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
 			if (!in_pitch)
 			{
