@@ -3,6 +3,27 @@
 #include "Emu/PSP2/ErrorCodes.h"
 #include "Emu/PSP2/Modules/Common.h"
 
+// Kernel internal TLS manager (TODO)
+class arm_tls_manager
+{
+	std::array<atomic_t<bool>, 128> m_map{};
+
+public:
+	const u32 vaddr;
+	const u32 fsize;
+	const u32 vsize;
+	const u32 start;
+
+	// Initialize from ELF process parameters
+	arm_tls_manager(u32 vaddr, u32 fsize, u32 vsize);
+
+	// Allocate and initialize TLS
+	u32 alloc();
+
+	// Deallocate by address
+	void free(u32 addr);
+};
+
 // Error Codes
 enum SceLibKernelError : s32
 {

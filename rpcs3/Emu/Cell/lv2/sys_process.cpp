@@ -25,6 +25,8 @@
 
 logs::channel sys_process("sys_process", logs::level::notice);
 
+u32 g_ps3_sdk_version;
+
 s32 process_getpid()
 {
 	// TODO: get current process id
@@ -194,7 +196,7 @@ s32 _sys_process_get_paramsfo(vm::ptr<char> buffer)
 s32 process_get_sdk_version(u32 pid, s32& ver)
 {
 	// get correct SDK version for selected pid
-	ver = Emu.GetSDKVersion();
+	ver = g_ps3_sdk_version;
 
 	return CELL_OK;
 }

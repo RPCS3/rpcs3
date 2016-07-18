@@ -15,6 +15,59 @@ logs::channel sceLibKernel("sceLibKernel", logs::level::notice);
 
 extern u64 get_system_time();
 
+arm_tls_manager::arm_tls_manager(u32 vaddr, u32 fsize, u32 vsize)
+	: vaddr(vaddr)
+	, fsize(fsize)
+	, vsize(vsize)
+	, start(vsize ? vm::alloc(vsize * ::size32(m_map), vm::main) : 0)
+{
+}
+
+u32 arm_tls_manager::alloc()
+{
+	if (!vsize)
+	{
+		return 0;
+	}
+
+	for (u32 i = 0; i < m_map.size(); i++)
+	{
+		if (!m_map[i] && m_map[i].exchange(true) == false)
+		{
+			const u32 addr = start + i * vsize; // Get TLS address
+			std::memcpy(vm::base(addr), vm::base(vaddr), fsize); // Initialize from TLS image
+			std::memset(vm::base(addr + fsize), 0, vsize - fsize); // Fill the rest with zeros
+			return addr;
+		}
+	}
+
+	sceLibKernel.error("arm_tls_manager::alloc(): out of TLS memory (max=%zu)", m_map.size());
+	return 0;
+}
+
+void arm_tls_manager::free(u32 addr)
+{
+	if (!addr)
+	{
+		return;
+	}
+
+	// Calculate TLS index
+	const u32 i = (addr - start) / vsize;
+
+	if (addr < start || i >= m_map.size() || (addr - start) % vsize)
+	{
+		sceLibKernel.error("arm_tls_manager::free(0x%x): invalid address", addr);
+		return;
+	}
+
+	if (m_map[i].exchange(false) == false)
+	{
+		sceLibKernel.error("arm_tls_manager::free(0x%x): deallocation failed", addr);
+		return;
+	}
+}
+
 s32 sceKernelAllocMemBlock(vm::cptr<char> name, s32 type, u32 vsize, vm::ptr<SceKernelAllocMemBlockOpt> pOpt)
 {
 	throw EXCEPTION("");
@@ -46,6 +99,7 @@ arm_error_code sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThre
 	thread->prio = initPriority;
 	thread->stack_size = stackSize;
 	thread->cpu_init();
+	thread->TLS = fxm::get<arm_tls_manager>()->alloc();
 
 	return NOT_AN_ERROR(thread->id);
 }
@@ -109,6 +163,7 @@ arm_error_code sceKernelDeleteThread(s32 threadId)
 	//	return SCE_KERNEL_ERROR_NOT_DORMANT;
 	//}
 
+	fxm::get<arm_tls_manager>()->free(thread->TLS);
 	idm::remove<ARMv7Thread>(threadId);
 	return SCE_OK;
 }
@@ -120,6 +175,7 @@ arm_error_code sceKernelExitDeleteThread(ARMv7Thread& cpu, s32 exitStatus)
 	//cpu.state += cpu_state::stop;
 
 	// Delete current thread; exit status is stored in r0
+	fxm::get<arm_tls_manager>()->free(cpu.TLS);
 	idm::remove<ARMv7Thread>(cpu.id);
 
 	return SCE_OK;
