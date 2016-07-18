@@ -138,7 +138,10 @@ VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask)
 		return { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
 
 	case CELL_GCM_TEXTURE_G8B8:
-		return { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G };
+	{
+		VkComponentSwizzle map_table[] = { VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R };
+		return{ map_table[remap_r], map_table[remap_g], map_table[remap_b], map_table[remap_a] };
+	}
 
 	case CELL_GCM_TEXTURE_X16:
 		return { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R };
