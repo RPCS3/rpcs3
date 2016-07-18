@@ -103,8 +103,8 @@ TEST(NodeTest, MapForceInsert) {
 
   node.force_insert(k2, v2);
   EXPECT_EQ("v1", node["k1"].as<std::string>());
-  EXPECT_EQ("v2", node["k2"].as<std::string>());
-  EXPECT_EQ(2, node.size());
+  EXPECT_EQ("v1", node["k2"].as<std::string>());
+  EXPECT_EQ(3, node.size());
 }
 
 TEST(NodeTest, UndefinedConstNodeWithFallback) {

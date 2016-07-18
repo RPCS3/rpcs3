@@ -114,7 +114,7 @@ class YAML_CPP_API node_data {
   mutable std::size_t m_seqSize;
 
   // map
-  typedef std::map<node*, node*> node_map;
+  typedef std::vector<std::pair<node*, node*>> node_map;
   node_map m_map;
 
   typedef std::pair<node*, node*> kv_pair;

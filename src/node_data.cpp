@@ -256,9 +256,10 @@ void node_data::reset_map() {
 }
 
 void node_data::insert_map_pair(node& key, node& value) {
-  m_map[&key] = &value;
+  m_map.emplace_back(&key, &value);
+
   if (!key.is_defined() || !value.is_defined())
-    m_undefinedPairs.push_back(kv_pair(&key, &value));
+    m_undefinedPairs.emplace_back(&key, &value);
 }
 
 void node_data::convert_to_map(shared_memory_holder pMemory) {

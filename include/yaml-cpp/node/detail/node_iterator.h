@@ -37,7 +37,7 @@ struct node_iterator_value : public std::pair<V*, V*> {
 };
 
 typedef std::vector<node*> node_seq;
-typedef std::map<node*, node*> node_map;
+typedef std::vector<std::pair<node*, node*>> node_map;
 
 template <typename V>
 struct node_iterator_type {
