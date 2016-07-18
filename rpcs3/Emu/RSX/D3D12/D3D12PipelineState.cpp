@@ -62,6 +62,89 @@ void D3D12GSRender::load_program()
 
 	if (rsx::method_registers.blend_enabled())
 	{
+		//We can use the d3d blend factor as long as !(rgb_factor == alpha && a_factor == color)
+		rsx::blend_factor sfactor_rgb = rsx::method_registers.blend_func_sfactor_rgb();
+		rsx::blend_factor dfactor_rgb = rsx::method_registers.blend_func_dfactor_rgb();
+		rsx::blend_factor sfactor_a = rsx::method_registers.blend_func_sfactor_a();
+		rsx::blend_factor dfactor_a = rsx::method_registers.blend_func_dfactor_a();
+
+		D3D12_BLEND d3d_sfactor_rgb = get_blend_factor(sfactor_rgb);
+		D3D12_BLEND d3d_dfactor_rgb = get_blend_factor(dfactor_rgb);;
+		D3D12_BLEND d3d_sfactor_alpha = get_blend_factor_alpha(sfactor_a);
+		D3D12_BLEND d3d_dfactor_alpha = get_blend_factor_alpha(dfactor_a);
+		
+		FLOAT BlendColor[4];
+		
+		//TODO: Check surface color format for u16 colors
+		{
+			u8 blend_color_r = rsx::method_registers.blend_color_8b_r();
+			u8 blend_color_g = rsx::method_registers.blend_color_8b_g();
+			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
+			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
+
+			BlendColor[0] = blend_color_r / 255.f;
+			BlendColor[1] = blend_color_g / 255.f;
+			BlendColor[2] = blend_color_b / 255.f;
+			BlendColor[3] = blend_color_a / 255.f;
+		}
+		
+		bool color_blend_possible = true;
+
+		if (sfactor_rgb == rsx::blend_factor::constant_alpha ||
+			dfactor_rgb == rsx::blend_factor::constant_alpha)
+		{
+			if (sfactor_rgb == rsx::blend_factor::constant_color ||
+				dfactor_rgb == rsx::blend_factor::constant_color)
+			{
+				//Color information will be destroyed
+				color_blend_possible = false;
+			}
+			else
+			{
+				//All components are alpha.
+				float constant_color_as_alpha = (BlendColor[0] + BlendColor[1] + BlendColor[2]) / 3.f;
+				BlendColor[0] = BlendColor[1] = BlendColor[2] = BlendColor[3];
+
+				if (sfactor_a == rsx::blend_factor::constant_color ||
+					dfactor_a == rsx::blend_factor::constant_color)
+				{
+					//Alpha information is about to be destroyed. Check that no alpha key requires it...
+					if (sfactor_a == rsx::blend_factor::constant_alpha ||
+						dfactor_a == rsx::blend_factor::constant_alpha)
+					{
+						color_blend_possible = false;
+					}
+					else
+						BlendColor[3] = constant_color_as_alpha;
+				}
+			}
+		}
+
+		if (!color_blend_possible)
+		{
+			LOG_ERROR(RSX, "The constant_color blend factor combination defined is not supported");
+			
+			auto flatten_d3d12_factor = [](D3D12_BLEND in) -> D3D12_BLEND
+			{
+				switch (in)
+				{
+				case D3D12_BLEND_BLEND_FACTOR:
+					return D3D12_BLEND_ONE;
+				case D3D12_BLEND_INV_BLEND_FACTOR:
+					return D3D12_BLEND_ZERO;
+				}
+			};
+
+			d3d_sfactor_rgb = flatten_d3d12_factor(d3d_sfactor_rgb);
+			d3d_dfactor_rgb = flatten_d3d12_factor(d3d_dfactor_rgb);;
+			d3d_sfactor_alpha = flatten_d3d12_factor(d3d_sfactor_alpha);
+			d3d_dfactor_alpha = flatten_d3d12_factor(d3d_dfactor_alpha);
+		}
+		else
+		{
+			get_current_resource_storage().command_list->OMSetBlendFactor(BlendColor);
+		}
+
 		prop.Blend.RenderTarget[0].BlendEnable = true;
 
 		if (rsx::method_registers.blend_enabled_surface_1())
@@ -92,33 +175,33 @@ void D3D12GSRender::load_program()
 			prop.Blend.RenderTarget[3].BlendOpAlpha = get_blend_op(rsx::method_registers.blend_equation_a());
 		}
 
-		prop.Blend.RenderTarget[0].SrcBlend = get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-		prop.Blend.RenderTarget[0].DestBlend = get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-		prop.Blend.RenderTarget[0].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_sfactor_a());
-		prop.Blend.RenderTarget[0].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_dfactor_a());
+		prop.Blend.RenderTarget[0].SrcBlend = d3d_sfactor_rgb;
+		prop.Blend.RenderTarget[0].DestBlend = d3d_dfactor_rgb;
+		prop.Blend.RenderTarget[0].SrcBlendAlpha = d3d_sfactor_alpha;
+		prop.Blend.RenderTarget[0].DestBlendAlpha = d3d_dfactor_alpha;
 
 		if (rsx::method_registers.blend_enabled_surface_1())
 		{
-			prop.Blend.RenderTarget[1].SrcBlend = get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			prop.Blend.RenderTarget[1].DestBlend = get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			prop.Blend.RenderTarget[1].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_sfactor_a());
-			prop.Blend.RenderTarget[1].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_dfactor_a());
+			prop.Blend.RenderTarget[1].SrcBlend = d3d_sfactor_rgb;
+			prop.Blend.RenderTarget[1].DestBlend = d3d_dfactor_rgb;
+			prop.Blend.RenderTarget[1].SrcBlendAlpha = d3d_sfactor_alpha;
+			prop.Blend.RenderTarget[1].DestBlendAlpha = d3d_dfactor_alpha;
 		}
 
 		if (rsx::method_registers.blend_enabled_surface_2())
 		{
-			prop.Blend.RenderTarget[2].SrcBlend = get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			prop.Blend.RenderTarget[2].DestBlend = get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			prop.Blend.RenderTarget[2].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_sfactor_a());
-			prop.Blend.RenderTarget[2].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_dfactor_a());
+			prop.Blend.RenderTarget[2].SrcBlend = d3d_sfactor_rgb;
+			prop.Blend.RenderTarget[2].DestBlend = d3d_dfactor_rgb;
+			prop.Blend.RenderTarget[2].SrcBlendAlpha = d3d_sfactor_alpha;
+			prop.Blend.RenderTarget[2].DestBlendAlpha = d3d_dfactor_alpha;
 		}
 
 		if (rsx::method_registers.blend_enabled_surface_3())
 		{
-			prop.Blend.RenderTarget[3].SrcBlend = get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			prop.Blend.RenderTarget[3].DestBlend = get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			prop.Blend.RenderTarget[3].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_sfactor_a());
-			prop.Blend.RenderTarget[3].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers.blend_func_dfactor_a());
+			prop.Blend.RenderTarget[3].SrcBlend = d3d_sfactor_rgb;
+			prop.Blend.RenderTarget[3].DestBlend = d3d_dfactor_rgb;
+			prop.Blend.RenderTarget[3].SrcBlendAlpha = d3d_sfactor_alpha;
+			prop.Blend.RenderTarget[3].DestBlendAlpha = d3d_dfactor_alpha;
 		}
 	}
 
@@ -128,11 +211,6 @@ void D3D12GSRender::load_program()
 		prop.Blend.RenderTarget[0].LogicOp = get_logic_op(rsx::method_registers.logic_operation());
 	}
 
-//	if (m_set_blend_color)
-	{
-		// glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
-		// checkForGlError("glBlendColor");
-	}
 	prop.DepthStencilFormat = get_depth_stencil_surface_format(rsx::method_registers.surface_depth_fmt());
 	prop.RenderTargetsFormat = get_color_surface_format(rsx::method_registers.surface_color());
 
