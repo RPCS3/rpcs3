@@ -283,13 +283,15 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 			if (pkg_install(pkg_f, local_path + '/', progress))
 			{
 				progress = 1.;
+				return_;
 			}
 
 			// TODO: Ask user to delete files on cancellation/failure?
+			progress = -1.;
 		});
 
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), progress < 1.)
+		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
 		{
 			// Update progress window
 			if (!pdlg.Update(static_cast<int>(progress * pdlg.GetRange())))
@@ -298,6 +300,12 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 				progress -= 1.;
 				break;
 			}
+		}
+		
+		if (progress > 0.)
+		{
+			pdlg.Update(pdlg.GetRange());
+			std::this_thread::sleep_for(100ms);
 		}
 	}
 
