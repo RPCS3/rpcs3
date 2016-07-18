@@ -160,7 +160,7 @@ namespace
 	GLenum front_face(rsx::front_face op)
 	{
 		GLenum mask = 0;
-		if (rsx::to_window_origin((rsx::method_registers[NV4097_SET_SHADER_WINDOW] >> 12) & 0xf) == rsx::window_origin::bottom)
+		if (rsx::method_registers.shader_window_origin() == rsx::window_origin::bottom)
 			mask = 1;
 
 		switch (op)
