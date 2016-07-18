@@ -8,6 +8,9 @@
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 
+#include <sstream>
+#include <cereal/archives/binary.hpp>
+
 #include <thread>
 #include <cassert>
 #include <algorithm>
@@ -723,6 +726,13 @@ namespace rsx
 		else if (rsx->capture_current_frame)
 		{
 			rsx->capture_current_frame = false;
+			std::stringstream os;
+			cereal::BinaryOutputArchive archive(os);
+			archive(frame_debug);
+			{
+				fs::file f(fs::get_config_dir() + "capture.txt", fs::rewrite);
+				f.write(os.str());
+			}
 			Emu.Pause();
 		}
 

@@ -9,6 +9,9 @@
 #include "rsx_vertex_data.h"
 #include "Utilities/geometry.h"
 
+#include <cereal/types/array.hpp>
+#include <cereal/types/unordered_map.hpp>
+
 namespace rsx
 {
 	//TODO
@@ -122,6 +125,15 @@ namespace rsx
 		void decode(u32 reg, u32 value);
 
 		void reset();
+
+		template<typename Archive>
+		void serialize(Archive & ar)
+		{
+			ar(transform_program,
+//				transform_constants,
+				registers
+				);
+		}
 
 		u16 viewport_width() const
 		{
