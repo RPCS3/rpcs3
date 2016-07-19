@@ -650,7 +650,7 @@ void VKGSRender::end()
 		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	for (int i = 0; i < rsx::limits::textures_count; ++i)
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		if (m_program->has_uniform("tex" + std::to_string(i)))
 		{

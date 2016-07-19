@@ -186,7 +186,7 @@ u32 GLGSRender::set_vertex_buffer()
 	//initialize vertex attributes
 	//merge all vertex arrays
 
-	static const u32 texture_index_offset = rsx::limits::textures_count + rsx::limits::vertex_textures_count;
+	static const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
 	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
 

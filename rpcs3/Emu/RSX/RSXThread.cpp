@@ -747,7 +747,7 @@ namespace rsx
 		result.height = rsx::method_registers.shader_window_height();
 
 		std::array<texture_dimension_extended, 16> texture_dimensions;
-		for (u32 i = 0; i < rsx::limits::textures_count; ++i)
+		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			if (!rsx::method_registers.fragment_textures[i].enabled())
 				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
@@ -801,7 +801,7 @@ namespace rsx
 			}
 		}
 
-		for (u8 index = 0; index < rsx::limits::textures_count; ++index)
+		for (u8 index = 0; index < rsx::limits::fragment_textures_count; ++index)
 		{
 			if (!rsx::method_registers.fragment_textures[index].enabled())
 			{

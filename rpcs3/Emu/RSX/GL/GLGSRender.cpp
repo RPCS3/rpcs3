@@ -396,7 +396,7 @@ void GLGSRender::end()
 
 	//setup textures
 	{
-		for (int i = 0; i < rsx::limits::textures_count; ++i)
+		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			int location;
 			if (m_program->uniforms.has_location("ftexture" + std::to_string(i), &location))
