@@ -107,7 +107,7 @@ namespace
 		case rsx::vertex_base_type::cmp: return gl::buffer_pointer::type::s16; // Needs conversion
 		case rsx::vertex_base_type::ub256: gl::buffer_pointer::type::u8;
 		}
-		throw EXCEPTION("unknow vertex type");
+		throw EXCEPTION("unknown vertex type");
 	}
 
 	bool gl_normalized(rsx::vertex_base_type type)
@@ -124,7 +124,7 @@ namespace
 		case rsx::vertex_base_type::s32k:
 			return false;
 		}
-		throw EXCEPTION("unknow vertex type");
+		throw EXCEPTION("unknown vertex type");
 	}
 
 	// return vertex count if primitive type is not native (empty array otherwise)
@@ -186,7 +186,7 @@ u32 GLGSRender::set_vertex_buffer()
 	//initialize vertex attributes
 	//merge all vertex arrays
 
-	static const u32 texture_index_offset = rsx::limits::textures_count + rsx::limits::vertex_textures_count;
+	static const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
 	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
 

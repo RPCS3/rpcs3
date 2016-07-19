@@ -77,7 +77,7 @@ namespace rsx
 	{
 		enum
 		{
-			textures_count = 16,
+			fragment_textures_count = 16,
 			vertex_textures_count = 4,
 			vertex_count = 16,
 			fragment_count = 32,

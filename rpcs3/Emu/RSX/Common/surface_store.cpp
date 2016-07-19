@@ -38,7 +38,7 @@ namespace rsx
 			case surface_color_format::w16z16y16x16: return align(width * 8, 256);
 			case surface_color_format::w32z32y32x32: return align(width * 16, 256);
 			}
-			throw EXCEPTION("Unknow color surface format");
+			throw EXCEPTION("Unknown color surface format");
 		}
 
 		size_t get_packed_pitch(surface_color_format format, u32 width)
@@ -60,7 +60,7 @@ namespace rsx
 			case surface_color_format::w16z16y16x16: return width * 8;
 			case surface_color_format::w32z32y32x32: return width * 16;
 			}
-			throw EXCEPTION("Unknow color surface format");
+			throw EXCEPTION("Unknown color surface format");
 		}
 	}
 }

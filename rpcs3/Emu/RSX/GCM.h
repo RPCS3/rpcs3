@@ -200,7 +200,7 @@ namespace rsx
 		linear_nearest, ///< linear filtering, closest mipmap level
 		nearest_linear, ///< no filtering, linear mix between closest mipmap levels
 		linear_linear, ///< linear filtering, linear mix between closest mipmap levels
-		convolution_min, ///< Unknow mode but looks close to linear_linear
+		convolution_min, ///< Unknown mode but looks close to linear_linear
 	};
 
 	texture_minify_filter to_texture_minify_filter(u8 in);
@@ -209,7 +209,7 @@ namespace rsx
 	{
 		nearest, ///< no filtering
 		linear, ///< linear filtering
-		convolution_mag, ///< Unknow mode but looks close to linear
+		convolution_mag, ///< Unknown mode but looks close to linear
 	};
 
 	texture_magnify_filter to_texture_magnify_filter(u8 in);

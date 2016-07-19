@@ -99,7 +99,7 @@ namespace rsx
 		* must be used if the vertex attrib mask request it.
 		*
 		* Note that behavior when both vertex array and immediate value system are disabled but vertex attrib mask
-		* request inputs is unknow.
+		* request inputs is unknown.
 		*/
 		std::array<data_array_format_info, 16> register_vertex_info;
 		std::array<std::vector<u8>, 16> register_vertex_data;

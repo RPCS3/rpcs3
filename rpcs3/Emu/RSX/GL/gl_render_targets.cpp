@@ -72,7 +72,7 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	case rsx::surface_depth_format::z16: return 2;
 	case rsx::surface_depth_format::z24s8: return 4;
 	}
-	throw EXCEPTION("Unknow depth format");
+	throw EXCEPTION("Unknown depth format");
 }
 
 

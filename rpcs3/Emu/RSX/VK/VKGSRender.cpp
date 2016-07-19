@@ -15,7 +15,7 @@ namespace
 		case rsx::surface_depth_format::z16: return 0xFFFF;
 		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
 		}
-		throw EXCEPTION("Unknow depth format");
+		throw EXCEPTION("Unknown depth format");
 	}
 
 	u8 get_pixel_size(rsx::surface_depth_format format)
@@ -25,7 +25,7 @@ namespace
 		case rsx::surface_depth_format::z16: return 2;
 		case rsx::surface_depth_format::z24s8: return 4;
 		}
-		throw EXCEPTION("Unknow depth format");
+		throw EXCEPTION("Unknown depth format");
 	}
 }
 
@@ -650,7 +650,7 @@ void VKGSRender::end()
 		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	for (int i = 0; i < rsx::limits::textures_count; ++i)
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		if (m_program->has_uniform("tex" + std::to_string(i)))
 		{

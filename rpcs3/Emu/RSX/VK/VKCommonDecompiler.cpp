@@ -93,7 +93,7 @@ namespace vk
 		case COMPARE::FUNCTION_SNE:
 			return "notEqual(" + Op0 + ", " + Op1 + ")";
 		}
-		throw EXCEPTION("Unknow compare function");
+		throw EXCEPTION("Unknown compare function");
 	}
 
 	void insert_glsl_legacy_function(std::ostream& OS)

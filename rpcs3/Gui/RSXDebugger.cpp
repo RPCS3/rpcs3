@@ -821,7 +821,7 @@ void RSXDebugger::GetTexture()
 
 	m_list_texture->DeleteAllItems();
 
-	for(uint i=0; i<rsx::limits::textures_count; ++i)
+	for(uint i=0; i<rsx::limits::fragment_textures_count; ++i)
 	{
 /*		if(render->textures[i].enabled())
 		{
