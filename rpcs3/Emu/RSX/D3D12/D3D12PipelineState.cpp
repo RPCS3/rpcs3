@@ -163,27 +163,31 @@ void D3D12GSRender::load_program()
 		prop.DepthStencil.DepthEnable = FALSE;
 
 	prop.DepthStencil.DepthWriteMask = rsx::method_registers.depth_write_enabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-	prop.DepthStencil.StencilEnable = rsx::method_registers.stencil_test_enabled();
-	prop.DepthStencil.StencilReadMask = rsx::method_registers.stencil_func_mask();
-	prop.DepthStencil.StencilWriteMask = rsx::method_registers.stencil_mask();
-	prop.DepthStencil.FrontFace.StencilPassOp = get_stencil_op(rsx::method_registers.stencil_op_zpass());
-	prop.DepthStencil.FrontFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.stencil_op_zfail());
-	prop.DepthStencil.FrontFace.StencilFailOp = get_stencil_op(rsx::method_registers.stencil_op_fail());
-	prop.DepthStencil.FrontFace.StencilFunc = get_compare_func(rsx::method_registers.stencil_func());
 
-	if (rsx::method_registers.two_sided_stencil_test_enabled())
+	if (rsx::method_registers.stencil_test_enabled())
 	{
-		prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers.back_stencil_op_fail());
-		prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers.back_stencil_func());
-		prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
-		prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
-	}
-	else
-	{
-		prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers.stencil_op_zpass());
-		prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.stencil_op_zfail());
-		prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers.stencil_op_fail());
-		prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers.stencil_func());
+		prop.DepthStencil.StencilEnable = TRUE;
+		prop.DepthStencil.StencilReadMask = rsx::method_registers.stencil_func_mask();
+		prop.DepthStencil.StencilWriteMask = rsx::method_registers.stencil_mask();
+		prop.DepthStencil.FrontFace.StencilPassOp = get_stencil_op(rsx::method_registers.stencil_op_zpass());
+		prop.DepthStencil.FrontFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.stencil_op_zfail());
+		prop.DepthStencil.FrontFace.StencilFailOp = get_stencil_op(rsx::method_registers.stencil_op_fail());
+		prop.DepthStencil.FrontFace.StencilFunc = get_compare_func(rsx::method_registers.stencil_func());
+
+		if (rsx::method_registers.two_sided_stencil_test_enabled())
+		{
+			prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers.back_stencil_op_fail());
+			prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers.back_stencil_func());
+			prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
+			prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
+		}
+		else
+		{
+			prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers.stencil_op_zpass());
+			prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.stencil_op_zfail());
+			prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers.stencil_op_fail());
+			prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers.stencil_func());
+		}
 	}
 
 	// Sensible default value
