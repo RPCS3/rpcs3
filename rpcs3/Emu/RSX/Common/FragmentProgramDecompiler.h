@@ -88,7 +88,7 @@ protected:
 	/** returns string calling saturate function.
 	*/
 	virtual std::string saturate(const std::string &code) = 0;
-	/** returns string calling comparaison function on 2 args passed as strings.
+	/** returns string calling comparison function on 2 args passed as strings.
 	 */
 	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &) = 0;
 

@@ -458,14 +458,14 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 		}
 
 		{
-			auto make_comparsion_test = [](rsx::comparaison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
+			auto make_comparsion_test = [](rsx::comparison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
 			{
-				if (compare_func == rsx::comparaison_function::always)
+				if (compare_func == rsx::comparison_function::always)
 				{
 					return{};
 				}
 
-				if (compare_func == rsx::comparaison_function::never)
+				if (compare_func == rsx::comparison_function::never)
 				{
 					return "\tdiscard;\n";
 				}
@@ -474,27 +474,27 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 
 				switch (compare_func)
 				{
-				case rsx::comparaison_function::equal:
+				case rsx::comparison_function::equal:
 					compare = "==";
 					break;
 
-				case rsx::comparaison_function::not_equal:
+				case rsx::comparison_function::not_equal:
 					compare = "!=";
 					break;
 
-				case rsx::comparaison_function::less_or_equal:
+				case rsx::comparison_function::less_or_equal:
 					compare = "<=";
 					break;
 
-				case rsx::comparaison_function::less:
+				case rsx::comparison_function::less:
 					compare = "<";
 					break;
 
-				case rsx::comparaison_function::greater:
+				case rsx::comparison_function::greater:
 					compare = ">";
 					break;
 
-				case rsx::comparaison_function::greater_or_equal:
+				case rsx::comparison_function::greater_or_equal:
 					compare = ">=";
 					break;
 				}
@@ -508,11 +508,11 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 				{
 					std::string index_string = std::to_string(index);
 					std::string fetch_texture = "texture_fetch(" + index_string + ", tex" + index_string + " * ftexture" + index_string + "_cm).a";
-					finalize += make_comparsion_test((rsx::comparaison_function)state.textures_zfunc[index], "", "0", fetch_texture);
+					finalize += make_comparsion_test((rsx::comparison_function)state.textures_zfunc[index], "", "0", fetch_texture);
 				}
 			}
 
-			finalize += make_comparsion_test((rsx::comparaison_function)state.alpha_func, "alpha_test != 0 && ", "ocol.a", "alpha_ref");
+			finalize += make_comparsion_test((rsx::comparison_function)state.alpha_func, "alpha_test != 0 && ", "ocol.a", "alpha_ref");
 		}
 		break;
 

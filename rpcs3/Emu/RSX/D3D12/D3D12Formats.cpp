@@ -130,18 +130,18 @@ D3D12_STENCIL_OP get_stencil_op(rsx::stencil_op op)
 	throw EXCEPTION("Invalid stencil op (0x%x)", op);
 }
 
-D3D12_COMPARISON_FUNC get_compare_func(rsx::comparaison_function op)
+D3D12_COMPARISON_FUNC get_compare_func(rsx::comparison_function op)
 {
 	switch (op)
 	{
-	case rsx::comparaison_function::never: return D3D12_COMPARISON_FUNC_NEVER;
-	case rsx::comparaison_function::less: return D3D12_COMPARISON_FUNC_LESS;
-	case rsx::comparaison_function::equal: return D3D12_COMPARISON_FUNC_EQUAL;
-	case rsx::comparaison_function::less_or_equal: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	case rsx::comparaison_function::greater: return D3D12_COMPARISON_FUNC_GREATER;
-	case rsx::comparaison_function::not_equal: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-	case rsx::comparaison_function::greater_or_equal: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-	case rsx::comparaison_function::always: return D3D12_COMPARISON_FUNC_ALWAYS;
+	case rsx::comparison_function::never: return D3D12_COMPARISON_FUNC_NEVER;
+	case rsx::comparison_function::less: return D3D12_COMPARISON_FUNC_LESS;
+	case rsx::comparison_function::equal: return D3D12_COMPARISON_FUNC_EQUAL;
+	case rsx::comparison_function::less_or_equal: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case rsx::comparison_function::greater: return D3D12_COMPARISON_FUNC_GREATER;
+	case rsx::comparison_function::not_equal: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case rsx::comparison_function::greater_or_equal: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case rsx::comparison_function::always: return D3D12_COMPARISON_FUNC_ALWAYS;
 	}
 	throw EXCEPTION("Invalid or unsupported compare func (0x%x)", op);
 }

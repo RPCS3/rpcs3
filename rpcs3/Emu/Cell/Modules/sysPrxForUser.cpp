@@ -14,44 +14,44 @@ extern fs::file g_tty;
 
 vm::gvar<s32> sys_prx_version; // ???
 
-#define TLS_SYS 0x30
-
-u32 g_tls_size = 0; // Size of TLS area per thread
-u32 g_tls_addr = 0; // Start of TLS memory area
-u32 g_tls_max = 0; // Max number of threads
-
-std::unique_ptr<atomic_t<bool>[]> g_tls_map; // I'd like to make it std::vector but it won't work
+static u32 s_tls_addr = 0; // TLS image address
+static u32 s_tls_file = 0; // TLS image size
+static u32 s_tls_zero = 0; // TLS zeroed area size (TLS mem size - TLS image size)
+static u32 s_tls_size = 0; // Size of TLS area per thread
+static u32 s_tls_area = 0; // Start of TLS memory area
+static u32 s_tls_max = 0; // Max number of threads
+static std::unique_ptr<atomic_t<bool>[]> s_tls_map; // I'd like to make it std::vector but it won't work
 
 u32 ppu_alloc_tls()
 {
-	for (u32 i = 0; i < g_tls_max; i++)
+	for (u32 i = 0; i < s_tls_max; i++)
 	{
-		if (g_tls_map[i].exchange(true) == false)
+		if (!s_tls_map[i] && s_tls_map[i].exchange(true) == false)
 		{
-			const u32 addr = g_tls_addr + i * g_tls_size; // Calculate TLS address
-			std::memset(vm::base(addr), 0, TLS_SYS); // Clear system area (TODO)
-			std::memcpy(vm::base(addr + TLS_SYS), vm::base(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // Copy TLS image
-			std::memset(vm::base(addr + TLS_SYS + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // Clear the rest
+			const u32 addr = s_tls_area + i * s_tls_size; // Calculate TLS address
+			std::memset(vm::base(addr), 0, 0x30); // Clear system area (TODO)
+			std::memcpy(vm::base(addr + 0x30), vm::base(s_tls_addr), s_tls_file); // Copy TLS image
+			std::memset(vm::base(addr + 0x30 + s_tls_file), 0, s_tls_zero); // Clear the rest
 			return addr;
 		}
 	}
 
-	sysPrxForUser.error("ppu_alloc_tls(): out of TLS memory (max=%zu)", g_tls_max);
+	sysPrxForUser.error("ppu_alloc_tls(): out of TLS memory (max=%zu)", s_tls_max);
 	return 0;
 }
 
 void ppu_free_tls(u32 addr)
 {
 	// Calculate TLS position
-	const u32 i = (addr - g_tls_addr) / g_tls_size;
+	const u32 i = (addr - s_tls_area) / s_tls_size;
 
-	if (addr < g_tls_addr || i >= g_tls_max || (addr - g_tls_addr) % g_tls_size)
+	if (addr < s_tls_area || i >= s_tls_max || (addr - s_tls_area) % s_tls_size)
 	{
 		sysPrxForUser.error("ppu_free_tls(0x%x): invalid address", addr);
 		return;
 	}
 
-	if (g_tls_map[i].exchange(false) == false)
+	if (s_tls_map[i].exchange(false) == false)
 	{
 		sysPrxForUser.error("ppu_free_tls(0x%x): deallocation failed", addr);
 		return;
@@ -66,15 +66,18 @@ void sys_initialize_tls(PPUThread& ppu, u64 main_thread_id, u32 tls_seg_addr, u3
 	if (ppu.GPR[13] != 0) return;
 
 	// Initialize TLS memory
-	g_tls_size = Emu.GetTLSMemsz() + TLS_SYS;
-	g_tls_addr = vm::alloc(0x20000, vm::main) + 0x30;
-	g_tls_max = (0xffd0 / g_tls_size) + (0x10000 / g_tls_size);
-	g_tls_map = std::make_unique<atomic_t<bool>[]>(g_tls_max);
+	s_tls_addr = tls_seg_addr;
+	s_tls_file = tls_seg_size;
+	s_tls_zero = tls_mem_size - tls_seg_size;
+	s_tls_size = tls_mem_size + 0x30; // 0x30 is system area size
+	s_tls_area = vm::alloc(0x20000, vm::main) + 0x30;
+	s_tls_max = (0xffd0 / s_tls_size) + (0x10000 / s_tls_size);
+	s_tls_map = std::make_unique<atomic_t<bool>[]>(s_tls_max);
 
 	// Allocate TLS for main thread
-	ppu.GPR[13] = ppu_alloc_tls() + 0x7000 + TLS_SYS;
+	ppu.GPR[13] = ppu_alloc_tls() + 0x7000 + 0x30;
 
-	sysPrxForUser.notice("TLS initialized (addr=0x%x, size=0x%x, max=0x%x)", g_tls_addr - 0x30, g_tls_size, g_tls_max);
+	sysPrxForUser.notice("TLS initialized (addr=0x%x, size=0x%x, max=0x%x)", s_tls_area - 0x30, s_tls_size, s_tls_max);
 
 	// TODO
 	g_spu_printf_agcb = vm::null;

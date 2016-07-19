@@ -31,25 +31,25 @@ namespace
 
 namespace vk
 {
-	VkCompareOp compare_op(rsx::comparaison_function op)
+	VkCompareOp compare_op(rsx::comparison_function op)
 	{
 		switch (op)
 		{
-		case rsx::comparaison_function::never:
+		case rsx::comparison_function::never:
 			return VK_COMPARE_OP_NEVER;
-		case rsx::comparaison_function::greater:
+		case rsx::comparison_function::greater:
 			return VK_COMPARE_OP_GREATER;
-		case rsx::comparaison_function::less:
+		case rsx::comparison_function::less:
 			return VK_COMPARE_OP_LESS;
-		case rsx::comparaison_function::less_or_equal:
+		case rsx::comparison_function::less_or_equal:
 			return VK_COMPARE_OP_LESS_OR_EQUAL;
-		case rsx::comparaison_function::greater_or_equal:
+		case rsx::comparison_function::greater_or_equal:
 			return VK_COMPARE_OP_GREATER_OR_EQUAL;
-		case rsx::comparaison_function::equal:
+		case rsx::comparison_function::equal:
 			return VK_COMPARE_OP_EQUAL;
-		case rsx::comparaison_function::not_equal:
+		case rsx::comparison_function::not_equal:
 			return VK_COMPARE_OP_NOT_EQUAL;
-		case rsx::comparaison_function::always:
+		case rsx::comparison_function::always:
 			return VK_COMPARE_OP_ALWAYS;
 		default:
 			throw EXCEPTION("Unsupported compare op: 0x%X", op);

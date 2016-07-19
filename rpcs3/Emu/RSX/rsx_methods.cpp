@@ -794,7 +794,7 @@ namespace rsx
 		m_scissor_origin_y = 0;
 
 		m_alpha_test_enabled = false;
-		m_alpha_func = rsx::comparaison_function::always;
+		m_alpha_func = rsx::comparison_function::always;
 		m_alpha_ref = 0;
 
 		m_blend_enabled = false;
@@ -816,7 +816,7 @@ namespace rsx
 		m_stencil_test_enabled = false;
 		m_two_sided_stencil_test_enabled = false;
 		m_stencil_mask = 0xff;
-		m_stencil_func = rsx::comparaison_function::always;
+		m_stencil_func = rsx::comparison_function::always;
 		m_stencil_func_ref = 0;
 		m_stencil_func_mask = 0xff;
 		m_stencil_op_fail = rsx::stencil_op::keep;
@@ -824,7 +824,7 @@ namespace rsx
 		m_stencil_op_zpass = rsx::stencil_op::keep;
 
 		m_back_stencil_mask = 0xff;
-		m_back_stencil_func = rsx::comparaison_function::always;
+		m_back_stencil_func = rsx::comparison_function::always;
 		m_back_stencil_func_ref = 0;
 		m_back_stencil_func_mask = 0xff;
 		m_back_stencil_op_fail = rsx::stencil_op::keep;
@@ -851,7 +851,7 @@ namespace rsx
 		m_fog_params_1 = 1.f;
 
 		m_depth_test_enabled = false;
-		m_depth_func = rsx::comparaison_function::less;
+		m_depth_func = rsx::comparison_function::less;
 		m_depth_write_enabled = true;
 
 		m_poly_offset_scale = 0.f;
@@ -876,7 +876,7 @@ namespace rsx
 
 		m_context_dma_report = rsx::blit_engine::context_dma::to_memory_get_report;
 		m_two_side_light_enabled = true;
-		m_alpha_func = rsx::comparaison_function::always;
+		m_alpha_func = rsx::comparison_function::always;
 
 		// Reset vertex attrib array
 		for (int i = 0; i < 16; i++)

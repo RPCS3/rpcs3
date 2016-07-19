@@ -792,20 +792,20 @@ rsx::window_pixel_center rsx::to_window_pixel_center(u8 in)
 	throw EXCEPTION("Unknown window pixel center 0x%x", in);
 }
 
-rsx::comparaison_function rsx::to_comparaison_function(u16 in)
+rsx::comparison_function rsx::to_comparison_function(u16 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_NEVER: return rsx::comparaison_function::never;
-	case CELL_GCM_LESS: return rsx::comparaison_function::less;
-	case CELL_GCM_EQUAL: return rsx::comparaison_function::equal;
-	case CELL_GCM_LEQUAL: return rsx::comparaison_function::less_or_equal;
-	case CELL_GCM_GREATER: return rsx::comparaison_function::greater;
-	case CELL_GCM_NOTEQUAL: return rsx::comparaison_function::not_equal;
-	case CELL_GCM_GEQUAL: return rsx::comparaison_function::greater_or_equal;
-	case CELL_GCM_ALWAYS: return rsx::comparaison_function::always;
+	case CELL_GCM_NEVER: return rsx::comparison_function::never;
+	case CELL_GCM_LESS: return rsx::comparison_function::less;
+	case CELL_GCM_EQUAL: return rsx::comparison_function::equal;
+	case CELL_GCM_LEQUAL: return rsx::comparison_function::less_or_equal;
+	case CELL_GCM_GREATER: return rsx::comparison_function::greater;
+	case CELL_GCM_NOTEQUAL: return rsx::comparison_function::not_equal;
+	case CELL_GCM_GEQUAL: return rsx::comparison_function::greater_or_equal;
+	case CELL_GCM_ALWAYS: return rsx::comparison_function::always;
 	}
-	throw EXCEPTION("Unknown comparaison function 0x%x", in);
+	throw EXCEPTION("Unknown comparison function 0x%x", in);
 }
 
 enum
@@ -854,18 +854,18 @@ std::string print_boolean(bool b)
 	}
 }
 
-std::string print_comparaison_function(comparaison_function f)
+std::string print_comparison_function(comparison_function f)
 {
 	switch (f)
 	{
-	case comparaison_function::never: return "Never";
-	case comparaison_function::less: return "Less";
-	case comparaison_function::equal: return "Equal";
-	case comparaison_function::less_or_equal: return "Less_equal";
-	case comparaison_function::greater: return "Greater";
-	case comparaison_function::not_equal: return "Not_equal";
-	case comparaison_function::greater_or_equal: return "Greater_equal";
-	case comparaison_function::always: return "Always";
+	case comparison_function::never: return "Never";
+	case comparison_function::less: return "Less";
+	case comparison_function::equal: return "Equal";
+	case comparison_function::less_or_equal: return "Less_equal";
+	case comparison_function::greater: return "Greater";
+	case comparison_function::not_equal: return "Not_equal";
+	case comparison_function::greater_or_equal: return "Greater_equal";
+	case comparison_function::always: return "Always";
 	}
 	throw;
 }

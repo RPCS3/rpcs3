@@ -189,7 +189,7 @@ void Emulator::Load()
 			}
 		}
 
-		ResetInfo();
+		SetCPUThreadStop(0);
 
 		LOG_NOTICE(LOADER, "Path: %s", m_path);
 

@@ -118,6 +118,8 @@ extern void sys_initialize_tls(PPUThread&, u64, u32, u32, u32);
 
 extern void ppu_initialize(const std::string& name, const std::vector<ppu_function>& set, u32 entry);
 
+extern u32 g_ps3_sdk_version;
+
 // Function lookup table. Not supposed to grow after emulation start.
 std::vector<ppu_function_t> g_ppu_function_cache;
 
@@ -946,6 +948,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Functions
 	std::vector<ppu_function> exec_set;
 
+	// TLS information
+	u32 tls_vaddr{0}, tls_fsize{0}, tls_vsize{0};
+
+	// Process information
+	u32 sdk_version = 0x360001;
+	s32 primary_prio = 0x50;
+	u32 primary_stacksize = 0x100000;
+	u32 malloc_pagesize = 0x100000;
+
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
 	{
@@ -992,13 +1003,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		case 0x00000007: //TLS
 		{
-			const u32 addr = vm::cast(prog.p_vaddr, HERE);
-			const u32 filesz = fmt::narrow<u32>("Invalid p_filesz (0x%llx)" HERE, prog.p_filesz);
-			const u32 memsz = fmt::narrow<u32>("Invalid p_memsz (0x%llx)" HERE, prog.p_memsz);
-			Emu.SetTLSData(addr, filesz, memsz);
-			LOG_NOTICE(LOADER, "*** TLS segment addr: 0x%08x", Emu.GetTLSAddr());
-			LOG_NOTICE(LOADER, "*** TLS segment size: 0x%08x", Emu.GetTLSFilesz());
-			LOG_NOTICE(LOADER, "*** TLS memory size: 0x%08x", Emu.GetTLSMemsz());
+			tls_vaddr = vm::cast(prog.p_vaddr, HERE);
+			tls_fsize = fmt::narrow<u32>("Invalid p_filesz (0x%llx)" HERE, prog.p_filesz);
+			tls_vsize = fmt::narrow<u32>("Invalid p_memsz (0x%llx)" HERE, prog.p_memsz);
 			break;
 		}
 
@@ -1025,20 +1032,24 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				{
 					LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", info.size, SIZE_32(process_param_t));
 				}
+
 				if (info.magic != 0x13bcc5f6)
 				{
 					LOG_ERROR(LOADER, "Bad process_param magic! [0x%x]", info.magic);
 				}
 				else
 				{
+					sdk_version = info.sdk_version;
+					primary_prio = info.primary_prio;
+					primary_stacksize = info.primary_stacksize;
+					malloc_pagesize = info.malloc_pagesize;
+
 					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
 					LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
 					LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize);
 					LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize);
 					LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
 					//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
-
-					Emu.SetParams(info.sdk_version, info.malloc_pagesize, std::max<u32>(info.primary_stacksize, 0x4000), info.primary_prio);
 				}
 			}
 			break;
@@ -1337,16 +1348,19 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Initialize recompiler
 	ppu_initialize("", exec_set, static_cast<u32>(elf.header.e_entry));
 
+	// Set SDK version
+	g_ps3_sdk_version = sdk_version;
+
 	auto ppu = idm::make_ptr<PPUThread>("main_thread");
 
 	ppu->pc = entry.addr() & -0x1000;
-	ppu->stack_size = Emu.GetPrimaryStackSize();
-	ppu->prio = Emu.GetPrimaryPrio();
+	ppu->stack_size = std::max<u32>(primary_stacksize, 0x4000);
+	ppu->prio = primary_prio;
 	ppu->cpu_init();
 
 	ppu->GPR[2] = 0xdeadbeef; // rtoc
 	ppu->GPR[11] = 0xabadcafe; // OPD ???
-	ppu->GPR[12] = Emu.GetMallocPageSize();
+	ppu->GPR[12] = malloc_pagesize;
 
 	std::initializer_list<std::string> args = { Emu.GetPath()/*, "-emu"s*/ };
 
@@ -1371,9 +1385,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	// Arguments for sys_initialize_tls()
 	ppu->GPR[7] = ppu->id;
-	ppu->GPR[8] = Emu.GetTLSAddr();
-	ppu->GPR[9] = Emu.GetTLSFilesz();
-	ppu->GPR[10] = Emu.GetTLSMemsz();
+	ppu->GPR[8] = tls_vaddr;
+	ppu->GPR[9] = tls_fsize;
+	ppu->GPR[10] = tls_vsize;
 
 	//ppu->state += cpu_state::interrupt;
 

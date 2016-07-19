@@ -129,7 +129,7 @@ namespace rsx
 
 	window_pixel_center to_window_pixel_center(u8 in);
 
-	enum class comparaison_function : u8
+	enum class comparison_function : u8
 	{
 		never,
 		less,
@@ -141,7 +141,7 @@ namespace rsx
 		always
 	};
 
-	comparaison_function to_comparaison_function(u16 in);
+	comparison_function to_comparison_function(u16 in);
 
 	enum class fog_mode : u8
 	{

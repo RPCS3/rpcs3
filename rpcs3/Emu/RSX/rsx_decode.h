@@ -90,7 +90,7 @@ namespace
 namespace rsx
 {
 	std::string print_boolean(bool b);
-	std::string print_comparaison_function(comparaison_function f);
+	std::string print_comparison_function(comparison_function f);
 	std::string print_stencil_op(stencil_op op);
 	std::string print_fog_mode(fog_mode op);
 	std::string print_logic_op(logic_op op);
@@ -1083,64 +1083,64 @@ struct registers_decoder<NV0039_OFFSET_IN>
 template<>
 struct registers_decoder<NV4097_SET_DEPTH_FUNC>
 {
-	static auto decode(u32 value) { return to_comparaison_function(value); }
+	static auto decode(u32 value) { return to_comparison_function(value); }
 
-	static void commit_rsx_state(rsx_state &state, comparaison_function &&decoded_values)
+	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
 	{
 		state.m_depth_func = decoded_values;
 	}
 
-	static std::string dump(comparaison_function &&decoded_values)
+	static std::string dump(comparison_function &&decoded_values)
 	{
-		return "Depth: compare_function = " + print_comparaison_function(decoded_values);
+		return "Depth: compare_function = " + print_comparison_function(decoded_values);
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_FUNC>
 {
-	static auto decode(u32 value) { return to_comparaison_function(value); }
+	static auto decode(u32 value) { return to_comparison_function(value); }
 
-	static void commit_rsx_state(rsx_state &state, comparaison_function &&decoded_values)
+	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
 	{
 		state.m_stencil_func = decoded_values;
 	}
 
-	static std::string dump(comparaison_function &&decoded_values)
+	static std::string dump(comparison_function &&decoded_values)
 	{
-		return "Stencil: (front) compare_function = " + print_comparaison_function(decoded_values);
+		return "Stencil: (front) compare_function = " + print_comparison_function(decoded_values);
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC>
 {
-	static auto decode(u32 value) { return to_comparaison_function(value); }
+	static auto decode(u32 value) { return to_comparison_function(value); }
 
-	static void commit_rsx_state(rsx_state &state, comparaison_function &&decoded_values)
+	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
 	{
 		state.m_back_stencil_func = decoded_values;
 	}
 
-	static std::string dump(comparaison_function &&decoded_values)
+	static std::string dump(comparison_function &&decoded_values)
 	{
-		return "Stencil: back compare_function = " + print_comparaison_function(decoded_values);
+		return "Stencil: back compare_function = " + print_comparison_function(decoded_values);
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_ALPHA_FUNC>
 {
-	static auto decode(u32 value) { return to_comparaison_function(value); }
+	static auto decode(u32 value) { return to_comparison_function(value); }
 
-	static void commit_rsx_state(rsx_state &state, comparaison_function &&decoded_values)
+	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
 	{
 		state.m_alpha_func = decoded_values;
 	}
 
-	static std::string dump(comparaison_function &&decoded_values)
+	static std::string dump(comparison_function &&decoded_values)
 	{
-		return "Alpha: compare_function = " + print_comparaison_function(decoded_values);
+		return "Alpha: compare_function = " + print_comparison_function(decoded_values);
 	}
 };
 

@@ -30,7 +30,7 @@ D3D12_STENCIL_OP get_stencil_op(rsx::stencil_op op);
 /**
  * Convert GCM comparison function code to D3D12 one.
  */
-D3D12_COMPARISON_FUNC get_compare_func(rsx::comparaison_function op);
+D3D12_COMPARISON_FUNC get_compare_func(rsx::comparison_function op);
 
 /**
  * Convert GCM texture format to an equivalent one supported by D3D12.
