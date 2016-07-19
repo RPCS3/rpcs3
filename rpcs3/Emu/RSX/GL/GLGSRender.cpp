@@ -62,18 +62,18 @@ extern CellGcmContextData current_context;
 
 namespace
 {
-	GLenum comparaison_op(rsx::comparaison_function op)
+	GLenum comparison_op(rsx::comparison_function op)
 	{
 		switch (op)
 		{
-		case rsx::comparaison_function::never: return GL_NEVER;
-		case rsx::comparaison_function::less: return GL_LESS;
-		case rsx::comparaison_function::equal: return GL_EQUAL;
-		case rsx::comparaison_function::less_or_equal: return GL_LEQUAL;
-		case rsx::comparaison_function::greater: return GL_GREATER;
-		case rsx::comparaison_function::not_equal: return GL_NOTEQUAL;
-		case rsx::comparaison_function::greater_or_equal: return GL_GEQUAL;
-		case rsx::comparaison_function::always: return GL_ALWAYS;
+		case rsx::comparison_function::never: return GL_NEVER;
+		case rsx::comparison_function::less: return GL_LESS;
+		case rsx::comparison_function::equal: return GL_EQUAL;
+		case rsx::comparison_function::less_or_equal: return GL_LEQUAL;
+		case rsx::comparison_function::greater: return GL_GREATER;
+		case rsx::comparison_function::not_equal: return GL_NOTEQUAL;
+		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
+		case rsx::comparison_function::always: return GL_ALWAYS;
 		}
 		throw;
 	}
@@ -202,7 +202,7 @@ void GLGSRender::begin()
 
 	if (__glcheck enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
-		__glcheck glDepthFunc(comparaison_op(rsx::method_registers.depth_func()));
+		__glcheck glDepthFunc(comparison_op(rsx::method_registers.depth_func()));
 		__glcheck glDepthMask(rsx::method_registers.depth_write_enabled());
 	}
 
@@ -246,14 +246,14 @@ void GLGSRender::begin()
 	
 	if (__glcheck enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
 	{
-		__glcheck glStencilFunc(comparaison_op(rsx::method_registers.stencil_func()), rsx::method_registers.stencil_func_ref(),
+		__glcheck glStencilFunc(comparison_op(rsx::method_registers.stencil_func()), rsx::method_registers.stencil_func_ref(),
 			rsx::method_registers.stencil_func_mask());
 		__glcheck glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
 			stencil_op(rsx::method_registers.stencil_op_zpass()));
 
 		if (rsx::method_registers.two_sided_stencil_test_enabled()) {
 			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
-			__glcheck glStencilFuncSeparate(GL_BACK, comparaison_op(rsx::method_registers.back_stencil_func()),
+			__glcheck glStencilFuncSeparate(GL_BACK, comparison_op(rsx::method_registers.back_stencil_func()),
 				rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
 			__glcheck glStencilOpSeparate(GL_BACK, stencil_op(rsx::method_registers.back_stencil_op_fail()),
 				stencil_op(rsx::method_registers.back_stencil_op_zfail()), stencil_op(rsx::method_registers.back_stencil_op_zpass()));

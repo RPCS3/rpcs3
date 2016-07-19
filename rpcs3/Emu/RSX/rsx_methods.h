@@ -166,7 +166,7 @@ namespace rsx
 
 		bool m_alpha_test_enabled : 1;
 		u8 m_alpha_ref;
-		comparaison_function m_alpha_func : 3;
+		comparison_function m_alpha_func : 3;
 
 		bool m_restart_index_enabled : 1;
 		u32 m_restart_index;
@@ -193,7 +193,7 @@ namespace rsx
 		bool m_depth_bounds_test_enabled : 1;
 		bool m_depth_test_enabled : 1;
 		bool m_depth_write_enabled : 1;
-		comparaison_function m_depth_func : 3;
+		comparison_function m_depth_func : 3;
 		f32 m_depth_bounds_min;
 		f32 m_depth_bounds_max;
 		f32 m_clip_min;
@@ -206,8 +206,8 @@ namespace rsx
 		u8 m_back_stencil_func_ref;
 		u8 m_stencil_func_mask;
 		u8 m_back_stencil_func_mask;
-		comparaison_function m_stencil_func : 3;
-		comparaison_function m_back_stencil_func : 3;
+		comparison_function m_stencil_func : 3;
+		comparison_function m_back_stencil_func : 3;
 		stencil_op m_stencil_op_fail : 3;
 		stencil_op m_stencil_op_zfail : 3;
 		stencil_op m_stencil_op_zpass : 3;
@@ -631,17 +631,17 @@ namespace rsx
 			return m_two_sided_stencil_test_enabled;
 		}
 
-		comparaison_function depth_func() const
+		comparison_function depth_func() const
 		{
 			return m_depth_func;
 		}
 
-		comparaison_function stencil_func() const
+		comparison_function stencil_func() const
 		{
 			return m_stencil_func;
 		}
 
-		comparaison_function back_stencil_func() const
+		comparison_function back_stencil_func() const
 		{
 			return m_back_stencil_func;
 		}
@@ -971,7 +971,7 @@ namespace rsx
 			return m_fog_equation;
 		}
 
-		comparaison_function alpha_func() const
+		comparison_function alpha_func() const
 		{
 			return m_alpha_func;
 		}

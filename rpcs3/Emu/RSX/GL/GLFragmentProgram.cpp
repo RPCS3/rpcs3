@@ -233,22 +233,22 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		switch (m_prog.alpha_func)
 		{
-		case rsx::comparaison_function::equal:
+		case rsx::comparison_function::equal:
 			OS << "	if (bool(alpha_test) && " << first_output_name << ".a != alpha_ref) discard;\n";
 			break;
-		case rsx::comparaison_function::not_equal:
+		case rsx::comparison_function::not_equal:
 			OS << "	if (bool(alpha_test) && " << first_output_name << ".a == alpha_ref) discard;\n";
 			break;
-		case rsx::comparaison_function::less_or_equal:
+		case rsx::comparison_function::less_or_equal:
 			OS << "	if (bool(alpha_test) && " << first_output_name << ".a > alpha_ref) discard;\n";
 			break;
-		case rsx::comparaison_function::less:
+		case rsx::comparison_function::less:
 			OS << "	if (bool(alpha_test) && " << first_output_name << ".a >= alpha_ref) discard;\n";
 			break;
-		case rsx::comparaison_function::greater:
+		case rsx::comparison_function::greater:
 			OS << "	if (bool(alpha_test) && " << first_output_name << ".a <= alpha_ref) discard;\n";
 			break;
-		case rsx::comparaison_function::greater_or_equal:
+		case rsx::comparison_function::greater_or_equal:
 			OS << "	if (bool(alpha_test) && " << first_output_name << ".a < alpha_ref) discard;\n";
 			break;
 		}
