@@ -102,21 +102,8 @@ void D3D12GSRender::load_program()
 			else
 			{
 				//All components are alpha.
-				float constant_color_as_alpha = (BlendColor[0] + BlendColor[1] + BlendColor[2]) / 3.f;
+				//If an alpha factor refers to constant_color, it only refers to the alpha component, so no need to replace it
 				BlendColor[0] = BlendColor[1] = BlendColor[2] = BlendColor[3];
-
-				if (sfactor_a == rsx::blend_factor::constant_color ||
-					dfactor_a == rsx::blend_factor::constant_color)
-				{
-					//Alpha information is about to be destroyed. Check that no alpha key requires it...
-					if (sfactor_a == rsx::blend_factor::constant_alpha ||
-						dfactor_a == rsx::blend_factor::constant_alpha)
-					{
-						color_blend_possible = false;
-					}
-					else
-						BlendColor[3] = constant_color_as_alpha;
-				}
 			}
 		}
 
