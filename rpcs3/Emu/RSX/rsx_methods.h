@@ -101,22 +101,11 @@ namespace rsx
 		* Note that behavior when both vertex array and immediate value system are disabled but vertex attrib mask
 		* request inputs is unknown.
 		*/
-		std::array<data_array_format_info, 16> register_vertex_info;
-		std::array<std::vector<u8>, 16> register_vertex_data;
+		std::array<register_vertex_data_info, 16> register_vertex_info;
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
 		rsx_state();
 		~rsx_state();
-
-		u32& operator[](size_t idx)
-		{
-			return registers[idx];
-		}
-
-		const u32& operator[](size_t idx) const
-		{
-			return registers[idx];
-		}
 
 		void decode(u32 reg, u32 value);
 

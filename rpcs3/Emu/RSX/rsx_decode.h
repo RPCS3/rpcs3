@@ -85,6 +85,21 @@ namespace
 			subreg == 2 ? "z" :
 			"w";
 	}
+
+	std::string print_vertex_attribute_format(rsx::vertex_base_type type)
+	{
+		switch (type)
+		{
+		case rsx::vertex_base_type::s1: return "Signed short normalized";
+		case rsx::vertex_base_type::f: return "Float";
+		case rsx::vertex_base_type::sf: return "Half float";
+		case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
+		case rsx::vertex_base_type::s32k: return "Signed short unormalized";
+		case rsx::vertex_base_type::cmp: return "CMP";
+		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
+		}
+		throw;
+	}
 }
 
 namespace rsx
@@ -2318,6 +2333,172 @@ struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM_LOAD>
 #define DECLARE_TRANSFORM_PROGRAM(index) NV4097_SET_TRANSFORM_PROGRAM + index,
 EXPAND_RANGE_512(0, TRANSFORM_PROGRAM)
 
+template<u32 index>
+struct vertex_array_helper
+{
+	static auto decode(u32 value)
+	{
+		u16 frequency = value >> 16;
+		u8 stride = (value >> 8) & 0xff;
+		u8 size = (value >> 4) & 0xf;
+		rsx::vertex_base_type type = rsx::to_vertex_base_type(value & 0xf);
+		return std::make_tuple(frequency, stride, size, type);
+	}
+
+	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u16, u8, u8, rsx::vertex_base_type> &&decoded_values)
+	{
+		state.vertex_arrays_info[index].frequency = std::get<0>(decoded_values);
+		state.vertex_arrays_info[index].stride = std::get<1>(decoded_values);
+		state.vertex_arrays_info[index].size = std::get<2>(decoded_values);
+		state.vertex_arrays_info[index].type = std::get<3>(decoded_values);
+	}
+
+	static std::string dump(std::tuple<u16, u8, u8, rsx::vertex_base_type> &&decoded_values)
+	{
+		if (std::get<2>(decoded_values) == 0)
+			return "(disabled)";
+
+		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(std::get<3>(decoded_values)) +
+			" size = " + std::to_string(std::get<2>(decoded_values)) +
+			" stride = " + std::to_string(std::get<1>(decoded_values)) +
+			" frequency = " + std::to_string(std::get<0>(decoded_values));
+	}
+};
+
+#define VERTEX_DATA_ARRAY_FORMAT(index) template<> struct registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index> : public vertex_array_helper<index> {};
+#define DECLARE_VERTEX_DATA_ARRAY_FORMAT(index) NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index,
+
+EXPAND_RANGE_16(0, VERTEX_DATA_ARRAY_FORMAT)
+
+template<u32 index>
+struct vertex_array_offset_helper
+{
+	static auto decode(u32 value)
+	{
+		return value;
+	}
+
+	static void commit_rsx_state(rsx::rsx_state &state, u32 &&decoded_values)
+	{
+		state.vertex_arrays_info[index].m_offset = decoded_values;
+	}
+
+	static std::string dump(u32 &&decoded_values)
+	{
+		return "Vertex array " + std::to_string(index) + ": Offset = " + std::to_string(decoded_values);
+	}
+};
+
+#define VERTEX_DATA_ARRAY_OFFSET(index) template<> struct registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index> : public vertex_array_offset_helper<index> {};
+#define DECLARE_VERTEX_DATA_ARRAY_OFFSET(index) NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index,
+
+EXPAND_RANGE_16(0, VERTEX_DATA_ARRAY_OFFSET)
+
+template<typename Type> struct vertex_data_type_from_element_type;
+template<> struct vertex_data_type_from_element_type<float> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::f; };
+template<> struct vertex_data_type_from_element_type<f16> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::sf; };
+template<> struct vertex_data_type_from_element_type<u8> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::ub; };
+template<> struct vertex_data_type_from_element_type<u16> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::s1; };
+
+template<typename type, int count>
+struct vertex_type_namer;
+
+template<int count>
+struct vertex_type_namer<f32, count>
+{
+	static std::string get()
+	{
+		return "float" + std::to_string(count);
+	}
+};
+
+template<int count>
+struct vertex_type_namer<u16, count>
+{
+	static std::string get()
+	{
+		return "short" + std::to_string(count);
+	}
+};
+
+template<>
+struct vertex_type_namer<u8, 4>
+{
+	static std::string get()
+	{
+		return "uchar4";
+	}
+};
+
+template<u32 index, typename type, int count>
+struct register_vertex_helper
+{
+	static auto decode(u32 value)
+	{
+		return value;
+	}
+
+	static const size_t increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
+
+	static const size_t attribute_index = index / increment_per_array_index;
+	static const size_t vertex_subreg = index % increment_per_array_index;
+
+	static void commit_rsx_state(rsx::rsx_state &state, u32 &&decoded_values)
+	{
+		auto& info = state.register_vertex_info[attribute_index];
+
+		info.type = vertex_data_type_from_element_type<type>::type;
+		info.size = count;
+		info.frequency = 0;
+		info.stride = 0;
+		state.register_vertex_info[attribute_index].data[vertex_subreg] = decoded_values;
+	}
+
+	static std::string dump(u32&& decoded_values)
+	{
+		return "register vertex " + std::to_string(attribute_index) + " as " + vertex_type_namer<type, count>::get() + ": " +
+			std::to_string(decoded_values);
+	}
+};
+
+#define VERTEX_DATA4UB(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_DATA4UB_M + index> : public register_vertex_helper<index, u8, 4> {};
+#define VERTEX_DATA1F(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_DATA1F_M + index> : public register_vertex_helper<index, f32, 1> {};
+#define VERTEX_DATA2F(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_DATA2F_M + index> : public register_vertex_helper<index, f32, 2> {};
+#define VERTEX_DATA3F(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_DATA3F_M + index> : public register_vertex_helper<index, f32, 3> {};
+#define VERTEX_DATA4F(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_DATA4F_M + index> : public register_vertex_helper<index, f32, 4> {};
+#define VERTEX_DATA2S(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_DATA2S_M + index> : public register_vertex_helper<index, u16, 2> {};
+#define VERTEX_DATA4S(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_DATA4S_M + index> : public register_vertex_helper<index, u16, 4> {};
+
+#define DECLARE_VERTEX_DATA4UB(index) \
+	NV4097_SET_VERTEX_DATA4UB_M + index,
+#define DECLARE_VERTEX_DATA1F(index) \
+	NV4097_SET_VERTEX_DATA1F_M + index,
+#define DECLARE_VERTEX_DATA2F(index) \
+	NV4097_SET_VERTEX_DATA2F_M + index,
+#define DECLARE_VERTEX_DATA3F(index) \
+	NV4097_SET_VERTEX_DATA3F_M + index,
+#define DECLARE_VERTEX_DATA4F(index) \
+	NV4097_SET_VERTEX_DATA4F_M + index,
+#define DECLARE_VERTEX_DATA2S(index) \
+	NV4097_SET_VERTEX_DATA2S_M + index,
+#define DECLARE_VERTEX_DATA4S(index) \
+	NV4097_SET_VERTEX_DATA4S_M + index,
+
+EXPAND_RANGE_16(0, VERTEX_DATA4UB)
+EXPAND_RANGE_16(0, VERTEX_DATA1F)
+EXPAND_RANGE_16(0, VERTEX_DATA2F)
+EXPAND_RANGE_16(0, VERTEX_DATA3F)
+EXPAND_RANGE_16(0, VERTEX_DATA4F)
+EXPAND_RANGE_16(0, VERTEX_DATA2S)
+EXPAND_RANGE_16(0, VERTEX_DATA4S)
+
 constexpr std::integer_sequence<u32,
 	NV4097_SET_VIEWPORT_HORIZONTAL,
 	NV4097_SET_VIEWPORT_VERTICAL,
@@ -2463,10 +2644,18 @@ constexpr std::integer_sequence<u32,
 	NV4097_SET_ANTI_ALIASING_CONTROL,
 	NV4097_SET_FRONT_POLYGON_MODE,
 	NV4097_SET_BACK_POLYGON_MODE,
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_FORMAT)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_OFFSET)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4UB)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA1F)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA2F)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA3F)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4F)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA2S)
+	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4S)
 	EXPAND_RANGE_32(0, DECLARE_TRANSFORM_CONSTANT)
 	NV4097_SET_TRANSFORM_CONSTANT_LOAD,
 	EXPAND_RANGE_512(0, DECLARE_TRANSFORM_PROGRAM)
 	NV4097_SET_TRANSFORM_PROGRAM_LOAD
 > opcode_list{};
-
 } // end namespace rsx

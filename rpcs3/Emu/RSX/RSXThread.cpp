@@ -354,7 +354,6 @@ namespace rsx
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			rsx::method_registers.register_vertex_info[index].size = 0;
-			rsx::method_registers.register_vertex_data[index].clear();
 		}
 
 		if (capture_current_frame)

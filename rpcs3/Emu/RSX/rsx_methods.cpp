@@ -26,12 +26,6 @@ namespace rsx
 	rsx_state method_registers;
 	rsx_method_t methods[0x10000 >> 2]{};
 
-	template<typename Type> struct vertex_data_type_from_element_type;
-	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
-	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
-	template<> struct vertex_data_type_from_element_type<u8> { static const vertex_base_type type = vertex_base_type::ub; };
-	template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s1; };
-
 	namespace nv406e
 	{
 		force_inline void set_reference(thread* rsx, u32 arg)
@@ -72,104 +66,6 @@ namespace rsx
 			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(),
 				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
 		}
-
-		//fire only when all data passed to rsx cmd buffer
-		template<u32 id, u32 index, int count, typename type>
-		force_inline void set_vertex_data_impl(thread* rsx, u32 arg)
-		{
-			static const size_t element_size = (count * sizeof(type));
-			static const size_t element_size_in_words = element_size / sizeof(u32);
-
-			auto& info = rsx::method_registers.register_vertex_info[index];
-
-			info.type = vertex_data_type_from_element_type<type>::type;
-			info.size = count;
-			info.frequency = 0;
-			info.stride = 0;
-
-			auto& entry = rsx::method_registers.register_vertex_data[index];
-
-			//find begin of data
-			size_t begin = id + index * element_size_in_words;
-
-			size_t position = entry.size();
-			entry.resize(position + element_size);
-
-			memcpy(entry.data() + position, &method_registers[begin], element_size);
-		}
-
-		template<u32 index>
-		struct set_vertex_data4ub_m
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
-			}
-		};
-
-		template<u32 index>
-		struct set_vertex_data1f_m
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
-			}
-		};
-
-		template<u32 index>
-		struct set_vertex_data2f_m
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, f32>(rsx, arg);
-			}
-		};
-
-		template<u32 index>
-		struct set_vertex_data3f_m
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, f32>(rsx, arg);
-			}
-		};
-
-		template<u32 index>
-		struct set_vertex_data4f_m
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, f32>(rsx, arg);
-			}
-		};
-
-		template<u32 index>
-		struct set_vertex_data2s_m
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
-			}
-		};
-
-		template<u32 index>
-		struct set_vertex_data4s_m
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
-			}
-		};
-
-		template<u32 index>
-		struct set_vertex_data_array_format
-		{
-			force_inline static void impl(thread* rsx, u32 arg)
-			{
-				auto& info = rsx::method_registers.vertex_arrays_info[index];
-				info.unpack_array(arg);
-			}
-		};
 
 		force_inline void draw_arrays(thread* rsx, u32 arg)
 		{
@@ -221,10 +117,8 @@ namespace rsx
 
 				if (vertex_info.size > 0)
 				{
-					auto &vertex_data = rsx::method_registers.register_vertex_data[index];
-
 					u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-					u32 element_count = vertex_data.size() / element_size;
+					u32 element_count = vertex_info.size;
 
 					vertex_info.frequency = element_count;
 
@@ -763,9 +657,7 @@ namespace rsx
 
 	rsx_state::rsx_state() :
 		fragment_textures(fill_array<texture>(registers, std::make_index_sequence<16>())),
-		vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
-		register_vertex_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>())),
-		vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
+		vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>()))
 	{
 
 	}
@@ -1033,14 +925,6 @@ namespace
 			bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 			bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 			bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
-			bind_range<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nv4097::set_vertex_data_array_format>();
-			bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
-			bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA2F_M + 1, 2, 16, nv4097::set_vertex_data2f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA3F_M + 2, 3, 16, nv4097::set_vertex_data3f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA4F_M + 3, 4, 16, nv4097::set_vertex_data4f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
-			bind_range<NV4097_SET_VERTEX_DATA4S_M + 1, 2, 16, nv4097::set_vertex_data4s_m>();
 			bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
 			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
 			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
