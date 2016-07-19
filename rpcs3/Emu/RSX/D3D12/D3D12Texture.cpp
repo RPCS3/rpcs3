@@ -59,7 +59,7 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, texture.width(), texture.height(), texture.depth(), texture.get_exact_mipmap_count());
 		}
-		throw EXCEPTION("Unknow texture dimension");
+		throw EXCEPTION("Unknown texture dimension");
 	}
 }
 

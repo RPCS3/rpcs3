@@ -25,7 +25,7 @@ namespace
 		case rsx::surface_depth_format::z16: return 0xFFFF;
 		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
 		}
-		throw EXCEPTION("Unknow depth format");
+		throw EXCEPTION("Unknown depth format");
 	}
 
 	UINT get_num_rtt(rsx::surface_target color_target)
@@ -39,7 +39,7 @@ namespace
 		case rsx::surface_target::surfaces_a_b_c: return 3;
 		case rsx::surface_target::surfaces_a_b_c_d: return 4;
 		}
-		throw EXCEPTION("Wrong color_target (%d)", color_target);
+		throw EXCEPTION("Unknown color target");
 	}
 
 	std::vector<u8> get_rtt_indexes(rsx::surface_target color_target)
@@ -53,7 +53,7 @@ namespace
 		case rsx::surface_target::surfaces_a_b_c: return{ 0, 1, 2 };
 		case rsx::surface_target::surfaces_a_b_c_d: return{ 0, 1, 2, 3 };
 		}
-		throw EXCEPTION("Wrong color_target (%d)", color_target);
+		throw EXCEPTION("Unknown color target");
 	}
 
 	u8 get_clear_stencil(u32 register_value)
@@ -80,7 +80,7 @@ namespace
 		case rsx::surface_color_format::w16z16y16x16: return align(width * 8, 256);
 		case rsx::surface_color_format::w32z32y32x32: return align(width * 16, 256);
 		}
-		throw EXCEPTION("Unknow color surface format");
+		throw EXCEPTION("Unknown color surface format");
 	}
 
 	size_t get_packed_pitch(rsx::surface_color_format format, u32 width)
@@ -102,7 +102,7 @@ namespace
 		case rsx::surface_color_format::w16z16y16x16: return width * 8;
 		case rsx::surface_color_format::w32z32y32x32: return width * 16;
 		}
-		throw EXCEPTION("Unknow color surface format");
+		throw EXCEPTION("Unknown color surface format");
 	}
 }
 
