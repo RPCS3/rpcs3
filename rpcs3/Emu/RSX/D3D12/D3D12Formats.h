@@ -36,22 +36,22 @@ D3D12_COMPARISON_FUNC get_compare_func(rsx::comparison_function op);
  * Convert GCM texture format to an equivalent one supported by D3D12.
  * Destination format may require a byte swap or data conversion.
  */
-DXGI_FORMAT get_texture_format(u8 format);
+DXGI_FORMAT get_texture_format(rsx::texture::format format);
 
 /**
  * Convert texture aniso value to UINT.
  */
-UINT get_texture_max_aniso(rsx::texture_max_anisotropy aniso);
+UINT get_texture_max_aniso(rsx::texture::max_anisotropy aniso);
 
 /**
  * Convert texture wrap mode to D3D12_TEXTURE_ADDRESS_MODE
  */
-D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture_wrap_mode wrap);
+D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture::wrap_mode wrap);
 
 /**
  * Convert minify and magnify filter to D3D12_FILTER
  */
-D3D12_FILTER get_texture_filter(rsx::texture_minify_filter min_filter, rsx::texture_magnify_filter mag_filter);
+D3D12_FILTER get_texture_filter(rsx::texture::minify_filter min_filter, rsx::texture::magnify_filter mag_filter);
 
 /**
  * Convert draw mode to D3D12_PRIMITIVE_TOPOLOGY

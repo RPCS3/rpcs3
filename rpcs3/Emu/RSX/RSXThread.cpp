@@ -761,7 +761,7 @@ namespace rsx
 				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
 			else
 				texture_dimensions[i] = rsx::method_registers.fragment_textures[i].get_extended_texture_dimension();
-			if (rsx::method_registers.fragment_textures[i].enabled() && (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN))
+			if (rsx::method_registers.fragment_textures[i].enabled() && (rsx::method_registers.fragment_textures[i].normalization() == rsx::texture::coordinates::unnormalized))
 				result.unnormalized_coords |= (1 << i);
 		}
 		result.set_texture_dimension(texture_dimensions);
@@ -820,7 +820,7 @@ namespace rsx
 			}
 
 			result.state.textures_alpha_kill[index] = rsx::method_registers.fragment_textures[index].alpha_kill_enabled() ? 1 : 0;
-			result.state.textures_zfunc[index] = rsx::method_registers.fragment_textures[index].zfunc();
+//			result.state.textures_zfunc[index] = rsx::method_registers.fragment_textures[index].zfunc();
 
 			switch (rsx::method_registers.fragment_textures[index].get_extended_texture_dimension())
 			{

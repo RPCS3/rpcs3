@@ -649,15 +649,9 @@ namespace rsx
 		}
 	}
 
-	template<typename T, size_t... N, typename Args>
-	std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...> seq)
-	{
-		return{ T(N, std::forward<Args>(arg))... };
-	}
-
 	rsx_state::rsx_state() :
-		fragment_textures(fill_array<texture>(registers, std::make_index_sequence<16>())),
-		vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>()))
+		fragment_textures({}),
+		vertex_textures({})
 	{
 
 	}
@@ -669,9 +663,6 @@ namespace rsx
 
 	void rsx_state::reset()
 	{
-		//setup method registers
-		std::memset(registers.data(), 0, registers.size() * sizeof(u32));
-
 		m_primitive_type = primitive_type::triangles;
 		m_transform_program_pointer = 0;
 
@@ -777,15 +768,8 @@ namespace rsx
 		}
 
 		// Construct Textures
-		for (int i = 0; i < 16; i++)
-		{
-			fragment_textures[i].init(i);
-		}
-
-		for (int i = 0; i < 4; i++)
-		{
-			vertex_textures[i].init(i);
-		}
+		std::for_each(fragment_textures.begin(), fragment_textures.end(), [](auto &tex) { tex.init(); });
+		std::for_each(vertex_textures.begin(), vertex_textures.end(), [](auto &tex) { tex.init(); });
 	}
 
 namespace
@@ -804,8 +788,6 @@ namespace
 		const auto &It = reg_decoder.find(reg);
 		if (It != reg_decoder.end())
 			(It->second)(*this, value);
-		else
-			registers[reg] = value;
 	}
 
 	struct __rsx_methods_t

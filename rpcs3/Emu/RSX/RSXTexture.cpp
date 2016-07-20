@@ -6,103 +6,130 @@
 
 namespace rsx
 {
-	texture::texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r)
+	void texture_t::init()
 	{
-
-	}
-
-	void texture::init(u8 index)
-	{
-		m_index = index;
-
 		// Offset
-		registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)] = 0;
+		m_offset = 0;
 
 		// Format
-		registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] = 0;
+		//registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] = 0;
 
 		// Address
-		registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] =
-			((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) |
-			((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
+		m_aniso_bias = 0;
+		m_unsigned_remap = rsx::texture::unsigned_remap::normal;
+		m_signed_remap = rsx::texture::signed_remap::normal;
+		m_gamma_a = false;
+		m_gamma_b = false;
+		m_gamma_r = false;
+		m_gamma_g = false;
+		m_zfunc = rsx::texture::zfunc::never;
+		m_wrap_r = rsx::texture::wrap_mode::wrap;
+		m_wrap_s = rsx::texture::wrap_mode::wrap;
+		m_wrap_t = rsx::texture::wrap_mode::wrap;
 
 		// Control0
-		registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] =
-			(((/*alphakill*/0) << 2) | (/*maxaniso*/0) << 4) | ((/*maxlod*/0xc00) << 7) | ((/*minlod*/0) << 19) | ((/*enable*/0) << 31);
+		m_alpha_kill_enabled = false;
+		m_max_aniso = rsx::texture::max_anisotropy::x1;
+		m_max_lod = 3072;
+		m_min_lod = 0;
+		m_enabled = false;
 
 		// Control1
-		registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)] = 0xE4;
+		m_remap_0 = rsx::texture::component_remap::A;
+		m_remap_1 = rsx::texture::component_remap::R;
+		m_remap_2 = rsx::texture::component_remap::G;
+		m_remap_3 = rsx::texture::component_remap::B;
 
 		// Filter
-		registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] =
-			((/*bias*/0) | ((/*conv*/1) << 13) | ((/*min*/5) << 16) | ((/*mag*/2) << 24)
-			| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
+		m_bias = 0;
+		m_convolution_filter = 1;
+		m_min_filter = rsx::texture::minify_filter::nearest_linear;
+		m_mag_filter = rsx::texture::magnify_filter::linear;
+		m_a_signed = false;
+		m_r_signed = false;
+		m_b_signed = false;
+		m_g_signed = false;
 
 		// Image Rect
-		registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)] = (/*height*/1) | ((/*width*/1) << 16);
+		m_width = 1;
+		m_height = 1;
+
+		m_depth = 1;
 
 		// Border Color
-		registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)] = 0;
+		m_border_color_a = 0;
+		m_border_color_b = 0;
+		m_border_color_g = 0;
+		m_border_color_r = 0;
 	}
 
-	u32 texture::offset() const
+	u32 texture_t::offset() const
 	{
-		return registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)];
+		return m_offset;
 	}
 
-	u8 texture::location() const
+	u8 texture_t::location() const
 	{
-		return (registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] & 0x3) - 1;
+		return m_location;
 	}
 
-	bool texture::cubemap() const
+	bool texture_t::cubemap() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 2) & 0x1);
+		return m_cubemap;
 	}
 
-	u8 texture::border_type() const
+	rsx::texture::border_type texture_t::border_type() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 3) & 0x1);
+		return m_border_type;
 	}
 
-	rsx::texture_dimension texture::dimension() const
+	rsx::texture::dimension texture_t::dimension() const
 	{
-		return rsx::to_texture_dimension((registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
+		return m_dimension;
 	}
 
-	rsx::texture_dimension_extended texture::get_extended_texture_dimension() const
+	rsx::texture_dimension_extended texture_t::get_extended_texture_dimension() const
 	{
 		switch (dimension())
 		{
-		case rsx::texture_dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
-		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
-		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture::dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
+		case rsx::texture::dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture::dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
 
 		default: ASSUME(0);
 		}
 	}
 
-	u8 texture::format() const
+	rsx::texture::format texture_t::format() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 8) & 0xff);
+		return m_format;
 	}
 
-	bool texture::is_compressed_format() const
+	rsx::texture::layout texture_t::layout() const
 	{
-		int texture_format = format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-		if (texture_format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 ||
-			texture_format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 ||
-			texture_format == CELL_GCM_TEXTURE_COMPRESSED_DXT45)
+		return m_layout;
+	}
+
+	rsx::texture::coordinates texture_t::normalization() const
+	{
+		return m_normalization;
+	}
+
+	bool texture_t::is_compressed_format() const
+	{
+		if (format() == rsx::texture::format::compressed_dxt1 ||
+			format() == rsx::texture::format::compressed_dxt23 ||
+			format() == rsx::texture::format::compressed_dxt45)
 			return true;
 		return false;
 	}
 
-	u16 texture::mipmap() const
+	u16 texture_t::mipmap() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 16) & 0xffff);
+		return m_mipmap;
 	}
 
-	u16 texture::get_exact_mipmap_count() const
+	u16 texture_t::get_exact_mipmap_count() const
 	{
 		if (is_compressed_format())
 		{
@@ -115,345 +142,399 @@ namespace rsx
 		return std::min(mipmap(), max_mipmap_count);
 	}
 
-	rsx::texture_wrap_mode texture::wrap_s() const
+	rsx::texture::wrap_mode texture_t::wrap_s() const
 	{
-		return rsx::to_texture_wrap_mode((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);
+		return m_wrap_s;
 	}
 
-	rsx::texture_wrap_mode texture::wrap_t() const
+	rsx::texture::wrap_mode texture_t::wrap_t() const
 	{
-		return rsx::to_texture_wrap_mode((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 8) & 0xf);
+		return m_wrap_t;
 	}
 
-	rsx::texture_wrap_mode texture::wrap_r() const
+	rsx::texture::wrap_mode texture_t::wrap_r() const
 	{
-		return rsx::to_texture_wrap_mode((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 16) & 0xf);
+		return m_wrap_r;
 	}
 
-	u8 texture::unsigned_remap() const
+	rsx::texture::unsigned_remap texture_t::unsigned_remap() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 12) & 0xf);
+		return m_unsigned_remap;
 	}
 
-	u8 texture::zfunc() const
+	rsx::texture::zfunc texture_t::zfunc() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
+		return m_zfunc;
 	}
 
-	u8 texture::gamma() const
+	u8 texture_t::aniso_bias() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 20) & 0xf);
+		return m_aniso_bias;
 	}
 
-	u8 texture::aniso_bias() const
+	rsx::texture::signed_remap texture_t::signed_remap() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 4) & 0xf);
+		return m_signed_remap;
 	}
 
-	u8 texture::signed_remap() const
+	bool texture_t::enabled() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 24) & 0xf);
+		return m_enabled;
 	}
 
-	bool texture::enabled() const
+	u16  texture_t::min_lod() const
 	{
-		return location() <= 1 && ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
+		return m_min_lod;
 	}
 
-	u16  texture::min_lod() const
+	u16  texture_t::max_lod() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 19) & 0xfff);
+		return m_max_lod;
 	}
 
-	u16  texture::max_lod() const
+	rsx::texture::max_anisotropy texture_t::max_aniso() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
+		return m_max_aniso;
 	}
 
-	rsx::texture_max_anisotropy   texture::max_aniso() const
+	bool texture_t::alpha_kill_enabled() const
 	{
-		return rsx::to_texture_max_anisotropy((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
+		return m_alpha_kill_enabled;
 	}
 
-	bool texture::alpha_kill_enabled() const
+	rsx::texture::component_remap texture_t::remap_0() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 2) & 0x1);
+		return m_remap_0;
 	}
 
-	u32 texture::remap() const
+	rsx::texture::component_remap texture_t::remap_1() const
 	{
-		return (registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)]);
+		return m_remap_1;
 	}
 
-	float texture::bias() const
+	rsx::texture::component_remap texture_t::remap_2() const
 	{
-		return float(f16((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff));
+		return m_remap_2;
 	}
 
-	rsx::texture_minify_filter texture::min_filter() const
+	rsx::texture::component_remap texture_t::remap_3() const
 	{
-		return rsx::to_texture_minify_filter((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
+		return m_remap_3;
 	}
 
-	rsx::texture_magnify_filter texture::mag_filter() const
+	float texture_t::bias() const
 	{
-		return rsx::to_texture_magnify_filter((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
+		return float(f16(m_bias));
 	}
 
-	u8 texture::convolution_filter() const
+	rsx::texture::minify_filter texture_t::min_filter() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 13) & 0xf);
+		return m_min_filter;
 	}
 
-	bool texture::a_signed() const
+	rsx::texture::magnify_filter texture_t::mag_filter() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 28) & 0x1);
+		return m_mag_filter;
 	}
 
-	bool texture::r_signed() const
+	u8 texture_t::convolution_filter() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 29) & 0x1);
+		return m_convolution_filter;
 	}
 
-	bool texture::g_signed() const
+	bool texture_t::a_signed() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 30) & 0x1);
+		return m_a_signed;
 	}
 
-	bool texture::b_signed() const
+	bool texture_t::r_signed() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 31) & 0x1);
+		return m_r_signed;
 	}
 
-	u16 texture::width() const
+	bool texture_t::g_signed() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)] >> 16) & 0xffff);
+		return m_g_signed;
 	}
 
-	u16 texture::height() const
+	bool texture_t::b_signed() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff);
+		return m_b_signed;
 	}
 
-	u32 texture::border_color() const
+	u16 texture_t::width() const
 	{
-		return registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)];
+		return m_width;
 	}
 
-	u16 texture::depth() const
+	u16 texture_t::height() const
 	{
-		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20;
+		return m_height;
 	}
 
-	u32 texture::pitch() const
+	u8 texture_t::border_color_a() const
 	{
-		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] & 0xfffff;
+		return m_border_color_a;
 	}
 
-	vertex_texture::vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r)
+	u8 texture_t::border_color_r() const
+	{
+		return m_border_color_r;
+	}
+
+	u8 texture_t::border_color_g() const
+	{
+		return m_border_color_g;
+	}
+
+	u8 texture_t::border_color_b() const
+	{
+		return m_border_color_b;
+	}
+
+	u16 texture_t::depth() const
+	{
+		return m_depth;
+	}
+
+	u32 texture_t::pitch() const
+	{
+		return m_pitch;
+	}
+
+	vertex_texture_t::vertex_texture_t()
 	{
 
 	}
 
-	void vertex_texture::init(u8 index)
+	void vertex_texture_t::init()
 	{
-		m_index = index;
-
 		// Offset
-		registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)] = 0;
+		m_offset = 0;
 
 		// Format
-		registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] = 0;
+		//registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] = 0;
 
 		// Address
-		registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] =
-			((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) |
-			((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
+		m_aniso_bias = 0;
+		m_unsigned_remap = rsx::texture::unsigned_remap::normal;
+		m_signed_remap = rsx::texture::signed_remap::normal;
+		m_gamma_a = false;
+		m_gamma_b = false;
+		m_gamma_r = false;
+		m_gamma_g = false;
+		m_zfunc = rsx::texture::zfunc::never;
 
 		// Control0
-		registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] =
-			(((/*alphakill*/0) << 2) | (/*maxaniso*/0) << 4) | ((/*maxlod*/0xc00) << 7) | ((/*minlod*/0) << 19) | ((/*enable*/0) << 31);
+		m_alpha_kill_enabled = false;
+		m_max_aniso = rsx::texture::max_anisotropy::x1;
+		m_max_lod = 3072;
+		m_min_lod = 0;
+		m_enabled = false;
 
 		// Control1
-		//registers[NV4097_SET_VERTEX_TEXTURE_CONTROL1 + (m_index * 8)] = 0xE4;
+		m_remap_0 = rsx::texture::component_remap::A;
+		m_remap_1 = rsx::texture::component_remap::R;
+		m_remap_2 = rsx::texture::component_remap::G;
+		m_remap_3 = rsx::texture::component_remap::B;
 
 		// Filter
-		registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] =
-			((/*bias*/0) | ((/*conv*/1) << 13) | ((/*min*/5) << 16) | ((/*mag*/2) << 24)
-			| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
+		m_bias = 0;
+		m_convolution_filter = 1;
+		m_min_filter = rsx::texture::minify_filter::nearest_linear;
+		m_mag_filter = rsx::texture::magnify_filter::linear;
+		m_a_signed = false;
+		m_r_signed = false;
+		m_b_signed = false;
+		m_g_signed = false;
 
 		// Image Rect
-		registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)] = (/*height*/1) | ((/*width*/1) << 16);
+		m_width = 1;
+		m_height = 1;
+		m_depth = 1;
 
 		// Border Color
-		registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + (m_index * 8)] = 0;
+		m_border_color_a = 0;
+		m_border_color_b = 0;
+		m_border_color_g = 0;
+		m_border_color_r = 0;
 	}
 
-	u32 vertex_texture::offset() const
+	u32 vertex_texture_t::offset() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)];
+		return m_offset;
 	}
 
-	u8 vertex_texture::location() const
+	u8 vertex_texture_t::location() const
 	{
-		return (registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] & 0x3) - 1;
+		return m_location;
 	}
 
-	bool vertex_texture::cubemap() const
+	bool vertex_texture_t::cubemap() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 2) & 0x1);
+		return m_cubemap;
 	}
 
-	u8 vertex_texture::border_type() const
+	rsx::texture::border_type vertex_texture_t::border_type() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 3) & 0x1);
+		return m_border_type;
 	}
 
-	rsx::texture_dimension vertex_texture::dimension() const
+	rsx::texture::dimension vertex_texture_t::dimension() const
 	{
-		return rsx::to_texture_dimension((registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
+		return m_dimension;
 	}
 
-	rsx::texture_dimension_extended vertex_texture::get_extended_texture_dimension() const
+	rsx::texture_dimension_extended vertex_texture_t::get_extended_texture_dimension() const
 	{
 		switch (dimension())
 		{
-		case rsx::texture_dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
-		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
-		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture::dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
+		case rsx::texture::dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture::dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
 
 		default: ASSUME(0);
 		}
 	}
 
-	u8 vertex_texture::format() const
+	rsx::texture::format vertex_texture_t::format() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 8) & 0xff);
+		return m_format;
 	}
 
-	u16 vertex_texture::mipmap() const
+	rsx::texture::layout vertex_texture_t::layout() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 16) & 0xffff);
+		return m_layout;
 	}
 
-	u16 vertex_texture::get_exact_mipmap_count() const
+	rsx::texture::coordinates vertex_texture_t::normalization() const
+	{
+		return rsx::texture::coordinates();
+	}
+
+	u16 vertex_texture_t::mipmap() const
+	{
+		return m_mipmap;
+	}
+
+	u16 vertex_texture_t::get_exact_mipmap_count() const
 	{
 		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
 		return std::min(mipmap(), max_mipmap_count);
 	}
 
-	u8 vertex_texture::unsigned_remap() const
+	rsx::texture::unsigned_remap vertex_texture_t::unsigned_remap() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 12) & 0xf);
+		return m_unsigned_remap;
 	}
 
-	u8 vertex_texture::zfunc() const
+	rsx::texture::zfunc vertex_texture_t::zfunc() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
+		return m_zfunc;
 	}
 
-	u8 vertex_texture::gamma() const
+	u8 vertex_texture_t::gamma() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 20) & 0xf);
+		return m_gamma_a;
 	}
 
-	u8 vertex_texture::aniso_bias() const
+	u8 vertex_texture_t::aniso_bias() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 4) & 0xf);
+		return m_aniso_bias;
 	}
 
-	u8 vertex_texture::signed_remap() const
+	rsx::texture::signed_remap vertex_texture_t::signed_remap() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 24) & 0xf);
+		return m_signed_remap;
 	}
 
-	bool vertex_texture::enabled() const
+	bool vertex_texture_t::enabled() const
 	{
-		return location() <= 1 && ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
+		return m_enabled;
 	}
 
-	u16 vertex_texture::min_lod() const
+	u16 vertex_texture_t::min_lod() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 19) & 0xfff);
+		return m_min_lod;
 	}
 
-	u16 vertex_texture::max_lod() const
+	u16 vertex_texture_t::max_lod() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
+		return m_max_lod;
 	}
 
-	rsx::texture_max_anisotropy vertex_texture::max_aniso() const
+	rsx::texture::max_anisotropy vertex_texture_t::max_aniso() const
 	{
-		return rsx::to_texture_max_anisotropy((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
+		return m_max_aniso;
 	}
 
-	bool vertex_texture::alpha_kill_enabled() const
+	bool vertex_texture_t::alpha_kill_enabled() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 2) & 0x1);
+		return m_alpha_kill_enabled;
 	}
 
-	u16 vertex_texture::bias() const
+	u16 vertex_texture_t::bias() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return m_bias;
 	}
 
-	rsx::texture_minify_filter vertex_texture::min_filter() const
+	rsx::texture::minify_filter vertex_texture_t::min_filter() const
 	{
-		return rsx::to_texture_minify_filter((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
+		return m_min_filter;
 	}
 
-	rsx::texture_magnify_filter vertex_texture::mag_filter() const
+	rsx::texture::magnify_filter vertex_texture_t::mag_filter() const
 	{
-		return rsx::to_texture_magnify_filter((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
+		return m_mag_filter;
 	}
 
-	u8 vertex_texture::convolution_filter() const
+	u8 vertex_texture_t::convolution_filter() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 13) & 0xf);
+		return m_convolution_filter;
 	}
 
-	bool vertex_texture::a_signed() const
+	bool vertex_texture_t::a_signed() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 28) & 0x1);
+		return m_a_signed;
 	}
 
-	bool vertex_texture::r_signed() const
+	bool vertex_texture_t::r_signed() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 29) & 0x1);
+		return m_r_signed;
 	}
 
-	bool vertex_texture::g_signed() const
+	bool vertex_texture_t::g_signed() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 30) & 0x1);
+		return m_g_signed;
 	}
 
-	bool vertex_texture::b_signed() const
+	bool vertex_texture_t::b_signed() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 31) & 0x1);
+		return m_b_signed;
 	}
 
-	u16 vertex_texture::width() const
+	u16 vertex_texture_t::width() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)] >> 16) & 0xffff);
+		return m_width;
 	}
 
-	u16 vertex_texture::height() const
+	u16 vertex_texture_t::height() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff);
+		return m_height;
 	}
 
-	u32 vertex_texture::border_color() const
+	u32 vertex_texture_t::border_color() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + (m_index * 8)];
+		return m_border_color_a;
 	}
 
-	u16 vertex_texture::depth() const
+	u16 vertex_texture_t::depth() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] >> 20;
+		return m_depth;
 	}
 
-	u32 vertex_texture::pitch() const
+	u32 vertex_texture_t::pitch() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] & 0xfffff;
+		return m_pitch;
 	}
 }

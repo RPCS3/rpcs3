@@ -667,9 +667,9 @@ void VKGSRender::end()
 			m_sampler_to_clean.push_back(std::make_unique<vk::sampler>(
 				*m_device,
 				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
-				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
+				rsx::method_registers.fragment_textures[i].normalization() == rsx::texture::coordinates::unnormalized,
 				rsx::method_registers.fragment_textures[i].bias(), vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), rsx::method_registers.fragment_textures[i].min_lod(), rsx::method_registers.fragment_textures[i].max_lod(),
-				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color())
+				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color_a())
 				));
 			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 		}

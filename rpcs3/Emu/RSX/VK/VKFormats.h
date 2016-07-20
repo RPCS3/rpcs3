@@ -18,10 +18,10 @@ namespace vk
 	VkCullModeFlags get_cull_face(u32 cfv);
 	VkBorderColor get_border_color(u8 color);
 
-	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter);
-	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter);
-	VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap);
-	float max_aniso(rsx::texture_max_anisotropy gcm_aniso);
-	VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask);
+	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture::minify_filter min_filter);
+	VkFilter get_mag_filter(rsx::texture::magnify_filter mag_filter);
+	VkSamplerAddressMode vk_wrap_mode(rsx::texture::wrap_mode gcm_wrap);
+	float max_aniso(rsx::texture::max_anisotropy gcm_aniso);
+	VkComponentMapping get_component_mapping(rsx::texture::format format, rsx::texture::component_remap remap_0, rsx::texture::component_remap remap_1, rsx::texture::component_remap remap_2, rsx::texture::component_remap remap_3);
 	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type& mode, bool &requires_modification);
 }

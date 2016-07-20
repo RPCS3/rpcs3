@@ -3,8 +3,8 @@
 
 namespace rsx
 {
-	class vertex_texture;
-	class texture;
+	class vertex_texture_t;
+	class texture_t;
 
 	namespace gl
 	{
@@ -16,9 +16,9 @@ namespace rsx
 		public:
 			void create();
 
-			int gl_wrap(rsx::texture_wrap_mode in);
+			int gl_wrap(rsx::texture::wrap_mode in);
 
-			float max_aniso(rsx::texture_max_anisotropy aniso);
+			float max_aniso(rsx::texture::max_anisotropy aniso);
 
 			inline static u8 convert_4_to_8(u8 v)
 			{
@@ -38,8 +38,8 @@ namespace rsx
 				return (v << 2) | (v >> 4);
 			}
 
-			void init(int index, rsx::texture& tex);
-			void init(int index, rsx::vertex_texture& tex);
+			void init(int index, rsx::texture_t& tex);
+			void init(int index, rsx::vertex_texture_t& tex);
 			
 			/**
 			* If a format is marked as mandating expansion, any request to have the data uploaded to the GPU shall require that the pixel data
@@ -52,7 +52,7 @@ namespace rsx
 			* The pitch modifier changes the pitch value supplied by the rsx::texture by supplying a suitable divisor or 0 if no change is needed.
 			* The modified value, if any, is then used to supply to GL the UNPACK_ROW_LENGTH for the texture data to be supplied.
 			*/
-			static u16  get_pitch_modifier(u32 format);
+			static u16  get_pitch_modifier(rsx::texture::format format);
 			
 			void bind();
 			void unbind();
