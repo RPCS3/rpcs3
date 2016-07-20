@@ -1,10 +1,11 @@
 #pragma once
+
+#include "types.h"
 #include <string>
-#include <cstdint>
 
 namespace utils
 {
-	enum class version_type : std::uint8_t
+	enum class version_type : uint
 	{
 		pre_alpha,
 		alpha,
@@ -17,29 +18,35 @@ namespace utils
 
 	class version
 	{
-		std::uint8_t m_hi;
-		std::uint8_t m_mid;
-		std::uint8_t m_lo;
+		uint m_hi;
+		uint m_mid;
+		uint m_lo;
 		version_type m_type = version_type::release;
-		std::uint8_t m_type_index = 1;
-		std::string m_postfix;
+		uint m_type_index = 1;
+		const char* m_postfix;
 
 	public:
-		version(std::uint8_t hi, std::uint8_t mid, std::uint8_t lo = 0);
+		constexpr version(uint hi, uint mid, uint lo, version_type type, uint type_index, const char* postfix)
+			: m_hi(hi)
+			, m_mid(mid)
+			, m_lo(lo)
+			, m_type(type)
+			, m_type_index(type_index)
+			, m_postfix(postfix)
+		{
+		}
 
-		version& type(version_type type, std::uint8_t type_index = 1);
-
-		std::uint8_t hi() const
+		uint hi() const
 		{
 			return m_hi;
 		}
 
-		std::uint8_t mid() const
+		uint mid() const
 		{
 			return m_mid;
 		}
 
-		std::uint8_t lo() const
+		uint lo() const
 		{
 			return m_lo;
 		}
@@ -54,18 +61,12 @@ namespace utils
 			return m_postfix;
 		}
 
-		version& postfix(const std::string& value)
-		{
-			m_postfix = value;
-			return *this;
-		}
-
-		std::uint8_t type_index() const
+		uint type_index() const
 		{
 			return m_type_index;
 		}
 
-		std::uint16_t to_hex() const;
+		uint to_hex() const;
 		std::string to_string() const;
 	};
 }

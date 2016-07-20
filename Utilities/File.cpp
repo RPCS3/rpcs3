@@ -627,7 +627,7 @@ void fs::file::xnull() const
 
 void fs::file::xfail() const
 {
-	throw fmt::exception("Unexpected fs::error %u", g_tls_error);
+	throw fmt::exception("Unexpected fs::error %s", g_tls_error);
 }
 
 bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)

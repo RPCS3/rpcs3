@@ -195,7 +195,7 @@ bool Rpcs3App::OnInit()
 	Emu.SetCallbacks(std::move(callbacks));
 
 	TheApp = this;
-	SetAppName(_PRGNAME_);
+	SetAppName("RPCS3");
 	wxInitAllImageHandlers();
 
 	Emu.Init();

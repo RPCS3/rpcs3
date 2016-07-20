@@ -41,8 +41,6 @@ using namespace std::literals;
 // Obsolete, throw fmt::exception directly. Use 'HERE' macro, if necessary.
 #define EXCEPTION(format_str, ...) fmt::exception("%s(): " format_str HERE, __FUNCTION__, ##__VA_ARGS__)
 
-#define _PRGNAME_ "RPCS3"
-
 #include "Utilities/types.h"
 #include "Utilities/Macro.h"
 #include "Utilities/Platform.h"

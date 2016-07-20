@@ -410,7 +410,7 @@ ppu_error_code sys_fs_rmdir(vm::cptr<char> path)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return CELL_ENOENT;
-		default: sys_fs.error("sys_fs_rmdir(): unknown error %d", error);
+		default: sys_fs.error("sys_fs_rmdir(): unknown error %s", error);
 		}
 
 		return CELL_EIO; // ???
@@ -430,7 +430,7 @@ ppu_error_code sys_fs_unlink(vm::cptr<char> path)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return CELL_ENOENT;
-		default: sys_fs.error("sys_fs_unlink(): unknown error %d", error);
+		default: sys_fs.error("sys_fs_unlink(): unknown error %s", error);
 		}
 
 		return CELL_EIO; // ???
@@ -559,7 +559,7 @@ ppu_error_code sys_fs_truncate(vm::cptr<char> path, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return CELL_ENOENT;
-		default: sys_fs.error("sys_fs_truncate(): unknown error %d", error);
+		default: sys_fs.error("sys_fs_truncate(): unknown error %s", error);
 		}
 
 		return CELL_EIO; // ???
@@ -586,7 +586,7 @@ ppu_error_code sys_fs_ftruncate(u32 fd, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::ok:
-		default: sys_fs.error("sys_fs_ftruncate(): unknown error %d", error);
+		default: sys_fs.error("sys_fs_ftruncate(): unknown error %s", error);
 		}
 
 		return CELL_EIO; // ???

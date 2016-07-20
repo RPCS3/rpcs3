@@ -463,3 +463,21 @@ namespace fs
 	// Error code returned
 	extern thread_local error g_tls_error;
 }
+
+template<>
+struct unveil<fs::error>
+{
+	static inline const char* get(fs::error error)
+	{
+		switch (error)
+		{
+		case fs::error::ok: return "OK";
+
+		case fs::error::inval: return "Invalid arguments";
+		case fs::error::noent: return "Not found";
+		case fs::error::exist: return "Already exists";
+
+		default: throw error;
+		}
+	}
+};
