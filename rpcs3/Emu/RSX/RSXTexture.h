@@ -17,7 +17,7 @@ namespace rsx
 	class texture
 	{
 	protected:
-		u8 m_index;
+		const u8 m_index;
 		std::array<u32, 0x10000 / 4> &registers;
 
 	public:
@@ -25,7 +25,7 @@ namespace rsx
 		texture() = delete;
 
 		//initialize texture registers with default values
-		void init(u8 index);
+		void init();
 
 		// Offset
 		u32 offset() const;
@@ -93,7 +93,7 @@ namespace rsx
 	class vertex_texture
 	{
 	protected:
-		u8 m_index;
+		const u8 m_index;
 		std::array<u32, 0x10000 / 4> &registers;
 
 	public:
@@ -101,7 +101,7 @@ namespace rsx
 		vertex_texture() = delete;
 
 		//initialize texture registers with default values
-		void init(u8 index);
+		void init();
 
 		// Offset
 		u32 offset() const;

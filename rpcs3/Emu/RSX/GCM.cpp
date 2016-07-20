@@ -854,7 +854,7 @@ std::string print_boolean(bool b)
 	}
 }
 
-std::string print_comparison_function(comparison_function f)
+std::string to_string(comparison_function f)
 {
 	switch (f)
 	{
@@ -870,7 +870,7 @@ std::string print_comparison_function(comparison_function f)
 	throw;
 }
 
-std::string print_stencil_op(stencil_op op)
+std::string to_string(stencil_op op)
 {
 	switch (op)
 	{
@@ -885,7 +885,7 @@ std::string print_stencil_op(stencil_op op)
 	throw;
 }
 
-std::string print_fog_mode(fog_mode op)
+std::string to_string(fog_mode op)
 {
 	switch (op)
 	{
@@ -899,7 +899,7 @@ std::string print_fog_mode(fog_mode op)
 	throw;
 }
 
-std::string print_logic_op(logic_op op)
+std::string to_string(logic_op op)
 {
 	switch (op)
 	{
@@ -922,7 +922,7 @@ std::string print_logic_op(logic_op op)
 	throw;
 }
 
-std::string print_front_face(front_face op)
+std::string to_string(front_face op)
 {
 	switch (op)
 	{
@@ -932,7 +932,7 @@ std::string print_front_face(front_face op)
 	throw;
 }
 
-std::string print_cull_face(cull_face op)
+std::string to_string(cull_face op)
 {
 	switch (op)
 	{
@@ -943,7 +943,7 @@ std::string print_cull_face(cull_face op)
 	throw;
 }
 
-std::string print_surface_target(surface_target target)
+std::string to_string(surface_target target)
 {
 	switch (target)
 	{
@@ -957,7 +957,7 @@ std::string print_surface_target(surface_target target)
 	throw;
 }
 
-std::string print_primitive_mode(primitive_type draw_mode)
+std::string to_string(primitive_type draw_mode)
 {
 	switch (draw_mode)
 	{
@@ -976,7 +976,7 @@ std::string print_primitive_mode(primitive_type draw_mode)
 	throw;
 }
 
-std::string print_transfer_operation(blit_engine::transfer_operation op)
+std::string to_string(blit_engine::transfer_operation op)
 {
 	switch (op)
 	{
@@ -990,7 +990,7 @@ std::string print_transfer_operation(blit_engine::transfer_operation op)
 	throw;
 }
 
-std::string print_transfer_source_format(blit_engine::transfer_source_format op)
+std::string to_string(blit_engine::transfer_source_format op)
 {
 	switch (op)
 	{
@@ -1011,7 +1011,7 @@ std::string print_transfer_source_format(blit_engine::transfer_source_format op)
 	throw;
 }
 
-std::string print_context_surface(blit_engine::context_surface op)
+std::string to_string(blit_engine::context_surface op)
 {
 	switch (op)
 	{
@@ -1021,7 +1021,7 @@ std::string print_context_surface(blit_engine::context_surface op)
 	throw;
 }
 
-std::string print_transfer_destination_format(blit_engine::transfer_destination_format op)
+std::string to_string(blit_engine::transfer_destination_format op)
 {
 	switch (op)
 	{
@@ -1033,7 +1033,7 @@ std::string print_transfer_destination_format(blit_engine::transfer_destination_
 }
 
 
-std::string print_blend_op(blend_equation op)
+std::string to_string(blend_equation op)
 {
 	switch (op)
 	{
@@ -1049,7 +1049,7 @@ std::string print_blend_op(blend_equation op)
 	throw;
 }
 
-std::string print_blend_factor(blend_factor factor)
+std::string to_string(blend_factor factor)
 {
 	switch (factor)
 	{
@@ -1072,7 +1072,7 @@ std::string print_blend_factor(blend_factor factor)
 	throw;
 }
 
-std::string print_origin_mode(window_origin origin)
+std::string to_string(window_origin origin)
 {
 	switch (origin)
 	{
@@ -1082,7 +1082,7 @@ std::string print_origin_mode(window_origin origin)
 	throw;
 }
 
-std::string print_pixel_center_mode(window_pixel_center in)
+std::string to_string(window_pixel_center in)
 {
 	switch (in)
 	{
@@ -1092,7 +1092,7 @@ std::string print_pixel_center_mode(window_pixel_center in)
 	throw;
 }
 
-std::string print_user_clip_plane_op(user_clip_plane_op op)
+std::string to_string(user_clip_plane_op op)
 {
 	switch (op)
 	{
@@ -1105,7 +1105,7 @@ std::string print_user_clip_plane_op(user_clip_plane_op op)
 
 
 
-std::string print_depth_stencil_surface_format(surface_depth_format format)
+std::string to_string(surface_depth_format format)
 {
 	switch (format)
 	{
@@ -1115,7 +1115,7 @@ std::string print_depth_stencil_surface_format(surface_depth_format format)
 	throw;
 }
 
-std::string print_surface_antialiasing(surface_antialiasing format)
+std::string to_string(surface_antialiasing format)
 {
 	switch (format)
 	{
@@ -1127,7 +1127,7 @@ std::string print_surface_antialiasing(surface_antialiasing format)
 	throw;
 }
 
-std::string print_surface_color_format(surface_color_format format)
+std::string to_string(surface_color_format format)
 {
 	switch (format)
 	{
@@ -1149,7 +1149,7 @@ std::string print_surface_color_format(surface_color_format format)
 	throw;
 }
 
-std::string print_index_type(index_array_type arg)
+std::string to_string(index_array_type arg)
 {
 	switch (arg)
 	{
@@ -1159,7 +1159,7 @@ std::string print_index_type(index_array_type arg)
 	throw;
 }
 
-std::string print_context_dma(blit_engine::context_dma op)
+std::string to_string(blit_engine::context_dma op)
 {
 	switch (op)
 	{
@@ -1169,7 +1169,7 @@ std::string print_context_dma(blit_engine::context_dma op)
 	throw;
 }
 
-std::string print_transfer_origin(blit_engine::transfer_origin op)
+std::string to_string(blit_engine::transfer_origin op)
 {
 	switch (op)
 	{
@@ -1179,7 +1179,7 @@ std::string print_transfer_origin(blit_engine::transfer_origin op)
 	throw;
 }
 
-std::string print_transfer_interpolator(blit_engine::transfer_interpolator op)
+std::string to_string(blit_engine::transfer_interpolator op)
 {
 	switch (op)
 	{
@@ -1189,7 +1189,7 @@ std::string print_transfer_interpolator(blit_engine::transfer_interpolator op)
 	throw;
 }
 
-std::string print_shading_mode(shading_mode op)
+std::string to_string(shading_mode op)
 {
 	switch (op)
 	{
@@ -1199,7 +1199,7 @@ std::string print_shading_mode(shading_mode op)
 	throw;
 }
 
-std::string print_polygon_mode(polygon_mode op)
+std::string to_string(polygon_mode op)
 {
 	switch (op)
 	{
@@ -1999,10 +1999,17 @@ namespace
 
 	namespace
 	{
+		template<u32 opcode>
+		auto register_pretty_printing(u32 arg)
+		{
+			typename rsx::registers_decoder<opcode>::decoded_type decoded_value(arg);
+			return rsx::registers_decoder<opcode>::dump(std::move(arg));
+		}
+
 		template<u32... opcode>
 		auto create_printing_table(const std::integer_sequence<u32, opcode...> &)
 		{
-			return std::unordered_map<uint32_t, std::string(*)(u32)>{ {opcode, rsx::print_register_value<opcode>}... };
+			return std::unordered_map<uint32_t, std::string(*)(u32)>{ {opcode, register_pretty_printing<opcode>}... };
 		}
 	}
 

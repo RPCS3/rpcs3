@@ -10,6 +10,7 @@
 
 #include <thread>
 #include <cassert>
+#include <algorithm>
 
 cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 {
@@ -24,7 +25,14 @@ cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 namespace rsx
 {
 	rsx_state method_registers;
-	rsx_method_t methods[0x10000 >> 2]{};
+	using rsx_method_t = void(*)(class thread*, u32);
+	std::unordered_map<u32, rsx_method_t> methods{};
+
+	template<typename Type> struct vertex_data_type_from_element_type;
+	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
+	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
+	template<> struct vertex_data_type_from_element_type<u8> { static const vertex_base_type type = vertex_base_type::ub; };
+	template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s1; };
 
 	namespace nv406e
 	{
@@ -67,6 +75,99 @@ namespace rsx
 				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
 		}
 
+		template<u32 id, u32 index, int count, typename type>
+		force_inline void set_vertex_data_impl(thread* rsx, u32 arg)
+		{
+			static const size_t increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
+
+			static const size_t attribute_index = index / increment_per_array_index;
+			static const size_t vertex_subreg = index % increment_per_array_index;
+
+			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
+
+			info.type = vertex_data_type_from_element_type<type>::type;
+			info.size = count;
+			info.frequency = 0;
+			info.stride = 0;
+			rsx::method_registers.register_vertex_info[attribute_index].data[vertex_subreg] = arg;
+		}
+
+		template<u32 index>
+		struct set_vertex_data4ub_m
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data1f_m
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data2f_m
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, f32>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data3f_m
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, f32>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data4f_m
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, f32>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data2s_m
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data4s_m
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data_array_format
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				const typename rsx::registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index>::decoded_type decoded_value(arg);
+				rsx::method_registers.vertex_arrays_info[index].frequency = decoded_value.frequency();
+				rsx::method_registers.vertex_arrays_info[index].stride = decoded_value.stride();
+				rsx::method_registers.vertex_arrays_info[index].size = decoded_value.size();
+				rsx::method_registers.vertex_arrays_info[index].type = decoded_value.type();
+			}
+		};
+
 		force_inline void draw_arrays(thread* rsx, u32 arg)
 		{
 			rsx->draw_command = rsx::draw_command::array;
@@ -97,7 +198,21 @@ namespace rsx
 		{
 			force_inline static void impl(thread* rsxthr, u32 arg)
 			{
+				static constexpr u32 reg = index / 4;
+				static constexpr u8 subreg = index % 4;
+
+				u32 load = rsx::method_registers.transform_constant_load();
+				rsx::method_registers.transform_constants[load + reg].rgba[subreg] = (f32&)arg;
 				rsxthr->m_transform_constants_dirty = true;
+			}
+		};
+
+		template<u32 index>
+		struct set_transform_program
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				method_registers.commit_4_transform_program_instructions(index);
 			}
 		};
 
@@ -657,7 +772,8 @@ namespace rsx
 
 	rsx_state::rsx_state() :
 		fragment_textures(fill_array<texture>(registers, std::make_index_sequence<16>())),
-		vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>()))
+		vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
+		vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 	{
 
 	}
@@ -672,140 +788,77 @@ namespace rsx
 		//setup method registers
 		std::memset(registers.data(), 0, registers.size() * sizeof(u32));
 
-		m_primitive_type = primitive_type::triangles;
-		m_transform_program_pointer = 0;
+		registers[NV4097_SET_COLOR_MASK] = CELL_GCM_COLOR_MASK_R | CELL_GCM_COLOR_MASK_G | CELL_GCM_COLOR_MASK_B | CELL_GCM_COLOR_MASK_A;
+		registers[NV4097_SET_SCISSOR_HORIZONTAL] = (4096 << 16) | 0;
+		registers[NV4097_SET_SCISSOR_VERTICAL] = (4096 << 16) | 0;
 
-		m_color_mask_r = true;
-		m_color_mask_g = true;
-		m_color_mask_b = true;
-		m_color_mask_a = true;
+		registers[NV4097_SET_ALPHA_FUNC] = CELL_GCM_ALWAYS;
+		registers[NV4097_SET_ALPHA_REF] = 0;
 
-		m_scissor_width = 4096;
-		m_scissor_height = 4096;
-		m_scissor_origin_x = 0;
-		m_scissor_origin_y = 0;
+		registers[NV4097_SET_BLEND_FUNC_SFACTOR] = (CELL_GCM_ONE << 16) | CELL_GCM_ONE;
+		registers[NV4097_SET_BLEND_FUNC_DFACTOR] = (CELL_GCM_ZERO << 16) | CELL_GCM_ZERO;
+		registers[NV4097_SET_BLEND_COLOR] = 0;
+		registers[NV4097_SET_BLEND_COLOR2] = 0;
+		registers[NV4097_SET_BLEND_EQUATION] = (0x8006 << 16) | 0x8006; // (add)
 
-		m_alpha_test_enabled = false;
-		m_alpha_func = rsx::comparison_function::always;
-		m_alpha_ref = 0;
+		registers[NV4097_SET_STENCIL_MASK] = 0xff;
+		registers[NV4097_SET_STENCIL_FUNC] = CELL_GCM_ALWAYS;
+		registers[NV4097_SET_STENCIL_FUNC_REF] = 0x00;
+		registers[NV4097_SET_STENCIL_FUNC_MASK] = 0xff;
+/*		registers[NV4097_SET_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;*/
 
-		m_blend_enabled = false;
-		m_blend_enabled_surface_1 = false;
-		m_blend_enabled_surface_2 = false;
-		m_blend_enabled_surface_3 = false;
-		m_blend_func_sfactor_rgb = rsx::blend_factor::one;
-		m_blend_func_sfactor_a = rsx::blend_factor::one;
-		m_blend_func_dfactor_rgb = rsx::blend_factor::one;
-		m_blend_func_dfactor_a = rsx::blend_factor::one;
+		registers[NV4097_SET_BACK_STENCIL_MASK] = 0xff;
+		registers[NV4097_SET_BACK_STENCIL_FUNC] = CELL_GCM_ALWAYS;
+		registers[NV4097_SET_BACK_STENCIL_FUNC_REF] = 0x00;
+		registers[NV4097_SET_BACK_STENCIL_FUNC_MASK] = 0xff;
+/*		registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;*/
 
-		m_blend_color_16b_a = 0;
-		m_blend_color_16b_b = 0;
-		m_blend_color = 0;
+//		registers[NV4097_SET_SHADE_MODE] = CELL_GCM_SMOOTH;
 
-		m_blend_equation_rgb = rsx::blend_equation::add;
-		m_blend_equation_a = rsx::blend_equation::add;
+//		registers[NV4097_SET_LOGIC_OP] = CELL_GCM_COPY;
 
-		m_stencil_test_enabled = false;
-		m_two_sided_stencil_test_enabled = false;
-		m_stencil_mask = 0xff;
-		m_stencil_func = rsx::comparison_function::always;
-		m_stencil_func_ref = 0;
-		m_stencil_func_mask = 0xff;
-		m_stencil_op_fail = rsx::stencil_op::keep;
-		m_stencil_op_zfail = rsx::stencil_op::keep;
-		m_stencil_op_zpass = rsx::stencil_op::keep;
+		(f32&)registers[NV4097_SET_DEPTH_BOUNDS_MIN] = 0.f;
+		(f32&)registers[NV4097_SET_DEPTH_BOUNDS_MAX] = 1.f;
 
-		m_back_stencil_mask = 0xff;
-		m_back_stencil_func = rsx::comparison_function::always;
-		m_back_stencil_func_ref = 0;
-		m_back_stencil_func_mask = 0xff;
-		m_back_stencil_op_fail = rsx::stencil_op::keep;
-		m_back_stencil_op_zfail = rsx::stencil_op::keep;
-		m_back_stencil_op_zpass = rsx::stencil_op::keep;
+		(f32&)registers[NV4097_SET_CLIP_MIN] = 0.f;
+		(f32&)registers[NV4097_SET_CLIP_MAX] = 1.f;
 
-		m_shading_mode = rsx::shading_mode::smooth;
-
-		m_logic_op_enabled = false;
-		m_logic_operation = rsx::logic_op::logic_copy;
-
-		m_depth_bounds_test_enabled = false;
-		m_depth_bounds_min = 0.f;
-		m_depth_bounds_max = 1.f;
-
-		m_clip_min = 0.f;
-		m_clip_max = 1.f;
-
-		m_line_width = 1.f;
+		registers[NV4097_SET_LINE_WIDTH] = 1 << 3;
 
 		// These defaults were found using After Burner Climax (which never set fog mode despite using fog input)
-		m_fog_equation = rsx::fog_mode::linear;
-		m_fog_params_0 = 1.f;
-		m_fog_params_1 = 1.f;
+		registers[NV4097_SET_FOG_MODE] = 0x2601; // rsx::fog_mode::linear;
+		(f32&)registers[NV4097_SET_FOG_PARAMS] = 1.;
+		(f32&)registers[NV4097_SET_FOG_PARAMS + 1] = 1.;
 
-		m_depth_test_enabled = false;
-		m_depth_func = rsx::comparison_function::less;
-		m_depth_write_enabled = true;
+		registers[NV4097_SET_DEPTH_FUNC] = CELL_GCM_LESS;
+		registers[NV4097_SET_DEPTH_MASK] = CELL_GCM_TRUE;
+		(f32&)registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = 0.f;
+		(f32&)registers[NV4097_SET_POLYGON_OFFSET_BIAS] = 0.f;
+//		registers[NV4097_SET_FRONT_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
+//		registers[NV4097_SET_BACK_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
+		registers[NV4097_SET_CULL_FACE] = CELL_GCM_BACK;
+		registers[NV4097_SET_FRONT_FACE] = CELL_GCM_CCW;
+		registers[NV4097_SET_RESTART_INDEX] = -1;
+		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
 
-		m_poly_offset_scale = 0.f;
-		m_poly_offset_bias = 0.f;
 
-		m_front_polygon_mode = rsx::polygon_mode::fill;
-		m_back_polygon_mode = rsx::polygon_mode::fill;
+		registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] = (4096 << 16) | 0;
+		registers[NV4097_SET_CLEAR_RECT_VERTICAL] = (4096 << 16) | 0;
 
-		m_cull_face_enabled = false;
-		m_cull_face_mode = rsx::cull_face::back;
-		m_front_face_mode = rsx::front_face::ccw;
-		m_restart_index_enabled = false;
-		m_restart_index = -1;
+		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
 
-		m_clear_rect_origin_x = 0;
-		m_clear_rect_origin_y = 0;
-		m_clear_rect_width = 4096;
-		m_clear_rect_height = 4096;
-
-		m_z_clear_value = -1;
-		m_stencil_clear_value = -1;
-
-		m_context_dma_report = rsx::blit_engine::context_dma::to_memory_get_report;
-		m_two_side_light_enabled = true;
-		m_alpha_func = rsx::comparison_function::always;
-
-		// Reset vertex attrib array
-		for (int i = 0; i < 16; i++)
-		{
-			vertex_arrays_info[i].size = 0;
-		}
-
-		// Construct Textures
-		for (int i = 0; i < 16; i++)
-		{
-			fragment_textures[i].init(i);
-		}
-
-		for (int i = 0; i < 4; i++)
-		{
-			vertex_textures[i].init(i);
-		}
+		std::for_each(vertex_arrays_info.begin(), vertex_arrays_info.end(), [](auto &info) { info.size = 0; });
+		std::for_each(fragment_textures.begin(), fragment_textures.end(), [](auto &tex) { tex.init(); });
+		std::for_each(vertex_textures.begin(), vertex_textures.end(), [](auto &tex) { tex.init(); });
 	}
-
-namespace
-{
-	template<u32... opcode>
-	auto create_commit_functions_table(const std::integer_sequence<u32, opcode...> &)
-	{
-		return std::unordered_map<uint32_t, void(*)(rsx_state&, u32)>{ {opcode, commit<opcode>}... };
-	}
-
-	auto reg_decoder = create_commit_functions_table(opcode_list);
-}
 
 	void rsx_state::decode(u32 reg, u32 value)
 	{
-		const auto &It = reg_decoder.find(reg);
-		if (It != reg_decoder.end())
-			(It->second)(*this, value);
-		else
-			registers[reg] = value;
+		registers[reg] = value;
 	}
 
 	struct __rsx_methods_t
@@ -925,7 +978,16 @@ namespace
 			bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 			bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 			bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
+			bind_range<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nv4097::set_vertex_data_array_format>();
+			bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
+			bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA3F_M, 1, 48, nv4097::set_vertex_data3f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nv4097::set_vertex_data4f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
+			bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
 			bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
+			bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
 			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
 			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 			bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
