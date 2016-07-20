@@ -62,7 +62,7 @@ namespace rsx
 			}
 			catch (...)
 			{
-				LOG_ERROR(RSX, "Cache file '%s' ignored", entry.name);
+				LOG_WARNING(RSX, "Cache file '%s' ignored", entry.name);
 				continue;
 			}
 
@@ -376,7 +376,7 @@ namespace rsx
 
 		last_flip_time = get_system_time() - 1000000;
 
-		scope_thread vblank("VBlank Thread", [this]()
+		m_vblank_thread = thread_ctrl::spawn("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
@@ -484,9 +484,18 @@ namespace rsx
 		}
 	}
 
+	void thread::on_exit()
+	{
+		if (m_vblank_thread)
+		{
+			m_vblank_thread->join();
+			m_vblank_thread.reset();
+		}
+	}
+
 	std::string thread::get_name() const
 	{
-		return "rsx::thread"s;
+		return "rsx::thread";
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool is_d3d) const

@@ -611,6 +611,8 @@ void GLGSRender::on_exit()
 	m_attrib_ring_buffer.remove();
 	m_uniform_ring_buffer.remove();
 	m_index_ring_buffer.remove();
+
+	return GSRender::on_exit();
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)

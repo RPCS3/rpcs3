@@ -754,6 +754,8 @@ void VKGSRender::on_init_thread()
 void VKGSRender::on_exit()
 {
 	m_texture_cache.destroy();
+
+	return GSRender::on_exit();
 }
 
 void VKGSRender::clear_surface(u32 mask)

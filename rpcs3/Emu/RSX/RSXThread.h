@@ -189,6 +189,8 @@ namespace rsx
 
 	class thread : public named_thread
 	{
+		std::shared_ptr<thread_ctrl> m_vblank_thread;
+
 	protected:
 		std::stack<u32> m_call_stack;
 
@@ -267,6 +269,7 @@ namespace rsx
 		virtual ~thread();
 
 		virtual void on_task() override;
+		virtual void on_exit() override;
 
 	public:
 		virtual std::string get_name() const override;
