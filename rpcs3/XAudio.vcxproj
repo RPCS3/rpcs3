@@ -76,6 +76,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\rpcs3\Emu\Audio\XAudio2\XAudio2Thread.cpp" />
+    <ClCompile Include="Emu\Audio\XAudio2\XAudio27Thread.cpp" />
+    <ClCompile Include="Emu\Audio\XAudio2\XAudio28Thread.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
