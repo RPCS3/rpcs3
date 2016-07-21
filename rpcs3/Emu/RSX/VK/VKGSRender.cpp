@@ -31,28 +31,20 @@ namespace
 
 namespace vk
 {
-	VkCompareOp compare_op(rsx::comparison_function op)
+	VkCompareOp get_compare_func(rsx::comparison_function op)
 	{
 		switch (op)
 		{
-		case rsx::comparison_function::never:
-			return VK_COMPARE_OP_NEVER;
-		case rsx::comparison_function::greater:
-			return VK_COMPARE_OP_GREATER;
-		case rsx::comparison_function::less:
-			return VK_COMPARE_OP_LESS;
-		case rsx::comparison_function::less_or_equal:
-			return VK_COMPARE_OP_LESS_OR_EQUAL;
-		case rsx::comparison_function::greater_or_equal:
-			return VK_COMPARE_OP_GREATER_OR_EQUAL;
-		case rsx::comparison_function::equal:
-			return VK_COMPARE_OP_EQUAL;
-		case rsx::comparison_function::not_equal:
-			return VK_COMPARE_OP_NOT_EQUAL;
-		case rsx::comparison_function::always:
-			return VK_COMPARE_OP_ALWAYS;
+		case rsx::comparison_function::never: return VK_COMPARE_OP_NEVER;
+		case rsx::comparison_function::greater: return VK_COMPARE_OP_GREATER;
+		case rsx::comparison_function::less: return VK_COMPARE_OP_LESS;
+		case rsx::comparison_function::less_or_equal: return VK_COMPARE_OP_LESS_OR_EQUAL;
+		case rsx::comparison_function::greater_or_equal: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+		case rsx::comparison_function::equal: return VK_COMPARE_OP_EQUAL;
+		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
+		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
 		default:
-			throw EXCEPTION("Unsupported compare op: 0x%X", op);
+			throw EXCEPTION("Unknown compare op: 0x%X", op);
 		}
 	}
 
@@ -965,14 +957,14 @@ bool VKGSRender::load_program()
 		properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers.stencil_op_fail());
 		properties.ds.front.passOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zpass());
 		properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zfail());
-		properties.ds.front.compareOp = vk::compare_op(rsx::method_registers.stencil_func());
+		properties.ds.front.compareOp = vk::get_compare_func(rsx::method_registers.stencil_func());
 
 		if (rsx::method_registers.two_sided_stencil_test_enabled())
 		{
 			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail());
 			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
 			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
-			properties.ds.back.compareOp = vk::compare_op(rsx::method_registers.back_stencil_func());
+			properties.ds.back.compareOp = vk::get_compare_func(rsx::method_registers.back_stencil_func());
 		}
 		else
 			properties.ds.back = properties.ds.front;
@@ -983,7 +975,7 @@ bool VKGSRender::load_program()
 	if (rsx::method_registers.depth_test_enabled())
 	{
 		properties.ds.depthTestEnable = VK_TRUE;
-		properties.ds.depthCompareOp = vk::compare_op(rsx::method_registers.depth_func());
+		properties.ds.depthCompareOp = vk::get_compare_func(rsx::method_registers.depth_func());
 	}
 	else
 		properties.ds.depthTestEnable = VK_FALSE;
