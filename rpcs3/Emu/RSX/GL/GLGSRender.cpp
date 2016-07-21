@@ -394,6 +394,20 @@ void GLGSRender::end()
 	draw_fbo.bind();
 	m_program->use();
 
+	//Check if depth buffer is bound and valid
+	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
+	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+	if (ds && !ds->cleared())
+	{
+		glDepthMask(GL_TRUE);
+		glClearDepth(1.f);
+		
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glDepthMask(rsx::method_registers.depth_write_enabled());
+
+		ds->set_cleared();
+	}
+
 	//setup textures
 	{
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -696,6 +710,20 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 	}
 
 	found->second(arg, this);
+
+	switch (cmd)
+	{
+	case NV4097_CLEAR_SURFACE:
+	{
+		if (arg & 0x1)
+		{
+			gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+			if (ds && !ds->cleared())
+				ds->set_cleared();
+		}
+	}
+	}
+
 	return true;
 }
 

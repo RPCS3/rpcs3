@@ -44,8 +44,8 @@ namespace vk
 		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
 
 		bool host_visible_cached = false;
-		u32  host_visible_vram_size = 0;
-		u32  device_local_vram_size = 0;
+		VkDeviceSize  host_visible_vram_size = 0;
+		VkDeviceSize  device_local_vram_size = 0;
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{

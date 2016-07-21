@@ -124,7 +124,7 @@ namespace vk
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
 			}
 
-			if (queue >= queue_props.size()) throw EXCEPTION("Undefined trap");
+			if (queue >= queue_props.size()) throw EXCEPTION("Bad queue index passed to get_queue_properties (%u)", queue);
 			return queue_props[queue];
 		}
 
@@ -154,8 +154,6 @@ namespace vk
 
 		render_device(vk::physical_device &pdev, uint32_t graphics_queue_idx)
 		{
-			VkResult err;
-
 			float queue_priorities[1] = { 0.f };
 			pgpu = &pdev;
 
@@ -188,8 +186,7 @@ namespace vk
 			device.ppEnabledExtensionNames = requested_extensions;
 			device.pEnabledFeatures = nullptr;
 
-			err = vkCreateDevice(*pgpu, &device, nullptr, &dev);
-			if (err != VK_SUCCESS) throw EXCEPTION("Undefined trap");
+			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
 		}
 
 		~render_device()
@@ -844,7 +841,7 @@ namespace vk
 			nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
 			
-			if (!nb_swap_images) throw EXCEPTION("Undefined trap");
+			if (!nb_swap_images) throw EXCEPTION("Driver returned 0 images for swapchain");
 
 			std::vector<VkImage> swap_images;
 			swap_images.resize(nb_swap_images);
@@ -1052,9 +1049,7 @@ namespace vk
 			instance_info.ppEnabledExtensionNames = requested_extensions;
 
 			VkInstance instance;
-			VkResult error = vkCreateInstance(&instance_info, nullptr, &instance);
-
-			if (error != VK_SUCCESS) throw EXCEPTION("Undefined trap");
+			CHECK_RESULT(vkCreateInstance(&instance_info, nullptr, &instance));
 
 			m_vk_instances.push_back(instance);
 			return (u32)m_vk_instances.size();
@@ -1063,7 +1058,7 @@ namespace vk
 		void makeCurrentInstance(uint32_t instance_id)
 		{
 			if (!instance_id || instance_id > m_vk_instances.size())
-				throw EXCEPTION("Undefined trap");
+				throw EXCEPTION("Invalid instance passed to makeCurrentInstance (%u)", instance_id);
 
 			if (m_debugger)
 			{
@@ -1083,7 +1078,7 @@ namespace vk
 		VkInstance getInstanceById(uint32_t instance_id)
 		{
 			if (!instance_id || instance_id > m_vk_instances.size())
-				throw EXCEPTION("Undefined trap");
+				throw EXCEPTION("Invalid instance passed to getInstanceById (%u)", instance_id);
 
 			instance_id--;
 			return m_vk_instances[instance_id];
@@ -1117,7 +1112,7 @@ namespace vk
 			createInfo.hwnd = hWnd;
 
 			VkSurfaceKHR surface;
-			VkResult err = vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface);
+			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
 
 			uint32_t device_queues = dev.get_queue_count();
 			std::vector<VkBool32> supportsPresent(device_queues);
@@ -1165,19 +1160,17 @@ namespace vk
 
 			// Generate error if could not find both a graphics and a present queue
 			if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX)
-				throw EXCEPTION("Undefined trap");
+				throw EXCEPTION("Failed to find a suitable graphics/compute queue");
 
 			if (graphicsQueueNodeIndex != presentQueueNodeIndex)
-				throw EXCEPTION("Undefined trap");
+				throw EXCEPTION("Separate graphics and present queues not supported");
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
-			err = vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, nullptr);
-			if (err != VK_SUCCESS) throw EXCEPTION("Undefined trap");
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, nullptr));
 
 			std::vector<VkSurfaceFormatKHR> surfFormats(formatCount);
-			err = vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, surfFormats.data());
-			if (err != VK_SUCCESS) throw EXCEPTION("Undefined trap");
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, surfFormats.data()));
 
 			VkFormat format;
 			VkColorSpaceKHR color_space;
@@ -1188,7 +1181,7 @@ namespace vk
 			}
 			else
 			{
-				if (!formatCount) throw EXCEPTION("Undefined trap");
+				if (!formatCount) throw EXCEPTION("Format count is zero!");
 				format = surfFormats[0].format;
 			}
 
