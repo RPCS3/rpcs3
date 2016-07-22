@@ -690,8 +690,6 @@ struct VdecFrame
 	u32 frc;
 };
 
-int vdecRead(void* opaque, u8* buf, int buf_size);
-
 class VideoDecoder
 {
 public:
@@ -699,22 +697,11 @@ public:
 	u32 id;
 	volatile bool is_closed;
 	volatile bool is_finished;
-	bool just_started;
-	bool just_finished;
 
-	AVCodec* codec;
-	AVInputFormat* input_format;
-	AVCodecContext* ctx;
-	AVFormatContext* fmt;
-	u8* io_buf;
+	struct AVCodec* codec;
+	struct AVCodecContext* ctx;
 
-	struct VideoReader
-	{
-		u32 addr;
-		u32 size;
-	} reader;
-
-	squeue_t<VdecFrame> frames;
+	squeue_t<VdecFrame, 64> frames;
 
 	const s32 type;
 	const u32 profile;
@@ -725,9 +712,9 @@ public:
 	u32 memBias;
 
 	VdecTask task; // current task variable
-	u64 last_pts, first_pts, first_dts;
 	u32 frc_set; // frame rate overwriting
-	AVRational rfr, afr;
+	u64 last_pts;
+	u64 last_dts;
 
 	std::shared_ptr<PPUThread> vdecCb;
 
