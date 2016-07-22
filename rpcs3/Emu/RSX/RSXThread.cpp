@@ -352,7 +352,8 @@ namespace rsx
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			rsx::method_registers.register_vertex_info[index].size = 0;
+			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
+			//rsx::method_registers.register_vertex_info[index].size = 0;
 		}
 
 		if (capture_current_frame)
