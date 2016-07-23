@@ -23,7 +23,7 @@ void lv2_cond_t::notify(lv2_lock_t, cpu_thread* thread)
 	}
 	else
 	{
-		mutex->owner = std::static_pointer_cast<cpu_thread>(thread->shared_from_this());
+		mutex->owner = idm::get<PPUThread>(thread->id);
 
 		VERIFY(!thread->state.test_and_set(cpu_state::signal));
 		(*thread)->notify();
@@ -212,7 +212,7 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 				// try to reown mutex and exit if timed out
 				if (!cond->mutex->owner)
 				{
-					cond->mutex->owner = std::static_pointer_cast<cpu_thread>(ppu.shared_from_this());
+					cond->mutex->owner = idm::get<PPUThread>(ppu.id);
 					break;
 				}
 

@@ -312,7 +312,7 @@ public:
 	}
 };
 
-class named_thread : public std::enable_shared_from_this<named_thread>
+class named_thread
 {
 	// Pointer to managed resource (shared with actual thread)
 	std::shared_ptr<thread_ctrl> m_thread;
@@ -329,8 +329,8 @@ public:
 	virtual std::string get_name() const;
 
 protected:
-	// Start thread (cannot be called from the constructor: should throw bad_weak_ptr in such case)
-	void start();
+	// Start thread (cannot be called from the constructor: should throw in such case)
+	void start_thread(const std::shared_ptr<void>& _this);
 
 	// Thread task (called in the thread)
 	virtual void on_task() = 0;
@@ -340,9 +340,9 @@ protected:
 
 public:
 	// ID initialization
-	virtual void on_init()
+	virtual void on_init(const std::shared_ptr<void>& _this)
 	{
-		start();
+		return start_thread(_this);
 	}
 
 	// ID finalization
