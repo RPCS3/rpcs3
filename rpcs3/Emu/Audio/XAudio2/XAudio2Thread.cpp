@@ -4,14 +4,14 @@
 #include "Utilities/StrFmt.h"
 #include "Utilities/Config.h"
 #include "Emu/System.h"
-
+#include "stdafx.h"
 #include "XAudio2Thread.h"
 #include <Windows.h>
 
 extern cfg::bool_entry g_cfg_audio_convert_to_u16;
 
 XAudio2Thread::XAudio2Thread()
-	: m_xaudio(LoadLibraryA("xaudio2_8.dll"))
+	: m_xaudio(fs::is_file("C:/Windows/System32/XAudio2_9.dll") ? LoadLibraryA("xaudio2_9.dll") : LoadLibraryA("xaudio2_8.dll"))
 {
 	m_xaudio ? xa28_init(m_xaudio) : xa27_init();
 }
