@@ -95,7 +95,7 @@ private:
 	atomic_t<u32> m_joining{};
 
 	// Thread interrupt guard counter
-	u32 m_guard = 0x80000000;
+	volatile u32 m_guard = 0x80000000;
 
 	// Thread internals
 	atomic_t<internal*> m_data{};
