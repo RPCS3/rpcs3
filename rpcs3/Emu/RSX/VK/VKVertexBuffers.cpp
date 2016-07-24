@@ -549,6 +549,20 @@ VKGSRender::upload_vertex_data()
 					break;
 				}
 			}
+			else
+			{
+				//This section should theoretically be unreachable (data stream without available data)
+				//Variable is defined in the shaders but no data is available
+				//Bind a buffer view to keep the driver from crashing if access is attempted.
+				
+				u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(32);
+				void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, 32);
+				memset(dst, 0, 32);
+				m_attrib_ring_info.unmap();
+
+				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, offset_in_attrib_buffer, 32));
+				m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
+			}
 		}
 	}
 	
