@@ -16,7 +16,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 	// pick a new writer if possible; protocol is ignored in current implementation
 	if (!readers && !writer && wsq.size())
 	{
-		writer = std::static_pointer_cast<cpu_thread>(wsq.front()->shared_from_this());
+		writer = idm::get<PPUThread>(wsq.front()->id);
 
 		VERIFY(!writer->state.test_and_set(cpu_state::signal));
 		(*writer)->notify();
@@ -221,7 +221,7 @@ s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 
 	if (!rwlock->readers && !rwlock->writer)
 	{
-		rwlock->writer = std::static_pointer_cast<cpu_thread>(ppu.shared_from_this());
+		rwlock->writer = idm::get<PPUThread>(ppu.id);
 
 		return CELL_OK;
 	}
@@ -293,7 +293,7 @@ s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id)
 		return CELL_EBUSY;
 	}
 
-	rwlock->writer = std::static_pointer_cast<cpu_thread>(ppu.shared_from_this());
+	rwlock->writer = idm::get<PPUThread>(ppu.id);
 
 	return CELL_OK;
 }

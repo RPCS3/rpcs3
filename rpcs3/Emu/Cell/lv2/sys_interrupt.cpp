@@ -156,13 +156,18 @@ s32 _sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih, vm::ptr<u64> r13)
 	return CELL_OK;
 }
 
-void sys_interrupt_thread_eoi(PPUThread& ppu)
+void sys_interrupt_thread_eoi(PPUThread& ppu) // Low-level PPU function example
 {
-	sys_interrupt.trace("sys_interrupt_thread_eoi()");
-
-	// TODO: maybe it should actually unwind the stack of PPU thread?
-
-	ppu.GPR[1] = align(ppu.stack_addr + ppu.stack_size, 0x200) - 0x200; // supercrutch to bypass stack check
+	// Low-level function body must guard all C++-ish calls and all objects with non-trivial destructors
+	thread_guard{ppu}, sys_interrupt.trace("sys_interrupt_thread_eoi()");
 
 	ppu.state += cpu_state::ret;
+
+	// Throw if this syscall was not called directly by the SC instruction (hack)
+	if (ppu.LR == 0 || ppu.GPR[11] != 88 || ppu.custom_task)
+	{
+		// Low-level function must disable interrupts before throwing (not related to sys_interrupt_*, it's rather coincidence)
+		ppu->interrupt_disable();
+		throw cpu_state::ret;
+	}
 }

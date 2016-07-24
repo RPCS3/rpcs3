@@ -2238,18 +2238,18 @@ std::string named_thread::get_name() const
 	return fmt::format("('%s') Unnamed Thread", typeid(*this).name());
 }
 
-void named_thread::start()
+void named_thread::start_thread(const std::shared_ptr<void>& _this)
 {
-	// Get shared_ptr instance (will throw if called from the constructor or the object has been created incorrectly)
-	auto&& ptr = shared_from_this();
+	// Ensure it's not called from the constructor and the correct object is passed
+	ENSURES(_this.get() == this);
 
 	// Run thread
-	m_thread = thread_ctrl::spawn(get_name(), [thread = std::move(ptr)]()
+	m_thread = thread_ctrl::spawn(get_name(), [this, _this]()
 	{
 		try
 		{
 			LOG_TRACE(GENERAL, "Thread started");
-			thread->on_task();
+			on_task();
 			LOG_TRACE(GENERAL, "Thread ended");
 		}
 		catch (const std::exception& e)
@@ -2262,6 +2262,6 @@ void named_thread::start()
 			LOG_NOTICE(GENERAL, "Thread aborted");
 		}
 
-		thread->on_exit();
+		on_exit();
 	});
 }

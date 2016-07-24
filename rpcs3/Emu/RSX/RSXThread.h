@@ -274,7 +274,7 @@ namespace rsx
 	public:
 		virtual std::string get_name() const override;
 
-		virtual void on_init() override {} // disable start() (TODO)
+		virtual void on_init(const std::shared_ptr<void>&) override {} // disable start() (TODO)
 		virtual void on_stop() override {} // disable join()
 
 		virtual void begin();
