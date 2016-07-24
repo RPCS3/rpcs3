@@ -149,9 +149,6 @@ class PPUTranslator final //: public CPUTranslator
 
 	/* Variables */
 
-	// Explicit register usage counter
-	std::unordered_map<llvm::Value*, u64> m_value_usage;
-
 	// Memory base
 	llvm::Value* m_base;
 
@@ -385,9 +382,6 @@ public:
 
 	// Branch to next instruction if condition failed, never branch on nullptr
 	void UseCondition(llvm::Value* = nullptr);
-
-	// Check whether the address is stack
-	bool IsStackAddr(llvm::Value* addr);
 
 	// Get memory pointer
 	llvm::Value* GetMemory(llvm::Value* addr, llvm::Type* type);
