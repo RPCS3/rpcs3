@@ -321,7 +321,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 		if (func.addr)
 		{
-			// Update TOC (TODO: this doesn't work well)
+			// Update TOC (TODO: this doesn't work well, must update TOC recursively)
 			if (func.toc == 0 || toc == -1)
 			{
 				func.toc = toc;
@@ -592,6 +592,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					func.size = 0x4;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
+					func.called_from.emplace(target);
+					func.gate_target = target;
 					continue;
 				}
 			}
@@ -620,7 +622,9 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 					func.size = 0x10;
 					func.blocks.emplace(func.addr, func.size);
-					func.attr += new_func.attr & ppu_attr::no_return;				
+					func.attr += new_func.attr & ppu_attr::no_return;
+					func.called_from.emplace(target);
+					func.gate_target = target;
 					continue;
 				}
 			}
@@ -909,6 +913,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
+							func.called_from.emplace(target);
 							add_func(target, func.toc, func.addr);
 						}
 					}
