@@ -673,8 +673,8 @@ void VKGSRender::end()
 	rp_begin.framebuffer = m_framebuffer_to_clean.back()->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
-	rp_begin.renderArea.extent.width = m_frame->client_width();
-	rp_begin.renderArea.extent.height = m_frame->client_height();
+	rp_begin.renderArea.extent.width = m_framebuffer_to_clean.back()->width();
+	rp_begin.renderArea.extent.height = m_framebuffer_to_clean.back()->height();
 
 	vkCmdBeginRenderPass(m_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 

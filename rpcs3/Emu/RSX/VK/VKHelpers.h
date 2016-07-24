@@ -589,6 +589,9 @@ namespace vk
 		VkFramebuffer value;
 		VkFramebufferCreateInfo info = {};
 		std::vector<std::unique_ptr<vk::image_view>> attachements;
+		u32 m_width = 0;
+		u32 m_height = 0;
+
 	public:
 		framebuffer(VkDevice dev, VkRenderPass pass, u32 width, u32 height, std::vector<std::unique_ptr<vk::image_view>> &&atts)
 			: m_device(dev), attachements(std::move(atts))
@@ -608,12 +611,25 @@ namespace vk
 			info.renderPass = pass;
 			info.layers = 1;
 
+			m_width = width;
+			m_height = height;
+
 			CHECK_RESULT(vkCreateFramebuffer(dev, &info, nullptr, &value));
 		}
 
 		~framebuffer()
 		{
 			vkDestroyFramebuffer(m_device, value, nullptr);
+		}
+
+		u32 width()
+		{
+			return m_width;
+		}
+
+		u32 height()
+		{
+			return m_height;
 		}
 
 		framebuffer(const framebuffer&) = delete;
