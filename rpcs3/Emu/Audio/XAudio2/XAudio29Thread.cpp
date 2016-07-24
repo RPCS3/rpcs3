@@ -14,8 +14,10 @@ static thread_local IXAudio2* s_tls_xaudio2_instance{};
 static thread_local IXAudio2MasteringVoice* s_tls_master_voice{};
 static thread_local IXAudio2SourceVoice* s_tls_source_voice{};
 
-void XAudio2Thread::xa28_init(void* module)
+void XAudio2Thread::xa29_init(void* module)
 {
+	CoInitializeEx(NULL, COINIT_MULTITHREADED); // allow Xaudio2 run in its own thread
+	
 	auto create = (XAudio2Create)GetProcAddress((HMODULE)module, "XAudio2Create");
 
 	HRESULT hr = S_OK;
@@ -24,6 +26,7 @@ void XAudio2Thread::xa28_init(void* module)
 	if (FAILED(hr))
 	{
 		LOG_ERROR(GENERAL, "XAudio2Thread : XAudio2Create() failed(0x%08x)", (u32)hr);
+		CoUninitialize();
 		Emu.Pause();
 		return;
 	}
@@ -33,13 +36,14 @@ void XAudio2Thread::xa28_init(void* module)
 	{
 		LOG_ERROR(GENERAL, "XAudio2Thread : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
 		s_tls_xaudio2_instance->Release();
+		CoUninitialize();
 		Emu.Pause();
 	}
 
 	LOG_SUCCESS(GENERAL, "XAudio 2.8 initialized");
 }
 
-void XAudio2Thread::xa28_destroy()
+void XAudio2Thread::xa29_destroy()
 {
 	if (s_tls_source_voice != nullptr)
 	{
@@ -56,10 +60,11 @@ void XAudio2Thread::xa28_destroy()
 	{
 		s_tls_xaudio2_instance->StopEngine();
 		s_tls_xaudio2_instance->Release();
+		CoUninitialize();
 	}
 }
 
-void XAudio2Thread::xa28_play()
+void XAudio2Thread::xa29_play()
 {
 	HRESULT hr = s_tls_source_voice->Start();
 	if (FAILED(hr))
@@ -69,7 +74,7 @@ void XAudio2Thread::xa28_play()
 	}
 }
 
-void XAudio2Thread::xa28_flush()
+void XAudio2Thread::xa29_flush()
 {
 	HRESULT hr = s_tls_source_voice->FlushSourceBuffers();
 	if (FAILED(hr))
@@ -79,7 +84,7 @@ void XAudio2Thread::xa28_flush()
 	}
 }
 
-void XAudio2Thread::xa28_stop()
+void XAudio2Thread::xa29_stop()
 {
 	HRESULT hr = s_tls_source_voice->Stop();
 	if (FAILED(hr))
@@ -89,7 +94,7 @@ void XAudio2Thread::xa28_stop()
 	}
 }
 
-void XAudio2Thread::xa28_open()
+void XAudio2Thread::xa29_open()
 {
 	HRESULT hr;
 
@@ -109,6 +114,8 @@ void XAudio2Thread::xa28_open()
 	if (FAILED(hr))
 	{
 		LOG_ERROR(GENERAL, "XAudio2Thread : CreateSourceVoice() failed(0x%08x)", (u32)hr);
+		s_tls_xaudio2_instance->Release();
+		CoUninitialize(); 
 		Emu.Pause();
 		return;
 	}
@@ -116,7 +123,7 @@ void XAudio2Thread::xa28_open()
 	s_tls_source_voice->SetVolume(4.0);
 }
 
-void XAudio2Thread::xa28_add(const void* src, int size)
+void XAudio2Thread::xa29_add(const void* src, int size)
 {
 	XAUDIO2_BUFFER buffer;
 
