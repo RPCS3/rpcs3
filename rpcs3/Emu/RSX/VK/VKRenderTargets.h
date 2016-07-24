@@ -22,6 +22,7 @@ namespace rsx
 
 			std::unique_ptr<vk::image> rtt;
 			rtt.reset(new vk::image(device, mem_mapping.device_local,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
 				static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1,
@@ -57,6 +58,7 @@ namespace rsx
 
 			std::unique_ptr<vk::image> ds;
 			ds.reset(new vk::image(device, mem_mapping.device_local,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
 				static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1,

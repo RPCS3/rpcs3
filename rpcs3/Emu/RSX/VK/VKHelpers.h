@@ -338,7 +338,9 @@ namespace vk
 		VkImageCreateInfo info = {};
 		std::shared_ptr<vk::memory_block> memory;
 
-		image(VkDevice dev, uint32_t memory_type_index,
+		image(vk::render_device &dev,
+			uint32_t memory_type_index,
+			uint32_t access_flags,
 			VkImageType image_type,
 			VkFormat format,
 			uint32_t width, uint32_t height, uint32_t depth,
@@ -367,8 +369,16 @@ namespace vk
 
 			VkMemoryRequirements memory_req;
 			vkGetImageMemoryRequirements(m_device, value, &memory_req);
-			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_type_index);
+			
+			if (!(memory_req.memoryTypeBits & (1 << memory_type_index)))
+			{
+				//Suggested memory type is incompatible with this memory type.
+				//Go through the bitset and test for requested props.
+				if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
+					throw EXCEPTION("No compatible memory type was found!");
+			}
 
+			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_type_index);
 			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->memory, 0));
 		}
 
@@ -472,7 +482,7 @@ namespace vk
 		VkBufferCreateInfo info = {};
 		std::unique_ptr<vk::memory_block> memory;
 
-		buffer(VkDevice dev, u64 size, uint32_t memory_type_index, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
+		buffer(vk::render_device& dev, u64 size, uint32_t memory_type_index, uint32_t access_flags, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
 			: m_device(dev)
 		{
 			info.size = size;
@@ -483,9 +493,18 @@ namespace vk
 
 			CHECK_RESULT(vkCreateBuffer(m_device, &info, nullptr, &value));
 
-			VkMemoryRequirements memory_reqs;
 			//Allocate vram for this buffer
+			VkMemoryRequirements memory_reqs;
 			vkGetBufferMemoryRequirements(m_device, value, &memory_reqs);
+
+			if (!(memory_reqs.memoryTypeBits & (1 << memory_type_index)))
+			{
+				//Suggested memory type is incompatible with this memory type.
+				//Go through the bitset and test for requested props.
+				if (!dev.get_compatible_memory_type(memory_reqs.memoryTypeBits, access_flags, &memory_type_index))
+					throw EXCEPTION("No compatible memory type was found!");
+			}
+
 			memory.reset(new memory_block(m_device, memory_reqs.size, memory_type_index));
 			vkBindBufferMemory(dev, value, memory->memory, 0);
 		}
