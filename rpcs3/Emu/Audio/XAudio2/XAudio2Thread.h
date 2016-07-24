@@ -16,13 +16,13 @@ class XAudio2Thread : public AudioThread
 	static void xa27_open();
 	static void xa27_add(const void*, int);
 
-	static void xa28_init(void*);
-	static void xa28_destroy();
-	static void xa28_play();
-	static void xa28_flush();
-	static void xa28_stop();
-	static void xa28_open();
-	static void xa28_add(const void*, int);
+	static void xa29_init(void*);
+	static void xa29_destroy();
+	static void xa29_play();
+	static void xa29_flush();
+	static void xa29_stop();
+	static void xa29_open();
+	static void xa29_add(const void*, int);
 
 public:
 	XAudio2Thread();
