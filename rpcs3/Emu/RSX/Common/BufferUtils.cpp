@@ -75,10 +75,11 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 	}
 	case rsx::vertex_base_type::cmp:
 	{
+		u32 base_index = rsx::method_registers.vertex_data_base_index();
 		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
 		for (u32 i = 0; i < count; ++i)
 		{
-			auto* c_src = (const be_t<u32>*)(src_ptr + attribute_src_stride * (first + i));
+			auto* c_src = (const be_t<u32>*)(src_ptr + attribute_src_stride * (first + i + base_index));
 			const auto& decoded_vector = decode_cmp_vector(*c_src);
 			dst_span[i * dst_stride / sizeof(u16)] = decoded_vector[0];
 			dst_span[i * dst_stride / sizeof(u16) + 1] = decoded_vector[1];
