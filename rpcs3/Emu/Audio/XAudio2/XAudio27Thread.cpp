@@ -62,6 +62,7 @@ void XAudio2Thread::xa27_destroy()
 	{
 		s_tls_xaudio2_instance->StopEngine();
 		s_tls_xaudio2_instance->Release();
+		CoUninitialize();
 	}
 
 	CoUninitialize();
@@ -117,6 +118,8 @@ void XAudio2Thread::xa27_open()
 	if (FAILED(hr))
 	{
 		LOG_ERROR(GENERAL, "XAudio2Thread : CreateSourceVoice() failed(0x%08x)", (u32)hr);
+		s_tls_xaudio2_instance->Release();
+		CoUninitialize();
 		Emu.Pause();
 		return;
 	}
