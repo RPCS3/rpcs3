@@ -1803,6 +1803,7 @@ namespace gl
 						break;
 					}
 
+					fs::create_path(fs::get_config_dir() + "/shaderlog");
 					fs::file(fs::get_config_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
 				}
 
