@@ -18,7 +18,7 @@ void lv2_mutex_t::unlock(lv2_lock_t)
 	if (sq.size())
 	{
 		// pick new owner; protocol is ignored in current implementation
-		owner = std::static_pointer_cast<cpu_thread>(sq.front()->shared_from_this());
+		owner = idm::get<PPUThread>(sq.front()->id);
 
 		VERIFY(!owner->state.test_and_set(cpu_state::signal));
 		(*owner)->notify();
@@ -127,7 +127,7 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 	// lock immediately if not locked
 	if (!mutex->owner)
 	{
-		mutex->owner = std::static_pointer_cast<cpu_thread>(ppu.shared_from_this());
+		mutex->owner = idm::get<PPUThread>(ppu.id);
 
 		return CELL_OK;
 	}
@@ -202,7 +202,7 @@ s32 sys_mutex_trylock(PPUThread& ppu, u32 mutex_id)
 	}
 
 	// own the mutex if free
-	mutex->owner = std::static_pointer_cast<cpu_thread>(ppu.shared_from_this());
+	mutex->owner = idm::get<PPUThread>(ppu.id);
 
 	return CELL_OK;
 }

@@ -518,4 +518,24 @@ namespace gl
 	{
 		settings_.apply(*this);
 	}
+
+	bool is_primitive_native(rsx::primitive_type in)
+	{
+		switch (in)
+		{
+		case rsx::primitive_type::points:
+		case rsx::primitive_type::lines:
+		case rsx::primitive_type::line_loop:
+		case rsx::primitive_type::line_strip:
+		case rsx::primitive_type::triangles:
+		case rsx::primitive_type::triangle_strip:
+		case rsx::primitive_type::triangle_fan:
+			return true;
+		case rsx::primitive_type::quads:
+		case rsx::primitive_type::quad_strip:
+		case rsx::primitive_type::polygon:
+			return false;
+		}
+		throw EXCEPTION("unknown primitive type");
+	}
 }

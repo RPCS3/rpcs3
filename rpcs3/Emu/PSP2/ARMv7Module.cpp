@@ -9,6 +9,7 @@
 #include "ARMv7Opcodes.h"
 #include "ARMv7Function.h"
 #include "ARMv7Module.h"
+#include "Modules/sceLibKernel.h"
 
 LOG_CHANNEL(sceAppMgr);
 LOG_CHANNEL(sceAppUtil);
@@ -70,8 +71,6 @@ LOG_CHANNEL(sceUlt);
 LOG_CHANNEL(sceVideodec);
 LOG_CHANNEL(sceVoice);
 LOG_CHANNEL(sceVoiceQoS);
-
-extern void armv7_init_tls();
 
 extern std::string arm_get_function_name(const std::string& module, u32 fnid);
 extern std::string arm_get_variable_name(const std::string& module, u32 vnid);
@@ -355,8 +354,7 @@ static void arm_patch_refs(u32 refs, u32 addr)
 	
 }
 
-template<>
-void arm_exec_loader::load() const
+void arm_load_exec(const arm_exec_object& elf)
 {
 	arm_initialize_modules();
 
@@ -373,7 +371,7 @@ void arm_exec_loader::load() const
 	u32 tls_fsize{};
 	u32 tls_vsize{};
 
-	for (const auto& prog : progs)
+	for (const auto& prog : elf.progs)
 	{
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
@@ -397,7 +395,7 @@ void arm_exec_loader::load() const
 		}
 	}
 
-	if (!module_info) module_info.set(start_addr + header.e_entry);
+	if (!module_info) module_info.set(start_addr + elf.header.e_entry);
 	if (!libent) libent.set(start_addr + module_info->libent_top);
 	if (!libstub) libstub.set(start_addr + module_info->libstub_top);
 
@@ -429,8 +427,6 @@ void arm_exec_loader::load() const
 	LOG_NOTICE(LOADER, "** tls_faddr=0x%x", tls_faddr);
 	LOG_NOTICE(LOADER, "** tls_fsize=0x%x", tls_fsize);
 	LOG_NOTICE(LOADER, "** tls_vsize=0x%x", tls_vsize);
-
-	Emu.SetTLSData(tls_faddr + start_addr, tls_fsize, tls_vsize);
 
 	// Process exports
 	while (libent.addr() < start_addr + module_info->libent_end)
@@ -636,8 +632,6 @@ void arm_exec_loader::load() const
 	stop_code[1] = 1; // Predefined function index (HLE return)
 	Emu.SetCPUThreadStop(stop_code.addr());
 
-	armv7_init_tls();
-
 	const std::string& thread_name = proc_param->sceUserMainThreadName ? proc_param->sceUserMainThreadName.get_ptr() : "main_thread";
 	const u32 stack_size = proc_param->sceUserMainThreadStackSize ? proc_param->sceUserMainThreadStackSize->value() : 256 * 1024;
 	const u32 priority = proc_param->sceUserMainThreadPriority ? proc_param->sceUserMainThreadPriority->value() : 160;
@@ -648,6 +642,7 @@ void arm_exec_loader::load() const
 	thread->stack_size = stack_size;
 	thread->prio = priority;
 	thread->cpu_init();
+	thread->TLS = fxm::make_always<arm_tls_manager>(tls_faddr + start_addr, tls_fsize, tls_vsize)->alloc();
 
 	// Initialize args
 	std::vector<char> argv_data;

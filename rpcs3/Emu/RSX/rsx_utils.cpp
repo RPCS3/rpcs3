@@ -70,14 +70,12 @@ namespace rsx
 
 	void fill_window_matrix(void *dest, bool transpose)
 	{
-		u32 shader_window = method_registers[NV4097_SET_SHADER_WINDOW];
+		u16 height = method_registers.shader_window_height();
+		window_origin origin = method_registers.shader_window_origin();
+		window_pixel_center pixelCenter = method_registers.shader_window_pixel();
 
-		u16 height = shader_window & 0xfff;
-		window_origin origin = to_window_origin((shader_window >> 12) & 0xf);
-		window_pixel_center pixelCenter = to_window_pixel_center(shader_window >> 16);
-
-		f32 offset_x = f32(method_registers[NV4097_SET_WINDOW_OFFSET] & 0xffff);
-		f32 offset_y = f32(method_registers[NV4097_SET_WINDOW_OFFSET] >> 16);
+		f32 offset_x = f32(method_registers.shader_window_offset_x());
+		f32 offset_y = f32(method_registers.shader_window_offset_y());
 		f32 scale_y = 1.0;
 
 		if (origin == window_origin::bottom)
@@ -97,13 +95,13 @@ namespace rsx
 
 	void fill_viewport_matrix(void *buffer, bool transpose)
 	{
-		f32 offset_x = (f32&)method_registers[NV4097_SET_VIEWPORT_OFFSET + 0];
-		f32 offset_y = (f32&)method_registers[NV4097_SET_VIEWPORT_OFFSET + 1];
-		f32 offset_z = (f32&)method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
+		f32 offset_x = method_registers.viewport_offset_x();
+		f32 offset_y = method_registers.viewport_offset_y();
+		f32 offset_z = method_registers.viewport_offset_z();
 
-		f32 scale_x = (f32&)method_registers[NV4097_SET_VIEWPORT_SCALE + 0];
-		f32 scale_y = (f32&)method_registers[NV4097_SET_VIEWPORT_SCALE + 1];
-		f32 scale_z = (f32&)method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
+		f32 scale_x = method_registers.viewport_scale_x();
+		f32 scale_y = method_registers.viewport_scale_y();
+		f32 scale_z = method_registers.viewport_scale_z();
 
 		fill_scale_offset_matrix(buffer, transpose, offset_x, offset_y, offset_z, scale_x, scale_y, scale_z);
 	}

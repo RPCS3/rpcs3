@@ -15,7 +15,7 @@ namespace
 		case rsx::surface_depth_format::z16: return 0xFFFF;
 		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
 		}
-		throw EXCEPTION("Unknow depth format");
+		throw EXCEPTION("Unknown depth format");
 	}
 
 	u8 get_pixel_size(rsx::surface_depth_format format)
@@ -25,32 +25,26 @@ namespace
 		case rsx::surface_depth_format::z16: return 2;
 		case rsx::surface_depth_format::z24s8: return 4;
 		}
-		throw EXCEPTION("Unknow depth format");
+		throw EXCEPTION("Unknown depth format");
 	}
 }
 
 namespace vk
 {
-	VkCompareOp compare_op(u32 gl_name)
+	VkCompareOp get_compare_func(rsx::comparison_function op)
 	{
-		switch (gl_name)
+		switch (op)
 		{
-		case CELL_GCM_NEVER:
-			return VK_COMPARE_OP_NEVER;
-		case CELL_GCM_GREATER:
-			return VK_COMPARE_OP_GREATER;
-		case CELL_GCM_LESS:
-			return VK_COMPARE_OP_LESS;
-		case CELL_GCM_LEQUAL:
-			return VK_COMPARE_OP_LESS_OR_EQUAL;
-		case CELL_GCM_GEQUAL:
-			return VK_COMPARE_OP_GREATER_OR_EQUAL;
-		case CELL_GCM_EQUAL:
-			return VK_COMPARE_OP_EQUAL;
-		case CELL_GCM_ALWAYS:
-			return VK_COMPARE_OP_ALWAYS;
+		case rsx::comparison_function::never: return VK_COMPARE_OP_NEVER;
+		case rsx::comparison_function::greater: return VK_COMPARE_OP_GREATER;
+		case rsx::comparison_function::less: return VK_COMPARE_OP_LESS;
+		case rsx::comparison_function::less_or_equal: return VK_COMPARE_OP_LESS_OR_EQUAL;
+		case rsx::comparison_function::greater_or_equal: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+		case rsx::comparison_function::equal: return VK_COMPARE_OP_EQUAL;
+		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
+		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
 		default:
-			throw EXCEPTION("Unsupported compare op: 0x%X", gl_name);
+			throw EXCEPTION("Unknown compare op: 0x%X", op);
 		}
 	}
 
@@ -181,93 +175,94 @@ namespace vk
 		}
 	}
 
-	VkLogicOp get_logic_op(u32 op)
+	VkLogicOp get_logic_op(rsx::logic_op op)
 	{
 		switch (op)
 		{
-		case CELL_GCM_CLEAR: return VK_LOGIC_OP_CLEAR;
-		case CELL_GCM_AND: return VK_LOGIC_OP_AND;
-		case CELL_GCM_AND_REVERSE: return VK_LOGIC_OP_AND_REVERSE;
-		case CELL_GCM_COPY: return VK_LOGIC_OP_COPY;
-		case CELL_GCM_AND_INVERTED: return VK_LOGIC_OP_AND_INVERTED;
-		case CELL_GCM_NOOP: return VK_LOGIC_OP_NO_OP;
-		case CELL_GCM_XOR: return VK_LOGIC_OP_XOR;
-		case CELL_GCM_OR: return VK_LOGIC_OP_OR;
-		case CELL_GCM_NOR: return VK_LOGIC_OP_NOR;
-		case CELL_GCM_EQUIV: return VK_LOGIC_OP_EQUIVALENT;
-		case CELL_GCM_INVERT: return VK_LOGIC_OP_INVERT;
-		case CELL_GCM_OR_REVERSE: return VK_LOGIC_OP_OR_REVERSE;
-		case CELL_GCM_COPY_INVERTED: return VK_LOGIC_OP_COPY_INVERTED;
-		case CELL_GCM_OR_INVERTED: return VK_LOGIC_OP_OR_INVERTED;
-		case CELL_GCM_NAND: return VK_LOGIC_OP_NAND;
+		case rsx::logic_op::logic_clear: return VK_LOGIC_OP_CLEAR;
+		case rsx::logic_op::logic_and: return VK_LOGIC_OP_AND;
+		case rsx::logic_op::logic_and_reverse: return VK_LOGIC_OP_AND_REVERSE;
+		case rsx::logic_op::logic_copy: return VK_LOGIC_OP_COPY;
+		case rsx::logic_op::logic_and_inverted: return VK_LOGIC_OP_AND_INVERTED;
+		case rsx::logic_op::logic_noop: return VK_LOGIC_OP_NO_OP;
+		case rsx::logic_op::logic_xor: return VK_LOGIC_OP_XOR;
+		case rsx::logic_op::logic_or : return VK_LOGIC_OP_OR;
+		case rsx::logic_op::logic_nor: return VK_LOGIC_OP_NOR;
+		case rsx::logic_op::logic_equiv: return VK_LOGIC_OP_EQUIVALENT;
+		case rsx::logic_op::logic_invert: return VK_LOGIC_OP_INVERT;
+		case rsx::logic_op::logic_or_reverse: return VK_LOGIC_OP_OR_REVERSE;
+		case rsx::logic_op::logic_copy_inverted: return VK_LOGIC_OP_COPY_INVERTED;
+		case rsx::logic_op::logic_or_inverted: return VK_LOGIC_OP_OR_INVERTED;
+		case rsx::logic_op::logic_nand: return VK_LOGIC_OP_NAND;
 		default:
 			throw EXCEPTION("Unknown logic op 0x%X", op);
 		}
 	}
 
-	VkBlendFactor get_blend_factor(u16 factor)
+	VkBlendFactor get_blend_factor(rsx::blend_factor factor)
 	{
 		switch (factor)
 		{
-		case CELL_GCM_ONE: return VK_BLEND_FACTOR_ONE;
-		case CELL_GCM_ZERO: return VK_BLEND_FACTOR_ZERO;
-		case CELL_GCM_SRC_ALPHA: return VK_BLEND_FACTOR_SRC_ALPHA;
-		case CELL_GCM_DST_ALPHA: return VK_BLEND_FACTOR_DST_ALPHA;
-		case CELL_GCM_SRC_COLOR: return VK_BLEND_FACTOR_SRC_COLOR;
-		case CELL_GCM_DST_COLOR: return VK_BLEND_FACTOR_DST_COLOR;
-		case CELL_GCM_CONSTANT_COLOR: return VK_BLEND_FACTOR_CONSTANT_COLOR;
-		case CELL_GCM_CONSTANT_ALPHA: return VK_BLEND_FACTOR_CONSTANT_ALPHA;
-		case CELL_GCM_ONE_MINUS_SRC_COLOR: return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-		case CELL_GCM_ONE_MINUS_DST_COLOR: return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-		case CELL_GCM_ONE_MINUS_SRC_ALPHA: return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		case CELL_GCM_ONE_MINUS_DST_ALPHA: return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-		case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
-		case CELL_GCM_ONE_MINUS_CONSTANT_COLOR: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+		case rsx::blend_factor::one: return VK_BLEND_FACTOR_ONE;
+		case rsx::blend_factor::zero: return VK_BLEND_FACTOR_ZERO;
+		case rsx::blend_factor::src_alpha: return VK_BLEND_FACTOR_SRC_ALPHA;
+		case rsx::blend_factor::dst_alpha: return VK_BLEND_FACTOR_DST_ALPHA;
+		case rsx::blend_factor::src_color: return VK_BLEND_FACTOR_SRC_COLOR;
+		case rsx::blend_factor::dst_color: return VK_BLEND_FACTOR_DST_COLOR;
+		case rsx::blend_factor::constant_color: return VK_BLEND_FACTOR_CONSTANT_COLOR;
+		case rsx::blend_factor::constant_alpha: return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+		case rsx::blend_factor::one_minus_src_color: return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+		case rsx::blend_factor::one_minus_dst_color: return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+		case rsx::blend_factor::one_minus_src_alpha: return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		case rsx::blend_factor::one_minus_dst_alpha: return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+		case rsx::blend_factor::one_minus_constant_alpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 		default:
 			throw EXCEPTION("Unknown blend factor 0x%X", factor);
 		}
 	};
 
-	VkBlendOp get_blend_op(u16 op)
+	VkBlendOp get_blend_op(rsx::blend_equation op)
 	{
 		switch (op)
 		{
-		case CELL_GCM_FUNC_ADD: return VK_BLEND_OP_ADD;
-		case CELL_GCM_FUNC_SUBTRACT: return VK_BLEND_OP_SUBTRACT;
-		case CELL_GCM_FUNC_REVERSE_SUBTRACT: return VK_BLEND_OP_REVERSE_SUBTRACT;
-		case CELL_GCM_MIN: return VK_BLEND_OP_MIN;
-		case CELL_GCM_MAX: return VK_BLEND_OP_MAX;
+		case rsx::blend_equation::add: return VK_BLEND_OP_ADD;
+		case rsx::blend_equation::substract: return VK_BLEND_OP_SUBTRACT;
+		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
+		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
 		default:
 			throw EXCEPTION("Unknown blend op: 0x%X", op);
 		}
 	}
 	
-	VkStencilOp get_stencil_op(u32 op)
+
+	VkStencilOp get_stencil_op(rsx::stencil_op op)
 	{
 		switch (op)
 		{
-		case CELL_GCM_KEEP: return VK_STENCIL_OP_KEEP;
-		case CELL_GCM_ZERO: return VK_STENCIL_OP_ZERO;
-		case CELL_GCM_REPLACE: return VK_STENCIL_OP_REPLACE;
-		case CELL_GCM_INCR: return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-		case CELL_GCM_DECR: return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
-		case CELL_GCM_INVERT: return VK_STENCIL_OP_INVERT;
-		case CELL_GCM_INCR_WRAP: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
-		case CELL_GCM_DECR_WRAP: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+		case rsx::stencil_op::keep: return VK_STENCIL_OP_KEEP;
+		case rsx::stencil_op::zero: return VK_STENCIL_OP_ZERO;
+		case rsx::stencil_op::replace: return VK_STENCIL_OP_REPLACE;
+		case rsx::stencil_op::incr: return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+		case rsx::stencil_op::decr: return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+		case rsx::stencil_op::invert: return VK_STENCIL_OP_INVERT;
+		case rsx::stencil_op::incr_wrap: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+		case rsx::stencil_op::decr_wrap: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 		default:
 			throw EXCEPTION("Unknown stencil op: 0x%X", op);
 		}
 	}
-	
-	VkFrontFace get_front_face_ccw(u32 ffv)
+
+	VkFrontFace get_front_face(rsx::front_face ffv)
 	{
 		switch (ffv)
 		{
-		default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
-		case CELL_GCM_CW: return VK_FRONT_FACE_CLOCKWISE;
-		case CELL_GCM_CCW: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
+		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		default:
+			throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 		}
-		throw EXCEPTION("Unknown front face value: 0x%X", ffv);
 	}
 
 	VkCullModeFlags get_cull_face(u32 cfv)
@@ -304,6 +299,7 @@ namespace
 		color_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		color_attachement_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		color_attachement_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 		for (u32 i = 0; i < number_of_color_surface; ++i)
 		{
 			attachments.push_back(color_attachement_description);
@@ -479,12 +475,13 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 
 #define RING_BUFFER_SIZE 16 * 1024 * DESCRIPTOR_MAX_DRAW_CALLS
+
 	m_uniform_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
 	m_texture_upload_buffer_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
 
@@ -499,7 +496,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
 
 
-	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
+	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R32_SFLOAT, 0, 32);
 
 	VkFenceCreateInfo fence_info = {};
@@ -607,8 +604,7 @@ void VKGSRender::begin()
 	if (!load_program())
 		return;
 
-	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
-	float actual_line_width = (line_width >> 3) + (line_width & 7) / 8.f;
+	float actual_line_width = rsx::method_registers.line_width();
 
 	vkCmdSetLineWidth(m_command_buffer, actual_line_width);
 
@@ -618,56 +614,34 @@ void VKGSRender::begin()
 	m_used_descriptors++;
 }
 
-namespace
-{
-	bool normalize(rsx::vertex_base_type type)
-	{
-		switch (type)
-		{
-		case rsx::vertex_base_type::s1:
-		case rsx::vertex_base_type::ub:
-		case rsx::vertex_base_type::cmp:
-			return true;
-		case rsx::vertex_base_type::f:
-		case rsx::vertex_base_type::sf:
-		case rsx::vertex_base_type::ub256:
-		case rsx::vertex_base_type::s32k:
-			return false;
-		}
-		throw EXCEPTION("unknown vertex type");
-	}
-}
-
-
-
 void VKGSRender::end()
 {
 	size_t idx = vk::get_render_pass_location(
-		vk::get_compatible_surface_format(m_surface.color_format).first,
-		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
-		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
+		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
+		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
+		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	for (int i = 0; i < rsx::limits::textures_count; ++i)
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		if (m_program->has_uniform("tex" + std::to_string(i)))
 		{
-			if (!textures[i].enabled())
+			if (!rsx::method_registers.fragment_textures[i].enabled())
 			{
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 				continue;
 			}
-			vk::image_view  *texture0 = m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+			vk::image_view  *texture0 = m_texture_cache.upload_texture(m_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
 			VkFilter min_filter;
 			VkSamplerMipmapMode mip_mode;
-			std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(textures[i].min_filter());
+			std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
 			m_sampler_to_clean.push_back(std::make_unique<vk::sampler>(
 				*m_device,
-				vk::vk_wrap_mode(textures[i].wrap_s()), vk::vk_wrap_mode(textures[i].wrap_t()), vk::vk_wrap_mode(textures[i].wrap_r()),
-				!!(textures[i].format() & CELL_GCM_TEXTURE_UN),
-				textures[i].bias(), vk::max_aniso(textures[i].max_aniso()), textures[i].min_lod(), textures[i].max_lod(),
-				min_filter, vk::get_mag_filter(textures[i].mag_filter()), mip_mode, vk::get_border_color(textures[i].border_color())
+				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
+				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
+				rsx::method_registers.fragment_textures[i].bias(), vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), rsx::method_registers.fragment_textures[i].min_lod(), rsx::method_registers.fragment_textures[i].max_lod(),
+				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color())
 				));
 			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 		}
@@ -679,8 +653,8 @@ void VKGSRender::end()
 	rp_begin.framebuffer = m_framebuffer_to_clean.back()->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
-	rp_begin.renderArea.extent.width = m_frame->client_width();
-	rp_begin.renderArea.extent.height = m_frame->client_height();
+	rp_begin.renderArea.extent.width = m_framebuffer_to_clean.back()->width();
+	rp_begin.renderArea.extent.height = m_framebuffer_to_clean.back()->height();
 
 	vkCmdBeginRenderPass(m_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -710,23 +684,18 @@ void VKGSRender::end()
 
 void VKGSRender::set_viewport()
 {
-	u32 viewport_horizontal = rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL];
-	u32 viewport_vertical = rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL];
+	u16 viewport_x = rsx::method_registers.viewport_origin_x();
+	u16 viewport_y = rsx::method_registers.viewport_origin_y();
+	u16 viewport_w = rsx::method_registers.viewport_width();
+	u16 viewport_h = rsx::method_registers.viewport_height();
 
-	u16 viewport_x = viewport_horizontal & 0xffff;
-	u16 viewport_y = viewport_vertical & 0xffff;
-	u16 viewport_w = viewport_horizontal >> 16;
-	u16 viewport_h = viewport_vertical >> 16;
+	u16 scissor_x = rsx::method_registers.scissor_origin_x();
+	u16 scissor_w = rsx::method_registers.scissor_width();
+	u16 scissor_y = rsx::method_registers.scissor_origin_y();
+	u16 scissor_h = rsx::method_registers.scissor_height();
 
-	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
-	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
-	u16 scissor_x = scissor_horizontal;
-	u16 scissor_w = scissor_horizontal >> 16;
-	u16 scissor_y = scissor_vertical;
-	u16 scissor_h = scissor_vertical >> 16;
-
-//	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
-//	rsx::window_origin shader_window_origin = rsx::to_window_origin((shader_window >> 12) & 0xf);
+	//	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
+	//	rsx::window_origin shader_window_origin = rsx::to_window_origin((shader_window >> 12) & 0xf);
 
 	VkViewport viewport = {};
 	viewport.x = viewport_x;
@@ -751,20 +720,21 @@ void VKGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
 	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
 }
 
 void VKGSRender::on_exit()
 {
 	m_texture_cache.destroy();
+
+	return GSRender::on_exit();
 }
 
 void VKGSRender::clear_surface(u32 mask)
 {
 	//TODO: Build clear commands into current renderpass descriptor set
 	if (!(mask & 0xF3)) return;
-	if (m_current_present_image== 0xFFFF) return;
-	if (!rsx::method_registers[NV4097_SET_SURFACE_FORMAT]) return;
+	if (m_current_present_image == 0xFFFF) return;
 
 	init_buffers();
 
@@ -774,13 +744,13 @@ void VKGSRender::clear_surface(u32 mask)
 	VkClearValue depth_stencil_clear_values, color_clear_values;
 	VkImageSubresourceRange depth_range = vk::get_image_subresource_range(0, 0, 1, 1, 0);
 
-	rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
+	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (mask & 0x1)
 	{
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
-		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
+		u32 clear_depth = rsx::method_registers.z_clear_value();
 		float depth_clear = (float)clear_depth / max_depth_value;
 
 		depth_range.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -790,8 +760,8 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (mask & 0x2)
 	{
-		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
-		u32 stencil_mask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
+		u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+		u32 stencil_mask = rsx::method_registers.stencil_mask();
 
 		//TODO set stencil mask
 		depth_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -800,11 +770,10 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (mask & 0xF0)
 	{
-		u32 clear_color = rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE];
-		u8 clear_a = clear_color >> 24;
-		u8 clear_r = clear_color >> 16;
-		u8 clear_g = clear_color >> 8;
-		u8 clear_b = clear_color;
+		u8 clear_a = rsx::method_registers.clear_color_a();
+		u8 clear_r = rsx::method_registers.clear_color_r();
+		u8 clear_g = rsx::method_registers.clear_color_g();
+		u8 clear_b = rsx::method_registers.clear_color_b();
 
 		//TODO set color mask
 		/*VkBool32 clear_red = (VkBool32)!!(mask & 0x20);
@@ -873,17 +842,16 @@ bool VKGSRender::load_program()
 
 	vk::pipeline_props properties = {};
 
-
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	bool unused;
 	properties.ia.topology = vk::get_appropriate_topology(draw_mode, unused);
 
-	if (rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
+	if (rsx::method_registers.restart_index_enabled())
 	{
-		if (rsx::method_registers[NV4097_SET_RESTART_INDEX] != 0xFFFF &&
-			rsx::method_registers[NV4097_SET_RESTART_INDEX] != 0xFFFFFFFF)
+		if (rsx::method_registers.restart_index() != 0xFFFF &&
+			rsx::method_registers.restart_index() != 0xFFFFFFFF)
 		{
-			LOG_ERROR(RSX, "Custom primitive restart index 0x%X. Should rewrite index buffer with proper value!", rsx::method_registers[NV4097_SET_RESTART_INDEX]);
+			LOG_ERROR(RSX, "Custom primitive restart index 0x%X. Should rewrite index buffer with proper value!", rsx::method_registers.restart_index());
 		}
 		properties.ia.primitiveRestartEnable = VK_TRUE;
 	}
@@ -897,17 +865,11 @@ bool VKGSRender::load_program()
 		properties.att_state[i].blendEnable = VK_FALSE;
 	}
 
-	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
-	bool color_mask_b = !!(color_mask & 0xff);
-	bool color_mask_g = !!((color_mask >> 8) & 0xff);
-	bool color_mask_r = !!((color_mask >> 16) & 0xff);
-	bool color_mask_a = !!((color_mask >> 24) & 0xff);
-
 	VkColorComponentFlags mask = 0;
-	if (color_mask_a) mask |= VK_COLOR_COMPONENT_A_BIT;
-	if (color_mask_b) mask |= VK_COLOR_COMPONENT_B_BIT;
-	if (color_mask_g) mask |= VK_COLOR_COMPONENT_G_BIT;
-	if (color_mask_r) mask |= VK_COLOR_COMPONENT_R_BIT;
+	if (rsx::method_registers.color_mask_a()) mask |= VK_COLOR_COMPONENT_A_BIT;
+	if (rsx::method_registers.color_mask_b()) mask |= VK_COLOR_COMPONENT_B_BIT;
+	if (rsx::method_registers.color_mask_g()) mask |= VK_COLOR_COMPONENT_G_BIT;
+	if (rsx::method_registers.color_mask_r()) mask |= VK_COLOR_COMPONENT_R_BIT;
 
 	VkColorComponentFlags color_masks[4] = { mask };
 
@@ -918,19 +880,15 @@ bool VKGSRender::load_program()
 		properties.att_state[render_targets[idx]].colorWriteMask = mask;
 	}
 
-	if (rsx::method_registers[NV4097_SET_BLEND_ENABLE])
+	if (rsx::method_registers.blend_enabled())
 	{
-		u32 sfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR];
-		u32 dfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR];
+		VkBlendFactor sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
+		VkBlendFactor sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
+		VkBlendFactor dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
+		VkBlendFactor dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
 
-		VkBlendFactor sfactor_rgb = vk::get_blend_factor(sfactor);
-		VkBlendFactor sfactor_a = vk::get_blend_factor(sfactor >> 16);
-		VkBlendFactor dfactor_rgb = vk::get_blend_factor(dfactor);
-		VkBlendFactor dfactor_a = vk::get_blend_factor(dfactor >> 16);
-
-		u32 equation = rsx::method_registers[NV4097_SET_BLEND_EQUATION];
-		VkBlendOp equation_rgb = vk::get_blend_op(equation);
-		VkBlendOp equation_a = vk::get_blend_op(equation >> 16);
+		VkBlendOp equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
+		VkBlendOp equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
 
 		//TODO: Separate target blending
 		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
@@ -952,67 +910,91 @@ bool VKGSRender::load_program()
 		}
 	}
 
-	if (rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE])
+	if (rsx::method_registers.logic_op_enabled())
 	{
 		properties.cs.logicOpEnable = true;
-		properties.cs.logicOp = vk::get_logic_op(rsx::method_registers[NV4097_SET_LOGIC_OP]);
+		properties.cs.logicOp = vk::get_logic_op(rsx::method_registers.logic_operation());
 	}
 
 	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	properties.ds.depthWriteEnable = (!!rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? VK_TRUE : VK_FALSE;
+	properties.ds.depthWriteEnable = rsx::method_registers.depth_write_enabled() ? VK_TRUE : VK_FALSE;
 
-	if (rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE])
+	if (rsx::method_registers.depth_bounds_test_enabled())
 	{
 		properties.ds.depthBoundsTestEnable = VK_TRUE;
-		properties.ds.minDepthBounds = (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN];
-		properties.ds.maxDepthBounds = (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX];
+		properties.ds.minDepthBounds = rsx::method_registers.depth_bounds_min();
+		properties.ds.maxDepthBounds = rsx::method_registers.depth_bounds_max();
 	}
 	else
 		properties.ds.depthBoundsTestEnable = VK_FALSE;
 
-	if (rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE])
+	if (rsx::method_registers.stencil_test_enabled())
 	{
 		properties.ds.stencilTestEnable = VK_TRUE;
-		properties.ds.front.writeMask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
-		properties.ds.front.compareMask = rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK];
-		properties.ds.front.reference = rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF];
-		properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
-		properties.ds.front.passOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
-		properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
-		properties.ds.front.compareOp = vk::compare_op(rsx::method_registers[NV4097_SET_STENCIL_FUNC]);
+		properties.ds.front.writeMask = rsx::method_registers.stencil_mask();
+		properties.ds.front.compareMask = rsx::method_registers.stencil_func_mask();
+		properties.ds.front.reference = rsx::method_registers.stencil_func_ref();
+		properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers.stencil_op_fail());
+		properties.ds.front.passOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zpass());
+		properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zfail());
+		properties.ds.front.compareOp = vk::get_compare_func(rsx::method_registers.stencil_func());
 
-		if (rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE])
+		if (rsx::method_registers.two_sided_stencil_test_enabled())
 		{
-			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL]);
-			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
-			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL]);
-			properties.ds.back.compareOp = vk::compare_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC]);
+			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail());
+			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
+			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
+			properties.ds.back.compareOp = vk::get_compare_func(rsx::method_registers.back_stencil_func());
 		}
 		else
 			properties.ds.back = properties.ds.front;
 	}
 	else
 		properties.ds.stencilTestEnable = VK_FALSE;
-		
-	if (!!rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE])
+
+	if (rsx::method_registers.depth_test_enabled())
 	{
 		properties.ds.depthTestEnable = VK_TRUE;
-		properties.ds.depthCompareOp = vk::compare_op(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
+		properties.ds.depthCompareOp = vk::get_compare_func(rsx::method_registers.depth_func());
 	}
 	else
 		properties.ds.depthTestEnable = VK_FALSE;
 
-	if (!!rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE])
-	{
-		properties.rs.cullMode = vk::get_cull_face(rsx::method_registers[NV4097_SET_CULL_FACE]);
-	}
-	
-	properties.rs.frontFace = vk::get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]);
-	
+	properties.rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
+	properties.rs.depthClampEnable = VK_FALSE;
+	properties.rs.rasterizerDiscardEnable = VK_FALSE;
+	properties.rs.depthBiasEnable = VK_FALSE;
+
+//	if (rsx::method_registers.cull_face_enabled())
+//	{
+//		switch (rsx::method_registers.cull_face_mode())
+//		{
+//		case rsx::cull_face::front:
+//			properties.rs.cullMode = VK_CULL_MODE_FRONT_BIT;
+//			break;
+//		case rsx::cull_face::back:
+//			properties.rs.cullMode = VK_CULL_MODE_BACK_BIT;
+//			break;
+//		case rsx::cull_face::front_and_back:
+//			properties.rs.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
+//			break;
+//		default:
+//			properties.rs.cullMode = VK_CULL_MODE_NONE;
+//			break;
+//		}
+//	}
+//	else
+//		properties.rs.cullMode = VK_CULL_MODE_NONE;
+
+	properties.rs.frontFace = vk::get_front_face(rsx::method_registers.front_face_mode());
+	properties.rs.cullMode = VK_CULL_MODE_NONE;
+
 	size_t idx = vk::get_render_pass_location(
-		vk::get_compatible_surface_format(m_surface.color_format).first,
-		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
-		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
+		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
+		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
+		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
+	
 	properties.render_pass = m_render_passes[idx];
 
 	properties.num_targets = m_draw_buffers_count;
@@ -1030,23 +1012,23 @@ bool VKGSRender::load_program()
 
 	//TODO: Add case for this in RSXThread
 	/**
-	 * NOTE: While VK's coord system resembles GLs, the clip volume is no longer symetrical in z
-	 * Its like D3D without the flip in y (depending on how you build the spir-v)
-	 */
+	* NOTE: While VK's coord system resembles GLs, the clip volume is no longer symetrical in z
+	* Its like D3D without the flip in y (depending on how you build the spir-v)
+	*/
 	{
-		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+		int clip_w = rsx::method_registers.surface_clip_width();
+		int clip_h = rsx::method_registers.surface_clip_height();
 
-		float scale_x = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE] / (clip_w / 2.f);
-		float offset_x = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET] - (clip_w / 2.f);
+		float scale_x = rsx::method_registers.viewport_scale_x() / (clip_w / 2.f);
+		float offset_x = rsx::method_registers.viewport_offset_x() - (clip_w / 2.f);
 		offset_x /= clip_w / 2.f;
 
-		float scale_y = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
-		float offset_y = ((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
+		float scale_y = rsx::method_registers.viewport_scale_y() / (clip_h / 2.f);
+		float offset_y = (rsx::method_registers.viewport_offset_y() - (clip_h / 2.f));
 		offset_y /= clip_h / 2.f;
 
-		float scale_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
-		float offset_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
+		float scale_z = rsx::method_registers.viewport_scale_z();
+		float offset_z = rsx::method_registers.viewport_offset_z();
 
 		float one = 1.f;
 
@@ -1056,12 +1038,14 @@ bool VKGSRender::load_program()
 		stream_vector((char*)buf + 48, 0, 0, 0, (u32&)one);
 	}
 
-	u32 is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
-	u8 alpha_ref_raw = (u8)(rsx::method_registers[NV4097_SET_ALPHA_REF] & 0xFF);
+	u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
+	u8 alpha_ref_raw = rsx::method_registers.alpha_ref();
 	float alpha_ref = alpha_ref_raw / 255.f;
 
-	memcpy((char*)buf + 64, &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
-	memcpy((char*)buf + 68, &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
+	f32 fog0 = rsx::method_registers.fog_params_0();
+	f32 fog1 = rsx::method_registers.fog_params_1();
+	memcpy((char*)buf + 64, &fog0, sizeof(float));
+	memcpy((char*)buf + 68, &fog1, sizeof(float));
 	memcpy((char*)buf + 72, &is_alpha_tested, sizeof(u32));
 	memcpy((char*)buf + 76, &alpha_ref, sizeof(float));
 	m_uniform_buffer_ring_info.unmap();
@@ -1072,14 +1056,18 @@ bool VKGSRender::load_program()
 	m_uniform_buffer_ring_info.unmap();
 
 	const size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(fragment_constants_sz);
-	buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_constants_sz);
-	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
-	m_uniform_buffer_ring_info.unmap();
+	const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(std::max(fragment_constants_sz, static_cast<size_t>(32)));
+
+	if (fragment_constants_sz)
+	{
+		buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_constants_sz);
+		m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
+		m_uniform_buffer_ring_info.unmap();
+	}
 
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);	
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, (fragment_constants_sz? fragment_constants_sz: 32) }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
 
 	return true;
 }
@@ -1161,37 +1149,29 @@ void VKGSRender::open_command_buffer()
 
 void VKGSRender::prepare_rtts()
 {
-	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
-
 	if (!m_rtts_dirty)
 		return;
 
 	m_rtts_dirty = false;
 
-	if (m_surface.format != surface_format)
-		m_surface.unpack(surface_format);
-
-	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
-	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
-
-	u32 clip_width = clip_horizontal >> 16;
-	u32 clip_height = clip_vertical >> 16;
-	u32 clip_x = clip_horizontal;
-	u32 clip_y = clip_vertical;
+	u32 clip_width = rsx::method_registers.surface_clip_width();
+	u32 clip_height = rsx::method_registers.surface_clip_height();
+	u32 clip_x = rsx::method_registers.surface_clip_origin_x();
+	u32 clip_y = rsx::method_registers.surface_clip_origin_y();
 
 	m_rtts.prepare_render_target(&m_command_buffer,
-		surface_format,
-		clip_horizontal, clip_vertical,
-		rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
+		rsx::method_registers.surface_color(), rsx::method_registers.surface_depth_fmt(),
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height(),
+		rsx::method_registers.surface_color_target(),
 		get_color_surface_addresses(), get_zeta_surface_address(),
 		(*m_device), &m_command_buffer, m_optimal_tiling_supported_formats, m_memory_type_mapping);
 
 	//Bind created rtts as current fbo...
-	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
+	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
 
 	std::vector<std::unique_ptr<vk::image_view>> fbo_images;
 
-	for (u8 index: draw_buffers)
+	for (u8 index : draw_buffers)
 	{
 		vk::image *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
 
@@ -1212,7 +1192,7 @@ void VKGSRender::prepare_rtts()
 		vk::image *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
 
 		VkImageSubresourceRange subres = {};
-		subres.aspectMask = (m_surface.depth_format == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
+		subres.aspectMask = (rsx::method_registers.surface_depth_fmt() == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
 		subres.baseArrayLayer = 0;
 		subres.baseMipLevel = 0;
 		subres.layerCount = 1;
@@ -1221,7 +1201,7 @@ void VKGSRender::prepare_rtts()
 		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 	}
 
-	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(m_surface.color_format).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format), (u8)draw_buffers.size());
+	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()), (u8)draw_buffers.size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
 	m_framebuffer_to_clean.push_back(std::make_unique<vk::framebuffer>(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));

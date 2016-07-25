@@ -2,7 +2,6 @@
 #include "stdafx_gui.h"
 #include "rpcs3.h"
 #include "MainFrame.h"
-#include "rpcs3_version.h"
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -73,7 +72,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-	SetLabel(std::string(_PRGNAME_ " v") + rpcs3::version.to_string());
+	SetLabel("RPCS3 v" + rpcs3::version.to_string());
 
 	wxMenuBar* menubar = new wxMenuBar();
 
@@ -164,9 +163,6 @@ MainFrame::MainFrame()
 
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
 	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
-
-	LOG_NOTICE(GENERAL, "%s", (std::string(_PRGNAME_ " v") + rpcs3::version.to_string()).c_str());
-	LOG_NOTICE(GENERAL, "");
 }
 
 MainFrame::~MainFrame()
@@ -253,7 +249,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	pkg_f.seek(0);
 
 	// Get full path
-	const auto& local_path = vfs::get("/dev_hdd0/game/") + std::string(std::begin(title_id), std::end(title_id));
+	const auto& local_path = Emu.GetGameDir() + std::string(std::begin(title_id), std::end(title_id));
 
 	if (!fs::create_dir(local_path))
 	{
@@ -283,13 +279,15 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 			if (pkg_install(pkg_f, local_path + '/', progress))
 			{
 				progress = 1.;
+				return_;
 			}
 
 			// TODO: Ask user to delete files on cancellation/failure?
+			progress = -1.;
 		});
 
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), progress < 1.)
+		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
 		{
 			// Update progress window
 			if (!pdlg.Update(static_cast<int>(progress * pdlg.GetRange())))
@@ -298,6 +296,12 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 				progress -= 1.;
 				break;
 			}
+		}
+		
+		if (progress > 0.)
+		{
+			pdlg.Update(pdlg.GetRange());
+			std::this_thread::sleep_for(100ms);
 		}
 	}
 

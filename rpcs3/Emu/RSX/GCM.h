@@ -48,6 +48,7 @@ namespace rsx
 
 	enum class primitive_type : u8
 	{
+		invalid,
 		points,
 		lines,
 		line_loop, // line strip with last end being joined with first end.
@@ -128,7 +129,7 @@ namespace rsx
 
 	window_pixel_center to_window_pixel_center(u8 in);
 
-	enum class comparaison_function : u8
+	enum class comparison_function : u8
 	{
 		never,
 		less,
@@ -140,7 +141,7 @@ namespace rsx
 		always
 	};
 
-	comparaison_function to_comparaison_function(u16 in);
+	comparison_function to_comparison_function(u16 in);
 
 	enum class fog_mode : u8
 	{
@@ -199,7 +200,7 @@ namespace rsx
 		linear_nearest, ///< linear filtering, closest mipmap level
 		nearest_linear, ///< no filtering, linear mix between closest mipmap levels
 		linear_linear, ///< linear filtering, linear mix between closest mipmap levels
-		convolution_min, ///< Unknow mode but looks close to linear_linear
+		convolution_min, ///< Unknown mode but looks close to linear_linear
 	};
 
 	texture_minify_filter to_texture_minify_filter(u8 in);
@@ -208,10 +209,199 @@ namespace rsx
 	{
 		nearest, ///< no filtering
 		linear, ///< linear filtering
-		convolution_mag, ///< Unknow mode but looks close to linear
+		convolution_mag, ///< Unknown mode but looks close to linear
 	};
 
 	texture_magnify_filter to_texture_magnify_filter(u8 in);
+
+	enum class stencil_op : u8
+	{
+		keep,
+		zero,
+		replace,
+		incr,
+		decr,
+		invert,
+		incr_wrap,
+		decr_wrap,
+	};
+
+	stencil_op to_stencil_op(u16 in);
+
+	enum class blend_equation : u8
+	{
+		add,
+		min,
+		max,
+		substract,
+		reverse_substract,
+		reverse_substract_signed,
+		add_signed,
+		reverse_add_signed,
+	};
+
+	blend_equation to_blend_equation(u16 in);
+
+	enum class blend_factor : u8
+	{
+		zero,
+		one,
+		src_color,
+		one_minus_src_color,
+		dst_color,
+		one_minus_dst_color,
+		src_alpha,
+		one_minus_src_alpha,
+		dst_alpha,
+		one_minus_dst_alpha,
+		src_alpha_saturate,
+		constant_color,
+		one_minus_constant_color,
+		constant_alpha,
+		one_minus_constant_alpha,
+	};
+
+	blend_factor to_blend_factor(u16 in);
+
+	enum class logic_op : u8
+	{
+		logic_clear,
+		logic_and,
+		logic_and_reverse,
+		logic_copy,
+		logic_and_inverted,
+		logic_noop,
+		logic_xor,
+		logic_or,
+		logic_nor,
+		logic_equiv,
+		logic_invert,
+		logic_or_reverse,
+		logic_copy_inverted,
+		logic_or_inverted,
+		logic_nand,
+		logic_set,
+	};
+
+	logic_op to_logic_op(u16 in);
+
+	enum class front_face : u8
+	{
+		cw, /// clockwise
+		ccw /// counter clockwise
+	};
+
+	front_face to_front_face(u16 in);
+
+	enum class cull_face : u8
+	{
+		front,
+		back,
+		front_and_back,
+	};
+
+	cull_face to_cull_face(u16 in);
+
+	enum class user_clip_plane_op : u8
+	{
+		disable,
+		less_than,
+		greather_or_equal,
+	};
+
+	user_clip_plane_op to_user_clip_plane_op(u8 in);
+
+	enum class shading_mode : u8
+	{
+		smooth,
+		flat,
+	};
+
+	shading_mode to_shading_mode(u32 in);
+
+	enum class polygon_mode : u8
+	{
+		point,
+		line,
+		fill,
+	};
+
+	polygon_mode to_polygon_mode(u32 in);
+
+	namespace blit_engine
+	{
+		enum class transfer_origin : u8
+		{
+			center,
+			corner,
+		};
+
+		transfer_origin to_transfer_origin(u8 in);
+
+		enum class transfer_interpolator : u8
+		{
+			zoh,
+			foh,
+		};
+
+		transfer_interpolator to_transfer_interpolator(u8 in);
+
+		enum class transfer_operation : u8
+		{
+			srccopy_and,
+			rop_and,
+			blend_and,
+			srccopy,
+			srccopy_premult,
+			blend_premult,
+		};
+
+		transfer_operation to_transfer_operation(u8 in);
+
+		enum class transfer_source_format : u8
+		{
+			a1r5g5b5,
+			x1r5g5b5,
+			a8r8g8b8,
+			x8r8g8b8,
+			cr8yb8cb8ya8,
+			yb8cr8ya8cb8,
+			r5g6b5,
+			y8,
+			ay8,
+			eyb8ecr8eya8ecb8,
+			ecr8eyb8ecb8eya8,
+			a8b8g8r8,
+			x8b8g8r8,
+		};
+
+		transfer_source_format to_transfer_source_format(u8 in);
+
+		enum class transfer_destination_format : u8
+		{
+			r5g6b5,
+			a8r8g8b8,
+			y32,
+		};
+
+		transfer_destination_format to_transfer_destination_format(u8 in);
+
+		enum class context_surface : u8
+		{
+			surface2d,
+			swizzle2d,
+		};
+
+		context_surface to_context_surface(u32 in);
+
+		enum class context_dma : u8
+		{
+			to_memory_get_report,
+			report_location_main,
+		};
+
+		context_dma to_context_dma(u32 in);
+	}
 }
 
 enum
@@ -236,12 +426,6 @@ enum CellRescTableElement
 {
 	CELL_RESC_ELEMENT_HALF  = 0,
 	CELL_RESC_ELEMENT_FLOAT = 1,
-};
-
-enum
-{
-	CELL_GCM_FLAT   = 0x1D00,
-	CELL_GCM_SMOOTH = 0x1D01,
 };
 
 enum
@@ -296,43 +480,6 @@ enum
 	// Surface type
 	CELL_GCM_SURFACE_PITCH    = 1,
 	CELL_GCM_SURFACE_SWIZZLE  = 2,
-};
-
-enum
-{
-	// Transfer operations
-	CELL_GCM_TRANSFER_OPERATION_SRCCOPY_AND     = 0,
-	CELL_GCM_TRANSFER_OPERATION_ROP_AND         = 1,
-	CELL_GCM_TRANSFER_OPERATION_BLEND_AND       = 2,
-	CELL_GCM_TRANSFER_OPERATION_SRCCOPY         = 3,
-	CELL_GCM_TRANSFER_OPERATION_SRCCOPY_PREMULT = 4,
-	CELL_GCM_TRANSFER_OPERATION_BLEND_PREMULT   = 5,
-
-	CELL_GCM_TRANSFER_ORIGIN_CENTER = 1,
-	CELL_GCM_TRANSFER_ORIGIN_CORNER = 2,
-
-	CELL_GCM_TRANSFER_INTERPOLATOR_ZOH = 0,
-	CELL_GCM_TRANSFER_INTERPOLATOR_FOH = 1,
-
-	// Destination Format conversions
-	CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5   = 4,
-	CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8 = 10,
-	CELL_GCM_TRANSFER_SURFACE_FORMAT_Y32      = 11,
-
-	// Source Format conversions
-	CELL_GCM_TRANSFER_SCALE_FORMAT_A1R5G5B5         = 1,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_X1R5G5B5         = 2,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8         = 3,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_X8R8G8B8         = 4,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_CR8YB8CB8YA8     = 5,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_YB8CR8YA8CB8     = 6,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5           = 7,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_Y8               = 8,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_AY8              = 9,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_EYB8ECR8EYA8ECB8 = 10,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_ECR8EYB8ECB8EYA8 = 11,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_A8B8G8R8         = 12,
-	CELL_GCM_TRANSFER_SCALE_FORMAT_X8B8G8R8         = 13,
 };
 
 enum
@@ -428,28 +575,6 @@ enum
 
 	CELL_GCM_ZERO = 0,
 	CELL_GCM_ONE = 1,
-	CELL_GCM_SRC_COLOR = 0x0300,
-	CELL_GCM_ONE_MINUS_SRC_COLOR = 0x0301,
-	CELL_GCM_SRC_ALPHA = 0x0302,
-	CELL_GCM_ONE_MINUS_SRC_ALPHA = 0x0303,
-	CELL_GCM_DST_ALPHA = 0x0304,
-	CELL_GCM_ONE_MINUS_DST_ALPHA = 0x0305,
-	CELL_GCM_DST_COLOR = 0x0306,
-	CELL_GCM_ONE_MINUS_DST_COLOR = 0x0307,
-	CELL_GCM_SRC_ALPHA_SATURATE = 0x0308,
-	CELL_GCM_CONSTANT_COLOR = 0x8001,
-	CELL_GCM_ONE_MINUS_CONSTANT_COLOR = 0x8002,
-	CELL_GCM_CONSTANT_ALPHA = 0x8003,
-	CELL_GCM_ONE_MINUS_CONSTANT_ALPHA = 0x8004,
-
-	CELL_GCM_FUNC_ADD = 0x8006,
-	CELL_GCM_MIN = 0x8007,
-	CELL_GCM_MAX = 0x8008,
-	CELL_GCM_FUNC_SUBTRACT = 0x800A,
-	CELL_GCM_FUNC_REVERSE_SUBTRACT = 0x800B,
-	CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED = 0x0000F005,
-	CELL_GCM_FUNC_ADD_SIGNED = 0x0000F006,
-	CELL_GCM_FUNC_REVERSE_ADD_SIGNED = 0x0000F007,
 
 	CELL_GCM_FRONT = 0x0404,
 	CELL_GCM_BACK = 0x0405,
@@ -457,30 +582,6 @@ enum
 
 	CELL_GCM_CW = 0x0900,
 	CELL_GCM_CCW = 0x0901,
-
-	CELL_GCM_CLEAR = 0x1500,
-	CELL_GCM_AND = 0x1501,
-	CELL_GCM_AND_REVERSE = 0x1502,
-	CELL_GCM_COPY = 0x1503,
-	CELL_GCM_AND_INVERTED = 0x1504,
-	CELL_GCM_NOOP = 0x1505,
-	CELL_GCM_XOR = 0x1506,
-	CELL_GCM_OR = 0x1507,
-	CELL_GCM_NOR = 0x1508,
-	CELL_GCM_EQUIV = 0x1509,
-	CELL_GCM_INVERT = 0x150A,
-	CELL_GCM_OR_REVERSE = 0x150B,
-	CELL_GCM_COPY_INVERTED = 0x150C,
-	CELL_GCM_OR_INVERTED = 0x150D,
-	CELL_GCM_NAND = 0x150E,
-	CELL_GCM_SET = 0x150F,
-
-	CELL_GCM_KEEP = 0x1E00,
-	CELL_GCM_REPLACE = 0x1E01,
-	CELL_GCM_INCR = 0x1E02,
-	CELL_GCM_DECR = 0x1E03,
-	CELL_GCM_INCR_WRAP = 0x8507,
-	CELL_GCM_DECR_WRAP = 0x8508,
 
 	CELL_GCM_TRANSFER_LOCAL_TO_LOCAL = 0,
 	CELL_GCM_TRANSFER_MAIN_TO_LOCAL = 1,
@@ -561,16 +662,8 @@ enum
 	CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6 = 1 << CELL_GCM_ATTRIB_OUTPUT_TEX6,
 	CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7 = 1 << CELL_GCM_ATTRIB_OUTPUT_TEX7,
 
-	CELL_GCM_POLYGON_MODE_POINT = 0x1B00,
-	CELL_GCM_POLYGON_MODE_LINE = 0x1B01,
-	CELL_GCM_POLYGON_MODE_FILL = 0x1B02,
-
 	CELL_GCM_TRUE = 1,
 	CELL_GCM_FALSE = 0,
-
-	CELL_GCM_USER_CLIP_PLANE_DISABLE = 0,
-	CELL_GCM_USER_CLIP_PLANE_ENABLE_LT = 1,
-	CELL_GCM_USER_CLIP_PLANE_ENABLE_GE = 2,
 };
 
 enum
@@ -594,10 +687,8 @@ enum
 {
 	CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER   = 0xFEED0000, // Local memory
 	CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER    = 0xFEED0001, // Main memory
-	CELL_GCM_CONTEXT_SURFACE2D                 = 0x313371C3,
-	CELL_GCM_CONTEXT_SWIZZLE2D                 = 0x31337A73,
-	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT  = 0x66626660,
-	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN  = 0xBAD68000,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT = 0x66626660,
+	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN = 0xBAD68000,
 	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0         = 0x6660420F,
 };
 

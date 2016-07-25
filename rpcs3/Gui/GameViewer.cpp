@@ -42,7 +42,6 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 
 	m_sortColumn = 1;
 	m_sortAscending = true;
-	m_path = "/dev_hdd0/game/";
 	m_popup = new wxMenu();
 
 	Bind(wxEVT_LIST_ITEM_ACTIVATED, &GameViewer::DClick, this);
@@ -80,7 +79,7 @@ void GameViewer::LoadGames()
 {
 	m_games.clear();
 
-	for (const auto& entry : fs::dir(vfs::get(m_path)))
+	for (const auto& entry : fs::dir(Emu.GetGameDir()))
 	{
 		if (entry.is_directory)
 		{
@@ -93,10 +92,13 @@ void GameViewer::LoadPSF()
 {
 	m_game_data.clear();
 
+	const std::string& game_path = Emu.GetGameDir();
+
 	for (u32 i = 0; i < m_games.size(); ++i)
 	{
-		const std::string sfb = vfs::get(m_path) + m_games[i] + "/PS3_DISC.SFB";
-		const std::string sfo = vfs::get(m_path) + m_games[i] + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
+		const std::string& dir = game_path + m_games[i];
+		const std::string& sfb = dir + "/PS3_DISC.SFB";
+		const std::string& sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
 
 		const fs::file sfo_file(sfo);
 		if (!sfo_file)
@@ -125,27 +127,27 @@ void GameViewer::LoadPSF()
 		if (game.category == "HG")
 		{
 			game.category = "HDD Game";
-			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
+			game.icon_path = dir + "/ICON0.PNG";
 		}
 		else if (game.category == "DG")
 		{
 			game.category = "Disc Game";
-			game.icon_path = vfs::get(m_path) + m_games[i] + "/PS3_GAME/ICON0.PNG";
+			game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
 		}
 		else if (game.category == "HM")
 		{
 			game.category = "Home";
-			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
+			game.icon_path = dir + "/ICON0.PNG";
 		}
 		else if (game.category == "AV")
 		{
 			game.category = "Audio/Video";
-			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
+			game.icon_path = dir + "/ICON0.PNG";
 		}
 		else if (game.category == "GD")
 		{
 			game.category = "Game Data";
-			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
+			game.icon_path = dir + "/ICON0.PNG";
 		}
 			
 		m_game_data.push_back(game);
@@ -183,13 +185,13 @@ void GameViewer::DClick(wxListEvent& event)
 	long i = GetFirstSelected();
 	if (i < 0) return;
 
-	const std::string& path = m_path + m_game_data[i].root;
+	const std::string& path = Emu.GetGameDir() + m_game_data[i].root;
 
 	Emu.Stop();
 
-	if (!Emu.BootGame(vfs::get(path)))
+	if (!Emu.BootGame(path))
 	{
-		LOG_ERROR(LOADER, "Failed to boot %s", path);
+		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[i].root);
 	}
 }
 
@@ -238,7 +240,7 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 
 	if (wxMessageBox("Permanently delete game files?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
 	{
-		fs::remove_all(vfs::get(m_path) + this->GetItemText(i, 6).ToStdString());
+		fs::remove_all(Emu.GetGameDir() + this->GetItemText(i, 6).ToStdString());
 	}
 
 	Refresh();

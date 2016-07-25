@@ -221,10 +221,12 @@ struct RSXFragmentProgram
 	u32 offset;
 	u32 ctrl;
 	u16 unnormalized_coords;
-	rsx::comparaison_function alpha_func;
+	rsx::comparison_function alpha_func;
 	bool front_back_color_enabled : 1;
 	bool back_color_diffuse_output : 1;
 	bool back_color_specular_output : 1;
+	bool front_color_diffuse_output : 1;
+	bool front_color_specular_output : 1;
 	u32 texture_dimensions;
 	rsx::window_origin origin_mode;
 	rsx::window_pixel_center pixel_center_mode;

@@ -21,8 +21,6 @@ private:
 	vk::glsl::program *m_program;
 	vk::context m_thread_context;
 
-	rsx::surface_info m_surface;
-
 	vk::vk_data_heap m_attrib_ring_info;
 	
 	vk::texture_cache m_texture_cache;

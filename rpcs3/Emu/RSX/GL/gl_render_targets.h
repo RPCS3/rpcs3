@@ -4,6 +4,31 @@
 #include "stdafx.h"
 #include "../RSXThread.h"
 
+namespace gl
+{
+	class render_target : public texture
+	{
+		bool is_cleared;
+
+	public:
+
+		render_target()
+		{
+			is_cleared = false;
+		}
+
+		void set_cleared()
+		{
+			is_cleared = true;
+		}
+
+		bool cleared()
+		{
+			return is_cleared;
+		}
+	};
+}
+
 struct color_swizzle
 {
 	gl::texture::channel a = gl::texture::channel::a;
@@ -42,49 +67,25 @@ namespace rsx
 		color_format surface_color_format_to_gl(rsx::surface_color_format color_format);
 		depth_format surface_depth_format_to_gl(rsx::surface_depth_format depth_format);
 		u8 get_pixel_size(rsx::surface_depth_format format);
-
-		const u32 mr_color_offset[rsx::limits::color_buffers_count] =
-		{
-			NV4097_SET_SURFACE_COLOR_AOFFSET,
-			NV4097_SET_SURFACE_COLOR_BOFFSET,
-			NV4097_SET_SURFACE_COLOR_COFFSET,
-			NV4097_SET_SURFACE_COLOR_DOFFSET
-		};
-
-		const u32 mr_color_dma[rsx::limits::color_buffers_count] =
-		{
-			NV4097_SET_CONTEXT_DMA_COLOR_A,
-			NV4097_SET_CONTEXT_DMA_COLOR_B,
-			NV4097_SET_CONTEXT_DMA_COLOR_C,
-			NV4097_SET_CONTEXT_DMA_COLOR_D
-		};
-
-		const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
-		{
-			NV4097_SET_SURFACE_PITCH_A,
-			NV4097_SET_SURFACE_PITCH_B,
-			NV4097_SET_SURFACE_PITCH_C,
-			NV4097_SET_SURFACE_PITCH_D
-		};
 	}
 }
 
 struct gl_render_target_traits
 {
-	using surface_storage_type = std::unique_ptr<gl::texture>;
-	using surface_type = gl::texture*;
+	using surface_storage_type = std::unique_ptr<gl::render_target>;
+	using surface_type = gl::render_target*;
 	using command_list_type = void*;
 	using download_buffer_object = std::vector<u8>;
 
 	static
-	std::unique_ptr<gl::texture> create_new_surface(
+	std::unique_ptr<gl::render_target> create_new_surface(
 		u32 address,
 		rsx::surface_color_format surface_color_format,
 		size_t width,
 		size_t height
 	)
 	{
-		std::unique_ptr<gl::texture> result(new gl::texture());
+		std::unique_ptr<gl::render_target> result(new gl::render_target());
 
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 		result->recreate(gl::texture::target::texture2D);
@@ -104,14 +105,14 @@ struct gl_render_target_traits
 	}
 
 	static
-	std::unique_ptr<gl::texture> create_new_surface(
+	std::unique_ptr<gl::render_target> create_new_surface(
 			u32 address,
 		rsx::surface_depth_format surface_depth_format,
 			size_t width,
 			size_t height
 		)
 	{
-		std::unique_ptr<gl::texture> result(new gl::texture());
+		std::unique_ptr<gl::render_target> result(new gl::render_target());
 
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		result->recreate(gl::texture::target::texture2D);
@@ -130,27 +131,27 @@ struct gl_render_target_traits
 		return result;
 	}
 
-	static void prepare_rtt_for_drawing(void *, gl::texture*) {}
-	static void prepare_rtt_for_sampling(void *, gl::texture*) {}
-	static void prepare_ds_for_drawing(void *, gl::texture*) {}
-	static void prepare_ds_for_sampling(void *, gl::texture*) {}
+	static void prepare_rtt_for_drawing(void *, gl::render_target*) {}
+	static void prepare_rtt_for_sampling(void *, gl::render_target*) {}
+	static void prepare_ds_for_drawing(void *, gl::render_target*) {}
+	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
 	static
-	bool rtt_has_format_width_height(const std::unique_ptr<gl::texture> &rtt, rsx::surface_color_format surface_color_format, size_t width, size_t height)
+	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format surface_color_format, size_t width, size_t height)
 	{
 		// TODO: check format
 		return rtt->width() == width && rtt->height() == height;
 	}
 
 	static
-		bool ds_has_format_width_height(const std::unique_ptr<gl::texture> &rtt, rsx::surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
+		bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
 	{
 		// TODO: check format
 		return rtt->width() == width && rtt->height() == height;
 	}
 
 	// Note : pbo breaks fbo here so use classic texture copy
-	static std::vector<u8> issue_download_command(gl::texture* color_buffer, rsx::surface_color_format color_format, size_t width, size_t height)
+	static std::vector<u8> issue_download_command(gl::render_target* color_buffer, rsx::surface_color_format color_format, size_t width, size_t height)
 	{
 		auto pixel_format = rsx::internals::surface_color_format_to_gl(color_format);
 		std::vector<u8> result(width * height * pixel_format.channel_count * pixel_format.channel_size);
@@ -159,7 +160,7 @@ struct gl_render_target_traits
 		return result;
 	}
 
-	static std::vector<u8> issue_depth_download_command(gl::texture* depth_stencil_buffer, rsx::surface_depth_format depth_format, size_t width, size_t height)
+	static std::vector<u8> issue_depth_download_command(gl::render_target* depth_stencil_buffer, rsx::surface_depth_format depth_format, size_t width, size_t height)
 	{
 		std::vector<u8> result(width * height * 4);
 
@@ -169,7 +170,7 @@ struct gl_render_target_traits
 		return result;
 	}
 
-	static std::vector<u8> issue_stencil_download_command(gl::texture* depth_stencil_buffer, size_t width, size_t height)
+	static std::vector<u8> issue_stencil_download_command(gl::render_target* depth_stencil_buffer, size_t width, size_t height)
 	{
 		std::vector<u8> result(width * height * 4);
 		return result;
@@ -186,7 +187,7 @@ struct gl_render_target_traits
 	{
 	}
 
-	static gl::texture* get(const std::unique_ptr<gl::texture> &in)
+	static gl::render_target* get(const std::unique_ptr<gl::render_target> &in)
 	{
 		return in.get();
 	}

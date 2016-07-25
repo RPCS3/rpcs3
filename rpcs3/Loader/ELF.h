@@ -32,6 +32,12 @@ enum class elf_machine : u16
 	mips = 0x08,
 };
 
+template<typename T>
+using elf_be = be_t<T>;
+
+template<typename T>
+using elf_le = le_t<T>;
+
 template<template<typename T> class en_t, typename sz_t>
 struct elf_ehdr
 {
@@ -127,14 +133,7 @@ struct elf_shdr
 	en_t<sz_t> sh_entsize;
 };
 
-// Default elf_loader::load() return type, specialized to change.
-template<typename T>
-struct elf_load_result
-{
-	using type = void;
-};
-
-// ELF loader errors
+// ELF loading error
 enum class elf_error
 {
 	ok = 0,
@@ -154,7 +153,7 @@ enum class elf_error
 	header_os,
 };
 
-// ELF loader error information
+// ELF loading error information
 template<>
 struct unveil<elf_error>
 {
@@ -183,11 +182,11 @@ struct unveil<elf_error>
 	}
 };
 
-// ELF loader with specified parameters.
+// ELF object with specified parameters.
 // en_t: endianness (specify le_t or be_t)
 // sz_t: size (specify u32 for ELF32, u64 for ELF64)
 template<template<typename T> class en_t, typename sz_t, elf_machine Machine, elf_os OS, elf_type Type>
-class elf_loader
+class elf_object
 {
 	elf_error m_error{};
 
@@ -208,9 +207,9 @@ public:
 	std::vector<shdr_t> shdrs;
 
 public:
-	elf_loader() = default;
+	elf_object() = default;
 
-	elf_loader(const fs::file& stream, u64 offset = 0)
+	elf_object(const fs::file& stream, u64 offset = 0)
 	{
 		open(stream, offset);
 	}
@@ -346,14 +345,9 @@ public:
 	{
 		return m_error;
 	}
-
-	// Format-specific loader function (must be specialized)
-	typename elf_load_result<elf_loader>::type load() const;
 };
 
-using ppu_exec_loader = elf_loader<be_t, u64, elf_machine::ppc64, elf_os::none, elf_type::exec>;
-using ppu_prx_loader = elf_loader<be_t, u64, elf_machine::ppc64, elf_os::lv2, elf_type::prx>;
-using spu_exec_loader = elf_loader<be_t, u32, elf_machine::spu, elf_os::none, elf_type::exec>;
-using arm_exec_loader = elf_loader<le_t, u32, elf_machine::arm, elf_os::none, elf_type::none>;
-
-template<> struct elf_load_result<ppu_prx_loader> { using type = std::shared_ptr<struct lv2_prx_t>; };
+using ppu_exec_object = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::none, elf_type::exec>;
+using ppu_prx_object  = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::lv2, elf_type::prx>;
+using spu_exec_object = elf_object<elf_be, u32, elf_machine::spu, elf_os::none, elf_type::exec>;
+using arm_exec_object = elf_object<elf_le, u32, elf_machine::arm, elf_os::none, elf_type::none>;

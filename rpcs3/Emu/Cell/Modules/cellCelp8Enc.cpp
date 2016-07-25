@@ -2,18 +2,10 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "cellCelp8Enc.h"
+
 logs::channel cellCelp8Enc("cellCelp8Enc", logs::level::notice);
 
-// Return Codes
-enum
-{
-	CELL_CELP8ENC_ERROR_FAILED      = 0x806140a1,
-	CELL_CELP8ENC_ERROR_SEQ         = 0x806140a2,
-	CELL_CELP8ENC_ERROR_ARG         = 0x806140a3,
-	CELL_CELP8ENC_ERROR_CORE_FAILED = 0x806140b1,
-	CELL_CELP8ENC_ERROR_CORE_SEQ    = 0x806140b2,
-	CELL_CELP8ENC_ERROR_CORE_ARG    = 0x806140b3,
-};
 
 s32 cellCelp8EncQueryAttr()
 {

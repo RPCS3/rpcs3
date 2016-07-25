@@ -12,7 +12,7 @@ class AboutDialog : public wxDialog
 
 public:
 	AboutDialog(wxWindow* parent)
-		: wxDialog(parent, wxID_ANY, "About " _PRGNAME_, wxDefaultPosition)
+		: wxDialog(parent, wxID_ANY, "About RPCS3", wxDefaultPosition)
 	{
 		wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
 
@@ -20,18 +20,18 @@ public:
 		wxPanel* s_panel_logo(new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(512, 92)));
 		s_panel_logo->SetBackgroundColour(wxColor(100, 100, 100));
 
-		wxStaticText* t_name = new wxStaticText(this, wxID_ANY, _PRGNAME_);
+		wxStaticText* t_name = new wxStaticText(this, wxID_ANY, "RPCS3");
 		t_name->SetFont(wxFont(28, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
 		t_name->SetBackgroundColour(wxColor(100, 100, 100));
 		t_name->SetForegroundColour(wxColor(255, 255, 255));
 		t_name->SetPosition(wxPoint(10, 6));
 
-		wxStaticText* t_descr = new wxStaticText(this, wxID_ANY, "An early but promising PS3 emulator and debugger.");
+		wxStaticText* t_descr = new wxStaticText(this, wxID_ANY, "PS3 emulator and debugger.");
 		t_descr->SetBackgroundColour(wxColor(100, 100, 100));
 		t_descr->SetForegroundColour(wxColor(255, 255, 255));
 		t_descr->SetPosition(wxPoint(12, 50));
 
-		wxStaticText* t_version = new wxStaticText(this, wxID_ANY, std::string(_PRGNAME_ " Version: ") + rpcs3::version.to_string());
+		wxStaticText* t_version = new wxStaticText(this, wxID_ANY, "RPCS3 Version: " + rpcs3::version.to_string());
 		t_version->SetBackgroundColour(wxColor(100, 100, 100));
 		t_version->SetForegroundColour(wxColor(200, 200, 200));
 		t_version->SetPosition(wxPoint(12, 66));

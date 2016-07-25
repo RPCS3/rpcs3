@@ -439,6 +439,12 @@ namespace fs
 	// Get executable directory
 	const std::string& get_executable_dir();
 
+	// Get data/cache directory for specified prefix and suffix
+	std::string get_data_dir(const std::string& prefix, const std::string& location, const std::string& suffix);
+
+	// Get data/cache directory for specified prefix and path (suffix will be filename)
+	std::string get_data_dir(const std::string& prefix, const std::string& path);
+
 	// Delete directory and all its contents recursively
 	void remove_all(const std::string& path, bool remove_root = true);
 
@@ -457,3 +463,21 @@ namespace fs
 	// Error code returned
 	extern thread_local error g_tls_error;
 }
+
+template<>
+struct unveil<fs::error>
+{
+	static inline const char* get(fs::error error)
+	{
+		switch (error)
+		{
+		case fs::error::ok: return "OK";
+
+		case fs::error::inval: return "Invalid arguments";
+		case fs::error::noent: return "Not found";
+		case fs::error::exist: return "Already exists";
+
+		default: throw error;
+		}
+	}
+};

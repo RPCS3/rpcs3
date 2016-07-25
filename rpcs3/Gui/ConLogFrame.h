@@ -2,11 +2,7 @@
 
 class LogFrame : public wxPanel
 {
-	fs::file m_log_file;
 	fs::file m_tty_file;
-
-	logs::level m_level{ logs::level::always }; // current log level
-	wxColour m_color{ 0, 255, 255 }; // current log color
 
 	wxAuiNotebook m_tabs;
 	wxTextCtrl *m_log;
@@ -20,8 +16,15 @@ class LogFrame : public wxPanel
 	YAML::Node m_cfg_level;
 	YAML::Node m_cfg_tty;
 
-	logs::level get_cfg_level() const { return static_cast<logs::level>(m_cfg_level.as<uint>(4)); }
-	bool get_cfg_tty() const { return m_cfg_tty.as<bool>(true); }
+	logs::level get_cfg_level() const
+	{
+		return static_cast<logs::level>(m_cfg_level.as<uint>(4));
+	}
+
+	bool get_cfg_tty() const
+	{
+		return m_cfg_tty.as<bool>(true);
+	}
 
 public:
 	LogFrame(wxWindow* parent);

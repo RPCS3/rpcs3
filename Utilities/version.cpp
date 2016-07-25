@@ -14,26 +14,12 @@ namespace utils
 		case version_type::release: return "Release";
 		}
 
-		throw;
+		throw type;
 	}
 
-	version::version(std::uint8_t hi, std::uint8_t mid, std::uint8_t lo)
-		: m_hi(hi)
-		, m_mid(mid)
-		, m_lo(lo)
+	uint version::to_hex() const
 	{
-	}
-
-	version& version::type(version_type type, std::uint8_t type_index)
-	{
-		m_type = type;
-		m_type_index = type_index;
-		return *this;
-	}
-
-	std::uint16_t version::to_hex() const
-	{
-		return (m_hi << 24) | (m_mid << 16) | (m_lo << 8) | ((std::uint8_t(m_type) & 0xf) << 4) | (m_type_index & 0xf);
+		return (m_hi << 24) | (m_mid << 16) | (m_lo << 8) | ((uint(m_type) & 0xf) << 4) | (m_type_index & 0xf);
 	}
 
 	std::string version::to_string() const

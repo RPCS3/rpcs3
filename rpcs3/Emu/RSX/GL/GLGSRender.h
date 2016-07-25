@@ -15,7 +15,7 @@ class GLGSRender : public GSRender
 {
 private:
 
-	rsx::gl::texture m_gl_textures[rsx::limits::textures_count];
+	rsx::gl::texture m_gl_textures[rsx::limits::fragment_textures_count];
 	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
 
 	gl::glsl::program *m_program;

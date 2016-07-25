@@ -9,6 +9,7 @@
 #include <array>
 
 #include "../rpcs3/Emu/Cell/PPUOpcodes.h"
+#include "../rpcs3/Emu/Cell/PPUAnalyser.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -147,9 +148,6 @@ class PPUTranslator final //: public CPUTranslator
 	be_t<u32>* m_bin{};
 
 	/* Variables */
-
-	// Explicit register usage counter
-	std::unordered_map<llvm::Value*, u64> m_value_usage;
 
 	// Memory base
 	llvm::Value* m_base;
@@ -385,9 +383,6 @@ public:
 	// Branch to next instruction if condition failed, never branch on nullptr
 	void UseCondition(llvm::Value* = nullptr);
 
-	// Check whether the address is stack
-	bool IsStackAddr(llvm::Value* addr);
-
 	// Get memory pointer
 	llvm::Value* GetMemory(llvm::Value* addr, llvm::Type* type);
 
@@ -448,7 +443,7 @@ public:
 	void AddBlockInfo(u64 addr);
 
 	// Parses PPU opcodes and translate them into LLVM IR
-	llvm::Function* TranslateToIR(u64 start_addr, u64 end_addr, be_t<u32>* bin, void(*custom)(PPUTranslator*) = nullptr);
+	llvm::Function* TranslateToIR(const ppu_function& info, be_t<u32>* bin, void(*custom)(PPUTranslator*) = nullptr);
 
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);

@@ -24,7 +24,7 @@ void RawSPUThread::cpu_task()
 	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
 }
 
-void RawSPUThread::on_init()
+void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
 {
 	if (!offset)
 	{
@@ -33,7 +33,7 @@ void RawSPUThread::on_init()
 		const_cast<u32&>(offset) = vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000);
 		VERIFY(offset);
 
-		SPUThread::on_init();
+		SPUThread::on_init(_this);
 	}
 }
 
@@ -234,12 +234,11 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 	return false;
 }
 
-template<>
-void spu_exec_loader::load() const
+void spu_load_exec(const spu_exec_object& elf)
 {
 	auto spu = idm::make_ptr<RawSPUThread>("TEST_SPU");
 
-	for (const auto& prog : progs)
+	for (const auto& prog : elf.progs)
 	{
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
@@ -248,5 +247,5 @@ void spu_exec_loader::load() const
 	}
 
 	spu->cpu_init();
-	spu->npc = header.e_entry;
+	spu->npc = elf.header.e_entry;
 }

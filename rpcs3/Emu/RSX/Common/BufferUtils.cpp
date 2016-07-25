@@ -347,16 +347,16 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 template<typename T>
 std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
-	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-	rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+	rsx::index_array_type type = rsx::method_registers.index_type();
 
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 
 
-	EXPECTS(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
+	EXPECTS(rsx::method_registers.vertex_data_base_index() == 0);
 
-	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
-	u32 primitive_restart_index = rsx::method_registers[NV4097_SET_RESTART_INDEX];
+	bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
+	u32 primitive_restart_index = rsx::method_registers.restart_index();
 
 	// Disjoint first_counts ranges not supported atm
 	for (int i = 0; i < first_count_arguments.size() - 1; i++)
@@ -386,7 +386,7 @@ std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic
 		return expand_indexed_quads<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
 	}
 
-	throw EXCEPTION("Unknow draw mode");
+	throw EXCEPTION("Unknown draw mode");
 }
 
 std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
@@ -398,17 +398,17 @@ std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, 
 	case rsx::index_array_type::u32:
 		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst), draw_mode, first_count_arguments);
 	}
-	throw EXCEPTION("Unknow index type");
+	throw EXCEPTION("Unknown index type");
 }
 
 std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
-	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-	rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+	rsx::index_array_type type = rsx::method_registers.index_type();
 
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
-	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
-	u32 primitive_restart_index = rsx::method_registers[NV4097_SET_RESTART_INDEX];
+	bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
+	u32 primitive_restart_index = rsx::method_registers.restart_index();
 
 	// Disjoint first_counts ranges not supported atm
 	for (int i = 0; i < first_count_arguments.size() - 1; i++)
@@ -426,12 +426,12 @@ std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, g
 
 std::tuple<u16, u16> write_index_array_data_to_buffer_untouched(gsl::span<u16, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
-	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-	rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+	rsx::index_array_type type = rsx::method_registers.index_type();
 
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
-	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
-	u16 primitive_restart_index = rsx::method_registers[NV4097_SET_RESTART_INDEX];
+	bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
+	u16 primitive_restart_index = rsx::method_registers.restart_index();
 
 	// Disjoint first_counts ranges not supported atm
 	for (int i = 0; i < first_count_arguments.size() - 1; i++)

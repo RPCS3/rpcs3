@@ -2,7 +2,98 @@
 #include "stdafx_gui.h"
 #include "Gui/ConLogFrame.h"
 
+#include "rpcs3_version.h"
 #include <chrono>
+
+struct gui_listener : logs::listener
+{
+	atomic_t<logs::level> enabled{};
+
+	struct packet
+	{
+		atomic_t<packet*> next{};
+
+		logs::level sev{};
+		std::string msg;
+
+		~packet()
+		{
+			for (auto ptr = next.raw(); UNLIKELY(ptr);)
+			{
+				delete std::exchange(ptr, std::exchange(ptr->next.raw(), nullptr));
+			}
+		}
+	};
+
+	atomic_t<packet*> last; // Packet for writing another packet
+	atomic_t<packet*> read; // Packet for reading
+
+	gui_listener()
+		: logs::listener()
+	{
+		// Initialize packets
+		read = new packet;
+		last = new packet;
+		read->next = last.load();
+		last->msg = fmt::format("RPCS3 v%s\n", rpcs3::version.to_string());
+
+		// Self-registration
+		logs::listener::add(this);
+	}
+
+	~gui_listener()
+	{
+		delete read;
+	}
+
+	void log(const logs::message& msg)
+	{
+		if (msg.sev <= enabled)
+		{
+			const auto _new = new packet;
+			_new->sev = msg.sev;
+
+			if (msg.prefix_size > 0)
+			{
+				_new->msg = fmt::format("{%s} ", msg.prefix);
+			}
+
+			if (msg.ch->name)
+			{
+				_new->msg += msg.ch->name;
+				_new->msg += msg.sev == logs::level::todo ? " TODO: " : ": ";
+			}
+			else if (msg.sev == logs::level::todo)
+			{
+				_new->msg += "TODO: ";
+			}
+
+			_new->msg += msg.text;
+			_new->msg += '\n';
+
+			last = last->next = _new;
+		}
+	}
+
+	void pop()
+	{
+		if (const auto head = read->next.exchange(nullptr))
+		{
+			delete read.exchange(head);
+		}
+	}
+
+	void clear()
+	{
+		while (read->next)
+		{
+			pop();
+		}
+	}
+};
+
+// GUI Listener instance
+static gui_listener s_gui_listener;
 
 enum
 {
@@ -28,9 +119,8 @@ LogFrame::LogFrame(wxWindow* parent)
 	, m_cfg_level(g_gui_cfg["Log Level"])
 	, m_cfg_tty(g_gui_cfg["Log TTY"])
 {
-	// Open or create RPCS3.log; TTY.log
-	m_log_file.open(fs::get_config_dir() + "RPCS3.log", fs::read + fs::create);
-	m_tty_file.open(fs::get_config_dir() + "TTY.log",   fs::read + fs::create);
+	// Open or create TTY.log
+	m_tty_file.open(fs::get_config_dir() + "TTY.log", fs::read + fs::create);
 
 	m_tty->SetBackgroundColour(wxColour("Black"));
 	m_log->SetBackgroundColour(wxColour("Black"));
@@ -51,6 +141,9 @@ LogFrame::LogFrame(wxWindow* parent)
 	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_tty);
 
 	Show();
+
+	// Update listener info
+	s_gui_listener.enabled = get_cfg_level();
 
 	// Check for updates every ~10 ms
 	m_timer.Start(10);
@@ -103,7 +196,7 @@ void LogFrame::OnContextMenu(wxCommandEvent& event)
 	case id_log_clear:
 	{
 		m_log->Clear();
-		m_log_file.seek(0, fs::seek_end);
+		s_gui_listener.clear();
 		break;
 	}
 
@@ -132,6 +225,7 @@ void LogFrame::OnContextMenu(wxCommandEvent& event)
 		if (id >= id_log_level && id < id_log_level + 8)
 		{
 			m_cfg_level = id - id_log_level;
+			s_gui_listener.enabled = static_cast<logs::level>(id - id_log_level);
 			break;
 		}
 	}
@@ -182,68 +276,37 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 	}
 
 	// Check main logs
-	while (const u64 size = std::min<u64>(sizeof(buf), m_log_file.size() - m_log_file.pos()))
+	while (const auto packet = s_gui_listener.read->next.load())
 	{
-		const wxString& text = get_utf8(m_log_file, size);
-
-		// Append text if necessary
-		auto flush_logs = [&](u64 start, u64 pos)
+		// Confirm log level
+		if (packet->sev <= s_gui_listener.enabled)
 		{
-			if (pos != start && m_level <= get_cfg_level()) // TODO
+			// Get text color
+			wxColour color;
+			wxString text;
+			switch (packet->sev)
 			{
-				m_log->SetDefaultStyle(m_color);
-				m_log->AppendText(text.substr(start, pos - start));
-			}
-		};
-
-		// Parse log level formatting
-		for (std::size_t start = 0, pos = 0;; pos++)
-		{
-			if (pos < text.size() && text[pos] == L'·')
-			{
-				if (text.size() - pos <= 3)
-				{
-					// Cannot get log formatting: abort
-					m_log_file.seek(0 - text.substr(pos).ToUTF8().length(), fs::seek_cur);
-
-					flush_logs(start, pos);
-					break;
-				}
-
-				if (text[pos + 2] == ' ')
-				{
-					logs::level level;
-					wxColour color;
-
-					switch (text[pos + 1].GetValue())
-					{
-					case 'A': level = logs::level::always; color.Set(0x00, 0xFF, 0xFF); break; // Cyan
-					case 'F': level = logs::level::fatal; color.Set(0xFF, 0x00, 0xFF); break; // Fuchsia
-					case 'E': level = logs::level::error; color.Set(0xFF, 0x00, 0x00); break; // Red
-					case 'U': level = logs::level::todo; color.Set(0xFF, 0x60, 0x00); break; // Orange
-					case 'S': level = logs::level::success; color.Set(0x00, 0xFF, 0x00); break; // Green
-					case 'W': level = logs::level::warning; color.Set(0xFF, 0xFF, 0x00); break; // Yellow
-					case '!': level = logs::level::notice; color.Set(0xFF, 0xFF, 0xFF); break; // White
-					case 'T': level = logs::level::trace; color.Set(0x80, 0x80, 0x80); break; // Gray
-					default: continue;
-					}
-
-					flush_logs(start, pos);
-
-					start = pos + 3;
-					m_level = level;
-					m_color = color;
-				}
+			case logs::level::always: color.Set(0x00, 0xFF, 0xFF); break; // Cyan
+			case logs::level::fatal: text = "F "; color.Set(0xFF, 0x00, 0xFF); break; // Fuchsia
+			case logs::level::error: text = "E "; color.Set(0xFF, 0x00, 0x00); break; // Red
+			case logs::level::todo: text = "U "; color.Set(0xFF, 0x60, 0x00); break; // Orange
+			case logs::level::success: text = "S "; color.Set(0x00, 0xFF, 0x00); break; // Green
+			case logs::level::warning: text = "W "; color.Set(0xFF, 0xFF, 0x00); break; // Yellow
+			case logs::level::notice: text = "! "; color.Set(0xFF, 0xFF, 0xFF); break; // White
+			case logs::level::trace: text = "T "; color.Set(0x80, 0x80, 0x80); break; // Gray
+			default: continue;
 			}
 
-			if (pos >= text.size())
-			{
-				flush_logs(start, pos);
-				break;
-			}
+			// Print UTF-8 text
+			text += wxString::FromUTF8(packet->msg.data(), packet->msg.size());
+			m_log->SetDefaultStyle(color);
+			m_log->AppendText(text);
 		}
 
+		// Drop packet
+		s_gui_listener.pop();
+
 		// Limit processing time
-		if (std::chrono::high_resolution_clock::now() >= start + 7ms || text.empty()) break;
+		if (std::chrono::high_resolution_clock::now() >= start + 7ms) break;
 	}
 }

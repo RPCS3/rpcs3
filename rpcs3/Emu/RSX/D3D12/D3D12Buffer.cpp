@@ -59,6 +59,19 @@ namespace
 		return vertex_buffer_view;
 	}
 
+	D3D12_SHADER_RESOURCE_VIEW_DESC get_vertex_attribute_srv(const rsx::vertex_base_type type, u8 size, UINT64 offset_in_vertex_buffers_buffer, UINT buffer_size)
+	{
+		u32 element_size = rsx::get_vertex_type_size_on_host(type, size);
+		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
+			get_vertex_attribute_format(type, size),
+			D3D12_SRV_DIMENSION_BUFFER,
+			get_component_mapping_from_vector_size(size)
+		};
+		vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
+		vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
+		return vertex_buffer_view;
+	}
+
 	template<int N>
 	UINT64 get_next_multiple_of(UINT64 val)
 	{
@@ -77,8 +90,8 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 
 	u32 vertex_count = get_vertex_count(vertex_ranges);
 	size_t offset_in_vertex_buffers_buffer = 0;
-	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
-	EXPECTS(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
+	u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
+	EXPECTS(rsx::method_registers.vertex_data_base_index() == 0);
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -86,17 +99,17 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 		if (!enabled)
 			continue;
 
-		if (vertex_arrays_info[index].size > 0)
+		if (rsx::method_registers.vertex_arrays_info[index].size > 0)
 		{
 			// Active vertex array
-			const rsx::data_array_format_info &info = vertex_arrays_info[index];
+			const rsx::data_array_format_info &info = rsx::method_registers.vertex_arrays_info[index];
 
 			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 			UINT buffer_size = element_size * vertex_count;
 			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
-			u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-			u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
+			u32 base_offset = rsx::method_registers.vertex_data_base_offset();
+			u32 offset = rsx::method_registers.vertex_arrays_info[index].offset();
 			u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
 			const gsl::byte *src_ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
 
@@ -117,23 +130,22 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 			m_timers.buffer_upload_size += buffer_size;
 
 		}
-		else if (register_vertex_info[index].size > 0)
+		else if (rsx::method_registers.register_vertex_info[index].size > 0)
 		{
 			// In register vertex attribute
-			const rsx::data_array_format_info &info = register_vertex_info[index];
-			const std::vector<u8> &data = register_vertex_data[index];
+			const rsx::register_vertex_data_info &info = rsx::method_registers.register_vertex_info[index];
 
 			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
-			UINT buffer_size = gsl::narrow<UINT>(data.size());
+			UINT buffer_size = element_size;
 			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
 			void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			memcpy(mapped_buffer, data.data(), data.size());
+			memcpy(mapped_buffer, info.data.data(), buffer_size);
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 			command_list->CopyBufferRegion(m_vertex_buffer_data.Get(), offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
 
-			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(info, offset_in_vertex_buffers_buffer, buffer_size));
+			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(info.type, info.size, offset_in_vertex_buffers_buffer, buffer_size));
 			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
 		}
 	}
@@ -224,13 +236,15 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	// Separate constant buffer
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 256));
 	fill_scale_offset_data(mapped_buffer);
-	int is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
-	u8 alpha_ref_raw = (u8)(rsx::method_registers[NV4097_SET_ALPHA_REF] & 0xFF);
+	int is_alpha_tested = rsx::method_registers.alpha_test_enabled();
+	u8 alpha_ref_raw = rsx::method_registers.alpha_ref();
 	float alpha_ref = alpha_ref_raw / 255.f;
 	memcpy((char*)mapped_buffer + 16 * sizeof(float), &is_alpha_tested, sizeof(int));
 	memcpy((char*)mapped_buffer + 17 * sizeof(float), &alpha_ref, sizeof(float));
-	memcpy((char*)mapped_buffer + 18 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
-	memcpy((char*)mapped_buffer + 19 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
+	f32 fogp0 = rsx::method_registers.fog_params_0();
+	f32 fogp1 = rsx::method_registers.fog_params_1();
+	memcpy((char*)mapped_buffer + 18 * sizeof(float), &fogp0, sizeof(float));
+	memcpy((char*)mapped_buffer + 19 * sizeof(float), &fogp1, sizeof(float));
 
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 256));
 
@@ -321,7 +335,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 		size_t vertex_count;
 		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_view;
 		std::tie(vertex_buffer_view, vertex_count) = upload_inlined_vertex_array(
-			vertex_arrays_info,
+			rsx::method_registers.vertex_arrays_info,
 			{ (const gsl::byte*) inline_vertex_array.data(), gsl::narrow<int>(inline_vertex_array.size() * sizeof(uint)) },
 			m_buffer_data, m_vertex_buffer_data.Get(), command_list);
 
@@ -355,7 +369,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 	// Index count
 	size_t index_count = get_index_count(draw_mode, gsl::narrow<int>(get_vertex_count(first_count_commands)));
 
-	rsx::index_array_type indexed_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	rsx::index_array_type indexed_type = rsx::method_registers.index_type();
 	size_t index_size = get_index_type_size(indexed_type);
 
 	// Alloc

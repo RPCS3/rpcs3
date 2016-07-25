@@ -12,6 +12,7 @@
 #define _XOPEN_SOURCE
 #define __USE_GNU
 #endif
+#include <errno.h>
 #include <signal.h>
 #include <ucontext.h>
 #endif
@@ -588,6 +589,57 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			out_size = 1;
 			return;
 		}
+		break;
+	}
+	case 0xc4: // 3-byte VEX prefix
+	case 0xc5: // 2-byte VEX prefix
+	{
+		// Last prefix byte: op2 or op3
+		const u8 opx = op1 == 0xc5 ? op2 : op3;
+
+		// Implied prefixes
+		rex |= op2 & 0x80 ? 0 : 0x4; // REX.R
+		rex |= op1 == 0xc4 && op3 & 0x80 ? 0x8 : 0; // REX.W ???
+		oso = (opx & 0x3) == 0x1;
+		repe = (opx & 0x3) == 0x2;
+		repne = (opx & 0x3) == 0x3;
+
+		const u8 vopm = op1 == 0xc5 ? 1 : op2 & 0x1f;
+		const u8 vop1 = op1 == 0xc5 ? op3 : code[2];
+		const u8 vlen = (opx & 0x4) ? 32 : 16;
+		const u8 vreg = (~opx >> 3) & 0xf;
+		out_length += op1 == 0xc5 ? 2 : 3;
+		code += op1 == 0xc5 ? 2 : 3;
+
+		if (vopm == 0x1) switch (vop1) // Implied leading byte 0x0F
+		{
+		case 0x11:
+		case 0x29:
+		{
+			if (!repe && !repne) // VMOVAPS/VMOVAPD/VMOVUPS/VMOVUPD mem,reg
+			{
+				out_op = X64OP_STORE;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = vlen;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		case 0x7f:
+		{
+			if (repe || oso) // VMOVDQU/VMOVDQA mem,reg
+			{
+				out_op = X64OP_STORE;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = vlen;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		}
+
 		break;
 	}
 	case 0xc6:
@@ -1539,8 +1591,34 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
 }
 
+// Detect leaf function
+static bool is_leaf_function(u64 rip)
+{
+#ifdef _WIN32
+	DWORD64 base = 0;
+	if (const auto rtf = RtlLookupFunctionEntry(rip, &base, nullptr))
+	{
+		// Access UNWIND_INFO structure
+		const auto uw = (u8*)(base + rtf->UnwindData);
+
+		// Leaf function has zero epilog size and no unwind codes
+		return uw[0] == 1 && uw[1] == 0 && uw[2] == 0 && uw[3] == 0;
+	}
+
+	// No unwind info implies leaf function
+	return true;
+#else
+	// TODO
+	return false;
+#endif
+}
+
+static thread_local u64 s_tls_ret_pos = 0;
+static thread_local u64 s_tls_ret_addr = 0;
+
 [[noreturn]] static void throw_access_violation(const char* cause, u64 addr)
 {
+	if (s_tls_ret_pos) *(u64*)s_tls_ret_pos = s_tls_ret_addr; // Fix stack
 	vm::throw_access_violation(addr, cause);
 	std::abort();
 }
@@ -1553,9 +1631,12 @@ static void prepare_throw_access_violation(x64_context* context, const char* cau
 	ARG2(context) = address;
 
 	// Push the exception address as a "return" address (throw_access_violation() shall not return)
-	*--(u64*&)(RSP(context)) = RIP(context);
+	s_tls_ret_addr = RIP(context);
+	s_tls_ret_pos = is_leaf_function(s_tls_ret_addr) ? 0 : RSP(context) -= sizeof(u64);
 	RIP(context) = (u64)std::addressof(throw_access_violation);
 }
+
+static void _handle_interrupt(x64_context* ctx);
 
 #ifdef _WIN32
 
@@ -1646,6 +1727,11 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 {
 	x64_context* context = (ucontext_t*)uct;
 
+	if (sig == SIGUSR1)
+	{
+		return _handle_interrupt(context);
+	}
+
 #ifdef __APPLE__
 	const bool is_writing = context->uc_mcontext->__es.__err & 0x2;
 #else
@@ -1683,7 +1769,15 @@ const bool s_exception_handler_set = []() -> bool
 
 	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
 	{
-		std::printf("sigaction() failed (0x%x).", errno);
+		std::printf("sigaction(SIGSEGV) failed (0x%x).", errno);
+		std::abort();
+	}
+
+	sa.sa_sigaction = signal_handler;
+
+	if (::sigaction(SIGUSR1, &sa, NULL) == -1)
+	{
+		std::printf("sigaction(SIGUSR1) failed (0x%x).", errno);
 		std::abort();
 	}
 
@@ -1715,13 +1809,23 @@ struct thread_ctrl::internal
 {
 	std::mutex mutex;
 	std::condition_variable cond;
-	std::condition_variable join; // Allows simultaneous joining
+	std::condition_variable jcv; // Allows simultaneous joining
+	std::condition_variable icv;
 
 	task_stack atexit;
 
-	std::exception_ptr exception; // Caught exception
+	std::exception_ptr exception; // Stored exception
 
 	std::chrono::high_resolution_clock::time_point time_limit;
+
+#ifdef _WIN32
+	DWORD thread_id = 0;
+#endif
+
+	x64_context _context{};
+	x64_context* const thread_ctx = &this->_context;
+
+	atomic_t<void(*)()> interrupt{}; // Interrupt function
 };
 
 thread_local thread_ctrl::internal* g_tls_internal = nullptr;
@@ -1752,7 +1856,6 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 		}
 		catch (...)
 		{
-			ctrl->initialize_once();
 			ctrl->m_data->exception = std::current_exception();
 		}
 
@@ -1762,15 +1865,11 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 
 void thread_ctrl::wait_start(u64 timeout)
 {
-	initialize_once();
-
 	m_data->time_limit = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(timeout);
 }
 
 bool thread_ctrl::wait_wait(u64 timeout)
 {
-	initialize_once();
-
 	std::unique_lock<std::mutex> lock(m_data->mutex, std::adopt_lock);
 
 	if (timeout && m_data->cond.wait_until(lock, m_data->time_limit) == std::cv_status::timeout)
@@ -1794,11 +1893,12 @@ void thread_ctrl::test()
 
 void thread_ctrl::initialize()
 {
-	initialize_once(); // TODO (temporarily)
-
 	// Initialize TLS variable
 	g_tls_this_thread = this;
 	g_tls_internal = this->m_data;
+#ifdef _WIN32
+	m_data->thread_id = GetCurrentThreadId();
+#endif
 
 	g_tls_log_prefix = []
 	{
@@ -1840,6 +1940,10 @@ void thread_ctrl::initialize()
 
 void thread_ctrl::finalize() noexcept
 {
+	// Disable and discard possible interrupts
+	interrupt_disable();
+	test_interrupt();
+
 	// TODO
 	vm::reservation_free();
 
@@ -1857,7 +1961,6 @@ void thread_ctrl::finalize() noexcept
 
 void thread_ctrl::push_atexit(task_stack task)
 {
-	initialize_once();
 	m_data->atexit.push(std::move(task));
 }
 
@@ -1870,6 +1973,8 @@ thread_ctrl::thread_ctrl(std::string&& name)
 #undef new
 	new (&m_thread) std::thread;
 #pragma pop_macro("new")
+
+	initialize_once();
 }
 
 thread_ctrl::~thread_ctrl()
@@ -1915,24 +2020,20 @@ void thread_ctrl::join()
 		// Notify others if necessary
 		if (UNLIKELY(m_joining.exchange(0x80000000) != 1))
 		{
-			initialize_once();
-
 			// Serialize for reliable notification
 			m_data->mutex.lock();
 			m_data->mutex.unlock();
-			m_data->join.notify_all();
+			m_data->jcv.notify_all();
 		}
 	}
 	else
 	{
 		// Hard way
-		initialize_once();
-
 		std::unique_lock<std::mutex> lock(m_data->mutex);
-		m_data->join.wait(lock, WRAP_EXPR(m_joining >= 0x80000000));
+		m_data->jcv.wait(lock, WRAP_EXPR(m_joining >= 0x80000000));
 	}
 
-	if (UNLIKELY(m_data && m_data->exception))
+	if (UNLIKELY(m_data && m_data->exception && !std::uncaught_exception()))
 	{
 		std::rethrow_exception(m_data->exception);
 	}
@@ -1940,7 +2041,6 @@ void thread_ctrl::join()
 
 void thread_ctrl::lock()
 {
-	initialize_once();
 	m_data->mutex.lock();
 }
 
@@ -1956,8 +2056,6 @@ void thread_ctrl::lock_notify()
 		return;
 	}
 
-	initialize_once();
-
 	// Serialize for reliable notification, condition is assumed to be changed externally
 	m_data->mutex.lock();
 	m_data->mutex.unlock();
@@ -1972,6 +2070,153 @@ void thread_ctrl::notify()
 void thread_ctrl::set_exception(std::exception_ptr e)
 {
 	m_data->exception = e;
+}
+
+static void _handle_interrupt(x64_context* ctx)
+{
+	// Copy context for further use (TODO: is it safe on all platforms?)
+	g_tls_internal->_context = *ctx;
+	thread_ctrl::handle_interrupt();
+}
+
+static thread_local void(*s_tls_handler)() = nullptr;
+
+[[noreturn]] static void execute_interrupt_handler()
+{
+	// Fix stack for throwing
+	if (s_tls_ret_pos) s_tls_ret_addr = std::exchange(*(u64*)s_tls_ret_pos, s_tls_ret_addr);
+
+	// Run either throwing or returning interrupt handler
+	s_tls_handler();
+
+	// Restore context in the case of return
+	const auto ctx = g_tls_internal->thread_ctx;
+
+	if (s_tls_ret_pos)
+	{
+		RIP(ctx) = std::exchange(*(u64*)s_tls_ret_pos, s_tls_ret_addr);
+		RSP(ctx) += sizeof(u64);
+	}
+	else
+	{
+		RIP(ctx) = s_tls_ret_addr;
+	}
+
+#ifdef _WIN32
+	RtlRestoreContext(ctx, nullptr);
+#else
+	::setcontext(ctx);
+#endif
+}
+
+void thread_ctrl::handle_interrupt()
+{
+	const auto _this = g_tls_this_thread;
+	const auto ctx = g_tls_internal->thread_ctx;
+
+	if (_this->m_guard & 0x80000000)
+	{
+		// Discard interrupt if interrupts are disabled
+		if (g_tls_internal->interrupt.exchange(nullptr))
+		{
+			_this->lock();
+			_this->unlock();
+			g_tls_internal->icv.notify_one();
+		}
+	}
+	else if (_this->m_guard == 0)
+	{
+		// Set interrupt immediately if no guard set
+		if (const auto handler = g_tls_internal->interrupt.exchange(nullptr))
+		{
+			_this->lock();
+			_this->unlock();
+			g_tls_internal->icv.notify_one();
+
+#ifdef _WIN32
+			// Install function call
+			s_tls_ret_addr = RIP(ctx);
+			s_tls_ret_pos = is_leaf_function(s_tls_ret_addr) ? 0 : RSP(ctx) -= sizeof(u64);
+			s_tls_handler = handler;
+			RIP(ctx) = (u64)execute_interrupt_handler;
+#else
+			// Call handler directly (TODO: install function call preserving red zone)
+			return handler();
+#endif
+		}
+	}
+	else
+	{
+		// Set delayed interrupt otherwise
+		_this->m_guard |= 0x40000000;
+	}
+	
+#ifdef _WIN32
+	RtlRestoreContext(ctx, nullptr);
+#endif
+}
+
+void thread_ctrl::interrupt(void(*handler)())
+{
+	VERIFY(this != g_tls_this_thread); // TODO: self-interrupt
+	VERIFY(m_data->interrupt.compare_and_swap_test(nullptr, handler)); // TODO: multiple interrupts
+
+#ifdef _WIN32
+	const auto ctx = m_data->thread_ctx;
+
+	const HANDLE nt = OpenThread(THREAD_ALL_ACCESS, FALSE, m_data->thread_id);
+	VERIFY(nt);
+	VERIFY(SuspendThread(nt) != -1);
+
+	ctx->ContextFlags = CONTEXT_FULL;
+	VERIFY(GetThreadContext(nt, ctx));
+
+	ctx->ContextFlags = CONTEXT_FULL;
+	const u64 _rip = RIP(ctx);
+	RIP(ctx) = (u64)std::addressof(thread_ctrl::handle_interrupt);
+	VERIFY(SetThreadContext(nt, ctx));
+
+	RIP(ctx) = _rip;
+	VERIFY(ResumeThread(nt) != -1);
+	CloseHandle(nt);
+#else
+	pthread_kill(reinterpret_cast<std::thread&>(m_thread).native_handle(), SIGUSR1);
+#endif
+
+	std::unique_lock<std::mutex> lock(m_data->mutex, std::adopt_lock);
+
+	while (m_data->interrupt)
+	{
+		m_data->icv.wait(lock);
+	}
+
+	lock.release();
+}
+
+void thread_ctrl::test_interrupt()
+{
+	if (m_guard & 0x80000000)
+	{
+		if (m_data->interrupt.exchange(nullptr))
+		{
+			lock(), unlock(), m_data->icv.notify_one();
+		}
+		
+		return;
+	}
+
+	if (m_guard == 0x40000000 && !std::uncaught_exception())
+	{
+		m_guard = 0;
+
+		// Execute delayed interrupt handler
+		if (const auto handler = m_data->interrupt.exchange(nullptr))
+		{
+			lock(), unlock(), m_data->icv.notify_one();
+
+			return handler();
+		}
+	}
 }
 
 void thread_ctrl::sleep(u64 useconds)
@@ -1993,18 +2238,18 @@ std::string named_thread::get_name() const
 	return fmt::format("('%s') Unnamed Thread", typeid(*this).name());
 }
 
-void named_thread::start()
+void named_thread::start_thread(const std::shared_ptr<void>& _this)
 {
-	// Get shared_ptr instance (will throw if called from the constructor or the object has been created incorrectly)
-	auto&& ptr = shared_from_this();
+	// Ensure it's not called from the constructor and the correct object is passed
+	ENSURES(_this.get() == this);
 
 	// Run thread
-	m_thread = thread_ctrl::spawn(get_name(), [thread = std::move(ptr)]()
+	m_thread = thread_ctrl::spawn(get_name(), [this, _this]()
 	{
 		try
 		{
 			LOG_TRACE(GENERAL, "Thread started");
-			thread->on_task();
+			on_task();
 			LOG_TRACE(GENERAL, "Thread ended");
 		}
 		catch (const std::exception& e)
@@ -2017,6 +2262,6 @@ void named_thread::start()
 			LOG_NOTICE(GENERAL, "Thread aborted");
 		}
 
-		thread->on_exit();
+		on_exit();
 	});
 }

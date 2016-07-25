@@ -17,6 +17,39 @@ namespace logs
 		trace, // lowest level (usually disabled)
 	};
 
+	struct channel;
+
+	// Message information (temporary data)
+	struct message
+	{
+		const channel* ch;
+		level sev;
+
+		const char* prefix;
+		std::size_t prefix_size;
+		const char* text;
+		std::size_t text_size;
+	};
+
+	class listener
+	{
+		// Next listener (linked list)
+		atomic_t<listener*> m_next{};
+
+		friend struct channel;
+
+	public:
+		constexpr listener() = default;
+
+		virtual ~listener() = default;
+
+		// Process log message
+		virtual void log(const message& msg) = 0;
+
+		// Add new listener
+		static void add(listener*);
+	};
+
 	struct channel
 	{
 		// Channel prefix (added to every log message)
@@ -60,7 +93,6 @@ namespace logs
 		GEN_LOG_METHOD(trace)
 
 #undef GEN_LOG_METHOD
-
 	private:
 		// Send log message to global logger instance
 		static void broadcast(const channel& ch, level sev, const char* fmt...);

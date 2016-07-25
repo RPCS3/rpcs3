@@ -370,13 +370,13 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_stencil->GetId()) display_buffer(this, stencil_img);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
-		u8 location = render->textures[m_cur_texture].location();
+/*		u8 location = render->textures[m_cur_texture].location();
 		if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
 			&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
 			MemoryViewerPanel::ShowImage(this,
 				rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
 				render->textures[m_cur_texture].width(),
-				render->textures[m_cur_texture].height(), false);
+				render->textures[m_cur_texture].height(), false);*/
 	}
 
 #undef SHOW_BUFFER
@@ -725,7 +725,7 @@ void RSXDebugger::GetBuffers()
 	}
 
 	// Draw Texture
-	if(!render->textures[m_cur_texture].enabled())
+/*	if(!render->textures[m_cur_texture].enabled())
 		return;
 
 	u32 offset = render->textures[m_cur_texture].offset();
@@ -752,7 +752,7 @@ void RSXDebugger::GetBuffers()
 
 	wxImage img(width, height, buffer);
 	wxClientDC dc_canvas(p_buffer_tex);
-	dc_canvas.DrawBitmap(img.Scale(m_text_width, m_text_height), 0, 0, false);
+	dc_canvas.DrawBitmap(img.Scale(m_text_width, m_text_height), 0, 0, false);*/
 }
 
 void RSXDebugger::GetFlags()
@@ -821,9 +821,9 @@ void RSXDebugger::GetTexture()
 
 	m_list_texture->DeleteAllItems();
 
-	for(uint i=0; i<rsx::limits::textures_count; ++i)
+	for(uint i=0; i<rsx::limits::fragment_textures_count; ++i)
 	{
-		if(render->textures[i].enabled())
+/*		if(render->textures[i].enabled())
 		{
 			m_list_texture->InsertItem(i, wxString::Format("%d", i));
 			u8 location = render->textures[i].location();
@@ -848,7 +848,7 @@ void RSXDebugger::GetTexture()
 				render->textures[i].height()));
 
 			m_list_texture->SetItemBackgroundColour(i, wxColour(m_cur_texture == i ? "Wheat" : "White"));
-		}
+		}*/
 	}
 }
 

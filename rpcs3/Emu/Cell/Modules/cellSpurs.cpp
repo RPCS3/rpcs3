@@ -377,9 +377,9 @@ namespace _spurs
 
 s32 _spurs::get_sdk_version()
 {
-	const s32 version = Emu.GetSDKVersion();
+	s32 version = -1;
 
-	return version == -1 ? 0x465000 : version;
+	return process_get_sdk_version(process_getpid(), version) || version == -1 ? 0x465000 : version;
 }
 
 bool _spurs::is_libprof_loaded()

@@ -102,13 +102,13 @@ cfg::map_entry<std::function<std::shared_ptr<GSRender>()>> g_cfg_gs_render(cfg::
 #endif
 });
 
-cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render(cfg::root.audio, "Renderer", "OpenAL",
+cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render(cfg::root.audio, "Renderer", 1,
 {
 	{ "Null", PURE_EXPR(std::make_shared<NullAudioThread>()) },
-	{ "OpenAL", PURE_EXPR(std::make_shared<OpenALThread>()) },
 #ifdef _WIN32
 	{ "XAudio2", PURE_EXPR(std::make_shared<XAudio2Thread>()) },
 #endif
+	{ "OpenAL", PURE_EXPR(std::make_shared<OpenALThread>()) },
 });
 
 extern cfg::bool_entry g_cfg_autostart;
@@ -195,7 +195,7 @@ bool Rpcs3App::OnInit()
 	Emu.SetCallbacks(std::move(callbacks));
 
 	TheApp = this;
-	SetAppName(_PRGNAME_);
+	SetAppName("RPCS3");
 	wxInitAllImageHandlers();
 
 	Emu.Init();

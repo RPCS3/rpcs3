@@ -12,9 +12,8 @@ extern u32 ppu_generate_id(const char* name);
 // Flags set with REG_FUNC
 enum ppu_static_function_flags : u32
 {
-	MFF_FORCED_HLE = (1 << 0), // Always call HLE function (TODO: deactivated)
-
-	MFF_PERFECT = MFF_FORCED_HLE, // Indicates that function is completely implemented and can replace LLE implementation
+	MFF_FORCED_HLE = (1 << 0), // Always call HLE function
+	MFF_PERFECT    = (1 << 1), // Indicates complete implementation and LLE interchangeability
 };
 
 // HLE function information

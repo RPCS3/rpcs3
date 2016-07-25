@@ -141,19 +141,16 @@ namespace rsx
 		template <typename ...Args>
 		void prepare_render_target(
 			command_list_type command_list,
-			u32 set_surface_format_reg,
+			surface_color_format color_format, surface_depth_format depth_format,
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
 			surface_target set_surface_target,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
 			Args&&... extra_params)
 		{
-			u32 clip_width = clip_horizontal_reg >> 16;
-			u32 clip_height = clip_vertical_reg >> 16;
-			u32 clip_x = clip_horizontal_reg;
-			u32 clip_y = clip_vertical_reg;
-
-			surface_color_format color_format = to_surface_color_format(set_surface_format_reg & 0x1f);
-			surface_depth_format depth_format = to_surface_depth_format((set_surface_format_reg >> 5) & 0x7);
+			u32 clip_width = clip_horizontal_reg;
+			u32 clip_height = clip_vertical_reg;
+//			u32 clip_x = clip_horizontal_reg;
+//			u32 clip_y = clip_vertical_reg;
 
 			// Make previous RTTs sampleable
 			for (std::tuple<u32, surface_type> &rtt : m_bound_render_targets)

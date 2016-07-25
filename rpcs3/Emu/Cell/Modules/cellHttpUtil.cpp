@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "cellHttpUtil.h"
+
 logs::channel cellHttpUtil("cellHttpUtil", logs::level::notice);
 
 s32 cellHttpUtilParseUri()

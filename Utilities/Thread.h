@@ -94,6 +94,9 @@ private:
 	// Thread join contention counter
 	atomic_t<u32> m_joining{};
 
+	// Thread interrupt guard counter
+	volatile u32 m_guard = 0x80000000;
+
 	// Thread internals
 	atomic_t<internal*> m_data{};
 
@@ -187,6 +190,42 @@ public:
 	// Set exception (internal data must be initialized, thread mutex must be locked)
 	void set_exception(std::exception_ptr);
 
+	// Internal
+	static void handle_interrupt();
+
+	// Interrupt thread with specified handler call (thread mutex must be locked)
+	void interrupt(void(*handler)());
+
+	// Interrupt guard recursive enter
+	void guard_enter()
+	{
+		m_guard++;
+	}
+
+	// Interrupt guard recursive leave
+	void guard_leave()
+	{
+		if (UNLIKELY(--m_guard & 0x40000000))
+		{
+			test_interrupt();
+		}
+	}
+
+	// Allow interrupts
+	void interrupt_enable()
+	{
+		m_guard &= ~0x80000000;
+	}
+
+	// Disable and discard any interrupt
+	void interrupt_disable()
+	{
+		m_guard |= 0x80000000;
+	}
+
+	// Check interrupt if delayed by guard scope
+	void test_interrupt();
+
 	// Current thread sleeps for specified amount of microseconds.
 	// Wrapper for std::this_thread::sleep, doesn't require valid thread_ctrl.
 	[[deprecated]] static void sleep(u64 useconds);
@@ -273,7 +312,7 @@ public:
 	}
 };
 
-class named_thread : public std::enable_shared_from_this<named_thread>
+class named_thread
 {
 	// Pointer to managed resource (shared with actual thread)
 	std::shared_ptr<thread_ctrl> m_thread;
@@ -290,8 +329,8 @@ public:
 	virtual std::string get_name() const;
 
 protected:
-	// Start thread (cannot be called from the constructor: should throw bad_weak_ptr in such case)
-	void start();
+	// Start thread (cannot be called from the constructor: should throw in such case)
+	void start_thread(const std::shared_ptr<void>& _this);
 
 	// Thread task (called in the thread)
 	virtual void on_task() = 0;
@@ -301,9 +340,9 @@ protected:
 
 public:
 	// ID initialization
-	virtual void on_init()
+	virtual void on_init(const std::shared_ptr<void>& _this)
 	{
-		start();
+		return start_thread(_this);
 	}
 
 	// ID finalization
@@ -349,6 +388,36 @@ public:
 	~thread_lock()
 	{
 		m_thread->unlock();
+	}
+};
+
+// Interrupt guard scope
+class thread_guard final
+{
+	thread_ctrl* m_thread;
+
+public:
+	thread_guard(const thread_guard&) = delete;
+
+	thread_guard(thread_ctrl* thread)
+		: m_thread(thread)
+	{
+		m_thread->guard_enter();
+	}
+
+	thread_guard(named_thread& thread)
+		: thread_guard(thread.operator->())
+	{
+	}
+
+	thread_guard()
+		: thread_guard(thread_ctrl::get_current())
+	{
+	}
+
+	~thread_guard() noexcept(false)
+	{
+		m_thread->guard_leave();
 	}
 };
 

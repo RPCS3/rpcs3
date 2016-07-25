@@ -12,21 +12,8 @@ add_custom_command(OUTPUT something_that_never_exists
 	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.0) # TODO: the same for (apple) clang
-		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
-	endif()
-	# Warnings
-	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
-elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-	add_compile_options(-ftemplate-depth=1024)
-	if(APPLE)
-		add_compile_options(-stdlib=libc++)
-	endif()
-	if(WIN32)
-		add_compile_options(-pthread)
-	endif()
-endif()
+# Check for a sufficient compiler and set build options
+include(ConfigureCompiler)
 
 if(WIN32)
 	add_definitions(-DUNICODE)
@@ -171,6 +158,7 @@ endif()
 
 link_directories(
 "${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
+"${RPCS3_SRC_DIR}/../Vulkan"
 )
 
 if(NOT USE_SYSTEM_FFMPEG)
@@ -194,7 +182,7 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
 
-if(APPLE)
+if(NOT WIN32)
 	set (EXCLUDE_DIR "/RSX/VK/")
 	foreach (TMP_PATH ${RPCS3_SRC})
 		string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
@@ -212,7 +200,7 @@ if(MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 endif()
 if(WIN32)
-	target_link_libraries(rpcs3  ws2_32.lib Winmm.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV)
+	target_link_libraries(rpcs3  ws2_32.lib Winmm.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL)
 	if(NOT MSVC)
 		target_link_libraries(rpcs3  ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} opengl32.lib glu32.lib libpthread)
 	else()
@@ -232,9 +220,6 @@ else()
 		target_link_libraries(rpcs3  ${PNG_LIBRARIES})
 	else()
 		target_link_libraries(rpcs3  png16_static)
-	endif()
-	if (NOT APPLE)
-		target_link_libraries(rpcs3  vulkan glslang OSDependent OGLCompiler SPIRV)
 	endif()
 endif()
 if(LLVM_FOUND)

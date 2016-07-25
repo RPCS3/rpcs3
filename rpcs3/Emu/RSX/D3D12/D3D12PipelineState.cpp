@@ -60,83 +60,148 @@ void D3D12GSRender::load_program()
 	};
 	prop.Blend = CD3D12_BLEND_DESC;
 
-	if (rsx::method_registers[NV4097_SET_BLEND_ENABLE])
+	if (rsx::method_registers.blend_enabled())
 	{
+		//We can use the d3d blend factor as long as !(rgb_factor == alpha && a_factor == color)
+		rsx::blend_factor sfactor_rgb = rsx::method_registers.blend_func_sfactor_rgb();
+		rsx::blend_factor dfactor_rgb = rsx::method_registers.blend_func_dfactor_rgb();
+		rsx::blend_factor sfactor_a = rsx::method_registers.blend_func_sfactor_a();
+		rsx::blend_factor dfactor_a = rsx::method_registers.blend_func_dfactor_a();
+
+		D3D12_BLEND d3d_sfactor_rgb = get_blend_factor(sfactor_rgb);
+		D3D12_BLEND d3d_dfactor_rgb = get_blend_factor(dfactor_rgb);;
+		D3D12_BLEND d3d_sfactor_alpha = get_blend_factor_alpha(sfactor_a);
+		D3D12_BLEND d3d_dfactor_alpha = get_blend_factor_alpha(dfactor_a);
+		
+		FLOAT BlendColor[4];
+		
+		//TODO: Check surface color format for u16 colors
+		{
+			u8 blend_color_r = rsx::method_registers.blend_color_8b_r();
+			u8 blend_color_g = rsx::method_registers.blend_color_8b_g();
+			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
+			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
+
+			BlendColor[0] = blend_color_r / 255.f;
+			BlendColor[1] = blend_color_g / 255.f;
+			BlendColor[2] = blend_color_b / 255.f;
+			BlendColor[3] = blend_color_a / 255.f;
+		}
+		
+		bool color_blend_possible = true;
+
+		if (sfactor_rgb == rsx::blend_factor::constant_alpha ||
+			dfactor_rgb == rsx::blend_factor::constant_alpha)
+		{
+			if (sfactor_rgb == rsx::blend_factor::constant_color ||
+				dfactor_rgb == rsx::blend_factor::constant_color)
+			{
+				//Color information will be destroyed
+				color_blend_possible = false;
+			}
+			else
+			{
+				//All components are alpha.
+				//If an alpha factor refers to constant_color, it only refers to the alpha component, so no need to replace it
+				BlendColor[0] = BlendColor[1] = BlendColor[2] = BlendColor[3];
+			}
+		}
+
+		if (!color_blend_possible)
+		{
+			LOG_ERROR(RSX, "The constant_color blend factor combination defined is not supported");
+			
+			auto flatten_d3d12_factor = [](D3D12_BLEND in) -> D3D12_BLEND
+			{
+				switch (in)
+				{
+				case D3D12_BLEND_BLEND_FACTOR:
+					return D3D12_BLEND_ONE;
+				case D3D12_BLEND_INV_BLEND_FACTOR:
+					return D3D12_BLEND_ZERO;
+				}
+			};
+
+			d3d_sfactor_rgb = flatten_d3d12_factor(d3d_sfactor_rgb);
+			d3d_dfactor_rgb = flatten_d3d12_factor(d3d_dfactor_rgb);;
+			d3d_sfactor_alpha = flatten_d3d12_factor(d3d_sfactor_alpha);
+			d3d_dfactor_alpha = flatten_d3d12_factor(d3d_dfactor_alpha);
+		}
+		else
+		{
+			get_current_resource_storage().command_list->OMSetBlendFactor(BlendColor);
+		}
+
 		prop.Blend.RenderTarget[0].BlendEnable = true;
 
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x2)
+		if (rsx::method_registers.blend_enabled_surface_1())
 			prop.Blend.RenderTarget[1].BlendEnable = true;
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x4)
+		if (rsx::method_registers.blend_enabled_surface_2())
 			prop.Blend.RenderTarget[2].BlendEnable = true;
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x8)
+		if (rsx::method_registers.blend_enabled_surface_3())
 			prop.Blend.RenderTarget[3].BlendEnable = true;
 
-		prop.Blend.RenderTarget[0].BlendOp = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
-		prop.Blend.RenderTarget[0].BlendOpAlpha = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
+		prop.Blend.RenderTarget[0].BlendOp = get_blend_op(rsx::method_registers.blend_equation_rgb());
+		prop.Blend.RenderTarget[0].BlendOpAlpha = get_blend_op(rsx::method_registers.blend_equation_a());
 
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x2)
+		if (rsx::method_registers.blend_enabled_surface_1())
 		{
-			prop.Blend.RenderTarget[1].BlendOp = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
-			prop.Blend.RenderTarget[1].BlendOpAlpha = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
+			prop.Blend.RenderTarget[1].BlendOp = get_blend_op(rsx::method_registers.blend_equation_rgb());
+			prop.Blend.RenderTarget[1].BlendOpAlpha = get_blend_op(rsx::method_registers.blend_equation_a());
 		}
 
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x4)
+		if (rsx::method_registers.blend_enabled_surface_2())
 		{
-			prop.Blend.RenderTarget[2].BlendOp = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
-			prop.Blend.RenderTarget[2].BlendOpAlpha = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
+			prop.Blend.RenderTarget[2].BlendOp = get_blend_op(rsx::method_registers.blend_equation_rgb());
+			prop.Blend.RenderTarget[2].BlendOpAlpha = get_blend_op(rsx::method_registers.blend_equation_a());
 		}
 
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x8)
+		if (rsx::method_registers.blend_enabled_surface_3())
 		{
-			prop.Blend.RenderTarget[3].BlendOp = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
-			prop.Blend.RenderTarget[3].BlendOpAlpha = get_blend_op(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
+			prop.Blend.RenderTarget[3].BlendOp = get_blend_op(rsx::method_registers.blend_equation_rgb());
+			prop.Blend.RenderTarget[3].BlendOpAlpha = get_blend_op(rsx::method_registers.blend_equation_a());
 		}
 
-		prop.Blend.RenderTarget[0].SrcBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
-		prop.Blend.RenderTarget[0].DestBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
-		prop.Blend.RenderTarget[0].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
-		prop.Blend.RenderTarget[0].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
+		prop.Blend.RenderTarget[0].SrcBlend = d3d_sfactor_rgb;
+		prop.Blend.RenderTarget[0].DestBlend = d3d_dfactor_rgb;
+		prop.Blend.RenderTarget[0].SrcBlendAlpha = d3d_sfactor_alpha;
+		prop.Blend.RenderTarget[0].DestBlendAlpha = d3d_dfactor_alpha;
 
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x2)
+		if (rsx::method_registers.blend_enabled_surface_1())
 		{
-			prop.Blend.RenderTarget[1].SrcBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
-			prop.Blend.RenderTarget[1].DestBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
-			prop.Blend.RenderTarget[1].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
-			prop.Blend.RenderTarget[1].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
+			prop.Blend.RenderTarget[1].SrcBlend = d3d_sfactor_rgb;
+			prop.Blend.RenderTarget[1].DestBlend = d3d_dfactor_rgb;
+			prop.Blend.RenderTarget[1].SrcBlendAlpha = d3d_sfactor_alpha;
+			prop.Blend.RenderTarget[1].DestBlendAlpha = d3d_dfactor_alpha;
 		}
 
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x4)
+		if (rsx::method_registers.blend_enabled_surface_2())
 		{
-			prop.Blend.RenderTarget[2].SrcBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
-			prop.Blend.RenderTarget[2].DestBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
-			prop.Blend.RenderTarget[2].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
-			prop.Blend.RenderTarget[2].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
+			prop.Blend.RenderTarget[2].SrcBlend = d3d_sfactor_rgb;
+			prop.Blend.RenderTarget[2].DestBlend = d3d_dfactor_rgb;
+			prop.Blend.RenderTarget[2].SrcBlendAlpha = d3d_sfactor_alpha;
+			prop.Blend.RenderTarget[2].DestBlendAlpha = d3d_dfactor_alpha;
 		}
 
-		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x8)
+		if (rsx::method_registers.blend_enabled_surface_3())
 		{
-			prop.Blend.RenderTarget[3].SrcBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
-			prop.Blend.RenderTarget[3].DestBlend = get_blend_factor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
-			prop.Blend.RenderTarget[3].SrcBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
-			prop.Blend.RenderTarget[3].DestBlendAlpha = get_blend_factor_alpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
+			prop.Blend.RenderTarget[3].SrcBlend = d3d_sfactor_rgb;
+			prop.Blend.RenderTarget[3].DestBlend = d3d_dfactor_rgb;
+			prop.Blend.RenderTarget[3].SrcBlendAlpha = d3d_sfactor_alpha;
+			prop.Blend.RenderTarget[3].DestBlendAlpha = d3d_dfactor_alpha;
 		}
 	}
 
-	if (rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE])
+	if (rsx::method_registers.logic_op_enabled())
 	{
 		prop.Blend.RenderTarget[0].LogicOpEnable = true;
-		prop.Blend.RenderTarget[0].LogicOp = get_logic_op(rsx::method_registers[NV4097_SET_LOGIC_OP]);
+		prop.Blend.RenderTarget[0].LogicOp = get_logic_op(rsx::method_registers.logic_operation());
 	}
 
-//	if (m_set_blend_color)
-	{
-		// glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
-		// checkForGlError("glBlendColor");
-	}
-	prop.DepthStencilFormat = get_depth_stencil_surface_format(m_surface.depth_format);
-	prop.RenderTargetsFormat = get_color_surface_format(m_surface.color_format);
+	prop.DepthStencilFormat = get_depth_stencil_surface_format(rsx::method_registers.surface_depth_fmt());
+	prop.RenderTargetsFormat = get_color_surface_format(rsx::method_registers.surface_color());
 
-	switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+	switch (rsx::method_registers.surface_color_target())
 	{
 	case rsx::surface_target::surface_a:
 	case rsx::surface_target::surface_b:
@@ -154,36 +219,40 @@ void D3D12GSRender::load_program()
 	default:
 		break;
 	}
-	if (!!(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE]))
+	if (rsx::method_registers.depth_test_enabled())
 	{
 		prop.DepthStencil.DepthEnable = TRUE;
-		prop.DepthStencil.DepthFunc = get_compare_func(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
+		prop.DepthStencil.DepthFunc = get_compare_func(rsx::method_registers.depth_func());
 	}
 	else
 		prop.DepthStencil.DepthEnable = FALSE;
 
-	prop.DepthStencil.DepthWriteMask = !!(rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-	prop.DepthStencil.StencilEnable = !!(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE]);
-	prop.DepthStencil.StencilReadMask = rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK];
-	prop.DepthStencil.StencilWriteMask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
-	prop.DepthStencil.FrontFace.StencilPassOp = get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
-	prop.DepthStencil.FrontFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
-	prop.DepthStencil.FrontFace.StencilFailOp = get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
-	prop.DepthStencil.FrontFace.StencilFunc = get_compare_func(rsx::method_registers[NV4097_SET_STENCIL_FUNC]);
+	prop.DepthStencil.DepthWriteMask = rsx::method_registers.depth_write_enabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
 
-	if (rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE])
+	if (rsx::method_registers.stencil_test_enabled())
 	{
-		prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL]);
-		prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC]);
-		prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
-		prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL]);
-	}
-	else
-	{
-		prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
-		prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
-		prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
-		prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers[NV4097_SET_STENCIL_FUNC]);
+		prop.DepthStencil.StencilEnable = TRUE;
+		prop.DepthStencil.StencilReadMask = rsx::method_registers.stencil_func_mask();
+		prop.DepthStencil.StencilWriteMask = rsx::method_registers.stencil_mask();
+		prop.DepthStencil.FrontFace.StencilPassOp = get_stencil_op(rsx::method_registers.stencil_op_zpass());
+		prop.DepthStencil.FrontFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.stencil_op_zfail());
+		prop.DepthStencil.FrontFace.StencilFailOp = get_stencil_op(rsx::method_registers.stencil_op_fail());
+		prop.DepthStencil.FrontFace.StencilFunc = get_compare_func(rsx::method_registers.stencil_func());
+
+		if (rsx::method_registers.two_sided_stencil_test_enabled())
+		{
+			prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers.back_stencil_op_fail());
+			prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers.back_stencil_func());
+			prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
+			prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
+		}
+		else
+		{
+			prop.DepthStencil.BackFace.StencilPassOp = get_stencil_op(rsx::method_registers.stencil_op_zpass());
+			prop.DepthStencil.BackFace.StencilDepthFailOp = get_stencil_op(rsx::method_registers.stencil_op_zfail());
+			prop.DepthStencil.BackFace.StencilFailOp = get_stencil_op(rsx::method_registers.stencil_op_fail());
+			prop.DepthStencil.BackFace.StencilFunc = get_compare_func(rsx::method_registers.stencil_func());
+		}
 	}
 
 	// Sensible default value
@@ -202,25 +271,25 @@ void D3D12GSRender::load_program()
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
 	};
 	prop.Rasterization = CD3D12_RASTERIZER_DESC;
-	
-	if (!!rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE])
+
+	if (rsx::method_registers.cull_face_enabled())
 	{
-		prop.Rasterization.CullMode = get_cull_face(rsx::method_registers[NV4097_SET_CULL_FACE]);
+		prop.Rasterization.CullMode = get_cull_face(rsx::method_registers.cull_face_mode());
 	}
 
-	prop.Rasterization.FrontCounterClockwise = get_front_face_ccw(rsx::method_registers[NV4097_SET_FRONT_FACE]);
+	prop.Rasterization.FrontCounterClockwise = get_front_face_ccw(rsx::method_registers.front_face_mode());
 
 	UINT8 mask = 0;
-	mask |= (rsx::method_registers[NV4097_SET_COLOR_MASK] >> 16) & 0xFF ? D3D12_COLOR_WRITE_ENABLE_RED : 0;
-	mask |= (rsx::method_registers[NV4097_SET_COLOR_MASK] >> 8) & 0xFF ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0;
-	mask |= rsx::method_registers[NV4097_SET_COLOR_MASK] & 0xFF ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0;
-	mask |= (rsx::method_registers[NV4097_SET_COLOR_MASK] >> 24) & 0xFF ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0;
+	mask |= rsx::method_registers.color_mask_r() ? D3D12_COLOR_WRITE_ENABLE_RED : 0;
+	mask |= rsx::method_registers.color_mask_g() ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0;
+	mask |= rsx::method_registers.color_mask_b() ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0;
+	mask |= rsx::method_registers.color_mask_a() ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0;
 	for (unsigned i = 0; i < prop.numMRT; i++)
 		prop.Blend.RenderTarget[i].RenderTargetWriteMask = mask;
 
-	if (!!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
+	if (rsx::method_registers.restart_index_enabled())
 	{
-		rsx::index_array_type index_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		rsx::index_array_type index_type = rsx::method_registers.index_type();
 		if (index_type == rsx::index_array_type::u32)
 		{
 			prop.CutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF;

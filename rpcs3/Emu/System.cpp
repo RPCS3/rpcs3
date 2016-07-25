@@ -28,16 +28,28 @@
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
 cfg::bool_entry g_cfg_autoexit(cfg::root.misc, "Exit RPCS3 when process finishes");
 
-std::string g_cfg_defaults;
+cfg::string_entry g_cfg_vfs_emulator_dir(cfg::root.vfs, "$(EmulatorDir)"); // Default (empty): taken from fs::get_executable_dir()
+cfg::string_entry g_cfg_vfs_dev_hdd0(cfg::root.vfs, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/");
+cfg::string_entry g_cfg_vfs_dev_hdd1(cfg::root.vfs, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/");
+cfg::string_entry g_cfg_vfs_dev_flash(cfg::root.vfs, "/dev_flash/", "$(EmulatorDir)dev_flash/");
+cfg::string_entry g_cfg_vfs_dev_usb000(cfg::root.vfs, "/dev_usb000/", "$(EmulatorDir)dev_usb000/");
+cfg::string_entry g_cfg_vfs_dev_bdvd(cfg::root.vfs, "/dev_bdvd/"); // Not mounted
+cfg::string_entry g_cfg_vfs_app_home(cfg::root.vfs, "/app_home/"); // Not mounted
 
-extern cfg::string_entry g_cfg_vfs_dev_bdvd;
-extern cfg::string_entry g_cfg_vfs_app_home;
+cfg::bool_entry g_cfg_vfs_allow_host_root(cfg::root.vfs, "Enable /host_root/", true);
+
+std::string g_cfg_defaults;
 
 extern atomic_t<u32> g_thread_count;
 
 extern atomic_t<u32> g_ppu_core[2];
 
 extern u64 get_system_time();
+
+extern void ppu_load_exec(const ppu_exec_object&);
+extern void spu_load_exec(const spu_exec_object&);
+extern void arm_load_exec(const arm_exec_object&);
+extern std::shared_ptr<struct lv2_prx_t> ppu_load_prx(const ppu_prx_object&);
 
 fs::file g_tty;
 
@@ -119,6 +131,22 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	return false;
 }
 
+std::string Emulator::GetGameDir()
+{
+	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+
+	return fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
+}
+
+std::string Emulator::GetLibDir()
+{
+	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+
+	return fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
+}
+
 void Emulator::Load()
 {
 	Stop();
@@ -161,7 +189,7 @@ void Emulator::Load()
 			}
 		}
 
-		ResetInfo();
+		SetCPUThreadStop(0);
 
 		LOG_NOTICE(LOADER, "Path: %s", m_path);
 
@@ -173,10 +201,10 @@ void Emulator::Load()
 		}
 
 		const fs::file elf_file(m_path);
-		ppu_exec_loader ppu_exec;
-		ppu_prx_loader ppu_prx;
-		spu_exec_loader spu_exec;
-		arm_exec_loader arm_exec;
+		ppu_exec_object ppu_exec;
+		ppu_prx_object ppu_prx;
+		spu_exec_object spu_exec;
+		arm_exec_object arm_exec;
 
 		if (!elf_file)
 		{
@@ -199,38 +227,55 @@ void Emulator::Load()
 			const auto _psf = psf::load_object(fs::file(elf_dir + "/../PARAM.SFO"));
 			m_title = psf::get_string(_psf, "TITLE", m_path);
 			m_title_id = psf::get_string(_psf, "TITLE_ID");
+			fs::get_data_dir(m_title_id, m_path);
 
 			LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 			LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
-			LOG_NOTICE(LOADER, "");
 
-			LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
+			// Mount all devices
+			const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
+			const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+			const std::string& bdvd_dir = g_cfg_vfs_dev_bdvd;
+			const std::string& home_dir = g_cfg_vfs_app_home;
 
-			// Mount /dev_bdvd/
-			if (g_cfg_vfs_dev_bdvd.size() == 0 && fs::is_file(elf_dir + "/../../PS3_DISC.SFB"))
+			vfs::mount("dev_hdd0", fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir));
+			vfs::mount("dev_hdd1", fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir));
+			vfs::mount("dev_flash", fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir));
+			vfs::mount("dev_usb", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
+			vfs::mount("dev_usb000", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
+			vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
+
+			// Mount /dev_bdvd/ if necessary
+			if (bdvd_dir.empty() && fs::is_file(elf_dir + "/../../PS3_DISC.SFB"))
 			{
 				const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
 
 				// Check latest two directories
 				if (dir_list.size() >= 2 && dir_list.back() == "USRDIR" && *(dir_list.end() - 2) == "PS3_GAME")
 				{
-					g_cfg_vfs_dev_bdvd = elf_dir.substr(0, elf_dir.length() - 15);
+					vfs::mount("dev_bdvd", elf_dir.substr(0, elf_dir.length() - 15));
 				}
 				else
 				{
-					g_cfg_vfs_dev_bdvd = elf_dir + "/../../";
+					vfs::mount("dev_bdvd", elf_dir + "/../../");
 				}
-			}
 
-			// Mount /app_home/
-			if (g_cfg_vfs_app_home.size() == 0)
+				LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
+			}
+			else if (bdvd_dir.size())
 			{
-				g_cfg_vfs_app_home = elf_dir + '/';
+				vfs::mount("dev_bdvd", fmt::replace_all(bdvd_dir, "$(EmulatorDir)", emu_dir));
 			}
 
-			vfs::dump();
+			// Mount /host_root/ if necessary
+			if (g_cfg_vfs_allow_host_root)
+			{
+				vfs::mount("host_root", {});
+			}
 
-			ppu_exec.load();
+			LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
+
+			ppu_load_exec(ppu_exec);
 
 			Emu.GetCallbackManager().Init();
 			fxm::import<GSRender>(PURE_EXPR(Emu.GetCallbacks().get_gs_render())); // TODO: must be created in appropriate sys_rsx syscall
@@ -240,7 +285,7 @@ void Emulator::Load()
 			// PPU PRX (experimental)
 			m_status = Ready;
 			vm::ps3::init();
-			ppu_prx.load();
+			ppu_load_prx(ppu_prx);
 			GetCallbackManager().Init();
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
@@ -248,23 +293,23 @@ void Emulator::Load()
 			// SPU executable (experimental)
 			m_status = Ready;
 			vm::ps3::init();
-			spu_exec.load();
+			spu_load_exec(spu_exec);
 		}
 		else if (arm_exec.open(elf_file) == elf_error::ok)
 		{
 			// ARMv7 executable
 			m_status = Ready;
 			vm::psv::init();
-			arm_exec.load();
+			arm_load_exec(arm_exec);
 		}
 		else
 		{
 			LOG_ERROR(LOADER, "Invalid or unsupported file format: %s", m_path);
 
-			LOG_WARNING(LOADER, "** ppu_exec_loader -> %s", ppu_exec.get_error());
-			LOG_WARNING(LOADER, "** ppu_prx_loader -> %s", ppu_prx.get_error());
-			LOG_WARNING(LOADER, "** spu_exec_loader -> %s", spu_exec.get_error());
-			LOG_WARNING(LOADER, "** arm_exec_loader -> %s", arm_exec.get_error());
+			LOG_WARNING(LOADER, "** ppu_exec -> %s", ppu_exec.get_error());
+			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
+			LOG_WARNING(LOADER, "** spu_exec -> %s", spu_exec.get_error());
+			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
 			return;
 		}
 

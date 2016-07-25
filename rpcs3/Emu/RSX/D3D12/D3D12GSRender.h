@@ -61,8 +61,6 @@ private:
 	data_cache m_texture_cache;
 	bool invalidate_address(u32 addr);
 
-	rsx::surface_info m_surface;
-
 	RSXVertexProgram m_vertex_program;
 	RSXFragmentProgram m_fragment_program;
 	PipelineStateObjectCache m_pso_cache;
@@ -123,7 +121,6 @@ private:
 	u32 m_current_transform_constants_buffer_descriptor_id;
 	ComPtr<ID3D12DescriptorHeap> m_current_texture_descriptors;
 	ComPtr<ID3D12DescriptorHeap> m_current_sampler_descriptors;
-	size_t vram_size;
 
 public:
 	D3D12GSRender();
