@@ -371,6 +371,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 
 void VKFragmentProgram::Compile()
 {
+	fs::create_path(fs::get_config_dir() + "/shaderlog");
 	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram.spirv", fs::rewrite).write(shader);
 
 	std::vector<u32> spir_v;
