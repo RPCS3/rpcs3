@@ -20,14 +20,6 @@ void XAudio2Thread::xa28_init(void* module)
 
 	HRESULT hr = S_OK;
 
-	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED); // allow Xaudio2 run in its own thread
-	if (FAILED(hr))
-	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : CoInitializeEx() failed(0x%08x)", (u32)hr);
-		Emu.Pause();
-		return;
-	}
-
 	hr = create(&s_tls_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
 	{
@@ -64,7 +56,6 @@ void XAudio2Thread::xa28_destroy()
 	{
 		s_tls_xaudio2_instance->StopEngine();
 		s_tls_xaudio2_instance->Release();
-		CoUninitialize();
 	}
 }
 
@@ -118,8 +109,6 @@ void XAudio2Thread::xa28_open()
 	if (FAILED(hr))
 	{
 		LOG_ERROR(GENERAL, "XAudio2Thread : CreateSourceVoice() failed(0x%08x)", (u32)hr);
-		s_tls_xaudio2_instance->Release();
-		CoUninitialize();
 		Emu.Pause();
 		return;
 	}
