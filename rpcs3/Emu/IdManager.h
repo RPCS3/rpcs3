@@ -35,7 +35,7 @@ namespace id_manager
 	template<typename T, typename = void>
 	struct on_init
 	{
-		static inline void func(T*)
+		static inline void func(T*, const std::shared_ptr<void>&)
 		{
 			// Forbid forward declarations
 			static constexpr auto size = sizeof(std::conditional_t<std::is_void<T>::value, void*, T>);
@@ -43,11 +43,11 @@ namespace id_manager
 	};
 
 	template<typename T>
-	struct on_init<T, decltype(std::declval<T>().on_init())>
+	struct on_init<T, decltype(std::declval<T>().on_init(std::declval<const std::shared_ptr<void>&>()))>
 	{
-		static inline void func(T* ptr)
+		static inline void func(T* ptr, const std::shared_ptr<void>&_ptr)
 		{
-			if (ptr) ptr->on_init();
+			if (ptr) ptr->on_init(_ptr);
 		}
 	};
 
@@ -87,7 +87,6 @@ namespace id_manager
 		static u32 add_type();
 
 	public:
-		void(*on_init)(void*) = nullptr;
 		void(*on_stop)(void*) = nullptr;
 
 		// Get type index
@@ -101,10 +100,7 @@ namespace id_manager
 		template<typename T>
 		static inline void update()
 		{
-			auto& info = access()[get_index<T>()];
-
-			info.on_init = [](void* ptr) { return_ id_manager::on_init<T>::func(static_cast<T*>(ptr)); };
-			info.on_stop = [](void* ptr) { return_ id_manager::on_stop<T>::func(static_cast<T*>(ptr)); };
+			access()[get_index<T>()].on_stop = [](void* ptr) { return_ id_manager::on_stop<T>::func(static_cast<T*>(ptr)); };
 		}
 
 		// Read all registered types
@@ -251,7 +247,7 @@ public:
 	{
 		if (auto pair = create_id<T>(WRAP_EXPR(std::make_shared<Make>(std::forward<Args>(args)...))))
 		{
-			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
 			return{ pair->second, static_cast<T*>(pair->second.get()) };
 		}
@@ -265,7 +261,7 @@ public:
 	{
 		if (auto pair = create_id<T>(WRAP_EXPR(std::make_shared<Make>(std::forward<Args>(args)...))))
 		{
-			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
 			return pair->first;
 		}
@@ -279,7 +275,7 @@ public:
 	{
 		if (auto pair = create_id<T>(WRAP_EXPR(ptr)))
 		{
-			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
 			return pair->first;
 		}
@@ -293,7 +289,7 @@ public:
 	{
 		if (auto pair = create_id<T>(std::forward<F>(provider)))
 		{
-			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()));
+			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
 			return { pair->second, static_cast<T*>(pair->second.get()) };
 		}
@@ -477,7 +473,7 @@ public:
 
 		if (ptr)
 		{
-			id_manager::on_init<T>::func(ptr.get());
+			id_manager::on_init<T>::func(ptr.get(), ptr);
 			id_manager::on_stop<T>::func(nullptr);
 		}
 
@@ -506,7 +502,7 @@ public:
 			id_manager::on_stop<T>::func(static_cast<T*>(old.get()));
 		}
 
-		id_manager::on_init<T>::func(ptr.get());
+		id_manager::on_init<T>::func(ptr.get(), ptr);
 		return ptr;
 	}
 
@@ -530,7 +526,7 @@ public:
 
 		if (ptr)
 		{
-			id_manager::on_init<T>::func(ptr.get());
+			id_manager::on_init<T>::func(ptr.get(), ptr);
 			id_manager::on_stop<T>::func(nullptr);
 		}
 
@@ -559,7 +555,7 @@ public:
 			id_manager::on_stop<T>::func(static_cast<T*>(old.get()));
 		}
 
-		id_manager::on_init<T>::func(ptr.get());
+		id_manager::on_init<T>::func(ptr.get(), ptr);
 		return ptr;
 	}
 
@@ -585,7 +581,7 @@ public:
 			}
 		}
 
-		id_manager::on_init<T>::func(ptr.get());
+		id_manager::on_init<T>::func(ptr.get(), ptr);
 		id_manager::on_stop<T>::func(nullptr);
 		return ptr;
 	}

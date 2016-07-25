@@ -585,6 +585,32 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 							ReplaceInstWithInst(ci, CallInst::Create(f, {ci->getArgOperand(0)}));
 						}
 					}
+
+					continue;
+				}
+
+				if (const auto li = dyn_cast<LoadInst>(inst))
+				{
+					// TODO: more careful check
+					if (li->getNumUses() == 0)
+					{
+						// Remove unreferenced volatile loads
+						li->eraseFromParent();
+					}
+
+					continue;
+				}
+
+				if (const auto si = dyn_cast<StoreInst>(inst))
+				{
+					// TODO: more careful check
+					if (isa<UndefValue>(si->getOperand(0)) && si->getParent() == &func->getEntryBlock())
+					{
+						// Remove undef volatile stores
+						si->eraseFromParent();
+					}
+
+					continue;
 				}
 			}
 		}
@@ -595,6 +621,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	// Remove unused functions, structs, global variables, etc
 	mpm.add(createStripDeadPrototypesPass());
 	//mpm.add(createFunctionInliningPass());
+	mpm.add(createDeadInstEliminationPass());
 	mpm.run(*module);
 
 	std::string result;

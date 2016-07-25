@@ -490,7 +490,7 @@ struct ppu_linkage_info
 };
 
 // Link variable
-static void ppu_patch_variable_stub(u32 vref, u32 vaddr)
+static void ppu_patch_variable_refs(u32 vref, u32 vaddr)
 {
 	struct vref_t
 	{
@@ -656,7 +656,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 				// Fix imports
 				for (const auto vref : vlink.second)
 				{
-					ppu_patch_variable_stub(vref, vaddr);
+					ppu_patch_variable_refs(vref, vaddr);
 					//LOG_WARNING(LOADER, "Exported variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 				}
 			}
@@ -724,7 +724,7 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			vlink.second.emplace(vref);
 
 			// Link if available
-			if (vlink.first) ppu_patch_variable_stub(vref, vlink.first);
+			if (vlink.first) ppu_patch_variable_refs(vref, vlink.first);
 
 			//LOG_WARNING(LOADER, "Imported variable '%s' in module '%s' (0x%x)", ppu_get_variable_name(module_name, vnid), module_name, vlink.first);
 		}
@@ -788,7 +788,7 @@ std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 			for (auto i = 0; i < segments.size(); i++)
 			{
 				const u32 saddr = static_cast<u32>(elf.progs[i].p_vaddr);
-				if (addr >= addr && addr < saddr + elf.progs[i].p_memsz)
+				if (addr >= saddr && addr < saddr + elf.progs[i].p_memsz)
 				{
 					// "Relocate" section
 					sections.emplace_back(std::make_pair(addr - saddr + segments[i].first, size));
@@ -949,7 +949,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	std::vector<ppu_function> exec_set;
 
 	// TLS information
-	u32 tls_vaddr{0}, tls_fsize{0}, tls_vsize{0};
+	u32 tls_vaddr = 0;
+	u32 tls_fsize = 0;
+	u32 tls_vsize = 0;
 
 	// Process information
 	u32 sdk_version = 0x360001;
@@ -976,8 +978,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
 
 			segments.emplace_back(std::make_pair(addr, size));
-
-			//if (prog.p_flags & 1) exec_end = addr + size; // Test EXEC flag
 		}
 	}
 
@@ -999,9 +999,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		switch (const u32 p_type = prog.p_type)
 		{
-		case 0x00000001: break; //LOAD
+		case 0x00000001: break; // LOAD (already loaded)
 
-		case 0x00000007: //TLS
+		case 0x00000007: // TLS
 		{
 			tls_vaddr = vm::cast(prog.p_vaddr, HERE);
 			tls_fsize = fmt::narrow<u32>("Invalid p_filesz (0x%llx)" HERE, prog.p_filesz);
@@ -1009,7 +1009,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			break;
 		}
 
-		case 0x60000001: //LOOS+1
+		case 0x60000001: // LOOS+1
 		{
 			if (prog.p_filesz)
 			{
@@ -1055,7 +1055,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			break;
 		}
 
-		case 0x60000002: //LOOS+2
+		case 0x60000002: // LOOS+2
 		{
 			if (prog.p_filesz)
 			{
@@ -1243,7 +1243,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 					for (auto& ref : entry.second.second)
 					{
-						ppu_patch_variable_stub(ref, _sv->var->addr());
+						ppu_patch_variable_refs(ref, _sv->var->addr());
 						LOG_NOTICE(LOADER, "** Linked at ref=*0x%x", ref);
 					}
 				}
@@ -1391,16 +1391,16 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	//ppu->state += cpu_state::interrupt;
 
-	// Set memory protections
-	//for (const auto& prog : progs)
-	//{
-	//	const u32 addr = static_cast<u32>(prog.p_vaddr);
-	//	const u32 size = static_cast<u32>(prog.p_memsz);
+	// Set memory protection
+	for (const auto& prog : elf.progs)
+	{
+		const u32 addr = static_cast<u32>(prog.p_vaddr);
+		const u32 size = static_cast<u32>(prog.p_memsz);
 
-	//	if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0 /* W */)
-	//	{
-	//		// Set memory protection to read-only where necessary
-	//		VERIFY(vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable));
-	//	}
-	//}
+		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0 /* W */)
+		{
+			// Set memory protection to read-only where necessary
+			VERIFY(vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable));
+		}
+	}
 }

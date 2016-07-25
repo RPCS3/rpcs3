@@ -2,6 +2,7 @@
 #include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "RSXThread.h"
 
 #include "Emu/Cell/PPUCallback.h"
@@ -13,6 +14,8 @@
 #include "Utilities/StrUtil.h"
 
 #include <thread>
+
+class GSRender;
 
 #define CMD_DEBUG 0
 
@@ -881,7 +884,7 @@ namespace rsx
 		m_used_gcm_commands.clear();
 
 		on_init_rsx();
-		start();
+		start_thread(fxm::get<GSRender>());
 	}
 
 	GcmTileInfo *thread::find_tile(u32 offset, u32 location)

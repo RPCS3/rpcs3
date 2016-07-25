@@ -14,7 +14,7 @@ public:
 	static constexpr u32 id_min = 0;
 	static constexpr u32 id_max = 4;
 
-	void on_init() override;
+	void on_init(const std::shared_ptr<void>&) override;
 
 	RawSPUThread(const std::string& name);
 
