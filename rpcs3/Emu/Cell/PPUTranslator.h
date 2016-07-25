@@ -151,6 +151,7 @@ class PPUTranslator final //: public CPUTranslator
 
 	// Memory base
 	llvm::Value* m_base;
+	llvm::Value* m_base_loaded;
 
 	// Thread context
 	llvm::Value* m_thread;

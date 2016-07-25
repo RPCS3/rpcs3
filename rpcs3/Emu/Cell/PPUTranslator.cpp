@@ -71,7 +71,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base, u64
 	, m_pure_attr(AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {
 	// Memory base
-	m_base = new GlobalVariable(*module, ArrayType::get(GetType<char>(), 0x100000000), false, GlobalValue::ExternalLinkage, 0, "__memory");
+	m_base = new GlobalVariable(*module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, "__mptr");
 
 	// Thread context struct (TODO: safer member access)
 	std::vector<Type*> thread_struct{ArrayType::get(GetType<char>(), OFFSET_32(PPUThread, GPR))};
@@ -84,7 +84,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base, u64
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
 	// Callable
-	m_call = new GlobalVariable(*module, ArrayType::get(FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false)->getPointerTo(), 0x40000000), true, GlobalValue::ExternalLinkage, 0, "__call");
+	m_call = new GlobalVariable(*module, ArrayType::get(GetType<u32>(), 0x40000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, "__cptr");
 }
 
 PPUTranslator::~PPUTranslator()
@@ -125,6 +125,7 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 	/* Create context variables */
 	//m_thread = Call(m_thread_type->getPointerTo(), AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadOnly}), "__context", m_ir->getInt64(info.addr));
 	m_thread = &*m_function->getArgumentList().begin();
+	m_base_loaded = m_ir->CreateLoad(m_base);
 	
 	// Non-volatile registers with special meaning (TODO)
 	if (info.attr & ppu_attr::uses_r0) m_g_gpr[0] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1 + 0, ".r0g");
@@ -319,8 +320,8 @@ void PPUTranslator::CallFunction(u64 target, bool tail, Value* indirect)
 	{
 		const auto addr = indirect ? indirect : (Value*)m_ir->getInt64(target);
 		const auto pos = m_ir->CreateLShr(addr, 2, "", true);
-		const auto ptr = m_ir->CreateGEP(m_call, {m_ir->getInt64(0), pos});
-		m_ir->CreateCall(m_ir->CreateLoad(ptr), {m_thread});
+		const auto ptr = m_ir->CreateGEP(m_ir->CreateLoad(m_call), {m_ir->getInt64(0), pos});
+		m_ir->CreateCall(m_ir->CreateIntToPtr(m_ir->CreateLoad(ptr), FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false)->getPointerTo()), {m_thread});
 	}
 
 	if (!tail)
@@ -545,7 +546,7 @@ void PPUTranslator::UseCondition(Value* cond)
 
 llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
 {
-	return m_ir->CreateBitCast(m_ir->CreateGEP(m_base, {m_ir->getInt64(0), addr}), type->getPointerTo());
+	return m_ir->CreateBitCast(m_ir->CreateGEP(m_base_loaded, {m_ir->getInt64(0), addr}), type->getPointerTo());
 }
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)

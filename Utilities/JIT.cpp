@@ -231,7 +231,7 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 		.setErrorStr(&result)
 		.setMCJITMemoryManager(std::make_unique<MemoryManager>(std::move(table)))
 		.setOptLevel(llvm::CodeGenOpt::Aggressive)
-		.setCodeModel((u64)s_memory <= 0x60000000 ? llvm::CodeModel::Medium : llvm::CodeModel::Large) // TODO
+		.setCodeModel((u64)s_memory <= 0x60000000 ? llvm::CodeModel::Small : llvm::CodeModel::Large) // TODO
 		.setMCPU(llvm::sys::getHostCPUName())
 		.create());
 
