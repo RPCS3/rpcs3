@@ -8,17 +8,20 @@ namespace rsx
 
 struct data_array_format_info
 {
+private:
+	u32& m_offset_register;
+public:
 	u16 frequency = 0;
 	u8 stride = 0;
 	u8 size = 0;
 	vertex_base_type type = vertex_base_type::f;
-	u32 m_offset;
 
-	data_array_format_info() {}
+	data_array_format_info(int id, std::array<u32, 0x10000 / 4> &registers)
+		: m_offset_register(registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + id]) {}
 
 	u32 offset() const
 	{
-		return m_offset;
+		return m_offset_register;
 	}
 };
 

@@ -11,10 +11,8 @@ namespace rsx
 
 	}
 
-	void texture::init(u8 index)
+	void texture::init()
 	{
-		m_index = index;
-
 		// Offset
 		registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)] = 0;
 
@@ -255,10 +253,8 @@ namespace rsx
 
 	}
 
-	void vertex_texture::init(u8 index)
+	void vertex_texture::init()
 	{
-		m_index = index;
-
 		// Offset
 		registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)] = 0;
 

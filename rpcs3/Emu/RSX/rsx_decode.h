@@ -1,83 +1,12 @@
 #pragma once
 #include "Utilities/types.h"
+#include "Utilities/BitField.h"
 #include <tuple>
 #include "GCM.h"
-#include "rsx_methods.h"
 #pragma warning(disable:4503)
 
 namespace
 {
-	struct split_reg_half_uint_decode
-	{
-		static std::tuple<u16, u16> decode(u32 reg)
-		{
-			return std::make_tuple(reg & 0xffff, reg >> 16);
-		}
-	};
-
-	template<u16 rsx::rsx_state::*FirstMember, u16 rsx::rsx_state::*SecondMember>
-	struct as_u16x2
-	{
-		static std::tuple<u16, u16> decode(u32 reg)
-		{
-			return std::make_tuple(reg & 0xffff, reg >> 16);
-		}
-
-		static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u16, u16> &&decoded_values)
-		{
-			state.*FirstMember = std::get<0>(decoded_values);
-			state.*SecondMember = std::get<1>(decoded_values);
-		}
-	};
-
-	template<f32 rsx::rsx_state::*Member>
-	struct as_f32
-	{
-		static f32 decode(u32 reg)
-		{
-			return reinterpret_cast<f32&>(reg);
-		}
-
-		static void commit_rsx_state(rsx::rsx_state &state, f32 &&decoded_values)
-		{
-			state.*Member = decoded_values;
-		}
-	};
-
-
-	template<u32 rsx::rsx_state::*Member>
-	struct as_u32
-	{
-		static u32 decode(u32 reg)
-		{
-			return reg;
-		}
-
-		static void commit_rsx_state(rsx::rsx_state &state, u32 &&decoded_values)
-		{
-			state.*Member = decoded_values;
-		}
-	};
-
-	struct as_bool
-	{
-		static bool decode(u32 reg)
-		{
-			return !!reg;
-		}
-	};
-
-	struct as_unused
-	{
-		static u32 decode(u32 reg) { return reg; }
-		static void commit_rsx_state(rsx::rsx_state &state, u32 &&) {}
-	};
-
-	std::tuple<u8, u8, u8, u8> split_reg_quad_uchar(u32 reg)
-	{
-		return std::make_tuple(reg & 0xff, (reg >> 8) & 0xff, (reg >> 16) & 0xff, (reg >> 24) & 0xff);
-	}
-
 	std::string get_subreg_name(u8 subreg)
 	{
 		return subreg == 0 ? "x" :
@@ -105,219 +34,573 @@ namespace
 namespace rsx
 {
 	std::string print_boolean(bool b);
-	std::string print_comparison_function(comparison_function f);
-	std::string print_stencil_op(stencil_op op);
-	std::string print_fog_mode(fog_mode op);
-	std::string print_logic_op(logic_op op);
-	std::string print_front_face(front_face op);
-	std::string print_cull_face(cull_face op);
-	std::string print_surface_target(surface_target target);
-	std::string print_primitive_mode(primitive_type draw_mode);
-	std::string print_transfer_operation(blit_engine::transfer_operation op);
-	std::string print_transfer_source_format(blit_engine::transfer_source_format op);
-	std::string print_context_surface(blit_engine::context_surface op);
-	std::string print_transfer_destination_format(blit_engine::transfer_destination_format op);
-	std::string print_blend_op(blend_equation op);
-	std::string print_blend_factor(blend_factor factor);
-	std::string print_origin_mode(window_origin origin);
-	std::string print_pixel_center_mode(window_pixel_center in);
-	std::string print_user_clip_plane_op(user_clip_plane_op op);
-	std::string print_depth_stencil_surface_format(surface_depth_format format);
-	std::string print_surface_antialiasing(surface_antialiasing format);
-	std::string print_surface_color_format(surface_color_format format);
-	std::string print_index_type(index_array_type arg);
-	std::string print_context_dma(blit_engine::context_dma op);
-	std::string print_transfer_origin(blit_engine::transfer_origin op);
-	std::string print_transfer_interpolator(blit_engine::transfer_interpolator op);
-	std::string print_shading_mode(shading_mode op);
-	std::string print_polygon_mode(polygon_mode op);
+	std::string to_string(comparison_function f);
+	std::string to_string(stencil_op op);
+	std::string to_string(fog_mode op);
+	std::string to_string(logic_op op);
+	std::string to_string(front_face op);
+	std::string to_string(cull_face op);
+	std::string to_string(surface_target target);
+	std::string to_string(primitive_type draw_mode);
+	std::string to_string(blit_engine::transfer_operation op);
+	std::string to_string(blit_engine::transfer_source_format op);
+	std::string to_string(blit_engine::context_surface op);
+	std::string to_string(blit_engine::transfer_destination_format op);
+	std::string to_string(blend_equation op);
+	std::string to_string(blend_factor factor);
+	std::string to_string(window_origin origin);
+	std::string to_string(window_pixel_center in);
+	std::string to_string(user_clip_plane_op op);
+	std::string to_string(surface_depth_format format);
+	std::string to_string(surface_antialiasing format);
+	std::string to_string(surface_color_format format);
+	std::string to_string(index_array_type arg);
+	std::string to_string(blit_engine::context_dma op);
+	std::string to_string(blit_engine::transfer_origin op);
+	std::string to_string(blit_engine::transfer_interpolator op);
+	std::string to_string(shading_mode op);
+	std::string to_string(polygon_mode op);
 
 template<uint32_t Register>
 struct registers_decoder
 {};
 
-template<uint32_t Register>
-void commit(rsx_state &state, u32 value)
-{
-	registers_decoder<Register>::commit_rsx_state(state, registers_decoder<Register>::decode(value));
-}
-
-template<uint32_t Register>
-std::string print_register_value(u32 value)
-{
-	return registers_decoder<Register>::dump(registers_decoder<Register>::decode(value));
-}
+template<u32 I, u32 N>
+using bitfield_decoder_t = bf_t<u32, I, N>;
 
 template<>
-struct registers_decoder<NV4097_SET_VIEWPORT_HORIZONTAL> :
-	public as_u16x2<&rsx_state::m_viewport_origin_x, &rsx_state::m_viewport_width>
+struct registers_decoder<NV4097_SET_VIEWPORT_HORIZONTAL>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: x = " + std::to_string(std::get<0>(decoded_values)) + " width = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_x;
+			bitfield_decoder_t<16, 16> width;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_x() const
+		{
+			return m_data.origin_x;
+		}
+
+		u16 width() const
+		{
+			return m_data.width;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: x = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_VERTICAL>
-	: public as_u16x2<&rsx_state::m_viewport_origin_y, &rsx_state::m_viewport_height>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: y = " + std::to_string(std::get<0>(decoded_values)) + " height = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_y;
+			bitfield_decoder_t<16, 16> height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_y() const
+		{
+			return m_data.origin_y;
+		}
+
+		u16 height() const
+		{
+			return m_data.height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: y = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SCISSOR_HORIZONTAL>
-	: public as_u16x2<&rsx_state::m_scissor_origin_x, &rsx_state::m_scissor_width>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Scissor: x = " + std::to_string(std::get<0>(decoded_values)) + " width = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_x;
+			bitfield_decoder_t<16, 16> width;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_x() const
+		{
+			return m_data.origin_x;
+		}
+
+		u16 width() const
+		{
+			return m_data.width;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Scissor: x = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SCISSOR_VERTICAL>
-	: public as_u16x2<&rsx_state::m_scissor_origin_y, &rsx_state::m_scissor_height>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Scissor: y  = " + std::to_string(std::get<0>(decoded_values)) + " height = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_y;
+			bitfield_decoder_t<16, 16> height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_y() const
+		{
+			return m_data.origin_y;
+		}
+
+		u16 height() const
+		{
+			return m_data.height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Scissor: y  = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_CLIP_HORIZONTAL>
-	: public as_u16x2<&rsx_state::m_surface_clip_origin_x, &rsx_state::m_surface_clip_width>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: clip x  = " + std::to_string(std::get<0>(decoded_values)) + " width = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_x;
+			bitfield_decoder_t<16, 16> width;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_x() const
+		{
+			return m_data.origin_x;
+		}
+
+		u16 width() const
+		{
+			return m_data.width;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: clip x  = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
 	}
 };
 
 template<>
 struct registers_decoder< NV4097_SET_SURFACE_CLIP_VERTICAL>
-	: public as_u16x2<&rsx_state::m_surface_clip_origin_y, &rsx_state::m_surface_clip_height>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: clip y  = " + std::to_string(std::get<0>(decoded_values)) + " height = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_y;
+			bitfield_decoder_t<16, 16> height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_y() const
+		{
+			return m_data.origin_y;
+		}
+
+		u16 height() const
+		{
+			return m_data.height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: clip y  = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CLEAR_RECT_HORIZONTAL>
-	: public as_u16x2<&rsx_state::m_clear_rect_origin_x, &rsx_state::m_clear_rect_width>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Clear: rect x  = " + std::to_string(std::get<0>(decoded_values)) + " width = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_x;
+			bitfield_decoder_t<16, 16> width;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_x() const
+		{
+			return m_data.origin_x;
+		}
+
+		u16 width() const
+		{
+			return m_data.width;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Clear: rect x  = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CLEAR_RECT_VERTICAL>
-	: public as_u16x2<&rsx_state::m_clear_rect_origin_y, &rsx_state::m_clear_rect_height>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Clear: rect y  = " + std::to_string(std::get<0>(decoded_values)) + " height = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> origin_y;
+			bitfield_decoder_t<16, 16> height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 origin_y() const
+		{
+			return m_data.origin_y;
+		}
+
+		u16 height() const
+		{
+			return m_data.height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Clear: rect y  = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
 	}
 };
 
 template<>
 struct registers_decoder< NV3089_CLIP_POINT>
-	: public as_u16x2<&rsx_state::m_blit_engine_clip_x, &rsx_state::m_blit_engine_clip_y>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Blit engine: clip x  = " + std::to_string(std::get<0>(decoded_values)) + " y = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> clip_x;
+			bitfield_decoder_t<16, 16> clip_y;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 clip_x() const
+		{
+			return m_data.clip_x;
+		}
+
+		u16 clip_y() const
+		{
+			return m_data.clip_y;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Blit engine: clip x  = " + std::to_string(decoded_values.clip_x()) + " y = " + std::to_string(decoded_values.clip_y());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_CLIP_SIZE>
-	: public as_u16x2<&rsx_state::m_blit_engine_width, &rsx_state::m_blit_engine_height>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Blit engine: clip width  = " + std::to_string(std::get<0>(decoded_values)) + " height = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> width;
+			bitfield_decoder_t<16, 16> height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 clip_width() const
+		{
+			return m_data.width;
+		}
+
+		u16 clip_height() const
+		{
+			return m_data.height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Blit engine: clip width  = " + std::to_string(decoded_values.clip_width()) + " height = " + std::to_string(decoded_values.clip_height());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_IMAGE_OUT_POINT>
-	: public as_u16x2<&rsx_state::m_blit_engine_output_x, &rsx_state::m_blit_engine_output_y>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Blit engine: output x  = " + std::to_string(std::get<0>(decoded_values)) + " y = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> x;
+			bitfield_decoder_t<16, 16> y;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 x() const
+		{
+			return m_data.x;
+		}
+
+		u16 y() const
+		{
+			return m_data.y;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Blit engine: output x  = " + std::to_string(decoded_values.x()) + " y = " + std::to_string(decoded_values.y());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_WINDOW_OFFSET>
-	: public as_u16x2<&rsx_state::m_shader_window_offset_x, &rsx_state::m_shader_window_offset_y>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Window: offset x  = " + std::to_string(std::get<0>(decoded_values)) + " y = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> window_offset_x;
+			bitfield_decoder_t<16, 16> window_offset_y;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 window_offset_x() const
+		{
+			return m_data.window_offset_x;
+		}
+
+		u16 window_offset_y() const
+		{
+			return m_data.window_offset_y;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Window: offset x  = " + std::to_string(decoded_values.window_offset_x()) + " y = " + std::to_string(decoded_values.window_offset_y());
 	}
 };
 
 
 template<>
 struct registers_decoder<NV3089_IMAGE_OUT_SIZE>
-	: public as_u16x2<&rsx_state::m_blit_engine_output_width, &rsx_state::m_blit_engine_output_height>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Blit engine: output width  = " + std::to_string(std::get<0>(decoded_values)) + " height = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> width;
+			bitfield_decoder_t<16, 16> height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 width() const
+		{
+			return m_data.width;
+		}
+
+		u16 height() const
+		{
+			return m_data.height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Blit engine: output width  = " + std::to_string(decoded_values.width()) + " height = " + std::to_string(decoded_values.height());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_IMAGE_IN_SIZE>
-	: public as_u16x2<&rsx_state::m_blit_engine_input_width, &rsx_state::m_blit_engine_input_height>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Blit engine: input width  = " + std::to_string(std::get<0>(decoded_values)) + " height = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> width;
+			bitfield_decoder_t<16, 16> height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 width() const
+		{
+			return m_data.width;
+		}
+
+		u16 height() const
+		{
+			return m_data.height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Blit engine: input width  = " + std::to_string(decoded_values.width()) + " height = " + std::to_string(decoded_values.height());
 	}
 };
 
 template<>
 struct registers_decoder<NV3062_SET_PITCH>
-	: public as_u16x2<&rsx_state::m_blit_engine_output_alignement_nv3062, &rsx_state::m_blit_engine_output_pitch_nv3062>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Blit engine: output alignment  = " + std::to_string(std::get<0>(decoded_values)) + " pitch = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> alignment;
+			bitfield_decoder_t<16, 16> pitch;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 alignment() const
+		{
+			return m_data.alignment;
+		}
+
+		u16 pitch() const
+		{
+			return m_data.pitch;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Blit engine: output alignment  = " + std::to_string(decoded_values.alignment()) + " pitch = " + std::to_string(decoded_values.pitch());
 	}
 };
 
 template<>
 struct registers_decoder< NV308A_POINT>
-	: public as_u16x2<&rsx_state::m_nv308a_x, &rsx_state::m_nv308a_y>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "NV308A: x  = " + std::to_string(std::get<0>(decoded_values)) + " y = " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> x;
+			bitfield_decoder_t<16, 16> y;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 x() const
+		{
+			return m_data.x;
+		}
+
+		u16 y() const
+		{
+			return m_data.y;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV308A: x  = " + std::to_string(decoded_values.x()) + " y = " + std::to_string(decoded_values.y());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_INPUT_MASK> : public split_reg_half_uint_decode
+struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_INPUT_MASK>
 {
-	static void commit_rsx_state(rsx_state &state, std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		std::tie(state.m_vertex_attrib_input_mask, std::ignore) = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+		u32 mask() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
 		std::string result = "Transform program enabled inputs:";
 		const std::string input_names[] =
@@ -330,544 +613,1194 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_INPUT_MASK> : public split_reg
 			"in_tc4", "in_tc5", "in_tc6", "in_tc7"
 		};
 		for (unsigned i = 0; i < 16; i++)
-			if (std::get<0>(decoded_values) & (1 << i))
+			if (decoded_values.mask() & (1 << i))
 				result += input_names[i] + " ";
-		return result + " ? = " + std::to_string(std::get<1>(decoded_values));
+		return result;
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_FREQUENCY_DIVIDER_OPERATION> : public split_reg_half_uint_decode
+struct registers_decoder<NV4097_SET_FREQUENCY_DIVIDER_OPERATION>
 {
-	static void commit_rsx_state(rsx_state &state, std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		std::tie(state.m_frequency_divider_operation_mask, std::ignore) = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+		u32 frequency_divider_operation_mask() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
 		std::string result = "Frequency divider: ";
 		for (unsigned i = 0; i < 16; i++)
-			if (std::get<0>(decoded_values) & (1 << i))
+			if (decoded_values.frequency_divider_operation_mask() & (1 << i))
 				result += std::to_string(i) + " ";
-		return result + " ? = " + std::to_string(std::get<1>(decoded_values));
+		return result;
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_DEPTH_TEST_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_DEPTH_TEST_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_depth_test_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> depth_test_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool depth_test_enabled() const
+		{
+			return bool(m_data.depth_test_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Depth: test " + print_boolean(decoded_values);
+		return "Depth: test " + print_boolean(decoded_values.depth_test_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_DEPTH_MASK> : public as_bool
+struct registers_decoder<NV4097_SET_DEPTH_MASK>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_depth_write_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> depth_write_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool depth_write_enabled() const
+		{
+			return bool(m_data.depth_write_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Depth: write " + print_boolean(decoded_values);
-	}
-};
-
-
-template<>
-struct registers_decoder<NV4097_SET_ALPHA_TEST_ENABLE> : public as_bool
-{
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
-	{
-		state.m_alpha_test_enabled = decoded_values;
-	}
-
-	static std::string dump(bool &&decoded_values)
-	{
-		return "Alpha: test " + print_boolean(decoded_values);
+		return "Depth: write " + print_boolean(decoded_values.depth_write_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_STENCIL_TEST_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_ALPHA_TEST_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_test_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> alpha_test_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool alpha_test_enabled() const
+		{
+			return bool(m_data.alpha_test_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: test " + print_boolean(decoded_values);
+		return "Alpha: test " + print_boolean(decoded_values.alpha_test_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_RESTART_INDEX_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_STENCIL_TEST_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_restart_index_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> stencil_test_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool stencil_test_enabled() const
+		{
+			return bool(m_data.stencil_test_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Restart Index: " + print_boolean(decoded_values);
+		return "Stencil: test " + print_boolean(decoded_values.stencil_test_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_RESTART_INDEX_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_depth_bounds_test_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> restart_index_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool restart_index_enabled() const
+		{
+			return bool(m_data.restart_index_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Depth: bound test " + print_boolean(decoded_values);
+		return "Restart Index: " + print_boolean(decoded_values.restart_index_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_LOGIC_OP_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_logic_op_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> depth_bound_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool depth_bound_enabled() const
+		{
+			return bool(m_data.depth_bound_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Logic: " + print_boolean(decoded_values);
+		return "Depth: bound test " + print_boolean(decoded_values.depth_bound_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_DITHER_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_LOGIC_OP_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_dither_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> logic_op_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool logic_op_enabled() const
+		{
+			return bool(m_data.logic_op_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Dither: " + print_boolean(decoded_values);
+		return "Logic: " + print_boolean(decoded_values.logic_op_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_BLEND_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_DITHER_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blend_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> dither_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool dither_enabled() const
+		{
+			return bool(m_data.dither_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Blend: " + print_boolean(decoded_values);
+		return "Dither: " + print_boolean(decoded_values.dither_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_LINE_SMOOTH_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_BLEND_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_line_smooth_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> blend_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool blend_enabled() const
+		{
+			return bool(m_data.blend_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Line: smooth " + print_boolean(decoded_values);
+		return "Blend: " + print_boolean(decoded_values.blend_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_POLY_OFFSET_POINT_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_LINE_SMOOTH_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_poly_offset_point_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> line_smooth_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool line_smooth_enabled() const
+		{
+			return bool(m_data.line_smooth_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Polygon: offset point " + print_boolean(decoded_values);
+		return "Line: smooth " + print_boolean(decoded_values.line_smooth_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_POLY_OFFSET_LINE_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_POLY_OFFSET_POINT_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_offset_line_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> poly_offset_point_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool poly_offset_point_enabled() const
+		{
+			return bool(m_data.poly_offset_point_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Polygon: offset line " + print_boolean(decoded_values);
+		return "Polygon: offset point " + print_boolean(decoded_values.poly_offset_point_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_POLY_OFFSET_FILL_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_POLY_OFFSET_LINE_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_poly_offset_fill_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> poly_offset_line_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool poly_offset_line_enabled() const
+		{
+			return bool(m_data.poly_offset_line_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Polygon: offset fill " + print_boolean(decoded_values);
+		return "Polygon: offset line " + print_boolean(decoded_values.poly_offset_line_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_CULL_FACE_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_POLY_OFFSET_FILL_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_cull_face_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> poly_offset_fill_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool poly_offset_fill_enabled() const
+		{
+			return bool(m_data.poly_offset_fill_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Cull face: " + print_boolean(decoded_values);
+		return "Polygon: offset fill " + print_boolean(decoded_values.poly_offset_fill_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_POLY_SMOOTH_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_CULL_FACE_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_poly_smooth_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> cull_face_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool cull_face_enabled() const
+		{
+			return bool(m_data.cull_face_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Polygon: smooth " + print_boolean(decoded_values);
+		return "Cull face: " + print_boolean(decoded_values.cull_face_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE> : public as_bool
+struct registers_decoder<NV4097_SET_POLY_SMOOTH_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_two_sided_stencil_test_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> poly_smooth_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool poly_smooth_enabled() const
+		{
+			return bool(m_data.poly_smooth_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: per side " + print_boolean(decoded_values);
+		return "Polygon: smooth " + print_boolean(decoded_values.poly_smooth_enabled());
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_SET_TWO_SIDE_LIGHT_EN> : public as_bool
+struct registers_decoder<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE>
 {
-	static void commit_rsx_state(rsx_state &state, bool &&decoded_values)
+	struct decoded_type
 	{
-		state.m_two_side_light_enabled = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> two_sided_stencil_test_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(bool &&decoded_values)
+		bool two_sided_stencil_test_enabled() const
+		{
+			return bool(m_data.two_sided_stencil_test_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Light: per side " + print_boolean(decoded_values);
+		return "Stencil: per side " + print_boolean(decoded_values.two_sided_stencil_test_enabled());
+	}
+};
+
+template<>
+struct registers_decoder<NV4097_SET_TWO_SIDE_LIGHT_EN>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> two_sided_lighting_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		bool two_sided_lighting_enabled() const
+		{
+			return bool(m_data.two_sided_lighting_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Light: per side " + print_boolean(decoded_values.two_sided_lighting_enabled());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MIN>
-	: as_f32<&rsx_state::m_depth_bounds_min>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Depth: bound min = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> depth_bound_min;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 depth_bound_min() const
+		{
+			return reinterpret_cast<const f32&>(m_data.depth_bound_min);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Depth: bound min = " + std::to_string(decoded_values.depth_bound_min());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MAX>
-	: as_f32<&rsx_state::m_depth_bounds_max>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Depth: bound max = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> depth_bound_max;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 depth_bound_max() const
+		{
+			return reinterpret_cast<const f32&>(m_data.depth_bound_max);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Depth: bound max = " + std::to_string(decoded_values.depth_bound_max());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_FOG_PARAMS>
-	: as_f32<&rsx_state::m_fog_params_0>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Fog: param 0 = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> fog_param_0;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 fog_param_0() const
+		{
+			return reinterpret_cast<const f32&>(m_data.fog_param_0);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Fog: param 0 = " + std::to_string(decoded_values.fog_param_0());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_FOG_PARAMS + 1>
-	: as_f32<&rsx_state::m_fog_params_1>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Fog: param 1 = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> fog_param_1;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 fog_param_1() const
+		{
+			return reinterpret_cast<const f32&>(m_data.fog_param_1);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Fog: param 1 = " + std::to_string(decoded_values.fog_param_1());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CLIP_MIN>
-	: as_f32<&rsx_state::m_clip_min>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Depth: clip min = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> clip_min;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 clip_min() const
+		{
+			return reinterpret_cast<const f32&>(m_data.clip_min);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Depth: clip min = " + std::to_string(decoded_values.clip_min());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CLIP_MAX>
-	: as_f32<&rsx_state::m_clip_max>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Depth: clip max = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> clip_max;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 clip_max() const
+		{
+			return reinterpret_cast<const f32&>(m_data.clip_max);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Depth: clip max = " + std::to_string(decoded_values.clip_max());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR>
-	: as_f32<&rsx_state::m_poly_offset_scale>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Polygon: offset scale = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> polygon_offset_scale_factor;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 polygon_offset_scale_factor() const
+		{
+			return reinterpret_cast<const f32&>(m_data.polygon_offset_scale_factor);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Polygon: offset scale = " + std::to_string(decoded_values.polygon_offset_scale_factor());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_POLYGON_OFFSET_BIAS>
-	: as_f32<&rsx_state::m_poly_offset_bias>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Polygon: offset bias = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> polygon_offset_scale_bias;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 polygon_offset_scale_bias() const
+		{
+			return reinterpret_cast<const f32&>(m_data.polygon_offset_scale_bias);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Polygon: offset bias = " + std::to_string(decoded_values.polygon_offset_scale_bias());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_SCALE>
-	: as_f32<&rsx_state::m_viewport_scale_x>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: scale x = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_scale_x;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_scale_x() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_scale_x);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: scale x = " + std::to_string(decoded_values.viewport_scale_x());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 1>
-	: as_f32<&rsx_state::m_viewport_scale_y>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: scale y = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_scale_y;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_scale_y() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_scale_y);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: scale y = " + std::to_string(decoded_values.viewport_scale_y());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 2>
-	: as_f32<&rsx_state::m_viewport_scale_z>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: scale z = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_scale_z;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_scale_z() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_scale_z);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: scale z = " + std::to_string(decoded_values.viewport_scale_z());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 3>
-	: as_f32<&rsx_state::m_viewport_scale_w>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: scale w = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_scale_w;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_scale_w() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_scale_w);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: scale w = " + std::to_string(decoded_values.viewport_scale_w());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET>
-	: as_f32<&rsx_state::m_viewport_offset_x>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: offset x = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_offset_x;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_offset_x() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_offset_x);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: offset x = " + std::to_string(decoded_values.viewport_offset_x());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 1>
-	: as_f32<&rsx_state::m_viewport_offset_y>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: offset y = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_offset_y;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_offset_y() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_offset_y);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: offset y = " + std::to_string(decoded_values.viewport_offset_y());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 2>
-	: as_f32<&rsx_state::m_viewport_offset_z>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: offset z = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_offset_z;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_offset_z() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_offset_z);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: offset z = " + std::to_string(decoded_values.viewport_offset_z());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 3>
-	: as_f32<&rsx_state::m_viewport_offset_w>
 {
-	static std::string dump(f32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Viewport: offset w = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> viewport_offset_w;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 viewport_offset_w() const
+		{
+			return reinterpret_cast<const f32&>(m_data.viewport_offset_w);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Viewport: offset w = " + std::to_string(decoded_values.viewport_offset_w());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_RESTART_INDEX>
-	: as_u32<&rsx_state::m_restart_index>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Restart index: " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 restart_index() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Restart index: " + std::to_string(decoded_values.restart_index());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_COLOR_AOFFSET>
-	: as_u32<&rsx_state::m_surface_a_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: A offset " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_a_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: A offset " + std::to_string(decoded_values.surface_a_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_COLOR_BOFFSET>
-	: as_u32<&rsx_state::m_surface_b_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: B offset " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_b_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: B offset " + std::to_string(decoded_values.surface_b_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_COLOR_COFFSET>
-	: as_u32<&rsx_state::m_surface_c_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: C offset " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_c_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: C offset " + std::to_string(decoded_values.surface_c_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_COLOR_DOFFSET>
-	: as_u32<&rsx_state::m_surface_d_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: D offset " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_d_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: D offset " + std::to_string(decoded_values.surface_d_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_PITCH_A>
-	: as_u32<&rsx_state::m_surface_a_pitch>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: A pitch " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_a_pitch() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: A pitch " + std::to_string(decoded_values.surface_a_pitch());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_PITCH_B>
-	: as_u32<&rsx_state::m_surface_b_pitch>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: B pitch " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_b_pitch() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: B pitch " + std::to_string(decoded_values.surface_b_pitch());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_PITCH_C>
-	: as_u32<&rsx_state::m_surface_c_pitch>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: C pitch " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_c_pitch() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: C pitch " + std::to_string(decoded_values.surface_c_pitch());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_PITCH_D>
-	: as_u32<&rsx_state::m_surface_d_pitch>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: D pitch " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_d_pitch() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: D pitch " + std::to_string(decoded_values.surface_d_pitch());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_ZETA_OFFSET>
-	: as_u32<&rsx_state::m_surface_z_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: Z offset " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_z_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: Z offset " + std::to_string(decoded_values.surface_z_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_PITCH_Z>
-	: as_u32<&rsx_state::m_surface_z_pitch>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Surface: Z pitch " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 surface_z_pitch() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Surface: Z pitch " + std::to_string(decoded_values.surface_z_pitch());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK>
-	: as_u32<&rsx_state::m_vertex_attrib_output_mask>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 output_mask() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
 		const std::string output_names[] =
 		{
@@ -896,7 +1829,7 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK>
 		};
 		std::string result = "Transform program outputs:";
 		for (unsigned i = 0; i < 22; i++)
-			if (decoded_values & (1 << i))
+			if (decoded_values.output_mask() & (1 << i))
 				result += output_names[i] + " ";
 		return result;
 	}
@@ -904,517 +1837,991 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK>
 
 template<>
 struct registers_decoder<NV4097_SET_SHADER_CONTROL>
-	: as_u32<&rsx_state::m_shader_control>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Shader control: raw_value =" + std::to_string(decoded_values) +
-			" reg_count = " + std::to_string((decoded_values >> 24) & 0xFF) +
-			((decoded_values & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace " : "") +
-			((decoded_values & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports " : "");
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 shader_ctrl() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Shader control: raw_value =" + std::to_string(decoded_values.shader_ctrl()) +
+			" reg_count = " + std::to_string((decoded_values.shader_ctrl() >> 24) & 0xFF) +
+			((decoded_values.shader_ctrl() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace " : "") +
+			((decoded_values.shader_ctrl() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports " : "");
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VERTEX_DATA_BASE_OFFSET>
-	: as_u32<&rsx_state::m_vertex_data_base_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Vertex: base offset " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 vertex_data_base_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Vertex: base offset " + std::to_string(decoded_values.vertex_data_base_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_INDEX_ARRAY_ADDRESS>
-	: as_u32<&rsx_state::m_index_array_address>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Index: array offset " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 index_array_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Index: array offset " + std::to_string(decoded_values.index_array_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_VERTEX_DATA_BASE_INDEX>
-	: as_u32<&rsx_state::m_vertex_data_base_index>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Vertex: base index " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 vertex_data_base_index() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Vertex: base index " + std::to_string(decoded_values.vertex_data_base_index());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SHADER_PROGRAM>
-	: as_u32<&rsx_state::m_shader_program_address>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Shader: program offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 shader_program_address() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Shader: program offset = " + std::to_string(decoded_values.shader_program_address());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM_START>
-	: as_u32<&rsx_state::m_transform_program_start>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Transform program: start = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 transform_program_start() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Transform program: start = " + std::to_string(decoded_values.transform_program_start());
 	}
 };
 
 template<>
 struct registers_decoder<NV406E_SEMAPHORE_OFFSET>
-	: as_u32<&rsx_state::m_semaphore_offset_406e>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV406E semaphore: offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 semaphore_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV406E semaphore: offset = " + std::to_string(decoded_values.semaphore_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SEMAPHORE_OFFSET>
-	: as_u32<&rsx_state::m_semaphore_offset_4097>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "semaphore: offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 semaphore_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "semaphore: offset = " + std::to_string(decoded_values.semaphore_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_IMAGE_IN_OFFSET>
-	: as_u32<&rsx_state::m_blit_engine_input_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV3089: input offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 input_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV3089: input offset = " + std::to_string(decoded_values.input_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV3062_SET_OFFSET_DESTIN>
-	: as_u32<&rsx_state::m_blit_engine_output_offset_nv3062>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV3062: output offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 output_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV3062: output offset = " + std::to_string(decoded_values.output_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV309E_SET_OFFSET>
-	: as_u32<&rsx_state::m_blit_engine_nv309E_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV309E: offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV309E: offset = " + std::to_string(decoded_values.offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_DS_DX>
-	: as_u32<&rsx_state::m_blit_engine_ds_dx>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV3089: dsdx = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 ds_dx() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV3089: dsdx = " + std::to_string(decoded_values.ds_dx());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_DT_DY>
-	: as_u32<&rsx_state::m_blit_engine_dt_dy>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV3089: dtdy = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 dt_dy() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV3089: dtdy = " + std::to_string(decoded_values.dt_dy());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_PITCH_IN>
-	: as_u32<&rsx_state::m_nv0039_input_pitch>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV0039: input pitch = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 input_pitch() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV0039: input pitch = " + std::to_string(decoded_values.input_pitch());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_PITCH_OUT>
-	: as_u32<&rsx_state::m_nv0039_output_pitch>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV0039: output pitch = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 output_pitch() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV0039: output pitch = " + std::to_string(decoded_values.output_pitch());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_LINE_LENGTH_IN>
-	: as_u32<&rsx_state::m_nv0039_line_length>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV0039: line lenght input = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 input_line_length() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV0039: line lenght input = " + std::to_string(decoded_values.input_line_length());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_LINE_COUNT>
-	: as_u32<&rsx_state::m_nv0039_line_count>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV0039: line count = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 line_count() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV0039: line count = " + std::to_string(decoded_values.line_count());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_OFFSET_OUT>
-	: as_u32<&rsx_state::m_nv0039_output_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV0039: output offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 output_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV0039: output offset = " + std::to_string(decoded_values.output_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_OFFSET_IN>
-	: as_u32<&rsx_state::m_nv0039_input_offset>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV0039: input offset = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 input_offset() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV0039: input offset = " + std::to_string(decoded_values.input_offset());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_DEPTH_FUNC>
 {
-	static auto decode(u32 value) { return to_comparison_function(value); }
-
-	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
+	struct decoded_type
 	{
-		state.m_depth_func = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> depth_func;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(comparison_function &&decoded_values)
+		rsx::comparison_function depth_func() const
+		{
+			return to_comparison_function(m_data.depth_func);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Depth: compare_function = " + print_comparison_function(decoded_values);
+		return "Depth: compare_function = " + to_string(decoded_values.depth_func());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_FUNC>
 {
-	static auto decode(u32 value) { return to_comparison_function(value); }
-
-	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_func = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> stencil_func;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(comparison_function &&decoded_values)
+		rsx::comparison_function stencil_func() const
+		{
+			return to_comparison_function(m_data.stencil_func);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (front) compare_function = " + print_comparison_function(decoded_values);
+		return "Stencil: (front) compare_function = " + to_string(decoded_values.stencil_func());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC>
 {
-	static auto decode(u32 value) { return to_comparison_function(value); }
-
-	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
+	struct decoded_type
 	{
-		state.m_back_stencil_func = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> back_stencil_func;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(comparison_function &&decoded_values)
+		rsx::comparison_function back_stencil_func() const
+		{
+			return to_comparison_function(m_data.back_stencil_func);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: back compare_function = " + print_comparison_function(decoded_values);
+		return "Stencil: back compare_function = " + to_string(decoded_values.back_stencil_func());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_ALPHA_FUNC>
 {
-	static auto decode(u32 value) { return to_comparison_function(value); }
-
-	static void commit_rsx_state(rsx_state &state, comparison_function &&decoded_values)
+	struct decoded_type
 	{
-		state.m_alpha_func = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> alpha_func;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(comparison_function &&decoded_values)
+		rsx::comparison_function alpha_func() const
+		{
+			return to_comparison_function(m_data.alpha_func);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Alpha: compare_function = " + print_comparison_function(decoded_values);
+		return "Alpha: compare_function = " + to_string(decoded_values.alpha_func());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_OP_FAIL>
 {
-	static auto decode(u32 value) { return to_stencil_op(value); }
-
-	static void commit_rsx_state(rsx_state &state, stencil_op &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_op_fail = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> fail;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(stencil_op &&decoded_values)
+		rsx::stencil_op fail() const
+		{
+			return to_stencil_op(m_data.fail);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (front) fail op = " + print_stencil_op(decoded_values);
+		return "Stencil: (front) fail op = " + to_string(decoded_values.fail());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_OP_ZFAIL>
 {
-	static auto decode(u32 value) { return to_stencil_op(value); }
-
-	static void commit_rsx_state(rsx_state &state, stencil_op &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_op_zfail = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> zfail;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(stencil_op &&decoded_values)
+		rsx::stencil_op zfail() const
+		{
+			return to_stencil_op(m_data.zfail);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (front) zfail op = " + print_stencil_op(decoded_values);
+		return "Stencil: (front) zfail op = " + to_string(decoded_values.zfail());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_OP_ZPASS>
 {
-	static auto decode(u32 value) { return to_stencil_op(value); }
-
-	static void commit_rsx_state(rsx_state &state, stencil_op &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_op_zpass = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> zpass;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(stencil_op &&decoded_values)
+		rsx::stencil_op zpass() const
+		{
+			return to_stencil_op(m_data.zpass);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (front) zpass op = " + print_stencil_op(decoded_values);
+		return "Stencil: (front) zpass op = " + to_string(decoded_values.zpass());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_FAIL>
 {
-	static auto decode(u32 value) { return to_stencil_op(value); }
-
-	static void commit_rsx_state(rsx_state &state, stencil_op &&decoded_values)
+	struct decoded_type
 	{
-		state.m_back_stencil_op_fail = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> back_fail;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(stencil_op &&decoded_values)
+		rsx::stencil_op back_fail() const
+		{
+			return to_stencil_op(m_data.back_fail);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (back) fail op = " + print_stencil_op(decoded_values);
+		return "Stencil: (back) fail op = " + to_string(decoded_values.back_fail());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZFAIL>
 {
-	static auto decode(u32 value) { return to_stencil_op(value); }
-
-	static void commit_rsx_state(rsx_state &state, stencil_op &&decoded_values)
+	struct decoded_type
 	{
-		state.m_back_stencil_op_zfail = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> back_zfail;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(stencil_op &&decoded_values)
+		rsx::stencil_op back_zfail() const
+		{
+			return to_stencil_op(m_data.back_zfail);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (back) zfail op = " + print_stencil_op(decoded_values);
+		return "Stencil: (back) zfail op = " + to_string(decoded_values.back_zfail());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZPASS>
 {
-	static auto decode(u32 value) { return to_stencil_op(value); }
-
-	static void commit_rsx_state(rsx_state &state, stencil_op &&decoded_values)
+	struct decoded_type
 	{
-		state.m_back_stencil_op_zpass = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> back_zpass;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(stencil_op &&decoded_values)
+		rsx::stencil_op back_zpass() const
+		{
+			return to_stencil_op(m_data.back_zpass);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (back) zpass op = " + print_stencil_op(decoded_values);
+		return "Stencil: (back) zpass op = " + to_string(decoded_values.back_zpass());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_FUNC_REF>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_func_ref = std::get<0>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> stencil_func_ref;
+		} m_data;
 
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 stencil_func_ref() const { return m_data.stencil_func_ref; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (front) func ref = " + std::to_string(std::get<0>(decoded_values));
+		return "Stencil: (front) func ref = " + std::to_string(decoded_values.stencil_func_ref());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_REF>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_back_stencil_func_ref = std::get<0>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> back_stencil_func_ref;
+		} m_data;
 
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 back_stencil_func_ref() const { return m_data.back_stencil_func_ref; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (back) func ref = " + std::to_string(std::get<0>(decoded_values));
+		return "Stencil: (back) func ref = " + std::to_string(decoded_values.back_stencil_func_ref());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_FUNC_MASK>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_func_mask = std::get<0>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> stencil_func_mask;
+		} m_data;
 
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 stencil_func_mask() const { return m_data.stencil_func_mask; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (front) func mask = " + std::to_string(std::get<0>(decoded_values));
+		return "Stencil: (front) func mask = " + std::to_string(decoded_values.stencil_func_mask());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_MASK>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_back_stencil_func_mask = std::get<0>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> back_stencil_func_mask;
+		} m_data;
 
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 back_stencil_func_mask() const { return m_data.back_stencil_func_mask; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (back) func mask = " + std::to_string(std::get<0>(decoded_values));
+		return "Stencil: (back) func mask = " + std::to_string(decoded_values.back_stencil_func_mask());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_ALPHA_REF>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_alpha_ref = std::get<0>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> alpha_ref;
+		} m_data;
 
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 alpha_ref() const { return m_data.alpha_ref; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Alpha: ref = " + std::to_string(std::get<0>(decoded_values));
+		return "Alpha: ref = " + std::to_string(decoded_values.alpha_ref());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_COLOR_CLEAR_VALUE>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		std::tie(state.m_clear_color_b, state.m_clear_color_g, state.m_clear_color_r, state.m_clear_color_a) = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> red;
+			bitfield_decoder_t<8, 8> green;
+			bitfield_decoder_t<16, 8> blue;
+			bitfield_decoder_t<24, 8> alpha;
+		} m_data;
 
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 red() const { return m_data.red; }
+		u8 green() const { return m_data.red; }
+		u8 blue() const { return m_data.red; }
+		u8 alpha() const { return m_data.red; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Clear: R = " + std::to_string(std::get<0>(decoded_values)) +
-			" G = " + std::to_string(std::get<1>(decoded_values)) +
-			" B = " + std::to_string(std::get<2>(decoded_values)) +
-			" A = " + std::to_string(std::get<3>(decoded_values));
+		return "Clear: R = " + std::to_string(decoded_values.red()) +
+			" G = " + std::to_string(decoded_values.green()) +
+			" B = " + std::to_string(decoded_values.blue()) +
+			" A = " + std::to_string(decoded_values.alpha());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_STENCIL_MASK>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_stencil_mask = std::get<0>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> stencil_mask;
+		} m_data;
 
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 stencil_mask() const { return m_data.stencil_mask; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Stencil: (front) mask = " + std::to_string(std::get<0>(decoded_values));
+		return "Stencil: (front) mask = " + std::to_string(decoded_values.stencil_mask());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_STENCIL_MASK>
 {
-	static auto decode(u32 value) { return split_reg_quad_uchar(value); }
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_back_stencil_mask = std::get<0>(decoded_values);
-	}
-
-	static std::string dump(std::tuple<u8, u8, u8, u8> &&decoded_values)
+private:
+	union
 	{
-		return "Stencil: (back) mask = " + std::to_string(std::get<0>(decoded_values));
+		u32 raw_value;
+		bitfield_decoder_t<0, 8> back_stencil_mask;
+	} m_data;
+public:
+	decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+	u8 back_stencil_mask() const { return m_data.back_stencil_mask; }
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Stencil: (back) mask = " + std::to_string(decoded_values.back_stencil_mask());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_LOGIC_OP>
 {
-	static auto decode(u32 value) { return to_logic_op(value); }
-
-	static void commit_rsx_state(rsx_state &state, logic_op &&decoded_values)
+	struct decoded_type
 	{
-		state.m_logic_operation = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> logic_operation;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(logic_op &&decoded_values)
+		logic_op logic_operation() const
+		{
+			return to_logic_op(m_data.logic_operation);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Logic: op = " + print_logic_op(decoded_values);
+		return "Logic: op = " + to_string(decoded_values.logic_operation());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_FRONT_FACE>
 {
-	static auto decode(u32 value) { return to_front_face(value); }
-
-	static void commit_rsx_state(rsx_state &state, front_face &&decoded_values)
+	struct decoded_type
 	{
-		state.m_front_face_mode = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> front_face_mode;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(front_face &&decoded_values)
+		front_face front_face_mode() const
+		{
+			return to_front_face(m_data.front_face_mode);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Front Face: " + print_front_face(decoded_values);
+		return "Front Face: " + to_string(decoded_values.front_face_mode());
 	}
 };
 
@@ -1422,689 +2829,1179 @@ struct registers_decoder<NV4097_SET_FRONT_FACE>
 template<>
 struct registers_decoder<NV4097_SET_CULL_FACE>
 {
-	static auto decode(u32 value) { return to_cull_face(value); }
-
-	static void commit_rsx_state(rsx_state &state, cull_face &&decoded_values)
+	struct decoded_type
 	{
-		state.m_cull_face_mode = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> cull_face_mode;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(cull_face &&decoded_values)
+		cull_face cull_face_mode() const
+		{
+			return to_cull_face(m_data.cull_face_mode);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Cull Face: " + print_cull_face(decoded_values);
+		return "Cull Face: " + to_string(decoded_values.cull_face_mode());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_COLOR_TARGET>
 {
-	static auto decode(u32 value) { return to_surface_target(value); }
-
-	static void commit_rsx_state(rsx_state &state, surface_target &&decoded_values)
+	struct decoded_type
 	{
-		state.m_surface_color_target = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> target;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(surface_target &&decoded_values)
+		surface_target target() const
+		{
+			return to_surface_target(m_data.target);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: Color target(s) = " + print_surface_target(decoded_values);
+		return "Surface: Color target(s) = " + to_string(decoded_values.target());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_FOG_MODE>
 {
-	static auto decode(u32 value) { return to_fog_mode(value); }
-
-	static void commit_rsx_state(rsx_state &state, fog_mode &&decoded_values)
+	struct decoded_type
 	{
-		state.m_fog_equation = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> fog_equation;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(fog_mode &&decoded_values)
+		fog_mode fog_equation() const
+		{
+			return to_fog_mode(m_data.fog_equation);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Fog: " + print_fog_mode(decoded_values);
+		return "Fog: " + to_string(decoded_values.fog_equation());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BEGIN_END>
 {
-	static auto decode(u32 value) { return to_primitive_type(value); }
-
-	static void commit_rsx_state(rsx_state &state, primitive_type &&decoded_values)
+	struct decoded_type
 	{
-		state.m_primitive_type = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> primitive;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(primitive_type &&decoded_values)
+		primitive_type primitive() const
+		{
+			return to_primitive_type(m_data.primitive);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "-- " + print_primitive_mode(decoded_values) + " --";
+		return "-- " + to_string(decoded_values.primitive()) + " --";
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_SET_OPERATION>
 {
-	static auto decode(u32 value) { return blit_engine::to_transfer_operation(value); }
-
-	static void commit_rsx_state(rsx_state &state, blit_engine::transfer_operation &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_operation = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> transfer_op;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(blit_engine::transfer_operation &&decoded_values)
+		blit_engine::transfer_operation transfer_op() const
+		{
+			return blit_engine::to_transfer_operation(m_data.transfer_op);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: op = " + print_transfer_operation(decoded_values);
+		return "NV3089: op = " + to_string(decoded_values.transfer_op());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_SET_COLOR_FORMAT>
 {
-	static auto decode(u32 value) { return blit_engine::to_transfer_source_format(value); }
-
-	static void commit_rsx_state(rsx_state &state, blit_engine::transfer_source_format &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_src_color_format = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> transfer_source_fmt;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(blit_engine::transfer_source_format &&decoded_values)
+		blit_engine::transfer_source_format transfer_source_fmt() const
+		{
+			return blit_engine::to_transfer_source_format(m_data.transfer_source_fmt);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: source fmt = " + print_transfer_source_format(decoded_values);
+		return "NV3089: source fmt = " + to_string(decoded_values.transfer_source_fmt());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_SET_CONTEXT_SURFACE>
 {
-	static auto decode(u32 value) { return blit_engine::to_context_surface(value); }
-
-	static void commit_rsx_state(rsx_state &state, blit_engine::context_surface &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_context_surface = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> ctx_surface;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(blit_engine::context_surface &&decoded_values)
+		blit_engine::context_surface ctx_surface() const
+		{
+			return blit_engine::to_context_surface(m_data.ctx_surface);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: context surface = " + print_context_surface(decoded_values);
+		return "NV3089: context surface = " + to_string(decoded_values.ctx_surface());
 	}
 };
 
 template<>
 struct registers_decoder<NV3062_SET_COLOR_FORMAT>
 {
-	static auto decode(u32 value) { return blit_engine::to_transfer_destination_format(value); }
-
-	static void commit_rsx_state(rsx_state &state, blit_engine::transfer_destination_format &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_nv3062_color_format = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> transfer_dest_fmt;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(blit_engine::transfer_destination_format &&decoded_values)
+		blit_engine::transfer_destination_format transfer_dest_fmt() const
+		{
+			return blit_engine::to_transfer_destination_format(m_data.transfer_dest_fmt);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3062: output fmt = " + print_transfer_destination_format(decoded_values);
+		return "NV3062: output fmt = " + to_string(decoded_values.transfer_dest_fmt());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BLEND_EQUATION>
 {
-	static auto decode(u32 value) {
-		auto tmp = split_reg_half_uint_decode::decode(value);
-		return std::make_tuple(to_blend_equation(std::get<0>(tmp)), to_blend_equation(std::get<1>(tmp)));
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<blend_equation, blend_equation> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blend_equation_rgb = std::get<0>(decoded_values);
-		state.m_blend_equation_a = std::get<1>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> blend_rgb;
+			bitfield_decoder_t<16, 16> blend_a;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<blend_equation, blend_equation> &&decoded_values)
+		blend_equation blend_rgb() const
+		{
+			return to_blend_equation(m_data.blend_rgb);
+		}
+
+		blend_equation blend_a() const
+		{
+			return to_blend_equation(m_data.blend_a);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Blend: equation rgb = " + print_blend_op(std::get<0>(decoded_values)) + " a = " + print_blend_op(std::get<1>(decoded_values));
+		return "Blend: equation rgb = " + to_string(decoded_values.blend_rgb()) +
+			" a = " + to_string(decoded_values.blend_a());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BLEND_FUNC_SFACTOR>
 {
-	static auto decode(u32 value) {
-		auto tmp = split_reg_half_uint_decode::decode(value);
-		return std::make_tuple(to_blend_factor(std::get<0>(tmp)), to_blend_factor(std::get<1>(tmp)));
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<blend_factor, blend_factor> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blend_func_sfactor_rgb = std::get<0>(decoded_values);
-		state.m_blend_func_sfactor_a = std::get<1>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> src_blend_rgb;
+			bitfield_decoder_t<16, 16> src_blend_a;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<blend_factor, blend_factor> &&decoded_values)
+		blend_factor src_blend_rgb() const
+		{
+			return to_blend_factor(m_data.src_blend_rgb);
+		}
+
+		blend_factor src_blend_a() const
+		{
+			return to_blend_factor(m_data.src_blend_a);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Blend: sfactor rgb = " + print_blend_factor(std::get<0>(decoded_values)) + " a = " + print_blend_factor(std::get<1>(decoded_values));
+		return "Blend: sfactor rgb = " + to_string(decoded_values.src_blend_rgb()) +
+			" a = " + to_string(decoded_values.src_blend_a());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BLEND_FUNC_DFACTOR>
 {
-	static auto decode(u32 value) {
-		auto tmp = split_reg_half_uint_decode::decode(value);
-		return std::make_tuple(to_blend_factor(std::get<0>(tmp)), to_blend_factor(std::get<1>(tmp)));
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<blend_factor, blend_factor> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blend_func_dfactor_rgb = std::get<0>(decoded_values);
-		state.m_blend_func_dfactor_a = std::get<1>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> dst_blend_rgb;
+			bitfield_decoder_t<16, 16> dst_blend_a;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<blend_factor, blend_factor> &&decoded_values)
+		blend_factor dst_blend_rgb() const
+		{
+			return to_blend_factor(m_data.dst_blend_rgb);
+		}
+
+		blend_factor dst_blend_a() const
+		{
+			return to_blend_factor(m_data.dst_blend_a);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Blend: dfactor rgb = " + print_blend_factor(std::get<0>(decoded_values)) + " a = " + print_blend_factor(std::get<1>(decoded_values));
+		return "Blend: dfactor rgb = " + to_string(decoded_values.dst_blend_rgb()) +
+			" a = " + to_string(decoded_values.dst_blend_a());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_COLOR_MASK>
 {
-	static auto decode(u32 value) {
-		auto tmp = split_reg_quad_uchar(value);
-		return std::make_tuple(!!std::get<0>(tmp), !!std::get<1>(tmp), !!std::get<2>(tmp), !!std::get<3>(tmp));
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<bool, bool, bool, bool> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_color_mask_b = std::get<0>(decoded_values);
-		state.m_color_mask_g = std::get<1>(decoded_values);
-		state.m_color_mask_r = std::get<2>(decoded_values);
-		state.m_color_mask_a = std::get<3>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_data;
+			bitfield_decoder_t<0, 8> color_b;
+			bitfield_decoder_t<8, 8> color_g;
+			bitfield_decoder_t<16, 8> color_r;
+			bitfield_decoder_t<24, 8> color_a;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
 
-	static std::string dump(std::tuple<bool, bool, bool, bool> &&decoded_values)
+		bool color_b() const
+		{
+			return bool(m_data.color_b);
+		}
+
+		bool color_g() const
+		{
+			return bool(m_data.color_g);
+		}
+
+		bool color_r() const
+		{
+			return bool(m_data.color_r);
+		}
+
+		bool color_a() const
+		{
+			return bool(m_data.color_a);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: color mask A = " + print_boolean(std::get<3>(decoded_values)) +
-			" R = " + print_boolean(std::get<2>(decoded_values)) +
-			" G = " + print_boolean(std::get<1>(decoded_values)) +
-			" B = " + print_boolean(std::get<0>(decoded_values));
+		return "Surface: color mask A = " + print_boolean(decoded_values.color_a()) +
+			" R = " + print_boolean(decoded_values.color_r()) +
+			" G = " + print_boolean(decoded_values.color_g()) +
+			" B = " + print_boolean(decoded_values.color_b());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SHADER_WINDOW>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(
-			to_window_origin((value >> 12) & 0xf),
-			to_window_pixel_center((value >> 16) & 0xf),
-			static_cast<u16>(value & 0xfff)
-		);
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<window_origin, window_pixel_center, u16> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_shader_window_origin = std::get<0>(decoded_values);
-		state.m_shader_window_pixel = std::get<1>(decoded_values);
-		state.m_shader_window_height = std::get<2>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 12> window_shader_height;
+			bitfield_decoder_t<12, 4> window_shader_origin;
+			bitfield_decoder_t<16, 4> window_shader_pixel_center;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<window_origin, window_pixel_center, u16> &&decoded_values)
+		window_origin window_shader_origin() const
+		{
+			return to_window_origin(m_data.window_shader_origin);
+		}
+
+		window_pixel_center window_shader_pixel_center() const
+		{
+			return to_window_pixel_center(m_data.window_shader_pixel_center);
+		}
+
+		u16 window_shader_height() const
+		{
+			return m_data.window_shader_height;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Viewport: height = " + std::to_string(std::get<2>(decoded_values)) +
-			" origin = " + print_origin_mode(std::get<0>(decoded_values)) +
-			" pixel center = " + print_pixel_center_mode(std::get<1>(decoded_values));
+		return "Viewport: height = " + std::to_string(decoded_values.window_shader_height()) +
+			" origin = " + to_string(decoded_values.window_shader_origin()) +
+			" pixel center = " + to_string(decoded_values.window_shader_pixel_center());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BLEND_ENABLE_MRT>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(
-			!!(value & 0x2),
-			!!(value & 0x4),
-			!!(value & 0x8)
-		);
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<bool, bool, bool> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blend_enabled_surface_1 = std::get<0>(decoded_values);
-		state.m_blend_enabled_surface_2 = std::get<1>(decoded_values);
-		state.m_blend_enabled_surface_3 = std::get<2>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_data;
+			bitfield_decoder_t<1, 1> blend_surface_b;
+			bitfield_decoder_t<2, 1> blend_surface_c;
+			bitfield_decoder_t<3, 1> blend_surface_d;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
 
-	static std::string dump(std::tuple<bool, bool, bool>&& decoded_values)
+		bool blend_surface_b() const
+		{
+			return bool(m_data.blend_surface_b);
+		}
+
+		bool blend_surface_c() const
+		{
+			return bool(m_data.blend_surface_c);
+		}
+
+		bool blend_surface_d() const
+		{
+			return bool(m_data.blend_surface_d);
+		}
+	};
+
+	static std::string dump(decoded_type&& decoded_values)
 	{
-		return "Blend: mrt1 = " + print_boolean(std::get<0>(decoded_values)) +
-			" mrt2 = " + print_boolean(std::get<1>(decoded_values)) +
-			" mrt3 = " + print_boolean(std::get<2>(decoded_values));
+		return "Blend: mrt1 = " + print_boolean(decoded_values.blend_surface_b()) +
+			" mrt2 = " + print_boolean(decoded_values.blend_surface_c()) +
+			" mrt3 = " + print_boolean(decoded_values.blend_surface_d());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_USER_CLIP_PLANE_CONTROL>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(
-			to_user_clip_plane_op(value & 0xf),
-			to_user_clip_plane_op((value >> 4) & 0xf),
-			to_user_clip_plane_op((value >> 8) & 0xf),
-			to_user_clip_plane_op((value >> 12) & 0xf),
-			to_user_clip_plane_op((value >> 16) & 0xf),
-			to_user_clip_plane_op((value >> 20) & 0xf)
-		);
-	}
 
-	static void commit_rsx_state(rsx_state &state,
-		std::tuple<user_clip_plane_op, user_clip_plane_op, user_clip_plane_op, user_clip_plane_op, user_clip_plane_op, user_clip_plane_op> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_clip_plane_0_enabled = std::get<0>(decoded_values);
-		state.m_clip_plane_1_enabled = std::get<1>(decoded_values);
-		state.m_clip_plane_2_enabled = std::get<2>(decoded_values);
-		state.m_clip_plane_3_enabled = std::get<3>(decoded_values);
-		state.m_clip_plane_4_enabled = std::get<4>(decoded_values);
-		state.m_clip_plane_5_enabled = std::get<5>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_data;
+			bitfield_decoder_t<0, 4> clip_plane0;
+			bitfield_decoder_t<4, 4> clip_plane1;
+			bitfield_decoder_t<8, 4> clip_plane2;
+			bitfield_decoder_t<12, 4> clip_plane3;
+			bitfield_decoder_t<16, 4> clip_plane4;
+			bitfield_decoder_t<20, 4> clip_plane5;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
 
-	static std::string dump(std::tuple<user_clip_plane_op, user_clip_plane_op, user_clip_plane_op, user_clip_plane_op, user_clip_plane_op, user_clip_plane_op> &&decoded_values)
+		user_clip_plane_op clip_plane0() const
+		{
+			return to_user_clip_plane_op(m_data.clip_plane0);
+		}
+
+		user_clip_plane_op clip_plane1() const
+		{
+			return to_user_clip_plane_op(m_data.clip_plane1);
+		}
+
+		user_clip_plane_op clip_plane2() const
+		{
+			return to_user_clip_plane_op(m_data.clip_plane2);
+		}
+
+		user_clip_plane_op clip_plane3() const
+		{
+			return to_user_clip_plane_op(m_data.clip_plane3);
+		}
+
+		user_clip_plane_op clip_plane4() const
+		{
+			return to_user_clip_plane_op(m_data.clip_plane4);
+		}
+
+		user_clip_plane_op clip_plane5() const
+		{
+			return to_user_clip_plane_op(m_data.clip_plane5);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "User clip: UC0 = " + print_user_clip_plane_op(std::get<0>(decoded_values)) +
-			" UC1 = " + print_user_clip_plane_op(std::get<1>(decoded_values)) +
-			" UC2 = " + print_user_clip_plane_op(std::get<2>(decoded_values)) +
-			" UC2 = " + print_user_clip_plane_op(std::get<2>(decoded_values)) +
-			" UC2 = " + print_user_clip_plane_op(std::get<2>(decoded_values)) +
-			" UC2 = " + print_user_clip_plane_op(std::get<2>(decoded_values));
+		return "User clip: UC0 = " + to_string(decoded_values.clip_plane0()) +
+			" UC1 = " + to_string(decoded_values.clip_plane1()) +
+			" UC2 = " + to_string(decoded_values.clip_plane2()) +
+			" UC2 = " + to_string(decoded_values.clip_plane3()) +
+			" UC2 = " + to_string(decoded_values.clip_plane4()) +
+			" UC2 = " + to_string(decoded_values.clip_plane5());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_LINE_WIDTH>
 {
-	static auto decode(u32 value) {
-		return (value >> 3) + (value & 7) / 8.f;
-	}
-
-	static void commit_rsx_state(rsx_state &state, f32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_line_width = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_data;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
 
-	static std::string dump(f32 &&decoded_values)
+		f32 line_width() const
+		{
+			return (m_data.raw_data >> 3) + (m_data.raw_data & 7) / 8.f;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Line width: " + std::to_string(decoded_values);
+		return "Line width: " + std::to_string(decoded_values.line_width());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(
-			to_surface_color_format(value & 0x1f),
-			to_surface_depth_format((value >> 5) & 0x7),
-			to_surface_antialiasing((value >> 12) & 0xf),
-			static_cast<u8>((value >> 16) & 0xff),
-			static_cast<u8>((value >> 24) & 0xff)
-		);
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<surface_color_format, surface_depth_format, surface_antialiasing, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_surface_color = std::get<0>(decoded_values);
-		state.m_surface_depth_format = std::get<1>(decoded_values);
-		state.m_surface_antialias = std::get<2>(decoded_values);
-		state.m_surface_log2_width = std::get<3>(decoded_values);
-		state.m_surface_log2_height = std::get<4>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 5> color_fmt;
+			bitfield_decoder_t<5, 3> depth_fmt;
+			bitfield_decoder_t<12, 4> antialias;
+			bitfield_decoder_t<16, 8> log2width;
+			bitfield_decoder_t<24, 8> log2height;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<surface_color_format, surface_depth_format, surface_antialiasing, u8, u8> &&decoded_values)
+		surface_color_format color_fmt() const
+		{
+			return to_surface_color_format(m_data.color_fmt);
+		}
+
+		surface_depth_format depth_fmt() const
+		{
+			return to_surface_depth_format(m_data.depth_fmt);
+		}
+
+		surface_antialiasing antialias() const
+		{
+			return to_surface_antialiasing(m_data.antialias);
+		}
+
+		u8 log2width() const
+		{
+			return bitfield_decoder_t<16, 8>(m_data.log2width);
+		}
+
+		u8 log2height() const
+		{
+			return bitfield_decoder_t<24, 8>(m_data.log2height);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: Color format = " + print_surface_color_format(std::get<0>(decoded_values)) +
-			" DepthStencil format = " + print_depth_stencil_surface_format(std::get<1>(decoded_values)) +
-			" Anti aliasing =" + print_surface_antialiasing(std::get<2>(decoded_values)) +
-			" w = " + std::to_string(std::get<3>(decoded_values)) +
-			" h = " + std::to_string(std::get<4>(decoded_values));
+		return "Surface: Color format = " + to_string(decoded_values.color_fmt()) +
+			" DepthStencil format = " + to_string(decoded_values.depth_fmt()) +
+			" Anti aliasing =" + to_string(decoded_values.antialias()) +
+			" w = " + std::to_string(decoded_values.log2width()) +
+			" h = " + std::to_string(decoded_values.log2height());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_ZSTENCIL_CLEAR_VALUE>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(value >> 8, static_cast<u8>(value & 0xff));
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u32, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_z_clear_value = std::get<0>(decoded_values);
-		state.m_stencil_clear_value = std::get<1>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<8, 24> clear_z;
+			bitfield_decoder_t<0, 8> clear_stencil;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<u32, u8> &&decoded_values)
+		u8 clear_stencil() const
+		{
+			return m_data.clear_stencil;
+		}
+
+		u32 clear_z() const
+		{
+			return m_data.clear_z;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Clear: Z = " + std::to_string(std::get<0>(decoded_values)) +
-			" Stencil = " + std::to_string(std::get<1>(decoded_values));
+		return "Clear: Z = " + std::to_string(decoded_values.clear_z()) +
+			" Stencil = " + std::to_string(decoded_values.clear_stencil());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(index_array_type(value >> 4), value & 0xf);
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<index_array_type, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_index_type = std::get<0>(decoded_values);
-		state.m_index_array_location = std::get<1>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 4> index_dma;
+			bitfield_decoder_t<4, 28> type;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<index_array_type, u8> &&decoded_values)
+		u8 index_dma() const
+		{
+			return m_data.index_dma;
+		}
+
+		index_array_type type() const
+		{
+			return to_index_array_type(m_data.type);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Index: type = " + print_index_type(std::get<0>(decoded_values)) +
-			" dma = " + std::to_string(std::get<1>(decoded_values));
+		return "Index: type = " + to_string(decoded_values.type()) +
+			" dma = " + std::to_string(decoded_values.index_dma());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_A>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_surface_a_dma = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> dma_surface_a;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 dma_surface_a() const
+		{
+			return m_data.dma_surface_a;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: A DMA = " + std::to_string(decoded_values);
+		return "Surface: A DMA = " + std::to_string(decoded_values.dma_surface_a());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_B>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_surface_b_dma = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> dma_surface_b;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 dma_surface_b() const
+		{
+			return m_data.dma_surface_b;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: B DMA = " + std::to_string(decoded_values);
+		return "Surface: B DMA = " + std::to_string(decoded_values.dma_surface_b());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_C>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_surface_c_dma = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> dma_surface_c;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 dma_surface_c() const
+		{
+			return m_data.dma_surface_c;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: C DMA = " + std::to_string(decoded_values);
+		return "Surface: C DMA = " + std::to_string(decoded_values.dma_surface_c());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_D>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_surface_d_dma = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> dma_surface_d;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 dma_surface_d() const
+		{
+			return m_data.dma_surface_d;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: D DMA = " + std::to_string(decoded_values);
+		return "Surface: D DMA = " + std::to_string(decoded_values.dma_surface_d());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CONTEXT_DMA_ZETA>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_surface_z_dma = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> dma_surface_z;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 dma_surface_z() const
+		{
+			return m_data.dma_surface_z;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Surface: Z DMA = " + std::to_string(decoded_values);
+		return "Surface: Z DMA = " + std::to_string(decoded_values.dma_surface_z());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_SET_CONTEXT_DMA_IMAGE>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_input_location = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> context_dma;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 context_dma() const
+		{
+			return m_data.context_dma;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: input DMA = " + std::to_string(decoded_values);
+		return "NV3089: input DMA = " + std::to_string(decoded_values.context_dma());
 	}
 };
 
 template<>
 struct registers_decoder<NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN>
-	: as_u32<&rsx_state::m_blit_engine_output_location_nv3062>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "NV3062: output DMA = " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> output_dma;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 output_dma() const
+		{
+			return m_data.output_dma;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV3062: output DMA = " + std::to_string(decoded_values.output_dma());
 	}
 };
 
 template<>
 struct registers_decoder<NV309E_SET_CONTEXT_DMA_IMAGE>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_nv309E_location = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> context_dma;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 context_dma() const
+		{
+			return m_data.context_dma;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV309E: output DMA = " + std::to_string(decoded_values);
+		return "NV309E: output DMA = " + std::to_string(decoded_values.context_dma());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_SET_CONTEXT_DMA_BUFFER_OUT>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_nv0039_output_location = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> output_dma;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 output_dma() const
+		{
+			return m_data.output_dma;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV0039: output DMA = " + std::to_string(decoded_values);
+		return "NV0039: output DMA = " + std::to_string(decoded_values.output_dma());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_SET_CONTEXT_DMA_BUFFER_IN>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_nv0039_input_location = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> input_dma;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 input_dma() const
+		{
+			return m_data.input_dma;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV0039: input DMA = " + std::to_string(decoded_values);
+		return "NV0039: input DMA = " + std::to_string(decoded_values.input_dma());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_CONTEXT_DMA_REPORT>
 {
-	static auto decode(u32 value) {
-		return blit_engine::to_context_dma(value);
-	}
-
-	static void commit_rsx_state(rsx_state &state, blit_engine::context_dma &&decoded_values)
+	struct decoded_type
 	{
-		state.m_context_dma_report = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> context_dma_report;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(blit_engine::context_dma &&decoded_values)
+		blit_engine::context_dma context_dma_report() const
+		{
+			return blit_engine::to_context_dma(m_data.context_dma_report);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Report: context DMA = " + print_context_dma(decoded_values);
+		return "Report: context DMA = " + to_string(decoded_values.context_dma_report());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_IMAGE_IN_FORMAT>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(static_cast<u16>(value),
-			blit_engine::to_transfer_origin(value >> 16),
-			blit_engine::to_transfer_interpolator(value >> 24));
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<u16, blit_engine::transfer_origin, blit_engine::transfer_interpolator> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_input_pitch = std::get<0>(decoded_values);
-		state.m_blit_engine_input_origin = std::get<1>(decoded_values);
-		state.m_blit_engine_input_inter = std::get<2>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> format;
+			bitfield_decoder_t<16, 8> transfer_origin;
+			bitfield_decoder_t<24, 8> transfer_interpolator;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<u16, blit_engine::transfer_origin, blit_engine::transfer_interpolator> &&decoded_values)
+		u16 format() const
+		{
+			return m_data.format;
+		}
+
+		blit_engine::transfer_origin transfer_origin() const
+		{
+			return blit_engine::to_transfer_origin(m_data.transfer_origin);
+		}
+
+		blit_engine::transfer_interpolator transfer_interpolator() const
+		{
+			return blit_engine::to_transfer_interpolator(m_data.transfer_interpolator);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: input fmt " + std::to_string(std::get<0>(decoded_values)) +
-			" origin = " + print_transfer_origin(std::get<1>(decoded_values)) +
-			" interp = " + print_transfer_interpolator(std::get<2>(decoded_values));
+		return "NV3089: input fmt " + std::to_string(decoded_values.format()) +
+			" origin = " + to_string(decoded_values.transfer_origin()) +
+			" interp = " + to_string(decoded_values.transfer_interpolator());
 	}
 };
 
 template<>
 struct registers_decoder<NV309E_SET_FORMAT>
 {
-	static auto decode(u32 value) {
-		return std::make_tuple(blit_engine::to_transfer_destination_format(value), static_cast<u8>(value >> 16), static_cast<u8>(value >> 24));
-	}
-
-	static void commit_rsx_state(rsx_state &state, std::tuple<blit_engine::transfer_destination_format, u8, u8> &&decoded_values)
+	struct decoded_type
 	{
-		state.m_blit_engine_output_format_nv309E = std::get<0>(decoded_values);
-		state.m_nv309e_sw_height_log2 = std::get<1>(decoded_values);
-		state.m_nv309e_sw_width_log2 = std::get<2>(decoded_values);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> transfer_destination_fmt;
+			bitfield_decoder_t<16, 8> sw_height_log2;
+			bitfield_decoder_t<24, 8> sw_width_log2;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(std::tuple<blit_engine::transfer_destination_format, u8, u8> &&decoded_values)
+		blit_engine::transfer_destination_format format() const
+		{
+			return blit_engine::to_transfer_destination_format(m_data.transfer_destination_fmt);
+		}
+
+		u8 sw_height_log2() const
+		{
+			return m_data.sw_height_log2;
+		}
+
+		u8 sw_width_log2() const
+		{
+			return m_data.sw_width_log2;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV309E: output fmt = " + print_transfer_destination_format(std::get<0>(decoded_values)) +
-			" log2-width = " + std::to_string(std::get<1>(decoded_values)) +
-			" log2-height = " + std::to_string(std::get<2>(decoded_values));
+		return "NV309E: output fmt = " + to_string(decoded_values.format()) +
+			" log2-width = " + std::to_string(decoded_values.sw_width_log2()) +
+			" log2-height = " + std::to_string(decoded_values.sw_height_log2());
 	}
 };
 
 template<>
 struct registers_decoder<NV0039_FORMAT>
 {
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 8> input_fmt;
+			bitfield_decoder_t<8, 8> output_fmt;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 input_format() const
+		{
+			return m_data.input_fmt;
+		}
+
+		u8 output_format() const
+		{
+			return m_data.output_fmt;
+		}
+	};
+
 	static auto decode(u32 value) {
 		return std::make_tuple(static_cast<u8>(value & 0xff), static_cast<u8>(value >> 8));
 	}
 
-	static void commit_rsx_state(rsx_state &state, std::tuple<u8, u8> &&decoded_values)
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		state.m_nv0039_input_format = std::get<0>(decoded_values);
-		state.m_nv0039_output_format = std::get<1>(decoded_values);
-	}
-
-	static std::string dump(std::tuple<u8, u8> &&decoded_values)
-	{
-		return "NV0039: input format = " + std::to_string(std::get<0>(decoded_values)) +
-			" output format = " + std::to_string(std::get<1>(decoded_values));
+		return "NV0039: input format = " + std::to_string(decoded_values.input_format()) +
+			" output format = " + std::to_string(decoded_values.output_format());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BLEND_COLOR2>
-	: public as_u16x2<&rsx_state::m_blend_color_16b_b, &rsx_state::m_blend_color_16b_a>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "Blend color: 16b BA = " + std::to_string(std::get<0>(decoded_values)) +
-			", " + std::to_string(std::get<1>(decoded_values));
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> blue;
+			bitfield_decoder_t<16, 16> alpha;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 blue() const
+		{
+			return m_data.blue;
+		}
+
+		u8 alpha() const
+		{
+			return m_data.alpha;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Blend color: 16b BA = " + std::to_string(decoded_values.blue()) +
+			", " + std::to_string(decoded_values.alpha());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BLEND_COLOR>
-	: as_u32<&rsx_state::m_blend_color>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		auto rgba8 = split_reg_quad_uchar(decoded_values);
-		auto rg16 = split_reg_half_uint_decode::decode(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> red16;
+			bitfield_decoder_t<16, 16> green16;
+			bitfield_decoder_t<0, 8> red8;
+			bitfield_decoder_t<8, 8> green8;
+			bitfield_decoder_t<16, 8> blue8;
+			bitfield_decoder_t<24, 8> alpha8;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u8 red16() const
+		{
+			return m_data.red16;
+		}
+
+		u8 green16() const
+		{
+			return m_data.green16;
+		}
+
+		u8 red8() const
+		{
+			return m_data.red8;
+		}
+
+		u8 green8() const
+		{
+			return m_data.green8;
+		}
+
+		u8 blue8() const
+		{
+			return m_data.blue8;
+		}
+
+		u8 alpha8() const
+		{
+			return m_data.alpha8;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
 		return "Blend color: 8b RGBA = " +
-			std::to_string(std::get<0>(rgba8)) + ", " + std::to_string(std::get<1>(rgba8)) + ", " + std::to_string(std::get<2>(rgba8)) + ", " + std::to_string(std::get<3>(rgba8)) +
-			" 16b RG = " + std::to_string(std::get<0>(rg16)) + ", " + std::to_string(std::get<1>(rg16));
+			std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.alpha8()) +
+			" 16b RG = " + std::to_string(decoded_values.red16()) + ", " + std::to_string(decoded_values.green16());
 	}
 };
 
 template<>
 struct registers_decoder<NV3089_IMAGE_IN>
-	: public as_u16x2<&rsx_state::m_blit_engine_in_x, &rsx_state::m_blit_engine_in_y>
 {
-	static std::string dump(std::tuple<u16, u16> &&decoded_values)
+	struct decoded_type
 	{
-		return "NV3089: in x = " + std::to_string(std::get<0>(decoded_values) / 16.f) +
-			" y = " + std::to_string(std::get<1>(decoded_values) / 16.f);
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 16> x;
+			bitfield_decoder_t<16, 16> y;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u16 x() const
+		{
+			return m_data.x;
+		}
+
+		u16 y() const
+		{
+			return m_data.y;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV3089: in x = " + std::to_string(decoded_values.x() / 16.f) +
+			" y = " + std::to_string(decoded_values.y() / 16.f);
 	}
 };
 
 template<>
-struct registers_decoder<NV4097_NO_OPERATION> : public as_unused
+struct registers_decoder<NV4097_NO_OPERATION>
 {
+	struct decoded_type
+	{
+		decoded_type(u32) {};
+	};
+
 	static std::string dump(u32 &&decoded_values)
 	{
 		return "(nop)";
@@ -2112,8 +4009,13 @@ struct registers_decoder<NV4097_NO_OPERATION> : public as_unused
 };
 
 template<>
-struct registers_decoder<NV4097_INVALIDATE_VERTEX_CACHE_FILE> : public as_unused
+struct registers_decoder<NV4097_INVALIDATE_VERTEX_CACHE_FILE>
 {
+	struct decoded_type
+	{
+		decoded_type(u32) {};
+	};
+
 	static std::string dump(u32 &&decoded_values)
 	{
 		return "(invalidate vertex cache file)";
@@ -2121,8 +4023,13 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_CACHE_FILE> : public as_unused
 };
 
 template<>
-struct registers_decoder<NV4097_INVALIDATE_VERTEX_FILE> : public as_unused
+struct registers_decoder<NV4097_INVALIDATE_VERTEX_FILE>
 {
+	struct decoded_type
+	{
+		decoded_type(u32) {};
+	};
+
 	static std::string dump(u32 &&decoded_values)
 	{
 		return "(invalidate vertex file)";
@@ -2132,97 +4039,150 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_FILE> : public as_unused
 template<>
 struct registers_decoder<NV4097_SET_ANTI_ALIASING_CONTROL>
 {
-	static auto decode(u32 value)
+	struct decoded_type
 	{
-		return std::make_tuple(
-			!!(value & 0x1),
-			!!((value >> 4) & 0x1),
-			!!((value >> 8) & 0x1),
-			static_cast<u16>(value >> 16)
-		);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 1> msaa_enabled;
+			bitfield_decoder_t<4, 1> msaa_alpha_to_coverage;
+			bitfield_decoder_t<8, 1> msaa_alpha_to_one;
+			bitfield_decoder_t<16, 16> msaa_sample_mask;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static void commit_rsx_state(rsx_state &state, std::tuple<bool, bool, bool, u16> &&decoded_values)
-	{
-		state.m_msaa_enabled = std::get<0>(decoded_values);
-		state.m_msaa_alpha_to_coverage = std::get<1>(decoded_values);
-		state.m_msaa_alpha_to_one = std::get<2>(decoded_values);
-		state.m_msaa_sample_mask = std::get<3>(decoded_values);
-	}
+		bool msaa_enabled() const
+		{
+			return bool(m_data.msaa_enabled);
+		}
 
-	static std::string dump(std::tuple<bool, bool, bool, u16> &&decoded_values)
+		bool msaa_alpha_to_coverage() const
+		{
+			return bool(m_data.msaa_alpha_to_coverage);
+		}
+
+		bool msaa_alpha_to_one() const
+		{
+			return bool(m_data.msaa_alpha_to_one);
+		}
+
+		u16 msaa_sample_mask() const
+		{
+			return m_data.msaa_sample_mask;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Anti_aliasing: " + print_boolean(std::get<0>(decoded_values)) +
-			" alpha_to_coverage = " + print_boolean(std::get<1>(decoded_values)) +
-			" alpha_to_one = " + print_boolean(std::get<2>(decoded_values)) +
-			" sample_mask = " + std::to_string(std::get<3>(decoded_values));
+		return "Anti_aliasing: " + print_boolean(decoded_values.msaa_enabled()) +
+			" alpha_to_coverage = " + print_boolean(decoded_values.msaa_alpha_to_coverage()) +
+			" alpha_to_one = " + print_boolean(decoded_values.msaa_alpha_to_one()) +
+			" sample_mask = " + std::to_string(decoded_values.msaa_sample_mask());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_SHADE_MODE>
 {
-	static auto decode(u32 value)
+	struct decoded_type
 	{
-		return to_shading_mode(value);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> shading;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static void commit_rsx_state(rsx_state &state, rsx::shading_mode &&decoded_values)
-	{
-		state.m_shading_mode = decoded_values;
-	}
+		shading_mode shading() const
+		{
+			return to_shading_mode(m_data.shading);
+		}
+	};
 
-	static std::string dump(rsx::shading_mode &&decoded_values)
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Shading mode: " + print_shading_mode(decoded_values);
+		return "Shading mode: " + to_string(decoded_values.shading());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_FRONT_POLYGON_MODE>
 {
-	static auto decode(u32 value)
+	struct decoded_type
 	{
-		return to_polygon_mode(value);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> front_polygon_mode;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static void commit_rsx_state(rsx_state &state, rsx::polygon_mode &&decoded_values)
-	{
-		state.m_front_polygon_mode = decoded_values;
-	}
+		polygon_mode front_polygon_mode() const
+		{
+			return to_polygon_mode(m_data.front_polygon_mode);
+		}
+	};
 
-	static std::string dump(rsx::polygon_mode &&decoded_values)
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Front polygon mode: " + print_polygon_mode(decoded_values);
+		return "Front polygon mode: " + to_string(decoded_values.front_polygon_mode());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_BACK_POLYGON_MODE>
 {
-	static auto decode(u32 value)
+	struct decoded_type
 	{
-		return to_polygon_mode(value);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> back_polygon_mode;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static void commit_rsx_state(rsx_state &state, rsx::polygon_mode &&decoded_values)
-	{
-		state.m_back_polygon_mode = decoded_values;
-	}
+		polygon_mode back_polygon_mode() const
+		{
+			return to_polygon_mode(m_data.back_polygon_mode);
+		}
+	};
 
-	static std::string dump(rsx::polygon_mode &&decoded_values)
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "back polygon mode: " + print_polygon_mode(decoded_values);
+		return "back polygon mode: " + to_string(decoded_values.back_polygon_mode());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_TRANSFORM_CONSTANT_LOAD>
-	: as_u32<&rsx_state::m_transform_constant_file_pointer>
 {
-	static std::string dump(u32 &&decoded_values)
+	struct decoded_type
 	{
-		return "Set transform constant pointer at " + std::to_string(decoded_values);
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 transform_constant_load() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Set transform constant pointer at " + std::to_string(decoded_values.transform_constant_load());
 	}
 };
 
@@ -2268,22 +4228,28 @@ struct registers_decoder<NV4097_SET_TRANSFORM_CONSTANT_LOAD>
 template<u32 index>
 struct transform_constant_helper
 {
-	static auto decode(u32 value) {
-		return value;
-	}
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		f32 constant_value() const
+		{
+			return reinterpret_cast<const f32&>(m_data.raw_value);
+		}
+	};
 
 	static constexpr u32 reg = index / 4;
 	static constexpr u8 subreg = index % 4;
 
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		u32 load = state.m_transform_constant_file_pointer;
-		state.transform_constants[load + reg].rgba[subreg] = (f32&)decoded_values;
-	}
-
-	static std::string dump(u32 &&decoded_values)
-	{
-		return "TransformConstant[base + " + std::to_string(reg) + "]." + get_subreg_name(subreg) + " = " + std::to_string((f32&)decoded_values);
+		return "TransformConstant[base + " + std::to_string(reg) + "]." + get_subreg_name(subreg) + " = " + std::to_string(decoded_values.constant_value());
 	}
 };
 
@@ -2295,37 +4261,51 @@ EXPAND_RANGE_32(0, TRANSFORM_CONSTANT)
 template<u32 index>
 struct transform_program_helper
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		u32 &load = state.m_transform_program_pointer;
-		state.transform_program[load++] = decoded_values;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 value() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Transform Program (" + std::to_string(index) + "):"+ std::to_string(decoded_values);
+		return "Transform Program (" + std::to_string(index) + "):"+ std::to_string(decoded_values.value());
 	}
 };
 
 template<>
 struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM_LOAD>
 {
-	static auto decode(u32 value) {
-		return value;
-	}
-
-	static void commit_rsx_state(rsx_state &state, u32 &&decoded_values)
+	struct decoded_type
 	{
-		state.m_transform_program_pointer = decoded_values << 2;
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 32> transform_program_load;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-	static std::string dump(u32 &&decoded_values)
+		u32 transform_program_load() const
+		{
+			return m_data.transform_program_load;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Transform Program pointer :" + std::to_string(decoded_values);
+		return "Transform Program pointer :" + std::to_string(decoded_values.transform_program_load());
 	}
 };
 
@@ -2336,32 +4316,50 @@ EXPAND_RANGE_512(0, TRANSFORM_PROGRAM)
 template<u32 index>
 struct vertex_array_helper
 {
-	static auto decode(u32 value)
+	struct decoded_type
 	{
-		u16 frequency = value >> 16;
-		u8 stride = (value >> 8) & 0xff;
-		u8 size = (value >> 4) & 0xf;
-		rsx::vertex_base_type type = rsx::to_vertex_base_type(value & 0xf);
-		return std::make_tuple(frequency, stride, size, type);
-	}
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 4> type;
+			bitfield_decoder_t<4, 4> size;
+			bitfield_decoder_t<8, 8> stride;
+			bitfield_decoder_t<16, 16> frequency;
+		} m_data;
+	public:
+		decoded_type(u32 v) { m_data.raw_value = v; }
 
-	static void commit_rsx_state(rsx::rsx_state &state, std::tuple<u16, u8, u8, rsx::vertex_base_type> &&decoded_values)
-	{
-		state.vertex_arrays_info[index].frequency = std::get<0>(decoded_values);
-		state.vertex_arrays_info[index].stride = std::get<1>(decoded_values);
-		state.vertex_arrays_info[index].size = std::get<2>(decoded_values);
-		state.vertex_arrays_info[index].type = std::get<3>(decoded_values);
-	}
+		u16 frequency() const
+		{
+			return m_data.frequency;
+		}
 
-	static std::string dump(std::tuple<u16, u8, u8, rsx::vertex_base_type> &&decoded_values)
+		u8 stride() const
+		{
+			return m_data.stride;
+		}
+
+		u8 size() const
+		{
+			return m_data.size;
+		}
+
+		rsx::vertex_base_type type() const
+		{
+			return rsx::to_vertex_base_type(m_data.type);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		if (std::get<2>(decoded_values) == 0)
+		if (decoded_values.size() == 0)
 			return "(disabled)";
 
-		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(std::get<3>(decoded_values)) +
-			" size = " + std::to_string(std::get<2>(decoded_values)) +
-			" stride = " + std::to_string(std::get<1>(decoded_values)) +
-			" frequency = " + std::to_string(std::get<0>(decoded_values));
+		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(decoded_values.type()) +
+			" size = " + std::to_string(decoded_values.size()) +
+			" stride = " + std::to_string(decoded_values.stride()) +
+			" frequency = " + std::to_string(decoded_values.frequency());
 	}
 };
 
@@ -2373,19 +4371,22 @@ EXPAND_RANGE_16(0, VERTEX_DATA_ARRAY_FORMAT)
 template<u32 index>
 struct vertex_array_offset_helper
 {
-	static auto decode(u32 value)
+	struct decoded_type
 	{
-		return value;
-	}
+	private:
+		u32 raw_value;
+	public:
+		decoded_type(u32 v) : raw_value(v) {}
 
-	static void commit_rsx_state(rsx::rsx_state &state, u32 &&decoded_values)
-	{
-		state.vertex_arrays_info[index].m_offset = decoded_values;
-	}
+		u32 offset() const
+		{
+			return raw_value;
+		}
+	};
 
-	static std::string dump(u32 &&decoded_values)
+	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Vertex array " + std::to_string(index) + ": Offset = " + std::to_string(decoded_values);
+		return "Vertex array " + std::to_string(index) + ": Offset = " + std::to_string(decoded_values.offset());
 	}
 };
 
@@ -2394,70 +4395,74 @@ struct vertex_array_offset_helper
 
 EXPAND_RANGE_16(0, VERTEX_DATA_ARRAY_OFFSET)
 
-template<typename Type> struct vertex_data_type_from_element_type;
-template<> struct vertex_data_type_from_element_type<float> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::f; };
-template<> struct vertex_data_type_from_element_type<f16> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::sf; };
-template<> struct vertex_data_type_from_element_type<u8> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::ub; };
-template<> struct vertex_data_type_from_element_type<u16> { static constexpr rsx::vertex_base_type type = rsx::vertex_base_type::s1; };
-
 template<typename type, int count>
-struct vertex_type_namer;
+struct register_vertex_printer;
 
 template<int count>
-struct vertex_type_namer<f32, count>
+struct register_vertex_printer<f32, count>
 {
-	static std::string get()
+	static std::string type()
 	{
 		return "float" + std::to_string(count);
+	}
+
+	static std::string value(u32 v)
+	{
+		return std::to_string(reinterpret_cast<f32&>(v));
 	}
 };
 
 template<int count>
-struct vertex_type_namer<u16, count>
+struct register_vertex_printer<u16, count>
 {
-	static std::string get()
+	static std::string type()
 	{
 		return "short" + std::to_string(count);
+	}
+
+	static std::string value(u32 v)
+	{
+		return std::to_string(v & 0xffff) + std::to_string(v >> 16);
 	}
 };
 
 template<>
-struct vertex_type_namer<u8, 4>
+struct register_vertex_printer<u8, 4>
 {
-	static std::string get()
+	static std::string type()
 	{
 		return "uchar4";
+	}
+
+	static std::string value(u32 v)
+	{
+		return std::to_string(v & 0xff) + std::to_string((v >> 8) & 0xff) + std::to_string((v >> 16) & 0xff) + std::to_string((v >> 24) & 0xff);
 	}
 };
 
 template<u32 index, typename type, int count>
 struct register_vertex_helper
 {
-	static auto decode(u32 value)
+	struct decoded_type
 	{
-		return value;
-	}
+	private:
+		u32 m_raw_value;
+	public:
+		decoded_type(u32 v) : m_raw_value(v) {}
 
+		u32 value() const
+		{
+			return m_raw_value;
+		}
+	};
 	static const size_t increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
-
 	static const size_t attribute_index = index / increment_per_array_index;
 	static const size_t vertex_subreg = index % increment_per_array_index;
 
-	static void commit_rsx_state(rsx::rsx_state &state, u32 &&decoded_values)
+	static std::string dump(decoded_type&& decoded_values)
 	{
-		auto& info = state.register_vertex_info[attribute_index];
-
-		info.type = vertex_data_type_from_element_type<type>::type;
-		info.size = count;
-		info.frequency = 0;
-		info.stride = 0;
-		state.register_vertex_info[attribute_index].data[vertex_subreg] = decoded_values;
-	}
-
-	static std::string dump(u32&& decoded_values)
-	{
-		return "register vertex " + std::to_string(attribute_index) + " as " + vertex_type_namer<type, count>::get() + ": " +
-			std::to_string(decoded_values);
+		return "register vertex " + std::to_string(attribute_index) + " as " + register_vertex_printer<type, count>::type() + ": " +
+			register_vertex_printer<type, count>::value(decoded_values.value());
 	}
 };
 
@@ -2646,13 +4651,6 @@ constexpr std::integer_sequence<u32,
 	NV4097_SET_BACK_POLYGON_MODE,
 	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_FORMAT)
 	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_OFFSET)
-	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4UB)
-	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA1F)
-	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA2F)
-	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA3F)
-	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4F)
-	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA2S)
-	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA4S)
 	EXPAND_RANGE_32(0, DECLARE_TRANSFORM_CONSTANT)
 	NV4097_SET_TRANSFORM_CONSTANT_LOAD,
 	EXPAND_RANGE_512(0, DECLARE_TRANSFORM_PROGRAM)
