@@ -129,9 +129,7 @@ arm_error_code sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pA
 	// set SceKernelThreadEntry function arguments
 	thread->GPR[0] = argSize;
 	thread->GPR[1] = pos;
-
-	thread->state -= cpu_state::stop;
-	(*thread)->lock_notify();
+	thread->run();
 	return SCE_OK;
 }
 
@@ -308,7 +306,7 @@ arm_error_code sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm
 	{
 	}
 
-	(*thread)->join();
+	thread->join();
 
 	if (pExitStatus)
 	{
@@ -480,23 +478,20 @@ struct psp2_event_flag final
 	// Returns true if the command has been completed immediately. Its status is unknown otherwise.
 	bool exec(task type, u32 arg)
 	{
-		// Acquire position in the queue
+		// Allocate position in the queue
 		const u32 push_pos = m_workload.push_begin();
 
 		// Make the command
 		cmd_t cmd{type, arg};
 
+		// Get queue head
 		u32 pos = m_workload.peek();
 
-		// Check optimistic case
+		// Check non-optimistic case
 		if (UNLIKELY(pos != push_pos))
 		{
-			// Write the command
-			m_workload[push_pos] = cmd;
-			pos = m_workload.peek(); // ???
-
-			// Try to acquire a command
-			cmd = m_workload[pos].exchange({task::null});
+			// Try to acquire first command in the queue, *then* write current command
+			m_workload[push_pos] = std::exchange(cmd, m_workload[pos].exchange({task::null}));
 		}
 
 		while (true)
@@ -523,7 +518,7 @@ struct psp2_event_flag final
 				idm::get<ARMv7Thread>(cmd.arg, [&](u32, ARMv7Thread& cpu)
 				{
 					cpu.state += cpu_state::signal;
-					cpu->lock_notify();
+					cpu.lock_notify();
 				});
 
 				break;
@@ -869,9 +864,9 @@ arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 		return SCE_OK;
 	}
 
-	cpu_thread_lock entry(cpu);
+	thread_lock entry(cpu);
 
-	if (!thread_ctrl::wait(timeout, WRAP_EXPR(cpu.state.test_and_reset(cpu_state::signal))))
+	if (!thread_ctrl::wait_for(timeout, WRAP_EXPR(cpu.state.test_and_reset(cpu_state::signal))))
 	{
 		// Timeout cleanup
 		cpu.owner = nullptr;

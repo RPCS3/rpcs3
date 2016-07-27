@@ -233,9 +233,12 @@ public:
 	// Wait until pred(). Abortable, may throw. Thread must be locked.
 	// Timeout in microseconds (zero means infinite).
 	template<typename F>
-	static inline auto wait(u64 useconds, F&& pred)
+	static inline auto wait_for(u64 useconds, F&& pred)
 	{
-		g_tls_this_thread->wait_start(useconds);
+		if (useconds)
+		{
+			g_tls_this_thread->wait_start(useconds);
+		}
 
 		while (true)
 		{
@@ -250,6 +253,26 @@ public:
 				return result;
 			}
 		}
+	}
+
+	// Wait once. Abortable, may throw. Thread must be locked.
+	// Timeout in microseconds (zero means infinite).
+	static inline bool wait_for(u64 useconds = 0)
+	{
+		if (useconds)
+		{
+			g_tls_this_thread->wait_start(useconds);
+		}
+
+		g_tls_this_thread->test();
+
+		if (!g_tls_this_thread->wait_wait(useconds) && useconds)
+		{
+			return false;
+		}
+
+		g_tls_this_thread->test();
+		return true;
 	}
 
 	// Wait until pred(). Abortable, may throw. Thread must be locked.
@@ -269,7 +292,7 @@ public:
 		}
 	}
 
-	// Wait once. Thread must be locked.
+	// Wait once. Abortable, may throw. Thread must be locked.
 	static inline void wait()
 	{
 		g_tls_this_thread->test();
@@ -277,7 +300,7 @@ public:
 		g_tls_this_thread->test();
 	}
 
-	// Wait unconditionally until aborted. Thread must be locked.
+	// Wait eternally. Abortable, may throw. Thread must be locked.
 	[[noreturn]] static inline void eternalize()
 	{
 		while (true)
@@ -302,13 +325,20 @@ public:
 
 	// Named thread factory
 	template<typename N, typename F>
-	static inline std::shared_ptr<thread_ctrl> spawn(N&& name, F&& func)
+	static inline void spawn(N&& name, F&& func)
 	{
-		auto ctrl = std::make_shared<thread_ctrl>(std::forward<N>(name));
+		auto&& out = std::make_shared<thread_ctrl>(std::forward<N>(name));
 
-		thread_ctrl::start(ctrl, std::forward<F>(func));
+		thread_ctrl::start(out, std::forward<F>(func));
+	}
 
-		return ctrl;
+	// Named thread factory
+	template<typename N, typename F>
+	static inline void spawn(std::shared_ptr<thread_ctrl>& out, N&& name, F&& func)
+	{
+		out = std::make_shared<thread_ctrl>(std::forward<N>(name));
+
+		thread_ctrl::start(out, std::forward<F>(func));
 	}
 };
 
@@ -355,6 +385,31 @@ public:
 	thread_ctrl* operator->() const
 	{
 		return m_thread.get();
+	}
+
+	void join() const
+	{
+		return m_thread->join();
+	}
+
+	void lock() const
+	{
+		return m_thread->lock();
+	}
+
+	void unlock() const
+	{
+		return m_thread->unlock();
+	}
+
+	void lock_notify() const
+	{
+		return m_thread->lock_notify();
+	}
+
+	void notify() const
+	{
+		return m_thread->notify();
 	}
 };
 
@@ -429,8 +484,8 @@ class scope_thread final
 public:
 	template<typename N, typename F>
 	scope_thread(N&& name, F&& func)
-		: m_thread(thread_ctrl::spawn(std::forward<N>(name), std::forward<F>(func)))
 	{
+		thread_ctrl::spawn(m_thread, std::forward<N>(name), std::forward<F>(func));
 	}
 
 	// Deleted copy/move constructors + copy/move operators
@@ -440,5 +495,11 @@ public:
 	~scope_thread() noexcept(false)
 	{
 		m_thread->join();
+	}
+
+	// Access thread_ctrl
+	thread_ctrl* operator->() const
+	{
+		return m_thread.get();
 	}
 };

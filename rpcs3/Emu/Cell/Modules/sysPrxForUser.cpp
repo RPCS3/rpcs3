@@ -58,12 +58,12 @@ void ppu_free_tls(u32 addr)
 	}
 }
 
-void sys_initialize_tls(PPUThread& ppu, u64 main_thread_id, u32 tls_seg_addr, u32 tls_seg_size, u32 tls_mem_size)
+void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u32 tls_seg_size, u32 tls_mem_size)
 {
 	sysPrxForUser.notice("sys_initialize_tls(thread_id=0x%llx, addr=*0x%x, size=0x%x, mem_size=0x%x)", main_thread_id, tls_seg_addr, tls_seg_size, tls_mem_size);
 
 	// Uninitialized TLS expected.
-	if (ppu.GPR[13] != 0) return;
+	if (ppu.gpr[13] != 0) return;
 
 	// Initialize TLS memory
 	s_tls_addr = tls_seg_addr;
@@ -75,7 +75,7 @@ void sys_initialize_tls(PPUThread& ppu, u64 main_thread_id, u32 tls_seg_addr, u3
 	s_tls_map = std::make_unique<atomic_t<bool>[]>(s_tls_max);
 
 	// Allocate TLS for main thread
-	ppu.GPR[13] = ppu_alloc_tls() + 0x7000 + 0x30;
+	ppu.gpr[13] = ppu_alloc_tls() + 0x7000 + 0x30;
 
 	sysPrxForUser.notice("TLS initialized (addr=0x%x, size=0x%x, max=0x%x)", s_tls_area - 0x30, s_tls_size, s_tls_max);
 
@@ -105,7 +105,7 @@ s64 _sys_process_at_Exitspawn()
 	return CELL_OK;
 }
 
-s32 sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih)
+s32 sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)
 {
 	sysPrxForUser.notice("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
 

@@ -61,7 +61,7 @@ enum CellVdecPicAttr : s32
 };
 
 // Universal Frame Rate Code
-enum CellVdecFrameRate : u8
+enum CellVdecFrameRate : s32
 {
 	CELL_VDEC_FRC_24000DIV1001 = 0x80,
 	CELL_VDEC_FRC_24           = 0x81,
@@ -643,82 +643,4 @@ struct CellVdecMpeg2Info
 	u8 ccDataLength[2];
 	u8 ccData[2][128];
 	be_t<u64> reserved[2];
-};
-
-/* Video Decoder Thread Classes */
-
-enum VdecJobType : u32
-{
-	vdecStartSeq,
-	vdecEndSeq,
-	vdecDecodeAu,
-	vdecSetFrameRate,
-	vdecClose,
-};
-
-struct VdecTask
-{
-	VdecJobType type;
-	union
-	{
-		u32 frc;
-		CellVdecDecodeMode mode;
-	};
-	u32 addr;
-	u32 size;
-	u64 pts;
-	u64 dts;
-	u64 userData;
-	u64 specData;
-
-	VdecTask(VdecJobType type)
-		: type(type)
-	{
-	}
-
-	VdecTask()
-	{
-	}
-};
-
-struct VdecFrame
-{
-	AVFrame* data;
-	u64 dts;
-	u64 pts;
-	u64 userdata;
-	u32 frc;
-};
-
-class VideoDecoder
-{
-public:
-	squeue_t<VdecTask> job;
-	u32 id;
-	volatile bool is_closed;
-	volatile bool is_finished;
-
-	struct AVCodec* codec;
-	struct AVCodecContext* ctx;
-
-	squeue_t<VdecFrame, 64> frames;
-
-	const s32 type;
-	const u32 profile;
-	const u32 memAddr;
-	const u32 memSize;
-	const vm::ptr<CellVdecCbMsg> cbFunc;
-	const u32 cbArg;
-	u32 memBias;
-
-	VdecTask task; // current task variable
-	u32 frc_set; // frame rate overwriting
-	u64 last_pts;
-	u64 last_dts;
-
-	std::shared_ptr<PPUThread> vdecCb;
-
-	VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg);
-
-	~VideoDecoder();
 };

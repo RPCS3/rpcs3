@@ -7,28 +7,6 @@
 
 logs::channel cellSail("cellSail", logs::level::notice);
 
-void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
-{
-	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
-	{
-		CellSailEvent event;
-		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
-		event.u32x2.minor = 0;
-		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
-	});
-
-	// TODO: Do stuff here
-	pSelf->booted = true;
-
-	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
-	{
-		CellSailEvent event;
-		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
-		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
-		pSelf->callback(ppu, pSelf->callbackArg, event, 0, 0);
-	});
-}
-
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
 	cellSail.warning("cellSailMemAllocatorInitialize(pSelf=*0x%x, pCallbacks=*0x%x)", pSelf, pCallbacks);
@@ -611,7 +589,7 @@ s32 cellSailPlayerInitialize()
 	return CELL_OK;
 }
 
-s32 cellSailPlayerInitialize2(
+s32 cellSailPlayerInitialize2(ppu_thread& ppu,
 	vm::ptr<CellSailPlayer> pSelf,
 	vm::ptr<CellSailMemAllocator> pAllocator,
 	vm::ptr<CellSailPlayerFuncNotified> pCallback,
@@ -630,13 +608,12 @@ s32 cellSailPlayerInitialize2(
 	pSelf->booted = false;
 	pSelf->paused = true;
 
-	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
 	{
 		CellSailEvent event;
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		event.u32x2.minor = 0;
 		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
-	});
+	};
 
 	return CELL_OK;
 }
@@ -765,11 +742,26 @@ s32 cellSailPlayerReplaceEventHandler()
 	return CELL_OK;
 }
 
-s32 cellSailPlayerBoot(PPUThread& ppu, vm::ptr<CellSailPlayer> pSelf, u64 userParam)
+s32 cellSailPlayerBoot(ppu_thread& ppu, vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
 	cellSail.warning("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
 
-	playerBoot(pSelf, userParam);
+	{
+		CellSailEvent event;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		event.u32x2.minor = 0;
+		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
+	};
+
+	// TODO: Do stuff here
+	pSelf->booted = true;
+
+	{
+		CellSailEvent event;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
+		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		pSelf->callback(ppu, pSelf->callbackArg, event, 0, 0);
+	};
 
 	return CELL_OK;
 }

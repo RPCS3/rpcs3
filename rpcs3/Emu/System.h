@@ -32,8 +32,6 @@ enum Status : u32
 // Emulation Stopped exception event
 class EmulationStopped {};
 
-class CallbackManager;
-
 class Emulator final
 {
 	atomic_t<u32> m_status;
@@ -44,8 +42,6 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
 
 	u32 m_cpu_thr_stop;
-
-	std::unique_ptr<CallbackManager>  m_callback_manager;
 
 	std::string m_path;
 	std::string m_elf_path;
@@ -105,11 +101,6 @@ public:
 	u64 GetPauseTime()
 	{
 		return m_pause_amend_time;
-	}
-
-	CallbackManager& GetCallbackManager()
-	{
-		return *m_callback_manager;
 	}
 
 	void SetCPUThreadStop(u32 addr)

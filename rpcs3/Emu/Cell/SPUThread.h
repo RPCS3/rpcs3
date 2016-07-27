@@ -180,7 +180,7 @@ public:
 			data.value |= value;
 		});
 
-		if (old.wait) spu->lock_notify();
+		if (old.wait) spu.lock_notify();
 	}
 
 	// push unconditionally (overwriting previous value), may require notification
@@ -193,7 +193,7 @@ public:
 			data.value = value;
 		});
 
-		if (old.wait) spu->lock_notify();
+		if (old.wait) spu.lock_notify();
 	}
 
 	// returns true on success
@@ -228,7 +228,7 @@ public:
 			// value is not cleared and may be read again
 		});
 
-		if (old.wait) spu->lock_notify();
+		if (old.wait) spu.lock_notify();
 
 		return old.value;
 	}
@@ -253,12 +253,8 @@ struct spu_channel_4_t
 {
 	struct alignas(16) sync_var_t
 	{
-		struct
-		{
-			u32 waiting : 1;
-			u32 count : 3;
-		};
-		
+		u8 waiting;
+		u8 count;
 		u32 value0;
 		u32 value1;
 		u32 value2;
@@ -299,7 +295,7 @@ public:
 			return false;
 		}))
 		{
-			spu->lock_notify();
+			spu.lock_notify();
 		}
 	}
 
@@ -337,7 +333,7 @@ public:
 
 	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
 	{
-		this->values.raw() = { 0, count, value0, value1, value2 };
+		this->values.raw() = { 0, static_cast<u8>(count), value0, value1, value2 };
 		this->value3 = value3;
 	}
 };

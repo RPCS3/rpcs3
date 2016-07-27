@@ -197,7 +197,7 @@ public:
 
 // Call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
 template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(Args...)>>
-inline RT ppu_execute_function_or_callback(const char* name, PPUThread& ppu, Args&&... args)
+inline RT ppu_execute_function_or_callback(const char* name, ppu_thread& ppu, Args&&... args)
 {
 	return Func(std::forward<Args>(args)...);
 }

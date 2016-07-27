@@ -22,7 +22,7 @@ void lv2_lwmutex_t::unlock(lv2_lock_t)
 	{
 		auto& thread = sq.front();
 		VERIFY(!thread->state.test_and_set(cpu_state::signal));
-		(*thread)->notify();
+		thread->notify();
 
 		sq.pop_front();
 	}
@@ -75,7 +75,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 	return CELL_OK;
 }
 
-s32 _sys_lwmutex_lock(PPUThread& ppu, u32 lwmutex_id, u64 timeout)
+s32 _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 {
 	sys_lwmutex.trace("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
 

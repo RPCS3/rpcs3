@@ -5,17 +5,35 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/PPUOpcodes.h"
 #include "sys_interrupt.h"
 
 logs::channel sys_interrupt("sys_interrupt", logs::level::notice);
 
-void lv2_int_serv_t::join(PPUThread& ppu, lv2_lock_t lv2_lock)
+void lv2_int_serv_t::exec()
 {
-	// Use is_joining to stop interrupt thread and signal
-	thread->is_joining = true;
-	(*thread)->notify();
+	thread->cmd_list
+	({
+		{ ppu_cmd::set_args, 2 }, arg1, arg2,
+		{ ppu_cmd::lle_call, 2 },
+	});
 
-	// Start joining
+	thread->lock_notify();
+}
+
+void lv2_int_serv_t::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
+{
+	// Enqueue _sys_ppu_thread_exit call
+	thread->cmd_list
+	({
+		{ ppu_cmd::set_args, 1 }, u64{0},
+		{ ppu_cmd::set_gpr, 11 }, u64{41},
+		{ ppu_cmd::opcode, ppu_instructions::SC(0) },
+	});
+
+	thread->lock_notify();
+
+	// Join thread (TODO)
 	while (!(thread->state & cpu_state::exit))
 	{
 		CHECK_EMU_STATUS;
@@ -25,7 +43,6 @@ void lv2_int_serv_t::join(PPUThread& ppu, lv2_lock_t lv2_lock)
 
 	// Cleanup
 	idm::remove<lv2_int_serv_t>(id);
-	idm::remove<PPUThread>(thread->id);
 }
 
 s32 sys_interrupt_tag_destroy(u32 intrtag)
@@ -66,7 +83,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	}
 
 	// Get interrupt thread
-	const auto it = idm::get<PPUThread>(intrthread);
+	const auto it = idm::get<ppu_thread>(intrthread);
 
 	if (!it)
 	{
@@ -86,55 +103,16 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 		return CELL_ESTAT;
 	}
 
-	const auto handler = idm::make_ptr<lv2_int_serv_t>(it);
+	tag->handler = idm::make_ptr<lv2_int_serv_t>(it, arg1, arg2);
 
-	tag->handler = handler;
+	it->run();
 
-	it->custom_task = [handler, arg1, arg2](PPUThread& ppu)
-	{
-		const u32 pc   = ppu.pc;
-		const u32 rtoc = ppu.GPR[2];
-
-		LV2_LOCK;
-
-		while (!ppu.is_joining)
-		{
-			CHECK_EMU_STATUS;
-
-			// call interrupt handler until int status is clear
-			if (handler->signal)
-			{
-				if (lv2_lock) lv2_lock.unlock();
-
-				ppu.GPR[3] = arg1;
-				ppu.GPR[4] = arg2;
-				ppu.fast_call(pc, rtoc);
-
-				handler->signal--;
-				continue;
-			}
-
-			if (!lv2_lock)
-			{
-				lv2_lock.lock();
-				continue;
-			}
-
-			get_current_thread_cv().wait(lv2_lock);
-		}
-
-		ppu.state += cpu_state::exit;
-	};
-
-	it->state -= cpu_state::stop;
-	(*it)->lock_notify();
-
-	*ih = handler->id;
+	*ih = tag->handler->id;
 
 	return CELL_OK;
 }
 
-s32 _sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih, vm::ptr<u64> r13)
+s32 _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u64> r13)
 {
 	sys_interrupt.warning("_sys_interrupt_thread_disestablish(ih=0x%x, r13=*0x%x)", ih, r13);
 
@@ -151,12 +129,12 @@ s32 _sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih, vm::ptr<u64> r13)
 	handler->join(ppu, lv2_lock);
 
 	// Save TLS base
-	*r13 = handler->thread->GPR[13];
+	*r13 = handler->thread->gpr[13];
 
 	return CELL_OK;
 }
 
-void sys_interrupt_thread_eoi(PPUThread& ppu) // Low-level PPU function example
+void sys_interrupt_thread_eoi(ppu_thread& ppu) // Low-level PPU function example
 {
 	// Low-level function body must guard all C++-ish calls and all objects with non-trivial destructors
 	thread_guard{ppu}, sys_interrupt.trace("sys_interrupt_thread_eoi()");
@@ -164,7 +142,7 @@ void sys_interrupt_thread_eoi(PPUThread& ppu) // Low-level PPU function example
 	ppu.state += cpu_state::ret;
 
 	// Throw if this syscall was not called directly by the SC instruction (hack)
-	if (ppu.LR == 0 || ppu.GPR[11] != 88 || ppu.custom_task)
+	if (ppu.lr == 0 || ppu.gpr[11] != 88)
 	{
 		// Low-level function must disable interrupts before throwing (not related to sys_interrupt_*, it's rather coincidence)
 		ppu->interrupt_disable();

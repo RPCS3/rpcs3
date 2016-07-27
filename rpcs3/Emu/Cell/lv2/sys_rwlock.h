@@ -38,14 +38,14 @@ struct lv2_rwlock_t
 };
 
 // Aux
-class PPUThread;
+class ppu_thread;
 
 // SysCalls
 s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr);
 s32 sys_rwlock_destroy(u32 rw_lock_id);
-s32 sys_rwlock_rlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout);
+s32 sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout);
 s32 sys_rwlock_tryrlock(u32 rw_lock_id);
 s32 sys_rwlock_runlock(u32 rw_lock_id);
-s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout);
-s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id);
-s32 sys_rwlock_wunlock(PPUThread& ppu, u32 rw_lock_id);
+s32 sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout);
+s32 sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id);
+s32 sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id);

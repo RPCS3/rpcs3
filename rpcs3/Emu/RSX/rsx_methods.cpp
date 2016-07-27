@@ -746,10 +746,13 @@ namespace rsx
 
 		if (rsx->flip_handler)
 		{
-			Emu.GetCallbackManager().Async([func = rsx->flip_handler](PPUThread& ppu)
-			{
-				func(ppu, 1);
+			rsx->intr_thread->cmd_list
+			({
+				{ ppu_cmd::set_args, 1 }, u64{1},
+				{ ppu_cmd::lle_call, rsx->flip_handler },
 			});
+
+			rsx->intr_thread->lock_notify();
 		}
 	}
 
@@ -757,10 +760,13 @@ namespace rsx
 	{
 		if (rsx->user_handler)
 		{
-			Emu.GetCallbackManager().Async([func = rsx->user_handler, arg](PPUThread& ppu)
-			{
-				func(ppu, arg);
+			rsx->intr_thread->cmd_list
+			({
+				{ ppu_cmd::set_args, 1 }, u64{arg},
+				{ ppu_cmd::lle_call, rsx->user_handler },
 			});
+
+			rsx->intr_thread->lock_notify();
 		}
 	}
 

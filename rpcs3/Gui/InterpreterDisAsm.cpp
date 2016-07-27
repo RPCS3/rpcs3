@@ -25,7 +25,7 @@ u32 InterpreterDisAsmFrame::GetPc() const
 {
 	switch (cpu->type)
 	{
-	case cpu_type::ppu: return static_cast<PPUThread*>(cpu)->pc;
+	case cpu_type::ppu: return static_cast<ppu_thread*>(cpu)->cia;
 	case cpu_type::spu: return static_cast<SPUThread*>(cpu)->pc;
 	case cpu_type::arm: return static_cast<ARMv7Thread*>(cpu)->PC;
 	}
@@ -123,7 +123,7 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 	m_choice_units->Freeze();
 	m_choice_units->Clear();
 
-	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([&](u32, cpu_thread& cpu)
+	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([&](u32, cpu_thread& cpu)
 	{
 		m_choice_units->Append(cpu.get_name(), &cpu);
 	});

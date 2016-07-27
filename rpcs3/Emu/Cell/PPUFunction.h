@@ -2,14 +2,14 @@
 
 #include "PPUThread.h"
 
-using ppu_function_t = void(*)(PPUThread&);
+using ppu_function_t = void(*)(ppu_thread&);
 
 // BIND_FUNC macro "converts" any appropriate HLE function to ppu_function_t, binding it to PPU thread context.
 // If function already has type ppu_function_t, it's handled specially and classified as "low-level HLE function".
 // 1) Low-level functions are bound directly so they don't save their name to ppu.last_function variable.
 // 2) Low-level functions don't install thread_guar, so they are very limited, and may be dangerous.
-// If you don't need "low-level function", be sure it's either `void()` or `void(PPUThread& ppu, PPUThread&)` for example.
-#define BIND_FUNC(func) (std::is_same<decltype(func), ppu_function_t>::value ? reinterpret_cast<ppu_function_t>(func) : static_cast<ppu_function_t>([](PPUThread& ppu){\
+// If you don't need "low-level function", be sure it's either `void()` or `void(ppu_thread& ppu, ppu_thread&)` for example.
+#define BIND_FUNC(func) (std::is_same<decltype(func), ppu_function_t>::value ? reinterpret_cast<ppu_function_t>(func) : static_cast<ppu_function_t>([](ppu_thread& ppu){\
 	const thread_guard guard(ppu);\
 	const auto old_f = ppu.last_function;\
 	ppu.last_function = #func;\
@@ -27,11 +27,11 @@ namespace ppu_func_detail
 	// argument type classification
 	enum arg_class : u32
 	{
-		ARG_GENERAL, // argument stored in GPR (from r3 to r10)
-		ARG_FLOAT, // argument stored in FPR (from f1 to f13)
-		ARG_VECTOR, // argument stored in VR (from v2 to v13)
+		ARG_GENERAL, // argument stored in gpr (from r3 to r10)
+		ARG_FLOAT, // argument stored in fpr (from f1 to f13)
+		ARG_VECTOR, // argument stored in vr (from v2 to v13)
 		ARG_STACK, // argument stored on the stack
-		ARG_CONTEXT, // PPUThread& passed, doesn't affect g/f/v_count
+		ARG_CONTEXT, // ppu_thread& passed, doesn't affect g/f/v_count
 		ARG_VARIADIC, // argument count at specific position, doesn't affect g/f/v_count
 		ARG_UNKNOWN,
 	};
@@ -44,9 +44,9 @@ namespace ppu_func_detail
 		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_GENERAL");
 
-		static inline T get_arg(PPUThread& ppu)
+		static inline T get_arg(ppu_thread& ppu)
 		{
-			return ppu_gpr_cast<T>(ppu.GPR[g_count + 2]);
+			return ppu_gpr_cast<T>(ppu.gpr[g_count + 2]);
 		}
 	};
 
@@ -55,9 +55,9 @@ namespace ppu_func_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_FLOAT");
 
-		static inline T get_arg(PPUThread& ppu)
+		static inline T get_arg(ppu_thread& ppu)
 		{
-			return static_cast<T>(ppu.FPR[f_count]);
+			return static_cast<T>(ppu.fpr[f_count]);
 		}
 	};
 
@@ -66,9 +66,9 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<CV T, CV v128>::value, "Invalid function argument type for ARG_VECTOR");
 
-		static force_inline T get_arg(PPUThread& ppu)
+		static force_inline T get_arg(ppu_thread& ppu)
 		{
-			return ppu.VR[v_count + 1];
+			return ppu.vr[v_count + 1];
 		}
 	};
 
@@ -77,7 +77,7 @@ namespace ppu_func_detail
 	{
 		static_assert(alignof(T) <= 16, "Unsupported type alignment for ARG_STACK");
 
-		static force_inline T get_arg(PPUThread& ppu)
+		static force_inline T get_arg(ppu_thread& ppu)
 		{
 			return ppu_gpr_cast<T, u64>(*ppu.get_stack_arg(g_count, alignof(T))); // TODO
 		}
@@ -86,9 +86,9 @@ namespace ppu_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_CONTEXT, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<T, PPUThread&>::value, "Invalid function argument type for ARG_CONTEXT");
+		static_assert(std::is_same<T, ppu_thread&>::value, "Invalid function argument type for ARG_CONTEXT");
 
-		static force_inline PPUThread& get_arg(PPUThread& ppu)
+		static force_inline ppu_thread& get_arg(ppu_thread& ppu)
 		{
 			return ppu;
 		}
@@ -99,7 +99,7 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<T, ppu_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
 
-		static force_inline ppu_va_args_t get_arg(PPUThread& ppu)
+		static force_inline ppu_va_args_t get_arg(ppu_thread& ppu)
 		{
 			return{ g_count };
 		}
@@ -111,9 +111,9 @@ namespace ppu_func_detail
 		static_assert(type == ARG_GENERAL, "Unknown function result type");
 		static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_GENERAL");
 
-		static force_inline void put_result(PPUThread& ppu, const T& result)
+		static force_inline void put_result(ppu_thread& ppu, const T& result)
 		{
-			ppu.GPR[3] = ppu_gpr_cast(result);
+			ppu.gpr[3] = ppu_gpr_cast(result);
 		}
 	};
 
@@ -122,9 +122,9 @@ namespace ppu_func_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-		static force_inline void put_result(PPUThread& ppu, const T& result)
+		static force_inline void put_result(ppu_thread& ppu, const T& result)
 		{
-			ppu.FPR[1] = static_cast<T>(result);
+			ppu.fpr[1] = static_cast<T>(result);
 		}
 	};
 
@@ -133,9 +133,9 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<CV T, CV v128>::value, "Invalid function result type for ARG_VECTOR");
 
-		static force_inline void put_result(PPUThread& ppu, const T& result)
+		static force_inline void put_result(ppu_thread& ppu, const T& result)
 		{
-			ppu.VR[2] = result;
+			ppu.vr[2] = result;
 		}
 	};
 
@@ -160,21 +160,21 @@ namespace ppu_func_detail
 	// argument type + g/f/v_count unpacker
 	template<typename T, u32 type_pack> struct bind_arg_packed
 	{
-		static force_inline T get_arg(PPUThread& ppu)
+		static force_inline T get_arg(ppu_thread& ppu)
 		{
 			return bind_arg<T, static_cast<arg_class>(type_pack & 0xff), (type_pack >> 8) & 0xff, (type_pack >> 16) & 0xff, (type_pack >> 24)>::get_arg(ppu);
 		}
 	};
 
 	template<u32... Info, typename RT, typename... Args>
-	force_inline RT call(PPUThread& ppu, RT(*func)(Args...), arg_info_pack_t<Info...>)
+	force_inline RT call(ppu_thread& ppu, RT(*func)(Args...), arg_info_pack_t<Info...>)
 	{
 		// do the actual function call when all arguments are prepared (simultaneous unpacking of Args... and Info...)
 		return func(bind_arg_packed<Args, Info>::get_arg(ppu)...);
 	}
 
 	template<typename T, typename... Types, u32... Info, typename RT, typename... Args>
-	force_inline RT call(PPUThread& ppu, RT(*func)(Args...), arg_info_pack_t<Info...> info)
+	force_inline RT call(ppu_thread& ppu, RT(*func)(Args...), arg_info_pack_t<Info...> info)
 	{
 		// unpack previous type counts (0/0/0 for the first time)
 		const u32 g_count = (info.last_value >> 8) & 0xff;
@@ -184,7 +184,7 @@ namespace ppu_func_detail
 		// TODO: check calculations
 		const bool is_float = std::is_floating_point<T>::value;
 		const bool is_vector = std::is_same<CV T, CV v128>::value;
-		const bool is_context = std::is_same<T, PPUThread&>::value;
+		const bool is_context = std::is_same<T, ppu_thread&>::value;
 		const bool is_variadic = std::is_same<CV T, CV ppu_va_args_t>::value;
 		const bool is_general = !is_float && !is_vector && !is_context && !is_variadic;
 
@@ -220,7 +220,7 @@ namespace ppu_func_detail
 	{
 		using func_t = void(*)(T...);
 
-		static force_inline void do_call(PPUThread& ppu, func_t func)
+		static force_inline void do_call(ppu_thread& ppu, func_t func)
 		{
 			call<T...>(ppu, func, arg_info_pack_t<>{});
 		}
@@ -231,14 +231,14 @@ namespace ppu_func_detail
 	{
 		using func_t = RT(*)(T...);
 
-		static force_inline void do_call(PPUThread& ppu, func_t func)
+		static force_inline void do_call(ppu_thread& ppu, func_t func)
 		{
 			bind_result<RT, result_type<RT>::value>::put_result(ppu, call<T...>(ppu, func, arg_info_pack_t<>{}));
 		}
 	};
 
 	template<typename RT, typename... T>
-	force_inline void do_call(PPUThread& ppu, RT(*func)(T...))
+	force_inline void do_call(ppu_thread& ppu, RT(*func)(T...))
 	{
 		func_binder<RT, T...>::do_call(ppu, func);
 	}

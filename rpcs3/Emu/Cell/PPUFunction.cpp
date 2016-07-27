@@ -2361,7 +2361,7 @@ s32 ppu_error_code::report(s32 error, const char* text)
 	{
 		if (thread->type == cpu_type::ppu)
 		{
-			if (auto func = static_cast<PPUThread*>(thread)->last_function)
+			if (auto func = static_cast<ppu_thread*>(thread)->last_function)
 			{
 				LOG_ERROR(PPU, "'%s' failed with 0x%08x : %s", func, error, text);
 			}
@@ -2383,7 +2383,7 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 	static std::vector<ppu_function_t> list
 	{
 		nullptr,
-		[](PPUThread& ppu) { ppu.state += cpu_state::ret; },
+		[](ppu_thread& ppu) { ppu.state += cpu_state::ret; },
 	};
 
 	return list;

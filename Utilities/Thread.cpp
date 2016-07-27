@@ -1830,11 +1830,6 @@ struct thread_ctrl::internal
 
 thread_local thread_ctrl::internal* g_tls_internal = nullptr;
 
-extern std::mutex& get_current_thread_mutex()
-{
-	return g_tls_internal->mutex;
-}
-
 extern std::condition_variable& get_current_thread_cv()
 {
 	return g_tls_internal->cond;
@@ -2244,7 +2239,7 @@ void named_thread::start_thread(const std::shared_ptr<void>& _this)
 	ENSURES(_this.get() == this);
 
 	// Run thread
-	m_thread = thread_ctrl::spawn(get_name(), [this, _this]()
+	thread_ctrl::spawn(m_thread, get_name(), [this, _this]()
 	{
 		try
 		{

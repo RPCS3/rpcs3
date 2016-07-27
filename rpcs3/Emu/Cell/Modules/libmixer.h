@@ -166,39 +166,3 @@ struct CellSurMixerChStripParam
 	be_t<float> floatVal;
 	be_t<s32> intVal;
 };
-
-struct SurMixerConfig
-{
-	std::mutex mutex;
-
-	u32 audio_port;
-	s32 priority;
-	u32 ch_strips_1;
-	u32 ch_strips_2;
-	u32 ch_strips_6;
-	u32 ch_strips_8;
-
-	vm::ptr<CellSurMixerNotifyCallbackFunction> cb;
-	vm::ptr<void> cb_arg;
-
-	f32 mixdata[8 * 256];
-	u64 mixcount;
-};
-
-struct SSPlayer
-{
-	bool m_created; // SSPlayerCreate/Remove
-	bool m_connected; // AANConnect/Disconnect
-	bool m_active; // SSPlayerPlay/Stop
-	u32 m_channels; // 1 or 2
-	u32 m_addr;
-	u32 m_samples;
-	u32 m_loop_start;
-	u32 m_loop_mode;
-	u32 m_position;
-	float m_level;
-	float m_speed;
-	float m_x;
-	float m_y;
-	float m_z;
-};

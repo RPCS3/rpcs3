@@ -375,7 +375,7 @@ namespace rsx
 
 		last_flip_time = get_system_time() - 1000000;
 
-		m_vblank_thread = thread_ctrl::spawn("VBlank Thread", [this]()
+		thread_ctrl::spawn(m_vblank_thread, "VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
@@ -390,10 +390,13 @@ namespace rsx
 
 					if (vblank_handler)
 					{
-						Emu.GetCallbackManager().Async([func = vblank_handler](PPUThread& ppu)
-						{
-							func(ppu, 1);
+						intr_thread->cmd_list
+						({
+							{ ppu_cmd::set_args, 1 }, u64{1},
+							{ ppu_cmd::lle_call, vblank_handler },
 						});
+
+						intr_thread->lock_notify();
 					}
 
 					continue;

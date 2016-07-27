@@ -57,7 +57,7 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_get_id(PPUThread& ppu, vm::ptr<u64> thread_id)
+s32 sys_ppu_thread_get_id(ppu_thread& ppu, vm::ptr<u64> thread_id)
 {
 	sysPrxForUser.trace("sys_ppu_thread_get_id(thread_id=*0x%x)", thread_id);
 
@@ -66,7 +66,7 @@ s32 sys_ppu_thread_get_id(PPUThread& ppu, vm::ptr<u64> thread_id)
 	return CELL_OK;
 }
 
-void sys_ppu_thread_exit(PPUThread& ppu, u64 val)
+void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 {
 	sysPrxForUser.trace("sys_ppu_thread_exit(val=0x%llx)", val);
 
@@ -74,12 +74,12 @@ void sys_ppu_thread_exit(PPUThread& ppu, u64 val)
 	// ...
 	
 	// Deallocate TLS
-	ppu_free_tls(vm::cast(ppu.GPR[13], HERE) - 0x7030);
+	ppu_free_tls(vm::cast(ppu.gpr[13], HERE) - 0x7030);
 
-	if (ppu.GPR[3] == val && !ppu.custom_task)
+	if (ppu.gpr[3] == val)
 	{
 		// Change sys_ppu_thread_exit code to the syscall code (hack)
-		ppu.GPR[11] = 41;
+		ppu.gpr[11] = 41;
 	}
 
 	// Call the syscall
@@ -88,7 +88,7 @@ void sys_ppu_thread_exit(PPUThread& ppu, u64 val)
 
 std::mutex g_once_mutex;
 
-void sys_ppu_thread_once(PPUThread& ppu, vm::ptr<atomic_be_t<u32>> once_ctrl, vm::ptr<void()> init)
+void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> once_ctrl, vm::ptr<void()> init)
 {
 	sysPrxForUser.warning("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
 

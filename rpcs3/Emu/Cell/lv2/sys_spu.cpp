@@ -321,8 +321,7 @@ s32 sys_spu_thread_group_start(u32 id)
 	{
 		if (thread)
 		{
-			thread->state -= cpu_state::stop;
-			(*thread)->lock_notify();
+			thread->run();
 		}
 	}
 
@@ -420,7 +419,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_state::suspend;
-			(*thread)->lock_notify();
+			thread->lock_notify();
 		}
 	}
 
@@ -503,7 +502,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 		if (thread)
 		{
 			thread->state += cpu_state::stop;
-			(*thread)->lock_notify();
+			thread->lock_notify();
 		}
 	}
 
@@ -1154,7 +1153,7 @@ s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_destroy(PPUThread& ppu, u32 id)
+s32 sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 {
 	sys_spu.warning("sys_raw_spu_destroy(id=%d)", id);
 

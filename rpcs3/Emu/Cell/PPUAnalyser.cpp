@@ -403,6 +403,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			const u32 addr = ptr[0];
 			const u32 _toc = ptr[1];
 
+			// Rough Table of Contents borders
+			const u32 _toc_begin = _toc - 0x8000;
+			const u32 _toc_end = _toc + 0x8000;
+
 			// TODO: improve TOC constraints
 			if (_toc % 4 || _toc == 0 || _toc >= 0x40000000 || (_toc >= start && _toc < end))
 			{
@@ -436,8 +440,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		}
 	}
 
-	// Secondary attempt (TODO)
-	if (secs.empty() && lib_toc)
+	// Secondary attempt (TODO, needs better strategy)
+	if (/*secs.empty() &&*/ lib_toc)
 	{
 		add_toc(lib_toc);
 	}

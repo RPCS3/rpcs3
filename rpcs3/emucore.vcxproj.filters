@@ -632,9 +632,6 @@
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\PPUCallback.cpp">
-      <Filter>Emu\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\PPUFunction.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
@@ -1695,6 +1692,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_trace.h">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\SleepQueue.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

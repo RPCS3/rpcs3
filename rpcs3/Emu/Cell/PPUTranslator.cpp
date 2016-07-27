@@ -63,7 +63,7 @@ const ppu_decoder<PPUTranslator> s_ppu_decoder;
 	GetGpr(op.ra),\
 	GetGpr(op.rb)))
 
-PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base, u64 entry)
+PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base)
 	: m_context(context)
 	, m_module(module)
 	, m_base_addr(base)
@@ -74,12 +74,12 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base, u64
 	m_base = new GlobalVariable(*module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, "__mptr");
 
 	// Thread context struct (TODO: safer member access)
-	std::vector<Type*> thread_struct{ArrayType::get(GetType<char>(), OFFSET_32(PPUThread, GPR))};
+	std::vector<Type*> thread_struct{ArrayType::get(GetType<char>(), OFFSET_32(ppu_thread, gpr))};
 
-	thread_struct.insert(thread_struct.end(), 32, GetType<u64>()); // GPR[0..31]
-	thread_struct.insert(thread_struct.end(), 32, GetType<f64>()); // FPR[0..31]
-	thread_struct.insert(thread_struct.end(), 32, GetType<u32[4]>()); // VR[0..31]
-	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // CR[0..31]
+	thread_struct.insert(thread_struct.end(), 32, GetType<u64>()); // gpr[0..31]
+	thread_struct.insert(thread_struct.end(), 32, GetType<f64>()); // fpr[0..31]
+	thread_struct.insert(thread_struct.end(), 32, GetType<u32[4]>()); // vr[0..31]
+	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // cr[0..31]
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 

@@ -195,4 +195,5 @@ struct CellSysCacheParam
 	vm::ptr<void> reserved;
 };
 
-extern void sysutilSendSystemCommand(u64 status, u64 param);
+extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&&);
+extern void sysutil_send_system_cmd(u64 status, u64 param);

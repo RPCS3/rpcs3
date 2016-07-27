@@ -908,22 +908,22 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	null_func, null_func, null_func, null_func,             //1023  UNS
 };
 
-extern void ppu_execute_syscall(PPUThread& ppu, u64 code)
+extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 {
 	if (code < g_ppu_syscall_table.size())
 	{
 		// If autopause occures, check_status() will hold the thread till unpaused.
-		if (debug::autopause::pause_syscall(code) && ppu.check_status()) throw cpu_state::ret;
+		if (debug::autopause::pause_syscall(code) && ppu.check_state()) throw cpu_state::ret;
 
 		if (auto func = g_ppu_syscall_table[code])
 		{
 			func(ppu);
-			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_get_syscall_name(code), code, ppu.GPR[3]);
+			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_get_syscall_name(code), code, ppu.gpr[3]);
 		}
 		else
 		{
 			LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(code));
-			ppu.GPR[3] = 0;
+			ppu.gpr[3] = 0;
 		}
 
 		return;

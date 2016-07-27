@@ -3,12 +3,8 @@
 #include "CPUThread.h"
 
 #include <mutex>
-#include <condition_variable>
 
 thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
-
-extern std::mutex& get_current_thread_mutex();
-extern std::condition_variable& get_current_thread_cv();
 
 void cpu_thread::on_task()
 {
@@ -18,7 +14,7 @@ void cpu_thread::on_task()
 
 	Emu.SendDbgCommand(DID_CREATE_THREAD, this);
 
-	std::unique_lock<std::mutex> lock(get_current_thread_mutex());
+	std::unique_lock<named_thread> lock(*this);
 
 	// Check thread status
 	while (!(state & cpu_state::exit))
@@ -54,14 +50,14 @@ void cpu_thread::on_task()
 			continue;
 		}
 
-		get_current_thread_cv().wait(lock);
+		thread_ctrl::wait();
 	}
 }
 
 void cpu_thread::on_stop()
 {
 	state += cpu_state::exit;
-	(*this)->lock_notify();
+	lock_notify();
 }
 
 cpu_thread::~cpu_thread()
@@ -73,9 +69,9 @@ cpu_thread::cpu_thread(cpu_type type)
 {
 }
 
-bool cpu_thread::check_status()
+bool cpu_thread::check_state()
 {
-	std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
+	std::unique_lock<named_thread> lock(*this, std::defer_lock);
 
 	while (true)
 	{
@@ -86,7 +82,7 @@ bool cpu_thread::check_status()
 			return true;
 		}
 
-		if (!state.test(cpu_state_pause) && !state.test(cpu_state::interrupt))
+		if (!state.test(cpu_state_pause))
 		{
 			break;
 		}
@@ -97,12 +93,7 @@ bool cpu_thread::check_status()
 			continue;
 		}
 
-		if (!state.test(cpu_state_pause) && state & cpu_state::interrupt && handle_interrupt())
-		{
-			continue;
-		}
-
-		get_current_thread_cv().wait(lock);
+		thread_ctrl::wait();
 	}
 
 	const auto state_ = state.load();
@@ -119,4 +110,10 @@ bool cpu_thread::check_status()
 	}
 
 	return false;
+}
+
+void cpu_thread::run()
+{
+	state -= cpu_state::stop;
+	lock_notify();
 }

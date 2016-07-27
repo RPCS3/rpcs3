@@ -16,10 +16,10 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 	// pick a new writer if possible; protocol is ignored in current implementation
 	if (!readers && !writer && wsq.size())
 	{
-		writer = idm::get<PPUThread>(wsq.front()->id);
+		writer = idm::get<ppu_thread>(wsq.front()->id);
 
 		VERIFY(!writer->state.test_and_set(cpu_state::signal));
-		(*writer)->notify();
+		writer->notify();
 
 		return wsq.pop_front();
 	}
@@ -32,7 +32,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 		for (auto& thread : rsq)
 		{
 			VERIFY(!thread->state.test_and_set(cpu_state::signal));
-			(*thread)->notify();
+			thread->notify();
 		}
 
 		return rsq.clear();
@@ -90,7 +90,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 	return CELL_OK;
 }
 
-s32 sys_rwlock_rlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
+s32 sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
@@ -199,7 +199,7 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 	return CELL_OK;
 }
 
-s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
+s32 sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
@@ -221,7 +221,7 @@ s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 
 	if (!rwlock->readers && !rwlock->writer)
 	{
-		rwlock->writer = idm::get<PPUThread>(ppu.id);
+		rwlock->writer = idm::get<ppu_thread>(ppu.id);
 
 		return CELL_OK;
 	}
@@ -270,7 +270,7 @@ s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 	return CELL_OK;
 }
 
-s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id)
+s32 sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 {
 	sys_rwlock.trace("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
 
@@ -293,12 +293,12 @@ s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id)
 		return CELL_EBUSY;
 	}
 
-	rwlock->writer = idm::get<PPUThread>(ppu.id);
+	rwlock->writer = idm::get<ppu_thread>(ppu.id);
 
 	return CELL_OK;
 }
 
-s32 sys_rwlock_wunlock(PPUThread& ppu, u32 rw_lock_id)
+s32 sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 {
 	sys_rwlock.trace("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
 

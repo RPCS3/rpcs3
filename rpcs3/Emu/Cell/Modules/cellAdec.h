@@ -1043,7 +1043,7 @@ struct AdecTask
 
 struct AdecFrame
 {
-	AVFrame* data;
+	struct AVFrame* data;
 	u64 pts;
 	u64 userdata;
 	u32 auAddr;
@@ -1096,58 +1096,3 @@ struct OMAHeader // OMA Header
 };
 
 CHECK_SIZE(OMAHeader, 96);
-
-class AudioDecoder
-{
-public:
-	squeue_t<AdecTask> job;
-	u32 id;
-	volatile bool is_closed;
-	volatile bool is_finished;
-	bool just_started;
-	bool just_finished;
-
-	AVCodec* codec;
-	AVInputFormat* input_format;
-	AVCodecContext* ctx;
-	AVFormatContext* fmt;
-	u8* io_buf;
-
-	struct AudioReader
-	{
-		u32 addr;
-		u32 size;
-		bool init;
-		bool has_ats;
-
-		AudioReader()
-			: init(false)
-		{
-		}
-
-	} reader;
-
-	squeue_t<AdecFrame> frames;
-
-	const s32 type;
-	const u32 memAddr;
-	const u32 memSize;
-	const vm::ptr<CellAdecCbMsg> cbFunc;
-	const u32 cbArg;
-	u32 memBias;
-
-	AdecTask task;
-	u64 last_pts, first_pts;
-
-	u32 ch_out;
-	u32 ch_cfg;
-	u32 frame_size;
-	u32 sample_rate;
-	bool use_ats_headers;
-
-	std::shared_ptr<PPUThread> adecCb;
-
-	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg);
-
-	~AudioDecoder();
-};

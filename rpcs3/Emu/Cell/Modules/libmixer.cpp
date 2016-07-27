@@ -8,8 +8,45 @@
 
 #include <cmath>
 #include <thread>
+#include <mutex>
 
 logs::channel libmixer("libmixer", logs::level::notice);
+
+struct SurMixerConfig
+{
+	std::mutex mutex;
+
+	u32 audio_port;
+	s32 priority;
+	u32 ch_strips_1;
+	u32 ch_strips_2;
+	u32 ch_strips_6;
+	u32 ch_strips_8;
+
+	vm::ptr<CellSurMixerNotifyCallbackFunction> cb;
+	vm::ptr<void> cb_arg;
+
+	f32 mixdata[8 * 256];
+	u64 mixcount;
+};
+
+struct SSPlayer
+{
+	bool m_created; // SSPlayerCreate/Remove
+	bool m_connected; // AANConnect/Disconnect
+	bool m_active; // SSPlayerPlay/Stop
+	u32 m_channels; // 1 or 2
+	u32 m_addr;
+	u32 m_samples;
+	u32 m_loop_start;
+	u32 m_loop_mode;
+	u32 m_position;
+	float m_level;
+	float m_speed;
+	float m_x;
+	float m_y;
+	float m_z;
+};
 
 // TODO: use fxm
 SurMixerConfig g_surmx;
@@ -284,48 +321,14 @@ s32 cellSSPlayerGetState(u32 handle)
 	return CELL_SSPLAYER_STATE_OFF;
 }
 
-s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
+struct surmixer_thread : ppu_thread
 {
-	libmixer.warning("cellSurMixerCreate(config=*0x%x)", config);
+	using ppu_thread::ppu_thread;
 
-	const auto g_audio = fxm::get<audio_config>();
-
-	const auto port = g_audio->open_port();
-
-	if (!port)
+	virtual void cpu_task() override
 	{
-		return CELL_LIBMIXER_ERROR_FULL;
-	}
+		const auto g_audio = fxm::get<audio_config>();
 
-	g_surmx.audio_port = port->number;
-	g_surmx.priority = config->priority;
-	g_surmx.ch_strips_1 = config->chStrips1;
-	g_surmx.ch_strips_2 = config->chStrips2;
-	g_surmx.ch_strips_6 = config->chStrips6;
-	g_surmx.ch_strips_8 = config->chStrips8;
-
-	port->channel = 8;
-	port->block = 16;
-	port->attr = 0;
-	port->size = port->channel * port->block * AUDIO_SAMPLES * sizeof(float);
-	port->tag = 0;
-	port->level = 1.0f;
-	port->level_set.store({ 1.0f, 0.0f });
-
-	libmixer.warning("*** audio port opened (port=%d)", g_surmx.audio_port);
-
-	g_surmx.mixcount = 0;
-	g_surmx.cb = vm::null;
-
-	g_ssp.clear();
-
-	libmixer.warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
-
-	const auto ppu = idm::make_ptr<PPUThread>("Surmixer Thread");
-	ppu->prio = 1001;
-	ppu->stack_size = 0x10000;
-	ppu->custom_task = [g_audio](PPUThread& ppu)
-	{
 		audio_port& port = g_audio->ports[g_surmx.audio_port];
 
 		while (port.state != audio_port_state::closed)
@@ -345,7 +348,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 				memset(g_surmx.mixdata, 0, sizeof(g_surmx.mixdata));
 				if (g_surmx.cb)
 				{
-					g_surmx.cb(ppu, g_surmx.cb_arg, (u32)g_surmx.mixcount, 256);
+					g_surmx.cb(*this, g_surmx.cb_arg, (u32)g_surmx.mixcount, 256);
 				}
 
 				//u64 stamp1 = get_system_time();
@@ -445,12 +448,52 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 			g_surmx.mixcount++;
 		}
 
-		idm::remove<PPUThread>(ppu.id);
-	};
+		idm::remove<ppu_thread>(id);
+	}
+};
 
-	ppu->cpu_init();
-	ppu->state -= cpu_state::stop;
-	(*ppu)->lock_notify();
+s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
+{
+	libmixer.warning("cellSurMixerCreate(config=*0x%x)", config);
+
+	const auto g_audio = fxm::get<audio_config>();
+
+	const auto port = g_audio->open_port();
+
+	if (!port)
+	{
+		return CELL_LIBMIXER_ERROR_FULL;
+	}
+
+	g_surmx.audio_port = port->number;
+	g_surmx.priority = config->priority;
+	g_surmx.ch_strips_1 = config->chStrips1;
+	g_surmx.ch_strips_2 = config->chStrips2;
+	g_surmx.ch_strips_6 = config->chStrips6;
+	g_surmx.ch_strips_8 = config->chStrips8;
+
+	port->channel = 8;
+	port->block = 16;
+	port->attr = 0;
+	port->size = port->channel * port->block * AUDIO_SAMPLES * sizeof(float);
+	port->tag = 0;
+	port->level = 1.0f;
+	port->level_set.store({ 1.0f, 0.0f });
+
+	libmixer.warning("*** audio port opened (port=%d)", g_surmx.audio_port);
+
+	g_surmx.mixcount = 0;
+	g_surmx.cb = vm::null;
+
+	g_ssp.clear();
+
+	libmixer.warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
+
+	auto&& thread = std::make_shared<surmixer_thread>("Surmixer Thread");
+
+	idm::import_existing<ppu_thread>(thread);
+
+	thread->run();
 
 	return CELL_OK;
 }

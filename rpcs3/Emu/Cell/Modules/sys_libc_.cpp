@@ -6,7 +6,7 @@ extern logs::channel sysPrxForUser;
 extern fs::file g_tty;
 
 // TODO
-static std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count)
+static std::string ps3_fmt(ppu_thread& context, vm::cptr<char> fmt, u32 g_count)
 {
 	std::string result;
 
@@ -312,7 +312,7 @@ s32 _sys_free(u32 addr)
 	return CELL_OK;
 }
 
-s32 _sys_snprintf(PPUThread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)
+s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=*0x%x, ...)", dst, count, fmt);
 
@@ -334,7 +334,7 @@ s32 _sys_snprintf(PPUThread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> f
 	}
 }
 
-s32 _sys_printf(PPUThread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
+s32 _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.warning("_sys_printf(fmt=*0x%x, ...)", fmt);
 

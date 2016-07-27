@@ -269,7 +269,7 @@ void spu_recompiler::InterpreterCall(spu_opcode_t op)
 
 			const u32 old_pc = _spu->pc;
 
-			if (_spu->state.load() && _spu->check_status())
+			if (_spu->state.load() && _spu->check_state())
 			{
 				return 0x2000000 | _spu->pc;
 			}
@@ -340,7 +340,7 @@ void spu_recompiler::FunctionCall()
 				LOG_ERROR(SPU, "Branch-to-self");
 			}
 
-			while (!_spu->state.load() || !_spu->check_status())
+			while (!_spu->state.load() || !_spu->check_state())
 			{
 				// Proceed recursively
 				spu_recompiler_base::enter(*_spu);

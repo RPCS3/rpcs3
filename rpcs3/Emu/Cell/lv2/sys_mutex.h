@@ -41,11 +41,11 @@ struct lv2_mutex_t
 	void unlock(lv2_lock_t);
 };
 
-class PPUThread;
+class ppu_thread;
 
 // SysCalls
 s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr);
 s32 sys_mutex_destroy(u32 mutex_id);
-s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout);
-s32 sys_mutex_trylock(PPUThread& ppu, u32 mutex_id);
-s32 sys_mutex_unlock(PPUThread& ppu, u32 mutex_id);
+s32 sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout);
+s32 sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id);
+s32 sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id);

@@ -42,8 +42,6 @@ std::string g_cfg_defaults;
 
 extern atomic_t<u32> g_thread_count;
 
-extern atomic_t<u32> g_ppu_core[2];
-
 extern u64 get_system_time();
 
 extern void ppu_load_exec(const ppu_exec_object&);
@@ -64,7 +62,6 @@ namespace rpcs3
 Emulator::Emulator()
 	: m_status(Stopped)
 	, m_cpu_thr_stop(0)
-	, m_callback_manager(new CallbackManager())
 {
 }
 
@@ -77,9 +74,6 @@ void Emulator::Init()
 	
 	idm::init();
 	fxm::init();
-
-	g_ppu_core[0] = 0;
-	g_ppu_core[1] = 0;
 
 	// Reset defaults, cache them
 	cfg::root.from_default();
@@ -277,7 +271,6 @@ void Emulator::Load()
 
 			ppu_load_exec(ppu_exec);
 
-			Emu.GetCallbackManager().Init();
 			fxm::import<GSRender>(PURE_EXPR(Emu.GetCallbacks().get_gs_render())); // TODO: must be created in appropriate sys_rsx syscall
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
@@ -286,7 +279,6 @@ void Emulator::Load()
 			m_status = Ready;
 			vm::ps3::init();
 			ppu_load_prx(ppu_prx);
-			GetCallbackManager().Init();
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -348,10 +340,9 @@ void Emulator::Run()
 	m_pause_amend_time = 0;
 	m_status = Running;
 
-	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
-		cpu.state -= cpu_state::stop;
-		cpu->lock_notify();
+		cpu.run();
 	});
 
 	SendDbgCommand(DID_STARTED_EMU);
@@ -377,7 +368,7 @@ bool Emulator::Pause()
 
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_state::dbg_global_pause;
 	});
@@ -411,10 +402,10 @@ void Emulator::Resume()
 
 	SendDbgCommand(DID_RESUME_EMU);
 
-	idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_state::dbg_global_pause;
-		cpu->lock_notify();
+		cpu.lock_notify();
 	});
 
 	rpcs3::on_resume()();
@@ -437,7 +428,7 @@ void Emulator::Stop()
 	{
 		LV2_LOCK;
 
-		idm::select<PPUThread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+		idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 		{
 			cpu.state += cpu_state::dbg_global_stop;
 			cpu->lock();
@@ -462,8 +453,6 @@ void Emulator::Stop()
 	fxm::clear();
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
-
-	GetCallbackManager().Clear();
 
 	RSXIOMem.Clear();
 	vm::close();

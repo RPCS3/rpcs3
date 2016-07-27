@@ -143,22 +143,34 @@ struct atomic_storage
 		return atomic_storage<T>::sub_fetch(dest, 1);
 	}
 
+	static inline bool test_and_set(T& dest, T mask)
+	{
+		return (atomic_storage<T>::fetch_or(dest, mask) & mask) != 0;
+	}
+
+	static inline bool test_and_reset(T& dest, T mask)
+	{
+		return (atomic_storage<T>::fetch_and(dest, ~mask) & mask) != 0;
+	}
+
+	static inline bool test_and_complement(T& dest, T mask)
+	{
+		return (atomic_storage<T>::fetch_xor(dest, mask) & mask) != 0;
+	}
+
 	static inline bool bts(T& dest, uint bit)
 	{
-		const T mask = static_cast<T>(1) << bit;
-		return (atomic_storage<T>::fetch_or(dest, mask) & mask) != 0;
+		return atomic_storage<T>::test_and_set(dest, static_cast<T>(1) << bit);
 	}
 
 	static inline bool btr(T& dest, uint bit)
 	{
-		const T mask = static_cast<T>(1) << bit;
-		return (atomic_storage<T>::fetch_and(dest, ~mask) & mask) != 0;
+		return atomic_storage<T>::test_and_reset(dest, static_cast<T>(1) << bit);
 	}
 
 	static inline bool btc(T& dest, uint bit)
 	{
-		const T mask = static_cast<T>(1) << bit;
-		return (atomic_storage<T>::fetch_xor(dest, mask) & mask) != 0;
+		return atomic_storage<T>::test_and_complement(dest, static_cast<T>(1) << bit);
 	}
 };
 
@@ -637,14 +649,9 @@ struct atomic_test_and_set
 template<typename T1, typename T2>
 struct atomic_test_and_set<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::is_convertible<T2, T1>::value>>
 {
-	static inline bool op(T1& lhs, const T2& rhs)
-	{
-		return (atomic_storage<T1>::fetch_or(lhs, rhs) & rhs) != 0;
-	}
-
-	static constexpr auto fetch_op = &op;
-	static constexpr auto op_fetch = &op;
-	static constexpr auto atomic_op = &op;
+	static constexpr auto fetch_op = &atomic_storage<T1>::test_and_set;
+	static constexpr auto op_fetch = &atomic_storage<T1>::test_and_set;
+	static constexpr auto atomic_op = &atomic_storage<T1>::test_and_set;
 };
 
 template<typename T1, typename T2, typename>
@@ -659,14 +666,9 @@ struct atomic_test_and_reset
 template<typename T1, typename T2>
 struct atomic_test_and_reset<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::is_convertible<T2, T1>::value>>
 {
-	static inline bool op(T1& lhs, const T2& rhs)
-	{
-		return (atomic_storage<T1>::fetch_and(lhs, ~rhs) & rhs) != 0;
-	}
-
-	static constexpr auto fetch_op = &op;
-	static constexpr auto op_fetch = &op;
-	static constexpr auto atomic_op = &op;
+	static constexpr auto fetch_op = &atomic_storage<T1>::test_and_reset;
+	static constexpr auto op_fetch = &atomic_storage<T1>::test_and_reset;
+	static constexpr auto atomic_op = &atomic_storage<T1>::test_and_reset;
 };
 
 template<typename T1, typename T2, typename>
@@ -681,14 +683,9 @@ struct atomic_test_and_complement
 template<typename T1, typename T2>
 struct atomic_test_and_complement<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::is_convertible<T2, T1>::value>>
 {
-	static inline bool op(T1& lhs, const T2& rhs)
-	{
-		return (atomic_storage<T1>::fetch_xor(lhs, rhs) & rhs) != 0;
-	}
-
-	static constexpr auto fetch_op = &op;
-	static constexpr auto op_fetch = &op;
-	static constexpr auto atomic_op = &op;
+	static constexpr auto fetch_op = &atomic_storage<T1>::test_and_complement;
+	static constexpr auto op_fetch = &atomic_storage<T1>::test_and_complement;
+	static constexpr auto atomic_op = &atomic_storage<T1>::test_and_complement;
 };
 
 // Atomic type with lock-free and standard layout guarantees (and appropriate limitations)

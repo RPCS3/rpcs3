@@ -8,20 +8,40 @@
 
 #include "Utilities/StrUtil.h"
 
+#include <mutex>
+#include <queue>
+
 logs::channel cellSysutil("cellSysutil", logs::level::notice);
 
-// Temporarily
-using sys_callbacks_t = std::array<std::pair<vm::ptr<CellSysutilCallback>, vm::ptr<void>>, 4>;
-
-void sysutilSendSystemCommand(u64 status, u64 param)
+struct sysutil_cb_manager
 {
-	if (const auto g_sys_callback = fxm::get<sys_callbacks_t>())
+	std::mutex mutex;
+
+	std::array<std::pair<vm::ptr<CellSysutilCallback>, vm::ptr<void>>, 4> callbacks;
+
+	std::queue<std::function<s32(ppu_thread&)>> registered;
+};
+
+extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
+{
+	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+
+	std::lock_guard<std::mutex> lock(cbm->mutex);
+
+	cbm->registered.push(std::move(cb));
+}
+
+extern void sysutil_send_system_cmd(u64 status, u64 param)
+{
+	if (const auto cbm = fxm::get<sysutil_cb_manager>())
 	{
-		for (auto& cb : *g_sys_callback)
+		for (auto& cb : cbm->callbacks)
 		{
 			if (cb.first)
 			{
-				Emu.GetCallbackManager().Register([=](PPUThread& ppu) -> s32
+				std::lock_guard<std::mutex> lock(cbm->mutex);
+
+				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
 					cb.first(ppu, status, param, cb.second);
@@ -196,15 +216,26 @@ s32 cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 	return CELL_OK;
 }
 
-s32 cellSysutilCheckCallback(PPUThread& CPU)
+s32 cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
-	while (auto func = Emu.GetCallbackManager().Check())
-	{
-		CHECK_EMU_STATUS;
+	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-		if (s32 res = func(CPU))
+	while (true)
+	{
+		std::lock_guard<std::mutex> lock(cbm->mutex);
+
+		if (cbm->registered.empty())
+		{
+			break;
+		}
+
+		const auto func = std::move(cbm->registered.front());
+
+		cbm->registered.pop();
+
+		if (s32 res = func(ppu))
 		{
 			return res;
 		}
@@ -217,12 +248,15 @@ s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm:
 {
 	cellSysutil.warning("cellSysutilRegisterCallback(slot=%d, func=*0x%x, userdata=*0x%x)", slot, func, userdata);
 
-	if (slot >= sys_callbacks_t{}.size())
+	if (slot >= 4)
 	{
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	fxm::get_always<sys_callbacks_t>()->at(slot) = std::make_pair(func, userdata);
+	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+
+	cbm->callbacks[slot] = std::make_pair(func, userdata);
+
 	return CELL_OK;
 }
 
@@ -230,12 +264,15 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 {
 	cellSysutil.warning("cellSysutilUnregisterCallback(slot=%d)", slot);
 
-	if (slot >= sys_callbacks_t{}.size())
+	if (slot >= 4)
 	{
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	fxm::get_always<sys_callbacks_t>()->at(slot) = std::make_pair(vm::null, vm::null);
+	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+
+	cbm->callbacks[slot] = std::make_pair(vm::null, vm::null);
+
 	return CELL_OK;
 }
 

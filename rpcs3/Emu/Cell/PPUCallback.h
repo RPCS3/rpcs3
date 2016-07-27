@@ -27,9 +27,9 @@ namespace ppu_cb_detail
 		static_assert(!std::is_reference<T>::value, "Invalid callback argument type (reference)");
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_GENERAL");
 		
-		static inline void set_value(PPUThread& CPU, const T& arg)
+		static inline void set_value(ppu_thread& CPU, const T& arg)
 		{
-			CPU.GPR[g_count + 2] = ppu_gpr_cast(arg);
+			CPU.gpr[g_count + 2] = ppu_gpr_cast(arg);
 		}
 	};
 
@@ -38,9 +38,9 @@ namespace ppu_cb_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_FLOAT");
 
-		static inline void set_value(PPUThread& CPU, const T& arg)
+		static inline void set_value(ppu_thread& CPU, const T& arg)
 		{
-			CPU.FPR[f_count] = static_cast<T>(arg);
+			CPU.fpr[f_count] = static_cast<T>(arg);
 		}
 	};
 
@@ -49,9 +49,9 @@ namespace ppu_cb_detail
 	{
 		static_assert(std::is_same<CV T, CV v128>::value, "Invalid callback argument type for ARG_VECTOR");
 
-		static inline void set_value(PPUThread& CPU, const T& arg)
+		static inline void set_value(ppu_thread& CPU, const T& arg)
 		{
-			CPU.VR[v_count + 1] = arg;
+			CPU.vr[v_count + 1] = arg;
 		}
 	};
 
@@ -60,37 +60,37 @@ namespace ppu_cb_detail
 	{
 		static_assert(alignof(T) <= 16, "Unsupported callback argument type alignment for ARG_STACK");
 
-		static inline void set_value(PPUThread& CPU, const T& arg)
+		static inline void set_value(ppu_thread& CPU, const T& arg)
 		{
 			const s64 stack_pos = (g_count - 1) * 0x8 + 0x30 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase FIXED_STACK_FRAME_SIZE (arg count limit broken)");
-			vm::ps3::write64(CPU.GPR[1] + stack_pos, ppu_gpr_cast(arg)); // TODO
+			vm::ps3::write64(CPU.gpr[1] + stack_pos, ppu_gpr_cast(arg)); // TODO
 		}
 	};
 
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct _func_arg<T, ARG_CONTEXT, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<T, PPUThread&>::value, "Invalid callback argument type for ARG_CONTEXT");
+		static_assert(std::is_same<T, ppu_thread&>::value, "Invalid callback argument type for ARG_CONTEXT");
 
-		force_inline static void set_value(PPUThread& CPU, const T& arg)
+		force_inline static void set_value(ppu_thread& CPU, const T& arg)
 		{
 		}
 	};
 
 	template<u32 g_count, u32 f_count, u32 v_count>
-	force_inline static bool _bind_func_args(PPUThread& CPU)
+	force_inline static bool _bind_func_args(ppu_thread& CPU)
 	{
 		// terminator
 		return false;
 	}
 
 	template<u32 g_count, u32 f_count, u32 v_count, typename T1, typename... T>
-	force_inline static bool _bind_func_args(PPUThread& CPU, T1 arg1, T... args)
+	force_inline static bool _bind_func_args(ppu_thread& CPU, T1 arg1, T... args)
 	{
 		const bool is_float = std::is_floating_point<T1>::value;
 		const bool is_vector = std::is_same<CV T1, CV v128>::value;
-		const bool is_context = std::is_same<T1, PPUThread&>::value;
+		const bool is_context = std::is_same<T1, ppu_thread&>::value;
 		const bool is_general = !is_float && !is_vector && !is_context;
 
 		const _func_arg_type t =
@@ -116,9 +116,9 @@ namespace ppu_cb_detail
 		static_assert(type == ARG_GENERAL, "Unknown callback result type");
 		static_assert(sizeof(T) <= 8, "Invalid callback result type for ARG_GENERAL");
 
-		force_inline static T get_value(const PPUThread& CPU)
+		force_inline static T get_value(const ppu_thread& CPU)
 		{
-			return ppu_gpr_cast<T>(CPU.GPR[3]);
+			return ppu_gpr_cast<T>(CPU.gpr[3]);
 		}
 	};
 
@@ -127,9 +127,9 @@ namespace ppu_cb_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid callback result type for ARG_FLOAT");
 
-		force_inline static T get_value(const PPUThread& CPU)
+		force_inline static T get_value(const ppu_thread& CPU)
 		{
-			return static_cast<T>(CPU.FPR[1]);
+			return static_cast<T>(CPU.fpr[1]);
 		}
 	};
 
@@ -138,16 +138,16 @@ namespace ppu_cb_detail
 	{
 		static_assert(std::is_same<CV T, CV v128>::value, "Invalid callback result type for ARG_VECTOR");
 
-		force_inline static T get_value(const PPUThread& CPU)
+		force_inline static T get_value(const ppu_thread& CPU)
 		{
-			return CPU.VR[2];
+			return CPU.vr[2];
 		}
 	};
 
 	template<typename RT, typename... T>
 	struct _func_caller
 	{
-		force_inline static RT call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+		force_inline static RT call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
 		{
 			_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
 
@@ -164,12 +164,12 @@ namespace ppu_cb_detail
 	template<typename... T>
 	struct _func_caller<void, T...>
 	{
-		force_inline static void call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+		force_inline static void call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
 		{
 			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
-			CPU.GPR[1] -= stack ? FIXED_STACK_FRAME_SIZE : 0x30; // create reserved area
+			CPU.gpr[1] -= stack ? FIXED_STACK_FRAME_SIZE : 0x30; // create reserved area
 			CPU.fast_call(pc, rtoc);
-			CPU.GPR[1] += stack ? FIXED_STACK_FRAME_SIZE : 0x30;
+			CPU.gpr[1] += stack ? FIXED_STACK_FRAME_SIZE : 0x30;
 		}
 	};
 }
@@ -177,7 +177,7 @@ namespace ppu_cb_detail
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	force_inline RT _ptr_base<RT(T...), AT>::operator()(PPUThread& CPU, T... args) const
+	force_inline RT _ptr_base<RT(T...), AT>::operator()(ppu_thread& CPU, T... args) const
 	{
 		const auto data = vm::ps3::_ptr<u32>(vm::cast(m_addr, HERE));
 		const u32 pc = data[0];
@@ -187,37 +187,7 @@ namespace vm
 	}
 }
 
-template<typename RT, typename... T> inline RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+template<typename RT, typename... T> inline RT cb_call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
 {
 	return ppu_cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 }
-
-#include <queue>
-#include <mutex>
-
-class CallbackManager
-{
-	using check_cb_t = std::function<s32(PPUThread&)>;
-	using async_cb_t = std::function<void(PPUThread&)>;
-
-	std::mutex m_mutex;
-
-	std::queue<check_cb_t> m_check_cb;
-	std::queue<async_cb_t> m_async_cb;
-
-	std::shared_ptr<PPUThread> m_cb_thread;
-
-public:
-	// Register checked callback
-	void Register(check_cb_t func);
-
-	// Register async callback, called in callback thread
-	void Async(async_cb_t func);
-
-	// Get one registered callback
-	check_cb_t Check();
-
-	void Init();
-
-	void Clear();
-};

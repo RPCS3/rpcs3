@@ -244,7 +244,7 @@ be_t<u32> pngDecGetChunkInformation(PStream stream, bool IDAT = false)
 	return chunk_information;
 }
 
-s32 pngDecCreate(PPUThread& ppu, PPHandle png_handle, PThreadInParam thread_in_param, PThreadOutParam thread_out_param, PExtThreadInParam extra_thread_in_param = vm::null, PExtThreadOutParam extra_thread_out_param = vm::null)
+s32 pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thread_in_param, PThreadOutParam thread_out_param, PExtThreadInParam extra_thread_in_param = vm::null, PExtThreadOutParam extra_thread_out_param = vm::null)
 {
 	// Check if partial image decoding is used
 	if (extra_thread_out_param)
@@ -277,7 +277,7 @@ s32 pngDecCreate(PPUThread& ppu, PPHandle png_handle, PThreadInParam thread_in_p
 	return CELL_OK;
 }
 
-s32 pngDecDestroy(PPUThread& ppu, PHandle handle)
+s32 pngDecDestroy(ppu_thread& ppu, PHandle handle)
 {
 	// Deallocate the decoder handle memory
 	if (handle->free(ppu, handle, handle->free_arg) != 0)
@@ -289,7 +289,7 @@ s32 pngDecDestroy(PPUThread& ppu, PHandle handle)
 	return CELL_OK;
 }
 
-s32 pngDecOpen(PPUThread& ppu, PHandle handle, PPStream png_stream, PSrc source, POpenInfo open_info, PCbControlStream control_stream = vm::null, POpenParam open_param = vm::null)
+s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source, POpenInfo open_info, PCbControlStream control_stream = vm::null, POpenParam open_param = vm::null)
 {
 	// Check if partial image decoding is used
 	if (control_stream || open_param)
@@ -442,7 +442,7 @@ s32 pngDecOpen(PPUThread& ppu, PHandle handle, PPStream png_stream, PSrc source,
 	return CELL_OK;
 }
 
-s32 pngDecClose(PPUThread& ppu, PHandle handle, PStream stream)
+s32 pngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
 {
 	// Remove the file descriptor, if a file descriptor was used for decoding
 	if (stream->buffer->file)
@@ -555,7 +555,7 @@ s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, P
 	return CELL_OK;
 }
 
-s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam data_control_param, PDataOutInfo data_out_info, PCbControlDisp cb_control_disp = vm::null, PDispParam disp_param = vm::null)
+s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam data_control_param, PDataOutInfo data_out_info, PCbControlDisp cb_control_disp = vm::null, PDispParam disp_param = vm::null)
 {
 	if (cb_control_disp || disp_param)
 	{
@@ -703,37 +703,37 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 	return CELL_OK;
 }
 
-s32 cellPngDecCreate(PPUThread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
+s32 cellPngDecCreate(ppu_thread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
 {
 	cellPngDec.warning("cellPngDecCreate(handle=**0x%x, threadInParam=*0x%x, threadOutParam=*0x%x)", handle, threadInParam, threadOutParam);
 	return pngDecCreate(ppu, handle, threadInParam, threadOutParam);
 }
 
-s32 cellPngDecExtCreate(PPUThread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
+s32 cellPngDecExtCreate(ppu_thread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
 {
 	cellPngDec.warning("cellPngDecCreate(mainHandle=**0x%x, threadInParam=*0x%x, threadOutParam=*0x%x, extThreadInParam=*0x%x, extThreadOutParam=*0x%x)", handle, threadInParam, threadOutParam, extThreadInParam, extThreadOutParam);
 	return pngDecCreate(ppu, handle, threadInParam, threadOutParam, extThreadInParam, extThreadOutParam);
 }
 
-s32 cellPngDecDestroy(PPUThread& ppu, PHandle handle)
+s32 cellPngDecDestroy(ppu_thread& ppu, PHandle handle)
 {
 	cellPngDec.warning("cellPngDecDestroy(mainHandle=*0x%x)", handle);
 	return pngDecDestroy(ppu, handle);
 }
 
-s32 cellPngDecOpen(PPUThread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo)
+s32 cellPngDecOpen(ppu_thread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo)
 {
 	cellPngDec.warning("cellPngDecOpen(handle=*0x%x, stream=**0x%x, src=*0x%x, openInfo=*0x%x)", handle, stream, src, openInfo);
 	return pngDecOpen(ppu, handle, stream, src, openInfo);
 }
 
-s32 cellPngDecExtOpen(PPUThread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo, PCbControlStream cbCtrlStrm, POpenParam opnParam)
+s32 cellPngDecExtOpen(ppu_thread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo, PCbControlStream cbCtrlStrm, POpenParam opnParam)
 {
 	cellPngDec.warning("cellPngDecExtOpen(handle=*0x%x, stream=**0x%x, src=*0x%x, openInfo=*0x%x, cbCtrlStrm=*0x%x, opnParam=*0x%x)", handle, stream, src, openInfo, cbCtrlStrm, opnParam);
 	return pngDecOpen(ppu, handle, stream, src, openInfo, cbCtrlStrm, opnParam);
 }
 
-s32 cellPngDecClose(PPUThread& ppu, PHandle handle, PStream stream)
+s32 cellPngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
 {
 	cellPngDec.warning("cellPngDecClose(handle=*0x%x, stream=*0x%x)", handle, stream);
 	return pngDecClose(ppu, handle, stream);
@@ -763,13 +763,13 @@ s32 cellPngDecExtSetParameter(PHandle handle, PStream stream, PInParam inParam, 
 	return pngDecSetParameter(stream, inParam, outParam, extInParam, extOutParam);
 }
 
-s32 cellPngDecDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo)
+s32 cellPngDecDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo)
 {
 	cellPngDec.warning("cellPngDecDecodeData(handle=*0x%x, stream=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", handle, stream, data, dataCtrlParam, dataOutInfo);
 	return pngDecodeData(ppu, handle, stream, data, dataCtrlParam, dataOutInfo);
 }
 
-s32 cellPngDecExtDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo, PCbControlDisp cbCtrlDisp, PDispParam dispParam)
+s32 cellPngDecExtDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo, PCbControlDisp cbCtrlDisp, PDispParam dispParam)
 {
 	cellPngDec.warning("cellPngDecExtDecodeData(handle=*0x%x, stream=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x, cbCtrlDisp=*0x%x, dispParam=*0x%x)", handle, stream, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
 	return pngDecodeData(ppu, handle, stream, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);

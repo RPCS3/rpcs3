@@ -3,8 +3,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
-extern std::mutex g_mutex_avcodec_open2;
-
 extern "C"
 {
 #include "libavcodec/avcodec.h"
@@ -15,97 +13,391 @@ extern "C"
 #include "cellPamf.h"
 #include "cellAdec.h"
 
+#include <mutex>
 #include <thread>
+
+extern std::mutex g_mutex_avcodec_open2;
 
 logs::channel cellAdec("cellAdec", logs::level::notice);
 
-AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
-	: type(type)
-	, memAddr(addr)
-	, memSize(size)
-	, memBias(0)
-	, cbFunc(func)
-	, cbArg(arg)
-	, is_closed(false)
-	, is_finished(false)
-	, just_started(false)
-	, just_finished(false)
-	, codec(nullptr)
-	, input_format(nullptr)
-	, ctx(nullptr)
-	, fmt(nullptr)
+class AudioDecoder : public ppu_thread
 {
-	av_register_all();
-	avcodec_register_all();
+public:
+	squeue_t<AdecTask> job;
+	volatile bool is_closed;
+	volatile bool is_finished;
+	bool just_started;
+	bool just_finished;
 
-	switch (type)
-	{
-	case CELL_ADEC_TYPE_ATRACX:
-	case CELL_ADEC_TYPE_ATRACX_2CH:
-	case CELL_ADEC_TYPE_ATRACX_6CH:
-	case CELL_ADEC_TYPE_ATRACX_8CH:
-	{
-		codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
-		input_format = av_find_input_format("oma");
-		break;
-	}
-	case CELL_ADEC_TYPE_MP3:
-	{
-		codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
-		input_format = av_find_input_format("mp3");
-		break;
-	}
-	default:
-	{
-		throw EXCEPTION("Unknown type (0x%x)", type);
-	}
-	}
-	
-	if (!codec)
-	{
-		throw EXCEPTION("avcodec_find_decoder() failed");
-	}
-	if (!input_format)
-	{
-		throw EXCEPTION("av_find_input_format() failed");
-	}
-	fmt = avformat_alloc_context();
-	if (!fmt)
-	{
-		throw EXCEPTION("avformat_alloc_context() failed");
-	}
-	io_buf = (u8*)av_malloc(4096);
-	fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
-	if (!fmt->pb)
-	{
-		throw EXCEPTION("avio_alloc_context() failed");
-	}
-}
+	AVCodec* codec;
+	AVInputFormat* input_format;
+	AVCodecContext* ctx;
+	AVFormatContext* fmt;
+	u8* io_buf;
 
-AudioDecoder::~AudioDecoder()
-{
-	// TODO: check finalization
-	AdecFrame af;
-	while (frames.try_pop(af))
+	struct AudioReader
 	{
-		av_frame_unref(af.data);
-		av_frame_free(&af.data);
-	}
-	if (ctx)
-	{
-		avcodec_close(ctx);
-		avformat_close_input(&fmt);
-	}
-	if (fmt)
-	{
-		if (io_buf)
+		u32 addr;
+		u32 size;
+		bool init;
+		bool has_ats;
+
+		AudioReader()
+			: init(false)
 		{
-			av_free(io_buf);
 		}
-		if (fmt->pb) av_free(fmt->pb);
-		avformat_free_context(fmt);
+
+	} reader;
+
+	squeue_t<AdecFrame> frames;
+
+	const s32 type;
+	const u32 memAddr;
+	const u32 memSize;
+	const vm::ptr<CellAdecCbMsg> cbFunc;
+	const u32 cbArg;
+	u32 memBias;
+
+	AdecTask task;
+	u64 last_pts, first_pts;
+
+	u32 ch_out;
+	u32 ch_cfg;
+	u32 frame_size;
+	u32 sample_rate;
+	bool use_ats_headers;
+
+	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
+		: ppu_thread("HLE Audio Decoder")
+		, type(type)
+		, memAddr(addr)
+		, memSize(size)
+		, memBias(0)
+		, cbFunc(func)
+		, cbArg(arg)
+		, is_closed(false)
+		, is_finished(false)
+		, just_started(false)
+		, just_finished(false)
+		, codec(nullptr)
+		, input_format(nullptr)
+		, ctx(nullptr)
+		, fmt(nullptr)
+	{
+		av_register_all();
+		avcodec_register_all();
+
+		switch (type)
+		{
+		case CELL_ADEC_TYPE_ATRACX:
+		case CELL_ADEC_TYPE_ATRACX_2CH:
+		case CELL_ADEC_TYPE_ATRACX_6CH:
+		case CELL_ADEC_TYPE_ATRACX_8CH:
+		{
+			codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
+			input_format = av_find_input_format("oma");
+			break;
+		}
+		case CELL_ADEC_TYPE_MP3:
+		{
+			codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
+			input_format = av_find_input_format("mp3");
+			break;
+		}
+		default:
+		{
+			throw EXCEPTION("Unknown type (0x%x)", type);
+		}
+		}
+
+		if (!codec)
+		{
+			throw EXCEPTION("avcodec_find_decoder() failed");
+		}
+		if (!input_format)
+		{
+			throw EXCEPTION("av_find_input_format() failed");
+		}
+		fmt = avformat_alloc_context();
+		if (!fmt)
+		{
+			throw EXCEPTION("avformat_alloc_context() failed");
+		}
+		io_buf = (u8*)av_malloc(4096);
+		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
+		if (!fmt->pb)
+		{
+			throw EXCEPTION("avio_alloc_context() failed");
+		}
 	}
-}
+
+	~AudioDecoder()
+	{
+		// TODO: check finalization
+		AdecFrame af;
+		while (frames.try_pop(af))
+		{
+			av_frame_unref(af.data);
+			av_frame_free(&af.data);
+		}
+		if (ctx)
+		{
+			avcodec_close(ctx);
+			avformat_close_input(&fmt);
+		}
+		if (fmt)
+		{
+			if (io_buf)
+			{
+				av_free(io_buf);
+			}
+			if (fmt->pb) av_free(fmt->pb);
+			avformat_free_context(fmt);
+		}
+	}
+
+	virtual void cpu_task() override
+	{
+		while (true)
+		{
+			if (Emu.IsStopped() || is_closed)
+			{
+				break;
+			}
+
+			if (!job.pop(task, &is_closed))
+			{
+				break;
+			}
+
+			switch (task.type)
+			{
+			case adecStartSeq:
+			{
+				// TODO: reset data
+				cellAdec.warning("adecStartSeq:");
+
+				reader.addr = 0;
+				reader.size = 0;
+				reader.init = false;
+				reader.has_ats = false;
+				just_started = true;
+
+				if (adecIsAtracX(type))
+				{
+					ch_cfg = task.at3p.channel_config;
+					ch_out = task.at3p.channels;
+					frame_size = task.at3p.frame_size;
+					sample_rate = task.at3p.sample_rate;
+					use_ats_headers = task.at3p.ats_header == 1;
+				}
+				break;
+			}
+
+			case adecEndSeq:
+			{
+				// TODO: finalize
+				cellAdec.warning("adecEndSeq:");
+				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, cbArg);
+
+				just_finished = true;
+				break;
+			}
+
+			case adecDecodeAu:
+			{
+				int err = 0;
+
+				reader.addr = task.au.addr;
+				reader.size = task.au.size;
+				reader.has_ats = use_ats_headers;
+				//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
+
+				if (just_started)
+				{
+					first_pts = task.au.pts;
+					last_pts = task.au.pts;
+					if (adecIsAtracX(type)) last_pts -= 0x10000; // hack
+				}
+
+				struct AVPacketHolder : AVPacket
+				{
+					AVPacketHolder(u32 size)
+					{
+						av_init_packet(this);
+
+						if (size)
+						{
+							data = (u8*)av_calloc(1, size + FF_INPUT_BUFFER_PADDING_SIZE);
+							this->size = size + FF_INPUT_BUFFER_PADDING_SIZE;
+						}
+						else
+						{
+							data = NULL;
+							size = 0;
+						}
+					}
+
+					~AVPacketHolder()
+					{
+						av_free(data);
+					}
+
+				} au(0);
+
+				if (just_started && just_finished)
+				{
+					avcodec_flush_buffers(ctx);
+					
+					reader.init = true; // wrong
+					just_finished = false;
+					just_started = false;
+				}
+				else if (just_started) // deferred initialization
+				{
+					AVDictionary* opts = nullptr;
+					av_dict_set(&opts, "probesize", "96", 0);
+					err = avformat_open_input(&fmt, NULL, input_format, &opts);
+					if (err || opts)
+					{
+						throw EXCEPTION("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+					}
+					//err = avformat_find_stream_info(fmt, NULL);
+					//if (err || !fmt->nb_streams)
+					//{
+					//	ADEC_ERROR("adecDecodeAu: avformat_find_stream_info() failed (err=0x%x, nb_streams=%d)", err, fmt->nb_streams);
+					//}
+					if (!avformat_new_stream(fmt, codec))
+					{
+						throw EXCEPTION("avformat_new_stream() failed");
+					}
+					ctx = fmt->streams[0]->codec; // TODO: check data
+
+					opts = nullptr;
+					av_dict_set(&opts, "refcounted_frames", "1", 0);
+					{
+						std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
+						// not multithread-safe (???)
+						err = avcodec_open2(ctx, codec, &opts);
+					}
+					if (err || opts)
+					{
+						throw EXCEPTION("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+					}
+					just_started = false;
+				}
+
+				bool last_frame = false;
+
+				while (true)
+				{
+					if (Emu.IsStopped() || is_closed)
+					{
+						if (Emu.IsStopped()) cellAdec.warning("adecDecodeAu: aborted");
+						break;
+					}
+
+					last_frame = av_read_frame(fmt, &au) < 0;
+					if (last_frame)
+					{
+						//break;
+						av_free(au.data);
+						au.data = NULL;
+						au.size = 0;
+					}
+
+					struct AdecFrameHolder : AdecFrame
+					{
+						AdecFrameHolder()
+						{
+							data = av_frame_alloc();
+						}
+
+						~AdecFrameHolder()
+						{
+							if (data)
+							{
+								av_frame_unref(data);
+								av_frame_free(&data);
+							}
+						}
+
+					} frame;
+
+					if (!frame.data)
+					{
+						throw EXCEPTION("av_frame_alloc() failed");
+					}
+
+					int got_frame = 0;
+
+					int decode = avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
+
+					if (decode <= 0)
+					{
+						if (decode < 0)
+						{
+							cellAdec.error("adecDecodeAu: AU decoding error(0x%x)", decode);
+						}
+						if (!got_frame && reader.size == 0) break;
+					}
+
+					if (got_frame)
+					{
+						//u64 ts = av_frame_get_best_effort_timestamp(frame.data);
+						//if (ts != AV_NOPTS_VALUE)
+						//{
+						//	frame.pts = ts/* - first_pts*/;
+						//	last_pts = frame.pts;
+						//}
+						last_pts += ((u64)frame.data->nb_samples) * 90000 / frame.data->sample_rate;
+						frame.pts = last_pts;
+
+						s32 nbps = av_get_bytes_per_sample((AVSampleFormat)frame.data->format);
+						switch (frame.data->format)
+						{
+						case AV_SAMPLE_FMT_FLTP: break;
+						case AV_SAMPLE_FMT_S16P: break;
+						default:
+						{
+							throw EXCEPTION("Unsupported frame format(%d)", frame.data->format);
+						}
+						}
+						frame.auAddr = task.au.addr;
+						frame.auSize = task.au.size;
+						frame.userdata = task.au.userdata;
+						frame.size = frame.data->nb_samples * frame.data->channels * nbps;
+
+						//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
+							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
+
+						if (frames.push(frame, &is_closed))
+						{
+							frame.data = nullptr; // to prevent destruction
+							cbFunc(*this, id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, cbArg);
+						}
+					}
+				}
+
+				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, cbArg);
+				break;
+			}
+
+			case adecClose:
+			{
+				break;
+			}
+
+			default:
+			{
+				throw EXCEPTION("Unknown task(%d)", task.type);
+			}
+			}
+		}
+
+		is_finished = true;
+	}
+};
 
 int adecRead(void* opaque, u8* buf, int buf_size)
 {
@@ -162,16 +454,16 @@ next:
 			buf_size = adec.reader.size;
 		}
 		break;
-		
+
 		case adecDecodeAu:
 		{
 			std::memcpy(buf, vm::base(adec.reader.addr), adec.reader.size);
-			
+
 			buf += adec.reader.size;
 			buf_size -= adec.reader.size;
 			res += adec.reader.size;
 
-			adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
+			adec.cbFunc(adec, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
 
 			adec.job.pop(adec.task);
 
@@ -181,7 +473,7 @@ next:
 			//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
 		}
 		break;
-		
+
 		default:
 		{
 			cellAdec.error("adecRawRead(): unknown task (%d)", task.type);
@@ -210,267 +502,6 @@ next:
 		adec.reader.size -= buf_size;
 		return res + buf_size;
 	}
-}
-
-void adecOpen(u32 adec_id) // TODO: call from the constructor
-{
-	const auto sptr = idm::get<AudioDecoder>(adec_id);
-	AudioDecoder& adec = *sptr;
-
-	adec.id = adec_id;
-
-	adec.adecCb = idm::make_ptr<PPUThread>(fmt::format("Demuxer[0x%x] Thread", adec_id));
-	adec.adecCb->prio = 1001;
-	adec.adecCb->stack_size = 0x10000;
-	adec.adecCb->custom_task = [sptr](PPUThread& CPU)
-	{
-		AudioDecoder& adec = *sptr;
-		AdecTask& task = adec.task;
-
-		while (true)
-		{
-			if (Emu.IsStopped() || adec.is_closed)
-			{
-				break;
-			}
-
-			if (!adec.job.pop(task, &adec.is_closed))
-			{
-				break;
-			}
-
-			switch (task.type)
-			{
-			case adecStartSeq:
-			{
-				// TODO: reset data
-				cellAdec.warning("adecStartSeq:");
-
-				adec.reader.addr = 0;
-				adec.reader.size = 0;
-				adec.reader.init = false;
-				adec.reader.has_ats = false;
-				adec.just_started = true;
-
-				if (adecIsAtracX(adec.type))
-				{
-					adec.ch_cfg = task.at3p.channel_config;
-					adec.ch_out = task.at3p.channels;
-					adec.frame_size = task.at3p.frame_size;
-					adec.sample_rate = task.at3p.sample_rate;
-					adec.use_ats_headers = task.at3p.ats_header == 1;
-				}
-				break;
-			}
-
-			case adecEndSeq:
-			{
-				// TODO: finalize
-				cellAdec.warning("adecEndSeq:");
-				adec.cbFunc(CPU, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
-
-				adec.just_finished = true;
-				break;
-			}
-
-			case adecDecodeAu:
-			{
-				int err = 0;
-
-				adec.reader.addr = task.au.addr;
-				adec.reader.size = task.au.size;
-				adec.reader.has_ats = adec.use_ats_headers;
-				//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
-
-				if (adec.just_started)
-				{
-					adec.first_pts = task.au.pts;
-					adec.last_pts = task.au.pts;
-					if (adecIsAtracX(adec.type)) adec.last_pts -= 0x10000; // hack
-				}
-
-				struct AVPacketHolder : AVPacket
-				{
-					AVPacketHolder(u32 size)
-					{
-						av_init_packet(this);
-
-						if (size)
-						{
-							data = (u8*)av_calloc(1, size + FF_INPUT_BUFFER_PADDING_SIZE);
-							this->size = size + FF_INPUT_BUFFER_PADDING_SIZE;
-						}
-						else
-						{
-							data = NULL;
-							size = 0;
-						}
-					}
-
-					~AVPacketHolder()
-					{
-						av_free(data);
-					}
-
-				} au(0);
-
-				if (adec.just_started && adec.just_finished)
-				{
-					avcodec_flush_buffers(adec.ctx);
-					
-					adec.reader.init = true; // wrong
-					adec.just_finished = false;
-					adec.just_started = false;
-				}
-				else if (adec.just_started) // deferred initialization
-				{
-					AVDictionary* opts = nullptr;
-					av_dict_set(&opts, "probesize", "96", 0);
-					err = avformat_open_input(&adec.fmt, NULL, adec.input_format, &opts);
-					if (err || opts)
-					{
-						throw EXCEPTION("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
-					}
-					//err = avformat_find_stream_info(adec.fmt, NULL);
-					//if (err || !adec.fmt->nb_streams)
-					//{
-					//	ADEC_ERROR("adecDecodeAu: avformat_find_stream_info() failed (err=0x%x, nb_streams=%d)", err, adec.fmt->nb_streams);
-					//}
-					if (!avformat_new_stream(adec.fmt, adec.codec))
-					{
-						throw EXCEPTION("avformat_new_stream() failed");
-					}
-					adec.ctx = adec.fmt->streams[0]->codec; // TODO: check data
-
-					opts = nullptr;
-					av_dict_set(&opts, "refcounted_frames", "1", 0);
-					{
-						std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
-						// not multithread-safe (???)
-						err = avcodec_open2(adec.ctx, adec.codec, &opts);
-					}
-					if (err || opts)
-					{
-						throw EXCEPTION("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
-					}
-					adec.just_started = false;
-				}
-
-				bool last_frame = false;
-
-				while (true)
-				{
-					if (Emu.IsStopped() || adec.is_closed)
-					{
-						if (Emu.IsStopped()) cellAdec.warning("adecDecodeAu: aborted");
-						break;
-					}
-
-					last_frame = av_read_frame(adec.fmt, &au) < 0;
-					if (last_frame)
-					{
-						//break;
-						av_free(au.data);
-						au.data = NULL;
-						au.size = 0;
-					}
-
-					struct AdecFrameHolder : AdecFrame
-					{
-						AdecFrameHolder()
-						{
-							data = av_frame_alloc();
-						}
-
-						~AdecFrameHolder()
-						{
-							if (data)
-							{
-								av_frame_unref(data);
-								av_frame_free(&data);
-							}
-						}
-
-					} frame;
-
-					if (!frame.data)
-					{
-						throw EXCEPTION("av_frame_alloc() failed");
-					}
-
-					int got_frame = 0;
-
-					int decode = avcodec_decode_audio4(adec.ctx, frame.data, &got_frame, &au);
-
-					if (decode <= 0)
-					{
-						if (decode < 0)
-						{
-							cellAdec.error("adecDecodeAu: AU decoding error(0x%x)", decode);
-						}
-						if (!got_frame && adec.reader.size == 0) break;
-					}
-
-					if (got_frame)
-					{
-						//u64 ts = av_frame_get_best_effort_timestamp(frame.data);
-						//if (ts != AV_NOPTS_VALUE)
-						//{
-						//	frame.pts = ts/* - adec.first_pts*/;
-						//	adec.last_pts = frame.pts;
-						//}
-						adec.last_pts += ((u64)frame.data->nb_samples) * 90000 / frame.data->sample_rate;
-						frame.pts = adec.last_pts;
-
-						s32 nbps = av_get_bytes_per_sample((AVSampleFormat)frame.data->format);
-						switch (frame.data->format)
-						{
-						case AV_SAMPLE_FMT_FLTP: break;
-						case AV_SAMPLE_FMT_S16P: break;
-						default:
-						{
-							throw EXCEPTION("Unsupported frame format(%d)", frame.data->format);
-						}
-						}
-						frame.auAddr = task.au.addr;
-						frame.auSize = task.au.size;
-						frame.userdata = task.au.userdata;
-						frame.size = frame.data->nb_samples * frame.data->channels * nbps;
-
-						//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
-							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
-
-						if (adec.frames.push(frame, &adec.is_closed))
-						{
-							frame.data = nullptr; // to prevent destruction
-							adec.cbFunc(CPU, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
-						}
-					}
-				}
-
-				adec.cbFunc(CPU, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
-				break;
-			}
-
-			case adecClose:
-			{
-				break;
-			}
-
-			default:
-			{
-				throw EXCEPTION("Unknown task(%d)", task.type);
-			}
-			}
-		}
-
-		adec.is_finished = true;
-
-	};
-
-	adec.adecCb->cpu_init();
-	adec.adecCb->state -= cpu_state::stop;
-	(*adec.adecCb)->lock_notify();
 }
 
 bool adecCheckType(s32 type)
@@ -527,7 +558,11 @@ s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	adecOpen(*handle = idm::make<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	auto&& adec = std::make_shared<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
+
+	*handle = idm::import_existing<ppu_thread>(adec);
+
+	adec->run();
 
 	return CELL_OK;
 }
@@ -541,7 +576,11 @@ s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	adecOpen(*handle = idm::make<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	auto&& adec = std::make_shared<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
+
+	*handle = idm::import_existing<ppu_thread>(adec);
+
+	adec->run();
 
 	return CELL_OK;
 }
@@ -574,8 +613,7 @@ s32 cellAdecClose(u32 handle)
 		std::this_thread::sleep_for(1ms); // hack
 	}
 
-	idm::remove<PPUThread>(adec->adecCb->id);
-	idm::remove<AudioDecoder>(handle);
+	idm::remove<ppu_thread>(handle);
 	return CELL_OK;
 }
 

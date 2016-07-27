@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellMusic.h"
+#include "cellSysutil.h"
 
 logs::channel cellMusic("cellMusic", logs::level::notice);
 
@@ -122,7 +123,7 @@ s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> 
 	music->func = func;
 	music->userData = userData;
 
-	Emu.GetCallbackManager().Register([=](PPUThread& ppu) -> s32
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		func(ppu, CELL_MUSIC2_EVENT_INITIALIZE_RESULT, vm::make_var<s32>(CELL_OK), userData);
 		return CELL_OK;

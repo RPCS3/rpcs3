@@ -196,6 +196,8 @@ namespace rsx
 		void capture_frame(const std::string &name);
 
 	public:
+		std::shared_ptr<class ppu_thread> intr_thread;
+
 		u32 ioAddress, ioSize;
 		int flip_status;
 		int flip_mode;

@@ -8,17 +8,13 @@
 #include "sys_process.h"
 #include "sys_timer.h"
 
-#include <thread>
-
 logs::channel sys_timer("sys_timer", logs::level::notice);
 
 extern u64 get_system_time();
 
-extern std::mutex& get_current_thread_mutex();
-
 void lv2_timer_t::on_task()
 {
-	std::unique_lock<std::mutex> lock(get_current_thread_mutex());
+	thread_lock lock(*this);
 
 	while (state <= SYS_TIMER_STATE_RUN)
 	{
@@ -54,7 +50,7 @@ void lv2_timer_t::on_task()
 			continue;
 		}
 
-		get_current_thread_cv().wait_for(lock, 1ms);
+		thread_ctrl::wait_for(100);
 	}
 }
 
@@ -67,7 +63,7 @@ void lv2_timer_t::on_stop()
 {
 	// Signal thread using invalid state and join
 	state = -1;
-	(*this)->lock_notify();
+	this->lock_notify();
 	named_thread::on_stop();
 }
 
@@ -172,8 +168,7 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 	timer->expire = base_time ? base_time : start_time + period;
 	timer->period = period;
 	timer->state  = SYS_TIMER_STATE_RUN;
-
-	(*timer)->lock_notify();
+	timer->lock_notify();
 
 	return CELL_OK;
 }

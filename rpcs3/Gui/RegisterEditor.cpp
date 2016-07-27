@@ -86,7 +86,7 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 		{
 		case cpu_type::ppu:
 		{
-			auto& ppu = *static_cast<PPUThread*>(cpu);
+			auto& ppu = *static_cast<ppu_thread*>(cpu);
 
 			while (value.length() < 32) value = "0" + value;
 			std::string::size_type first_brk = reg.find('[');
@@ -99,8 +99,8 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 					{
 						unsigned long long reg_value;
 						reg_value = std::stoull(value.substr(16, 31), 0, 16);
-						if (reg.find("GPR") == 0) ppu.GPR[reg_index] = (u64)reg_value;
-						if (reg.find("FPR") == 0) (u64&)ppu.FPR[reg_index] = (u64)reg_value;
+						if (reg.find("GPR") == 0) ppu.gpr[reg_index] = (u64)reg_value;
+						if (reg.find("FPR") == 0) (u64&)ppu.fpr[reg_index] = (u64)reg_value;
 						return;
 					}
 					if (reg.find("VR") == 0)
@@ -109,8 +109,8 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 						unsigned long long reg_value1;
 						reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 						reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
-						ppu.VR[reg_index]._u64[0] = (u64)reg_value0;
-						ppu.VR[reg_index]._u64[1] = (u64)reg_value1;
+						ppu.vr[reg_index]._u64[0] = (u64)reg_value0;
+						ppu.vr[reg_index]._u64[1] = (u64)reg_value1;
 						return;
 					}
 				}
@@ -118,15 +118,15 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 				{
 					unsigned long long reg_value;
 					reg_value = std::stoull(value.substr(16, 31), 0, 16);
-					if (reg == "LR") ppu.LR = (u64)reg_value;
-					if (reg == "CTR") ppu.CTR = (u64)reg_value;
+					if (reg == "LR") ppu.lr = (u64)reg_value;
+					if (reg == "CTR") ppu.ctr = (u64)reg_value;
 					return;
 				}
 				if (reg == "CR")
 				{
 					unsigned long long reg_value;
 					reg_value = std::stoull(value.substr(24, 31), 0, 16);
-					if (reg == "CR") ppu.SetCR((u32)reg_value);
+					if (reg == "CR") ppu.cr_unpack((u32)reg_value);
 					return;
 				}
 			}
@@ -183,19 +183,19 @@ void RegisterEditorDialog::updateRegister(wxCommandEvent& event)
 	{
 	case cpu_type::ppu:
 	{
-		auto& ppu = *static_cast<PPUThread*>(cpu);
+		auto& ppu = *static_cast<ppu_thread*>(cpu);
 
 		std::size_t first_brk = reg.find('[');
 		if (first_brk != -1)
 		{
 			long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-			if (reg.find("GPR") == 0) str = fmt::format("%016llx", ppu.GPR[reg_index]);
-			if (reg.find("FPR") == 0) str = fmt::format("%016llx", ppu.FPR[reg_index]);
-			if (reg.find("VR") == 0)  str = fmt::format("%016llx%016llx", ppu.VR[reg_index]._u64[1], ppu.VR[reg_index]._u64[0]);
+			if (reg.find("GPR") == 0) str = fmt::format("%016llx", ppu.gpr[reg_index]);
+			if (reg.find("FPR") == 0) str = fmt::format("%016llx", ppu.fpr[reg_index]);
+			if (reg.find("VR") == 0)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
 		}
-		if (reg == "CR")  str = fmt::format("%08x", ppu.GetCR());
-		if (reg == "LR")  str = fmt::format("%016llx", ppu.LR);
-		if (reg == "CTR") str = fmt::format("%016llx", ppu.CTR);
+		if (reg == "CR")  str = fmt::format("%08x", ppu.cr_pack());
+		if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
+		if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
 		break;
 	}
 	case cpu_type::spu:

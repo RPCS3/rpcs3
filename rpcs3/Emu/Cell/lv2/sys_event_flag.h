@@ -107,12 +107,12 @@ struct lv2_event_flag_t
 };
 
 // Aux
-class PPUThread;
+class ppu_thread;
 
 // SysCalls
 s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init);
 s32 sys_event_flag_destroy(u32 id);
-s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
+s32 sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
 s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);
 s32 sys_event_flag_set(u32 id, u64 bitptn);
 s32 sys_event_flag_clear(u32 id, u64 bitptn);

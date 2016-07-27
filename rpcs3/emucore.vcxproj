@@ -240,7 +240,6 @@
     <ClCompile Include="Emu\Cell\Modules\sys_prx_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_spinlock.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_spu_.cpp" />
-    <ClCompile Include="Emu\Cell\PPUCallback.cpp" />
     <ClCompile Include="Emu\Cell\PPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\PPUFunction.cpp" />
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
@@ -390,6 +389,7 @@
     <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
+    <ClInclude Include="..\Utilities\SleepQueue.h" />
     <ClInclude Include="..\Utilities\sync.h" />
     <ClInclude Include="..\Utilities\Platform.h" />
     <ClInclude Include="..\Utilities\Log.h" />

@@ -68,7 +68,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 	return CELL_OK;
 }
 
-s32 sys_semaphore_wait(PPUThread& ppu, u32 sem_id, u64 timeout)
+s32 sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 {
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
@@ -174,7 +174,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 
 		auto& thread = sem->sq.front();
 		VERIFY(!thread->state.test_and_set(cpu_state::signal));
-		(*thread)->notify();
+		thread->notify();
 
 		sem->sq.pop_front();
 	}

@@ -11,37 +11,24 @@
 
 logs::channel sys_ppu_thread("sys_ppu_thread", logs::level::notice);
 
-void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
+void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
 	sys_ppu_thread.warning("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
-	// TODO: Should we really unlock mutexes?
+	// TODO: shall sys_mutex objects be unlocked?
 
-	//// get all sys_mutex objects
-	//for (auto& mutex : idm::get_all<lv2_mutex_t>())
-	//{
-	//	// unlock mutex if locked by this thread
-	//	if (mutex->owner.get() == &ppu)
-	//	{
-	//		mutex->unlock(lv2_lock);
-	//	}
-	//}
+	LV2_LOCK;
 
+	ppu.state += cpu_state::exit;
+
+	// Delete detached thread
+	if (!ppu.is_joinable)
 	{
-		LV2_LOCK;
-
-		ppu.state += cpu_state::exit;
-		//ppu.handle_interrupt();
-
-		// Delete detached thread
-		if (!ppu.is_joinable)
-		{
-			idm::remove<PPUThread>(ppu.id);
-		}
+		idm::remove<ppu_thread>(ppu.id);
 	}
 
 	// Throw if this syscall was not called directly by the SC instruction (hack)
-	if (ppu.LR == 0 || ppu.GPR[11] != 41 || ppu.custom_task)
+	if (ppu.lr == 0 || ppu.gpr[11] != 41)
 	{
 		throw cpu_state::exit;
 	}
@@ -54,13 +41,13 @@ void sys_ppu_thread_yield()
 	std::this_thread::yield();
 }
 
-s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
+s32 sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 {
 	sys_ppu_thread.warning("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{
@@ -77,8 +64,6 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 		return CELL_EDEADLK;
 	}
 
-	ppu.sleep();
-
 	// mark joining
 	thread->is_joining = true;
 
@@ -90,13 +75,11 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 		get_current_thread_cv().wait_for(lv2_lock, 1ms);
 	}
 
-	ppu.awake();
-
 	// get exit status from the register
-	if (vptr) *vptr = thread->GPR[3];
+	if (vptr) *vptr = thread->gpr[3];
 
 	// cleanup
-	idm::remove<PPUThread>(thread->id);
+	idm::remove<ppu_thread>(thread->id);
 
 	return CELL_OK;
 }
@@ -107,7 +90,7 @@ s32 sys_ppu_thread_detach(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{
@@ -130,7 +113,7 @@ s32 sys_ppu_thread_detach(u32 thread_id)
 	return CELL_OK;
 }
 
-void sys_ppu_thread_get_join_state(PPUThread& ppu, vm::ptr<s32> isjoinable)
+void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable)
 {
 	sys_ppu_thread.warning("sys_ppu_thread_get_join_state(isjoinable=*0x%x)", isjoinable);
 
@@ -145,7 +128,7 @@ s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio)
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{
@@ -168,7 +151,7 @@ s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{
@@ -180,7 +163,7 @@ s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_get_stack_information(PPUThread& ppu, vm::ptr<sys_ppu_thread_stack_t> sp)
+s32 sys_ppu_thread_get_stack_information(ppu_thread& ppu, vm::ptr<sys_ppu_thread_stack_t> sp)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_get_stack_information(sp=*0x%x)", sp);
 
@@ -196,7 +179,7 @@ s32 sys_ppu_thread_stop(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{
@@ -214,7 +197,7 @@ s32 sys_ppu_thread_restart(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{
@@ -239,28 +222,30 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 		return CELL_EINVAL;
 	}
 
-	const bool is_joinable = (flags & SYS_PPU_THREAD_CREATE_JOINABLE) != 0;
-	const bool is_interrupt = (flags & SYS_PPU_THREAD_CREATE_INTERRUPT) != 0;
-
-	if (is_joinable && is_interrupt)
+	if ((flags & 3) == 3) // Check two flags: joinable + interrupt not allowed
 	{
 		return CELL_EPERM;
 	}
 
-	const auto ppu = idm::make_ptr<PPUThread>(threadname ? threadname.get_ptr() : "");
+	const auto ppu = idm::make_ptr<ppu_thread>(threadname ? threadname.get_ptr() : "", prio, stacksize);
 
-	ppu->prio = prio;
-	ppu->stack_size = std::max<u32>(stacksize, 0x4000);
-	ppu->cpu_init();
-
-	ppu->pc = vm::read32(param->entry);
-	ppu->GPR[2] = vm::read32(param->entry + 4); // rtoc
-	ppu->GPR[3] = arg;
-	ppu->GPR[4] = unk; // actually unknown
-	ppu->GPR[13] = param->tls;
-
-	ppu->is_joinable = is_joinable;
-	//ppu->state += cpu_state::interrupt;
+	ppu->is_joinable = (flags & SYS_PPU_THREAD_CREATE_JOINABLE) != 0;
+	ppu->gpr[13] = param->tls.value();
+	
+	if ((flags & SYS_PPU_THREAD_CREATE_INTERRUPT) == 0)
+	{
+		// Initialize thread entry point
+		ppu->cmd_list
+		({
+			{ ppu_cmd::set_args, 2 }, arg, unk, // Actually unknown
+			{ ppu_cmd::lle_call, param->entry.value() },
+		});
+	}
+	else
+	{
+		// Save entry for further use
+		ppu->gpr[2] = param->entry.value();
+	}
 
 	*thread_id = ppu->id;
 
@@ -273,15 +258,14 @@ s32 sys_ppu_thread_start(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	thread->state -= cpu_state::stop;
-	(*thread)->lock_notify();
+	thread->run();
 
 	return CELL_OK;
 }
@@ -292,7 +276,7 @@ s32 sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 
 	LV2_LOCK;
 
-	const auto thread = idm::get<PPUThread>(thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
 
 	if (!thread)
 	{

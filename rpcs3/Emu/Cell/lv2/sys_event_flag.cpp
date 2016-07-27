@@ -17,20 +17,20 @@ void lv2_event_flag_t::notify_all(lv2_lock_t)
 {
 	auto pred = [this](cpu_thread* thread) -> bool
 	{
-		auto& ppu = static_cast<PPUThread&>(*thread);
+		auto& ppu = static_cast<ppu_thread&>(*thread);
 
 		// load pattern and mode from registers
-		const u64 bitptn = ppu.GPR[4];
-		const u32 mode = static_cast<u32>(ppu.GPR[5]);
+		const u64 bitptn = ppu.gpr[4];
+		const u32 mode = static_cast<u32>(ppu.gpr[5]);
 
 		// check specific pattern
 		if (check_pattern(bitptn, mode))
 		{
 			// save pattern
-			ppu.GPR[4] = clear_pattern(bitptn, mode);
+			ppu.gpr[4] = clear_pattern(bitptn, mode);
 
 			VERIFY(!thread->state.test_and_set(cpu_state::signal));
-			(*thread)->notify();
+			thread->notify();
 
 			return true;
 		}
@@ -101,7 +101,7 @@ s32 sys_event_flag_destroy(u32 id)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
+s32 sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
 {
 	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
@@ -109,8 +109,8 @@ s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u6
 
 	// If this syscall is called through the SC instruction, these registers must already contain corresponding values.
 	// But let's fixup them (in the case of explicit function call or something) because these values are used externally.
-	ppu.GPR[4] = bitptn;
-	ppu.GPR[5] = mode;
+	ppu.gpr[4] = bitptn;
+	ppu.gpr[5] = mode;
 
 	LV2_LOCK;
 
@@ -172,11 +172,11 @@ s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u6
 	// load pattern saved upon signaling
 	if (result)
 	{
-		*result = ppu.GPR[4];
+		*result = ppu.gpr[4];
 	}
 
 	// check cause
-	if (ppu.GPR[5] == 0)
+	if (ppu.gpr[5] == 0)
 	{
 		return CELL_ECANCELED;
 	}
@@ -284,16 +284,16 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 	// signal all threads to return CELL_ECANCELED
 	for (auto& thread : eflag->sq)
 	{
-		auto& ppu = static_cast<PPUThread&>(*thread);
+		auto& ppu = static_cast<ppu_thread&>(*thread);
 
 		// save existing pattern
-		ppu.GPR[4] = pattern;
+		ppu.gpr[4] = pattern;
 
 		// clear "mode" as a sign of cancellation
-		ppu.GPR[5] = 0;
+		ppu.gpr[5] = 0;
 
 		VERIFY(!thread->state.test_and_set(cpu_state::signal));
-		(*thread)->notify();
+		thread->notify();
 	}
 
 	eflag->sq.clear();

@@ -823,19 +823,19 @@ namespace vm
 		{
 		case cpu_type::ppu:
 		{
-			PPUThread& context = static_cast<PPUThread&>(*cpu);
+			ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
-			const u32 old_pos = vm::cast(context.GPR[1], HERE);
-			context.GPR[1] -= align(size + 4, 8); // room minimal possible size
-			context.GPR[1] &= ~(align_v - 1); // fix stack alignment
+			const u32 old_pos = vm::cast(context.gpr[1], HERE);
+			context.gpr[1] -= align(size + 4, 8); // room minimal possible size
+			context.gpr[1] &= ~(align_v - 1); // fix stack alignment
 
-			if (context.GPR[1] < context.stack_addr)
+			if (context.gpr[1] < context.stack_addr)
 			{
 				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)", size, align_v, old_pos, context.stack_addr);
 			}
 			else
 			{
-				const u32 addr = static_cast<u32>(context.GPR[1]);
+				const u32 addr = static_cast<u32>(context.gpr[1]);
 				vm::ps3::_ref<nse_t<u32>>(addr + size) = old_pos;
 				std::memset(vm::base(addr), 0, size);
 				return addr;
@@ -896,15 +896,15 @@ namespace vm
 		{
 		case cpu_type::ppu:
 		{
-			PPUThread& context = static_cast<PPUThread&>(*cpu);
+			ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
-			if (context.GPR[1] != addr)
+			if (context.gpr[1] != addr)
 			{
-				LOG_ERROR(MEMORY, "Stack inconsistency (addr=0x%x, SP=0x%llx, size=0x%x)", addr, context.GPR[1], size);
+				LOG_ERROR(MEMORY, "Stack inconsistency (addr=0x%x, SP=0x%llx, size=0x%x)", addr, context.gpr[1], size);
 				return;
 			}
 
-			context.GPR[1] = vm::ps3::_ref<nse_t<u32>>(context.GPR[1] + size);
+			context.gpr[1] = vm::ps3::_ref<nse_t<u32>>(context.gpr[1] + size);
 			return;
 		}
 

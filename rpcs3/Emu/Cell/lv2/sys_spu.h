@@ -196,7 +196,7 @@ struct lv2_spu_group_t
 	}
 };
 
-class PPUThread;
+class ppu_thread;
 
 // Aux
 void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr);
@@ -233,7 +233,7 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
 s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status);
 
 s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr);
-s32 sys_raw_spu_destroy(PPUThread& ppu, u32 id);
+s32 sys_raw_spu_destroy(ppu_thread& ppu, u32 id);
 s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag);
 s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);
 s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask);

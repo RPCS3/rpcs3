@@ -220,11 +220,11 @@ void KernelExplorer::Update()
 	}
 
 	// PPU Threads
-	if (const u32 count = idm::get_count<PPUThread>())
+	if (const u32 count = idm::get_count<ppu_thread>())
 	{
 		const auto& node = m_tree->AppendItem(root, fmt::format("PPU Threads (%zu)", count));
 
-		idm::select<PPUThread>([&](u32 id, PPUThread& ppu)
+		idm::select<ppu_thread>([&](u32 id, ppu_thread& ppu)
 		{
 			m_tree->AppendItem(node, fmt::format("PPU Thread: ID = 0x%08x '%s'", id, ppu.get_name()));
 		});

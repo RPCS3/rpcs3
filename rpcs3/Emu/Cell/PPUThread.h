@@ -3,29 +3,124 @@
 #include "Common.h"
 #include "../CPU/CPUThread.h"
 #include "../Memory/vm.h"
+#include "Utilities/lockless.h"
 
-class PPUThread final : public cpu_thread
+// Lightweight PPU command queue element
+struct ppu_cmd : any64
+{
+	enum : u32
+	{
+		none = 0,
+
+		opcode, // Execute PPU instruction from arg
+		set_gpr, // Set gpr[arg] (+1 cmd)
+		set_args, // Set general-purpose args (+arg cmd)
+		lle_call, // Load addr and rtoc at *arg or *gpr[arg] and execute
+		hle_call, // Execute function by index (arg)
+	};
+
+	struct pair_t
+	{
+		any32 arg1;
+		any32 arg2;
+	};
+
+	ppu_cmd() = default;
+
+	template<typename T>
+	ppu_cmd(const T& value)
+		: any64(value)
+	{
+	}
+
+	template<typename T1, typename T2>
+	ppu_cmd(const T1& arg1, const T2& arg2)
+		: any64(pair_t{arg1, arg2})
+	{
+	}
+
+	explicit operator bool() const
+	{
+		return as<u64>() != 0;
+	}
+
+	template<typename T>
+	decltype(auto) arg1()
+	{
+		return as<pair_t>().arg1.as<T>();
+	}
+
+	template<typename T>
+	decltype(auto) arg1() const
+	{
+		return as<const pair_t>().arg1.as<const T>();
+	}
+
+	template<typename T>
+	decltype(auto) arg2()
+	{
+		return as<pair_t>().arg2.as<T>();
+	}
+
+	template<typename T>
+	decltype(auto) arg2() const
+	{
+		return as<const pair_t>().arg2.as<const T>();
+	}
+};
+
+static_assert(sizeof(ppu_cmd) == 8 && std::is_pod<ppu_cmd>::value, "Incorrect ppu_cmd struct");
+
+class ppu_thread : public cpu_thread
 {
 public:
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
-	virtual void cpu_init() override;
+	virtual void cpu_init() override final {}
 	virtual void cpu_task() override;
-	virtual void cpu_task_main();
-	virtual bool handle_interrupt() override;
-	virtual ~PPUThread() override;
+	virtual ~ppu_thread() override;
 
-	PPUThread(const std::string& name);
+	ppu_thread(const std::string& name, u32 prio = 0, u32 stack = 0x10000);
 
-	u64 GPR[32]{}; // General-Purpose Registers
-	f64 FPR[32]{}; // Floating Point Registers
-	v128 VR[32]{}; // Vector Registers
-	alignas(16) bool CR[32]{}; // Condition Registers
-	bool SO{}; // XER: Summary overflow
-	bool OV{}; // XER: Overflow
-	bool CA{}; // XER: Carry
-	u8 XCNT{}; // XER: 0..6
+	u64 gpr[32] = {}; // General-Purpose Registers
+	f64 fpr[32] = {}; // Floating Point Registers
+	v128 vr[32] = {}; // Vector Registers
 
+	alignas(16) bool cr[32] = {}; // Condition Registers (abstract representation)
+
+	// Pack CR bits
+	u32 cr_pack() const
+	{
+		u32 result{};
+
+		for (u32 bit : cr)
+		{
+			result = (result << 1) | bit;
+		}
+
+		return result;
+	}
+
+	// Unpack CR bits
+	void cr_unpack(u32 value)
+	{
+		for (bool& b : cr)
+		{
+			b = (value & 0x1) != 0;
+			value >>= 1;
+		}
+	}
+
+	// Fixed-Point Exception Register (abstract representation)
+	struct
+	{
+		bool so{}; // Summary Overflow
+		bool ov{}; // Overflow
+		bool ca{}; // Carry
+		u8 cnt{};  // 0..6
+	}
+	xer;
+	
 	/*
 		Saturation. A sticky status bit indicating that some field in a saturating instruction saturated since the last
 		time SAT was cleared. In other words when SAT = '1' it remains set to '1' until it is cleared to '0' by an
@@ -45,7 +140,7 @@ public:
 			Vector Convert to Fixed-Point with Saturation (vctuxs, vctsxs)
 		0	Indicates no saturation occurred; mtvscr can explicitly clear this bit.
 	*/
-	bool SAT{}; 
+	bool sat{};
 
 	/*
 		Non-Java. A mode control bit that determines whether vector floating-point operations will be performed
@@ -54,88 +149,47 @@ public:
 			by Java, IEEE, and C9X standard.
 		1	The non-Java/non-IEEE-compliant mode is selected. If an element in a source vector register
 			contains a denormalized value, the value '0' is used instead. If an instruction causes an underflow
-			exception, the corresponding element in the target VR is cleared to '0'. In both cases, the '0'
+			exception, the corresponding element in the target vr is cleared to '0'. In both cases, the '0'
 			has the same sign as the denormalized or underflowing value.
 	*/
-	bool NJ{ true };
+	bool nj = true;
 
-	bool FL{}; // FPSCR.FPCC.FL
-	bool FG{}; // FPSCR.FPCC.FG
-	bool FE{}; // FPSCR.FPCC.FE
-	bool FU{}; // FPSCR.FPCC.FU
+	struct // Floating-Point Status and Control Register (abstract representation)
+	{
+		bool fl{}; // FPCC.FL
+		bool fg{}; // FPCC.FG
+		bool fe{}; // FPCC.FE
+		bool fu{}; // FPCC.FU
+	}
+	fpscr;
 
-	u64 LR{}; // Link Register
-	u64 CTR{}; // Counter Register
-	u32 VRSAVE{};
+	u32 cia{}; // Current Instruction Address
+	u64 lr{}; // Link Register
+	u64 ctr{}; // Counter Register
+	u32 vrsave{0xffffffff}; // VR Save Register (almost unused)
 
-	u32 pc = 0;
-	u32 prio = -1; // Thread priority
-	u32 stack_addr = 0; // Stack address
-	u32 stack_size = 0; // Stack size
+	u32 prio = 0; // Thread priority (0..3071)
+	const u32 stack_size; // Stack size
+	const u32 stack_addr; // Stack address
 	bool is_joinable = true;
 	bool is_joining = false;
 
+	lf_fifo<atomic_t<ppu_cmd>, 255> cmd_queue; // Command queue for asynchronous operations.
+
+	void cmd_push(ppu_cmd);
+	void cmd_list(std::initializer_list<ppu_cmd>);
+	void cmd_pop(u32 = 0);
+	ppu_cmd cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
+
+	const char* last_function{}; // Last function name for diagnosis, optimized for speed.
+
 	const std::string m_name; // Thread name
-
-	std::function<void(PPUThread&)> custom_task;
-
-	// Function name can be stored here. Used to print the last called function.
-	const char* last_function = nullptr;
-
-	// When a thread has met an exception, this variable is used to retro propagate it through stack call.
-	std::exception_ptr pending_exception;
-
-	// Pack CR bits
-	u32 GetCR() const
-	{
-		u32 result{};
-
-		for (u32 bit : CR)
-		{
-			result = (result << 1) | bit;
-		}
-
-		return result;
-	}
-
-	// Unpack CR bits
-	void SetCR(u32 value)
-	{
-		for (bool& b : CR)
-		{
-			b = (value & 0x1) != 0;
-			value >>= 1;
-		}
-	}
-
-	// Set CR field
-	void SetCR(u32 field, bool le, bool gt, bool eq, bool so)
-	{
-		CR[field * 4 + 0] = le;
-		CR[field * 4 + 1] = gt;
-		CR[field * 4 + 2] = eq;
-		CR[field * 4 + 3] = so;
-	}
-
-	// Set CR field for comparison
-	template<typename T>
-	void SetCR(u32 field, const T& a, const T& b)
-	{
-		SetCR(field, a < b, a > b, a == b, SO);
-	}
-
-	// Set overflow bit
-	void SetOV(const bool set)
-	{
-		OV = set;
-		SO |= set;
-	}
 
 	u64 get_next_arg(u32& g_count)
 	{
 		if (g_count < 8)
 		{
-			return GPR[g_count++ + 3];
+			return gpr[g_count++ + 3];
 		}
 		else
 		{
@@ -144,6 +198,7 @@ public:
 	}
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
+	void exec_task();
 	void fast_call(u32 addr, u32 rtoc);
 };
 

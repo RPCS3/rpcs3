@@ -64,12 +64,12 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	if (type == SYS_PPU_QUEUE && thread->type == cpu_type::ppu)
 	{
 		// store event data in registers
-		auto& ppu = static_cast<PPUThread&>(*thread);
+		auto& ppu = static_cast<ppu_thread&>(*thread);
 
-		ppu.GPR[4] = source;
-		ppu.GPR[5] = data1;
-		ppu.GPR[6] = data2;
-		ppu.GPR[7] = data3;
+		ppu.gpr[4] = source;
+		ppu.gpr[5] = data1;
+		ppu.gpr[6] = data2;
+		ppu.gpr[7] = data3;
 	}
 	else if (type == SYS_SPU_QUEUE && thread->type == cpu_type::spu)
 	{
@@ -84,7 +84,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	}
 
 	VERIFY(!thread->state.test_and_set(cpu_state::signal));
-	(*thread)->notify();
+	thread->notify();
 
 	return m_sq.pop_front();
 }
@@ -165,7 +165,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	{
 		if (queue->type == SYS_PPU_QUEUE && thread->type == cpu_type::ppu)
 		{
-			static_cast<PPUThread&>(*thread).GPR[3] = 1;
+			static_cast<ppu_thread&>(*thread).gpr[3] = 1;
 		}
 		else if (queue->type == SYS_SPU_QUEUE && thread->type == cpu_type::spu)
 		{
@@ -177,7 +177,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 		}
 
 		thread->state += cpu_state::signal;
-		(*thread)->notify();
+		thread->notify();
 	}
 
 	return CELL_OK;
@@ -220,7 +220,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 	return CELL_OK;
 }
 
-s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
+s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
 {
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
@@ -243,12 +243,12 @@ s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> 
 	if (queue->events())
 	{
 		// event data is returned in registers (dummy_event is not used)
-		std::tie(ppu.GPR[4], ppu.GPR[5], ppu.GPR[6], ppu.GPR[7]) = queue->pop(lv2_lock);
+		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = queue->pop(lv2_lock);
 		return CELL_OK;
 	}
 
 	// cause (if cancelled) will be returned in r3
-	ppu.GPR[3] = 0;
+	ppu.gpr[3] = 0;
 
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(queue->thread_queue(lv2_lock), ppu);
@@ -274,7 +274,7 @@ s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> 
 		}
 	}
 
-	if (ppu.GPR[3])
+	if (ppu.gpr[3])
 	{
 		ENSURES(!idm::check<lv2_event_queue_t>(equeue_id));
 		return CELL_ECANCELED;

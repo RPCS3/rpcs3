@@ -53,7 +53,7 @@ s32 sceNp2Term()
 	return CELL_OK;
 }
 
-s32 sceNpMatching2Term(PPUThread& ppu)
+s32 sceNpMatching2Term(ppu_thread& ppu)
 {
 	sceNp2.warning("sceNpMatching2Term()");
 

@@ -24,8 +24,6 @@
 
 extern u64 get_timebased_time();
 
-extern std::mutex& get_current_thread_mutex();
-
 enum class spu_decoder_type
 {
 	precise,
@@ -57,8 +55,7 @@ void spu_int_ctrl_t::set(u64 ints)
 
 		if (tag && tag->handler)
 		{
-			tag->handler->signal++;
-			(*tag->handler->thread)->notify();
+			tag->handler->exec();
 		}
 	}
 }
@@ -126,7 +123,7 @@ spu_imm_table_t::spu_imm_table_t()
 
 std::string SPUThread::get_name() const
 {
-	return fmt::format("%sSPU[0x%x] Thread (%s)", offset > RAW_SPU_BASE_ADDR ? "Raw" : "", id, m_name);
+	return fmt::format("%sSPU[0x%x] Thread (%s)", offset >= RAW_SPU_BASE_ADDR ? "Raw" : "", id, m_name);
 }
 
 std::string SPUThread::dump() const
@@ -187,7 +184,7 @@ void SPUThread::cpu_task()
 
 	if (custom_task)
 	{
-		if (check_status()) return;
+		if (check_state()) return;
 
 		return custom_task(*this);
 	}
@@ -229,7 +226,7 @@ void SPUThread::cpu_task()
 			continue;
 		}
 
-		if (check_status()) return;
+		if (check_state()) return;
 	}
 }
 
@@ -281,7 +278,7 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 
 	u32 eal = vm::cast(args.ea, HERE);
 
-	if (eal >= SYS_SPU_THREAD_BASE_LOW && offset >= RAW_SPU_BASE_ADDR) // SPU Thread Group MMIO (LS and SNR)
+	if (eal >= SYS_SPU_THREAD_BASE_LOW && offset < RAW_SPU_BASE_ADDR) // SPU Thread Group MMIO (LS and SNR)
 	{
 		const u32 index = (eal - SYS_SPU_THREAD_BASE_LOW) / SYS_SPU_THREAD_OFFSET; // thread number in group
 		const u32 offset = (eal - SYS_SPU_THREAD_BASE_LOW) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
@@ -548,7 +545,7 @@ void SPUThread::set_events(u32 mask)
 	// Notify if some events were set
 	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING && ch_event_stat & SPU_EVENT_WAITING)
 	{
-		(*this)->lock_notify();
+		lock_notify();
 	}
 }
 
@@ -602,7 +599,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		if (!channel.try_pop(out))
 		{
-			cpu_thread_lock{*this}, thread_ctrl::wait(WRAP_EXPR(state & cpu_state::stop || channel.try_pop(out)));
+			thread_lock{*this}, thread_ctrl::wait(WRAP_EXPR(state & cpu_state::stop || channel.try_pop(out)));
 
 			return !state.test(cpu_state::stop);
 		}
@@ -617,7 +614,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	//	break;
 	case SPU_RdInMbox:
 	{
-		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
+		std::unique_lock<named_thread> lock(*this, std::defer_lock);
 
 		while (true)
 		{
@@ -644,7 +641,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 				continue;
 			}
 
-			get_current_thread_cv().wait(lock);
+			thread_ctrl::wait();
 		}
 	}
 
@@ -693,7 +690,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdEventStat:
 	{
-		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
+		std::unique_lock<named_thread> lock(*this, std::defer_lock);
 
 		// start waiting or return immediately
 		if (u32 res = get_events(true))
@@ -716,7 +713,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			{
 				CHECK_EMU_STATUS;
 
-				get_current_thread_cv().wait(lock);
+				thread_ctrl::wait();
 			}
 		}
 
@@ -756,7 +753,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
-			std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
+			std::unique_lock<named_thread> lock(*this, std::defer_lock);
 
 			while (!ch_out_intr_mbox.try_push(value))
 			{
@@ -773,7 +770,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					continue;
 				}
 
-				get_current_thread_cv().wait(lock);
+				thread_ctrl::wait();
 			}
 
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
@@ -963,7 +960,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
-		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
+		std::unique_lock<named_thread> lock(*this, std::defer_lock);
 
 		while (!ch_out_mbox.try_push(value))
 		{
@@ -980,7 +977,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				continue;
 			}
 
-			get_current_thread_cv().wait(lock);
+			thread_ctrl::wait();
 		}
 
 		return true;
@@ -1305,7 +1302,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state -= cpu_state::suspend;
-				(*thread)->lock_notify();
+				thread->lock_notify();
 			}
 		}
 
@@ -1344,7 +1341,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_state::stop;
-				(*thread)->lock_notify();
+				thread->lock_notify();
 			}
 		}
 

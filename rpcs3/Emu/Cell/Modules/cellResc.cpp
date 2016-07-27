@@ -83,7 +83,7 @@ s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 	return CELL_OK;
 }
 
-s32 cellRescSetConvertAndFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> cntxt, s32 idx)
+s32 cellRescSetConvertAndFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> cntxt, s32 idx)
 {
 	cellResc.todo("cellRescSetConvertAndFlip(cntxt=*0x%x, idx=0x%x)", cntxt, idx);
 

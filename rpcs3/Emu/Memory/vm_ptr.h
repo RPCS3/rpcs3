@@ -2,7 +2,7 @@
 
 #include "vm_ref.h"
 
-class PPUThread;
+class ppu_thread;
 class ARMv7Thread;
 
 namespace vm
@@ -264,7 +264,7 @@ namespace vm
 		}
 
 		// Callback; defined in PPUCallback.h, passing context is mandatory
-		RT operator()(PPUThread& ppu, T... args) const;
+		RT operator()(ppu_thread& ppu, T... args) const;
 
 		// Callback; defined in ARMv7Callback.h, passing context is mandatory
 		RT operator()(ARMv7Thread& cpu, T... args) const;

@@ -23,10 +23,10 @@ void lv2_cond_t::notify(lv2_lock_t, cpu_thread* thread)
 	}
 	else
 	{
-		mutex->owner = idm::get<PPUThread>(thread->id);
+		mutex->owner = idm::get<ppu_thread>(thread->id);
 
 		VERIFY(!thread->state.test_and_set(cpu_state::signal));
-		(*thread)->notify();
+		thread->notify();
 	}
 }
 
@@ -165,7 +165,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 	return CELL_OK;
 }
 
-s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
+s32 sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 {
 	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
@@ -212,7 +212,7 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 				// try to reown mutex and exit if timed out
 				if (!cond->mutex->owner)
 				{
-					cond->mutex->owner = idm::get<PPUThread>(ppu.id);
+					cond->mutex->owner = idm::get<ppu_thread>(ppu.id);
 					break;
 				}
 

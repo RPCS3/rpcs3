@@ -77,7 +77,7 @@ void ARMv7Thread::cpu_task_main()
 		return fmt::format("%s [0x%08x]", cpu->get_name(), cpu->PC);
 	};
 
-	while (!state.load() || !check_status())
+	while (!state.load() || !check_state())
 	{
 		if (ISET == Thumb)
 		{

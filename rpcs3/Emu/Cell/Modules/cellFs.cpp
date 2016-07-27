@@ -8,6 +8,8 @@
 
 #include "Utilities/StrUtil.h"
 
+#include <mutex>
+
 logs::channel cellFs("cellFs", logs::level::notice);
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
@@ -691,38 +693,58 @@ struct lv2_fs_mount_point
 	std::mutex mutex;
 };
 
-void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
+struct fs_aio_thread : ppu_thread
 {
-	cellFs.notice("FS AIO Request(%d): fd=%d, offset=0x%llx, buf=*0x%x, size=0x%llx, user_data=0x%llx", xid, aio->fd, aio->offset, aio->buf, aio->size, aio->user_data);
+	using ppu_thread::ppu_thread;
 
-	s32 error = CELL_OK;
-	u64 result = 0;
-
-	const auto file = idm::get<lv2_file>(aio->fd);
-
-	if (!file || (!write && file->flags & CELL_FS_O_WRONLY) || (write && !(file->flags & CELL_FS_O_ACCMODE)))
+	virtual void cpu_task() override
 	{
-		error = CELL_EBADF;
+		while (ppu_cmd cmd = cmd_wait())
+		{
+			const u32 type = cmd.arg1<u32>();
+			const s32 xid = cmd.arg2<s32>();
+			const ppu_cmd cmd2 = cmd_queue[cmd_queue.peek() + 1];
+			const auto aio = cmd2.arg1<vm::ptr<CellFsAio>>();
+			const auto func = cmd2.arg2<fs_aio_cb_t>();
+			cmd_pop(1);
+
+			s32 error = CELL_OK;
+			u64 result = 0;
+
+			const auto file = idm::get<lv2_file>(aio->fd);
+
+			if (!file || (type == 1 && file->flags & CELL_FS_O_WRONLY) || (type == 2 && !(file->flags & CELL_FS_O_ACCMODE)))
+			{
+				error = CELL_EBADF;
+			}
+			else
+			{
+				std::lock_guard<std::mutex> lock(file->mp->mutex);
+
+				const auto old_pos = file->file.pos(); file->file.seek(aio->offset);
+
+				result = type == 2
+					? file->op_write(aio->buf, aio->size)
+					: file->op_read(aio->buf, aio->size);
+
+				file->file.seek(old_pos);
+			}
+
+			func(*this, aio, error, xid, result);
+		}
 	}
-	else
+};
+
+struct fs_aio_manager
+{
+	std::shared_ptr<fs_aio_thread> t = std::make_shared<fs_aio_thread>("FS AIO Thread", 500);
+
+	fs_aio_manager()
 	{
-		std::lock_guard<std::mutex> lock(file->mp->mutex);
-
-		const auto old_pos = file->file.pos(); file->file.seek(aio->offset);
-
-		result = write
-			? file->op_write(aio->buf, aio->size)
-			: file->op_read(aio->buf, aio->size);
-
-		file->file.seek(old_pos);
+		idm::import_existing<ppu_thread>(t);
+		t->run();
 	}
-
-	// should be executed directly by FS AIO thread
-	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
-	{
-		func(ppu, aio, error, xid, result);
-	});
-}
+};
 
 s32 cellFsAioInit(vm::cptr<char> mount_point)
 {
@@ -730,6 +752,7 @@ s32 cellFsAioInit(vm::cptr<char> mount_point)
 	cellFs.warning("*** mount_point = '%s'", mount_point.get_ptr());
 
 	// TODO: create AIO thread (if not exists) for specified mount point
+	fxm::get_always<fs_aio_manager>();
 
 	return CELL_OK;
 }
@@ -754,7 +777,15 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	thread_ctrl::spawn("FS AIO Read Thread", COPY_EXPR(fsAio(aio, false, xid, func)));
+	const auto m = fxm::get_always<fs_aio_manager>();
+
+	m->t->cmd_list
+	({
+		{ 1, xid },
+		{ aio, func },
+	});
+
+	m->t->lock_notify();
 
 	return CELL_OK;
 }
@@ -767,14 +798,22 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	thread_ctrl::spawn("FS AIO Write Thread", COPY_EXPR(fsAio(aio, true, xid, func)));
+	const auto m = fxm::get_always<fs_aio_manager>();
+
+	m->t->cmd_list
+	({
+		{ 2, xid },
+		{ aio, func },
+	});
+
+	m->t->lock_notify();
 
 	return CELL_OK;
 }
 
 s32 cellFsAioCancel(s32 id)
 {
-	cellFs.warning("cellFsAioCancel(id=%d) -> CELL_EINVAL", id);
+	cellFs.todo("cellFsAioCancel(id=%d) -> CELL_EINVAL", id);
 
 	// TODO: cancelled requests return CELL_ECANCELED through their own callbacks
 

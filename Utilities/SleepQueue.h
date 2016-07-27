@@ -12,7 +12,7 @@ template<typename T> using sleep_queue = std::deque<T*>;
 // Sleep is called in the constructor (if not null)
 // Awake is called in the destructor (if not null)
 // Sleep queue is actually std::deque with pointers, be careful about the lifetime
-template<typename T, void(T::*Sleep)() = &T::sleep, void(T::*Awake)() = &T::awake>
+template<typename T, void(T::*Sleep)() = nullptr, void(T::*Awake)() = nullptr>
 class sleep_entry final
 {
 	sleep_queue<T>& m_queue;

@@ -8,6 +8,7 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #else
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

@@ -9,6 +9,7 @@
 typedef int HostCode;
 #else
 #include <iconv.h>
+#include <errno.h>
 typedef const char *HostCode;
 #endif
 
