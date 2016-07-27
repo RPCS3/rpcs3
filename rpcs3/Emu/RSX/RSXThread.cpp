@@ -29,7 +29,7 @@ cfg::bool_entry g_cfg_rsx_debug_output(cfg::root.video, "Debug output");
 cfg::bool_entry g_cfg_rsx_overlay(cfg::root.video, "Debug overlay");
 
 bool user_asked_for_frame_capture = false;
-frame_capture_data frame_debug;
+rsx::frame_capture_data frame_debug;
 
 namespace vm { using namespace ps3; }
 
@@ -307,11 +307,8 @@ namespace rsx
 
 		int clip_w = rsx::method_registers.surface_clip_width();
 		int clip_h = rsx::method_registers.surface_clip_height();
-		draw_state.width = clip_w;
-		draw_state.height = clip_h;
-		draw_state.color_format = rsx::method_registers.surface_color();
+		draw_state.state = rsx::method_registers;
 		draw_state.color_buffer = std::move(copy_render_targets_to_memory());
-		draw_state.depth_format = rsx::method_registers.surface_depth_fmt();
 		draw_state.depth_stencil = std::move(copy_depth_stencil_buffer_to_memory());
 
 		if (draw_command == rsx::draw_command::indexed)
@@ -321,18 +318,17 @@ namespace rsx
 			{
 				draw_state.vertex_count += range.second;
 			}
-			draw_state.index_type = rsx::method_registers.index_type();
 
-			if (draw_state.index_type == rsx::index_array_type::u16)
+			if (draw_state.state.index_type() == rsx::index_array_type::u16)
 			{
 				draw_state.index.resize(2 * draw_state.vertex_count);
 			}
-			if (draw_state.index_type == rsx::index_array_type::u32)
+			if (draw_state.state.index_type() == rsx::index_array_type::u32)
 			{
 				draw_state.index.resize(4 * draw_state.vertex_count);
 			}
 			gsl::span<gsl::byte> dst = { (gsl::byte*)draw_state.index.data(), gsl::narrow<int>(draw_state.index.size()) };
-			write_index_array_data_to_buffer(dst, draw_state.index_type, draw_mode, first_count_commands);
+			write_index_array_data_to_buffer(dst, draw_state.state.index_type(), draw_mode, first_count_commands);
 		}
 
 		draw_state.programs = get_programs();

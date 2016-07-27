@@ -471,14 +471,14 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 		p_buffer_colorD,
 	};
 
-	size_t width = draw_call.width;
-	size_t height = draw_call.height;
+	size_t width = draw_call.state.surface_clip_width();
+	size_t height = draw_call.state.surface_clip_height();
 
 	for (size_t i = 0; i < 4; i++)
 	{
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
-			buffer_img[i] = wxImage(width, height, convert_to_wximage_buffer(draw_call.color_format, draw_call.color_buffer[i], width, height));
+			buffer_img[i] = wxImage(width, height, convert_to_wximage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height));
 			wxClientDC dc_canvas(p_buffers[i]);
 
 			if (buffer_img[i].IsOk())
@@ -493,7 +493,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[0];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
 
-			if (draw_call.depth_format == rsx::surface_depth_format::z24s8)
+			if (draw_call.state.surface_depth_fmt() == rsx::surface_depth_format::z24s8)
 			{
 				for (u32 row = 0; row < height; row++)
 				{
@@ -564,7 +564,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 
 	m_list_index_buffer->ClearAll();
 	m_list_index_buffer->InsertColumn(0, "Index", 0, 700);
-	if (frame_debug.draw_calls[draw_id].index_type == rsx::index_array_type::u16)
+	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u16)
 	{
 		u16 *index_buffer = (u16*)frame_debug.draw_calls[draw_id].index.data();
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
@@ -572,7 +572,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 			m_list_index_buffer->InsertItem(i, std::to_string(index_buffer[i]));
 		}
 	}
-	if (frame_debug.draw_calls[draw_id].index_type == rsx::index_array_type::u32)
+	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u32)
 	{
 		u32 *index_buffer = (u32*)frame_debug.draw_calls[draw_id].index.data();
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)

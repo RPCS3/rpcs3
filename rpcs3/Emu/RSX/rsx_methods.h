@@ -88,10 +88,11 @@ namespace rsx
 		}
 
 	public:
+		rsx_state &operator=(const rsx_state& in);
+
 		std::array<texture, 16> fragment_textures;
 		std::array<vertex_texture, 4> vertex_textures;
 
-		u32 m_transform_program_pointer;
 
 		std::array<u32, 512 * 4> transform_program;
 		std::unordered_map<u32, color4_base<f32>> transform_constants;
