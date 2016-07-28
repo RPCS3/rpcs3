@@ -6,11 +6,6 @@
 
 namespace rsx
 {
-	texture::texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r)
-	{
-
-	}
-
 	void texture::init()
 	{
 		// Offset
@@ -246,11 +241,6 @@ namespace rsx
 	u32 texture::pitch() const
 	{
 		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] & 0xfffff;
-	}
-
-	vertex_texture::vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r)
-	{
-
 	}
 
 	void vertex_texture::init()

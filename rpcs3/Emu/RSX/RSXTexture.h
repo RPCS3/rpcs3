@@ -21,7 +21,7 @@ namespace rsx
 		std::array<u32, 0x10000 / 4> &registers;
 
 	public:
-		texture(u8 idx, std::array<u32, 0x10000 / 4> &r);
+		texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
 		texture() = delete;
 
 		//initialize texture registers with default values
@@ -97,7 +97,7 @@ namespace rsx
 		std::array<u32, 0x10000 / 4> &registers;
 
 	public:
-		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r);
+		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
 		vertex_texture() = delete;
 
 		//initialize texture registers with default values
