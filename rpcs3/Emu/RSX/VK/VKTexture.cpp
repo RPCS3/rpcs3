@@ -81,7 +81,12 @@ namespace vk
 			change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 	}
 
-	void copy_scaled_image(VkCommandBuffer cmd, VkImage & src, VkImage & dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_width, u32 src_height, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect)
+	void copy_scaled_image(VkCommandBuffer cmd,
+			VkImage & src, VkImage & dst,
+			VkImageLayout srcLayout, VkImageLayout dstLayout,
+			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height,
+			u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height,
+			u32 mipmaps, VkImageAspectFlagBits aspect)
 	{
 		VkImageSubresourceLayers a_src = {}, a_dst = {};
 		a_src.aspectMask = aspect;
@@ -91,11 +96,13 @@ namespace vk
 
 		a_dst = a_src;
 
+		//TODO: Use an array of offsets/dimensions for mipmapped blits (mipmap count > 1) since subimages will have different dimensions
+
 		VkImageBlit rgn = {};
-		rgn.srcOffsets[0] = { 0, 0, 0 };
+		rgn.srcOffsets[0] = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
 		rgn.srcOffsets[1] = { (int32_t)src_width, (int32_t)src_height, 1 };
-		rgn.dstOffsets[0] = { 0, 0, 0 };
-		rgn.dstOffsets[1] = { (int32_t)dst_width, (int32_t)dst_height, 1 };
+		rgn.dstOffsets[0] = { (int32_t)dst_x_offset, (int32_t)dst_y_offset, 0 };
+		rgn.dstOffsets[1] = { (int32_t)(dst_width + dst_x_offset), (int32_t)(dst_height + dst_y_offset), 1 };
 		rgn.dstSubresource = a_dst;
 		rgn.srcSubresource = a_src;
 
