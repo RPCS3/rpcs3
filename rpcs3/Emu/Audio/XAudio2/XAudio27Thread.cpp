@@ -10,12 +10,15 @@
 
 extern cfg::bool_entry g_cfg_audio_convert_to_u16;
 
+static thread_local HMODULE s_tls_xaudio2_lib{};
 static thread_local IXAudio2* s_tls_xaudio2_instance{};
 static thread_local IXAudio2MasteringVoice* s_tls_master_voice{};
 static thread_local IXAudio2SourceVoice* s_tls_source_voice{};
 
-void XAudio2Thread::xa27_init()
+void XAudio2Thread::xa27_init(void* lib2_7)
 {
+	s_tls_xaudio2_lib = (HMODULE)lib2_7;
+
 	HRESULT hr = S_OK;
 
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -41,8 +44,6 @@ void XAudio2Thread::xa27_init()
 		s_tls_xaudio2_instance->Release();
 		Emu.Pause();
 	}
-
-	LOG_SUCCESS(GENERAL, "XAudio 2.7 initialized");
 }
 
 void XAudio2Thread::xa27_destroy()
@@ -65,6 +66,8 @@ void XAudio2Thread::xa27_destroy()
 	}
 
 	CoUninitialize();
+
+	FreeLibrary(s_tls_xaudio2_lib);
 }
 
 void XAudio2Thread::xa27_play()

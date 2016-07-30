@@ -6,9 +6,19 @@
 
 class XAudio2Thread : public AudioThread
 {
-	void* const m_xaudio;
+	struct vtable
+	{
+		void(*destroy)();
+		void(*play)();
+		void(*flush)();
+		void(*stop)();
+		void(*open)();
+		void(*add)(const void*, int);
+	};
 
-	static void xa27_init();
+	vtable m_funcs;
+
+	static void xa27_init(void*);
 	static void xa27_destroy();
 	static void xa27_play();
 	static void xa27_flush();
