@@ -1,6 +1,8 @@
 #pragma once
 
 #include <map>
+#include <functional>
+#include <memory>
 
 class thread_ctrl;
 

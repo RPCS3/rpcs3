@@ -15,6 +15,7 @@
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
 #include "Utilities/geometry.h"
+#include "rsx_trace.h"
 
 extern u64 get_system_time();
 
