@@ -881,6 +881,9 @@
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\gcm_enums.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1695,6 +1698,9 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\SleepQueue.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\gcm_enums.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
