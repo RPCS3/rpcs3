@@ -24,7 +24,7 @@ u32 id_manager::typeinfo::add_type()
 	return ::size32(list) - 1;
 }
 
-idm::map_type::pointer idm::allocate_id(u32 tag, u32 min, u32 max)
+id_manager::id_map::pointer idm::allocate_id(u32 tag, u32 min, u32 max)
 {
 	// Check all IDs starting from "next id"
 	for (u32 i = 0; i <= max - min; i++)
@@ -58,7 +58,7 @@ std::shared_ptr<void> idm::deallocate_id(u32 tag, u32 id)
 	return ptr;
 }
 
-idm::map_type::pointer idm::find_id(u32 type, u32 id)
+id_manager::id_map::pointer idm::find_id(u32 type, u32 id)
 {
 	const auto found = g_map[type].find(id);
 

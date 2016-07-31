@@ -112,6 +112,53 @@ namespace id_manager
 
 	template<typename T>
 	const u32 typeinfo::registered<T>::index = typeinfo::add_type();
+
+	// ID value with additional type stored
+	class id_key
+	{
+		u32 m_value; // ID value
+		u32 m_type; // True object type
+
+	public:
+		id_key() = default;
+
+		id_key(u32 value, u32 type = 0)
+			: m_value(value)
+			, m_type(type)
+		{
+		}
+
+		u32 id() const
+		{
+			return m_value;
+		}
+
+		u32 type() const
+		{
+			return m_type;
+		}
+
+		bool operator ==(const id_key& rhs) const
+		{
+			return m_value == rhs.m_value;
+		}
+
+		bool operator !=(const id_key& rhs) const
+		{
+			return m_value != rhs.m_value;
+		}
+	};
+
+	// Custom hasher for ID values
+	struct id_hash final
+	{
+		std::size_t operator ()(const id_key& key) const
+		{
+			return key.id();
+		}
+	};
+
+	using id_map = std::unordered_map<id_key, std::shared_ptr<void>, id_hash>;
 }
 
 // Object manager for emulated process. Multiple objects of specified arbitrary type are given unique IDs.
@@ -123,21 +170,10 @@ class idm
 	// 2) g_id[id_base] indicates next ID allocated in g_map.
 	// 3) g_map[id_base] contains the additional copy of object pointer.
 
-	// Custom hasher for ID values
-	struct id_hash_t final
-	{
-		std::size_t operator ()(u32 value) const
-		{
-			return value;
-		}
-	};
-
-	using map_type = std::unordered_map<u32, std::shared_ptr<void>, id_hash_t>;
-
 	static shared_mutex g_mutex;
 
 	// Type Index -> ID -> Object. Use global since only one process is supported atm.
-	static std::vector<map_type> g_map;
+	static std::vector<id_manager::id_map> g_map;
 
 	// Next ID for each category
 	static std::vector<u32> g_id;
@@ -192,14 +228,14 @@ class idm
 	};
 
 	// Prepares new ID, returns nullptr if out of resources
-	static map_type::pointer allocate_id(u32 tag, u32 min, u32 max);
+	static id_manager::id_map::pointer allocate_id(u32 tag, u32 min, u32 max);
 
 	// Deallocate ID, returns object
 	static std::shared_ptr<void> deallocate_id(u32 tag, u32 id);
 
 	// Allocate new ID and construct it from the provider()
 	template<typename T, typename F>
-	static map_type::pointer create_id(F&& provider)
+	static id_manager::id_map::pointer create_id(F&& provider)
 	{
 		id_manager::typeinfo::update<T>();
 		id_manager::typeinfo::update<typename id_manager::id_traits<T>::tag>();
@@ -214,13 +250,13 @@ class idm
 				place->second = provider();
 				
 				// Update ID value if required
-				set_id_value(static_cast<T*>(place->second.get()), place->first);
+				set_id_value(static_cast<T*>(place->second.get()), place->first.id());
 
 				return &*g_map[get_type<T>()].emplace(*place).first;
 			}
 			catch (...)
 			{
-				deallocate_id(get_tag<T>(), place->first);
+				deallocate_id(get_tag<T>(), place->first.id());
 				throw;
 			}
 		}
@@ -229,7 +265,7 @@ class idm
 	}
 
 	// Get ID (internal)
-	static map_type::pointer find_id(u32 type, u32 id);
+	static id_manager::id_map::pointer find_id(u32 type, u32 id);
 
 	// Remove ID and return object
 	static std::shared_ptr<void> delete_id(u32 type, u32 tag, u32 id);
@@ -263,7 +299,7 @@ public:
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
-			return pair->first;
+			return pair->first.id();
 		}
 
 		throw EXCEPTION("Out of IDs ('%s')", typeid(T).name());
@@ -277,7 +313,7 @@ public:
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
-			return pair->first;
+			return pair->first.id();
 		}
 
 		throw EXCEPTION("Out of IDs ('%s')", typeid(T).name());
@@ -357,7 +393,7 @@ public:
 		{
 			for (auto& id : g_map[type])
 			{
-				if (pred(id.first, *static_cast<A2*>(id.second.get())), bool_if_void<false>())
+				if (pred(id.first.id(), *static_cast<A2*>(id.second.get())), bool_if_void<false>())
 				{
 					return static_cast<result_type>(std::static_pointer_cast<A2>(id.second));
 				}
