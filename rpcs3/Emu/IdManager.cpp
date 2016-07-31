@@ -24,7 +24,7 @@ u32 id_manager::typeinfo::add_type()
 	return ::size32(list) - 1;
 }
 
-id_manager::id_map::pointer idm::allocate_id(u32 tag, u32 min, u32 max)
+id_manager::id_map::pointer idm::allocate_id(u32 tag, u32 type, u32 min, u32 max)
 {
 	// Check all IDs starting from "next id"
 	for (u32 i = 0; i <= max - min; i++)
@@ -33,7 +33,7 @@ id_manager::id_map::pointer idm::allocate_id(u32 tag, u32 min, u32 max)
 		if (g_id[tag] < min || g_id[tag] > max) g_id[tag] = min;
 
 		// Get ID
-		const auto r = g_map[tag].emplace(g_id[tag]++, nullptr);
+		const auto r = g_map[tag].emplace(id_manager::id_key{g_id[tag]++, type}, nullptr);
 
 		if (r.second)
 		{
@@ -58,18 +58,22 @@ std::shared_ptr<void> idm::deallocate_id(u32 tag, u32 id)
 	return ptr;
 }
 
-id_manager::id_map::pointer idm::find_id(u32 type, u32 id)
+id_manager::id_map::pointer idm::find_id(u32 type, u32 true_type, u32 id)
 {
 	const auto found = g_map[type].find(id);
 
 	if (found == g_map[type].end()) return nullptr;
 
+	if (true_type != get_type<void>() && found->first.type() != true_type) return nullptr;
+
 	return &*found;
 }
 
-std::shared_ptr<void> idm::delete_id(u32 type, u32 tag, u32 id)
+std::shared_ptr<void> idm::delete_id(u32 type, u32 true_type, u32 tag, u32 id)
 {
 	writer_lock lock(g_mutex);
+
+	if (!find_id(type, true_type, id)) return nullptr; // ???
 
 	auto&& ptr = deallocate_id(tag, id);
 

@@ -399,10 +399,10 @@ s32 cellVdecOpen(vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm
 	cellVdec.warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	// Create decoder thread
-	auto&& vdec = std::make_shared<vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
 
 	// Hack: store thread id (normally it should be pointer)
-	*handle = idm::import_existing<ppu_thread>(vdec);
+	*handle = vdec->id;
 
 	vdec->run();
 
@@ -414,10 +414,10 @@ s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> r
 	cellVdec.warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	// Create decoder thread
-	auto&& vdec = std::make_shared<vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
 
 	// Hack: store thread id (normally it should be pointer)
-	*handle = idm::import_existing<ppu_thread>(vdec);
+	*handle = vdec->id;
 
 	vdec->run();
 
@@ -428,7 +428,7 @@ s32 cellVdecClose(u32 handle)
 {
 	cellVdec.warning("cellVdecClose(handle=0x%x)", handle);
 
-	const auto vdec = std::dynamic_pointer_cast<vdec_thread>(idm::get<ppu_thread>(handle)); // TODO: avoid RTTI
+	const auto vdec = idm::get<ppu_thread, vdec_thread>(handle);
 
 	if (!vdec)
 	{
@@ -446,7 +446,7 @@ s32 cellVdecStartSeq(u32 handle)
 {
 	cellVdec.trace("cellVdecStartSeq(handle=0x%x)", handle);
 
-	const auto vdec = std::dynamic_pointer_cast<vdec_thread>(idm::get<ppu_thread>(handle)); // TODO: avoid RTTI
+	const auto vdec = idm::get<ppu_thread, vdec_thread>(handle);
 
 	if (!vdec)
 	{
@@ -462,7 +462,7 @@ s32 cellVdecEndSeq(u32 handle)
 {
 	cellVdec.warning("cellVdecEndSeq(handle=0x%x)", handle);
 
-	const auto vdec = std::dynamic_pointer_cast<vdec_thread>(idm::get<ppu_thread>(handle)); // TODO: avoid RTTI
+	const auto vdec = idm::get<ppu_thread, vdec_thread>(handle);
 
 	if (!vdec)
 	{
@@ -478,7 +478,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 {
 	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, mode, auInfo);
 
-	const auto vdec = std::dynamic_pointer_cast<vdec_thread>(idm::get<ppu_thread>(handle)); // TODO: avoid RTTI
+	const auto vdec = idm::get<ppu_thread, vdec_thread>(handle);
 
 	if (mode > CELL_VDEC_DEC_MODE_PB_SKIP || !vdec)
 	{
@@ -509,7 +509,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 {
 	cellVdec.trace("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
-	const auto vdec = std::dynamic_pointer_cast<vdec_thread>(idm::get<ppu_thread>(handle)); // TODO: avoid RTTI
+	const auto vdec = idm::get<ppu_thread, vdec_thread>(handle);
 
 	if (!format || !vdec)
 	{
@@ -629,7 +629,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 {
 	cellVdec.trace("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
 
-	const auto vdec = std::dynamic_pointer_cast<vdec_thread>(idm::get<ppu_thread>(handle)); // TODO: avoid RTTI
+	const auto vdec = idm::get<ppu_thread, vdec_thread>(handle);
 
 	if (!vdec)
 	{
@@ -824,7 +824,7 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
 	cellVdec.trace("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, frc);
 
-	const auto vdec = std::dynamic_pointer_cast<vdec_thread>(idm::get<ppu_thread>(handle)); // TODO: avoid RTTI
+	const auto vdec = idm::get<ppu_thread, vdec_thread>(handle);
 
 	if (!vdec)
 	{

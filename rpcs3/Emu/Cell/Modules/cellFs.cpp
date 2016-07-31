@@ -737,12 +737,12 @@ struct fs_aio_thread : ppu_thread
 
 struct fs_aio_manager
 {
-	std::shared_ptr<fs_aio_thread> t = std::make_shared<fs_aio_thread>("FS AIO Thread", 500);
+	std::shared_ptr<fs_aio_thread> thread;
 
 	fs_aio_manager()
+		: thread(idm::make_ptr<ppu_thread, fs_aio_thread>("FS AIO Thread", 500))
 	{
-		idm::import_existing<ppu_thread>(t);
-		t->run();
+		thread->run();
 	}
 };
 
@@ -779,13 +779,13 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const auto m = fxm::get_always<fs_aio_manager>();
 
-	m->t->cmd_list
+	m->thread->cmd_list
 	({
 		{ 1, xid },
 		{ aio, func },
 	});
 
-	m->t->lock_notify();
+	m->thread->lock_notify();
 
 	return CELL_OK;
 }
@@ -800,13 +800,13 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const auto m = fxm::get_always<fs_aio_manager>();
 
-	m->t->cmd_list
+	m->thread->cmd_list
 	({
 		{ 2, xid },
 		{ aio, func },
 	});
 
-	m->t->lock_notify();
+	m->thread->lock_notify();
 
 	return CELL_OK;
 }

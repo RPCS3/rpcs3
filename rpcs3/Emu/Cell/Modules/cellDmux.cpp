@@ -976,9 +976,9 @@ s32 cellDmuxOpen(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResource> res, vm
 	}
 
 	// TODO: check demuxerResource and demuxerCb arguments
-	auto&& dmux = std::make_shared<Demuxer>(res->memAddr, res->memSize, cb->cbMsgFunc, cb->cbArg);
+	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(res->memAddr, res->memSize, cb->cbMsgFunc, cb->cbArg);
 
-	*handle = idm::import_existing<ppu_thread>(dmux);
+	*handle = dmux->id;
 
 	dmux->run();
 
@@ -995,9 +995,9 @@ s32 cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> res
 	}
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
-	auto&& dmux = std::make_shared<Demuxer>(resEx->memAddr, resEx->memSize, cb->cbMsgFunc, cb->cbArg);
+	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(resEx->memAddr, resEx->memSize, cb->cbMsgFunc, cb->cbArg);
 
-	*handle = idm::import_existing<ppu_thread>(dmux);
+	*handle = dmux->id;
 
 	dmux->run();
 
@@ -1021,9 +1021,9 @@ s32 cellDmuxOpen2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellDmuxResource2> res
 	}
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
-	auto&& dmux = std::make_shared<Demuxer>(res2->memAddr, res2->memSize, cb->cbMsgFunc, cb->cbArg);
+	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(res2->memAddr, res2->memSize, cb->cbMsgFunc, cb->cbArg);
 
-	*handle = idm::import_existing<ppu_thread>(dmux);
+	*handle = dmux->id;
 
 	dmux->run();
 
