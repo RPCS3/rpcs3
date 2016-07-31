@@ -243,11 +243,11 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 	{
 	case rsx::primitive_type::points:
 	case rsx::primitive_type::lines:
-	case rsx::primitive_type::line_loop:
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
 		return true;
+	case rsx::primitive_type::line_loop:
 	case rsx::primitive_type::polygon:
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::quads:
@@ -270,6 +270,8 @@ size_t get_index_count(rsx::primitive_type draw_mode, unsigned initial_index_cou
 
 	switch (draw_mode)
 	{
+	case rsx::primitive_type::line_loop:
+		return initial_index_count + 1;
 	case rsx::primitive_type::polygon:
 	case rsx::primitive_type::triangle_fan:
 		return (initial_index_count - 2) * 3;
@@ -297,6 +299,11 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	unsigned short *typedDst = (unsigned short *)(dst);
 	switch (draw_mode)
 	{
+	case rsx::primitive_type::line_loop:
+		for (unsigned i = 0; i < count; ++i)
+			dst[i] = i;
+		dst[count] = 0;
+		return;
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::polygon:
 		for (unsigned i = 0; i < (count - 2); i++)
@@ -334,7 +341,6 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 		return;
 	case rsx::primitive_type::points:
 	case rsx::primitive_type::lines:
-	case rsx::primitive_type::line_loop:
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
@@ -342,109 +348,66 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	}
 }
 
-// TODO: Unify indexed and non indexed primitive expansion ?
-// FIXME: these functions shouldn't access rsx::method_registers (global)
-template<typename T>
-std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+
+namespace
 {
-	u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
-	rsx::index_array_type type = rsx::method_registers.index_type();
-
-	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
-
-
-	EXPECTS(rsx::method_registers.vertex_data_base_index() == 0);
-
-	bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-	u32 primitive_restart_index = rsx::method_registers.restart_index();
-
-	// Disjoint first_counts ranges not supported atm
-	for (int i = 0; i < first_count_arguments.size() - 1; i++)
+	/**
+	* Get first index and index count from a draw indexed clause.
+	*/
+	std::tuple<u32, u32> get_first_count_from_draw_indexed_clause(const std::vector<std::pair<u32, u32>>& first_count_arguments)
 	{
-		const std::tuple<u32, u32> &range = first_count_arguments[i];
-		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
-		EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
-	}
-	u32 first = std::get<0>(first_count_arguments.front());
-	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
-	auto ptr = vm::ps3::_ptr<const T>(address + first * type_size);
-
-	switch (draw_mode)
-	{
-	case rsx::primitive_type::points:
-	case rsx::primitive_type::lines:
-	case rsx::primitive_type::line_loop:
-	case rsx::primitive_type::line_strip:
-	case rsx::primitive_type::triangles:
-	case rsx::primitive_type::triangle_strip:
-	case rsx::primitive_type::quad_strip:
-		return upload_untouched<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
-	case rsx::primitive_type::polygon:
-	case rsx::primitive_type::triangle_fan:
-		return expand_indexed_triangle_fan<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
-	case rsx::primitive_type::quads:
-		return expand_indexed_quads<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
+		u32 first = std::get<0>(first_count_arguments.front());
+		u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
+		return std::make_tuple(first, count);
 	}
 
-	throw EXCEPTION("Unknown draw mode");
+
+	// TODO: Unify indexed and non indexed primitive expansion ?
+	template<typename T>
+	std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
+		gsl::span<const be_t<T>> src,
+		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
+		std::function<bool(rsx::primitive_type)> expands)
+	{
+		u32 first;
+		u32 count;
+		std::tie(first, count) = get_first_count_from_draw_indexed_clause(first_count_arguments);
+
+		if (!expands(draw_mode)) return upload_untouched<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
+
+		switch (draw_mode)
+		{
+		case rsx::primitive_type::line_loop:
+		{
+			const auto &returnvalue = upload_untouched<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
+			dst[count] = src[first];
+			return returnvalue;
+		}
+		case rsx::primitive_type::polygon:
+		case rsx::primitive_type::triangle_fan:
+			return expand_indexed_triangle_fan<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
+		case rsx::primitive_type::quads:
+			return expand_indexed_quads<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
+		}
+		throw EXCEPTION("Don't know how to expand draw mode");
+	}
 }
 
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst,
+	gsl::span<const gsl::byte> src,
+	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
+	std::function<bool(rsx::primitive_type)> expands)
 {
 	switch (type)
 	{
 	case rsx::index_array_type::u16:
-		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst), draw_mode, first_count_arguments);
+		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst),
+			gsl::as_span<const be_t<u16>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, expands);
 	case rsx::index_array_type::u32:
-		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst), draw_mode, first_count_arguments);
+		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst),
+			gsl::as_span<const be_t<u32>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, expands);
 	}
 	throw EXCEPTION("Unknown index type");
-}
-
-std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
-{
-	u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
-	rsx::index_array_type type = rsx::method_registers.index_type();
-
-	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
-	bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-	u32 primitive_restart_index = rsx::method_registers.restart_index();
-
-	// Disjoint first_counts ranges not supported atm
-	for (int i = 0; i < first_count_arguments.size() - 1; i++)
-	{
-		const std::tuple<u32, u32> &range = first_count_arguments[i];
-		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
-		EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
-	}
-	u32 first = std::get<0>(first_count_arguments.front());
-	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
-	auto ptr = vm::ps3::_ptr<const u32>(address + first * type_size);
-
-	return upload_untouched<u32>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
-}
-
-std::tuple<u16, u16> write_index_array_data_to_buffer_untouched(gsl::span<u16, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
-{
-	u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
-	rsx::index_array_type type = rsx::method_registers.index_type();
-
-	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
-	bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-	u16 primitive_restart_index = rsx::method_registers.restart_index();
-
-	// Disjoint first_counts ranges not supported atm
-	for (int i = 0; i < first_count_arguments.size() - 1; i++)
-	{
-		const std::tuple<u32, u32> &range = first_count_arguments[i];
-		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
-		EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
-	}
-	u32 first = std::get<0>(first_count_arguments.front());
-	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
-	auto ptr = vm::ps3::_ptr<const u16>(address + first * type_size);
-
-	return upload_untouched<u16>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
 }
 
 void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)

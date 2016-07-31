@@ -380,7 +380,9 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 	u32 min_index, max_index;
 	gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(mapped_buffer), gsl::narrow<u32>(buffer_size) };
 
-	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, indexed_type, draw_mode, first_count_commands);
+	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, get_raw_index_array(first_count_commands),
+		indexed_type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
+		[](auto prim) { return !is_primitive_native(prim); });
 
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	D3D12_INDEX_BUFFER_VIEW index_buffer_view = {

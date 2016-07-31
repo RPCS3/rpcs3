@@ -11,6 +11,7 @@
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
 #include "rsx_trace.h"
+#include <Utilities/GSL.h>
 
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
@@ -251,6 +252,8 @@ namespace rsx
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 address, bool is_writing) { return false; }
+
+		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 
 	private:
 		std::mutex m_mtx_task;

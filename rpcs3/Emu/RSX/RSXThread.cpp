@@ -318,17 +318,9 @@ namespace rsx
 			{
 				draw_state.vertex_count += range.second;
 			}
-
-			if (draw_state.state.index_type() == rsx::index_array_type::u16)
-			{
-				draw_state.index.resize(2 * draw_state.vertex_count);
-			}
-			if (draw_state.state.index_type() == rsx::index_array_type::u32)
-			{
-				draw_state.index.resize(4 * draw_state.vertex_count);
-			}
-			gsl::span<gsl::byte> dst = { (gsl::byte*)draw_state.index.data(), gsl::narrow<int>(draw_state.index.size()) };
-			write_index_array_data_to_buffer(dst, draw_state.state.index_type(), draw_mode, first_count_commands);
+			auto index_raw_data_ptr = get_raw_index_array(first_count_commands);
+			draw_state.index.resize(index_raw_data_ptr.size_bytes());
+			std::copy(index_raw_data_ptr.begin(), index_raw_data_ptr.end(), draw_state.index.begin());
 		}
 
 		draw_state.programs = get_programs();
@@ -578,6 +570,28 @@ namespace rsx
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
 		return get_system_time() * 1000;
+	}
+
+	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
+	{
+		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+		rsx::index_array_type type = rsx::method_registers.index_type();
+
+		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+		bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
+		u32 primitive_restart_index = rsx::method_registers.restart_index();
+
+		// Disjoint first_counts ranges not supported atm
+		for (int i = 0; i < draw_indexed_clause.size() - 1; i++)
+		{
+			const std::tuple<u32, u32> &range = draw_indexed_clause[i];
+			const std::tuple<u32, u32> &next_range = draw_indexed_clause[i + 1];
+			EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+		}
+		u32 first = std::get<0>(draw_indexed_clause.front());
+		u32 count = std::get<0>(draw_indexed_clause.back()) + std::get<1>(draw_indexed_clause.back()) - first;
+		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
+		return{ ptr, count * type_size };
 	}
 
 	void thread::do_internal_task()
