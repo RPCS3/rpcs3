@@ -12,8 +12,6 @@
 #include <cereal/archives/binary.hpp>
 
 #include <thread>
-#include <cassert>
-#include <algorithm>
 
 cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 {
@@ -29,7 +27,7 @@ namespace rsx
 {
 	rsx_state method_registers;
 	using rsx_method_t = void(*)(class thread*, u32);
-	std::unordered_map<u32, rsx_method_t> methods{};
+	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
 	template<typename Type> struct vertex_data_type_from_element_type;
 	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
@@ -802,21 +800,21 @@ namespace rsx
 		registers[NV4097_SET_STENCIL_FUNC] = CELL_GCM_ALWAYS;
 		registers[NV4097_SET_STENCIL_FUNC_REF] = 0x00;
 		registers[NV4097_SET_STENCIL_FUNC_MASK] = 0xff;
-/*		registers[NV4097_SET_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;*/
+		//registers[NV4097_SET_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		//registers[NV4097_SET_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		//registers[NV4097_SET_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
 
 		registers[NV4097_SET_BACK_STENCIL_MASK] = 0xff;
 		registers[NV4097_SET_BACK_STENCIL_FUNC] = CELL_GCM_ALWAYS;
 		registers[NV4097_SET_BACK_STENCIL_FUNC_REF] = 0x00;
 		registers[NV4097_SET_BACK_STENCIL_FUNC_MASK] = 0xff;
-/*		registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;*/
+		//registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		//registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		//registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
 
-//		registers[NV4097_SET_SHADE_MODE] = CELL_GCM_SMOOTH;
+		//registers[NV4097_SET_SHADE_MODE] = CELL_GCM_SMOOTH;
 
-//		registers[NV4097_SET_LOGIC_OP] = CELL_GCM_COPY;
+		//registers[NV4097_SET_LOGIC_OP] = CELL_GCM_COPY;
 
 		(f32&)registers[NV4097_SET_DEPTH_BOUNDS_MIN] = 0.f;
 		(f32&)registers[NV4097_SET_DEPTH_BOUNDS_MAX] = 1.f;
@@ -835,8 +833,8 @@ namespace rsx
 		registers[NV4097_SET_DEPTH_MASK] = CELL_GCM_TRUE;
 		(f32&)registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = 0.f;
 		(f32&)registers[NV4097_SET_POLYGON_OFFSET_BIAS] = 0.f;
-//		registers[NV4097_SET_FRONT_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
-//		registers[NV4097_SET_BACK_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
+		//registers[NV4097_SET_FRONT_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
+		//registers[NV4097_SET_BACK_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
 		registers[NV4097_SET_CULL_FACE] = CELL_GCM_BACK;
 		registers[NV4097_SET_FRONT_FACE] = CELL_GCM_CCW;
 		registers[NV4097_SET_RESTART_INDEX] = -1;
@@ -848,9 +846,9 @@ namespace rsx
 
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
 
-		std::for_each(vertex_arrays_info.begin(), vertex_arrays_info.end(), [](auto &info) { info.size = 0; });
-		std::for_each(fragment_textures.begin(), fragment_textures.end(), [](auto &tex) { tex.init(); });
-		std::for_each(vertex_textures.begin(), vertex_textures.end(), [](auto &tex) { tex.init(); });
+		for (auto& info : vertex_arrays_info) info.size = 0;
+		for (auto& tex : fragment_textures) tex.init();
+		for (auto& tex : vertex_textures) tex.init();
 	}
 
 	void rsx_state::decode(u32 reg, u32 value)

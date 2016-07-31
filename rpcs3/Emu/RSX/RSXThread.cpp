@@ -476,10 +476,9 @@ namespace rsx
 					frame_debug.command_queue.push_back(std::make_pair(reg, value));
 				}
 
-				const auto& It = methods.find(reg);
-				if (It != methods.end())
+				if (auto method = methods[reg])
 				{
-					It->second(this, value);
+					method(this, value);
 				}
 			}
 

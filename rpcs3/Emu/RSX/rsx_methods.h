@@ -1116,5 +1116,5 @@ namespace rsx
 
 	using rsx_method_t = void(*)(class thread*, u32);
 	extern rsx_state method_registers;
-	extern std::unordered_map<u32, rsx_method_t> methods;
+	extern std::array<rsx_method_t, 0x10000 / 4> methods;
 }
