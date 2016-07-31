@@ -80,7 +80,7 @@ namespace rsx
 	namespace
 	{
 		template<typename T, size_t... N, typename Args>
-		std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...> seq)
+		std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
 		{
 			return{ T(N, std::forward<Args>(arg))... };
 		}
