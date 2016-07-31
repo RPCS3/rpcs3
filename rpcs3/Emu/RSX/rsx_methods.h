@@ -75,9 +75,18 @@ namespace rsx
 		}
 	};
 
+	namespace
+	{
+		template<typename T, size_t... N, typename Args>
+		std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...> seq)
+		{
+			return{ T(N, std::forward<Args>(arg))... };
+		}
+	}
+
 	struct rsx_state
 	{
-	private:
+	protected:
 		std::array<u32, 0x10000 / 4> registers;
 
 		template<u32 opcode>
@@ -91,7 +100,21 @@ namespace rsx
 		}
 
 	public:
-		rsx_state &operator=(const rsx_state& in);
+		rsx_state &operator=(const rsx_state& in)
+		{
+			registers = in.registers;
+			transform_program = in.transform_program;
+			transform_constants = in.transform_constants;
+			register_vertex_info = in.register_vertex_info;
+			for (int i = 0; i < 16; i++)
+			{
+				vertex_arrays_info[i].size = in.vertex_arrays_info[i].size;
+				vertex_arrays_info[i].stride = in.vertex_arrays_info[i].stride;
+				vertex_arrays_info[i].frequency = in.vertex_arrays_info[i].frequency;
+				vertex_arrays_info[i].type = in.vertex_arrays_info[i].type;
+			}
+			return *this;
+		}
 
 		std::array<texture, 16> fragment_textures;
 		std::array<vertex_texture, 4> vertex_textures;
@@ -119,8 +142,13 @@ namespace rsx
 		std::array<register_vertex_data_info, 16> register_vertex_info;
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
-		rsx_state();
-		~rsx_state();
+		rsx_state() :
+			fragment_textures(fill_array<texture>(registers, std::make_index_sequence<16>())),
+			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
+			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
+		{ }
+
+		~rsx_state() { }
 
 		void decode(u32 reg, u32 value);
 
@@ -600,7 +628,7 @@ namespace rsx
 			return decode<NV4097_SET_ALPHA_REF>().alpha_ref();
 		}
 
-		surface_target surface_color_target()
+		surface_target surface_color_target() const
 		{
 			return decode<NV4097_SET_SURFACE_COLOR_TARGET>().target();
 		}
