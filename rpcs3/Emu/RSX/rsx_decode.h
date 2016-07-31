@@ -4002,7 +4002,7 @@ struct registers_decoder<NV4097_NO_OPERATION>
 		decoded_type(u32) {};
 	};
 
-	static std::string dump(u32 &&decoded_values)
+	static std::string dump(u32 &&)
 	{
 		return "(nop)";
 	}
@@ -4016,7 +4016,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_CACHE_FILE>
 		decoded_type(u32) {};
 	};
 
-	static std::string dump(u32 &&decoded_values)
+	static std::string dump(u32 &&)
 	{
 		return "(invalidate vertex cache file)";
 	}
@@ -4030,7 +4030,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_FILE>
 		decoded_type(u32) {};
 	};
 
-	static std::string dump(u32 &&decoded_values)
+	static std::string dump(u32 &&)
 	{
 		return "(invalidate vertex file)";
 	}
