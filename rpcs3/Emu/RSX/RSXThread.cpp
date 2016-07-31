@@ -478,7 +478,7 @@ namespace rsx
 
 				if (auto method = methods[reg])
 				{
-					method(this, value);
+					method(this, reg, value);
 				}
 			}
 

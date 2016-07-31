@@ -26,7 +26,7 @@ cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 namespace rsx
 {
 	rsx_state method_registers;
-	using rsx_method_t = void(*)(class thread*, u32);
+	
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -37,12 +37,12 @@ namespace rsx
 
 	namespace nv406e
 	{
-		force_inline void set_reference(thread* rsx, u32 arg)
+		void set_reference(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx->ctrl->ref.exchange(arg);
 		}
 
-		force_inline void semaphore_acquire(thread* rsx, u32 arg)
+		void semaphore_acquire(thread* rsx, u32 _reg, u32 arg)
 		{
 			//TODO: dma
 			while (vm::ps3::read32(rsx->label_addr + method_registers.semaphore_offset_406e()) != arg)
@@ -54,7 +54,7 @@ namespace rsx
 			}
 		}
 
-		force_inline void semaphore_release(thread* rsx, u32 arg)
+		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			//TODO: dma
 			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_406e(), arg);
@@ -63,21 +63,45 @@ namespace rsx
 
 	namespace nv4097
 	{
-		force_inline void texture_read_semaphore_release(thread* rsx, u32 arg)
+		void clear(thread* rsx, u32 _reg, u32 arg)
 		{
+			// TODO: every backend must override method table to insert its own handlers
+			if (!rsx->do_method(/* reg << 2 */ NV4097_CLEAR_SURFACE, arg))
+			{
+				//
+			}
+
+			if (rsx->capture_current_frame)
+			{
+				rsx->capture_frame("clear");
+			}
+		}
+
+		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
+		{
+			if (!rsx->do_method(/* reg << 2 */ NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
+			{
+				//
+			}
+
 			//TODO: dma
 			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(), arg);
 		}
 
-		force_inline void back_end_write_semaphore_release(thread* rsx, u32 arg)
+		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			if (!rsx->do_method(/* reg << 2 */ NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
+			{
+				//
+			}
+
 			//TODO: dma
 			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(),
 				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
 		}
 
 		template<u32 id, u32 index, int count, typename type>
-		force_inline void set_vertex_data_impl(thread* rsx, u32 arg)
+		void set_vertex_data_impl(thread* rsx, u32 arg)
 		{
 			static const size_t increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
 
@@ -96,7 +120,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4ub_m
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
 			}
@@ -105,7 +129,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data1f_m
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
 			}
@@ -114,7 +138,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2f_m
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, f32>(rsx, arg);
 			}
@@ -123,7 +147,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data3f_m
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, f32>(rsx, arg);
 			}
@@ -132,7 +156,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4f_m
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, f32>(rsx, arg);
 			}
@@ -141,7 +165,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2s_m
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
 			}
@@ -150,7 +174,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4s_m
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
 			}
@@ -159,7 +183,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data_array_format
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				const typename rsx::registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index>::decoded_type decoded_value(arg);
 				rsx::method_registers.vertex_arrays_info[index].frequency = decoded_value.frequency();
@@ -169,7 +193,7 @@ namespace rsx
 			}
 		};
 
-		force_inline void draw_arrays(thread* rsx, u32 arg)
+		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx->draw_command = rsx::draw_command::array;
 			u32 first = arg & 0xffffff;
@@ -178,7 +202,7 @@ namespace rsx
 			rsx->first_count_commands.emplace_back(std::make_pair(first, count));
 		}
 
-		force_inline void draw_index_array(thread* rsx, u32 arg)
+		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx->draw_command = rsx::draw_command::indexed;
 			u32 first = arg & 0xffffff;
@@ -187,7 +211,7 @@ namespace rsx
 			rsx->first_count_commands.emplace_back(std::make_pair(first, count));
 		}
 
-		force_inline void draw_inline_array(thread* rsx, u32 arg)
+		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx->draw_command = rsx::draw_command::inlined_array;
 			rsx->draw_inline_vertex_array = true;
@@ -197,7 +221,7 @@ namespace rsx
 		template<u32 index>
 		struct set_transform_constant
 		{
-			force_inline static void impl(thread* rsxthr, u32 arg)
+			static void impl(thread* rsxthr, u32 _reg, u32 arg)
 			{
 				static constexpr u32 reg = index / 4;
 				static constexpr u8 subreg = index % 4;
@@ -211,13 +235,13 @@ namespace rsx
 		template<u32 index>
 		struct set_transform_program
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				method_registers.commit_4_transform_program_instructions(index);
 			}
 		};
 
-		force_inline void set_begin_end(thread* rsxthr, u32 arg)
+		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
 		{
 			if (arg)
 			{
@@ -257,7 +281,7 @@ namespace rsx
 			}
 		}
 
-		force_inline void get_report(thread* rsx, u32 arg)
+		void get_report(thread* rsx, u32 _reg, u32 arg)
 		{
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
@@ -297,7 +321,7 @@ namespace rsx
 			//result->padding = 0;
 		}
 
-		force_inline void clear_report_value(thread* rsx, u32 arg)
+		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
 		{
 			switch (arg)
 			{
@@ -313,7 +337,7 @@ namespace rsx
 			}
 		}
 
-		force_inline void set_surface_dirty_bit(thread* rsx, u32)
+		void set_surface_dirty_bit(thread* rsx, u32 _reg, u32)
 		{
 			rsx->m_rtts_dirty = true;
 		}
@@ -321,7 +345,7 @@ namespace rsx
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
-			force_inline static void impl(thread* rsx, u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				rsx->m_textures_dirty[index] = true;
 			}
@@ -333,7 +357,7 @@ namespace rsx
 		template<u32 index>
 		struct color
 		{
-			force_inline static void impl(u32 arg)
+			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				u16 x = method_registers.nv308a_x();
 				u16 y = method_registers.nv308a_y();
@@ -351,7 +375,7 @@ namespace rsx
 
 	namespace nv3089
 	{
-		never_inline void image_in(thread *rsx, u32 arg)
+		void image_in(thread *rsx, u32 _reg, u32 arg)
 		{
 			rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
@@ -659,7 +683,7 @@ namespace rsx
 
 	namespace nv0039
 	{
-		never_inline void buffer_notify(u32 arg)
+		void buffer_notify(thread*, u32, u32 arg)
 		{
 			s32 in_pitch = method_registers.nv0039_input_pitch();
 			s32 out_pitch = method_registers.nv0039_output_pitch();
@@ -713,7 +737,7 @@ namespace rsx
 		}
 	}
 
-	void flip_command(thread* rsx, u32 arg)
+	void flip_command(thread* rsx, u32, u32 arg)
 	{
 		if (user_asked_for_frame_capture)
 		{
@@ -764,7 +788,7 @@ namespace rsx
 		}
 	}
 
-	void user_command(thread* rsx, u32 arg)
+	void user_command(thread* rsx, u32, u32 arg)
 	{
 		if (rsx->user_handler)
 		{
@@ -856,172 +880,117 @@ namespace rsx
 		registers[reg] = value;
 	}
 
-	struct __rsx_methods_t
+	namespace method_detail
 	{
-		using rsx_impl_method_t = void(*)(u32);
-
-		template<rsx_method_t impl_func>
-		force_inline static void call_impl_func(thread *rsx, u32 arg)
-		{
-			impl_func(rsx, arg);
-		}
-
-		template<rsx_impl_method_t impl_func>
-		force_inline static void call_impl_func(thread *rsx, u32 arg)
-		{
-			impl_func(arg);
-		}
-
-		template<int id, typename T, T impl_func>
-		static void wrapper(thread *rsx, u32 arg)
-		{
-			// try process using gpu
-			if (rsx->do_method(id, arg))
-			{
-				if (rsx->capture_current_frame && id == NV4097_CLEAR_SURFACE)
-					rsx->capture_frame("clear");
-				return;
-			}
-
-			// not handled by renderer
-			// try process using cpu
-			if (impl_func != nullptr)
-				call_impl_func<impl_func>(rsx, arg);
-		}
-
-		template<int id, int step, int count, template<u32> class T, int index = 0>
+		template<int Id, int Step, int Count, template<u32> class T, int Index = 0>
 		struct bind_range_impl_t
 		{
-			force_inline static void impl()
+			static inline void impl()
 			{
-				bind_range_impl_t<id + step, step, count, T, index + 1>::impl();
-				bind<id, T<index>::impl>();
+				methods[Id] = &T<Index>::impl;
+				bind_range_impl_t<Id + Step, Step, Count, T, Index + 1>::impl();
 			}
 		};
 
-		template<int id, int step, int count, template<u32> class T>
-		struct bind_range_impl_t<id, step, count, T, count>
+		template<int Id, int Step, int Count, template<u32> class T>
+		struct bind_range_impl_t<Id, Step, Count, T, Count>
 		{
-			force_inline static void impl()
+			static inline void impl()
 			{
 			}
 		};
 
-		template<int id, int step, int count, template<u32> class T, int index = 0>
-		force_inline static void bind_range()
+		template<int Id, int Step, int Count, template<u32> class T, int Index = 0>
+		static inline void bind_range()
 		{
-			bind_range_impl_t<id, step, count, T, index>::impl();
+			bind_range_impl_t<Id, Step, Count, T, Index>::impl();
 		}
 
-		[[noreturn]] never_inline static void bind_redefinition_error(int id)
+		template<int Id, rsx_method_t Func>
+		static void bind()
 		{
-			throw EXCEPTION("RSX method implementation redefinition (0x%04x)", id);
+			methods[Id] = Func;
 		}
+	}
 
-		template<int id, typename T, T impl_func>
-		static void bind_impl()
-		{
-			if (methods[id])
-			{
-				bind_redefinition_error(id);
-			}
+	// TODO: implement this as virtual function: rsx::thread::init_methods() or something
+	static const bool s_methods_init = []() -> bool
+	{
+		using namespace method_detail;
 
-			methods[id] = wrapper<id, T, impl_func>;
-		}
+		// NV406E
+		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
+		bind<NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire>();
+		bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
 
-		template<int id, typename T, T impl_func>
-		static void bind_cpu_only_impl()
-		{
-			if (methods[id])
-			{
-				bind_redefinition_error(id);
-			}
+		/*
 
-			methods[id] = call_impl_func<impl_func>;
-		}
+		// Store previous fbo addresses to detect RTT config changes.
+		std::array<u32, 4> m_previous_color_address = {};
+		u32 m_previous_address_z = 0;
+		u32 m_previous_target = 0;
+		u32 m_previous_clip_horizontal = 0;
+		u32 m_previous_clip_vertical = 0;
+		*/
 
-		template<int id, rsx_impl_method_t impl_func>       static void bind() { bind_impl<id, rsx_impl_method_t, impl_func>(); }
-		template<int id, rsx_method_t impl_func = nullptr>  static void bind() { bind_impl<id, rsx_method_t, impl_func>(); }
+		// NV4097
+		bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
+		bind<NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release>();
+		bind<NV4097_SET_BEGIN_END, nv4097::set_begin_end>();
+		bind<NV4097_CLEAR_SURFACE, nv4097::clear>();
+		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
+		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
+		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
+		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nv4097::set_vertex_data_array_format>();
+		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
+		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
+		bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();
+		bind_range<NV4097_SET_VERTEX_DATA3F_M, 1, 48, nv4097::set_vertex_data3f_m>();
+		bind_range<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nv4097::set_vertex_data4f_m>();
+		bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
+		bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
+		bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
+		bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
+		bind<NV4097_GET_REPORT, nv4097::get_report>();
+		bind<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
+		bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_CLIP_VERTICAL, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_COLOR_AOFFSET, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_COLOR_BOFFSET, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_COLOR_COFFSET, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_COLOR_DOFFSET, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_ZETA_OFFSET, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_CONTEXT_DMA_COLOR_A, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_CONTEXT_DMA_COLOR_B, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_OFFSET, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_FORMAT, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_CONTROL0, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_CONTROL1, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_CONTROL2, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_CONTROL3, 1, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_BORDER_COLOR, 8, 16, nv4097::set_texture_dirty_bit>();
 
-		//do not try process on gpu
-		template<int id, rsx_impl_method_t impl_func>      static void bind_cpu_only() { bind_cpu_only_impl<id, rsx_impl_method_t, impl_func>(); }
-		//do not try process on gpu
-		template<int id, rsx_method_t impl_func = nullptr> static void bind_cpu_only() { bind_cpu_only_impl<id, rsx_method_t, impl_func>(); }
+		//NV308A
+		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
+		bind_range<NV308A_COLOR + 256, 1, 512, nv308a::color, 256>();
 
-		__rsx_methods_t()
-		{
-			// NV406E
-			bind_cpu_only<NV406E_SET_REFERENCE, nv406e::set_reference>();
-			bind<NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire>();
-			bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
+		//NV3089
+		bind<NV3089_IMAGE_IN, nv3089::image_in>();
 
-			/*
+		//NV0039
+		bind<NV0039_BUFFER_NOTIFY, nv0039::buffer_notify>();
 
-			// Store previous fbo addresses to detect RTT config changes.
-			std::array<u32, 4> m_previous_color_address = {};
-			u32 m_previous_address_z = 0;
-			u32 m_previous_target = 0;
-			u32 m_previous_clip_horizontal = 0;
-			u32 m_previous_clip_vertical = 0;
-			*/
+		// custom methods
+		bind<GCM_FLIP_COMMAND, flip_command>();
+		bind<GCM_SET_USER_COMMAND, user_command>();
 
-			// NV4097
-			bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
-			bind<NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release>();
-			bind<NV4097_SET_BEGIN_END, nv4097::set_begin_end>();
-			bind<NV4097_CLEAR_SURFACE>();
-			bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
-			bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
-			bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
-			bind_range<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nv4097::set_vertex_data_array_format>();
-			bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
-			bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA3F_M, 1, 48, nv4097::set_vertex_data3f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nv4097::set_vertex_data4f_m>();
-			bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
-			bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
-			bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
-			bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
-			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
-			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
-			bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_SURFACE_CLIP_VERTICAL, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_SURFACE_COLOR_AOFFSET, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_SURFACE_COLOR_BOFFSET, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_SURFACE_COLOR_COFFSET, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_SURFACE_COLOR_DOFFSET, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_SURFACE_ZETA_OFFSET, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_CONTEXT_DMA_COLOR_A, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_CONTEXT_DMA_COLOR_B, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
-			bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_OFFSET, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_FORMAT, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_CONTROL0, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_CONTROL1, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_CONTROL2, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_CONTROL3, 1, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
-			bind_range<NV4097_SET_TEXTURE_BORDER_COLOR, 8, 16, nv4097::set_texture_dirty_bit>();
-
-			//NV308A
-			bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
-			bind_range<NV308A_COLOR + 256, 1, 512, nv308a::color, 256>();
-
-			//NV3089
-			bind<NV3089_IMAGE_IN, nv3089::image_in>();
-
-			//NV0039
-			bind<NV0039_BUFFER_NOTIFY, nv0039::buffer_notify>();
-
-			// custom methods
-			bind_cpu_only<GCM_FLIP_COMMAND, flip_command>();
-			bind_cpu_only<GCM_SET_USER_COMMAND, user_command>();
-		}
-	} __rsx_methods;
+		return true;	
+	}();
 }
