@@ -260,7 +260,7 @@
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GCM.cpp" />
     <ClCompile Include="Emu\RSX\gcm_enums.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\rsx_cache.cpp" />
