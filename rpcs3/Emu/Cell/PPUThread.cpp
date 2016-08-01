@@ -80,6 +80,7 @@ std::string ppu_thread::dump() const
 {
 	std::string ret;
 
+	ret += fmt::format("Type: %s\n", typeid(*this).name());
 	ret += fmt::format("State: 0x%08x\n", state.load());
 	ret += fmt::format("Priority: %d\n", prio);
 	

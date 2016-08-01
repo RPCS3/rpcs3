@@ -607,9 +607,9 @@ s32 _spurs::create_handler(vm::ptr<CellSpurs> spurs, u32 ppuPriority)
 		}
 	};
 
-	auto&& eht = std::make_shared<handler_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr0", ppuPriority, 0x4000);
+	auto&& eht = idm::make_ptr<ppu_thread, handler_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr0", ppuPriority, 0x4000);
 
-	spurs->ppu0 = idm::import_existing<ppu_thread>(eht);
+	spurs->ppu0 = eht->id;
 
 	eht->gpr[3] = spurs.addr();
 	eht->run();
@@ -804,11 +804,9 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 		}
 	};
 
-	auto&& eht = std::make_shared<event_helper_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr1", ppuPriority, 0x8000);
+	auto&& eht = idm::make_ptr<ppu_thread, event_helper_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr1", ppuPriority, 0x8000);
 
-	const u32 tid = idm::import_existing<ppu_thread>(eht);
-
-	if (tid == 0)
+	if (!eht)
 	{
 		sys_event_port_disconnect(spurs->eventPort);
 		sys_event_port_destroy(spurs->eventPort);
@@ -825,7 +823,7 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 	eht->gpr[3] = spurs.addr();
 	eht->run();
 
-	spurs->ppu1 = tid;
+	spurs->ppu1 = eht->id;
 	return CELL_OK;
 }
 

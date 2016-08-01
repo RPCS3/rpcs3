@@ -558,9 +558,9 @@ s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	auto&& adec = std::make_shared<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
+	auto&& adec = idm::make_ptr<ppu_thread, AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
 
-	*handle = idm::import_existing<ppu_thread>(adec);
+	*handle = adec->id;
 
 	adec->run();
 
@@ -576,9 +576,9 @@ s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	auto&& adec = std::make_shared<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
+	auto&& adec = idm::make_ptr<ppu_thread, AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
 
-	*handle = idm::import_existing<ppu_thread>(adec);
+	*handle = adec->id;
 
 	adec->run();
 
