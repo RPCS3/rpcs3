@@ -50,7 +50,7 @@ void lv2_timer_t::on_task()
 			continue;
 		}
 
-		thread_ctrl::wait_for(100);
+		thread_ctrl::wait_for(1000);
 	}
 }
 
