@@ -264,7 +264,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
 		{
-			if (i.name == "front_spec_color")
+			if (i.name == "front_diff_color")
 				insert_front_diffuse = false;
 
 			if (i.name == "front_spec_color")
