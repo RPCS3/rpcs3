@@ -295,7 +295,11 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 		}
 		else
 		{
-			finalize += "\tocol = h0;\n";
+			if (shader.temporary_registers.find({ "h0" }) != shader.temporary_registers.end())
+			{
+				//Some shaders only write to gl_FragDepth and ignore color output
+				finalize += "\tocol = h0;\n";
+			}
 
 			if (shader.temporary_registers.find({ "h4" }) != shader.temporary_registers.end())
 			{
@@ -316,19 +320,13 @@ rsx::complete_shader glsl_complete_shader(const rsx::decompiled_shader &shader, 
 
 		if (state.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		{
-			if (state.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+			//@NOTE: Checking for CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS to determine whether to read 16f or 32f depth is incorrect (always seems to be r1.z)
+			//Resogun shows this behaviour as well as Naruto UNS2
+			//See also D3D12FragmentProgramDecompiler.cpp
+
+			if (shader.temporary_registers.find({ "r1" }) != shader.temporary_registers.end())
 			{
-				if (shader.temporary_registers.find({ "r1" }) != shader.temporary_registers.end())
-				{
-					finalize += "\tgl_FragDepth = r1.z;\n";
-				}
-			}
-			else
-			{
-				if (shader.temporary_registers.find({ "h2" }) != shader.temporary_registers.end())
-				{
-					finalize += "\tgl_FragDepth = h2.z;\n";
-				}
+				finalize += "\tgl_FragDepth = r1.z;\n";
 			}
 		}
 
