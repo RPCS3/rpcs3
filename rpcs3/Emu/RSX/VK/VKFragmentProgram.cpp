@@ -270,7 +270,7 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 			if (PI.name == "fogc")
 			{
 				vk::insert_fog_declaration(OS, m_prog.fog_equation);
-				return;
+				continue;
 			}
 		}
 	}
