@@ -192,9 +192,9 @@ namespace vk
 
 			VkImageType image_type;
 			VkImageViewType image_view_type;
-			u16 height;
-			u16 depth;
-			u8 layer;
+			u16 height = 0;
+			u16 depth = 0;
+			u8 layer = 0;
 			switch (tex.get_extended_texture_dimension())
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -221,6 +221,7 @@ namespace vk
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				image_type = VK_IMAGE_TYPE_3D;
 				image_view_type = VK_IMAGE_VIEW_TYPE_3D;
+				height = tex.height();
 				depth = tex.depth();
 				layer = 1;
 				break;
@@ -228,6 +229,13 @@ namespace vk
 
 			bool is_cubemap = tex.get_extended_texture_dimension() == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			VkImageSubresourceRange subresource_range = vk::get_image_subresource_range(0, 0, is_cubemap ? 6 : 1, tex.get_exact_mipmap_count(), VK_IMAGE_ASPECT_COLOR_BIT);
+
+			//If for some reason invalid dimensions are requested, fail
+			if (!height || !depth || !layer || !tex.width())
+			{
+				LOG_ERROR(RSX, "Texture upload requested but invalid texture dimensions passed");
+				return nullptr;
+			}
 
 			cto.uploaded_texture = std::make_unique<vk::image>(*vk::get_current_renderer(), memory_type_mapping.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				image_type,
