@@ -461,7 +461,7 @@ s32 cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 	case audio_port_state::closed: portConfig->status = CELL_AUDIO_STATUS_CLOSE; break;
 	case audio_port_state::opened: portConfig->status = CELL_AUDIO_STATUS_READY; break;
 	case audio_port_state::started: portConfig->status = CELL_AUDIO_STATUS_RUN; break;
-	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, state);
+	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, (u32)state);
 	}
 
 	portConfig->nChannel = port.channel;
@@ -492,7 +492,7 @@ s32 cellAudioPortStart(u32 portNum)
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
 	case audio_port_state::opened: return CELL_OK;
-	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, state);
+	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, (u32)state);
 	}
 }
 
@@ -517,7 +517,7 @@ s32 cellAudioPortClose(u32 portNum)
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_OK;
 	case audio_port_state::opened: return CELL_OK;
-	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, state);
+	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, (u32)state);
 	}
 }
 
@@ -542,7 +542,7 @@ s32 cellAudioPortStop(u32 portNum)
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	case audio_port_state::started: return CELL_OK;
 	case audio_port_state::opened: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
-	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, state);
+	default: throw fmt::exception("Invalid port state (%d: %d)", portNum, (u32)state);
 	}
 }
 

@@ -242,3 +242,36 @@ struct ff_t : bf_base<T, N>
 		return V;
 	}
 };
+
+template<typename T, uint I, uint N>
+struct fmt_unveil<bf_t<T, I, N>, void>
+{
+	using type = typename fmt_unveil<simple_t<T>>::type;
+
+	static inline u64 get(const bf_t<T, I, N>& bf)
+	{
+		return fmt_unveil<type>::get(bf);
+	}
+};
+
+template<typename F, typename... Fields>
+struct fmt_unveil<cf_t<F, Fields...>, void>
+{
+	using type = typename fmt_unveil<simple_t<typename F::type>>::type;
+
+	static inline u64 get(const cf_t<F, Fields...>& cf)
+	{
+		return fmt_unveil<type>::get(cf);
+	}
+};
+
+template<typename T, T V, uint N>
+struct fmt_unveil<ff_t<T, V, N>, void>
+{
+	using type = typename fmt_unveil<simple_t<T>>::type;
+
+	static inline u64 get(const ff_t<T, V, N>& ff)
+	{
+		return fmt_unveil<type>::get(ff);
+	}
+};

@@ -20,7 +20,7 @@ namespace
 		const u32* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 
 		if (type > rsx::vertex_base_type::ub256)
-			throw EXCEPTION("OpenGL error: unknown vertex base type 0x%X.", (u32)type);
+			throw EXCEPTION("OpenGL error: unknown vertex base type 0x%x", (u32)type);
 
 		return vec_selectors[size][(int)type];
 	}
@@ -131,7 +131,7 @@ namespace
 	std::tuple<u32, u32> get_index_array_for_emulated_non_indexed_draw(const std::vector<std::pair<u32, u32>> &first_count_commands, rsx::primitive_type primitive_mode, gl::ring_buffer &dst)
 	{
 		u32 vertex_draw_count = 0;
-		assert(!gl::is_primitive_native(primitive_mode));
+		EXPECTS(gl::is_primitive_native(primitive_mode));
 
 		for (const auto &pair : first_count_commands)
 		{
@@ -411,7 +411,7 @@ u32 GLGSRender::set_vertex_buffer()
 					break;
 				}
 				default:
-					LOG_ERROR(RSX, "bad non array vertex data format (type = %d, size = %d)", vertex_info.type, vertex_info.size);
+					LOG_ERROR(RSX, "bad non array vertex data format (type=%d, size=%d)", (u32)vertex_info.type, vertex_info.size);
 					break;
 				}
 			}

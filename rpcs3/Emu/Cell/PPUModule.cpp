@@ -748,9 +748,9 @@ std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 		{
 			if (prog.p_memsz)
 			{
-				const u32 mem_size = fmt::narrow<u32>("Invalid p_memsz (0x%llx)" HERE, prog.p_memsz);
-				const u32 file_size = fmt::narrow<u32>("Invalid p_filesz (0x%llx)" HERE, prog.p_filesz);
-				const u32 init_addr = fmt::narrow<u32>("Invalid p_vaddr (0x%llx)" HERE, prog.p_vaddr);
+				const u32 mem_size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+				const u32 file_size = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
+				const u32 init_addr = ::narrow<u32>(prog.p_vaddr, "p_vaddr" HERE);
 
 				// Alloc segment memory
 				const u32 addr = vm::alloc(mem_size, vm::main);
@@ -965,7 +965,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		const u32 addr = vm::cast(prog.p_vaddr, HERE);
-		const u32 size = fmt::narrow<u32>("Invalid p_memsz: 0x%llx" HERE, prog.p_memsz);
+		const u32 size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
 
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
@@ -1004,8 +1004,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		case 0x00000007: // TLS
 		{
 			tls_vaddr = vm::cast(prog.p_vaddr, HERE);
-			tls_fsize = fmt::narrow<u32>("Invalid p_filesz (0x%llx)" HERE, prog.p_filesz);
-			tls_vsize = fmt::narrow<u32>("Invalid p_memsz (0x%llx)" HERE, prog.p_memsz);
+			tls_fsize = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
+			tls_vsize = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
 			break;
 		}
 

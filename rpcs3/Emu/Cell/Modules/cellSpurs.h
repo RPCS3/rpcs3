@@ -562,7 +562,7 @@ struct alignas(128) CellSpurs
 	_sub_str4 wklH2[0x10];                              // 0x1A00
 	u8 unknown_[0x2000 - 0x1B00];
 
-	force_inline atomic_t<u8>& wklState(const u32 wid)
+	atomic_t<u8>& wklState(const u32 wid)
 	{
 		if (wid & 0x10)
 		{

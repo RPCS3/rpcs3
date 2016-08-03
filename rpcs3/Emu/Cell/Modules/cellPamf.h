@@ -509,12 +509,12 @@ public:
 		return push(data, [do_exit]() { return do_exit && *do_exit; });
 	}
 
-	force_inline bool push(const T& data)
+	bool push(const T& data)
 	{
 		return push(data, SQUEUE_NEVER_EXIT);
 	}
 
-	force_inline bool try_push(const T& data)
+	bool try_push(const T& data)
 	{
 		return push(data, SQUEUE_ALWAYS_EXIT);
 	}
@@ -577,12 +577,12 @@ public:
 		return pop(data, [do_exit]() { return do_exit && *do_exit; });
 	}
 
-	force_inline bool pop(T& data)
+	bool pop(T& data)
 	{
 		return pop(data, SQUEUE_NEVER_EXIT);
 	}
 
-	force_inline bool try_pop(T& data)
+	bool try_pop(T& data)
 	{
 		return pop(data, SQUEUE_ALWAYS_EXIT);
 	}
@@ -639,12 +639,12 @@ public:
 		return peek(data, start_pos, [do_exit]() { return do_exit && *do_exit; });
 	}
 
-	force_inline bool peek(T& data, u32 start_pos = 0)
+	bool peek(T& data, u32 start_pos = 0)
 	{
 		return peek(data, start_pos, SQUEUE_NEVER_EXIT);
 	}
 
-	force_inline bool try_peek(T& data, u32 start_pos = 0)
+	bool try_peek(T& data, u32 start_pos = 0)
 	{
 		return peek(data, start_pos, SQUEUE_ALWAYS_EXIT);
 	}

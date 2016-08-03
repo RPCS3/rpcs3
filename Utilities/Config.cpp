@@ -85,6 +85,62 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 	return true;
 }
 
+bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string& value)
+{
+	for (u64 i = 0;; i++)
+	{
+		std::string var;
+		func(var, i);
+
+		if (var == value)
+		{
+			if (out) *out = i;
+			return true;
+		}
+
+		std::string hex;
+		fmt_class_string<u64>::format(hex, i);
+		if (var == hex)
+		{
+			break;
+		}
+	}
+
+	try
+	{
+		const auto val = std::stoull(value, nullptr, 0);
+
+		if (out) *out = val;
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::format) func)
+{
+	std::vector<std::string> result;
+
+	for (u64 i = 0;; i++)
+	{
+		std::string var;
+		func(var, i);
+
+		std::string hex;
+		fmt_class_string<u64>::format(hex, i);
+		if (var == hex)
+		{
+			break;
+		}
+
+		result.emplace_back(std::move(var));
+	}
+
+	return result;
+}
+
 void cfg::encode(YAML::Emitter& out, const cfg::entry_base& rhs)
 {
 	switch (rhs.get_type())

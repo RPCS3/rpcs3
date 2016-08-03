@@ -648,7 +648,7 @@ public:
 
 			default:
 			{
-				throw EXCEPTION("Demuxer thread error: unknown task (0x%x)", task.type);
+				throw EXCEPTION("Demuxer thread error: unknown task (0x%x)", (u32)task.type);
 			}	
 			}
 		}

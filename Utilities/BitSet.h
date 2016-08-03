@@ -256,3 +256,14 @@ struct atomic_test_and_complement<bitset_t<T>, T, std::enable_if_t<std::is_enum<
 
 	static constexpr auto atomic_op = &_op;
 };
+
+template<typename T, std::size_t BitSize>
+struct fmt_unveil<bitset_t<T, BitSize>, void>
+{
+	using type = typename bitset_t<T, BitSize>::raw_type;
+
+	static inline u64 get(const bitset_t<T, BitSize>& value)
+	{
+		return fmt_unveil<type>::get(static_cast<type>(value._value()));
+	}
+};

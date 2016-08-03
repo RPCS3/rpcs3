@@ -175,7 +175,7 @@ bool Rpcs3App::OnInit()
 		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan", w, h);
 		}
 
-		throw EXCEPTION("Invalid Frame Type (0x%x)", type);
+		throw fmt::exception("Invalid frame type (0x%x)" HERE, (int)type);
 	};
 
 	callbacks.get_gs_render = PURE_EXPR(g_cfg_gs_render.get()());

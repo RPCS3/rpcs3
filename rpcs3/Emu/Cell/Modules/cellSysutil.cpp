@@ -74,25 +74,15 @@ cfg::map_entry<s32> g_cfg_sys_language(cfg::root.sys, "Language",
 	{ "English (UK)", CELL_SYSUTIL_LANG_ENGLISH_GB },
 });
 
-enum class systemparam_id_name : s32 {};
+// For test
+enum systemparam_id_name : s32 {};
 
 template<>
-struct unveil<systemparam_id_name, void>
+void fmt_class_string<systemparam_id_name>::format(std::string& out, u64 arg)
 {
-	struct temp
+	format_enum(out, arg, [](auto value)
 	{
-		s32 value;
-		char buf[12];
-
-		temp(systemparam_id_name value)
-			: value(s32(value))
-		{
-		}
-	};
-
-	static inline const char* get(temp&& in)
-	{
-		switch (in.value)
+		switch (value)
 		{
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG: return "ID_LANG";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN: return "ID_ENTER_BUTTON_ASSIGN";
@@ -113,14 +103,13 @@ struct unveil<systemparam_id_name, void>
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME: return "ID_CURRENT_USERNAME";
 		}
 
-		std::snprintf(in.buf, sizeof(in.buf), "!0x%04X", in.value);
-		return in.buf;
-	}
-};
+		return unknown;
+	});
+}
 
-s32 cellSysutilGetSystemParamInt(s32 id, vm::ptr<s32> value)
+s32 cellSysutilGetSystemParamInt(systemparam_id_name id, vm::ptr<s32> value)
 {
-	cellSysutil.warning("cellSysutilGetSystemParamInt(id=%s, value=*0x%x)", systemparam_id_name(id), value);
+	cellSysutil.warning("cellSysutilGetSystemParamInt(id=0x%x(%s), value=*0x%x)", id, id, value);
 
 	// TODO: load this information from config (preferably "sys/" group)
 
@@ -193,9 +182,9 @@ s32 cellSysutilGetSystemParamInt(s32 id, vm::ptr<s32> value)
 	return CELL_OK;
 }
 
-s32 cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
+s32 cellSysutilGetSystemParamString(systemparam_id_name id, vm::ptr<char> buf, u32 bufsize)
 {
-	cellSysutil.trace("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, systemparam_id_name(id), buf, bufsize);
+	cellSysutil.trace("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, id, buf, bufsize);
 
 	memset(buf.get_ptr(), 0, bufsize);
 

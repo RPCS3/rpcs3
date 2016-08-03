@@ -298,10 +298,6 @@ union alignas(16) v128
 		_u64[0] = 0;
 		_u64[1] = 0;
 	}
-
-	std::string to_hex() const;
-
-	std::string to_xyzw() const;
 };
 
 inline v128 operator |(const v128& left, const v128& right)
@@ -950,11 +946,13 @@ template<typename T> using atomic_le_t = atomic_t<le_t<T>>;
 
 // Formatting for BE/LE data
 template<typename T, bool Se, std::size_t Align>
-struct unveil<se_t<T, Se, Align>, void>
+struct fmt_unveil<se_t<T, Se, Align>, void>
 {
-	static inline auto get(const se_t<T, Se, Align>& arg)
+	using type = typename fmt_unveil<T>::type;
+
+	static inline u64 get(const se_t<T, Se, Align>& arg)
 	{
-		return unveil<T>::get(arg);
+		return fmt_unveil<T>::get(arg);
 	}
 };
 

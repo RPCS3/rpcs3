@@ -1,7 +1,9 @@
 #pragma once
 
 #include "types.h"
+#include "Platform.h"
 #include "Atomic.h"
+#include "StrFmt.h"
 
 namespace logs
 {
@@ -67,19 +69,17 @@ namespace logs
 
 		// Formatting function
 		template<typename... Args>
-		void format(level sev, const char* fmt, const Args&... args) const
+		SAFE_BUFFERS void format(level sev, const char* fmt, const Args&... args) const
 		{
-#ifdef _MSC_VER
-			if (sev <= enabled)
-#else
-			if (__builtin_expect(sev <= enabled, 0))
-#endif
-				broadcast(*this, sev, fmt, ::unveil<Args>::get(args)...);
+			if (UNLIKELY(sev <= enabled))
+			{
+				broadcast(*this, sev, fmt, fmt::arg_type_info::get<typename fmt_unveil<Args>::type...>(), fmt::args_t<Args...>{::fmt_unveil<Args>::get(args)...});
+			}
 		}
 
 #define GEN_LOG_METHOD(_sev)\
 		template<typename... Args>\
-		void _sev(const char* fmt, const Args&... args) const\
+		SAFE_BUFFERS void _sev(const char* fmt, const Args&... args) const\
 		{\
 			return format<Args...>(level::_sev, fmt, args...);\
 		}
@@ -95,7 +95,7 @@ namespace logs
 #undef GEN_LOG_METHOD
 	private:
 		// Send log message to global logger instance
-		static void broadcast(const channel& ch, level sev, const char* fmt...);
+		static void broadcast(const channel& ch, level sev, const char*, const fmt::supplementary_info*, const u64*);
 	};
 
 	/* Small set of predefined channels */
@@ -109,22 +109,6 @@ namespace logs
 	extern channel SPU;
 	extern channel ARMv7;
 }
-
-template<>
-struct bijective<logs::level, const char*>
-{
-	static constexpr bijective_pair<logs::level, const char*> map[]
-	{
-		{ logs::level::always, "Nothing" },
-		{ logs::level::fatal, "Fatal" },
-		{ logs::level::error, "Error" },
-		{ logs::level::todo, "TODO" },
-		{ logs::level::success, "Success" },
-		{ logs::level::warning, "Warning" },
-		{ logs::level::notice, "Notice" },
-		{ logs::level::trace, "Trace" },
-	};
-};
 
 // Legacy:
 

@@ -46,7 +46,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 
 	case rsx::surface_color_format::a8b8g8r8:
 	default:
-		LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", color_format);
+		LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", (u32)color_format);
 		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1 };
 	}
 }
@@ -59,7 +59,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		return{ ::gl::texture::type::ushort, ::gl::texture::format::depth, ::gl::texture::internal_format::depth16 };
 
 	default:
-		LOG_ERROR(RSX, "Surface depth buffer: Unsupported surface depth format (0x%x)", depth_format);
+		LOG_ERROR(RSX, "Surface depth buffer: Unsupported surface depth format (0x%x)", (u32)depth_format);
 	case rsx::surface_depth_format::z24s8:
 		return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
 	}

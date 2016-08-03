@@ -36,7 +36,7 @@ VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support,
 		throw EXCEPTION("No hardware support for z24s8");
 	}
 	}
-	throw EXCEPTION("Invalid format (0x%x)", format);
+	throw EXCEPTION("Invalid format (0x%x)", (u32)format);
 }
 
 std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter)
@@ -62,7 +62,7 @@ VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
 	case rsx::texture_magnify_filter::linear: return VK_FILTER_LINEAR;
 	case rsx::texture_magnify_filter::convolution_mag: return VK_FILTER_LINEAR;
 	}
-	throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
+	throw EXCEPTION("Invalid mag filter (0x%x)", (u32)mag_filter);
 }
 
 VkBorderColor get_border_color(u8 color)
@@ -105,7 +105,7 @@ float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
 	case rsx::texture_max_anisotropy::x16: return 16.0f;
 	}
 
-	throw EXCEPTION("Texture anisotropy error: bad max aniso (%d).", gcm_aniso);
+	throw EXCEPTION("Texture anisotropy error: bad max aniso (%d)", (u32)gcm_aniso);
 }
 
 

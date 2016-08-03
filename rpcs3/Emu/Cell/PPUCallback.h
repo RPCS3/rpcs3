@@ -73,20 +73,20 @@ namespace ppu_cb_detail
 	{
 		static_assert(std::is_same<T, ppu_thread&>::value, "Invalid callback argument type for ARG_CONTEXT");
 
-		force_inline static void set_value(ppu_thread& CPU, const T& arg)
+		FORCE_INLINE static void set_value(ppu_thread& CPU, const T& arg)
 		{
 		}
 	};
 
 	template<u32 g_count, u32 f_count, u32 v_count>
-	force_inline static bool _bind_func_args(ppu_thread& CPU)
+	FORCE_INLINE static bool _bind_func_args(ppu_thread& CPU)
 	{
 		// terminator
 		return false;
 	}
 
 	template<u32 g_count, u32 f_count, u32 v_count, typename T1, typename... T>
-	force_inline static bool _bind_func_args(ppu_thread& CPU, T1 arg1, T... args)
+	FORCE_INLINE static bool _bind_func_args(ppu_thread& CPU, T1 arg1, T... args)
 	{
 		const bool is_float = std::is_floating_point<T1>::value;
 		const bool is_vector = std::is_same<CV T1, CV v128>::value;
@@ -116,7 +116,7 @@ namespace ppu_cb_detail
 		static_assert(type == ARG_GENERAL, "Unknown callback result type");
 		static_assert(sizeof(T) <= 8, "Invalid callback result type for ARG_GENERAL");
 
-		force_inline static T get_value(const ppu_thread& CPU)
+		FORCE_INLINE static T get_value(const ppu_thread& CPU)
 		{
 			return ppu_gpr_cast<T>(CPU.gpr[3]);
 		}
@@ -127,7 +127,7 @@ namespace ppu_cb_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid callback result type for ARG_FLOAT");
 
-		force_inline static T get_value(const ppu_thread& CPU)
+		FORCE_INLINE static T get_value(const ppu_thread& CPU)
 		{
 			return static_cast<T>(CPU.fpr[1]);
 		}
@@ -138,7 +138,7 @@ namespace ppu_cb_detail
 	{
 		static_assert(std::is_same<CV T, CV v128>::value, "Invalid callback result type for ARG_VECTOR");
 
-		force_inline static T get_value(const ppu_thread& CPU)
+		FORCE_INLINE static T get_value(const ppu_thread& CPU)
 		{
 			return CPU.vr[2];
 		}
@@ -147,7 +147,7 @@ namespace ppu_cb_detail
 	template<typename RT, typename... T>
 	struct _func_caller
 	{
-		force_inline static RT call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
+		FORCE_INLINE static RT call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
 		{
 			_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
 
@@ -164,7 +164,7 @@ namespace ppu_cb_detail
 	template<typename... T>
 	struct _func_caller<void, T...>
 	{
-		force_inline static void call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
+		FORCE_INLINE static void call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
 		{
 			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
 			CPU.gpr[1] -= stack ? FIXED_STACK_FRAME_SIZE : 0x30; // create reserved area
@@ -177,7 +177,7 @@ namespace ppu_cb_detail
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	force_inline RT _ptr_base<RT(T...), AT>::operator()(ppu_thread& CPU, T... args) const
+	FORCE_INLINE RT _ptr_base<RT(T...), AT>::operator()(ppu_thread& CPU, T... args) const
 	{
 		const auto data = vm::ps3::_ptr<u32>(vm::cast(m_addr, HERE));
 		const u32 pc = data[0];

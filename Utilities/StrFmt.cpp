@@ -1,73 +1,178 @@
 #include "StrFmt.h"
 #include "BEType.h"
 #include "StrUtil.h"
+#include "cfmt.h"
 
-#include <cassert>
-#include <array>
-#include <memory>
 #include <algorithm>
 
-std::string v128::to_hex() const
+void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
-	return fmt::format("%016llx%016llx", _u64[1], _u64[0]);
+	fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
 }
 
-std::string v128::to_xyzw() const
+void fmt_class_string<const char*>::format(std::string& out, u64 arg)
 {
-	return fmt::format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
+	out += reinterpret_cast<const char*>(static_cast<std::uintptr_t>(arg));
 }
 
-std::string fmt::unsafe_vformat(const char* fmt, va_list _args) noexcept
+template<>
+void fmt_class_string<std::string>::format(std::string& out, u64 arg)
 {
-	// Fixed stack buffer for the first attempt
-	std::array<char, 4096> fixed_buf;
+	out += get_object(arg).c_str(); // TODO?
+}
 
-	// Possibly dynamically allocated buffer for the second attempt
-	std::unique_ptr<char[]> buf;
+template<>
+void fmt_class_string<std::vector<char>>::format(std::string& out, u64 arg)
+{
+	const std::vector<char>& obj = get_object(arg);
+	out.append(obj.cbegin(), obj.cend());
+}
 
-	// Pointer to the current buffer
-	char* buf_addr = fixed_buf.data();
+template<>
+void fmt_class_string<char>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%hhx", static_cast<char>(arg));
+}
 
-	for (std::size_t buf_size = fixed_buf.size();;)
+template<>
+void fmt_class_string<uchar>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%hhx", static_cast<uchar>(arg));
+}
+
+template<>
+void fmt_class_string<schar>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%hhx", static_cast<schar>(arg));
+}
+
+template<>
+void fmt_class_string<short>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%hx", static_cast<short>(arg));
+}
+
+template<>
+void fmt_class_string<ushort>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%hx", static_cast<ushort>(arg));
+}
+
+template<>
+void fmt_class_string<int>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%x", static_cast<int>(arg));
+}
+
+template<>
+void fmt_class_string<uint>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%x", static_cast<uint>(arg));
+}
+
+template<>
+void fmt_class_string<long>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%lx", static_cast<long>(arg));
+}
+
+template<>
+void fmt_class_string<ulong>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%lx", static_cast<ulong>(arg));
+}
+
+template<>
+void fmt_class_string<llong>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%llx", static_cast<llong>(arg));
+}
+
+template<>
+void fmt_class_string<ullong>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "0x%llx", static_cast<ullong>(arg));
+}
+
+template<>
+void fmt_class_string<float>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "%f", static_cast<float>(reinterpret_cast<f64&>(arg)));
+}
+
+template<>
+void fmt_class_string<double>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "%f", reinterpret_cast<f64&>(arg));
+}
+
+template<>
+void fmt_class_string<bool>::format(std::string& out, u64 arg)
+{
+	out += arg ? "true" : "false"; // TODO?
+}
+
+template<>
+void fmt_class_string<v128>::format(std::string& out, u64 arg)
+{
+	const v128& vec = get_object(arg);
+	fmt::append(out, "0x%016llx%016llx", vec._u64[1], vec._u64[0]);
+}
+
+namespace fmt
+{
+	struct cfmt_src;
+}
+
+// Temporary implementation
+struct fmt::cfmt_src
+{
+	const fmt::supplementary_info* sup;
+	const u64* args;
+
+	bool test(std::size_t index = 0)
 	{
-		va_list args;
-		va_copy(args, _args);
-
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-#endif
-		const std::size_t len = std::vsnprintf(buf_addr, buf_size, fmt, args);
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-		va_end(args);
-
-		assert(len <= INT_MAX);
-
-		if (len < buf_size)
+		for (std::size_t i = 0; i <= index; i++)
 		{
-			return{ buf_addr, len };
+			if (!sup[i].fmt_string)
+			{
+				return false;
+			}
 		}
 
-		buf.reset(buf_addr = new char[buf_size = len + 1]);
+		return true;
 	}
+
+	template<typename T>
+	T get(std::size_t index = 0)
+	{
+		return reinterpret_cast<const T&>(args[index]);
+	}
+
+	void skip(std::size_t extra)
+	{
+		++sup += extra;
+		++args += extra;
+	}
+
+	std::size_t fmt_string(std::string& out)
+	{
+		const std::size_t start = out.size();
+		sup->fmt_string(out, args[0]);
+		return out.size() - start;
+	}
+};
+
+void fmt::raw_append(std::string& out, const char* fmt, const fmt::supplementary_info* sup, const u64* args) noexcept
+{
+	cfmt_append(out, fmt, cfmt_src{sup, args});
 }
 
-std::string fmt::unsafe_format(const char* fmt...) noexcept
+char* fmt::alloc_format(const char* fmt, const fmt::supplementary_info* sup, const u64* args) noexcept
 {
-	va_list args;
-	va_start(args, fmt);
-	auto result = unsafe_vformat(fmt, args);
-	va_end(args);
-
-	return result;
-}
-
-fmt::exception_base::exception_base(const char* fmt...)
-	: std::runtime_error((va_start(m_args, fmt), unsafe_vformat(fmt, m_args)))
-{
-	va_end(m_args);
+	std::string str;
+	raw_append(str, fmt, sup, args);
+	return static_cast<char*>(std::memcpy(std::malloc(str.size() + 1), str.data(), str.size() + 1));
 }
 
 std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)

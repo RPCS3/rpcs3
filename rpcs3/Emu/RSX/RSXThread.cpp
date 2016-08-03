@@ -44,7 +44,7 @@ namespace rsx
 
 	void old_shaders_cache::shaders_cache::load(const std::string &path, shader_language lang)
 	{
-		const std::string lang_name(::unveil<shader_language>::get(lang));
+		const std::string lang_name(lang == shader_language::glsl ? "glsl" : "hlsl");
 
 		auto extract_hash = [](const std::string &string)
 		{
@@ -180,7 +180,7 @@ namespace rsx
 		case vertex_base_type::cmp: return sizeof(u16) * 4;
 		case vertex_base_type::ub256: EXPECTS(size == 4); return sizeof(u8) * 4;
 		}
-		throw EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
+		throw EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", (u8)type);
 	}
 
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)

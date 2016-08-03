@@ -492,10 +492,12 @@ struct to_se<vm::_ptr_base<T, AT>, Se>
 
 // Format pointer
 template<typename T, typename AT>
-struct unveil<vm::_ptr_base<T, AT>, void>
+struct fmt_unveil<vm::_ptr_base<T, AT>, void>
 {
-	static inline auto get(const vm::_ptr_base<T, AT>& arg)
+	using type = typename fmt_unveil<AT>::type;
+
+	static inline u64 get(const vm::_ptr_base<T, AT>& arg)
 	{
-		return unveil<AT>::get(arg.addr());
+		return fmt_unveil<AT>::get(arg.addr());
 	}
 };

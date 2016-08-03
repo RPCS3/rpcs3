@@ -37,7 +37,7 @@ enum : u32
 
 std::mutex g_savedata_mutex;
 
-static never_inline s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
+static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {

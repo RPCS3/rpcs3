@@ -390,7 +390,7 @@ public:
 
 			default:
 			{
-				throw EXCEPTION("Unknown task(%d)", task.type);
+				throw EXCEPTION("Unknown task(%d)", (u32)task.type);
 			}
 			}
 		}
@@ -476,7 +476,7 @@ next:
 
 		default:
 		{
-			cellAdec.error("adecRawRead(): unknown task (%d)", task.type);
+			cellAdec.error("adecRawRead(): unknown task (%d)", (u32)task.type);
 			Emu.Pause();
 			return -1;
 		}

@@ -87,7 +87,7 @@ std::string ppu_thread::dump() const
 	ret += "\nRegisters:\n=========\n";
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("GPR[%d] = 0x%llx\n", i, gpr[i]);
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("FPR[%d] = %.6G\n", i, fpr[i]);
-	for (uint i = 0; i < 32; ++i) ret += fmt::format("VR[%d] = 0x%s [%s]\n", i, vr[i].to_hex().c_str(), vr[i].to_xyzw().c_str());
+	for (uint i = 0; i < 32; ++i) ret += fmt::format("VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
 
 	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm)
 	{

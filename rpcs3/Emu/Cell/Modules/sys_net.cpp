@@ -147,7 +147,7 @@ namespace sys_net
 	// TODO
 	thread_local vm::ptr<_tls_data_t> g_tls_net_data{};
 
-	static never_inline void initialize_tls()
+	static NEVER_INLINE void initialize_tls()
 	{
 		// allocate if not initialized
 		if (!g_tls_net_data)

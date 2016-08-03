@@ -34,21 +34,6 @@ namespace rsx
 	}
 }
 
-template<>
-struct unveil<rsx::old_shaders_cache::shader_language>
-{
-	static inline const char* get(rsx::old_shaders_cache::shader_language in)
-	{
-		switch (in)
-		{
-		case rsx::old_shaders_cache::shader_language::glsl: return "glsl";
-		case rsx::old_shaders_cache::shader_language::hlsl: return "hlsl";
-		}
-
-		return "";
-	}
-};
-
 namespace rsx
 {
 	namespace limits

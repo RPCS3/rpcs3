@@ -39,12 +39,12 @@ namespace arm_func_detail
 		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_GENERAL");
 
-		force_inline static T get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static T get_arg(ARMv7Thread& cpu)
 		{
 			return arm_gpr_cast<T>(cpu.GPR[g_count - 1]);
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, const T& arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, const T& arg)
 		{
 			cpu.GPR[g_count - 1] = arm_gpr_cast(arg);
 		}
@@ -56,12 +56,12 @@ namespace arm_func_detail
 		// first u64 argument is passed in r0-r1, second one is passed in r2-r3 (if g_count = 3)
 		static_assert(g_count == 2 || g_count == 4, "Wrong u64 argument position");
 
-		force_inline static u64 get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static u64 get_arg(ARMv7Thread& cpu)
 		{
 			return cpu.GPR_D[(g_count - 1) >> 1];
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, u64 arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, u64 arg)
 		{
 			cpu.GPR_D[(g_count - 1) >> 1] = arg;
 		}
@@ -72,12 +72,12 @@ namespace arm_func_detail
 	{
 		static_assert(g_count == 2 || g_count == 4, "Wrong s64 argument position");
 
-		force_inline static s64 get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static s64 get_arg(ARMv7Thread& cpu)
 		{
 			return cpu.GPR_D[(g_count - 1) >> 1];
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, s64 arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, s64 arg)
 		{
 			cpu.GPR_D[(g_count - 1) >> 1] = arg;
 		}
@@ -89,11 +89,11 @@ namespace arm_func_detail
 		static_assert(f_count <= 0, "TODO: Unsupported argument type (float)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_FLOAT");
 
-		force_inline static T get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static T get_arg(ARMv7Thread& cpu)
 		{
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, const T& arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, const T& arg)
 		{
 		}
 	};
@@ -104,11 +104,11 @@ namespace arm_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported argument type (vector)");
 		static_assert(std::is_same<CV T, CV v128>::value, "Invalid function argument type for ARG_VECTOR");
 
-		force_inline static T get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static T get_arg(ARMv7Thread& cpu)
 		{
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, const T& arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, const T& arg)
 		{
 		}
 	};
@@ -120,13 +120,13 @@ namespace arm_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_STACK");
 
-		force_inline static T get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static T get_arg(ARMv7Thread& cpu)
 		{
 			// TODO: check
 			return arm_gpr_cast<T, u32>(vm::psv::read32(cpu.SP + sizeof(u32) * (g_count - 5)));
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, const T& arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, const T& arg)
 		{
 			// TODO: check
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
@@ -139,13 +139,13 @@ namespace arm_func_detail
 	template<u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<u64, ARG_STACK, g_count, f_count, v_count>
 	{
-		force_inline static u64 get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static u64 get_arg(ARMv7Thread& cpu)
 		{
 			// TODO: check
 			return vm::psv::read64(cpu.SP + sizeof(u32) * (g_count - 6));
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, u64 arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, u64 arg)
 		{
 			// TODO: check
 			const int stack_pos = (g_count - 6) * 4 - FIXED_STACK_FRAME_SIZE;
@@ -158,13 +158,13 @@ namespace arm_func_detail
 	template<u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<s64, ARG_STACK, g_count, f_count, v_count>
 	{
-		force_inline static s64 get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static s64 get_arg(ARMv7Thread& cpu)
 		{
 			// TODO: check
 			return vm::psv::read64(cpu.SP + sizeof(u32) * (g_count - 6));
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, s64 arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, s64 arg)
 		{
 			// TODO: check
 			const int stack_pos = (g_count - 6) * 4 - FIXED_STACK_FRAME_SIZE;
@@ -179,12 +179,12 @@ namespace arm_func_detail
 	{
 		static_assert(std::is_same<T, ARMv7Thread&>::value, "Invalid function argument type for ARG_CONTEXT");
 
-		force_inline static ARMv7Thread& get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static ARMv7Thread& get_arg(ARMv7Thread& cpu)
 		{
 			return cpu;
 		}
 
-		force_inline static void put_arg(ARMv7Thread& cpu, ARMv7Thread& arg)
+		FORCE_INLINE static void put_arg(ARMv7Thread& cpu, ARMv7Thread& arg)
 		{
 		}
 	};
@@ -194,7 +194,7 @@ namespace arm_func_detail
 	{
 		static_assert(std::is_same<CV T, CV arm_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
 
-		force_inline static arm_va_args_t get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static arm_va_args_t get_arg(ARMv7Thread& cpu)
 		{
 			return{ g_count };
 		}
@@ -208,12 +208,12 @@ namespace arm_func_detail
 		static_assert(type == ARG_GENERAL, "Wrong use of bind_result template");
 		static_assert(sizeof(T) <= 4, "Invalid function result type for ARG_GENERAL");
 
-		force_inline static T get_result(ARMv7Thread& cpu)
+		FORCE_INLINE static T get_result(ARMv7Thread& cpu)
 		{
 			return arm_gpr_cast<T>(cpu.GPR[0]);
 		}
 
-		force_inline static void put_result(ARMv7Thread& cpu, const T& result)
+		FORCE_INLINE static void put_result(ARMv7Thread& cpu, const T& result)
 		{
 			cpu.GPR[0] = arm_gpr_cast(result);
 		}
@@ -222,12 +222,12 @@ namespace arm_func_detail
 	template<>
 	struct bind_result<u64, ARG_GENERAL>
 	{
-		force_inline static u64 get_result(ARMv7Thread& cpu)
+		FORCE_INLINE static u64 get_result(ARMv7Thread& cpu)
 		{
 			return cpu.GPR_D[0];
 		}
 
-		force_inline static void put_result(ARMv7Thread& cpu, u64 result)
+		FORCE_INLINE static void put_result(ARMv7Thread& cpu, u64 result)
 		{
 			cpu.GPR_D[0] = result;
 		}
@@ -236,12 +236,12 @@ namespace arm_func_detail
 	template<>
 	struct bind_result<s64, ARG_GENERAL>
 	{
-		force_inline static s64 get_result(ARMv7Thread& cpu)
+		FORCE_INLINE static s64 get_result(ARMv7Thread& cpu)
 		{
 			return cpu.GPR_D[0];
 		}
 
-		force_inline static void put_result(ARMv7Thread& cpu, s64 result)
+		FORCE_INLINE static void put_result(ARMv7Thread& cpu, s64 result)
 		{
 			cpu.GPR_D[0] = result;
 		}
@@ -252,7 +252,7 @@ namespace arm_func_detail
 	//{
 	//	static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-	//	static force_inline void put_result(ARMv7Thread& cpu, const T& result)
+	//	static FORCE_INLINE void put_result(ARMv7Thread& cpu, const T& result)
 	//	{
 	//	}
 	//};
@@ -262,7 +262,7 @@ namespace arm_func_detail
 	//{
 	//	static_assert(std::is_same<std::remove_cv_t<T>, v128>::value, "Invalid function result type for ARG_VECTOR");
 
-	//	static force_inline void put_result(ARMv7Thread& cpu, const T& result)
+	//	static FORCE_INLINE void put_result(ARMv7Thread& cpu, const T& result)
 	//	{
 	//	}
 	//};
@@ -322,21 +322,21 @@ namespace arm_func_detail
 	// argument type + g/f/v_count unpacker
 	template<typename T, u32 type_pack> struct bind_arg_packed
 	{
-		force_inline static T get_arg(ARMv7Thread& cpu)
+		FORCE_INLINE static T get_arg(ARMv7Thread& cpu)
 		{
 			return bind_arg<T, static_cast<arg_class>(type_pack & 0xff), (type_pack >> 8) & 0xff, (type_pack >> 16) & 0xff, (type_pack >> 24)>::get_arg(cpu);
 		}
 	};
 
 	template<u32... Info, typename RT, typename... Args>
-	force_inline RT call(ARMv7Thread& cpu, RT(*func)(Args...), arg_info_pack_t<Info...> info)
+	FORCE_INLINE RT call(ARMv7Thread& cpu, RT(*func)(Args...), arg_info_pack_t<Info...> info)
 	{
 		// do the actual function call when all arguments are prepared (simultaneous unpacking of Args... and Info...)
 		return func(bind_arg_packed<Args, Info>::get_arg(cpu)...);
 	}
 
 	template<typename T, typename... Types, u32... Info, typename RT, typename... Args>
-	force_inline RT call(ARMv7Thread& cpu, RT(*func)(Args...), arg_info_pack_t<Info...> info)
+	FORCE_INLINE RT call(ARMv7Thread& cpu, RT(*func)(Args...), arg_info_pack_t<Info...> info)
 	{
 		// unpack previous type counts (0/0/0 for the first time)
 		const u32 g_count = (info.last_value >> 8) & 0xff;
@@ -353,14 +353,14 @@ namespace arm_func_detail
 	}
 
 	template<u32 g_count, u32 f_count, u32 v_count>
-	force_inline static bool put_func_args(ARMv7Thread& cpu)
+	FORCE_INLINE static bool put_func_args(ARMv7Thread& cpu)
 	{
 		// terminator
 		return false;
 	}
 
 	template<u32 g_count, u32 f_count, u32 v_count, typename T1, typename... T>
-	force_inline static bool put_func_args(ARMv7Thread& cpu, T1 arg, T... args)
+	FORCE_INLINE static bool put_func_args(ARMv7Thread& cpu, T1 arg, T... args)
 	{
 		using type = arg_type<T1, g_count, f_count, v_count>;
 		const arg_class t = type::value;
@@ -402,7 +402,7 @@ namespace arm_func_detail
 	template<typename RT, typename... T>
 	struct func_caller
 	{
-		force_inline static RT call(ARMv7Thread& cpu, u32 addr, T... args)
+		FORCE_INLINE static RT call(ARMv7Thread& cpu, u32 addr, T... args)
 		{
 			func_caller<void, T...>::call(cpu, addr, args...);
 
@@ -413,7 +413,7 @@ namespace arm_func_detail
 	template<typename... T>
 	struct func_caller<void, T...>
 	{
-		force_inline static void call(ARMv7Thread& cpu, u32 addr, T... args)
+		FORCE_INLINE static void call(ARMv7Thread& cpu, u32 addr, T... args)
 		{
 			if (put_func_args<0, 0, 0, T...>(cpu, args...))
 			{
@@ -428,7 +428,7 @@ namespace arm_func_detail
 		}
 	};
 
-	template<typename RT, typename... T> force_inline void do_call(ARMv7Thread& cpu, RT(*func)(T...))
+	template<typename RT, typename... T> FORCE_INLINE void do_call(ARMv7Thread& cpu, RT(*func)(T...))
 	{
 		func_binder<RT, T...>::do_call(cpu, func);
 	}

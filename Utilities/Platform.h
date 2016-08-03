@@ -29,15 +29,21 @@
 #endif
 
 #ifdef _MSC_VER
-#define never_inline __declspec(noinline)
+#define SAFE_BUFFERS __declspec(safebuffers)
 #else
-#define never_inline __attribute__((noinline))
+#define SAFE_BUFFERS
 #endif
 
 #ifdef _MSC_VER
-#define force_inline __forceinline
+#define NEVER_INLINE __declspec(noinline)
 #else
-#define force_inline __attribute__((always_inline)) inline
+#define NEVER_INLINE __attribute__((noinline))
+#endif
+
+#ifdef _MSC_VER
+#define FORCE_INLINE __forceinline
+#else
+#define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
 
 #if defined(__GNUG__)

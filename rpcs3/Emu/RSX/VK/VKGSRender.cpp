@@ -44,7 +44,7 @@ namespace vk
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
 		default:
-			throw EXCEPTION("Unknown compare op: 0x%X", op);
+			throw EXCEPTION("Unknown compare op: 0x%x", (u32)op);
 		}
 	}
 
@@ -91,7 +91,7 @@ namespace vk
 			return std::make_pair(VK_FORMAT_R32_SFLOAT, vk::default_component_map());
 
 		default:
-			LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", color_format);
+			LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", (u32)color_format);
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 		}
 	}
@@ -170,7 +170,7 @@ namespace vk
 		case rsx::surface_target::surfaces_a_b_c_d:
 			return{ 0, 1, 2, 3 };
 		default:
-			LOG_ERROR(RSX, "Bad surface color target: %d", fmt);
+			LOG_ERROR(RSX, "Bad surface color target: %d", (u32)fmt);
 			return{};
 		}
 	}
@@ -195,7 +195,7 @@ namespace vk
 		case rsx::logic_op::logic_or_inverted: return VK_LOGIC_OP_OR_INVERTED;
 		case rsx::logic_op::logic_nand: return VK_LOGIC_OP_NAND;
 		default:
-			throw EXCEPTION("Unknown logic op 0x%X", op);
+			throw EXCEPTION("Unknown logic op 0x%x", (u32)op);
 		}
 	}
 
@@ -218,7 +218,7 @@ namespace vk
 		case rsx::blend_factor::one_minus_constant_alpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 		default:
-			throw EXCEPTION("Unknown blend factor 0x%X", factor);
+			throw EXCEPTION("Unknown blend factor 0x%x", (u32)factor);
 		}
 	};
 
@@ -232,7 +232,7 @@ namespace vk
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
 		default:
-			throw EXCEPTION("Unknown blend op: 0x%X", op);
+			throw EXCEPTION("Unknown blend op: 0x%x", (u32)op);
 		}
 	}
 	
@@ -250,7 +250,7 @@ namespace vk
 		case rsx::stencil_op::incr_wrap: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 		case rsx::stencil_op::decr_wrap: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 		default:
-			throw EXCEPTION("Unknown stencil op: 0x%X", op);
+			throw EXCEPTION("Unknown stencil op: 0x%x", (u32)op);
 		}
 	}
 
@@ -261,7 +261,7 @@ namespace vk
 		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
 		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		default:
-			throw EXCEPTION("Unknown front face value: 0x%X", ffv);
+			throw EXCEPTION("Unknown front face value: 0x%x", (u32)ffv);
 		}
 	}
 
@@ -274,7 +274,7 @@ namespace vk
 		case CELL_GCM_FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
 		default: return VK_CULL_MODE_NONE;
 		}
-		throw EXCEPTION("Unknown cull face value: 0x%X", cfv);
+		throw EXCEPTION("Unknown cull face value: 0x%x", (u32)cfv);
 	}
 }
 
@@ -861,7 +861,7 @@ bool VKGSRender::load_program()
 		if (rsx::method_registers.restart_index() != 0xFFFF &&
 			rsx::method_registers.restart_index() != 0xFFFFFFFF)
 		{
-			LOG_ERROR(RSX, "Custom primitive restart index 0x%X. Should rewrite index buffer with proper value!", rsx::method_registers.restart_index());
+			LOG_ERROR(RSX, "Custom primitive restart index 0x%x should rewrite index buffer with proper value!", rsx::method_registers.restart_index());
 		}
 		properties.ia.primitiveRestartEnable = VK_TRUE;
 	}

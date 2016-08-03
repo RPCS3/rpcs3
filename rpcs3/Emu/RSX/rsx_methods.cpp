@@ -298,7 +298,7 @@ namespace rsx
 			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_LOCATION_LOCAL; break;
 			case blit_engine::context_dma::report_location_main: location = CELL_GCM_LOCATION_MAIN; break;
 			default:
-				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", report_dma);
+				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", (u8)report_dma);
 				return;
 			}
 
@@ -406,12 +406,12 @@ namespace rsx
 
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", in_origin);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", operation);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", (u8)operation);
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -440,7 +440,7 @@ namespace rsx
 				break;
 
 			default:
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", method_registers.blit_engine_context_surface());
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
 				return;
 			}
 
@@ -512,13 +512,13 @@ namespace rsx
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", dst_color_format);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", (u8)dst_color_format);
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
 				src_color_format != rsx::blit_engine::transfer_source_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", src_color_format);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", (u8)src_color_format);
 			}
 
 			//LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: SIZE=0x%08x, pitch=0x%x, offset=0x%x, scaleX=%f, scaleY=%f, CLIP_SIZE=0x%08x, OUT_SIZE=0x%08x",

@@ -5,7 +5,7 @@
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	force_inline RT _ptr_base<RT(T...), AT>::operator()(ARMv7Thread& cpu, T... args) const
+	FORCE_INLINE RT _ptr_base<RT(T...), AT>::operator()(ARMv7Thread& cpu, T... args) const
 	{
 		return arm_func_detail::func_caller<RT, T...>::call(cpu, vm::cast(this->addr(), HERE), args...);
 	}

@@ -191,7 +191,7 @@ struct to_se<vm::_ref_base<T, AT>, Se>
 
 // Forbid formatting
 template<typename T, typename AT>
-struct unveil<vm::_ref_base<T, AT>, void>
+struct fmt_unveil<vm::_ref_base<T, AT>, void>
 {
 	static_assert(!sizeof(T), "vm::_ref_base<>: ambiguous format argument");
 };

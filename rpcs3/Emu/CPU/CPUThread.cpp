@@ -4,6 +4,28 @@
 
 #include <mutex>
 
+template<>
+void fmt_class_string<cpu_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto arg)
+	{
+		switch (arg)
+		{
+		STR_CASE(cpu_type::ppu);
+		STR_CASE(cpu_type::spu);
+		STR_CASE(cpu_type::arm);
+		}
+
+		return unknown;
+	});
+}
+
+template<>
+void fmt_class_string<bitset_t<cpu_state>::raw_type>::format(std::string& out, u64 arg)
+{
+	out += "[UNIMPLEMENTED]";
+}
+
 thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
 
 void cpu_thread::on_task()

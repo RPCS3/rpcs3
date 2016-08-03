@@ -121,10 +121,10 @@ public:
 	void Resume();
 	void Stop();
 
-	force_inline bool IsRunning() const { return m_status == Running; }
-	force_inline bool IsPaused()  const { return m_status == Paused; }
-	force_inline bool IsStopped() const { return m_status == Stopped; }
-	force_inline bool IsReady()   const { return m_status == Ready; }
+	bool IsRunning() const { return m_status == Running; }
+	bool IsPaused()  const { return m_status == Paused; }
+	bool IsStopped() const { return m_status == Stopped; }
+	bool IsReady()   const { return m_status == Ready; }
 };
 
 extern Emulator Emu;

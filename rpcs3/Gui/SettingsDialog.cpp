@@ -27,14 +27,14 @@ static YAML::Node loaded;
 static YAML::Node saved;
 
 // Emit sorted YAML
-static never_inline void emit(YAML::Emitter& out, const YAML::Node& node)
+static NEVER_INLINE void emit(YAML::Emitter& out, const YAML::Node& node)
 {
 	// TODO
 	out << node;
 }
 
 // Incrementally load YAML
-static never_inline void operator +=(YAML::Node& left, const YAML::Node& node)
+static NEVER_INLINE void operator +=(YAML::Node& left, const YAML::Node& node)
 {
 	if (node && !node.IsNull())
 	{

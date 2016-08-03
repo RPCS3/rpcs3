@@ -3,15 +3,31 @@
 #include "StrFmt.h"
 
 #include "rpcs3_version.h"
-#include <cstdarg>
 #include <string>
 
 // Thread-specific log prefix provider
 thread_local std::string(*g_tls_log_prefix)() = nullptr;
 
-#ifndef _MSC_VER
-constexpr DECLARE(bijective<logs::level, const char*>::map);
-#endif
+template<>
+void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto lev)
+	{
+		switch (lev)
+		{
+		case logs::level::always: return "Nothing";
+		case logs::level::fatal: return "Fatal";
+		case logs::level::error: return "Error";
+		case logs::level::todo: return "TODO";
+		case logs::level::success: return "Success";
+		case logs::level::warning: return "Warning";
+		case logs::level::notice: return "Notice";
+		case logs::level::trace: return "Trace";
+		}
+
+		return unknown;
+	});
+}
 
 namespace logs
 {
@@ -72,13 +88,10 @@ void logs::listener::add(logs::listener* _new)
 	}
 }
 
-void logs::channel::broadcast(const logs::channel& ch, logs::level sev, const char* fmt...)
+void logs::channel::broadcast(const logs::channel& ch, logs::level sev, const char* fmt, const fmt::supplementary_info* sup, const u64* args)
 {
-	va_list args;
-	va_start(args, fmt);
-	std::string&& text = fmt::unsafe_vformat(fmt, args);
-	std::string&& prefix = g_tls_log_prefix ? g_tls_log_prefix() : "";
-	va_end(args);
+	std::string text; fmt::raw_append(text, fmt, sup, args);
+	std::string prefix(g_tls_log_prefix ? g_tls_log_prefix() : "");
 
 	// Prepare message information
 	message msg;

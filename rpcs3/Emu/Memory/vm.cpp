@@ -490,7 +490,7 @@ namespace vm
 
 		if (!block)
 		{
-			throw EXCEPTION("Invalid memory location (%d)", location);
+			throw fmt::exception("Invalid memory location (%u)" HERE, (uint)location);
 		}
 
 		return block->alloc(size, align, sup);
@@ -502,7 +502,7 @@ namespace vm
 
 		if (!block)
 		{
-			throw EXCEPTION("Invalid memory location (%d, addr=0x%x)", location, addr);
+			throw fmt::exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
 		return block->falloc(addr, size, sup);
@@ -514,7 +514,7 @@ namespace vm
 
 		if (!block)
 		{
-			throw EXCEPTION("Invalid memory location (%d, addr=0x%x)", location, addr);
+			throw fmt::exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
 		return block->dealloc(addr, sup_out);
@@ -526,7 +526,7 @@ namespace vm
 
 		if (!block)
 		{
-			LOG_ERROR(MEMORY, "vm::dealloc(): invalid memory location (%d, addr=0x%x)\n", location, addr);
+			LOG_ERROR(MEMORY, "vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", (uint)location, addr);
 			return;
 		}
 

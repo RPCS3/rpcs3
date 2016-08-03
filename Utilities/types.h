@@ -27,22 +27,19 @@ namespace gsl
 	enum class byte : u8;
 }
 
-template<typename T1, typename T2>
-struct bijective_pair
+namespace fmt
 {
-	T1 v1;
-	T2 v2;
-};
+}
+
+// Formatting helper, type-specific preprocessing for improving safety and functionality
+template<typename T, typename = void>
+struct fmt_unveil;
 
 template<typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
 struct se_storage;
 
 template<typename T, bool Se = true, std::size_t Align = alignof(T)>
 class se_t;
-
-// Specialization with static constexpr bijective_pair<T1, T2> map[] member expected
-template<typename T1, typename T2>
-struct bijective;
 
 template<typename T, std::size_t Size = sizeof(T)>
 struct atomic_storage;
@@ -501,40 +498,6 @@ struct multicast<void>
 	}
 };
 
-template<typename T1, typename T2 = const char*, typename T = T1, typename DT = T2>
-T2 bijective_find(const T& left, const DT& def = {})
-{
-	for (std::size_t i = 0; i < sizeof(bijective<T1, T2>::map) / sizeof(bijective_pair<T1, T2>); i++)
-	{
-		if (bijective<T1, T2>::map[i].v1 == left)
-		{
-			return bijective<T1, T2>::map[i].v2;
-		}
-	}
-
-	return def;
-}
-
-// Formatting helper, type-specific preprocessing for improving safety and functionality
-template<typename T, typename = void>
-struct unveil
-{
-	// TODO
-	static inline const T& get(const T& arg)
-	{
-		return arg;
-	}
-};
-
-template<typename T>
-struct unveil<T, void_t<decltype(std::declval<T>().c_str())>>
-{
-	static inline const char* get(const T& arg)
-	{
-		return arg.c_str();
-	}
-};
-
 // Tagged ID type
 template<typename T = void, typename ID = u32>
 class id_value
@@ -558,5 +521,16 @@ public:
 	operator ID() const
 	{
 		return m_value;
+	}
+};
+
+template<typename T, typename ID>
+struct fmt_unveil<id_value<T, ID>>
+{
+	using type = typename fmt_unveil<ID>::type;
+
+	static inline u64 get(const id_value<T, ID>& value)
+	{
+		return fmt_unveil<ID>::get(value);
 	}
 };

@@ -2,6 +2,7 @@
 
 #include "Utilities/types.h"
 #include "Utilities/Atomic.h"
+#include "Utilities/StrFmt.h"
 
 #include <initializer_list>
 #include <exception>
@@ -17,6 +18,12 @@ namespace cfg
 {
 	// Convert string to signed integer
 	bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max);
+
+	// Internal hack
+	bool try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string&);
+
+	// Internal hack
+	std::vector<std::string> try_to_enum_list(decltype(&fmt_class_string<int>::format) func);
 
 	// Config tree entry type.
 	enum class type : uint
@@ -296,26 +303,26 @@ namespace cfg
 
 		std::string to_string() const override
 		{
-			for (std::size_t i = 0; i < sizeof(bijective<T, const char*>::map) / sizeof(bijective_pair<T, const char*>); i++)
-			{
-				if (bijective<T, const char*>::map[i].v1 == m_value)
-				{
-					return bijective<T, const char*>::map[i].v2;
-				}
-			}
-
-			return{}; // TODO: ???
+			std::string result;
+			fmt_class_string<T>::format(result, fmt_unveil<T>::get(m_value));
+			return result; // TODO: ???
 		}
 
 		bool from_string(const std::string& value) override
 		{
-			for (std::size_t i = 0; i < sizeof(bijective<T, const char*>::map) / sizeof(bijective_pair<T, const char*>); i++)
+			u64 result;
+
+			if (try_to_enum_value(&result, &fmt_class_string<T>::format, value))
 			{
-				if (bijective<T, const char*>::map[i].v2 == value)
+				const auto val = static_cast<std::underlying_type_t<T>>(result);
+
+				if (static_cast<u64>(val) != result)
 				{
-					m_value = bijective<T, const char*>::map[i].v1;
-					return true;
+					return false;
 				}
+
+				m_value = static_cast<T>(val);
+				return true;
 			}
 
 			return false;
@@ -323,14 +330,7 @@ namespace cfg
 
 		std::vector<std::string> to_list() const override
 		{
-			std::vector<std::string> result;
-
-			for (std::size_t i = 0; i < sizeof(bijective<T, const char*>::map) / sizeof(bijective_pair<T, const char*>); i++)
-			{
-				result.emplace_back(bijective<T, const char*>::map[i].v2);
-			}
-
-			return result;
+			return try_to_enum_list(&fmt_class_string<T>::format);
 		}
 	};
 

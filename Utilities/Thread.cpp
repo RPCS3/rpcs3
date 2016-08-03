@@ -863,7 +863,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 		return true;
 	}
 
-	LOG_ERROR(MEMORY, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", reg, d_size, i_size);
+	LOG_ERROR(MEMORY, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", (u32)reg, d_size, i_size);
 	return false;
 }
 
@@ -882,7 +882,7 @@ bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 v
 		}
 	}
 
-	LOG_ERROR(MEMORY, "put_x64_reg_value(): invalid destination (reg=%d, d_size=%lld, value=0x%llx)", reg, d_size, value);
+	LOG_ERROR(MEMORY, "put_x64_reg_value(): invalid destination (reg=%d, d_size=%lld, value=0x%llx)", (u32)reg, d_size, value);
 	return false;
 }
 
@@ -1062,7 +1062,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		if (a_size != 4 || !d_size || !i_size)
 		{
-			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", (u32)op, (u32)reg, d_size, a_size, i_size);
 			report_opcode();
 			return false;
 		}
@@ -1134,7 +1134,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_STOS:
 		default:
 		{
-			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", op, reg, d_size, i_size);
+			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", (u32)op, (u32)reg, d_size, i_size);
 			report_opcode();
 			return false;
 		}
@@ -1151,7 +1151,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		// write memory using "privileged" access to avoid breaking reservation
 		if (!d_size || !i_size)
 		{
-			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", (u32)op, (u32)reg, d_size, a_size, i_size);
 			report_opcode();
 			return false;
 		}
@@ -1165,7 +1165,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			{
 				if (reg - X64R_XMM0 >= 16)
 				{
-					LOG_ERROR(MEMORY, "X64OP_STORE: d_size=16, reg=%d", reg);
+					LOG_ERROR(MEMORY, "X64OP_STORE: d_size=16, reg=%d", (u32)reg);
 					return false;
 				}
 
@@ -1577,7 +1577,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 		default:
 		{
-			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", (u32)op, (u32)reg, d_size, a_size, i_size);
 			report_opcode();
 			return false;
 		}

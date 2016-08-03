@@ -10,6 +10,12 @@
 const ppu_decoder<ppu_itype> s_ppu_itype;
 const ppu_decoder<ppu_iname> s_ppu_iname;
 
+template<>
+void fmt_class_string<bitset_t<ppu_attr>::raw_type>::format(std::string& out, u64 arg)
+{
+	out += "[UNIMPLEMENTED]";
+}
+
 void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc)
 {
 	// Load custom PRX configuration if available

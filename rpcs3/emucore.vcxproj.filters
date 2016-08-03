@@ -884,6 +884,9 @@
     <ClCompile Include="Emu\RSX\gcm_enums.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\ELF.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1701,6 +1704,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\gcm_enums.h">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\cfmt.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

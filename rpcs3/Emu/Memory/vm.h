@@ -182,12 +182,12 @@ namespace vm
 	{
 		static vm::addr_t cast(u64 addr, const char* loc)
 		{
-			return static_cast<vm::addr_t>(fmt::narrow<u32>("Memory address out of range: 0x%llx%s", addr, loc));
+			return static_cast<vm::addr_t>(static_cast<u32>(addr));
 		}
 
 		static vm::addr_t cast(u64 addr)
 		{
-			return static_cast<vm::addr_t>(fmt::narrow<u32>("Memory address out of range: 0x%llx", addr));
+			return static_cast<vm::addr_t>(static_cast<u32>(addr));
 		}
 	};
 

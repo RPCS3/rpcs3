@@ -61,7 +61,7 @@ public:
 		Show();
 	}
 
-	force_inline void Update(const u8 thread_id, const u64 value, const wxString& msg)
+	void Update(const u8 thread_id, const u64 value, const wxString& msg)
 	{
 		if(thread_id > m_cores) return;
 

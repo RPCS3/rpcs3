@@ -49,7 +49,7 @@ namespace vk
 		const VkFormat* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 
 		if (type > rsx::vertex_base_type::ub256)
-			throw EXCEPTION("VKGS error: unknown vertex base type 0x%X.", (u32)type);
+			throw EXCEPTION("VKGS error: unknown vertex base type 0x%x", (u32)type);
 
 		return vec_selectors[size][(int)type];
 	}
@@ -425,7 +425,7 @@ VKGSRender::upload_vertex_data()
 				vk::copy_inlined_data_to_buffer<u16, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
 				break;
 			default:
-				throw EXCEPTION("Unknown base type %d", vertex_info.type);
+				throw EXCEPTION("Unknown base type %d", (u32)vertex_info.type);
 			}
 
 			m_attrib_ring_info.unmap();
@@ -545,7 +545,7 @@ VKGSRender::upload_vertex_data()
 					break;
 				}
 				default:
-					LOG_ERROR(RSX, "bad non array vertex data format (type = %d, size = %d)", vertex_info.type, vertex_info.size);
+					LOG_ERROR(RSX, "bad non array vertex data format (type=%d, size=%d)", (u32)vertex_info.type, vertex_info.size);
 					break;
 				}
 			}

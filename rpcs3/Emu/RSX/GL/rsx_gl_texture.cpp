@@ -37,7 +37,7 @@ namespace
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 		}
-		throw EXCEPTION("Compressed or unknown texture format %x", texture_format);
+		throw EXCEPTION("Compressed or unknown texture format 0x%x", texture_format);
 	}
 
 
@@ -66,7 +66,7 @@ namespace
 		case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(GL_RG, GL_HALF_FLOAT);
 		}
-		throw EXCEPTION("Compressed or unknown texture format %x", texture_format);
+		throw EXCEPTION("Compressed or unknown texture format 0x%x", texture_format);
 	}
 
 	bool is_compressed_format(u32 texture_format)
@@ -99,7 +99,7 @@ namespace
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 			return true;
 		}
-		throw EXCEPTION("Unknown format %x", texture_format);
+		throw EXCEPTION("Unknown format 0x%x", texture_format);
 	}
 
 	bool requires_unpack_byte(u32 texture_format)
@@ -178,7 +178,7 @@ namespace
 			return { GL_ZERO, GL_GREEN, GL_BLUE, GL_RED };
 
 		}
-		throw EXCEPTION("Unknown format %x", texture_format);
+		throw EXCEPTION("Unknown format 0x%x", texture_format);
 	}
 }
 
@@ -248,7 +248,7 @@ namespace rsx
 			case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
 			}
 
-			LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d).", wrap);
+			LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d)", (u32)wrap);
 			return GL_REPEAT;
 		}
 
@@ -266,7 +266,7 @@ namespace rsx
 			case rsx::texture_max_anisotropy::x16: return 16.0f;
 			}
 
-			LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d).", aniso);
+			LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d)", (u32)aniso);
 			return 1.0f;
 		}
 
@@ -526,7 +526,7 @@ namespace rsx
 			{
 				if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
 				{
-					LOG_WARNING(RSX, "Texture %d, target 0x%X, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
+					LOG_WARNING(RSX, "Texture %d, target 0x%x, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
 					min_filter = GL_LINEAR;
 				}
 			}
@@ -631,7 +631,7 @@ namespace rsx
 			{
 				if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
 				{
-					LOG_WARNING(RSX, "Texture %d, target 0x%X, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
+					LOG_WARNING(RSX, "Texture %d, target 0x%x, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
 					min_filter = GL_LINEAR;
 				}
 			}

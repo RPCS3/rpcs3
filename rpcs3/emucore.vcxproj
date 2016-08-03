@@ -367,6 +367,7 @@
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
     <ClCompile Include="Emu\System.cpp" />
+    <ClCompile Include="Loader\ELF.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
@@ -386,6 +387,7 @@
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\BitSet.h" />
+    <ClInclude Include="..\Utilities\cfmt.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\geometry.h" />

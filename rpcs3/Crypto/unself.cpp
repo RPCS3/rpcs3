@@ -7,86 +7,86 @@
 // TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
 #include <zlib.h>
 
-force_inline u8 Read8(const fs::file& f)
+inline u8 Read8(const fs::file& f)
 {
 	u8 ret;
 	f.read(&ret, sizeof(ret));
 	return ret;
 }
 
-force_inline u16 Read16(const fs::file& f)
+inline u16 Read16(const fs::file& f)
 {
 	be_t<u16> ret;
 	f.read(&ret, sizeof(ret));
 	return ret;
 }
 
-force_inline u32 Read32(const fs::file& f)
+inline u32 Read32(const fs::file& f)
 {
 	be_t<u32> ret;
 	f.read(&ret, sizeof(ret));
 	return ret;
 }
 
-force_inline u64 Read64(const fs::file& f)
+inline u64 Read64(const fs::file& f)
 {
 	be_t<u64> ret;
 	f.read(&ret, sizeof(ret));
 	return ret;
 }
 
-force_inline u16 Read16LE(const fs::file& f)
+inline u16 Read16LE(const fs::file& f)
 {
 	u16 ret;
 	f.read(&ret, sizeof(ret));
 	return ret;
 }
 
-force_inline u32 Read32LE(const fs::file& f)
+inline u32 Read32LE(const fs::file& f)
 {
 	u32 ret;
 	f.read(&ret, sizeof(ret));
 	return ret;
 }
 
-force_inline u64 Read64LE(const fs::file& f)
+inline u64 Read64LE(const fs::file& f)
 {
 	u64 ret;
 	f.read(&ret, sizeof(ret));
 	return ret;
 }
 
-force_inline void Write8(const fs::file& f, const u8 data)
+inline void Write8(const fs::file& f, const u8 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write16LE(const fs::file& f, const u16 data)
+inline void Write16LE(const fs::file& f, const u16 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write32LE(const fs::file& f, const u32 data)
+inline void Write32LE(const fs::file& f, const u32 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write64LE(const fs::file& f, const u64 data)
+inline void Write64LE(const fs::file& f, const u64 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write16(const fs::file& f, const be_t<u16> data)
+inline void Write16(const fs::file& f, const be_t<u16> data)
 {
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write32(const fs::file& f, const be_t<u32> data)
+inline void Write32(const fs::file& f, const be_t<u32> data)
 {
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write64(const fs::file& f, const be_t<u64> data)
+inline void Write64(const fs::file& f, const be_t<u64> data)
 {
 	f.write(&data, sizeof(data));
 }

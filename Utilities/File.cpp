@@ -1333,3 +1333,37 @@ u64 fs::get_dir_size(const std::string& path)
 
 	return result;
 }
+
+template<>
+void fmt_class_string<fs::seek_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto arg)
+	{
+		switch (arg)
+		{
+		STR_CASE(fs::seek_mode::seek_set);
+		STR_CASE(fs::seek_mode::seek_cur);
+		STR_CASE(fs::seek_mode::seek_end);
+		}
+
+		return unknown;
+	});
+}
+
+template<>
+void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto arg)
+	{
+		switch (arg)
+		{
+		case fs::error::ok: return "OK";
+
+		case fs::error::inval: return "Invalid arguments";
+		case fs::error::noent: return "Not found";
+		case fs::error::exist: return "Already exists";
+		}
+
+		return unknown;
+	});
+}

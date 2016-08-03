@@ -24,7 +24,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) { VkResult __res = expr; if(__res != VK_SUCCESS) throw EXCEPTION("Assertion failed! Result is %Xh", __res); }
+#define CHECK_RESULT(expr) do { VkResult _res = (expr); if (_res != VK_SUCCESS) throw fmt::exception("Assertion failed! Result is %Xh", (s32)_res); } while (0)
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);

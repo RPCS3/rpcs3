@@ -130,7 +130,7 @@ std::string SPUThread::dump() const
 {
 	std::string ret = "Registers:\n=========\n";
 
-	for (uint i = 0; i<128; ++i) ret += fmt::format("GPR[%d] = 0x%s\n", i, gpr[i].to_hex().c_str());
+	for (uint i = 0; i<128; ++i) ret += fmt::format("GPR[%d] = %s\n", i, gpr[i]);
 
 	return ret;
 }
@@ -1254,7 +1254,7 @@ bool SPUThread::stop_and_signal(u32 code)
 		}
 		else
 		{
-			throw EXCEPTION("Unexpected SPU Thread Group state (%d)", group->state);
+			throw EXCEPTION("Unexpected SPU Thread Group state (%d)", (u32)group->state);
 		}
 
 		if (queue->events())
@@ -1294,7 +1294,7 @@ bool SPUThread::stop_and_signal(u32 code)
 		}
 		else
 		{
-			throw EXCEPTION("Unexpected SPU Thread Group state (%d)", group->state);
+			throw EXCEPTION("Unexpected SPU Thread Group state (%d)", (u32)group->state);
 		}
 
 		for (auto& thread : group->threads)

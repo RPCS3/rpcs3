@@ -1,6 +1,22 @@
 #include "stdafx.h"
 #include "PSF.h"
 
+template<>
+void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto fmt)
+	{
+		switch (fmt)
+		{
+		STR_CASE(psf::format::array);
+		STR_CASE(psf::format::string);
+		STR_CASE(psf::format::integer);
+		}
+
+		return unknown;
+	});
+}
+
 namespace psf
 {
 	logs::channel log("PSF", logs::level::notice);

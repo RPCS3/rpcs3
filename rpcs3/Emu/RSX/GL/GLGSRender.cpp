@@ -363,7 +363,7 @@ void GLGSRender::end()
 			switch (control)
 			{
 			default:
-				LOG_ERROR(RSX, "bad clip plane control (0x%x)", control);
+				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u32)control);
 
 			case rsx::user_clip_plane_op::disable:
 				value = 0;
@@ -1019,7 +1019,7 @@ void GLGSRender::flip(int buffer)
 			std::string message =
 				"draw_calls: " + std::to_string(m_draw_calls) + ", " + "draw_call_setup: " + std::to_string(m_begin_time) + "us, " + "vertex_upload_time: " + std::to_string(m_vertex_upload_time) + "us, " + "draw_call_execution: " + std::to_string(m_draw_time) + "us";
 
-			LOG_ERROR(RSX, message.c_str());
+			LOG_ERROR(RSX, "%s", message);
 		}
 	}
 
