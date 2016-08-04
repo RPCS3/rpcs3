@@ -20,6 +20,22 @@ struct sysutil_cb_manager
 	std::array<std::pair<vm::ptr<CellSysutilCallback>, vm::ptr<void>>, 4> callbacks;
 
 	std::queue<std::function<s32(ppu_thread&)>> registered;
+
+	std::function<s32(ppu_thread&)> get_cb()
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+
+		if (registered.empty())
+		{
+			return nullptr;
+		}
+
+		auto func = std::move(registered.front());
+
+		registered.pop();
+
+		return func;
+	}
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
@@ -211,23 +227,14 @@ s32 cellSysutilCheckCallback(ppu_thread& ppu)
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	while (true)
+	while (auto&& func = cbm->get_cb())
 	{
-		std::lock_guard<std::mutex> lock(cbm->mutex);
-
-		if (cbm->registered.empty())
-		{
-			break;
-		}
-
-		const auto func = std::move(cbm->registered.front());
-
-		cbm->registered.pop();
-
 		if (s32 res = func(ppu))
 		{
 			return res;
 		}
+
+		CHECK_EMU_STATUS;
 	}
 
 	return CELL_OK;
