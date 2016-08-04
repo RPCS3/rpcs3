@@ -201,6 +201,12 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	u16 w = src_layout.width_in_block;
 	u16 h = src_layout.height_in_block;
 	u16 depth = src_layout.depth;
+	u32 pitch = src_layout.pitch_in_bytes;
+
+	// Ignore when texture width > pitch
+	if (w > pitch)
+		return;
+		
 	switch (format)
 	{
 	case CELL_GCM_TEXTURE_B8:
