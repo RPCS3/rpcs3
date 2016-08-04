@@ -18,391 +18,139 @@
 #include <unordered_set>
 #include <algorithm>
 
-// Node location
-using cfg_location = std::vector<const char*>;
+static const int default_width = 550;
+static const int default_height = 610;
 
-extern std::string g_cfg_defaults;
-
-static YAML::Node loaded;
-static YAML::Node saved;
-
-// Emit sorted YAML
-static never_inline void emit(YAML::Emitter& out, const YAML::Node& node)
+SettingsDialog::SettingsDialog(wxWindow* parent,
+							   Mode mode,
+							   const wxString& title)
+: wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxSize(default_width, default_height), wxDEFAULT_DIALOG_STYLE)
 {
-	// TODO
-	out << node;
-}
+	BuildDialog(mode);
+	AddRenderers();
+	AddRendererSettings();
+	AddAudioBackends();
+	AddInputHandlers();
+	AddCameras();
+	AddConnectionStats();
+	AddSystemLanguages();
 
-// Incrementally load YAML
-static never_inline void operator +=(YAML::Node& left, const YAML::Node& node)
-{
-	if (node && !node.IsNull())
+
+	if (mode == Global)
 	{
-		if (node.IsMap())
-		{
-			for (const auto& pair : node)
-			{
-				if (pair.first.IsScalar())
-				{
-					auto&& lhs = left[pair.first.Scalar()];
-					lhs += pair.second;
-				}
-				else
-				{
-					// Exotic case (TODO: probably doesn't work)
-					auto&& lhs = left[YAML::Clone(pair.first)];
-					lhs += pair.second;
-				}
-			}
-		}
-		else if (node.IsScalar() || node.IsSequence())
-		{
-			// Scalars and sequences are replaced completely, but this may change in future.
-			// This logic may be overwritten by custom demands of every specific cfg:: node.
-			left = node;
-		}
+
+	}
+
+	else
+	{
+
+	}
+
+	if (ShowModal() == wxID_OK)
+	{
 	}
 }
 
-// Connects wx gui element to the config node; abstract base class
-struct cfg_adapter
+void SettingsDialog::OnModuleListItemToggled(wxCommandEvent& event)
 {
-	cfg_location location;
+}
 
-	cfg_adapter(cfg_location&& _loc)
-		: location(std::move(_loc))
-	{
-	}
-
-	static cfg::entry_base& get_cfg(cfg::entry_base& root, cfg_location::const_iterator begin, cfg_location::const_iterator end)
-	{
-		return begin == end ? root : get_cfg(root[*begin], begin + 1, end);
-	}
-
-	static YAML::Node get_node(YAML::Node node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
-	{
-		return begin == end ? node : get_node(node[*begin], begin + 1, end); // TODO
-	}
-
-	cfg::entry_base& get_cfg() const
-	{
-		return get_cfg(cfg::root, location.cbegin(), location.cend());
-	}
-
-	YAML::Node get_node(YAML::Node root) const
-	{
-		return get_node(root, location.cbegin(), location.cend());
-	}
-
-	virtual void save() = 0;
-};
-
-struct radiobox_pad_helper
+void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent& event)
 {
-	cfg_location location;
-	wxArrayString values;
+}
 
-	radiobox_pad_helper(cfg_location&& _loc)
-		: location(std::move(_loc))
+void SettingsDialog::OnCBoxRendererChanged(wxCommandEvent& event)
+{
+	cb_gpu_selector->Clear();
+
+	if (event.GetString() == "Null")
 	{
-		for (const auto& v : cfg_adapter::get_cfg(cfg::root, location.cbegin(), location.cend()).to_list())
+		l_gpu_selector->SetLabelText("GPU Selector");
+		cb_gpu_selector->Enable(false);
+	}
+
+	else if (event.GetString() == "OpenGL")
+	{
+		l_gpu_selector->SetLabelText("GPU Selector");
+		cb_gpu_selector->Enable(false);
+	}
+
+#ifdef _WIN32
+	else if (event.GetString() == "D3D12")
+	{
+		l_gpu_selector->SetLabelText("D3D Adapter");
+		if (gpus_d3d.empty())
 		{
-			values.Add(fmt::FromUTF8(v));
+			cb_gpu_selector->Enable(false);
+		}
+
+		else
+		{
+			cb_gpu_selector->Enable(true);
+			cb_gpu_selector->Append(gpus_d3d);
+			cb_gpu_selector->SetSelection(0);
 		}
 	}
 
-	operator const wxArrayString&() const
+	else if (event.GetString() == "Vulkan")
 	{
-		return values;
-	}
-};
-
-struct radiobox_pad : cfg_adapter
-{
-	wxRadioBox*& ptr;
-
-	radiobox_pad(radiobox_pad_helper&& helper, wxRadioBox*& ptr)
-		: cfg_adapter(std::move(helper.location))
-		, ptr(ptr)
-	{
-		const auto& value = get_node(loaded).Scalar();
-		const auto& values = get_cfg().to_list();
-
-		for (int i = 0; i < values.size(); i++)
+		l_gpu_selector->SetLabelText("Vulkan Adapter");
+		if (gpus_vulkan.empty())
 		{
-			if (value == values[i])
-			{
-				ptr->SetSelection(i);
-				return;
-			}
-		}
-	}
-
-	void save() override
-	{
-		get_node(saved) = get_cfg().to_list()[ptr->GetSelection()];
-	}
-};
-
-struct combobox_pad : cfg_adapter
-{
-	wxComboBox*& ptr;
-
-	combobox_pad(cfg_location&& _loc, wxComboBox*& ptr)
-		: cfg_adapter(std::move(_loc))
-		, ptr(ptr)
-	{
-		for (const auto& v : get_cfg().to_list())
-		{
-			ptr->Append(fmt::FromUTF8(v));
+			cb_gpu_selector->Enable(false);
 		}
 
-		ptr->SetValue(fmt::FromUTF8(get_node(loaded).Scalar()));
-	}
-
-	void save() override
-	{
-		get_node(saved) = fmt::ToUTF8(ptr->GetValue());
-	}
-};
-
-struct checkbox_pad : cfg_adapter
-{
-	wxCheckBox*& ptr;
-
-	checkbox_pad(cfg_location&& _loc, wxCheckBox*& ptr)
-		: cfg_adapter(std::move(_loc))
-		, ptr(ptr)
-	{
-		ptr->SetValue(get_node(loaded).as<bool>(false));
-	}
-
-	void save() override
-	{
-		get_node(saved) = ptr->GetValue() ? "true" : "false";
-	}
-};
-
-struct textctrl_pad : cfg_adapter
-{
-	wxTextCtrl*& ptr;
-
-	textctrl_pad(cfg_location&& _loc, wxTextCtrl*& ptr)
-		: cfg_adapter(std::move(_loc))
-		, ptr(ptr)
-	{
-		ptr->SetValue(fmt::FromUTF8(get_node(loaded).Scalar()));
-	}
-
-	void save() override
-	{
-		get_node(saved) = fmt::ToUTF8(ptr->GetValue());
-	}
-};
-
-
-SettingsDialog::SettingsDialog(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
-{
-	// Load default config
-	loaded = YAML::Load(g_cfg_defaults);
-
-	// Incrementally load config.yml
-	const fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	loaded += YAML::Load(config.to_string());
-
-	std::vector<std::unique_ptr<cfg_adapter>> pads;
-
-	static const u32 width = 458;
-	static const u32 height = 400;
-
-	// Settings panels
-	wxNotebook* nb_config = new wxNotebook(this, wxID_ANY, wxPoint(6, 6), wxSize(width, height));
-	wxPanel* p_system = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_core = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_graphics = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_audio = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_io = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_misc = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_networking = new wxPanel(nb_config, wxID_ANY);
-
-	nb_config->AddPage(p_core, "Core");
-	nb_config->AddPage(p_graphics, "Graphics");
-	nb_config->AddPage(p_audio, "Audio");
-	nb_config->AddPage(p_io, "Input / Output");
-	nb_config->AddPage(p_misc, "Misc");
-	nb_config->AddPage(p_networking, "Networking");
-	nb_config->AddPage(p_system, "System");
-
-	wxBoxSizer* s_subpanel_core = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* s_subpanel_core1 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_core2 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_graphics = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* s_subpanel_graphics1 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_graphics2 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_audio = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_io = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* s_subpanel_io1 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_io2 = new wxBoxSizer(wxVERTICAL);
-
-	wxBoxSizer* s_subpanel_system = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_misc = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_networking = new wxBoxSizer(wxVERTICAL);
-
-	// Core
-	wxStaticBoxSizer* s_round_core_lle = new wxStaticBoxSizer(wxVERTICAL, p_core, "Load libraries");
-	chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, wxLB_EXTENDED);
-	chbox_list_core_lle->Bind(wxEVT_CHECKLISTBOX, &SettingsDialog::OnModuleListItemToggled, this);
-	wxTextCtrl* s_module_search_box = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, {});
-	s_module_search_box->Bind(wxEVT_TEXT, &SettingsDialog::OnSearchBoxTextChanged, this);
-
-	// Graphics
-	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
-	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter");
-	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Resolution");
-	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Aspect ratio");
-	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Frame limit");
-
-	// Input / Output
-	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Pad Handler");
-	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Keyboard Handler");
-	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Mouse Handler");
-	wxStaticBoxSizer* s_round_io_camera = new wxStaticBoxSizer(wxVERTICAL, p_io, "Camera");
-	wxStaticBoxSizer* s_round_io_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_io, "Camera type");
-
-	// Audio
-	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, "Audio Out");
-
-	// Networking
-	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, "Connection status");
-
-	// System
-	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, "Language");
-
-
-	wxRadioBox* rbox_ppu_decoder;
-	wxRadioBox* rbox_spu_decoder;
-	wxComboBox* cbox_gs_render = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_gs_d3d_adapter = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_gs_resolution = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_gs_aspect = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_gs_frame_limit = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_pad_handler = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);;
-	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_mouse_handler = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_camera = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_camera_type = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_audio_out = new wxComboBox(p_audio, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_net_status = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
-
-	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
-	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx only");
-	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
-	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log shader programs");
-	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
-	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffers");
-	wxCheckBox* chbox_gs_read_depth = new wxCheckBox(p_graphics, wxID_ANY, "Read Depth Buffer");
-	wxCheckBox* chbox_gs_vsync = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
-	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
-	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug overlay");
-	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
-	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
-	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
-	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
-	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
-	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
-
-	{
-		// Sort string vector alphabetically
-		static const auto sort_string_vector = [](std::vector<std::string>& vec)
+		else
 		{
-			std::sort(vec.begin(), vec.end(), [](const std::string &str1, const std::string &str2) { return str1 < str2; });
-		};
-
-		auto&& data = loaded["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
-		sort_string_vector(data);
-
-		// List selected modules first
-		for (const auto& unk : data)
-		{
-			lle_module_list.insert(lle_module_list.end(), std::pair<std::string, bool>(unk, true));
-			chbox_list_core_lle->Check(chbox_list_core_lle->Append(unk));
+			cb_gpu_selector->Enable(true);
+			cb_gpu_selector->Append(gpus_vulkan);
+			cb_gpu_selector->SetSelection(0);
 		}
-
-		const std::string& lle_dir = Emu.GetLibDir(); // TODO
-
-		std::unordered_set<std::string> set(data.begin(), data.end());
-		std::vector<std::string> lle_module_list_unselected;
-
-		for (const auto& prxf : fs::dir(lle_dir))
-		{
-			// List found unselected modules
-			if (!prxf.is_directory && ppu_prx_object(fs::file(lle_dir + prxf.name)) == elf_error::ok && !set.count(prxf.name))
-			{
-				lle_module_list_unselected.push_back(prxf.name);
-			}
-		}
-
-		sort_string_vector(lle_module_list_unselected);
-
-		for (const auto& prxf : lle_module_list_unselected)
-		{
-			lle_module_list.insert(lle_module_list.end(), std::pair<std::string, bool>(prxf, false));
-			chbox_list_core_lle->Check(chbox_list_core_lle->Append(prxf), false);
-		}
-
-		lle_module_list_unselected.clear();
 	}
+#endif
 
-	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
-	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
-	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(ppu_decoder_modes), rbox_ppu_decoder));
+	else
+	{
+		l_gpu_selector->SetLabelText("GPU Selector");
+		cb_gpu_selector->Enable(false);
+	}
+}
 
-	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU Decoder" });
-	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);
-	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(spu_decoder_modes), rbox_spu_decoder));
-	rbox_spu_decoder->Enable(3, false); // TODO
+void SettingsDialog::AddRenderers()
+{
+#ifdef _WIN32
+	GetD3DAdapters();
+	GetVulkanAdapters();
+#endif
+}
 
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load liblv2.sprx only" }, chbox_core_load_liblv2));
+void SettingsDialog::AddRendererSettings()
+{
+}
 
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
+void SettingsDialog::AddAudioBackends()
+{
+}
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Resolution" }, cbox_gs_resolution));
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Aspect ratio" }, cbox_gs_aspect));
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Frame limit" }, cbox_gs_frame_limit));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Log shader programs" }, chbox_gs_log_prog));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write Depth Buffer" }, chbox_gs_dump_depth));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write Color Buffers" }, chbox_gs_dump_color));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read Color Buffers" }, chbox_gs_read_color));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read Depth Buffer" }, chbox_gs_read_depth));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "VSync" }, chbox_gs_vsync));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug output" }, chbox_gs_debug_output));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug overlay" }, chbox_gs_overlay));
+void SettingsDialog::AddInputHandlers()
+{
+}
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Audio", "Renderer" }, cbox_audio_out));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Dump to file" }, chbox_audio_dump));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Convert to 16 bit" }, chbox_audio_conv));
+void SettingsDialog::AddCameras()
+{
+}
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Pad" }, cbox_pad_handler));
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Keyboard" }, cbox_keyboard_handler));
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Mouse" }, cbox_mouse_handler));
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Camera" }, cbox_camera));
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Camera type" }, cbox_camera_type));
+void SettingsDialog::AddConnectionStats()
+{
+}
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Net", "Connection status" }, cbox_net_status));
+void SettingsDialog::AddSystemLanguages()
+{
+}
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "System", "Language" }, cbox_sys_lang));
-
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Exit RPCS3 when process finishes" }, chbox_hle_exitonstop));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Always start after boot" }, chbox_hle_always_start));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at System Call" }, chbox_dbg_ap_systemcall));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at Function Call" }, chbox_dbg_ap_functioncall));
-
-#ifdef _MSC_VER
+#ifdef _WIN32
+void SettingsDialog::GetD3DAdapters()
+{
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
 
 	if (SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory))))
@@ -413,193 +161,298 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 		{
 			DXGI_ADAPTER_DESC desc;
 			adapter->GetDesc(&desc);
-			cbox_gs_d3d_adapter->Append(desc.Description);
+			gpus_d3d.push_back(desc.Description);
 		}
-
-		pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "D3D12", "Adapter" }, cbox_gs_d3d_adapter));
 	}
-	else
+}
+
+void SettingsDialog::GetVulkanAdapters()
+{
+	// ???
+}
 #endif
+
+void SettingsDialog::BuildDialog(Mode mode)
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	// Create Layout Sizer
+	s_dialog = new wxBoxSizer(wxVERTICAL);
+	s_core = new wxBoxSizer(wxHORIZONTAL);
+	s_core_left = new wxBoxSizer(wxVERTICAL);
+	s_core_ppu_decoder = new wxBoxSizer(wxVERTICAL);
+	s_core_spu_decoder = new wxBoxSizer(wxVERTICAL);
+	s_core_ckb = new wxBoxSizer(wxVERTICAL);
+	s_core_right = new wxBoxSizer(wxVERTICAL);
+	s_graphics = new wxBoxSizer(wxVERTICAL);
+	s_graphics_cb = new wxGridSizer(0, 2, 0, 0);
+	s_graphics_renderer = new wxBoxSizer(wxVERTICAL);
+	s_graphics_aspect_ratio = new wxBoxSizer(wxVERTICAL);
+	s_graphics_resolution = new wxBoxSizer(wxVERTICAL);
+	s_graphics_frame_limit = new wxBoxSizer(wxVERTICAL);
+	s_graphics_ckb = new wxGridSizer(4, 2, 0, 0);
+	s_graphics_gpu_selector = new wxBoxSizer(wxVERTICAL);
+	s_audio = new wxBoxSizer(wxVERTICAL);
+	s_audio_cb = new wxGridSizer(0, 2, 0, 0);
+	s_audio_audio_out = new wxBoxSizer(wxVERTICAL);
+	s_audio_ckb = new wxGridSizer(0, 1, 0, 0);
+
+	if (mode == Global)
 	{
-		cbox_gs_d3d_adapter->Enable(false);
+		s_io = new wxBoxSizer(wxVERTICAL);
+		s_io_cb = new wxGridSizer(0, 2, 0, 0);
+		s_io_pad_handler = new wxBoxSizer(wxVERTICAL);
+		s_io_camera = new wxBoxSizer(wxVERTICAL);
+		s_io_keyboard_handler = new wxBoxSizer(wxVERTICAL);
+		s_io_camera_type = new wxBoxSizer(wxVERTICAL);
+		s_io_mouse_handler = new wxBoxSizer(wxVERTICAL);
+		s_misc = new wxBoxSizer(wxVERTICAL);
+		s_misc_ckb = new wxGridSizer(0, 1, 0, 0);
+		s_networking = new wxBoxSizer(wxVERTICAL);
+		s_networking_cb = new wxGridSizer(0, 2, 0, 0);
+		s_networking_connection_status = new wxBoxSizer(wxVERTICAL);
+		s_system = new wxBoxSizer(wxVERTICAL);
+		s_system_ckb = new wxGridSizer(0, 2, 0, 0);
+		s_system_cb = new wxGridSizer(0, 2, 0, 0);
+		s_system_language = new wxBoxSizer(wxVERTICAL);
 	}
 
-	// Core
-	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_core_lle->Add(s_module_search_box, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_button_box = new wxBoxSizer(wxHORIZONTAL);
 
-	// Rendering
-	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_gs_d3d_adapter->Add(cbox_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_gs_aspect->Add(cbox_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_gs_frame_limit->Add(cbox_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
+	wxSize ui_elem_min_size = wxSize(default_width / 2, wxDefaultSize.GetY());
+	wxSize ui_elem_core_min_size = wxSize(ui_elem_min_size.GetX() / 1.5 + 10, ui_elem_min_size.GetY());
 
-	// Input/Output
-	s_round_io_pad_handler->Add(cbox_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_io_keyboard_handler->Add(cbox_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_io_mouse_handler->Add(cbox_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_io_camera->Add(cbox_camera, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_io_camera_type->Add(cbox_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
+	// Helper macros
+#define CreateLabel(UI_PANEL, UI_NAME, NAME) \
+	l_##UI_NAME = new wxStaticText(p_##UI_PANEL, wxID_ANY, wxT(NAME), wxDefaultPosition, wxDefaultSize, 0); \
+	l_##UI_NAME->Wrap(-1) \
 
-	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
+#define CreateCheckBox(UI_PANEL, UI_NAME, NAME) \
+	ckb_##UI_NAME = new wxCheckBox(p_##UI_PANEL, wxID_ANY, wxT(NAME), wxDefaultPosition, wxDefaultSize, 0); \
+	ckb_##UI_NAME->SetMinSize(ui_elem_min_size); \
+	s_##UI_PANEL##_ckb->Add(ckb_##UI_NAME, 0, wxALL | wxEXPAND, 5)
 
-	// Networking
-	s_round_net_status->Add(cbox_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
+#define CreateCheckBoxCore(UI_PANEL, UI_NAME, NAME) \
+	CreateCheckBox(UI_PANEL, UI_NAME, NAME); \
+	ckb_##UI_NAME->SetMinSize(ui_elem_core_min_size)
 
-	// System
-	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
+#define CreateComboBox(UI_PANEL, UI_NAME, NAME) \
+	l_##UI_NAME = new wxStaticText(p_##UI_PANEL, wxID_ANY, wxT(NAME), wxDefaultPosition, wxDefaultSize, 0); \
+	l_##UI_NAME->Wrap(-1); \
+	cb_##UI_NAME = new wxChoice(p_##UI_PANEL, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, 0); \
+	cb_##UI_NAME->SetMinSize(ui_elem_min_size); \
+	s_##UI_PANEL##_##UI_NAME->Add(l_##UI_NAME, 0, wxALL | wxEXPAND, 5); \
+	s_##UI_PANEL##_##UI_NAME->Add(cb_##UI_NAME, 0, wxALL | wxEXPAND, 5); \
+	s_##UI_PANEL##_cb->Add(s_##UI_PANEL##_##UI_NAME, 1, wxEXPAND, 5)
 
-	// Core
-	s_subpanel_core1->Add(rbox_ppu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core2->Add(s_round_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core->Add(s_subpanel_core1);
-	s_subpanel_core->Add(s_subpanel_core2);
+#define CreateRadioBox(UI_PANEL, UI_NAME, NUM_CHOICES, CHOICES) \
+	radiobox_##UI_NAME = new wxRadioBox(p_##UI_PANEL, wxID_ANY, wxT(NAME), \
+		wxDefaultPosition, wxDefaultSize, \
+		NUM_CHOICES, CHOICES, 1, wxRA_SPECIFY_COLS); \
+	radiobox_##UI_NAME->SetSelection(0)
 
-	// Graphics
-	s_subpanel_graphics1->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(s_round_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(chbox_gs_read_depth, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics2->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics2->Add(s_round_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics2->AddSpacer(68);
-	s_subpanel_graphics2->Add(chbox_gs_debug_output, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics2->Add(chbox_gs_overlay, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics2->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics2->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics->Add(s_subpanel_graphics1);
-	s_subpanel_graphics->Add(s_subpanel_graphics2);
+#define FinalizePanelLayout(UI_PANEL, NAME, DEFAULT_PAGE) \
+	p_##UI_PANEL->SetSizer(s_##UI_PANEL); \
+	p_##UI_PANEL->Layout(); \
+	s_##UI_PANEL->Fit(p_##UI_PANEL); \
+	nb_config->AddPage(p_##UI_PANEL, wxT(NAME), DEFAULT_PAGE);
 
-	// Input - Output
-	s_subpanel_io1->Add(s_round_io_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_io1->Add(s_round_io_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_io1->Add(s_round_io_mouse_handler, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_io2->Add(s_round_io_camera, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_io2->Add(s_round_io_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_io->Add(s_subpanel_io1);
-	s_subpanel_io->Add(s_subpanel_io2);
+	//=============================================================================================//
+	// Panels                                                                                      //
+	//=============================================================================================//
 
-	// Audio
-	s_subpanel_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_audio->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
+	// NOTE: the pages needs to be added last, otherwise the layout doesn't work
 
-	// Miscellaneous
-	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_misc->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
+	nb_config = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+	p_core = new wxPanel(nb_config, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	p_graphics = new wxPanel(nb_config, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	p_audio = new wxPanel(nb_config, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	p_io = new wxPanel(nb_config, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	p_misc = new wxPanel(nb_config, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	p_networking = new wxPanel(nb_config, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	p_system = new wxPanel(nb_config, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 
-	// Auto Pause
-	s_subpanel_misc->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_misc->Add(chbox_dbg_ap_functioncall, wxSizerFlags().Border(wxALL, 5).Expand());
+	//=============================================================================================//
+	// Core                                                                                        //
+	//=============================================================================================//
 
-	// Networking
-	s_subpanel_networking->Add(s_round_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
+	wxString radiobox_ppu_decoderChoices[] = {
+		wxT("Interpreter (precise)"),
+		wxT("Interpreter (fast)"),
+		wxT("Recompiler (LLVM)")
+	};
+	int radiobox_ppu_decoderNChoices = sizeof(radiobox_ppu_decoderChoices) / sizeof(wxString);
+	radiobox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, wxT("PPU Decoder"),
+										  wxDefaultPosition, wxDefaultSize,
+										  radiobox_ppu_decoderNChoices, radiobox_ppu_decoderChoices,
+										  1, wxRA_SPECIFY_COLS);
+	radiobox_ppu_decoder->SetSelection(0);
 
-	// System
-	s_subpanel_system->Add(chbox_vfs_enable_host_root, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
+	wxString radiobox_spu_decoderChoices[] = {
+		wxT("Interpreter (precise)"),
+		wxT("Interpreter (fast)"),
+		wxT("Recompiler (ASMJIT)"),
+		wxT("Recompiler (LLVM)")
+	};
+	int radiobox_spu_decoderNChoices = sizeof(radiobox_spu_decoderChoices) / sizeof(wxString);
+	radiobox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, wxT("SPU Decoder"),
+										  wxDefaultPosition, wxDefaultSize,
+										  radiobox_spu_decoderNChoices, radiobox_spu_decoderChoices,
+										  1, wxRA_SPECIFY_COLS);
+	radiobox_spu_decoder->SetSelection(0);
 
-	// Buttons
-	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
-	s_b_panel->Add(new wxButton(this, wxID_OK), wxSizerFlags().Border(wxALL, 5).Bottom());
-	s_b_panel->Add(new wxButton(this, wxID_CANCEL), wxSizerFlags().Border(wxALL, 5).Bottom());
+	CreateCheckBoxCore(core, hook_static_functions, "Hook static functions");
+	CreateCheckBoxCore(core, load_liblv2_sprx_only, "Load liblv2.sprx only");
 
-	// Resize panels
-	SetSizerAndFit(s_subpanel_core, false);
-	SetSizerAndFit(s_subpanel_graphics, false);
-	SetSizerAndFit(s_subpanel_io, false);
-	SetSizerAndFit(s_subpanel_audio, false);
-	SetSizerAndFit(s_subpanel_misc, false);
-	SetSizerAndFit(s_subpanel_networking, false);
-	SetSizerAndFit(s_subpanel_system, false);
-	SetSizerAndFit(s_b_panel, false);
+	CreateLabel(core, load_libraries, "Load libraries");
+	clb_lle_module_list = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, 0);
+	clb_lle_module_list->Bind(wxEVT_CHECKLISTBOX, &SettingsDialog::OnModuleListItemToggled, this);
+	lle_search_box = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+	lle_search_box->Bind(wxEVT_TEXT, &SettingsDialog::OnSearchBoxTextChanged, this);
 
-	SetSize(width + 26, height + 80);
+	// setup additional layout elements
+	s_core_right->Add(l_load_libraries, 0, wxALL, 5);
+	s_core_ppu_decoder->Add(radiobox_ppu_decoder, 1, wxALL | wxEXPAND, 5);
+	s_core_left->Add(s_core_ppu_decoder, 2, wxEXPAND, 5);
+	s_core_spu_decoder->Add(radiobox_spu_decoder, 1, wxALL | wxEXPAND, 5);
+	s_core_left->Add(s_core_spu_decoder, 2, wxEXPAND, 5);
+	s_core_left->Add(s_core_ckb, 2, wxEXPAND, 5);
+	s_core_left->Add(0, 0, 1, wxEXPAND, 5);
+	s_core->Add(s_core_left, 1, wxEXPAND, 5);
+	s_core_right->Add(clb_lle_module_list, 5, wxALL | wxEXPAND, 5);
+	s_core_right->Add(lle_search_box, 0, wxALL | wxEXPAND, 5);
+	s_core->Add(s_core_right, 2, wxEXPAND, 5);
 
-	if (ShowModal() == wxID_OK)
-	{
-		std::set<std::string> lle_selected;
+	FinalizePanelLayout(core, "Core", true);
 
-		for (auto& i : lle_module_list)
-		{
-			if (i.second) // selected
-			{
-				lle_selected.emplace(i.first);
-			}
-		}
+	//=============================================================================================//
+	// Graphics                                                                                    //
+	//=============================================================================================//
 
-		saved.reset();
-		saved["Core"]["Load libraries"] = std::vector<std::string>(lle_selected.begin(), lle_selected.end());
+	CreateComboBox(graphics, renderer, "Renderer");
+	cb_renderer->Bind(wxEVT_CHOICE, &SettingsDialog::OnCBoxRendererChanged, this);
+	CreateComboBox(graphics, aspect_ratio, "Aspect ratio");
+	CreateComboBox(graphics, resolution, "Resolution");
+	CreateComboBox(graphics, frame_limit, "Frame limit");
+	CreateComboBox(graphics, gpu_selector, "GPU Selector");
 
-		for (auto& pad : pads)
-		{
-			pad->save();
-		}
+	CreateCheckBox(graphics, write_color_buffers, "Write Color Buffers");
+	CreateCheckBox(graphics, write_depth_buffer, "Write Depth Buffer");
+	CreateCheckBox(graphics, read_color_buffers, "Read Color Buffers");
+	CreateCheckBox(graphics, read_depth_buffer, "Read Depth Buffer");
+	CreateCheckBox(graphics, debug_output, "Debug Output");
+	CreateCheckBox(graphics, debug_overlay, "Debug overlay");
+	CreateCheckBox(graphics, log_shader_programs, "Log shader programs");
 
-		loaded += saved;
-		YAML::Emitter out;
-		emit(out, loaded);
+	// setup additional layout elements
+	s_graphics->Add(s_graphics_cb, 0, 0, 5);
+	s_graphics->Add(s_graphics_ckb, 0, 0, 5);
 
-		// Save config
-		config.seek(0);
-		config.trunc(0);
-		config.write(out.c_str(), out.size());
-	}
+	FinalizePanelLayout(graphics, "Graphics", false);
+
+	//=============================================================================================//
+	// Audio                                                                                       //
+	//=============================================================================================//
+
+	CreateComboBox(audio, audio_out, "Audio Out");
+
+	CreateCheckBox(audio, dump_to_file, "Dump to file");
+	CreateCheckBox(audio, convert_to_16bit, "Convert to 16 bit");
+
+	// setup additional layout elements
+	s_audio->Add(s_audio_cb, 0, 0, 5);
+	s_audio->Add(s_audio_ckb, 0, 0, 5);
+
+	FinalizePanelLayout(audio, "Audio", false);
+
+	//=============================================================================================//
+	// Input / Output                                                                              //
+	//=============================================================================================//
+
+	if (mode == Global) { // BEGIN GLOBAL MODE
+
+	CreateComboBox(io, pad_handler, "Pad Handler");
+	CreateComboBox(io, camera, "Camera");
+	CreateComboBox(io, keyboard_handler, "Keyboard Handler");
+	CreateComboBox(io, camera_type, "Camera type");
+	CreateComboBox(io, mouse_handler, "Mouse Handler");
+
+	// setup additional layout elements
+	s_io->Add(s_io_cb, 0, 0, 5);
+
+	FinalizePanelLayout(io, "Input / Output", false);
+
+	//=============================================================================================//
+	// Misc                                                                                        //
+	//=============================================================================================//
+
+	CreateCheckBox(misc, exit_on_process_finish, "Exit RPCS3 when process finishes");
+	CreateCheckBox(misc, start_after_boot, "Always start after boot");
+	CreateCheckBox(misc, auto_pause_syscall, "Auto Pause at System Call");
+	CreateCheckBox(misc, auto_pause_funccall, "Auto Pause at Function Call");
+
+	// setup additional layout elements
+	s_misc->Add(s_misc_ckb, 0, 0, 5);
+
+	FinalizePanelLayout(misc, "Misc", false);
+
+	//=============================================================================================//
+	// Networking                                                                                  //
+	//=============================================================================================//
+
+	CreateComboBox(networking, connection_status, "Connection status");
+
+	// setup additional layout elements
+	s_networking->Add(s_networking_cb, 0, 0, 5);
+
+	FinalizePanelLayout(networking, "Networking", false);
+
+	//=============================================================================================//
+	// System                                                                                      //
+	//=============================================================================================//
+
+	CreateCheckBox(system, enable_host_root, "Enable /host_root/");
+
+	CreateComboBox(system, language, "Language");
+
+	// setup additional layout elements
+	s_system->Add(s_system_ckb, 0, 0, 5);
+	s_system->Add(s_system_cb, 0, 0, 5);
+
+	FinalizePanelLayout(system, "System", false);
+
+	//=============================================================================================//
+	// Finalize Dialog                                                                             //
+	//=============================================================================================//
+
+	} // END GLOBAL MODE
+
+	s_dialog->Add(nb_config, 5, wxEXPAND | wxALL, 5);
+
+	btn_ok = new wxButton(this, wxID_OK, wxT("OK"), wxDefaultPosition, wxDefaultSize, 0);
+	s_button_box->Add(btn_ok, 1, wxALIGN_BOTTOM | wxALL, 5);
+
+	btn_cancel = new wxButton(this, wxID_CANCEL, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0);
+	s_button_box->Add(btn_cancel, 1, wxALIGN_BOTTOM | wxALL, 5);
+
+	s_button_box->Add(0, 0, 5, wxALIGN_BOTTOM | wxEXPAND, 5);
+
+	s_dialog->Add(s_button_box, 1, wxEXPAND, 5);
+
+	SetSizer(s_dialog);
+	Layout();
+
+	Centre(wxBOTH);
+
+	SetMinSize(wxSize(default_width, default_height));
 }
 
-void SettingsDialog::OnModuleListItemToggled(wxCommandEvent &event)
+SettingsDialog::~SettingsDialog()
 {
-	lle_module_list[fmt::ToUTF8(event.GetString())] = chbox_list_core_lle->IsChecked(event.GetSelection());
-}
+	lle_module_list.clear();
 
-void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
-{
-	// helper to preserve alphabetically order while inserting items
-	int item_index = 0;
-
-	if (event.GetString().IsEmpty())
-	{
-		for (auto& i : lle_module_list)
-		{
-			if (i.second)
-			{
-				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, item_index));
-				item_index++;
-			}
-
-			else
-			{
-				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, chbox_list_core_lle->GetCount()), false);
-			}
-		}
-	}
-
-	chbox_list_core_lle->Clear();
-
-	wxString search_term = event.GetString().Lower();
-	item_index = 0;
-
-	for (auto& i : lle_module_list)
-	{
-		if (fmt::FromUTF8(i.first).Find(search_term) != wxString::npos)
-		{
-			if (i.second)
-			{
-				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, item_index));
-				item_index++;
-			}
-
-			else
-			{
-				chbox_list_core_lle->Check(chbox_list_core_lle->Insert(i.first, chbox_list_core_lle->GetCount()), false);
-			}
-		}
-	}
+#ifdef _WIN32
+	gpus_d3d.Clear();
+	gpus_vulkan.Clear();
+#endif
 }
