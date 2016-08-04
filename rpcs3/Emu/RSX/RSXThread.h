@@ -143,14 +143,6 @@ namespace rsx
 		}
 	};
 
-	enum class draw_command
-	{
-		none,
-		array,
-		inlined_array,
-		indexed,
-	};
-
 	class thread : public named_thread
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
@@ -170,11 +162,6 @@ namespace rsx
 		GcmZcullInfo zculls[limits::zculls_count];
 
 		u32 vertex_draw_count = 0;
-
-		/**
-		* Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
-		*/
-		std::vector<std::pair<u32, u32> > first_count_commands;
 
 		// Constant stored for whole frame
 		std::unordered_map<u32, color4f> local_transform_constants;
@@ -198,8 +185,6 @@ namespace rsx
 		u32 gcm_current_buffer;
 		u32 ctxt_addr;
 		u32 label_addr;
-		rsx::draw_command draw_command;
-		primitive_type draw_mode;
 
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];

@@ -442,7 +442,7 @@ void D3D12GSRender::end()
 	get_current_resource_storage().command_list->RSSetScissorRects(1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(),
 		rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 
-	get_current_resource_storage().command_list->IASetPrimitiveTopology(get_primitive_topology(draw_mode));
+	get_current_resource_storage().command_list->IASetPrimitiveTopology(get_primitive_topology(rsx::method_registers.current_draw_clause.primitive));
 
 	if (indexed_draw)
 		get_current_resource_storage().command_list->DrawIndexedInstanced((UINT)vertex_count, 1, 0, 0, 0);

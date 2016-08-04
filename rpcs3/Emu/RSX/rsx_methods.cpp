@@ -200,25 +200,25 @@ namespace rsx
 
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx->draw_command = rsx::draw_command::array;
+			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
-			rsx->first_count_commands.emplace_back(std::make_pair(first, count));
+			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(std::make_pair(first, count));
 		}
 
 		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx->draw_command = rsx::draw_command::indexed;
+			rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
-			rsx->first_count_commands.emplace_back(std::make_pair(first, count));
+			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(std::make_pair(first, count));
 		}
 
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx->draw_command = rsx::draw_command::inlined_array;
+			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
 			rsx->draw_inline_vertex_array = true;
 			rsx->inline_vertex_array.push_back(arg);
 		}
@@ -250,6 +250,9 @@ namespace rsx
 		{
 			if (arg)
 			{
+				rsx::method_registers.current_draw_clause.first_count_commands.clear();
+				rsx::method_registers.current_draw_clause.command = draw_command::none;
+				rsx::method_registers.current_draw_clause.primitive = rsx::method_registers.primitive_mode();
 				rsxthr->begin();
 				return;
 			}
@@ -267,20 +270,20 @@ namespace rsx
 
 					vertex_info.frequency = element_count;
 
-					if (rsxthr->draw_command == rsx::draw_command::none)
+					if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
 					{
 						max_vertex_count = std::max<u32>(max_vertex_count, element_count);
 					}
 				}
 			}
 
-			if (rsxthr->draw_command == rsx::draw_command::none && max_vertex_count)
+			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && max_vertex_count)
 			{
-				rsxthr->draw_command = rsx::draw_command::array;
-				rsxthr->first_count_commands.push_back(std::make_pair(0, max_vertex_count));
+				rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
+				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, max_vertex_count));
 			}
 
-			if (!(rsxthr->first_count_commands.empty() && rsxthr->inline_vertex_array.empty()))
+			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() && rsxthr->inline_vertex_array.empty()))
 			{
 				rsxthr->end();
 			}

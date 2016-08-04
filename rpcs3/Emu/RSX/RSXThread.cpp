@@ -311,14 +311,11 @@ namespace rsx
 		draw_state.color_buffer = std::move(copy_render_targets_to_memory());
 		draw_state.depth_stencil = std::move(copy_depth_stencil_buffer_to_memory());
 
-		if (draw_command == rsx::draw_command::indexed)
+		if (draw_state.state.current_draw_clause.command == rsx::draw_command::indexed)
 		{
 			draw_state.vertex_count = 0;
-			for (const auto &range : first_count_commands)
-			{
-				draw_state.vertex_count += range.second;
-			}
-			auto index_raw_data_ptr = get_raw_index_array(first_count_commands);
+			draw_state.vertex_count = draw_state.state.current_draw_clause.get_elements_count();
+			auto index_raw_data_ptr = get_raw_index_array(draw_state.state.current_draw_clause.first_count_commands);
 			draw_state.index.resize(index_raw_data_ptr.size_bytes());
 			std::copy(index_raw_data_ptr.begin(), index_raw_data_ptr.end(), draw_state.index.begin());
 		}
@@ -332,9 +329,6 @@ namespace rsx
 	{
 		draw_inline_vertex_array = false;
 		inline_vertex_array.clear();
-		first_count_commands.clear();
-		draw_command = rsx::draw_command::none;
-		draw_mode = method_registers.primitive_mode();
 	}
 
 	void thread::end()
@@ -349,13 +343,8 @@ namespace rsx
 
 		if (capture_current_frame)
 		{
-			for (const auto &first_count : first_count_commands)
-			{
-				vertex_draw_count += first_count.second;
-			}
-
-			capture_frame("Draw " + std::to_string(vertex_draw_count));
-			vertex_draw_count = 0;
+			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			capture_frame("Draw " + rsx::to_string(rsx::method_registers.current_draw_clause.primitive) + std::to_string(element_count));
 		}
 	}
 
