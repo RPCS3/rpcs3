@@ -235,6 +235,8 @@ s32 cellSysutilCheckCallback(ppu_thread& ppu)
 
 		cbm->registered.pop();
 
+		cbm->mutex.unlock();
+		
 		if (s32 res = func(ppu))
 		{
 			return res;
