@@ -30,16 +30,11 @@ size_t get_index_type_size(rsx::index_array_type type);
 /**
  * Write count indexes using (first, first + count) ranges.
  * Returns min/max index found during the process.
- * The function expands index buffer for non native primitive type.
+ * The function expands index buffer for non native primitive type if expands(draw_mode) return true.
  */
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, rsx::index_array_type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments);
-
-
-/**
- * Doesn't expand index
- */
-std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments);
-std::tuple<u16, u16> write_index_array_data_to_buffer_untouched(gsl::span<u16, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments);
+std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, gsl::span<const gsl::byte> src,
+	rsx::index_array_type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
+	std::function<bool(rsx::primitive_type)> expands);
 
 /**
  * Write index data needed to emulate non indexed non native primitive mode.
