@@ -854,7 +854,7 @@ bool VKGSRender::load_program()
 
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	bool unused;
-	properties.ia.topology = vk::get_appropriate_topology(draw_mode, unused);
+	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, unused);
 
 	if (rsx::method_registers.restart_index_enabled())
 	{

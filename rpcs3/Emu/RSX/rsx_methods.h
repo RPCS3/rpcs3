@@ -2,6 +2,7 @@
 
 #include <array>
 #include <vector>
+#include <numeric>
 
 #include "GCM.h"
 #include "rsx_decode.h"
@@ -14,6 +15,34 @@
 
 namespace rsx
 {
+	enum class draw_command
+	{
+		none,
+		array,
+		inlined_array,
+		indexed,
+	};
+
+	struct draw_clause
+	{
+		primitive_type primitive;
+		draw_command command;
+
+		/**
+		* Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
+		*/
+		std::vector<std::pair<u32, u32> > first_count_commands;
+
+		/**
+		 * Returns how many vertex or index will be consumed by the draw clause.
+		 */
+		u32 get_elements_count() const
+		{
+			return std::accumulate(first_count_commands.begin(), first_count_commands.end(), 0,
+				[](u32 acc, auto b) { return acc + b.second; });
+		}
+	};
+
 	using rsx_method_t = void(*)(class thread*, u32 reg, u32 arg);
 
 	//TODO
@@ -124,6 +153,8 @@ namespace rsx
 
 		std::array<u32, 512 * 4> transform_program;
 		std::unordered_map<u32, color4_base<f32>> transform_constants;
+
+		draw_clause current_draw_clause;
 
 		/**
 		* RSX can sources vertex attributes from 2 places:

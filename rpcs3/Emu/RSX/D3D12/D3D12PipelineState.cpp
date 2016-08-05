@@ -44,7 +44,7 @@ void D3D12GSRender::load_program()
 	m_fragment_program = get_current_fragment_program();
 
 	D3D12PipelineProperties prop = {};
-	prop.Topology = get_primitive_topology_type(draw_mode);
+	prop.Topology = get_primitive_topology_type(rsx::method_registers.current_draw_clause.primitive);
 
 	static D3D12_BLEND_DESC CD3D12_BLEND_DESC =
 	{

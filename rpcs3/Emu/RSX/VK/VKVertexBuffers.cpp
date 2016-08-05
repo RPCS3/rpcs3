@@ -246,42 +246,36 @@ VKGSRender::upload_vertex_data()
 	vertex_draw_count = 0;
 	u32 min_index, max_index;
 
-	bool is_indexed_draw = (draw_command == rsx::draw_command::indexed);
+	bool is_indexed_draw = (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
 	bool primitives_emulated = false;
 	u32  index_count = 0;
 
 	VkIndexType index_format = VK_INDEX_TYPE_UINT16;
-	VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_mode, primitives_emulated);
+	VkPrimitiveTopology prims = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
 
-	if (draw_command == rsx::draw_command::array)
+	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
 	{
-		for (const auto &first_count : first_count_commands)
-		{
-			vertex_draw_count += first_count.second;
-		}
+		vertex_draw_count += rsx::method_registers.current_draw_clause.get_elements_count();
 	}
 
-	if (draw_command == rsx::draw_command::indexed || primitives_emulated)
+	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed || primitives_emulated)
 	{
 		rsx::index_array_type type = rsx::method_registers.index_type();
 		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 		
 		if (is_indexed_draw)	//Could be emulated or not, emulated array vertex count already computed above
 		{
-			for (const auto& first_count : first_count_commands)
-			{
-				vertex_draw_count += first_count.second;
-			}
+			vertex_draw_count += rsx::method_registers.current_draw_clause.get_elements_count();
 		}
 
 		index_count = vertex_draw_count;
 		u32 upload_size = vertex_draw_count * type_size;
 
-		std::vector<std::pair<u32, u32>> ranges = first_count_commands;
+		std::vector<std::pair<u32, u32>> ranges = rsx::method_registers.current_draw_clause.first_count_commands;
 
 		if (primitives_emulated)
 		{
-			index_count = get_index_count(draw_mode, vertex_draw_count);
+			index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, vertex_draw_count);
 			upload_size = index_count * sizeof(u16);
 
 			if (is_indexed_draw)
@@ -294,13 +288,13 @@ VKGSRender::upload_vertex_data()
 		offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-		std::tie(min_index, max_index, index_format) = vk::upload_index_buffer(get_raw_index_array(ranges), draw_mode, type, buf, is_indexed_draw, vertex_draw_count, index_count, ranges);
+		std::tie(min_index, max_index, index_format) = vk::upload_index_buffer(get_raw_index_array(ranges), rsx::method_registers.current_draw_clause.primitive, type, buf, is_indexed_draw, vertex_draw_count, index_count, ranges);
 
 		m_index_buffer_ring_info.unmap();
 		is_indexed_draw = true;
 	}
 
-	if (draw_command == rsx::draw_command::inlined_array)
+	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 	{
 		u32 stride = 0;
 		u32 offsets[rsx::limits::vertex_count] = { 0 };
@@ -373,7 +367,7 @@ VKGSRender::upload_vertex_data()
 		}
 	}
 
-	if (draw_command == rsx::draw_command::array || draw_command == rsx::draw_command::indexed)
+	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array || rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
 	{
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -407,7 +401,7 @@ VKGSRender::upload_vertex_data()
 
 				u32 num_stored_verts = vertex_draw_count;
 
-				if (draw_command == rsx::draw_command::array)
+				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
 				{
 					size_t offset = 0;
 					offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(upload_size);
@@ -416,7 +410,7 @@ VKGSRender::upload_vertex_data()
 					
 					gsl::span<gsl::byte> dest_span(static_cast<gsl::byte*>(dst), upload_size);
 					
-					for (const auto &first_count : first_count_commands)
+					for (const auto &first_count : rsx::method_registers.current_draw_clause.first_count_commands)
 					{
 						write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride, real_element_size);
 						offset += first_count.second * real_element_size;
@@ -425,7 +419,7 @@ VKGSRender::upload_vertex_data()
 					m_attrib_ring_info.unmap();
 				}
 
-				if (draw_command == rsx::draw_command::indexed)
+				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
 				{
 					num_stored_verts = (max_index + 1);
 					upload_size = real_element_size * num_stored_verts;

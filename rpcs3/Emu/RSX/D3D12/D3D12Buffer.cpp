@@ -303,7 +303,7 @@ std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> D3D12GSRender::generate_index_buffer
 {
 	size_t index_count = 0;
 	for (const auto &pair : vertex_ranges)
-		index_count += get_index_count(draw_mode, pair.second);
+		index_count += get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
 
 	// Alloc
 	size_t buffer_size = align(index_count * sizeof(u16), 64);
@@ -313,8 +313,8 @@ std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> D3D12GSRender::generate_index_buffer
 	size_t first = 0;
 	for (const auto &pair : vertex_ranges)
 	{
-		size_t element_count = get_index_count(draw_mode, pair.second);
-		write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)mapped_buffer, draw_mode, (u32)first, (u32)pair.second);
+		size_t element_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
+		write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)mapped_buffer, rsx::method_registers.current_draw_clause.primitive, (u32)first, (u32)pair.second);
 		mapped_buffer = (char*)mapped_buffer + element_count * sizeof(u16);
 		first += pair.second;
 	}
@@ -330,7 +330,7 @@ std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> D3D12GSRender::generate_index_buffer
 
 std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list)
 {
-	if (draw_command == rsx::draw_command::inlined_array)
+	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 	{
 		size_t vertex_count;
 		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_view;
@@ -339,7 +339,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 			{ (const gsl::byte*) inline_vertex_array.data(), gsl::narrow<int>(inline_vertex_array.size() * sizeof(uint)) },
 			m_buffer_data, m_vertex_buffer_data.Get(), command_list);
 
-		if (is_primitive_native(draw_mode))
+		if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			return std::make_tuple(false, vertex_count, vertex_buffer_view);
 
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
@@ -349,25 +349,25 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 		return std::make_tuple(true, index_count, vertex_buffer_view);
 	}
 
-	if (draw_command == rsx::draw_command::array)
+	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
 	{
-		if (is_primitive_native(draw_mode))
+		if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 		{
-			size_t vertex_count = get_vertex_count(first_count_commands);
-			return std::make_tuple(false, vertex_count, upload_vertex_attributes(first_count_commands, command_list));
+			size_t vertex_count = get_vertex_count(rsx::method_registers.current_draw_clause.first_count_commands);
+			return std::make_tuple(false, vertex_count, upload_vertex_attributes(rsx::method_registers.current_draw_clause.first_count_commands, command_list));
 		}
 
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 		size_t index_count;
-		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array(first_count_commands);
+		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array(rsx::method_registers.current_draw_clause.first_count_commands);
 		command_list->IASetIndexBuffer(&index_buffer_view);
-		return std::make_tuple(true, index_count, upload_vertex_attributes(first_count_commands, command_list));
+		return std::make_tuple(true, index_count, upload_vertex_attributes(rsx::method_registers.current_draw_clause.first_count_commands, command_list));
 	}
 
-	EXPECTS(draw_command == rsx::draw_command::indexed);
+	EXPECTS(rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
 
 	// Index count
-	size_t index_count = get_index_count(draw_mode, gsl::narrow<int>(get_vertex_count(first_count_commands)));
+	size_t index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, gsl::narrow<int>(get_vertex_count(rsx::method_registers.current_draw_clause.first_count_commands)));
 
 	rsx::index_array_type indexed_type = rsx::method_registers.index_type();
 	size_t index_size = get_index_type_size(indexed_type);
@@ -380,8 +380,8 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 	u32 min_index, max_index;
 	gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(mapped_buffer), gsl::narrow<u32>(buffer_size) };
 
-	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, get_raw_index_array(first_count_commands),
-		indexed_type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
+	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, get_raw_index_array(rsx::method_registers.current_draw_clause.first_count_commands),
+		indexed_type, rsx::method_registers.current_draw_clause.primitive, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), rsx::method_registers.current_draw_clause.first_count_commands,
 		[](auto prim) { return !is_primitive_native(prim); });
 
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
