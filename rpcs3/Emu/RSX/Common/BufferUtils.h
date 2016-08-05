@@ -20,12 +20,12 @@ bool is_primitive_native(rsx::primitive_type m_draw_mode);
 /**
  * Returns a fixed index count for emulated primitive, otherwise returns initial_index_count
  */
-size_t get_index_count(rsx::primitive_type m_draw_mode, unsigned initial_index_count);
+u32 get_index_count(rsx::primitive_type m_draw_mode, u32 initial_index_count);
 
 /**
  * Returns index type size in byte
  */
-size_t get_index_type_size(rsx::index_array_type type);
+u32 get_index_type_size(rsx::index_array_type type);
 
 /**
  * Write count indexes using (first, first + count) ranges.
