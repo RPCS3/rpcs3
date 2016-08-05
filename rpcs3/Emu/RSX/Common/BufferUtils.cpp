@@ -262,7 +262,7 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
  * see http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/polygon-triangulation-r3334
  */
 
-size_t get_index_count(rsx::primitive_type draw_mode, unsigned initial_index_count)
+u32 get_index_count(rsx::primitive_type draw_mode, u32 initial_index_count)
 {
 	// Index count
 	if (is_primitive_native(draw_mode))
@@ -284,7 +284,7 @@ size_t get_index_count(rsx::primitive_type draw_mode, unsigned initial_index_cou
 	}
 }
 
-size_t get_index_type_size(rsx::index_array_type type)
+u32 get_index_type_size(rsx::index_array_type type)
 {
 	switch (type)
 	{
