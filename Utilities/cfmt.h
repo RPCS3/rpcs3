@@ -3,17 +3,18 @@
 #include "types.h"
 #include <string>
 #include <vector>
+#include <algorithm>
 
 /*
 C-style format parser. Appends formatted string to `out`, returns number of characters written.
-Arguments are provided via `src`. TODO
+`out`: mutable reference to std::string, std::vector<char> or other compatible container
+`fmt`: null-terminated string of `Char` type (char or constructible from char)
+`src`: rvalue reference to argument provider.
 */
-template<typename Src, typename Size = std::size_t>
-Size cfmt_append(std::string& out, const char* fmt, Src&& src)
+template<typename Dst, typename Char, typename Src>
+std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 {
-	const std::size_t old_size = out.size();
-
-	out.reserve(old_size + 992);
+	const std::size_t start_pos = out.size();
 
 	struct cfmt_context
 	{
@@ -37,14 +38,13 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 	// Error handling: print untouched sequence, stop further formatting
 	const auto drop_sequence = [&]
 	{
-		out.append(fmt - ctx.size, ctx.size);
+		out.insert(out.end(), fmt - ctx.size, fmt);
 		ctx.size = -1;
 	};
 
-	// TODO: check overflow
 	const auto read_decimal = [&](uint result) -> uint
 	{
-		while (fmt[0] >= '0' && fmt[0] <= '9')
+		while (fmt[0] >= '0' && fmt[0] <= '9' && result <= (UINT_MAX / 10))
 		{
 			result = result * 10 + (fmt[0] - '0');
 			fmt++, ctx.size++;
@@ -53,24 +53,48 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 		return result;
 	};
 
-	// TODO: remove this
-	const auto fallback = [&]()
+	const auto write_octal = [&](u64 value, u64 min_num)
 	{
-		const std::string _fmt(fmt - ctx.size, fmt);
+		out.resize(out.size() + std::max<u64>(min_num, 66 / 3 - (cntlz64(value | 1) + 2) / 3), '0');
 
-		const u64 arg0 = src.template get<u64>();
-		const int arg1 = ctx.args >= 1 ? src.template get<int>(1) : 0;
-		const int arg2 = ctx.args >= 2 ? src.template get<int>(2) : 0;
-
-		if (const std::size_t _size = std::snprintf(0, 0, _fmt.c_str(), arg0, arg1, arg2))
+		// Write in reversed order
+		for (auto i = out.rbegin(); value; i++, value /= 8)
 		{
-			out.resize(out.size() + _size);
-			std::snprintf(&out.front() + out.size() - _size, _size + 1, _fmt.c_str(), arg0, arg1, arg2);
+			*i = value % 8 + '0';
+		}
+	};
+
+	const auto write_hex = [&](u64 value, bool upper, u64 min_num)
+	{
+		out.resize(out.size() + std::max<u64>(min_num, 64 / 4 - cntlz64(value | 1) / 4), '0');
+		
+		// Write in reversed order
+		for (auto i = out.rbegin(); value; i++, value /= 16)
+		{
+			*i = (upper ? "0123456789ABCDEF" : "0123456789abcdef")[value % 16];
+		}
+	};
+
+	const auto write_decimal = [&](u64 value, s64 min_size)
+	{
+		const std::size_t start = out.size();
+
+		do
+		{
+			out.push_back(value % 10 + '0');
+			value /= 10;
+		}
+		while (0 < --min_size || value);
+
+		// Revert written characters
+		for (std::size_t i = start, j = out.size() - 1; i < j; i++, j--)
+		{
+			std::swap(out[i], out[j]);
 		}
 	};
 
 	// Single pass over fmt string (null-terminated), TODO: check correct order
-	while (const char ch = *fmt++) if (ctx.size == 0)
+	while (const Char ch = *fmt++) if (ctx.size == 0)
 	{
 		if (ch == '%')
 		{
@@ -78,17 +102,17 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 		}
 		else
 		{
-			out += ch;
+			out.push_back(ch);
 		}
 	}
 	else if (ctx.size == 1 && ch == '%')
 	{
 		ctx = {0};
-		out += ch;
+		out.push_back(ch);
 	}
 	else if (ctx.size == -1)
 	{
-		out += ch;
+		out.push_back(ch);
 	}
 	else switch (ctx.size++, ch)
 	{
@@ -108,43 +132,58 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 	case '8':
 	case '9':
 	{
-		ctx.width = read_decimal(ch - '0');
+		if (UNLIKELY(ctx.width))
+		{
+			drop_sequence();
+		}
+		else
+		{
+			ctx.width = read_decimal(ch - '0');
+		}
+		
 		break;
 	}
 
 	case '*':
 	{
-		if (!src.test(++ctx.args))
+		if (UNLIKELY(ctx.width || !src.test(ctx.args)))
 		{
 			drop_sequence();
-			break;
 		}
-
-		const int warg = src.template get<int>(ctx.args);
-		ctx.width = std::abs(warg);
-		ctx.left |= warg < 0;
+		else
+		{
+			const int warg = src.template get<int>(ctx.args++);
+			ctx.width = std::abs(warg);
+			ctx.left |= warg < 0;
+		}
+		
 		break;
 	}
 
 	case '.':
 	{
-		if (*fmt >= '0' && *fmt <= '9') // TODO: does it allow '0'?
+		if (UNLIKELY(ctx.dot || ctx.prec))
+		{
+			drop_sequence();
+		}
+		else if (*fmt >= '0' && *fmt <= '9') // TODO: does it allow '0'?
 		{
 			ctx.prec = read_decimal(0);
 			ctx.dot = true;
 		}
 		else if (*fmt == '*')
 		{
-			if (!src.test(++ctx.args))
+			if (UNLIKELY(!src.test(ctx.args)))
 			{
 				drop_sequence();
-				break;
 			}
-
-			fmt++, ctx.size++;
-			const int parg = src.template get<int>(ctx.args);
-			ctx.prec = parg;
-			ctx.dot = parg >= 0;
+			else
+			{
+				fmt++, ctx.size++;
+				const int parg = src.template get<int>(ctx.args++);
+				ctx.prec = std::max(parg, 0);
+				ctx.dot = parg >= 0;
+			}
 		}
 		else
 		{
@@ -157,7 +196,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'h':
 	{
-		if (ctx.type)
+		if (UNLIKELY(ctx.type))
 		{
 			drop_sequence();
 		}
@@ -176,7 +215,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'l':
 	{
-		if (ctx.type)
+		if (UNLIKELY(ctx.type))
 		{
 			drop_sequence();
 		}
@@ -195,7 +234,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'z':
 	{
-		if (ctx.type)
+		if (UNLIKELY(ctx.type))
 		{
 			drop_sequence();
 		}
@@ -209,7 +248,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'j':
 	{
-		if (ctx.type)
+		if (UNLIKELY(ctx.type))
 		{
 			drop_sequence();
 		}
@@ -223,7 +262,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 't':
 	{
-		if (ctx.type)
+		if (UNLIKELY(ctx.type))
 		{
 			drop_sequence();
 		}
@@ -237,19 +276,19 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'c':
 	{
-		if (ctx.type || !src.test())
+		if (UNLIKELY(ctx.type || !src.test(ctx.args)))
 		{
 			drop_sequence();
 			break;
 		}
 
 		const std::size_t start = out.size();
-		out += src.template get<char>(0);
+		out.push_back(src.template get<Char>(ctx.args));
 
 		if (1 < ctx.width)
 		{
 			// Add spaces if necessary
-			out.insert(start + ctx.left, ctx.width - 1, ' ');
+			out.insert(out.begin() + start + ctx.left, ctx.width - 1, ' ');
 		}
 
 		src.skip(ctx.args);
@@ -259,14 +298,14 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 's':
 	{
-		if (ctx.type || !src.test())
+		if (UNLIKELY(ctx.type || !src.test(ctx.args)))
 		{
 			drop_sequence();
 			break;
 		}
 
 		const std::size_t start = out.size();
-		const std::size_t size1 = src.fmt_string(out);
+		const std::size_t size1 = src.fmt_string(out, ctx.args);
 		
 		if (ctx.dot && size1 > ctx.prec)
 		{
@@ -274,13 +313,12 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 			out.resize(start + ctx.prec);
 		}
 
-		// TODO: how it works if precision and width specified simultaneously?
 		const std::size_t size2 = out.size() - start;
 
 		if (size2 < ctx.width)
 		{
 			// Add spaces if necessary
-			out.insert(ctx.left ? out.size() : start, ctx.width - size2, ' ');
+			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
 		}
 
 		src.skip(ctx.args);
@@ -291,7 +329,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 	case 'd':
 	case 'i':
 	{
-		if (!src.test())
+		if (UNLIKELY(!src.test(ctx.args)))
 		{
 			drop_sequence();
 			break;
@@ -299,10 +337,48 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = sizeof(int);
+			ctx.type = (u8)src.type(ctx.args);
 		}
 
-		fallback(); // TODO
+		// Sign-extended argument expected: no special conversion
+		const u64 val = src.template get<u64>(ctx.args);
+		const s64 sval = val;
+
+		const std::size_t start = out.size();
+
+		if (!ctx.dot || ctx.prec)
+		{
+			if (sval < 0)
+			{
+				out.push_back('-');
+			}
+			else if (ctx.sign)
+			{
+				out.push_back('+');
+			}
+			else if (ctx.space)
+			{
+				out.push_back(' ');
+			}
+
+			write_decimal(sval < 0 ? 0 - val : val, ctx.prec);
+		}
+
+		const std::size_t size2 = out.size() - start;
+
+		if (size2 < ctx.width)
+		{
+			// Add padding if necessary
+			if (ctx.zeros && !ctx.left && !ctx.dot)
+			{
+				out.insert(out.begin() + start + (sval < 0 || ctx.sign || ctx.space), ctx.width - size2, '0');
+			}
+			else
+			{
+				out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+			}
+		}
+
 		src.skip(ctx.args);
 		ctx = {0};
 		break;
@@ -310,7 +386,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'o':
 	{
-		if (!src.test())
+		if (UNLIKELY(!src.test(ctx.args)))
 		{
 			drop_sequence();
 			break;
@@ -318,10 +394,40 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = sizeof(int);
+			ctx.type = (u8)src.type(ctx.args);
 		}
 
-		fallback(); // TODO
+		const u64 mask =
+			ctx.type == 1 ? 0xffull :
+			ctx.type == 2 ? 0xffffull :
+			ctx.type == 4 ? 0xffffffffull : 0xffffffffffffffffull;
+
+		const u64 val = src.template get<u64>(ctx.args) & mask;
+
+		const std::size_t start = out.size();
+
+		if (ctx.alter)
+		{
+			out.push_back('0');
+
+			if (val)
+			{
+				write_octal(val, ctx.prec ? ctx.prec - 1 : 0);
+			}
+		}
+		else if (!ctx.dot || ctx.prec)
+		{
+			write_octal(val, ctx.prec);
+		}
+
+		const std::size_t size2 = out.size() - start;
+
+		if (size2 < ctx.width)
+		{
+			// Add padding if necessary
+			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ctx.zeros && !ctx.left && !ctx.dot ? '0' : ' ');
+		}
+
 		src.skip(ctx.args);
 		ctx = {0};
 		break;
@@ -330,7 +436,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 	case 'x':
 	case 'X':
 	{
-		if (!src.test())
+		if (UNLIKELY(!src.test(ctx.args)))
 		{
 			drop_sequence();
 			break;
@@ -338,10 +444,48 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = sizeof(int);
+			ctx.type = (u8)src.type(ctx.args);
 		}
 
-		fallback(); // TODO
+		const u64 mask =
+			ctx.type == 1 ? 0xffull :
+			ctx.type == 2 ? 0xffffull :
+			ctx.type == 4 ? 0xffffffffull : 0xffffffffffffffffull;
+
+		const u64 val = src.template get<u64>(ctx.args) & mask;
+
+		const std::size_t start = out.size();
+
+		if (ctx.alter)
+		{
+			out.push_back('0');
+
+			if (val)
+			{
+				out.push_back(ch); // Prepend 0x or 0X
+				write_hex(val, ch == 'X', ctx.prec);
+			}
+		}
+		else if (!ctx.dot || ctx.prec)
+		{
+			write_hex(val, ch == 'X', ctx.prec);
+		}
+
+		const std::size_t size2 = out.size() - start;
+
+		if (size2 < ctx.width)
+		{
+			// Add padding if necessary
+			if (ctx.zeros && !ctx.left && !ctx.dot)
+			{
+				out.insert(out.begin() + start + (ctx.alter && val ? 2 : 0), ctx.width - size2, '0');
+			}
+			else
+			{
+				out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+			}
+		}
+
 		src.skip(ctx.args);
 		ctx = {0};
 		break;
@@ -349,7 +493,7 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'u':
 	{
-		if (!src.test())
+		if (UNLIKELY(!src.test(ctx.args)))
 		{
 			drop_sequence();
 			break;
@@ -357,10 +501,31 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = sizeof(int);
+			ctx.type = (u8)src.type(ctx.args);
 		}
 
-		fallback(); // TODO
+		const u64 mask =
+			ctx.type == 1 ? 0xffull :
+			ctx.type == 2 ? 0xffffull :
+			ctx.type == 4 ? 0xffffffffull : 0xffffffffffffffffull;
+
+		const u64 val = src.template get<u64>(ctx.args) & mask;
+
+		const std::size_t start = out.size();
+
+		if (!ctx.dot || ctx.prec)
+		{
+			write_decimal(val, ctx.prec);
+		}
+
+		const std::size_t size2 = out.size() - start;
+
+		if (size2 < ctx.width)
+		{
+			// Add padding if necessary
+			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ctx.zeros && !ctx.left && !ctx.dot ? '0' : ' ');
+		}
+
 		src.skip(ctx.args);
 		ctx = {0};
 		break;
@@ -368,19 +533,26 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 
 	case 'p':
 	{
-		if (!src.test())
+		if (UNLIKELY(!src.test(ctx.args) || ctx.type))
 		{
 			drop_sequence();
 			break;
 		}
 
-		if (ctx.type)
-		{
-			drop_sequence();
-			break;
-		}
+		const u64 val = src.template get<u64>(ctx.args);
 
-		fallback(); // TODO
+		const std::size_t start = out.size();
+
+		write_hex(val, false, sizeof(void*) * 2);
+
+		const std::size_t size2 = out.size() - start;
+
+		if (size2 < ctx.width)
+		{
+			// Add padding if necessary
+			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+		}
+		
 		src.skip(ctx.args);
 		ctx = {0};
 		break;
@@ -395,19 +567,26 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 	case 'g':
 	case 'G':
 	{
-		if (!src.test())
+		if (UNLIKELY(!src.test(ctx.args) || ctx.type))
 		{
 			drop_sequence();
 			break;
 		}
 
-		if (ctx.type)
+		// Fallback (TODO)
+
+		const std::string _fmt(fmt - ctx.size, fmt);
+
+		const u64 arg0 = src.template get<u64>(0);
+		const u64 arg1 = ctx.args >= 1 ? src.template get<u64>(1) : 0;
+		const u64 arg2 = ctx.args >= 2 ? src.template get<u64>(2) : 0;
+
+		if (const std::size_t _size = std::snprintf(0, 0, _fmt.c_str(), arg0, arg1, arg2))
 		{
-			drop_sequence();
-			break;
+			out.resize(out.size() + _size);
+			std::snprintf(&out.front() + out.size() - _size, _size + 1, _fmt.c_str(), arg0, arg1, arg2);
 		}
 
-		fallback(); // TODO
 		src.skip(ctx.args);
 		ctx = {0};
 		break;
@@ -427,5 +606,5 @@ Size cfmt_append(std::string& out, const char* fmt, Src&& src)
 		fmt--, drop_sequence();
 	}
 
-	return static_cast<Size>(out.size() - old_size);
+	return out.size() - start_pos;
 }

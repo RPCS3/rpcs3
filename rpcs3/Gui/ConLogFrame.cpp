@@ -46,16 +46,18 @@ struct gui_listener : logs::listener
 		delete read;
 	}
 
-	void log(const logs::message& msg)
+	void log(const logs::message& msg, const std::string& prefix, const std::string& text)
 	{
 		if (msg.sev <= enabled)
 		{
 			const auto _new = new packet;
 			_new->sev = msg.sev;
 
-			if (msg.prefix_size > 0)
+			if (prefix.size() > 0)
 			{
-				_new->msg = fmt::format("{%s} ", msg.prefix);
+				_new->msg += "{";
+				_new->msg += prefix;
+				_new->msg += "} ";
 			}
 
 			if (msg.ch->name)
@@ -68,7 +70,7 @@ struct gui_listener : logs::listener
 				_new->msg += "TODO: ";
 			}
 
-			_new->msg += msg.text;
+			_new->msg += text;
 			_new->msg += '\n';
 
 			last = last->next = _new;

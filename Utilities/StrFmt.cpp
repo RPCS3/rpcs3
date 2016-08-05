@@ -1,11 +1,18 @@
 #include "StrFmt.h"
 #include "BEType.h"
 #include "StrUtil.h"
+#include "Macro.h"
 #include "cfmt.h"
 
 #include <algorithm>
 
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
+}
+
+template<>
+void fmt_class_string<std::nullptr_t>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
 }
@@ -97,13 +104,13 @@ void fmt_class_string<ullong>::format(std::string& out, u64 arg)
 template<>
 void fmt_class_string<float>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "%f", static_cast<float>(reinterpret_cast<f64&>(arg)));
+	fmt::append(out, "%gf", static_cast<float>(reinterpret_cast<f64&>(arg)));
 }
 
 template<>
 void fmt_class_string<double>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "%f", reinterpret_cast<f64&>(arg));
+	fmt::append(out, "%g", reinterpret_cast<f64&>(arg));
 }
 
 template<>
@@ -127,24 +134,21 @@ namespace fmt
 // Temporary implementation
 struct fmt::cfmt_src
 {
-	const fmt::supplementary_info* sup;
+	const fmt_type_info* sup;
 	const u64* args;
 
-	bool test(std::size_t index = 0)
+	bool test(std::size_t index) const
 	{
-		for (std::size_t i = 0; i <= index; i++)
+		if (!sup[index].fmt_string)
 		{
-			if (!sup[i].fmt_string)
-			{
-				return false;
-			}
+			return false;
 		}
 
 		return true;
 	}
 
 	template<typename T>
-	T get(std::size_t index = 0)
+	T get(std::size_t index) const
 	{
 		return reinterpret_cast<const T&>(args[index]);
 	}
@@ -155,20 +159,44 @@ struct fmt::cfmt_src
 		++args += extra;
 	}
 
-	std::size_t fmt_string(std::string& out)
+	std::size_t fmt_string(std::string& out, std::size_t extra) const
 	{
 		const std::size_t start = out.size();
-		sup->fmt_string(out, args[0]);
+		sup[extra].fmt_string(out, args[extra]);
 		return out.size() - start;
+	}
+
+	// Returns type size (0 if unknown, pointer, assumed max)
+	std::size_t type(std::size_t extra) const
+	{
+		// Hack: use known function pointers to determine type
+#define TYPE(type)\
+		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
+
+		TYPE(char);
+		TYPE(schar);
+		TYPE(uchar);
+		TYPE(short);
+		TYPE(ushort);
+		TYPE(int);
+		TYPE(uint);
+		TYPE(long);
+		TYPE(ulong);
+		TYPE(llong);
+		TYPE(ullong);
+
+#undef TYPE
+
+		return 0;
 	}
 };
 
-void fmt::raw_append(std::string& out, const char* fmt, const fmt::supplementary_info* sup, const u64* args) noexcept
+void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup, const u64* args) noexcept
 {
 	cfmt_append(out, fmt, cfmt_src{sup, args});
 }
 
-char* fmt::alloc_format(const char* fmt, const fmt::supplementary_info* sup, const u64* args) noexcept
+char* fmt::alloc_format(const char* fmt, const fmt_type_info* sup, const u64* args) noexcept
 {
 	std::string str;
 	raw_append(str, fmt, sup, args);

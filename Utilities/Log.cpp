@@ -56,7 +56,7 @@ namespace logs
 		}
 
 		// Encode level, current thread name, channel name and write log message
-		virtual void log(const message& msg) override;
+		virtual void log(const message& msg, const std::string& prefix, const std::string& text) override;
 	};
 
 	static file_listener* get_logger()
@@ -88,19 +88,10 @@ void logs::listener::add(logs::listener* _new)
 	}
 }
 
-void logs::channel::broadcast(const logs::channel& ch, logs::level sev, const char* fmt, const fmt::supplementary_info* sup, const u64* args)
+void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u64* args)
 {
 	std::string text; fmt::raw_append(text, fmt, sup, args);
 	std::string prefix(g_tls_log_prefix ? g_tls_log_prefix() : "");
-
-	// Prepare message information
-	message msg;
-	msg.ch = &ch;
-	msg.sev = sev;
-	msg.text = text.data();
-	msg.text_size = text.size();
-	msg.prefix = prefix.data();
-	msg.prefix_size = prefix.size();
 
 	// Get first (main) listener
 	listener* lis = get_logger();
@@ -108,7 +99,7 @@ void logs::channel::broadcast(const logs::channel& ch, logs::level sev, const ch
 	// Send message to all listeners
 	while (lis)
 	{
-		lis->log(msg);
+		lis->log(*this, prefix, text);
 		lis = lis->m_next;
 	}
 }
@@ -135,9 +126,9 @@ void logs::file_writer::log(const char* text, std::size_t size)
 	m_file.write(text, size);
 }
 
-void logs::file_listener::log(const logs::message& msg)
+void logs::file_listener::log(const logs::message& msg, const std::string& prefix, const std::string& _text)
 {
-	std::string text; text.reserve(msg.text_size + msg.prefix_size + 200);
+	std::string text; text.reserve(prefix.size() + _text.size() + 200);
 
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg.sev)
@@ -154,9 +145,11 @@ void logs::file_listener::log(const logs::message& msg)
 
 	// TODO: print time?
 
-	if (msg.prefix_size > 0)
+	if (prefix.size() > 0)
 	{
-		text += fmt::format("{%s} ", msg.prefix);
+		text += "{";
+		text += prefix;
+		text += "} ";
 	}
 	
 	if (msg.ch->name)
@@ -169,7 +162,7 @@ void logs::file_listener::log(const logs::message& msg)
 		text += "TODO: ";
 	}
 	
-	text += msg.text;
+	text += _text;
 	text += '\n';
 
 	file_writer::log(text.data(), text.size());

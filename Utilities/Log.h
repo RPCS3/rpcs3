@@ -27,10 +27,8 @@ namespace logs
 		const channel* ch;
 		level sev;
 
-		const char* prefix;
-		std::size_t prefix_size;
-		const char* text;
-		std::size_t text_size;
+		// Send log message to global logger instance
+		void broadcast(const char*, const fmt_type_info*, const u64*);
 	};
 
 	class listener
@@ -38,7 +36,7 @@ namespace logs
 		// Next listener (linked list)
 		atomic_t<listener*> m_next{};
 
-		friend struct channel;
+		friend struct message;
 
 	public:
 		constexpr listener() = default;
@@ -46,7 +44,7 @@ namespace logs
 		virtual ~listener() = default;
 
 		// Process log message
-		virtual void log(const message& msg) = 0;
+		virtual void log(const message& msg, const std::string& prefix, const std::string& text) = 0;
 
 		// Add new listener
 		static void add(listener*);
@@ -69,11 +67,11 @@ namespace logs
 
 		// Formatting function
 		template<typename... Args>
-		SAFE_BUFFERS void format(level sev, const char* fmt, const Args&... args) const
+		SAFE_BUFFERS FORCE_INLINE void format(level sev, const char* fmt, const Args&... args) const
 		{
 			if (UNLIKELY(sev <= enabled))
 			{
-				broadcast(*this, sev, fmt, fmt::arg_type_info::get<typename fmt_unveil<Args>::type...>(), fmt::args_t<Args...>{::fmt_unveil<Args>::get(args)...});
+				message{this, sev}.broadcast(fmt, fmt_type_info::get<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 			}
 		}
 
@@ -93,9 +91,6 @@ namespace logs
 		GEN_LOG_METHOD(trace)
 
 #undef GEN_LOG_METHOD
-	private:
-		// Send log message to global logger instance
-		static void broadcast(const channel& ch, level sev, const char*, const fmt::supplementary_info*, const u64*);
 	};
 
 	/* Small set of predefined channels */

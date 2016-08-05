@@ -155,48 +155,49 @@ struct fmt_class_string<char*, void> : fmt_class_string<const char*>
 	// Classify char* as const char*
 };
 
+struct fmt_type_info
+{
+	decltype(&fmt_class_string<int>::format) fmt_string;
+
+	template<typename T>
+	static constexpr fmt_type_info make()
+	{
+		return fmt_type_info
+		{
+			&fmt_class_string<T>::format,
+		};
+	}
+
+	template<typename... Args>
+	static inline const fmt_type_info* get()
+	{
+		// Constantly initialized null-terminated list of type-specific information
+		static constexpr fmt_type_info result[sizeof...(Args) + 1]
+		{
+			make<Args>()...
+		};
+
+		return result;
+	}
+};
+
+template<typename Arg>
+using fmt_unveil_t = typename fmt_unveil<Arg>::type;
+
+// Argument array type (each element generated via fmt_unveil<>)
+template<typename... Args>
+using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
+
 namespace fmt
 {
-	// Argument array type (each element generated via fmt_unveil<>)
-	template<typename... Args>
-	using args_t = const u64(&&)[sizeof...(Args) + 1];
-
-	using supplementary_info = const struct arg_type_info;
-
-	struct arg_type_info
-	{
-		decltype(&fmt_class_string<int>::format) fmt_string;
-
-		template<typename T>
-		static constexpr arg_type_info make()
-		{
-			return arg_type_info
-			{
-				&fmt_class_string<T>::format,
-			};
-		}
-
-		template<typename... Args>
-		static inline const supplementary_info* get()
-		{
-			// Constantly initialized null-terminated list of type-specific information
-			static constexpr arg_type_info result[sizeof...(Args) + 1]
-			{
-				make<Args>()...
-			};
-
-			return result;
-		}
-	};
-
 	// Internal formatting function
-	void raw_append(std::string& out, const char*, const supplementary_info*, const u64*) noexcept;
+	void raw_append(std::string& out, const char*, const fmt_type_info*, const u64*) noexcept;
 
 	// Formatting function
 	template<typename... Args>
 	static SAFE_BUFFERS void append(std::string& out, const char* fmt, const Args&... args)
 	{
-		raw_append(out, fmt, arg_type_info::get<typename fmt_unveil<Args>::type...>(), args_t<Args...>{::fmt_unveil<Args>::get(args)...});
+		raw_append(out, fmt, fmt_type_info::get<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 
 	// Formatting function
@@ -209,7 +210,7 @@ namespace fmt
 	}
 
 	// Internal helper function
-	char* alloc_format(const char*, const supplementary_info*, const u64*) noexcept;
+	char* alloc_format(const char*, const fmt_type_info*, const u64*) noexcept;
 
 	// Exception type with formatting constructor
 	template<typename Base>
@@ -220,7 +221,7 @@ namespace fmt
 	public:
 		template<typename... Args>
 		SAFE_BUFFERS exception_t(const char* fmt, const Args&... args)
-			: base((fmt = alloc_format(fmt, arg_type_info::get<typename fmt_unveil<Args>::type...>(), args_t<Args...>{::fmt_unveil<Args>::get(args)...})))
+			: base((fmt = alloc_format(fmt, fmt_type_info::get<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...})))
 		{
 			std::free(const_cast<char*>(fmt));
 		}
