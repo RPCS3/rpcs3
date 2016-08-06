@@ -6,7 +6,8 @@
 #include "Thread.h"
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
+#include <Psapi.h>
 #else
 #ifdef __APPLE__
 #define _XOPEN_SOURCE
@@ -20,11 +21,7 @@
 static void report_fatal_error(const std::string& msg)
 {
 	std::string _msg = msg + "\n"
-		"HOW TO REPORT ERRORS:\n"
-		"1) Check the FAQ, readme, other sources. Please ensure that your hardware and software configuration is compliant.\n"
-		"2) You must provide FULL information: how to reproduce the error (your actions), RPCS3.log file, other *.log files whenever requested.\n"
-		"3) Please ensure that your software (game) is 'Playable' or close. Please note that 'Non-playable' games will be ignored.\n"
-		"4) If the software (game) is not 'Playable', please ensure that this error is unexpected, i.e. it didn't happen before or similar.\n"
+		"HOW TO REPORT ERRORS: Check the FAQ, README, other sources.\n"
 		"Please, don't send incorrect reports. Thanks for understanding.\n";
 
 #ifdef _WIN32
@@ -1675,7 +1672,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
 
-		msg += fmt::format("Access violation %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
+		msg += fmt::format("Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
 	}
 	else
 	{
@@ -1687,8 +1684,58 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 		}
 	}
 
+	std::vector<HMODULE> modules;
+	for (DWORD size = 256; modules.size() < size; size /= sizeof(HMODULE))
+	{
+		modules.resize(size);
+		if (!EnumProcessModules(GetCurrentProcess(), modules.data(), size * sizeof(HMODULE), &size))
+		{
+			modules.clear();
+			break;
+		}
+	}
+
 	msg += fmt::format("Instruction address: %p.\n", pExp->ContextRecord->Rip);
-	msg += fmt::format("Image base: %p.\n", GetModuleHandle(NULL));
+
+	DWORD64 unwind_base;
+	if (const auto rtf = RtlLookupFunctionEntry(pExp->ContextRecord->Rip, &unwind_base, nullptr))
+	{
+		// Get function address
+		const DWORD64 func_addr = rtf->BeginAddress + unwind_base;
+		msg += fmt::format("Function address: %p (base+0x%x).\n", func_addr, rtf->BeginAddress);
+
+		// Access UNWIND_INFO structure
+		//const auto uw = (u8*)(unwind_base + rtf->UnwindData);
+	}
+
+	for (HMODULE module : modules)
+	{
+		MODULEINFO info;
+		if (GetModuleInformation(GetCurrentProcess(), module, &info, sizeof(info)))
+		{
+			const DWORD64 base = (DWORD64)info.lpBaseOfDll;
+
+			if (pExp->ContextRecord->Rip >= base && pExp->ContextRecord->Rip < base + info.SizeOfImage)
+			{
+				std::string module_name;
+				for (DWORD size = 256; module_name.size() < size;)
+				{
+					module_name.resize(size);
+					size = GetModuleBaseNameA(GetCurrentProcess(), module, &module_name.front(), size);
+					if (!size)
+					{
+						module_name.resize(1, '\0');
+						break;
+					}
+				}
+
+				msg += fmt::format("Module name: '%s'.\n", module_name);
+				msg += fmt::format("Module base: %p.\n", info.lpBaseOfDll);
+			}
+		}
+	}
+
+	msg += fmt::format("RPCS3 image base: %p.\n", GetModuleHandle(NULL));
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION)
 	{
@@ -1755,7 +1802,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 	else
 	{
 		// TODO (debugger interaction)
-		report_fatal_error(fmt::format("Access violation %s location %p at %p.", cause, info->si_addr, RIP(context)));
+		report_fatal_error(fmt::format("Segfault %s location %p at %p.", cause, info->si_addr, RIP(context)));
 		std::abort();
 	}
 }
