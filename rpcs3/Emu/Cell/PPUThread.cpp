@@ -688,7 +688,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 		return;
 	}
 
-	memory_helper::free_reserved_memory(s_ppu_compiled, 0x200000000); // TODO
+	memory_helper::free_reserved_memory(s_ppu_compiled, 0x100000000); // TODO
 
 	// Get and install function addresses
 	for (const auto& info : funcs)
