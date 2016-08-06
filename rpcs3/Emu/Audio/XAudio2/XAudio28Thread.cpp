@@ -39,7 +39,7 @@ void XAudio2Thread::xa28_init(void* lib)
 		return;
 	}
 
-	hr = s_tls_xaudio2_instance->CreateMasteringVoice(&s_tls_master_voice);
+	hr = s_tls_xaudio2_instance->CreateMasteringVoice(&s_tls_master_voice, 8, 48000);
 	if (FAILED(hr))
 	{
 		LOG_ERROR(GENERAL, "XAudio2Thread : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
