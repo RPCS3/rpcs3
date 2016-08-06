@@ -38,67 +38,67 @@ void fmt_class_string<std::vector<char>>::format(std::string& out, u64 arg)
 template<>
 void fmt_class_string<char>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%hhx", static_cast<char>(arg));
+	fmt::append(out, "%#hhx", static_cast<char>(arg));
 }
 
 template<>
 void fmt_class_string<uchar>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%hhx", static_cast<uchar>(arg));
+	fmt::append(out, "%#hhx", static_cast<uchar>(arg));
 }
 
 template<>
 void fmt_class_string<schar>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%hhx", static_cast<schar>(arg));
+	fmt::append(out, "%#hhx", static_cast<schar>(arg));
 }
 
 template<>
 void fmt_class_string<short>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%hx", static_cast<short>(arg));
+	fmt::append(out, "%#hx", static_cast<short>(arg));
 }
 
 template<>
 void fmt_class_string<ushort>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%hx", static_cast<ushort>(arg));
+	fmt::append(out, "%#hx", static_cast<ushort>(arg));
 }
 
 template<>
 void fmt_class_string<int>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%x", static_cast<int>(arg));
+	fmt::append(out, "%#x", static_cast<int>(arg));
 }
 
 template<>
 void fmt_class_string<uint>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%x", static_cast<uint>(arg));
+	fmt::append(out, "%#x", static_cast<uint>(arg));
 }
 
 template<>
 void fmt_class_string<long>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%lx", static_cast<long>(arg));
+	fmt::append(out, "%#lx", static_cast<long>(arg));
 }
 
 template<>
 void fmt_class_string<ulong>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%lx", static_cast<ulong>(arg));
+	fmt::append(out, "%#lx", static_cast<ulong>(arg));
 }
 
 template<>
 void fmt_class_string<llong>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%llx", static_cast<llong>(arg));
+	fmt::append(out, "%#llx", static_cast<llong>(arg));
 }
 
 template<>
 void fmt_class_string<ullong>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "0x%llx", static_cast<ullong>(arg));
+	fmt::append(out, "%#llx", static_cast<ullong>(arg));
 }
 
 template<>
@@ -116,7 +116,7 @@ void fmt_class_string<double>::format(std::string& out, u64 arg)
 template<>
 void fmt_class_string<bool>::format(std::string& out, u64 arg)
 {
-	out += arg ? "true" : "false"; // TODO?
+	out += arg ? "true" : "false";
 }
 
 template<>
@@ -166,24 +166,19 @@ struct fmt::cfmt_src
 		return out.size() - start;
 	}
 
-	// Returns type size (0 if unknown, pointer, assumed max)
+	// Returns type size (0 if unknown, pointer, unsigned, assumed max)
 	std::size_t type(std::size_t extra) const
 	{
 		// Hack: use known function pointers to determine type
 #define TYPE(type)\
 		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
 
-		TYPE(char);
-		TYPE(schar);
-		TYPE(uchar);
-		TYPE(short);
-		TYPE(ushort);
 		TYPE(int);
-		TYPE(uint);
-		TYPE(long);
-		TYPE(ulong);
 		TYPE(llong);
-		TYPE(ullong);
+		TYPE(schar);
+		TYPE(short);
+		if (std::is_signed<char>::value) TYPE(char);
+		TYPE(long);
 
 #undef TYPE
 

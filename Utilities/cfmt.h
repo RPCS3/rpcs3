@@ -340,15 +340,15 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			ctx.type = (u8)src.type(ctx.args);
 		}
 
-		// Sign-extended argument expected: no special conversion
+		// Sign-extended argument expected
 		const u64 val = src.template get<u64>(ctx.args);
-		const s64 sval = val;
+		const bool negative = ctx.type && static_cast<s64>(val) < 0;
 
 		const std::size_t start = out.size();
 
 		if (!ctx.dot || ctx.prec)
 		{
-			if (sval < 0)
+			if (negative)
 			{
 				out.push_back('-');
 			}
@@ -361,7 +361,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 				out.push_back(' ');
 			}
 
-			write_decimal(sval < 0 ? 0 - val : val, ctx.prec);
+			write_decimal(negative ? 0 - val : val, ctx.prec);
 		}
 
 		const std::size_t size2 = out.size() - start;
@@ -371,7 +371,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			// Add padding if necessary
 			if (ctx.zeros && !ctx.left && !ctx.dot)
 			{
-				out.insert(out.begin() + start + (sval < 0 || ctx.sign || ctx.space), ctx.width - size2, '0');
+				out.insert(out.begin() + start + (negative || ctx.sign || ctx.space), ctx.width - size2, '0');
 			}
 			else
 			{
@@ -402,6 +402,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			ctx.type == 2 ? 0xffffull :
 			ctx.type == 4 ? 0xffffffffull : 0xffffffffffffffffull;
 
+		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
 
 		const std::size_t start = out.size();
@@ -452,6 +453,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			ctx.type == 2 ? 0xffffull :
 			ctx.type == 4 ? 0xffffffffull : 0xffffffffffffffffull;
 
+		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
 
 		const std::size_t start = out.size();
@@ -509,6 +511,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			ctx.type == 2 ? 0xffffull :
 			ctx.type == 4 ? 0xffffffffull : 0xffffffffffffffffull;
 
+		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
 
 		const std::size_t start = out.size();
