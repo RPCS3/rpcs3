@@ -332,19 +332,22 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 	for (const auto& path : m_col_icon->data)
 	{
 		wxImage game_icon(80, 44);
+		if (!path.empty())
 		{
 			wxLogNull logNo; // temporary disable wx warnings ("iCCP: known incorrect sRGB profile" spamming)
 			if (game_icon.LoadFile(fmt::FromUTF8(path), wxBITMAP_TYPE_PNG))
 			{
 				game_icon.Rescale(80, 44, wxIMAGE_QUALITY_HIGH);
 				m_icon_indexes.push_back(m_img_list->Add(game_icon));
+				continue;
 			}
 			else
 			{
 				LOG_ERROR(GENERAL, "Error loading image %s", path);
-				m_icon_indexes.push_back(-1);
 			}
 		}
+
+		m_icon_indexes.push_back(-1);
 	}
 }
 
