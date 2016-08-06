@@ -8,6 +8,11 @@
 
 XAudio2Thread::XAudio2Thread()
 {
+	if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+	{
+		LOG_ERROR(GENERAL, "XAudio: failed to increase thread priority");
+	}
+
 	if (auto lib2_7 = LoadLibraryExW(L"XAudio2_7.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
 	{
 		xa27_init(lib2_7);
