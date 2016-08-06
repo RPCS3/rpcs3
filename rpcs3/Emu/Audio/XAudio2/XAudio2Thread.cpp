@@ -8,21 +8,6 @@
 
 XAudio2Thread::XAudio2Thread()
 {
-	if (auto lib2_7 = LoadLibraryExW(L"XAudio2_7.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
-	{
-		xa27_init(lib2_7);
-
-		m_funcs.destroy = &xa27_destroy;
-		m_funcs.play    = &xa27_play;
-		m_funcs.flush   = &xa27_flush;
-		m_funcs.stop    = &xa27_stop;
-		m_funcs.open    = &xa27_open;
-		m_funcs.add     = &xa27_add;
-
-		LOG_SUCCESS(GENERAL, "XAudio 2.7 initialized");
-		return;
-	}
-	
 	if (auto lib2_9 = LoadLibraryExW(L"XAudio2_9.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
 	{
 		// xa28* implementation is fully compatible with library 2.9
@@ -39,6 +24,21 @@ XAudio2Thread::XAudio2Thread()
 		return;
 	}
 
+	if (auto lib2_7 = LoadLibraryExW(L"XAudio2_7.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
+	{
+		xa27_init(lib2_7);
+
+		m_funcs.destroy = &xa27_destroy;
+		m_funcs.play    = &xa27_play;
+		m_funcs.flush   = &xa27_flush;
+		m_funcs.stop    = &xa27_stop;
+		m_funcs.open    = &xa27_open;
+		m_funcs.add     = &xa27_add;
+
+		LOG_SUCCESS(GENERAL, "XAudio 2.7 initialized");
+		return;
+	}
+	
 	if (auto lib2_8 = LoadLibraryExW(L"XAudio2_8.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
 	{
 		xa28_init(lib2_8);
