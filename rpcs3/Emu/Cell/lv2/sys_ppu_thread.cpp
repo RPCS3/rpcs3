@@ -68,7 +68,7 @@ s32 sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	thread->is_joining = true;
 
 	// join thread
-	while (!(thread->state & cpu_state::exit))
+	while (!test(thread->state & cpu_state::exit))
 	{
 		CHECK_EMU_STATUS;
 

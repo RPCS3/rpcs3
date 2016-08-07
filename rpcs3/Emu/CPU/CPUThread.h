@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Utilities/Thread.h"
-#include "../Utilities/BitSet.h"
+#include "../Utilities/bit_set.h"
 
 // CPU Thread Type (TODO: probably remove, use id and idm to classify threads)
 enum class cpu_type : u8
@@ -12,7 +12,7 @@ enum class cpu_type : u8
 };
 
 // CPU Thread State flags (TODO: use u32 once cpu_type is removed)
-enum struct cpu_state : u16
+enum class cpu_state : u16
 {
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
@@ -24,10 +24,12 @@ enum struct cpu_state : u16
 	dbg_global_stop, // Emulation stopped
 	dbg_pause, // Thread paused
 	dbg_step, // Thread forced to pause after one step (one instruction, etc)
+
+	__bitset_enum_max
 };
 
 // CPU Thread State flags: pause state union
-constexpr bitset_t<cpu_state> cpu_state_pause = make_bitset(cpu_state::suspend, cpu_state::dbg_global_pause, cpu_state::dbg_pause);
+constexpr bs_t<cpu_state> cpu_state_pause = cpu_state::suspend + cpu_state::dbg_global_pause + cpu_state::dbg_pause;
 
 class cpu_thread : public named_thread
 {
@@ -43,7 +45,7 @@ public:
 	cpu_thread(cpu_type type);
 
 	// Public thread state
-	atomic_t<bitset_t<cpu_state>> state{ cpu_state::stop };
+	atomic_t<bs_t<cpu_state>> state{+cpu_state::stop};
 
 	// Object associated with sleep state, possibly synchronization primitive (mutex, semaphore, etc.)
 	atomic_t<void*> owner{};

@@ -266,7 +266,7 @@ void InterpreterDisAsmFrame::ShowAddr(u32 addr)
 
 			wxColour colour;
 
-			if (cpu->state.test(cpu_state_pause) && m_pc == GetPc())
+			if (test(cpu->state & cpu_state_pause) && m_pc == GetPc())
 			{
 				colour = wxColour("Green");
 			}
@@ -436,7 +436,7 @@ void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 {
-	if (cpu && cpu->state.test(cpu_state_pause))
+	if (cpu && test(cpu->state & cpu_state_pause))
 	{
 		cpu->state -= cpu_state::dbg_pause;
 		(*cpu)->lock_notify();
@@ -455,11 +455,11 @@ void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
 	if (cpu)
 	{
-		if (cpu->state.atomic_op([](bitset_t<cpu_state>& state) -> bool
+		if (test(cpu_state::dbg_pause, cpu->state.fetch_op([](bs_t<cpu_state>& state)
 		{
 			state += cpu_state::dbg_step;
-			return state.test_and_reset(cpu_state::dbg_pause);
-		}))
+			state -= cpu_state::dbg_pause;
+		})))
 		{
 			(*cpu)->lock_notify();
 		}

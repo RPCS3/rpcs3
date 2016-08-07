@@ -77,7 +77,7 @@ void ARMv7Thread::cpu_task_main()
 		return fmt::format("%s [0x%08x]", cpu->get_name(), cpu->PC);
 	};
 
-	while (!state.load() || !check_state())
+	while (!test(state) || !check_state())
 	{
 		if (ISET == Thumb)
 		{
@@ -142,7 +142,7 @@ void ARMv7Thread::fast_call(u32 addr)
 	{
 		cpu_task_main();
 
-		if (SP != old_SP && !state.test(cpu_state::ret) && !state.test(cpu_state::exit)) // SP shouldn't change
+		if (SP != old_SP && !test(state, cpu_state::ret + cpu_state::exit)) // SP shouldn't change
 		{
 			throw fmt::exception("Stack inconsistency (addr=0x%x, SP=0x%x, old=0x%x)", addr, SP, old_SP);
 		}

@@ -1453,9 +1453,6 @@
     <ClInclude Include="..\Utilities\geometry.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\BitSet.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\PSP2\ARMv7Callback.h">
       <Filter>Emu\PSP2</Filter>
     </ClInclude>
@@ -1706,6 +1703,9 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\cfmt.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\bit_set.h">
       <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>

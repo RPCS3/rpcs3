@@ -146,6 +146,32 @@ struct fmt_class_string
 		fmt_class_string<std::underlying_type_t<T>>::format(out, static_cast<u64>(value));
 	}
 
+	// Helper function (bitset formatting)
+	static SAFE_BUFFERS FORCE_INLINE void format_bitset(std::string& out, u64 arg, const char* prefix, const char* delim, const char* suffix, void(*fmt)(std::string&, u64))
+	{
+		// Start from raw value
+		fmt_class_string<u64>::format(out, arg);
+
+		out += prefix;
+
+		for (u64 i = 0; i < 64; i++)
+		{
+			const u64 mask = 1ull << i;
+
+			if (arg & mask)
+			{
+				fmt(out, i);
+
+				if (arg > mask)
+				{
+					out += delim;
+				}
+			}
+		}
+
+		out += suffix;
+	}
+
 	// Helper constant (may be used in format_enum as lambda return value)
 	static constexpr const char* unknown = nullptr;
 };

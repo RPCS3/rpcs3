@@ -3,7 +3,7 @@
 #include <map>
 #include <set>
 
-#include "Utilities/BitSet.h"
+#include "Utilities/bit_set.h"
 #include "Utilities/BEType.h"
 
 // PPU Function Attributes
@@ -16,6 +16,8 @@ enum class ppu_attr : u32
 	uses_r0,
 	entry_point,
 	complex_stack,
+
+	__bitset_enum_max
 };
 
 // PPU Function Information
@@ -24,7 +26,7 @@ struct ppu_function
 	u32 addr = 0;
 	u32 toc = 0;
 	u32 size = 0;
-	bitset_t<ppu_attr> attr{};
+	bs_t<ppu_attr> attr{};
 
 	u32 stack_frame = 0;
 	u32 gate_target = 0;

@@ -213,7 +213,7 @@ void SPUThread::cpu_task()
 
 	while (true)
 	{
-		if (!state.load())
+		if (!test(state))
 		{
 			// Read opcode
 			const u32 op = base[pc / 4];
@@ -599,9 +599,9 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		if (!channel.try_pop(out))
 		{
-			thread_lock{*this}, thread_ctrl::wait(WRAP_EXPR(state & cpu_state::stop || channel.try_pop(out)));
+			thread_lock{*this}, thread_ctrl::wait(WRAP_EXPR(test(state & cpu_state::stop) || channel.try_pop(out)));
 
-			return !state.test(cpu_state::stop);
+			return !test(state & cpu_state::stop);
 		}
 
 		return true;
@@ -630,7 +630,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 			CHECK_EMU_STATUS;
 
-			if (state & cpu_state::stop)
+			if (test(state & cpu_state::stop))
 			{
 				return false;
 			}
@@ -702,14 +702,14 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		if (ch_event_mask & SPU_EVENT_LR)
 		{
 			// register waiter if polling reservation status is required
-			vm::wait_op(last_raddr, 128, WRAP_EXPR(get_events(true) || state & cpu_state::stop));
+			vm::wait_op(last_raddr, 128, WRAP_EXPR(get_events(true) || test(state & cpu_state::stop)));
 		}
 		else
 		{
 			lock.lock();
 
 			// simple waiting loop otherwise
-			while (!get_events(true) && !(state & cpu_state::stop))
+			while (!get_events(true) && !test(state & cpu_state::stop))
 			{
 				CHECK_EMU_STATUS;
 
@@ -719,7 +719,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 		ch_event_stat &= ~SPU_EVENT_WAITING;
 
-		if (state & cpu_state::stop)
+		if (test(state & cpu_state::stop))
 		{
 			return false;
 		}
@@ -759,7 +759,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			{
 				CHECK_EMU_STATUS;
 
-				if (state & cpu_state::stop)
+				if (test(state & cpu_state::stop))
 				{
 					return false;
 				}
@@ -966,7 +966,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		{
 			CHECK_EMU_STATUS;
 
-			if (state & cpu_state::stop)
+			if (test(state & cpu_state::stop))
 			{
 				return false;
 			}
@@ -1231,7 +1231,7 @@ bool SPUThread::stop_and_signal(u32 code)
 		{
 			CHECK_EMU_STATUS;
 
-			if (state & cpu_state::stop)
+			if (test(state & cpu_state::stop))
 			{
 				return false;
 			}
@@ -1272,7 +1272,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			{
 				CHECK_EMU_STATUS;
 
-				if (state & cpu_state::stop)
+				if (test(state & cpu_state::stop))
 				{
 					return false;
 				}

@@ -21,9 +21,32 @@ void fmt_class_string<cpu_type>::format(std::string& out, u64 arg)
 }
 
 template<>
-void fmt_class_string<bitset_t<cpu_state>::raw_type>::format(std::string& out, u64 arg)
+void fmt_class_string<cpu_state>::format(std::string& out, u64 arg)
 {
-	out += "[UNIMPLEMENTED]";
+	format_enum(out, arg, [](cpu_state f)
+	{
+		switch (f)
+		{
+		STR_CASE(cpu_state::stop);
+		STR_CASE(cpu_state::exit);
+		STR_CASE(cpu_state::suspend);
+		STR_CASE(cpu_state::ret);
+		STR_CASE(cpu_state::signal);
+		STR_CASE(cpu_state::dbg_global_pause);
+		STR_CASE(cpu_state::dbg_global_stop);
+		STR_CASE(cpu_state::dbg_pause);
+		STR_CASE(cpu_state::dbg_step);
+		case cpu_state::__bitset_enum_max: break;
+		}
+
+		return unknown;
+	});
+}
+
+template<>
+void fmt_class_string<bs_t<cpu_state>>::format(std::string& out, u64 arg)
+{
+	format_bitset(out, arg, "[", "|", "]", &fmt_class_string<cpu_state>::format);
 }
 
 thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
@@ -39,12 +62,12 @@ void cpu_thread::on_task()
 	std::unique_lock<named_thread> lock(*this);
 
 	// Check thread status
-	while (!(state & cpu_state::exit))
+	while (!test(state & cpu_state::exit))
 	{
 		CHECK_EMU_STATUS;
 
 		// check stop status
-		if (!(state & cpu_state::stop))
+		if (!test(state & cpu_state::stop))
 		{
 			if (lock) lock.unlock();
 
@@ -99,12 +122,12 @@ bool cpu_thread::check_state()
 	{
 		CHECK_EMU_STATUS; // check at least once
 
-		if (state & cpu_state::exit)
+		if (test(state & cpu_state::exit))
 		{
 			return true;
 		}
 
-		if (!state.test(cpu_state_pause))
+		if (!test(state & cpu_state_pause))
 		{
 			break;
 		}
@@ -120,12 +143,12 @@ bool cpu_thread::check_state()
 
 	const auto state_ = state.load();
 
-	if (state_ & make_bitset(cpu_state::ret, cpu_state::stop))
+	if (test(state_, cpu_state::ret + cpu_state::stop))
 	{
 		return true;
 	}
 
-	if (state_ & cpu_state::dbg_step)
+	if (test(state_, cpu_state::dbg_step))
 	{
 		state += cpu_state::dbg_pause;
 		state -= cpu_state::dbg_step;

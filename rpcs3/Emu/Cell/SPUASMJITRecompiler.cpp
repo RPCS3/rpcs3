@@ -269,7 +269,7 @@ void spu_recompiler::InterpreterCall(spu_opcode_t op)
 
 			const u32 old_pc = _spu->pc;
 
-			if (_spu->state.load() && _spu->check_state())
+			if (test(_spu->state) && _spu->check_state())
 			{
 				return 0x2000000 | _spu->pc;
 			}
@@ -340,12 +340,12 @@ void spu_recompiler::FunctionCall()
 				LOG_ERROR(SPU, "Branch-to-self");
 			}
 
-			while (!_spu->state.load() || !_spu->check_state())
+			while (!test(_spu->state) || !_spu->check_state())
 			{
 				// Proceed recursively
 				spu_recompiler_base::enter(*_spu);
 
-				if (_spu->state & cpu_state::ret)
+				if (test(_spu->state & cpu_state::ret))
 				{
 					break;
 				}
@@ -2186,7 +2186,7 @@ void spu_recompiler::BR(spu_opcode_t op)
 		c->mov(*addr, target | 0x2000000);
 		//c->cmp(asmjit::host::dword_ptr(*ls, m_pos), 0x32); // compare instruction opcode with BR-to-self
 		//c->je(labels[target / 4]);
-		c->lock().or_(SPU_OFF_16(state), make_bitset(cpu_state::stop, cpu_state::ret)._value());
+		c->lock().or_(SPU_OFF_16(state), static_cast<u16>(cpu_state::stop + cpu_state::ret));
 		c->jmp(*end);
 		c->unuse(*addr);
 		return;

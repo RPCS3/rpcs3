@@ -630,7 +630,7 @@ void fs::file::xfail() const
 	throw fmt::exception("Unexpected fs::error %s", g_tls_error);
 }
 
-bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
+bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 {
 	if (auto device = get_virtual_device(path))
 	{
@@ -645,25 +645,25 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 
 #ifdef _WIN32
 	DWORD access = 0;
-	if (mode & fs::read) access |= GENERIC_READ;
-	if (mode & fs::write) access |= mode & fs::append ? FILE_APPEND_DATA : GENERIC_WRITE;
+	if (test(mode & fs::read)) access |= GENERIC_READ;
+	if (test(mode & fs::write)) access |= test(mode & fs::append) ? FILE_APPEND_DATA : GENERIC_WRITE;
 
 	DWORD disp = 0;
-	if (mode & fs::create)
+	if (test(mode & fs::create))
 	{
 		disp =
-			mode & fs::excl ? CREATE_NEW :
-			mode & fs::trunc ? CREATE_ALWAYS : OPEN_ALWAYS;
+			test(mode & fs::excl) ? CREATE_NEW :
+			test(mode & fs::trunc) ? CREATE_ALWAYS : OPEN_ALWAYS;
 	}
 	else
 	{
-		if (mode & fs::excl)
+		if (test(mode & fs::excl))
 		{
 			g_tls_error = error::inval;
 			return false;
 		}
 
-		disp = mode & fs::trunc ? TRUNCATE_EXISTING : OPEN_EXISTING;
+		disp = test(mode & fs::trunc) ? TRUNCATE_EXISTING : OPEN_EXISTING;
 	}
 
 	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -801,14 +801,14 @@ bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 #else
 	int flags = 0;
 
-	if (mode & fs::read && mode & fs::write) flags |= O_RDWR;
-	else if (mode & fs::read) flags |= O_RDONLY;
-	else if (mode & fs::write) flags |= O_WRONLY;
+	if (test(mode & fs::read) && test(mode & fs::write)) flags |= O_RDWR;
+	else if (test(mode & fs::read)) flags |= O_RDONLY;
+	else if (test(mode & fs::write)) flags |= O_WRONLY;
 
-	if (mode & fs::append) flags |= O_APPEND;
-	if (mode & fs::create) flags |= O_CREAT;
-	if (mode & fs::trunc) flags |= O_TRUNC;
-	if (mode & fs::excl) flags |= O_EXCL;
+	if (test(mode & fs::append)) flags |= O_APPEND;
+	if (test(mode & fs::create)) flags |= O_CREAT;
+	if (test(mode & fs::trunc)) flags |= O_TRUNC;
+	if (test(mode & fs::excl)) flags |= O_EXCL;
 
 	const int fd = ::open(path.c_str(), flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 

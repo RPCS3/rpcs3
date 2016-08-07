@@ -79,9 +79,8 @@ std::string ppu_thread::get_name() const
 std::string ppu_thread::dump() const
 {
 	std::string ret;
-
 	ret += fmt::format("Type: %s\n", typeid(*this).name());
-	ret += fmt::format("State: 0x%08x\n", state.load());
+	ret += fmt::format("State: %s\n", state.load());
 	ret += fmt::format("Priority: %d\n", prio);
 	
 	ret += "\nRegisters:\n=========\n";
@@ -196,7 +195,7 @@ void ppu_thread::exec_task()
 
 	while (true)
 	{
-		if (UNLIKELY(state.load()))
+		if (UNLIKELY(test(state)))
 		{
 			if (check_state()) return;
 		}
@@ -228,7 +227,7 @@ void ppu_thread::exec_task()
 					func2 = table[_i._u32[2]];
 					func3 = table[_i._u32[3]];
 
-					if (UNLIKELY(state.load()))
+					if (UNLIKELY(test(state)))
 					{
 						break;
 					}
@@ -240,8 +239,6 @@ void ppu_thread::exec_task()
 		}
 	}
 }
-
-constexpr auto stop_state = make_bitset(cpu_state::stop, cpu_state::exit, cpu_state::suspend);
 
 ppu_thread::~ppu_thread()
 {
@@ -311,7 +308,7 @@ ppu_cmd ppu_thread::cmd_wait()
 
 	while (true)
 	{
-		if (UNLIKELY(state.load()))
+		if (UNLIKELY(test(state)))
 		{
 			if (lock) lock.unlock();
 
@@ -368,7 +365,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	{
 		exec_task();
 
-		if (gpr[1] != old_stack && !state.test(cpu_state::ret) && !state.test(cpu_state::exit)) // gpr[1] shouldn't change
+		if (gpr[1] != old_stack && !test(state, cpu_state::ret + cpu_state::exit)) // gpr[1] shouldn't change
 		{
 			throw fmt::exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, gpr[1], old_stack);
 		}

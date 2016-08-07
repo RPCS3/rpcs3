@@ -34,7 +34,7 @@ void lv2_int_serv_t::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
 	thread->lock_notify();
 
 	// Join thread (TODO)
-	while (!(thread->state & cpu_state::exit))
+	while (!test(thread->state & cpu_state::exit))
 	{
 		CHECK_EMU_STATUS;
 
@@ -91,7 +91,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	}
 
 	// If interrupt thread is running, it's already established on another interrupt tag
-	if (!(it->state & cpu_state::stop))
+	if (!test(it->state & cpu_state::stop))
 	{
 		return CELL_EAGAIN;
 	}

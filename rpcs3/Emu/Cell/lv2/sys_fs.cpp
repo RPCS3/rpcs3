@@ -79,7 +79,7 @@ ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 
 		return CELL_EISDIR;
 	}
 
-	bitset_t<fs::open_mode> open_mode{};
+	bs_t<fs::open_mode> open_mode{};
 
 	switch (flags & CELL_FS_O_ACCMODE)
 	{
@@ -125,7 +125,7 @@ ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 
 		open_mode = {}; // error
 	}
 
-	if (!open_mode)
+	if (!test(open_mode))
 	{
 		throw EXCEPTION("Invalid or unimplemented flags (%#o): '%s'", flags, path.get_ptr());
 	}
@@ -136,7 +136,7 @@ ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 
 	{
 		sys_fs.error("sys_fs_open('%s'): failed to open file (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
 
-		if (open_mode & fs::excl)
+		if (test(open_mode & fs::excl))
 		{
 			return CELL_EEXIST; // approximation
 		}
