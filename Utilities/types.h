@@ -529,7 +529,7 @@ struct fmt_unveil<id_value<T, ID>>
 {
 	using type = typename fmt_unveil<ID>::type;
 
-	static inline u64 get(const id_value<T, ID>& value)
+	static inline auto get(const id_value<T, ID>& value)
 	{
 		return fmt_unveil<ID>::get(value);
 	}

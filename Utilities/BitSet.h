@@ -262,7 +262,7 @@ struct fmt_unveil<bitset_t<T, BitSize>, void>
 {
 	using type = typename bitset_t<T, BitSize>::raw_type;
 
-	static inline u64 get(const bitset_t<T, BitSize>& value)
+	static inline auto get(const bitset_t<T, BitSize>& value)
 	{
 		return fmt_unveil<type>::get(static_cast<type>(value._value()));
 	}

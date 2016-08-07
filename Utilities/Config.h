@@ -314,14 +314,8 @@ namespace cfg
 
 			if (try_to_enum_value(&result, &fmt_class_string<T>::format, value))
 			{
-				const auto val = static_cast<std::underlying_type_t<T>>(result);
-
-				if (static_cast<u64>(val) != result)
-				{
-					return false;
-				}
-
-				m_value = static_cast<T>(val);
+				// No narrowing check, it's hard to do right there
+				m_value = static_cast<T>(static_cast<std::underlying_type_t<T>>(result));
 				return true;
 			}
 

@@ -248,7 +248,7 @@ struct fmt_unveil<bf_t<T, I, N>, void>
 {
 	using type = typename fmt_unveil<simple_t<T>>::type;
 
-	static inline u64 get(const bf_t<T, I, N>& bf)
+	static inline auto get(const bf_t<T, I, N>& bf)
 	{
 		return fmt_unveil<type>::get(bf);
 	}
@@ -259,7 +259,7 @@ struct fmt_unveil<cf_t<F, Fields...>, void>
 {
 	using type = typename fmt_unveil<simple_t<typename F::type>>::type;
 
-	static inline u64 get(const cf_t<F, Fields...>& cf)
+	static inline auto get(const cf_t<F, Fields...>& cf)
 	{
 		return fmt_unveil<type>::get(cf);
 	}
@@ -270,7 +270,7 @@ struct fmt_unveil<ff_t<T, V, N>, void>
 {
 	using type = typename fmt_unveil<simple_t<T>>::type;
 
-	static inline u64 get(const ff_t<T, V, N>& ff)
+	static inline auto get(const ff_t<T, V, N>& ff)
 	{
 		return fmt_unveil<type>::get(ff);
 	}

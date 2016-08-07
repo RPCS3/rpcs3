@@ -944,13 +944,12 @@ template<typename T> using atomic_be_t = atomic_t<be_t<T>>;
 template<typename T> using atomic_le_t = atomic_t<le_t<T>>;
 #endif
 
-// Formatting for BE/LE data
 template<typename T, bool Se, std::size_t Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>
 {
 	using type = typename fmt_unveil<T>::type;
 
-	static inline u64 get(const se_t<T, Se, Align>& arg)
+	static inline auto get(const se_t<T, Se, Align>& arg)
 	{
 		return fmt_unveil<T>::get(arg);
 	}

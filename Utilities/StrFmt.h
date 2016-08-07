@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <string>
+#include <memory>
 
 #include "Platform.h"
 #include "types.h"
@@ -22,6 +23,24 @@ struct fmt_unveil
 	static inline u64 get(const T& arg)
 	{
 		return reinterpret_cast<std::uintptr_t>(&arg);
+	}
+
+	// Temporary value container (can possibly be created by other fmt_unveil<> specializations)
+	struct u64_wrapper
+	{
+		T arg;
+
+		// Allow implicit conversion
+		operator u64() const
+		{
+			return reinterpret_cast<std::uintptr_t>(&arg);
+		}
+	};
+
+	// This overload resolution takes the precedence
+	static inline u64_wrapper get(T&& arg)
+	{
+		return {std::move(arg)};
 	}
 };
 

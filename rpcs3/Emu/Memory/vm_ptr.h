@@ -496,7 +496,7 @@ struct fmt_unveil<vm::_ptr_base<T, AT>, void>
 {
 	using type = typename fmt_unveil<AT>::type;
 
-	static inline u64 get(const vm::_ptr_base<T, AT>& arg)
+	static inline auto get(const vm::_ptr_base<T, AT>& arg)
 	{
 		return fmt_unveil<AT>::get(arg.addr());
 	}
