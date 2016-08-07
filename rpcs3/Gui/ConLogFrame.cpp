@@ -73,7 +73,7 @@ struct gui_listener : logs::listener
 			_new->msg += text;
 			_new->msg += '\n';
 
-			last = last->next = _new;
+			last.exchange(_new)->next = _new;
 		}
 	}
 
