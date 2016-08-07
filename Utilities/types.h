@@ -461,40 +461,29 @@ using any16 = any_pod<simple_t, sizeof(u16)>;
 using any32 = any_pod<simple_t, sizeof(u32)>;
 using any64 = any_pod<simple_t, sizeof(u64)>;
 
-// Allows to define integer convertible to multiple enum types
-template<typename T = void, typename... Ts>
-struct multicast : multicast<Ts...>
+// Allows to define integer convertible to multiple types
+template<typename T, T Value, typename T1 = void, typename... Ts>
+struct multicast : multicast<T, Value, Ts...>
 {
-	static_assert(std::is_enum<T>::value, "multicast<> error: invalid conversion type (enum type expected)");
+	constexpr multicast() = default;
 
-	multicast() = default;
-
-	template<typename UT>
-	constexpr multicast(const UT& value)
-		: multicast<Ts...>(value)
-		, m_value{ value } // Forbid narrowing
+	// Implicit conversion to desired type
+	constexpr operator T1() const
 	{
+		return static_cast<T1>(Value);
 	}
-
-	constexpr operator T() const
-	{
-		// Cast to enum type
-		return static_cast<T>(m_value);
-	}
-
-private:
-	std::underlying_type_t<T> m_value;
 };
 
 // Recursion terminator
-template<>
-struct multicast<void>
+template<typename T, T Value>
+struct multicast<T, Value, void>
 {
-	multicast() = default;
-
-	template<typename UT>
-	constexpr multicast(const UT& value)
+	constexpr multicast() = default;
+	
+	// Explicit conversion to base type
+	explicit constexpr operator T() const
 	{
+		return Value;
 	}
 };
 
