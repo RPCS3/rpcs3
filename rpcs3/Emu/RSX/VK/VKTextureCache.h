@@ -32,6 +32,7 @@ namespace vk
 		std::vector<cached_texture_object> m_cache;
 		std::pair<u64, u64> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
 		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
+		std::vector<std::unique_ptr<vk::image>> m_dirty_textures;
 
 		bool lock_memory_region(u32 start, u32 size)
 		{
@@ -99,7 +100,7 @@ namespace vk
 				{
 					if (tex.exists)
 					{
-						tex.uploaded_texture.reset();
+						m_dirty_textures.push_back(std::move(tex.uploaded_texture));
 						tex.exists = false;
 					}
 
@@ -131,18 +132,6 @@ namespace vk
 		void unlock_object(cached_texture_object &obj)
 		{
 			unlock_memory_region(static_cast<u32>(obj.protected_rgn_start), static_cast<u32>(obj.native_rsx_size));
-		}
-
-		void purge_dirty_textures()
-		{
-			for (cached_texture_object &tex : m_cache)
-			{
-				if (tex.dirty && tex.exists)
-				{
-					tex.uploaded_texture.reset();
-					tex.exists = false;
-				}
-			}
 		}
 
 	public:
@@ -293,6 +282,7 @@ namespace vk
 
 		void flush()
 		{
+			m_dirty_textures.clear();
 			m_temporary_image_view.clear();
 		}
 	};
