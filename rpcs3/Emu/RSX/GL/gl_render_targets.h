@@ -179,7 +179,7 @@ struct gl_render_target_traits
 	static
 	gsl::span<const gsl::byte> map_downloaded_buffer(const std::vector<u8> &buffer)
 	{
-		return{ reinterpret_cast<const gsl::byte*>(buffer.data()), gsl::narrow<int>(buffer.size()) };
+		return{ reinterpret_cast<const gsl::byte*>(buffer.data()), ::narrow<int>(buffer.size()) };
 	}
 
 	static

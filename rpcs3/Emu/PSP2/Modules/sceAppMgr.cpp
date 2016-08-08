@@ -8,22 +8,22 @@ logs::channel sceAppMgr("sceAppMgr", logs::level::notice);
 
 s32 sceAppMgrReceiveEventNum(vm::ptr<s32> eventNum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppMgrReceiveEvent(vm::ptr<SceAppMgrEvent> appEvent)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppMgrAcquireBgmPort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppMgrReleaseBgmPort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

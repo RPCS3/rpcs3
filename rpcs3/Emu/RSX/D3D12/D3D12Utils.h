@@ -22,7 +22,7 @@ inline std::string get_hresult_message(HRESULT hr)
 #endif
 }
 
-#define CHECK_HRESULT(expr) { HRESULT hr = (expr); if (FAILED(hr)) throw EXCEPTION("HRESULT = %s", get_hresult_message(hr)); }
+#define CHECK_HRESULT(expr) { HRESULT hr = (expr); if (FAILED(hr)) fmt::throw_exception("HRESULT = %s" HERE, get_hresult_message(hr)); }
 
 /**
  * Send data to dst pointer without polluting cache.

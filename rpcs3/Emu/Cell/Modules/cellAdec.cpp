@@ -106,28 +106,28 @@ public:
 		}
 		default:
 		{
-			throw EXCEPTION("Unknown type (0x%x)", type);
+			fmt::throw_exception("Unknown type (0x%x)" HERE, type);
 		}
 		}
 
 		if (!codec)
 		{
-			throw EXCEPTION("avcodec_find_decoder() failed");
+			fmt::throw_exception("avcodec_find_decoder() failed" HERE);
 		}
 		if (!input_format)
 		{
-			throw EXCEPTION("av_find_input_format() failed");
+			fmt::throw_exception("av_find_input_format() failed" HERE);
 		}
 		fmt = avformat_alloc_context();
 		if (!fmt)
 		{
-			throw EXCEPTION("avformat_alloc_context() failed");
+			fmt::throw_exception("avformat_alloc_context() failed" HERE);
 		}
 		io_buf = (u8*)av_malloc(4096);
 		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
 		if (!fmt->pb)
 		{
-			throw EXCEPTION("avio_alloc_context() failed");
+			fmt::throw_exception("avio_alloc_context() failed" HERE);
 		}
 	}
 
@@ -260,7 +260,7 @@ public:
 					err = avformat_open_input(&fmt, NULL, input_format, &opts);
 					if (err || opts)
 					{
-						throw EXCEPTION("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						fmt::throw_exception("avformat_open_input() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
 					}
 					//err = avformat_find_stream_info(fmt, NULL);
 					//if (err || !fmt->nb_streams)
@@ -269,7 +269,7 @@ public:
 					//}
 					if (!avformat_new_stream(fmt, codec))
 					{
-						throw EXCEPTION("avformat_new_stream() failed");
+						fmt::throw_exception("avformat_new_stream() failed" HERE);
 					}
 					ctx = fmt->streams[0]->codec; // TODO: check data
 
@@ -282,7 +282,7 @@ public:
 					}
 					if (err || opts)
 					{
-						throw EXCEPTION("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
 					}
 					just_started = false;
 				}
@@ -326,7 +326,7 @@ public:
 
 					if (!frame.data)
 					{
-						throw EXCEPTION("av_frame_alloc() failed");
+						fmt::throw_exception("av_frame_alloc() failed" HERE);
 					}
 
 					int got_frame = 0;
@@ -360,7 +360,7 @@ public:
 						case AV_SAMPLE_FMT_S16P: break;
 						default:
 						{
-							throw EXCEPTION("Unsupported frame format(%d)", frame.data->format);
+							fmt::throw_exception("Unsupported frame format(%d)" HERE, frame.data->format);
 						}
 						}
 						frame.auAddr = task.au.addr;
@@ -390,7 +390,7 @@ public:
 
 			default:
 			{
-				throw EXCEPTION("Unknown task(%d)", (u32)task.type);
+				fmt::throw_exception("Unknown task(%d)" HERE, (u32)task.type);
 			}
 			}
 		}
@@ -817,7 +817,7 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		}
 		else
 		{
-			throw EXCEPTION("Unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
+			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)" HERE, frame->channels, frame->format);
 		}
 	}
 

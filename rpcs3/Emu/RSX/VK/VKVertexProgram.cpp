@@ -315,7 +315,7 @@ void VKVertexProgram::Compile()
 
 	std::vector<u32> spir_v;
 	if (!vk::compile_glsl_to_spv(shader, vk::glsl::glsl_vertex_program, spir_v))
-		throw EXCEPTION("Failed to compile vertex shader");
+		fmt::throw_exception("Failed to compile vertex shader" HERE);
 
 	VkShaderModuleCreateInfo vs_info;
 	vs_info.codeSize = spir_v.size() * sizeof(u32);

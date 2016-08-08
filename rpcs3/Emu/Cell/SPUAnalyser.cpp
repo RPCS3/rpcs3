@@ -38,7 +38,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	// Check arguments (bounds and alignment)
 	if (max_limit > 0x40000 || entry >= max_limit || entry % 4 || max_limit % 4)
 	{
-		throw EXCEPTION("Invalid arguments (entry=0x%05x, limit=0x%05x)", entry, max_limit);
+		fmt::throw_exception("Invalid arguments (entry=0x%05x, limit=0x%05x)" HERE, entry, max_limit);
 	}
 
 	// Key for multimap

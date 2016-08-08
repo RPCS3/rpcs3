@@ -59,7 +59,7 @@ XAudio2Thread::XAudio2Thread()
 		return;
 	}
 
-	throw fmt::exception("No supported XAudio2 library found");
+	fmt::throw_exception("No supported XAudio2 library found");
 }
 
 XAudio2Thread::~XAudio2Thread()

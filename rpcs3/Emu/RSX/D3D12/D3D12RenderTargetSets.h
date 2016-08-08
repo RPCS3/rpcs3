@@ -135,7 +135,7 @@ struct render_target_traits
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
 		DXGI_FORMAT dxgi_format = get_color_surface_format(color_format);
-		size_t row_pitch = rsx::utility::get_aligned_pitch(color_format, gsl::narrow<u32>(width));
+		size_t row_pitch = rsx::utility::get_aligned_pitch(color_format, ::narrow<u32>(width));
 
 		size_t buffer_size = row_pitch * height;
 		size_t heap_offset = readback_heap.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
@@ -238,7 +238,7 @@ struct render_target_traits
 
 		readback_heap.m_get_pos = current_put_pos_minus_one;
 		const gsl::byte *mapped_buffer = readback_heap.map<const gsl::byte>(CD3DX12_RANGE(offset, offset + buffer_size));
-		return { mapped_buffer , gsl::narrow<int>(buffer_size) };
+		return { mapped_buffer , ::narrow<int>(buffer_size) };
 	}
 
 	static

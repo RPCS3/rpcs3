@@ -19,12 +19,12 @@ s32 cellSnd3Exit()
 
 u16 cellSnd3Note2Pitch(u16 center_note, u16 center_fine, u16 note, s16 fine)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u16 cellSnd3Pitch2Note(u16 center_note, u16 center_fine, u16 pitch)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SetOutputMode(u32 mode)
@@ -59,22 +59,22 @@ s32 cellSnd3UnbindSoundData(u32 hd3ID)
 
 s32 cellSnd3NoteOnByTone(u32 hd3ID, u32 toneIndex, u32 note, u32 keyOnID, vm::ptr<CellSnd3KeyOnParam> keyOnParam)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3KeyOnByTone(u32 hd3ID, u32 toneIndex, u32 pitch, u32 keyOnID, vm::ptr<CellSnd3KeyOnParam> keyOnParam)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3VoiceNoteOnByTone(u32 hd3ID, u32 voiceNum, u32 toneIndex, u32 note, u32 keyOnID, vm::ptr<CellSnd3KeyOnParam> keyOnParam)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3VoiceKeyOnByTone(u32 hd3ID, u32 voiceNum, u32 toneIndex, u32 pitch, u32 keyOnID, vm::ptr<CellSnd3KeyOnParam> keyOnParam)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3VoiceSetReserveMode(u32 voiceNum, u32 reserveMode)
@@ -139,7 +139,7 @@ s32 cellSnd3VoiceGetEnvelope(u32 voiceNum)
 
 s32 cellSnd3VoiceGetStatus(u32 voiceNum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 cellSnd3KeyOffByID(u32 keyOnID)
@@ -186,12 +186,12 @@ s32 cellSnd3SetEffectType(u16 effectType, s16 returnVol, u16 delay, u16 feedback
 
 s32 cellSnd3SMFBind(vm::ptr<CellSnd3SmfCtx> smfCtx, vm::ptr<void> smf, u32 hd3ID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFUnbind(u32 smfID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFPlay(u32 smfID, u32 playVelocity, u32 playPan, u32 playCount)
@@ -232,7 +232,7 @@ s32 cellSnd3SMFAddTempo(u32 smfID, s32 addTempo)
 
 s32 cellSnd3SMFGetTempo(u32 smfID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFSetPlayVelocity(u32 smfID, u32 playVelocity)
@@ -243,7 +243,7 @@ s32 cellSnd3SMFSetPlayVelocity(u32 smfID, u32 playVelocity)
 
 s32 cellSnd3SMFGetPlayVelocity(u32 smfID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFSetPlayPanpot(u32 smfID, u32 playPanpot)
@@ -260,17 +260,17 @@ s32 cellSnd3SMFSetPlayPanpotEx(u32 smfID, u32 playPanpotEx)
 
 s32 cellSnd3SMFGetPlayPanpot(u32 smfID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFGetPlayPanpotEx(u32 smfID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFGetPlayStatus(u32 smfID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFSetPlayChannel(u32 smfID, u32 playChannelBit)
@@ -281,7 +281,7 @@ s32 cellSnd3SMFSetPlayChannel(u32 smfID, u32 playChannelBit)
 
 s32 cellSnd3SMFGetPlayChannel(u32 smfID, vm::ptr<u32> playChannelBit)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSnd3SMFGetKeyOnID(u32 smfID, u32 midiChannel, vm::ptr<u32> keyOnID)

@@ -27,13 +27,17 @@ namespace gsl
 	enum class byte : u8;
 }
 
-namespace fmt
-{
-}
-
 // Formatting helper, type-specific preprocessing for improving safety and functionality
 template<typename T, typename = void>
 struct fmt_unveil;
+
+struct fmt_type_info;
+
+namespace fmt
+{
+	template<typename... Args>
+	const fmt_type_info* get_type_info();
+}
 
 template<typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
 struct se_storage;
@@ -409,6 +413,84 @@ struct ignore
 	{
 	}
 };
+
+template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
+constexpr T align(const T& value, std::uint64_t align)
+{
+	return static_cast<T>((value + (align - 1)) & ~(align - 1));
+}
+
+namespace fmt
+{
+	[[noreturn]] void raw_error(const char* msg);
+
+	[[noreturn]] void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg);
+}
+
+// Narrow cast (throws on failure)
+template<typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
+inline To narrow(const From& value, const char* msg = nullptr)
+{
+	// Allow "narrowing to void" and ensure it always fails in this case
+	auto&& result = static_cast<std::conditional_t<std::is_void<To>::value, From, To>>(value);
+	if (std::is_void<To>::value || static_cast<From>(result) != value)
+	{
+		// Pack value as formatting argument
+		fmt::raw_narrow_error(msg, fmt::get_type_info<typename fmt_unveil<From>::type>(), fmt_unveil<From>::get(value));
+	}
+
+	return static_cast<std::conditional_t<std::is_void<To>::value, void, decltype(result)>>(result);
+}
+
+// Returns u32 size() for container
+template<typename CT, typename = decltype(static_cast<u32>(std::declval<CT>().size()))>
+inline u32 size32(const CT& container, const char* msg = nullptr)
+{
+	return narrow<u32>(container.size(), msg);
+}
+
+// Returns u32 size for an array
+template<typename T, std::size_t Size>
+constexpr u32 size32(const T(&)[Size], const char* msg = nullptr)
+{
+	return static_cast<u32>(Size);
+}
+
+template<typename T1, typename = std::enable_if_t<std::is_integral<T1>::value>>
+constexpr bool test(const T1& value)
+{
+	return value != 0;
+}
+
+template<typename T1, typename T2, typename = std::enable_if_t<std::is_integral<T1>::value && std::is_integral<T2>::value>>
+constexpr bool test(const T1& lhs, const T2& rhs)
+{
+	return (lhs & rhs) != 0;
+}
+
+template<typename T, typename T2, typename = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value>>
+inline bool test_and_set(T& lhs, const T2& rhs)
+{
+	const bool result = (lhs & rhs) != 0;
+	lhs |= rhs;
+	return result;
+}
+
+template<typename T, typename T2, typename = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value>>
+inline bool test_and_reset(T& lhs, const T2& rhs)
+{
+	const bool result = (lhs & rhs) != 0;
+	lhs &= ~rhs;
+	return result;
+}
+
+template<typename T, typename T2, typename = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value>>
+inline bool test_and_complement(T& lhs, const T2& rhs)
+{
+	const bool result = (lhs & rhs) != 0;
+	lhs ^= rhs;
+	return result;
+}
 
 // Simplified hash algorithm for pointers. May be used in std::unordered_(map|set).
 template<typename T, std::size_t Align = alignof(T)>

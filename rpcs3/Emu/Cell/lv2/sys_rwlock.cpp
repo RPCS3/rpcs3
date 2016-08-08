@@ -109,7 +109,7 @@ s32 sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	{
 		if (!++rwlock->readers)
 		{
-			throw EXCEPTION("Too many readers");
+			fmt::throw_exception("Too many readers" HERE);
 		}
 
 		return CELL_OK;
@@ -141,7 +141,7 @@ s32 sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	if (rwlock->writer || !rwlock->readers)
 	{
-		throw EXCEPTION("Unexpected");
+		fmt::throw_exception("Unexpected" HERE);
 	}
 
 	return CELL_OK;
@@ -167,7 +167,7 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 
 	if (!++rwlock->readers)
 	{
-		throw EXCEPTION("Too many readers");
+		fmt::throw_exception("Too many readers" HERE);
 	}
 
 	return CELL_OK;
@@ -244,7 +244,7 @@ s32 sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				{
 					if (rwlock->wsq.front() != &ppu)
 					{
-						throw EXCEPTION("Unexpected");
+						fmt::throw_exception("Unexpected" HERE);
 					}
 
 					rwlock->wsq.clear();
@@ -264,7 +264,7 @@ s32 sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	if (rwlock->readers || rwlock->writer.get() != &ppu)
 	{
-		throw EXCEPTION("Unexpected");
+		fmt::throw_exception("Unexpected" HERE);
 	}
 
 	return CELL_OK;

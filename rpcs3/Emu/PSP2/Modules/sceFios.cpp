@@ -8,682 +8,682 @@ logs::channel sceFios("sceFios", logs::level::notice);
 
 s32 sceFiosInitialize(vm::cptr<SceFiosParams> pParameters)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosTerminate()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosIsInitialized(vm::ptr<SceFiosParams> pOutParameters)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosUpdateParameters(vm::cptr<SceFiosParams> pParameters)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosSetGlobalDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosGetGlobalDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosSetThreadDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosGetThreadDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosGetDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosSuspend()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceFiosGetSuspendCount()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosIsSuspended()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosResume()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosShutdownAndCancelOps()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosCancelAllOps()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosCloseAllFiles()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosIsIdle()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceFiosGetAllFHs(vm::ptr<s32> pOutArray, u32 arraySize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceFiosGetAllDHs(vm::ptr<s32> pOutArray, u32 arraySize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceFiosGetAllOps(vm::ptr<s32> pOutArray, u32 arraySize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosIsValidHandle(s32 h)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosPathcmp(vm::cptr<char> pA, vm::cptr<char> pB)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosPathncmp(vm::cptr<char> pA, vm::cptr<char> pB, u32 n)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosPrintf(vm::cptr<char> pFormat, arm_va_args_t va_args)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosVprintf(vm::cptr<char> pFormat) // va_list
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<b8> pOutExists)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosFileExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileGetSize(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<s64> pOutSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFileGetSizeSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDirectoryExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<b8> pOutExists)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosDirectoryExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDirectoryCreate(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDirectoryCreateSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDirectoryDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDirectoryDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<b8> pOutExists)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosStat(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosStatSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosResolve(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosResolveSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosRename(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pOldPath, vm::cptr<char> pNewPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosRenameSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pOldPath, vm::cptr<char> pNewPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileRead(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFileReadSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileWrite(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFileWriteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileTruncate(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFileTruncateSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHOpen(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pPath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHOpenSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pPath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHStat(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHStatSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHTruncate(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHTruncateSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHSyncSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHRead(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHReadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHWrite(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHWriteSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHReadv(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHReadvSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHWritev(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHWritevSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHPread(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHPreadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHPwrite(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHPwriteSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHPreadv(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHPreadvSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHPwritev(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHPwritevSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHClose(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosFHCloseSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHSeek(s32 fh, s64 offset, SceFiosWhence whence)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHTell(s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::cptr<char> sceFiosFHGetPath(s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosFHGetSize(s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<SceFiosOpenParams> sceFiosFHGetOpenParams(s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDHOpen(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::cptr<char> pPath, SceFiosBuffer buf)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDHOpenSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::cptr<char> pPath, SceFiosBuffer buf)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDHRead(vm::cptr<SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDHReadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDHClose(vm::cptr<SceFiosOpAttr> pAttr, s32 dh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosDHCloseSync(vm::cptr<SceFiosOpAttr> pAttr, s32 dh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::cptr<char> sceFiosDHGetPath(s32 dh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosOpIsDone(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOpWait(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOpWaitUntil(s32 op, s64 deadline)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosOpDelete(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOpSyncWait(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosOpSyncWaitForIO(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOpGetError(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosOpCancel(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceFiosOpIsCancelled(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::cptr<SceFiosOpAttr> sceFiosOpGetAttr(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::cptr<char> sceFiosOpGetPath(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<void> sceFiosOpGetBuffer(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosOpGetOffset(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosOpGetRequestCount(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosOpGetActualCount(s32 op)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosOpReschedule(s32 op, s64 newDeadline)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosTimeGetCurrent()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosTimeIntervalToNanoseconds(s64 interval)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosTimeIntervalFromNanoseconds(s64 ns)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u64 sceFiosDateGetCurrent()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u64 sceFiosDateFromComponents(vm::cptr<tm> pComponents)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<tm> sceFiosDateToComponents(u64 date, vm::ptr<tm> pOutComponents)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u64 sceFiosDateFromSceDateTime(vm::cptr<SceDateTime> pSceDateTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<SceDateTime> sceFiosDateToSceDateTime(u64 date, vm::ptr<SceDateTime> pSceDateTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOverlayAdd(vm::cptr<SceFiosOverlay> pOverlay, vm::ptr<s32> pOutID)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOverlayRemove(s32 id)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOverlayGetInfo(s32 id, vm::ptr<SceFiosOverlay> pOutOverlay)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOverlayModify(s32 id, vm::cptr<SceFiosOverlay> pNewValue)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOverlayGetList(vm::ptr<s32> pOutIDs, u32 maxIDs, vm::ptr<u32> pActualIDs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosOverlayResolveSync(s32 resolveFlag, vm::cptr<char> pInPath, vm::ptr<char> pOutPath, u32 maxPath)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosArchiveGetMountBufferSize(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pArchivePath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s64 sceFiosArchiveGetMountBufferSizeSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pArchivePath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosArchiveMount(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pArchivePath, vm::cptr<char> pMountPoint, SceFiosBuffer mountBuffer, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosArchiveMountSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pArchivePath, vm::cptr<char> pMountPoint, SceFiosBuffer mountBuffer, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosArchiveUnmount(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosArchiveUnmountSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<char> sceFiosDebugDumpError(s32 err, vm::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<char> sceFiosDebugDumpOp(s32 op, vm::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<char> sceFiosDebugDumpFH(s32 fh, vm::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<char> sceFiosDebugDumpDH(s32 dh, vm::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<char> sceFiosDebugDumpDate(u64 date, vm::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosIOFilterAdd(s32 index, vm::ptr<SceFiosIOFilterCallback> pFilterCallback, vm::ptr<void> pFilterContext)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosIOFilterGetInfo(s32 index, vm::pptr<SceFiosIOFilterCallback> pOutFilterCallback, vm::pptr<void> pOutFilterContext)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceFiosIOFilterRemove(s32 index)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceFiosIOFilterPsarcDearchiver()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 #define REG_FUNC(nid, name) REG_FNID(SceFios2, nid, name)

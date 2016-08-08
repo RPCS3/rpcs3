@@ -8,82 +8,82 @@ logs::channel sceNetCtl("sceNetCtl", logs::level::notice);
 
 s32 sceNetCtlInit()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceNetCtlTerm()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlCheckCallback()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlInetGetResult(s32 eventType, vm::ptr<s32> errorCode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlAdhocGetResult(s32 eventType, vm::ptr<s32> errorCode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlInetGetInfo(s32 code, vm::ptr<SceNetCtlInfo> info)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlInetGetState(vm::ptr<s32> state)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlGetNatInfo(vm::ptr<SceNetCtlNatInfo> natinfo)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlInetRegisterCallback(vm::ptr<SceNetCtlCallback> func, vm::ptr<void> arg, vm::ptr<s32> cid)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlInetUnregisterCallback(s32 cid)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlAdhocRegisterCallback(vm::ptr<SceNetCtlCallback> func, vm::ptr<void> arg, vm::ptr<s32> cid)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlAdhocUnregisterCallback(s32 cid)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlAdhocGetState(vm::ptr<s32> state)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlAdhocDisconnect()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlAdhocGetPeerList(vm::ptr<u32> buflen, vm::ptr<void> buf)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCtlAdhocGetInAddr(vm::ptr<SceNetInAddr> inaddr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 #define REG_FUNC(nid, name) REG_FNID(SceNetCtl, nid, name)

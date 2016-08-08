@@ -31,7 +31,7 @@ namespace rsx
 
 	[[noreturn]] void invalid_method(thread*, u32 _reg, u32 arg)
 	{
-		throw fmt::exception("Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		fmt::throw_exception("Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;

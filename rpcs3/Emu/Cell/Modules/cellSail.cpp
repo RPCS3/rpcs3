@@ -464,22 +464,22 @@ s32 cellSailSourceNotifyMediaStateChanged()
 
 s32 cellSailSourceNotifyOpenCompleted()
 {
-	throw EXCEPTION("Unexpected function");
+	fmt::throw_exception("Unexpected function" HERE);
 }
 
 s32 cellSailSourceNotifyStartCompleted()
 {
-	throw EXCEPTION("Unexpected function");
+	fmt::throw_exception("Unexpected function" HERE);
 }
 
 s32 cellSailSourceNotifyStopCompleted()
 {
-	throw EXCEPTION("Unexpected function");
+	fmt::throw_exception("Unexpected function" HERE);
 }
 
 s32 cellSailSourceNotifyReadCompleted()
 {
-	throw EXCEPTION("Unexpected function");
+	fmt::throw_exception("Unexpected function" HERE);
 }
 
 s32 cellSailSourceSetDiagHandler()
@@ -490,7 +490,7 @@ s32 cellSailSourceSetDiagHandler()
 
 s32 cellSailSourceNotifyCloseCompleted()
 {
-	throw EXCEPTION("Unexpected function");
+	fmt::throw_exception("Unexpected function" HERE);
 }
 
 s32 cellSailMp4MovieGetBrand()

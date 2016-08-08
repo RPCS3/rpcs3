@@ -10,17 +10,17 @@ namespace sce_libstdcxx_func
 {
 	void __aeabi_unwind_cpp_pr0()
 	{
-		throw EXCEPTION("");
+		fmt::throw_exception("Unimplemented" HERE);
 	}
 
 	void __aeabi_unwind_cpp_pr1()
 	{
-		throw EXCEPTION("");
+		fmt::throw_exception("Unimplemented" HERE);
 	}
 
 	void __aeabi_unwind_cpp_pr2()
 	{
-		throw EXCEPTION("");
+		fmt::throw_exception("Unimplemented" HERE);
 	}
 }
 

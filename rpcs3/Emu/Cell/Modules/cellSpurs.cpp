@@ -28,7 +28,7 @@ struct cell_error_t
 	}
 };
 
-#define CHECK_SUCCESS(expr) if (cell_error_t error{expr}) throw fmt::exception("Failure: %s -> 0x%x" HERE, #expr, error.value)
+#define CHECK_SUCCESS(expr) if (cell_error_t error{expr}) fmt::throw_exception("Failure: %s -> 0x%x" HERE, #expr, error.value)
 
 //----------------------------------------------------------------------------
 // Function prototypes
@@ -757,7 +757,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			}
 			else
 			{
-				throw fmt::exception("data0=0x%x" HERE, data0);
+				fmt::throw_exception("data0=0x%x" HERE, data0);
 			}
 		}
 	}

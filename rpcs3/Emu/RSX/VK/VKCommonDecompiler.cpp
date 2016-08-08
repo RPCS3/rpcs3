@@ -93,7 +93,7 @@ namespace vk
 		case COMPARE::FUNCTION_SNE:
 			return "notEqual(" + Op0 + ", " + Op1 + ")";
 		}
-		throw EXCEPTION("Unknown compare function");
+		fmt::throw_exception("Unknown compare function" HERE);
 	}
 
 	void insert_glsl_legacy_function(std::ostream& OS)
@@ -259,7 +259,7 @@ namespace vk
 				return t;
 		}
 
-		throw EXCEPTION("Unknown register name: %s", name);
+		fmt::throw_exception("Unknown register name: %s" HERE, name);
 	}
 
 	bool compile_glsl_to_spv(std::string& shader, glsl::program_domain domain, std::vector<u32>& spv)

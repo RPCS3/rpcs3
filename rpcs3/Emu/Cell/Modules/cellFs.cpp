@@ -843,42 +843,42 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 
 s32 cellFsUtime()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsArcadeHddSerialNumber()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsAllocateFileAreaWithInitialData()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsAllocateFileAreaByFdWithoutZeroFill()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsSetIoBuffer()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsAllocateFileAreaByFdWithInitialData()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsTruncate2()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsChangeFileSizeWithoutAllocation()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsAllocateFileAreaWithoutZeroFill(vm::cptr<char> path, u64 size)
@@ -890,22 +890,22 @@ s32 cellFsAllocateFileAreaWithoutZeroFill(vm::cptr<char> path, u64 size)
 
 s32 cellFsChangeFileSizeByFdWithoutAllocation()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsSetDiscReadRetrySetting()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsRegisterConversionCallback()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsUnregisterL10nCallbacks()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

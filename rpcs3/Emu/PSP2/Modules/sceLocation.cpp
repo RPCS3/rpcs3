@@ -8,87 +8,87 @@ logs::channel sceLocation("sceLocation", logs::level::notice);
 
 s32 sceLocationOpen(vm::ptr<u8> handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationClose(u8 handle)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationReopen(u8 handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationGetMethod(u8 handle, vm::ptr<s32> lmethod, vm::ptr<s32> hmethod)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationGetLocation(u8 handle, vm::ptr<SceLocationLocationInfo> linfo)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationCancelGetLocation(u8 handle)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationStartLocationCallback(u8 handle, u32 distance, vm::ptr<SceLocationLocationInfoCallback> callback, vm::ptr<void> userdata)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationStopLocationCallback(u8 handle)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationGetHeading(u8 handle, vm::ptr<SceLocationHeadingInfo> hinfo)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationStartHeadingCallback(u8 handle, u32 difference, vm::ptr<SceLocationHeadingInfoCallback> callback, vm::ptr<void> userdata)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationStopHeadingCallback(u8 handle)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationConfirm(u8 handle)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationConfirmGetStatus(u8 handle, vm::ptr<s32> status)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationConfirmGetResult(u8 handle, vm::ptr<s32> result)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationConfirmAbort(u8 handle)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationGetPermission(u8 handle, vm::ptr<SceLocationPermissionInfo> info)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceLocationSetGpsEmulationFile(vm::ptr<char> filename)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

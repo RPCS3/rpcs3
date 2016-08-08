@@ -20,7 +20,7 @@ namespace gl
 		case rsx::primitive_type::quad_strip: return GL_TRIANGLES;
 		case rsx::primitive_type::polygon: return GL_TRIANGLES;
 		}
-		throw EXCEPTION("unknow primitive type");
+		fmt::throw_exception("unknow primitive type" HERE);
 	}
 
 #ifdef WIN32
@@ -91,7 +91,7 @@ namespace gl
 
 		if (status != GL_FRAMEBUFFER_COMPLETE)
 		{
-			throw std::logic_error(fmt::format("0x%04x", status));
+			fmt::throw_exception<std::logic_error>("0x%04x", status);
 		}
 	}
 
@@ -536,6 +536,6 @@ namespace gl
 		case rsx::primitive_type::polygon:
 			return false;
 		}
-		throw EXCEPTION("unknown primitive type");
+		fmt::throw_exception("unknown primitive type" HERE);
 	}
 }

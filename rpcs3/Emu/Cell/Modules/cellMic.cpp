@@ -190,7 +190,7 @@ s32 cellMicGetStatus()
 
 s32 cellMicStopEx()
 {
-	throw EXCEPTION("Unexpected function");
+	fmt::throw_exception("Unexpected function" HERE);
 }
 
 s32 cellMicSysShareClose()

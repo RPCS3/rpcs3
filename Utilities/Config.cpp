@@ -12,7 +12,7 @@ namespace cfg
 	{
 		if (_type != type::node)
 		{
-			throw std::logic_error("Invalid root node");
+			fmt::throw_exception<std::logic_error>("Invalid root node" HERE);
 		}
 	}
 
@@ -21,7 +21,7 @@ namespace cfg
 	{
 		if (!owner.m_nodes.emplace(name, this).second)
 		{
-			throw std::logic_error("Node already exists");
+			fmt::throw_exception<std::logic_error>("Node already exists: %s" HERE, name);
 		}
 	}
 
@@ -32,7 +32,7 @@ namespace cfg
 			return *static_cast<const node&>(*this).m_nodes.at(name);
 		}
 
-		throw std::logic_error("Invalid node type");
+		fmt::throw_exception<std::logic_error>("Invalid node type" HERE);
 	}
 
 	entry_base& entry_base::operator[](const char* name) const
@@ -42,7 +42,17 @@ namespace cfg
 			return *static_cast<const node&>(*this).m_nodes.at(name);
 		}
 
-		throw std::logic_error("Invalid node type");
+		fmt::throw_exception<std::logic_error>("Invalid node type" HERE);
+	}
+
+	bool entry_base::from_string(const std::string&)
+	{
+		fmt::throw_exception<std::logic_error>("from_string() purecall" HERE);
+	}
+
+	bool entry_base::from_list(std::vector<std::string>&&)
+	{
+		fmt::throw_exception<std::logic_error>("from_list() purecall" HERE);
 	}
 
 	// Emit YAML

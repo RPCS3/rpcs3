@@ -47,22 +47,22 @@ s32 sceNpSnsFbGetAccessToken()
 
 s32 sceNpSnsFbStreamPublish()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNpSnsFbCheckThrottle()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNpSnsFbCheckConfig()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNpSnsFbLoadThrottle()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

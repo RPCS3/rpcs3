@@ -325,7 +325,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 			else
 			{
-				throw EXCEPTION("Invalid savedata selected");
+				fmt::throw_exception("Invalid savedata selected" HERE);
 			}
 		}
 	}

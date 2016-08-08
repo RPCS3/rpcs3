@@ -51,7 +51,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 	if (!++mutex->cond_count)
 	{
-		throw EXCEPTION("Unexpected cond_count");
+		fmt::throw_exception("Unexpected cond_count" HERE);
 	}
 
 	*cond_id = idm::make<lv2_cond_t>(mutex, attr->name_u64);
@@ -79,7 +79,7 @@ s32 sys_cond_destroy(u32 cond_id)
 
 	if (!cond->mutex->cond_count--)
 	{
-		throw EXCEPTION("Unexpected cond_count");
+		fmt::throw_exception("Unexpected cond_count" HERE);
 	}
 
 	idm::remove<lv2_cond_t>(cond_id);
@@ -233,7 +233,7 @@ s32 sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	// mutex owner is restored after notification or unlocking
 	if (cond->mutex->owner.get() != &ppu)
 	{
-		throw EXCEPTION("Unexpected mutex owner");
+		fmt::throw_exception("Unexpected mutex owner" HERE);
 	}
 
 	// restore the recursive value

@@ -249,7 +249,7 @@ s32 pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thread_in_
 	// Check if partial image decoding is used
 	if (extra_thread_out_param)
 	{
-		throw EXCEPTION("Partial image decoding is not supported.");
+		fmt::throw_exception("Partial image decoding is not supported." HERE);
 	}
 
 	// Allocate memory for the decoder handle
@@ -294,7 +294,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Check if partial image decoding is used
 	if (control_stream || open_param)
 	{
-		throw EXCEPTION("Partial image decoding is not supported.");
+		fmt::throw_exception("Partial image decoding is not supported." HERE);
 	}
 
 	// Allocate memory for the stream structure
@@ -325,7 +325,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Check for if the buffer structure allocation failed
 	if (!buffer)
 	{
-		throw EXCEPTION("Memory allocation for the PNG buffer structure failed.");
+		fmt::throw_exception("Memory allocation for the PNG buffer structure failed." HERE);
 	}
 
 	// We might not be reading from a file stream
@@ -340,7 +340,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Need to test it somewhere
 	if (stream->source.fileOffset != 0)
 	{
-		throw EXCEPTION("Non-0 file offset not supported.");
+		fmt::throw_exception("Non-0 file offset not supported." HERE);
 	}
 
 	// Depending on the source type, get the first 8 bytes
@@ -398,13 +398,13 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Check if the creation of the structure failed
 	if (!stream->info_ptr)
 	{
-		throw EXCEPTION("Creation of png_infop failed.");
+		fmt::throw_exception("Creation of png_infop failed." HERE);
 	}
 
 	// Set a point to return to when an error occurs in libpng
 	if (setjmp(png_jmpbuf(stream->png_ptr)))
 	{
-		throw EXCEPTION("Fatal error in libpng.");
+		fmt::throw_exception("Fatal error in libpng." HERE);
 	}
 
 	// We must indicate, that we allocated more memory
@@ -492,12 +492,12 @@ s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, P
 	// Partial image decoding is not supported. Need to find games to test with.
 	if (extra_in_param || extra_out_param)
 	{
-		throw EXCEPTION("Partial image decoding is not supported");
+		fmt::throw_exception("Partial image decoding is not supported" HERE);
 	}
 
 	if (in_param->outputPackFlag == CELL_PNGDEC_1BYTE_PER_NPIXEL)
 	{
-		throw EXCEPTION("Packing not supported! (%d)", in_param->outputPackFlag);
+		fmt::throw_exception("Packing not supported! (%d)" HERE, in_param->outputPackFlag);
 	}
 
 	// We already grab the basic info, when opening the stream, so we simply need to pass most of the values
@@ -559,7 +559,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 {
 	if (cb_control_disp || disp_param)
 	{
-		throw EXCEPTION("Partial image decoding is not supported");
+		fmt::throw_exception("Partial image decoding is not supported" HERE);
 	}
 
 	// Indicate, that the PNG decoding is stopped/failed. This is incase, we return an error code in the middle of decoding
@@ -568,12 +568,12 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 	// Possibilities for decoding in different sizes aren't tested, so if anyone finds any of these cases, we'll know about it.
 	if (stream->info.imageWidth != stream->out_param.outputWidth)
 	{
-		throw EXCEPTION("Image width doesn't match output width! (%d/%d)", stream->out_param.outputWidth, stream->info.imageWidth);
+		fmt::throw_exception("Image width doesn't match output width! (%d/%d)" HERE, stream->out_param.outputWidth, stream->info.imageWidth);
 	}
 
 	if (stream->info.imageHeight != stream->out_param.outputHeight)
 	{
-		throw EXCEPTION("Image width doesn't match output height! (%d/%d)", stream->out_param.outputHeight, stream->info.imageHeight);
+		fmt::throw_exception("Image width doesn't match output height! (%d/%d)" HERE, stream->out_param.outputHeight, stream->info.imageHeight);
 	}
 
 	// Get the amount of output bytes per line
@@ -589,7 +589,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 		// Check if the packing is really 1 byte per 1 pixel
 		if (stream->packing != CELL_PNGDEC_1BYTE_PER_1PIXEL)
 		{
-			throw EXCEPTION("Unexpected packing value! (%d)", stream->packing);
+			fmt::throw_exception("Unexpected packing value! (%d)" HERE, stream->packing);
 		}
 
 		// Scale 16 bit depth down to 8 bit depth. PS3 uses png_set_strip_16, since png_set_scale_16 wasn't available back then.
@@ -685,7 +685,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 		break;
 	}
 
-	default: throw EXCEPTION("Unsupported color space (%d)", stream->out_param.outputColorSpace);
+	default: fmt::throw_exception("Unsupported color space (%d)" HERE, stream->out_param.outputColorSpace);
 	}
 
 	// Get the number of iTXt, tEXt and zTXt chunks
@@ -777,87 +777,87 @@ s32 cellPngDecExtDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm:
 
 s32 cellPngDecGetUnknownChunks(PHandle handle, PStream stream, vm::pptr<CellPngUnknownChunk> unknownChunk, vm::ptr<u32> unknownChunkNumber)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetpCAL(PHandle handle, PStream stream, vm::ptr<CellPngPCAL> pcal)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetcHRM(PHandle handle, PStream stream, vm::ptr<CellPngCHRM> chrm)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetsCAL(PHandle handle, PStream stream, vm::ptr<CellPngSCAL> scal)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetpHYs(PHandle handle, PStream stream, vm::ptr<CellPngPHYS> phys)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetoFFs(PHandle handle, PStream stream, vm::ptr<CellPngOFFS> offs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetsPLT(PHandle handle, PStream stream, vm::ptr<CellPngSPLT> splt)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetbKGD(PHandle handle, PStream stream, vm::ptr<CellPngBKGD> bkgd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGettIME(PHandle handle, PStream stream, vm::ptr<CellPngTIME> time)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGethIST(PHandle handle, PStream stream, vm::ptr<CellPngHIST> hist)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGettRNS(PHandle handle, PStream stream, vm::ptr<CellPngTRNS> trns)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetsBIT(PHandle handle, PStream stream, vm::ptr<CellPngSBIT> sbit)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetiCCP(PHandle handle, PStream stream, vm::ptr<CellPngICCP> iccp)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetsRGB(PHandle handle, PStream stream, vm::ptr<CellPngSRGB> srgb)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetgAMA(PHandle handle, PStream stream, vm::ptr<CellPngGAMA> gama)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetPLTE(PHandle handle, PStream stream, vm::ptr<CellPngPLTE> plte)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellPngDecGetTextChunk(PHandle handle, PStream stream, vm::ptr<u32> textInfoNum, vm::pptr<CellPngTextInfo> textInfo)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 DECLARE(ppu_module_manager::cellPngDec)("cellPngDec", []()

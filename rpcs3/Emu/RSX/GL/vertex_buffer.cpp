@@ -20,7 +20,7 @@ namespace
 		const u32* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 
 		if (type > rsx::vertex_base_type::ub256)
-			throw EXCEPTION("OpenGL error: unknown vertex base type 0x%x", (u32)type);
+			fmt::throw_exception("OpenGL error: unknown vertex base type 0x%x" HERE, (u32)type);
 
 		return vec_selectors[size][(int)type];
 	}
@@ -107,7 +107,7 @@ namespace
 		case rsx::vertex_base_type::cmp: return gl::buffer_pointer::type::s16; // Needs conversion
 		case rsx::vertex_base_type::ub256: gl::buffer_pointer::type::u8;
 		}
-		throw EXCEPTION("unknown vertex type");
+		fmt::throw_exception("unknown vertex type" HERE);
 	}
 
 	bool gl_normalized(rsx::vertex_base_type type)
@@ -124,7 +124,7 @@ namespace
 		case rsx::vertex_base_type::s32k:
 			return false;
 		}
-		throw EXCEPTION("unknown vertex type");
+		fmt::throw_exception("unknown vertex type" HERE);
 	}
 
 	// return vertex count if primitive type is not native (empty array otherwise)
@@ -158,12 +158,12 @@ namespace
 	{
 		u32 min_index, max_index, vertex_draw_count = initial_vertex_count;
 
-		vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
+		vertex_draw_count = (u32)get_index_count(draw_mode, ::narrow<int>(vertex_draw_count));
 
-		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+		u32 type_size = ::narrow<u32>(get_index_type_size(type));
 		u32 block_sz = vertex_draw_count * type_size;
 
-		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), gsl::narrow<u32>(block_sz) };
+		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), ::narrow<u32>(block_sz) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, raw_index_buffer,
 			type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
 			[](auto prim) { return !is_primitive_native(prim); });
@@ -202,7 +202,7 @@ u32 GLGSRender::set_vertex_buffer()
 	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
 	{
 		rsx::index_array_type type = rsx::method_registers.index_type();
-		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+		u32 type_size = ::narrow<u32>(get_index_type_size(type));
 		
 		vertex_draw_count += rsx::method_registers.current_draw_clause.get_elements_count();
 

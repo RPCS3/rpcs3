@@ -55,7 +55,7 @@ u64 get_timebased_time()
 	LARGE_INTEGER count;
 	if (!QueryPerformanceCounter(&count))
 	{
-		throw EXCEPTION("Unexpected");
+		fmt::throw_exception("Unexpected" HERE);
 	}
 
 	const u64 time = count.QuadPart;
@@ -66,7 +66,7 @@ u64 get_timebased_time()
 	struct timespec ts;
 	if (::clock_gettime(CLOCK_MONOTONIC, &ts))
 	{
-		throw EXCEPTION("System error %d", errno);
+		fmt::throw_exception("System error %d" HERE, errno);
 	}
 	
 	return static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000u;
@@ -82,7 +82,7 @@ u64 get_system_time()
 		LARGE_INTEGER count;
 		if (!QueryPerformanceCounter(&count))
 		{
-			throw EXCEPTION("Unexpected");
+			fmt::throw_exception("Unexpected" HERE);
 		}
 
 		const u64 time = count.QuadPart;
@@ -93,7 +93,7 @@ u64 get_system_time()
 		struct timespec ts;
 		if (::clock_gettime(CLOCK_MONOTONIC, &ts))
 		{
-			throw EXCEPTION("System error %d", errno);
+			fmt::throw_exception("System error %d" HERE, errno);
 		}
 
 		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000u + static_cast<u64>(ts.tv_nsec) / 1000u;
@@ -122,7 +122,7 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	LARGE_INTEGER count;
 	if (!QueryPerformanceCounter(&count))
 	{
-		throw EXCEPTION("Unexpected");
+		fmt::throw_exception("Unexpected" HERE);
 	}
 
 	// get time difference in nanoseconds
@@ -137,7 +137,7 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	struct timespec ts;
 	if (::clock_gettime(CLOCK_REALTIME, &ts))
 	{
-		throw EXCEPTION("System error %d", errno);
+		fmt::throw_exception("System error %d" HERE, errno);
 	}
 
 	*sec = ts.tv_sec;

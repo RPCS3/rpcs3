@@ -8,17 +8,17 @@ logs::channel sceAudioIn("sceAudioIn", logs::level::notice);
 
 s32 sceAudioInOpenPort(s32 portType, s32 grain, s32 freq, s32 param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudioInReleasePort(s32 port)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudioInInput(s32 port, vm::ptr<void> destPtr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

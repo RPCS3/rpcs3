@@ -79,7 +79,7 @@ struct lv2_event_flag_t
 		}
 		else
 		{
-			throw EXCEPTION("Unknown mode (0x%x)", mode);
+			fmt::throw_exception("Unknown mode (0x%x)" HERE, mode);
 		}
 	}
 
@@ -99,7 +99,7 @@ struct lv2_event_flag_t
 		}
 		else
 		{
-			throw EXCEPTION("Unknown mode (0x%x)", mode);
+			fmt::throw_exception("Unknown mode (0x%x)" HERE, mode);
 		}
 	}
 

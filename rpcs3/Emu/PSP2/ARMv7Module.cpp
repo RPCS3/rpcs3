@@ -102,7 +102,7 @@ extern void arm_execute_function(ARMv7Thread& cpu, u32 index)
 		}
 	}
 
-	throw fmt::exception("Function not registered (%u)" HERE, index);
+	fmt::throw_exception("Function not registered (%u)" HERE, index);
 }
 
 arm_static_module::arm_static_module(const char* name)
@@ -377,7 +377,7 @@ void arm_load_exec(const arm_exec_object& elf)
 		{
 			if (!vm::falloc(prog.p_vaddr, prog.p_memsz, vm::main))
 			{
-				throw fmt::exception("vm::falloc() failed (addr=0x%x, size=0x%x)", prog.p_vaddr, prog.p_memsz);
+				fmt::throw_exception("vm::falloc() failed (addr=0x%x, size=0x%x)", prog.p_vaddr, prog.p_memsz);
 			}
 
 			if (prog.p_paddr)

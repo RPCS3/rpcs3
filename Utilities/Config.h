@@ -69,10 +69,7 @@ namespace cfg
 		}
 
 		// Try to convert from string (optional)
-		virtual bool from_string(const std::string&)
-		{
-			throw std::logic_error("from_string() not specified");
-		}
+		virtual bool from_string(const std::string&);
 
 		// Get string list (optional)
 		virtual std::vector<std::string> to_list() const
@@ -81,10 +78,7 @@ namespace cfg
 		}
 
 		// Set multiple values. Implementation-specific, optional.
-		virtual bool from_list(std::vector<std::string>&&)
-		{
-			throw std::logic_error("from_list() not specified");
-		}
+		virtual bool from_list(std::vector<std::string>&&);
 	};
 
 	// Config tree node which contains another nodes
@@ -223,7 +217,7 @@ namespace cfg
 		}
 
 		map_entry(node& owner, const std::string& name, std::size_t def_index, init_type init)
-			: map_entry(owner, name, def_index < init.size() ? (init.begin() + def_index)->first : throw std::logic_error("Invalid default value index"), init)
+			: map_entry(owner, name, (init.begin() + (def_index < init.size() ? def_index : 0))->first, init)
 		{
 		}
 
@@ -358,7 +352,7 @@ namespace cfg
 		{
 			if (value < Min || value > Max)
 			{
-				throw fmt::exception("Value out of the valid range: %lld" HERE, s64{ value });
+				fmt::throw_exception("Value out of the valid range: %lld" HERE, s64{ value });
 			}
 
 			m_value = value;

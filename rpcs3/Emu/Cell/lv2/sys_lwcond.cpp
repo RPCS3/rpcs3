@@ -82,7 +82,7 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 
 	if (mode != 1 && mode != 2 && mode != 3)
 	{
-		throw EXCEPTION("Unknown mode (%d)", mode);
+		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
 	// mode 1: lightweight mutex was initially owned by the calling thread
@@ -135,7 +135,7 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 
 	if (mode != 1 && mode != 2)
 	{
-		throw EXCEPTION("Unknown mode (%d)", mode);
+		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
 	// mode 1: lightweight mutex was initially owned by the calling thread

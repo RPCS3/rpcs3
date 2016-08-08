@@ -59,7 +59,7 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, texture.width(), texture.height(), texture.depth(), texture.get_exact_mipmap_count());
 		}
-		throw EXCEPTION("Unknown texture dimension");
+		fmt::throw_exception("Unknown texture dimension" HERE);
 	}
 }
 
@@ -83,7 +83,7 @@ namespace {
 		size_t mip_level = 0;
 
 		void *mapped_buffer_ptr = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-		gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, gsl::narrow<int>(buffer_size) };
+		gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, ::narrow<int>(buffer_size) };
 		std::vector<rsx_subresource_layout> input_layouts = get_subresources_layout(texture);
 		u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
 		u8 block_size_in_texel = get_format_block_size_in_texel(format);
@@ -163,7 +163,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::te
 		shared_resource_view_desc.Texture3D.MipLevels = tex.get_exact_mipmap_count();
 		return shared_resource_view_desc;
 	}
-	throw EXCEPTION("Wrong texture dimension");
+	fmt::throw_exception("Wrong texture dimension" HERE);
 }
 }
 

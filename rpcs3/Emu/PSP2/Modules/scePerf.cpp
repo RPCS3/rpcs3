@@ -58,7 +58,7 @@ arm_error_code scePerfArmPmonSelectEvent(ARMv7Thread& cpu, s32 threadId, u32 cou
 
 	default:
 	{
-		throw EXCEPTION("Unknown event requested");
+		fmt::throw_exception("Unknown event requested" HERE);
 	}
 	}
 
@@ -103,7 +103,7 @@ arm_error_code scePerfArmPmonGetCounterValue(ARMv7Thread& cpu, s32 threadId, u32
 	}
 	else
 	{
-		throw EXCEPTION("Cycle counter requested");
+		fmt::throw_exception("Cycle counter requested" HERE);
 	}
 
 	return SCE_OK;
@@ -145,22 +145,22 @@ u32 scePerfGetTimebaseFrequency()
 
 s32 _sceRazorCpuInit(vm::cptr<void> pBufferBase, u32 bufferSize, u32 numPerfCounters, vm::pptr<u32> psceRazorVars)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRazorCpuPushMarker(vm::cptr<char> szLabel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRazorCpuPopMarker()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRazorCpuSync()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 #define REG_FUNC(nid, name) REG_FNID(ScePerf, nid, name)

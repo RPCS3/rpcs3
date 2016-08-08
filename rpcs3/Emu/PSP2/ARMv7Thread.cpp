@@ -40,14 +40,14 @@ void ARMv7Thread::cpu_init()
 	{
 		if (!stack_size)
 		{
-			throw EXCEPTION("Invalid stack size");
+			fmt::throw_exception("Invalid stack size" HERE);
 		}
 
 		stack_addr = vm::alloc(stack_size, vm::main);
 
 		if (!stack_addr)
 		{
-			throw EXCEPTION("Out of stack memory");
+			fmt::throw_exception("Out of stack memory" HERE);
 		}
 	}
 
@@ -106,7 +106,7 @@ void ARMv7Thread::cpu_task_main()
 		}
 		else
 		{
-			throw fmt::exception("Invalid instruction set" HERE);
+			fmt::throw_exception("Invalid instruction set" HERE);
 		}
 	}
 }
@@ -144,7 +144,7 @@ void ARMv7Thread::fast_call(u32 addr)
 
 		if (SP != old_SP && !test(state, cpu_state::ret + cpu_state::exit)) // SP shouldn't change
 		{
-			throw fmt::exception("Stack inconsistency (addr=0x%x, SP=0x%x, old=0x%x)", addr, SP, old_SP);
+			fmt::throw_exception("Stack inconsistency (addr=0x%x, SP=0x%x, old=0x%x)", addr, SP, old_SP);
 		}
 	}
 	catch (cpu_state _s)

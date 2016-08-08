@@ -516,7 +516,7 @@ s32 cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> fu
 
 	if (g_surmx.cb)
 	{
-		throw EXCEPTION("Callback already set");
+		fmt::throw_exception("Callback already set" HERE);
 	}
 
 	g_surmx.cb = func;
@@ -531,7 +531,7 @@ s32 cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction>
 
 	if (g_surmx.cb != func)
 	{
-		throw EXCEPTION("Callback not set");
+		fmt::throw_exception("Callback not set" HERE);
 	}
 
 	g_surmx.cb = vm::null;
@@ -648,19 +648,19 @@ void cellSurMixerBeep(u32 arg)
 f32 cellSurMixerUtilGetLevelFromDB(f32 dB)
 {
 	libmixer.todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 f32 cellSurMixerUtilGetLevelFromDBIndex(s32 index)
 {
 	libmixer.todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 f32 cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
 	libmixer.todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 DECLARE(ppu_module_manager::libmixer)("libmixer", []()

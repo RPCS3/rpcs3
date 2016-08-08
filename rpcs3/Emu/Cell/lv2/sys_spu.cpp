@@ -19,7 +19,7 @@ void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr)
 
 	if (obj != elf_error::ok)
 	{
-		throw fmt::exception("Failed to load SPU image: %s" HERE, obj.get_error());
+		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
 	}
 
 	for (const auto& prog : obj.progs)
@@ -70,7 +70,7 @@ s32 sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 
 	if (hdr.CheckMagic())
 	{
-		throw fmt::exception("sys_spu_image_open() error: '%s' is encrypted! Try to decrypt it manually and try again.", path.get_ptr());
+		fmt::throw_exception("sys_spu_image_open() error: '%s' is encrypted! Try to decrypt it manually and try again.", path.get_ptr());
 	}
 
 	f.seek(0);
@@ -116,7 +116,7 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image_t> im
 
 	if (count > group->num)
 	{
-		throw EXCEPTION("Unexpected thread count (%d)", count);
+		fmt::throw_exception("Unexpected thread count (%d)" HERE, count);
 	}
 
 	if (count == group->num)
@@ -171,12 +171,12 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 
 	if (!group)
 	{
-		throw EXCEPTION("Invalid SPU thread group");
+		fmt::throw_exception("Invalid SPU thread group" HERE);
 	}
 
 	if (thread->index >= group->threads.size() || group->threads[thread->index] != thread)
 	{
-		throw EXCEPTION("Unexpected SPU thread index (%d)", thread->index);
+		fmt::throw_exception("Unexpected SPU thread index (%d)" HERE, thread->index);
 	}
 
 	group->args[thread->index].arg1 = arg->arg1;
@@ -292,7 +292,7 @@ s32 sys_spu_thread_group_start(u32 id)
 		{
 			if (t->index >= group->threads.size())
 			{
-				throw EXCEPTION("Unexpected SPU thread index (%d)", t->index);
+				fmt::throw_exception("Unexpected SPU thread index (%d)" HERE, t->index);
 			}
 
 			auto& args = group->args[t->index];
@@ -583,7 +583,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 	}
 	default:
 	{
-		throw EXCEPTION("Unexpected join_state");
+		fmt::throw_exception("Unexpected join_state" HERE);
 	}
 	}
 
@@ -619,7 +619,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 
 	if (!group)
 	{
-		throw EXCEPTION("Invalid SPU thread group");
+		fmt::throw_exception("Invalid SPU thread group" HERE);
 	}
 
 	if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING)
@@ -661,7 +661,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 lsa, vm::ptr<u64> value, u32 type)
 
 	if (!group)
 	{
-		throw EXCEPTION("Invalid SPU thread group");
+		fmt::throw_exception("Invalid SPU thread group" HERE);
 	}
 
 	if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING)
@@ -698,7 +698,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 
 	if (!group)
 	{
-		throw EXCEPTION("Invalid SPU thread group");
+		fmt::throw_exception("Invalid SPU thread group" HERE);
 	}
 
 	if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING)
@@ -774,7 +774,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 
 	if (!group)
 	{
-		throw EXCEPTION("Invalid SPU thread group");
+		fmt::throw_exception("Invalid SPU thread group" HERE);
 	}
 
 	//if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING) // ???
@@ -1328,7 +1328,7 @@ s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 
 	if (value > 3)
 	{
-		throw EXCEPTION("Unexpected value (0x%x)", value);
+		fmt::throw_exception("Unexpected value (0x%x)" HERE, value);
 	}
 
 	const auto thread = idm::get<RawSPUThread>(id);

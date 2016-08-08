@@ -8,202 +8,202 @@ logs::channel sceCommonDialog("sceCommonDialog", logs::level::notice);
 
 s32 sceCommonDialogUpdate(vm::cptr<SceCommonDialogUpdateParam> updateParam)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceMsgDialogInit(vm::cptr<SceMsgDialogParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 SceCommonDialogStatus sceMsgDialogGetStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceMsgDialogAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceMsgDialogGetResult(vm::ptr<SceMsgDialogResult> result)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceMsgDialogTerm()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceMsgDialogClose()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceMsgDialogProgressBarInc(s32 target, u32 delta)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceMsgDialogProgressBarSetValue(s32 target, u32 rate)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCheckDialogInit(vm::ptr<SceNetCheckDialogParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 SceCommonDialogStatus sceNetCheckDialogGetStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCheckDialogAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCheckDialogGetResult(vm::ptr<SceNetCheckDialogResult> result)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNetCheckDialogTerm()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogInit(vm::cptr<SceSaveDataDialogParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 SceCommonDialogStatus sceSaveDataDialogGetStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogGetResult(vm::ptr<SceSaveDataDialogResult> result)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogTerm()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 SceCommonDialogStatus sceSaveDataDialogGetSubStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogSubClose()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogContinue(vm::cptr<SceSaveDataDialogParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogFinish(vm::cptr<SceSaveDataDialogFinishParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogProgressBarInc(s32 target, u32 delta)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSaveDataDialogProgressBarSetValue(s32 target, u32 rate)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeDialogInit(vm::cptr<SceImeDialogParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 SceCommonDialogStatus sceImeDialogGetStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeDialogAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeDialogGetResult(vm::ptr<SceImeDialogResult> result)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeDialogTerm()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoImportDialogInit(vm::cptr<ScePhotoImportDialogParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 SceCommonDialogStatus scePhotoImportDialogGetStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoImportDialogGetResult(vm::ptr<ScePhotoImportDialogResult> result)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoImportDialogTerm()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoImportDialogAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoReviewDialogInit(vm::cptr<ScePhotoReviewDialogParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 SceCommonDialogStatus scePhotoReviewDialogGetStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoReviewDialogGetResult(vm::ptr<ScePhotoReviewDialogResult> result)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoReviewDialogTerm()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoReviewDialogAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

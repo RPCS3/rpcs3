@@ -8,27 +8,27 @@ logs::channel sceIme("sceIme", logs::level::notice);
 
 s32 sceImeOpen(vm::ptr<SceImeParam> param)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeUpdate()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeSetCaret(vm::cptr<SceImeCaret> caret)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeSetPreeditGeometry(vm::cptr<SceImePreeditGeometry> preedit)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceImeClose()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

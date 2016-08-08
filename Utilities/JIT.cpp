@@ -80,7 +80,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 
 	[[noreturn]] static void null()
 	{
-		throw std::runtime_error("Null function" HERE);
+		fmt::throw_exception("Null function" HERE);
 	}
 
 	virtual u64 getSymbolAddress(const std::string& name) override
@@ -237,7 +237,7 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 
 	if (!m_engine)
 	{
-		throw fmt::exception("LLVM: Failed to create ExecutionEngine: %s", result);
+		fmt::throw_exception("LLVM: Failed to create ExecutionEngine: %s", result);
 	}
 
 	m_engine->setProcessAllSections(true); // ???

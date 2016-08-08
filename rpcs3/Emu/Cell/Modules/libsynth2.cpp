@@ -31,7 +31,7 @@ void cellSoundSynth2SetParam(u16 reg, u16 value)
 u16 cellSoundSynth2GetParam(u16 reg)
 {
 	libsynth2.todo("cellSoundSynth2GetParam(register=0x%x)", reg);
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void cellSoundSynth2SetSwitch(u16 reg, u32 value)
@@ -42,7 +42,7 @@ void cellSoundSynth2SetSwitch(u16 reg, u32 value)
 u32 cellSoundSynth2GetSwitch(u16 reg)
 {
 	libsynth2.todo("cellSoundSynth2GetSwitch(register=0x%x)", reg);
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSoundSynth2SetAddr(u16 reg, u32 value)
@@ -54,7 +54,7 @@ s32 cellSoundSynth2SetAddr(u16 reg, u32 value)
 u32 cellSoundSynth2GetAddr(u16 reg)
 {
 	libsynth2.todo("cellSoundSynth2GetAddr(register=0x%x)", reg);
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSoundSynth2SetEffectAttr(s16 bus, vm::ptr<CellSoundSynth2EffectAttr> attr)
@@ -95,13 +95,13 @@ s32 cellSoundSynth2VoiceTransStatus(s16 channel, s16 flag)
 u16 cellSoundSynth2Note2Pitch(u16 center_note, u16 center_fine, u16 note, s16 fine)
 {
 	libsynth2.todo("cellSoundSynth2Note2Pitch(center_note=0x%x, center_fine=0x%x, note=0x%x, fine=%d)", center_note, center_fine, note, fine);
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u16 cellSoundSynth2Pitch2Note(u16 center_note, u16 center_fine, u16 pitch)
 {
 	libsynth2.todo("cellSoundSynth2Pitch2Note(center_note=0x%x, center_fine=0x%x, pitch=0x%x)", center_note, center_fine, pitch);
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

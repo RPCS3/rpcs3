@@ -33,10 +33,10 @@ VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support,
 	{
 		if (support.d24_unorm_s8) return VK_FORMAT_D24_UNORM_S8_UINT;
 		if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
-		throw EXCEPTION("No hardware support for z24s8");
+		fmt::throw_exception("No hardware support for z24s8" HERE);
 	}
 	}
-	throw EXCEPTION("Invalid format (0x%x)", (u32)format);
+	fmt::throw_exception("Invalid format (0x%x)" HERE, (u32)format);
 }
 
 std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter)
@@ -51,7 +51,7 @@ std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_mi
 	case rsx::texture_minify_filter::linear_linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 	case rsx::texture_minify_filter::convolution_min: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 	}
-	throw EXCEPTION("Invalid max filter");
+	fmt::throw_exception("Invalid max filter" HERE);
 }
 
 VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -62,7 +62,7 @@ VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
 	case rsx::texture_magnify_filter::linear: return VK_FILTER_LINEAR;
 	case rsx::texture_magnify_filter::convolution_mag: return VK_FILTER_LINEAR;
 	}
-	throw EXCEPTION("Invalid mag filter (0x%x)", (u32)mag_filter);
+	fmt::throw_exception("Invalid mag filter (0x%x)" HERE, (u32)mag_filter);
 }
 
 VkBorderColor get_border_color(u8 color)
@@ -88,7 +88,7 @@ VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap)
 	case rsx::texture_wrap_mode::mirror_once_border: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 	case rsx::texture_wrap_mode::mirror_once_clamp: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 	}
-	throw EXCEPTION("unhandled texture clamp mode");
+	fmt::throw_exception("unhandled texture clamp mode" HERE);
 }
 
 float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
@@ -105,7 +105,7 @@ float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
 	case rsx::texture_max_anisotropy::x16: return 16.0f;
 	}
 
-	throw EXCEPTION("Texture anisotropy error: bad max aniso (%d)", (u32)gcm_aniso);
+	fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)" HERE, (u32)gcm_aniso);
 }
 
 
@@ -183,7 +183,7 @@ VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask)
 		return { map_table[remap_r], map_table[remap_g], map_table[remap_b], map_table[remap_a] };
 	}
 	}
-	throw EXCEPTION("Invalid or unsupported component mapping for texture format (0x%x)", format);
+	fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)" HERE, format);
 }
 
 }

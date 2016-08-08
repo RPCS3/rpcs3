@@ -35,7 +35,7 @@ namespace
 		case 4:
 			return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		}
-		throw EXCEPTION("Wrong vector size %d", size);
+		fmt::throw_exception("Wrong vector size %d" HERE, size);
 	}
 
 	u32 get_vertex_count(const std::vector<std::pair<u32, u32> > first_count_commands)
@@ -178,7 +178,7 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 		stride += rsx::get_vertex_type_size_on_host(info.type, info.size);
 	}
 
-	u32 element_count = gsl::narrow<u32>(inlined_array_raw_data.size_bytes()) / stride;
+	u32 element_count = ::narrow<u32>(inlined_array_raw_data.size_bytes()) / stride;
 	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> result;
 
 	UINT64 vertex_buffer_offset = 0;
@@ -287,7 +287,7 @@ D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12GSRender::upload_fragment_shader_constants(
 
 	size_t offset = 0;
 	float *mapped_buffer = m_buffer_data.map<float>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	m_pso_cache.fill_fragment_constans_buffer({ mapped_buffer, gsl::narrow<int>(buffer_size) }, m_fragment_program);
+	m_pso_cache.fill_fragment_constans_buffer({ mapped_buffer, ::narrow<int>(buffer_size) }, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	return {
@@ -336,7 +336,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_view;
 		std::tie(vertex_buffer_view, vertex_count) = upload_inlined_vertex_array(
 			rsx::method_registers.vertex_arrays_info,
-			{ (const gsl::byte*) inline_vertex_array.data(), gsl::narrow<int>(inline_vertex_array.size() * sizeof(uint)) },
+			{ (const gsl::byte*) inline_vertex_array.data(), ::narrow<int>(inline_vertex_array.size() * sizeof(uint)) },
 			m_buffer_data, m_vertex_buffer_data.Get(), command_list);
 
 		if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
@@ -367,7 +367,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 	EXPECTS(rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
 
 	// Index count
-	size_t index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, gsl::narrow<int>(get_vertex_count(rsx::method_registers.current_draw_clause.first_count_commands)));
+	size_t index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, ::narrow<int>(get_vertex_count(rsx::method_registers.current_draw_clause.first_count_commands)));
 
 	rsx::index_array_type indexed_type = rsx::method_registers.index_type();
 	size_t index_size = get_index_type_size(indexed_type);
@@ -378,7 +378,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	u32 min_index, max_index;
-	gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(mapped_buffer), gsl::narrow<u32>(buffer_size) };
+	gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(mapped_buffer), ::narrow<u32>(buffer_size) };
 
 	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, get_raw_index_array(rsx::method_registers.current_draw_clause.first_count_commands),
 		indexed_type, rsx::method_registers.current_draw_clause.primitive, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), rsx::method_registers.current_draw_clause.first_count_commands,

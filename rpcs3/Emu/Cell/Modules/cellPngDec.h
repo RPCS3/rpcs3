@@ -317,6 +317,6 @@ static s32 getPngDecColourType(u8 type)
 	case PNG_COLOR_TYPE_PALETTE:    return CELL_PNGDEC_PALETTE;
 	case PNG_COLOR_TYPE_GRAY:       return CELL_PNGDEC_GRAYSCALE;
 	case PNG_COLOR_TYPE_GRAY_ALPHA: return CELL_PNGDEC_GRAYSCALE_ALPHA;
-	default: throw EXCEPTION("Unknown colour type: %d", type);
+	default: fmt::throw_exception("Unknown colour type: %d" HERE, type);
 	}
 }

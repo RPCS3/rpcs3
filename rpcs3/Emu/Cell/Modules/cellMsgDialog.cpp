@@ -12,7 +12,7 @@ extern logs::channel cellSysutil;
 
 s32 cellMsgDialogOpen()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
@@ -200,7 +200,7 @@ s32 cellMsgDialogOpenErrorCode(ppu_thread& ppu, u32 errorCode, vm::ptr<CellMsgDi
 
 s32 cellMsgDialogOpenSimulViewWarning()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellMsgDialogClose(f32 delay)
@@ -251,7 +251,7 @@ s32 cellMsgDialogAbort()
 
 	if (!fxm::remove<MsgDialogBase>())
 	{
-		throw EXCEPTION("Failed to remove MsgDialog object");
+		fmt::throw_exception("Failed to remove MsgDialog object" HERE);
 	}
 
 	return CELL_OK;

@@ -12,7 +12,7 @@ namespace
 	template <typename T>
 	gsl::span<T> as_span_workaround(gsl::span<gsl::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), gsl::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
 	}
 
 	// TODO: Make this function part of GSL
@@ -46,7 +46,7 @@ struct copy_unmodified_block_swizzled
 		for (int d = 0; d < depth; ++d)
 		{
 			rsx::convert_linear_swizzle<U>((void*)src.subspan(d * width_in_block * row_count).data(), temp_swizzled.get(), width_in_block, row_count, true);
-			gsl::span<const U> swizzled_src{ temp_swizzled.get(), gsl::narrow<int>(width_in_block * row_count) };
+			gsl::span<const U> swizzled_src{ temp_swizzled.get(), ::narrow<int>(width_in_block * row_count) };
 			for (int row = 0; row < row_count; ++row)
 				copy(dst.subspan((row + d * row_count) * dst_pitch_in_block, width_in_block), swizzled_src.subspan(row * width_in_block, width_in_block));
 		}
@@ -130,7 +130,7 @@ std::tuple<u16, u16, u8> get_height_depth_layer(const RsxTextureType &tex)
 	case rsx::texture_dimension_extended::texture_dimension_cubemap: return std::make_tuple(tex.height(), 1, 6);
 	case rsx::texture_dimension_extended::texture_dimension_3d: return std::make_tuple(tex.height(), tex.depth(), 1);
 	}
-	throw EXCEPTION("Unsupported texture dimension");
+	fmt::throw_exception("Unsupported texture dimension" HERE);
 }
 }
 
@@ -183,7 +183,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	}
-	throw EXCEPTION("Wrong format 0x%x", format);
+	fmt::throw_exception("Wrong format 0x%x" HERE, format);
 }
 
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &texture)
@@ -271,7 +271,7 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 		break;
 
 	default:
-		throw EXCEPTION("Wrong format 0x%x", format);
+		fmt::throw_exception("Wrong format 0x%x" HERE, format);
 	}
 }
 

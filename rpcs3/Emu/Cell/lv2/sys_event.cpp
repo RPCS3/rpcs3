@@ -80,7 +80,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	}
 	else
 	{
-		throw fmt::exception("Unexpected (queue type=%d, thread type=%d)" HERE, type, (s32)thread->type);
+		fmt::throw_exception("Unexpected (queue type=%d, thread type=%d)" HERE, type, (s32)thread->type);
 	}
 
 	VERIFY(!thread->state.test_and_set(cpu_state::signal));
@@ -173,7 +173,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 		}
 		else
 		{
-			throw fmt::exception("Unexpected (queue.type=%d, thread.type=%d)" HERE, queue->type, thread->type);
+			fmt::throw_exception("Unexpected (queue.type=%d, thread.type=%d)" HERE, queue->type, thread->type);
 		}
 
 		thread->state += cpu_state::signal;
@@ -198,7 +198,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	if (size < 0)
 	{
-		throw fmt::exception("Negative size (%d)" HERE, size);
+		fmt::throw_exception("Negative size (%d)" HERE, size);
 	}
 
 	if (queue->type != SYS_PPU_QUEUE)

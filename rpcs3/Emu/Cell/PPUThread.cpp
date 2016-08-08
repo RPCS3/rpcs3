@@ -134,7 +134,7 @@ void ppu_thread::cpu_task()
 		{
 			if (arg >= 32)
 			{
-				throw fmt::exception("Invalid ppu_cmd::set_gpr arg (0x%x)" HERE, arg);
+				fmt::throw_exception("Invalid ppu_cmd::set_gpr arg (0x%x)" HERE, arg);
 			}
 
 			gpr[arg % 32] = cmd_queue[pos].load().as<u64>();
@@ -145,7 +145,7 @@ void ppu_thread::cpu_task()
 		{
 			if (arg > 8)
 			{
-				throw fmt::exception("Unsupported ppu_cmd::set_args size (0x%x)" HERE, arg);
+				fmt::throw_exception("Unsupported ppu_cmd::set_args size (0x%x)" HERE, arg);
 			}
 
 			for (u32 i = 0; i < arg; i++)
@@ -169,7 +169,7 @@ void ppu_thread::cpu_task()
 		}
 		default:
 		{
-			throw fmt::exception("Unknown ppu_cmd(0x%x)" HERE, type);
+			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, type);
 		}
 		}
 	}
@@ -188,7 +188,7 @@ void ppu_thread::exec_task()
 	const auto& table = *(
 		g_cfg_ppu_decoder.get() == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
 		g_cfg_ppu_decoder.get() == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
-		throw std::logic_error("Invalid PPU decoder"));
+		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
 
 	v128 _op;
 	decltype(&ppu_interpreter::UNK) func0, func1, func2, func3;
@@ -257,7 +257,7 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 {
 	if (!stack_addr)
 	{
-		throw fmt::exception("Out of stack memory (size=0x%x)" HERE, stack_size);
+		fmt::throw_exception("Out of stack memory (size=0x%x)" HERE, stack_size);
 	}
 
 	gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
@@ -336,7 +336,7 @@ ppu_cmd ppu_thread::cmd_wait()
 
 be_t<u64>* ppu_thread::get_stack_arg(s32 i, u64 align)
 {
-	if (align != 1 && align != 2 && align != 4 && align != 8 && align != 16) throw fmt::exception("Unsupported alignment: 0x%llx" HERE, align);
+	if (align != 1 && align != 2 && align != 4 && align != 8 && align != 16) fmt::throw_exception("Unsupported alignment: 0x%llx" HERE, align);
 	return vm::_ptr<u64>(vm::cast((gpr[1] + 0x30 + 0x8 * (i - 1)) & (0 - align), HERE));
 }
 
@@ -367,7 +367,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 		if (gpr[1] != old_stack && !test(state, cpu_state::ret + cpu_state::exit)) // gpr[1] shouldn't change
 		{
-			throw fmt::exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, gpr[1], old_stack);
+			fmt::throw_exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, gpr[1], old_stack);
 		}
 	}
 	catch (cpu_state _s)
@@ -418,12 +418,12 @@ extern void sse_cellbe_stvrx(u64 addr, __m128i a);
 
 [[noreturn]] static void ppu_trap(u64 addr)
 {
-	throw fmt::exception("Trap! (0x%llx)", addr);
+	fmt::throw_exception("Trap! (0x%llx)", addr);
 }
 
 [[noreturn]] static void ppu_unreachable(u64 addr)
 {
-	throw fmt::exception("Unreachable! (0x%llx)", addr);
+	fmt::throw_exception("Unreachable! (0x%llx)", addr);
 }
 
 static void ppu_trace(u64 addr)

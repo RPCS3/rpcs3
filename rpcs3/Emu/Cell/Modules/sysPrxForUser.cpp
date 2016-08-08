@@ -156,12 +156,12 @@ s32 sys_get_random_number(vm::ptr<u8> addr, u64 size)
 
 s32 console_getc()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 console_putc()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 console_write(vm::ptr<char> data, u32 len)

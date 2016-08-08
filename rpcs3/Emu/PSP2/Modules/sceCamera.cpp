@@ -8,207 +8,207 @@ logs::channel sceCamera("sceCamera", logs::level::notice);
 
 s32 sceCameraOpen(s32 devnum, vm::ptr<SceCameraInfo> pInfo)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraClose(s32 devnum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraStart(s32 devnum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraStop(s32 devnum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraRead(s32 devnum, vm::ptr<SceCameraRead> pRead)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraIsActive(s32 devnum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetSaturation(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetSaturation(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetBrightness(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetBrightness(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetContrast(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetContrast(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetSharpness(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetSharpness(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetReverse(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetReverse(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetEffect(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetEffect(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetEV(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetEV(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetZoom(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetZoom(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetAntiFlicker(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetAntiFlicker(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetISO(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetISO(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetGain(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetGain(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetWhiteBalance(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetWhiteBalance(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetBacklight(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetBacklight(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetNightmode(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetNightmode(s32 devnum, s32 mode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraLedSwitch(s32 devnum, s32 iSwitch)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraLedBlink(s32 devnum, s32 iOnCount, s32 iOffCount, s32 iBlinkCount)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetNoiseReductionForDebug(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetNoiseReductionForDebug(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraGetSharpnessOffForDebug(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCameraSetSharpnessOffForDebug(s32 devnum, s32 level)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceCameraUseCacheMemoryForTrial(s32 isCache)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

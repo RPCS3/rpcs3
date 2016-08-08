@@ -302,7 +302,7 @@ public:
 			return pair->first.id();
 		}
 
-		throw EXCEPTION("Out of IDs ('%s')", typeid(T).name());
+		fmt::throw_exception("Out of IDs ('%s')" HERE, typeid(T).name());
 	}
 
 	// Add a new ID for an existing object provided (returns new id)
@@ -316,7 +316,7 @@ public:
 			return pair->first.id();
 		}
 
-		throw EXCEPTION("Out of IDs ('%s')", typeid(T).name());
+		fmt::throw_exception("Out of IDs ('%s')" HERE, typeid(T).name());
 	}
 
 	// Add a new ID for an object returned by provider()

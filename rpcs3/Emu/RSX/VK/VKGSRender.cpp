@@ -15,7 +15,7 @@ namespace
 		case rsx::surface_depth_format::z16: return 0xFFFF;
 		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
 		}
-		throw EXCEPTION("Unknown depth format");
+		fmt::throw_exception("Unknown depth format" HERE);
 	}
 
 	u8 get_pixel_size(rsx::surface_depth_format format)
@@ -25,7 +25,7 @@ namespace
 		case rsx::surface_depth_format::z16: return 2;
 		case rsx::surface_depth_format::z24s8: return 4;
 		}
-		throw EXCEPTION("Unknown depth format");
+		fmt::throw_exception("Unknown depth format" HERE);
 	}
 }
 
@@ -44,7 +44,7 @@ namespace vk
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
 		default:
-			throw EXCEPTION("Unknown compare op: 0x%x", (u32)op);
+			fmt::throw_exception("Unknown compare op: 0x%x" HERE, (u32)op);
 		}
 	}
 
@@ -195,7 +195,7 @@ namespace vk
 		case rsx::logic_op::logic_or_inverted: return VK_LOGIC_OP_OR_INVERTED;
 		case rsx::logic_op::logic_nand: return VK_LOGIC_OP_NAND;
 		default:
-			throw EXCEPTION("Unknown logic op 0x%x", (u32)op);
+			fmt::throw_exception("Unknown logic op 0x%x" HERE, (u32)op);
 		}
 	}
 
@@ -218,7 +218,7 @@ namespace vk
 		case rsx::blend_factor::one_minus_constant_alpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 		default:
-			throw EXCEPTION("Unknown blend factor 0x%x", (u32)factor);
+			fmt::throw_exception("Unknown blend factor 0x%x" HERE, (u32)factor);
 		}
 	};
 
@@ -232,7 +232,7 @@ namespace vk
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
 		default:
-			throw EXCEPTION("Unknown blend op: 0x%x", (u32)op);
+			fmt::throw_exception("Unknown blend op: 0x%x" HERE, (u32)op);
 		}
 	}
 	
@@ -250,7 +250,7 @@ namespace vk
 		case rsx::stencil_op::incr_wrap: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 		case rsx::stencil_op::decr_wrap: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 		default:
-			throw EXCEPTION("Unknown stencil op: 0x%x", (u32)op);
+			fmt::throw_exception("Unknown stencil op: 0x%x" HERE, (u32)op);
 		}
 	}
 
@@ -261,7 +261,7 @@ namespace vk
 		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
 		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		default:
-			throw EXCEPTION("Unknown front face value: 0x%x", (u32)ffv);
+			fmt::throw_exception("Unknown front face value: 0x%x" HERE, (u32)ffv);
 		}
 	}
 
@@ -274,7 +274,7 @@ namespace vk
 		case CELL_GCM_FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
 		default: return VK_CULL_MODE_NONE;
 		}
-		throw EXCEPTION("Unknown cull face value: 0x%x", (u32)cfv);
+		fmt::throw_exception("Unknown cull face value: 0x%x" HERE, (u32)cfv);
 	}
 }
 
@@ -1071,7 +1071,7 @@ bool VKGSRender::load_program()
 	if (fragment_constants_sz)
 	{
 		buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_constants_sz);
-		m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
+		m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
 		m_uniform_buffer_ring_info.unmap();
 	}
 

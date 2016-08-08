@@ -112,7 +112,7 @@ logs::file_writer::file_writer(const std::string& name)
 	{
 		if (!m_file.open(fs::get_config_dir() + name, fs::rewrite + fs::append))
 		{
-			throw fmt::exception("Can't create log file %s (error %s)", name, fs::g_tls_error);
+			fmt::throw_exception("Can't create log file %s (error %s)", name, fs::g_tls_error);
 		}
 	}
 	catch (...)

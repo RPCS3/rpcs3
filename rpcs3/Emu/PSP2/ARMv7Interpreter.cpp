@@ -19,16 +19,16 @@ void arm_interpreter::UNK(ARMv7Thread& cpu, const u32 op, const u32 cond)
 	{
 		if (op > 0xffff)
 		{
-			throw fmt::exception("Unknown/Illegal opcode: 0x%04X 0x%04X (cond=0x%x)", op >> 16, op & 0xffff, cond);
+			fmt::throw_exception("Unknown/Illegal opcode: 0x%04X 0x%04X (cond=0x%x)", op >> 16, op & 0xffff, cond);
 		}
 		else
 		{
-			throw fmt::exception("Unknown/Illegal opcode: 0x%04X (cond=0x%x)", op, cond);
+			fmt::throw_exception("Unknown/Illegal opcode: 0x%04X (cond=0x%x)", op, cond);
 		}
 	}
 	else
 	{
-		throw fmt::exception("Unknown/Illegal opcode: 0x%08X", op);
+		fmt::throw_exception("Unknown/Illegal opcode: 0x%08X", op);
 	}
 }
 
@@ -66,14 +66,14 @@ void arm_interpreter::MRC_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 
 			if (!cpu.TLS)
 			{
-				throw fmt::exception("TLS not initialized" HERE);
+				fmt::throw_exception("TLS not initialized" HERE);
 			}
 
 			cpu.GPR[t] = cpu.TLS;
 			return;
 		}
 
-		throw fmt::exception("mrc?? p%d,%d,r%d,c%d,c%d,%d" HERE, cp, opc1, t, cn, cm, opc2);
+		fmt::throw_exception("mrc?? p%d,%d,r%d,c%d,c%d,%d" HERE, cp, opc1, t, cn, cm, opc2);
 	}
 }
 
@@ -133,7 +133,7 @@ void arm_interpreter::ADC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::ADC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -193,7 +193,7 @@ void arm_interpreter::ADD_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::ADD_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
@@ -315,20 +315,20 @@ void arm_interpreter::AND_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::AND_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::ASR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::ASR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -348,13 +348,13 @@ void arm_interpreter::B(ARMv7Thread& cpu, const u32 op, const u32 _cond)
 template<arm_encoding type>
 void arm_interpreter::BFC(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::BFI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -411,14 +411,14 @@ void arm_interpreter::BIC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::BIC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::BKPT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -507,19 +507,19 @@ void arm_interpreter::CLZ(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::CMN_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::CMN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::CMN_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -572,26 +572,26 @@ void arm_interpreter::CMP_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::CMP_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::DBG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::DMB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::DSB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -648,7 +648,7 @@ void arm_interpreter::EOR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::EOR_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -690,19 +690,19 @@ void arm_interpreter::LDM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::LDMDA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDMDB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDMIB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -803,7 +803,7 @@ void arm_interpreter::LDRB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::LDRB_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
@@ -884,7 +884,7 @@ void arm_interpreter::LDRD_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::LDRD_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -915,13 +915,13 @@ void arm_interpreter::LDRH_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::LDRH_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDRH_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -953,32 +953,32 @@ void arm_interpreter::LDRSB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::LDRSB_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDRSB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::LDRSH_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDRSH_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDRSH_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1004,19 +1004,19 @@ void arm_interpreter::LDREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::LDREXB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDREXD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::LDREXH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1096,20 +1096,20 @@ void arm_interpreter::LSR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::LSR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::MLA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::MLS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1174,19 +1174,19 @@ void arm_interpreter::MOVT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::MRS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::MSR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::MSR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1266,7 +1266,7 @@ void arm_interpreter::MVN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::MVN_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1282,13 +1282,13 @@ void arm_interpreter::NOP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::ORN_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::ORN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1345,14 +1345,14 @@ void arm_interpreter::ORR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::ORR_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::PKH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1402,68 +1402,68 @@ void arm_interpreter::PUSH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::QADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QDADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QDSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::QSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::RBIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
@@ -1482,13 +1482,13 @@ void arm_interpreter::REV(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::REV16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::REVSH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1545,7 +1545,7 @@ void arm_interpreter::ROR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::RRX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1577,256 +1577,256 @@ void arm_interpreter::RSB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::RSB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::RSB_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::RSC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::RSC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::RSC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SBC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SBC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SBC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SBFX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SDIV(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SEL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SHADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SHADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SHASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SHSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SHSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SHSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SMLA__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMLAD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMLAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMLAL__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMLALD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMLAW_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMLSD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMLSLD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMMLA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMMLS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMMUL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMUAD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMUL__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMULL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMULW_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SMUSD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SSAT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SSAT16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -1860,19 +1860,19 @@ void arm_interpreter::STM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::STMDA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::STMDB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::STMIB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -2009,7 +2009,7 @@ void arm_interpreter::STRD_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::STRD_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -2085,19 +2085,19 @@ void arm_interpreter::STREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::STREXB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::STREXD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::STREXH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -2157,7 +2157,7 @@ void arm_interpreter::SUB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::SUB_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
@@ -2187,77 +2187,77 @@ void arm_interpreter::SUB_SPI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::SUB_SPR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SVC(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::SXTAB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SXTAB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SXTAH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SXTB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SXTB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::SXTH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::TB_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::TEQ_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::TEQ_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::TEQ_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
@@ -2280,92 +2280,92 @@ void arm_interpreter::TST_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::TST_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::TST_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::UADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UBFX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UDIV(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UHADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UHADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UHASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UHSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UHSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UHSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UMAAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UMLAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
@@ -2395,97 +2395,97 @@ void arm_interpreter::UMULL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::UQADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UQADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UQASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UQSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UQSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UQSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::USAD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::USADA8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::USAT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::USAT16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::USAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::USUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::USUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UXTAB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UXTAB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UXTAH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
@@ -2505,843 +2505,843 @@ void arm_interpreter::UXTB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 template<arm_encoding type>
 void arm_interpreter::UXTB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::UXTH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::VABA_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VABD_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VABD_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VABS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VAC__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VADD_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VADDHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VADD_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VAND(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VBIC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VBIC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VB__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCEQ_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCEQ_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCGE_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCGE_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCGT_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCGT_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCLE_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCLS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCLT_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCLZ(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCMP_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCNT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCVT_FIA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCVT_FIF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCVT_FFA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCVT_FFF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCVT_DF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCVT_HFA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VCVT_HFF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VDIV(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VDUP_S(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VDUP_R(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VEOR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VEXT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VHADDSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD__MS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD1_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD1_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD2_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD2_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD3_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD3_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD4_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLD4_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLDM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VLDR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMAXMIN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMAXMIN_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VML__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VML__FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VML__S(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOV_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOV_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOV_RS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOV_SR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOV_RF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOV_2RF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOV_2RD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOVL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMOVN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMRS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMUL_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMUL_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMUL_S(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMVN_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VMVN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VNEG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VNM__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VORN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VORR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VORR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPADAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPADD_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPADDL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPMAXMIN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPMAXMIN_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPOP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VPUSH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQABS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQDML_L(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQDMULH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQDMULL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQMOV_N(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQNEG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQRDMULH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQRSHL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQRSHR_N(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQSHL_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQSHL_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQSHR_N(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VQSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRADDHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRECPE(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRECPS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VREV__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRHADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRSHL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRSHR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRSHRN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRSQRTE(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRSQRTS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRSRA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VRSUBHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSHL_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSHL_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSHLL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSHR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSHRN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSLI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSQRT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSRA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSRI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VST__MS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VST1_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VST2_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VST3_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VST4_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSTM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSTR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSUB_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSUBHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSUB_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VSWP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VTB_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VTRN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VTST(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VUZP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::VZIP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 
 template<arm_encoding type>
 void arm_interpreter::WFE(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::WFI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template<arm_encoding type>
 void arm_interpreter::YIELD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	throw EXCEPTION("TODO");
+	fmt::throw_exception("TODO" HERE);
 }
 
 template void arm_interpreter::HACK<T1>(ARMv7Thread&, const u32, const u32);

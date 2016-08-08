@@ -5,7 +5,7 @@ logs::channel cellVideoUpload("cellVideoUpload", logs::level::notice);
 
 s32 cellVideoUploadInitialize()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 DECLARE(ppu_module_manager::cellVideoUpload)("cellVideoUpload", []()

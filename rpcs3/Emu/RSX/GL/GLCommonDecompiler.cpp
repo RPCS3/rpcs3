@@ -98,7 +98,7 @@ std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::st
 	case COMPARE::FUNCTION_SNE:
 		return "notEqual(" + Op0 + ", " + Op1 + ")";
 	}
-	throw EXCEPTION("Unknown compare function");
+	fmt::throw_exception("Unknown compare function" HERE);
 }
 
 void insert_glsl_legacy_function(std::ostream& OS)

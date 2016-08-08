@@ -8,147 +8,147 @@ logs::channel sceSas("sceSas", logs::level::notice);
 
 s32 sceSasGetNeededMemorySize(vm::cptr<char> config, vm::ptr<u32> outSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasInit(vm::cptr<char> config, vm::ptr<void> buffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasInitWithGrain(vm::cptr<char> config, u32 grain, vm::ptr<void> buffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasExit(vm::pptr<void> outBuffer, vm::ptr<u32> outBufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetGrain(u32 grain)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasGetGrain()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetOutputmode(u32 outputmode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasGetOutputmode()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasCore(vm::ptr<s16> out)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasCoreWithMix(vm::ptr<s16> inOut, s32 lvol, s32 rvol)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetVoice(s32 iVoiceNum, vm::cptr<void> vagBuf, u32 size, u32 loopflag)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::cptr<void> pcmBuf, u32 size, s32 loopsize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetNoise(s32 iVoiceNum, u32 uClk)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetVolume(s32 iVoiceNum, s32 l, s32 r, s32 wl, s32 wr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetPitch(s32 iVoiceNum, s32 pitch)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetADSR(s32 iVoiceNum, u32 flag, u32 ar, u32 dr, u32 sr, u32 rr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetADSRmode(s32 iVoiceNum, u32 flag, u32 am, u32 dm, u32 sm, u32 rm)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetSL(s32 iVoiceNum, u32 sl)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetSimpleADSR(s32 iVoiceNum, u16 adsr1, u16 adsr2)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetKeyOn(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetKeyOff(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetPause(s32 iVoiceNum, u32 pauseFlag)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasGetPauseState(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasGetEndState(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasGetEnvelope(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetEffect(s32 drySwitch, s32 wetSwitch)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetEffectType(s32 type)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetEffectVolume(s32 valL, s32 valR)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSasSetEffectParam(u32 delayTime, u32 feedback)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

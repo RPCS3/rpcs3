@@ -119,7 +119,7 @@ namespace rsx
 			res = (u32)RSXIOMem.RealAddr(offset); // TODO: Error Check?
 			if (res == 0)
 			{
-				throw EXCEPTION("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
+				fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
 			}
 
 			//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
@@ -131,7 +131,7 @@ namespace rsx
 		}
 		default:
 		{
-			throw EXCEPTION("Invalid location (offset=0x%x, location=0x%x)", offset, location);
+			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
 		}
 		}
 
@@ -153,7 +153,7 @@ namespace rsx
 			case 3:
 				return sizeof(u16) * 4;
 			}
-			throw EXCEPTION("Wrong vector size");
+			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::f: return sizeof(f32) * size;
 		case vertex_base_type::sf:
 			switch (size)
@@ -165,7 +165,7 @@ namespace rsx
 			case 3:
 				return sizeof(f16) * 4;
 			}
-			throw EXCEPTION("Wrong vector size");
+			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::ub:
 			switch (size)
 			{
@@ -176,11 +176,11 @@ namespace rsx
 			case 3:
 				return sizeof(u8) * 4;
 			}
-			throw EXCEPTION("Wrong vector size");
+			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::cmp: return sizeof(u16) * 4;
 		case vertex_base_type::ub256: EXPECTS(size == 4); return sizeof(u8) * 4;
 		}
-		throw EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", (u8)type);
+		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!" HERE, (u8)type);
 	}
 
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
@@ -232,7 +232,7 @@ namespace rsx
 			}
 			break;
 		default:
-			throw;
+			::narrow(tile->comp, "tile->comp" HERE);
 		}
 	}
 
@@ -281,7 +281,7 @@ namespace rsx
 			}
 			break;
 		default:
-			throw;
+			::narrow(tile->comp, "tile->comp" HERE);
 		}
 	}
 
@@ -566,7 +566,7 @@ namespace rsx
 		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
 		rsx::index_array_type type = rsx::method_registers.index_type();
 
-		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+		u32 type_size = ::narrow<u32>(get_index_type_size(type));
 		bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
 		u32 primitive_restart_index = rsx::method_registers.restart_index();
 
@@ -929,7 +929,7 @@ namespace rsx
 	
 		if (!RSXIOMem.Read32(addr, &value))
 		{
-			throw EXCEPTION("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 		}
 
 		return value;
@@ -939,7 +939,7 @@ namespace rsx
 	{
 		if (!RSXIOMem.Write32(addr, value))
 		{
-			throw EXCEPTION("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 		}
 	}
 }

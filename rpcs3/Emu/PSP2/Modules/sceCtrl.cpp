@@ -8,42 +8,42 @@ logs::channel sceCtrl("sceCtrl", logs::level::notice);
 
 s32 sceCtrlSetSamplingMode(u32 uiMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCtrlGetSamplingMode(vm::ptr<u32> puiMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCtrlPeekBufferPositive(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCtrlPeekBufferNegative(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCtrlReadBufferPositive(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCtrlReadBufferNegative(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCtrlSetRapidFire(s32 port, s32 idx, vm::cptr<SceCtrlRapidFireRule> pRule)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceCtrlClearRapidFire(s32 port, s32 idx)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

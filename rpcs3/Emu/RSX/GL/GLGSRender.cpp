@@ -21,7 +21,7 @@ namespace
 		case rsx::surface_depth_format::z16: return 0xFFFF;
 		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
 		}
-		throw EXCEPTION("Unknown depth format");
+		fmt::throw_exception("Unknown depth format" HERE);
 	}
 }
 
@@ -323,7 +323,7 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
 		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
 		}
-		throw EXCEPTION("Unknown texture target");
+		fmt::throw_exception("Unknown texture target" HERE);
 	}
 
 	GLenum get_gl_target_for_texture(const rsx::vertex_texture& tex)
@@ -335,7 +335,7 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
 		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
 		}
-		throw EXCEPTION("Unknown texture target");
+		fmt::throw_exception("Unknown texture target" HERE);
 	}
 }
 

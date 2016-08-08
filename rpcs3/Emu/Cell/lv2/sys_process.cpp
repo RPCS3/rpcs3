@@ -84,10 +84,10 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_INTR_SERVICE_HANDLE_OBJECT: *nump = idm::get_count<lv2_int_serv_t>(); break;
 	case SYS_EVENT_QUEUE_OBJECT: *nump = idm::get_count<lv2_event_queue_t>(); break;
 	case SYS_EVENT_PORT_OBJECT: *nump = idm::get_count<lv2_event_port_t>(); break;
-	case SYS_TRACE_OBJECT: throw EXCEPTION("SYS_TRACE_OBJECT");
-	case SYS_SPUIMAGE_OBJECT: throw EXCEPTION("SYS_SPUIMAGE_OBJECT");
+	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT" HERE);
+	case SYS_SPUIMAGE_OBJECT: fmt::throw_exception("SYS_SPUIMAGE_OBJECT" HERE);
 	case SYS_PRX_OBJECT: *nump = idm::get_count<lv2_prx_t>(); break;
-	case SYS_SPUPORT_OBJECT: throw EXCEPTION("SYS_SPUPORT_OBJECT");
+	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
 	case SYS_LWMUTEX_OBJECT: *nump = idm::get_count<lv2_lwmutex_t>(); break;
 	case SYS_TIMER_OBJECT: *nump = idm::get_count<lv2_timer_t>(); break;
 	case SYS_SEMAPHORE_OBJECT: *nump = idm::get_count<lv2_sema_t>(); break;
@@ -131,10 +131,10 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_INTR_SERVICE_HANDLE_OBJECT: idm_get_set<lv2_int_serv_t>(objects); break;
 	case SYS_EVENT_QUEUE_OBJECT: idm_get_set<lv2_event_queue_t>(objects); break;
 	case SYS_EVENT_PORT_OBJECT: idm_get_set<lv2_event_port_t>(objects); break;
-	case SYS_TRACE_OBJECT: throw EXCEPTION("SYS_TRACE_OBJECT");
-	case SYS_SPUIMAGE_OBJECT: throw EXCEPTION("SYS_SPUIMAGE_OBJECT");
+	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT" HERE);
+	case SYS_SPUIMAGE_OBJECT: fmt::throw_exception("SYS_SPUIMAGE_OBJECT" HERE);
 	case SYS_PRX_OBJECT: idm_get_set<lv2_prx_t>(objects); break;
-	case SYS_SPUPORT_OBJECT: throw EXCEPTION("SYS_SPUPORT_OBJECT");
+	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
 	case SYS_LWMUTEX_OBJECT: idm_get_set<lv2_lwmutex_t>(objects); break;
 	case SYS_TIMER_OBJECT: idm_get_set<lv2_timer_t>(objects); break;
 	case SYS_SEMAPHORE_OBJECT: idm_get_set<lv2_sema_t>(objects); break;

@@ -71,7 +71,7 @@ namespace logs
 		{
 			if (UNLIKELY(sev <= enabled))
 			{
-				message{this, sev}.broadcast(fmt, fmt_type_info::get<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+				message{this, sev}.broadcast(fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 			}
 		}
 

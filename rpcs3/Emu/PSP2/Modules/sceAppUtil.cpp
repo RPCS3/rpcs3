@@ -8,67 +8,67 @@ logs::channel sceAppUtil("sceAppUtil", logs::level::notice);
 
 s32 sceAppUtilInit(vm::cptr<SceAppUtilInitParam> initParam, vm::ptr<SceAppUtilBootParam> bootParam)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilShutdown()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSaveDataSlotCreate(u32 slotId, vm::cptr<SceAppUtilSaveDataSlotParam> param, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSaveDataSlotDelete(u32 slotId, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSaveDataSlotSetParam(u32 slotId, vm::cptr<SceAppUtilSaveDataSlotParam> param, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSaveDataSlotGetParam(u32 slotId, vm::ptr<SceAppUtilSaveDataSlotParam> param, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSaveDataFileSave(vm::cptr<SceAppUtilSaveDataFileSlot> slot, vm::cptr<SceAppUtilSaveDataFile> files, u32 fileNum, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint, vm::ptr<u32> requiredSizeKB)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilPhotoMount()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilPhotoUmount()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSystemParamGetInt(u32 paramId, vm::ptr<s32> value)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSystemParamGetString(u32 paramId, vm::ptr<char> buf, u32 bufSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilSaveSafeMemory(vm::cptr<void> buf, u32 bufSize, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAppUtilLoadSafeMemory(vm::ptr<void> buf, u32 bufSize, s64 offset)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

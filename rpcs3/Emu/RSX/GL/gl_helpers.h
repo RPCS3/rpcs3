@@ -19,9 +19,9 @@ namespace gl
 	{
 		const char* file;
 		const char* function;
-		long line;
+		int line;
 
-		constexpr __glcheck_impl_t(const char* file, const char* function, long line)
+		constexpr __glcheck_impl_t(const char* file, const char* function, int line)
 			: file(file)
 			, function(function)
 			, line(line)
@@ -43,7 +43,7 @@ namespace gl
 				default: error = "unknown error"; break;
 				}
 
-				throw std::runtime_error(fmt::format("OpenGL error: %s. file '%s' function '%s' line %ld", error.c_str(), file, function, line));
+				fmt::throw_exception("OpenGL error: %s\n(in file %s:%d, function %s)", error, file, line, function);
 			}
 		}
 	};
@@ -1239,7 +1239,7 @@ namespace gl
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
 		{
 			if (get_target() != target::textureBuffer)
-				throw EXCEPTION("OpenGL error: texture cannot copy from buffer");
+				fmt::throw_exception("OpenGL error: texture cannot copy from buffer" HERE);
 
 /*			if (!offset)
 			{
@@ -1248,7 +1248,7 @@ namespace gl
 			}*/
 
 			if (glTextureBufferRangeEXT == nullptr)
-				throw EXCEPTION("OpenGL error: partial buffer access for textures is unsupported on your system");
+				fmt::throw_exception("OpenGL error: partial buffer access for textures is unsupported on your system" HERE);
 
 			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
 		}

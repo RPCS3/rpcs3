@@ -15,7 +15,7 @@ void lv2_lwmutex_t::unlock(lv2_lock_t)
 {
 	if (signaled)
 	{
-		throw EXCEPTION("Unexpected");
+		fmt::throw_exception("Unexpected" HERE);
 	}
 
 	if (sq.size())
@@ -44,7 +44,7 @@ s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmut
 
 	if (arg4 != 0x80000001 || arg6)
 	{
-		throw EXCEPTION("Unknown arguments (arg4=0x%x, arg6=0x%x)", arg4, arg6);
+		fmt::throw_exception("Unknown arguments (arg4=0x%x, arg6=0x%x)" HERE, arg4, arg6);
 	}
 
 	*lwmutex_id = idm::make<lv2_lwmutex_t>(protocol, name);

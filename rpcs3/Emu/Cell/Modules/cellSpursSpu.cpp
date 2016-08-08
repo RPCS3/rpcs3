@@ -1388,7 +1388,7 @@ bool spursTasksetSyscallEntry(SPUThread& spu)
 		spu.gpr[3]._u32[3] = spursTasksetProcessSyscall(spu, spu.gpr[3]._u32[3], spu.gpr[4]._u32[3]);
 
 		// Resume the previously executing task if the syscall did not cause a context switch
-		throw EXCEPTION("Broken (TODO)");
+		fmt::throw_exception("Broken (TODO)" HERE);
 		//if (spu.m_is_branch == false) {
 		//    spursTasksetResumeTask(spu);
 		//}

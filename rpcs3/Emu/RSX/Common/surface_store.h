@@ -242,8 +242,8 @@ namespace rsx
 
 				gsl::span<const gsl::byte> raw_src = Traits::map_downloaded_buffer(download_data[i], std::forward<Args&&>(args)...);
 
-				size_t src_pitch = utility::get_aligned_pitch(color_format, gsl::narrow<u32>(width));
-				size_t dst_pitch = utility::get_packed_pitch(color_format, gsl::narrow<u32>(width));
+				size_t src_pitch = utility::get_aligned_pitch(color_format, ::narrow<u32>(width));
+				size_t dst_pitch = utility::get_packed_pitch(color_format, ::narrow<u32>(width));
 
 				result[i].resize(dst_pitch * height);
 
@@ -259,13 +259,13 @@ namespace rsx
 				case surface_color_format::x8r8g8b8_z8r8g8b8:
 				case surface_color_format::x32:
 				{
-					gsl::span<be_t<u32>> dst_span{ (be_t<u32>*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(be_t<u32>)) };
+					gsl::span<be_t<u32>> dst_span{ (be_t<u32>*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(be_t<u32>)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u32>(raw_src), src_pitch, width, height);
 					break;
 				}
 				case surface_color_format::b8:
 				{
-					gsl::span<u8> dst_span{ (u8*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(u8)) };
+					gsl::span<u8> dst_span{ (u8*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(u8)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u8>(raw_src), src_pitch, width, height);
 					break;
 				}
@@ -274,20 +274,20 @@ namespace rsx
 				case surface_color_format::x1r5g5b5_o1r5g5b5:
 				case surface_color_format::x1r5g5b5_z1r5g5b5:
 				{
-					gsl::span<be_t<u16>> dst_span{ (be_t<u16>*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(be_t<u16>)) };
+					gsl::span<be_t<u16>> dst_span{ (be_t<u16>*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(be_t<u16>)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u16>(raw_src), src_pitch, width, height);
 					break;
 				}
 				// Note : may require some big endian swap
 				case surface_color_format::w32z32y32x32:
 				{
-					gsl::span<u128> dst_span{ (u128*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(u128)) };
+					gsl::span<u128> dst_span{ (u128*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(u128)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u128>(raw_src), src_pitch, width, height);
 					break;
 				}
 				case surface_color_format::w16z16y16x16:
 				{
-					gsl::span<u64> dst_span{ (u64*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(u64)) };
+					gsl::span<u64> dst_span{ (u64*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(u64)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u64>(raw_src), src_pitch, width, height);
 					break;
 				}
@@ -321,13 +321,13 @@ namespace rsx
 			if (depth_format == surface_depth_format::z16)
 			{
 				result[0].resize(width * height * 2);
-				gsl::span<u16> dest{ (u16*)result[0].data(), gsl::narrow<int>(width * height) };
+				gsl::span<u16> dest{ (u16*)result[0].data(), ::narrow<int>(width * height) };
 				copy_pitched_src_to_dst(dest, gsl::as_span<const u16>(depth_buffer_raw_src), row_pitch, width, height);
 			}
 			if (depth_format == surface_depth_format::z24s8)
 			{
 				result[0].resize(width * height * 4);
-				gsl::span<u32> dest{ (u32*)result[0].data(), gsl::narrow<int>(width * height) };
+				gsl::span<u32> dest{ (u32*)result[0].data(), ::narrow<int>(width * height) };
 				copy_pitched_src_to_dst(dest, gsl::as_span<const u32>(depth_buffer_raw_src), row_pitch, width, height);
 			}
 			Traits::unmap_downloaded_buffer(depth_data, std::forward<Args&&>(args)...);
@@ -337,7 +337,7 @@ namespace rsx
 
 			gsl::span<const gsl::byte> stencil_buffer_raw_src = Traits::map_downloaded_buffer(stencil_data, std::forward<Args&&>(args)...);
 			result[1].resize(width * height);
-			gsl::span<u8> dest{ (u8*)result[1].data(), gsl::narrow<int>(width * height) };
+			gsl::span<u8> dest{ (u8*)result[1].data(), ::narrow<int>(width * height) };
 			copy_pitched_src_to_dst(dest, gsl::as_span<const u8>(stencil_buffer_raw_src), align(width, 256), width, height);
 			Traits::unmap_downloaded_buffer(stencil_data, std::forward<Args&&>(args)...);
 			return result;

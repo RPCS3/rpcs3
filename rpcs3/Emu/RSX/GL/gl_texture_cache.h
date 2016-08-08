@@ -300,7 +300,7 @@ namespace gl
 				case GL_DEPTH_COMPONENT16:
 					break;
 				default:
-					throw EXCEPTION("Unsupported depth format!");
+					fmt::throw_exception("Unsupported depth format!" HERE);
 				}
 
 				__glcheck glTexImage2D(GL_TEXTURE_2D, 0, gl_pixel_format_internal, width, height, 0, in_format, ex_format, nullptr);
@@ -334,7 +334,7 @@ namespace gl
 					}
 				}
 
-				if (!region) throw EXCEPTION("No region created!!");
+				if (!region) fmt::throw_exception("No region created!!" HERE);
 			}
 
 			if (width != region->current_width ||
@@ -369,7 +369,7 @@ namespace gl
 		void write_rtt(u32 base, u32 size, u32 texaddr)
 		{
 			//Actually download the data, since it seems that cell is writing to it manually
-			throw;
+			fmt::throw_exception("write_rtt" HERE);
 		}
 
 		void destroy_rtt_cache()
@@ -407,7 +407,7 @@ namespace gl
 
 		void initialize_rtt_cache()
 		{
-			if (rtt_cache.size()) throw EXCEPTION("Initialize RTT cache while cache already exists! Leaking objects??");
+			if (rtt_cache.size()) fmt::throw_exception("Initialize RTT cache while cache already exists! Leaking objects??" HERE);
 
 			for (int i = 0; i < 64; ++i)
 			{

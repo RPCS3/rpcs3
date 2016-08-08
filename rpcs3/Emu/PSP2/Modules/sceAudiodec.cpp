@@ -8,37 +8,37 @@ logs::channel sceAudiodec("sceAudiodec", logs::level::notice);
 
 s32 sceAudiodecInitLibrary(u32 codecType, vm::ptr<SceAudiodecInitParam> pInitParam)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudiodecTermLibrary(u32 codecType)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudiodecCreateDecoder(vm::ptr<SceAudiodecCtrl> pCtrl, u32 codecType)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudiodecDeleteDecoder(vm::ptr<SceAudiodecCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudiodecDecode(vm::ptr<SceAudiodecCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudiodecClearContext(vm::ptr<SceAudiodecCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceAudiodecGetInternalError(vm::ptr<SceAudiodecCtrl> pCtrl, vm::ptr<s32> pInternalError)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

@@ -37,7 +37,7 @@ namespace
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 		}
-		throw EXCEPTION("Compressed or unknown texture format 0x%x", texture_format);
+		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
 
 
@@ -66,7 +66,7 @@ namespace
 		case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(GL_RG, GL_HALF_FLOAT);
 		}
-		throw EXCEPTION("Compressed or unknown texture format 0x%x", texture_format);
+		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
 
 	bool is_compressed_format(u32 texture_format)
@@ -99,7 +99,7 @@ namespace
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 			return true;
 		}
-		throw EXCEPTION("Unknown format 0x%x", texture_format);
+		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
 	}
 
 	bool requires_unpack_byte(u32 texture_format)
@@ -178,7 +178,7 @@ namespace
 			return { GL_ZERO, GL_GREEN, GL_BLUE, GL_RED };
 
 		}
-		throw EXCEPTION("Unknown format 0x%x", texture_format);
+		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
 	}
 }
 
@@ -198,7 +198,7 @@ namespace rsx
 			case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
 			case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
 			}
-			throw EXCEPTION("Unknow min filter");
+			fmt::throw_exception("Unknow min filter" HERE);
 		}
 
 		int gl_tex_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -209,7 +209,7 @@ namespace rsx
 			case rsx::texture_magnify_filter::linear: return GL_LINEAR;
 			case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
 			}
-			throw EXCEPTION("Unknow mag filter");
+			fmt::throw_exception("Unknow mag filter" HERE);
 		}
 
 		static const int gl_tex_zfunc[] =

@@ -18,13 +18,13 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	const auto buf_size = source.size() + 1; // size + null terminator
 
-	const int size = source.size() < INT_MAX ? static_cast<int>(buf_size) : throw fmt::exception("to_wchar(): invalid source length (0x%llx)", source.size());
+	const int size = source.size() < INT_MAX ? static_cast<int>(buf_size) : (fmt::throw_exception("to_wchar(): invalid source length (0x%llx)", source.size()), 0);
 
 	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]); // allocate buffer assuming that length is the max possible size
 
 	if (!MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size))
 	{
-		throw fmt::exception("to_wchar(): MultiByteToWideChar() failed: error %u.", GetLastError());
+		fmt::throw_exception("to_wchar(): MultiByteToWideChar() failed: error %u.", GetLastError());
 	}
 
 	return buffer;
@@ -34,7 +34,7 @@ static void to_utf8(std::string& result, const wchar_t* source)
 {
 	const auto length = std::wcslen(source);
 
-	const int buf_size = length <= INT_MAX / 3 ? static_cast<int>(length) * 3 + 1 : throw fmt::exception("to_utf8(): invalid source length (0x%llx)", length);
+	const int buf_size = length <= INT_MAX / 3 ? static_cast<int>(length) * 3 + 1 : (fmt::throw_exception("to_utf8(): invalid source length (0x%llx)", length), 0);
 
 	result.resize(buf_size); // set max possible length for utf-8 + null terminator
 
@@ -44,7 +44,7 @@ static void to_utf8(std::string& result, const wchar_t* source)
 	}
 	else
 	{
-		throw fmt::exception("to_utf8(): WideCharToMultiByte() failed: error %u.", GetLastError());
+		fmt::throw_exception("to_utf8(): WideCharToMultiByte() failed: error %u.", GetLastError());
 	}
 }
 
@@ -82,7 +82,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
 	case ERROR_DIRECTORY: return fs::error::inval;
 	case ERROR_INVALID_NAME: return fs::error::inval;
-	default: throw fmt::exception("Unknown Win32 error: %u.", e);
+	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
 	}
 }
 
@@ -111,7 +111,7 @@ static fs::error to_error(int e)
 	case ENOENT: return fs::error::noent;
 	case EEXIST: return fs::error::exist;
 	case EINVAL: return fs::error::inval;
-	default: throw fmt::exception("Unknown system error: %d.", e);
+	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
 
@@ -465,7 +465,7 @@ bool fs::rename(const std::string& from, const std::string& to)
 
 	if (device != get_virtual_device(to))
 	{
-		throw fmt::exception("fs::rename() between different devices not implemented.\nFrom: %s\nTo: %s", from, to);
+		fmt::throw_exception("fs::rename() between different devices not implemented.\nFrom: %s\nTo: %s", from, to);
 	}
 
 	if (device)
@@ -498,7 +498,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 
 	if (device != get_virtual_device(to) || device) // TODO
 	{
-		throw fmt::exception("fs::copy_file() for virtual devices not implemented.\nFrom: %s\nTo: %s", from, to);
+		fmt::throw_exception("fs::copy_file() for virtual devices not implemented.\nFrom: %s\nTo: %s", from, to);
 	}
 
 #ifdef _WIN32
@@ -622,12 +622,12 @@ bool fs::truncate_file(const std::string& path, u64 length)
 
 void fs::file::xnull() const
 {
-	throw std::logic_error("fs::file is null");
+	fmt::throw_exception<std::logic_error>("fs::file is null");
 }
 
 void fs::file::xfail() const
 {
-	throw fmt::exception("Unexpected fs::error %s", g_tls_error);
+	fmt::throw_exception("Unexpected fs::error %s", g_tls_error);
 }
 
 bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
@@ -694,7 +694,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			FILE_BASIC_INFO basic_info;
 			if (!GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO)))
 			{
-				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
+				fmt::throw_exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			stat_t info;
@@ -730,7 +730,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 
 			if (!result || !SetFilePointerEx(m_handle, old, NULL, FILE_BEGIN)) // restore position
 			{
-				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
+				fmt::throw_exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return result != FALSE;
@@ -745,7 +745,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			DWORD nread;
 			if (!ReadFile(m_handle, buffer, size, &nread, NULL))
 			{
-				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
+				fmt::throw_exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return nread;
@@ -760,7 +760,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			DWORD nwritten;
 			if (!WriteFile(m_handle, buffer, size, &nwritten, NULL))
 			{
-				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
+				fmt::throw_exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return nwritten;
@@ -775,11 +775,11 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_set ? FILE_BEGIN :
 				whence == seek_cur ? FILE_CURRENT :
 				whence == seek_end ? FILE_END :
-				throw fmt::exception("Invalid whence (0x%x)" HERE, whence);
+				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
 			{
-				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
+				fmt::throw_exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return pos.QuadPart;
@@ -790,7 +790,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			LARGE_INTEGER size;
 			if (!GetFileSizeEx(m_handle, &size))
 			{
-				throw fmt::exception("Win32 error: %u." HERE, GetLastError());
+				fmt::throw_exception("Win32 error: %u." HERE, GetLastError());
 			}
 
 			return size.QuadPart;
@@ -838,7 +838,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			struct ::stat file_info;
 			if (::fstat(m_fd, &file_info) != 0)
 			{
-				throw fmt::exception("System error: %d." HERE, errno);
+				fmt::throw_exception("System error: %d." HERE, errno);
 			}
 
 			stat_t info;
@@ -868,7 +868,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			const auto result = ::read(m_fd, buffer, count);
 			if (result == -1)
 			{
-				throw fmt::exception("System error: %d." HERE, errno);
+				fmt::throw_exception("System error: %d." HERE, errno);
 			}
 
 			return result;
@@ -879,7 +879,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			const auto result = ::write(m_fd, buffer, count);
 			if (result == -1)
 			{
-				throw fmt::exception("System error: %d." HERE, errno);
+				fmt::throw_exception("System error: %d." HERE, errno);
 			}
 
 			return result;
@@ -891,12 +891,12 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_set ? SEEK_SET :
 				whence == seek_cur ? SEEK_CUR :
 				whence == seek_end ? SEEK_END :
-				throw fmt::exception("Invalid whence (0x%x)" HERE, whence);
+				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
 			if (result == -1)
 			{
-				throw fmt::exception("System error: %d." HERE, errno);
+				fmt::throw_exception("System error: %d." HERE, errno);
 			}
 
 			return result;
@@ -907,7 +907,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 			struct ::stat file_info;
 			if (::fstat(m_fd, &file_info) != 0)
 			{
-				throw fmt::exception("System error: %d." HERE, errno);
+				fmt::throw_exception("System error: %d." HERE, errno);
 			}
 
 			return file_info.st_size;
@@ -938,26 +938,27 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		fs::stat_t stat() override
 		{
-			throw std::logic_error("Not supported" HERE);
+			fmt::throw_exception<std::logic_error>("Not supported" HERE);
 		}
 
 		bool trunc(u64 length) override
 		{
-			throw std::logic_error("Not allowed" HERE);
+			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
 		}
 
 		u64 read(void* buffer, u64 count) override
 		{
 			const u64 start = m_pos;
 			const u64 end = seek(count, fs::seek_cur);
-			const u64 read_size = end >= start ? end - start : throw std::logic_error("Stream overflow" HERE);
+			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
+			const u64 read_size = end - start;
 			std::memcpy(buffer, m_ptr + start, read_size);
 			return read_size;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			throw std::logic_error("Not allowed" HERE);
+			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
 		}
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
@@ -966,7 +967,7 @@ fs::file::file(const void* ptr, std::size_t size)
 				whence == fs::seek_set ? m_pos = std::min<u64>(offset, m_size) :
 				whence == fs::seek_cur ? m_pos = std::min<u64>(offset + m_pos, m_size) :
 				whence == fs::seek_end ? m_pos = std::min<u64>(offset + m_size, m_size) :
-				throw fmt::exception("Invalid whence (0x%x)" HERE, whence);
+				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 		}
 
 		u64 size() override
@@ -980,7 +981,7 @@ fs::file::file(const void* ptr, std::size_t size)
 
 void fs::dir::xnull() const
 {
-	throw std::logic_error("fs::dir is null");
+	fmt::throw_exception<std::logic_error>("fs::dir is null");
 }
 
 bool fs::dir::open(const std::string& path)
@@ -1052,7 +1053,7 @@ bool fs::dir::open(const std::string& path)
 						return false;
 					}
 
-					throw fmt::exception("Win32 error: %u." HERE, GetLastError());
+					fmt::throw_exception("Win32 error: %u." HERE, GetLastError());
 				}
 
 				add_entry(found);
@@ -1104,7 +1105,7 @@ bool fs::dir::open(const std::string& path)
 			struct ::stat file_info;
 			if (::fstatat(::dirfd(m_dd), found->d_name, &file_info, 0) != 0)
 			{
-				throw fmt::exception("System error: %d." HERE, errno);
+				fmt::throw_exception("System error: %d." HERE, errno);
 			}
 
 			info.name = found->d_name;

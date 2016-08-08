@@ -40,7 +40,7 @@ struct arm_interpreter
 			}
 			break;
 
-		default: throw EXCEPTION("");
+		default: fmt::throw_exception("Unimplemented" HERE);
 		}
 
 		return shift_t;
@@ -122,7 +122,7 @@ struct arm_interpreter
 			case arm_code::SRType_ASR: return ASR_C(value, amount, carry_out);
 			case arm_code::SRType_ROR: return ROR_C(value, amount, carry_out);
 			case arm_code::SRType_RRX: return RRX_C(value, carry_in, carry_out);
-			default: throw EXCEPTION("");
+			default: fmt::throw_exception("Unimplemented" HERE);
 			}
 		}
 

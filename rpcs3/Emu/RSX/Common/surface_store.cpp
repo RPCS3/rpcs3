@@ -16,7 +16,7 @@ namespace rsx
 			case surface_target::surfaces_a_b_c: return{ 0, 1, 2 };
 			case surface_target::surfaces_a_b_c_d: return{ 0, 1, 2, 3 };
 			}
-			throw EXCEPTION("Wrong color_target");
+			fmt::throw_exception("Wrong color_target" HERE);
 		}
 
 		size_t get_aligned_pitch(surface_color_format format, u32 width)
@@ -38,7 +38,7 @@ namespace rsx
 			case surface_color_format::w16z16y16x16: return align(width * 8, 256);
 			case surface_color_format::w32z32y32x32: return align(width * 16, 256);
 			}
-			throw EXCEPTION("Unknown color surface format");
+			fmt::throw_exception("Unknown color surface format" HERE);
 		}
 
 		size_t get_packed_pitch(surface_color_format format, u32 width)
@@ -60,7 +60,7 @@ namespace rsx
 			case surface_color_format::w16z16y16x16: return width * 8;
 			case surface_color_format::w32z32y32x32: return width * 16;
 			}
-			throw EXCEPTION("Unknown color surface format");
+			fmt::throw_exception("Unknown color surface format" HERE);
 		}
 	}
 }

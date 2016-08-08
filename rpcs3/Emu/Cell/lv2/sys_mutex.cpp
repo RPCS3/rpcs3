@@ -159,7 +159,7 @@ s32 sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 	// new owner must be set when unlocked
 	if (mutex->owner.get() != &ppu)
 	{
-		throw EXCEPTION("Unexpected mutex owner");
+		fmt::throw_exception("Unexpected mutex owner" HERE);
 	}
 
 	return CELL_OK;
@@ -230,7 +230,7 @@ s32 sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 	{
 		if (!mutex->recursive)
 		{
-			throw EXCEPTION("Unexpected recursive_count");
+			fmt::throw_exception("Unexpected recursive_count" HERE);
 		}
 		
 		mutex->recursive_count--;

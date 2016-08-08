@@ -10,12 +10,12 @@ logs::channel sceUlt("sceUlt", logs::level::notice);
 
 s32 _sceUltWaitingQueueResourcePoolOptParamInitialize(vm::ptr<SceUltWaitingQueueResourcePoolOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceUltWaitingQueueResourcePoolGetWorkAreaSize(u32 numThreads, u32 numSyncObjects)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltWaitingQueueResourcePoolCreate(
@@ -27,22 +27,22 @@ s32 _sceUltWaitingQueueResourcePoolCreate(
 	vm::cptr<SceUltWaitingQueueResourcePoolOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltWaitingQueueResourcePoolDestroy(vm::ptr<SceUltWaitingQueueResourcePool> pool)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltQueueDataResourcePoolOptParamInitialize(vm::ptr<SceUltQueueDataResourcePoolOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceUltQueueDataResourcePoolGetWorkAreaSize(u32 numData, u32 dataSize, u32 numQueueObject)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltQueueDataResourcePoolCreate(
@@ -56,22 +56,22 @@ s32 _sceUltQueueDataResourcePoolCreate(
 	vm::cptr<SceUltQueueDataResourcePoolOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltQueueDataResourcePoolDestroy(vm::ptr<SceUltQueueDataResourcePool> pool)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceUltMutexGetStandaloneWorkAreaSize(u32 waitingQueueDepth, u32 numConditionVariable)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltMutexOptParamInitialize(vm::ptr<SceUltMutexOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltMutexCreate(
@@ -81,7 +81,7 @@ s32 _sceUltMutexCreate(
 	vm::cptr<SceUltMutexOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltMutexCreateStandalone(
@@ -93,32 +93,32 @@ s32 _sceUltMutexCreateStandalone(
 	vm::cptr<SceUltMutexOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltMutexLock(vm::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltMutexTryLock(vm::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltMutexUnlock(vm::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltMutexDestroy(vm::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltConditionVariableOptParamInitialize(vm::ptr<SceUltConditionVariableOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltConditionVariableCreate(
@@ -128,39 +128,39 @@ s32 _sceUltConditionVariableCreate(
 	vm::cptr<SceUltConditionVariableOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltConditionVariableSignal(vm::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltConditionVariableSignalAll(vm::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltConditionVariableWait(vm::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltConditionVariableDestroy(vm::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltQueueOptParamInitialize(vm::ptr<SceUltQueueOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceUltQueueGetStandaloneWorkAreaSize(u32 queueDepth,
 	u32 dataSize,
 	u32 waitingQueueLength)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltQueueCreate(
@@ -172,7 +172,7 @@ s32 _sceUltQueueCreate(
 	vm::cptr<SceUltQueueOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltQueueCreateStandalone(
@@ -185,37 +185,37 @@ s32 _sceUltQueueCreateStandalone(
 	vm::cptr<SceUltQueueOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltQueuePush(vm::ptr<SceUltQueue> queue, vm::cptr<void> data)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltQueueTryPush(vm::ptr<SceUltQueue> queue, vm::cptr<void> data)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltQueuePop(vm::ptr<SceUltQueue> queue, vm::ptr<void> data)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltQueueTryPop(vm::ptr<SceUltQueue> queue, vm::ptr<void> data)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltQueueDestroy(vm::ptr<SceUltQueue> queue)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltReaderWriterLockOptParamInitialize(vm::ptr<SceUltReaderWriterLockOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltReaderWriterLockCreate(
@@ -225,7 +225,7 @@ s32 _sceUltReaderWriterLockCreate(
 	vm::cptr<SceUltReaderWriterLockOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltReaderWriterLockCreateStandalone(
@@ -236,52 +236,52 @@ s32 _sceUltReaderWriterLockCreateStandalone(
 	vm::cptr<SceUltReaderWriterLockOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceUltReaderWriterLockGetStandaloneWorkAreaSize(u32 waitingQueueDepth)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltReaderWriterLockLockRead(vm::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltReaderWriterLockTryLockRead(vm::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltReaderWriterLockUnlockRead(vm::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltReaderWriterLockLockWrite(vm::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltReaderWriterLockTryLockWrite(vm::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltReaderWriterLockUnlockWrite(vm::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltReaderWriterLockDestroy(vm::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltSemaphoreOptParamInitialize(vm::ptr<SceUltSemaphoreOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltSemaphoreCreate(
@@ -292,37 +292,37 @@ s32 _sceUltSemaphoreCreate(
 	vm::cptr<SceUltSemaphoreOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltSemaphoreAcquire(vm::ptr<SceUltSemaphore> semaphore, s32 numResource)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltSemaphoreTryAcquire(vm::ptr<SceUltSemaphore> semaphore, s32 numResource)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltSemaphoreRelease(vm::ptr<SceUltSemaphore> semaphore, s32 numResource)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltSemaphoreDestroy(vm::ptr<SceUltSemaphore> semaphore)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltUlthreadRuntimeOptParamInitialize(vm::ptr<SceUltUlthreadRuntimeOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 sceUltUlthreadRuntimeGetWorkAreaSize(u32 numMaxUlthread, u32 numWorkerThread)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltUlthreadRuntimeCreate(
@@ -334,17 +334,17 @@ s32 _sceUltUlthreadRuntimeCreate(
 	vm::cptr<SceUltUlthreadRuntimeOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltUlthreadRuntimeDestroy(vm::ptr<SceUltUlthreadRuntime> runtime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltUlthreadOptParamInitialize(vm::ptr<SceUltUlthreadOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sceUltUlthreadCreate(
@@ -358,32 +358,32 @@ s32 _sceUltUlthreadCreate(
 	vm::cptr<SceUltUlthreadOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltUlthreadYield()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltUlthreadExit(s32 status)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltUlthreadJoin(vm::ptr<SceUltUlthread> ulthread, vm::ptr<s32> status)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltUlthreadTryJoin(vm::ptr<SceUltUlthread> ulthread, vm::ptr<s32> status)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceUltUlthreadGetSelf(vm::pptr<SceUltUlthread> ulthread)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 #define REG_FUNC(nid, name) REG_FNID(SceUlt, nid, name)

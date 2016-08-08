@@ -8,87 +8,87 @@ logs::channel sceVoiceQoS("sceVoiceQoS", logs::level::notice);
 
 s32 sceVoiceQoSInit()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSEnd()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSCreateLocalEndpoint(vm::ptr<s32> pLocalId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSDeleteLocalEndpoint(s32 localId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSCreateRemoteEndpoint(vm::ptr<s32> pRemoteId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSDeleteRemoteEndpoint(s32 remoteId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSConnect(vm::ptr<s32> pConnectionId, s32 localId, s32 remoteId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSDisconnect(s32 connectionId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSGetLocalEndpoint(s32 connectionId, vm::ptr<s32> pLocalId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSGetRemoteEndpoint(s32 connectionId, vm::ptr<s32> pRemoteId)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSSetLocalEndpointAttribute(s32 localId, SceVoiceQoSAttributeId attributeId, vm::cptr<void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSGetLocalEndpointAttribute(s32 localId, SceVoiceQoSAttributeId attributeId, vm::ptr<void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSSetConnectionAttribute(s32 connectionId, SceVoiceQoSAttributeId attributeId, vm::cptr<void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSGetConnectionAttribute(s32 connectionId, SceVoiceQoSAttributeId attributeId, vm::ptr<void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSGetStatus(s32 connectionId, SceVoiceQoSStatusId statusId, vm::ptr<void> pStatusValue, s32 statusSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSWritePacket(s32 connectionId, vm::cptr<void> pData, vm::ptr<u32> pSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceVoiceQoSReadPacket(s32 connectionId, vm::ptr<void> pData, vm::ptr<u32> pSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

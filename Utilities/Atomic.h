@@ -952,12 +952,6 @@ public:
 	}
 
 	template<typename T2 = T>
-	auto test(const T2& rhs) const
-	{
-		return load().test(rhs);
-	}
-
-	template<typename T2 = T>
 	auto test_and_set(const T2& rhs)
 	{
 		return atomic_op(atomic_test_and_set<type, T2>{}, rhs);

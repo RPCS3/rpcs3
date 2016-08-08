@@ -7,7 +7,7 @@ logs::channel cellGameExec("cellGameExec", logs::level::notice);
 
 s32 cellGameSetExitParam()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGameGetHomeDataExportPath(vm::ptr<char> exportPath)
@@ -21,17 +21,17 @@ s32 cellGameGetHomeDataExportPath(vm::ptr<char> exportPath)
 
 s32 cellGameGetHomePath()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGameGetHomeDataImportPath()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGameGetHomeLaunchOptionPath()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm::ptr<u32> execData)

@@ -435,7 +435,7 @@ namespace
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
 		case rsx::surface_color_format::w32z32y32x32:
-			throw EXCEPTION("Unsupported format for display");
+			fmt::throw_exception("Unsupported format for display" HERE);
 		}
 	}
 

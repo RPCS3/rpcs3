@@ -9,7 +9,7 @@ namespace
 	template <typename T>
 	gsl::span<T> as_span_workaround(gsl::span<gsl::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), gsl::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
 	}
 }
 
@@ -254,7 +254,7 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 	case rsx::primitive_type::quad_strip:
 		return false;
 	}
-	throw EXCEPTION("Wrong primitive type");
+	fmt::throw_exception("Wrong primitive type" HERE);
 }
 
 /** We assume that polygon is convex in polygon mode (constraints in OpenGL)
@@ -291,7 +291,7 @@ u32 get_index_type_size(rsx::index_array_type type)
 	case rsx::index_array_type::u16: return sizeof(u16);
 	case rsx::index_array_type::u32: return sizeof(u32);
 	}
-	throw EXCEPTION("Wrong index type");
+	fmt::throw_exception("Wrong index type" HERE);
 }
 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned first, unsigned count)
@@ -344,7 +344,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
-		throw EXCEPTION("Native primitive type doesn't require expansion");
+		fmt::throw_exception("Native primitive type doesn't require expansion" HERE);
 	}
 }
 
@@ -389,7 +389,7 @@ namespace
 		case rsx::primitive_type::quads:
 			return expand_indexed_quads<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
 		}
-		throw EXCEPTION("Don't know how to expand draw mode");
+		fmt::throw_exception("Don't know how to expand draw mode" HERE);
 	}
 }
 
@@ -407,7 +407,7 @@ std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst,
 		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst),
 			gsl::as_span<const be_t<u32>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, expands);
 	}
-	throw EXCEPTION("Unknown index type");
+	fmt::throw_exception("Unknown index type" HERE);
 }
 
 void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)

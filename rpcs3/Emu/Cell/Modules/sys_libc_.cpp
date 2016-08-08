@@ -139,7 +139,7 @@ static std::string ps3_fmt(ppu_thread& context, vm::cptr<char> fmt, u32 g_count)
 			}
 			}
 
-			throw EXCEPTION("Unknown formatting: '%s'", start.get_ptr());
+			fmt::throw_exception("Unknown formatting: '%s'" HERE, start.get_ptr());
 		}
 		}
 
@@ -176,7 +176,7 @@ s32 _sys_memcmp(vm::cptr<void> buf1, vm::cptr<void> buf2, u32 size)
 
 s32 _sys_memchr()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 vm::ptr<void> _sys_memmove(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
@@ -215,7 +215,7 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
 
 	if (strcat(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
 	{
-		throw EXCEPTION("Unexpected strcat() result");
+		fmt::throw_exception("Unexpected strcat() result" HERE);
 	}
 
 	return dest;
@@ -234,7 +234,7 @@ vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 
 	if (strncat(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
 	{
-		throw EXCEPTION("Unexpected strncat() result");
+		fmt::throw_exception("Unexpected strncat() result" HERE);
 	}
 
 	return dest;
@@ -246,7 +246,7 @@ vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::cptr<char> source)
 
 	if (strcpy(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
 	{
-		throw EXCEPTION("Unexpected strcpy() result");
+		fmt::throw_exception("Unexpected strcpy() result" HERE);
 	}
 
 	return dest;
@@ -263,7 +263,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 
 	if (strncpy(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
 	{
-		throw EXCEPTION("Unexpected strncpy() result");
+		fmt::throw_exception("Unexpected strncpy() result" HERE);
 	}
 
 	return dest;
@@ -271,22 +271,22 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 
 s32 _sys_strncasecmp()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_strrchr()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_tolower()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_toupper()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 _sys_malloc(u32 size)
@@ -348,27 +348,27 @@ s32 _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 
 s32 _sys_sprintf()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_vprintf()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_vsnprintf()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_vsprintf()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_qsort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sysPrxForUser_sys_libc_init()

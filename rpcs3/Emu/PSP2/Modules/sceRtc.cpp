@@ -8,187 +8,187 @@ logs::channel sceRtc("sceRtc", logs::level::notice);
 
 u32 sceRtcGetTickResolution()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetCurrentTick(vm::ptr<u64> pTick)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetCurrentClock(vm::ptr<SceDateTime> pTime, s32 iTimeZone)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetCurrentClockLocalTime(vm::ptr<SceDateTime> pTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetCurrentNetworkTick(vm::ptr<u64> pTick)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcConvertUtcToLocalTime(vm::cptr<u64> pUtc, vm::ptr<u64> pLocalTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcConvertLocalTimeToUtc(vm::cptr<u64> pLocalTime, vm::ptr<u64> pUtc)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcIsLeapYear(s32 year)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetDaysInMonth(s32 year, s32 month)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetDayOfWeek(s32 year, s32 month, s32 day)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcCheckValid(vm::cptr<SceDateTime> pTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcSetTime_t(vm::ptr<SceDateTime> pTime, u32 iTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcSetTime64_t(vm::ptr<SceDateTime> pTime, u64 ullTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetTime_t(vm::cptr<SceDateTime> pTime, vm::ptr<u32> piTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetTime64_t(vm::cptr<SceDateTime> pTime, vm::ptr<u64> pullTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcSetDosTime(vm::ptr<SceDateTime> pTime, u32 uiDosTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetDosTime(vm::cptr<SceDateTime> pTime, vm::ptr<u32> puiDosTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcSetWin32FileTime(vm::ptr<SceDateTime> pTime, u64 ulWin32Time)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetWin32FileTime(vm::cptr<SceDateTime> pTime, vm::ptr<u64> ulWin32Time)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcSetTick(vm::ptr<SceDateTime> pTime, vm::cptr<u64> pTick)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcGetTick(vm::cptr<SceDateTime> pTime, vm::ptr<u64> pTick)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcCompareTick(vm::cptr<u64> pTick1, vm::cptr<u64> pTick2)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddTicks(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddMicroseconds(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddSeconds(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddMinutes(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddHours(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddDays(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddWeeks(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddMonths(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcTickAddYears(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcFormatRFC2822(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc, s32 iTimeZoneMinutes)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcFormatRFC2822LocalTime(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcFormatRFC3339(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc, s32 iTimeZoneMinutes)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcFormatRFC3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcParseDateTime(vm::ptr<u64> pUtc, vm::cptr<char> pszDateTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceRtcParseRFC3339(vm::ptr<u64> pUtc, vm::cptr<char> pszDateTime)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

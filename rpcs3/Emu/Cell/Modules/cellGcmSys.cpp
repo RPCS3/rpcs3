@@ -617,7 +617,7 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 
 s32 cellGcmSetUserCommand()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
@@ -638,7 +638,7 @@ s32 cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
 
 s32 cellGcmSetWaitFlipUnsafe()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
@@ -725,7 +725,7 @@ s32 cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 
 	if ((*id = fxm::get<GSRender>()->gcm_current_buffer) > UINT8_MAX)
 	{
-		throw EXCEPTION("Unexpected");
+		fmt::throw_exception("Unexpected" HERE);
 	}
 
 	return CELL_OK;
@@ -739,7 +739,7 @@ s32 cellGcmSetInvalidateTile()
 
 s32 cellGcmTerminate()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGcmDumpGraphicsError()
@@ -776,7 +776,7 @@ u64 cellGcmGetVBlankCount()
 
 s32 cellGcmSysGetLastVBlankTime()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGcmInitSystemMode(u64 mode)
@@ -1136,7 +1136,7 @@ void cellGcmSetDefaultCommandBuffer()
 
 s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 //------------------------------------------------------------------------
@@ -1205,42 +1205,42 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 s32 _cellGcmFunc2()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _cellGcmFunc3()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _cellGcmFunc4()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _cellGcmFunc13()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _cellGcmFunc38()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGcmGpadGetStatus()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGcmGpadNotifyCaptureSurface()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellGcmGpadCaptureSnapshot()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

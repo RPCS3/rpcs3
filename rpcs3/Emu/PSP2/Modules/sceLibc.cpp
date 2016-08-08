@@ -141,7 +141,7 @@ std::string arm_fmt(ARMv7Thread& cpu, vm::cptr<char> fmt, u32 g_count)
 			}
 			}
 
-			throw EXCEPTION("Unknown formatting '%s'", start.get_ptr());
+			fmt::throw_exception("Unknown formatting '%s'" HERE, start.get_ptr());
 		}
 		}
 

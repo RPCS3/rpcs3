@@ -8,17 +8,17 @@ logs::channel sceRazorCapture("sceRazorCapture", logs::level::notice);
 
 void sceRazorCaptureSetTrigger(u32 frameIndex, vm::cptr<char> captureFilename)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sceRazorCaptureSetTriggerNextFrame(vm::cptr<char> captureFilename)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 b8 sceRazorCaptureIsInProgress()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 #define REG_FUNC(nid, name) REG_FNID(SceRazorCapture, nid, name)

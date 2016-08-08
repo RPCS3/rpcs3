@@ -148,7 +148,7 @@ namespace vm
 			return static_cast<vm::addr_t>(res);
 		}
 
-		throw fmt::exception("Not a virtual memory pointer (%p)", real_ptr);
+		fmt::throw_exception("Not a virtual memory pointer (%p)", real_ptr);
 	}
 
 	// Convert pointer-to-member to a vm address compatible offset

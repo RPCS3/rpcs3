@@ -2,7 +2,6 @@
 
 #include <exception>
 #include <string>
-#include <memory>
 
 #include "Platform.h"
 #include "types.h"
@@ -212,18 +211,6 @@ struct fmt_type_info
 			&fmt_class_string<T>::format,
 		};
 	}
-
-	template<typename... Args>
-	static inline const fmt_type_info* get()
-	{
-		// Constantly initialized null-terminated list of type-specific information
-		static constexpr fmt_type_info result[sizeof...(Args) + 1]
-		{
-			make<Args>()...
-		};
-
-		return result;
-	}
 };
 
 template<typename Arg>
@@ -235,6 +222,18 @@ using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
 
 namespace fmt
 {
+	template<typename... Args>
+	const fmt_type_info* get_type_info()
+	{
+		// Constantly initialized null-terminated list of type-specific information
+		static constexpr fmt_type_info result[sizeof...(Args) + 1]
+		{
+			fmt_type_info::make<Args>()...
+		};
+
+		return result;
+	}
+
 	// Internal formatting function
 	void raw_append(std::string& out, const char*, const fmt_type_info*, const u64*) noexcept;
 
@@ -242,7 +241,7 @@ namespace fmt
 	template<typename... Args>
 	static SAFE_BUFFERS void append(std::string& out, const char* fmt, const Args&... args)
 	{
-		raw_append(out, fmt, fmt_type_info::get<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		raw_append(out, fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 
 	// Formatting function
@@ -254,24 +253,14 @@ namespace fmt
 		return result;
 	}
 
-	// Internal helper function
-	char* alloc_format(const char*, const fmt_type_info*, const u64*) noexcept;
+	// Internal exception message formatting template, must be explicitly specialized or instantiated in cpp to minimize code bloat
+	template<typename T>
+	[[noreturn]] void raw_throw_exception(const char*, const fmt_type_info*, const u64*);
 
-	// Exception type with formatting constructor
-	template<typename Base>
-	class exception_t : public Base
+	// Throw exception with formatting
+	template<typename T = std::runtime_error, typename... Args>
+	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
 	{
-		using base = Base;
-
-	public:
-		template<typename... Args>
-		SAFE_BUFFERS exception_t(const char* fmt, const Args&... args)
-			: base((fmt = alloc_format(fmt, fmt_type_info::get<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...})))
-		{
-			std::free(const_cast<char*>(fmt));
-		}
-	};
-
-	// Exception type derived from std::runtime_error with formatting constructor
-	using exception = exception_t<std::runtime_error>;
+		raw_throw_exception<T>(fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+	}
 }

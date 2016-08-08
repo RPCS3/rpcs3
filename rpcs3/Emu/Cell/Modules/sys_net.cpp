@@ -499,7 +499,7 @@ namespace sys_net
 
 		if (level != SOL_SOCKET && level != IPPROTO_TCP)
 		{
-			throw EXCEPTION("Invalid socket option level!");
+			fmt::throw_exception("Invalid socket option level!" HERE);
 		}
 
 		s32 ret;
@@ -598,7 +598,7 @@ namespace sys_net
 
 				if (flags < 0)
 				{
-					throw EXCEPTION("Failed to obtain socket flags.");
+					fmt::throw_exception("Failed to obtain socket flags." HERE);
 				}
 
 				u32 mode = *(u32*)optval.get_ptr();

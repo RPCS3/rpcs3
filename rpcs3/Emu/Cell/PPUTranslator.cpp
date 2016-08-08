@@ -100,7 +100,7 @@ void PPUTranslator::AddFunction(u64 addr, Function* func, FunctionType* type)
 {
 	if (!m_func_types.emplace(addr, type).second || !m_func_list.emplace(addr, func).second)
 	{
-		throw fmt::exception("AddFunction(0x%08llx: %s) failed: function already exists", addr, func->getName().data());
+		fmt::throw_exception("AddFunction(0x%08llx: %s) failed: function already exists", addr, func->getName().data());
 	}
 }
 

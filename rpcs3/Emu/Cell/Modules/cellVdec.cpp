@@ -107,20 +107,20 @@ struct vdec_thread : ppu_thread
 		}
 		default:
 		{
-			throw fmt::exception("Unknown video decoder type (0x%x)" HERE, type);
+			fmt::throw_exception("Unknown video decoder type (0x%x)" HERE, type);
 		}
 		}
 
 		if (!codec)
 		{
-			throw fmt::exception("avcodec_find_decoder() failed (type=0x%x)" HERE, type);
+			fmt::throw_exception("avcodec_find_decoder() failed (type=0x%x)" HERE, type);
 		}
 
 		ctx = avcodec_alloc_context3(codec);
 
 		if (!ctx)
 		{
-			throw fmt::exception("avcodec_alloc_context3() failed (type=0x%x)" HERE, type);
+			fmt::throw_exception("avcodec_alloc_context3() failed (type=0x%x)" HERE, type);
 		}
 
 		AVDictionary* opts{};
@@ -132,7 +132,7 @@ struct vdec_thread : ppu_thread
 		if (err || opts)
 		{
 			avcodec_free_context(&ctx);
-			throw fmt::exception("avcodec_open2() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
+			fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
 		}
 	}
 
@@ -214,7 +214,7 @@ struct vdec_thread : ppu_thread
 
 					if (!frame.avf)
 					{
-						throw fmt::exception("av_frame_alloc() failed" HERE);
+						fmt::throw_exception("av_frame_alloc() failed" HERE);
 					}
 
 					int got_picture = 0;
@@ -223,7 +223,7 @@ struct vdec_thread : ppu_thread
 
 					if (decode < 0)
 					{
-						throw fmt::exception("AU decoding error(0x%x)" HERE, decode);
+						fmt::throw_exception("AU decoding error(0x%x)" HERE, decode);
 					}
 
 					if (got_picture == 0)
@@ -240,12 +240,12 @@ struct vdec_thread : ppu_thread
 					{
 						if (frame->interlaced_frame)
 						{
-							throw fmt::exception("Interlaced frames not supported (0x%x)", frame->interlaced_frame);
+							fmt::throw_exception("Interlaced frames not supported (0x%x)", frame->interlaced_frame);
 						}
 
 						if (frame->repeat_pict)
 						{
-							throw fmt::exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
+							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
 						if (frc_set)
@@ -264,7 +264,7 @@ struct vdec_thread : ppu_thread
 							case CELL_VDEC_FRC_60: amend = 90000 / 60; break;
 							default:
 							{
-								throw EXCEPTION("Invalid frame rate code set (0x%x)", frc_set);
+								fmt::throw_exception("Invalid frame rate code set (0x%x)" HERE, frc_set);
 							}
 							}
 
@@ -289,7 +289,7 @@ struct vdec_thread : ppu_thread
 								case 60: case 0x100000000ull + 120: frame.frc = CELL_VDEC_FRC_60; break;
 								default:
 								{
-									throw EXCEPTION("Unsupported time_base.den (%d/1, tpf=%d)", ctx->time_base.den, ctx->ticks_per_frame);
+									fmt::throw_exception("Unsupported time_base.den (%d/1, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
 								}
 								}
 							}
@@ -309,12 +309,12 @@ struct vdec_thread : ppu_thread
 								}
 								else
 								{
-									throw EXCEPTION("Unsupported time_base.den (%d/1001, tpf=%d)", ctx->time_base.den, ctx->ticks_per_frame);
+									fmt::throw_exception("Unsupported time_base.den (%d/1001, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
 								}
 							}
 							else
 							{
-								throw EXCEPTION("Unsupported time_base.num (%d)", ctx->time_base.num);
+								fmt::throw_exception("Unsupported time_base.num (%d)" HERE, ctx->time_base.num);
 							}
 						}
 
@@ -355,7 +355,7 @@ struct vdec_thread : ppu_thread
 
 			default:
 			{
-				throw fmt::exception("Unknown command (0x%x)" HERE, (u32)vcmd);
+				fmt::throw_exception("Unknown command (0x%x)" HERE, (u32)vcmd);
 			}
 			}
 		}
@@ -487,7 +487,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 
 	if (mode != CELL_VDEC_DEC_MODE_NORMAL)
 	{
-		throw EXCEPTION("Unsupported decoding mode (%d)", (s32)mode);
+		fmt::throw_exception("Unsupported decoding mode (%d)" HERE, (s32)mode);
 	}
 
 	// TODO: check info
@@ -550,13 +550,13 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		default:
 		{
-			throw fmt::exception("Unknown formatType (%d)" HERE, type);
+			fmt::throw_exception("Unknown formatType (%d)" HERE, type);
 		}
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
 		{
-			throw fmt::exception("Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
+			fmt::throw_exception("Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
 		}
 
 		if (alpha_plane)
@@ -572,7 +572,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		default:
 		{
-			throw fmt::exception("Unknown format (%d)" HERE, frame->format);
+			fmt::throw_exception("Unknown format (%d)" HERE, frame->format);
 		}
 		}
 
@@ -614,7 +614,7 @@ s32 cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::
 
 	if (arg4 || format2->unk0 || format2->unk1)
 	{
-		throw EXCEPTION("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
+		fmt::throw_exception("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)" HERE, arg4, format2->unk0, format2->unk1);
 	}
 
 	vm::var<CellVdecPicFormat> format;

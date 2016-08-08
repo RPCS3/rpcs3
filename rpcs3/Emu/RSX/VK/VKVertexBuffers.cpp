@@ -49,7 +49,7 @@ namespace vk
 		const VkFormat* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 
 		if (type > rsx::vertex_base_type::ub256)
-			throw EXCEPTION("VKGS error: unknown vertex base type 0x%x", (u32)type);
+			fmt::throw_exception("VKGS error: unknown vertex base type 0x%x" HERE, (u32)type);
 
 		return vec_selectors[size][(int)type];
 	}
@@ -81,7 +81,7 @@ namespace vk
 			requires_modification = true;
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		default:
-			throw ("Unsupported primitive topology 0x%X", (u8)mode);
+			fmt::throw_exception("Unsupported primitive topology 0x%x", (u8)mode);
 		}
 	}
 
@@ -261,7 +261,7 @@ VKGSRender::upload_vertex_data()
 	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed || primitives_emulated)
 	{
 		rsx::index_array_type type = rsx::method_registers.index_type();
-		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+		u32 type_size = ::narrow<u32>(get_index_type_size(type));
 		
 		if (is_indexed_draw)	//Could be emulated or not, emulated array vertex count already computed above
 		{
@@ -358,7 +358,7 @@ VKGSRender::upload_vertex_data()
 				vk::copy_inlined_data_to_buffer<u16, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
 				break;
 			default:
-				throw EXCEPTION("Unknown base type %d", (u32)vertex_info.type);
+				fmt::throw_exception("Unknown base type %d" HERE, (u32)vertex_info.type);
 			}
 
 			m_attrib_ring_info.unmap();

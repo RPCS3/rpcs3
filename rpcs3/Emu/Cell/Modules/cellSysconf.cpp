@@ -5,17 +5,17 @@ logs::channel cellSysconf("cellSysconf", logs::level::notice);
 
 s32 cellSysconfAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSysconfOpen()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellSysconfBtGetDeviceList()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void cellSysutil_Sysconf_init()

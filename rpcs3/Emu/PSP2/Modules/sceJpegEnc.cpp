@@ -8,7 +8,7 @@ logs::channel sceJpegEnc("sceJpegEnc", logs::level::notice);
 
 s32 sceJpegEncoderGetContextSize()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderInit(
@@ -19,19 +19,19 @@ s32 sceJpegEncoderInit(
 	vm::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderEncode(
 	SceJpegEncoderContext context,
 	vm::cptr<void> pYCbCr)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderEnd(SceJpegEncoderContext context)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderSetValidRegion(
@@ -39,21 +39,21 @@ s32 sceJpegEncoderSetValidRegion(
 	s32 iFrameWidth,
 	s32 iFrameHeight)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderSetCompressionRatio(
 	SceJpegEncoderContext context,
 	s32 compratio)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderSetHeaderMode(
 	SceJpegEncoderContext context,
 	s32 headerMode)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderSetOutputAddr(
@@ -61,7 +61,7 @@ s32 sceJpegEncoderSetOutputAddr(
 	vm::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegEncoderCsc(
@@ -71,7 +71,7 @@ s32 sceJpegEncoderCsc(
 	s32 iFrameWidth,
 	s32 inputPixelFormat)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

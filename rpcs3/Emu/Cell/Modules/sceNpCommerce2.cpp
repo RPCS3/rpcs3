@@ -45,17 +45,17 @@ s32 sceNpCommerce2DestroyCtx()
 
 s32 sceNpCommerce2EmptyStoreCheckStart()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNpCommerce2EmptyStoreCheckAbort()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNpCommerce2EmptyStoreCheckFinish()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNpCommerce2CreateSessionStart()
@@ -306,12 +306,12 @@ s32 sceNpCommerce2DestroyReq()
 
 s32 sceNpCommerce2DoServiceListStartAsync()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceNpCommerce2DoServiceListFinishAsync()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 DECLARE(ppu_module_manager::sceNpCommerce2)("sceNpCommerce2", []()

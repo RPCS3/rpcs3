@@ -14,7 +14,7 @@ namespace utils
 		case version_type::release: return "Release";
 		}
 
-		throw type;
+		return "Unknown";
 	}
 
 	uint version::to_hex() const

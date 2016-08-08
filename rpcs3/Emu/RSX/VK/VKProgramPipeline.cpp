@@ -65,7 +65,7 @@ namespace vk
 				}
 			}
 
-			throw EXCEPTION("texture not found");
+			fmt::throw_exception("texture not found" HERE);
 		}
 
 		void program::bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set)
@@ -101,7 +101,7 @@ namespace vk
 					return;
 				}
 			}
-			throw EXCEPTION("vertex buffer not found");
+			fmt::throw_exception("vertex buffer not found" HERE);
 		}
 	}
 }

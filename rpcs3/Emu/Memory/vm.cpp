@@ -96,7 +96,7 @@ namespace vm
 	std::vector<std::shared_ptr<block_t>> g_locations; // memory locations
 
 	access_violation::access_violation(u64 addr, const char* cause)
-		: std::runtime_error(fmt::exception("Access violation %s address 0x%llx", cause, addr))
+		: std::runtime_error(fmt::format("Access violation %s address 0x%llx", cause, addr))
 	{
 		g_tls_fault_count &= ~(1ull << 63);
 	}
@@ -121,7 +121,7 @@ namespace vm
 		if (::mprotect(vm::base(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
 #endif
 		{
-			throw EXCEPTION("System failure (addr=0x%x)", addr);
+			fmt::throw_exception("System failure (addr=0x%x)" HERE, addr);
 		}
 	}
 
@@ -136,7 +136,7 @@ namespace vm
 			if (::mprotect(vm::base(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
 #endif
 			{
-				throw EXCEPTION("System failure (addr=0x%x)", addr);
+				fmt::throw_exception("System failure (addr=0x%x)" HERE, addr);
 			}
 
 			g_reservation_addr = 0;
@@ -170,14 +170,14 @@ namespace vm
 
 		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		const u8 flags = g_pages[addr >> 12];
 
 		if (!(flags & page_writable) || !(flags & page_allocated) || (flags & page_no_reservations))
 		{
-			throw EXCEPTION("Invalid page flags (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
+			fmt::throw_exception("Invalid page flags (addr=0x%x, size=0x%x, flags=0x%x)" HERE, addr, size, flags);
 		}
 
 		// break the reservation
@@ -206,7 +206,7 @@ namespace vm
 
 		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		if (g_reservation_owner != thread_ctrl::get_current() || g_reservation_addr != addr || g_reservation_size != size)
@@ -293,7 +293,7 @@ namespace vm
 
 		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		g_tls_did_break_reservation = false;
@@ -334,14 +334,14 @@ namespace vm
 	{
 		if (!size || (size | addr) % 4096 || flags & page_allocated)
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
 			if (g_pages[i])
 			{
-				throw EXCEPTION("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
+				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
 			}
 		}
 
@@ -356,14 +356,14 @@ namespace vm
 		if (::mprotect(priv_addr, size, PROT_READ | PROT_WRITE) || ::mprotect(real_addr, size, protection))
 #endif
 		{
-			throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
+			fmt::throw_exception("System failure (addr=0x%x, size=0x%x, flags=0x%x)" HERE, addr, size, flags);
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
 			if (g_pages[i].exchange(flags | page_allocated))
 			{
-				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
+				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
 			}
 		}
 
@@ -376,7 +376,7 @@ namespace vm
 
 		if (!size || (size | addr) % 4096)
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		const u8 flags_inv = flags_set & flags_clear;
@@ -418,7 +418,7 @@ namespace vm
 				if (::mprotect(real_addr, 4096, protection))
 #endif
 				{
-					throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x)", addr, size, flags_test, flags_set, flags_clear);
+					fmt::throw_exception("System failure (addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x)" HERE, addr, size, flags_test, flags_set, flags_clear);
 				}
 			}
 		}
@@ -430,14 +430,14 @@ namespace vm
 	{
 		if (!size || (size | addr) % 4096)
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
 			if ((g_pages[i] & page_allocated) == 0)
 			{
-				throw EXCEPTION("Memory not mapped (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
+				fmt::throw_exception("Memory not mapped (addr=0x%x, size=0x%x, current_addr=0x%x)" HERE, addr, size, i * 4096);
 			}
 		}
 
@@ -447,7 +447,7 @@ namespace vm
 
 			if (!(g_pages[i].exchange(0) & page_allocated))
 			{
-				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
+				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)" HERE, addr, size, i * 4096);
 			}
 		}
 
@@ -462,7 +462,7 @@ namespace vm
 		if (::mprotect(real_addr, size, PROT_NONE) || ::mprotect(priv_addr, size, PROT_NONE))
 #endif
 		{
-			throw EXCEPTION("System failure (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("System failure (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 	}
 
@@ -490,7 +490,7 @@ namespace vm
 
 		if (!block)
 		{
-			throw fmt::exception("Invalid memory location (%u)" HERE, (uint)location);
+			fmt::throw_exception("Invalid memory location (%u)" HERE, (uint)location);
 		}
 
 		return block->alloc(size, align, sup);
@@ -502,7 +502,7 @@ namespace vm
 
 		if (!block)
 		{
-			throw fmt::exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
 		return block->falloc(addr, size, sup);
@@ -514,7 +514,7 @@ namespace vm
 
 		if (!block)
 		{
-			throw fmt::exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
 		return block->dealloc(addr, sup_out);
@@ -588,7 +588,7 @@ namespace vm
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < 4096 || align != (0x80000000u >> cntlz32(align)))
 		{
-			throw EXCEPTION("Invalid alignment (size=0x%x, align=0x%x)", size, align);
+			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
 		}
 
 		// Return if size is invalid
@@ -678,7 +678,7 @@ namespace vm
 
 		if (!size || (size | addr) % 4096)
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		for (auto& block : g_locations)
@@ -698,7 +698,7 @@ namespace vm
 		{
 			if (g_pages[i])
 			{
-				throw EXCEPTION("Unexpected pages allocated (current_addr=0x%x)", i * 4096);
+				fmt::throw_exception("Unexpected pages allocated (current_addr=0x%x)" HERE, i * 4096);
 			}
 		}
 
@@ -831,7 +831,7 @@ namespace vm
 
 			if (context.gpr[1] < context.stack_addr)
 			{
-				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)", size, align_v, old_pos, context.stack_addr);
+				fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)" HERE, size, align_v, old_pos, context.stack_addr);
 			}
 			else
 			{
@@ -852,7 +852,7 @@ namespace vm
 
 			if (context.gpr[1]._u32[3] >= 0x40000) // extremely rough
 			{
-				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=LS:0x%05x)", size, align_v, old_pos);
+				fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=LS:0x%05x)" HERE, size, align_v, old_pos);
 			}
 			else
 			{
@@ -872,7 +872,7 @@ namespace vm
 
 			if (context.SP < context.stack_addr)
 			{
-				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=0x%x, stack=*0x%x)", size, align_v, context.SP, context.stack_addr);
+				fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%x, stack=*0x%x)" HERE, size, align_v, context.SP, context.stack_addr);
 			}
 			else
 			{
@@ -883,11 +883,11 @@ namespace vm
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%u)", cpu->type);
+			fmt::throw_exception("Invalid thread type (%u)" HERE, cpu->type);
 		}
 		}
 
-		throw EXCEPTION("Invalid thread");
+		fmt::throw_exception("Invalid thread" HERE);
 	}
 
 	void stack_pop_verbose(u32 addr, u32 size) noexcept

@@ -24,7 +24,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) do { VkResult _res = (expr); if (_res != VK_SUCCESS) throw fmt::exception("Assertion failed! Result is %Xh", (s32)_res); } while (0)
+#define CHECK_RESULT(expr) do { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh", (s32)_res); } while (0)
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
@@ -124,7 +124,7 @@ namespace vk
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
 			}
 
-			if (queue >= queue_props.size()) throw EXCEPTION("Bad queue index passed to get_queue_properties (%u)", queue);
+			if (queue >= queue_props.size()) fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)" HERE, queue);
 			return queue_props[queue];
 		}
 
@@ -287,7 +287,7 @@ namespace vk
 				access_mask |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
 			if (!owner->get_compatible_memory_type(typeBits, access_mask, &typeIndex))
-				throw EXCEPTION("Could not find suitable memory type!");
+				fmt::throw_exception("Could not find suitable memory type!" HERE);
 
 			VkMemoryAllocateInfo infos;
 			infos.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -375,7 +375,7 @@ namespace vk
 				//Suggested memory type is incompatible with this memory type.
 				//Go through the bitset and test for requested props.
 				if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
-					throw EXCEPTION("No compatible memory type was found!");
+					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
 			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_type_index);
@@ -502,7 +502,7 @@ namespace vk
 				//Suggested memory type is incompatible with this memory type.
 				//Go through the bitset and test for requested props.
 				if (!dev.get_compatible_memory_type(memory_reqs.memoryTypeBits, access_flags, &memory_type_index))
-					throw EXCEPTION("No compatible memory type was found!");
+					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
 			memory.reset(new memory_block(m_device, memory_reqs.size, memory_type_index));
@@ -876,7 +876,7 @@ namespace vk
 			nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
 			
-			if (!nb_swap_images) throw EXCEPTION("Driver returned 0 images for swapchain");
+			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain" HERE);
 
 			std::vector<VkImage> swap_images;
 			swap_images.resize(nb_swap_images);
@@ -1093,7 +1093,7 @@ namespace vk
 		void makeCurrentInstance(uint32_t instance_id)
 		{
 			if (!instance_id || instance_id > m_vk_instances.size())
-				throw EXCEPTION("Invalid instance passed to makeCurrentInstance (%u)", instance_id);
+				fmt::throw_exception("Invalid instance passed to makeCurrentInstance (%u)" HERE, instance_id);
 
 			if (m_debugger)
 			{
@@ -1113,7 +1113,7 @@ namespace vk
 		VkInstance getInstanceById(uint32_t instance_id)
 		{
 			if (!instance_id || instance_id > m_vk_instances.size())
-				throw EXCEPTION("Invalid instance passed to getInstanceById (%u)", instance_id);
+				fmt::throw_exception("Invalid instance passed to getInstanceById (%u)" HERE, instance_id);
 
 			instance_id--;
 			return m_vk_instances[instance_id];
@@ -1195,10 +1195,10 @@ namespace vk
 
 			// Generate error if could not find both a graphics and a present queue
 			if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX)
-				throw EXCEPTION("Failed to find a suitable graphics/compute queue");
+				fmt::throw_exception("Failed to find a suitable graphics/compute queue" HERE);
 
 			if (graphicsQueueNodeIndex != presentQueueNodeIndex)
-				throw EXCEPTION("Separate graphics and present queues not supported");
+				fmt::throw_exception("Separate graphics and present queues not supported" HERE);
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
@@ -1216,7 +1216,7 @@ namespace vk
 			}
 			else
 			{
-				if (!formatCount) throw EXCEPTION("Format count is zero!");
+				if (!formatCount) fmt::throw_exception("Format count is zero!" HERE);
 				format = surfFormats[0].format;
 			}
 

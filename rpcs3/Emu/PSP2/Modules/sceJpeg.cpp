@@ -8,12 +8,12 @@ logs::channel sceJpeg("sceJpeg", logs::level::notice);
 
 s32 sceJpegInitMJpeg(s32 maxSplitDecoder)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegFinishMJpeg()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegDecodeMJpeg(
@@ -27,7 +27,7 @@ s32 sceJpegDecodeMJpeg(
 	vm::ptr<void> pCoefBuffer,
 	u32 coefBufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegDecodeMJpegYCbCr(
@@ -39,7 +39,7 @@ s32 sceJpegDecodeMJpegYCbCr(
 	vm::ptr<void> pCoefBuffer,
 	u32 coefBufferSize)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegMJpegCsc(
@@ -50,7 +50,7 @@ s32 sceJpegMJpegCsc(
 	s32 colorOption,
 	s32 sampling)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegGetOutputInfo(
@@ -60,22 +60,22 @@ s32 sceJpegGetOutputInfo(
 	s32 decodeMode,
 	vm::ptr<SceJpegOutputInfo> pOutputInfo)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegCreateSplitDecoder(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegDeleteSplitDecoder(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceJpegSplitDecodeMJpeg(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

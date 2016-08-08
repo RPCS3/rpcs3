@@ -292,7 +292,7 @@ const g_ppu_scale_table;
 
 bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	throw std::runtime_error("MFVSCR" HERE);
+	fmt::throw_exception<std::logic_error>("MFVSCR instruction at 0x%x (%s)", ppu.cia, Emu.GetTitleID());
 }
 
 bool ppu_interpreter::MTVSCR(ppu_thread& ppu, ppu_opcode_t op)
@@ -1817,7 +1817,7 @@ bool ppu_interpreter::TDI(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		throw std::runtime_error("Trap!" HERE);
+		fmt::throw_exception("Trap!" HERE);
 	}
 
 	return true;
@@ -1834,7 +1834,7 @@ bool ppu_interpreter::TWI(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		throw std::runtime_error("Trap!" HERE);
+		fmt::throw_exception("Trap!" HERE);
 	}
 
 	return true;
@@ -1941,7 +1941,7 @@ bool ppu_interpreter::SC(ppu_thread& ppu, ppu_opcode_t op)
 	switch (u32 lv = op.lev)
 	{
 	case 0x0: ppu_execute_syscall(ppu, ppu.gpr[11]); break;
-	default: throw fmt::exception("SC lv%u", lv);
+	default: fmt::throw_exception("SC lv%u", lv);
 	}
 
 	return true;
@@ -2181,7 +2181,7 @@ bool ppu_interpreter::TW(ppu_thread& ppu, ppu_opcode_t op)
 		((u32)a < (u32)b && (op.bo & 0x2)) ||
 		((u32)a >(u32)b && (op.bo & 0x1)))
 	{
-		throw std::runtime_error("Trap!" HERE);
+		fmt::throw_exception("Trap!" HERE);
 	}
 
 	return true;
@@ -2402,7 +2402,7 @@ bool ppu_interpreter::TD(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		throw std::runtime_error("Trap!" HERE);
+		fmt::throw_exception("Trap!" HERE);
 	}
 
 	return true;
@@ -2742,7 +2742,7 @@ bool ppu_interpreter::EQV(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ECIWX(ppu_thread& ppu, ppu_opcode_t op)
 {
-	throw std::runtime_error("ECIWX" HERE);
+	fmt::throw_exception("ECIWX" HERE);
 }
 
 bool ppu_interpreter::LHZUX(ppu_thread& ppu, ppu_opcode_t op)
@@ -2773,7 +2773,7 @@ bool ppu_interpreter::MFSPR(ppu_thread& ppu, ppu_opcode_t op)
 
 	case 0x10C: ppu.gpr[op.rd] = get_timebased_time() & 0xffffffff; break;
 	case 0x10D: ppu.gpr[op.rd] = get_timebased_time() >> 32; break;
-	default: throw fmt::exception("MFSPR 0x%x" HERE, n);
+	default: fmt::throw_exception("MFSPR 0x%x" HERE, n);
 	}
 
 	return true;
@@ -2813,7 +2813,7 @@ bool ppu_interpreter::MFTB(ppu_thread& ppu, ppu_opcode_t op)
 	{
 	case 0x10C: ppu.gpr[op.rd] = get_timebased_time() & 0xffffffff; break;
 	case 0x10D: ppu.gpr[op.rd] = get_timebased_time() >> 32; break;
-	default: throw fmt::exception("MFSPR 0x%x" HERE, n);
+	default: fmt::throw_exception("MFSPR 0x%x" HERE, n);
 	}
 
 	return true;
@@ -2856,7 +2856,7 @@ bool ppu_interpreter::ORC(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ECOWX(ppu_thread& ppu, ppu_opcode_t op)
 {
-	throw std::runtime_error("ECOWX" HERE);
+	fmt::throw_exception("ECOWX" HERE);
 }
 
 bool ppu_interpreter::STHUX(ppu_thread& ppu, ppu_opcode_t op)
@@ -2912,7 +2912,7 @@ bool ppu_interpreter::MTSPR(ppu_thread& ppu, ppu_opcode_t op)
 	case 0x008: ppu.lr = ppu.gpr[op.rs]; break;
 	case 0x009: ppu.ctr = ppu.gpr[op.rs]; break;
 	case 0x100: ppu.vrsave = (u32)ppu.gpr[op.rs]; break;
-	default: throw fmt::exception("MTSPR 0x%x" HERE, n);
+	default: fmt::throw_exception("MTSPR 0x%x" HERE, n);
 	}
 
 	return true;
@@ -3850,5 +3850,5 @@ bool ppu_interpreter::FCFID(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::UNK(ppu_thread& ppu, ppu_opcode_t op)
 {
-	throw fmt::exception("Unknown/Illegal opcode: 0x%08x at 0x%x" HERE, op.opcode, ppu.cia);
+	fmt::throw_exception("Unknown/Illegal opcode: 0x%08x at 0x%x" HERE, op.opcode, ppu.cia);
 }

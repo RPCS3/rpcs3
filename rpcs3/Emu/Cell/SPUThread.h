@@ -442,7 +442,7 @@ public:
 			return this->_u32[3] >> 10 & 0x3;
 
 		default:
-			throw EXCEPTION("Unexpected slice value (%d)", slice);
+			fmt::throw_exception("Unexpected slice value (%d)" HERE, slice);
 		}
 	}
 

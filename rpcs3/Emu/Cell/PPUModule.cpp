@@ -154,7 +154,7 @@ extern void ppu_execute_function(ppu_thread& ppu, u32 index)
 		}
 	}
 
-	throw fmt::exception("Function not registered (index %u)" HERE, index);
+	fmt::throw_exception("Function not registered (index %u)" HERE, index);
 }
 
 extern ppu_function_t ppu_get_function(u32 index)
@@ -757,7 +757,7 @@ std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 
 				if (!addr)
 				{
-					throw fmt::exception("vm::alloc() failed (size=0x%x)", mem_size);
+					fmt::throw_exception("vm::alloc() failed (size=0x%x)", mem_size);
 				}
 
 				// Copy data
@@ -970,10 +970,10 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
-				throw fmt::exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
+				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
 			if (!vm::falloc(addr, size, vm::main))
-				throw fmt::exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
 
@@ -1083,7 +1083,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				if (proc_prx_param.magic != 0x1b434cec)
 				{
-					throw fmt::exception("Bad magic! (0x%x)", proc_prx_param.magic);
+					fmt::throw_exception("Bad magic! (0x%x)", proc_prx_param.magic);
 				}
 
 				ppu_load_exports(link, proc_prx_param.libent_start, proc_prx_param.libent_end);
@@ -1114,7 +1114,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 		else
 		{
-			throw fmt::exception("Failed to load liblv2.sprx: %s", obj.get_error());
+			fmt::throw_exception("Failed to load liblv2.sprx: %s", obj.get_error());
 		}
 	}
 	else

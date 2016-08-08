@@ -45,7 +45,7 @@ s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 		{
 			if (!vm::dealloc(ptr.addr(), vm::main))
 			{
-				throw EXCEPTION("Memory deallocation failed (ptr=0x%x)", ptr);
+				fmt::throw_exception("Memory deallocation failed (ptr=0x%x)" HERE, ptr);
 			}
 		};
 	}

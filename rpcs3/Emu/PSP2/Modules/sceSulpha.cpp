@@ -8,67 +8,67 @@ logs::channel sceSulpha("sceSulpha", logs::level::notice);
 
 s32 sceSulphaNetworkInit()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaNetworkShutdown()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaGetDefaultConfig(vm::ptr<SceSulphaConfig> config)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaGetNeededMemory(vm::cptr<SceSulphaConfig> config, vm::ptr<u32> sizeInBytes)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaInit(vm::cptr<SceSulphaConfig> config, vm::ptr<void> buffer, u32 sizeInBytes)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaShutdown()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaUpdate()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaFileConnect(vm::cptr<char> filename)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaFileDisconnect()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaSetBookmark(vm::cptr<char> name, s32 id)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaAgentsGetNeededMemory(vm::cptr<SceSulphaAgentsRegister> config, vm::ptr<u32> sizeInBytes)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaAgentsRegister(vm::cptr<SceSulphaAgentsRegister> config, vm::ptr<void> buffer, u32 sizeInBytes, vm::ptr<SceSulphaHandle> handles)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceSulphaAgentsUnregister(vm::cptr<SceSulphaHandle> handles, u32 agentCount)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

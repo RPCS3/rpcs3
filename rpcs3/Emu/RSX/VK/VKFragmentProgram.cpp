@@ -376,7 +376,7 @@ void VKFragmentProgram::Compile()
 
 	std::vector<u32> spir_v;
 	if (!vk::compile_glsl_to_spv(shader, vk::glsl::glsl_fragment_program, spir_v))
-		throw EXCEPTION("Failed to compile fragment shader");
+		fmt::throw_exception("Failed to compile fragment shader" HERE);
 
 	//Create the object and compile
 	VkShaderModuleCreateInfo fs_info;

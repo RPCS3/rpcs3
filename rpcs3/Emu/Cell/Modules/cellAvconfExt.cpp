@@ -12,32 +12,32 @@ vm::gvar<f32> g_gamma; // TODO
 
 s32 cellAudioOutUnregisterDevice()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioOutGetDeviceInfo2()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellVideoOutSetXVColor()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellVideoOutSetupDisplay()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioInGetDeviceInfo()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellVideoOutConvertCursorColor()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
@@ -56,12 +56,12 @@ s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 
 s32 cellAudioInGetAvailableDeviceInfo()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioOutGetAvailableDeviceInfo()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
@@ -85,27 +85,27 @@ s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 
 s32 cellAudioOutRegisterDevice()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioOutSetDeviceMode()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioInSetDeviceMode()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioInRegisterDevice()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioInUnregisterDevice()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)

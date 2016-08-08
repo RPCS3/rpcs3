@@ -15,7 +15,7 @@ s64 sys_prx_exitspawn_with_level()
 
 s32 sys_prx_load_module_list_on_memcontainer()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sysPrxForUser_sys_prx_init()

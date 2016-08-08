@@ -12,7 +12,7 @@ ppu_error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> pre
 	sys_tty.fatal("sys_tty_read(ch=%d, buf=*0x%x, len=%d, preadlen=*0x%x)", ch, buf, len, preadlen);
 
 	// We currently do not support reading from the Console
-	throw std::runtime_error("Unimplemented" HERE);
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 ppu_error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)

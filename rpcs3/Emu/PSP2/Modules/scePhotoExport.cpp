@@ -16,7 +16,7 @@ s32 scePhotoExportFromData(
 	vm::ptr<char> exportedPath,
 	s32 exportedPathLength)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 scePhotoExportFromFile(
@@ -28,7 +28,7 @@ s32 scePhotoExportFromFile(
 	vm::ptr<char> exportedPath,
 	s32 exportedPathLength)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 #define REG_FUNC(nid, name) REG_FNID(libScePhotoExport, nid, name)

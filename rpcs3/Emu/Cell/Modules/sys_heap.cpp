@@ -58,22 +58,22 @@ s32 _sys_heap_free(u32 heap, u32 addr)
 
 s32 _sys_heap_alloc_heap_memory()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_heap_get_mallinfo()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_heap_get_total_free_size()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 _sys_heap_stats()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 void sysPrxForUser_sys_heap_init()

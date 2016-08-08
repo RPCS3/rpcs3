@@ -8,27 +8,27 @@ logs::channel sceTouch("sceTouch", logs::level::notice);
 
 s32 sceTouchGetPanelInfo(u32 port, vm::ptr<SceTouchPanelInfo> pPanelInfo)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceTouchRead(u32 port, vm::ptr<SceTouchData> pData, u32 nBufs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceTouchPeek(u32 port, vm::ptr<SceTouchData> pData, u32 nBufs)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceTouchSetSamplingState(u32 port, u32 state)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 sceTouchGetSamplingState(u32 port, vm::ptr<u32> pState)
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

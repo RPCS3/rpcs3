@@ -128,6 +128,52 @@ void fmt_class_string<v128>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
+	void raw_error(const char* msg)
+	{
+		std::string out;
+
+		out += "Error: ";
+		out += msg;
+
+		throw std::runtime_error(out);
+	}
+
+	void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg)
+	{
+		std::string out;
+
+		out += "Narrow error: (";
+		sup->fmt_string(out, arg); // Print value
+		out += ")";
+
+		if (msg)
+		{
+			out += " ";
+			out += msg;
+		}
+
+		throw std::range_error(out);
+	}
+
+	// Hidden template
+	template<typename T>
+	void raw_throw_exception(const char* fmt, const fmt_type_info* sup, const u64* args)
+	{
+		std::string out;
+		raw_append(out, fmt, sup, args);
+		throw T{out};
+	}
+
+	// Explicit instantiations (not exhaustive)
+	template void raw_throw_exception<std::runtime_error>(const char*, const fmt_type_info*, const u64*);
+	template void raw_throw_exception<std::logic_error>(const char*, const fmt_type_info*, const u64*);
+	template void raw_throw_exception<std::domain_error>(const char*, const fmt_type_info*, const u64*);
+	template void raw_throw_exception<std::invalid_argument>(const char*, const fmt_type_info*, const u64*);
+	template void raw_throw_exception<std::out_of_range>(const char*, const fmt_type_info*, const u64*);
+	template void raw_throw_exception<std::range_error>(const char*, const fmt_type_info*, const u64*);
+	template void raw_throw_exception<std::overflow_error>(const char*, const fmt_type_info*, const u64*);
+	template void raw_throw_exception<std::underflow_error>(const char*, const fmt_type_info*, const u64*);
+
 	struct cfmt_src;
 }
 
@@ -189,13 +235,6 @@ struct fmt::cfmt_src
 void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup, const u64* args) noexcept
 {
 	cfmt_append(out, fmt, cfmt_src{sup, args});
-}
-
-char* fmt::alloc_format(const char* fmt, const fmt_type_info* sup, const u64* args) noexcept
-{
-	std::string str;
-	raw_append(str, fmt, sup, args);
-	return static_cast<char*>(std::memcpy(std::malloc(str.size() + 1), str.data(), str.size() + 1));
 }
 
 std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)

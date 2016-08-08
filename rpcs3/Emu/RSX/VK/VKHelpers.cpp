@@ -77,8 +77,8 @@ namespace vk
 			}
 		}
 
-		if (result.device_local == VK_MAX_MEMORY_TYPES) throw EXCEPTION("GPU doesn't support device local memory");
-		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) throw EXCEPTION("GPU doesn't support host coherent device local memory");
+		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory" HERE);
+		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory" HERE);
 		return result;
 	}
 
@@ -116,7 +116,7 @@ namespace vk
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return VK_FORMAT_R8G8_UNORM; // Not right
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return VK_FORMAT_R8G8_UNORM; // Not right
 		}
-		throw EXCEPTION("Invalid or unsupported sampler format for texture format (0x%x)", format);
+		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)" HERE, format);
 	}
 
 	VkAllocationCallbacks default_callbacks()

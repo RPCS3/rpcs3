@@ -929,7 +929,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 		return;
 	}
 
-	throw fmt::exception("Invalid syscall number (%llu)", code);
+	fmt::throw_exception("Invalid syscall number (%llu)", code);
 }
 
 extern ppu_function_t ppu_get_syscall(u64 code)

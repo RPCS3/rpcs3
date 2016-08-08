@@ -230,12 +230,12 @@ s32 cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 
 s32 cellAudioOutRegisterCallback()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellAudioOutUnregisterCallback()
 {
-	throw EXCEPTION("");
+	fmt::throw_exception("Unimplemented" HERE);
 }
 
 

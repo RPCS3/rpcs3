@@ -127,7 +127,7 @@ ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 
 
 	if (!test(open_mode))
 	{
-		throw EXCEPTION("Invalid or unimplemented flags (%#o): '%s'", flags, path.get_ptr());
+		fmt::throw_exception("Invalid or unimplemented flags (%#o): '%s'" HERE, flags, path.get_ptr());
 	}
 
 	fs::file file(local_path, open_mode);

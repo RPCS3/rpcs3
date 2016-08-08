@@ -477,7 +477,7 @@ bool is_flip_surface_in_global_memory(rsx::surface_target color_target)
 	case rsx::surface_target::none:
 		return false;
 	}
-	throw EXCEPTION("Wrong color_target");
+	fmt::throw_exception("Wrong color_target" HERE);
 }
 }
 
