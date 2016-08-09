@@ -18,7 +18,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 	{
 		writer = idm::get<ppu_thread>(wsq.front()->id);
 
-		VERIFY(!writer->state.test_and_set(cpu_state::signal));
+		VERIFY(!writer->state.test_and_set(cpu_flag::signal));
 		writer->notify();
 
 		return wsq.pop_front();
@@ -31,7 +31,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 
 		for (auto& thread : rsq)
 		{
-			VERIFY(!thread->state.test_and_set(cpu_state::signal));
+			VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 			thread->notify();
 		}
 
@@ -118,7 +118,7 @@ s32 sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(rwlock->rsq, ppu);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 
@@ -229,7 +229,7 @@ s32 sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(rwlock->wsq, ppu);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 

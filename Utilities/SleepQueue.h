@@ -9,10 +9,8 @@ static struct defer_sleep_tag {} constexpr defer_sleep{};
 template<typename T> using sleep_queue = std::deque<T*>;
 
 // Automatic object handling a thread pointer (T*) in the sleep queue
-// Sleep is called in the constructor (if not null)
-// Awake is called in the destructor (if not null)
 // Sleep queue is actually std::deque with pointers, be careful about the lifetime
-template<typename T, void(T::*Sleep)() = nullptr, void(T::*Awake)() = nullptr>
+template<typename T>
 class sleep_entry final
 {
 	sleep_queue<T>& m_queue;
@@ -24,7 +22,6 @@ public:
 		: m_queue(queue)
 		, m_thread(entry)
 	{
-		if (Sleep) (m_thread.*Sleep)();
 	}
 
 	// Constructor; calls enter()
@@ -38,7 +35,6 @@ public:
 	~sleep_entry()
 	{
 		leave();
-		if (Awake) (m_thread.*Awake)();
 	}
 
 	// Add thread to the sleep queue

@@ -25,7 +25,7 @@ void lv2_cond_t::notify(lv2_lock_t, cpu_thread* thread)
 	{
 		mutex->owner = idm::get<ppu_thread>(thread->id);
 
-		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 		thread->notify();
 	}
 }
@@ -198,7 +198,7 @@ s32 sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	// potential mutex waiter (not added immediately)
 	sleep_entry<cpu_thread> mutex_waiter(cond->mutex->sq, ppu, defer_sleep);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 

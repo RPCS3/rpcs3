@@ -374,7 +374,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 	{
 		if (thread)
 		{
-			thread->state += cpu_state::suspend;
+			thread->state += cpu_flag::suspend;
 		}
 	}
 
@@ -418,7 +418,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 	{
 		if (thread)
 		{
-			thread->state -= cpu_state::suspend;
+			thread->state -= cpu_flag::suspend;
 			thread->lock_notify();
 		}
 	}
@@ -501,7 +501,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 	{
 		if (thread)
 		{
-			thread->state += cpu_state::stop;
+			thread->state += cpu_flag::stop;
 			thread->lock_notify();
 		}
 	}
@@ -1169,7 +1169,7 @@ s32 sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	// TODO: CELL_EBUSY is not returned
 
 	// Stop thread
-	thread->state += cpu_state::stop;
+	thread->state += cpu_flag::stop;
 
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)

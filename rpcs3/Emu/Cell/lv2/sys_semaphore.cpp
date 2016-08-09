@@ -93,7 +93,7 @@ s32 sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(sem->sq, ppu);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 
@@ -173,7 +173,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 		count--;
 
 		auto& thread = sem->sq.front();
-		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 		thread->notify();
 
 		sem->sq.pop_front();

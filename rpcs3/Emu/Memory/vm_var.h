@@ -18,16 +18,17 @@ namespace vm
 		}
 	};
 
+	template<typename T>
 	struct stack_allocator
 	{
 		static inline vm::addr_t alloc(u32 size, u32 align)
 		{
-			return vm::cast(vm::stack_push(size, align));
+			return vm::cast(T::stack_push(size, align));
 		}
 
 		static inline void dealloc(u32 addr, u32 size) noexcept
 		{
-			vm::stack_pop_verbose(addr, size);
+			T::stack_pop_verbose(addr, size);
 		}
 	};
 
@@ -98,21 +99,30 @@ namespace vm
 	};
 
 	// LE variable
-	template<typename T, typename A = stack_allocator> using varl = _var_base<to_le_t<T>, A>;
+	template<typename T, typename A> using varl = _var_base<to_le_t<T>, A>;
 
 	// BE variable
-	template<typename T, typename A = stack_allocator> using varb = _var_base<to_be_t<T>, A>;
+	template<typename T, typename A> using varb = _var_base<to_be_t<T>, A>;
 
 	namespace ps3
 	{
 		// BE variable
-		template<typename T, typename A = stack_allocator> using var = varb<T, A>;
+		template<typename T, typename A = stack_allocator<ppu_thread>> using var = varb<T, A>;
 
 		// Make BE variable initialized from value
-		template<typename T>
+		template<typename T, typename A = stack_allocator<ppu_thread>>
 		inline auto make_var(const T& value)
 		{
-			return varb<T>(value);
+			return varb<T, A>(value);
+		}
+
+		// Make char[] variable initialized from std::string
+		template<typename A = stack_allocator<ppu_thread>>
+		static auto make_str(const std::string& str)
+		{
+			var<char[], A> var_(size32(str) + 1);
+			std::memcpy(var_.get_ptr(), str.c_str(), str.size() + 1);
+			return var_;
 		}
 
 		// Global HLE variable
@@ -125,13 +135,22 @@ namespace vm
 	namespace psv
 	{
 		// LE variable
-		template<typename T, typename A = stack_allocator> using var = varl<T, A>;
+		template<typename T, typename A = stack_allocator<ARMv7Thread>> using var = varl<T, A>;
 
 		// Make LE variable initialized from value
-		template<typename T>
+		template<typename T, typename A = stack_allocator<ARMv7Thread>>
 		inline auto make_var(const T& value)
 		{
-			return varl<T>(value);
+			return var<T, A>(value);
+		}
+
+		// Make char[] variable initialized from std::string
+		template<typename A = stack_allocator<ARMv7Thread>>
+		static auto make_str(const std::string& str)
+		{
+			var<char[], A> var_(size32(str) + 1);
+			std::memcpy(var_.get_ptr(), str.c_str(), str.size() + 1);
+			return var_;
 		}
 
 		// Global HLE variable
@@ -139,13 +158,5 @@ namespace vm
 		struct gvar : ptr<T>
 		{
 		};
-	}
-
-	// Make char[] variable initialized from std::string
-	static auto make_str(const std::string& str)
-	{
-		_var_base<char[], stack_allocator> var(size32(str) + 1);
-		std::memcpy(var.get_ptr(), str.c_str(), str.size() + 1);
-		return var;
 	}
 }

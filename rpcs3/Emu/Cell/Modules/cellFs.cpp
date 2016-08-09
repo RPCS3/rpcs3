@@ -699,11 +699,11 @@ struct fs_aio_thread : ppu_thread
 
 	virtual void cpu_task() override
 	{
-		while (ppu_cmd cmd = cmd_wait())
+		while (cmd64 cmd = cmd_wait())
 		{
 			const u32 type = cmd.arg1<u32>();
 			const s32 xid = cmd.arg2<s32>();
-			const ppu_cmd cmd2 = cmd_queue[cmd_queue.peek() + 1];
+			const cmd64 cmd2 = cmd_get(1);
 			const auto aio = cmd2.arg1<vm::ptr<CellFsAio>>();
 			const auto func = cmd2.arg2<fs_aio_cb_t>();
 			cmd_pop(1);

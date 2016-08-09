@@ -138,7 +138,7 @@ arm_error_code sceKernelExitThread(ARMv7Thread& cpu, s32 exitStatus)
 	sceLibKernel.warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// Exit status is stored in r0
-	cpu.state += cpu_state::exit;
+	cpu.state += cpu_flag::exit;
 
 	return SCE_OK;
 }
@@ -170,7 +170,7 @@ arm_error_code sceKernelExitDeleteThread(ARMv7Thread& cpu, s32 exitStatus)
 {
 	sceLibKernel.warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
-	//cpu.state += cpu_state::stop;
+	//cpu.state += cpu_flag::stop;
 
 	// Delete current thread; exit status is stored in r0
 	fxm::get<arm_tls_manager>()->free(cpu.TLS);
@@ -517,7 +517,7 @@ struct psp2_event_flag final
 			{
 				idm::get<ARMv7Thread>(cmd.arg, [&](u32, ARMv7Thread& cpu)
 				{
-					cpu.state += cpu_state::signal;
+					cpu.state += cpu_flag::signal;
 					cpu.lock_notify();
 				});
 
@@ -545,11 +545,11 @@ struct psp2_event_flag final
 		{
 			if (!exec(task::signal, cpu.id))
 			{
-				thread_lock{cpu}, thread_ctrl::wait(WRAP_EXPR(cpu.state.test_and_reset(cpu_state::signal)));
+				thread_lock{cpu}, thread_ctrl::wait(WRAP_EXPR(cpu.state.test_and_reset(cpu_flag::signal)));
 			}
 			else
 			{
-				cpu.state -= cpu_state::signal;
+				cpu.state -= cpu_flag::signal;
 			}
 		}
 	}
@@ -579,7 +579,7 @@ private:
 			{
 				cpu.GPR[0] = SCE_OK;
 				cpu.GPR[1] = pattern;
-				cpu.state += cpu_state::signal;
+				cpu.state += cpu_flag::signal;
 				cpu->lock_notify();
 			}
 			else
@@ -679,7 +679,7 @@ private:
 				{
 					cpu.GPR[0] = SCE_OK;
 					cpu.GPR[1] = old_pattern;
-					cpu.state += cpu_state::signal;
+					cpu.state += cpu_flag::signal;
 					cpu.owner = nullptr;
 					cpu->unlock();
 					cpu->notify();
@@ -713,7 +713,7 @@ private:
 			{
 				cpu.GPR[0] = error;
 				cpu.GPR[1] = pattern;
-				cpu.state += cpu_state::signal;
+				cpu.state += cpu_flag::signal;
 				cpu.owner = nullptr;
 				cpu->unlock();
 				cpu->notify();
@@ -858,7 +858,7 @@ arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 	cpu.GPR[1] = bitPattern;
 
 	// Second chance
-	if (evf->exec(psp2_event_flag::task::wait, cpu.id) && cpu.state.test_and_reset(cpu_state::signal))
+	if (evf->exec(psp2_event_flag::task::wait, cpu.id) && cpu.state.test_and_reset(cpu_flag::signal))
 	{
 		if (pResultPat) *pResultPat = cpu.GPR[1];
 		return SCE_OK;
@@ -866,7 +866,7 @@ arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 
 	thread_lock entry(cpu);
 
-	if (!thread_ctrl::wait_for(timeout, WRAP_EXPR(cpu.state.test_and_reset(cpu_state::signal))))
+	if (!thread_ctrl::wait_for(timeout, WRAP_EXPR(cpu.state.test_and_reset(cpu_flag::signal))))
 	{
 		// Timeout cleanup
 		cpu.owner = nullptr;

@@ -2359,7 +2359,7 @@ s32 ppu_error_code::report(s32 error, const char* text)
 {
 	if (auto thread = get_current_cpu_thread())
 	{
-		if (thread->type == cpu_type::ppu)
+		if (thread->id >= ppu_thread::id_min)
 		{
 			if (auto func = static_cast<ppu_thread*>(thread)->last_function)
 			{
@@ -2383,7 +2383,7 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 	static std::vector<ppu_function_t> list
 	{
 		nullptr,
-		[](ppu_thread& ppu) { ppu.state += cpu_state::ret; },
+		[](ppu_thread& ppu) { ppu.state += cpu_flag::ret; },
 	};
 
 	return list;

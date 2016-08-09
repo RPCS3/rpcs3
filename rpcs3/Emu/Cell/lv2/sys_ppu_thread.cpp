@@ -19,7 +19,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 	LV2_LOCK;
 
-	ppu.state += cpu_state::exit;
+	ppu.state += cpu_flag::exit;
 
 	// Delete detached thread
 	if (!ppu.is_joinable)
@@ -30,7 +30,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	// Throw if this syscall was not called directly by the SC instruction (hack)
 	if (ppu.lr == 0 || ppu.gpr[11] != 41)
 	{
-		throw cpu_state::exit;
+		throw cpu_flag::exit;
 	}
 }
 
@@ -68,7 +68,7 @@ s32 sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	thread->is_joining = true;
 
 	// join thread
-	while (!test(thread->state & cpu_state::exit))
+	while (!test(thread->state & cpu_flag::exit))
 	{
 		CHECK_EMU_STATUS;
 

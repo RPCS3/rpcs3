@@ -543,6 +543,62 @@ using any16 = any_pod<simple_t, sizeof(u16)>;
 using any32 = any_pod<simple_t, sizeof(u32)>;
 using any64 = any_pod<simple_t, sizeof(u64)>;
 
+struct cmd64 : any64
+{
+	struct pair_t
+	{
+		any32 arg1;
+		any32 arg2;
+	};
+
+	cmd64() = default;
+
+	template<typename T>
+	cmd64(const T& value)
+		: any64(value)
+	{
+	}
+
+	template<typename T1, typename T2>
+	cmd64(const T1& arg1, const T2& arg2)
+		: any64(pair_t{arg1, arg2})
+	{
+	}
+
+	explicit operator bool() const
+	{
+		return as<u64>() != 0;
+	}
+
+	// TODO: compatibility with std::pair/std::tuple?
+
+	template<typename T>
+	decltype(auto) arg1()
+	{
+		return as<pair_t>().arg1.as<T>();
+	}
+
+	template<typename T>
+	decltype(auto) arg1() const
+	{
+		return as<const pair_t>().arg1.as<const T>();
+	}
+
+	template<typename T>
+	decltype(auto) arg2()
+	{
+		return as<pair_t>().arg2.as<T>();
+	}
+
+	template<typename T>
+	decltype(auto) arg2() const
+	{
+		return as<const pair_t>().arg2.as<const T>();
+	}
+};
+
+static_assert(sizeof(cmd64) == 8 && std::is_pod<cmd64>::value, "Incorrect cmd64 type");
+
 // Allows to define integer convertible to multiple types
 template<typename T, T Value, typename T1 = void, typename... Ts>
 struct multicast : multicast<T, Value, Ts...>

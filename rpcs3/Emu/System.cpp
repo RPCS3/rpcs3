@@ -25,6 +25,8 @@
 
 #include <thread>
 
+system_type g_system;
+
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
 cfg::bool_entry g_cfg_autoexit(cfg::root.misc, "Exit RPCS3 when process finishes");
 
@@ -208,6 +210,7 @@ void Emulator::Load()
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
 			// PS3 executable
+			g_system = system_type::ps3;
 			m_status = Ready;
 			vm::ps3::init();
 
@@ -276,6 +279,7 @@ void Emulator::Load()
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
 			// PPU PRX (experimental)
+			g_system = system_type::ps3;
 			m_status = Ready;
 			vm::ps3::init();
 			ppu_load_prx(ppu_prx);
@@ -283,6 +287,7 @@ void Emulator::Load()
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
 			// SPU executable (experimental)
+			g_system = system_type::ps3;
 			m_status = Ready;
 			vm::ps3::init();
 			spu_load_exec(spu_exec);
@@ -290,6 +295,7 @@ void Emulator::Load()
 		else if (arm_exec.open(elf_file) == elf_error::ok)
 		{
 			// ARMv7 executable
+			g_system = system_type::psv;
 			m_status = Ready;
 			vm::psv::init();
 			arm_load_exec(arm_exec);
@@ -370,7 +376,7 @@ bool Emulator::Pause()
 
 	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
-		cpu.state += cpu_state::dbg_global_pause;
+		cpu.state += cpu_flag::dbg_global_pause;
 	});
 
 	SendDbgCommand(DID_PAUSED_EMU);
@@ -404,7 +410,7 @@ void Emulator::Resume()
 
 	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
-		cpu.state -= cpu_state::dbg_global_pause;
+		cpu.state -= cpu_flag::dbg_global_pause;
 		cpu.lock_notify();
 	});
 
@@ -430,7 +436,7 @@ void Emulator::Stop()
 
 		idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 		{
-			cpu.state += cpu_state::dbg_global_stop;
+			cpu.state += cpu_flag::dbg_global_stop;
 			cpu->lock();
 			cpu->set_exception(std::make_exception_ptr(EmulationStopped()));
 			cpu->unlock();

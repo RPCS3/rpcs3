@@ -118,12 +118,11 @@ void ppu_thread::cpu_task()
 	//SetHostRoundingMode(FPSCR_RN_NEAR);
 
 	// Execute cmd_queue
-	while (ppu_cmd cmd = cmd_wait())
+	while (cmd64 cmd = cmd_wait())
 	{
-		const u32 pos = cmd_queue.peek() + 1; // Additional arguments start from [pos]
 		const u32 arg = cmd.arg2<u32>(); // 32-bit arg extracted
 
-		switch (u32 type = cmd.arg1<u32>())
+		switch (auto type = cmd.arg1<ppu_cmd>())
 		{
 		case ppu_cmd::opcode:
 		{
@@ -137,7 +136,7 @@ void ppu_thread::cpu_task()
 				fmt::throw_exception("Invalid ppu_cmd::set_gpr arg (0x%x)" HERE, arg);
 			}
 
-			gpr[arg % 32] = cmd_queue[pos].load().as<u64>();
+			gpr[arg % 32] = cmd_get(1).as<u64>();
 			cmd_pop(1);
 			break;
 		}
@@ -150,7 +149,7 @@ void ppu_thread::cpu_task()
 
 			for (u32 i = 0; i < arg; i++)
 			{
-				gpr[i + 3] = cmd_queue[pos + i].load().as<u64>();
+				gpr[i + 3] = cmd_get(1 + i).as<u64>();
 			}
 
 			cmd_pop(arg);
@@ -169,7 +168,7 @@ void ppu_thread::cpu_task()
 		}
 		default:
 		{
-			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, type);
+			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, (u32)type);
 		}
 		}
 	}
@@ -249,7 +248,7 @@ ppu_thread::~ppu_thread()
 }
 
 ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
-	: cpu_thread(cpu_type::ppu)
+	: cpu_thread()
 	, prio(prio)
 	, stack_size(std::max<u32>(stack, 0x4000))
 	, stack_addr(vm::alloc(stack_size, vm::stack))
@@ -263,7 +262,7 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
 }
 
-void ppu_thread::cmd_push(ppu_cmd cmd)
+void ppu_thread::cmd_push(cmd64 cmd)
 {
 	// Reserve queue space
 	const u32 pos = cmd_queue.push_begin();
@@ -272,7 +271,7 @@ void ppu_thread::cmd_push(ppu_cmd cmd)
 	cmd_queue[pos] = cmd;
 }
 
-void ppu_thread::cmd_list(std::initializer_list<ppu_cmd> list)
+void ppu_thread::cmd_list(std::initializer_list<cmd64> list)
 {
 	// Reserve queue space
 	const u32 pos = cmd_queue.push_begin(static_cast<u32>(list.size()));
@@ -295,14 +294,14 @@ void ppu_thread::cmd_pop(u32 count)
 	// Clean command buffer for command tail
 	for (u32 i = 1; i <= count; i++)
 	{
-		cmd_queue[pos + i].raw() = ppu_cmd{};
+		cmd_queue[pos + i].raw() = cmd64{};
 	}
 
 	// Free
 	cmd_queue.pop_end(count + 1);
 }
 
-ppu_cmd ppu_thread::cmd_wait()
+cmd64 ppu_thread::cmd_wait()
 {
 	std::unique_lock<named_thread> lock(*this, std::defer_lock);
 
@@ -314,12 +313,12 @@ ppu_cmd ppu_thread::cmd_wait()
 
 			if (check_state()) // check_status() requires unlocked mutex
 			{
-				return ppu_cmd{};
+				return cmd64{};
 			}
 		}
 
 		// Lightweight queue doesn't care about mutex state
-		if (ppu_cmd result = cmd_queue[cmd_queue.peek()].exchange(ppu_cmd{}))
+		if (cmd64 result = cmd_queue[cmd_queue.peek()].exchange(cmd64{}))
 		{
 			return result;
 		}
@@ -365,15 +364,15 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	{
 		exec_task();
 
-		if (gpr[1] != old_stack && !test(state, cpu_state::ret + cpu_state::exit)) // gpr[1] shouldn't change
+		if (gpr[1] != old_stack && !test(state, cpu_flag::ret + cpu_flag::exit)) // gpr[1] shouldn't change
 		{
 			fmt::throw_exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, gpr[1], old_stack);
 		}
 	}
-	catch (cpu_state _s)
+	catch (cpu_flag _s)
 	{
 		state += _s;
-		if (_s != cpu_state::ret) throw;
+		if (_s != cpu_flag::ret) throw;
 	}
 	catch (EmulationStopped)
 	{
@@ -388,7 +387,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 		throw;
 	}
 
-	state -= cpu_state::ret;
+	state -= cpu_flag::ret;
 
 	cia = old_pc;
 	gpr[1] = old_stack;
@@ -396,6 +395,51 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	lr = old_lr;
 	last_function = old_func;
 	g_tls_log_prefix = old_fmt;
+}
+
+u32 ppu_thread::stack_push(u32 size, u32 align_v)
+{
+	if (auto cpu = get_current_cpu_thread()) if (cpu->id >= id_min)
+	{
+		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
+
+		const u32 old_pos = vm::cast(context.gpr[1], HERE);
+		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
+		context.gpr[1] &= ~(align_v - 1); // fix stack alignment
+
+		if (context.gpr[1] < context.stack_addr)
+		{
+			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)" HERE, size, align_v, old_pos, context.stack_addr);
+		}
+		else
+		{
+			const u32 addr = static_cast<u32>(context.gpr[1]);
+			vm::ps3::_ref<nse_t<u32>>(addr + size) = old_pos;
+			std::memset(vm::base(addr), 0, size);
+			return addr;
+		}
+	}
+
+	fmt::throw_exception("Invalid thread" HERE);
+}
+
+void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
+{
+	if (auto cpu = get_current_cpu_thread()) if (cpu->id >= id_min)
+	{
+		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
+
+		if (context.gpr[1] != addr)
+		{
+			LOG_ERROR(PPU, "Stack inconsistency (addr=0x%x, SP=0x%llx, size=0x%x)", addr, context.gpr[1], size);
+			return;
+		}
+
+		context.gpr[1] = vm::ps3::_ref<nse_t<u32>>(context.gpr[1] + size);
+		return;
+	}
+
+	LOG_ERROR(PPU, "Invalid thread" HERE);
 }
 
 const ppu_decoder<ppu_itype> s_ppu_itype;

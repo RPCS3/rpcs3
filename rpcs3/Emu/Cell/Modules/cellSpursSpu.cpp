@@ -1819,7 +1819,7 @@ void spursTasksetDispatch(SPUThread& spu)
 		{
 			// TODO: Figure this out
 			spu.status |= SPU_STATUS_STOPPED_BY_STOP;
-			throw cpu_state::stop;
+			throw cpu_flag::stop;
 		}
 
 		spursTasksetStartTask(spu, taskInfo->args);
@@ -1873,7 +1873,7 @@ void spursTasksetDispatch(SPUThread& spu)
 		{
 			// TODO: Figure this out
 			spu.status |= SPU_STATUS_STOPPED_BY_STOP;
-			throw cpu_state::stop;
+			throw cpu_flag::stop;
 		}
 
 		spu.gpr[3].clear();

@@ -21,7 +21,7 @@ void lv2_lwmutex_t::unlock(lv2_lock_t)
 	if (sq.size())
 	{
 		auto& thread = sq.front();
-		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 		thread->notify();
 
 		sq.pop_front();
@@ -100,7 +100,7 @@ s32 _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(mutex->sq, ppu);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 

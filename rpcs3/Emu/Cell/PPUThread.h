@@ -5,75 +5,25 @@
 #include "../Memory/vm.h"
 #include "Utilities/lockless.h"
 
-// Lightweight PPU command queue element
-struct ppu_cmd : any64
+enum class ppu_cmd : u32
 {
-	enum : u32
-	{
-		none = 0,
+	null,
 
-		opcode, // Execute PPU instruction from arg
-		set_gpr, // Set gpr[arg] (+1 cmd)
-		set_args, // Set general-purpose args (+arg cmd)
-		lle_call, // Load addr and rtoc at *arg or *gpr[arg] and execute
-		hle_call, // Execute function by index (arg)
-	};
-
-	struct pair_t
-	{
-		any32 arg1;
-		any32 arg2;
-	};
-
-	ppu_cmd() = default;
-
-	template<typename T>
-	ppu_cmd(const T& value)
-		: any64(value)
-	{
-	}
-
-	template<typename T1, typename T2>
-	ppu_cmd(const T1& arg1, const T2& arg2)
-		: any64(pair_t{arg1, arg2})
-	{
-	}
-
-	explicit operator bool() const
-	{
-		return as<u64>() != 0;
-	}
-
-	template<typename T>
-	decltype(auto) arg1()
-	{
-		return as<pair_t>().arg1.as<T>();
-	}
-
-	template<typename T>
-	decltype(auto) arg1() const
-	{
-		return as<const pair_t>().arg1.as<const T>();
-	}
-
-	template<typename T>
-	decltype(auto) arg2()
-	{
-		return as<pair_t>().arg2.as<T>();
-	}
-
-	template<typename T>
-	decltype(auto) arg2() const
-	{
-		return as<const pair_t>().arg2.as<const T>();
-	}
+	opcode, // Execute PPU instruction from arg
+	set_gpr, // Set gpr[arg] (+1 cmd)
+	set_args, // Set general-purpose args (+arg cmd)
+	lle_call, // Load addr and rtoc at *arg or *gpr[arg] and execute
+	hle_call, // Execute function by index (arg)
 };
-
-static_assert(sizeof(ppu_cmd) == 8 && std::is_pod<ppu_cmd>::value, "Incorrect ppu_cmd struct");
 
 class ppu_thread : public cpu_thread
 {
 public:
+	using id_base = ppu_thread;
+
+	static constexpr u32 id_min = 0x80000000; // TODO (used to determine thread type)
+	static constexpr u32 id_max = 0x8fffffff;
+
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
 	virtual void cpu_init() override final {}
@@ -174,12 +124,13 @@ public:
 	bool is_joinable = true;
 	bool is_joining = false;
 
-	lf_fifo<atomic_t<ppu_cmd>, 255> cmd_queue; // Command queue for asynchronous operations.
+	lf_fifo<atomic_t<cmd64>, 255> cmd_queue; // Command queue for asynchronous operations.
 
-	void cmd_push(ppu_cmd);
-	void cmd_list(std::initializer_list<ppu_cmd>);
+	void cmd_push(cmd64);
+	void cmd_list(std::initializer_list<cmd64>);
 	void cmd_pop(u32 = 0);
-	ppu_cmd cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
+	cmd64 cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
+	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 
 	const char* last_function{}; // Last function name for diagnosis, optimized for speed.
 
@@ -200,6 +151,9 @@ public:
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
 	void fast_call(u32 addr, u32 rtoc);
+
+	static u32 stack_push(u32 size, u32 align_v);
+	static void stack_pop_verbose(u32 addr, u32 size) noexcept;
 };
 
 template<typename T, typename = void>

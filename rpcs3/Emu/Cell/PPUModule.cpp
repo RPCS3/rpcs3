@@ -144,7 +144,7 @@ extern void ppu_execute_function(ppu_thread& ppu, u32 index)
 	if (index < g_ppu_function_cache.size())
 	{
 		// If autopause occures, check_status() will hold the thread until unpaused.
-		if (debug::autopause::pause_function(g_ppu_fnid_cache[index]) && ppu.check_state()) throw cpu_state::ret;
+		if (debug::autopause::pause_function(g_ppu_fnid_cache[index]) && ppu.check_state()) throw cpu_flag::ret;
 
 		if (const auto func = g_ppu_function_cache[index])
 		{
