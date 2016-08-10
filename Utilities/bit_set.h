@@ -199,32 +199,32 @@ struct bs_base
 		return (shift(lhs) & static_cast<under>(rhs)) != 0;
 	}
 
-	friend constexpr bool test_and_set(type& lhs, type rhs)
+	friend bool test_and_set(type& lhs, type rhs)
 	{
 		return test_and_set(reinterpret_cast<under&>(lhs), static_cast<under>(rhs));
 	}
 
-	friend constexpr bool test_and_set(type& lhs, T rhs)
+	friend bool test_and_set(type& lhs, T rhs)
 	{
 		return test_and_set(reinterpret_cast<under&>(lhs), shift(rhs));
 	}
 
-	friend constexpr bool test_and_reset(type& lhs, type rhs)
+	friend bool test_and_reset(type& lhs, type rhs)
 	{
 		return test_and_reset(reinterpret_cast<under&>(lhs), static_cast<under>(rhs));
 	}
 
-	friend constexpr bool test_and_reset(type& lhs, T rhs)
+	friend bool test_and_reset(type& lhs, T rhs)
 	{
 		return test_and_reset(reinterpret_cast<under&>(lhs), shift(rhs));
 	}
 
-	friend constexpr bool test_and_complement(type& lhs, type rhs)
+	friend bool test_and_complement(type& lhs, type rhs)
 	{
 		return test_and_complement(reinterpret_cast<under&>(lhs), static_cast<under>(rhs));
 	}
 
-	friend constexpr bool test_and_complement(type& lhs, T rhs)
+	friend bool test_and_complement(type& lhs, T rhs)
 	{
 		return test_and_complement(reinterpret_cast<under&>(lhs), shift(rhs));
 	}
@@ -461,6 +461,8 @@ struct atomic_test_and_set<BS, T, void_t<decltype(T::__bitset_enum_max), std::en
 		return atomic_storage<under>::bts(reinterpret_cast<under&>(left), static_cast<uint>(static_cast<under>(value)));
 	}
 
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
 	static constexpr auto atomic_op = &_op;
 };
 
@@ -474,6 +476,8 @@ struct atomic_test_and_reset<BS, T, void_t<decltype(T::__bitset_enum_max), std::
 		return atomic_storage<under>::btr(reinterpret_cast<under&>(left), static_cast<uint>(static_cast<under>(value)));
 	}
 
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
 	static constexpr auto atomic_op = &_op;
 };
 
@@ -487,6 +491,53 @@ struct atomic_test_and_complement<BS, T, void_t<decltype(T::__bitset_enum_max), 
 		return atomic_storage<under>::btc(reinterpret_cast<under&>(left), static_cast<uint>(static_cast<under>(value)));
 	}
 
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T>
+struct atomic_test_and_set<T, T, void_t<decltype(T::__bitset_set_type)>>
+{
+	using under = std::underlying_type_t<T>;
+
+	static inline bool _op(T& left, T value)
+	{
+		return atomic_storage<under>::test_and_set(reinterpret_cast<under&>(left), static_cast<under>(value));
+	}
+
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T>
+struct atomic_test_and_reset<T, T, void_t<decltype(T::__bitset_set_type)>>
+{
+	using under = std::underlying_type_t<T>;
+
+	static inline bool _op(T& left, T value)
+	{
+		return atomic_storage<under>::test_and_reset(reinterpret_cast<under&>(left), static_cast<under>(value));
+	}
+
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T>
+struct atomic_test_and_complement<T, T, void_t<decltype(T::__bitset_set_type)>>
+{
+	using under = std::underlying_type_t<T>;
+
+	static inline bool _op(T& left, T value)
+	{
+		return atomic_storage<under>::test_and_complement(reinterpret_cast<under&>(left), static_cast<under>(value));
+	}
+
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
 	static constexpr auto atomic_op = &_op;
 };
 
@@ -633,4 +684,49 @@ struct atomic_xor<T, T, void_t<decltype(T::__bitwise_ops), std::enable_if_t<std:
 
 	static constexpr auto op_fetch = &op2;
 	static constexpr auto atomic_op = &op2;
+};
+
+template<typename T>
+struct atomic_test_and_set<T, T, void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+{
+	using under = std::underlying_type_t<T>;
+
+	static inline bool _op(T& left, T value)
+	{
+		return atomic_storage<under>::test_and_set(reinterpret_cast<under&>(left), static_cast<under>(value));
+	}
+
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T>
+struct atomic_test_and_reset<T, T, void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+{
+	using under = std::underlying_type_t<T>;
+
+	static inline bool _op(T& left, T value)
+	{
+		return atomic_storage<under>::test_and_reset(reinterpret_cast<under&>(left), static_cast<under>(value));
+	}
+
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T>
+struct atomic_test_and_complement<T, T, void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+{
+	using under = std::underlying_type_t<T>;
+
+	static inline bool _op(T& left, T value)
+	{
+		return atomic_storage<under>::test_and_complement(reinterpret_cast<under&>(left), static_cast<under>(value));
+	}
+
+	static constexpr auto fetch_op = &_op;
+	static constexpr auto op_fetch = &_op;
+	static constexpr auto atomic_op = &_op;
 };
