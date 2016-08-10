@@ -487,7 +487,9 @@ void GLGSRender::end()
 		}
 	}
 
-	u32 offset_in_index_buffer = set_vertex_buffer();
+	u32 vertex_draw_count;
+	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
+	std::tie(vertex_draw_count, indexed_draw_info)  = set_vertex_buffer();
 	m_vao.bind();
 
 	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
@@ -497,26 +499,9 @@ void GLGSRender::end()
 		m_program->validate();
 	}
 
-	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
+	if (indexed_draw_info)
 	{
-		rsx::index_array_type indexed_type = rsx::method_registers.index_type();
-
-		if (indexed_type == rsx::index_array_type::u32)
-		{
-			__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, GL_UNSIGNED_INT, (GLvoid *)(std::ptrdiff_t)offset_in_index_buffer);
-		}
-		else if (indexed_type == rsx::index_array_type::u16)
-		{
-			__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, GL_UNSIGNED_SHORT, (GLvoid *)(std::ptrdiff_t)offset_in_index_buffer);
-		}
-		else
-		{
-			throw std::logic_error("bad index array type");
-		}
-	}
-	else if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
-	{
-		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, GL_UNSIGNED_SHORT, (GLvoid *)(std::ptrdiff_t)offset_in_index_buffer);
+		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, std::get<0>(indexed_draw_info.value()), (GLvoid *)(std::ptrdiff_t)std::get<1>(indexed_draw_info.value()));
 	}
 	else
 	{

@@ -4,6 +4,7 @@
 #include "rsx_gl_texture.h"
 #include "gl_texture_cache.h"
 #include "gl_render_targets.h"
+#include <Utilities/optional.hpp>
 
 #define RSX_DEBUG 1
 
@@ -56,7 +57,14 @@ public:
 private:
 	static u32 enable(u32 enable, u32 cap);
 	static u32 enable(u32 enable, u32 cap, u32 index);
-	u32 set_vertex_buffer();
+
+	// Return element to draw and in case of indexed draw index type and offset in index buffer
+	std::tuple<u32, std::optional<std::tuple<GLenum, u32> > > set_vertex_buffer();
+
+	void upload_vertex_buffers(const u32 &max_index, const u32 &max_vertex_attrib_size, const u32 &input_mask, const u32 &texture_index_offset);
+
+	// Returns vertex count
+	u32 upload_inline_array(const u32 &max_vertex_attrib_size, const u32 &texture_index_offset);
 
 public:
 	bool load_program();
