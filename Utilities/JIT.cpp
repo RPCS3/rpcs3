@@ -46,7 +46,7 @@ static const u64 s_memory_size = 0x20000000;
 static void* const s_memory = []() -> void*
 {
 #ifdef _WIN32
-	for (u64 addr = 0x1000000; addr <= 0x60000000; addr += 0x1000000)
+	for (u64 addr = 0x10000000; addr <= 0x60000000; addr += 0x1000000)
 	{
 		if (VirtualAlloc((void*)addr, s_memory_size, MEM_RESERVE, PAGE_NOACCESS))
 		{
@@ -59,6 +59,10 @@ static void* const s_memory = []() -> void*
 	return ::mmap((void*)0x10000000, s_memory_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
 }();
+
+// Code section
+static u8* s_code_addr;
+static u64 s_code_size;
 
 // EH frames
 static u8* s_unwind_info;
@@ -125,6 +129,9 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			return nullptr;
 		}
 
+		s_code_addr = (u8*)m_next;
+		s_code_size = size;
+
 		LOG_SUCCESS(GENERAL, "LLVM: Code section %u '%s' allocated -> 0x%p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), m_next, size, align);
 		return (u8*)std::exchange(m_next, (void*)next);
 	}
@@ -138,6 +145,11 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		{
 			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
 			return nullptr;
+		}
+
+		if (!is_ro)
+		{
+			LOG_ERROR(GENERAL, "LLVM: Writeable data section not supported!");
 		}
 
 #ifdef _WIN32
@@ -156,7 +168,15 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 
 	virtual bool finalizeMemory(std::string* = nullptr) override
 	{
-		// TODO: make sections read-only when necessary
+		// TODO: make only read-only sections read-only
+#ifdef _WIN32
+		DWORD op;
+		VirtualProtect(s_memory, (u64)m_next - (u64)s_memory, PAGE_READONLY, &op);
+		VirtualProtect(s_code_addr, s_code_size, PAGE_EXECUTE_READ, &op);
+#else
+		::mprotect(s_memory, (u64)m_next - (u64)s_memory, PROT_READ);
+		::mprotect(s_code_addr, s_code_size, PROT_READ | PROT_EXEC);
+#endif
 		return false;
 	}
 
@@ -267,19 +287,17 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 		func_set.emplace(pair.second);
 	}
 
-	// Hack (cannot obtain last function size)
-	func_set.emplace(::align(*--func_set.end() + 4096, 4096));
-
 	const u64 base = (u64)s_memory;
 	const u8* bits = s_unwind_info;
 
 	s_unwind.clear();
 	s_unwind.reserve(m_map.size());
 
-	for (auto it = func_set.begin(), end = --func_set.end(); it != end; it++)
+	for (const u64 addr : func_set)
 	{
-		const u64 addr = *it;
-		const u64 next = *func_set.upper_bound(addr);
+		// Find next function address
+		const auto _next = func_set.upper_bound(addr);
+		const u64 next = _next != func_set.end() ? *_next : (u64)s_code_addr + s_code_size;
 
 		// Generate RUNTIME_FUNCTION record
 		RUNTIME_FUNCTION uw;
@@ -297,6 +315,7 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 
 		if (flags != 1) 
 		{
+			// Can't happen for trivial code
 			LOG_ERROR(GENERAL, "LLVM: unsupported UNWIND_INFO version/flags (0x%02x)", flags);
 			break;
 		}
@@ -306,11 +325,11 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 
 	if (s_unwind_info + s_unwind_size != bits)
 	{
-		LOG_FATAL(GENERAL, "LLVM: .xdata analysis failed! (0x%p != 0x%p)", s_unwind_info + s_unwind_size, bits);
+		LOG_ERROR(GENERAL, "LLVM: .xdata analysis failed! (0x%p != 0x%p)", s_unwind_info + s_unwind_size, bits);
 	}
 	else if (!RtlAddFunctionTable(s_unwind.data(), (DWORD)s_unwind.size(), base))
 	{
-		LOG_FATAL(GENERAL, "RtlAddFunctionTable(addr=0x%p) failed! Error %u", s_unwind_info, GetLastError());
+		LOG_ERROR(GENERAL, "RtlAddFunctionTable(addr=0x%p) failed! Error %u", s_unwind_info, GetLastError());
 	}
 	else
 	{
