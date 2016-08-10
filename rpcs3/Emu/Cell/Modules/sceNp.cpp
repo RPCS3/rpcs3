@@ -1521,6 +1521,11 @@ s32 _Z32_sce_np_sysutil_cxml_prepare_docPN16sysutil_cxmlutil11FixedMemoryERN4cxm
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 sceNp_AFC62605()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
 
 DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 {
@@ -1755,4 +1760,5 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, _Z31_sce_np_sysutil_send_packet_subiRN4cxml8DocumentE);
 	REG_FUNC(sceNp, _Z37sce_np_matching_set_matching2_runningb);
 	REG_FUNC(sceNp, _Z32_sce_np_sysutil_cxml_prepare_docPN16sysutil_cxmlutil11FixedMemoryERN4cxml8DocumentEPKcRNS2_7ElementES6_i);
+	REG_FNID(sceNp, 0xAFC62605, sceNp_AFC62605);
 });
