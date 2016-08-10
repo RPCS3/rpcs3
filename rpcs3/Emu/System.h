@@ -3,6 +3,16 @@
 #include "VFS.h"
 #include "DbgCommand.h"
 
+enum class system_type
+{
+	ps3,
+	psv, // Experimental
+	//psp, // Hypothetical
+};
+
+// Current process type
+extern system_type g_system;
+
 enum class frame_type;
 
 struct EmuCallbacks

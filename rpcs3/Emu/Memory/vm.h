@@ -360,9 +360,6 @@ namespace vm
 
 	void close();
 
-	u32 stack_push(u32 size, u32 align_v);
-	void stack_pop_verbose(u32 addr, u32 size) noexcept;
-
 	extern thread_local u64 g_tls_fault_count;
 }
 

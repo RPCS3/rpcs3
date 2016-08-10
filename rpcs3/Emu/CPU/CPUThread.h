@@ -3,16 +3,8 @@
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
 
-// CPU Thread Type (TODO: probably remove, use id and idm to classify threads)
-enum class cpu_type : u8
-{
-	ppu, // PPU Thread
-	spu, // SPU Thread
-	arm, // ARMv7 Thread
-};
-
-// CPU Thread State flags (TODO: use u32 once cpu_type is removed)
-enum class cpu_state : u16
+// cpu_thread state flags
+enum class cpu_flag : u32
 {
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
@@ -28,8 +20,8 @@ enum class cpu_state : u16
 	__bitset_enum_max
 };
 
-// CPU Thread State flags: pause state union
-constexpr bs_t<cpu_state> cpu_state_pause = cpu_state::suspend + cpu_state::dbg_global_pause + cpu_state::dbg_pause;
+// cpu_flag set for pause state
+constexpr bs_t<cpu_flag> cpu_state_pause = cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause;
 
 class cpu_thread : public named_thread
 {
@@ -40,12 +32,11 @@ public:
 	virtual ~cpu_thread() override;
 
 	const id_value<> id{};
-	const cpu_type type;
 
-	cpu_thread(cpu_type type);
+	cpu_thread();
 
 	// Public thread state
-	atomic_t<bs_t<cpu_state>> state{+cpu_state::stop};
+	atomic_t<bs_t<cpu_flag>> state{+cpu_flag::stop};
 
 	// Object associated with sleep state, possibly synchronization primitive (mutex, semaphore, etc.)
 	atomic_t<void*> owner{};

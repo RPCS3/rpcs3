@@ -14,11 +14,11 @@
 
 #include "asmjit.h"
 
-#define SPU_OFF_128(x) asmjit::host::oword_ptr(*cpu, OFFSET_32(SPUThread, x))
-#define SPU_OFF_64(x) asmjit::host::qword_ptr(*cpu, OFFSET_32(SPUThread, x))
-#define SPU_OFF_32(x) asmjit::host::dword_ptr(*cpu, OFFSET_32(SPUThread, x))
-#define SPU_OFF_16(x) asmjit::host::word_ptr(*cpu, OFFSET_32(SPUThread, x))
-#define SPU_OFF_8(x) asmjit::host::byte_ptr(*cpu, OFFSET_32(SPUThread, x))
+#define SPU_OFF_128(x) asmjit::host::oword_ptr(*cpu, (std::conditional_t<sizeof(SPUThread::x) == 16, u32, void>)OFFSET_32(SPUThread, x))
+#define SPU_OFF_64(x) asmjit::host::qword_ptr(*cpu, (std::conditional_t<sizeof(SPUThread::x) == 8, u32, void>)OFFSET_32(SPUThread, x))
+#define SPU_OFF_32(x) asmjit::host::dword_ptr(*cpu, (std::conditional_t<sizeof(SPUThread::x) == 4, u32, void>)OFFSET_32(SPUThread, x))
+#define SPU_OFF_16(x) asmjit::host::word_ptr(*cpu, (std::conditional_t<sizeof(SPUThread::x) == 2, u32, void>)OFFSET_32(SPUThread, x))
+#define SPU_OFF_8(x) asmjit::host::byte_ptr(*cpu, (std::conditional_t<sizeof(SPUThread::x) == 1, u32, void>)OFFSET_32(SPUThread, x))
 
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter; // TODO: remove
 const spu_decoder<spu_recompiler> s_spu_decoder;
@@ -345,7 +345,7 @@ void spu_recompiler::FunctionCall()
 				// Proceed recursively
 				spu_recompiler_base::enter(*_spu);
 
-				if (test(_spu->state & cpu_state::ret))
+				if (test(_spu->state & cpu_flag::ret))
 				{
 					break;
 				}
@@ -2186,7 +2186,7 @@ void spu_recompiler::BR(spu_opcode_t op)
 		c->mov(*addr, target | 0x2000000);
 		//c->cmp(asmjit::host::dword_ptr(*ls, m_pos), 0x32); // compare instruction opcode with BR-to-self
 		//c->je(labels[target / 4]);
-		c->lock().or_(SPU_OFF_16(state), static_cast<u16>(cpu_state::stop + cpu_state::ret));
+		c->lock().or_(SPU_OFF_32(state), static_cast<u32>(cpu_flag::stop + cpu_flag::ret));
 		c->jmp(*end);
 		c->unuse(*addr);
 		return;

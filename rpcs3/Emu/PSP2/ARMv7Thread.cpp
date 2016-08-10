@@ -120,7 +120,7 @@ ARMv7Thread::~ARMv7Thread()
 }
 
 ARMv7Thread::ARMv7Thread(const std::string& name)
-	: cpu_thread(cpu_type::arm)
+	: cpu_thread()
 	, m_name(name)
 {
 }
@@ -142,15 +142,15 @@ void ARMv7Thread::fast_call(u32 addr)
 	{
 		cpu_task_main();
 
-		if (SP != old_SP && !test(state, cpu_state::ret + cpu_state::exit)) // SP shouldn't change
+		if (SP != old_SP && !test(state, cpu_flag::ret + cpu_flag::exit)) // SP shouldn't change
 		{
 			fmt::throw_exception("Stack inconsistency (addr=0x%x, SP=0x%x, old=0x%x)", addr, SP, old_SP);
 		}
 	}
-	catch (cpu_state _s)
+	catch (cpu_flag _s)
 	{
 		state += _s;
-		if (_s != cpu_state::ret) throw;
+		if (_s != cpu_flag::ret) throw;
 	}
 	catch (EmulationStopped)
 	{
@@ -165,11 +165,54 @@ void ARMv7Thread::fast_call(u32 addr)
 		throw;
 	}
 
-	state -= cpu_state::ret;
+	state -= cpu_flag::ret;
 
 	PC = old_PC;
 	SP = old_SP;
 	LR = old_LR;
 	custom_task = std::move(old_task);
 	last_function = old_func;
+}
+
+u32 ARMv7Thread::stack_push(u32 size, u32 align_v)
+{
+	if (auto cpu = get_current_cpu_thread())
+	{
+		ARMv7Thread& context = static_cast<ARMv7Thread&>(*cpu);
+
+		const u32 old_pos = context.SP;
+		context.SP -= align(size + 4, 4); // room minimal possible size
+		context.SP &= ~(align_v - 1); // fix stack alignment
+
+		if (context.SP < context.stack_addr)
+		{
+			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%x, stack=*0x%x)" HERE, size, align_v, context.SP, context.stack_addr);
+		}
+		else
+		{
+			vm::psv::_ref<nse_t<u32>>(context.SP + size) = old_pos;
+			return context.SP;
+		}
+	}
+
+	fmt::throw_exception("Invalid thread" HERE);
+}
+
+void ARMv7Thread::stack_pop_verbose(u32 addr, u32 size) noexcept
+{
+	if (auto cpu = get_current_cpu_thread())
+	{
+		ARMv7Thread& context = static_cast<ARMv7Thread&>(*cpu);
+
+		if (context.SP != addr)
+		{
+			LOG_ERROR(ARMv7, "Stack inconsistency (addr=0x%x, SP=0x%x, size=0x%x)", addr, context.SP, size);
+			return;
+		}
+
+		context.SP = vm::psv::_ref<nse_t<u32>>(context.SP + size);
+		return;
+	}
+
+	LOG_ERROR(ARMv7, "Invalid thread" HERE);
 }

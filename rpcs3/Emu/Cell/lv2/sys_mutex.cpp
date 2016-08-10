@@ -20,7 +20,7 @@ void lv2_mutex_t::unlock(lv2_lock_t)
 		// pick new owner; protocol is ignored in current implementation
 		owner = idm::get<ppu_thread>(sq.front()->id);
 
-		VERIFY(!owner->state.test_and_set(cpu_state::signal));
+		VERIFY(!owner->state.test_and_set(cpu_flag::signal));
 		owner->notify();
 	}
 }
@@ -135,7 +135,7 @@ s32 sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(mutex->sq, ppu);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 

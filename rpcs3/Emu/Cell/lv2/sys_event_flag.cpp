@@ -29,7 +29,7 @@ void lv2_event_flag_t::notify_all(lv2_lock_t)
 			// save pattern
 			ppu.gpr[4] = clear_pattern(bitptn, mode);
 
-			VERIFY(!thread->state.test_and_set(cpu_state::signal));
+			VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 			thread->notify();
 
 			return true;
@@ -146,7 +146,7 @@ s32 sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(eflag->sq, ppu);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 
@@ -292,7 +292,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		// clear "mode" as a sign of cancellation
 		ppu.gpr[5] = 0;
 
-		VERIFY(!thread->state.test_and_set(cpu_state::signal));
+		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 		thread->notify();
 	}
 

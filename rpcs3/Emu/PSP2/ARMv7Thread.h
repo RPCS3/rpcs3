@@ -196,6 +196,9 @@ public:
 	}
 
 	void fast_call(u32 addr);
+
+	static u32 stack_push(u32 size, u32 align_v);
+	static void stack_pop_verbose(u32 addr, u32 size) noexcept;
 };
 
 template<typename T, typename = void>

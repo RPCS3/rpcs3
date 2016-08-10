@@ -30,7 +30,7 @@ void lv2_lwcond_t::notify(lv2_lock_t, cpu_thread* thread, const std::shared_ptr<
 		mutex->signaled--;
 	}
 
-	VERIFY(!thread->state.test_and_set(cpu_state::signal));
+	VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 	thread->notify();
 }
 
@@ -180,7 +180,7 @@ s32 _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 t
 	// potential mutex waiter (not added immediately)
 	sleep_entry<cpu_thread> mutex_waiter(cond->sq, ppu, defer_sleep);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 

@@ -39,22 +39,19 @@ s32 arm_error_code::report(s32 error, const char* text)
 {
 	if (auto thread = get_current_cpu_thread())
 	{
-		if (thread->type == cpu_type::arm)
+		if (auto func = static_cast<ARMv7Thread*>(thread)->last_function)
 		{
-			if (auto func = static_cast<ARMv7Thread*>(thread)->last_function)
-			{
-				LOG_ERROR(ARMv7, "Function '%s' failed with 0x%08x : %s", func, error, text);
-			}
-			else
-			{
-				LOG_ERROR(ARMv7, "Unknown function failed with 0x%08x : %s", error, text);
-			}
-
-			return error;
+			LOG_ERROR(ARMv7, "Function '%s' failed with 0x%08x : %s", func, error, text);
 		}
+		else
+		{
+			LOG_ERROR(ARMv7, "Unknown function failed with 0x%08x : %s", error, text);
+		}
+
+		return error;
 	}
 
-	LOG_ERROR(ARMv7, "Illegal call to ppu_report_error(0x%x, '%s')!");
+	LOG_ERROR(ARMv7, "Illegal call to arm_report_error(0x%x, '%s')!");
 	return error;
 }
 
@@ -63,7 +60,7 @@ std::vector<arm_function_t>& arm_function_manager::access()
 	static std::vector<arm_function_t> list
 	{
 		nullptr,
-		[](ARMv7Thread& cpu) { cpu.state += cpu_state::ret; },
+		[](ARMv7Thread& cpu) { cpu.state += cpu_flag::ret; },
 	};
 
 	return list;

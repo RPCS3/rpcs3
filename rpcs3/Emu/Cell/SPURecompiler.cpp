@@ -24,7 +24,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	// Reset callstack if necessary
 	if (func->does_reset_stack && spu.recursion_level)
 	{
-		spu.state += cpu_state::ret;
+		spu.state += cpu_flag::ret;
 		return;
 	}
 

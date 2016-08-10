@@ -183,7 +183,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
 			status &= ~SPU_STATUS_RUNNING;
-			state += cpu_state::stop;
+			state += cpu_flag::stop;
 		}
 		else
 		{

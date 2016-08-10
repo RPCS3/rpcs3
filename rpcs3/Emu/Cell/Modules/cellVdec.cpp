@@ -25,7 +25,7 @@ vm::gvar<s32> _cell_vdec_prx_ver; // ???
 
 enum class vdec_cmd : u32
 {
-	none = 0,
+	null,
 
 	start_seq,
 	end_seq,
@@ -150,7 +150,7 @@ struct vdec_thread : ppu_thread
 
 	virtual void cpu_task() override
 	{
-		while (ppu_cmd cmd = cmd_wait())
+		while (cmd64 cmd = cmd_wait())
 		{
 			switch (vdec_cmd vcmd = cmd.arg1<vdec_cmd>())
 			{
@@ -182,14 +182,13 @@ struct vdec_thread : ppu_thread
 
 				if (vcmd == vdec_cmd::decode)
 				{
-					const u32 pos = cmd_queue.peek();
 					au_type = cmd.arg2<u32>();  // TODO
-					au_addr = cmd_queue[pos + 1].load().arg1<u32>();
-					au_size = cmd_queue[pos + 1].load().arg2<u32>();
-					au_pts = cmd_queue[pos + 2].load().as<u64>();
-					au_dts = cmd_queue[pos + 3].load().as<u64>();
-					au_usrd = cmd_queue[pos + 4].load().as<u64>(); // TODO
-					au_spec = cmd_queue[pos + 5].load().as<u64>(); // TODO
+					au_addr = cmd_get(1).arg1<u32>();
+					au_size = cmd_get(1).arg2<u32>();
+					au_pts = cmd_get(2).as<u64>();
+					au_dts = cmd_get(3).as<u64>();
+					au_usrd = cmd_get(4).as<u64>(); // TODO
+					au_spec = cmd_get(5).as<u64>(); // TODO
 					cmd_pop(5);
 
 					packet.data = vm::_ptr<u8>(au_addr);
@@ -349,7 +348,7 @@ struct vdec_thread : ppu_thread
 			case vdec_cmd::close:
 			{
 				cmd_pop();
-				state += cpu_state::exit;
+				state += cpu_flag::exit;
 				return;
 			}
 

@@ -34,7 +34,7 @@ void lv2_int_serv_t::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
 	thread->lock_notify();
 
 	// Join thread (TODO)
-	while (!test(thread->state & cpu_state::exit))
+	while (!test(thread->state & cpu_flag::exit))
 	{
 		CHECK_EMU_STATUS;
 
@@ -91,7 +91,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	}
 
 	// If interrupt thread is running, it's already established on another interrupt tag
-	if (!test(it->state & cpu_state::stop))
+	if (!test(it->state & cpu_flag::stop))
 	{
 		return CELL_EAGAIN;
 	}
@@ -139,13 +139,13 @@ void sys_interrupt_thread_eoi(ppu_thread& ppu) // Low-level PPU function example
 	// Low-level function body must guard all C++-ish calls and all objects with non-trivial destructors
 	thread_guard{ppu}, sys_interrupt.trace("sys_interrupt_thread_eoi()");
 
-	ppu.state += cpu_state::ret;
+	ppu.state += cpu_flag::ret;
 
 	// Throw if this syscall was not called directly by the SC instruction (hack)
 	if (ppu.lr == 0 || ppu.gpr[11] != 88)
 	{
 		// Low-level function must disable interrupts before throwing (not related to sys_interrupt_*, it's rather coincidence)
 		ppu->interrupt_disable();
-		throw cpu_state::ret;
+		throw cpu_flag::ret;
 	}
 }

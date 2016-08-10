@@ -913,7 +913,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 	if (code < g_ppu_syscall_table.size())
 	{
 		// If autopause occures, check_status() will hold the thread till unpaused.
-		if (debug::autopause::pause_syscall(code) && ppu.check_state()) throw cpu_state::ret;
+		if (debug::autopause::pause_syscall(code) && ppu.check_state()) throw cpu_flag::ret;
 
 		if (auto func = g_ppu_syscall_table[code])
 		{

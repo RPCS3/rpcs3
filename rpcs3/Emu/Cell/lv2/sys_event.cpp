@@ -61,7 +61,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	// notify waiter; protocol is ignored in current implementation
 	auto& thread = m_sq.front();
 
-	if (type == SYS_PPU_QUEUE && thread->type == cpu_type::ppu)
+	if (type == SYS_PPU_QUEUE && thread->id >= ppu_thread::id_min)
 	{
 		// store event data in registers
 		auto& ppu = static_cast<ppu_thread&>(*thread);
@@ -71,7 +71,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 		ppu.gpr[6] = data2;
 		ppu.gpr[7] = data3;
 	}
-	else if (type == SYS_SPU_QUEUE && thread->type == cpu_type::spu)
+	else if (type == SYS_SPU_QUEUE && thread->id < ppu_thread::id_min)
 	{
 		// store event data in In_MBox
 		auto& spu = static_cast<SPUThread&>(*thread);
@@ -80,10 +80,10 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	}
 	else
 	{
-		fmt::throw_exception("Unexpected (queue type=%d, thread type=%d)" HERE, type, (s32)thread->type);
+		fmt::throw_exception("Unexpected (queue type=%d, tid=%s)" HERE, type, thread->id);
 	}
 
-	VERIFY(!thread->state.test_and_set(cpu_state::signal));
+	VERIFY(!thread->state.test_and_set(cpu_flag::signal));
 	thread->notify();
 
 	return m_sq.pop_front();
@@ -163,20 +163,20 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	// signal all threads to return CELL_ECANCELED
 	for (auto& thread : queue->thread_queue(lv2_lock))
 	{
-		if (queue->type == SYS_PPU_QUEUE && thread->type == cpu_type::ppu)
+		if (queue->type == SYS_PPU_QUEUE && thread->id >= ppu_thread::id_min)
 		{
 			static_cast<ppu_thread&>(*thread).gpr[3] = 1;
 		}
-		else if (queue->type == SYS_SPU_QUEUE && thread->type == cpu_type::spu)
+		else if (queue->type == SYS_SPU_QUEUE && thread->id < ppu_thread::id_min)
 		{
 			static_cast<SPUThread&>(*thread).ch_in_mbox.set_values(1, CELL_ECANCELED);
 		}
 		else
 		{
-			fmt::throw_exception("Unexpected (queue.type=%d, thread.type=%d)" HERE, queue->type, thread->type);
+			fmt::throw_exception("Unexpected (queue type=%d, tid=%s)" HERE, queue->type, thread->id);
 		}
 
-		thread->state += cpu_state::signal;
+		thread->state += cpu_flag::signal;
 		thread->notify();
 	}
 
@@ -253,7 +253,7 @@ s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t>
 	// add waiter; protocol is ignored in current implementation
 	sleep_entry<cpu_thread> waiter(queue->thread_queue(lv2_lock), ppu);
 
-	while (!ppu.state.test_and_reset(cpu_state::signal))
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		CHECK_EMU_STATUS;
 
