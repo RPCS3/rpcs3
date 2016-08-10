@@ -56,12 +56,12 @@ s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 
 s32 sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 {
-	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=*0x%x)", img, path);
+	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
 	const fs::file f(vfs::get(path.get_ptr()));
 	if (!f)
 	{
-		sys_spu.error("sys_spu_image_open() error: '%s' not found!", path.get_ptr());
+		sys_spu.error("sys_spu_image_open() error: %s not found!", path);
 		return CELL_ENOENT;
 	}
 
@@ -70,7 +70,7 @@ s32 sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 
 	if (hdr.CheckMagic())
 	{
-		fmt::throw_exception("sys_spu_image_open() error: '%s' is encrypted! Try to decrypt it manually and try again.", path.get_ptr());
+		fmt::throw_exception("sys_spu_image_open() error: %s is encrypted! Try to decrypt it manually and try again.", path);
 	}
 
 	f.seek(0);
@@ -150,7 +150,7 @@ s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm
 		return CELL_EBUSY;
 	}
 
-	*thread = spu_thread_initialize(group_id, spu_num, img, attr->name ? std::string(attr->name.get_ptr(), attr->name_len) : "", attr->option, arg->arg1, arg->arg2, arg->arg3, arg->arg4);
+	*thread = spu_thread_initialize(group_id, spu_num, img, attr->name ? std::string(attr->name.get_ptr(), attr->name_len - 1) : "", attr->option, arg->arg1, arg->arg2, arg->arg3, arg->arg4);
 	return CELL_OK;
 }
 
@@ -223,7 +223,7 @@ s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_
 		sys_spu.todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
 	}
 
-	*id = idm::make<lv2_spu_group_t>(std::string{ attr->name.get_ptr(), attr->nsize - 1 }, num, prio, attr->type, attr->ct);
+	*id = idm::make<lv2_spu_group_t>(std::string(attr->name.get_ptr(), attr->nsize - 1), num, prio, attr->type, attr->ct);
 
 	return CELL_OK;
 }

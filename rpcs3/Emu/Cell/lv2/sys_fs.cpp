@@ -54,12 +54,11 @@ ppu_error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::
 
 ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::cptr<void> arg, u64 size)
 {
-	sys_fs.warning("sys_fs_open(path=*0x%x, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
-	sys_fs.warning("*** path = '%s'", path.get_ptr());
+	sys_fs.warning("sys_fs_open(path=%s, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 
 	if (!path[0])
 	{
-		sys_fs.error("sys_fs_open('%s') failed: path is invalid", path.get_ptr());
+		sys_fs.error("sys_fs_open(%s) failed: path is invalid", path);
 		return CELL_EINVAL;
 	}
 
@@ -67,7 +66,7 @@ ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 
 
 	if (local_path.empty())
 	{
-		sys_fs.error("sys_fs_open('%s') failed: device not mounted", path.get_ptr());
+		sys_fs.error("sys_fs_open(%s) failed: device not mounted", path);
 		return CELL_ENOTMOUNTED;
 	}
 
@@ -75,7 +74,7 @@ ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 
 
 	if (fs::is_dir(local_path))
 	{
-		sys_fs.error("sys_fs_open('%s') failed: path is a directory", path.get_ptr());
+		sys_fs.error("sys_fs_open(%s) failed: path is a directory", path);
 		return CELL_EISDIR;
 	}
 
@@ -127,14 +126,14 @@ ppu_error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 
 
 	if (!test(open_mode))
 	{
-		fmt::throw_exception("Invalid or unimplemented flags (%#o): '%s'" HERE, flags, path.get_ptr());
+		fmt::throw_exception("sys_fs_open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
 	}
 
 	fs::file file(local_path, open_mode);
 
 	if (!file)
 	{
-		sys_fs.error("sys_fs_open('%s'): failed to open file (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
+		sys_fs.error("sys_fs_open(%s): failed to open file (flags=%#o, mode=%#o)", path, flags, mode);
 
 		if (test(open_mode & fs::excl))
 		{
@@ -220,14 +219,13 @@ ppu_error_code sys_fs_close(u32 fd)
 
 ppu_error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 {
-	sys_fs.warning("sys_fs_opendir(path=*0x%x, fd=*0x%x)", path, fd);
-	sys_fs.warning("*** path = '%s'", path.get_ptr());
+	sys_fs.warning("sys_fs_opendir(path=%s, fd=*0x%x)", path, fd);
 
 	const std::string& local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
 	{
-		sys_fs.error("sys_fs_opendir('%s') failed: device not mounted", path.get_ptr());
+		sys_fs.error("sys_fs_opendir(%s) failed: device not mounted", path);
 		return CELL_ENOTMOUNTED;
 	}
 
@@ -235,7 +233,7 @@ ppu_error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 
 	if (fs::is_file(local_path))
 	{
-		sys_fs.error("sys_fs_opendir('%s') failed: path is a file", path.get_ptr());
+		sys_fs.error("sys_fs_opendir(%s) failed: path is a file", path);
 		return CELL_ENOTDIR;
 	}
 
@@ -243,7 +241,7 @@ ppu_error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 
 	if (!dir)
 	{
-		sys_fs.error("sys_fs_opendir('%s'): failed to open directory", path.get_ptr());
+		sys_fs.error("sys_fs_opendir(%s): failed to open directory", path);
 		return CELL_ENOENT;
 	}
 
@@ -306,14 +304,13 @@ ppu_error_code sys_fs_closedir(u32 fd)
 
 ppu_error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 {
-	sys_fs.warning("sys_fs_stat(path=*0x%x, sb=*0x%x)", path, sb);
-	sys_fs.warning("*** path = '%s'", path.get_ptr());
+	sys_fs.warning("sys_fs_stat(path=%s, sb=*0x%x)", path, sb);
 
 	const std::string& local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
 	{
-		sys_fs.warning("sys_fs_stat('%s') failed: not mounted", path.get_ptr());
+		sys_fs.warning("sys_fs_stat(%s) failed: not mounted", path);
 		return CELL_ENOTMOUNTED;
 	}
 
@@ -321,7 +318,7 @@ ppu_error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 
 	if (!fs::stat(local_path, info))
 	{
-		sys_fs.error("sys_fs_stat('%s') failed: not found", path.get_ptr());
+		sys_fs.error("sys_fs_stat(%s) failed: not found", path);
 		return CELL_ENOENT;
 	}
 
@@ -366,8 +363,7 @@ ppu_error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 
 ppu_error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 {
-	sys_fs.warning("sys_fs_mkdir(path=*0x%x, mode=%#o)", path, mode);
-	sys_fs.warning("*** path = '%s'", path.get_ptr());
+	sys_fs.warning("sys_fs_mkdir(path=%s, mode=%#o)", path, mode);
 
 	const std::string& local_path = vfs::get(path.get_ptr());
 
@@ -381,29 +377,26 @@ ppu_error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 		return CELL_EIO; // ???
 	}
 
-	sys_fs.notice("sys_fs_mkdir(): directory '%s' created", path.get_ptr());
+	sys_fs.notice("sys_fs_mkdir(): directory %s created", path);
 	return CELL_OK;
 }
 
 ppu_error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 {
-	sys_fs.warning("sys_fs_rename(from=*0x%x, to=*0x%x)", from, to);
-	sys_fs.warning("*** from = '%s'", from.get_ptr());
-	sys_fs.warning("*** to   = '%s'", to.get_ptr());
+	sys_fs.warning("sys_fs_rename(from=%s, to=%s)", from, to);
 
 	if (!fs::rename(vfs::get(from.get_ptr()), vfs::get(to.get_ptr())))
 	{
 		return CELL_ENOENT; // ???
 	}
 
-	sys_fs.notice("sys_fs_rename(): '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
+	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
 	return CELL_OK;
 }
 
 ppu_error_code sys_fs_rmdir(vm::cptr<char> path)
 {
-	sys_fs.warning("sys_fs_rmdir(path=*0x%x)", path);
-	sys_fs.warning("*** path = '%s'", path.get_ptr());
+	sys_fs.warning("sys_fs_rmdir(path=%s)", path);
 
 	if (!fs::remove_dir(vfs::get(path.get_ptr())))
 	{
@@ -416,14 +409,13 @@ ppu_error_code sys_fs_rmdir(vm::cptr<char> path)
 		return CELL_EIO; // ???
 	}
 
-	sys_fs.notice("sys_fs_rmdir(): directory '%s' removed", path.get_ptr());
+	sys_fs.notice("sys_fs_rmdir(): directory %s removed", path);
 	return CELL_OK;
 }
 
 ppu_error_code sys_fs_unlink(vm::cptr<char> path)
 {
-	sys_fs.warning("sys_fs_unlink(path=*0x%x)", path);
-	sys_fs.warning("*** path = '%s'", path.get_ptr());
+	sys_fs.warning("sys_fs_unlink(path=%s)", path);
 
 	if (!fs::remove_file(vfs::get(path.get_ptr())))
 	{
@@ -436,7 +428,7 @@ ppu_error_code sys_fs_unlink(vm::cptr<char> path)
 		return CELL_EIO; // ???
 	}
 
-	sys_fs.notice("sys_fs_unlink(): file '%s' deleted", path.get_ptr());
+	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
 	return CELL_OK;
 }
 
@@ -540,8 +532,7 @@ ppu_error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<
 
 ppu_error_code sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4)
 {
-	sys_fs.todo("sys_fs_get_block_size(path=*0x%x, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
-	sys_fs.todo("*** path = '%s'", path.get_ptr());
+	sys_fs.todo("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
 
 	*sector_size = 4096; // ?
 	*block_size = 4096; // ?
@@ -551,8 +542,7 @@ ppu_error_code sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_si
 
 ppu_error_code sys_fs_truncate(vm::cptr<char> path, u64 size)
 {
-	sys_fs.warning("sys_fs_truncate(path=*0x%x, size=0x%llx)", path, size);
-	sys_fs.warning("*** path = '%s'", path.get_ptr());
+	sys_fs.warning("sys_fs_truncate(path=%s, size=0x%llx)", path, size);
 
 	if (!fs::truncate_file(vfs::get(path.get_ptr()), size))
 	{
@@ -597,8 +587,7 @@ ppu_error_code sys_fs_ftruncate(u32 fd, u64 size)
 
 ppu_error_code sys_fs_chmod(vm::cptr<char> path, s32 mode)
 {
-	sys_fs.todo("sys_fs_chmod(path=*0x%x, mode=%#o) -> CELL_OK", path, mode);
-	sys_fs.todo("*** path = '%s'", path.get_ptr());
+	sys_fs.todo("sys_fs_chmod(path=%s, mode=%#o) -> CELL_OK", path, mode);
 
 	return CELL_OK;
 }

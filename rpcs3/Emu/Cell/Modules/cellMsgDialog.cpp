@@ -17,7 +17,7 @@ s32 cellMsgDialogOpen()
 
 s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
-	cellSysutil.warning("cellMsgDialogOpen2(type=0x%x, msgString=*0x%x, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
+	cellSysutil.warning("cellMsgDialogOpen2(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
 
 	if (!msgString || std::strlen(msgString.get_ptr()) >= 0x200 || type & -0x33f8)
 	{
@@ -249,17 +249,14 @@ s32 cellMsgDialogAbort()
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	if (!fxm::remove<MsgDialogBase>())
-	{
-		fmt::throw_exception("Failed to remove MsgDialog object" HERE);
-	}
+	VERIFY(fxm::remove<MsgDialogBase>());
 
 	return CELL_OK;
 }
 
 s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgString)
 {
-	cellSysutil.warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString=*0x%x)", progressBarIndex, msgString);
+	cellSysutil.warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString=%s)", progressBarIndex, msgString);
 
 	const auto dlg = fxm::get<MsgDialogBase>();
 

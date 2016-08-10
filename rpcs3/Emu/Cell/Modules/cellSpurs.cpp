@@ -1350,7 +1350,7 @@ s32 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute>
 /// Set the prefix for SPURS
 s32 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::cptr<char> prefix, u32 size)
 {
-	cellSpurs.warning("cellSpursAttributeSetNamePrefix(attr=*0x%x, prefix=*0x%x, size=%d)", attr, prefix, size);
+	cellSpurs.warning("cellSpursAttributeSetNamePrefix(attr=*0x%x, prefix=%s, size=%d)", attr, prefix, size);
 
 	if (!attr || !prefix)
 	{
@@ -2064,7 +2064,7 @@ s32 _cellSpursWorkloadAttributeInitialize(vm::ptr<CellSpursWorkloadAttribute> at
 /// Set the name of a workload
 s32 cellSpursWorkloadAttributeSetName(vm::ptr<CellSpursWorkloadAttribute> attr, vm::cptr<char> nameClass, vm::cptr<char> nameInstance)
 {
-	cellSpurs.warning("cellSpursWorkloadAttributeSetName(attr=*0x%x, nameClass=*0x%x, nameInstance=*0x%x)", attr, nameClass, nameInstance);
+	cellSpurs.warning("cellSpursWorkloadAttributeSetName(attr=*0x%x, nameClass=%s, nameInstance=%s)", attr, nameClass, nameInstance);
 
 	if (!attr)
 	{
@@ -3623,7 +3623,7 @@ s32 cellSpursCreateTaskWithAttribute()
 
 s32 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm::cptr<char> name)
 {
-	cellSpurs.warning("cellSpursTasksetAttributeSetName(attr=*0x%x, name=*0x%x)", attr, name);
+	cellSpurs.warning("cellSpursTasksetAttributeSetName(attr=*0x%x, name=%s)", attr, name);
 
 	if (!attr || !name)
 	{

@@ -71,14 +71,14 @@ s32 cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 
 s32 cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.todo("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=*0x%x)", pUtc, pszDateTime);
+	cellRtc.todo("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	return CELL_OK;
 }
 
 s32 cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.todo("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=*0x%x)", pUtc, pszDateTime);
+	cellRtc.todo("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	return CELL_OK;
 }

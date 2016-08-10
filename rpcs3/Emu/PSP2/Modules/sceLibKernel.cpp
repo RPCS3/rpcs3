@@ -90,7 +90,7 @@ s32 sceKernelGetMemBlockInfoByAddr(vm::ptr<void> vbase, vm::ptr<SceKernelMemBloc
 
 arm_error_code sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThreadEntry> entry, s32 initPriority, u32 stackSize, u32 attr, s32 cpuAffinityMask, vm::cptr<SceKernelThreadOptParam> pOptParam)
 {
-	sceLibKernel.warning("sceKernelCreateThread(pName=*0x%x, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
+	sceLibKernel.warning("sceKernelCreateThread(pName=%s, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
 	const auto thread = idm::make_ptr<ARMv7Thread>(pName.get_ptr());
@@ -738,7 +738,7 @@ template<> DECLARE(psp2_event_flag::ipc::g_ipc) {};
 
 arm_error_code sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 initPattern, vm::cptr<SceKernelEventFlagOptParam> pOptParam)
 {
-	sceLibKernel.error("sceKernelCreateEventFlag(pName=*0x%x, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
+	sceLibKernel.error("sceKernelCreateEventFlag(pName=%s, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
 
 	// Create EVF
 	auto evf = std::make_shared<psp2_event_flag>(pName.get_ptr(), attr, initPattern);
@@ -778,7 +778,7 @@ arm_error_code sceKernelDeleteEventFlag(s32 evfId)
 
 arm_error_code sceKernelOpenEventFlag(vm::cptr<char> pName)
 {
-	sceLibKernel.error("sceKernelOpenEventFlag(pName=*0x%x)", pName);
+	sceLibKernel.error("sceKernelOpenEventFlag(pName=%s)", pName);
 
 	const auto evf = psp2_event_flag::ipc::get(pName.get_ptr());
 
@@ -1019,7 +1019,7 @@ arm_error_code sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagIn
 
 arm_error_code sceKernelCreateSema(vm::cptr<char> pName, u32 attr, s32 initCount, s32 maxCount, vm::cptr<SceKernelSemaOptParam> pOptParam)
 {
-	sceLibKernel.error("sceKernelCreateSema(pName=*0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
+	sceLibKernel.error("sceKernelCreateSema(pName=%s, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
 	return NOT_AN_ERROR(idm::make<psp2_semaphore>(pName.get_ptr(), attr, initCount, maxCount));
 }
@@ -1095,7 +1095,7 @@ s32 sceKernelGetSemaInfo(s32 semaId, vm::ptr<SceKernelSemaInfo> pInfo)
 
 arm_error_code sceKernelCreateMutex(vm::cptr<char> pName, u32 attr, s32 initCount, vm::cptr<SceKernelMutexOptParam> pOptParam)
 {
-	sceLibKernel.error("sceKernelCreateMutex(pName=*0x%x, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
+	sceLibKernel.error("sceKernelCreateMutex(pName=%s, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
 
 	return NOT_AN_ERROR(idm::make<psp2_mutex>(pName.get_ptr(), attr, initCount));
 }
@@ -1202,7 +1202,7 @@ s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::ptr<SceKernelLwMutexInfo> pIn
 
 arm_error_code sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, vm::cptr<SceKernelCondOptParam> pOptParam)
 {
-	sceLibKernel.error("sceKernelCreateCond(pName=*0x%x, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
+	sceLibKernel.error("sceKernelCreateCond(pName=%s, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
 
 	const auto mutex = idm::get<psp2_mutex>(mutexId);
 

@@ -153,7 +153,7 @@ vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size)
 {
 	sysPrxForUser.trace("_sys_memset(dst=*0x%x, value=%d, size=0x%x)", dst, value, size);
 
-	memset(dst.get_ptr(), value, size);
+	std::memset(dst.get_ptr(), value, size);
 
 	return dst;
 }
@@ -162,7 +162,7 @@ vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 {
 	sysPrxForUser.trace("_sys_memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
 
-	memcpy(dst.get_ptr(), src.get_ptr(), size);
+	std::memcpy(dst.get_ptr(), src.get_ptr(), size);
 
 	return dst;
 }
@@ -171,7 +171,7 @@ s32 _sys_memcmp(vm::cptr<void> buf1, vm::cptr<void> buf2, u32 size)
 {
 	sysPrxForUser.trace("_sys_memcmp(buf1=*0x%x, buf2=*0x%x, size=%d)", buf1, buf2, size);
 
-	return memcmp(buf1.get_ptr(), buf2.get_ptr(), size);
+	return std::memcmp(buf1.get_ptr(), buf2.get_ptr(), size);
 }
 
 s32 _sys_memchr()
@@ -183,88 +183,76 @@ vm::ptr<void> _sys_memmove(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 {
 	sysPrxForUser.trace("_sys_memmove(dst=*0x%x, src=*0x%x, size=%d)", dst, src, size);
 
-	memmove(dst.get_ptr(), src.get_ptr(), size);
+	std::memmove(dst.get_ptr(), src.get_ptr(), size);
 
 	return dst;
 }
 
 s64 _sys_strlen(vm::cptr<char> str)
 {
-	sysPrxForUser.trace("_sys_strlen(str=*0x%x)", str);
+	sysPrxForUser.trace("_sys_strlen(str=%s)", str);
 
-	return strlen(str.get_ptr());
+	return std::strlen(str.get_ptr());
 }
 
 s32 _sys_strcmp(vm::cptr<char> str1, vm::cptr<char> str2)
 {
-	sysPrxForUser.trace("_sys_strcmp(str1=*0x%x, str2=*0x%x)", str1, str2);
+	sysPrxForUser.trace("_sys_strcmp(str1=%s, str2=%s)", str1, str2);
 
-	return strcmp(str1.get_ptr(), str2.get_ptr());
+	return std::strcmp(str1.get_ptr(), str2.get_ptr());
 }
 
 s32 _sys_strncmp(vm::cptr<char> str1, vm::cptr<char> str2, s32 max)
 {
-	sysPrxForUser.trace("_sys_strncmp(str1=*0x%x, str2=*0x%x, max=%d)", str1, str2, max);
+	sysPrxForUser.trace("_sys_strncmp(str1=%s, str2=%s, max=%d)", str1, str2, max);
 
-	return strncmp(str1.get_ptr(), str2.get_ptr(), max);
+	return std::strncmp(str1.get_ptr(), str2.get_ptr(), max);
 }
 
 vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
 {
-	sysPrxForUser.trace("_sys_strcat(dest=*0x%x, source=*0x%x)", dest, source);
+	sysPrxForUser.trace("_sys_strcat(dest=*0x%x, source=%s)", dest, source);
 
-	if (strcat(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
-	{
-		fmt::throw_exception("Unexpected strcat() result" HERE);
-	}
+	VERIFY(std::strcat(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
 
 	return dest;
 }
 
 vm::cptr<char> _sys_strchr(vm::cptr<char> str, s32 ch)
 {
-	sysPrxForUser.trace("_sys_strchr(str=*0x%x, ch=0x%x)", str, ch);
+	sysPrxForUser.trace("_sys_strchr(str=%s, ch=0x%x)", str, ch);
 
 	return vm::cptr<char>::make(vm::get_addr(strchr(str.get_ptr(), ch)));
 }
 
 vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 {
-	sysPrxForUser.trace("_sys_strncat(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
+	sysPrxForUser.trace("_sys_strncat(dest=*0x%x, source=%s, len=%d)", dest, source, len);
 
-	if (strncat(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
-	{
-		fmt::throw_exception("Unexpected strncat() result" HERE);
-	}
+	VERIFY(std::strncat(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
 
 	return dest;
 }
 
 vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::cptr<char> source)
 {
-	sysPrxForUser.trace("_sys_strcpy(dest=*0x%x, source=*0x%x)", dest, source);
+	sysPrxForUser.trace("_sys_strcpy(dest=*0x%x, source=%s)", dest, source);
 
-	if (strcpy(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
-	{
-		fmt::throw_exception("Unexpected strcpy() result" HERE);
-	}
+	VERIFY(std::strcpy(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
 
 	return dest;
 }
 
 vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 {
-	sysPrxForUser.trace("_sys_strncpy(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
+	sysPrxForUser.trace("_sys_strncpy(dest=*0x%x, source=%s, len=%d)", dest, source, len);
 
 	if (!dest || !source)
 	{
 		return vm::null;
 	}
 
-	if (strncpy(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
-	{
-		fmt::throw_exception("Unexpected strncpy() result" HERE);
-	}
+	VERIFY(std::strncpy(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
 
 	return dest;
 }
@@ -314,11 +302,9 @@ s32 _sys_free(u32 addr)
 
 s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
-	sysPrxForUser.warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=*0x%x, ...)", dst, count, fmt);
+	sysPrxForUser.warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=%s, ...)", dst, count, fmt);
 
 	std::string result = ps3_fmt(ppu, fmt, va_args.count);
-
-	sysPrxForUser.warning("*** '%s' -> '%s'", fmt.get_ptr(), result);
 
 	if (!count)
 	{
@@ -336,7 +322,7 @@ s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> 
 
 s32 _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
-	sysPrxForUser.warning("_sys_printf(fmt=*0x%x, ...)", fmt);
+	sysPrxForUser.warning("_sys_printf(fmt=%s, ...)", fmt);
 
 	if (g_tty)
 	{

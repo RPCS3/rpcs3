@@ -494,10 +494,34 @@ struct to_se<vm::_ptr_base<T, AT>, Se>
 template<typename T, typename AT>
 struct fmt_unveil<vm::_ptr_base<T, AT>, void>
 {
-	using type = typename fmt_unveil<AT>::type;
+	using type = vm::_ptr_base<T>; // Use only T, ignoring AT
 
 	static inline auto get(const vm::_ptr_base<T, AT>& arg)
 	{
 		return fmt_unveil<AT>::get(arg.addr());
 	}
+};
+
+template<>
+struct fmt_class_string<vm::_ptr_base<const void>, void>
+{
+	static void format(std::string& out, u64 arg);
+};
+
+template<typename T>
+struct fmt_class_string<vm::_ptr_base<T>, void> : fmt_class_string<vm::_ptr_base<const void>, void>
+{
+	// Classify all pointers as const void*
+};
+
+template<>
+struct fmt_class_string<vm::_ptr_base<const char>, void>
+{
+	static void format(std::string& out, u64 arg);
+};
+
+template<>
+struct fmt_class_string<vm::_ptr_base<char>, void> : fmt_class_string<vm::_ptr_base<const char>>
+{
+	// Classify char* as const char*
 };

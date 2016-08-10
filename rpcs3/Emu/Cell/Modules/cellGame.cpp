@@ -52,7 +52,7 @@ struct content_permission final
 
 s32 cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellGame.error("cellHddGameCheck(version=%d, dirName=*0x%x, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
+	cellGame.error("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	std::string dir = dirName.get_ptr();
 
@@ -248,7 +248,7 @@ ppu_error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<voi
 
 ppu_error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameContentSize> size)
 {
-	cellGame.warning("cellGameDataCheck(type=%d, dirName=*0x%x, size=*0x%x)", type, dirName, size);
+	cellGame.warning("cellGameDataCheck(type=%d, dirName=%s, size=*0x%x)", type, dirName, size);
 
 	if ((type - 1) >= 3)
 	{
@@ -270,7 +270,7 @@ ppu_error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellG
 
 	if (!fs::is_dir(vfs::get(dir)))
 	{
-		cellGame.warning("cellGameDataCheck(): '%s' directory not found", dir.c_str());
+		cellGame.warning("cellGameDataCheck(): '%s' directory not found", dir);
 		return CELL_GAME_RET_NONE;
 	}
 
@@ -303,15 +303,13 @@ ppu_error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentIn
 		const std::string& dir = "/dev_hdd0/game/" + prm->dir;
 
 		// Make temporary directory persistent
-		fs::remove_all(vfs::get(dir));
-
-		if (fs::rename(vfs::get("/dev_hdd1/game/" + prm->dir), vfs::get(dir)))
+		if (!fs::exists(vfs::get(dir)) && fs::rename(vfs::get("/dev_hdd1/game/" + prm->dir), vfs::get(dir)))
 		{
 			cellGame.success("cellGameContentPermit(): created directory %s", dir);
 		}
 		else
 		{
-			fmt::throw_exception("cellGameContentPermit(): failed to rename to %s", dir);
+			fmt::throw_exception("cellGameContentPermit(): failed to initialize %s", dir);
 		}
 
 		// Create PARAM.SFO
@@ -334,7 +332,7 @@ ppu_error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentIn
 
 ppu_error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
 {
-	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=*0x%x, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
+	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
@@ -422,7 +420,7 @@ ppu_error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<c
 
 s32 cellGameDataCheckCreate(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
 {
-	cellGame.warning("cellGameDataCheckCreate(version=0x%x, dirName=*0x%x, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
+	cellGame.warning("cellGameDataCheckCreate(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	// TODO: almost identical, the only difference is that this function will always calculate the size of game data
 	return cellGameDataCheckCreate2(ppu, version, dirName, errDialog, funcStat, container);
@@ -620,7 +618,7 @@ s32 cellGameGetLocalWebContentPath()
 
 ppu_error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char> dirName)
 {
-	cellGame.warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName=*0x%x)", type, errNeedSizeKB, dirName);
+	cellGame.warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName=%s)", type, errNeedSizeKB, dirName);
 
 	std::string errorName;
 	switch (type)
@@ -646,7 +644,7 @@ ppu_error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<
 
 	if (dirName)
 	{
-		errorMsg += fmt::format("\nDirectory name: %s", dirName.get_ptr());
+		errorMsg += fmt::format("\nDirectory name: %s", dirName);
 	}
 
 	const auto dlg = Emu.GetCallbacks().get_msg_dialog();

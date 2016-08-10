@@ -35,7 +35,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	sys_prx.warning("sys_prx_load_module(path=*0x%x, flags=0x%llx, pOpt=*0x%x)", path, flags, pOpt);
+	sys_prx.warning("sys_prx_load_module(path=%s, flags=0x%llx, pOpt=*0x%x)", path, flags, pOpt);
 
 	return prx_load_module(path.get_ptr(), flags, pOpt);
 }
@@ -157,8 +157,7 @@ s32 sys_prx_get_module_id_by_address()
 
 s32 sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
 {
-	const char *realName = name.get_ptr();
-	sys_prx.todo("sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", realName, flags, pOpt);
+	sys_prx.todo("sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", name, flags, pOpt);
 
 	//if (realName == "?") ...
 

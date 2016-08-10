@@ -324,7 +324,7 @@ namespace sys_net
 
 	u32 inet_addr(vm::cptr<char> cp)
 	{
-		libnet.warning("inet_addr(cp=*0x%x)", cp);
+		libnet.warning("inet_addr(cp=%s)", cp);
 		return htonl(::inet_addr(cp.get_ptr())); // return a big-endian IP address (WTF? function should return LITTLE-ENDIAN value)
 	}
 
@@ -374,7 +374,7 @@ namespace sys_net
 
 	vm::cptr<char> inet_ntop(s32 af, vm::ptr<void> src, vm::ptr<char> dst, u32 size)
 	{
-		libnet.warning("inet_ntop(af=%d, src=*0x%x, dst=*0x%x, size=%d)", af, src, dst, size);
+		libnet.warning("inet_ntop(af=%d, src=%s, dst=*0x%x, size=%d)", af, src, dst, size);
 		const char* result = ::inet_ntop(af, src.get_ptr(), dst.get_ptr(), size);
 
 		if (result == nullptr)
@@ -387,7 +387,7 @@ namespace sys_net
 
 	s32 inet_pton(s32 af, vm::cptr<char> src, vm::ptr<char> dst)
 	{
-		libnet.warning("inet_pton(af=%d, src=*0x%x, dst=*0x%x)", af, src, dst);
+		libnet.warning("inet_pton(af=%d, src=%s, dst=*0x%x)", af, src, dst);
 		return ::inet_pton(af, src.get_ptr(), dst.get_ptr());
 	}
 

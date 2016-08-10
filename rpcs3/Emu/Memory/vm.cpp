@@ -1,11 +1,7 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Memory.h"
 #include "Emu/System.h"
 #include "Utilities/Thread.h"
-#include "Emu/CPU/CPUThread.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/PSP2/ARMv7Thread.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -820,5 +816,58 @@ namespace vm
 	[[noreturn]] void throw_access_violation(u64 addr, const char* cause)
 	{
 		throw access_violation(addr, cause);
+	}
+}
+
+void fmt_class_string<vm::_ptr_base<const void>>::format(std::string& out, u64 arg)
+{
+	fmt_class_string<u32>::format(out, arg);
+}
+
+void fmt_class_string<vm::_ptr_base<const char>>::format(std::string& out, u64 arg)
+{
+	// Special case (may be allowed for some arguments)
+	if (arg == 0)
+	{
+		out += u8"«NULL»";
+		return;
+	}
+
+	// Filter certainly invalid addresses (TODO)
+	if (arg < 0x10000 || arg >= 0xf0000000)
+	{
+		out += u8"«INVALID_ADDRESS:";
+		fmt_class_string<u32>::format(out, arg);
+		out += u8"»";
+		return;
+	}
+
+	const auto start = out.size();
+
+	try
+	{
+		out += u8"“";
+
+		for (vm::_ptr_base<const volatile char> ptr = vm::cast(arg);; ptr++)
+		{
+			if (const char ch = *ptr)
+			{
+				out += ch;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		out += u8"”";
+	}
+	catch (const vm::access_violation&)
+	{
+		// Recover from invalid memory access
+		out.resize(start);
+		out += u8"«INVALID_ADDRESS:";
+		fmt_class_string<u32>::format(out, arg);
+		out += u8"»";
 	}
 }

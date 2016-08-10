@@ -65,13 +65,12 @@ s32 sys_spu_image_close(vm::ptr<sys_spu_image_t> img)
 
 s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
-	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=*0x%x, entry=*0x%x)", id, path, entry);
-	sysPrxForUser.warning("*** path = '%s'", path.get_ptr());
+	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
 	const fs::file f(vfs::get(path.get_ptr()));
 	if (!f)
 	{
-		sysPrxForUser.error("sys_raw_spu_load() error: '%s' not found!", path.get_ptr());
+		sysPrxForUser.error("sys_raw_spu_load() error: %s not found!", path);
 		return CELL_ENOENT;
 	}
 
@@ -80,7 +79,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 	if (hdr.CheckMagic())
 	{
-		fmt::throw_exception("sys_raw_spu_load() error: '%s' is encrypted! Try to decrypt it manually and try again.", path.get_ptr());
+		fmt::throw_exception("sys_raw_spu_load() error: %s is encrypted! Try to decrypt it manually and try again.", path);
 	}
 
 	f.seek(0);

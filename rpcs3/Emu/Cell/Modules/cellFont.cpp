@@ -65,7 +65,7 @@ s32 cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 f
 
 s32 cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPath, u32 subNum, s32 uniqueId, vm::ptr<CellFont> font)
 {
-	cellFont.warning("cellFontOpenFontFile(library=*0x%x, fontPath=*0x%x, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontPath, subNum, uniqueId, font);
+	cellFont.warning("cellFontOpenFontFile(library=*0x%x, fontPath=%s, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontPath, subNum, uniqueId, font);
 
 	fs::file f(vfs::get(fontPath.get_ptr()));
 	if (!f)

@@ -14,7 +14,7 @@ logs::channel cellFs("cellFs", logs::level::notice);
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
-	cellFs.warning("cellFsOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
+	cellFs.warning("cellFsOpen(path=%s, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
 
 	// TODO
 
@@ -48,7 +48,7 @@ s32 cellFsClose(u32 fd)
 
 s32 cellFsOpendir(vm::cptr<char> path, vm::ptr<u32> fd)
 {
-	cellFs.warning("cellFsOpendir(path=*0x%x, fd=*0x%x) -> sys_fs_opendir()", path, fd);
+	cellFs.warning("cellFsOpendir(path=%s, fd=*0x%x) -> sys_fs_opendir()", path, fd);
 
 	// TODO
 
@@ -79,7 +79,7 @@ s32 cellFsClosedir(u32 fd)
 
 s32 cellFsStat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 {
-	cellFs.warning("cellFsStat(path=*0x%x, sb=*0x%x) -> sys_fs_stat()", path, sb);
+	cellFs.warning("cellFsStat(path=%s, sb=*0x%x) -> sys_fs_stat()", path, sb);
 
 	// TODO
 
@@ -97,7 +97,7 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 
 s32 cellFsMkdir(vm::cptr<char> path, s32 mode)
 {
-	cellFs.warning("cellFsMkdir(path=*0x%x, mode=%#o) -> sys_fs_mkdir()", path, mode);
+	cellFs.warning("cellFsMkdir(path=%s, mode=%#o) -> sys_fs_mkdir()", path, mode);
 
 	// TODO
 
@@ -107,7 +107,7 @@ s32 cellFsMkdir(vm::cptr<char> path, s32 mode)
 
 s32 cellFsRename(vm::cptr<char> from, vm::cptr<char> to)
 {
-	cellFs.warning("cellFsRename(from=*0x%x, to=*0x%x) -> sys_fs_rename()", from, to);
+	cellFs.warning("cellFsRename(from=%s, to=%s) -> sys_fs_rename()", from, to);
 
 	// TODO
 
@@ -117,7 +117,7 @@ s32 cellFsRename(vm::cptr<char> from, vm::cptr<char> to)
 
 s32 cellFsRmdir(vm::cptr<char> path)
 {
-	cellFs.warning("cellFsRmdir(path=*0x%x) -> sys_fs_rmdir()", path);
+	cellFs.warning("cellFsRmdir(path=%s) -> sys_fs_rmdir()", path);
 
 	// TODO
 
@@ -127,7 +127,7 @@ s32 cellFsRmdir(vm::cptr<char> path)
 
 s32 cellFsUnlink(vm::cptr<char> path)
 {
-	cellFs.warning("cellFsUnlink(path=*0x%x) -> sys_fs_unlink()", path);
+	cellFs.warning("cellFsUnlink(path=%s) -> sys_fs_unlink()", path);
 
 	// TODO
 
@@ -170,7 +170,7 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 
 s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
-	cellFs.warning("cellFsGetBlockSize(path=*0x%x, sector_size=*0x%x, block_size=*0x%x) -> sys_fs_get_block_size()", path, sector_size, block_size);
+	cellFs.warning("cellFsGetBlockSize(path=%s, sector_size=*0x%x, block_size=*0x%x) -> sys_fs_get_block_size()", path, sector_size, block_size);
 
 	// TODO
 
@@ -180,7 +180,7 @@ s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u6
 
 s32 cellFsTruncate(vm::cptr<char> path, u64 size)
 {
-	cellFs.warning("cellFsTruncate(path=*0x%x, size=0x%llx) -> sys_fs_truncate()", path, size);
+	cellFs.warning("cellFsTruncate(path=%s, size=0x%llx) -> sys_fs_truncate()", path, size);
 
 	// TODO
 
@@ -198,7 +198,7 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 
 s32 cellFsChmod(vm::cptr<char> path, s32 mode)
 {
-	cellFs.warning("cellFsChmod(path=*0x%x, mode=%#o) -> sys_fs_chmod()", path, mode);
+	cellFs.warning("cellFsChmod(path=%s, mode=%#o) -> sys_fs_chmod()", path, mode);
 
 	// TODO
 
@@ -208,8 +208,7 @@ s32 cellFsChmod(vm::cptr<char> path, s32 mode)
 
 s32 cellFsGetFreeSize(vm::cptr<char> path, vm::ptr<u32> block_size, vm::ptr<u64> block_count)
 {
-	cellFs.warning("cellFsGetFreeSize(path=*0x%x, block_size=*0x%x, block_count=*0x%x)", path, block_size, block_count);
-	cellFs.warning("*** path = '%s'", path.get_ptr());
+	cellFs.warning("cellFsGetFreeSize(path=%s, block_size=*0x%x, block_count=*0x%x)", path, block_size, block_count);
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
 	*block_size = 4096; // ?
@@ -648,7 +647,7 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 s32 cellFsSdataOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
-	cellFs.notice("cellFsSdataOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
+	cellFs.notice("cellFsSdataOpen(path=%s, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
 
 	if (flags != CELL_FS_O_RDONLY)
 	{
@@ -748,8 +747,7 @@ struct fs_aio_manager
 
 s32 cellFsAioInit(vm::cptr<char> mount_point)
 {
-	cellFs.warning("cellFsAioInit(mount_point=*0x%x)", mount_point);
-	cellFs.warning("*** mount_point = '%s'", mount_point.get_ptr());
+	cellFs.warning("cellFsAioInit(mount_point=%s)", mount_point);
 
 	// TODO: create AIO thread (if not exists) for specified mount point
 	fxm::get_always<fs_aio_manager>();
@@ -759,8 +757,7 @@ s32 cellFsAioInit(vm::cptr<char> mount_point)
 
 s32 cellFsAioFinish(vm::cptr<char> mount_point)
 {
-	cellFs.warning("cellFsAioFinish(mount_point=*0x%x)", mount_point);
-	cellFs.warning("*** mount_point = '%s'", mount_point.get_ptr());
+	cellFs.warning("cellFsAioFinish(mount_point=%s)", mount_point);
 
 	// TODO: delete existing AIO thread for specified mount point
 
@@ -883,7 +880,7 @@ s32 cellFsChangeFileSizeWithoutAllocation()
 
 s32 cellFsAllocateFileAreaWithoutZeroFill(vm::cptr<char> path, u64 size)
 {
-	cellFs.warning("cellFsAllocateFileAreaWithoutZeroFill(path=*0x%x, size=0x%llx)", path, size);
+	cellFs.warning("cellFsAllocateFileAreaWithoutZeroFill(path=%s, size=0x%llx)", path, size);
 
 	return sys_fs_truncate(path, size);
 }

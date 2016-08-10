@@ -103,28 +103,28 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 
 s32 sceNpDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
+	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 s32 sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
+	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.todo("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
+	sceNp.todo("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
 
 	return CELL_OK;
 }
 
 s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
-	sceNp.todo("sceNpDrmVerifyUpgradeLicense2(content_id=*0x%x)", content_id);
+	sceNp.todo("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
 
 	return CELL_OK;
 }
@@ -135,9 +135,9 @@ s32 sceNpDrmExecuteGamePurchase()
 	return CELL_OK;
 }
 
-s32 sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
+s32 sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 {
-	sceNp.warning("sceNpDrmGetTimelimit(path=*0x%x, time_remain=*0x%x)", path, time_remain);
+	sceNp.warning("sceNpDrmGetTimelimit(path=%s, time_remain=*0x%x)", path, time_remain);
 
 	*time_remain = 0x7FFFFFFFFFFFFFFFULL;
 
