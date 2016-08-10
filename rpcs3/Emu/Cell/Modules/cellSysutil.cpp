@@ -413,6 +413,12 @@ s32 cellSysutilGameReboot_I()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellSysutil_E1EC7B6A()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
 extern void cellSysutil_MsgDialog_init();
@@ -463,4 +469,5 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilGameExit_I);
 	REG_FUNC(cellSysutil, cellSysutilGamePowerOff_I);
 	REG_FUNC(cellSysutil, cellSysutilGameReboot_I);
+	REG_FNID(cellSysutil, 0xE1EC7B6A, cellSysutil_E1EC7B6A);
 });

@@ -390,9 +390,10 @@ namespace
 		case rsx::primitive_type::triangle_fan:
 			return expand_indexed_triangle_fan<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
 		case rsx::primitive_type::quads:
+		case rsx::primitive_type::quad_strip:
 			return expand_indexed_quads<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
 		}
-		fmt::throw_exception("Don't know how to expand draw mode" HERE);
+		fmt::throw_exception("Unknown draw mode (0x%x)" HERE, (u32)draw_mode);
 	}
 }
 

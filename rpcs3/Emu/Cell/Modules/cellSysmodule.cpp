@@ -356,6 +356,12 @@ s32 cellSysmodule_D9B8C0EE()
 	return CELL_OK;
 }
 
+s32 cellSysmodule_1A267F98()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 {
 	REG_FUNC(cellSysmodule, cellSysmoduleInitialize);
@@ -368,4 +374,5 @@ DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 	REG_FUNC(cellSysmodule, cellSysmoduleFetchImage);
 	REG_FNID(cellSysmodule, 0xB498BF77, cellSysmodule_B498BF77);
 	REG_FNID(cellSysmodule, 0xD9B8C0EE, cellSysmodule_D9B8C0EE);
+	REG_FNID(cellSysmodule, 0x1A267F98, cellSysmodule_1A267F98);
 });
