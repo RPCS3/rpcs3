@@ -1685,7 +1685,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 	}
 
 	std::vector<HMODULE> modules;
-	for (DWORD size = 256; modules.size() < size; size /= sizeof(HMODULE))
+	for (DWORD size = 256; modules.size() != size; size /= sizeof(HMODULE))
 	{
 		modules.resize(size);
 		if (!EnumProcessModules(GetCurrentProcess(), modules.data(), size * sizeof(HMODULE), &size))
@@ -1718,13 +1718,13 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 			if (pExp->ContextRecord->Rip >= base && pExp->ContextRecord->Rip < base + info.SizeOfImage)
 			{
 				std::string module_name;
-				for (DWORD size = 256; module_name.size() < size;)
+				for (DWORD size = 15; module_name.size() != size;)
 				{
 					module_name.resize(size);
-					size = GetModuleBaseNameA(GetCurrentProcess(), module, &module_name.front(), size);
+					size = GetModuleBaseNameA(GetCurrentProcess(), module, &module_name.front(), size + 1);
 					if (!size)
 					{
-						module_name.resize(1, '\0');
+						module_name.clear();
 						break;
 					}
 				}
