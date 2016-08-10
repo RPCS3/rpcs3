@@ -2312,7 +2312,7 @@ bool ppu_interpreter::CNTLZW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SLD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u32 n = ppu.gpr[op.rb];
+	const u64 n = ppu.gpr[op.rb];
 	ppu.gpr[op.ra] = UNLIKELY(n & 0x40) ? 0 : ppu.gpr[op.rs] << n;
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
@@ -3023,7 +3023,7 @@ bool ppu_interpreter::SRW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SRD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u32 n = ppu.gpr[op.rb];
+	const u64 n = ppu.gpr[op.rb];
 	ppu.gpr[op.ra] = UNLIKELY(n & 0x40) ? 0 : ppu.gpr[op.rs] >> n;
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
