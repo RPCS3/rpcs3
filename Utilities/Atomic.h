@@ -174,7 +174,7 @@ struct atomic_storage
 	}
 };
 
-/* The rest: ugly MSVC intrinsics + possibly __asm__ implementations (TODO) */
+/* The rest: ugly MSVC intrinsics + inline asm implementations */
 
 template<typename T>
 struct atomic_storage<T, 1> : atomic_storage<T, 0>
@@ -297,6 +297,27 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 		short r = _InterlockedDecrement16((volatile short*)&dest);
 		return (T&)r;
 	}
+#else
+	static inline bool bts(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btsw %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
+
+	static inline bool btr(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btrw %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
+
+	static inline bool btc(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btcw %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
 #endif
 };
 
@@ -374,6 +395,27 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 	static inline bool btr(T& dest, uint bit)
 	{
 		return _interlockedbittestandreset((volatile long*)&dest, bit) != 0;
+	}
+#else
+	static inline bool bts(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btsl %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
+
+	static inline bool btr(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btrl %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
+
+	static inline bool btc(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btcl %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
 	}
 #endif
 };
@@ -453,6 +495,27 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 	{
 		return _interlockedbittestandreset64((volatile llong*)&dest, bit) != 0;
 	}
+#else
+	static inline bool bts(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btsq %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
+
+	static inline bool btr(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btrq %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
+
+	static inline bool btc(T& dest, uint bit)
+	{
+		bool result;
+		__asm__("lock btcq %2, %0\n" "setc %1" : "+m" (dest), "=r" (result) : "Ir" (bit) : "cc");
+		return result;
+	}
 #endif
 };
 
@@ -490,6 +553,8 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 		return *(T*)+cmp;
 	}
 #endif
+
+	// TODO
 };
 
 template<typename T1, typename T2, typename>
@@ -642,7 +707,7 @@ struct atomic_test_and_set
 {
 	bool operator()(T1& lhs, const T2& rhs) const
 	{
-		return lhs.test_and_set(rhs);
+		return test_and_set(lhs, rhs);
 	}
 };
 
@@ -659,7 +724,7 @@ struct atomic_test_and_reset
 {
 	bool operator()(T1& lhs, const T2& rhs) const
 	{
-		return lhs.test_and_reset(rhs);
+		return test_and_reset(lhs, rhs);
 	}
 };
 
@@ -676,7 +741,7 @@ struct atomic_test_and_complement
 {
 	bool operator()(T1& lhs, const T2& rhs) const
 	{
-		return lhs.test_and_complement(rhs);
+		return test_and_complement(lhs, rhs);
 	}
 };
 
