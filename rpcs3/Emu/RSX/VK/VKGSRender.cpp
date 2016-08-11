@@ -673,14 +673,17 @@ void VKGSRender::end()
 	vkCmdBindPipeline(m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	vkCmdBindDescriptorSets(m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets, 0, nullptr);
 
-	if (!std::get<1>(upload_info))
-		vkCmdDraw(m_command_buffer, vertex_draw_count, 1, 0, 0);
+	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<2>(upload_info);
+
+	if (!index_info)
+		vkCmdDraw(m_command_buffer, std::get<1>(upload_info), 1, 0, 0);
 	else
 	{
 		VkIndexType index_type;
-		u32 index_count;
+		u32 index_count = std::get<1>(upload_info);
 		VkDeviceSize offset;
-		std::tie(std::ignore, std::ignore, index_count, offset, index_type) = upload_info;
+
+		std::tie(offset, index_type) = index_info.value();
 
 		vkCmdBindIndexBuffer(m_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 		vkCmdDrawIndexed(m_command_buffer, index_count, 1, 0, 0, 0);

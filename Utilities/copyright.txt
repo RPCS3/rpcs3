@@ -1,0 +1,10 @@
+Copyright (C) 2011-2012 Andrzej Krzemienski
+
+Distributed under the Boost Software License, Version 1.0
+(see accompanying file LICENSE_1_0.txt or a copy at
+http://www.boost.org/LICENSE_1_0.txt)
+
+The idea and interface is based on Boost.Optional library
+authored by Fernando Luis Cacciola Carballal
+
+Home at https://github.com/akrzemi1/Optional

@@ -161,8 +161,6 @@ namespace rsx
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
-		u32 vertex_draw_count = 0;
-
 		// Constant stored for whole frame
 		std::unordered_map<u32, color4f> local_transform_constants;
 
