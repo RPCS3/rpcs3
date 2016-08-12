@@ -131,6 +131,16 @@ void XAudio2Thread::xa28_open()
 
 void XAudio2Thread::xa28_add(const void* src, int size)
 {
+	XAUDIO2_VOICE_STATE state;
+	s_tls_source_voice->GetState(&state);
+
+	if (state.BuffersQueued > 32)
+	{
+		LOG_WARNING(GENERAL, "XAudio2Thread : too many buffers enqueued (%d, pos=%u)", state.BuffersQueued, state.SamplesPlayed);
+
+		return xa28_flush();
+	}
+
 	XAUDIO2_BUFFER buffer;
 
 	buffer.AudioBytes = size;
