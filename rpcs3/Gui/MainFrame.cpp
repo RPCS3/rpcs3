@@ -279,7 +279,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 			if (pkg_install(pkg_f, local_path + '/', progress))
 			{
 				progress = 1.;
-				return_;
+				return;
 			}
 
 			// TODO: Ask user to delete files on cancellation/failure?

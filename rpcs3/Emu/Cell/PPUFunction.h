@@ -64,7 +64,7 @@ namespace ppu_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<CV T, CV v128>::value, "Invalid function argument type for ARG_VECTOR");
+		static_assert(std::is_same<std::decay_t<T>, v128>::value, "Invalid function argument type for ARG_VECTOR");
 
 		static FORCE_INLINE T get_arg(ppu_thread& ppu)
 		{
@@ -86,7 +86,7 @@ namespace ppu_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_CONTEXT, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<T, ppu_thread&>::value, "Invalid function argument type for ARG_CONTEXT");
+		static_assert(std::is_same<std::decay_t<T>, ppu_thread>::value, "Invalid function argument type for ARG_CONTEXT");
 
 		static FORCE_INLINE ppu_thread& get_arg(ppu_thread& ppu)
 		{
@@ -97,7 +97,7 @@ namespace ppu_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_VARIADIC, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<T, ppu_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
+		static_assert(std::is_same<std::decay_t<T>, ppu_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
 
 		static FORCE_INLINE ppu_va_args_t get_arg(ppu_thread& ppu)
 		{
@@ -131,7 +131,7 @@ namespace ppu_func_detail
 	template<typename T>
 	struct bind_result<T, ARG_VECTOR>
 	{
-		static_assert(std::is_same<CV T, CV v128>::value, "Invalid function result type for ARG_VECTOR");
+		static_assert(std::is_same<std::decay_t<T>, v128>::value, "Invalid function result type for ARG_VECTOR");
 
 		static FORCE_INLINE void put_result(ppu_thread& ppu, const T& result)
 		{
@@ -183,9 +183,9 @@ namespace ppu_func_detail
 
 		// TODO: check calculations
 		const bool is_float = std::is_floating_point<T>::value;
-		const bool is_vector = std::is_same<CV T, CV v128>::value;
-		const bool is_context = std::is_same<T, ppu_thread&>::value;
-		const bool is_variadic = std::is_same<CV T, CV ppu_va_args_t>::value;
+		const bool is_vector = std::is_same<std::decay_t<T>, v128>::value;
+		const bool is_context = std::is_same<std::decay_t<T>, ppu_thread>::value;
+		const bool is_variadic = std::is_same<std::decay_t<T>, ppu_va_args_t>::value;
 		const bool is_general = !is_float && !is_vector && !is_context && !is_variadic;
 
 		const arg_class t =
@@ -209,7 +209,7 @@ namespace ppu_func_detail
 		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
 		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
 		static const bool is_float = std::is_floating_point<RT>::value;
-		static const bool is_vector = std::is_same<CV RT, CV v128>::value;
+		static const bool is_vector = std::is_same<std::decay_t<RT>, v128>::value;
 		static const arg_class value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 

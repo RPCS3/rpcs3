@@ -211,7 +211,7 @@ template<typename T>
 struct arm_gpr_cast_impl<T, std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>>
 {
 	static_assert(sizeof(T) <= 4, "Too big integral type for arm_gpr_cast<>()");
-	static_assert(std::is_same<CV T, CV bool>::value == false, "bool type is deprecated in arm_gpr_cast<>(), use b8 instead");
+	static_assert(std::is_same<std::decay_t<T>, bool>::value == false, "bool type is deprecated in arm_gpr_cast<>(), use b8 instead");
 
 	static inline u32 to(const T& value)
 	{

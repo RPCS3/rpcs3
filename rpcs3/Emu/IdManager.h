@@ -100,7 +100,7 @@ namespace id_manager
 		template<typename T>
 		static inline void update()
 		{
-			access()[get_index<T>()].on_stop = [](void* ptr) { return_ id_manager::on_stop<T>::func(static_cast<T*>(ptr)); };
+			access()[get_index<T>()].on_stop = [](void* ptr) { return id_manager::on_stop<T>::func(static_cast<T*>(ptr)); };
 		}
 
 		// Read all registered types

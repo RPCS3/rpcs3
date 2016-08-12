@@ -102,7 +102,7 @@ namespace arm_func_detail
 	struct bind_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
 		static_assert(v_count <= 0, "TODO: Unsupported argument type (vector)");
-		static_assert(std::is_same<CV T, CV v128>::value, "Invalid function argument type for ARG_VECTOR");
+		static_assert(std::is_same<std::decay_t<T>, v128>::value, "Invalid function argument type for ARG_VECTOR");
 
 		FORCE_INLINE static T get_arg(ARMv7Thread& cpu)
 		{
@@ -177,7 +177,7 @@ namespace arm_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_CONTEXT, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<T, ARMv7Thread&>::value, "Invalid function argument type for ARG_CONTEXT");
+		static_assert(std::is_same<std::decay_t<T>, ARMv7Thread>::value, "Invalid function argument type for ARG_CONTEXT");
 
 		FORCE_INLINE static ARMv7Thread& get_arg(ARMv7Thread& cpu)
 		{
@@ -192,7 +192,7 @@ namespace arm_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_VARIADIC, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<CV T, CV arm_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
+		static_assert(std::is_same<std::decay_t<T>, arm_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
 
 		FORCE_INLINE static arm_va_args_t get_arg(ARMv7Thread& cpu)
 		{
@@ -273,7 +273,7 @@ namespace arm_func_detail
 		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
 		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
 		static const bool is_float = std::is_floating_point<RT>::value;
-		static const bool is_vector = std::is_same<CV RT, CV v128>::value;
+		static const bool is_vector = std::is_same<std::decay_t<RT>, v128>::value;
 		static const arg_class value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
@@ -282,9 +282,9 @@ namespace arm_func_detail
 	{
 		// TODO: check calculations
 		static const bool is_float = std::is_floating_point<T>::value;
-		static const bool is_vector = std::is_same<CV T, CV v128>::value;
-		static const bool is_context = std::is_same<T, ARMv7Thread&>::value;
-		static const bool is_variadic = std::is_same<CV T, CV arm_va_args_t>::value;
+		static const bool is_vector = std::is_same<std::decay_t<T>, v128>::value;
+		static const bool is_context = std::is_same<std::decay_t<T>, ARMv7Thread>::value;
+		static const bool is_variadic = std::is_same<std::decay_t<T>, arm_va_args_t>::value;
 		static const bool is_general = !is_float && !is_vector && !is_context && !is_variadic;
 
 		static const u32 g_align = ALIGN_32(T) > 4 ? ALIGN_32(T) >> 2 : 1;

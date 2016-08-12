@@ -94,10 +94,10 @@ ppu_error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, 
 		if (!ct.take(size))
 		{
 			result = CELL_ENOMEM;
-			return_ false;
+			return false;
 		}
 
-		return_ true;
+		return true;
 	});
 
 	if (!ct && !result)
@@ -214,10 +214,10 @@ ppu_error_code sys_memory_container_destroy(u32 cid)
 		if (!ct.used.compare_and_swap_test(0, ct.size))
 		{
 			result = CELL_EBUSY;
-			return_ false;
+			return false;
 		}
 
-		return_ true;
+		return true;
 	});
 
 	if (!ct && !result)

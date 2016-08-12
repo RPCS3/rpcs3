@@ -17,9 +17,6 @@
 // Return 32 bit custom offsetof()
 #define OFFSET_32(type, x) static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(&reinterpret_cast<const volatile char&>(reinterpret_cast<type*>(0ull)->x)))
 
-// Sometimes to avoid writing std::remove_cv_t<>, example: std::is_same<CV T1, CV T2>
-#define CV const volatile
-
 #define CONCATENATE_DETAIL(x, y) x ## y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
 
@@ -30,8 +27,6 @@
 #define WRAP_EXPR(expr, ...) [&](__VA_ARGS__) { return expr; }
 #define COPY_EXPR(expr, ...) [=](__VA_ARGS__) { return expr; }
 #define PURE_EXPR(expr, ...) [] (__VA_ARGS__) { return expr; }
-
-#define return_ return
 
 #define HERE "\n(in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
 

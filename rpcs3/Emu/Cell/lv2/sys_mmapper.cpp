@@ -149,10 +149,10 @@ ppu_error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 si
 		if (!ct.take(size))
 		{
 			result = CELL_ENOMEM;
-			return_ false;
+			return false;
 		}
 
-		return_ true;
+		return true;
 	});
 
 	if (!ct && !result)
@@ -210,10 +210,10 @@ ppu_error_code sys_mmapper_free_shared_memory(u32 mem_id)
 		if (mem.addr.compare_and_swap_test(0, -1))
 		{
 			result = CELL_EBUSY;
-			return_ false;
+			return false;
 		}
 
-		return_ true;
+		return true;
 	});
 
 	if (!mem && !result)

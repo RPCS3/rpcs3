@@ -90,7 +90,7 @@ public:
 	template<typename T, T* Var>
 	static void register_static_variable(const char* module, const char* name, u32 vnid, void(*init)())
 	{
-		static_assert(std::is_same<CV u32, CV typename T::addr_type>::value, "Static variable registration: vm::gvar<T> expected");
+		static_assert(std::is_same<u32, std::decay_t<typename T::addr_type>>::value, "Static variable registration: vm::gvar<T> expected");
 
 		auto& info = access_static_variable(module, vnid);
 

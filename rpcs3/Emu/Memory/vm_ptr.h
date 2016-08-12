@@ -170,7 +170,7 @@ namespace vm
 
 		// Pointer difference operator
 		template<typename T2, typename AT2>
-		std::enable_if_t<std::is_object<T2>::value && std::is_same<CV T, CV T2>::value, s32> operator -(const _ptr_base<T2, AT2>& right) const
+		std::enable_if_t<std::is_object<T2>::value && std::is_same<std::decay_t<T>, std::decay_t<T2>>::value, s32> operator -(const _ptr_base<T2, AT2>& right) const
 		{
 			return static_cast<s32>(vm::cast(m_addr, HERE) - vm::cast(right.m_addr, HERE)) / SIZE_32(T);
 		}
