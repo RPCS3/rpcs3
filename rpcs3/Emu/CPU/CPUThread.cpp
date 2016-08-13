@@ -145,3 +145,8 @@ void cpu_thread::run()
 	state -= cpu_flag::stop;
 	lock_notify();
 }
+
+std::string cpu_thread::dump() const
+{
+	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
+}

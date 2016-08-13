@@ -26,7 +26,6 @@ public:
 
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
-	virtual void cpu_init() override final {}
 	virtual void cpu_task() override;
 	virtual ~ppu_thread() override;
 

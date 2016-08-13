@@ -16,12 +16,11 @@ class ARMv7Thread final : public cpu_thread
 public:
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
-	virtual void cpu_init() override;
 	virtual void cpu_task() override;
 	virtual void cpu_task_main();
 	virtual ~ARMv7Thread() override;
 
-	ARMv7Thread(const std::string& name);
+	ARMv7Thread(const std::string& name, u32 prio = 160, u32 stack = 256 * 1024);
 
 	union
 	{

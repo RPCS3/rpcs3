@@ -93,12 +93,9 @@ arm_error_code sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThre
 	sceLibKernel.warning("sceKernelCreateThread(pName=%s, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
-	const auto thread = idm::make_ptr<ARMv7Thread>(pName.get_ptr());
+	const auto thread = idm::make_ptr<ARMv7Thread>(pName.get_ptr(), initPriority, stackSize);
 
-	thread->PC = entry.addr();
-	thread->prio = initPriority;
-	thread->stack_size = stackSize;
-	thread->cpu_init();
+	thread->write_pc(entry.addr(), 0);
 	thread->TLS = fxm::get<arm_tls_manager>()->alloc();
 
 	return NOT_AN_ERROR(thread->id);

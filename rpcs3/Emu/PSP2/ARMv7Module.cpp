@@ -636,12 +636,9 @@ void arm_load_exec(const arm_exec_object& elf)
 	const u32 stack_size = proc_param->sceUserMainThreadStackSize ? proc_param->sceUserMainThreadStackSize->value() : 256 * 1024;
 	const u32 priority = proc_param->sceUserMainThreadPriority ? proc_param->sceUserMainThreadPriority->value() : 160;
 
-	auto thread = idm::make_ptr<ARMv7Thread>(thread_name);
+	auto thread = idm::make_ptr<ARMv7Thread>(thread_name, priority, stack_size);
 
-	thread->PC = entry_point;
-	thread->stack_size = stack_size;
-	thread->prio = priority;
-	thread->cpu_init();
+	thread->write_pc(entry_point, 0);
 	thread->TLS = fxm::make_always<arm_tls_manager>(tls_faddr + start_addr, tls_fsize, tls_vsize)->alloc();
 
 	// Initialize args

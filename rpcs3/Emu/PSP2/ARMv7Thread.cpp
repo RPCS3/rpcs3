@@ -17,7 +17,8 @@ std::string ARMv7Thread::get_name() const
 
 std::string ARMv7Thread::dump() const
 {
-	std::string result = "Registers:\n=========\n";
+	std::string result = cpu_thread::dump();
+	result += "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
 	{
 		result += fmt::format("r%u\t= 0x%08x\n", i, GPR[i]);
@@ -32,33 +33,6 @@ std::string ARMv7Thread::dump() const
 		u32{ APSR.Q });
 	
 	return result;
-}
-
-void ARMv7Thread::cpu_init()
-{
-	if (!stack_addr)
-	{
-		if (!stack_size)
-		{
-			fmt::throw_exception("Invalid stack size" HERE);
-		}
-
-		stack_addr = vm::alloc(stack_size, vm::main);
-
-		if (!stack_addr)
-		{
-			fmt::throw_exception("Out of stack memory" HERE);
-		}
-	}
-
-	memset(GPR, 0, sizeof(GPR));
-	APSR.APSR = 0;
-	IPSR.IPSR = 0;
-	ISET = PC & 1 ? Thumb : ARM; // select instruction set
-	PC = PC & ~1; // and fix PC
-	ITSTATE.IT = 0;
-	SP = stack_addr + stack_size;
-	TLS = 0;
 }
 
 extern thread_local std::string(*g_tls_log_prefix)();
@@ -119,10 +93,20 @@ ARMv7Thread::~ARMv7Thread()
 	}
 }
 
-ARMv7Thread::ARMv7Thread(const std::string& name)
+ARMv7Thread::ARMv7Thread(const std::string& name, u32 prio, u32 stack)
 	: cpu_thread()
 	, m_name(name)
+	, prio(prio)
+	, stack_addr(vm::alloc(stack, vm::main))
+	, stack_size(stack)
 {
+	verify(__func__), stack_size, stack_addr;
+
+	std::memset(GPR, 0, sizeof(GPR));
+	APSR.APSR = 0;
+	IPSR.IPSR = 0;
+	ITSTATE.IT = 0;
+	SP = stack_addr + stack_size;
 }
 
 void ARMv7Thread::fast_call(u32 addr)

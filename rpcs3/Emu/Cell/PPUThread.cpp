@@ -78,9 +78,7 @@ std::string ppu_thread::get_name() const
 
 std::string ppu_thread::dump() const
 {
-	std::string ret;
-	ret += fmt::format("Type: %s\n", typeid(*this).name());
-	ret += fmt::format("State: %s\n", state.load());
+	std::string ret = cpu_thread::dump();
 	ret += fmt::format("Priority: %d\n", prio);
 	
 	ret += "\nRegisters:\n=========\n";

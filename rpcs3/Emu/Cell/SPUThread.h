@@ -493,9 +493,9 @@ class SPUThread : public cpu_thread
 public:
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
-	virtual void cpu_init() override;
 	virtual void cpu_task() override;
 	virtual ~SPUThread() override;
+	void cpu_init();
 
 protected:
 	SPUThread(const std::string& name);

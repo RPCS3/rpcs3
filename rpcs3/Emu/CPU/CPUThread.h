@@ -3,7 +3,7 @@
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
 
-// cpu_thread state flags
+// Thread state flags
 enum class cpu_flag : u32
 {
 	stop, // Thread not running (HLE, initial state)
@@ -20,12 +20,12 @@ enum class cpu_flag : u32
 	__bitset_enum_max
 };
 
-// cpu_flag set for pause state
+// Flag set for pause state
 constexpr bs_t<cpu_flag> cpu_state_pause = cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause;
 
 class cpu_thread : public named_thread
 {
-	void on_task() override;
+	void on_task() override final;
 
 public:
 	virtual void on_stop() override;
@@ -47,8 +47,10 @@ public:
 	// Run thread
 	void run();
 
-	virtual std::string dump() const = 0; // Print CPU state
-	virtual void cpu_init() {} // Obsolete, must be removed
+	// Print CPU state
+	virtual std::string dump() const;
+
+	// Thread entry point function
 	virtual void cpu_task() = 0;
 };
 

@@ -128,7 +128,8 @@ std::string SPUThread::get_name() const
 
 std::string SPUThread::dump() const
 {
-	std::string ret = "Registers:\n=========\n";
+	std::string&& ret = cpu_thread::dump();
+	ret += "Registers:\n=========\n";
 
 	for (uint i = 0; i<128; ++i) ret += fmt::format("GPR[%d] = %s\n", i, gpr[i]);
 
