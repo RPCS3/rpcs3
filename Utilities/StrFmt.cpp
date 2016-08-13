@@ -11,115 +11,109 @@ void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 	fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
 }
 
-template<>
-void fmt_class_string<std::nullptr_t>::format(std::string& out, u64 arg)
-{
-	fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
-}
-
 void fmt_class_string<const char*>::format(std::string& out, u64 arg)
 {
 	out += reinterpret_cast<const char*>(static_cast<std::uintptr_t>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<std::string>::format(std::string& out, u64 arg)
 {
 	out += get_object(arg).c_str(); // TODO?
 }
 
-template<>
+template <>
 void fmt_class_string<std::vector<char>>::format(std::string& out, u64 arg)
 {
 	const std::vector<char>& obj = get_object(arg);
 	out.append(obj.cbegin(), obj.cend());
 }
 
-template<>
+template <>
 void fmt_class_string<char>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#hhx", static_cast<char>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<uchar>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#hhx", static_cast<uchar>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<schar>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#hhx", static_cast<schar>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<short>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#hx", static_cast<short>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<ushort>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#hx", static_cast<ushort>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<int>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#x", static_cast<int>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<uint>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#x", static_cast<uint>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<long>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#lx", static_cast<long>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<ulong>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#lx", static_cast<ulong>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<llong>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#llx", static_cast<llong>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<ullong>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#llx", static_cast<ullong>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<float>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%gf", static_cast<float>(reinterpret_cast<f64&>(arg)));
 }
 
-template<>
+template <>
 void fmt_class_string<double>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%g", reinterpret_cast<f64&>(arg));
 }
 
-template<>
+template <>
 void fmt_class_string<bool>::format(std::string& out, u64 arg)
 {
 	out += arg ? "true" : "false";
 }
 
-template<>
+template <>
 void fmt_class_string<v128>::format(std::string& out, u64 arg)
 {
 	const v128& vec = get_object(arg);
@@ -130,21 +124,38 @@ namespace fmt
 {
 	void raw_error(const char* msg)
 	{
-		std::string out;
+		std::string out{"Error"};
 
-		out += "Error: ";
+		out += ": ";
 		out += msg;
 
-		throw std::runtime_error(out);
+		throw std::runtime_error{out};
+	}
+
+	void raw_verify_error(const char* msg, uint position)
+	{
+		std::string out{"Verification failed"};
+
+		if (position)
+		{
+			out += " (+";
+			out += std::to_string(position);
+			out += ")";
+		}
+
+		out += ": ";
+		out += msg;
+
+		throw std::runtime_error{out};
 	}
 
 	void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg)
 	{
-		std::string out;
+		std::string out{"Narrow error"};
 
-		out += "Narrow error: (";
+		out += " (";
 		sup->fmt_string(out, arg); // Print value
-		out += ")";
+		out += "): ";
 
 		if (msg)
 		{
@@ -152,11 +163,11 @@ namespace fmt
 			out += msg;
 		}
 
-		throw std::range_error(out);
+		throw std::range_error{out};
 	}
 
 	// Hidden template
-	template<typename T>
+	template <typename T>
 	void raw_throw_exception(const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
@@ -193,7 +204,7 @@ struct fmt::cfmt_src
 		return true;
 	}
 
-	template<typename T>
+	template <typename T>
 	T get(std::size_t index) const
 	{
 		return reinterpret_cast<const T&>(args[index]);
@@ -215,9 +226,9 @@ struct fmt::cfmt_src
 	// Returns type size (0 if unknown, pointer, unsigned, assumed max)
 	std::size_t type(std::size_t extra) const
 	{
-		// Hack: use known function pointers to determine type
-#define TYPE(type)\
-		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
+// Hack: use known function pointers to determine type
+#define TYPE(type) \
+	if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
 
 		TYPE(int);
 		TYPE(llong);
@@ -249,7 +260,7 @@ std::string fmt::replace_first(const std::string& src, const std::string& from, 
 	return (pos ? src.substr(0, pos) + to : to) + std::string(src.c_str() + pos + from.length());
 }
 
-std::string fmt::replace_all(const std::string &src, const std::string& from, const std::string& to)
+std::string fmt::replace_all(const std::string& src, const std::string& from, const std::string& to)
 {
 	std::string target = src;
 	for (auto pos = target.find(from); pos != std::string::npos; pos = target.find(from, pos + 1))
@@ -269,7 +280,7 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 
 	for (size_t cursor_end = 0; cursor_end < source.length(); ++cursor_end)
 	{
-		for (auto &separator : separators)
+		for (auto& separator : separators)
 		{
 			if (strncmp(source.c_str() + cursor_end, separator.c_str(), separator.length()) == 0)
 			{
@@ -278,7 +289,7 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 					result.push_back(candidate);
 
 				cursor_begin = cursor_end + separator.length();
-				cursor_end = cursor_begin - 1;
+				cursor_end   = cursor_begin - 1;
 				break;
 			}
 		}
@@ -297,7 +308,7 @@ std::string fmt::trim(const std::string& source, const std::string& values)
 	std::size_t begin = source.find_first_not_of(values);
 
 	if (begin == source.npos)
-		return{};
+		return {};
 
 	return source.substr(begin, source.find_last_not_of(values) + 1);
 }
@@ -310,7 +321,7 @@ std::string fmt::to_upper(const std::string& string)
 	return result;
 }
 
-bool fmt::match(const std::string &source, const std::string &mask)
+bool fmt::match(const std::string& source, const std::string& mask)
 {
 	std::size_t source_position = 0, mask_position = 0;
 

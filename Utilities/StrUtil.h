@@ -7,8 +7,8 @@
 #include <functional>
 
 // Copy null-terminated string from std::string to char array with truncation
-template<std::size_t N>
-inline void strcpy_trunc(char(&dst)[N], const std::string& src)
+template <std::size_t N>
+inline void strcpy_trunc(char (&dst)[N], const std::string& src)
 {
 	const std::size_t count = src.size() >= N ? N - 1 : src.size();
 	std::memcpy(dst, src.c_str(), count);
@@ -16,8 +16,8 @@ inline void strcpy_trunc(char(&dst)[N], const std::string& src)
 }
 
 // Copy null-terminated string from char array to another char array with truncation
-template<std::size_t N, std::size_t N2>
-inline void strcpy_trunc(char(&dst)[N], const char(&src)[N2])
+template <std::size_t N, std::size_t N2>
+inline void strcpy_trunc(char (&dst)[N], const char (&src)[N2])
 {
 	const std::size_t count = N2 >= N ? N - 1 : N2;
 	std::memcpy(dst, src, count);
@@ -27,10 +27,10 @@ inline void strcpy_trunc(char(&dst)[N], const char(&src)[N2])
 namespace fmt
 {
 	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
-	std::string replace_all(const std::string &src, const std::string& from, const std::string& to);
+	std::string replace_all(const std::string& src, const std::string& from, const std::string& to);
 
-	template<size_t list_size>
-	std::string replace_all(std::string src, const std::pair<std::string, std::string>(&list)[list_size])
+	template <size_t list_size>
+	std::string replace_all(std::string src, const std::pair<std::string, std::string> (&list)[list_size])
 	{
 		for (size_t pos = 0; pos < src.length(); ++pos)
 		{
@@ -53,8 +53,8 @@ namespace fmt
 		return src;
 	}
 
-	template<size_t list_size>
-	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>>(&list)[list_size])
+	template <size_t list_size>
+	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>> (&list)[list_size])
 	{
 		for (size_t pos = 0; pos < src.length(); ++pos)
 		{
@@ -80,17 +80,17 @@ namespace fmt
 	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
 	std::string trim(const std::string& source, const std::string& values = " \t");
 
-	template<typename T>
+	template <typename T>
 	std::string merge(const T& source, const std::string& separator)
 	{
 		if (!source.size())
 		{
-			return{};
+			return {};
 		}
 
 		std::string result;
 
-		auto it = source.begin();
+		auto it  = source.begin();
 		auto end = source.end();
 		for (--end; it != end; ++it)
 		{
@@ -100,23 +100,23 @@ namespace fmt
 		return result + source.back();
 	}
 
-	template<typename T>
+	template <typename T>
 	std::string merge(std::initializer_list<T> sources, const std::string& separator)
 	{
 		if (!sources.size())
 		{
-			return{};
+			return {};
 		}
 
 		std::string result;
 		bool first = true;
 
-		for (auto &v : sources)
+		for (auto& v : sources)
 		{
 			if (first)
 			{
 				result = fmt::merge(v, separator);
-				first = false;
+				first  = false;
 			}
 			else
 			{
@@ -129,5 +129,5 @@ namespace fmt
 
 	std::string to_upper(const std::string& string);
 
-	bool match(const std::string &source, const std::string &mask);
+	bool match(const std::string& source, const std::string& mask);
 }

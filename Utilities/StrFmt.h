@@ -8,11 +8,11 @@
 
 namespace fmt
 {
-	template<typename... Args>
+	template <typename... Args>
 	static std::string format(const char*, const Args&...);
 }
 
-template<typename T, typename>
+template <typename T, typename>
 struct fmt_unveil
 {
 	static_assert(sizeof(T) > 0, "fmt_unveil<>: cannot pass forward-declared object");
@@ -43,7 +43,7 @@ struct fmt_unveil
 	}
 };
 
-template<typename T>
+template <typename T>
 struct fmt_unveil<T, std::enable_if_t<std::is_integral<T>::value && sizeof(T) <= 8 && alignof(T) <= 8>>
 {
 	using type = T;
@@ -54,7 +54,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_integral<T>::value && sizeof(T) <=
 	}
 };
 
-template<typename T>
+template <typename T>
 struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof(T) <= 8 && alignof(T) <= 8>>
 {
 	using type = T;
@@ -66,7 +66,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof
 	}
 };
 
-template<typename T>
+template <typename T>
 struct fmt_unveil<T, std::enable_if_t<std::is_enum<T>::value>>
 {
 	using type = T;
@@ -77,7 +77,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_enum<T>::value>>
 	}
 };
 
-template<typename T>
+template <typename T>
 struct fmt_unveil<T*, void>
 {
 	using type = const T*;
@@ -88,7 +88,7 @@ struct fmt_unveil<T*, void>
 	}
 };
 
-template<typename T, std::size_t N>
+template <typename T, std::size_t N>
 struct fmt_unveil<T[N], void>
 {
 	using type = const T*;
@@ -99,7 +99,7 @@ struct fmt_unveil<T[N], void>
 	}
 };
 
-template<>
+template <>
 struct fmt_unveil<b8, void>
 {
 	using type = bool;
@@ -111,7 +111,7 @@ struct fmt_unveil<b8, void>
 };
 
 // String type format provider, also type classifier (format() called if an argument is formatted as "%s")
-template<typename T, typename = void>
+template <typename T, typename = void>
 struct fmt_class_string
 {
 	// Formatting function (must be explicitly specialized)
@@ -127,7 +127,7 @@ struct fmt_class_string
 	}
 
 	// Helper function (safely converts arg to enum value)
-	static SAFE_BUFFERS FORCE_INLINE void format_enum(std::string& out, u64 arg, const char*(*get)(T value))
+	static SAFE_BUFFERS FORCE_INLINE void format_enum(std::string& out, u64 arg, const char* (*get)(T value))
 	{
 		const auto value = static_cast<std::underlying_type_t<T>>(arg);
 
@@ -146,7 +146,7 @@ struct fmt_class_string
 	}
 
 	// Helper function (bitset formatting)
-	static SAFE_BUFFERS FORCE_INLINE void format_bitset(std::string& out, u64 arg, const char* prefix, const char* delim, const char* suffix, void(*fmt)(std::string&, u64))
+	static SAFE_BUFFERS FORCE_INLINE void format_bitset(std::string& out, u64 arg, const char* prefix, const char* delim, const char* suffix, void (*fmt)(std::string&, u64))
 	{
 		// Start from raw value
 		fmt_class_string<u64>::format(out, arg);
@@ -175,25 +175,25 @@ struct fmt_class_string
 	static constexpr const char* unknown = nullptr;
 };
 
-template<>
+template <>
 struct fmt_class_string<const void*, void>
 {
 	static void format(std::string& out, u64 arg);
 };
 
-template<typename T>
+template <typename T>
 struct fmt_class_string<T*, void> : fmt_class_string<const void*, void>
 {
 	// Classify all pointers as const void*
 };
 
-template<>
+template <>
 struct fmt_class_string<const char*, void>
 {
 	static void format(std::string& out, u64 arg);
 };
 
-template<>
+template <>
 struct fmt_class_string<char*, void> : fmt_class_string<const char*>
 {
 	// Classify char* as const char*
@@ -203,7 +203,7 @@ struct fmt_type_info
 {
 	decltype(&fmt_class_string<int>::format) fmt_string;
 
-	template<typename T>
+	template <typename T>
 	static constexpr fmt_type_info make()
 	{
 		return fmt_type_info
@@ -213,23 +213,20 @@ struct fmt_type_info
 	}
 };
 
-template<typename Arg>
+template <typename Arg>
 using fmt_unveil_t = typename fmt_unveil<Arg>::type;
 
 // Argument array type (each element generated via fmt_unveil<>)
-template<typename... Args>
+template <typename... Args>
 using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
 
 namespace fmt
 {
-	template<typename... Args>
-	const fmt_type_info* get_type_info()
+	template <typename... Args>
+	SAFE_BUFFERS FORCE_INLINE const fmt_type_info* get_type_info()
 	{
 		// Constantly initialized null-terminated list of type-specific information
-		static constexpr fmt_type_info result[sizeof...(Args) + 1]
-		{
-			fmt_type_info::make<Args>()...
-		};
+		static constexpr fmt_type_info result[sizeof...(Args) + 1]{fmt_type_info::make<Args>()...};
 
 		return result;
 	}
@@ -238,15 +235,15 @@ namespace fmt
 	void raw_append(std::string& out, const char*, const fmt_type_info*, const u64*) noexcept;
 
 	// Formatting function
-	template<typename... Args>
-	static SAFE_BUFFERS void append(std::string& out, const char* fmt, const Args&... args)
+	template <typename... Args>
+	SAFE_BUFFERS FORCE_INLINE void append(std::string& out, const char* fmt, const Args&... args)
 	{
 		raw_append(out, fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 
 	// Formatting function
-	template<typename... Args>
-	static SAFE_BUFFERS std::string format(const char* fmt, const Args&... args)
+	template <typename... Args>
+	SAFE_BUFFERS FORCE_INLINE std::string format(const char* fmt, const Args&... args)
 	{
 		std::string result;
 		append<Args...>(result, fmt, args...);
@@ -254,11 +251,11 @@ namespace fmt
 	}
 
 	// Internal exception message formatting template, must be explicitly specialized or instantiated in cpp to minimize code bloat
-	template<typename T>
+	template <typename T>
 	[[noreturn]] void raw_throw_exception(const char*, const fmt_type_info*, const u64*);
 
 	// Throw exception with formatting
-	template<typename T = std::runtime_error, typename... Args>
+	template <typename T = std::runtime_error, typename... Args>
 	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
 	{
 		raw_throw_exception<T>(fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});

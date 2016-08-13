@@ -3,54 +3,57 @@
 #include "types.h"
 #include "Platform.h"
 
+// 128-bit vector type and also se_storage<> storage type
 union alignas(16) v128
 {
 	char _bytes[16];
 
-	template<typename T, std::size_t N, std::size_t M>
+	template <typename T, std::size_t N, std::size_t M>
 	struct masked_array_t // array type accessed as (index ^ M)
 	{
 		T m_data[N];
 
 	public:
-		T& operator [](std::size_t index)
+		T& operator[](std::size_t index)
 		{
 			return m_data[index ^ M];
 		}
 
-		const T& operator [](std::size_t index) const
+		const T& operator[](std::size_t index) const
 		{
 			return m_data[index ^ M];
 		}
 	};
 
 #if IS_LE_MACHINE == 1
-	template<typename T, std::size_t N = 16 / sizeof(T)> using normal_array_t = masked_array_t<T, N, 0>;
-	template<typename T, std::size_t N = 16 / sizeof(T)> using reversed_array_t = masked_array_t<T, N, N - 1>;
+	template <typename T, std::size_t N = 16 / sizeof(T)>
+	using normal_array_t = masked_array_t<T, N, 0>;
+	template <typename T, std::size_t N = 16 / sizeof(T)>
+	using reversed_array_t = masked_array_t<T, N, N - 1>;
 #endif
 
-	normal_array_t<u64>   _u64;
-	normal_array_t<s64>   _s64;
+	normal_array_t<u64> _u64;
+	normal_array_t<s64> _s64;
 	reversed_array_t<u64> u64r;
 	reversed_array_t<s64> s64r;
 
-	normal_array_t<u32>   _u32;
-	normal_array_t<s32>   _s32;
+	normal_array_t<u32> _u32;
+	normal_array_t<s32> _s32;
 	reversed_array_t<u32> u32r;
 	reversed_array_t<s32> s32r;
 
-	normal_array_t<u16>   _u16;
-	normal_array_t<s16>   _s16;
+	normal_array_t<u16> _u16;
+	normal_array_t<s16> _s16;
 	reversed_array_t<u16> u16r;
 	reversed_array_t<s16> s16r;
 
-	normal_array_t<u8>    _u8;
-	normal_array_t<s8>    _s8;
-	reversed_array_t<u8>  u8r;
-	reversed_array_t<s8>  s8r;
+	normal_array_t<u8> _u8;
+	normal_array_t<s8> _s8;
+	reversed_array_t<u8> u8r;
+	reversed_array_t<s8> s8r;
 
-	normal_array_t<f32>   _f;
-	normal_array_t<f64>   _d;
+	normal_array_t<f32> _f;
+	normal_array_t<f64> _d;
 	reversed_array_t<f32> fr;
 	reversed_array_t<f64> dr;
 
@@ -80,7 +83,7 @@ union alignas(16) v128
 				return (data & mask) != 0;
 			}
 
-			bit_element& operator =(const bool right)
+			bit_element& operator=(const bool right)
 			{
 				if (right)
 				{
@@ -93,7 +96,7 @@ union alignas(16) v128
 				return *this;
 			}
 
-			bit_element& operator =(const bit_element& right)
+			bit_element& operator=(const bit_element& right)
 			{
 				if (right)
 				{
@@ -108,7 +111,7 @@ union alignas(16) v128
 		};
 
 		// Index 0 returns the MSB and index 127 returns the LSB
-		bit_element operator [](u32 index)
+		bit_element operator[](u32 index)
 		{
 #if IS_LE_MACHINE == 1
 			return bit_element(m_data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
@@ -116,14 +119,13 @@ union alignas(16) v128
 		}
 
 		// Index 0 returns the MSB and index 127 returns the LSB
-		bool operator [](u32 index) const
+		bool operator[](u32 index) const
 		{
 #if IS_LE_MACHINE == 1
 			return (m_data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
 #endif
 		}
-	}
-	_bit;
+	} _bit;
 
 	static v128 from64(u64 _0, u64 _1 = 0)
 	{
@@ -277,12 +279,12 @@ union alignas(16) v128
 		return fromV(_mm_cmpeq_epi32(left.vi, right.vi));
 	}
 
-	bool operator ==(const v128& right) const
+	bool operator==(const v128& right) const
 	{
 		return _u64[0] == right._u64[0] && _u64[1] == right._u64[1];
 	}
 
-	bool operator !=(const v128& right) const
+	bool operator!=(const v128& right) const
 	{
 		return _u64[0] != right._u64[0] || _u64[1] != right._u64[1];
 	}
@@ -300,30 +302,27 @@ union alignas(16) v128
 	}
 };
 
-inline v128 operator |(const v128& left, const v128& right)
+inline v128 operator|(const v128& left, const v128& right)
 {
 	return v128::fromV(_mm_or_si128(left.vi, right.vi));
 }
 
-inline v128 operator &(const v128& left, const v128& right)
+inline v128 operator&(const v128& left, const v128& right)
 {
 	return v128::fromV(_mm_and_si128(left.vi, right.vi));
 }
 
-inline v128 operator ^(const v128& left, const v128& right)
+inline v128 operator^(const v128& left, const v128& right)
 {
 	return v128::fromV(_mm_xor_si128(left.vi, right.vi));
 }
 
-inline v128 operator ~(const v128& other)
+inline v128 operator~(const v128& other)
 {
 	return v128::from64(~other._u64[0], ~other._u64[1]);
 }
 
-#define IS_INTEGER(t) (std::is_integral<t>::value || std::is_enum<t>::value)
-#define IS_BINARY_COMPARABLE(t1, t2) (IS_INTEGER(t1) && IS_INTEGER(t2) && sizeof(t1) == sizeof(t2))
-
-template<typename T, std::size_t Align, std::size_t Size>
+template <typename T, std::size_t Align, std::size_t Size>
 struct se_storage
 {
 	using type = std::aligned_storage_t<Size, Align>;
@@ -359,7 +358,7 @@ struct se_storage
 	}
 };
 
-template<typename T>
+template <typename T>
 struct se_storage<T, 2, 2>
 {
 	using type = u16;
@@ -386,11 +385,11 @@ struct se_storage<T, 2, 2>
 
 	static inline T copy(const T& src)
 	{
-		return src;	
+		return src;
 	}
 };
 
-template<typename T>
+template <typename T>
 struct se_storage<T, 4, 4>
 {
 	using type = u32;
@@ -417,11 +416,11 @@ struct se_storage<T, 4, 4>
 
 	static inline T copy(const T& src)
 	{
-		return src;	
+		return src;
 	}
 };
 
-template<typename T>
+template <typename T>
 struct se_storage<T, 8, 8>
 {
 	using type = u64;
@@ -448,11 +447,11 @@ struct se_storage<T, 8, 8>
 
 	static inline T copy(const T& src)
 	{
-		return src;	
+		return src;
 	}
 };
 
-template<typename T>
+template <typename T>
 struct se_storage<T, 16, 16>
 {
 	using type = v128;
@@ -475,14 +474,12 @@ struct se_storage<T, 16, 16>
 
 	static inline T copy(const T& src)
 	{
-		return src;	
+		return src;
 	}
 };
 
-static struct se_raw_tag_t {} constexpr se_raw{};
-
 // Switched endianness
-template<typename T, std::size_t Align>
+template <typename T, std::size_t Align>
 class se_t<T, true, Align>
 {
 	using type = typename std::remove_cv<T>::type;
@@ -496,24 +493,6 @@ class se_t<T, true, Align>
 	static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
 	static_assert(sizeof(type) == alignof(type), "se_t<> error: unexpected alignment");
 
-	template<typename T2, typename = void>
-	struct bool_converter
-	{
-		static inline bool to_bool(const se_t<T2>& value)
-		{
-			return static_cast<bool>(value.value());
-		}
-	};
-
-	template<typename T2>
-	struct bool_converter<T2, std::enable_if_t<std::is_integral<T2>::value>>
-	{
-		static inline bool to_bool(const se_t<T2>& value)
-		{
-			return value.m_data != 0;
-		}
-	};
-
 public:
 	se_t() = default;
 
@@ -523,27 +502,15 @@ public:
 		: m_data(storage::to(value))
 	{
 	}
-	
-	// Construct directly from raw data (don't use)
-	constexpr se_t(const stype& raw_value, const se_raw_tag_t&)
-		: m_data(raw_value)
-	{
-	}
 
 	type value() const
 	{
 		return storage::from(m_data);
 	}
 
-	// Access underlying raw data (don't use)
-	constexpr const stype& raw_data() const noexcept
-	{
-		return m_data;
-	}
-	
-	se_t& operator =(const se_t&) = default;
+	se_t& operator=(const se_t&) = default;
 
-	se_t& operator =(type value)
+	se_t& operator=(type value)
 	{
 		return m_data = storage::to(value), *this;
 	}
@@ -554,58 +521,10 @@ public:
 	{
 		return storage::from(m_data);
 	}
-
-	// Optimization
-	explicit operator bool() const
-	{
-		return bool_converter<type>::to_bool(*this);
-	}
-
-	// Optimization
-	template<typename T2>
-	std::enable_if_t<IS_BINARY_COMPARABLE(T, T2), se_t&> operator &=(const se_t<T2>& right)
-	{
-		return m_data &= right.raw_data(), *this;
-	}
-
-	// Optimization
-	template<typename CT>
-	std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator &=(CT right)
-	{
-		return m_data &= storage::to(right), *this;
-	}
-
-	// Optimization
-	template<typename T2>
-	std::enable_if_t<IS_BINARY_COMPARABLE(T, T2), se_t&> operator |=(const se_t<T2>& right)
-	{
-		return m_data |= right.raw_data(), *this;
-	}
-
-	// Optimization
-	template<typename CT>
-	std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator |=(CT right)
-	{
-		return m_data |= storage::to(right), *this;
-	}
-
-	// Optimization
-	template<typename T2>
-	std::enable_if_t<IS_BINARY_COMPARABLE(T, T2), se_t&> operator ^=(const se_t<T2>& right)
-	{
-		return m_data ^= right.raw_data(), *this;
-	}
-
-	// Optimization
-	template<typename CT>
-	std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator ^=(CT right)
-	{
-		return m_data ^= storage::to(right), *this;
-	}
 };
 
 // Native endianness
-template<typename T, std::size_t Align>
+template <typename T, std::size_t Align>
 class se_t<T, false, Align>
 {
 	using type = typename std::remove_cv<T>::type;
@@ -627,26 +546,14 @@ public:
 	{
 	}
 
-	// Construct directly from raw data (don't use)
-	constexpr se_t(const stype& raw_value, const se_raw_tag_t&)
-		: m_data(raw_value)
-	{
-	}
-
 	type value() const
 	{
 		return storage::copy(reinterpret_cast<const type&>(m_data));
 	}
 
-	// Access underlying raw data (don't use)
-	constexpr const stype& raw_data() const noexcept
-	{
-		return m_data;
-	}
+	se_t& operator=(const se_t& value) = default;
 
-	se_t& operator =(const se_t& value) = default;
-
-	se_t& operator =(type value)
+	se_t& operator=(type value)
 	{
 		return m_data = reinterpret_cast<const stype&>(value), *this;
 	}
@@ -657,80 +564,84 @@ public:
 	{
 		return storage::copy(reinterpret_cast<const type&>(m_data));
 	}
-
-	template<typename CT>
-	std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator &=(const CT& right)
-	{
-		return m_data &= right, *this;
-	}
-
-	template<typename CT>
-	std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator |=(const CT& right)
-	{
-		return m_data |= right, *this;
-	}
-
-	template<typename CT>
-	std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator ^=(const CT& right)
-	{
-		return m_data ^= right, *this;
-	}
 };
 
-// se_t with native endianness (alias)
-template<typename T, std::size_t Align = alignof(T)> using nse_t = se_t<T, false, Align>;
+// se_t<> with native endianness
+template <typename T, std::size_t Align = alignof(T)>
+using nse_t = se_t<T, false, Align>;
 
-template<typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator +=(se_t<T, Se, Align>& left, const T1& right)
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator+=(se_t<T, Se, Align>& left, const T1& right)
 {
 	auto value = left.value();
 	return left = (value += right);
 }
 
-template<typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator -=(se_t<T, Se, Align>& left, const T1& right)
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator-=(se_t<T, Se, Align>& left, const T1& right)
 {
 	auto value = left.value();
 	return left = (value -= right);
 }
 
-template<typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator *=(se_t<T, Se, Align>& left, const T1& right)
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator*=(se_t<T, Se, Align>& left, const T1& right)
 {
 	auto value = left.value();
 	return left = (value *= right);
 }
 
-template<typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator /=(se_t<T, Se, Align>& left, const T1& right)
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator/=(se_t<T, Se, Align>& left, const T1& right)
 {
 	auto value = left.value();
 	return left = (value /= right);
 }
 
-template<typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator %=(se_t<T, Se, Align>& left, const T1& right)
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator%=(se_t<T, Se, Align>& left, const T1& right)
 {
 	auto value = left.value();
 	return left = (value %= right);
 }
 
-template<typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator <<=(se_t<T, Se, Align>& left, const T1& right)
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator&=(se_t<T, Se, Align>& left, const T1& right)
+{
+	auto value = left.value();
+	return left = (value &= right);
+}
+
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator|=(se_t<T, Se, Align>& left, const T1& right)
+{
+	auto value = left.value();
+	return left = (value |= right);
+}
+
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator^=(se_t<T, Se, Align>& left, const T1& right)
+{
+	auto value = left.value();
+	return left = (value ^= right);
+}
+
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator<<=(se_t<T, Se, Align>& left, const T1& right)
 {
 	auto value = left.value();
 	return left = (value <<= right);
 }
 
-template<typename T, bool Se, std::size_t Align, typename T1>
-inline se_t<T, Se, Align>& operator >>=(se_t<T, Se, Align>& left, const T1& right)
+template <typename T, bool Se, std::size_t Align, typename T1>
+inline se_t<T, Se, Align>& operator>>=(se_t<T, Se, Align>& left, const T1& right)
 {
 	auto value = left.value();
 	return left = (value >>= right);
 }
 
-template<typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align> operator ++(se_t<T, Se, Align>& left, int)
+template <typename T, bool Se, std::size_t Align>
+inline se_t<T, Se, Align> operator++(se_t<T, Se, Align>& left, int)
 {
 	auto value = left.value();
 	auto result = value++;
@@ -738,8 +649,8 @@ inline se_t<T, Se, Align> operator ++(se_t<T, Se, Align>& left, int)
 	return result;
 }
 
-template<typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align> operator --(se_t<T, Se, Align>& left, int)
+template <typename T, bool Se, std::size_t Align>
+inline se_t<T, Se, Align> operator--(se_t<T, Se, Align>& left, int)
 {
 	auto value = left.value();
 	auto result = value--;
@@ -747,148 +658,38 @@ inline se_t<T, Se, Align> operator --(se_t<T, Se, Align>& left, int)
 	return result;
 }
 
-template<typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align>& operator ++(se_t<T, Se, Align>& right)
+template <typename T, bool Se, std::size_t Align>
+inline se_t<T, Se, Align>& operator++(se_t<T, Se, Align>& right)
 {
 	auto value = right.value();
 	return right = ++value;
 }
 
-template<typename T, bool Se, std::size_t Align>
-inline se_t<T, Se, Align>& operator --(se_t<T, Se, Align>& right)
+template <typename T, bool Se, std::size_t Align>
+inline se_t<T, Se, Align>& operator--(se_t<T, Se, Align>& right)
 {
 	auto value = right.value();
 	return right = --value;
 }
 
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator ==(const se_t<T1>& left, const se_t<T2>& right)
-{
-	return left.raw_data() == right.raw_data();
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<std::is_integral<T1>::value && IS_INTEGER(T2) && sizeof(T1) >= sizeof(T2), bool> operator ==(const se_t<T1>& left, T2 right)
-{
-	return left.raw_data() == se_storage<T1>::to(right);
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_INTEGER(T1) && std::is_integral<T2>::value && sizeof(T1) <= sizeof(T2), bool> operator ==(T1 left, const se_t<T2>& right)
-{
-	return se_storage<T2>::to(left) == right.raw_data();
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator !=(const se_t<T1>& left, const se_t<T2>& right)
-{
-	return left.raw_data() != right.raw_data();
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<std::is_integral<T1>::value && IS_INTEGER(T2) && sizeof(T1) >= sizeof(T2), bool> operator !=(const se_t<T1>& left, T2 right)
-{
-	return left.raw_data() != se_storage<T1>::to(right);
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_INTEGER(T1) && std::is_integral<T2>::value && sizeof(T1) <= sizeof(T2), bool> operator !=(T1 left, const se_t<T2>& right)
-{
-	return se_storage<T2>::to(left) != right.raw_data();
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() & T2())>> operator &(const se_t<T1>& left, const se_t<T2>& right)
-{
-	return{ left.raw_data() & right.raw_data(), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<std::is_integral<T1>::value && IS_INTEGER(T2) && sizeof(T1) >= sizeof(T2) && sizeof(T1) >= 4, se_t<decltype(T1() & T2())>> operator &(const se_t<T1>& left, T2 right)
-{
-	return{ left.raw_data() & se_storage<T1>::to(right), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_INTEGER(T1) && std::is_integral<T2>::value && sizeof(T1) <= sizeof(T2) && sizeof(T2) >= 4, se_t<decltype(T1() & T2())>> operator &(T1 left, const se_t<T2>& right)
-{
-	return{ se_storage<T2>::to(left) & right.raw_data(), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() | T2())>> operator |(const se_t<T1>& left, const se_t<T2>& right)
-{
-	return{ left.raw_data() | right.raw_data(), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<std::is_integral<T1>::value && IS_INTEGER(T2) && sizeof(T1) >= sizeof(T2) && sizeof(T1) >= 4, se_t<decltype(T1() | T2())>> operator |(const se_t<T1>& left, T2 right)
-{
-	return{ left.raw_data() | se_storage<T1>::to(right), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_INTEGER(T1) && std::is_integral<T2>::value && sizeof(T1) <= sizeof(T2) && sizeof(T2) >= 4, se_t<decltype(T1() | T2())>> operator |(T1 left, const se_t<T2>& right)
-{
-	return{ se_storage<T2>::to(left) | right.raw_data(), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() ^ T2())>> operator ^(const se_t<T1>& left, const se_t<T2>& right)
-{
-	return{ left.raw_data() ^ right.raw_data(), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<std::is_integral<T1>::value && IS_INTEGER(T2) && sizeof(T1) >= sizeof(T2) && sizeof(T1) >= 4, se_t<decltype(T1() ^ T2())>> operator ^(const se_t<T1>& left, T2 right)
-{
-	return{ left.raw_data() ^ se_storage<T1>::to(right), se_raw };
-}
-
-// Optimization
-template<typename T1, typename T2>
-inline std::enable_if_t<IS_INTEGER(T1) && std::is_integral<T2>::value && sizeof(T1) <= sizeof(T2) && sizeof(T2) >= 4, se_t<decltype(T1() ^ T2())>> operator ^(T1 left, const se_t<T2>& right)
-{
-	return{ se_storage<T2>::to(left) ^ right.raw_data(), se_raw };
-}
-
-// Optimization
-template<typename T>
-inline std::enable_if_t<std::is_integral<T>::value && sizeof(T) >= 4, se_t<decltype(~T())>> operator ~(const se_t<T>& right)
-{
-	return{ ~right.raw_data(), se_raw };
-}
-
 #if IS_LE_MACHINE == 1
-template<typename T, std::size_t Align = alignof(T)> using be_t = se_t<T, true, Align>;
-template<typename T, std::size_t Align = alignof(T)> using le_t = se_t<T, false, Align>;
+template <typename T, std::size_t Align = alignof(T)>
+using be_t = se_t<T, true, Align>;
+template <typename T, std::size_t Align = alignof(T)>
+using le_t = se_t<T, false, Align>;
 #endif
 
 // Type converter: converts native endianness arithmetic/enum types to appropriate se_t<> type
-template<typename T, bool Se, typename = void>
+template <typename T, bool Se, typename = void>
 struct to_se
 {
-	template<typename T2, typename = void>
+	template <typename T2, typename = void>
 	struct to_se_
 	{
 		using type = T2;
 	};
 
-	template<typename T2>
+	template <typename T2>
 	struct to_se_<T2, std::enable_if_t<std::is_arithmetic<T2>::value || std::is_enum<T2>::value>>
 	{
 		using type = se_t<T2, Se>;
@@ -898,34 +699,70 @@ struct to_se
 	using type = typename to_se_<T>::type;
 };
 
-template<bool Se> struct to_se<v128, Se> { using type = se_t<v128, Se>; };
-template<bool Se> struct to_se<bool, Se> { using type = bool; };
-template<bool Se> struct to_se<char, Se> { using type = char; };
-template<bool Se> struct to_se<u8, Se>   { using type = u8; };
-template<bool Se> struct to_se<s8, Se>   { using type = s8; };
+template <bool Se>
+struct to_se<v128, Se>
+{
+	using type = se_t<v128, Se>;
+};
 
-template<typename T, bool Se>
-struct to_se<const T, Se, std::enable_if_t<!std::is_array<T>::value>> 
+template <bool Se>
+struct to_se<u128, Se>
+{
+	using type = se_t<u128, Se>;
+};
+
+template <bool Se>
+struct to_se<s128, Se>
+{
+	using type = se_t<s128, Se>;
+};
+
+template <bool Se>
+struct to_se<bool, Se>
+{
+	using type = bool;
+};
+
+template <bool Se>
+struct to_se<char, Se>
+{
+	using type = char;
+};
+
+template <bool Se>
+struct to_se<u8, Se>
+{
+	using type = u8;
+};
+
+template <bool Se>
+struct to_se<s8, Se>
+{
+	using type = s8;
+};
+
+template <typename T, bool Se>
+struct to_se<const T, Se, std::enable_if_t<!std::is_array<T>::value>>
 {
 	// Move const qualifier
 	using type = const typename to_se<T, Se>::type;
 };
 
-template<typename T, bool Se>
+template <typename T, bool Se>
 struct to_se<volatile T, Se, std::enable_if_t<!std::is_array<T>::value && !std::is_const<T>::value>>
 {
 	// Move volatile qualifier
 	using type = volatile typename to_se<T, Se>::type;
 };
 
-template<typename T, bool Se>
+template <typename T, bool Se>
 struct to_se<T[], Se>
 {
 	// Move array qualifier
 	using type = typename to_se<T, Se>::type[];
 };
 
-template<typename T, bool Se, std::size_t N>
+template <typename T, bool Se, std::size_t N>
 struct to_se<T[N], Se>
 {
 	// Move array qualifier
@@ -934,17 +771,21 @@ struct to_se<T[N], Se>
 
 // BE/LE aliases for to_se<>
 #if IS_LE_MACHINE == 1
-template<typename T> using to_be_t = typename to_se<T, true>::type;
-template<typename T> using to_le_t = typename to_se<T, false>::type;
+template <typename T>
+using to_be_t = typename to_se<T, true>::type;
+template <typename T>
+using to_le_t = typename to_se<T, false>::type;
 #endif
 
 // BE/LE aliases for atomic_t
 #if IS_LE_MACHINE == 1
-template<typename T> using atomic_be_t = atomic_t<be_t<T>>;
-template<typename T> using atomic_le_t = atomic_t<le_t<T>>;
+template <typename T>
+using atomic_be_t = atomic_t<be_t<T>>;
+template <typename T>
+using atomic_le_t = atomic_t<le_t<T>>;
 #endif
 
-template<typename T, bool Se, std::size_t Align>
+template <typename T, bool Se, std::size_t Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>
 {
 	using type = typename fmt_unveil<T>::type;
@@ -954,6 +795,3 @@ struct fmt_unveil<se_t<T, Se, Align>, void>
 		return fmt_unveil<T>::get(arg);
 	}
 };
-
-#undef IS_BINARY_COMPARABLE
-#undef IS_INTEGER
