@@ -106,10 +106,10 @@ namespace logs
 
 // Legacy:
 
-#define LOG_SUCCESS(ch, fmt, ...) logs::ch.success(fmt, ##__VA_ARGS__)
-#define LOG_NOTICE(ch, fmt, ...)  logs::ch.notice (fmt, ##__VA_ARGS__)
-#define LOG_WARNING(ch, fmt, ...) logs::ch.warning(fmt, ##__VA_ARGS__)
-#define LOG_ERROR(ch, fmt, ...)   logs::ch.error  (fmt, ##__VA_ARGS__)
-#define LOG_TODO(ch, fmt, ...)    logs::ch.todo   (fmt, ##__VA_ARGS__)
-#define LOG_TRACE(ch, fmt, ...)   logs::ch.trace  (fmt, ##__VA_ARGS__)
-#define LOG_FATAL(ch, fmt, ...)   logs::ch.fatal  (fmt, ##__VA_ARGS__)
+#define LOG_SUCCESS(ch, fmt, ...) logs::ch.success("" fmt, ##__VA_ARGS__)
+#define LOG_NOTICE(ch, fmt, ...)  logs::ch.notice ("" fmt, ##__VA_ARGS__)
+#define LOG_WARNING(ch, fmt, ...) logs::ch.warning("" fmt, ##__VA_ARGS__)
+#define LOG_ERROR(ch, fmt, ...)   logs::ch.error  ("" fmt, ##__VA_ARGS__)
+#define LOG_TODO(ch, fmt, ...)    logs::ch.todo   ("" fmt, ##__VA_ARGS__)
+#define LOG_TRACE(ch, fmt, ...)   logs::ch.trace  ("" fmt, ##__VA_ARGS__)
+#define LOG_FATAL(ch, fmt, ...)   logs::ch.fatal  ("" fmt, ##__VA_ARGS__)

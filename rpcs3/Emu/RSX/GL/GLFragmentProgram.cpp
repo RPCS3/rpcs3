@@ -359,7 +359,7 @@ void GLFragmentProgram::Compile()
 			delete[] buf;
 		}
 
-		LOG_NOTICE(RSX, shader.c_str()); // Log the text of the shader that failed to compile
+		LOG_NOTICE(RSX, "%s", shader); // Log the text of the shader that failed to compile
 		Emu.Pause(); // Pause the emulator, we can't really continue from here
 	}
 }

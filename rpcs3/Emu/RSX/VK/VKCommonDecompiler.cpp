@@ -291,8 +291,8 @@ namespace vk
 		}
 		else
 		{
-			LOG_ERROR(RSX, shader_object.getInfoLog());
-			LOG_ERROR(RSX, shader_object.getInfoDebugLog());
+			LOG_ERROR(RSX, "%s", shader_object.getInfoLog());
+			LOG_ERROR(RSX, "%s", shader_object.getInfoDebugLog());
 		}
 
 		glslang::FinalizeProcess();
