@@ -2283,7 +2283,7 @@ std::string named_thread::get_name() const
 void named_thread::start_thread(const std::shared_ptr<void>& _this)
 {
 	// Ensure it's not called from the constructor and the correct object is passed
-	ENSURES(_this.get() == this);
+	verify("named_thread::start_thread" HERE), _this.get() == this;
 
 	// Run thread
 	thread_ctrl::spawn(m_thread, get_name(), [this, _this]()

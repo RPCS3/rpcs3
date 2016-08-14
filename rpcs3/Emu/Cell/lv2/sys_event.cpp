@@ -276,7 +276,6 @@ s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t>
 
 	if (ppu.gpr[3])
 	{
-		ENSURES(!idm::check<lv2_event_queue_t>(equeue_id));
 		return CELL_ECANCELED;
 	}
 

@@ -249,9 +249,8 @@ SPUThread::SPUThread(const std::string& name, u32 index)
 	: cpu_thread()
 	, m_name(name)
 	, index(index)
-	, offset(vm::alloc(0x40000, vm::main))
+	, offset(verify(vm::alloc(0x40000, vm::main), __func__))
 {
-	ENSURES(offset);
 }
 
 void SPUThread::push_snr(u32 number, u32 value)

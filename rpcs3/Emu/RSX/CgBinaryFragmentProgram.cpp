@@ -473,7 +473,7 @@ void CgBinaryDisasm::TaskFP()
 			break;
 		}
 
-		ENSURES(m_step % sizeof(u32) == 0);
+		verify(HERE), m_step % sizeof(u32) == 0;
 		data += m_step / sizeof(u32);
 	}
 }

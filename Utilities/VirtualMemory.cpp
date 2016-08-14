@@ -16,30 +16,27 @@ namespace memory_helper
 	void* reserve_memory(size_t size)
 	{
 #ifdef _WIN32
-		void* ret = VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
-		ENSURES(ret != NULL);
+		return verify(VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS), "reserve_memory" HERE);
 #else
-		void* ret = mmap(nullptr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
-		ENSURES(ret != 0);
+		return verify(::mmap(nullptr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0), "reserve_memory" HERE);
 #endif
-		return ret;
 	}
 
 	void commit_page_memory(void* pointer, size_t size)
 	{
 #ifdef _WIN32
-		VERIFY(VirtualAlloc(pointer, size, MEM_COMMIT, PAGE_READWRITE) != NULL);
+		verify(HERE), VirtualAlloc(pointer, size, MEM_COMMIT, PAGE_READWRITE);
 #else
-		VERIFY(mprotect((void*)((u64)pointer & -4096), size, PROT_READ | PROT_WRITE) != -1);
+		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), size, PROT_READ | PROT_WRITE) != -1;
 #endif
 	}
 
 	void free_reserved_memory(void* pointer, size_t size)
 	{
 #ifdef _WIN32
-		VERIFY(VirtualFree(pointer, 0, MEM_DECOMMIT) != 0);
+		verify(HERE), VirtualFree(pointer, 0, MEM_DECOMMIT);
 #else
-		VERIFY(mprotect(pointer, size, PROT_NONE) != -1);
+		verify(HERE), ::mprotect(pointer, size, PROT_NONE) != -1;
 #endif
 	}
 }
