@@ -71,44 +71,44 @@ Rpcs3App* TheApp;
 
 cfg::map_entry<std::function<std::shared_ptr<KeyboardHandlerBase>()>> g_cfg_kb_handler(cfg::root.io, "Keyboard",
 {
-	{ "Null", PURE_EXPR(std::make_shared<NullKeyboardHandler>()) },
-	{ "Basic", PURE_EXPR(std::make_shared<BasicKeyboardHandler>()) },
+	{ "Null", &std::make_shared<NullKeyboardHandler> },
+	{ "Basic", &std::make_shared<BasicKeyboardHandler> },
 });
 
 cfg::map_entry<std::function<std::shared_ptr<MouseHandlerBase>()>> g_cfg_mouse_handler(cfg::root.io, "Mouse",
 {
-	{ "Null", PURE_EXPR(std::make_shared<NullMouseHandler>()) },
-	{ "Basic", PURE_EXPR(std::make_shared<BasicMouseHandler>()) },
+	{ "Null", &std::make_shared<NullMouseHandler> },
+	{ "Basic", &std::make_shared<BasicMouseHandler> },
 });
 
 cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handler(cfg::root.io, "Pad", "Keyboard",
 {
-	{ "Null", PURE_EXPR(std::make_shared<NullPadHandler>()) },
-	{ "Keyboard", PURE_EXPR(std::make_shared<KeyboardPadHandler>()) },
+	{ "Null", &std::make_shared<NullPadHandler> },
+	{ "Keyboard", &std::make_shared<KeyboardPadHandler> },
 #ifdef _MSC_VER
-	{ "XInput", PURE_EXPR(std::make_shared<XInputPadHandler>()) },
+	{ "XInput", &std::make_shared<XInputPadHandler> },
 #endif
 });
 
 cfg::map_entry<std::function<std::shared_ptr<GSRender>()>> g_cfg_gs_render(cfg::root.video, "Renderer", "OpenGL",
 {
-	{ "Null", PURE_EXPR(std::make_shared<NullGSRender>()) },
-	{ "OpenGL", PURE_EXPR(std::make_shared<GLGSRender>()) },
+	{ "Null", &std::make_shared<NullGSRender> },
+	{ "OpenGL", &std::make_shared<GLGSRender> },
 #ifdef _MSC_VER
-	{ "D3D12", PURE_EXPR(std::make_shared<D3D12GSRender>()) },
+	{ "D3D12", &std::make_shared<D3D12GSRender> },
 #endif
 #ifdef _WIN32
-	{ "Vulkan", PURE_EXPR(std::make_shared<VKGSRender>()) },
+	{ "Vulkan", &std::make_shared<VKGSRender> },
 #endif
 });
 
 cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render(cfg::root.audio, "Renderer", 1,
 {
-	{ "Null", PURE_EXPR(std::make_shared<NullAudioThread>()) },
+	{ "Null", &std::make_shared<NullAudioThread> },
 #ifdef _WIN32
-	{ "XAudio2", PURE_EXPR(std::make_shared<XAudio2Thread>()) },
+	{ "XAudio2", &std::make_shared<XAudio2Thread> },
 #endif
-	{ "OpenAL", PURE_EXPR(std::make_shared<OpenALThread>()) },
+	{ "OpenAL", &std::make_shared<OpenALThread> },
 });
 
 extern cfg::bool_entry g_cfg_autostart;
@@ -159,11 +159,11 @@ bool Rpcs3App::OnInit()
 		wxGetApp().SendDbgCommand(id, t);
 	};
 
-	callbacks.get_kb_handler = PURE_EXPR(g_cfg_kb_handler.get()());
+	callbacks.get_kb_handler = []{ return g_cfg_kb_handler.get()(); };
 
-	callbacks.get_mouse_handler = PURE_EXPR(g_cfg_mouse_handler.get()());
+	callbacks.get_mouse_handler = []{ return g_cfg_mouse_handler.get()(); };
 
-	callbacks.get_pad_handler = PURE_EXPR(g_cfg_pad_handler.get()());
+	callbacks.get_pad_handler = []{ return g_cfg_pad_handler.get()(); };
 
 	callbacks.get_gs_frame = [](frame_type type, int w, int h) -> std::unique_ptr<GSFrameBase>
 	{
@@ -178,9 +178,9 @@ bool Rpcs3App::OnInit()
 		fmt::throw_exception("Invalid frame type (0x%x)" HERE, (int)type);
 	};
 
-	callbacks.get_gs_render = PURE_EXPR(g_cfg_gs_render.get()());
+	callbacks.get_gs_render = []{ return g_cfg_gs_render.get()(); };
 
-	callbacks.get_audio = PURE_EXPR(g_cfg_audio_render.get()());
+	callbacks.get_audio = []{ return g_cfg_audio_render.get()(); };
 
 	callbacks.get_msg_dialog = []() -> std::shared_ptr<MsgDialogBase>
 	{

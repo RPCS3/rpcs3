@@ -59,7 +59,7 @@ struct bs_base
 		__bitset_set_type = 0 // SFINAE marker
 	};
 
-	static constexpr std::size_t bitmax = sizeof(T) * CHAR_BIT;
+	static constexpr std::size_t bitmax = sizeof(T) * 8;
 	static constexpr std::size_t bitsize = static_cast<under>(T::__bitset_enum_max);
 
 	static_assert(std::is_enum<T>::value, "bs_t<> error: invalid type (must be enum)");

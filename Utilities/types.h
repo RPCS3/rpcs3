@@ -1,8 +1,77 @@
 #pragma once
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#include <immintrin.h>
+#include <emmintrin.h>
+
 #include <cstdint>
-#include <climits>
 #include <type_traits>
+#include <utility>
+
+// Assume little-endian
+#define IS_LE_MACHINE 1
+#define IS_BE_MACHINE 0
+
+#ifdef _MSC_VER
+#define ASSUME(cond) __assume(cond)
+#define LIKELY(cond) (cond)
+#define UNLIKELY(cond) (cond)
+#define SAFE_BUFFERS __declspec(safebuffers)
+#define NEVER_INLINE __declspec(noinline)
+#define FORCE_INLINE __forceinline
+#else
+#define ASSUME(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#define LIKELY(cond) __builtin_expect(!!(cond), 1)
+#define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
+#define SAFE_BUFFERS
+#define NEVER_INLINE __attribute__((noinline))
+#define FORCE_INLINE __attribute__((always_inline)) inline
+
+// Some platforms don't support thread_local well yet.
+#define thread_local __thread
+#endif
+
+#define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
+#define CHECK_ALIGN(type, align) static_assert(alignof(type) == align, "Invalid " #type " type alignment")
+#define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
+#define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
+#define CHECK_STORAGE(type, storage) static_assert(sizeof(type) <= sizeof(storage) && alignof(type) <= alignof(decltype(storage)), #type " is too small")
+
+// Return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
+#define SIZE_32(...) static_cast<u32>(sizeof(__VA_ARGS__))
+
+// Return 32 bit alignof() to avoid widening/narrowing conversions with size_t
+#define ALIGN_32(...) static_cast<u32>(alignof(__VA_ARGS__))
+
+// Return 32 bit offsetof()
+#define OFFSET_32(type, x) static_cast<u32>(reinterpret_cast<std::uintptr_t>(&reinterpret_cast<const volatile char&>(reinterpret_cast<type*>(0ull)->x)))
+
+#define CONCATENATE_DETAIL(x, y) x ## y
+#define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
+
+#define STRINGIZE_DETAIL(x) #x
+#define STRINGIZE(x) STRINGIZE_DETAIL(x)
+
+#define HERE "\n(in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
+
+// Wrap an expression into lambda
+#define WRAP_EXPR(...) [&] { return __VA_ARGS__; }
+
+// Ensure that the expression is evaluated to true. Always evaluated and allowed to have side effects (unlike assert() macro).
+#define VERIFY(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Verification failed: " #__VA_ARGS__ HERE); } while (0)
+
+// EXPECTS() and ENSURES() are intended to check function arguments and results.
+// Expressions are not guaranteed to evaluate.
+#define EXPECTS(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Precondition failed: " #__VA_ARGS__ HERE); } while (0)
+#define ENSURES(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Postcondition failed: " #__VA_ARGS__ HERE); } while (0)
+
+#define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
+
+#define STR_CASE(...) case __VA_ARGS__: return #__VA_ARGS__
 
 using schar  = signed char;
 using uchar  = unsigned char;
@@ -158,8 +227,6 @@ struct explicit_bool_t
 using u128 = __uint128_t;
 using s128 = __int128_t;
 #else
-
-#include "intrin.h"
 
 // Unsigned 128-bit integer implementation (TODO)
 struct alignas(16) u128
@@ -342,8 +409,8 @@ struct alignas(16) s128
 };
 #endif
 
-static_assert(alignof(u128) == 16 && sizeof(u128) == 16, "Wrong u128 implementation");
-static_assert(alignof(s128) == 16 && sizeof(s128) == 16, "Wrong s128 implementation");
+CHECK_SIZE_ALIGN(u128, 16, 16);
+CHECK_SIZE_ALIGN(s128, 16, 16);
 
 union alignas(2) f16
 {
@@ -366,6 +433,8 @@ union alignas(2) f16
 	}
 };
 
+CHECK_SIZE_ALIGN(f16, 2, 2);
+
 using f32 = float;
 using f64 = double;
 
@@ -381,6 +450,59 @@ template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr T align(const T& value, std::uint64_t align)
 {
 	return static_cast<T>((value + (align - 1)) & ~(align - 1));
+}
+
+inline std::uint32_t cntlz32(std::uint32_t arg, bool nonzero = false)
+{
+#if defined(_MSC_VER)
+	unsigned long res;
+	return _BitScanReverse(&res, arg) || nonzero ? res ^ 31 : 32;
+#else
+	return arg || nonzero ? __builtin_clzll(arg) - 32 : 32;
+#endif
+}
+
+inline std::uint64_t cntlz64(std::uint64_t arg, bool nonzero = false)
+{
+#if defined(_MSC_VER)
+	unsigned long res;
+	return _BitScanReverse64(&res, arg) || nonzero ? res ^ 63 : 64;
+#else
+	return arg || nonzero ? __builtin_clzll(arg) : 64;
+#endif
+}
+
+// Helper function, used by ""_u16, ""_u32, ""_u64
+constexpr std::uint8_t to_u8(char c)
+{
+	return static_cast<std::uint8_t>(c);
+}
+
+// Convert 2-byte string to u16 value like reinterpret_cast does
+constexpr std::uint16_t operator""_u16(const char* s, std::size_t length)
+{
+	return length != 2 ? throw s :
+#if IS_LE_MACHINE == 1
+		to_u8(s[1]) << 8 | to_u8(s[0]);
+#endif
+}
+
+// Convert 4-byte string to u32 value like reinterpret_cast does
+constexpr std::uint32_t operator""_u32(const char* s, std::size_t length)
+{
+	return length != 4 ? throw s :
+#if IS_LE_MACHINE == 1
+		to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+#endif
+}
+
+// Convert 8-byte string to u64 value like reinterpret_cast does
+constexpr std::uint64_t operator""_u64(const char* s, std::size_t length)
+{
+	return length != 8 ? throw s :
+#if IS_LE_MACHINE == 1
+		static_cast<std::uint64_t>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+#endif
 }
 
 namespace fmt

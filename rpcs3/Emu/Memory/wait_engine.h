@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utilities/types.h"
-#include "Utilities/Macro.h"
 
 class thread_ctrl;
 

@@ -1,12 +1,11 @@
 #pragma once
 
+#include "types.h"
+#include "bit_set.h"
+
 #include <memory>
 #include <string>
 #include <vector>
-#include <type_traits>
-
-#include "types.h"
-#include "bit_set.h"
 
 namespace fs
 {

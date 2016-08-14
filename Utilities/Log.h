@@ -1,7 +1,6 @@
 #pragma once
 
 #include "types.h"
-#include "Platform.h"
 #include "Atomic.h"
 #include "StrFmt.h"
 

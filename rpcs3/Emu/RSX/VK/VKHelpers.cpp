@@ -3,34 +3,44 @@
 
 namespace vk
 {
-	context *g_current_vulkan_ctx = nullptr;
+	context* g_current_vulkan_ctx = nullptr;
 	render_device g_current_renderer;
 
 	texture g_null_texture;
 
-	VkSampler g_null_sampler = nullptr;
+	VkSampler g_null_sampler      = nullptr;
 	VkImageView g_null_image_view = nullptr;
 
-	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
-		return realloc(pOriginal, size);
-	}
-
-	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
-	{
-#ifdef _WIN32
-		return _aligned_malloc(size, alignment);
+#ifdef _MSC_VER
+		return _aligned_realloc(pOriginal, size, alignment);
+#elif _WIN32
+		return __mingw_aligned_realloc(pOriginal, size, alignment);
 #else
-		return malloc(size);
+		std::abort();
 #endif
 	}
 
-	VKAPI_ATTR void VKAPI_CALL mem_free(void *pUserData, void *pMemory)
+	VKAPI_ATTR void* VKAPI_CALL mem_alloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
-#ifdef _WIN32
-		_aligned_free(pMemory);
+#ifdef _MSC_VER
+		return _aligned_malloc(size, alignment);
+#elif _WIN32
+		return __mingw_aligned_malloc(size, alignment);
 #else
-		free(pMemory);
+		std::abort();
+#endif
+	}
+
+	VKAPI_ATTR void VKAPI_CALL mem_free(void* pUserData, void* pMemory)
+	{
+#ifdef _MSC_VER
+		_aligned_free(pMemory);
+#elif _WIN32
+		__mingw_aligned_free(pMemory);
+#else
+		std::abort();
 #endif
 	}
 

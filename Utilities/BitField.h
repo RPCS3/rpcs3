@@ -9,7 +9,7 @@ struct bf_base
 	using vtype = simple_t<type>;
 
 	// Datatype bitsize
-	static constexpr uint bitmax = sizeof(T) * CHAR_BIT; static_assert(N - 1 < bitmax, "bf_base<> error: N out of bounds");
+	static constexpr uint bitmax = sizeof(T) * 8; static_assert(N - 1 < bitmax, "bf_base<> error: N out of bounds");
 	
 	// Field bitsize
 	static constexpr uint bitsize = N;

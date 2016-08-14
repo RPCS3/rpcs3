@@ -1359,7 +1359,7 @@ inline float ldexpf_extended(float x, int exp)  // ldexpf() for extended values,
 
 inline bool isdenormal(float x)
 {
-	const int fpc = _fpclass(x);
+	const int fpc = std::fpclassify(x);
 #ifdef __GNUG__
 	return fpc == FP_SUBNORMAL;
 #else
@@ -1369,7 +1369,7 @@ inline bool isdenormal(float x)
 
 inline bool isdenormal(double x)
 {
-	const int fpc = _fpclass(x);
+	const int fpc = std::fpclassify(x);
 #ifdef __GNUG__
 	return fpc == FP_SUBNORMAL;
 #else

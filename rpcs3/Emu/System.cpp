@@ -274,7 +274,7 @@ void Emulator::Load()
 
 			ppu_load_exec(ppu_exec);
 
-			fxm::import<GSRender>(PURE_EXPR(Emu.GetCallbacks().get_gs_render())); // TODO: must be created in appropriate sys_rsx syscall
+			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{

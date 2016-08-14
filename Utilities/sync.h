@@ -3,7 +3,6 @@
 /* For internal use. Don't include. */
 
 #include "types.h"
-#include "Macro.h"
 #include "Atomic.h"
 
 #ifdef _WIN32

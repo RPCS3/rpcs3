@@ -1,10 +1,15 @@
 #include "StrFmt.h"
 #include "BEType.h"
 #include "StrUtil.h"
-#include "Macro.h"
 #include "cfmt.h"
 
 #include <algorithm>
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <errno.h>
+#endif
 
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
@@ -124,17 +129,25 @@ namespace fmt
 {
 	void raw_error(const char* msg)
 	{
-		std::string out{"Error"};
-
-		out += ": ";
-		out += msg;
-
-		throw std::runtime_error{out};
+		throw std::runtime_error{msg};
 	}
 
 	void raw_verify_error(const char* msg, uint position)
 	{
 		std::string out{"Verification failed"};
+
+		// Print error code (may be irrelevant)
+#ifdef _WIN32
+		if (DWORD error = GetLastError())
+		{
+			fmt::append(out, " (e%#x)", error);
+		}
+#else
+		if (int error = errno)
+		{
+			fmt::append(out, " (e%d)", error);
+		}
+#endif
 
 		if (position)
 		{

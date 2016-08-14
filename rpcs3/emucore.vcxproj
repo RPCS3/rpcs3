@@ -396,10 +396,8 @@
     <ClInclude Include="..\Utilities\lockless.h" />
     <ClInclude Include="..\Utilities\SleepQueue.h" />
     <ClInclude Include="..\Utilities\sync.h" />
-    <ClInclude Include="..\Utilities\Platform.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
-    <ClInclude Include="..\Utilities\Macro.h" />
     <ClInclude Include="..\Utilities\Config.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
     <ClInclude Include="..\Utilities\Semaphore.h" />

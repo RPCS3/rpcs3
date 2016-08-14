@@ -61,7 +61,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 	default: return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	const auto dlg = fxm::import<MsgDialogBase>(PURE_EXPR(Emu.GetCallbacks().get_msg_dialog()));
+	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
 
 	if (!dlg)
 	{
@@ -294,7 +294,10 @@ s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallAfter(COPY_EXPR(dlg->ProgressBarReset(progressBarIndex)));
+	Emu.CallAfter([=]
+	{
+		dlg->ProgressBarReset(progressBarIndex);
+	});
 
 	return CELL_OK;
 }
@@ -315,7 +318,10 @@ s32 cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallAfter(COPY_EXPR(dlg->ProgressBarInc(progressBarIndex, delta)));
+	Emu.CallAfter([=]
+	{
+		dlg->ProgressBarInc(progressBarIndex, delta);
+	});
 
 	return CELL_OK;
 }

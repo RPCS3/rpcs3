@@ -2,7 +2,6 @@
 
 #include "types.h"
 #include "Atomic.h"
-#include "Platform.h"
 
 // Binary semaphore
 class benaphore

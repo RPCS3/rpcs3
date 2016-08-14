@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include <climits>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -55,7 +56,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 	const auto write_octal = [&](u64 value, u64 min_num)
 	{
-		out.resize(out.size() + std::max<u64>(min_num, 66 / 3 - (cntlz64(value | 1) + 2) / 3), '0');
+		out.resize(out.size() + std::max<u64>(min_num, 66 / 3 - (cntlz64(value | 1, true) + 2) / 3), '0');
 
 		// Write in reversed order
 		for (auto i = out.rbegin(); value; i++, value /= 8)
@@ -66,7 +67,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 	const auto write_hex = [&](u64 value, bool upper, u64 min_num)
 	{
-		out.resize(out.size() + std::max<u64>(min_num, 64 / 4 - cntlz64(value | 1) / 4), '0');
+		out.resize(out.size() + std::max<u64>(min_num, 64 / 4 - cntlz64(value | 1, true) / 4), '0');
 		
 		// Write in reversed order
 		for (auto i = out.rbegin(); value; i++, value /= 16)

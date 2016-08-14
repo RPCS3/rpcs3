@@ -27,7 +27,7 @@ namespace rsx
 	//
 	static inline u32 ceil_log2(u32 value)
 	{
-		return value <= 1 ? 0 : ::cntlz32((value - 1) << 1) ^ 31;
+		return value <= 1 ? 0 : ::cntlz32((value - 1) << 1, true) ^ 31;
 	}
 
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels

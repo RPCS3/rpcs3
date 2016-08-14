@@ -1,7 +1,6 @@
 #pragma once
 
 #include "types.h"
-#include "Platform.h"
 
 // 128-bit vector type and also se_storage<> storage type
 union alignas(16) v128
@@ -353,7 +352,10 @@ struct se_storage
 	static type copy(const type& src)
 	{
 		type result;
-		std::memcpy(&result, &src, Size);
+		for (std::size_t i = 0; i < Size; i++)
+		{
+			reinterpret_cast<u8*>(&result)[i] = reinterpret_cast<const u8*>(&src)[i];
+		}
 		return result;
 	}
 };

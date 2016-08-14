@@ -15,7 +15,7 @@ s32 cellKbInit(u32 max_connect)
 	if (max_connect > 7)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	const auto handler = fxm::import<KeyboardHandlerBase>(PURE_EXPR(Emu.GetCallbacks().get_kb_handler()));
+	const auto handler = fxm::import<KeyboardHandlerBase>(Emu.GetCallbacks().get_kb_handler);
 
 	if (!handler)
 		return CELL_KB_ERROR_ALREADY_INITIALIZED;

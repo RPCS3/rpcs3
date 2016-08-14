@@ -19,11 +19,23 @@
 
 #pragma warning( disable : 4351 )
 
+// MSVC bug workaround
+#ifdef _MSC_VER
+namespace std { inline namespace literals { inline namespace chrono_literals {}}}
+#endif
+
+#include "Utilities/types.h"
+#include "Utilities/BEType.h"
+#include "Utilities/Atomic.h"
+#include "Utilities/StrFmt.h"
+#include "Utilities/File.h"
+#include "Utilities/Log.h"
+
 #include <cstdlib>
-#include <cstdint>
-#include <climits>
 #include <cstring>
+#include <climits>
 #include <exception>
+#include <stdexcept>
 #include <string>
 #include <memory>
 #include <vector>
@@ -31,18 +43,4 @@
 #include <functional>
 #include <unordered_map>
 
-// MSVC bug workaround
-#ifdef _MSC_VER
-namespace std { inline namespace literals { inline namespace chrono_literals {}}}
-#endif
-
 using namespace std::literals;
-
-#include "Utilities/types.h"
-#include "Utilities/Macro.h"
-#include "Utilities/Platform.h"
-#include "Utilities/BEType.h"
-#include "Utilities/Atomic.h"
-#include "Utilities/StrFmt.h"
-#include "Utilities/File.h"
-#include "Utilities/Log.h"

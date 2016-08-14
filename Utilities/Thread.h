@@ -1,11 +1,11 @@
 #pragma once
 
+#include "types.h"
+#include "Atomic.h"
+
 #include <exception>
 #include <string>
 #include <memory>
-
-#include "Platform.h"
-#include "Atomic.h"
 
 // Will report exception and call std::abort() if put in catch(...)
 [[noreturn]] void catch_all_exceptions();

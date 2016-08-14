@@ -2,7 +2,6 @@
 
 #include "types.h"
 #include "Atomic.h"
-#include "Platform.h"
 
 //! Simple sizeless array base for concurrent access. Cannot shrink, only growths automatically.
 //! There is no way to know the current size. The smaller index is, the faster it's accessed.

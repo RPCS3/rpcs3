@@ -17,7 +17,7 @@ s32 cellMouseInit(u32 max_connect)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	const auto handler = fxm::import<MouseHandlerBase>(PURE_EXPR(Emu.GetCallbacks().get_mouse_handler()));
+	const auto handler = fxm::import<MouseHandlerBase>(Emu.GetCallbacks().get_mouse_handler);
 
 	if (!handler)
 	{

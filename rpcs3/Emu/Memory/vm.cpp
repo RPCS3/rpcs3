@@ -162,7 +162,7 @@ namespace vm
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		const u64 align = 0x80000000ull >> cntlz32(size);
+		const u64 align = 0x80000000ull >> cntlz32(size, true);
 
 		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
 		{
@@ -198,7 +198,7 @@ namespace vm
 	{
 		std::unique_lock<reservation_mutex_t> lock(g_reservation_mutex);
 
-		const u64 align = 0x80000000ull >> cntlz32(size);
+		const u64 align = 0x80000000ull >> cntlz32(size, true);
 
 		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
 		{
@@ -285,7 +285,7 @@ namespace vm
 	{
 		std::unique_lock<reservation_mutex_t> lock(g_reservation_mutex);
 
-		const u64 align = 0x80000000ull >> cntlz32(size);
+		const u64 align = 0x80000000ull >> cntlz32(size, true);
 
 		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
 		{
@@ -582,7 +582,7 @@ namespace vm
 		size = ::align(size, 4096);
 
 		// Check alignment (it's page allocation, so passing small values there is just silly)
-		if (align < 4096 || align != (0x80000000u >> cntlz32(align)))
+		if (align < 4096 || align != (0x80000000u >> cntlz32(align, true)))
 		{
 			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
 		}

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "types.h"
-#include "Platform.h"
 
 // Helper class, provides access to compiler-specific atomic intrinsics
 template<typename T, std::size_t Size>

@@ -23,7 +23,6 @@
 
 #include "../Utilities/types.h"
 #include "../Utilities/StrFmt.h"
-#include "../Utilities/Macro.h"
 #include "../Utilities/BEType.h"
 
 template<typename T, typename = void>

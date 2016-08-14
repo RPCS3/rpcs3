@@ -7,7 +7,6 @@
 #include <array>
 
 #include "types.h"
-#include "Macro.h"
 #include "StrFmt.h"
 #include "File.h"
 #include "Log.h"

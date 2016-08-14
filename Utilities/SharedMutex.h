@@ -2,7 +2,6 @@
 
 #include "types.h"
 #include "Atomic.h"
-#include "Platform.h"
 
 //! An attempt to create effective implementation of "shared mutex", lock-free in optimistic case.
 //! All locking and unlocking may be done by a single LOCK XADD or LOCK CMPXCHG instruction.

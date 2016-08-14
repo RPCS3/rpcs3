@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Utilities/types.h"
-#include "Utilities/Macro.h"
-#include "Utilities/Platform.h"
 #include "Utilities/SharedMutex.h"
 
 #include <memory>

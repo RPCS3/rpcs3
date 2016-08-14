@@ -1,10 +1,10 @@
 #pragma once
 
-#include <exception>
-#include <string>
-
-#include "Platform.h"
 #include "types.h"
+
+#include <exception>
+#include <stdexcept>
+#include <string>
 
 namespace fmt
 {

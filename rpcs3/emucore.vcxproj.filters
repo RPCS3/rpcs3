@@ -1141,12 +1141,6 @@
     <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\Macro.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\Platform.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="Loader\ELF.h">
       <Filter>Loader</Filter>
     </ClInclude>
