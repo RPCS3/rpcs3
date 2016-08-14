@@ -574,19 +574,110 @@ inline std::remove_reference_t<T>&& verify_move(T&& value, const char* cause, F&
 	return std::move(value);
 }
 
-// Narrow cast (throws on failure)
+// narrow() function details
+template <typename From, typename To = void, typename = void>
+struct narrow_impl
+{
+	// Temporarily (diagnostic)
+	static_assert(std::is_void<To>::value, "narrow_impl<> specialization not found");
+
+	// Returns true if value cannot be represented in type To
+	static constexpr bool test(const From& value)
+	{
+		// Unspecialized cases (including cast to void) always considered narrowing
+		return true;
+	}
+};
+
+// Unsigned to unsigned narrowing
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && std::is_unsigned<To>::value>>
+{
+	static constexpr bool test(const From& value)
+	{
+		return sizeof(To) < sizeof(From) && static_cast<To>(value) != value;
+	}
+};
+
+// Signed to signed narrowing
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_signed<To>::value>>
+{
+	static constexpr bool test(const From& value)
+	{
+		return sizeof(To) < sizeof(From) && static_cast<To>(value) != value;
+	}
+};
+
+// Unsigned to signed narrowing
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && std::is_signed<To>::value>>
+{
+	static constexpr bool test(const From& value)
+	{
+		return sizeof(To) <= sizeof(From) && value > (static_cast<std::make_unsigned_t<To>>(-1) >> 1);
+	}
+};
+
+// Signed to unsigned narrowing (I)
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_unsigned<To>::value && sizeof(To) >= sizeof(From)>>
+{
+	static constexpr bool test(const From& value)
+	{
+		return value < static_cast<From>(0);
+	}
+};
+
+// Signed to unsigned narrowing (II)
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_unsigned<To>::value && sizeof(To) < sizeof(From)>>
+{
+	static constexpr bool test(const From& value)
+	{
+		return static_cast<std::make_unsigned_t<From>>(value) > static_cast<To>(-1);
+	}
+};
+
+// Enum to integer (TODO?)
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_enum<From>::value && std::is_integral<To>::value>>
+	: narrow_impl<std::underlying_type_t<From>, To>
+{
+};
+
+// Integer to enum (TODO?)
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_integral<From>::value && std::is_enum<To>::value>>
+	: narrow_impl<From, std::underlying_type_t<To>>
+{
+};
+
+// Enum to enum (TODO?)
+template <typename From, typename To>
+struct narrow_impl<From, To, std::enable_if_t<std::is_enum<From>::value && std::is_enum<To>::value>>
+	: narrow_impl<std::underlying_type_t<From>, std::underlying_type_t<To>>
+{
+};
+
+// Simple type enabled (TODO?)
+template <typename From, typename To>
+struct narrow_impl<From, To, void_t<typename From::simple_type>>
+	: narrow_impl<simple_t<From>, To>
+{
+};
+
 template <typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
 inline To narrow(const From& value, const char* msg = nullptr)
 {
-	// Allow "narrowing to void" and ensure it always fails in this case
-	auto&& result = static_cast<std::conditional_t<std::is_void<To>::value, From, To>>(value);
-	if (std::is_void<To>::value || static_cast<From>(result) != value)
+	// Narrow check
+	if (narrow_impl<From, To>::test(value))
 	{
 		// Pack value as formatting argument
 		fmt::raw_narrow_error(msg, fmt::get_type_info<typename fmt_unveil<From>::type>(), fmt_unveil<From>::get(value));
 	}
 
-	return static_cast<std::conditional_t<std::is_void<To>::value, void, decltype(result)>>(result);
+	return static_cast<To>(value);
 }
 
 // Returns u32 size() for container

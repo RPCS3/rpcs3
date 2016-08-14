@@ -15,29 +15,35 @@
 
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
-	const auto buf_size = source.size() + 1; // size + null terminator
+	// String size + null terminator
+	const std::size_t buf_size = source.size() + 1;
 
-	const int size = source.size() < INT_MAX ? static_cast<int>(buf_size) : (fmt::throw_exception("to_wchar(): invalid source length (0x%llx)", source.size()), 0);
+	// Safe size
+	const int size = narrow<int>(buf_size, "to_wchar" HERE);
 
-	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]); // allocate buffer assuming that length is the max possible size
+	// Buffer for max possible output length
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]);
 
 	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size);
 
 	return buffer;
 }
 
-static void to_utf8(std::string& result, const wchar_t* source)
+static void to_utf8(std::string& out, const wchar_t* source)
 {
-	const auto length = std::wcslen(source);
+	// String size
+	const std::size_t length = std::wcslen(source);
 
-	const int buf_size = length <= INT_MAX / 3 ? static_cast<int>(length) * 3 + 1 : (fmt::throw_exception("to_utf8(): invalid source length (0x%llx)", length), 0);
+	// Safe buffer size for max possible output length (including null terminator)
+	const int buf_size = narrow<int>(length * 3 + 1, "to_utf8" HERE);
 
-	result.resize(buf_size); // set max possible length for utf-8 + null terminator
+	// Resize buffer
+	out.resize(buf_size - 1);
 
-	const int nwritten = verify(WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &result.front(), buf_size, NULL, NULL), "to_utf8" HERE);
+	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, NULL, NULL);
 
-	// fix the size, remove null terminator
-	result.resize(nwritten - 1);
+	// Fix the size
+	out.resize(verify(result, "to_utf8" HERE) - 1);
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
@@ -722,8 +728,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 		u64 read(void* buffer, u64 count) override
 		{
 			// TODO (call ReadFile multiple times if count is too big)
-			const int size = ::narrow<int>(count, "Too big count" HERE);
-			EXPECTS(size >= 0);
+			const int size = narrow<int>(count, "file::read" HERE);
 
 			DWORD nread;
 			verify("file::read" HERE), ReadFile(m_handle, buffer, size, &nread, NULL);
@@ -734,8 +739,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 		u64 write(const void* buffer, u64 count) override
 		{
 			// TODO (call WriteFile multiple times if count is too big)
-			const int size = ::narrow<int>(count, "Too big count" HERE);
-			EXPECTS(size >= 0);
+			const int size = narrow<int>(count, "file::write" HERE);
 
 			DWORD nwritten;
 			verify("file::write" HERE), WriteFile(m_handle, buffer, size, &nwritten, NULL);
