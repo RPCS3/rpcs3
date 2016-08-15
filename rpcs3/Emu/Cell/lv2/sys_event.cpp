@@ -50,7 +50,7 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
 
 void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3)
 {
-	EXPECTS(m_sq.empty() || m_events.empty());
+	verify(HERE), m_sq.empty() || m_events.empty();
 
 	// save event if no waiters
 	if (m_sq.empty())
@@ -90,7 +90,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 
 lv2_event_queue_t::event_type lv2_event_queue_t::pop(lv2_lock_t)
 {
-	EXPECTS(m_events.size());
+	verify(HERE), m_events.size();
 	auto result = m_events.front();
 	m_events.pop_front();
 	return result;

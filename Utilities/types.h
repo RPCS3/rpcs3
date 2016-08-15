@@ -62,8 +62,8 @@
 #define WRAP_EXPR(...) [&] { return __VA_ARGS__; }
 
 // Ensure that the expression evaluates to true. Obsolete.
-#define EXPECTS(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Precondition failed: " #__VA_ARGS__ HERE); } while (0)
-#define ENSURES(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Postcondition failed: " #__VA_ARGS__ HERE); } while (0)
+//#define EXPECTS(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Precondition failed: " #__VA_ARGS__ HERE); } while (0)
+//#define ENSURES(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Postcondition failed: " #__VA_ARGS__ HERE); } while (0)
 
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 

@@ -57,8 +57,7 @@ struct lv2_lock_t
 	lv2_lock_t(type& lv2_lock)
 		: ref(lv2_lock)
 	{
-		EXPECTS(ref.owns_lock());
-		EXPECTS(ref.mutex() == &mutex);
+		verify(HERE), ref.owns_lock(), ref.mutex() == &mutex;
 	}
 
 	operator type&() const

@@ -91,7 +91,7 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 	u32 vertex_count = get_vertex_count(vertex_ranges);
 	size_t offset_in_vertex_buffers_buffer = 0;
 	u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
-	EXPECTS(rsx::method_registers.vertex_data_base_index() == 0);
+	verify(HERE), rsx::method_registers.vertex_data_base_index() == 0;
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -364,7 +364,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 		return std::make_tuple(true, index_count, upload_vertex_attributes(rsx::method_registers.current_draw_clause.first_count_commands, command_list));
 	}
 
-	EXPECTS(rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
+	verify(HERE), rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed;
 
 	// Index count
 	size_t index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, ::narrow<int>(get_vertex_count(rsx::method_registers.current_draw_clause.first_count_commands)));

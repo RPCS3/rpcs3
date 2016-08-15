@@ -282,7 +282,7 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 
 Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
 {
-	EXPECTS(type->getScalarType()->isIntegerTy());
+	verify(HERE), (type->getScalarType()->isIntegerTy());
 
 	const auto new_type = m_ir->getIntNTy(type->getScalarSizeInBits() * std::pow(2, pow2));
 	return type->isVectorTy() ? VectorType::get(new_type, type->getVectorNumElements()) : cast<Type>(new_type);

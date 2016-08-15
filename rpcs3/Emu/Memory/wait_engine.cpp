@@ -16,7 +16,7 @@ namespace vm
 
 	void waiter_base::initialize(u32 addr, u32 size)
 	{
-		EXPECTS(addr && (size & (~size + 1)) == size && (addr & (size - 1)) == 0);
+		verify(HERE), addr, (size & (~size + 1)) == size, (addr & (size - 1)) == 0;
 
 		this->addr = addr;
 		this->mask = ~(size - 1);

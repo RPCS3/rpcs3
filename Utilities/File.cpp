@@ -172,7 +172,7 @@ std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 
 std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	EXPECTS(name.size() > 2 && name[0] == '/' && name[1] == '/' && name.find('/', 2) == -1);
+	verify(HERE), name.size() > 2, name[0] == '/', name[1] == '/', name.find('/', 2) == -1;
 
 	return get_device_manager().set_device(name, device);
 }

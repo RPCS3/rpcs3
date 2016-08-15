@@ -48,7 +48,7 @@ namespace
 
 void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride)
 {
-	EXPECTS(vector_element_count > 0);
+	verify(HERE), (vector_element_count > 0);
 
 	switch (type)
 	{
@@ -98,7 +98,7 @@ std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> 
 	T min_index = -1;
 	T max_index = 0;
 
-	EXPECTS(dst.size_bytes() >= src.size_bytes());
+	verify(HERE), (dst.size_bytes() >= src.size_bytes());
 
 	size_t dst_idx = 0;
 	for (T index : src)
@@ -124,7 +124,7 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 	T min_index = -1;
 	T max_index = 0;
 
-	EXPECTS(dst.size() >= 3 * (src.size() - 2));
+	verify(HERE), (dst.size() >= 3 * (src.size() - 2));
 
 	const T index0 = src[0];
 	if (!is_primitive_restart_enabled || index0 != -1) // Cut
@@ -174,7 +174,7 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 	T min_index = -1;
 	T max_index = 0;
 
-	EXPECTS(4 * dst.size_bytes() >= 6 * src.size_bytes());
+	verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
 
 	size_t dst_idx = 0;
 	while (!src.empty())

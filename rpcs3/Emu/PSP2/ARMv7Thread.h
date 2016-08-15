@@ -157,7 +157,7 @@ public:
 
 	void write_gpr(u32 n, u32 value, u32 size)
 	{
-		EXPECTS(n < 16);
+		verify(HERE), n <= 15;
 
 		if (n < 15)
 		{
@@ -171,7 +171,7 @@ public:
 
 	u32 read_gpr(u32 n)
 	{
-		EXPECTS(n < 16);
+		verify(HERE), n <= 15;
 
 		if (n < 15)
 		{

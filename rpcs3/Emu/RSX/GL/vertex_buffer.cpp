@@ -131,7 +131,7 @@ namespace
 	std::tuple<u32, u32> get_index_array_for_emulated_non_indexed_draw(const std::vector<std::pair<u32, u32>> &first_count_commands, rsx::primitive_type primitive_mode, gl::ring_buffer &dst)
 	{
 		u32 vertex_draw_count = 0;
-		EXPECTS(!gl::is_primitive_native(primitive_mode));
+		verify(HERE), !gl::is_primitive_native(primitive_mode);
 
 		for (const auto &pair : first_count_commands)
 		{

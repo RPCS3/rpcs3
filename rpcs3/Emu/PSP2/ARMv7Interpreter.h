@@ -48,46 +48,46 @@ struct arm_interpreter
 
 	static u32 LSL_C(u32 x, s32 shift, bool& carry_out)
 	{
-		EXPECTS(shift > 0);
+		verify(HERE), (shift > 0);
 		carry_out = shift <= 32 ? (x & (1 << (32 - shift))) != 0 : false;
 		return shift < 32 ? x << shift : 0;
 	}
 
 	static u32 LSL_(u32 x, s32 shift)
 	{
-		EXPECTS(shift >= 0);
+		verify(HERE), (shift >= 0);
 		return shift < 32 ? x << shift : 0;
 	}
 
 	static u32 LSR_C(u32 x, s32 shift, bool& carry_out)
 	{
-		EXPECTS(shift > 0);
+		verify(HERE), (shift > 0);
 		carry_out = shift <= 32 ? (x & (1 << (shift - 1))) != 0 : false;
 		return shift < 32 ? x >> shift : 0;
 	}
 
 	static u32 LSR_(u32 x, s32 shift)
 	{
-		EXPECTS(shift >= 0);
+		verify(HERE), (shift >= 0);
 		return shift < 32 ? x >> shift : 0;
 	}
 
 	static s32 ASR_C(s32 x, s32 shift, bool& carry_out)
 	{
-		EXPECTS(shift > 0);
+		verify(HERE), (shift > 0);
 		carry_out = shift <= 32 ? (x & (1 << (shift - 1))) != 0 : x < 0;
 		return shift < 32 ? x >> shift : x >> 31;
 	}
 
 	static s32 ASR_(s32 x, s32 shift)
 	{
-		EXPECTS(shift >= 0);
+		verify(HERE), (shift >= 0);
 		return shift < 32 ? x >> shift : x >> 31;
 	}
 
 	static u32 ROR_C(u32 x, s32 shift, bool& carry_out)
 	{
-		EXPECTS(shift);
+		verify(HERE), (shift);
 		const u32 result = x >> shift | x << (32 - shift);
 		carry_out = (result >> 31) != 0;
 		return result;
@@ -111,7 +111,7 @@ struct arm_interpreter
 
 	static u32 Shift_C(u32 value, u32 type, s32 amount, bool carry_in, bool& carry_out)
 	{
-		EXPECTS(type != arm_code::SRType_RRX || amount == 1);
+		verify(HERE), (type != arm_code::SRType_RRX || amount == 1);
 
 		if (amount)
 		{

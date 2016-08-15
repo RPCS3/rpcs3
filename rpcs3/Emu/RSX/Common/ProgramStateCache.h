@@ -227,7 +227,7 @@ public:
 			0x6, 0x7, 0x4, 0x5,
 			0x2, 0x3, 0x0, 0x1);
 
-		EXPECTS(dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
+		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
 
 		size_t offset = 0;
 		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)

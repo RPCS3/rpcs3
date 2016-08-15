@@ -235,7 +235,7 @@ static EventListener s_listener;
 
 jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unordered_map<std::string, std::uintptr_t>&& table)
 {
-	EXPECTS(s_memory);
+	verify(HERE), s_memory;
 
 	std::string result;
 

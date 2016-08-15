@@ -45,8 +45,7 @@ namespace psf
 		, m_max_size(max_size)
 		, m_value_string(value)
 	{
-		EXPECTS(type == format::string || type == format::array);
-		EXPECTS(max_size);
+		verify(HERE), type == format::string || type == format::array, max_size;
 	}
 
 	entry::entry(u32 value)
@@ -62,26 +61,26 @@ namespace psf
 
 	const std::string& entry::as_string() const
 	{
-		EXPECTS(m_type == format::string || m_type == format::array);
+		verify(HERE), m_type == format::string || m_type == format::array;
 		return m_value_string;
 	}
 
 	u32 entry::as_integer() const
 	{
-		EXPECTS(m_type == format::integer);
+		verify(HERE), m_type == format::integer;
 		return m_value_integer;
 	}
 
 	entry& entry::operator =(const std::string& value)
 	{
-		EXPECTS(m_type == format::string || m_type == format::array);
+		verify(HERE), m_type == format::string || m_type == format::array;
 		m_value_string = value;
 		return *this;
 	}
 
 	entry& entry::operator =(u32 value)
 	{
-		EXPECTS(m_type == format::integer);
+		verify(HERE), m_type == format::integer;
 		m_value_integer = value;
 		return *this;
 	}
@@ -111,41 +110,41 @@ namespace psf
 			return result;
 		}
 
-		// Check size
-		EXPECTS(stream.size() >= sizeof(header_t));
-
 		// Get header
 		header_t header;
-		EXPECTS(stream.read(header));
+		verify(HERE), stream.read(header);
 
 		// Check magic and version
-		EXPECTS(header.magic == "\0PSF"_u32);
-		EXPECTS(header.version == 0x101);
-		EXPECTS(sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table);
-		EXPECTS(header.off_key_table <= header.off_data_table);
-		EXPECTS(header.off_data_table <= stream.size());
+		verify(HERE),
+			header.magic == "\0PSF"_u32,
+			header.version == 0x101,
+			sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table,
+			header.off_key_table <= header.off_data_table,
+			header.off_data_table <= stream.size();
 
 		// Get indices
 		std::vector<def_table_t> indices;
-		EXPECTS(stream.read(indices, header.entries_num));
+		verify(HERE), stream.read(indices, header.entries_num);
 
 		// Get keys
 		std::string keys;
-		EXPECTS(stream.seek(header.off_key_table) == header.off_key_table);
-		EXPECTS(stream.read(keys, header.off_data_table - header.off_key_table));
+		verify(HERE), stream.seek(header.off_key_table) == header.off_key_table;
+		verify(HERE), stream.read(keys, header.off_data_table - header.off_key_table);
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
-			EXPECTS(indices[i].key_off < header.off_data_table - header.off_key_table);
+			verify(HERE), indices[i].key_off < header.off_data_table - header.off_key_table;
 
 			// Get key name (null-terminated string)
 			std::string key(keys.data() + indices[i].key_off);
 
-			EXPECTS(result.count(key) == 0);
-			EXPECTS(indices[i].param_len <= indices[i].param_max);
-			EXPECTS(indices[i].data_off < stream.size() - header.off_data_table);
-			EXPECTS(indices[i].param_max < stream.size() - indices[i].data_off);
+			// Check entry
+			verify(HERE),
+				result.count(key) == 0,
+				indices[i].param_len <= indices[i].param_max,
+				indices[i].data_off < stream.size() - header.off_data_table,
+				indices[i].param_max < stream.size() - indices[i].data_off;
 
 			// Seek data pointer
 			stream.seek(header.off_data_table + indices[i].data_off);
@@ -154,7 +153,7 @@ namespace psf
 			{
 				// Integer data
 				le_t<u32> value;
-				EXPECTS(stream.read(value));
+				verify(HERE), stream.read(value);
 
 				result.emplace(std::piecewise_construct,
 					std::forward_as_tuple(std::move(key)),
@@ -164,7 +163,7 @@ namespace psf
 			{
 				// String/array data
 				std::string value;
-				EXPECTS(stream.read(value, indices[i].param_len));
+				verify(HERE), stream.read(value, indices[i].param_len);
 
 				if (indices[i].param_fmt == format::string)
 				{

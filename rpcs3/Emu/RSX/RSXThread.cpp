@@ -178,7 +178,7 @@ namespace rsx
 			}
 			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::cmp: return sizeof(u16) * 4;
-		case vertex_base_type::ub256: EXPECTS(size == 4); return sizeof(u8) * 4;
+		case vertex_base_type::ub256: verify(HERE), (size == 4); return sizeof(u8) * 4;
 		}
 		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!" HERE, (u8)type);
 	}
@@ -575,7 +575,7 @@ namespace rsx
 		{
 			const std::tuple<u32, u32> &range = draw_indexed_clause[i];
 			const std::tuple<u32, u32> &next_range = draw_indexed_clause[i + 1];
-			EXPECTS(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+			verify(HERE), (std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
 		}
 		u32 first = std::get<0>(draw_indexed_clause.front());
 		u32 count = std::get<0>(draw_indexed_clause.back()) + std::get<1>(draw_indexed_clause.back()) - first;
@@ -591,7 +591,7 @@ namespace rsx
 		}
 		else
 		{
-			EXPECTS(0);
+			fmt::throw_exception("Disabled" HERE);
 			//std::lock_guard<std::mutex> lock{ m_mtx_task };
 
 			//internal_task_entry &front = m_internal_tasks.front();

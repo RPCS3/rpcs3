@@ -1263,7 +1263,7 @@ static std::pair<u32, u32> getNextCommandBufferBeginEnd(u32 current)
 static u32 getOffsetFromAddress(u32 address)
 {
 	const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
-	EXPECTS(upper != 0xFFFF);
+	verify(HERE), (upper != 0xFFFF);
 	return (upper << 20) | (address & 0xFFFFF);
 }
 

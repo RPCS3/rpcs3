@@ -99,8 +99,7 @@ static const char* fmt_reg(u32 reg)
 
 static std::string fmt_shift(u32 type, u32 amount)
 {
-	EXPECTS(type != arm_code::SRType_RRX || amount == 1);
-	EXPECTS(amount <= 32);
+	verify(HERE), type != arm_code::SRType_RRX || amount == 1, amount <= 32;
 
 	if (amount)
 	{

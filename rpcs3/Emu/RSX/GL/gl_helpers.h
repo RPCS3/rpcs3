@@ -653,14 +653,14 @@ namespace gl
 				reserve_and_map((size > 4096) ? size : 4096);
 			}
 
-			EXPECTS(m_mapped_bytes_available >= size);
+			verify(HERE), m_mapped_bytes_available >= size;
 
 			void *ptr = (char*)m_mapped_base + m_mapped_reserve_offset;
 			u32 offset = m_mapped_reserve_offset + m_mapped_block_offset;
 			m_mapped_reserve_offset += size;
 			m_mapped_bytes_available -= size;
 
-			EXPECTS((offset & (alignment - 1)) == 0);
+			verify(HERE), (offset & (alignment - 1)) == 0;
 			return std::make_pair(ptr, offset);
 		}
 

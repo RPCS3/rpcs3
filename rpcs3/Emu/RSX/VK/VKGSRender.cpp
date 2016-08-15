@@ -106,7 +106,7 @@ namespace vk
 		size_t color_format_idx = 0;
 		size_t depth_format_idx = 0;
 
-		EXPECTS(color_count < 5);
+		verify(HERE), color_count < 5;
 
 		switch (color_format)
 		{
