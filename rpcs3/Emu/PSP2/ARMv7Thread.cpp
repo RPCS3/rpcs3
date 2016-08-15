@@ -100,7 +100,7 @@ ARMv7Thread::ARMv7Thread(const std::string& name, u32 prio, u32 stack)
 	, stack_addr(vm::alloc(stack, vm::main))
 	, stack_size(stack)
 {
-	verify(__func__), stack_size, stack_addr;
+	verify(HERE), stack_size, stack_addr;
 
 	std::memset(GPR, 0, sizeof(GPR));
 	APSR.APSR = 0;

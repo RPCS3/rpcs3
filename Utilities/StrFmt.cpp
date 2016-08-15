@@ -132,7 +132,7 @@ namespace fmt
 		throw std::runtime_error{msg};
 	}
 
-	void raw_verify_error(const char* msg, uint position)
+	void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg)
 	{
 		std::string out{"Verification failed"};
 
@@ -149,15 +149,18 @@ namespace fmt
 		}
 #endif
 
-		if (position)
+		if (sup)
 		{
-			out += " (+";
-			out += std::to_string(position);
+			out += " (";
+			sup->fmt_string(out, arg); // Print value
 			out += ")";
 		}
 
-		out += ": ";
-		out += msg;
+		if (msg)
+		{
+			out += ": ";
+			out += msg;
+		}
 
 		throw std::runtime_error{out};
 	}
@@ -166,13 +169,16 @@ namespace fmt
 	{
 		std::string out{"Narrow error"};
 
-		out += " (";
-		sup->fmt_string(out, arg); // Print value
-		out += "): ";
+		if (sup)
+		{
+			out += " (";
+			sup->fmt_string(out, arg); // Print value
+			out += ")";
+		}
 
 		if (msg)
 		{
-			out += " ";
+			out += ": ";
 			out += msg;
 		}
 

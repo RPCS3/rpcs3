@@ -96,6 +96,9 @@ namespace gsl
 template <typename T, typename = void>
 struct fmt_unveil;
 
+template <typename Arg>
+using fmt_unveil_t = typename fmt_unveil<Arg>::type;
+
 struct fmt_type_info;
 
 namespace fmt
@@ -443,25 +446,25 @@ struct ignore
 };
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
-constexpr T align(const T& value, std::uint64_t align)
+constexpr T align(const T& value, ullong align)
 {
 	return static_cast<T>((value + (align - 1)) & ~(align - 1));
 }
 
-inline std::uint32_t cntlz32(std::uint32_t arg, bool nonzero = false)
+inline u32 cntlz32(u32 arg, bool nonzero = false)
 {
-#if defined(_MSC_VER)
-	unsigned long res;
+#ifdef _MSC_VER
+	ulong res;
 	return _BitScanReverse(&res, arg) || nonzero ? res ^ 31 : 32;
 #else
 	return arg || nonzero ? __builtin_clzll(arg) - 32 : 32;
 #endif
 }
 
-inline std::uint64_t cntlz64(std::uint64_t arg, bool nonzero = false)
+inline u64 cntlz64(u64 arg, bool nonzero = false)
 {
-#if defined(_MSC_VER)
-	unsigned long res;
+#ifdef _MSC_VER
+	ulong res;
 	return _BitScanReverse64(&res, arg) || nonzero ? res ^ 63 : 64;
 #else
 	return arg || nonzero ? __builtin_clzll(arg) : 64;
@@ -469,13 +472,13 @@ inline std::uint64_t cntlz64(std::uint64_t arg, bool nonzero = false)
 }
 
 // Helper function, used by ""_u16, ""_u32, ""_u64
-constexpr std::uint8_t to_u8(char c)
+constexpr u8 to_u8(char c)
 {
-	return static_cast<std::uint8_t>(c);
+	return static_cast<u8>(c);
 }
 
 // Convert 2-byte string to u16 value like reinterpret_cast does
-constexpr std::uint16_t operator""_u16(const char* s, std::size_t length)
+constexpr u16 operator""_u16(const char* s, std::size_t length)
 {
 	return length != 2 ? throw s :
 #if IS_LE_MACHINE == 1
@@ -484,7 +487,7 @@ constexpr std::uint16_t operator""_u16(const char* s, std::size_t length)
 }
 
 // Convert 4-byte string to u32 value like reinterpret_cast does
-constexpr std::uint32_t operator""_u32(const char* s, std::size_t length)
+constexpr u32 operator""_u32(const char* s, std::size_t length)
 {
 	return length != 4 ? throw s :
 #if IS_LE_MACHINE == 1
@@ -493,18 +496,18 @@ constexpr std::uint32_t operator""_u32(const char* s, std::size_t length)
 }
 
 // Convert 8-byte string to u64 value like reinterpret_cast does
-constexpr std::uint64_t operator""_u64(const char* s, std::size_t length)
+constexpr u64 operator""_u64(const char* s, std::size_t length)
 {
 	return length != 8 ? throw s :
 #if IS_LE_MACHINE == 1
-		static_cast<std::uint64_t>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+		static_cast<u64>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
 #endif
 }
 
 namespace fmt
 {
 	[[noreturn]] void raw_error(const char* msg);
-	[[noreturn]] void raw_verify_error(const char* msg, uint position);
+	[[noreturn]] void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg);
 	[[noreturn]] void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg);
 }
 
@@ -533,7 +536,7 @@ struct verify_impl
 		// Verification (can be safely disabled)
 		if (!verify_func()(std::forward<T>(value)))
 		{
-			fmt::raw_verify_error(cause, N);
+			fmt::raw_verify_error(cause, fmt::get_type_info<uint>(), N);
 		}
 
 		return verify_impl<N + 1>{cause};
@@ -548,11 +551,12 @@ inline auto verify(const char* cause)
 
 // Verification helper (returns value or lvalue reference, may require to use verify_move instead)
 template <typename F = verify_func, typename T>
-inline T verify(T&& value, const char* cause, F&& func = F())
+inline T verify(const char* cause, T&& value, F&& pred = F())
 {
-	if (!func(std::forward<T>(value)))
+	if (!pred(std::forward<T>(value)))
 	{
-		fmt::raw_verify_error(cause, 0);
+		using unref = std::remove_const_t<std::remove_reference_t<T>>;
+		fmt::raw_verify_error(cause, fmt::get_type_info<fmt_unveil_t<unref>>(), fmt_unveil<unref>::get(value));
 	}
 
 	return std::forward<T>(value);
@@ -560,11 +564,12 @@ inline T verify(T&& value, const char* cause, F&& func = F())
 
 // Verification helper (must be used in return expression or in place of std::move)
 template <typename F = verify_func, typename T>
-inline std::remove_reference_t<T>&& verify_move(T&& value, const char* cause, F&& func = F())
+inline std::remove_reference_t<T>&& verify_move(const char* cause, T&& value, F&& pred = F())
 {
-	if (!func(std::forward<T>(value)))
+	if (!pred(std::forward<T>(value)))
 	{
-		fmt::raw_verify_error(cause, 0);
+		using unref = std::remove_const_t<std::remove_reference_t<T>>;
+		fmt::raw_verify_error(cause, fmt::get_type_info<fmt_unveil_t<unref>>(), fmt_unveil<unref>::get(value));
 	}
 
 	return std::move(value);
@@ -635,28 +640,7 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std
 	}
 };
 
-// Enum to integer (TODO?)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_enum<From>::value && std::is_integral<To>::value>>
-	: narrow_impl<std::underlying_type_t<From>, To>
-{
-};
-
-// Integer to enum (TODO?)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_integral<From>::value && std::is_enum<To>::value>>
-	: narrow_impl<From, std::underlying_type_t<To>>
-{
-};
-
-// Enum to enum (TODO?)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_enum<From>::value && std::is_enum<To>::value>>
-	: narrow_impl<std::underlying_type_t<From>, std::underlying_type_t<To>>
-{
-};
-
-// Simple type enabled (TODO?)
+// Simple type enabled (TODO: allow for To as well)
 template <typename From, typename To>
 struct narrow_impl<From, To, void_t<typename From::simple_type>>
 	: narrow_impl<simple_t<From>, To>
@@ -670,7 +654,7 @@ inline To narrow(const From& value, const char* msg = nullptr)
 	if (narrow_impl<From, To>::test(value))
 	{
 		// Pack value as formatting argument
-		fmt::raw_narrow_error(msg, fmt::get_type_info<typename fmt_unveil<From>::type>(), fmt_unveil<From>::get(value));
+		fmt::raw_narrow_error(msg, fmt::get_type_info<fmt_unveil_t<From>>(), fmt_unveil<From>::get(value));
 	}
 
 	return static_cast<To>(value);

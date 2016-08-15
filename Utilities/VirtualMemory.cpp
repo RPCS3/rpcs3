@@ -16,9 +16,9 @@ namespace memory_helper
 	void* reserve_memory(size_t size)
 	{
 #ifdef _WIN32
-		return verify(VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS), "reserve_memory" HERE);
+		return verify("reserve_memory" HERE, VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS));
 #else
-		return verify(::mmap(nullptr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0), "reserve_memory" HERE);
+		return verify("reserve_memory" HERE, ::mmap(nullptr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0));
 #endif
 	}
 

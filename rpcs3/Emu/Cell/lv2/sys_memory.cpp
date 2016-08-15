@@ -48,7 +48,7 @@ ppu_error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	}
 
 	// Allocate memory, write back the start address of the allocated area
-	*alloc_addr = verify(vm::alloc(size, vm::user_space, flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000), HERE);
+	*alloc_addr = verify(HERE, vm::alloc(size, vm::user_space, flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000));
 
 	return CELL_OK;
 }
@@ -111,7 +111,7 @@ ppu_error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, 
 	}
 
 	// Allocate memory, write back the start address of the allocated area, use cid as the supplementary info
-	*alloc_addr = verify(vm::alloc(size, vm::user_space, flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, cid), HERE);
+	*alloc_addr = verify(HERE, vm::alloc(size, vm::user_space, flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, cid));
 
 	return CELL_OK;
 }

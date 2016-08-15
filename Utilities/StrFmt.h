@@ -213,9 +213,6 @@ struct fmt_type_info
 	}
 };
 
-template <typename Arg>
-using fmt_unveil_t = typename fmt_unveil<Arg>::type;
-
 // Argument array type (each element generated via fmt_unveil<>)
 template <typename... Args>
 using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];

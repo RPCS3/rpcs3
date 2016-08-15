@@ -249,7 +249,7 @@ SPUThread::SPUThread(const std::string& name, u32 index)
 	: cpu_thread()
 	, m_name(name)
 	, index(index)
-	, offset(verify(vm::alloc(0x40000, vm::main), __func__))
+	, offset(verify("SPU LS" HERE, vm::alloc(0x40000, vm::main)))
 {
 }
 

@@ -43,7 +43,7 @@ static void to_utf8(std::string& out, const wchar_t* source)
 	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, NULL, NULL);
 
 	// Fix the size
-	out.resize(verify(result, "to_utf8" HERE) - 1);
+	out.resize(verify("to_utf8" HERE, result) - 1);
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
