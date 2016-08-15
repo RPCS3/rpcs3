@@ -2,7 +2,7 @@
 
 namespace vm { using namespace ps3; }
 
-enum CELL_KB_ERROR_CODE
+enum
 {
 	CELL_KB_ERROR_FATAL = 0x80121001,
 	CELL_KB_ERROR_INVALID_PARAMETER = 0x80121002,

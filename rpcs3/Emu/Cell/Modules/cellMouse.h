@@ -2,7 +2,7 @@
 
 namespace vm { using namespace ps3; }
 
-enum CELL_MOUSE_ERROR_CODE
+enum
 {
 	CELL_MOUSE_ERROR_FATAL = 0x80121201,
 	CELL_MOUSE_ERROR_INVALID_PARAMETER = 0x80121202,
