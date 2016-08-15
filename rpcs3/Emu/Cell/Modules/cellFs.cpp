@@ -288,7 +288,7 @@ ppu_error_code cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 b
 	// Write size read
 	if (nread) *nread = rc && rc != CELL_EFSSPECIFIC ? 0 : arg->out_size.value();
 
-	return NOT_AN_ERROR(rc ? rc : arg->out_code.value());
+	return not_an_error(rc ? rc : arg->out_code.value());
 }
 
 ppu_error_code cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size, vm::ptr<u64> nwrite)
@@ -323,7 +323,7 @@ ppu_error_code cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64
 	// Write size written
 	if (nwrite) *nwrite = rc && rc != CELL_EFSSPECIFIC ? 0 : arg->out_size.value();
 
-	return NOT_AN_ERROR(rc ? rc : arg->out_code.value());
+	return not_an_error(rc ? rc : arg->out_code.value());
 }
 
 s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)

@@ -110,11 +110,8 @@ struct ppu_error_code
 	{
 	}
 
-	// Helper
-	enum class not_an_error : s32 {};
-
 	// Silence any error
-	constexpr ppu_error_code(not_an_error value)
+	constexpr ppu_error_code(not_an_error_t value)
 		: value(static_cast<s32>(value))
 	{
 	}
@@ -125,9 +122,6 @@ struct ppu_error_code
 		return value;
 	}
 };
-
-// Helper macro for silencing possible error checks on returning ppu_error_code values
-#define NOT_AN_ERROR(...) static_cast<ppu_error_code::not_an_error>(__VA_ARGS__)
 
 template<typename T, typename>
 struct ppu_gpr_cast_impl;
@@ -142,7 +136,7 @@ struct ppu_gpr_cast_impl<ppu_error_code, void>
 
 	static inline ppu_error_code from(const u64 reg)
 	{
-		return NOT_AN_ERROR(reg);
+		return not_an_error(reg);
 	}
 };
 

@@ -90,7 +90,7 @@ ppu_error_code cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 
 	if (!mutex->ctrl.atomic_op(_sync::mutex_try_lock))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	return CELL_OK;
@@ -181,7 +181,7 @@ ppu_error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 
 	if (!barrier->ctrl.atomic_op(_sync::barrier::try_notify))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	vm::notify_at(barrier.addr(), 4);
@@ -230,7 +230,7 @@ ppu_error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 
 	if (!barrier->ctrl.atomic_op(_sync::barrier::try_wait))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	vm::notify_at(barrier.addr(), 4);
@@ -315,7 +315,7 @@ ppu_error_code cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer
 	// increase `readers` if `writers` is zero
 	if (!rwm->ctrl.atomic_op(_sync::rwlock::try_read_begin))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	// copy data to buffer
@@ -380,7 +380,7 @@ ppu_error_code cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buff
 	// set `writers` to 1 if `readers` and `writers` are zero
 	if (!rwm->ctrl.compare_and_swap_test({ 0, 0 }, { 0, 1 }))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	// copy data from buffer
@@ -480,7 +480,7 @@ ppu_error_code cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::cptr<void>
 
 	if (!queue->ctrl.atomic_op(_sync::queue::try_push_begin, depth, &position))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	// copy data from the buffer at the position
@@ -545,7 +545,7 @@ ppu_error_code cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> b
 	
 	if (!queue->ctrl.atomic_op(_sync::queue::try_pop_begin, depth, &position))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	// copy data at the position to the buffer
@@ -610,7 +610,7 @@ ppu_error_code cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> 
 
 	if (!queue->ctrl.atomic_op(_sync::queue::try_peek_begin, depth, &position))
 	{
-		return NOT_AN_ERROR(CELL_SYNC_ERROR_BUSY);
+		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
 	// copy data at the position to the buffer
@@ -640,7 +640,7 @@ ppu_error_code cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 
 	const u32 depth = queue->check_depth();
 
-	return NOT_AN_ERROR(queue->ctrl.load().count & 0xffffff);
+	return not_an_error(queue->ctrl.load().count & 0xffffff);
 }
 
 ppu_error_code cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
@@ -748,7 +748,7 @@ ppu_error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cpt
 
 	if (s32 ret = process_get_sdk_version(process_getpid(), sdk_ver))
 	{
-		return NOT_AN_ERROR(ret);
+		return not_an_error(ret);
 	}
 
 	if (sdk_ver == -1)
@@ -902,7 +902,7 @@ ppu_error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 			{
 				if (!push.m_h7 || res)
 				{
-					return NOT_AN_ERROR(res);
+					return not_an_error(res);
 				}
 				break;
 			}
@@ -1036,7 +1036,7 @@ ppu_error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<Cell
 			{
 				verify(HERE), (queue->push3.compare_and_swap_test(old2, push3));
 				verify(HERE), (fpSendSignal);
-				return NOT_AN_ERROR(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
+				return not_an_error(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
 			}
 			else
 			{
@@ -1095,7 +1095,7 @@ ppu_error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue
 
 		if (!isBlocking || res != CELL_SYNC_ERROR_AGAIN)
 		{
-			if (res) return NOT_AN_ERROR(res);
+			if (res) return not_an_error(res);
 
 			break;
 		}
@@ -1201,7 +1201,7 @@ ppu_error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLF
 			{
 				if (!pop.m_h3 || res)
 				{
-					return NOT_AN_ERROR(res);
+					return not_an_error(res);
 				}
 				break;
 			}
@@ -1335,7 +1335,7 @@ ppu_error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellS
 			{
 				verify(HERE), (queue->pop3.compare_and_swap_test(old2, pop3));
 				verify(HERE), (fpSendSignal);
-				return NOT_AN_ERROR(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
+				return not_an_error(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
 			}
 			else
 			{
@@ -1394,7 +1394,7 @@ ppu_error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue>
 
 		if (!isBlocking || res != CELL_SYNC_ERROR_AGAIN)
 		{
-			if (res) return NOT_AN_ERROR(res);
+			if (res) return not_an_error(res);
 
 			break;
 		}

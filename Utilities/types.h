@@ -868,6 +868,16 @@ public:
 	}
 };
 
+enum class not_an_error_t : s32
+{
+};
+
+template <typename T>
+FORCE_INLINE not_an_error_t not_an_error(const T& value)
+{
+	return static_cast<not_an_error_t>(static_cast<s32>(value));
+}
+
 template <typename T, typename ID>
 struct fmt_unveil<id_value<T, ID>>
 {

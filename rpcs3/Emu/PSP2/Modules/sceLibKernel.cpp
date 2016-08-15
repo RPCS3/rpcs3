@@ -98,7 +98,7 @@ arm_error_code sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThre
 	thread->write_pc(entry.addr(), 0);
 	thread->TLS = fxm::get<arm_tls_manager>()->alloc();
 
-	return NOT_AN_ERROR(thread->id);
+	return not_an_error(thread->id);
 }
 
 arm_error_code sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
@@ -747,7 +747,7 @@ arm_error_code sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 init
 	}
 
 	// Register ID
-	return NOT_AN_ERROR(idm::import_existing(evf));
+	return not_an_error(idm::import_existing(evf));
 }
 
 arm_error_code sceKernelDeleteEventFlag(s32 evfId)
@@ -788,7 +788,7 @@ arm_error_code sceKernelOpenEventFlag(vm::cptr<char> pName)
 		return SCE_KERNEL_ERROR_UID_CANNOT_FIND_BY_NAME;
 	}
 
-	return NOT_AN_ERROR(idm::import_existing(evf));
+	return not_an_error(idm::import_existing(evf));
 }
 
 arm_error_code sceKernelCloseEventFlag(s32 evfId)
@@ -881,7 +881,7 @@ arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 	if (pResultPat) *pResultPat = cpu.GPR[1];
 	if (pTimeout) *pTimeout = static_cast<u32>(std::max<s64>(0, timeout - (get_system_time() - start_time)));
 
-	return NOT_AN_ERROR(cpu.GPR[0]);
+	return not_an_error(cpu.GPR[0]);
 }
 
 arm_error_code sceKernelWaitEventFlagCB(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
@@ -931,7 +931,7 @@ arm_error_code sceKernelPollEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 		}
 	}
 
-	return NOT_AN_ERROR(SCE_KERNEL_ERROR_EVENT_COND);
+	return not_an_error(SCE_KERNEL_ERROR_EVENT_COND);
 }
 
 arm_error_code sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
@@ -1021,7 +1021,7 @@ arm_error_code sceKernelCreateSema(vm::cptr<char> pName, u32 attr, s32 initCount
 {
 	sceLibKernel.error("sceKernelCreateSema(pName=%s, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
-	return NOT_AN_ERROR(idm::make<psp2_semaphore>(pName.get_ptr(), attr, initCount, maxCount));
+	return not_an_error(idm::make<psp2_semaphore>(pName.get_ptr(), attr, initCount, maxCount));
 }
 
 arm_error_code sceKernelDeleteSema(s32 semaId)
@@ -1097,7 +1097,7 @@ arm_error_code sceKernelCreateMutex(vm::cptr<char> pName, u32 attr, s32 initCoun
 {
 	sceLibKernel.error("sceKernelCreateMutex(pName=%s, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
 
-	return NOT_AN_ERROR(idm::make<psp2_mutex>(pName.get_ptr(), attr, initCount));
+	return not_an_error(idm::make<psp2_mutex>(pName.get_ptr(), attr, initCount));
 }
 
 arm_error_code sceKernelDeleteMutex(s32 mutexId)
@@ -1211,7 +1211,7 @@ arm_error_code sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, 
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
-	return NOT_AN_ERROR(idm::make<psp2_cond>(pName.get_ptr(), attr, mutex));
+	return not_an_error(idm::make<psp2_cond>(pName.get_ptr(), attr, mutex));
 }
 
 arm_error_code sceKernelDeleteCond(s32 condId)

@@ -183,8 +183,8 @@ ppu_error_code cellVideoOutGetNumberOfDevice(u32 videoOut)
 
 	switch (videoOut)
 	{
-	case CELL_VIDEO_OUT_PRIMARY: return NOT_AN_ERROR(1);
-	case CELL_VIDEO_OUT_SECONDARY: return NOT_AN_ERROR(0);
+	case CELL_VIDEO_OUT_PRIMARY: return not_an_error(1);
+	case CELL_VIDEO_OUT_SECONDARY: return not_an_error(0);
 	}
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
@@ -196,8 +196,8 @@ ppu_error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutio
 
 	switch (videoOut)
 	{
-	case CELL_VIDEO_OUT_PRIMARY: return NOT_AN_ERROR(1);
-	case CELL_VIDEO_OUT_SECONDARY: return NOT_AN_ERROR(0);
+	case CELL_VIDEO_OUT_PRIMARY: return not_an_error(1);
+	case CELL_VIDEO_OUT_SECONDARY: return not_an_error(0);
 	}
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;

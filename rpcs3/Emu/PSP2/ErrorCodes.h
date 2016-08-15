@@ -179,11 +179,8 @@ struct arm_error_code
 	{
 	}
 
-	// Helper
-	enum class not_an_error : s32 {};
-
 	// Silence any error
-	constexpr arm_error_code(not_an_error value)
+	constexpr arm_error_code(not_an_error_t value)
 		: value(static_cast<s32>(value))
 	{
 	}
@@ -194,9 +191,6 @@ struct arm_error_code
 		return value;
 	}
 };
-
-// Helper macro for silencing possible error checks on returning arm_error_code values
-#define NOT_AN_ERROR(...) static_cast<arm_error_code::not_an_error>(static_cast<s32>(__VA_ARGS__))
 
 template<typename T, typename>
 struct arm_gpr_cast_impl;
@@ -211,7 +205,7 @@ struct arm_gpr_cast_impl<arm_error_code, void>
 
 	static inline arm_error_code from(const u32 reg)
 	{
-		return NOT_AN_ERROR(reg);
+		return not_an_error(reg);
 	}
 };
 
