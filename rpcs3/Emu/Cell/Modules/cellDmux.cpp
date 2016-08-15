@@ -792,7 +792,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 	u32 addr;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		VERIFY(!is_full(size));
+		verify(HERE), !is_full(size);
 
 		if (put + size + 128 > memAddr + memSize)
 		{
@@ -833,7 +833,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		put_count++;
 	}
 
-	VERIFY(entries.push(addr, &dmux->is_closed));
+	verify(HERE), entries.push(addr, &dmux->is_closed);
 }
 
 void ElementaryStream::push(DemuxerStream& stream, u32 size)

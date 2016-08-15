@@ -908,7 +908,7 @@ ppu_error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 			}
 		}
 
-		VERIFY(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
+		verify(HERE), sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK;
 		var1 = 1;
 	}
 }
@@ -999,7 +999,7 @@ ppu_error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<Cell
 
 			if (var9 > 1 && (u32)var8 > 1)
 			{
-				VERIFY(16 - var2 <= 1);
+				verify(HERE), (16 - var2 <= 1);
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1031,11 +1031,11 @@ ppu_error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<Cell
 
 		if (queue->push2.compare_and_swap_test(old, push2))
 		{
-			VERIFY(var2 + var4 < 16);
+			verify(HERE), (var2 + var4 < 16);
 			if (var6 != -1)
 			{
-				VERIFY(queue->push3.compare_and_swap_test(old2, push3));
-				VERIFY(fpSendSignal);
+				verify(HERE), (queue->push3.compare_and_swap_test(old2, push3));
+				verify(HERE), (fpSendSignal);
 				return NOT_AN_ERROR(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
 			}
 			else
@@ -1207,7 +1207,7 @@ ppu_error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLF
 			}
 		}
 
-		VERIFY(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
+		verify(HERE), (sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
 		var1 = 1;
 	}
 }
@@ -1303,7 +1303,7 @@ ppu_error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellS
 
 			if (var9 > 1 && (u32)var8 > 1)
 			{
-				VERIFY(16 - var2 <= 1);
+				verify(HERE), (16 - var2 <= 1);
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1333,8 +1333,8 @@ ppu_error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellS
 		{
 			if (var6 != -1)
 			{
-				VERIFY(queue->pop3.compare_and_swap_test(old2, pop3));
-				VERIFY(fpSendSignal);
+				verify(HERE), (queue->pop3.compare_and_swap_test(old2, pop3));
+				verify(HERE), (fpSendSignal);
 				return NOT_AN_ERROR(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
 			}
 			else

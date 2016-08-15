@@ -249,8 +249,7 @@ s32 cellMsgDialogAbort()
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	VERIFY(fxm::remove<MsgDialogBase>());
-
+	verify(HERE), fxm::remove<MsgDialogBase>();
 	return CELL_OK;
 }
 

@@ -172,9 +172,8 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 	{
 		count--;
 
-		auto& thread = sem->sq.front();
-		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
-		thread->notify();
+		const auto thread = sem->sq.front();
+		thread->set_signal();
 
 		sem->sq.pop_front();
 	}

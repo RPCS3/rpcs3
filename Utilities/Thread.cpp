@@ -2200,26 +2200,26 @@ void thread_ctrl::handle_interrupt()
 
 void thread_ctrl::interrupt(void(*handler)())
 {
-	VERIFY(this != g_tls_this_thread); // TODO: self-interrupt
-	VERIFY(m_data->interrupt.compare_and_swap_test(nullptr, handler)); // TODO: multiple interrupts
+	verify(HERE), this != g_tls_this_thread; // TODO: self-interrupt
+	verify(HERE), m_data->interrupt.compare_and_swap_test(nullptr, handler); // TODO: multiple interrupts
 
 #ifdef _WIN32
 	const auto ctx = m_data->thread_ctx;
 
 	const HANDLE nt = OpenThread(THREAD_ALL_ACCESS, FALSE, m_data->thread_id);
-	VERIFY(nt);
-	VERIFY(SuspendThread(nt) != -1);
+	verify(HERE), nt;
+	verify(HERE), SuspendThread(nt) != -1;
 
 	ctx->ContextFlags = CONTEXT_FULL;
-	VERIFY(GetThreadContext(nt, ctx));
+	verify(HERE), GetThreadContext(nt, ctx);
 
 	ctx->ContextFlags = CONTEXT_FULL;
 	const u64 _rip = RIP(ctx);
 	RIP(ctx) = (u64)std::addressof(thread_ctrl::handle_interrupt);
-	VERIFY(SetThreadContext(nt, ctx));
+	verify(HERE), SetThreadContext(nt, ctx);
 
 	RIP(ctx) = _rip;
-	VERIFY(ResumeThread(nt) != -1);
+	verify(HERE), ResumeThread(nt) != -1;
 	CloseHandle(nt);
 #else
 	pthread_kill(reinterpret_cast<std::thread&>(m_thread).native_handle(), SIGUSR1);

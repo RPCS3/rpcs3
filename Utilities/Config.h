@@ -180,7 +180,7 @@ namespace cfg
 			for (const auto& v : init)
 			{
 				// Ensure elements are unique
-				VERIFY(map.emplace(v.first, v.second).second);
+				verify(HERE), map.emplace(v.first, v.second).second;
 			}
 
 			return map;

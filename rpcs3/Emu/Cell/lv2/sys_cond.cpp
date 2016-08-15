@@ -24,9 +24,7 @@ void lv2_cond_t::notify(lv2_lock_t, cpu_thread* thread)
 	else
 	{
 		mutex->owner = idm::get<ppu_thread>(thread->id);
-
-		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
-		thread->notify();
+		thread->set_signal();
 	}
 }
 

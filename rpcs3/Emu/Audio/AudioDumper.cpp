@@ -24,7 +24,7 @@ void AudioDumper::WriteData(const void* buffer, u32 size)
 {
 	if (GetCh())
 	{
-		VERIFY(m_output.write(buffer, size) == size);
+		verify(HERE), size, m_output.write(buffer, size) == size;
 		m_header.Size += size;
 		m_header.RIFF.Size += size;
 	}

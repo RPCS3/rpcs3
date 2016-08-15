@@ -465,7 +465,7 @@ void arm_load_exec(const arm_exec_object& elf)
 
 				case 0x6c2224ba: // __sce_moduleinfo
 				{
-					VERIFY(addr == module_info.addr());
+					verify(HERE), addr == module_info.addr();
 					break;
 				}
 
@@ -601,8 +601,8 @@ void arm_load_exec(const arm_exec_object& elf)
 
 	LOG_NOTICE(LOADER, "__sce_process_param(*0x%x) analysis...", proc_param);
 
-	VERIFY(proc_param->size >= sizeof(psv_process_param_t));
-	VERIFY(proc_param->ver == "PSP2"_u32);
+	verify(HERE), proc_param->size >= sizeof(psv_process_param_t);
+	verify(HERE), proc_param->ver == "PSP2"_u32;
 
 	LOG_NOTICE(LOADER, "*** size=0x%x; 0x%x, 0x%x, 0x%x", proc_param->size, proc_param->ver, proc_param->unk0, proc_param->unk1);
 
@@ -618,7 +618,7 @@ void arm_load_exec(const arm_exec_object& elf)
 
 	LOG_NOTICE(LOADER, "__sce_libcparam(*0x%x) analysis...", libc_param);
 
-	VERIFY(libc_param->size >= 0x1c);
+	verify(HERE), libc_param->size >= 0x1c;
 
 	LOG_NOTICE(LOADER, "*** size=0x%x; 0x%x, 0x%x, 0x%x", libc_param->size, libc_param->unk0, libc_param->unk1, libc_param->unk2);
 

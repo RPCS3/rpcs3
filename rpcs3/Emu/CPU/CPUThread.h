@@ -47,6 +47,9 @@ public:
 	// Run thread
 	void run();
 
+	// Set cpu_flag::signal
+	void set_signal();
+
 	// Print CPU state
 	virtual std::string dump() const;
 

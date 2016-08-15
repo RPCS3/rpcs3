@@ -489,7 +489,7 @@ void D3D12GSRender::flip(int buffer)
 	if (!is_flip_surface_in_global_memory(rsx::method_registers.surface_color_target()))
 	{
 		resource_storage &storage = get_current_resource_storage();
-		VERIFY(storage.ram_framebuffer == nullptr);
+		verify(HERE), storage.ram_framebuffer == nullptr;
 
 		size_t w = 0, h = 0, row_pitch = 0;
 

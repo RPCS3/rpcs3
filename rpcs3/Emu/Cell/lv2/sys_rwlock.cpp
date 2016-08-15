@@ -17,9 +17,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 	if (!readers && !writer && wsq.size())
 	{
 		writer = idm::get<ppu_thread>(wsq.front()->id);
-
-		VERIFY(!writer->state.test_and_set(cpu_flag::signal));
-		writer->notify();
+		writer->set_signal();
 
 		return wsq.pop_front();
 	}
@@ -31,8 +29,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 
 		for (auto& thread : rsq)
 		{
-			VERIFY(!thread->state.test_and_set(cpu_flag::signal));
-			thread->notify();
+			thread->set_signal();
 		}
 
 		return rsq.clear();

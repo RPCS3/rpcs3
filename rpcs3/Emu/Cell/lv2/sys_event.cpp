@@ -83,8 +83,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 		fmt::throw_exception("Unexpected (queue type=%d, tid=%s)" HERE, type, thread->id);
 	}
 
-	VERIFY(!thread->state.test_and_set(cpu_flag::signal));
-	thread->notify();
+	thread->set_signal();
 
 	return m_sq.pop_front();
 }

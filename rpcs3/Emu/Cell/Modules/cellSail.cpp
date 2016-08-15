@@ -810,7 +810,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 					u32 buffer = vm::alloc(size, vm::main);
 					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
-					VERIFY(f.read(buf, size) == size);
+					verify(HERE), f.read(buf, size) == size;
 					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
 					u32 reader = cellPamfReaderInitialize(sp, bufPtr, size, 0);

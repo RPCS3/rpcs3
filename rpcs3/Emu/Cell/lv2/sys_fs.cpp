@@ -474,7 +474,7 @@ ppu_error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 			? file->op_read(arg->buf, arg->size)
 			: file->op_write(arg->buf, arg->size);
 
-		VERIFY(old_pos == file->file.seek(old_pos));
+		verify(HERE), old_pos == file->file.seek(old_pos);
 
 		arg->out_code = CELL_OK;
 

@@ -588,7 +588,7 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 		if ((spurs->flags1 & SF1_EXIT_IF_NO_WORK) == 0)
 		{
-			VERIFY(spurs->handlerExiting == 1);
+			verify(HERE), (spurs->handlerExiting == 1);
 
 			return sys_ppu_thread_exit(ppu, 0);
 		}
@@ -666,16 +666,16 @@ s32 _spurs::wakeup_shutdown_completion_waiter(ppu_thread& ppu, vm::ptr<CellSpurs
 	{
 		wklF->hook(ppu, spurs, wid, wklF->hookArg);
 
-		VERIFY(wklEvent->load() & 0x01);
-		VERIFY(wklEvent->load() & 0x02);
-		VERIFY((wklEvent->load() & 0x20) == 0);
+		verify(HERE), (wklEvent->load() & 0x01);
+		verify(HERE), (wklEvent->load() & 0x02);
+		verify(HERE), (wklEvent->load() & 0x20) == 0;
 		wklEvent->fetch_or(0x20);
 	}
 
 	s32 rc = CELL_OK;
 	if (!wklF->hook || wklEvent->load() & 0x10)
 	{
-		VERIFY(wklF->x28 == 2);
+		verify(HERE), (wklF->x28 == 2);
 		rc = sys_semaphore_post((u32)wklF->sem, 1);
 	}
 
@@ -2143,8 +2143,8 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	u32 index = wnum & 0xf;
 	if (wnum <= 15)
 	{
-		VERIFY((spurs->wklCurrentContention[wnum] & 0xf) == 0);
-		VERIFY((spurs->wklPendingContention[wnum] & 0xf) == 0);
+		verify(HERE), (spurs->wklCurrentContention[wnum] & 0xf) == 0;
+		verify(HERE), (spurs->wklPendingContention[wnum] & 0xf) == 0;
 		spurs->wklState1[wnum] = 1;
 		spurs->wklStatus1[wnum] = 0;
 		spurs->wklEvent1[wnum] = 0;
@@ -2179,8 +2179,8 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	}
 	else
 	{
-		VERIFY((spurs->wklCurrentContention[index] & 0xf0) == 0);
-		VERIFY((spurs->wklPendingContention[index] & 0xf0) == 0);
+		verify(HERE), (spurs->wklCurrentContention[index] & 0xf0) == 0;
+		verify(HERE), (spurs->wklPendingContention[index] & 0xf0) == 0;
 		spurs->wklState2[index] = 1;
 		spurs->wklStatus2[index] = 0;
 		spurs->wklEvent2[index] = 0;
@@ -2259,7 +2259,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 		v = mask | (0x80000000u >> wnum);
 	});
 
-	VERIFY(res_wkl <= 31);
+	verify(HERE), (res_wkl <= 31);
 	spurs->wklState(wnum).exchange(2);
 	spurs->sysSrvMsgUpdateWorkload.exchange(0xff);
 	spurs->sysSrvMessage.exchange(0xff);

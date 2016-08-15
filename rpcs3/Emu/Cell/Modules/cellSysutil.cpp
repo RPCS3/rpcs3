@@ -293,7 +293,7 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
 	const std::string& cache_id = param->cacheId;
-	VERIFY(cache_id.size() < sizeof(param->cacheId));
+	verify(HERE), cache_id.size() < sizeof(param->cacheId);
 	
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
 	strcpy_trunc(param->getCachePath, cache_path);

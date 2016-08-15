@@ -29,8 +29,7 @@ void lv2_event_flag_t::notify_all(lv2_lock_t)
 			// save pattern
 			ppu.gpr[4] = clear_pattern(bitptn, mode);
 
-			VERIFY(!thread->state.test_and_set(cpu_flag::signal));
-			thread->notify();
+			thread->set_signal();
 
 			return true;
 		}
@@ -292,8 +291,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		// clear "mode" as a sign of cancellation
 		ppu.gpr[5] = 0;
 
-		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
-		thread->notify();
+		thread->set_signal();
 	}
 
 	eflag->sq.clear();

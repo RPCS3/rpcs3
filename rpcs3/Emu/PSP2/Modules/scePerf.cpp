@@ -12,7 +12,7 @@ arm_error_code scePerfArmPmonReset(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonReset(threadId=0x%x)", threadId);
 
-	VERIFY(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
+	verify(HERE), threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF;
 
 	cpu.counters = {};
 
@@ -23,7 +23,7 @@ arm_error_code scePerfArmPmonSelectEvent(ARMv7Thread& cpu, s32 threadId, u32 cou
 {
 	scePerf.warning("scePerfArmPmonSelectEvent(threadId=0x%x, counter=0x%x, eventCode=0x%x)", threadId, counter, eventCode);
 
-	VERIFY(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
+	verify(HERE), threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF;
 
 	if (counter >= 6)
 	{
@@ -72,7 +72,7 @@ arm_error_code scePerfArmPmonStart(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonStart(threadId=0x%x)", threadId);
 
-	VERIFY(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
+	verify(HERE), threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF;
 
 	return SCE_OK;
 }
@@ -81,7 +81,7 @@ arm_error_code scePerfArmPmonStop(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonStop(threadId=0x%x)");
 
-	VERIFY(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
+	verify(HERE), threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF;
 
 	return SCE_OK;
 }
@@ -90,7 +90,7 @@ arm_error_code scePerfArmPmonGetCounterValue(ARMv7Thread& cpu, s32 threadId, u32
 {
 	scePerf.warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=*0x%x)", threadId, counter, pValue);
 
-	VERIFY(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
+	verify(HERE), threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF;
 
 	if (counter >= 6 && counter != SCE_PERF_ARM_PMON_CYCLE_COUNTER)
 	{

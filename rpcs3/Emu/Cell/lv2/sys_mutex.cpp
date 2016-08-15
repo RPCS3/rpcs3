@@ -19,9 +19,7 @@ void lv2_mutex_t::unlock(lv2_lock_t)
 	{
 		// pick new owner; protocol is ignored in current implementation
 		owner = idm::get<ppu_thread>(sq.front()->id);
-
-		VERIFY(!owner->state.test_and_set(cpu_flag::signal));
-		owner->notify();
+		owner->set_signal();
 	}
 }
 

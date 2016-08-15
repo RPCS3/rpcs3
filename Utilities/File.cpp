@@ -201,33 +201,6 @@ std::string fs::get_parent_dir(const std::string& path)
 	}
 }
 
-static const auto test_get_parent_dir = []() -> bool
-{
-	// Success:
-	VERIFY(fs::get_parent_dir("/x/y///") == "/x");
-	VERIFY(fs::get_parent_dir("/x/y/") == "/x");
-	VERIFY(fs::get_parent_dir("/x/y") == "/x");
-	VERIFY(fs::get_parent_dir("x:/y") == "x:");
-	VERIFY(fs::get_parent_dir("//x/y") == "//x");
-
-	// Failure:
-	VERIFY(fs::get_parent_dir("").empty());
-	VERIFY(fs::get_parent_dir("x/").empty());
-	VERIFY(fs::get_parent_dir("x").empty());
-	VERIFY(fs::get_parent_dir("x///").empty());
-	VERIFY(fs::get_parent_dir("/x/").empty());
-	VERIFY(fs::get_parent_dir("/x").empty());
-	VERIFY(fs::get_parent_dir("/").empty());
-	VERIFY(fs::get_parent_dir("//").empty());
-	VERIFY(fs::get_parent_dir("//x").empty());
-	VERIFY(fs::get_parent_dir("//x/").empty());
-	VERIFY(fs::get_parent_dir("///").empty());
-	VERIFY(fs::get_parent_dir("///x").empty());
-	VERIFY(fs::get_parent_dir("///x/").empty());
-
-	return false;
-}();
-
 bool fs::stat(const std::string& path, stat_t& info)
 {
 	if (auto device = get_virtual_device(path))

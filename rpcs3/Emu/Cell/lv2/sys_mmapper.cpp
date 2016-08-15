@@ -334,9 +334,7 @@ ppu_error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 		return CELL_EINVAL;
 	}
 
-	VERIFY(area->dealloc(addr));
-	VERIFY(mem->addr.exchange(0) == addr);
-
+	verify(HERE), area->dealloc(addr), mem->addr.exchange(0) == addr;
 	return CELL_OK;
 }
 

@@ -213,7 +213,7 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
 {
 	sysPrxForUser.trace("_sys_strcat(dest=*0x%x, source=%s)", dest, source);
 
-	VERIFY(std::strcat(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
+	verify(HERE), std::strcat(dest.get_ptr(), source.get_ptr()) == dest.get_ptr();
 
 	return dest;
 }
@@ -229,7 +229,7 @@ vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 {
 	sysPrxForUser.trace("_sys_strncat(dest=*0x%x, source=%s, len=%d)", dest, source, len);
 
-	VERIFY(std::strncat(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
+	verify(HERE), std::strncat(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr();
 
 	return dest;
 }
@@ -238,7 +238,7 @@ vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::cptr<char> source)
 {
 	sysPrxForUser.trace("_sys_strcpy(dest=*0x%x, source=%s)", dest, source);
 
-	VERIFY(std::strcpy(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
+	verify(HERE), std::strcpy(dest.get_ptr(), source.get_ptr()) == dest.get_ptr();
 
 	return dest;
 }
@@ -252,7 +252,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 		return vm::null;
 	}
 
-	VERIFY(std::strncpy(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
+	verify(HERE), std::strncpy(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr();
 
 	return dest;
 }

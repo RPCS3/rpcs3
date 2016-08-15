@@ -59,7 +59,7 @@ s32 sys_spu_image_close(vm::ptr<sys_spu_image_t> img)
 		return CELL_EINVAL;
 	}
 
-	VERIFY(vm::dealloc(img->segs.addr(), vm::main)); // Current rough implementation
+	verify(HERE), vm::dealloc(img->segs.addr(), vm::main); // Current rough implementation
 	return CELL_OK;
 }
 

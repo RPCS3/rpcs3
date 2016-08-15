@@ -146,6 +146,12 @@ void cpu_thread::run()
 	lock_notify();
 }
 
+void cpu_thread::set_signal()
+{
+	verify("cpu_flag::signal" HERE), !state.test_and_set(cpu_flag::signal);
+	notify(); // TODO: lock_notify?
+}
+
 std::string cpu_thread::dump() const
 {
 	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());

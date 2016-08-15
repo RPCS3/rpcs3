@@ -20,9 +20,8 @@ void lv2_lwmutex_t::unlock(lv2_lock_t)
 
 	if (sq.size())
 	{
-		auto& thread = sq.front();
-		VERIFY(!thread->state.test_and_set(cpu_flag::signal));
-		thread->notify();
+		const auto thread = sq.front();
+		thread->set_signal();
 
 		sq.pop_front();
 	}

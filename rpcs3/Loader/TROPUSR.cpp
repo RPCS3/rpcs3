@@ -138,7 +138,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	const std::string& path = vfs::get(configpath);
 
 	// TODO: rXmlDocument can open only real file
-	VERIFY(!fs::get_virtual_device(path));
+	verify(HERE), !fs::get_virtual_device(path);
 	rXmlDocument doc;
 	doc.Load(path);
 

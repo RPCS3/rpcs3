@@ -939,7 +939,7 @@ s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags)
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
 
-	VERIFY(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
+	verify(HERE), flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/;
 
 	return gcmMapEaIoAddress(ea, io, size, true);
 }
