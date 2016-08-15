@@ -1026,7 +1026,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	{
 		if (op == X64OP_NONE)
 		{
-			LOG_ERROR(MEMORY, "decode_x64_reg_op(%ph): unsupported opcode: %s", code, *(be_t<v128, 1>*)(code));
+			LOG_ERROR(MEMORY, "decode_x64_reg_op(%p): unsupported opcode: %s", code, *(be_t<v128, 1>*)code);
 		}
 	};
 

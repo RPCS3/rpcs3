@@ -13,12 +13,26 @@
 
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
+	if (arg)
+	{
+		fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
+	}
+	else
+	{
+		out += "(NULL)";		
+	}
 }
 
 void fmt_class_string<const char*>::format(std::string& out, u64 arg)
 {
-	out += reinterpret_cast<const char*>(static_cast<std::uintptr_t>(arg));
+	if (arg)
+	{
+		out += reinterpret_cast<const char*>(static_cast<std::uintptr_t>(arg));
+	}
+	else
+	{
+		out += "(NULL)";
+	}
 }
 
 template <>

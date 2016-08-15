@@ -124,14 +124,14 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		if (::mprotect(m_next, size, PROT_READ | PROT_WRITE | PROT_EXEC))
 #endif
 		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate memory at 0x%p", m_next);
+			LOG_FATAL(GENERAL, "LLVM: Failed to allocate memory at %p", m_next);
 			return nullptr;
 		}
 
 		s_code_addr = (u8*)m_next;
 		s_code_size = size;
 
-		LOG_SUCCESS(GENERAL, "LLVM: Code section %u '%s' allocated -> 0x%p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), m_next, size, align);
+		LOG_SUCCESS(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), m_next, size, align);
 		return (u8*)std::exchange(m_next, (void*)next);
 	}
 
@@ -157,11 +157,11 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		if (::mprotect(m_next, size, PROT_READ | PROT_WRITE))
 #endif
 		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate memory at 0x%p", m_next);
+			LOG_FATAL(GENERAL, "LLVM: Failed to allocate memory at %p", m_next);
 			return nullptr;
 		}
 
-		LOG_SUCCESS(GENERAL, "LLVM: Data section %u '%s' allocated -> 0x%p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), m_next, size, align, is_ro ? "ro" : "rw");
+		LOG_SUCCESS(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), m_next, size, align, is_ro ? "ro" : "rw");
 		return (u8*)std::exchange(m_next, (void*)next);
 	}
 
@@ -199,17 +199,17 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 #ifdef _WIN32
 		if (!RtlDeleteFunctionTable(s_unwind.data()))
 		{
-			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable(addr=0x%p) failed! Error %u", s_unwind_info, GetLastError());
+			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable(%p) failed! Error %u", s_unwind_info, GetLastError());
 		}
 
 		if (!VirtualFree(s_memory, 0, MEM_DECOMMIT))
 		{
-			LOG_FATAL(GENERAL, "VirtualFree(0x%p) failed! Error %u", s_memory, GetLastError());
+			LOG_FATAL(GENERAL, "VirtualFree(%p) failed! Error %u", s_memory, GetLastError());
 		}
 #else
 		if (::mprotect(s_memory, s_memory_size, PROT_NONE))
 		{
-			LOG_FATAL(GENERAL, "mprotect(0x%p) failed! Error %d", s_memory, errno);
+			LOG_FATAL(GENERAL, "mprotect(%p) failed! Error %d", s_memory, errno);
 		}
 
 		// TODO: unregister EH frames if necessary
@@ -324,15 +324,15 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 
 	if (s_unwind_info + s_unwind_size != bits)
 	{
-		LOG_ERROR(GENERAL, "LLVM: .xdata analysis failed! (0x%p != 0x%p)", s_unwind_info + s_unwind_size, bits);
+		LOG_ERROR(GENERAL, "LLVM: .xdata analysis failed! (%p != %p)", s_unwind_info + s_unwind_size, bits);
 	}
 	else if (!RtlAddFunctionTable(s_unwind.data(), (DWORD)s_unwind.size(), base))
 	{
-		LOG_ERROR(GENERAL, "RtlAddFunctionTable(addr=0x%p) failed! Error %u", s_unwind_info, GetLastError());
+		LOG_ERROR(GENERAL, "RtlAddFunctionTable(%p) failed! Error %u", s_unwind_info, GetLastError());
 	}
 	else
 	{
-		LOG_SUCCESS(GENERAL, "LLVM: UNWIND_INFO registered (addr=0x%p, size=0x%llx)", s_unwind_info, s_unwind_size);
+		LOG_SUCCESS(GENERAL, "LLVM: UNWIND_INFO registered (%p, size=0x%llx)", s_unwind_info, s_unwind_size);
 	}
 #endif
 }
