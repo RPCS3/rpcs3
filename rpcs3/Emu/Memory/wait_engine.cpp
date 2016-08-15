@@ -49,7 +49,7 @@ namespace vm
 		};
 
 		// Wait until thread == nullptr
-		waiter{this}, thread_ctrl::wait(WRAP_EXPR(!thread || test()));
+		waiter{this}, thread_ctrl::wait([&] { return !thread || test(); });
 	}
 
 	bool waiter_base::try_notify()

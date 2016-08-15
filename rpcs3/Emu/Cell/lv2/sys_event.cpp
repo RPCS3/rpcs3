@@ -20,7 +20,7 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 typ
 {
 	auto queue = std::make_shared<lv2_event_queue_t>(protocol, type, name, ipc_key, size);
 
-	auto make_expr = WRAP_EXPR(idm::import<lv2_event_queue_t>(WRAP_EXPR(queue)));
+	auto make_expr = [&] { return idm::import<lv2_event_queue_t>([&] { return queue; }); };
 
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
 	{

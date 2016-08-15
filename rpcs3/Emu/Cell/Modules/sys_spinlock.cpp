@@ -19,8 +19,8 @@ void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_lock(lock=*0x%x)", lock);
 
-	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
-	vm::wait_op(lock.addr(), 4, WRAP_EXPR(!lock->exchange(0xabadcafe)));
+	// Try exchange with 0xabadcafe, repeat until exchanged with 0
+	vm::wait_op(lock.addr(), 4, [&] { return lock->exchange(0xabadcafe) == 0; });
 }
 
 s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)

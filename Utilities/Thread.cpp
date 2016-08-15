@@ -2072,7 +2072,7 @@ void thread_ctrl::join()
 	{
 		// Hard way
 		std::unique_lock<std::mutex> lock(m_data->mutex);
-		m_data->jcv.wait(lock, WRAP_EXPR(m_joining >= 0x80000000));
+		m_data->jcv.wait(lock, [&] { return m_joining >= 0x80000000; });
 	}
 
 	if (UNLIKELY(m_data && m_data->exception && !std::uncaught_exception()))

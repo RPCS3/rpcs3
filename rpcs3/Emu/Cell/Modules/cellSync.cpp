@@ -67,7 +67,7 @@ ppu_error_code cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	const auto order = mutex->ctrl.atomic_op(_sync::mutex_acquire);
 
 	// wait until rel value is equal to old acq value
-	vm::wait_op(mutex.addr(), 4, WRAP_EXPR(mutex->ctrl.load().rel == order));
+	vm::wait_op(mutex.addr(), 4, [&] { return mutex->ctrl.load().rel == order; });
 
 	_mm_mfence();
 
@@ -156,7 +156,7 @@ ppu_error_code cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	vm::wait_op(barrier.addr(), 4, WRAP_EXPR(barrier->ctrl.atomic_op(_sync::barrier::try_notify)));
+	vm::wait_op(barrier.addr(), 4, [&] { return barrier->ctrl.atomic_op(_sync::barrier::try_notify); });
 
 	vm::notify_at(barrier.addr(), 4);
 
@@ -205,7 +205,7 @@ ppu_error_code cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 
 	_mm_mfence();
 
-	vm::wait_op(barrier.addr(), 4, WRAP_EXPR(barrier->ctrl.atomic_op(_sync::barrier::try_wait)));
+	vm::wait_op(barrier.addr(), 4, [&] { return barrier->ctrl.atomic_op(_sync::barrier::try_wait); });
 
 	vm::notify_at(barrier.addr(), 4);
 
@@ -282,7 +282,7 @@ ppu_error_code cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	}
 
 	// wait until `writers` is zero, increase `readers`
-	vm::wait_op(rwm.addr(), 8, WRAP_EXPR(rwm->ctrl.atomic_op(_sync::rwlock::try_read_begin)));
+	vm::wait_op(rwm.addr(), 8, [&] { return rwm->ctrl.atomic_op(_sync::rwlock::try_read_begin); });
 
 	// copy data to buffer
 	std::memcpy(buffer.get_ptr(), rwm->buffer.get_ptr(), rwm->size);
@@ -347,10 +347,10 @@ ppu_error_code cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 	}
 
 	// wait until `writers` is zero, set to 1
-	vm::wait_op(rwm.addr(), 8, WRAP_EXPR(rwm->ctrl.atomic_op(_sync::rwlock::try_write_begin)));
+	vm::wait_op(rwm.addr(), 8, [&] { return rwm->ctrl.atomic_op(_sync::rwlock::try_write_begin); });
 
 	// wait until `readers` is zero
-	vm::wait_op(rwm.addr(), 8, WRAP_EXPR(!rwm->ctrl.load().readers));
+	vm::wait_op(rwm.addr(), 8, [&] { return rwm->ctrl.load().readers == 0; });
 
 	// copy data from buffer
 	std::memcpy(rwm->buffer.get_ptr(), buffer.get_ptr(), rwm->size);
@@ -447,7 +447,7 @@ ppu_error_code cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> bu
 
 	u32 position;
 
-	vm::wait_op(queue.addr(), 8, WRAP_EXPR(queue->ctrl.atomic_op(_sync::queue::try_push_begin, depth, &position)));
+	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(_sync::queue::try_push_begin, depth, &position); });
 
 	// copy data from the buffer at the position
 	std::memcpy(&queue->buffer[position * queue->size], buffer.get_ptr(), queue->size);
@@ -512,7 +512,7 @@ ppu_error_code cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buff
 	
 	u32 position;
 
-	vm::wait_op(queue.addr(), 8, WRAP_EXPR(queue->ctrl.atomic_op(_sync::queue::try_pop_begin, depth, &position)));
+	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(_sync::queue::try_pop_begin, depth, &position); });
 
 	// copy data at the position to the buffer
 	std::memcpy(buffer.get_ptr(), &queue->buffer[position % depth * queue->size], queue->size);
@@ -577,7 +577,7 @@ ppu_error_code cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buf
 
 	u32 position;
 
-	vm::wait_op(queue.addr(), 8, WRAP_EXPR(queue->ctrl.atomic_op(_sync::queue::try_peek_begin, depth, &position)));
+	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(_sync::queue::try_peek_begin, depth, &position); });
 
 	// copy data at the position to the buffer
 	std::memcpy(buffer.get_ptr(), &queue->buffer[position % depth * queue->size], queue->size);
@@ -659,8 +659,8 @@ ppu_error_code cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 
 	const u32 depth = queue->check_depth();
 
-	vm::wait_op(queue.addr(), 8, WRAP_EXPR(queue->ctrl.atomic_op(_sync::queue::try_clear_begin_1)));
-	vm::wait_op(queue.addr(), 8, WRAP_EXPR(queue->ctrl.atomic_op(_sync::queue::try_clear_begin_2)));
+	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(_sync::queue::try_clear_begin_1); });
+	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(_sync::queue::try_clear_begin_2); });
 
 	queue->ctrl.exchange({ 0, 0 });
 

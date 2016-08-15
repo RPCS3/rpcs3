@@ -542,7 +542,7 @@ struct psp2_event_flag final
 		{
 			if (!exec(task::signal, cpu.id))
 			{
-				thread_lock{cpu}, thread_ctrl::wait(WRAP_EXPR(cpu.state.test_and_reset(cpu_flag::signal)));
+				thread_lock{cpu}, thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
 			}
 			else
 			{
@@ -625,7 +625,7 @@ private:
 
 				idm::select<ARMv7Thread>([&](u32 id, ARMv7Thread& cpu)
 				{
-					if (cpu->lock_if(WRAP_EXPR(cpu.owner == this && pat_test(new_state.pattern, cpu.GPR[1], cpu.GPR[0]))))
+					if (cpu->lock_if([&] { return cpu.owner == this && pat_test(new_state.pattern, cpu.GPR[1], cpu.GPR[0]); }))
 					{
 						threads.emplace_back(cpu);
 					}
@@ -648,7 +648,7 @@ private:
 			{
 				idm::get<ARMv7Thread>(new_state.waiters, [&](u32 id, ARMv7Thread& cpu)
 				{
-					if (cpu->lock_if(WRAP_EXPR(cpu.owner == this && pat_test(new_state.pattern, cpu.GPR[1], cpu.GPR[0]))))
+					if (cpu->lock_if([&] { return cpu.owner == this && pat_test(new_state.pattern, cpu.GPR[1], cpu.GPR[0]); }))
 					{
 						threads.emplace_back(cpu);
 					}
@@ -706,7 +706,7 @@ private:
 
 		idm::select<ARMv7Thread>([&](u32, ARMv7Thread& cpu)
 		{
-			if (cpu->lock_if(WRAP_EXPR(cpu.owner == this)))
+			if (cpu->lock_if([&] { return cpu.owner == this; }))
 			{
 				cpu.GPR[0] = error;
 				cpu.GPR[1] = pattern;
@@ -741,7 +741,10 @@ arm_error_code sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 init
 	auto evf = std::make_shared<psp2_event_flag>(pName.get_ptr(), attr, initPattern);
 
 	// Try to register IPC name, only if not empty string (TODO)
-	if (evf->name.empty() || !psp2_event_flag::ipc::add(evf->name, WRAP_EXPR(evf))) evf->ipc_ref = 0;
+	if (evf->name.empty() || !psp2_event_flag::ipc::add(evf->name, [&] { return evf; }))
+	{
+		evf->ipc_ref = 0;
+	}
 
 	// Register ID
 	return NOT_AN_ERROR(idm::import_existing(evf));
@@ -863,7 +866,7 @@ arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 
 	thread_lock entry(cpu);
 
-	if (!thread_ctrl::wait_for(timeout, WRAP_EXPR(cpu.state.test_and_reset(cpu_flag::signal))))
+	if (!thread_ctrl::wait_for(timeout, [&] { return cpu.state.test_and_reset(cpu_flag::signal); }))
 	{
 		// Timeout cleanup
 		cpu.owner = nullptr;

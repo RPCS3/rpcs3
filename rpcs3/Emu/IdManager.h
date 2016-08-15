@@ -279,7 +279,7 @@ public:
 	template<typename T, typename Make = T, typename... Args>
 	static inline std::enable_if_t<std::is_constructible<Make, Args...>::value, std::shared_ptr<Make>> make_ptr(Args&&... args)
 	{
-		if (auto pair = create_id<T, Make>(WRAP_EXPR(std::make_shared<Make>(std::forward<Args>(args)...))))
+		if (auto pair = create_id<T, Make>([&] { return std::make_shared<Make>(std::forward<Args>(args)...); }))
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
@@ -293,7 +293,7 @@ public:
 	template<typename T, typename Make = T, typename... Args>
 	static inline std::enable_if_t<std::is_constructible<Make, Args...>::value, u32> make(Args&&... args)
 	{
-		if (auto pair = create_id<T, Make>(WRAP_EXPR(std::make_shared<Make>(std::forward<Args>(args)...))))
+		if (auto pair = create_id<T, Make>([&] { return std::make_shared<Make>(std::forward<Args>(args)...); }))
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);
@@ -307,7 +307,7 @@ public:
 	template<typename T, typename Made = T>
 	static inline u32 import_existing(const std::shared_ptr<T>& ptr)
 	{
-		if (auto pair = create_id<T, Made>(WRAP_EXPR(ptr)))
+		if (auto pair = create_id<T, Made>([&] { return ptr; }))
 		{
 			id_manager::on_init<T>::func(static_cast<T*>(pair->second.get()), pair->second);
 			id_manager::on_stop<T>::func(nullptr);

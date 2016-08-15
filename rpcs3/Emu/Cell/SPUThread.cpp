@@ -599,7 +599,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		if (!channel.try_pop(out))
 		{
-			thread_lock{*this}, thread_ctrl::wait(WRAP_EXPR(test(state & cpu_flag::stop) || channel.try_pop(out)));
+			thread_lock{*this}, thread_ctrl::wait([&] { return test(state & cpu_flag::stop) || channel.try_pop(out); });
 
 			return !test(state & cpu_flag::stop);
 		}
@@ -702,7 +702,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		if (ch_event_mask & SPU_EVENT_LR)
 		{
 			// register waiter if polling reservation status is required
-			vm::wait_op(last_raddr, 128, WRAP_EXPR(get_events(true) || test(state & cpu_flag::stop)));
+			vm::wait_op(last_raddr, 128, [&] { return get_events(true) || test(state & cpu_flag::stop); });
 		}
 		else
 		{
