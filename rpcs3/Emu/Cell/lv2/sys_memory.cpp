@@ -5,7 +5,7 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_memory("sys_memory", logs::level::notice);
 
-ppu_error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
 	sys_memory.warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
 
@@ -53,7 +53,7 @@ ppu_error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	return CELL_OK;
 }
 
-ppu_error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
 {
 	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
 	
@@ -86,7 +86,7 @@ ppu_error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, 
 	}
 	}
 
-	ppu_error_code result{};
+	error_code result{};
 
 	const auto ct = idm::get<lv2_memory_container>(cid, [&](u32, lv2_memory_container& ct)
 	{
@@ -116,7 +116,7 @@ ppu_error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, 
 	return CELL_OK;
 }
 
-ppu_error_code sys_memory_free(u32 addr)
+error_code sys_memory_free(u32 addr)
 {
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
@@ -145,7 +145,7 @@ ppu_error_code sys_memory_free(u32 addr)
 	return CELL_OK;
 }
 
-ppu_error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
+error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
 	sys_memory.error("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
@@ -157,7 +157,7 @@ ppu_error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> 
 	return CELL_OK;
 }
 
-ppu_error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
+error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 {
 	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
@@ -176,7 +176,7 @@ ppu_error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_in
 	return CELL_OK;
 }
 
-ppu_error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
+error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 {
 	sys_memory.warning("sys_memory_container_create(cid=*0x%x, size=0x%x)", cid, size);
 
@@ -202,11 +202,11 @@ ppu_error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	return CELL_OK;
 }
 
-ppu_error_code sys_memory_container_destroy(u32 cid)
+error_code sys_memory_container_destroy(u32 cid)
 {
 	sys_memory.warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
-	ppu_error_code result{};
+	error_code result{};
 
 	const auto ct = idm::withdraw<lv2_memory_container>(cid, [&](u32, lv2_memory_container& ct)
 	{
@@ -236,7 +236,7 @@ ppu_error_code sys_memory_container_destroy(u32 cid)
 	return CELL_OK;
 }
 
-ppu_error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
+error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
 	sys_memory.warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
 

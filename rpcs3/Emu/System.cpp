@@ -475,4 +475,50 @@ void Emulator::Stop()
 	}
 }
 
+s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
+{
+	std::string out;
+
+	if (auto thread = get_current_cpu_thread())
+	{
+		if (g_system == system_type::ps3 && thread->id >= ppu_thread::id_min)
+		{
+			if (auto func = static_cast<ppu_thread*>(thread)->last_function)
+			{
+				out += "'";
+				out += func;
+				out += "'";
+			}			
+		}
+
+		if (g_system == system_type::psv)
+		{
+			if (auto func = static_cast<ARMv7Thread*>(thread)->last_function)
+			{
+				out += "'";
+				out += func;
+				out += "'";
+			}
+		}
+	}
+
+	if (out.empty())
+	{
+		fmt::append(out, "Unknown function failed with 0x%08x", arg);
+	}
+	else
+	{
+		fmt::append(out, " failed with 0x%08x", arg);
+	}
+	
+	if (sup)
+	{
+		fmt::raw_append(out, " : %s", sup, fmt_args_t<void>{arg});
+	}
+
+	LOG_ERROR(GENERAL, "%s", out);
+
+	return static_cast<s32>(arg);
+}
+
 Emulator Emu;

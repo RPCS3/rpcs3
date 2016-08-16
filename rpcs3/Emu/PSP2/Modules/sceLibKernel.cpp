@@ -15,6 +15,403 @@ logs::channel sceLibKernel("sceLibKernel", logs::level::notice);
 
 extern u64 get_system_time();
 
+template<>
+void fmt_class_string<SceError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(SCE_ERROR_ERRNO_EPERM);
+		STR_CASE(SCE_ERROR_ERRNO_ENOENT);
+		STR_CASE(SCE_ERROR_ERRNO_ESRCH);
+		STR_CASE(SCE_ERROR_ERRNO_EINTR);
+		STR_CASE(SCE_ERROR_ERRNO_EIO);
+		STR_CASE(SCE_ERROR_ERRNO_ENXIO);
+		STR_CASE(SCE_ERROR_ERRNO_E2BIG);
+		STR_CASE(SCE_ERROR_ERRNO_ENOEXEC);
+		STR_CASE(SCE_ERROR_ERRNO_EBADF);
+		STR_CASE(SCE_ERROR_ERRNO_ECHILD);
+		STR_CASE(SCE_ERROR_ERRNO_EAGAIN);
+		STR_CASE(SCE_ERROR_ERRNO_ENOMEM);
+		STR_CASE(SCE_ERROR_ERRNO_EACCES);
+		STR_CASE(SCE_ERROR_ERRNO_EFAULT);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTBLK);
+		STR_CASE(SCE_ERROR_ERRNO_EBUSY);
+		STR_CASE(SCE_ERROR_ERRNO_EEXIST);
+		STR_CASE(SCE_ERROR_ERRNO_EXDEV);
+		STR_CASE(SCE_ERROR_ERRNO_ENODEV);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTDIR);
+		STR_CASE(SCE_ERROR_ERRNO_EISDIR);
+		STR_CASE(SCE_ERROR_ERRNO_EINVAL);
+		STR_CASE(SCE_ERROR_ERRNO_ENFILE);
+		STR_CASE(SCE_ERROR_ERRNO_EMFILE);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTTY);
+		STR_CASE(SCE_ERROR_ERRNO_ETXTBSY);
+		STR_CASE(SCE_ERROR_ERRNO_EFBIG);
+		STR_CASE(SCE_ERROR_ERRNO_ENOSPC);
+		STR_CASE(SCE_ERROR_ERRNO_ESPIPE);
+		STR_CASE(SCE_ERROR_ERRNO_EROFS);
+		STR_CASE(SCE_ERROR_ERRNO_EMLINK);
+		STR_CASE(SCE_ERROR_ERRNO_EPIPE);
+		STR_CASE(SCE_ERROR_ERRNO_EDOM);
+		STR_CASE(SCE_ERROR_ERRNO_ERANGE);
+		STR_CASE(SCE_ERROR_ERRNO_ENOMSG);
+		STR_CASE(SCE_ERROR_ERRNO_EIDRM);
+		STR_CASE(SCE_ERROR_ERRNO_ECHRNG);
+		STR_CASE(SCE_ERROR_ERRNO_EL2NSYNC);
+		STR_CASE(SCE_ERROR_ERRNO_EL3HLT);
+		STR_CASE(SCE_ERROR_ERRNO_EL3RST);
+		STR_CASE(SCE_ERROR_ERRNO_ELNRNG);
+		STR_CASE(SCE_ERROR_ERRNO_EUNATCH);
+		STR_CASE(SCE_ERROR_ERRNO_ENOCSI);
+		STR_CASE(SCE_ERROR_ERRNO_EL2HLT);
+		STR_CASE(SCE_ERROR_ERRNO_EDEADLK);
+		STR_CASE(SCE_ERROR_ERRNO_ENOLCK);
+		STR_CASE(SCE_ERROR_ERRNO_EFORMAT);
+		STR_CASE(SCE_ERROR_ERRNO_EUNSUP);
+		STR_CASE(SCE_ERROR_ERRNO_EBADE);
+		STR_CASE(SCE_ERROR_ERRNO_EBADR);
+		STR_CASE(SCE_ERROR_ERRNO_EXFULL);
+		STR_CASE(SCE_ERROR_ERRNO_ENOANO);
+		STR_CASE(SCE_ERROR_ERRNO_EBADRQC);
+		STR_CASE(SCE_ERROR_ERRNO_EBADSLT);
+		STR_CASE(SCE_ERROR_ERRNO_EDEADLOCK);
+		STR_CASE(SCE_ERROR_ERRNO_EBFONT);
+		STR_CASE(SCE_ERROR_ERRNO_ENOSTR);
+		STR_CASE(SCE_ERROR_ERRNO_ENODATA);
+		STR_CASE(SCE_ERROR_ERRNO_ETIME);
+		STR_CASE(SCE_ERROR_ERRNO_ENOSR);
+		STR_CASE(SCE_ERROR_ERRNO_ENONET);
+		STR_CASE(SCE_ERROR_ERRNO_ENOPKG);
+		STR_CASE(SCE_ERROR_ERRNO_EREMOTE);
+		STR_CASE(SCE_ERROR_ERRNO_ENOLINK);
+		STR_CASE(SCE_ERROR_ERRNO_EADV);
+		STR_CASE(SCE_ERROR_ERRNO_ESRMNT);
+		STR_CASE(SCE_ERROR_ERRNO_ECOMM);
+		STR_CASE(SCE_ERROR_ERRNO_EPROTO);
+		STR_CASE(SCE_ERROR_ERRNO_EMULTIHOP);
+		STR_CASE(SCE_ERROR_ERRNO_ELBIN);
+		STR_CASE(SCE_ERROR_ERRNO_EDOTDOT);
+		STR_CASE(SCE_ERROR_ERRNO_EBADMSG);
+		STR_CASE(SCE_ERROR_ERRNO_EFTYPE);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTUNIQ);
+		STR_CASE(SCE_ERROR_ERRNO_EBADFD);
+		STR_CASE(SCE_ERROR_ERRNO_EREMCHG);
+		STR_CASE(SCE_ERROR_ERRNO_ELIBACC);
+		STR_CASE(SCE_ERROR_ERRNO_ELIBBAD);
+		STR_CASE(SCE_ERROR_ERRNO_ELIBSCN);
+		STR_CASE(SCE_ERROR_ERRNO_ELIBMAX);
+		STR_CASE(SCE_ERROR_ERRNO_ELIBEXEC);
+		STR_CASE(SCE_ERROR_ERRNO_ENOSYS);
+		STR_CASE(SCE_ERROR_ERRNO_ENMFILE);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTEMPTY);
+		STR_CASE(SCE_ERROR_ERRNO_ENAMETOOLONG);
+		STR_CASE(SCE_ERROR_ERRNO_ELOOP);
+		STR_CASE(SCE_ERROR_ERRNO_EOPNOTSUPP);
+		STR_CASE(SCE_ERROR_ERRNO_EPFNOSUPPORT);
+		STR_CASE(SCE_ERROR_ERRNO_ECONNRESET);
+		STR_CASE(SCE_ERROR_ERRNO_ENOBUFS);
+		STR_CASE(SCE_ERROR_ERRNO_EAFNOSUPPORT);
+		STR_CASE(SCE_ERROR_ERRNO_EPROTOTYPE);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTSOCK);
+		STR_CASE(SCE_ERROR_ERRNO_ENOPROTOOPT);
+		STR_CASE(SCE_ERROR_ERRNO_ESHUTDOWN);
+		STR_CASE(SCE_ERROR_ERRNO_ECONNREFUSED);
+		STR_CASE(SCE_ERROR_ERRNO_EADDRINUSE);
+		STR_CASE(SCE_ERROR_ERRNO_ECONNABORTED);
+		STR_CASE(SCE_ERROR_ERRNO_ENETUNREACH);
+		STR_CASE(SCE_ERROR_ERRNO_ENETDOWN);
+		STR_CASE(SCE_ERROR_ERRNO_ETIMEDOUT);
+		STR_CASE(SCE_ERROR_ERRNO_EHOSTDOWN);
+		STR_CASE(SCE_ERROR_ERRNO_EHOSTUNREACH);
+		STR_CASE(SCE_ERROR_ERRNO_EINPROGRESS);
+		STR_CASE(SCE_ERROR_ERRNO_EALREADY);
+		STR_CASE(SCE_ERROR_ERRNO_EDESTADDRREQ);
+		STR_CASE(SCE_ERROR_ERRNO_EMSGSIZE);
+		STR_CASE(SCE_ERROR_ERRNO_EPROTONOSUPPORT);
+		STR_CASE(SCE_ERROR_ERRNO_ESOCKTNOSUPPORT);
+		STR_CASE(SCE_ERROR_ERRNO_EADDRNOTAVAIL);
+		STR_CASE(SCE_ERROR_ERRNO_ENETRESET);
+		STR_CASE(SCE_ERROR_ERRNO_EISCONN);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTCONN);
+		STR_CASE(SCE_ERROR_ERRNO_ETOOMANYREFS);
+		STR_CASE(SCE_ERROR_ERRNO_EPROCLIM);
+		STR_CASE(SCE_ERROR_ERRNO_EUSERS);
+		STR_CASE(SCE_ERROR_ERRNO_EDQUOT);
+		STR_CASE(SCE_ERROR_ERRNO_ESTALE);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTSUP);
+		STR_CASE(SCE_ERROR_ERRNO_ENOMEDIUM);
+		STR_CASE(SCE_ERROR_ERRNO_ENOSHARE);
+		STR_CASE(SCE_ERROR_ERRNO_ECASECLASH);
+		STR_CASE(SCE_ERROR_ERRNO_EILSEQ);
+		STR_CASE(SCE_ERROR_ERRNO_EOVERFLOW);
+		STR_CASE(SCE_ERROR_ERRNO_ECANCELED);
+		STR_CASE(SCE_ERROR_ERRNO_ENOTRECOVERABLE);
+		STR_CASE(SCE_ERROR_ERRNO_EOWNERDEAD);
+		}
+
+		return unknown;
+	});
+}
+
+template<>
+void fmt_class_string<SceLibKernelError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(SCE_KERNEL_ERROR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_IMPLEMENTED);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_ARGUMENT);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_FLAGS);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_SIZE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_ADDR);
+		STR_CASE(SCE_KERNEL_ERROR_UNSUP);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_MODE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_ALIGNMENT);
+		STR_CASE(SCE_KERNEL_ERROR_NOSYS);
+		STR_CASE(SCE_KERNEL_ERROR_DEBUG_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER);
+		STR_CASE(SCE_KERNEL_ERROR_CPU_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_MMU_ILLEGAL_L1_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_MMU_L2_INDEX_OVERFLOW);
+		STR_CASE(SCE_KERNEL_ERROR_MMU_L2_SIZE_OVERFLOW);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_CPU_AFFINITY);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS_PERMISSION);
+		STR_CASE(SCE_KERNEL_ERROR_VA2PA_FAULT);
+		STR_CASE(SCE_KERNEL_ERROR_VA2PA_MAPPED);
+		STR_CASE(SCE_KERNEL_ERROR_VALIDATION_CHECK_FAILED);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_PROCESS_CONTEXT);
+		STR_CASE(SCE_KERNEL_ERROR_UID_NAME_TOO_LONG);
+		STR_CASE(SCE_KERNEL_ERROR_VARANGE_IS_NOT_PHYSICAL_CONTINUOUS);
+		STR_CASE(SCE_KERNEL_ERROR_PHYADDR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_NO_PHYADDR);
+		STR_CASE(SCE_KERNEL_ERROR_PHYADDR_USED);
+		STR_CASE(SCE_KERNEL_ERROR_PHYADDR_NOT_USED);
+		STR_CASE(SCE_KERNEL_ERROR_NO_IOADDR);
+		STR_CASE(SCE_KERNEL_ERROR_PHYMEM_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_PHYPAGE_STATUS);
+		STR_CASE(SCE_KERNEL_ERROR_NO_FREE_PHYSICAL_PAGE);
+		STR_CASE(SCE_KERNEL_ERROR_NO_FREE_PHYSICAL_PAGE_UNIT);
+		STR_CASE(SCE_KERNEL_ERROR_PHYMEMPART_NOT_EMPTY);
+		STR_CASE(SCE_KERNEL_ERROR_NO_PHYMEMPART_LPDDR2);
+		STR_CASE(SCE_KERNEL_ERROR_NO_PHYMEMPART_CDRAM);
+		STR_CASE(SCE_KERNEL_ERROR_FIXEDHEAP_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_FIXEDHEAP_ILLEGAL_SIZE);
+		STR_CASE(SCE_KERNEL_ERROR_FIXEDHEAP_ILLEGAL_INDEX);
+		STR_CASE(SCE_KERNEL_ERROR_FIXEDHEAP_INDEX_OVERFLOW);
+		STR_CASE(SCE_KERNEL_ERROR_FIXEDHEAP_NO_CHUNK);
+		STR_CASE(SCE_KERNEL_ERROR_UID_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_UID);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_UID_INVALID_ARGUMENT);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_INVALID_UID_RANGE);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_NO_VALID_UID);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_CANNOT_ALLOCATE_UIDENTRY);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_PROCESS_UID);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_KERNEL_UID);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_UID_CLASS);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_UID_SUBCLASS);
+		STR_CASE(SCE_KERNEL_ERROR_UID_CANNOT_FIND_BY_NAME);
+		STR_CASE(SCE_KERNEL_ERROR_VIRPAGE_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_VIRPAGE_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_BLOCK_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_BLOCK_ID);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_BLOCK_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_BLOCK_IN_USE);
+		STR_CASE(SCE_KERNEL_ERROR_PARTITION_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_PARTITION_ID);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_PARTITION_INDEX);
+		STR_CASE(SCE_KERNEL_ERROR_NO_L2PAGETABLE);
+		STR_CASE(SCE_KERNEL_ERROR_HEAPLIB_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_HEAP_ID);
+		STR_CASE(SCE_KERNEL_ERROR_OUT_OF_RANG);
+		STR_CASE(SCE_KERNEL_ERROR_HEAPLIB_NOMEM);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_ADDRESS_SPACE_ID);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_PARTITION_INDEX);
+		STR_CASE(SCE_KERNEL_ERROR_ADDRESS_SPACE_CANNOT_FIND_PARTITION_BY_ADDR);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_MEMBLOCK_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_REMAP_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_PHY_CONT_MEMBLOCK);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_CODE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_SIZE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_USERMAP_SIZE);
+		STR_CASE(SCE_KERNEL_ERROR_MEMBLOCK_TYPE_FOR_KERNEL_PROCESS);
+		STR_CASE(SCE_KERNEL_ERROR_PROCESS_CANNOT_REMAP_MEMBLOCK);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_PHYMEMLOW_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_CANNOT_ALLOC_PHYMEMLOW);
+		STR_CASE(SCE_KERNEL_ERROR_UNKNOWN_PHYMEMLOW_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_SYSMEM_BITHEAP_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_CANNOT_ALLOC_BITHEAP);
+		STR_CASE(SCE_KERNEL_ERROR_LOADCORE_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_SELF_HEADER);
+		STR_CASE(SCE_KERNEL_ERROR_EXCPMGR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_EXCPCODE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_EXCPHANDLER);
+		STR_CASE(SCE_KERNEL_ERROR_NOTFOUND_EXCPHANDLER);
+		STR_CASE(SCE_KERNEL_ERROR_CANNOT_RELEASE_EXCPHANDLER);
+		STR_CASE(SCE_KERNEL_ERROR_INTRMGR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_CONTEXT);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_INTRCODE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_INTRPARAM);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_INTRPRIORITY);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_INTRFILTER);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_INTRTYPE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_HANDLER);
+		STR_CASE(SCE_KERNEL_ERROR_FOUND_HANDLER);
+		STR_CASE(SCE_KERNEL_ERROR_NOTFOUND_HANDLER);
+		STR_CASE(SCE_KERNEL_ERROR_NO_MEMORY);
+		STR_CASE(SCE_KERNEL_ERROR_DMACMGR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_ALREADY_QUEUED);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_QUEUED);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_SETUP);
+		STR_CASE(SCE_KERNEL_ERROR_ON_TRANSFERRING);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_INITIALIZED);
+		STR_CASE(SCE_KERNEL_ERROR_TRANSFERRED);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_UNDER_CONTROL);
+		STR_CASE(SCE_KERNEL_ERROR_SYSTIMER_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_NO_FREE_TIMER);
+		STR_CASE(SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED);
+		STR_CASE(SCE_KERNEL_ERROR_TIMER_COUNTING);
+		STR_CASE(SCE_KERNEL_ERROR_TIMER_STOPPED);
+		STR_CASE(SCE_KERNEL_ERROR_THREADMGR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_DORMANT);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_DORMANT);
+		STR_CASE(SCE_KERNEL_ERROR_UNKNOWN_THID);
+		STR_CASE(SCE_KERNEL_ERROR_CAN_NOT_WAIT);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_THID);
+		STR_CASE(SCE_KERNEL_ERROR_THREAD_TERMINATED);
+		STR_CASE(SCE_KERNEL_ERROR_DELETED);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_TIMEOUT);
+		STR_CASE(SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_DELETE);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_ATTR);
+		STR_CASE(SCE_KERNEL_ERROR_EVF_MULTI);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_CANCEL);
+		STR_CASE(SCE_KERNEL_ERROR_EVF_COND);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_COUNT);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_PRIORITY);
+		STR_CASE(SCE_KERNEL_ERROR_MUTEX_RECURSIVE);
+		STR_CASE(SCE_KERNEL_ERROR_MUTEX_LOCK_OVF);
+		STR_CASE(SCE_KERNEL_ERROR_MUTEX_NOT_OWNED);
+		STR_CASE(SCE_KERNEL_ERROR_MUTEX_UNLOCK_UDF);
+		STR_CASE(SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN);
+		STR_CASE(SCE_KERNEL_ERROR_FAST_MUTEX_RECURSIVE);
+		STR_CASE(SCE_KERNEL_ERROR_FAST_MUTEX_LOCK_OVF);
+		STR_CASE(SCE_KERNEL_ERROR_FAST_MUTEX_FAILED_TO_OWN);
+		STR_CASE(SCE_KERNEL_ERROR_FAST_MUTEX_NOT_OWNED);
+		STR_CASE(SCE_KERNEL_ERROR_FAST_MUTEX_OWNED);
+		STR_CASE(SCE_KERNEL_ERROR_ALARM_CAN_NOT_CANCEL);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_OBJECT_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_KERNEL_TLS_FULL);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_KERNEL_TLS_INDEX);
+		STR_CASE(SCE_KERNEL_ERROR_KERNEL_TLS_BUSY);
+		STR_CASE(SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS);
+		STR_CASE(SCE_KERNEL_ERROR_UNKNOWN_UID);
+		STR_CASE(SCE_KERNEL_ERROR_SEMA_ZERO);
+		STR_CASE(SCE_KERNEL_ERROR_SEMA_OVF);
+		STR_CASE(SCE_KERNEL_ERROR_PMON_NOT_THREAD_MODE);
+		STR_CASE(SCE_KERNEL_ERROR_PMON_NOT_CPU_MODE);
+		STR_CASE(SCE_KERNEL_ERROR_ALREADY_REGISTERED);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_THREAD_ID);
+		STR_CASE(SCE_KERNEL_ERROR_ALREADY_DEBUG_SUSPENDED);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED);
+		STR_CASE(SCE_KERNEL_ERROR_CAN_NOT_USE_VFP);
+		STR_CASE(SCE_KERNEL_ERROR_RUNNING);
+		STR_CASE(SCE_KERNEL_ERROR_EVENT_COND);
+		STR_CASE(SCE_KERNEL_ERROR_MSG_PIPE_FULL);
+		STR_CASE(SCE_KERNEL_ERROR_MSG_PIPE_EMPTY);
+		STR_CASE(SCE_KERNEL_ERROR_ALREADY_SENT);
+		STR_CASE(SCE_KERNEL_ERROR_CAN_NOT_SUSPEND);
+		STR_CASE(SCE_KERNEL_ERROR_FAST_MUTEX_ALREADY_INITIALIZED);
+		STR_CASE(SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED);
+		STR_CASE(SCE_KERNEL_ERROR_THREAD_STOPPED);
+		STR_CASE(SCE_KERNEL_ERROR_THREAD_SUSPENDED);
+		STR_CASE(SCE_KERNEL_ERROR_NOT_SUSPENDED);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_DELETE_MUTEX);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_CANCEL_MUTEX);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_DELETE_COND);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_CANCEL_COND);
+		STR_CASE(SCE_KERNEL_ERROR_LW_MUTEX_NOT_OWNED);
+		STR_CASE(SCE_KERNEL_ERROR_LW_MUTEX_LOCK_OVF);
+		STR_CASE(SCE_KERNEL_ERROR_LW_MUTEX_UNLOCK_UDF);
+		STR_CASE(SCE_KERNEL_ERROR_LW_MUTEX_RECURSIVE);
+		STR_CASE(SCE_KERNEL_ERROR_LW_MUTEX_FAILED_TO_OWN);
+		STR_CASE(SCE_KERNEL_ERROR_WAIT_DELETE_LW_MUTEX);
+		STR_CASE(SCE_KERNEL_ERROR_ILLEGAL_STACK_SIZE);
+		STR_CASE(SCE_KERNEL_ERROR_RW_LOCK_RECURSIVE);
+		STR_CASE(SCE_KERNEL_ERROR_RW_LOCK_LOCK_OVF);
+		STR_CASE(SCE_KERNEL_ERROR_RW_LOCK_NOT_OWNED);
+		STR_CASE(SCE_KERNEL_ERROR_RW_LOCK_UNLOCK_UDF);
+		STR_CASE(SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK);
+		STR_CASE(SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_UNLOCK);
+		STR_CASE(SCE_KERNEL_ERROR_PROCESSMGR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_PID);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_PLS_FULL);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_BUDGET_ID);
+		STR_CASE(SCE_KERNEL_ERROR_INVALID_BUDGET_SIZE);
+		STR_CASE(SCE_KERNEL_ERROR_CP14_DISABLED);
+		STR_CASE(SCE_KERNEL_ERROR_EXCEEDED_MAX_PROCESSES);
+		STR_CASE(SCE_KERNEL_ERROR_PROCESS_REMAINING);
+		STR_CASE(SCE_KERNEL_ERROR_IOFILEMGR_ERROR);
+		STR_CASE(SCE_KERNEL_ERROR_IO_NAME_TOO_LONG);
+		STR_CASE(SCE_KERNEL_ERROR_IO_REG_DEV);
+		STR_CASE(SCE_KERNEL_ERROR_IO_ALIAS_USED);
+		STR_CASE(SCE_KERNEL_ERROR_IO_DEL_DEV);
+		STR_CASE(SCE_KERNEL_ERROR_IO_WOULD_BLOCK);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_START_FAILED);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_STOP_FAIL);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_IN_USE);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NO_LIB);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_SYSCALL_REG);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOMEM_LIB);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOMEM_STUB);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOMEM_SELF);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOMEM);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_INVALID_LIB);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_INVALID_STUB);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NO_FUNC_NID);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NO_VAR_NID);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_INVALID_TYPE);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NO_MOD_ENTRY);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROC_PARAM);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NO_MODOBJ);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NO_MOD);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NO_PROCESS);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_OLD_LIB);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_STARTED);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOT_STARTED);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOT_STOPPED);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROCESS_UID);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_CANNOT_EXPORT_LIB_TO_SHARED);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_ELINK);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOENT);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_BUSY);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NOEXEC);
+		STR_CASE(SCE_KERNEL_ERROR_MODULEMGR_NAMETOOLONG);
+		STR_CASE(SCE_KERNEL_ERROR_LIBRARYDB_NOENT);
+		STR_CASE(SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB);
+		STR_CASE(SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD);
+		STR_CASE(SCE_KERNEL_ERROR_AUTHFAIL);
+		STR_CASE(SCE_KERNEL_ERROR_NO_AUTH);
+		}
+
+		return unknown;
+	});
+}
+
 arm_tls_manager::arm_tls_manager(u32 vaddr, u32 fsize, u32 vsize)
 	: vaddr(vaddr)
 	, fsize(fsize)
@@ -88,7 +485,7 @@ s32 sceKernelGetMemBlockInfoByAddr(vm::ptr<void> vbase, vm::ptr<SceKernelMemBloc
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-arm_error_code sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThreadEntry> entry, s32 initPriority, u32 stackSize, u32 attr, s32 cpuAffinityMask, vm::cptr<SceKernelThreadOptParam> pOptParam)
+error_code sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThreadEntry> entry, s32 initPriority, u32 stackSize, u32 attr, s32 cpuAffinityMask, vm::cptr<SceKernelThreadOptParam> pOptParam)
 {
 	sceLibKernel.warning("sceKernelCreateThread(pName=%s, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
@@ -101,7 +498,7 @@ arm_error_code sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThre
 	return not_an_error(thread->id);
 }
 
-arm_error_code sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
+error_code sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 {
 	sceLibKernel.warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=*0x%x)", threadId, argSize, pArgBlock);
 
@@ -130,7 +527,7 @@ arm_error_code sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pA
 	return SCE_OK;
 }
 
-arm_error_code sceKernelExitThread(ARMv7Thread& cpu, s32 exitStatus)
+error_code sceKernelExitThread(ARMv7Thread& cpu, s32 exitStatus)
 {
 	sceLibKernel.warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
@@ -140,7 +537,7 @@ arm_error_code sceKernelExitThread(ARMv7Thread& cpu, s32 exitStatus)
 	return SCE_OK;
 }
 
-arm_error_code sceKernelDeleteThread(s32 threadId)
+error_code sceKernelDeleteThread(s32 threadId)
 {
 	sceLibKernel.warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
 
@@ -163,7 +560,7 @@ arm_error_code sceKernelDeleteThread(s32 threadId)
 	return SCE_OK;
 }
 
-arm_error_code sceKernelExitDeleteThread(ARMv7Thread& cpu, s32 exitStatus)
+error_code sceKernelExitDeleteThread(ARMv7Thread& cpu, s32 exitStatus)
 {
 	sceLibKernel.warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
@@ -288,7 +685,7 @@ s32 sceKernelDelayThreadCB(u32 usec)
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-arm_error_code sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> pTimeout)
+error_code sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
@@ -733,7 +1130,7 @@ private:
 
 template<> DECLARE(psp2_event_flag::ipc::g_ipc) {};
 
-arm_error_code sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 initPattern, vm::cptr<SceKernelEventFlagOptParam> pOptParam)
+error_code sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 initPattern, vm::cptr<SceKernelEventFlagOptParam> pOptParam)
 {
 	sceLibKernel.error("sceKernelCreateEventFlag(pName=%s, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
 
@@ -750,7 +1147,7 @@ arm_error_code sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 init
 	return not_an_error(idm::import_existing(evf));
 }
 
-arm_error_code sceKernelDeleteEventFlag(s32 evfId)
+error_code sceKernelDeleteEventFlag(s32 evfId)
 {
 	sceLibKernel.error("sceKernelDeleteEventFlag(evfId=0x%x)", evfId);
 
@@ -776,7 +1173,7 @@ arm_error_code sceKernelDeleteEventFlag(s32 evfId)
 	return SCE_OK;
 }
 
-arm_error_code sceKernelOpenEventFlag(vm::cptr<char> pName)
+error_code sceKernelOpenEventFlag(vm::cptr<char> pName)
 {
 	sceLibKernel.error("sceKernelOpenEventFlag(pName=%s)", pName);
 
@@ -791,7 +1188,7 @@ arm_error_code sceKernelOpenEventFlag(vm::cptr<char> pName)
 	return not_an_error(idm::import_existing(evf));
 }
 
-arm_error_code sceKernelCloseEventFlag(s32 evfId)
+error_code sceKernelCloseEventFlag(s32 evfId)
 {
 	sceLibKernel.error("sceKernelCloseEventFlag(evfId=0x%x)", evfId);
 
@@ -811,7 +1208,7 @@ arm_error_code sceKernelCloseEventFlag(s32 evfId)
 	return SCE_OK;
 }
 
-arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
+error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.error("sceKernelWaitEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
 
@@ -884,14 +1281,14 @@ arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 	return not_an_error(cpu.GPR[0]);
 }
 
-arm_error_code sceKernelWaitEventFlagCB(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
+error_code sceKernelWaitEventFlagCB(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.todo("sceKernelWaitEventFlagCB(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
 
 	return sceKernelWaitEventFlag(cpu, evfId, bitPattern, waitMode, pResultPat, pTimeout);
 }
 
-arm_error_code sceKernelPollEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat)
+error_code sceKernelPollEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat)
 {
 	sceLibKernel.error("sceKernelPollEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x)", evfId, bitPattern, waitMode, pResultPat);
 
@@ -934,7 +1331,7 @@ arm_error_code sceKernelPollEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 	return not_an_error(SCE_KERNEL_ERROR_EVENT_COND);
 }
 
-arm_error_code sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
+error_code sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
 {
 	sceLibKernel.error("sceKernelSetEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
 
@@ -952,7 +1349,7 @@ arm_error_code sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
 	return SCE_OK;
 }
 
-arm_error_code sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
+error_code sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
 {
 	sceLibKernel.error("sceKernelClearEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
 
@@ -970,7 +1367,7 @@ arm_error_code sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
 	return SCE_OK;
 }
 
-arm_error_code sceKernelCancelEventFlag(ARMv7Thread& cpu, s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThreads)
+error_code sceKernelCancelEventFlag(ARMv7Thread& cpu, s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThreads)
 {
 	sceLibKernel.error("sceKernelCancelEventFlag(evfId=0x%x, setPattern=0x%x, pNumWaitThreads=*0x%x)", evfId, setPattern, pNumWaitThreads);
 
@@ -988,7 +1385,7 @@ arm_error_code sceKernelCancelEventFlag(ARMv7Thread& cpu, s32 evfId, u32 setPatt
 	return SCE_OK;
 }
 
-arm_error_code sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
+error_code sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
 {
 	sceLibKernel.error("sceKernelGetEventFlagInfo(evfId=0x%x, pInfo=*0x%x)", evfId, pInfo);
 
@@ -1017,14 +1414,14 @@ arm_error_code sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagIn
 
 // Semaphore functions
 
-arm_error_code sceKernelCreateSema(vm::cptr<char> pName, u32 attr, s32 initCount, s32 maxCount, vm::cptr<SceKernelSemaOptParam> pOptParam)
+error_code sceKernelCreateSema(vm::cptr<char> pName, u32 attr, s32 initCount, s32 maxCount, vm::cptr<SceKernelSemaOptParam> pOptParam)
 {
 	sceLibKernel.error("sceKernelCreateSema(pName=%s, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
 	return not_an_error(idm::make<psp2_semaphore>(pName.get_ptr(), attr, initCount, maxCount));
 }
 
-arm_error_code sceKernelDeleteSema(s32 semaId)
+error_code sceKernelDeleteSema(s32 semaId)
 {
 	sceLibKernel.error("sceKernelDeleteSema(semaId=0x%x)", semaId);
 
@@ -1050,7 +1447,7 @@ s32 sceKernelCloseSema(s32 semaId)
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-arm_error_code sceKernelWaitSema(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
+error_code sceKernelWaitSema(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.error("sceKernelWaitSema(semaId=0x%x, needCount=%d, pTimeout=*0x%x)", semaId, needCount, pTimeout);
 
@@ -1093,14 +1490,14 @@ s32 sceKernelGetSemaInfo(s32 semaId, vm::ptr<SceKernelSemaInfo> pInfo)
 
 // Mutex functions
 
-arm_error_code sceKernelCreateMutex(vm::cptr<char> pName, u32 attr, s32 initCount, vm::cptr<SceKernelMutexOptParam> pOptParam)
+error_code sceKernelCreateMutex(vm::cptr<char> pName, u32 attr, s32 initCount, vm::cptr<SceKernelMutexOptParam> pOptParam)
 {
 	sceLibKernel.error("sceKernelCreateMutex(pName=%s, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
 
 	return not_an_error(idm::make<psp2_mutex>(pName.get_ptr(), attr, initCount));
 }
 
-arm_error_code sceKernelDeleteMutex(s32 mutexId)
+error_code sceKernelDeleteMutex(s32 mutexId)
 {
 	sceLibKernel.error("sceKernelDeleteMutex(mutexId=0x%x)", mutexId);
 
@@ -1200,7 +1597,7 @@ s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::ptr<SceKernelLwMutexInfo> pIn
 
 // Condition variable functions
 
-arm_error_code sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, vm::cptr<SceKernelCondOptParam> pOptParam)
+error_code sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, vm::cptr<SceKernelCondOptParam> pOptParam)
 {
 	sceLibKernel.error("sceKernelCreateCond(pName=%s, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
 
@@ -1214,7 +1611,7 @@ arm_error_code sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, 
 	return not_an_error(idm::make<psp2_cond>(pName.get_ptr(), attr, mutex));
 }
 
-arm_error_code sceKernelDeleteCond(s32 condId)
+error_code sceKernelDeleteCond(s32 condId)
 {
 	sceLibKernel.error("sceKernelDeleteCond(condId=0x%x)", condId);
 
@@ -1483,15 +1880,15 @@ s32 sceKernelGetRWLockInfo(s32 rwLockId, vm::ptr<SceKernelRWLockInfo> pInfo)
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-arm_error_code sceKernelGetThreadmgrUIDClass(s32 uid)
+error_code sceKernelGetThreadmgrUIDClass(s32 uid)
 {
 	sceLibKernel.error("sceKernelGetThreadmgrUIDClass(uid=0x%x)", uid);
 
-	if (idm::check<ARMv7Thread>(uid)) return SCE_KERNEL_THREADMGR_UID_CLASS_THREAD;
-	if (idm::check<psp2_semaphore>(uid)) return SCE_KERNEL_THREADMGR_UID_CLASS_SEMA;
-	if (idm::check<psp2_event_flag>(uid)) return SCE_KERNEL_THREADMGR_UID_CLASS_EVENT_FLAG;
-	if (idm::check<psp2_mutex>(uid)) return SCE_KERNEL_THREADMGR_UID_CLASS_MUTEX;
-	if (idm::check<psp2_cond>(uid)) return SCE_KERNEL_THREADMGR_UID_CLASS_COND;
+	if (idm::check<ARMv7Thread>(uid)) return not_an_error(SCE_KERNEL_THREADMGR_UID_CLASS_THREAD);
+	if (idm::check<psp2_semaphore>(uid)) return not_an_error(SCE_KERNEL_THREADMGR_UID_CLASS_SEMA);
+	if (idm::check<psp2_event_flag>(uid)) return not_an_error(SCE_KERNEL_THREADMGR_UID_CLASS_EVENT_FLAG);
+	if (idm::check<psp2_mutex>(uid)) return not_an_error(SCE_KERNEL_THREADMGR_UID_CLASS_MUTEX);
+	if (idm::check<psp2_cond>(uid)) return not_an_error(SCE_KERNEL_THREADMGR_UID_CLASS_COND);
 
 	return SCE_KERNEL_ERROR_INVALID_UID;
 }

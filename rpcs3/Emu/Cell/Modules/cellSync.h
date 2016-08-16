@@ -34,47 +34,6 @@ enum CellSyncError1 : u32
 	CELL_SYNC_ERROR_UNKNOWNKEY             = 0x80410113,
 };
 
-template<>
-inline const char* ppu_error_code::print(CellSyncError error)
-{
-	switch (error)
-	{
-		STR_CASE(CELL_SYNC_ERROR_AGAIN);
-		STR_CASE(CELL_SYNC_ERROR_INVAL);
-		STR_CASE(CELL_SYNC_ERROR_NOSYS);
-		STR_CASE(CELL_SYNC_ERROR_NOMEM);
-		STR_CASE(CELL_SYNC_ERROR_SRCH);
-		STR_CASE(CELL_SYNC_ERROR_NOENT);
-		STR_CASE(CELL_SYNC_ERROR_NOEXEC);
-		STR_CASE(CELL_SYNC_ERROR_DEADLK);
-		STR_CASE(CELL_SYNC_ERROR_PERM);
-		STR_CASE(CELL_SYNC_ERROR_BUSY);
-		STR_CASE(CELL_SYNC_ERROR_ABORT);
-		STR_CASE(CELL_SYNC_ERROR_FAULT);
-		STR_CASE(CELL_SYNC_ERROR_CHILD);
-		STR_CASE(CELL_SYNC_ERROR_STAT);
-		STR_CASE(CELL_SYNC_ERROR_ALIGN);
-		STR_CASE(CELL_SYNC_ERROR_NULL_POINTER);
-		STR_CASE(CELL_SYNC_ERROR_NOT_SUPPORTED_THREAD);
-		STR_CASE(CELL_SYNC_ERROR_NO_NOTIFIER);
-		STR_CASE(CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE);
-	}
-
-	return nullptr;
-}
-
-template<>
-inline const char* ppu_error_code::print(CellSyncError1 error)
-{
-	switch (error)
-	{
-		STR_CASE(CELL_SYNC_ERROR_SHOTAGE);
-		STR_CASE(CELL_SYNC_ERROR_UNKNOWNKEY);
-	}
-
-	return nullptr;
-}
-
 namespace _sync
 {
 	struct alignas(4) mutex // CellSyncMutex control variable
@@ -381,4 +340,4 @@ struct alignas(128) CellSyncLFQueue
 CHECK_SIZE_ALIGN(CellSyncLFQueue, 128, 128);
 
 // Prototypes
-ppu_error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer, u32 size, u32 depth, u32 direction, vm::ptr<void> eaSignal);
+error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer, u32 size, u32 depth, u32 direction, vm::ptr<void> eaSignal);

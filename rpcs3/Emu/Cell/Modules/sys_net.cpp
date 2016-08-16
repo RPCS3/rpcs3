@@ -199,7 +199,7 @@ namespace sys_net
 
 		if (name && result != SYS_NET_EWOULDBLOCK)
 		{
-			ppu_error_code::report(result, name);
+			libnet.error("Socket error %s", name);
 		}
 
 		return result;

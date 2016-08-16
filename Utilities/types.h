@@ -818,7 +818,10 @@ static_assert(sizeof(cmd64) == 8 && std::is_pod<cmd64>::value, "Incorrect cmd64 
 template <typename T, T Value, typename T1 = void, typename... Ts>
 struct multicast : multicast<T, Value, Ts...>
 {
-	constexpr multicast() = default;
+	constexpr multicast()
+		: multicast<T, Value, Ts...>()
+	{
+	}
 
 	// Implicit conversion to desired type
 	constexpr operator T1() const
@@ -868,14 +871,59 @@ public:
 	}
 };
 
-enum class not_an_error_t : s32
+// Error code type (return type), implements error reporting
+struct error_code
 {
+	// Use fixed s32 type for now (could be template argument)
+	s32 value;
+
+	error_code() = default;
+
+	// Must be implemented
+	static s32 error_report(const fmt_type_info* sup, u64 arg);
+
+	// Helper type (TODO: use scoped enum when error code is widely used)
+	enum not_an_error : s32
+	{
+		__not_an_error // SFINAE marker
+	};
+
+	// __not_an_error tester
+	template<typename ET, typename = void>
+	struct is_error : std::integral_constant<bool, std::is_enum<ET>::value || std::is_integral<ET>::value>
+	{
+	};
+
+	template<typename ET>
+	struct is_error<ET, void_t<decltype(ET::__not_an_error)>> : std::false_type
+	{
+	};
+
+	// Not an error constructor
+	template<typename ET, typename = decltype(ET::__not_an_error)>
+	error_code(const ET& value, int = 0)
+		: value(static_cast<s32>(value))
+	{
+	}
+
+	// Error constructor
+	template<typename ET, typename = std::enable_if_t<is_error<ET>::value>>
+	error_code(const ET& value)
+		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value)))
+	{
+	}
+
+	operator s32() const
+	{
+		return value;
+	}
 };
 
+// Helper function for error_code
 template <typename T>
-FORCE_INLINE not_an_error_t not_an_error(const T& value)
+constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
 {
-	return static_cast<not_an_error_t>(static_cast<s32>(value));
+	return static_cast<error_code::not_an_error>(static_cast<s32>(value));
 }
 
 template <typename T, typename ID>

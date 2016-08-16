@@ -7,7 +7,7 @@ logs::channel sys_tty("sys_tty", logs::level::notice);
 
 extern fs::file g_tty;
 
-ppu_error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
+error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
 {
 	sys_tty.fatal("sys_tty_read(ch=%d, buf=*0x%x, len=%d, preadlen=*0x%x)", ch, buf, len, preadlen);
 
@@ -15,7 +15,7 @@ ppu_error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> pre
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-ppu_error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
+error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
 	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
 

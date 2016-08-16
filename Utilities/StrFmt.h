@@ -39,7 +39,7 @@ struct fmt_unveil
 	// This overload resolution takes the precedence
 	static inline u64_wrapper get(T&& arg)
 	{
-		return {std::move(arg)};
+		return u64_wrapper{std::move(arg)};
 	}
 };
 

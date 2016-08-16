@@ -8,17 +8,6 @@ enum ScePerfError : u32
 	SCE_PERF_ERROR_INVALID_ARGUMENT = 0x80580000,
 };
 
-template<>
-inline const char* arm_error_code::print(ScePerfError error)
-{
-	switch (error)
-	{
-		STR_CASE(SCE_PERF_ERROR_INVALID_ARGUMENT);
-	}
-
-	return nullptr;
-}
-
 enum : s32
 {
 	// Thread IDs

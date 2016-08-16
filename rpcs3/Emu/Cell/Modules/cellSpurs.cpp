@@ -3196,7 +3196,7 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 	return CELL_OK;
 }
 
-static inline s32 SyncErrorToSpursError(const ppu_error_code& res)
+static inline s32 SyncErrorToSpursError(const error_code& res)
 {
 	return res.value < 0 ? 0x80410900 | (res.value & 0xff) : res.value;
 }

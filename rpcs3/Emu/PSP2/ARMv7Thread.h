@@ -237,6 +237,20 @@ struct arm_gpr_cast_impl<b8, void>
 	}
 };
 
+template<>
+struct arm_gpr_cast_impl<error_code, void>
+{
+	static inline u32 to(const error_code& code)
+	{
+		return code;
+	}
+
+	static inline error_code from(const u32 reg)
+	{
+		return not_an_error(reg);
+	}
+};
+
 template<typename T, typename AT>
 struct arm_gpr_cast_impl<vm::_ptr_base<T, AT>, void>
 {

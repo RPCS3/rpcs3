@@ -5,7 +5,7 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_mmapper("sys_mmapper", logs::level::notice);
 
-ppu_error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
+error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
 {
 	sys_mmapper.error("sys_mmapper_allocate_address(size=0x%llx, flags=0x%llx, alignment=0x%llx, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
 
@@ -49,7 +49,7 @@ ppu_error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, 
 	return CELL_EALIGN;
 }
 
-ppu_error_code sys_mmapper_allocate_fixed_address()
+error_code sys_mmapper_allocate_fixed_address()
 {
 	sys_mmapper.error("sys_mmapper_allocate_fixed_address()");
 
@@ -61,7 +61,7 @@ ppu_error_code sys_mmapper_allocate_fixed_address()
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id)
 {
 	sys_mmapper.warning("sys_mmapper_allocate_shared_memory(0x%llx, size=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, flags, mem_id);
 
@@ -108,7 +108,7 @@ ppu_error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, 
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
 {
 	sys_mmapper.error("sys_mmapper_allocate_shared_memory_from_container(0x%llx, size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, cid, flags, mem_id);
 
@@ -141,7 +141,7 @@ ppu_error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 si
 	}
 	}
 
-	ppu_error_code result{};
+	error_code result{};
 
 	const auto ct = idm::get<lv2_memory_container>(cid, [&](u32, lv2_memory_container& ct)
 	{
@@ -171,14 +171,14 @@ ppu_error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 si
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_change_address_access_right(u32 addr, u64 flags)
+error_code sys_mmapper_change_address_access_right(u32 addr, u64 flags)
 {
 	sys_mmapper.todo("sys_mmapper_change_address_access_right(addr=0x%x, flags=0x%llx)", addr, flags);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_free_address(u32 addr)
+error_code sys_mmapper_free_address(u32 addr)
 {
 	sys_mmapper.error("sys_mmapper_free_address(addr=0x%x)", addr);
 
@@ -198,11 +198,11 @@ ppu_error_code sys_mmapper_free_address(u32 addr)
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_free_shared_memory(u32 mem_id)
+error_code sys_mmapper_free_shared_memory(u32 mem_id)
 {
 	sys_mmapper.warning("sys_mmapper_free_shared_memory(mem_id=0x%x)", mem_id);
 
-	ppu_error_code result{};
+	error_code result{};
 
 	// Conditionally remove memory ID
 	const auto mem = idm::withdraw<lv2_memory>(mem_id, [&](u32, lv2_memory& mem)
@@ -232,7 +232,7 @@ ppu_error_code sys_mmapper_free_shared_memory(u32 mem_id)
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
+error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 {
 	sys_mmapper.error("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%llx)", addr, mem_id, flags);
 
@@ -271,7 +271,7 @@ ppu_error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
 {
 	sys_mmapper.error("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
 
@@ -307,7 +307,7 @@ ppu_error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags,
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
+error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 {
 	sys_mmapper.error("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
 
@@ -338,7 +338,7 @@ ppu_error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 	return CELL_OK;
 }
 
-ppu_error_code sys_mmapper_enable_page_fault_notification(u32 addr, u32 eq)
+error_code sys_mmapper_enable_page_fault_notification(u32 addr, u32 eq)
 {
 	sys_mmapper.todo("sys_mmapper_enable_page_fault_notification(addr=0x%x, eq=0x%x)", addr, eq);
 

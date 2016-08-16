@@ -2355,29 +2355,6 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 	return fmt::format("0x%08X", vnid);
 }
 
-s32 ppu_error_code::report(s32 error, const char* text)
-{
-	if (auto thread = get_current_cpu_thread())
-	{
-		if (thread->id >= ppu_thread::id_min)
-		{
-			if (auto func = static_cast<ppu_thread*>(thread)->last_function)
-			{
-				LOG_ERROR(PPU, "'%s' failed with 0x%08x : %s", func, error, text);
-			}
-			else
-			{
-				LOG_ERROR(PPU, "Unknown function failed with 0x%08x : %s", error, text);
-			}
-
-			return error;
-		}
-	}
-
-	LOG_ERROR(PPU, "Illegal call to ppu_error_code::report(0x%x, '%s')!");
-	return error;
-}
-
 std::vector<ppu_function_t>& ppu_function_manager::access()
 {
 	static std::vector<ppu_function_t> list

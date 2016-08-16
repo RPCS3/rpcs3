@@ -8,7 +8,21 @@ logs::channel scePerf("scePerf", logs::level::notice);
 
 extern u64 get_system_time();
 
-arm_error_code scePerfArmPmonReset(ARMv7Thread& cpu, s32 threadId)
+template<>
+void fmt_class_string<ScePerfError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(SCE_PERF_ERROR_INVALID_ARGUMENT);
+		}
+
+		return unknown;
+	});
+}
+
+error_code scePerfArmPmonReset(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonReset(threadId=0x%x)", threadId);
 
@@ -19,7 +33,7 @@ arm_error_code scePerfArmPmonReset(ARMv7Thread& cpu, s32 threadId)
 	return SCE_OK;
 }
 
-arm_error_code scePerfArmPmonSelectEvent(ARMv7Thread& cpu, s32 threadId, u32 counter, u8 eventCode)
+error_code scePerfArmPmonSelectEvent(ARMv7Thread& cpu, s32 threadId, u32 counter, u8 eventCode)
 {
 	scePerf.warning("scePerfArmPmonSelectEvent(threadId=0x%x, counter=0x%x, eventCode=0x%x)", threadId, counter, eventCode);
 
@@ -68,7 +82,7 @@ arm_error_code scePerfArmPmonSelectEvent(ARMv7Thread& cpu, s32 threadId, u32 cou
 	return SCE_OK;
 }
 
-arm_error_code scePerfArmPmonStart(ARMv7Thread& cpu, s32 threadId)
+error_code scePerfArmPmonStart(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonStart(threadId=0x%x)", threadId);
 
@@ -77,7 +91,7 @@ arm_error_code scePerfArmPmonStart(ARMv7Thread& cpu, s32 threadId)
 	return SCE_OK;
 }
 
-arm_error_code scePerfArmPmonStop(ARMv7Thread& cpu, s32 threadId)
+error_code scePerfArmPmonStop(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonStop(threadId=0x%x)");
 
@@ -86,7 +100,7 @@ arm_error_code scePerfArmPmonStop(ARMv7Thread& cpu, s32 threadId)
 	return SCE_OK;
 }
 
-arm_error_code scePerfArmPmonGetCounterValue(ARMv7Thread& cpu, s32 threadId, u32 counter, vm::ptr<u32> pValue)
+error_code scePerfArmPmonGetCounterValue(ARMv7Thread& cpu, s32 threadId, u32 counter, vm::ptr<u32> pValue)
 {
 	scePerf.warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=*0x%x)", threadId, counter, pValue);
 
@@ -109,7 +123,7 @@ arm_error_code scePerfArmPmonGetCounterValue(ARMv7Thread& cpu, s32 threadId, u32
 	return SCE_OK;
 }
 
-arm_error_code scePerfArmPmonSoftwareIncrement(ARMv7Thread& cpu, u32 mask)
+error_code scePerfArmPmonSoftwareIncrement(ARMv7Thread& cpu, u32 mask)
 {
 	scePerf.warning("scePerfArmPmonSoftwareIncrement(mask=0x%x)", mask);
 

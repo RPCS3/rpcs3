@@ -8,6 +8,23 @@
 
 logs::channel cellUserInfo("cellUserInfo", logs::level::notice);
 
+template<>
+void fmt_class_string<CellUserInfoError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(CELL_USERINFO_ERROR_BUSY);
+		STR_CASE(CELL_USERINFO_ERROR_INTERNAL);
+		STR_CASE(CELL_USERINFO_ERROR_PARAM);
+		STR_CASE(CELL_USERINFO_ERROR_NOUSER);
+		}
+
+		return unknown;
+	});
+}
+
 s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
 	cellUserInfo.warning("cellUserInfoGetStat(id=%d, stat=*0x%x)", id, stat);
@@ -63,7 +80,7 @@ s32 cellUserInfoEnableOverlay()
 	return CELL_OK;
 }
 
-ppu_error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
+error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
 {
 	cellUserInfo.todo("cellUserInfoGetList(listNum=*0x%x, listBuf=*0x%x, currentUserId=*0x%x)", listNum, listBuf, currentUserId);
 

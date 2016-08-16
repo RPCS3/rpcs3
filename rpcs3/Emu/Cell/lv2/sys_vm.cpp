@@ -6,7 +6,7 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_vm("sys_vm", logs::level::notice);
 
-ppu_error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
+error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
 	sys_vm.error("sys_vm_memory_map(vsize=0x%x, psize=0x%x, cid=0x%x, flags=0x%llx, policy=0x%llx, addr=*0x%x)", vsize, psize, cid, flag, policy, addr);
 
@@ -38,7 +38,7 @@ ppu_error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 po
 	return CELL_ENOMEM;
 }
 
-ppu_error_code sys_vm_unmap(u32 addr)
+error_code sys_vm_unmap(u32 addr)
 {
 	sys_vm.warning("sys_vm_unmap(addr=0x%x)", addr);
 
@@ -50,70 +50,70 @@ ppu_error_code sys_vm_unmap(u32 addr)
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_append_memory(u32 addr, u32 size)
+error_code sys_vm_append_memory(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_append_memory(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_return_memory(u32 addr, u32 size)
+error_code sys_vm_return_memory(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_return_memory(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_lock(u32 addr, u32 size)
+error_code sys_vm_lock(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_lock(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_unlock(u32 addr, u32 size)
+error_code sys_vm_unlock(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_unlock(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_touch(u32 addr, u32 size)
+error_code sys_vm_touch(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_touch(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_flush(u32 addr, u32 size)
+error_code sys_vm_flush(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_flush(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_invalidate(u32 addr, u32 size)
+error_code sys_vm_invalidate(u32 addr, u32 size)
 {
 	sys_vm.todo("sys_vm_invalidate(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_store(u32 addr, u32 size)
+error_code sys_vm_store(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_store(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_sync(u32 addr, u32 size)
+error_code sys_vm_sync(u32 addr, u32 size)
 {
 	sys_vm.warning("sys_vm_sync(addr=0x%x, size=0x%x)", addr, size);
 
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result)
+error_code sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result)
 {
 	sys_vm.warning("sys_vm_test(addr=0x%x, size=0x%x, result=*0x%x)", addr, size, result);
 
@@ -122,7 +122,7 @@ ppu_error_code sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result)
 	return CELL_OK;
 }
 
-ppu_error_code sys_vm_get_statistics(u32 addr, vm::ptr<sys_vm_statistics_t> stat)
+error_code sys_vm_get_statistics(u32 addr, vm::ptr<sys_vm_statistics_t> stat)
 {
 	sys_vm.warning("sys_vm_get_statistics(addr=0x%x, stat=*0x%x)", addr, stat);
 
