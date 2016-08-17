@@ -18,8 +18,8 @@
 
 #ifdef _MSC_VER
 #define ASSUME(cond) __assume(cond)
-#define LIKELY(cond) (cond)
-#define UNLIKELY(cond) (cond)
+#define LIKELY
+#define UNLIKELY
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
@@ -871,19 +871,19 @@ public:
 	}
 };
 
-// Error code type (return type), implements error reporting
+// Error code type (return type), implements error reporting. Could be a template.
 struct error_code
 {
-	// Use fixed s32 type for now (could be template argument)
+	// Use fixed s32 type for now
 	s32 value;
 
 	error_code() = default;
 
-	// Must be implemented
+	// Implementation must be provided specially
 	static s32 error_report(const fmt_type_info* sup, u64 arg);
 
-	// Helper type (TODO: use scoped enum when error code is widely used)
-	enum not_an_error : s32
+	// Helper type
+	enum class not_an_error : s32
 	{
 		__not_an_error // SFINAE marker
 	};

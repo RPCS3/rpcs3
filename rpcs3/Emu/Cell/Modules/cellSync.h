@@ -34,123 +34,135 @@ enum CellSyncError1 : u32
 	CELL_SYNC_ERROR_UNKNOWNKEY             = 0x80410113,
 };
 
-namespace _sync
+struct CellSyncMutex
 {
-	struct alignas(4) mutex // CellSyncMutex control variable
+	struct alignas(4) ctrl_t
 	{
 		be_t<u16> rel;
 		be_t<u16> acq;
 	};
-}
 
-struct CellSyncMutex
-{
-	atomic_t<_sync::mutex> ctrl;
+	atomic_t<ctrl_t> ctrl;
+
+	static inline auto lock_begin(ctrl_t& ctrl)
+	{
+		return ctrl.acq++;
+	}
+
+	static inline bool try_lock(ctrl_t& ctrl)
+	{
+		if (UNLIKELY(ctrl.rel != ctrl.acq))
+		{
+			return false;
+		}
+
+		ctrl.acq++;
+		return true;
+	}
+
+	static inline void unlock(ctrl_t& ctrl)
+	{
+		ctrl.rel++;
+	}
 };
 
 CHECK_SIZE_ALIGN(CellSyncMutex, 4, 4);
 
-namespace _sync
+struct CellSyncBarrier
 {
-	struct alignas(4) barrier // CellSyncBarrier control variable
+	struct alignas(4) ctrl_t
 	{
 		be_t<s16> value;
 		be_t<u16> count;
-
-		static inline bool try_notify(barrier& ctrl)
-		{
-			if (ctrl.value & 0x8000)
-			{
-				return false;
-			}
-
-			if (++ctrl.value == ctrl.count)
-			{
-				ctrl.value |= 0x8000;
-			}
-
-			return true;
-		};
-
-		static inline bool try_wait(barrier& ctrl)
-		{
-			if ((ctrl.value & 0x8000) == 0)
-			{
-				return false;
-			}
-
-			if (--ctrl.value == -0x8000)
-			{
-				ctrl.value = 0;
-			}
-
-			return true;
-		}
 	};
-}
 
-struct CellSyncBarrier
-{
-	atomic_t<_sync::barrier> ctrl;
+	atomic_t<ctrl_t> ctrl;
+
+	static inline bool try_notify(ctrl_t& ctrl)
+	{
+		if (ctrl.value & 0x8000)
+		{
+			return false;
+		}
+
+		if (++ctrl.value == ctrl.count)
+		{
+			ctrl.value |= 0x8000;
+		}
+
+		return true;
+	};
+
+	static inline bool try_wait(ctrl_t& ctrl)
+	{
+		if ((ctrl.value & 0x8000) == 0)
+		{
+			return false;
+		}
+
+		if (--ctrl.value == -0x8000)
+		{
+			ctrl.value = 0;
+		}
+
+		return true;
+	}
 };
 
 CHECK_SIZE_ALIGN(CellSyncBarrier, 4, 4);
 
-namespace _sync
+struct alignas(16) CellSyncRwm
 {
-	struct alignas(4) rwlock // CellSyncRwm control variable
+	struct alignas(4) ctrl_t
 	{
 		be_t<u16> readers;
 		be_t<u16> writers;
-
-		static inline bool try_read_begin(rwlock& ctrl)
-		{
-			if (ctrl.writers)
-			{
-				return false;
-			}
-
-			ctrl.readers++;
-			return true;
-		}
-
-		static inline bool try_read_end(rwlock& ctrl)
-		{
-			if (ctrl.readers == 0)
-			{
-				return false;
-			}
-
-			ctrl.readers--;
-			return true;
-		}
-
-		static inline bool try_write_begin(rwlock& ctrl)
-		{
-			if (ctrl.writers)
-			{
-				return false;
-			}
-
-			ctrl.writers = 1;
-			return true;
-		}
 	};
-}
 
-struct alignas(16) CellSyncRwm
-{
-	atomic_t<_sync::rwlock> ctrl;
+	atomic_t<ctrl_t> ctrl;
 
 	be_t<u32> size;
 	vm::bptr<void, u64> buffer;
+
+	static inline bool try_read_begin(ctrl_t& ctrl)
+	{
+		if (ctrl.writers)
+		{
+			return false;
+		}
+
+		ctrl.readers++;
+		return true;
+	}
+
+	static inline bool try_read_end(ctrl_t& ctrl)
+	{
+		if (ctrl.readers == 0)
+		{
+			return false;
+		}
+
+		ctrl.readers--;
+		return true;
+	}
+
+	static inline bool try_write_begin(ctrl_t& ctrl)
+	{
+		if (ctrl.writers)
+		{
+			return false;
+		}
+
+		ctrl.writers = 1;
+		return true;
+	}
 };
 
 CHECK_SIZE_ALIGN(CellSyncRwm, 16, 16);
 
-namespace _sync
+struct alignas(32) CellSyncQueue
 {
-	struct alignas(8) queue // CellSyncQueue control variable
+	struct alignas(8) ctrl_t
 	{
 		union
 		{
@@ -167,79 +179,9 @@ namespace _sync
 			bf_t<be_t<u32>, 0, 24> count;
 			bf_t<be_t<u32>, 24, 8> _push;
 		};
-
-		static inline bool try_push_begin(queue& ctrl, u32 depth, u32* position)
-		{
-			const u32 count = ctrl.count;
-
-			if (ctrl._push || count + ctrl._pop >= depth)
-			{
-				return false;
-			}
-
-			*position = ctrl.next;
-			ctrl.next = *position + 1 != depth ? *position + 1 : 0;
-			ctrl.count = count + 1;
-			ctrl._push = 1;
-			return true;
-		}
-
-		static inline bool try_pop_begin(queue& ctrl, u32 depth, u32* position)
-		{
-			const u32 count = ctrl.count;
-
-			if (ctrl._pop || count <= ctrl._push)
-			{
-				return false;
-			}
-
-			ctrl._pop = 1;
-			*position = ctrl.next + depth - count;
-			ctrl.count = count - 1;
-			return true;
-		}
-
-		static inline bool try_peek_begin(queue& ctrl, u32 depth, u32* position)
-		{
-			const u32 count = ctrl.count;
-
-			if (ctrl._pop || count <= ctrl._push)
-			{
-				return false;
-			}
-
-			ctrl._pop = 1;
-			*position = ctrl.next + depth - count;
-			return true;
-		}
-
-		static inline bool try_clear_begin_1(queue& ctrl)
-		{
-			if (ctrl._pop)
-			{
-				return false;
-			}
-
-			ctrl._pop = 1;
-			return true;
-		}
-
-		static inline bool try_clear_begin_2(queue& ctrl)
-		{
-			if (ctrl._push)
-			{
-				return false;
-			}
-
-			ctrl._push = 1;
-			return true;
-		}
 	};
-}
 
-struct alignas(32) CellSyncQueue
-{
-	atomic_t<_sync::queue> ctrl;
+	atomic_t<ctrl_t> ctrl;
 
 	be_t<u32> size;
 	be_t<u32> depth;
@@ -256,6 +198,83 @@ struct alignas(32) CellSyncQueue
 		}
 
 		return depth;
+	}
+
+	static inline bool try_push_begin(ctrl_t& ctrl, u32 depth, u32* position)
+	{
+		const u32 count = ctrl.count;
+
+		if (ctrl._push || count + ctrl._pop >= depth)
+		{
+			return false;
+		}
+
+		*position = ctrl.next;
+		ctrl.next = *position + 1 != depth ? *position + 1 : 0;
+		ctrl.count = count + 1;
+		ctrl._push = 1;
+		return true;
+	}
+
+	static inline void push_end(ctrl_t& ctrl)
+	{
+		ctrl._push = 0;
+	}
+
+	static inline bool try_pop_begin(ctrl_t& ctrl, u32 depth, u32* position)
+	{
+		const u32 count = ctrl.count;
+
+		if (ctrl._pop || count <= ctrl._push)
+		{
+			return false;
+		}
+
+		ctrl._pop = 1;
+		*position = ctrl.next + depth - count;
+		ctrl.count = count - 1;
+		return true;
+	}
+
+	static inline bool try_peek_begin(ctrl_t& ctrl, u32 depth, u32* position)
+	{
+		const u32 count = ctrl.count;
+
+		if (ctrl._pop || count <= ctrl._push)
+		{
+			return false;
+		}
+
+		ctrl._pop = 1;
+		*position = ctrl.next + depth - count;
+		return true;
+	}
+
+	static inline void pop_end(ctrl_t& ctrl)
+	{
+		ctrl._pop = 0;
+	}
+
+	static inline bool try_clear_begin_1(ctrl_t& ctrl)
+	{
+		if (ctrl._pop)
+		{
+			return false;
+		}
+
+		ctrl._pop = 1;
+		return true;
+	}
+
+	static inline bool try_clear_begin_2(ctrl_t& ctrl)
+	{
+		if (ctrl._push)
+		{
+			return false;
+		}
+
+		ctrl._push = 1;
+		return true;
 	}
 };
 

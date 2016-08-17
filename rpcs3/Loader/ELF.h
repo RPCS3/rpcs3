@@ -154,8 +154,8 @@ enum class elf_error
 };
 
 // ELF object with specified parameters.
-// en_t: endianness (specify le_t or be_t)
-// sz_t: size (specify u32 for ELF32, u64 for ELF64)
+// en_t: endianness (elf_le or elf_be)
+// sz_t: size (u32 for ELF32, u64 for ELF64)
 template<template<typename T> class en_t, typename sz_t, elf_machine Machine, elf_os OS, elf_type Type>
 class elf_object
 {
