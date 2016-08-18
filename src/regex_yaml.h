@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "yaml-cpp/dll.h"
+
 namespace YAML {
 class Stream;
 
@@ -26,7 +28,7 @@ enum REGEX_OP {
 // simplified regular expressions
 // . Only straightforward matches (no repeated characters)
 // . Only matches from start of string
-class RegEx {
+class YAML_CPP_API RegEx {
  public:
   RegEx();
   RegEx(char ch);
@@ -34,10 +36,10 @@ class RegEx {
   RegEx(const std::string& str, REGEX_OP op = REGEX_SEQ);
   ~RegEx() {}
 
-  friend RegEx operator!(const RegEx& ex);
-  friend RegEx operator||(const RegEx& ex1, const RegEx& ex2);
-  friend RegEx operator&&(const RegEx& ex1, const RegEx& ex2);
-  friend RegEx operator+(const RegEx& ex1, const RegEx& ex2);
+  friend YAML_CPP_API RegEx operator!(const RegEx& ex);
+  friend YAML_CPP_API RegEx operator||(const RegEx& ex1, const RegEx& ex2);
+  friend YAML_CPP_API RegEx operator&&(const RegEx& ex1, const RegEx& ex2);
+  friend YAML_CPP_API RegEx operator+(const RegEx& ex1, const RegEx& ex2);
 
   bool Matches(char ch) const;
   bool Matches(const std::string& str) const;
