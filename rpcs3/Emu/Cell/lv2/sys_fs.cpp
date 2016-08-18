@@ -254,6 +254,7 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 	}
 
 	*fd = _dir->id;
+	sys_fs.notice("sys_fs_opendir(%s) -> lv2_fs_id %d", path, _dir->id);
 
 	return CELL_OK;
 }
@@ -288,7 +289,7 @@ error_code sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 
 error_code sys_fs_closedir(u32 fd)
 {
-	sys_fs.trace("sys_fs_closedir(fd=%d)", fd);
+	sys_fs.warning("sys_fs_closedir(fd=%d)", fd);
 
 	const auto directory = idm::get<lv2_dir>(fd);
 

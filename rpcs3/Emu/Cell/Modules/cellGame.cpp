@@ -93,9 +93,17 @@ struct content_permission final
 
 	~content_permission()
 	{
-		if (is_temporary)
+		try
 		{
-			fs::remove_all(vfs::get("/dev_hdd1/game/" + dir));
+			if (is_temporary)
+			{
+				fs::remove_all(vfs::get("/dev_hdd1/game/" + dir));
+			}
+		}
+		catch (...)
+		{
+			cellGame.fatal("Failed to clean directory '/dev_hdd1/game/%s'", dir);
+			catch_all_exceptions();
 		}
 	}
 };
@@ -345,7 +353,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		return CELL_GAME_ERROR_PARAM;
 	}
 
-	const auto prm = fxm::withdraw<content_permission>();
+	const auto prm = fxm::get<content_permission>();
 	
 	if (!prm)
 	{
@@ -382,6 +390,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	strcpy_trunc(*contentInfoPath, dir);
 	strcpy_trunc(*usrdirPath, dir + "/USRDIR");
+	verify(HERE), fxm::remove<content_permission>();
 	
 	return CELL_OK;
 }
