@@ -932,7 +932,7 @@ bool fs::dir::open(const std::string& path)
 
 #ifdef _WIN32
 	WIN32_FIND_DATAW found;
-	const auto handle = FindFirstFileW(to_wchar(path + "/*").get(), &found);
+	const auto handle = FindFirstFileExW(to_wchar(path + "/*").get(), FindExInfoBasic, &found, FindExSearchNameMatch, NULL, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -942,8 +942,6 @@ bool fs::dir::open(const std::string& path)
 
 	class windows_dir final : public dir_base
 	{
-		const HANDLE m_handle;
-
 		std::vector<dir_entry> m_entries;
 		std::size_t m_pos = 0;
 
@@ -963,29 +961,24 @@ bool fs::dir::open(const std::string& path)
 		}
 
 	public:
-		windows_dir(HANDLE handle, const WIN32_FIND_DATAW& found)
-			: m_handle(handle)
+		windows_dir(HANDLE handle, WIN32_FIND_DATAW& found)
 		{
 			add_entry(found);
-		}
 
-		~windows_dir()
-		{
-			FindClose(m_handle);
+			while (FindNextFileW(handle, &found))
+			{
+				add_entry(found);
+			}
+
+			verify("dir::read" HERE), ERROR_NO_MORE_FILES == GetLastError();
+			FindClose(handle);
 		}
 
 		bool read(dir_entry& out) override
 		{
-			if (m_pos == m_entries.size())
+			if (m_pos >= m_entries.size())
 			{
-				WIN32_FIND_DATAW found;
-				if (!FindNextFileW(m_handle, &found))
-				{
-					verify("dir::read" HERE), ERROR_NO_MORE_FILES == GetLastError();
-					return false;
-				}
-
-				add_entry(found);
+				return false;
 			}
 
 			out = m_entries[m_pos++];
