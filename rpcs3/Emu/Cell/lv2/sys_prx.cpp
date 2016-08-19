@@ -8,6 +8,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_prx.h"
 
+namespace vm { using namespace ps3; }
+
 extern std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object&);
 
 logs::channel sys_prx("sys_prx", logs::level::notice);

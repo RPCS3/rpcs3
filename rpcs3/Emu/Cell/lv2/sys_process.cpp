@@ -23,6 +23,8 @@
 
 #include <thread>
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_process("sys_process", logs::level::notice);
 
 u32 g_ps3_sdk_version;
@@ -49,14 +51,11 @@ s32 sys_process_exit(s32 status)
 {
 	sys_process.warning("sys_process_exit(status=0x%x)", status);
 
-	LV2_LOCK;
-
 	CHECK_EMU_STATUS;
 	
-	sys_process.success("Process finished");
-
 	Emu.CallAfter([]()
 	{
+		sys_process.success("Process finished");
 		Emu.Stop();
 	});
 

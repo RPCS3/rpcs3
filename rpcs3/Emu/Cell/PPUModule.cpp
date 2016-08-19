@@ -15,6 +15,8 @@
 #include <unordered_set>
 #include <algorithm>
 
+namespace vm { using namespace ps3; }
+
 LOG_CHANNEL(cellAdec);
 LOG_CHANNEL(cellAtrac);
 LOG_CHANNEL(cellAtracMulti);

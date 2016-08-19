@@ -141,28 +141,25 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 	}
 	}
 
-	error_code result{};
-
-	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct)
+	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct) -> CellError
 	{
 		// Try to get "physical memory"
 		if (!ct.take(size))
 		{
-			result = CELL_ENOMEM;
-			return false;
+			return CELL_ENOMEM;
 		}
 
-		return true;
+		return {};
 	});
 
-	if (!ct && !result)
+	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!ct)
+	if (ct.value)
 	{
-		return result;
+		return ct.value;
 	}
 
 	// Generate a new mem ID
@@ -202,28 +199,25 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 {
 	sys_mmapper.warning("sys_mmapper_free_shared_memory(mem_id=0x%x)", mem_id);
 
-	error_code result{};
-
 	// Conditionally remove memory ID
-	const auto mem = idm::withdraw<lv2_memory>(mem_id, [&](lv2_memory& mem)
+	const auto mem = idm::withdraw<lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
 		if (mem.addr.compare_and_swap_test(0, -1))
 		{
-			result = CELL_EBUSY;
-			return false;
+			return CELL_EBUSY;
 		}
 
-		return true;
+		return {};
 	});
 
-	if (!mem && !result)
+	if (!mem)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!mem)
+	if (mem.value)
 	{
-		return result;
+		return mem.value;
 	}
 
 	// Return "physical memory" to the memory container

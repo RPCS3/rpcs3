@@ -103,6 +103,8 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 
 #endif
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_time("sys_time", logs::level::notice);
 
 static const u64 g_timebase_freq = /*79800000*/ 80000000; // 80 Mhz

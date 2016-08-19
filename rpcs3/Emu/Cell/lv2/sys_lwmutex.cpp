@@ -7,6 +7,8 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_lwmutex("sys_lwmutex", logs::level::notice);
 
 extern u64 get_system_time();

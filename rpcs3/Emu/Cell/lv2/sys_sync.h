@@ -4,8 +4,6 @@
 #include <mutex>
 #include <condition_variable>
 
-namespace vm { using namespace ps3; }
-
 // attr_protocol (waiting scheduling policy)
 enum
 {

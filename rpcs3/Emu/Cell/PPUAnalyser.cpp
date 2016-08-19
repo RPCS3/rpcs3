@@ -7,6 +7,8 @@
 
 #include "yaml-cpp/yaml.h"
 
+namespace vm { using namespace ps3; }
+
 const ppu_decoder<ppu_itype> s_ppu_itype;
 const ppu_decoder<ppu_iname> s_ppu_iname;
 

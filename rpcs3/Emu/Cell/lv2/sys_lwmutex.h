@@ -71,7 +71,7 @@ struct lv2_lwmutex_t
 class ppu_thread;
 
 // SysCalls
-s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);
+s32 _sys_lwmutex_create(vm::ps3::ptr<u32> lwmutex_id, u32 protocol, vm::ps3::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);
 s32 _sys_lwmutex_destroy(u32 lwmutex_id);
 s32 _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout);
 s32 _sys_lwmutex_trylock(u32 lwmutex_id);

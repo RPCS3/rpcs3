@@ -44,9 +44,9 @@ struct lv2_sema_t
 class ppu_thread;
 
 // SysCalls
-s32 sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val);
+s32 sys_semaphore_create(vm::ps3::ptr<u32> sem_id, vm::ps3::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val);
 s32 sys_semaphore_destroy(u32 sem_id);
 s32 sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout);
 s32 sys_semaphore_trywait(u32 sem_id);
 s32 sys_semaphore_post(u32 sem_id, s32 count);
-s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count);
+s32 sys_semaphore_get_value(u32 sem_id, vm::ps3::ptr<s32> count);

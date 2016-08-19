@@ -4,8 +4,6 @@
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
 
-namespace vm { using namespace ps3; }
-
 // Generate FNID or VNID for given name
 extern u32 ppu_generate_id(const char* name);
 
@@ -28,7 +26,7 @@ struct ppu_static_function
 struct ppu_static_variable
 {
 	const char* name;
-	vm::gvar<void>* var; // Pointer to variable address storage
+	vm::ps3::gvar<void>* var; // Pointer to variable address storage
 	void(*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
@@ -95,7 +93,7 @@ public:
 		auto& info = access_static_variable(module, vnid);
 
 		info.name  = name;
-		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
+		info.var   = reinterpret_cast<vm::ps3::gvar<void>*>(Var);
 		info.init  = init ? init : [] {};
 		info.size  = SIZE_32(typename T::type);
 		info.align = ALIGN_32(typename T::type);

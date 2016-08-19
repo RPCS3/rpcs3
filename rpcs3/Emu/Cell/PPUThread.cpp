@@ -41,6 +41,8 @@
 #include "Modules/cellMsgDialog.h"
 #endif
 
+namespace vm { using namespace ps3; }
+
 enum class ppu_decoder_type
 {
 	precise,

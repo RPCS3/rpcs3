@@ -8,6 +8,8 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "sys_interrupt.h"
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_interrupt("sys_interrupt", logs::level::notice);
 
 lv2_int_serv_t::lv2_int_serv_t(const std::shared_ptr<ppu_thread>& thread, u64 arg1, u64 arg2)

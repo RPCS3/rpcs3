@@ -48,7 +48,7 @@ struct lv2_mutex_t
 class ppu_thread;
 
 // SysCalls
-s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr);
+s32 sys_mutex_create(vm::ps3::ptr<u32> mutex_id, vm::ps3::ptr<sys_mutex_attribute_t> attr);
 s32 sys_mutex_destroy(u32 mutex_id);
 s32 sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout);
 s32 sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id);

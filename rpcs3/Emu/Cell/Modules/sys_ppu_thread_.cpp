@@ -86,13 +86,13 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 	return _sys_ppu_thread_exit(ppu, val);
 }
 
-std::mutex g_once_mutex;
+shared_mutex g_once_mutex;
 
 void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> once_ctrl, vm::ptr<void()> init)
 {
 	sysPrxForUser.warning("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
 
-	std::lock_guard<std::mutex> lock(g_once_mutex);
+	writer_lock lock(g_once_mutex);
 
 	if (once_ctrl->compare_and_swap_test(SYS_PPU_THREAD_ONCE_INIT, SYS_PPU_THREAD_DONE_INIT))
 	{

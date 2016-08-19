@@ -8,6 +8,8 @@
 #include "sys_process.h"
 #include "sys_timer.h"
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_timer("sys_timer", logs::level::notice);
 
 extern u64 get_system_time();

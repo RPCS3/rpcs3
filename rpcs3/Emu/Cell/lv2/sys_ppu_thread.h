@@ -44,14 +44,14 @@ enum : u32
 // SysCalls
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode);
 void sys_ppu_thread_yield();
-s32 sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr);
+s32 sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ps3::ptr<u64> vptr);
 s32 sys_ppu_thread_detach(u32 thread_id);
-void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable);
+void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ps3::ptr<s32> isjoinable);
 s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio);
-s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop);
-s32 sys_ppu_thread_get_stack_information(ppu_thread& ppu, vm::ptr<sys_ppu_thread_stack_t> sp);
+s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ps3::ptr<s32> priop);
+s32 sys_ppu_thread_get_stack_information(ppu_thread& ppu, vm::ps3::ptr<sys_ppu_thread_stack_t> sp);
 s32 sys_ppu_thread_stop(u32 thread_id);
 s32 sys_ppu_thread_restart(u32 thread_id);
-s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 arg4, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname);
+s32 _sys_ppu_thread_create(vm::ps3::ptr<u64> thread_id, vm::ps3::ptr<ppu_thread_param_t> param, u64 arg, u64 arg4, s32 prio, u32 stacksize, u64 flags, vm::ps3::cptr<char> threadname);
 s32 sys_ppu_thread_start(u32 thread_id);
-s32 sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name);
+s32 sys_ppu_thread_rename(u32 thread_id, vm::ps3::cptr<char> name);

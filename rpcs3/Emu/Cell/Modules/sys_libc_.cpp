@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
+namespace vm { using namespace ps3; }
+
 extern logs::channel sysPrxForUser;
 
 extern fs::file g_tty;

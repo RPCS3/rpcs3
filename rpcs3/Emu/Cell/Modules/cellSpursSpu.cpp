@@ -10,6 +10,7 @@
 #include "cellSpurs.h"
 
 #include <thread>
+#include <mutex>
 
 //----------------------------------------------------------------------------
 // Externs

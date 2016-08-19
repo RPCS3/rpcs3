@@ -10,6 +10,8 @@
 
 #include <algorithm>
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_cond("sys_cond", logs::level::notice);
 
 extern u64 get_system_time();

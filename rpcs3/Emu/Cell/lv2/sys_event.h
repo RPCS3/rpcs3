@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+class cpu_thread;
+
 // Event Queue Type
 enum : u32
 {
@@ -135,13 +137,13 @@ struct lv2_event_port_t
 class ppu_thread;
 
 // SysCalls
-s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
+s32 sys_event_queue_create(vm::ps3::ptr<u32> equeue_id, vm::ps3::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
 s32 sys_event_queue_destroy(u32 equeue_id, s32 mode);
-s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout);
-s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number);
+s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ps3::ptr<sys_event_t> dummy_event, u64 timeout);
+s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ps3::ptr<sys_event_t> event_array, s32 size, vm::ps3::ptr<u32> number);
 s32 sys_event_queue_drain(u32 event_queue_id);
 
-s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name);
+s32 sys_event_port_create(vm::ps3::ptr<u32> eport_id, s32 port_type, u64 name);
 s32 sys_event_port_destroy(u32 eport_id);
 s32 sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 s32 sys_event_port_disconnect(u32 eport_id);

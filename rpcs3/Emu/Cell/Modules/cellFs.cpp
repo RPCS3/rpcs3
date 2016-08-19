@@ -10,6 +10,8 @@
 
 #include <mutex>
 
+namespace vm { using namespace ps3; }
+
 logs::channel cellFs("cellFs", logs::level::notice);
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)

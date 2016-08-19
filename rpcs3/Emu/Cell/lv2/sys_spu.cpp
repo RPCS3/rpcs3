@@ -11,6 +11,8 @@
 #include "sys_event.h"
 #include "sys_spu.h"
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_spu("sys_spu", logs::level::notice);
 
 void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr)

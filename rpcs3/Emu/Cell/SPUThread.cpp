@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cfenv>
 #include <thread>
+#include <mutex>
 
 extern u64 get_timebased_time();
 
@@ -210,7 +211,7 @@ void SPUThread::cpu_task()
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS base address
-	const auto base = vm::_ptr<const u32>(offset);
+	const auto base = vm::ps3::_ptr<const u32>(offset);
 
 	while (true)
 	{
@@ -348,7 +349,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 
 	for (u32 i = 0; i < list_size; i++)
 	{
-		auto rec = vm::ptr<list_element>::make(offset + list_addr + i * 8);
+		auto rec = vm::ps3::ptr<list_element>::make(offset + list_addr + i * 8);
 
 		const u32 size = rec->ts;
 		const u32 addr = rec->ea;

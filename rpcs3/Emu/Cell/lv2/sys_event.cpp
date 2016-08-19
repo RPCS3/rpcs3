@@ -10,6 +10,8 @@
 #include "sys_process.h"
 #include "sys_event.h"
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_event("sys_event", logs::level::notice);
 
 template<> DECLARE(ipc_manager<lv2_event_queue_t, u64>::g_ipc) {};

@@ -40,7 +40,7 @@ struct lv2_cond_t
 class ppu_thread;
 
 // SysCalls
-s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr);
+s32 sys_cond_create(vm::ps3::ptr<u32> cond_id, u32 mutex_id, vm::ps3::ptr<sys_cond_attribute_t> attr);
 s32 sys_cond_destroy(u32 cond_id);
 s32 sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout);
 s32 sys_cond_signal(u32 cond_id);

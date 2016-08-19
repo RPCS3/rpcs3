@@ -9,6 +9,8 @@
 
 #include <algorithm>
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_event_flag("sys_event_flag", logs::level::notice);
 
 extern u64 get_system_time();
