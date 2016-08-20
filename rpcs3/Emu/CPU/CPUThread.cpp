@@ -5,6 +5,22 @@
 #include <mutex>
 
 template<>
+void fmt_class_string<cpu_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto arg)
+	{
+		switch (arg)
+		{
+		STR_CASE(cpu_type::ppu);
+		STR_CASE(cpu_type::spu);
+		STR_CASE(cpu_type::arm);
+		}
+
+		return unknown;
+	});
+}
+
+template<>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](cpu_flag f)
@@ -93,7 +109,8 @@ cpu_thread::~cpu_thread()
 {
 }
 
-cpu_thread::cpu_thread()
+cpu_thread::cpu_thread(cpu_type type)
+	: type(type)
 {
 }
 
