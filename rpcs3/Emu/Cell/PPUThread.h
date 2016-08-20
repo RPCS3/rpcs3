@@ -21,8 +21,8 @@ class ppu_thread : public cpu_thread
 public:
 	using id_base = ppu_thread;
 
-	static constexpr u32 id_min = 0x80000000; // TODO (used to determine thread type)
-	static constexpr u32 id_max = 0x8fffffff;
+	static constexpr u32 id_min = 0x70000000; // TODO (used to determine thread type)
+	static constexpr u32 id_max = 0x7fffffff;
 
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
