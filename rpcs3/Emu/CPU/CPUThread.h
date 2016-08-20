@@ -3,6 +3,13 @@
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
 
+enum class cpu_type : u8
+{
+	ppu, // PPU Thread
+	spu, // SPU Thread
+	arm, // ARMv7 Thread
+};
+
 // Thread state flags
 enum class cpu_flag : u32
 {
@@ -32,8 +39,9 @@ public:
 	virtual ~cpu_thread() override;
 
 	const id_value<> id{};
+	const cpu_type type;
 
-	cpu_thread();
+	cpu_thread(cpu_type type);
 
 	// Public thread state
 	atomic_t<bs_t<cpu_flag>> state{+cpu_flag::stop};

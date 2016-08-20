@@ -94,7 +94,7 @@ ARMv7Thread::~ARMv7Thread()
 }
 
 ARMv7Thread::ARMv7Thread(const std::string& name, u32 prio, u32 stack)
-	: cpu_thread()
+	: cpu_thread(cpu_type::arm)
 	, m_name(name)
 	, prio(prio)
 	, stack_addr(vm::alloc(stack, vm::main))

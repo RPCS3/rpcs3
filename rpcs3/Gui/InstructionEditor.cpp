@@ -61,7 +61,8 @@ InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u32 _pc, cpu_t
 	s_panel_margin_x->Add(s_panel_margin_y);
 	s_panel_margin_x->AddSpacer(12);
 
-	const u32 cpu_offset = g_system == system_type::ps3 && cpu->id < ppu_thread::id_min ? static_cast<SPUThread&>(*cpu).offset : 0;
+	
+	const u32 cpu_offset = cpu->type == cpu_type::spu ? static_cast<SPUThread&>(*cpu).offset : 0;
 
 	this->Connect(wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(InstructionEditorDialog::updatePreview));
 	t2_instr->SetValue(wxString::Format("%08x", vm::ps3::read32(cpu_offset + pc).value()));

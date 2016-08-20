@@ -481,7 +481,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 
 	if (auto thread = get_current_cpu_thread())
 	{
-		if (g_system == system_type::ps3 && thread->id >= ppu_thread::id_min)
+		if (g_system == system_type::ps3 && thread->type == cpu_type::ppu)
 		{
 			if (auto func = static_cast<ppu_thread*>(thread)->last_function)
 			{
