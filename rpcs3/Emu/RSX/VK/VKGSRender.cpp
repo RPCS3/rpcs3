@@ -923,6 +923,9 @@ bool VKGSRender::load_program()
 		}
 	}
 
+	properties.cs.attachmentCount = 1;
+	properties.cs.pAttachments = properties.att_state;
+	
 	if (rsx::method_registers.logic_op_enabled())
 	{
 		properties.cs.logicOpEnable = true;
