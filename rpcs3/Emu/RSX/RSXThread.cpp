@@ -583,6 +583,58 @@ namespace rsx
 		return{ ptr, count * type_size };
 	}
 
+	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	{
+		u32 offset  = vertex_array_info.offset();
+		u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
+
+		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type, vertex_array_info.size);
+
+		// Disjoint first_counts ranges not supported atm
+		for (int i = 0; i < vertex_ranges.size() - 1; i++)
+		{
+			const std::tuple<u32, u32>& range      = vertex_ranges[i];
+			const std::tuple<u32, u32>& next_range = vertex_ranges[i + 1];
+			verify(HERE), (std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+		}
+		u32 first = std::get<0>(vertex_ranges.front());
+		u32 count = std::get<0>(vertex_ranges.back()) + std::get<1>(vertex_ranges.back()) - first;
+
+		const gsl::byte* ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
+		return {ptr + first * vertex_array_info.stride, count * vertex_array_info.stride + element_size};
+	}
+
+	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	{
+		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
+		u32 input_mask = state.vertex_attrib_input_mask();
+		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		{
+			bool enabled = !!(input_mask & (1 << index));
+			if (!enabled)
+				continue;
+
+			if (state.vertex_arrays_info[index].size > 0)
+			{
+				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
+				result.push_back(vertex_array_buffer{info.type, info.size, info.stride,
+				    get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index});
+				continue;
+			}
+
+			if (state.register_vertex_info[index].size > 0)
+			{
+				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
+				result.push_back(vertex_array_register{info.type, info.size, info.data, index});
+				continue;
+			}
+
+			result.push_back(empty_vertex_array{index});
+		}
+
+		return result;
+	}
+
 	void thread::do_internal_task()
 	{
 		if (m_internal_tasks.empty())
