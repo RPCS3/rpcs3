@@ -923,7 +923,7 @@ bool VKGSRender::load_program()
 		}
 	}
 
-	properties.cs.attachmentCount = 1;
+	properties.cs.attachmentCount = m_draw_buffers_count;
 	properties.cs.pAttachments = properties.att_state;
 	
 	if (rsx::method_registers.logic_op_enabled())
