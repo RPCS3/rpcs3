@@ -745,6 +745,9 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
+	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
+	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
+	
 	//TODO: Build clear commands into current renderpass descriptor set
 	if (!(mask & 0xF3)) return;
 	if (m_current_present_image == 0xFFFF) return;
