@@ -174,6 +174,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 	case CELL_GCM_TEXTURE_Y16_X16:
 	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_X32_FLOAT:
 		return get_subresources_layout_impl<1, u32>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 		return get_subresources_layout_impl<1, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
@@ -254,6 +255,7 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 
 	case CELL_GCM_TEXTURE_Y16_X16:
 	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_X32_FLOAT:
 		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), gsl::as_span<const be_t<u32>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
 		break;
 
