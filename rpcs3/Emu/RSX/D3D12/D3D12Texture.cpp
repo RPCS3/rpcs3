@@ -207,7 +207,12 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			continue;
 		}
 		size_t w = rsx::method_registers.fragment_textures[i].width(), h = rsx::method_registers.fragment_textures[i].height();
-//		if (!w || !h) continue;
+		
+		if (!w || !h)
+		{
+			LOG_ERROR(RSX, "Texture upload requested but invalid texture dimensions passed");
+			continue;
+		}
 
 		const u32 texaddr = rsx::get_address(rsx::method_registers.fragment_textures[i].offset(), rsx::method_registers.fragment_textures[i].location());
 
