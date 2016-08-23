@@ -103,7 +103,7 @@ private:
 	 * Creates and fills an index buffer emulating unsupported primitive type.
 	 * Returns index_count and (offset_in_index_buffer, index_type)
 	 */
-	std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType> > generate_emulating_index_buffer(const rsx::draw_clause &clause);
+	std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType> > generate_emulating_index_buffer(const rsx::draw_clause &clause, u32 vertex_count);
 
 public:
 	bool load_program();
