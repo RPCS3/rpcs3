@@ -402,16 +402,9 @@ void VKFragmentProgram::Delete()
 
 	if (handle)
 	{
-		if (Emu.IsStopped())
-		{
-			LOG_WARNING(RSX, "VKFragmentProgram::Delete(): vkDestroyShaderModule(0x%X) avoided", handle);
-		}
-		else
-		{
-			VkDevice dev = (VkDevice)*vk::get_current_renderer();
-			vkDestroyShaderModule(dev, handle, NULL);
-			handle = nullptr;
-		}
+		VkDevice dev = (VkDevice)*vk::get_current_renderer();
+		vkDestroyShaderModule(dev, handle, NULL);
+		handle = nullptr;
 	}
 }
 

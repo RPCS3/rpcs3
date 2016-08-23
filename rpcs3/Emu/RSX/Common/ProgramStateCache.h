@@ -108,7 +108,7 @@ class program_state_cache
 		}
 	};
 
-private:
+protected:
 	size_t m_next_id = 0;
 	binary_to_vertex_program m_vertex_shader_cache;
 	binary_to_fragment_program m_fragment_shader_cache;

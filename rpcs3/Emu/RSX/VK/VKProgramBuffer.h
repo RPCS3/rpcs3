@@ -151,4 +151,11 @@ struct VKTraits
 
 class VKProgramBuffer : public program_state_cache<VKTraits>
 {
+public:
+	void clear()
+	{
+		program_state_cache<VKTraits>::clear();
+		m_vertex_shader_cache.clear();
+		m_fragment_shader_cache.clear();
+	}
 };
