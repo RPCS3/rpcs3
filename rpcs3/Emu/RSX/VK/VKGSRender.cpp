@@ -925,7 +925,8 @@ bool VKGSRender::load_program()
 			properties.att_state[render_targets[idx]].blendEnable = VK_FALSE;
 		}
 	}
-
+	
+	properties.cs.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	properties.cs.attachmentCount = m_draw_buffers_count;
 	properties.cs.pAttachments = properties.att_state;
 	
