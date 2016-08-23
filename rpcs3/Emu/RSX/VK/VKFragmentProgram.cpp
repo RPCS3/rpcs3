@@ -228,41 +228,15 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		{
 			if (m_prog.front_back_color_enabled)
 			{
-				if (PI.name == "spec_color")
+				if (PI.name == "spec_color" && m_prog.back_color_specular_output && m_prog.front_color_specular_output)
 				{
-					if (m_prog.back_color_specular_output || m_prog.front_color_specular_output)
-					{
-						if (m_prog.back_color_specular_output && m_prog.front_color_specular_output)
-						{
-							OS << "	vec4 spec_color = gl_FrontFacing ? front_spec_color : back_spec_color;\n";
-						}
-						else if (m_prog.back_color_specular_output)
-						{
-							OS << "	vec4 spec_color = back_spec_color;\n";
-						}
-						else
-							OS << "	vec4 spec_color = front_spec_color;\n";
-					}
-
+					OS << "	vec4 spec_color = gl_FrontFacing ? front_spec_color : back_spec_color;\n";
 					continue;
 				}
 
-				else if (PI.name == "diff_color")
+				if (PI.name == "diff_color" && m_prog.back_color_diffuse_output && m_prog.front_color_diffuse_output)
 				{
-					if (m_prog.back_color_diffuse_output || m_prog.front_color_diffuse_output)
-					{
-						if (m_prog.back_color_diffuse_output && m_prog.front_color_diffuse_output)
-						{
-							OS << "	vec4 diff_color = gl_FrontFacing ? front_diff_color : back_diff_color;\n";
-						}
-						else if (m_prog.back_color_diffuse_output)
-						{
-							OS << "	vec4 diff_color = back_diff_color;\n";
-						}
-						else
-							OS << "	vec4 diff_color = front_diff_color;\n";
-					}
-
+					OS << "	vec4 diff_color = gl_FrontFacing ? front_diff_color : back_diff_color;\n";
 					continue;
 				}
 			}
