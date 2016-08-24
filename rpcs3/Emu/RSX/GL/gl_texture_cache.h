@@ -497,6 +497,12 @@ namespace gl
 					obj->gl_id = 0;
 				}
 
+				if (!tex.width() || !tex.height())
+				{
+					LOG_ERROR(RSX, "Texture upload requested but invalid texture dimensions passed");
+					return;
+				}
+				
 				__glcheck gl_texture.init(index, tex);
 				gl_cached_texture &_obj = create_obj_for_params(gl_texture.id(), texaddr, tex.width(), tex.height(), tex.get_exact_mipmap_count());
 

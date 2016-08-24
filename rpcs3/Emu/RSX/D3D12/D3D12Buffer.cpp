@@ -7,6 +7,7 @@
 #include "../Common/BufferUtils.h"
 #include "D3D12Formats.h"
 #include "../rsx_methods.h"
+#include <Utilities/variant.hpp>
 
 namespace
 {
@@ -80,77 +81,90 @@ namespace
 	}
 }
 
+namespace
+{
+
+	struct vertex_buffer_visitor
+	{
+		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_views;
+
+		vertex_buffer_visitor(u32 vtx_cnt, ID3D12GraphicsCommandList* cmdlst, ID3D12Resource* write_vertex_buffer,
+		    d3d12_data_heap& heap)
+		    : vertex_count(vtx_cnt)
+		    , offset_in_vertex_buffers_buffer(0)
+		    , m_buffer_data(heap)
+		    , command_list(cmdlst)
+		    , m_vertex_buffer_data(write_vertex_buffer)
+		{
+		}
+
+		void operator()(const rsx::vertex_array_buffer& vertex_array)
+		{
+			u32 element_size   = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
+			UINT buffer_size   = element_size * vertex_count;
+			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+
+			void* mapped_buffer                     = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+			gsl::span<gsl::byte> mapped_buffer_span = {(gsl::byte*)mapped_buffer, gsl::narrow_cast<int>(buffer_size)};
+			write_vertex_array_data_to_buffer(mapped_buffer_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, element_size);
+
+			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+
+			command_list->CopyBufferRegion(m_vertex_buffer_data, offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
+
+			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(vertex_array.type, vertex_array.attribute_size, offset_in_vertex_buffers_buffer, buffer_size));
+			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
+
+			//m_timers.buffer_upload_size += buffer_size;
+		}
+
+		void operator()(const rsx::vertex_array_register& vertex_register)
+		{
+			u32 element_size   = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
+			UINT buffer_size   = element_size;
+			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+
+			void* mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+			memcpy(mapped_buffer, vertex_register.data.data(), buffer_size);
+			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+
+			command_list->CopyBufferRegion(m_vertex_buffer_data, offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
+
+			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(vertex_register.type, vertex_register.attribute_size, offset_in_vertex_buffers_buffer, buffer_size));
+			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
+		}
+
+		void operator()(const rsx::empty_vertex_array& vbo)
+		{
+		}
+
+	protected:
+		u32 vertex_count;
+		ID3D12GraphicsCommandList* command_list;
+		ID3D12Resource* m_vertex_buffer_data;
+		size_t offset_in_vertex_buffers_buffer;
+		d3d12_data_heap& m_buffer_data;
+	};
+
+} // End anonymous namespace
 
 std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attributes(
-	const std::vector<std::pair<u32, u32> > &vertex_ranges,
-	gsl::not_null<ID3D12GraphicsCommandList*> command_list)
+    const std::vector<std::pair<u32, u32>>& vertex_ranges,
+    gsl::not_null<ID3D12GraphicsCommandList*> command_list)
 {
-	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_views;
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
 
 	u32 vertex_count = get_vertex_count(vertex_ranges);
-	size_t offset_in_vertex_buffers_buffer = 0;
-	u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 	verify(HERE), rsx::method_registers.vertex_data_base_index() == 0;
 
-	for (int index = 0; index < rsx::limits::vertex_count; ++index)
-	{
-		bool enabled = !!(input_mask & (1 << index));
-		if (!enabled)
-			continue;
+	vertex_buffer_visitor visitor(vertex_count, command_list, m_vertex_buffer_data.Get(), m_buffer_data);
+	const auto& vertex_buffers = get_vertex_buffers(rsx::method_registers, vertex_ranges);
 
-		if (rsx::method_registers.vertex_arrays_info[index].size > 0)
-		{
-			// Active vertex array
-			const rsx::data_array_format_info &info = rsx::method_registers.vertex_arrays_info[index];
+	for (const auto& vbo : vertex_buffers)
+		std::apply_visitor(visitor, vbo);
 
-			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
-			UINT buffer_size = element_size * vertex_count;
-			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-			u32 base_offset = rsx::method_registers.vertex_data_base_offset();
-			u32 offset = rsx::method_registers.vertex_arrays_info[index].offset();
-			u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
-			const gsl::byte *src_ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
-
-			void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			for (const auto &range : vertex_ranges)
-			{
-				gsl::span<gsl::byte> mapped_buffer_span = { (gsl::byte*)mapped_buffer, gsl::narrow_cast<int>(buffer_size) };
-				write_vertex_array_data_to_buffer(mapped_buffer_span, src_ptr, range.first, range.second, info.type, info.size, info.stride, element_size);
-				mapped_buffer = (char*)mapped_buffer + range.second * element_size;
-			}
-			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-			command_list->CopyBufferRegion(m_vertex_buffer_data.Get(), offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
-
-			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(info, offset_in_vertex_buffers_buffer, buffer_size));
-			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
-
-			m_timers.buffer_upload_size += buffer_size;
-
-		}
-		else if (rsx::method_registers.register_vertex_info[index].size > 0)
-		{
-			// In register vertex attribute
-			const rsx::register_vertex_data_info &info = rsx::method_registers.register_vertex_info[index];
-
-			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
-			UINT buffer_size = element_size;
-			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-			void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			memcpy(mapped_buffer, info.data.data(), buffer_size);
-			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-			command_list->CopyBufferRegion(m_vertex_buffer_data.Get(), offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
-
-			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(info.type, info.size, offset_in_vertex_buffers_buffer, buffer_size));
-			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
-		}
-	}
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-	return vertex_buffer_views;
+	return visitor.vertex_buffer_views;
 }
 
 namespace
@@ -287,7 +301,7 @@ D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12GSRender::upload_fragment_shader_constants(
 
 	size_t offset = 0;
 	float *mapped_buffer = m_buffer_data.map<float>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	m_pso_cache.fill_fragment_constans_buffer({ mapped_buffer, ::narrow<int>(buffer_size) }, m_fragment_program);
+	m_pso_cache.fill_fragment_constants_buffer({ mapped_buffer, ::narrow<int>(buffer_size) }, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	return {

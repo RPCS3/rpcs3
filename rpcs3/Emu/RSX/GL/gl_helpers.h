@@ -14,7 +14,7 @@
 
 namespace gl
 {
-#if 1//def _DEBUG
+#ifdef _DEBUG
 	struct __glcheck_impl_t
 	{
 		const char* file;

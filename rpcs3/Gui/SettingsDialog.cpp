@@ -213,8 +213,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 
 	std::vector<std::unique_ptr<cfg_adapter>> pads;
 
-	static const u32 width = 458;
-	static const u32 height = 400;
+	static const u32 width = 458 * 2;
+	static const u32 height = 400 * 2;
 
 	// Settings panels
 	wxNotebook* nb_config = new wxNotebook(this, wxID_ANY, wxPoint(6, 6), wxSize(width, height));
@@ -521,7 +521,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	SetSizerAndFit(s_subpanel_system, false);
 	SetSizerAndFit(s_b_panel, false);
 
-	SetSize(width + 26, height + 80);
+	SetSize(width + 26 * 2, height + 80 * 2);
 
 	if (ShowModal() == wxID_OK)
 	{

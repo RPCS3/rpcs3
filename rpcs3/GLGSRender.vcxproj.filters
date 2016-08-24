@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Emu\RSX\GL\rsx_gl_texture.cpp" />
@@ -10,7 +10,6 @@
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GL\gl_render_targets.cpp" />
     <ClCompile Include="Emu\RSX\GL\vertex_buffer.cpp" />
-    <ClCompile Include="Emu\RSX\GL\rsx_gl_cache.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />
@@ -24,6 +23,5 @@
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
     <ClInclude Include="Emu\RSX\GL\gl_texture_cache.h" />
     <ClInclude Include="Emu\RSX\GL\gl_render_targets.h" />
-    <ClInclude Include="Emu\RSX\GL\rsx_gl_cache.h" />
   </ItemGroup>
 </Project>
