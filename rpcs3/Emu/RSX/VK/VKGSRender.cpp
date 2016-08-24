@@ -1101,7 +1101,7 @@ bool VKGSRender::load_program()
 	if (fragment_constants_sz)
 	{
 		buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_constants_sz);
-		m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
+		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
 		m_uniform_buffer_ring_info.unmap();
 	}
 
