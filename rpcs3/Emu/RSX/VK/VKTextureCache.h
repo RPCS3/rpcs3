@@ -134,6 +134,23 @@ namespace vk
 			unlock_memory_region(static_cast<u32>(obj.protected_rgn_start), static_cast<u32>(obj.native_rsx_size));
 		}
 
+		void purge_cache()
+		{
+			for (cached_texture_object &tex : m_cache)
+			{
+				if (tex.exists)
+					m_dirty_textures.push_back(std::move(tex.uploaded_texture));
+
+				if (tex.locked)
+					unlock_object(tex);
+			}
+
+			m_temporary_image_view.clear();
+			m_dirty_textures.clear();
+
+			m_cache.resize(0);
+		}
+
 	public:
 
 		texture_cache() {}
@@ -141,7 +158,7 @@ namespace vk
 
 		void destroy()
 		{
-			m_cache.resize(0);
+			purge_cache();
 		}
 
 		vk::image_view* upload_texture(command_buffer cmd, rsx::texture &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)

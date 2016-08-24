@@ -159,11 +159,11 @@ namespace rsx
 
 	struct vk_render_targets : public rsx::surface_store<vk_render_target_traits>
 	{
-
 		void destroy()
 		{
 			m_render_targets_storage.clear();
 			m_depth_stencil_storage.clear();
+			invalidated_resources.clear();
 		}
 	};
 }

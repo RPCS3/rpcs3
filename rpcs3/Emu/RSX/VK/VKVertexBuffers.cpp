@@ -242,7 +242,7 @@ VKGSRender::upload_vertex_data()
 	{
 		if (primitives_emulated)
 		{
-			std::tie(index_count, index_info) = generate_emulating_index_buffer(rsx::method_registers.current_draw_clause);
+			std::tie(index_count, index_info) = generate_emulating_index_buffer(rsx::method_registers.current_draw_clause, rsx::method_registers.current_draw_clause.get_elements_count());
 		}
 		else
 		{
@@ -256,6 +256,11 @@ VKGSRender::upload_vertex_data()
 	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 	{
 		index_count = upload_inlined_array();
+
+		if (primitives_emulated)
+		{
+			std::tie(index_count, index_info) = generate_emulating_index_buffer(rsx::method_registers.current_draw_clause, index_count);
+		}
 	}
 
 	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array || rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
@@ -454,6 +459,7 @@ u32 VKGSRender::upload_inlined_array()
 		m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
 		m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[index], descriptor_sets);
 	}
+
 	return vertex_draw_count;
 }
 
@@ -478,10 +484,8 @@ std::tuple<u32, u32, u32, std::tuple<VkDeviceSize, VkIndexType>> VKGSRender::upl
 }
 
 
-std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType> > VKGSRender::generate_emulating_index_buffer(const rsx::draw_clause &clause)
+std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType> > VKGSRender::generate_emulating_index_buffer(const rsx::draw_clause &clause, u32 vertex_count)
 {
-	u32 vertex_count = clause.get_elements_count();
-
 	u32 index_count = get_index_count(clause.primitive, vertex_count);
 	u32 upload_size = index_count * sizeof(u16);
 

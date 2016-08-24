@@ -512,46 +512,66 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 VKGSRender::~VKGSRender()
 {
+	//Wait for queue
 	vkQueueWaitIdle(m_swap_chain->get_present_queue());
 
+	//Sync objects
 	if (m_present_semaphore)
 	{
 		vkDestroySemaphore((*m_device), m_present_semaphore, nullptr);
 		m_present_semaphore = nullptr;
 	}
 
-	vk::destroy_global_resources();
+	if (m_submit_fence)
+	{
+		vkDestroyFence(*m_device, m_submit_fence, nullptr);
+		m_submit_fence = nullptr;
+	}
 
-	//TODO: Properly destroy shader modules instead of calling clear...
+	//Shaders
 	m_prog_buffer.clear();
 
-	m_index_buffer_ring_info.heap.release();
-	m_uniform_buffer_ring_info.heap.release();
-	m_attrib_ring_info.heap.release();
-	m_texture_upload_buffer_ring_info.heap.release();
-	null_buffer.release();
-	null_buffer_view.release();
+	//Global resources
+	vk::destroy_global_resources();
+
+	//Data heaps/buffers
+	m_index_buffer_ring_info.heap.reset();
+	m_uniform_buffer_ring_info.heap.reset();
+	m_attrib_ring_info.heap.reset();
+	m_texture_upload_buffer_ring_info.heap.reset();
+
+	//Fallback bindables
+	null_buffer.reset();
+	null_buffer_view.reset();
+
+	//Temporary objects
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();
 	m_framebuffer_to_clean.clear();
 
+	//Render passes
 	for (auto &render_pass : m_render_passes)
 		if (render_pass)
 			vkDestroyRenderPass(*m_device, render_pass, nullptr);
 
+	//Textures
 	m_rtts.destroy();
+	m_texture_cache.destroy();
 
+	//Pipeline descriptors
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
 
 	descriptor_pool.destroy();
 
+	//Command buffer
 	m_command_buffer.destroy();
 	m_command_buffer_pool.destroy();
 
+	//Device handles/contexts
 	m_swap_chain->destroy();
-
 	m_thread_context.close();
+
 	delete m_swap_chain;
 }
 

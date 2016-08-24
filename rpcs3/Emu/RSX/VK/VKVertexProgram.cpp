@@ -196,13 +196,9 @@ namespace vk
 			if (real_input.location != PI.location)
 				continue;
 
-			std::string vecType = "	vec4 ";
-			if (real_input.int_type)
-				vecType = "	ivec4 ";
-
 			if (!real_input.is_array)
 			{
-				OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0);" << std::endl;
+				OS << "	vec4 " << PI.name << " = vec4(texelFetch(" << PI.name << "_buffer, 0));" << std::endl;
 				return;
 			}
 
@@ -210,19 +206,19 @@ namespace vk
 			{
 				if (real_input.is_modulo)
 				{
-					OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex %" << real_input.frequency << ");" << std::endl;
+					OS << "	vec4 " << PI.name << "= vec4(texelFetch(" << PI.name << "_buffer, gl_VertexIndex %" << real_input.frequency << "));" << std::endl;
 					return;
 				}
 
-				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex /" << real_input.frequency << ");" << std::endl;
+				OS << "	vec4 " << PI.name << "= vec4(texelFetch(" << PI.name << "_buffer, gl_VertexIndex /" << real_input.frequency << "));" << std::endl;
 				return;
 			}
 
-			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba;" << std::endl;
+			OS << "	vec4 " << PI.name << "= vec4(texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba);" << std::endl;
 			return;
 		}
 
-		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba;" << std::endl;
+		OS << "	vec4 " << PI.name << "= vec4(texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba);" << std::endl;
 	}
 }
 
@@ -336,15 +332,8 @@ void VKVertexProgram::Delete()
 
 	if (handle)
 	{
-		if (Emu.IsStopped())
-		{
-			LOG_WARNING(RSX, "VKVertexProgram::Delete(): vkDestroyShaderModule(0x%X) avoided", handle);
-		}
-		else
-		{
-			VkDevice dev = (VkDevice)*vk::get_current_renderer();
-			vkDestroyShaderModule(dev, handle, nullptr);
-		}
+		VkDevice dev = (VkDevice)*vk::get_current_renderer();
+		vkDestroyShaderModule(dev, handle, nullptr);
 
 		handle = nullptr;
 	}
