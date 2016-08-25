@@ -233,6 +233,7 @@ VKGSRender::upload_vertex_data()
 	if (is_indexed_draw)
 	{
 		std::tie(min_index, max_index, index_count, index_info) = upload_index_buffer(rsx::method_registers.current_draw_clause);
+		min_index = 0; // We need correct index mapping
 	}
 
 	bool primitives_emulated = false;
@@ -248,9 +249,8 @@ VKGSRender::upload_vertex_data()
 		{
 			index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 		}
-
-		min_index = 0;
-		max_index = rsx::method_registers.current_draw_clause.get_elements_count() - 1;
+		min_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+		max_index = rsx::method_registers.current_draw_clause.get_elements_count() + min_index;
 	}
 
 	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
@@ -265,127 +265,119 @@ VKGSRender::upload_vertex_data()
 
 	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array || rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
 	{
-		upload_vertex_buffers(input_mask, max_index);
+		upload_vertex_buffers(min_index, max_index);
 	}
 	
 	return std::make_tuple(prims, index_count, index_info);
 }
 
-void VKGSRender::upload_vertex_buffers(u32 input_mask, u32 vertex_max_index)
+namespace
 {
-	for (int index = 0; index < rsx::limits::vertex_count; ++index)
+	struct vertex_buffer_visitor
 	{
-		bool enabled = !!(input_mask & (1 << index));
-
-		if (!m_program->has_uniform(s_reg_table[index]))
-			continue;
-
-		if (!enabled)
+		vertex_buffer_visitor(u32 vtx_cnt, VkDevice dev,
+		    vk::vk_data_heap& heap, vk::glsl::program* prog,
+		    VkDescriptorSet desc_set,
+		    std::vector<std::unique_ptr<vk::buffer_view>>& buffer_view_to_clean)
+		    : vertex_count(vtx_cnt)
+		    , m_attrib_ring_info(heap)
+		    , device(dev)
+		    , m_program(prog)
+		    , descriptor_sets(desc_set)
+		    , m_buffer_view_to_clean(buffer_view_to_clean)
 		{
-			continue;
 		}
 
-		if (rsx::method_registers.vertex_arrays_info[index].size > 0)
+		void operator()(const rsx::vertex_array_buffer& vertex_array)
 		{
-			auto &vertex_info = rsx::method_registers.vertex_arrays_info[index];
-
 			// Fill vertex_array
-			u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-			u32 real_element_size = vk::get_suitable_vk_size(vertex_info.type, vertex_info.size);
+			u32 element_size      = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
+			u32 real_element_size = vk::get_suitable_vk_size(vertex_array.type, vertex_array.attribute_size);
 
-			u32 upload_size = real_element_size * (vertex_max_index + 1);
-			bool requires_expansion = vk::requires_component_expansion(vertex_info.type, vertex_info.size);
+			u32 upload_size         = real_element_size * vertex_count;
+			bool requires_expansion = vk::requires_component_expansion(vertex_array.type, vertex_array.attribute_size);
 
-			// Get source pointer
-			u32 base_offset = rsx::method_registers.vertex_data_base_offset();
-			u32 offset = rsx::method_registers.vertex_arrays_info[index].offset();
-			u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
-			const gsl::byte *src_ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
-
-			u32 num_stored_verts = vertex_max_index + 1;
 			VkDeviceSize offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(upload_size);
 			void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, upload_size);
-			vk::prepare_buffer_for_writing(dst, vertex_info.type, vertex_info.size, vertex_max_index + 1);
+			vk::prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
 			gsl::span<gsl::byte> dest_span(static_cast<gsl::byte*>(dst), upload_size);
 
-			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
-			{
-				VkDeviceSize offset = 0;
-				for (const auto &first_count : rsx::method_registers.current_draw_clause.first_count_commands)
-				{
-					write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride, real_element_size);
-					offset += first_count.second * real_element_size;
-				}
-			}
-			else if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
-			{
-				write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, vertex_max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride, real_element_size);
-			}
+			write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, real_element_size);
 
 			m_attrib_ring_info.unmap();
-			const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
+			const VkFormat format = vk::get_suitable_vk_format(vertex_array.type, vertex_array.attribute_size);
 
-			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, upload_size));
-			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[index], descriptor_sets);
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, upload_size));
+			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vertex_array.index], descriptor_sets);
 		}
-		else if (rsx::method_registers.register_vertex_info[index].size > 0)
-		{
-			//Untested!
-			auto &vertex_info = rsx::method_registers.register_vertex_info[index];
 
-			switch (vertex_info.type)
+		void operator()(const rsx::vertex_array_register& vertex_register)
+		{
+			switch (vertex_register.type)
 			{
 			case rsx::vertex_base_type::f:
 			{
-				size_t data_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-				const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
+				size_t data_size      = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
+				const VkFormat format = vk::get_suitable_vk_format(vertex_register.type, vertex_register.attribute_size);
 
 				u32 offset_in_attrib_buffer = 0;
-				void *data_ptr = vertex_info.data.data();
 
-				if (vk::requires_component_expansion(vertex_info.type, vertex_info.size))
+				if (vk::requires_component_expansion(vertex_register.type, vertex_register.attribute_size))
 				{
-					const u32 num_stored_verts = static_cast<u32>(data_size / (sizeof(float) * vertex_info.size));
-					const u32 real_element_size = vk::get_suitable_vk_size(vertex_info.type, vertex_info.size);
+					const u32 num_stored_verts  = static_cast<u32>(data_size / (sizeof(float) * vertex_register.attribute_size));
+					const u32 real_element_size = vk::get_suitable_vk_size(vertex_register.type, vertex_register.attribute_size);
 
 					data_size = real_element_size * num_stored_verts;
 					offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
 					void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
 
-					vk::expand_array_components<float, 3, 4, 1>(reinterpret_cast<float*>(vertex_info.data.data()), dst, num_stored_verts);
+					vk::expand_array_components<float, 3, 4, 1>(reinterpret_cast<const float*>(vertex_register.data.data()), dst, num_stored_verts);
 					m_attrib_ring_info.unmap();
 				}
 				else
 				{
 					offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
 					void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
-					memcpy(dst, vertex_info.data.data(), data_size);
+					memcpy(dst, vertex_register.data.data(), data_size);
 					m_attrib_ring_info.unmap();
 				}
 
-				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
-				m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[index], descriptor_sets);
+				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
+				m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vertex_register.index], descriptor_sets);
 				break;
 			}
 			default:
-				fmt::throw_exception("Unknown base type %d" HERE, (u32)vertex_info.type);
+				fmt::throw_exception("Unknown base type %d" HERE, (u32)vertex_register.type);
 			}
 		}
-		else
-		{
-			//This section should theoretically be unreachable (data stream without available data)
-			//Variable is defined in the shaders but no data is available
-			//Bind a buffer view to keep the driver from crashing if access is attempted.
 
+		void operator()(const rsx::empty_vertex_array& vbo)
+		{
 			u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(32);
 			void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, 32);
 			memset(dst, 0, 32);
 			m_attrib_ring_info.unmap();
-
-			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, offset_in_attrib_buffer, 32));
-			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[index], descriptor_sets);
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, offset_in_attrib_buffer, 32));
+			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vbo.index], descriptor_sets);
 		}
-	}
+
+	protected:
+		VkDevice device;
+		u32 vertex_count;
+		vk::vk_data_heap& m_attrib_ring_info;
+		vk::glsl::program* m_program;
+		VkDescriptorSet descriptor_sets;
+		std::vector<std::unique_ptr<vk::buffer_view>>& m_buffer_view_to_clean;
+	};
+
+} // End anonymous namespace
+
+void VKGSRender::upload_vertex_buffers(u32 min_index, u32 vertex_max_index)
+{
+	vertex_buffer_visitor visitor(vertex_max_index - min_index + 1, *m_device, m_attrib_ring_info, m_program, descriptor_sets, m_buffer_view_to_clean);
+	const auto& vertex_buffers = get_vertex_buffers(rsx::method_registers, {{min_index, vertex_max_index - min_index + 1}});
+	for (const auto& vbo : vertex_buffers)
+		std::apply_visitor(visitor, vbo);
 }
 
 u32 VKGSRender::upload_inlined_array()

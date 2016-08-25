@@ -17,6 +17,7 @@
 #include "Utilities/Timer.h"
 #include "Utilities/geometry.h"
 #include "rsx_trace.h"
+#include "Utilities/variant.hpp"
 
 extern u64 get_system_time();
 
@@ -143,6 +144,28 @@ namespace rsx
 		}
 	};
 
+	struct vertex_array_buffer
+	{
+		rsx::vertex_base_type type;
+		u8 attribute_size;
+		u8 stride;
+		gsl::span<const gsl::byte> data;
+		u8 index;
+	};
+
+	struct vertex_array_register
+	{
+		rsx::vertex_base_type type;
+		u8 attribute_size;
+		std::array<u32, 4> data;
+		u8 index;
+	};
+
+	struct empty_vertex_array
+	{
+		u8 index;
+	};
+
 	class thread : public named_thread
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
@@ -237,6 +260,9 @@ namespace rsx
 		virtual bool on_access_violation(u32 address, bool is_writing) { return false; }
 
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
+		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+
+		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
 	private:
 		std::mutex m_mtx_task;
