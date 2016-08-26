@@ -46,13 +46,32 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 	{
 		for (const ParamItem& PI : PT.items)
 		{
+			if (m_prog.front_back_color_enabled)
+			{
+				if (PI.name == "diff_color" && m_prog.back_color_diffuse_output)
+					OS << "in vec4 back_diff_color;" << std::endl;
+
+				if (PI.name == "spec_color" && m_prog.back_color_specular_output)
+					OS << "in vec4 back_spec_color;" << std::endl;
+			}
+
 			//Rename fogc to fog_c to differentiate the input register from the variable
 			if (PI.name == "fogc")
 				OS << "in vec4 fog_c;" << std::endl;
-			else
-				OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
+			
+			OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
 		}
 	}
+
+	if (m_prog.front_back_color_enabled)
+	{
+		if (m_prog.front_color_diffuse_output)
+			OS << "in vec4 front_diff_color;" << std::endl;
+
+		if (m_prog.front_color_specular_output)
+			OS << "in vec4 front_spec_color;" << std::endl;
+	}
+
 }
 
 void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
@@ -188,10 +207,24 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	{
 		for (const ParamItem& PI : PT.items)
 		{
+			if (m_prog.front_back_color_enabled)
+			{
+				if (PI.name == "spec_color" && m_prog.back_color_specular_output)
+				{
+					OS << "	vec4 spec_color = gl_FrontFacing ? front_spec_color : spec_color;\n";
+					continue;
+				}
+				if (PI.name == "diff_color" && m_prog.back_color_diffuse_output)
+				{
+					OS << "	vec4 diff_color = gl_FrontFacing ? front_diff_color : diff_color;\n";
+					continue;
+				}
+			}
+
 			if (PI.name == "fogc")
 			{
 				insert_fog_declaration(OS, m_prog.fog_equation);
-				return;
+				continue;
 			}
 		}
 	}
@@ -268,28 +301,8 @@ GLFragmentProgram::GLFragmentProgram()
 
 GLFragmentProgram::~GLFragmentProgram()
 {
-	//if (m_decompiler_thread)
-	//{
-	//	Wait();
-	//	if (m_decompiler_thread->IsAlive())
-	//	{
-	//		m_decompiler_thread->Stop();
-	//	}
-
-	//	delete m_decompiler_thread;
-	//	m_decompiler_thread = nullptr;
-	//}
-
 	Delete();
 }
-
-//void GLFragmentProgram::Wait()
-//{
-//	if (m_decompiler_thread && m_decompiler_thread->IsAlive())
-//	{
-//		m_decompiler_thread->Join();
-//	}
-//}
 
 void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 {
@@ -307,24 +320,6 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 		}
 	}
 }
-
-//void GLFragmentProgram::DecompileAsync(RSXFragmentProgram& prog)
-//{
-//	if (m_decompiler_thread)
-//	{
-//		Wait();
-//		if (m_decompiler_thread->IsAlive())
-//		{
-//			m_decompiler_thread->Stop();
-//		}
-//
-//		delete m_decompiler_thread;
-//		m_decompiler_thread = nullptr;
-//	}
-//
-//	m_decompiler_thread = new GLFragmentDecompilerThread(shader, parr, prog.addr, prog.size, prog.ctrl);
-//	m_decompiler_thread->Start();
-//}
 
 void GLFragmentProgram::Compile()
 {
