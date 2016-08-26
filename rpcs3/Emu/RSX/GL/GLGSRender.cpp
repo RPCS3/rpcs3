@@ -220,7 +220,7 @@ void GLGSRender::begin()
 			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
 			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
 
-		if (m_surface.color_format == rsx::surface_color_format::w16z16y16x16) //TODO: check another color formats
+		if (rsx::method_registers.surface_color() == rsx::surface_color_format::w16z16y16x16) //TODO: check another color formats
 		{
 			u16 blend_color_r = rsx::method_registers.blend_color_16b_r();
 			u16 blend_color_g = rsx::method_registers.blend_color_16b_g();

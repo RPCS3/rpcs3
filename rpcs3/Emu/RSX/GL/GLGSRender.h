@@ -20,7 +20,6 @@ private:
 
 	gl::glsl::program *m_program;
 
-	rsx::surface_info m_surface;
 	gl_render_targets m_rtts;
 
 	gl::gl_texture_cache m_gl_texture_cache;

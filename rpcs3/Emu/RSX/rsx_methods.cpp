@@ -219,7 +219,6 @@ namespace rsx
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
-			rsx->draw_inline_vertex_array = true;
 			rsx->inline_vertex_array.push_back(arg);
 		}
 

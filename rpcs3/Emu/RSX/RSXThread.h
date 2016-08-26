@@ -117,33 +117,6 @@ namespace rsx
 		void read(void *dst, u32 width, u32 height, u32 pitch);
 	};
 
-	struct surface_info
-	{
-		u8 log2height;
-		u8 log2width;
-		surface_antialiasing antialias;
-		surface_depth_format depth_format;
-		surface_color_format color_format;
-
-		u32 width;
-		u32 height;
-		u32 format;
-
-		void unpack(u32 surface_format)
-		{
-			format = surface_format;
-
-			log2height = surface_format >> 24;
-			log2width = (surface_format >> 16) & 0xff;
-			antialias = to_surface_antialiasing((surface_format >> 12) & 0xf);
-			depth_format = to_surface_depth_format((surface_format >> 5) & 0x7);
-			color_format = to_surface_color_format(surface_format & 0x1f);
-
-			width = 1 << (u32(log2width) + 1);
-			height = 1 << (u32(log2width) + 1);
-		}
-	};
-
 	struct vertex_array_buffer
 	{
 		rsx::vertex_base_type type;
@@ -210,7 +183,6 @@ namespace rsx
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];
 
-		bool draw_inline_vertex_array;
 		std::vector<u32> inline_vertex_array;
 
 		bool m_rtts_dirty;
@@ -222,8 +194,6 @@ namespace rsx
 		RSXVertexProgram get_current_vertex_program() const;
 		RSXFragmentProgram get_current_fragment_program() const;
 	public:
-		u32 draw_array_count;
-		u32 draw_array_first;
 		double fps_limit = 59.94;
 
 	public:

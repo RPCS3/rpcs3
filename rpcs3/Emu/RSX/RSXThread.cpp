@@ -327,7 +327,6 @@ namespace rsx
 
 	void thread::begin()
 	{
-		draw_inline_vertex_array = false;
 		inline_vertex_array.clear();
 	}
 
