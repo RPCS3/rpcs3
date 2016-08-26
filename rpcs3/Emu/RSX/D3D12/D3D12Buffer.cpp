@@ -301,7 +301,7 @@ D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12GSRender::upload_fragment_shader_constants(
 
 	size_t offset = 0;
 	float *mapped_buffer = m_buffer_data.map<float>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	m_pso_cache.fill_fragment_constans_buffer({ mapped_buffer, ::narrow<int>(buffer_size) }, m_fragment_program);
+	m_pso_cache.fill_fragment_constants_buffer({ mapped_buffer, ::narrow<int>(buffer_size) }, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	return {

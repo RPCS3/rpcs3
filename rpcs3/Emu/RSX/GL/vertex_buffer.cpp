@@ -6,6 +6,19 @@
 
 namespace
 {
+	static constexpr std::array<const char*, 16> s_reg_table =
+	{
+		"in_pos_buffer", "in_weight_buffer", "in_normal_buffer",
+		"in_diff_color_buffer", "in_spec_color_buffer",
+		"in_fog_buffer",
+		"in_point_size_buffer", "in_7_buffer",
+		"in_tc0_buffer", "in_tc1_buffer", "in_tc2_buffer", "in_tc3_buffer",
+		"in_tc4_buffer", "in_tc5_buffer", "in_tc6_buffer", "in_tc7_buffer"
+	};
+}
+
+namespace
+{
 	u32 to_gl_internal_type(rsx::vertex_base_type type, u8 size)
 	{
 		/**
@@ -289,7 +302,7 @@ namespace
 		void operator()(const rsx::vertex_array_buffer& vertex_array)
 		{
 			int location;
-			if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[vertex_array.index] + "_buffer", &location))
+			if (!m_program->uniforms.has_location(s_reg_table[vertex_array.index], &location))
 				return;
 
 			// Fill vertex_array
@@ -318,7 +331,7 @@ namespace
 		void operator()(const rsx::vertex_array_register& vertex_register)
 		{
 			int location;
-			if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[vertex_register.index] + "_buffer", &location))
+			if (!m_program->uniforms.has_location(s_reg_table[vertex_register.index], &location))
 				return;
 			switch (vertex_register.type)
 			{
@@ -349,7 +362,7 @@ namespace
 		void operator()(const rsx::empty_vertex_array& vbo)
 		{
 			int location;
-			if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[vbo.index] + "_buffer", &location))
+			if (!m_program->uniforms.has_location(s_reg_table[vbo.index], &location))
 				return;
 			glActiveTexture(GL_TEXTURE0 + vbo.index + texture_index_offset);
 			glBindTexture(GL_TEXTURE_BUFFER, 0);
@@ -376,7 +389,7 @@ void GLGSRender::upload_vertex_buffers(u32 min_index, u32 max_index, const u32& 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
 		int location;
-		if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[index] + "_buffer", &location))
+		if (!m_program->uniforms.has_location(s_reg_table[index], &location))
 			continue;
 
 		glActiveTexture(GL_TEXTURE0 + index + texture_index_offset);
@@ -413,7 +426,7 @@ u32 GLGSRender::upload_inline_array(const u32 &max_vertex_attrib_size, const u32
 		auto &vertex_info = rsx::method_registers.vertex_arrays_info[index];
 
 		int location;
-		if (!m_program->uniforms.has_location(rsx::vertex_program::input_attrib_names[index] + "_buffer", &location))
+		if (!m_program->uniforms.has_location(s_reg_table[index], &location))
 			continue;
 
 		if (!vertex_info.size) // disabled, bind a null sampler
