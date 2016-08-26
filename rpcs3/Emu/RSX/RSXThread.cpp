@@ -531,12 +531,12 @@ namespace rsx
 			{
 				const auto &info = rsx::method_registers.vertex_arrays_info[index];
 
-				if (!info.size) // disabled
+				if (!info.size()) // disabled
 					continue;
 
-				u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
+				u32 element_size = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 
-				if (info.type == vertex_base_type::ub && info.size == 4)
+				if (info.type() == vertex_base_type::ub && info.size() == 4)
 				{
 					dst[0] = src[3];
 					dst[1] = src[2];
@@ -587,7 +587,7 @@ namespace rsx
 		u32 offset  = vertex_array_info.offset();
 		u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
 
-		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type, vertex_array_info.size);
+		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type(), vertex_array_info.size());
 
 		// Disjoint first_counts ranges not supported atm
 		for (int i = 0; i < vertex_ranges.size() - 1; i++)
@@ -600,7 +600,7 @@ namespace rsx
 		u32 count = std::get<0>(vertex_ranges.back()) + std::get<1>(vertex_ranges.back()) - first;
 
 		const gsl::byte* ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
-		return {ptr + first * vertex_array_info.stride, count * vertex_array_info.stride + element_size};
+		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
 	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
@@ -613,10 +613,10 @@ namespace rsx
 			if (!enabled)
 				continue;
 
-			if (state.vertex_arrays_info[index].size > 0)
+			if (state.vertex_arrays_info[index].size() > 0)
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
-				result.push_back(vertex_array_buffer{info.type, info.size, info.stride,
+				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
 				    get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index});
 				continue;
 			}
@@ -760,31 +760,25 @@ namespace rsx
 			if (!enabled)
 				continue;
 
-			if (rsx::method_registers.vertex_arrays_info[index].size > 0)
+			if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
 			{
 				result.rsx_vertex_inputs.push_back(
-				{
-					index,
-					rsx::method_registers.vertex_arrays_info[index].size,
-					rsx::method_registers.vertex_arrays_info[index].frequency,
-					!!((modulo_mask >> index) & 0x1),
-					true,
-					is_int_type(rsx::method_registers.vertex_arrays_info[index].type)
-				}
-				);
+				    {index,
+				        rsx::method_registers.vertex_arrays_info[index].size(),
+				        rsx::method_registers.vertex_arrays_info[index].frequency(),
+				        !!((modulo_mask >> index) & 0x1),
+				        true,
+				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type())});
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
 				result.rsx_vertex_inputs.push_back(
-				{
-					index,
-					rsx::method_registers.register_vertex_info[index].size,
-					rsx::method_registers.register_vertex_info[index].frequency,
-					!!((modulo_mask >> index) & 0x1),
-					false,
-					is_int_type(rsx::method_registers.vertex_arrays_info[index].type)
-				}
-				);
+				    {index,
+				        rsx::method_registers.register_vertex_info[index].size,
+				        rsx::method_registers.register_vertex_info[index].frequency,
+				        !!((modulo_mask >> index) & 0x1),
+				        false,
+				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type())});
 			}
 		}
 		return result;
@@ -843,10 +837,10 @@ namespace rsx
 		{
 			bool is_int = false;
 
-			if (rsx::method_registers.vertex_arrays_info[index].size > 0)
+			if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
 			{
-				is_int = is_int_type(rsx::method_registers.vertex_arrays_info[index].type);
-				result.state.frequency[index] = rsx::method_registers.vertex_arrays_info[index].frequency;
+				is_int                        = is_int_type(rsx::method_registers.vertex_arrays_info[index].type());
+				result.state.frequency[index] = rsx::method_registers.vertex_arrays_info[index].frequency();
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{

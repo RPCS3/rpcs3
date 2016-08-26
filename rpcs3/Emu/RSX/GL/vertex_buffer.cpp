@@ -214,7 +214,7 @@ std::tuple<u32, std::optional<std::tuple<GLenum, u32> > > GLGSRender::set_vertex
 	
 	for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 	{
-		if (rsx::method_registers.vertex_arrays_info[index].size || rsx::method_registers.register_vertex_info[index].size)
+		if (rsx::method_registers.vertex_arrays_info[index].size() || rsx::method_registers.register_vertex_info[index].size)
 		{
 			max_vertex_attrib_size += 16;
 		}
@@ -412,10 +412,10 @@ u32 GLGSRender::upload_inline_array(const u32 &max_vertex_attrib_size, const u32
 	for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 	{
 		const auto &info = rsx::method_registers.vertex_arrays_info[i];
-		if (!info.size) continue;
+		if (!info.size()) continue;
 
 		offsets[i] = stride;
-		stride += rsx::get_vertex_type_size_on_host(info.type, info.size);
+		stride += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 	}
 
 	u32 vertex_draw_count = (u32)(inline_vertex_array.size() * sizeof(u32)) / stride;
@@ -429,7 +429,7 @@ u32 GLGSRender::upload_inline_array(const u32 &max_vertex_attrib_size, const u32
 		if (!m_program->uniforms.has_location(s_reg_table[index], &location))
 			continue;
 
-		if (!vertex_info.size) // disabled, bind a null sampler
+		if (!vertex_info.size()) // disabled, bind a null sampler
 		{
 			glActiveTexture(GL_TEXTURE0 + index + texture_index_offset);
 			glBindTexture(GL_TEXTURE_BUFFER, 0);
@@ -437,9 +437,9 @@ u32 GLGSRender::upload_inline_array(const u32 &max_vertex_attrib_size, const u32
 			continue;
 		}
 
-		const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
+		const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type(), vertex_info.size());
 		u32 data_size = element_size * vertex_draw_count;
-		u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
+		u32 gl_type            = to_gl_internal_type(vertex_info.type(), vertex_info.size());
 
 		auto &texture = m_gl_attrib_buffers[index];
 
@@ -448,12 +448,12 @@ u32 GLGSRender::upload_inline_array(const u32 &max_vertex_attrib_size, const u32
 		u8 *dst = static_cast<u8*>(mapping.first);
 
 		src += offsets[index];
-		prepare_buffer_for_writing(dst, vertex_info.type, vertex_info.size, vertex_draw_count);
+		prepare_buffer_for_writing(dst, vertex_info.type(), vertex_info.size(), vertex_draw_count);
 
 		//TODO: properly handle compressed data
 		for (u32 i = 0; i < vertex_draw_count; ++i)
 		{
-			if (vertex_info.type == rsx::vertex_base_type::ub && vertex_info.size == 4)
+			if (vertex_info.type() == rsx::vertex_base_type::ub && vertex_info.size() == 4)
 			{
 				dst[0] = src[3];
 				dst[1] = src[2];

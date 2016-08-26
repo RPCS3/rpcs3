@@ -137,13 +137,6 @@ namespace rsx
 			transform_program = in.transform_program;
 			transform_constants = in.transform_constants;
 			register_vertex_info = in.register_vertex_info;
-			for (int i = 0; i < 16; i++)
-			{
-				vertex_arrays_info[i].size = in.vertex_arrays_info[i].size;
-				vertex_arrays_info[i].stride = in.vertex_arrays_info[i].stride;
-				vertex_arrays_info[i].frequency = in.vertex_arrays_info[i].frequency;
-				vertex_arrays_info[i].type = in.vertex_arrays_info[i].type;
-			}
 			return *this;
 		}
 
