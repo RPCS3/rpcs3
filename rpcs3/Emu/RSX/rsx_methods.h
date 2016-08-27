@@ -28,6 +28,8 @@ namespace rsx
 		primitive_type primitive;
 		draw_command command;
 
+		std::vector<u32> inline_vertex_array;
+
 		/**
 		* Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
 		*/

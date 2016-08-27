@@ -206,7 +206,7 @@ namespace rsx
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
-			rsx->inline_vertex_array.push_back(arg);
+			rsx::method_registers.current_draw_clause.inline_vertex_array.push_back(arg);
 		}
 
 		template<u32 index>
@@ -269,7 +269,8 @@ namespace rsx
 				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, max_vertex_count));
 			}
 
-			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() && rsxthr->inline_vertex_array.empty()))
+			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
+			        rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
 			{
 				rsxthr->end();
 			}

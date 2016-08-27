@@ -418,7 +418,9 @@ u32 GLGSRender::upload_inline_array(const u32 &max_vertex_attrib_size, const u32
 		stride += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 	}
 
-	u32 vertex_draw_count = (u32)(inline_vertex_array.size() * sizeof(u32)) / stride;
+	u32 vertex_draw_count =
+	    (u32)(rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(u32)) /
+	    stride;
 	m_attrib_ring_buffer.reserve_and_map(vertex_draw_count * max_vertex_attrib_size);
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
@@ -443,7 +445,8 @@ u32 GLGSRender::upload_inline_array(const u32 &max_vertex_attrib_size, const u32
 
 		auto &texture = m_gl_attrib_buffers[index];
 
-		u8 *src = reinterpret_cast<u8*>(inline_vertex_array.data());
+		u8* src =
+		    reinterpret_cast<u8*>(rsx::method_registers.current_draw_clause.inline_vertex_array.data());
 		auto mapping = m_attrib_ring_buffer.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
 		u8 *dst = static_cast<u8*>(mapping.first);
 

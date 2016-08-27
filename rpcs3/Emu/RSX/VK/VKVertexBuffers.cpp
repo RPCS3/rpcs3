@@ -394,7 +394,9 @@ u32 VKGSRender::upload_inlined_array()
 		stride += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 	}
 
-	u32 vertex_draw_count = (u32)(inline_vertex_array.size() * sizeof(u32)) / stride;
+	u32 vertex_draw_count =
+	    (u32)(rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(u32)) /
+	    stride;
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -413,7 +415,8 @@ u32 VKGSRender::upload_inlined_array()
 		const VkFormat format  = vk::get_suitable_vk_format(vertex_info.type(), vertex_info.size());
 
 		u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
-		u8 *src = reinterpret_cast<u8*>(inline_vertex_array.data());
+		u8* src =
+		    reinterpret_cast<u8*>(rsx::method_registers.current_draw_clause.inline_vertex_array.data());
 		u8 *dst = static_cast<u8*>(m_attrib_ring_info.map(offset_in_attrib_buffer, data_size));
 
 		src += offsets[index];

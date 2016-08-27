@@ -347,10 +347,12 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 	{
 		size_t vertex_count;
 		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_view;
-		std::tie(vertex_buffer_view, vertex_count) = upload_inlined_vertex_array(
-			rsx::method_registers.vertex_arrays_info,
-			{ (const gsl::byte*) inline_vertex_array.data(), ::narrow<int>(inline_vertex_array.size() * sizeof(uint)) },
-			m_buffer_data, m_vertex_buffer_data.Get(), command_list);
+		std::tie(vertex_buffer_view, vertex_count) =
+		    upload_inlined_vertex_array(rsx::method_registers.vertex_arrays_info,
+		        {(const gsl::byte*)rsx::method_registers.current_draw_clause.inline_vertex_array.data(),
+		            ::narrow<int>(rsx::method_registers.current_draw_clause.inline_vertex_array.size() *
+		                          sizeof(uint))},
+		        m_buffer_data, m_vertex_buffer_data.Get(), command_list);
 
 		if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			return std::make_tuple(false, vertex_count, vertex_buffer_view);

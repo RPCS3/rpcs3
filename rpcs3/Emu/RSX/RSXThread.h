@@ -183,8 +183,6 @@ namespace rsx
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];
 
-		std::vector<u32> inline_vertex_array;
-
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];

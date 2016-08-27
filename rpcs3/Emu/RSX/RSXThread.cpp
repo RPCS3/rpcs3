@@ -327,7 +327,7 @@ namespace rsx
 
 	void thread::begin()
 	{
-		inline_vertex_array.clear();
+		rsx::method_registers.current_draw_clause.inline_vertex_array.clear();
 	}
 
 	void thread::end()
@@ -521,11 +521,13 @@ namespace rsx
 
 	void thread::write_inline_array_to_buffer(void *dst_buffer)
 	{
-		u8* src = reinterpret_cast<u8*>(inline_vertex_array.data());
+		u8* src =
+		    reinterpret_cast<u8*>(rsx::method_registers.current_draw_clause.inline_vertex_array.data());
 		u8* dst = (u8*)dst_buffer;
 
 		size_t bytes_written = 0;
-		while (bytes_written < inline_vertex_array.size() * sizeof(u32))
+		while (bytes_written <
+		       rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(u32))
 		{
 			for (int index = 0; index < rsx::limits::vertex_count; ++index)
 			{
