@@ -185,19 +185,6 @@ namespace rsx
 			}
 		};
 
-		template<u32 index>
-		struct set_vertex_data_array_format
-		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
-			{
-				const typename rsx::registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index>::decoded_type decoded_value(arg);
-				rsx::method_registers.vertex_arrays_info[index].frequency = decoded_value.frequency();
-				rsx::method_registers.vertex_arrays_info[index].stride = decoded_value.stride();
-				rsx::method_registers.vertex_arrays_info[index].size = decoded_value.size();
-				rsx::method_registers.vertex_arrays_info[index].type = decoded_value.type();
-			}
-		};
-
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
@@ -219,7 +206,6 @@ namespace rsx
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
-			rsx->draw_inline_vertex_array = true;
 			rsx->inline_vertex_array.push_back(arg);
 		}
 
@@ -878,7 +864,6 @@ namespace rsx
 
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
 
-		for (auto& info : vertex_arrays_info) info.size = 0;
 		for (auto& tex : fragment_textures) tex.init();
 		for (auto& tex : vertex_textures) tex.init();
 	}
@@ -1276,7 +1261,6 @@ namespace rsx
 		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
-		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nv4097::set_vertex_data_array_format>();
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();

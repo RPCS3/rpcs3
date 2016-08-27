@@ -388,10 +388,10 @@ u32 VKGSRender::upload_inlined_array()
 	for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 	{
 		const auto &info = rsx::method_registers.vertex_arrays_info[i];
-		if (!info.size) continue;
+		if (!info.size()) continue;
 
 		offsets[i] = stride;
-		stride += rsx::get_vertex_type_size_on_host(info.type, info.size);
+		stride += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 	}
 
 	u32 vertex_draw_count = (u32)(inline_vertex_array.size() * sizeof(u32)) / stride;
@@ -403,48 +403,48 @@ u32 VKGSRender::upload_inlined_array()
 		if (!m_program->has_uniform(s_reg_table[index]))
 			continue;
 
-		if (!vertex_info.size) // disabled
+		if (!vertex_info.size()) // disabled
 		{
 			continue;
 		}
 
-		const u32 element_size = vk::get_suitable_vk_size(vertex_info.type, vertex_info.size);
+		const u32 element_size = vk::get_suitable_vk_size(vertex_info.type(), vertex_info.size());
 		const u32 data_size = element_size * vertex_draw_count;
-		const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
+		const VkFormat format  = vk::get_suitable_vk_format(vertex_info.type(), vertex_info.size());
 
 		u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
 		u8 *src = reinterpret_cast<u8*>(inline_vertex_array.data());
 		u8 *dst = static_cast<u8*>(m_attrib_ring_info.map(offset_in_attrib_buffer, data_size));
 
 		src += offsets[index];
-		u8 opt_size = vertex_info.size;
+		u8 opt_size = vertex_info.size();
 
-		if (vertex_info.size == 3)
+		if (vertex_info.size() == 3)
 			opt_size = 4;
 
 		//TODO: properly handle cmp type
-		if (vertex_info.type == rsx::vertex_base_type::cmp)
+		if (vertex_info.type() == rsx::vertex_base_type::cmp)
 			LOG_ERROR(RSX, "Compressed vertex attributes not supported for inlined arrays yet");
 
-		switch (vertex_info.type)
+		switch (vertex_info.type())
 		{
 		case rsx::vertex_base_type::f:
-			vk::copy_inlined_data_to_buffer<float, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
+			vk::copy_inlined_data_to_buffer<float, 1>(src, dst, vertex_draw_count, vertex_info.type(), vertex_info.size(), opt_size, element_size, stride);
 			break;
 		case rsx::vertex_base_type::sf:
-			vk::copy_inlined_data_to_buffer<u16, 0x3c00>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
+			vk::copy_inlined_data_to_buffer<u16, 0x3c00>(src, dst, vertex_draw_count, vertex_info.type(), vertex_info.size(), opt_size, element_size, stride);
 			break;
 		case rsx::vertex_base_type::s1:
 		case rsx::vertex_base_type::ub:
 		case rsx::vertex_base_type::ub256:
-			vk::copy_inlined_data_to_buffer<u8, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
+			vk::copy_inlined_data_to_buffer<u8, 1>(src, dst, vertex_draw_count, vertex_info.type(), vertex_info.size(), opt_size, element_size, stride);
 			break;
 		case rsx::vertex_base_type::s32k:
 		case rsx::vertex_base_type::cmp:
-			vk::copy_inlined_data_to_buffer<u16, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
+			vk::copy_inlined_data_to_buffer<u16, 1>(src, dst, vertex_draw_count, vertex_info.type(), vertex_info.size(), opt_size, element_size, stride);
 			break;
 		default:
-			fmt::throw_exception("Unknown base type %d" HERE, (u32)vertex_info.type);
+			fmt::throw_exception("Unknown base type %d" HERE, (u32)vertex_info.type());
 		}
 
 		m_attrib_ring_info.unmap();

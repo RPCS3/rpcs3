@@ -49,12 +49,11 @@ namespace
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC get_vertex_attribute_srv(const rsx::data_array_format_info &info, UINT64 offset_in_vertex_buffers_buffer, UINT buffer_size)
 	{
-		u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
+		u32 element_size = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
-			get_vertex_attribute_format(info.type, info.size),
-			D3D12_SRV_DIMENSION_BUFFER,
-			get_component_mapping_from_vector_size(info.size)
-		};
+		    get_vertex_attribute_format(info.type(), info.size()),
+		    D3D12_SRV_DIMENSION_BUFFER,
+		    get_component_mapping_from_vector_size(info.size())};
 		vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
 		vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
 		return vertex_buffer_view;
@@ -186,10 +185,10 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 	{
 		initial_offsets[index++] = stride;
 
-		if (!info.size) // disabled
+		if (!info.size()) // disabled
 			continue;
 
-		stride += rsx::get_vertex_type_size_on_host(info.type, info.size);
+		stride += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 	}
 
 	u32 element_count = ::narrow<u32>(inlined_array_raw_data.size_bytes()) / stride;
@@ -199,13 +198,13 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 	index = 0;
 	for (const auto &info : vertex_attribute_infos)
 	{
-		if (!info.size)
+		if (!info.size())
 		{
 			index++;
 			continue;
 		}
 
-		u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
+		u32 element_size   = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 		UINT buffer_size = element_size * element_count;
 		size_t heap_offset = ring_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
@@ -216,7 +215,7 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 		{
 			auto subdst = dst.subspan(i * element_size, element_size);
 			auto subsrc = inlined_array_raw_data.subspan(initial_offsets[index] + (i * stride), element_size);
-			if (info.type == rsx::vertex_base_type::ub && info.size == 4)
+			if (info.type() == rsx::vertex_base_type::ub && info.size() == 4)
 			{
 				subdst[0] = subsrc[3];
 				subdst[1] = subsrc[2];
