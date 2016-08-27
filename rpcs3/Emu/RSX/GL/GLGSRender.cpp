@@ -600,40 +600,6 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 	return true;
 }
 
-struct alignas(4) glsl_scale_buffer
-{
-	float viewport_matrix[4][4];
-	float window_matrix[4][4];
-	float normalize_matrix[4][4];
-};
-
-struct alignas(4) glsl_vertex_constants_buffer
-{
-	float vc[468][4];
-};
-
-struct alignas(4) glsl_fragment_constants_buffer
-{
-	float fc[2048][4];
-};
-
-struct alignas(4) glsl_fragment_state_buffer
-{
-	float fog_param0;
-	float fog_param1;
-	uint alpha_test;
-	float alpha_ref;
-};
-
-static void fill_fragment_state_buffer(glsl_fragment_state_buffer *buffer)
-{
-	const float fog_params[2] = { rsx::method_registers.fog_params_0(), rsx::method_registers.fog_params_1() };
-	std::memcpy(&buffer->fog_param0, fog_params, sizeof(float) * 2);
-
-	buffer->alpha_test = rsx::method_registers.alpha_test_enabled();
-	buffer->alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
-}
-
 bool GLGSRender::load_program()
 {
 	RSXVertexProgram vertex_program = get_current_vertex_program();
@@ -644,59 +610,53 @@ bool GLGSRender::load_program()
 
 	u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	fragment_constants_size = std::max(32U, fragment_constants_size);
-	u32 max_buffer_sz =
-		align(sizeof(glsl_scale_buffer), m_uniform_buffer_offset_align) +
-		align(sizeof(glsl_vertex_constants_buffer), m_uniform_buffer_offset_align) +
-		align(fragment_constants_size, m_uniform_buffer_offset_align) +
-		align(sizeof(glsl_fragment_state_buffer), m_uniform_buffer_offset_align);
+	u32 max_buffer_sz = 512 + 8192 + align(fragment_constants_size, m_uniform_buffer_offset_align);
+	m_uniform_ring_buffer.reserve_and_map(max_buffer_sz);
 
-
+	u8 *buf;
 	u32 scale_offset_offset;
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
-	u32 fragment_state_offset;
-
-	m_uniform_ring_buffer.reserve_and_map(max_buffer_sz);
 
 	// Scale offset
-	{
-		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(sizeof(glsl_scale_buffer), m_uniform_buffer_offset_align);
-		fill_scale_offset_data((glsl_scale_buffer *)mapping.first, false);
-		scale_offset_offset = mapping.second;
-	}
+	auto mapping = m_uniform_ring_buffer.alloc_from_reserve(512);
+	buf = static_cast<u8*>(mapping.first);
+	scale_offset_offset = mapping.second;
+	fill_scale_offset_data(buf, false);
 
-	// Fragment state
-	{
-		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(sizeof(glsl_fragment_state_buffer), m_uniform_buffer_offset_align);
-		fill_fragment_state_buffer((glsl_fragment_state_buffer *)mapping.first);
-		fragment_state_offset = mapping.second;
-	}
+	// Fragment state 
+	u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
+	float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+	f32 fog0 = rsx::method_registers.fog_params_0();
+	f32 fog1 = rsx::method_registers.fog_params_1();
+	memcpy(buf + 16 * sizeof(float), &fog0, sizeof(float));
+	memcpy(buf + 17 * sizeof(float), &fog1, sizeof(float));
+	memcpy(buf + 18 * sizeof(float), &is_alpha_tested, sizeof(u32));
+	memcpy(buf + 19 * sizeof(float), &alpha_ref, sizeof(float));
 
 	// Vertex constants
-	{
-		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(sizeof(glsl_vertex_constants_buffer), m_uniform_buffer_offset_align);
-		fill_vertex_program_constants_data(mapping.first);
-		vertex_constants_offset = mapping.second;
-	}
+	mapping = m_uniform_ring_buffer.alloc_from_reserve(8192);
+	buf = static_cast<u8*>(mapping.first);
+	vertex_constants_offset = mapping.second;
+	fill_vertex_program_constants_data(buf);
 
 	// Fragment constants
 	if (fragment_constants_size)
 	{
-		auto mapping = m_uniform_ring_buffer.alloc_from_reserve(fragment_constants_size, m_uniform_buffer_offset_align);
-		u8 *buf = static_cast<u8*>(mapping.first);
-		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
+		mapping = m_uniform_ring_buffer.alloc_from_reserve(fragment_constants_size);
+		buf = static_cast<u8*>(mapping.first);
 		fragment_constants_offset = mapping.second;
+		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
 	}
 
 	m_uniform_ring_buffer.unmap();
 
-	m_uniform_ring_buffer.bind_range(0, scale_offset_offset, sizeof(glsl_scale_buffer));
-	m_uniform_ring_buffer.bind_range(1, vertex_constants_offset, sizeof(glsl_vertex_constants_buffer));
+	m_uniform_ring_buffer.bind_range(0, scale_offset_offset, 512);
+	m_uniform_ring_buffer.bind_range(1, vertex_constants_offset, 8192);
 	if (fragment_constants_size)
 	{
 		m_uniform_ring_buffer.bind_range(2, fragment_constants_offset, fragment_constants_size);
 	}
-	m_uniform_ring_buffer.bind_range(3, fragment_state_offset, sizeof(glsl_fragment_state_buffer));
 
 	return true;
 }
