@@ -225,52 +225,14 @@ GLVertexProgram::GLVertexProgram()
 
 GLVertexProgram::~GLVertexProgram()
 {
-	//if (m_decompiler_thread)
-	//{
-	//	Wait();
-	//	if (m_decompiler_thread->IsAlive())
-	//	{
-	//		m_decompiler_thread->Stop();
-	//	}
-
-	//	delete m_decompiler_thread;
-	//	m_decompiler_thread = nullptr;
-	//}
-
 	Delete();
 }
-
-//void GLVertexProgram::Wait()
-//{
-//	if (m_decompiler_thread && m_decompiler_thread->IsAlive())
-//	{
-//		m_decompiler_thread->Join();
-//	}
-//}
 
 void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
 	GLVertexDecompilerThread decompiler(prog, shader, parr);
 	decompiler.Task();
 }
-
-//void GLVertexProgram::DecompileAsync(RSXVertexProgram& prog)
-//{
-//	if (m_decompiler_thread)
-//	{
-//		Wait();
-//		if (m_decompiler_thread->IsAlive())
-//		{
-//			m_decompiler_thread->Stop();
-//		}
-//
-//		delete m_decompiler_thread;
-//		m_decompiler_thread = nullptr;
-//	}
-//
-//	m_decompiler_thread = new GLVertexDecompilerThread(prog.data, shader, parr);
-//	m_decompiler_thread->Start();
-//}
 
 void GLVertexProgram::Compile()
 {
@@ -305,8 +267,6 @@ void GLVertexProgram::Compile()
 		LOG_NOTICE(RSX, "%s", shader.c_str());
 		Emu.Pause();
 	}
-	//else LOG_WARNING(RSX, "Vertex shader compiled successfully!");
-
 }
 
 void GLVertexProgram::Delete()
