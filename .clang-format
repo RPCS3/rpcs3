@@ -1,11 +1,11 @@
 ﻿Standard: Cpp11
 UseTab: ForIndentation
 TabWidth: 1
-IndentWidth: 1 
+IndentWidth: 1
 AccessModifierOffset: -1
 PointerAlignment: Left
 NamespaceIndentation: All
-ColumnLimit: 0
+ColumnLimit: 100
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: true
 BreakBeforeBinaryOperators: false
@@ -22,7 +22,7 @@ SortIncludes: false
 ReflowComments: true
 AlignConsecutiveAssignments: true
 AlignTrailingComments: true
-AlignAfterOpenBracket: false
+AlignAfterOpenBracket: DontAlign
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 BinPackArguments: true
 BinPackParameters: true
