@@ -141,16 +141,6 @@ private:
 	*/
 	std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> > upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list);
 
-	/**
-	 * Upload all enabled vertex attributes for vertex in ranges described by vertex_ranges.
-	 * A range in vertex_range is a pair whose first element is the index of the beginning of the
-	 * range, and whose second element is the number of vertex in this range.
-	 */
-	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges,
-		gsl::not_null<ID3D12GraphicsCommandList*> command_list);
-
-	std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> generate_index_buffer_for_emulated_primitives_array(const std::vector<std::pair<u32, u32> > &vertex_ranges);
-
 	void upload_and_bind_scale_offset_matrix(size_t descriptor_index);
 	void upload_and_bind_vertex_shader_constants(size_t descriptor_index);
 	D3D12_CONSTANT_BUFFER_VIEW_DESC upload_fragment_shader_constants();

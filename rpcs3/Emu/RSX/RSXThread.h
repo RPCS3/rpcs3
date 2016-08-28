@@ -139,6 +139,29 @@ namespace rsx
 		u8 index;
 	};
 
+	struct draw_array_command
+	{
+		/**
+		* First and count of index subranges.
+		*/
+		std::vector<std::pair<u32, u32>> indexes_range;
+	};
+
+	struct draw_indexed_array_command
+	{
+		/**
+		* First and count of subranges to fetch in index buffer.
+		*/
+		std::vector<std::pair<u32, u32>> ranges_to_fetch_in_index_buffer;
+
+		gsl::span<const gsl::byte> raw_index_buffer;
+	};
+
+	struct draw_inlined_array
+	{
+		std::vector<u32> inline_vertex_array;
+	};
+
 	class thread : public named_thread
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
@@ -231,6 +254,8 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
+		get_draw_command(const rsx::rsx_state& state) const;
 
 	private:
 		std::mutex m_mtx_task;

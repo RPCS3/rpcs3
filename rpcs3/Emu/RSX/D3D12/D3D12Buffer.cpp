@@ -80,166 +80,6 @@ namespace
 	}
 }
 
-namespace
-{
-
-	struct vertex_buffer_visitor
-	{
-		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_views;
-
-		vertex_buffer_visitor(u32 vtx_cnt, ID3D12GraphicsCommandList* cmdlst, ID3D12Resource* write_vertex_buffer,
-		    d3d12_data_heap& heap)
-		    : vertex_count(vtx_cnt)
-		    , offset_in_vertex_buffers_buffer(0)
-		    , m_buffer_data(heap)
-		    , command_list(cmdlst)
-		    , m_vertex_buffer_data(write_vertex_buffer)
-		{
-		}
-
-		void operator()(const rsx::vertex_array_buffer& vertex_array)
-		{
-			u32 element_size   = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
-			UINT buffer_size   = element_size * vertex_count;
-			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-			void* mapped_buffer                     = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			gsl::span<gsl::byte> mapped_buffer_span = {(gsl::byte*)mapped_buffer, gsl::narrow_cast<int>(buffer_size)};
-			write_vertex_array_data_to_buffer(mapped_buffer_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, element_size);
-
-			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-			command_list->CopyBufferRegion(m_vertex_buffer_data, offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
-
-			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(vertex_array.type, vertex_array.attribute_size, offset_in_vertex_buffers_buffer, buffer_size));
-			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
-
-			//m_timers.buffer_upload_size += buffer_size;
-		}
-
-		void operator()(const rsx::vertex_array_register& vertex_register)
-		{
-			u32 element_size   = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
-			UINT buffer_size   = element_size;
-			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-			void* mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			memcpy(mapped_buffer, vertex_register.data.data(), buffer_size);
-			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-			command_list->CopyBufferRegion(m_vertex_buffer_data, offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
-
-			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(vertex_register.type, vertex_register.attribute_size, offset_in_vertex_buffers_buffer, buffer_size));
-			offset_in_vertex_buffers_buffer = get_next_multiple_of<48>(offset_in_vertex_buffers_buffer + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
-		}
-
-		void operator()(const rsx::empty_vertex_array& vbo)
-		{
-		}
-
-	protected:
-		u32 vertex_count;
-		ID3D12GraphicsCommandList* command_list;
-		ID3D12Resource* m_vertex_buffer_data;
-		size_t offset_in_vertex_buffers_buffer;
-		d3d12_data_heap& m_buffer_data;
-	};
-
-} // End anonymous namespace
-
-std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attributes(
-    const std::vector<std::pair<u32, u32>>& vertex_ranges,
-    gsl::not_null<ID3D12GraphicsCommandList*> command_list)
-{
-	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
-
-	u32 vertex_count = get_vertex_count(vertex_ranges);
-	//verify(HERE), rsx::method_registers.vertex_data_base_index() == 0;
-
-	vertex_buffer_visitor visitor(vertex_count, command_list, m_vertex_buffer_data.Get(), m_buffer_data);
-	const auto& vertex_buffers = get_vertex_buffers(rsx::method_registers, vertex_ranges);
-
-	for (const auto& vbo : vertex_buffers)
-		std::apply_visitor(visitor, vbo);
-
-	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-	return visitor.vertex_buffer_views;
-}
-
-namespace
-{
-std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_vertex_array(
-	gsl::span<const rsx::data_array_format_info, 16> vertex_attribute_infos,
-	gsl::span<const gsl::byte> inlined_array_raw_data,
-	d3d12_data_heap& ring_buffer_data,
-	ID3D12Resource* vertex_buffer_placement,
-	ID3D12GraphicsCommandList* command_list
-	)
-{
-	// We can't rely on vertex_attribute_infos strides here so compute it
-	// assuming all attributes are packed
-	u32 stride = 0;
-	u32 initial_offsets[rsx::limits::vertex_count];
-	u8  index = 0;
-	for (const auto &info : vertex_attribute_infos)
-	{
-		initial_offsets[index++] = stride;
-
-		if (!info.size()) // disabled
-			continue;
-
-		stride += rsx::get_vertex_type_size_on_host(info.type(), info.size());
-	}
-
-	u32 element_count = ::narrow<u32>(inlined_array_raw_data.size_bytes()) / stride;
-	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> result;
-
-	UINT64 vertex_buffer_offset = 0;
-	index = 0;
-	for (const auto &info : vertex_attribute_infos)
-	{
-		if (!info.size())
-		{
-			index++;
-			continue;
-		}
-
-		u32 element_size   = rsx::get_vertex_type_size_on_host(info.type(), info.size());
-		UINT buffer_size = element_size * element_count;
-		size_t heap_offset = ring_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-		void *mapped_buffer = ring_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-		gsl::span<gsl::byte> dst = { (gsl::byte*)mapped_buffer, buffer_size };
-
-		for (u32 i = 0; i < element_count; i++)
-		{
-			auto subdst = dst.subspan(i * element_size, element_size);
-			auto subsrc = inlined_array_raw_data.subspan(initial_offsets[index] + (i * stride), element_size);
-			if (info.type() == rsx::vertex_base_type::ub && info.size() == 4)
-			{
-				subdst[0] = subsrc[3];
-				subdst[1] = subsrc[2];
-				subdst[2] = subsrc[1];
-				subdst[3] = subsrc[0];
-			}
-			else
-			{
-				std::copy(subsrc.begin(), subsrc.end(), subdst.begin());
-			}
-		}
-
-		ring_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-		command_list->CopyBufferRegion(vertex_buffer_placement, vertex_buffer_offset, ring_buffer_data.get_heap(), heap_offset, buffer_size);
-
-		result.emplace_back(get_vertex_attribute_srv(info, vertex_buffer_offset, buffer_size));
-		vertex_buffer_offset = get_next_multiple_of<48>(vertex_buffer_offset + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
-		index++;
-	}
-
-	return std::make_tuple(result, element_count);
-}
-}
 
 void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 {
@@ -309,106 +149,335 @@ D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12GSRender::upload_fragment_shader_constants(
 	};
 }
 
-
-
-
-std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> D3D12GSRender::generate_index_buffer_for_emulated_primitives_array(const std::vector<std::pair<u32, u32> > &vertex_ranges)
+namespace
 {
-	size_t index_count = 0;
-	for (const auto &pair : vertex_ranges)
-		index_count += get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
 
-	// Alloc
-	size_t buffer_size = align(index_count * sizeof(u16), 64);
-	size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	size_t first = 0;
-	for (const auto &pair : vertex_ranges)
+	struct vertex_buffer_visitor
 	{
-		size_t element_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
-		write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)mapped_buffer, rsx::method_registers.current_draw_clause.primitive, (u32)first, (u32)pair.second);
-		mapped_buffer = (char*)mapped_buffer + element_count * sizeof(u16);
-		first += pair.second;
-	}
-	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
-		m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset,
-		(UINT)buffer_size,
-		DXGI_FORMAT_R16_UINT
-	};
+		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_views;
 
-	return std::make_tuple(index_buffer_view, index_count);
-}
-
-std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list)
-{
-	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
-	{
-		size_t vertex_count;
-		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_view;
-		std::tie(vertex_buffer_view, vertex_count) =
-		    upload_inlined_vertex_array(rsx::method_registers.vertex_arrays_info,
-		        {(const gsl::byte*)rsx::method_registers.current_draw_clause.inline_vertex_array.data(),
-		            ::narrow<int>(rsx::method_registers.current_draw_clause.inline_vertex_array.size() *
-		                          sizeof(uint))},
-		        m_buffer_data, m_vertex_buffer_data.Get(), command_list);
-
-		if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
-			return std::make_tuple(false, vertex_count, vertex_buffer_view);
-
-		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
-		size_t index_count;
-		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array({ { 0, (u32)vertex_count } });
-		command_list->IASetIndexBuffer(&index_buffer_view);
-		return std::make_tuple(true, index_count, vertex_buffer_view);
-	}
-
-	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
-	{
-		if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
+		vertex_buffer_visitor(u32 vtx_cnt, ID3D12GraphicsCommandList* cmdlst,
+			ID3D12Resource* write_vertex_buffer, d3d12_data_heap& heap)
+			: vertex_count(vtx_cnt), offset_in_vertex_buffers_buffer(0), m_buffer_data(heap),
+			  command_list(cmdlst), m_vertex_buffer_data(write_vertex_buffer)
 		{
-			size_t vertex_count = get_vertex_count(rsx::method_registers.current_draw_clause.first_count_commands);
-			return std::make_tuple(false, vertex_count, upload_vertex_attributes(rsx::method_registers.current_draw_clause.first_count_commands, command_list));
 		}
 
-		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
-		size_t index_count;
-		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array(rsx::method_registers.current_draw_clause.first_count_commands);
-		command_list->IASetIndexBuffer(&index_buffer_view);
-		return std::make_tuple(true, index_count, upload_vertex_attributes(rsx::method_registers.current_draw_clause.first_count_commands, command_list));
+		void operator()(const rsx::vertex_array_buffer& vertex_array)
+		{
+			u32 element_size =
+				rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
+			UINT buffer_size = element_size * vertex_count;
+			size_t heap_offset =
+				m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+
+			void* mapped_buffer =
+				m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+			gsl::span<gsl::byte> mapped_buffer_span = {
+				(gsl::byte*)mapped_buffer, gsl::narrow_cast<int>(buffer_size)};
+			write_vertex_array_data_to_buffer(mapped_buffer_span, vertex_array.data, vertex_count,
+				vertex_array.type, vertex_array.attribute_size, vertex_array.stride, element_size);
+
+			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+
+			command_list->CopyBufferRegion(m_vertex_buffer_data, offset_in_vertex_buffers_buffer,
+				m_buffer_data.get_heap(), heap_offset, buffer_size);
+
+			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(vertex_array.type,
+				vertex_array.attribute_size, offset_in_vertex_buffers_buffer, buffer_size));
+			offset_in_vertex_buffers_buffer =
+				get_next_multiple_of<48>(offset_in_vertex_buffers_buffer +
+										 buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
+
+			// m_timers.buffer_upload_size += buffer_size;
+		}
+
+		void operator()(const rsx::vertex_array_register& vertex_register)
+		{
+			u32 element_size = rsx::get_vertex_type_size_on_host(
+				vertex_register.type, vertex_register.attribute_size);
+			UINT buffer_size = element_size;
+			size_t heap_offset =
+				m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+
+			void* mapped_buffer =
+				m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+			memcpy(mapped_buffer, vertex_register.data.data(), buffer_size);
+			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+
+			command_list->CopyBufferRegion(m_vertex_buffer_data, offset_in_vertex_buffers_buffer,
+				m_buffer_data.get_heap(), heap_offset, buffer_size);
+
+			vertex_buffer_views.emplace_back(get_vertex_attribute_srv(vertex_register.type,
+				vertex_register.attribute_size, offset_in_vertex_buffers_buffer, buffer_size));
+			offset_in_vertex_buffers_buffer =
+				get_next_multiple_of<48>(offset_in_vertex_buffers_buffer +
+										 buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
+		}
+
+		void operator()(const rsx::empty_vertex_array& vbo)
+		{
+		}
+
+	protected:
+		u32 vertex_count;
+		ID3D12GraphicsCommandList* command_list;
+		ID3D12Resource* m_vertex_buffer_data;
+		size_t offset_in_vertex_buffers_buffer;
+		d3d12_data_heap& m_buffer_data;
+	};
+
+	std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> generate_index_buffer_for_emulated_primitives_array(
+		const std::vector<std::pair<u32, u32>>& vertex_ranges, d3d12_data_heap& m_buffer_data)
+	{
+		size_t index_count = std::accumulate(
+			vertex_ranges.begin(), vertex_ranges.end(), 0, [](size_t acc, const auto& pair) {
+				return acc + get_index_count(
+								 rsx::method_registers.current_draw_clause.primitive, pair.second);
+			});
+
+		// Alloc
+		size_t buffer_size = align(index_count * sizeof(u16), 64);
+		size_t heap_offset =
+			m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+
+		void* mapped_buffer =
+			m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+		size_t first = 0;
+		for (const auto& pair : vertex_ranges) {
+			size_t element_count =
+				get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
+			write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)mapped_buffer,
+				rsx::method_registers.current_draw_clause.primitive, (u32)first, (u32)pair.second);
+			mapped_buffer = (char*)mapped_buffer + element_count * sizeof(u16);
+			first += pair.second;
+		}
+		m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+		D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
+			m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset, (UINT)buffer_size,
+			DXGI_FORMAT_R16_UINT};
+
+		return std::make_tuple(index_buffer_view, index_count);
 	}
 
-	verify(HERE), rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed;
+	using attribute_storage = std::vector<std::variant<rsx::vertex_array_buffer,
+		rsx::vertex_array_register, rsx::empty_vertex_array>>;
 
-	// Index count
-	size_t index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, ::narrow<int>(get_vertex_count(rsx::method_registers.current_draw_clause.first_count_commands)));
+	/**
+	* Upload all enabled vertex attributes for vertex in ranges described by vertex_ranges.
+	* A range in vertex_range is a pair whose first element is the index of the beginning of the
+	* range, and whose second element is the number of vertex in this range.
+	*/
+	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> upload_vertex_attributes(
+		const std::vector<std::pair<u32, u32>>& vertex_ranges,
+		std::function<attribute_storage(rsx::rsx_state, std::vector<std::pair<u32, u32>>)>
+			get_vertex_buffers,
+		ID3D12Resource* m_vertex_buffer_data, d3d12_data_heap& m_buffer_data,
+		gsl::not_null<ID3D12GraphicsCommandList*> command_list)
+	{
+		command_list->ResourceBarrier(1,
+			&CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data,
+				D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
 
-	rsx::index_array_type indexed_type = rsx::method_registers.index_type();
-	size_t index_size = get_index_type_size(indexed_type);
+		u32 vertex_count = get_vertex_count(vertex_ranges);
+		verify(HERE), rsx::method_registers.vertex_data_base_index() == 0;
 
-	// Alloc
-	size_t buffer_size = align(index_count * index_size, 64);
-	size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+		vertex_buffer_visitor visitor(
+			vertex_count, command_list, m_vertex_buffer_data, m_buffer_data);
+		const auto& vertex_buffers = get_vertex_buffers(rsx::method_registers, vertex_ranges);
 
-	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	u32 min_index, max_index;
-	gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(mapped_buffer), ::narrow<u32>(buffer_size) };
+		for (const auto& vbo : vertex_buffers) std::apply_visitor(visitor, vbo);
 
-	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, get_raw_index_array(rsx::method_registers.current_draw_clause.first_count_commands),
-		indexed_type, rsx::method_registers.current_draw_clause.primitive, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), rsx::method_registers.current_draw_clause.first_count_commands,
-		[](auto prim) { return !is_primitive_native(prim); });
+		command_list->ResourceBarrier(1,
+			&CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data,
+				D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+		return visitor.vertex_buffer_views;
+	}
 
-	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
-		m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset,
-		(UINT)buffer_size,
-		get_index_type(indexed_type)
+	std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_vertex_array(
+		gsl::span<const rsx::data_array_format_info, 16> vertex_attribute_infos,
+		gsl::span<const gsl::byte> inlined_array_raw_data, d3d12_data_heap& ring_buffer_data,
+		ID3D12Resource* vertex_buffer_placement, ID3D12GraphicsCommandList* command_list)
+	{
+		// We can't rely on vertex_attribute_infos strides here so compute it
+		// assuming all attributes are packed
+		u32 stride = 0;
+		u32 initial_offsets[rsx::limits::vertex_count];
+		u8 index = 0;
+		for (const auto& info : vertex_attribute_infos) {
+			initial_offsets[index++] = stride;
+
+			if (!info.size()) // disabled
+				continue;
+
+			stride += rsx::get_vertex_type_size_on_host(info.type(), info.size());
+		}
+
+		u32 element_count = ::narrow<u32>(inlined_array_raw_data.size_bytes()) / stride;
+		std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> result;
+
+		UINT64 vertex_buffer_offset = 0;
+		index = 0;
+		for (const auto& info : vertex_attribute_infos) {
+			if (!info.size()) {
+				index++;
+				continue;
+			}
+
+			u32 element_size = rsx::get_vertex_type_size_on_host(info.type(), info.size());
+			UINT buffer_size = element_size * element_count;
+			size_t heap_offset =
+				ring_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+
+			void* mapped_buffer =
+				ring_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+			gsl::span<gsl::byte> dst = {(gsl::byte*)mapped_buffer, buffer_size};
+
+			for (u32 i = 0; i < element_count; i++) {
+				auto subdst = dst.subspan(i * element_size, element_size);
+				auto subsrc = inlined_array_raw_data.subspan(
+					initial_offsets[index] + (i * stride), element_size);
+				if (info.type() == rsx::vertex_base_type::ub && info.size() == 4) {
+					subdst[0] = subsrc[3];
+					subdst[1] = subsrc[2];
+					subdst[2] = subsrc[1];
+					subdst[3] = subsrc[0];
+				}
+				else
+				{
+					std::copy(subsrc.begin(), subsrc.end(), subdst.begin());
+				}
+			}
+
+			ring_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+
+			command_list->CopyBufferRegion(vertex_buffer_placement, vertex_buffer_offset,
+				ring_buffer_data.get_heap(), heap_offset, buffer_size);
+
+			result.emplace_back(get_vertex_attribute_srv(info, vertex_buffer_offset, buffer_size));
+			vertex_buffer_offset = get_next_multiple_of<48>(
+				vertex_buffer_offset + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
+			index++;
+		}
+
+		return std::make_tuple(result, element_count);
+	}
+
+	struct draw_command_visitor
+	{
+		draw_command_visitor(ID3D12GraphicsCommandList* cmd_list, d3d12_data_heap& buffer_data,
+			ID3D12Resource* vertex_buffer_data,
+			std::function<attribute_storage(
+				const rsx::rsx_state&, const std::vector<std::pair<u32, u32>>&)>
+				get_vertex_info_lambda)
+			: command_list(cmd_list), m_buffer_data(buffer_data),
+			  m_vertex_buffer_data(vertex_buffer_data), get_vertex_buffers(get_vertex_info_lambda)
+		{
+		}
+
+		std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> operator()(
+			const rsx::draw_array_command& command)
+		{
+			if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive)) {
+				size_t vertex_count = get_vertex_count(command.indexes_range);
+				return std::make_tuple(false, vertex_count,
+					upload_vertex_attributes(command.indexes_range, get_vertex_buffers,
+						m_vertex_buffer_data, m_buffer_data, command_list));
+			}
+
+			D3D12_INDEX_BUFFER_VIEW index_buffer_view;
+			size_t index_count;
+			std::tie(index_buffer_view, index_count) =
+				generate_index_buffer_for_emulated_primitives_array(
+					command.indexes_range, m_buffer_data);
+			command_list->IASetIndexBuffer(&index_buffer_view);
+			return std::make_tuple(true, index_count,
+				upload_vertex_attributes(command.indexes_range, get_vertex_buffers,
+					m_vertex_buffer_data, m_buffer_data, command_list));
+		}
+
+		std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> operator()(
+			const rsx::draw_indexed_array_command& command)
+		{
+			// Index count
+			size_t index_count =
+				get_index_count(rsx::method_registers.current_draw_clause.primitive,
+					::narrow<int>(get_vertex_count(command.ranges_to_fetch_in_index_buffer)));
+
+			rsx::index_array_type indexed_type = rsx::method_registers.index_type();
+			size_t index_size = get_index_type_size(indexed_type);
+
+			// Alloc
+			size_t buffer_size = align(index_count * index_size, 64);
+			size_t heap_offset =
+				m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+
+			void* mapped_buffer =
+				m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+			u32 min_index, max_index;
+			gsl::span<gsl::byte> dst{
+				reinterpret_cast<gsl::byte*>(mapped_buffer), ::narrow<u32>(buffer_size)};
+
+			std::tie(min_index, max_index) =
+				write_index_array_data_to_buffer(dst, command.raw_index_buffer, indexed_type,
+					rsx::method_registers.current_draw_clause.primitive,
+					rsx::method_registers.restart_index_enabled(),
+					rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
+					[](auto prim) { return !is_primitive_native(prim); });
+
+			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+			D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
+				m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset, (UINT)buffer_size,
+				get_index_type(indexed_type)};
+			// m_timers.buffer_upload_size += buffer_size;
+			command_list->IASetIndexBuffer(&index_buffer_view);
+
+			return std::make_tuple(true, index_count,
+				upload_vertex_attributes({std::make_pair(0, max_index + 1)}, get_vertex_buffers,
+					m_vertex_buffer_data, m_buffer_data, command_list));
+		}
+
+		std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> operator()(
+			const rsx::draw_inlined_array& command)
+		{
+			size_t vertex_count;
+			std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_view;
+			std::tie(vertex_buffer_view, vertex_count) =
+				upload_inlined_vertex_array(rsx::method_registers.vertex_arrays_info,
+					{(const gsl::byte*)command.inline_vertex_array.data(),
+						::narrow<int>(command.inline_vertex_array.size() * sizeof(uint))},
+					m_buffer_data, m_vertex_buffer_data, command_list);
+
+			if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
+				return std::make_tuple(false, vertex_count, vertex_buffer_view);
+
+			D3D12_INDEX_BUFFER_VIEW index_buffer_view;
+			size_t index_count;
+			std::tie(index_buffer_view, index_count) =
+				generate_index_buffer_for_emulated_primitives_array(
+					{{0, (u32)vertex_count}}, m_buffer_data);
+			command_list->IASetIndexBuffer(&index_buffer_view);
+			return std::make_tuple(true, index_count, vertex_buffer_view);
+		}
+
+	private:
+		ID3D12GraphicsCommandList* command_list;
+		d3d12_data_heap& m_buffer_data;
+		std::function<attribute_storage(
+			const rsx::rsx_state&, const std::vector<std::pair<u32, u32>>&)>
+			get_vertex_buffers;
+		ID3D12Resource* m_vertex_buffer_data;
 	};
-	m_timers.buffer_upload_size += buffer_size;
-	command_list->IASetIndexBuffer(&index_buffer_view);
+} // End anonymous namespace
 
-	return std::make_tuple(true, index_count, upload_vertex_attributes({ std::make_pair(0, max_index + 1) }, command_list));
+std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>>
+D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList* command_list)
+{
+	return std::apply_visitor(
+		draw_command_visitor(command_list, m_buffer_data, m_vertex_buffer_data.Get(),
+			[this](
+				const auto& state, const auto& list) { return get_vertex_buffers(state, list); }),
+		get_draw_command(rsx::method_registers));
 }
 
 #endif
