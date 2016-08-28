@@ -1,5 +1,5 @@
 ﻿Standard: Cpp11
-UseTab: Always
+UseTab: ForIndentation
 TabWidth: 1
 IndentWidth: 1 
 AccessModifierOffset: -1
@@ -7,7 +7,7 @@ PointerAlignment: Left
 NamespaceIndentation: All
 ColumnLimit: 0
 BreakBeforeBraces: Allman
-BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializersBeforeComma: true
 BreakBeforeBinaryOperators: false
 BreakBeforeTernaryOperators: false
 AlwaysBreakTemplateDeclarations: true
@@ -20,7 +20,7 @@ Cpp11BracedListStyle: true
 IndentCaseLabels: false
 SortIncludes: false
 ReflowComments: true
-AlignConsecutiveAssignments: false
+AlignConsecutiveAssignments: true
 AlignTrailingComments: true
 AlignAfterOpenBracket: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
