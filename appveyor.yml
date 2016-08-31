@@ -13,9 +13,8 @@ before_build:
  - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp rsx_program_decompiler 3rdparty/cereal
  - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
- - 7z x vulkan.7z -aos -oC:\rpcs3\Vulkan > null
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/)
-   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
+   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake -DZLIB_ROOT=C:/rpcs3/zlib/)
 
 build_script:
  - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
@@ -24,11 +23,10 @@ install:
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/wxWidgets.7z'
 # - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/llvmlibs.7z'
  - ps: Start-FileDownload 'https://drive.google.com/uc?export=download&id=0B-98fOyaZKJ5YWVnb29JZXFQWkU' -FileName llvmlibs.7z
- - ps: Start-FileDownload 'https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRa21fbDQteTN1dGs' -FileName vulkan.7z
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/zlib.7z'
  - set WXWIN=C:\rpcs3\wxWidgets
  - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL
- - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
+ - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;C:\Python35-x64;%PATH%
  - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 
 artifacts:
