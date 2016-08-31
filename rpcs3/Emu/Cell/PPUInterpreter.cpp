@@ -297,7 +297,7 @@ bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MTVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "MTVSCR");
+	LOG_WARNING(PPU, "MTVSCR is unimplemented");
 	return true;
 }
 
@@ -2366,6 +2366,7 @@ bool ppu_interpreter::LDUX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBST(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBST is unimplemented");
 	return true;
 }
 
@@ -2444,6 +2445,7 @@ bool ppu_interpreter::LDARX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBF(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBF is unimplemented");
 	return true;
 }
 
@@ -2700,6 +2702,7 @@ bool ppu_interpreter::MULLW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBTST(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBTST is unimplemented");
 	return true;
 }
 
@@ -2723,6 +2726,7 @@ bool ppu_interpreter::ADD(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBT(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBT is unimplemented");
 	return true;
 }
 
@@ -2788,6 +2792,7 @@ bool ppu_interpreter::LWAX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DST(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DST is unimplemented");
 	return true;
 }
 
@@ -2829,6 +2834,7 @@ bool ppu_interpreter::LWAUX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DSTST(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DSTST is unimplemented");
 	return true;
 }
 
@@ -2920,6 +2926,7 @@ bool ppu_interpreter::MTSPR(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DCBI(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DCBI is unimplemented");
 	return true;
 }
 
@@ -3256,6 +3263,7 @@ bool ppu_interpreter::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::DSS(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "DSS is unimplemented");
 	return true;
 }
 
@@ -3333,6 +3341,7 @@ bool ppu_interpreter::EXTSW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ICBI(ppu_thread& ppu, ppu_opcode_t op)
 {
+	LOG_WARNING(PPU, "ICBI is unimplemented");
 	return true;
 }
 
