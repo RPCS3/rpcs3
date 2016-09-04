@@ -5,7 +5,6 @@ rsx::vertex_base_type rsx::to_vertex_base_type(u8 in)
 {
 	switch (in)
 	{
-	case 0: return rsx::vertex_base_type::invalid;
 	case 1: return rsx::vertex_base_type::s1;
 	case 2: return rsx::vertex_base_type::f;
 	case 3: return rsx::vertex_base_type::sf;
