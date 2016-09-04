@@ -8,6 +8,19 @@
 #include "D3D12Formats.h"
 #include "../rsx_methods.h"
 
+bool is_dxtc_format(u32 texture_format)
+{
+	switch (texture_format)
+	{
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		return true;
+	default:
+		return false;
+	}
+}
+
 namespace
 {
 D3D12_COMPARISON_FUNC get_sampler_compare_func[] =
@@ -47,17 +60,28 @@ namespace
 	{
 		const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		DXGI_FORMAT dxgi_format = get_texture_format(format);
+		u16 width = texture.width();
+		u16 height = texture.height();
+		u16 depth = texture.depth();
+		u16 miplevels = texture.get_exact_mipmap_count();
+
+		// DXTC uses 4x4 block texture and align to multiple of 4.
+		if (is_dxtc_format(format))
+		{
+			width = align(width, 4);
+			height = align(height, 4);
+		}
 
 		switch (texture.get_extended_texture_dimension())
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
-			return CD3DX12_RESOURCE_DESC::Tex1D(dxgi_format, texture.width(), 1, texture.get_exact_mipmap_count());
+			return CD3DX12_RESOURCE_DESC::Tex1D(dxgi_format, width, 1, miplevels);
 		case rsx::texture_dimension_extended::texture_dimension_2d:
-			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, texture.width(), texture.height(), 1, texture.get_exact_mipmap_count());
+			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, width, height, 1, miplevels);
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, texture.width(), texture.height(), 6, texture.get_exact_mipmap_count());
+			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, width, height, 6, miplevels);
 		case rsx::texture_dimension_extended::texture_dimension_3d:
-			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, texture.width(), texture.height(), texture.depth(), texture.get_exact_mipmap_count());
+			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, width, height, depth, miplevels);
 		}
 		fmt::throw_exception("Unknown texture dimension" HERE);
 	}
