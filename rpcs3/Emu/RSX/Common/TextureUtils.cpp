@@ -182,6 +182,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 		return get_subresources_layout_impl<4, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	}
 	fmt::throw_exception("Wrong format 0x%x" HERE, format);
