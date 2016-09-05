@@ -674,7 +674,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_SNE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_STR: SetDSTVec(getFunction(FUNCTION::FUNCTION_STR)); break;
 		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
-		case RSX_VEC_OPCODE_TXL: SetDSTVec("texture($t, $0.xy)"); break;
+		case RSX_VEC_OPCODE_TXL: SetDSTVec(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD)); break;
 
 		default:
 			AddCode(fmt::format("//Unknown vp opcode 0x%x", u32{ d1.vec_opcode }));
