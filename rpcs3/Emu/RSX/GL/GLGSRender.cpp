@@ -387,21 +387,22 @@ void GLGSRender::end()
 	//Vertex textures
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
+		int texture_index = i + rsx::limits::fragment_textures_count;
 		int location;
 		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &location))
 		{
 			if (!rsx::method_registers.vertex_textures[i].enabled())
 			{
-				glActiveTexture(GL_TEXTURE0 + i);
+				glActiveTexture(GL_TEXTURE0 + texture_index);
 				glBindTexture(GL_TEXTURE_2D, 0);
-				glProgramUniform1i(m_program->id(), location, i);
+				glProgramUniform1i(m_program->id(), location, texture_index);
 				continue;
 			}
 
 			m_gl_vertex_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.vertex_textures[i]));
 
-			__glcheck m_gl_texture_cache.upload_texture(i, rsx::method_registers.vertex_textures[i], m_gl_vertex_textures[i], m_rtts);
-			glProgramUniform1i(m_program->id(), location, i);
+			__glcheck m_gl_texture_cache.upload_texture(texture_index, rsx::method_registers.vertex_textures[i], m_gl_vertex_textures[i], m_rtts);
+			glProgramUniform1i(m_program->id(), location, texture_index);
 		}
 	}
 
