@@ -214,6 +214,17 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		for (const ParamItem &PI : PT.items)
 			add_input(OS, PI, rsx_vertex_program.rsx_vertex_inputs);
 	}
+
+	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type == "sampler2D")
+		{
+			for (const ParamItem &PI : PT.items)
+			{
+				OS << "	vec2 " << PI.name << "_coord_scale = vec2(1.);" << std::endl;
+			}
+		}
+	}
 }
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
