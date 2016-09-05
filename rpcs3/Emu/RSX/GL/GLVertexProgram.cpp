@@ -90,7 +90,20 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	vec4 vc[468];" << std::endl;
-	OS << "};" << std::endl;
+	OS << "};" << std::endl << std::endl;
+
+	for (const ParamType &PT: constants)
+	{
+		for (const ParamItem &PI : PT.items)
+		{
+			if (PI.name == "vc[468]")
+				continue;
+
+			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
+		}
+	}
+
+	OS << std::endl;
 }
 
 struct reg_info
@@ -246,6 +259,9 @@ void GLVertexProgram::Compile()
 
 	const char* str = shader.c_str();
 	const int strlen = ::narrow<int>(shader.length());
+
+	fs::create_path(fs::get_config_dir() + "/shaderlog");
+	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
