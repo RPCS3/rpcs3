@@ -347,6 +347,9 @@ void GLFragmentProgram::Compile()
 	const char* str = shader.c_str();
 	const int strlen = ::narrow<int>(shader.length());
 
+	fs::create_path(fs::get_config_dir() + "/shaderlog");
+	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
+
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
 
