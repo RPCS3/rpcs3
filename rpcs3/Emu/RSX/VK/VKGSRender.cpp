@@ -272,9 +272,9 @@ namespace vk
 		case rsx::cull_face::back: return VK_CULL_MODE_BACK_BIT;
 		case rsx::cull_face::front: return VK_CULL_MODE_FRONT_BIT;
 		case rsx::cull_face::front_and_back: return VK_CULL_MODE_FRONT_AND_BACK;
-		default: return VK_CULL_MODE_NONE;
+		default: 
+			fmt::throw_exception("Unknown cull face value: 0x%x" HERE, (u32)cfv);
 		}
-		fmt::throw_exception("Unknown cull face value: 0x%x" HERE, (u32)cfv);
 	}
 }
 
