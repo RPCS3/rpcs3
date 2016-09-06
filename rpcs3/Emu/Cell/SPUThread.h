@@ -180,7 +180,7 @@ public:
 			data.value |= value;
 		});
 
-		if (old.wait) spu.lock_notify();
+		if (old.wait) spu.notify();
 	}
 
 	// push unconditionally (overwriting previous value), may require notification
@@ -193,7 +193,7 @@ public:
 			data.value = value;
 		});
 
-		if (old.wait) spu.lock_notify();
+		if (old.wait) spu.notify();
 	}
 
 	// returns true on success
@@ -228,7 +228,7 @@ public:
 			// value is not cleared and may be read again
 		});
 
-		if (old.wait) spu.lock_notify();
+		if (old.wait) spu.notify();
 
 		return old.value;
 	}
@@ -295,7 +295,7 @@ public:
 			return false;
 		}))
 		{
-			spu.lock_notify();
+			spu.notify();
 		}
 	}
 

@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Utilities/SleepQueue.h"
-#include <mutex>
-#include <condition_variable>
+#include "Utilities/Thread.h"
+#include "Utilities/mutex.h"
+#include "Utilities/sema.h"
+#include "Utilities/cond.h"
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -43,27 +45,26 @@ enum
 	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
 };
 
-extern std::condition_variable& get_current_thread_cv();
-
-// Simple class for global mutex to pass unique_lock and check it
-struct lv2_lock_t
+// Temporary implementation for LV2_UNLOCK (TODO: remove it)
+struct lv2_lock_guard
 {
-	using type = std::unique_lock<std::mutex>;
+	static semaphore<> g_sema;
 
-	type& ref;
+	lv2_lock_guard(const lv2_lock_guard&) = delete;
 
-	lv2_lock_t(type& lv2_lock)
-		: ref(lv2_lock)
+	lv2_lock_guard()
 	{
-		verify(HERE), ref.owns_lock(), ref.mutex() == &mutex;
+		g_sema.post();
 	}
 
-	operator type&() const
+	~lv2_lock_guard()
 	{
-		return ref;
+		g_sema.wait();
 	}
-
-	static type::mutex_type mutex;
 };
 
-#define LV2_LOCK lv2_lock_t::type lv2_lock(lv2_lock_t::mutex)
+using lv2_lock_t = semaphore_lock&;
+
+#define LV2_LOCK semaphore_lock lv2_lock(lv2_lock_guard::g_sema)
+
+#define LV2_UNLOCK lv2_lock_guard{}

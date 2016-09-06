@@ -108,11 +108,11 @@ s32 sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			get_current_thread_cv().wait(lv2_lock);
+			LV2_UNLOCK, thread_ctrl::wait();
 		}
 	}
 

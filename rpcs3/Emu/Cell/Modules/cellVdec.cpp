@@ -75,6 +75,7 @@ struct vdec_thread : ppu_thread
 	u64 next_pts{};
 	u64 next_dts{};
 
+	std::mutex mutex;
 	std::queue<vdec_frame> out;
 	std::queue<u64> user_data; // TODO
 
@@ -325,7 +326,7 @@ struct vdec_thread : ppu_thread
 
 						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pkt_pts, frame.dts, frame->pkt_dts);
 
-						thread_lock{*this}, out.push(std::move(frame));
+						std::lock_guard<std::mutex>{mutex}, out.push(std::move(frame));
 
 						cb_func(*this, id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
 					}
@@ -437,7 +438,7 @@ s32 cellVdecClose(u32 handle)
 	}
 
 	vdec->cmd_push({vdec_cmd::close, 0});
-	vdec->lock_notify();
+	vdec->notify();
 	vdec->join();
 	idm::remove<ppu_thread>(handle);
 	return CELL_OK;
@@ -455,7 +456,7 @@ s32 cellVdecStartSeq(u32 handle)
 	}
 
 	vdec->cmd_push({vdec_cmd::start_seq, 0});
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 
@@ -471,7 +472,7 @@ s32 cellVdecEndSeq(u32 handle)
 	}
 
 	vdec->cmd_push({vdec_cmd::end_seq, 0});
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 
@@ -497,7 +498,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 		auInfo->codecSpecificData,
 	});
 
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 
@@ -514,7 +515,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 	vdec_frame frame;
 	{
-		thread_lock lock(*vdec);
+		std::lock_guard<std::mutex> lock(vdec->mutex);
 
 		if (vdec->out.empty())
 		{
@@ -639,7 +640,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	u64 usrd;
 	u32 frc;
 	{
-		thread_lock lock(*vdec);
+		std::lock_guard<std::mutex> lock(vdec->mutex);
 
 		if (vdec->out.empty())
 		{
@@ -830,7 +831,7 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 	// TODO: check frc value
 	vdec->cmd_push({vdec_cmd::set_frc, frc});
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 

@@ -779,7 +779,7 @@ namespace rsx
 				{ ppu_cmd::lle_call, rsx->flip_handler },
 			});
 
-			rsx->intr_thread->lock_notify();
+			rsx->intr_thread->notify();
 		}
 	}
 
@@ -793,7 +793,7 @@ namespace rsx
 				{ ppu_cmd::lle_call, rsx->user_handler },
 			});
 
-			rsx->intr_thread->lock_notify();
+			rsx->intr_thread->notify();
 		}
 	}
 

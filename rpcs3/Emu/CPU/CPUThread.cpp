@@ -43,8 +43,6 @@ void cpu_thread::on_task()
 
 	Emu.SendDbgCommand(DID_CREATE_THREAD, this);
 
-	std::unique_lock<named_thread> lock(*this);
-
 	// Check thread status
 	while (!test(state & cpu_flag::exit))
 	{
@@ -53,8 +51,6 @@ void cpu_thread::on_task()
 		// check stop status
 		if (!test(state & cpu_flag::stop))
 		{
-			if (lock) lock.unlock();
-
 			try
 			{
 				cpu_task();
@@ -73,12 +69,6 @@ void cpu_thread::on_task()
 			continue;
 		}
 
-		if (!lock)
-		{
-			lock.lock();
-			continue;
-		}
-
 		thread_ctrl::wait();
 	}
 }
@@ -86,7 +76,7 @@ void cpu_thread::on_task()
 void cpu_thread::on_stop()
 {
 	state += cpu_flag::exit;
-	lock_notify();
+	notify();
 }
 
 cpu_thread::~cpu_thread()
@@ -100,8 +90,6 @@ cpu_thread::cpu_thread(u32 id)
 
 bool cpu_thread::check_state()
 {
-	std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 	while (true)
 	{
 		CHECK_EMU_STATUS; // check at least once
@@ -114,12 +102,6 @@ bool cpu_thread::check_state()
 		if (!test(state & cpu_state_pause))
 		{
 			break;
-		}
-
-		if (!lock)
-		{
-			lock.lock();
-			continue;
 		}
 
 		thread_ctrl::wait();
@@ -144,7 +126,7 @@ bool cpu_thread::check_state()
 void cpu_thread::run()
 {
 	state -= cpu_flag::stop;
-	lock_notify();
+	notify();
 }
 
 void cpu_thread::set_signal()

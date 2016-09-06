@@ -8,6 +8,7 @@
 #ifdef _WIN32
 #include <Windows.h>
 #include <Psapi.h>
+#include <process.h>
 #else
 #ifdef __APPLE__
 #define _XOPEN_SOURCE
@@ -16,7 +17,15 @@
 #include <errno.h>
 #include <signal.h>
 #include <ucontext.h>
+#include <pthread.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #endif
+
+#include "sync.h"
+
+thread_local u64 g_tls_fault_rsx = 0;
+thread_local u64 g_tls_fault_spu = 0;
 
 static void report_fatal_error(const std::string& msg)
 {
@@ -1009,6 +1018,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 {
 	if (rsx::g_access_violation_handler && rsx::g_access_violation_handler(addr, is_writing))
 	{
+		g_tls_fault_rsx++;
 		return true;
 	}
 
@@ -1139,6 +1149,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		// skip processed instruction
 		RIP(context) += i_size;
+		g_tls_fault_spu++;
 		return true;
 	}
 
@@ -1878,103 +1889,65 @@ const bool s_self_test = []() -> bool
 	return true;
 }();
 
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <exception>
-#include <chrono>
-
-thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
-
-struct thread_ctrl::internal
-{
-	std::mutex mutex;
-	std::condition_variable cond;
-	std::condition_variable jcv; // Allows simultaneous joining
-	std::condition_variable icv;
-
-	task_stack atexit;
-
-	std::exception_ptr exception; // Stored exception
-
-	std::chrono::high_resolution_clock::time_point time_limit;
-
-#ifdef _WIN32
-	DWORD thread_id = 0;
-#endif
-
-	x64_context _context{};
-	x64_context* const thread_ctx = &this->_context;
-
-	atomic_t<void(*)()> interrupt{}; // Interrupt function
-};
-
-thread_local thread_ctrl::internal* g_tls_internal = nullptr;
-
-extern std::condition_variable& get_current_thread_cv()
-{
-	return g_tls_internal->cond;
-}
-
 // TODO
 extern atomic_t<u32> g_thread_count(0);
+
+thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 extern thread_local std::string(*g_tls_log_prefix)();
 
 void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
 {
-	reinterpret_cast<std::thread&>(ctrl->m_thread) = std::thread([ctrl, task = std::move(task)]
+#ifdef _WIN32
+	using thread_result = uint;
+	using thread_type = thread_result(__stdcall*)(void* arg);
+#else
+	using thread_result = void*;
+	using thread_type = thread_result(*)(void* arg);
+#endif
+
+	// Thread entry point
+	const thread_type entry = [](void* arg) -> thread_result
 	{
+		// Recover shared_ptr from short-circuited thread_ctrl object pointer
+		const std::shared_ptr<thread_ctrl> ctrl = static_cast<thread_ctrl*>(arg)->m_self;
+
 		try
 		{
 			ctrl->initialize();
-			task.exec();
+			task_stack{std::move(ctrl->m_task)}.invoke();
 		}
 		catch (...)
 		{
-			ctrl->m_data->exception = std::current_exception();
+			// Capture exception
+			ctrl->finalize(std::current_exception());
+			return 0;
 		}
 
-		ctrl->finalize();
-	});
-}
+		ctrl->finalize(nullptr);
+		return 0;
+	};
 
-void thread_ctrl::wait_start(u64 timeout)
-{
-	m_data->time_limit = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(timeout);
-}
+	ctrl->m_self = ctrl;
+	ctrl->m_task = std::move(task);
 
-bool thread_ctrl::wait_wait(u64 timeout)
-{
-	std::unique_lock<std::mutex> lock(m_data->mutex, std::adopt_lock);
+	// TODO: implement simple thread pool
+#ifdef _WIN32
+	std::uintptr_t thread = _beginthreadex(nullptr, 0, entry, ctrl.get(), 0, nullptr);
+	verify("thread_ctrl::start" HERE), thread != 0;
+#else
+	pthread_t thread;
+	verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get());
+#endif
 
-	if (timeout && m_data->cond.wait_until(lock, m_data->time_limit) == std::cv_status::timeout)
-	{
-		lock.release();
-		return false;
-	}
-
-	m_data->cond.wait(lock);
-	lock.release();
-	return true;
-}
-
-void thread_ctrl::test()
-{
-	if (m_data && m_data->exception)
-	{
-		std::rethrow_exception(m_data->exception);
-	}
+	// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize
+	ctrl->m_thread = thread;
 }
 
 void thread_ctrl::initialize()
 {
 	// Initialize TLS variable
 	g_tls_this_thread = this;
-	g_tls_internal = this->m_data;
-#ifdef _WIN32
-	m_data->thread_id = GetCurrentThreadId();
-#endif
 
 	g_tls_log_prefix = []
 	{
@@ -1983,8 +1956,7 @@ void thread_ctrl::initialize()
 
 	++g_thread_count;
 
-#if defined(_MSC_VER)
-
+#ifdef _MSC_VER
 	struct THREADNAME_INFO
 	{
 		DWORD dwType;
@@ -2010,11 +1982,10 @@ void thread_ctrl::initialize()
 		{
 		}
 	}
-
 #endif
 }
 
-void thread_ctrl::finalize() noexcept
+void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 {
 	// Disable and discard possible interrupts
 	interrupt_disable();
@@ -2023,135 +1994,213 @@ void thread_ctrl::finalize() noexcept
 	// TODO
 	vm::reservation_free();
 
-	// Call atexit functions
-	if (m_data) m_data->atexit.exec();
+	// Run atexit functions
+	m_task.invoke();
+	m_task.reset();
+
+#ifdef _WIN32
+	ULONG64 cycles{};
+	QueryThreadCycleTime(GetCurrentThread(), &cycles);
+	FILETIME ctime, etime, ktime, utime;
+	GetThreadTimes(GetCurrentThread(), &ctime, &etime, &ktime, &utime);
+	const u64 time = ((ktime.dwLowDateTime | (u64)ktime.dwHighDateTime << 32) + (utime.dwLowDateTime | (u64)utime.dwHighDateTime << 32)) * 100ull;
+#elif __linux__
+	const u64 cycles = 0; // Not supported
+	struct ::rusage stats{};
+	::getrusage(RUSAGE_THREAD, &stats);
+	const u64 time = (stats.ru_utime.tv_sec + stats.ru_stime.tv_sec) * 1000000000ull + (stats.ru_utime.tv_usec + stats.ru_stime.tv_usec) * 1000ull;
+#else
+	const u64 cycles = 0;
+	const u64 time = 0;
+#endif
+
+	LOG_NOTICE(GENERAL, "Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u];",
+		time / 1000000000.,
+		cycles / 1000000000.,
+		vm::g_tls_fault_count,
+		g_tls_fault_rsx,
+		g_tls_fault_spu);
 
 	--g_thread_count;
 
-#ifdef _WIN32
-	ULONG64 time;
-	QueryThreadCycleTime(GetCurrentThread(), &time);
-	LOG_NOTICE(GENERAL, "Thread time: %f Gc", time / 1000000000.);
-#endif
+	// Untangle circular reference, set exception
+	semaphore_lock{m_mutex}, m_self.reset(), m_exception = eptr;
+
+	// Signal joining waiters
+	m_jcv.notify_all();
 }
 
-void thread_ctrl::push_atexit(task_stack task)
+void thread_ctrl::_push(task_stack task)
 {
-	m_data->atexit.push(std::move(task));
+	g_tls_this_thread->m_task.push(std::move(task));
+}
+
+bool thread_ctrl::_wait_for(u64 usec)
+{
+	auto _this = g_tls_this_thread;
+
+	struct half_lock
+	{
+		semaphore<>& ref;
+
+		void lock()
+		{
+			// Used to avoid additional lock + unlock
+		}
+
+		void unlock()
+		{
+			ref.post();
+		}
+	}
+	_lock{_this->m_mutex};
+	
+	if (u32 sig = _this->m_signal.load())
+	{
+		thread_ctrl::test();
+
+		if (sig & 1)
+		{
+			_this->m_signal &= ~1;
+			return true;
+		}
+	}
+
+	_this->m_mutex.wait();
+
+	while (_this->m_cond.wait(_lock, usec))
+	{
+		if (u32 sig = _this->m_signal.load())
+		{
+			thread_ctrl::test();
+
+			if (sig & 1)
+			{
+				_this->m_signal &= ~1;
+				return true;
+			}
+		}
+
+		if (usec != -1)
+		{
+			return false;
+		}
+
+		_this->m_mutex.wait();
+
+		if (u32 sig = _this->m_signal.load())
+		{
+			if (sig & 2 && _this->m_exception)
+			{
+				_this->_throw();
+			}
+
+			if (sig & 1)
+			{
+				_this->m_signal &= ~1;
+				_this->m_mutex.post();
+				return true;
+			}
+		}
+	}
+
+	// Timeout
+	return false;
+}
+
+[[noreturn]] void thread_ctrl::_throw()
+{
+	std::exception_ptr ex = std::exchange(m_exception, std::exception_ptr{});
+	m_signal &= ~3;
+	m_mutex.post();
+	std::rethrow_exception(std::move(ex));
+}
+
+void thread_ctrl::_notify(cond_variable thread_ctrl::* ptr)
+{
+	// Optimized lock + unlock
+	if (!m_mutex.get())
+	{
+		m_mutex.wait();
+		m_mutex.post();
+	}
+
+	(this->*ptr).notify_one();
 }
 
 thread_ctrl::thread_ctrl(std::string&& name)
 	: m_name(std::move(name))
 {
-	static_assert(sizeof(std::thread) <= sizeof(m_thread), "Small storage");
-
-#pragma push_macro("new")
-#undef new
-	new (&m_thread) std::thread;
-#pragma pop_macro("new")
-
-	initialize_once();
 }
 
 thread_ctrl::~thread_ctrl()
 {
-	if (reinterpret_cast<std::thread&>(m_thread).joinable())
+	if (m_thread)
 	{
-		reinterpret_cast<std::thread&>(m_thread).detach();
+#ifdef _WIN32
+		CloseHandle((HANDLE)m_thread.raw());
+#else
+		pthread_detach(m_thread.raw());
+#endif
 	}
-
-	delete m_data;
-
-	reinterpret_cast<std::thread&>(m_thread).~thread();
 }
 
-void thread_ctrl::initialize_once()
+std::exception_ptr thread_ctrl::get_exception() const
 {
-	if (UNLIKELY(!m_data))
-	{
-		auto ptr = new thread_ctrl::internal;
+	semaphore_lock lock(m_mutex);
+	return m_exception;
+}
 
-		if (!m_data.compare_and_swap_test(nullptr, ptr))
-		{
-			delete ptr;
-		}
+void thread_ctrl::set_exception(std::exception_ptr ptr)
+{
+	semaphore_lock lock(m_mutex);
+	m_exception = ptr;
+
+	if (m_exception)
+	{
+		m_signal |= 2;
+		m_cond.notify_one();
+	}
+	else
+	{
+		m_signal &= ~2;
 	}
 }
 
 void thread_ctrl::join()
 {
-	// Increase contention counter
-	const u32 _j = m_joining++;
+#ifdef _WIN32
+	//verify("thread_ctrl::join" HERE), WaitForSingleObjectEx((HANDLE)m_thread.load(), -1, false) == WAIT_OBJECT_0;
+#endif
 
-	if (LIKELY(_j >= 0x80000000))
-	{
-		// Already joined (signal condition)
-		m_joining = 0x80000000;
-	}
-	else if (LIKELY(_j == 0))
-	{
-		// Winner joins the thread
-		reinterpret_cast<std::thread&>(m_thread).join();
+	semaphore_lock lock(m_mutex);
 
-		// Notify others if necessary
-		if (UNLIKELY(m_joining.exchange(0x80000000) != 1))
-		{
-			// Serialize for reliable notification
-			m_data->mutex.lock();
-			m_data->mutex.unlock();
-			m_data->jcv.notify_all();
-		}
-	}
-	else
+	while (m_self)
 	{
-		// Hard way
-		std::unique_lock<std::mutex> lock(m_data->mutex);
-		m_data->jcv.wait(lock, [&] { return m_joining >= 0x80000000; });
+		m_jcv.wait(lock);
 	}
 
-	if (UNLIKELY(m_data && m_data->exception && !std::uncaught_exception()))
+	if (UNLIKELY(m_exception && !std::uncaught_exception()))
 	{
-		std::rethrow_exception(m_data->exception);
+		std::rethrow_exception(m_exception);
 	}
-}
-
-void thread_ctrl::lock()
-{
-	m_data->mutex.lock();
-}
-
-void thread_ctrl::unlock()
-{
-	m_data->mutex.unlock();
-}
-
-void thread_ctrl::lock_notify()
-{
-	if (UNLIKELY(g_tls_this_thread == this))
-	{
-		return;
-	}
-
-	// Serialize for reliable notification, condition is assumed to be changed externally
-	m_data->mutex.lock();
-	m_data->mutex.unlock();
-	m_data->cond.notify_one();
 }
 
 void thread_ctrl::notify()
 {
-	m_data->cond.notify_one();
+	if (!(m_signal & 1))
+	{
+		m_signal |= 1;
+		_notify(&thread_ctrl::m_cond);
+	}
 }
 
-void thread_ctrl::set_exception(std::exception_ptr e)
-{
-	m_data->exception = e;
-}
+static thread_local x64_context s_tls_context{};
 
 static void _handle_interrupt(x64_context* ctx)
 {
 	// Copy context for further use (TODO: is it safe on all platforms?)
-	g_tls_internal->_context = *ctx;
+	s_tls_context = *ctx;
 	thread_ctrl::handle_interrupt();
 }
 
@@ -2166,7 +2215,7 @@ static thread_local void(*s_tls_handler)() = nullptr;
 	s_tls_handler();
 
 	// Restore context in the case of return
-	const auto ctx = g_tls_internal->thread_ctx;
+	const auto ctx = &s_tls_context;
 
 	if (s_tls_ret_pos)
 	{
@@ -2188,26 +2237,22 @@ static thread_local void(*s_tls_handler)() = nullptr;
 void thread_ctrl::handle_interrupt()
 {
 	const auto _this = g_tls_this_thread;
-	const auto ctx = g_tls_internal->thread_ctx;
+	const auto ctx = &s_tls_context;
 
 	if (_this->m_guard & 0x80000000)
 	{
 		// Discard interrupt if interrupts are disabled
-		if (g_tls_internal->interrupt.exchange(nullptr))
+		if (_this->m_iptr.exchange(nullptr))
 		{
-			_this->lock();
-			_this->unlock();
-			g_tls_internal->icv.notify_one();
+			_this->_notify(&thread_ctrl::m_icv);
 		}
 	}
 	else if (_this->m_guard == 0)
 	{
 		// Set interrupt immediately if no guard set
-		if (const auto handler = g_tls_internal->interrupt.exchange(nullptr))
+		if (const auto handler = _this->m_iptr.exchange(nullptr))
 		{
-			_this->lock();
-			_this->unlock();
-			g_tls_internal->icv.notify_one();
+			_this->_notify(&thread_ctrl::m_icv);
 
 #ifdef _WIN32
 			// Install function call
@@ -2234,13 +2279,15 @@ void thread_ctrl::handle_interrupt()
 
 void thread_ctrl::interrupt(void(*handler)())
 {
+	semaphore_lock lock(m_mutex);
+
 	verify(HERE), this != g_tls_this_thread; // TODO: self-interrupt
-	verify(HERE), m_data->interrupt.compare_and_swap_test(nullptr, handler); // TODO: multiple interrupts
+	verify(HERE), m_iptr.compare_and_swap_test(nullptr, handler); // TODO: multiple interrupts
 
 #ifdef _WIN32
-	const auto ctx = m_data->thread_ctx;
+	const auto ctx = &s_tls_context;
 
-	const HANDLE nt = OpenThread(THREAD_ALL_ACCESS, FALSE, m_data->thread_id);
+	const HANDLE nt = (HANDLE)m_thread.load();//OpenThread(THREAD_ALL_ACCESS, FALSE, m_data->thread_id);
 	verify(HERE), nt;
 	verify(HERE), SuspendThread(nt) != -1;
 
@@ -2254,28 +2301,24 @@ void thread_ctrl::interrupt(void(*handler)())
 
 	RIP(ctx) = _rip;
 	verify(HERE), ResumeThread(nt) != -1;
-	CloseHandle(nt);
+	//CloseHandle(nt);
 #else
-	pthread_kill(reinterpret_cast<std::thread&>(m_thread).native_handle(), SIGUSR1);
+	pthread_kill(m_thread.load(), SIGUSR1);
 #endif
 
-	std::unique_lock<std::mutex> lock(m_data->mutex, std::adopt_lock);
-
-	while (m_data->interrupt)
+	while (m_iptr)
 	{
-		m_data->icv.wait(lock);
+		m_icv.wait(lock);
 	}
-
-	lock.release();
 }
 
 void thread_ctrl::test_interrupt()
 {
 	if (m_guard & 0x80000000)
 	{
-		if (m_data->interrupt.exchange(nullptr))
+		if (m_iptr.exchange(nullptr))
 		{
-			lock(), unlock(), m_data->icv.notify_one();
+			_notify(&thread_ctrl::m_icv);
 		}
 		
 		return;
@@ -2286,18 +2329,30 @@ void thread_ctrl::test_interrupt()
 		m_guard = 0;
 
 		// Execute delayed interrupt handler
-		if (const auto handler = m_data->interrupt.exchange(nullptr))
+		if (const auto handler = m_iptr.exchange(nullptr))
 		{
-			lock(), unlock(), m_data->icv.notify_one();
+			_notify(&thread_ctrl::m_icv);
 
 			return handler();
 		}
 	}
 }
 
-void thread_ctrl::sleep(u64 useconds)
+void thread_ctrl::test()
 {
-	std::this_thread::sleep_for(std::chrono::microseconds(useconds));
+	const auto _this = g_tls_this_thread;
+
+	if (_this->m_signal & 2)
+	{
+		_this->m_mutex.wait();
+
+		if (_this->m_exception)
+		{
+			_this->_throw();
+		}
+
+		_this->m_mutex.post();
+	}
 }
 
 
@@ -2340,4 +2395,8 @@ void named_thread::start_thread(const std::shared_ptr<void>& _this)
 
 		on_exit();
 	});
+}
+
+task_stack::task_base::~task_base()
+{
 }

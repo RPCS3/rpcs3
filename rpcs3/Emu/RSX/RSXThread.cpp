@@ -377,7 +377,7 @@ namespace rsx
 							{ ppu_cmd::lle_call, vblank_handler },
 						});
 
-						intr_thread->lock_notify();
+						intr_thread->notify();
 					}
 
 					continue;
@@ -697,7 +697,7 @@ namespace rsx
 
 	//void thread::invoke(std::function<bool()> callback)
 	//{
-	//	if (operator->() == thread_ctrl::get_current())
+	//	if (get() == thread_ctrl::get_current())
 	//	{
 	//		while (true)
 	//		{

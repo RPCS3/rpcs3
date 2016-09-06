@@ -773,8 +773,6 @@ void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 {
 	bool shouldExit;
 
-	std::unique_lock<named_thread> lock(spu, std::defer_lock);
-
 	while (true)
 	{
 		vm::reservation_acquire(vm::base(spu.offset + 0x100), vm::cast(ctxt->spurs.addr(), HERE), 128);
@@ -862,8 +860,6 @@ void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 		if (spuIdling && shouldExit == false && foundReadyWorkload == false)
 		{
 			// The system service blocks by making a reservation and waiting on the lock line reservation lost event.
-			CHECK_EMU_STATUS;
-			if (!lock) { lock.lock(); continue; }
 			thread_ctrl::wait_for(1000);
 			continue;
 		}

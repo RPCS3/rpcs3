@@ -440,7 +440,7 @@ void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 	if (cpu && test(cpu->state & cpu_state_pause))
 	{
 		cpu->state -= cpu_flag::dbg_pause;
-		(*cpu)->lock_notify();
+		cpu->notify();
 	}
 }
 
@@ -462,7 +462,7 @@ void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 			state -= cpu_flag::dbg_pause;
 		})))
 		{
-			(*cpu)->lock_notify();
+			cpu->notify();
 		}
 	}
 }

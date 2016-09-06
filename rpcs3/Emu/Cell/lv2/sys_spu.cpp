@@ -421,7 +421,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_flag::suspend;
-			thread->lock_notify();
+			thread->notify();
 		}
 	}
 
@@ -504,7 +504,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 		if (thread)
 		{
 			thread->state += cpu_flag::stop;
-			thread->lock_notify();
+			thread->notify();
 		}
 	}
 
@@ -563,7 +563,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 		CHECK_EMU_STATUS;
 
-		group->cv.wait_for(lv2_lock, 1ms);
+		group->cv.wait(lv2_lock, 1000);
 	}
 
 	switch (group->join_state & ~SPU_TGJSF_IS_JOINING)

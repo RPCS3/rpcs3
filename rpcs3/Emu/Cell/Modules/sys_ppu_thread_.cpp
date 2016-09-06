@@ -50,7 +50,7 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 			return eq.name == "_mxr000\0"_u64;
 		}))
 		{
-			thread_ctrl::sleep(50000);
+			thread_ctrl::wait_for(50000);
 		}
 	}
 

@@ -928,7 +928,7 @@ struct psp2_event_flag final
 				idm::check<ARMv7Thread>(cmd.arg, [](auto& cpu)
 				{
 					cpu.state += cpu_flag::signal;
-					cpu.lock_notify();
+					cpu.notify();
 				});
 
 				break;
@@ -955,7 +955,7 @@ struct psp2_event_flag final
 		{
 			if (!exec(task::signal, cpu.id))
 			{
-				thread_lock{cpu}, thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
+				thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
 			}
 			else
 			{
@@ -980,7 +980,7 @@ private:
 				cpu.GPR[0] = SCE_KERNEL_ERROR_EVF_MULTI;
 				cpu.GPR[1] = pattern;
 				cpu.state += cpu_flag::signal;
-				cpu->lock_notify();
+				cpu.notify();
 				return;
 			}
 
@@ -1002,7 +1002,7 @@ private:
 				cpu.GPR[0] = SCE_OK;
 				cpu.GPR[1] = old_pattern;
 				cpu.state += cpu_flag::signal;
-				cpu->lock_notify();
+				cpu.notify();
 			}
 			else
 			{
@@ -1100,7 +1100,7 @@ private:
 					cpu.state += cpu_flag::signal;
 					cpu.owner = nullptr;
 					waiters -= attr & SCE_KERNEL_ATTR_MULTI ? 1 : cpu.id;
-					cpu->lock_notify();
+					cpu.notify();
 				}
 			}
 		}
@@ -1131,7 +1131,7 @@ private:
 			cpu.GPR[1] = _pattern;
 			cpu.state += cpu_flag::signal;
 			cpu.owner = nullptr;
-			cpu.lock_notify();
+			cpu.notify();
 		}
 
 		pattern = _pattern;
@@ -1268,20 +1268,34 @@ error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u
 	// Second chance
 	if (!evf->exec(psp2_event_flag::task::wait, cpu.id) || !cpu.state.test_and_reset(cpu_flag::signal))
 	{
-		thread_lock lock(cpu);
-
-		if (!thread_ctrl::wait_for(timeout, [&] { return cpu.state.test_and_reset(cpu_flag::signal); }))
+		while (!cpu.state.test_and_reset(cpu_flag::signal))
 		{
-			if (!evf->exec(psp2_event_flag::task::timeout, cpu.id))
+			if (timeout)
 			{
-				if (!evf->exec(psp2_event_flag::task::signal, cpu.id))
+				const u64 passed = get_system_time() - start_time;
+
+				if (passed >= timeout)
 				{
-					thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
+					if (!evf->exec(psp2_event_flag::task::timeout, cpu.id))
+					{
+						if (!evf->exec(psp2_event_flag::task::signal, cpu.id))
+						{
+							thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
+						}
+						else
+						{
+							cpu.state -= cpu_flag::signal;
+						}
+					}
+
+					break;
 				}
-				else
-				{
-					cpu.state -= cpu_flag::signal;
-				}
+
+				thread_ctrl::wait_for(timeout - passed);
+			}
+			else
+			{
+				thread_ctrl::wait();
 			}
 		}
 	}

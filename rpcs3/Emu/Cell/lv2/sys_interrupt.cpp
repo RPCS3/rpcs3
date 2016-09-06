@@ -28,7 +28,7 @@ void lv2_int_serv_t::exec()
 		{ ppu_cmd::lle_call, 2 },
 	});
 
-	thread->lock_notify();
+	thread->notify();
 }
 
 void lv2_int_serv_t::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
@@ -41,14 +41,14 @@ void lv2_int_serv_t::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
 		{ ppu_cmd::opcode, ppu_instructions::SC(0) },
 	});
 
-	thread->lock_notify();
+	thread->notify();
 
 	// Join thread (TODO)
 	while (!test(thread->state & cpu_flag::exit))
 	{
 		CHECK_EMU_STATUS;
 
-		get_current_thread_cv().wait_for(lv2_lock, 1ms);
+		LV2_UNLOCK, thread_ctrl::wait_for(1000);
 	}
 
 	// Cleanup
@@ -155,7 +155,7 @@ void sys_interrupt_thread_eoi(ppu_thread& ppu) // Low-level PPU function example
 	if (ppu.lr == 0 || ppu.gpr[11] != 88)
 	{
 		// Low-level function must disable interrupts before throwing (not related to sys_interrupt_*, it's rather coincidence)
-		ppu->interrupt_disable();
+		ppu.get()->interrupt_disable();
 		throw cpu_flag::ret;
 	}
 }

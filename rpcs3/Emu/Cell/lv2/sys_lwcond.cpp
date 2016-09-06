@@ -202,11 +202,11 @@ s32 _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 t
 				}
 			}
 
-			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			get_current_thread_cv().wait(lv2_lock);
+			LV2_UNLOCK, thread_ctrl::wait();
 		}
 	}
 

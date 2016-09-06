@@ -157,7 +157,7 @@ struct lv2_spu_group_t
 	s32 exit_status; // SPU Thread Group Exit Status
 
 	atomic_t<u32> join_state; // flags used to detect exit cause
-	std::condition_variable cv; // used to signal waiting PPU thread
+	cond_variable cv; // used to signal waiting PPU thread
 
 	std::weak_ptr<lv2_event_queue_t> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
 	std::weak_ptr<lv2_event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION

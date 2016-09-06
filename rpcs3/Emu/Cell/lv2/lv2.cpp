@@ -1013,4 +1013,4 @@ extern ppu_function_t ppu_get_syscall(u64 code)
 	return nullptr;
 }
 
-DECLARE(lv2_lock_t::mutex);
+DECLARE(lv2_lock_guard::g_sema);

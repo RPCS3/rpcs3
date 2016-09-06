@@ -799,7 +799,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 		{ aio, func },
 	});
 
-	m->thread->lock_notify();
+	m->thread->notify();
 
 	return CELL_OK;
 }
@@ -825,7 +825,7 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 		{ aio, func },
 	});
 
-	m->thread->lock_notify();
+	m->thread->notify();
 
 	return CELL_OK;
 }

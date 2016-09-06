@@ -74,7 +74,7 @@ s32 sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	{
 		CHECK_EMU_STATUS;
 
-		get_current_thread_cv().wait_for(lv2_lock, 1ms);
+		LV2_UNLOCK, thread_ctrl::wait_for(1000);
 	}
 
 	// get exit status from the register

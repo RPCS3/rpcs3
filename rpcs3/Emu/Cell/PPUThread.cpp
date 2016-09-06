@@ -312,33 +312,22 @@ void ppu_thread::cmd_pop(u32 count)
 
 cmd64 ppu_thread::cmd_wait()
 {
-	std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 	while (true)
 	{
 		if (UNLIKELY(test(state)))
 		{
-			if (lock) lock.unlock();
-
-			if (check_state()) // check_status() requires unlocked mutex
+			if (check_state())
 			{
 				return cmd64{};
 			}
 		}
 
-		// Lightweight queue doesn't care about mutex state
 		if (cmd64 result = cmd_queue[cmd_queue.peek()].exchange(cmd64{}))
 		{
 			return result;
 		}
 
-		if (!lock)
-		{
-			lock.lock();
-			continue;
-		}
-
-		thread_ctrl::wait(); // Waiting requires locked mutex
+		thread_ctrl::wait();
 	}
 }
 

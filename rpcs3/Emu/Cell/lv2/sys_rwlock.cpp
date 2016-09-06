@@ -130,11 +130,11 @@ s32 sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			get_current_thread_cv().wait(lv2_lock);
+			LV2_UNLOCK, thread_ctrl::wait();
 		}
 	}
 
@@ -253,11 +253,11 @@ s32 sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			get_current_thread_cv().wait(lv2_lock);
+			LV2_UNLOCK, thread_ctrl::wait();
 		}
 	}
 

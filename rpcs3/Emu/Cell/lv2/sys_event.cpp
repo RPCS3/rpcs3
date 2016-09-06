@@ -282,11 +282,11 @@ s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t>
 				return CELL_ETIMEDOUT;
 			}
 
-			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			get_current_thread_cv().wait(lv2_lock);
+			LV2_UNLOCK, thread_ctrl::wait();
 		}
 	}
 

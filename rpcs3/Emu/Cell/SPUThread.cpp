@@ -503,7 +503,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 u32 SPUThread::get_events(bool waiting)
 {
 	// check reservation status and set SPU_EVENT_LR if lost
-	if (last_raddr != 0 && !vm::reservation_test(operator->()))
+	if (last_raddr != 0 && !vm::reservation_test(this->get()))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 
@@ -546,7 +546,7 @@ void SPUThread::set_events(u32 mask)
 	// Notify if some events were set
 	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING && ch_event_stat & SPU_EVENT_WAITING)
 	{
-		lock_notify();
+		notify();
 	}
 }
 
@@ -600,7 +600,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		if (!channel.try_pop(out))
 		{
-			thread_lock{*this}, thread_ctrl::wait([&] { return test(state & cpu_flag::stop) || channel.try_pop(out); });
+			thread_ctrl::wait([&] { return test(state & cpu_flag::stop) || channel.try_pop(out); });
 
 			return !test(state & cpu_flag::stop);
 		}
@@ -615,8 +615,6 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	//	break;
 	case SPU_RdInMbox:
 	{
-		std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 		while (true)
 		{
 			if (const uint old_count = ch_in_mbox.try_pop(out))
@@ -634,12 +632,6 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			if (test(state & cpu_flag::stop))
 			{
 				return false;
-			}
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
 			}
 
 			thread_ctrl::wait();
@@ -691,8 +683,6 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdEventStat:
 	{
-		std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 		// start waiting or return immediately
 		if (u32 res = get_events(true))
 		{
@@ -707,8 +697,6 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		}
 		else
 		{
-			lock.lock();
-
 			// simple waiting loop otherwise
 			while (!get_events(true) && !test(state & cpu_flag::stop))
 			{
@@ -754,8 +742,6 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
-			std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 			while (!ch_out_intr_mbox.try_push(value))
 			{
 				CHECK_EMU_STATUS;
@@ -763,12 +749,6 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				if (test(state & cpu_flag::stop))
 				{
 					return false;
-				}
-
-				if (!lock)
-				{
-					lock.lock();
-					continue;
 				}
 
 				thread_ctrl::wait();
@@ -961,8 +941,6 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
-		std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 		while (!ch_out_mbox.try_push(value))
 		{
 			CHECK_EMU_STATUS;
@@ -970,12 +948,6 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			if (test(state & cpu_flag::stop))
 			{
 				return false;
-			}
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
 			}
 
 			thread_ctrl::wait();
@@ -1237,7 +1209,7 @@ bool SPUThread::stop_and_signal(u32 code)
 				return false;
 			}
 
-			group->cv.wait_for(lv2_lock, 1ms);
+			group->cv.wait(lv2_lock, 1000);
 		}
 
 		// change group status
@@ -1278,7 +1250,7 @@ bool SPUThread::stop_and_signal(u32 code)
 					return false;
 				}
 
-				get_current_thread_cv().wait(lv2_lock);
+				LV2_UNLOCK, thread_ctrl::wait();
 			}
 
 			// event data must be set by push()
@@ -1303,7 +1275,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state -= cpu_flag::suspend;
-				thread->lock_notify();
+				thread->notify();
 			}
 		}
 
@@ -1342,7 +1314,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_flag::stop;
-				thread->lock_notify();
+				thread->notify();
 			}
 		}
 

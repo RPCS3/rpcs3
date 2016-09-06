@@ -408,11 +408,15 @@ void Emulator::Resume()
 
 	SendDbgCommand(DID_RESUME_EMU);
 
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 	{
-		cpu.state -= cpu_flag::dbg_global_pause;
-		cpu.lock_notify();
-	});
+		LV2_LOCK;
+
+		idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+		{
+			cpu.state -= cpu_flag::dbg_global_pause;
+			cpu.notify();
+		});
+	}
 
 	rpcs3::on_resume()();
 
@@ -437,10 +441,8 @@ void Emulator::Stop()
 		idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
 		{
 			cpu.state += cpu_flag::dbg_global_stop;
-			cpu->lock();
-			cpu->set_exception(std::make_exception_ptr(EmulationStopped()));
-			cpu->unlock();
-			cpu->notify();
+			cpu.get()->set_exception(std::make_exception_ptr(EmulationStopped()));
+			cpu.notify();
 		});
 	}
 
