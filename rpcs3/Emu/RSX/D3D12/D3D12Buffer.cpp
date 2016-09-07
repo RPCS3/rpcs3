@@ -154,7 +154,7 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
 
 	u32 vertex_count = get_vertex_count(vertex_ranges);
-	verify(HERE), rsx::method_registers.vertex_data_base_index() == 0;
+	//verify(HERE), rsx::method_registers.vertex_data_base_index() == 0;
 
 	vertex_buffer_visitor visitor(vertex_count, command_list, m_vertex_buffer_data.Get(), m_buffer_data);
 	const auto& vertex_buffers = get_vertex_buffers(rsx::method_registers, vertex_ranges);
