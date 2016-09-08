@@ -102,8 +102,6 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
 		}
 	}
-
-	OS << std::endl;
 }
 
 struct reg_info

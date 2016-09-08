@@ -151,6 +151,17 @@ namespace vk
 			m_cache.resize(0);
 		}
 
+		//Helpers
+		VkComponentMapping get_component_map(rsx::fragment_texture &tex, u32 gcm_format)
+		{
+			return vk::get_component_mapping(gcm_format, tex.remap());
+		}
+
+		VkComponentMapping get_component_map(rsx::vertex_texture &tex, u32 gcm_format)
+		{
+			return{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		}
+
 	public:
 
 		texture_cache() {}
@@ -161,7 +172,8 @@ namespace vk
 			purge_cache();
 		}
 
-		vk::image_view* upload_texture(command_buffer cmd, rsx::fragment_texture &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
+		template <typename RsxTextureType>
+		vk::image_view* upload_texture(command_buffer cmd, RsxTextureType &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
@@ -193,7 +205,7 @@ namespace vk
 			u32 raw_format = tex.format();
 			u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
-			VkComponentMapping mapping = vk::get_component_mapping(format, tex.remap());
+			VkComponentMapping mapping = get_component_map(tex, format);
 			VkFormat vk_format = get_compatible_sampler_format(format);
 
 			VkImageType image_type;
@@ -251,7 +263,7 @@ namespace vk
 			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 
 			cto.uploaded_image_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), cto.uploaded_texture->value, image_view_type, vk_format,
-				vk::get_component_mapping(tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), tex.remap()),
+				mapping,
 				subresource_range);
 
 			copy_mipmaped_image_using_buffer(cmd, cto.uploaded_texture->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), tex.get_exact_mipmap_count(),

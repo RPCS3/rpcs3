@@ -364,7 +364,7 @@ namespace
 
 	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
 	{
-		std::array<VkDescriptorSetLayoutBinding, 35> bindings = {};
+		std::array<VkDescriptorSetLayoutBinding, 39> bindings = {};
 
 		size_t idx = 0;
 		// Vertex buffer
@@ -397,6 +397,15 @@ namespace
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 			bindings[idx].binding = TEXTURES_FIRST_BIND_SLOT + i;
+			idx++;
+		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[idx].descriptorCount = 1;
+			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			bindings[idx].binding = VERTEX_TEXTURES_FIRST_BIND_SLOT + i;
 			idx++;
 		}
 
@@ -674,6 +683,72 @@ void VKGSRender::end()
 				));
 
 			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
+		}
+	}
+
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	{
+		if (m_program->has_uniform("tex" + std::to_string(i)))
+		{
+			if (!rsx::method_registers.fragment_textures[i].enabled())
+			{
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
+				continue;
+			}
+
+			vk::image_view *texture0 = m_texture_cache.upload_texture(m_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+
+			if (!texture0)
+			{
+				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
+				continue;
+			}
+
+			VkFilter min_filter;
+			VkSamplerMipmapMode mip_mode;
+			std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
+
+			m_sampler_to_clean.push_back(std::make_unique<vk::sampler>(
+				*m_device,
+				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
+				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
+				rsx::method_registers.fragment_textures[i].bias(), vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), rsx::method_registers.fragment_textures[i].min_lod(), rsx::method_registers.fragment_textures[i].max_lod(),
+				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color())
+				));
+
+			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
+		}
+	}
+	
+	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	{
+		if (m_program->has_uniform("vtex" + std::to_string(i)))
+		{
+			if (!rsx::method_registers.vertex_textures[i].enabled())
+			{
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), descriptor_sets);
+				continue;
+			}
+
+			vk::image_view *texture0 = m_texture_cache.upload_texture(m_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+
+			if (!texture0)
+			{
+				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), descriptor_sets);
+				continue;
+			}
+
+			m_sampler_to_clean.push_back(std::make_unique<vk::sampler>(
+				*m_device,
+				VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+				!!(rsx::method_registers.vertex_textures[i].format() & CELL_GCM_TEXTURE_UN),
+				0, 1.f, rsx::method_registers.vertex_textures[i].min_lod(), rsx::method_registers.vertex_textures[i].max_lod(),
+				VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, vk::get_border_color(rsx::method_registers.vertex_textures[i].border_color())
+				));
+
+			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), descriptor_sets);
 		}
 	}
 

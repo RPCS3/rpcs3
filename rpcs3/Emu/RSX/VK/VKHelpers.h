@@ -15,6 +15,14 @@
 #include "../Common/ring_buffer_helper.h"
 
 #define DESCRIPTOR_MAX_DRAW_CALLS 1024
+
+#define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
+#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
+#define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 1
+#define SCALE_OFFSET_BIND_SLOT 0
+#define TEXTURES_FIRST_BIND_SLOT 19
+#define VERTEX_TEXTURES_FIRST_BIND_SLOT 35 //19+16
+
 extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 namespace rsx
@@ -1327,11 +1335,6 @@ namespace vk
 			program& load_uniforms(program_domain domain, const std::vector<program_input>& inputs);
 
 			bool has_uniform(std::string uniform_name);
-#define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
-#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
-#define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 1
-#define TEXTURES_FIRST_BIND_SLOT 19
-#define SCALE_OFFSET_BIND_SLOT 0
 			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
 			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
