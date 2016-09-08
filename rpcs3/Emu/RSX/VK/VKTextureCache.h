@@ -159,7 +159,7 @@ namespace vk
 
 		VkComponentMapping get_component_map(rsx::vertex_texture &tex, u32 gcm_format)
 		{
-			return{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+			return vk::get_component_mapping(gcm_format, (0 | 1 << 2 | 2 << 4 | 3 << 6));
 		}
 
 	public:
