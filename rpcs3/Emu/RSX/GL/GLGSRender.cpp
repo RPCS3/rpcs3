@@ -301,11 +301,6 @@ void GLGSRender::begin()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
-	{
-		__glcheck glPrimitiveRestartIndex(rsx::method_registers.restart_index());
-	}
-
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 	m_draw_calls++;
@@ -420,6 +415,12 @@ void GLGSRender::end()
 
 	if (indexed_draw_info)
 	{
+		if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		{
+			GLenum index_type = std::get<0>(indexed_draw_info.value());
+			__glcheck glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
+		}
+
 		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, std::get<0>(indexed_draw_info.value()), (GLvoid *)(std::ptrdiff_t)std::get<1>(indexed_draw_info.value()));
 	}
 	else

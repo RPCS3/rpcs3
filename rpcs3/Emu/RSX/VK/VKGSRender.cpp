@@ -959,11 +959,6 @@ bool VKGSRender::load_program()
 
 	if (rsx::method_registers.restart_index_enabled())
 	{
-		if (rsx::method_registers.restart_index() != 0xFFFF &&
-			rsx::method_registers.restart_index() != 0xFFFFFFFF)
-		{
-			LOG_ERROR(RSX, "Custom primitive restart index 0x%x should rewrite index buffer with proper value!", rsx::method_registers.restart_index());
-		}
 		properties.ia.primitiveRestartEnable = VK_TRUE;
 	}
 	else
