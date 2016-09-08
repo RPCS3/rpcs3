@@ -600,9 +600,9 @@ namespace rsx
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
 
-			__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
 			int min_filter = gl_tex_min_filter(tex.min_filter());
 
@@ -615,9 +615,9 @@ namespace rsx
 				}
 			}
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
-			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.f);
 		}
 
 		void texture::bind()
