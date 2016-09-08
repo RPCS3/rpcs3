@@ -604,17 +604,6 @@ namespace rsx
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
-			int min_filter = gl_tex_min_filter(tex.min_filter());
-
-			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
-			{
-				if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
-				{
-					LOG_WARNING(RSX, "Texture %d, target 0x%x, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
-					min_filter = GL_LINEAR;
-				}
-			}
-
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.f);
