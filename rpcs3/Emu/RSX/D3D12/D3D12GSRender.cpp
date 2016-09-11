@@ -356,7 +356,7 @@ void D3D12GSRender::end()
 		.Offset((INT)currentDescriptorIndex + vertex_buffer_count, m_descriptor_stride_srv_cbv_uav)
 		);
 
-	if (m_transform_constants_dirty)
+	if (m_transform_constants_dirty && !g_cfg_rsx_debug_output)
 	{
 		m_current_transform_constants_buffer_descriptor_id = (u32)currentDescriptorIndex + 1 + vertex_buffer_count;
 		upload_and_bind_vertex_shader_constants(currentDescriptorIndex + 1 + vertex_buffer_count);
