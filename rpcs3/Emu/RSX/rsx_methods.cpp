@@ -188,19 +188,19 @@ namespace rsx
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-			u32 first = arg & 0xffffff;
-			u32 count = (arg >> 24) + 1;
+			rsx::registers_decoder<NV4097_DRAW_ARRAYS>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(std::make_pair(first, count));
+			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(
+			    std::make_pair(v.start(), v.count()));
 		}
 
 		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
-			u32 first = arg & 0xffffff;
-			u32 count = (arg >> 24) + 1;
+			rsx::registers_decoder<NV4097_DRAW_INDEX_ARRAY>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(std::make_pair(first, count));
+			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(
+			    std::make_pair(v.start(), v.count()));
 		}
 
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
