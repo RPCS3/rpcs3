@@ -455,10 +455,10 @@ DXGI_FORMAT get_vertex_attribute_format(rsx::vertex_base_type type, u8 size)
 	{
 		switch (size)
 		{
-		case 1: return DXGI_FORMAT_R16G16B16A16_SNORM;
+		case 1:
 		case 2:
-		case 3:
-		case 4: fmt::throw_exception("Unsupported CMP vertex format with size > 1" HERE);
+		case 3: fmt::throw_exception("Unsupported CMP vertex format with size > 1" HERE);
+		case 4: return DXGI_FORMAT_R16G16B16A16_SNORM;
 		}
 		break;
 	}

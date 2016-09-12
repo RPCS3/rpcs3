@@ -23,6 +23,8 @@ void data_cache::protect_data(u64 key, u32 start, size_t size)
 
 bool data_cache::invalidate_address(u32 addr)
 {
+	// In case 2 threads write to texture memory
+	std::lock_guard<std::mutex> lock(m_mut);
 	bool handled = false;
 	auto It = m_protected_ranges.begin(), E = m_protected_ranges.end();
 	for (; It != E;)
@@ -33,7 +35,6 @@ bool data_cache::invalidate_address(u32 addr)
 		u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
 		if (addr >= protectedRangeStart && addr <= protectedRangeSize + protectedRangeStart)
 		{
-			std::lock_guard<std::mutex> lock(m_mut);
 			u64 texadrr = std::get<0>(protectedTexture);
 			m_address_to_data[texadrr].first.m_is_dirty = true;
 
