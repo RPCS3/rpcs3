@@ -2702,9 +2702,9 @@ struct registers_decoder<NV4097_SET_COLOR_CLEAR_VALUE>
 		union
 		{
 			u32 raw_value;
-			bitfield_decoder_t<0, 8> red;
+			bitfield_decoder_t<0, 8> blue;
 			bitfield_decoder_t<8, 8> green;
-			bitfield_decoder_t<16, 8> blue;
+			bitfield_decoder_t<16, 8> red;
 			bitfield_decoder_t<24, 8> alpha;
 		} m_data;
 
@@ -2712,9 +2712,9 @@ struct registers_decoder<NV4097_SET_COLOR_CLEAR_VALUE>
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
 		u8 red() const { return m_data.red; }
-		u8 green() const { return m_data.red; }
-		u8 blue() const { return m_data.red; }
-		u8 alpha() const { return m_data.red; }
+		u8 green() const { return m_data.green; }
+		u8 blue() const { return m_data.blue; }
+		u8 alpha() const { return m_data.alpha; }
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
