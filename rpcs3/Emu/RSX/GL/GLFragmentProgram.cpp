@@ -88,6 +88,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			int index = atoi(&PI.name.data()[3]);
 
 			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
+			OS << "uniform " << "vec4 " << "f" << PI.name << "_cm = vec4(1.0);" << std::endl;
 		}
 	}
 
@@ -118,33 +119,69 @@ namespace
 	// But it makes more sense to compute exp of interpoled value than to interpolate exp values.
 	void insert_fog_declaration(std::stringstream & OS, rsx::fog_mode mode)
 	{
+		std::string fog_func = {};
 		switch (mode)
 		{
 		case rsx::fog_mode::linear:
-			OS << "	vec4 fogc = vec4(fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			fog_func = "fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.)";
+			break;
 		case rsx::fog_mode::exponential:
-			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			fog_func = "11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5))";
+			break;
 		case rsx::fog_mode::exponential2:
-			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 2.), 0., 0.);\n";
-			return;
+			fog_func = "4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 2.)";
+			break;
 		case rsx::fog_mode::linear_abs:
-			OS << "	vec4 fogc = vec4(fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			fog_func = "fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.)";
+			break;
 		case rsx::fog_mode::exponential_abs:
-			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			fog_func = "11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5))";
+			break;
 		case rsx::fog_mode::exponential2_abs:
-			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.), 0., 0.);\n";
-			return;
+			fog_func = "4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.)";
+			break;
+
+		default: fog_func = "0.0, 0.0";
 		}
+
+		OS << "	vec4 fogc = clamp(vec4(" << fog_func << ", 0., 0.), 0., 1.);\n";
+	}
+
+	void insert_texture_fetch(std::stringstream & OS, const RSXFragmentProgram& prog, const ParamArray& param)
+	{
+		OS << "vec4 texture_fetch(int index, vec4 coord)\n{\n";
+		OS << "	switch (index)\n\t{\n";
+
+		for (u8 id = 0; id < 16; id++)
+		{
+			if (prog.textures_alpha_kill[id])
+			{
+				OS << "	case " + std::to_string(id) + ": return ";
+
+				switch (prog.get_texture_dimension(id))
+				{
+				case rsx::texture_dimension_extended::texture_dimension_1d: OS << "texture(tex" + std::to_string(id) + ", coord.x)"; break;
+				case rsx::texture_dimension_extended::texture_dimension_2d: OS << "texture(tex" + std::to_string(id) + ", coord.xy)"; break;
+				case rsx::texture_dimension_extended::texture_dimension_3d:
+				case rsx::texture_dimension_extended::texture_dimension_cubemap: OS << "texture(tex" + std::to_string(id) + ", coord.xyz)"; break;
+
+				default: OS << "vec4(0.0)";
+				}
+
+				OS << ";\n";
+			}
+		}
+
+		OS << "	default: return vec4(0.0);\n";
+		OS << "	}\n";
+		OS << "}\n";
 	}
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS);
+	insert_texture_fetch(OS, m_prog, m_parr);
 
 	OS << "void main ()" << std::endl;
 	OS << "{" << std::endl;
@@ -174,11 +211,11 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 			if (m_prog.unnormalized_coords & (1 << index))
 			{
-				OS << "vec2 tex" << index << "_coord_scale = 1. / textureSize(" << PI.name << ", 0);\n";
+				OS << "	vec2 tex" << index << "_coord_scale = 1. / textureSize(" << PI.name << ", 0);\n";
 			}
 			else
 			{
-				OS << "vec2 tex" << index << "_coord_scale = vec2(1.);\n";
+				OS << "	vec2 tex" << index << "_coord_scale = vec2(1.);\n";
 			}
 		}
 	}
@@ -231,27 +268,37 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	if (!first_output_name.empty())
 	{
-		switch (m_prog.alpha_func)
+		auto make_comparison_test = [](rsx::comparison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
 		{
-		case rsx::comparison_function::equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a != alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::not_equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a == alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::less_or_equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a > alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::less:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a >= alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::greater:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a <= alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::greater_or_equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a < alpha_ref) discard;\n";
-			break;
+			if (compare_func == rsx::comparison_function::always) return{};
+
+			if (compare_func == rsx::comparison_function::never) return " discard;\n";
+
+			std::string compare;
+			switch (compare_func)
+			{
+			case rsx::comparison_function::equal:            compare = " == "; break;
+			case rsx::comparison_function::not_equal:        compare = " != "; break;
+			case rsx::comparison_function::less_or_equal:    compare = " <= "; break;
+			case rsx::comparison_function::less:             compare = " < ";  break;
+			case rsx::comparison_function::greater:          compare = " > ";  break;
+			case rsx::comparison_function::greater_or_equal: compare = " >= "; break;
+			}
+
+			return "	if (" + test + "!(" + a + compare + b + ")) discard;\n";
+		};
+
+		for (u8 index = 0; index < 16; ++index)
+		{
+			if (m_prog.textures_alpha_kill[index])
+			{
+				std::string index_string = std::to_string(index);
+				std::string fetch_texture = "texture_fetch(" + index_string + ", tc" + index_string + " * ftex" + index_string + "_cm).a";
+				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+			}
 		}
+
+		OS << make_comparison_test(m_prog.alpha_func, "alpha_test != 0 && ", first_output_name + ".a", "alpha_ref");
 	}
 
 	OS << "}" << std::endl;

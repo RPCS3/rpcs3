@@ -808,9 +808,19 @@ namespace rsx
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			if (!rsx::method_registers.fragment_textures[i].enabled())
+			{
 				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
+				result.textures_alpha_kill[i] = 0;
+				result.textures_zfunc[i] = 0;
+			}
+
 			else
+			{
 				texture_dimensions[i] = rsx::method_registers.fragment_textures[i].get_extended_texture_dimension();
+				result.textures_alpha_kill[i] = rsx::method_registers.fragment_textures[i].alpha_kill_enabled() ? 1 : 0;
+				result.textures_zfunc[i] = rsx::method_registers.fragment_textures[i].zfunc();
+			}
+
 			if (rsx::method_registers.fragment_textures[i].enabled() && (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN))
 				result.unnormalized_coords |= (1 << i);
 		}
