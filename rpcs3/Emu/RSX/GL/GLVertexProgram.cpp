@@ -3,6 +3,7 @@
 
 #include "GLVertexProgram.h"
 #include "GLCommonDecompiler.h"
+#include "../GCM.h"
 
 #include <algorithm>
 
@@ -40,6 +41,55 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};" << std::endl;
 }
 
+std::vector<std::pair<std::string, std::string>> get_user_clip_planes(const RSXVertexProgram& prog)
+{
+	std::vector<std::pair<std::string, std::string>> uc_planes;
+
+	if (prog.output_mask & (1 << 5))
+	{
+		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC0)
+		{
+			uc_planes.push_back({ "uniform int uc_m0 = 0;\n",
+				"\tgl_ClipDistance[0] = uc_m0 * dst_reg5.y;\n" });
+		}
+
+		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC1)
+		{
+			uc_planes.push_back({ "uniform int uc_m1 = 0;\n",
+				"\tgl_ClipDistance[1] = uc_m1 * dst_reg5.z;\n" });
+		}
+
+		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC2)
+		{
+			uc_planes.push_back({ "uniform int uc_m2 = 0;\n",
+				"\tgl_ClipDistance[2] = uc_m2 * dst_reg5.w;\n" });
+		}
+	}
+
+	if (prog.output_mask & (1 << 6))
+	{
+		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC3)
+		{
+			uc_planes.push_back({ "uniform int uc_m3 = 0;\n",
+				"\tgl_ClipDistance[3] = uc_m3 * dst_reg6.y;\n" });
+		}
+
+		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC4)
+		{
+			uc_planes.push_back({ "uniform int uc_m4 = 0;\n",
+				"\tgl_ClipDistance[4] = uc_m4 * dst_reg6.z;\n" });
+		}
+
+		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC5)
+		{
+			uc_planes.push_back({ "uniform int uc_m5 = 0;\n",
+				"\tgl_ClipDistance[5] = uc_m5 * dst_reg6.w;\n" });
+		}
+	}
+
+	return uc_planes;
+}
+
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
 	std::vector<std::tuple<size_t, std::string>> input_data;
@@ -59,7 +109,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 	std::sort(input_data.begin(), input_data.end());
 
 	int location = 1;
-	for (const std::tuple<size_t, std::string> item : input_data)
+	for (const std::tuple<size_t, std::string>& item : input_data)
 	{
 		for (const ParamType &PT : inputs)
 		{
@@ -68,7 +118,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 				if (PI.name == std::get<1>(item))
 				{
 					bool is_int = false;
-					for (auto &attrib : rsx_vertex_program.rsx_vertex_inputs)
+					for (const auto &attrib : rsx_vertex_program.rsx_vertex_inputs)
 					{
 						if (attrib.location == std::get<0>(item))
 						{
@@ -82,6 +132,11 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 				}
 			}
 		}
+	}
+
+	for (const auto& uc : get_user_clip_planes(rsx_vertex_program))
+	{
+		OS << uc.first;
 	}
 }
 
@@ -132,7 +187,7 @@ static const reg_info reg_table[] =
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
-	for (auto &i : reg_table)
+	for (const auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
 		{
@@ -185,7 +240,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "{" << std::endl;
 
 	// Declare inside main function
-	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
 		{
@@ -205,11 +260,17 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
-	for (auto &i : reg_table)
+	for (const auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
 			OS << "	" << i.name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
 	}
+
+	for (const auto& uc : get_user_clip_planes(rsx_vertex_program))
+	{
+		OS << uc.second;
+	}
+
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
 	OS << "}" << std::endl;
 }

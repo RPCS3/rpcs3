@@ -147,7 +147,7 @@ namespace
 		OS << "	vec4 fogc = clamp(vec4(" << fog_func << ", 0., 0.), 0., 1.);\n";
 	}
 
-	void insert_texture_fetch(std::stringstream & OS, const RSXFragmentProgram& prog, const ParamArray& param)
+	void insert_texture_fetch(std::stringstream & OS, const RSXFragmentProgram& prog)
 	{
 		OS << "vec4 texture_fetch(int index, vec4 coord)\n{\n";
 		OS << "	switch (index)\n\t{\n";
@@ -181,7 +181,7 @@ namespace
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS);
-	insert_texture_fetch(OS, m_prog, m_parr);
+	insert_texture_fetch(OS, m_prog);
 
 	OS << "void main ()" << std::endl;
 	OS << "{" << std::endl;
