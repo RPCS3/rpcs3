@@ -286,6 +286,46 @@ void GLGSRender::begin()
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
 
+	auto set_clip_plane_control = [&](int index, rsx::user_clip_plane_op control)
+	{
+		int value = 0;
+		int location;
+
+		if (m_program->uniforms.has_location("uc_m" + std::to_string(index), &location))
+		{
+			switch (control)
+			{
+			default:
+				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)control);
+
+			case rsx::user_clip_plane_op::disable:
+				value = 0;
+				break;
+
+			case rsx::user_clip_plane_op::greather_or_equal:
+				value = 1;
+				break;
+
+			case rsx::user_clip_plane_op::less_than:
+				value = -1;
+				break;
+			}
+
+			__glcheck m_program->uniforms[location] = value;
+		}
+
+		__glcheck enable(value, GL_CLIP_DISTANCE0 + index);
+	};
+
+	load_program();
+	set_clip_plane_control(0, rsx::method_registers.clip_plane_0_enabled());
+	set_clip_plane_control(1, rsx::method_registers.clip_plane_1_enabled());
+	set_clip_plane_control(2, rsx::method_registers.clip_plane_2_enabled());
+	set_clip_plane_control(3, rsx::method_registers.clip_plane_3_enabled());
+	set_clip_plane_control(4, rsx::method_registers.clip_plane_4_enabled());
+	set_clip_plane_control(5, rsx::method_registers.clip_plane_5_enabled());
+
+
 	if (__glcheck enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
 	{
 		__glcheck glCullFace(cull_face(rsx::method_registers.cull_face_mode()));
