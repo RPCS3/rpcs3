@@ -11,8 +11,9 @@
 
 namespace
 {
-	UINT get_component_mapping_from_vector_size(u8 size)
+	UINT get_component_mapping_from_vector_size(rsx::vertex_base_type type, u8 size)
 	{
+		if (type == rsx::vertex_base_type::cmp) return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		switch (size)
 		{
 		case 1:
@@ -51,9 +52,8 @@ namespace
 	{
 		u32 element_size = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
-		    get_vertex_attribute_format(info.type(), info.size()),
-		    D3D12_SRV_DIMENSION_BUFFER,
-		    get_component_mapping_from_vector_size(info.size())};
+		    get_vertex_attribute_format(info.type(), info.size()), D3D12_SRV_DIMENSION_BUFFER,
+		    get_component_mapping_from_vector_size(info.type(), info.size())};
 		vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
 		vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
 		return vertex_buffer_view;
@@ -62,11 +62,8 @@ namespace
 	D3D12_SHADER_RESOURCE_VIEW_DESC get_vertex_attribute_srv(const rsx::vertex_base_type type, u8 size, UINT64 offset_in_vertex_buffers_buffer, UINT buffer_size)
 	{
 		u32 element_size = rsx::get_vertex_type_size_on_host(type, size);
-		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
-			get_vertex_attribute_format(type, size),
-			D3D12_SRV_DIMENSION_BUFFER,
-			get_component_mapping_from_vector_size(size)
-		};
+		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {get_vertex_attribute_format(type, size),
+		    D3D12_SRV_DIMENSION_BUFFER, get_component_mapping_from_vector_size(type, size)};
 		vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
 		vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
 		return vertex_buffer_view;
