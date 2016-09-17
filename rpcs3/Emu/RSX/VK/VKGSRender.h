@@ -87,24 +87,6 @@ private:
 	void prepare_rtts();
 	/// returns primitive topology, is_indexed, index_count, offset in index buffer, index type
 	std::tuple<VkPrimitiveTopology, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
-
-	void upload_vertex_buffers(u32 min_index, u32 vertex_max_index);
-
-	/// returns number of vertex drawn
-	u32 upload_inlined_array();
-
-	/**
-	 * Upload index (and expands it if primitive type is not natively supported).
-	 * Returns min index, max index, index_count, and (offset_in_index_buffer, index_type)
-	 */
-	std::tuple<u32, u32, u32, std::tuple<VkDeviceSize, VkIndexType>> upload_index_buffer(const rsx::draw_clause &clause);
-
-	/**
-	 * Creates and fills an index buffer emulating unsupported primitive type.
-	 * Returns index_count and (offset_in_index_buffer, index_type)
-	 */
-	std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType> > generate_emulating_index_buffer(const rsx::draw_clause &clause, u32 vertex_count);
-
 public:
 	bool load_program();
 	void init_buffers(bool skip_reading = false);
