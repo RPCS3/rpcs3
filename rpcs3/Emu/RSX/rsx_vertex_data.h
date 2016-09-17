@@ -50,6 +50,11 @@ public:
 	{
 		return decode_reg().type();
 	}
+
+	void reset()
+	{
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index] = 0x2;
+	}
 };
 
 struct register_vertex_data_info
