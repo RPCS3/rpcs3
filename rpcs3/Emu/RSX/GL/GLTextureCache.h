@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "GLGSRender.h"
-#include "gl_render_targets.h"
+#include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
 #include <chrono>
 

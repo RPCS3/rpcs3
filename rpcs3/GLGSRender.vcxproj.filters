@@ -1,20 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="Emu\RSX\GL\rsx_gl_texture.cpp" />
-    <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLTexture.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
-    <ClCompile Include="Emu\RSX\GL\gl_render_targets.cpp" />
-    <ClCompile Include="Emu\RSX\GL\vertex_buffer.cpp" />
-    <ClCompile Include="Emu\RSX\GL\rsx_gl_cache.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />
-    <ClInclude Include="Emu\RSX\GL\gl_helpers.h" />
+    <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
+    <ClInclude Include="Emu\RSX\GL\GLHelpers.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLGSRender.h" />
@@ -22,8 +21,7 @@
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
-    <ClInclude Include="Emu\RSX\GL\gl_texture_cache.h" />
-    <ClInclude Include="Emu\RSX\GL\gl_render_targets.h" />
-    <ClInclude Include="Emu\RSX\GL\rsx_gl_cache.h" />
+    <ClInclude Include="Emu\RSX\GL\GLTextureCache.h" />
+    <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
   </ItemGroup>
 </Project>
