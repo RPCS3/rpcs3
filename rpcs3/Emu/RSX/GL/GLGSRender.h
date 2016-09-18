@@ -1,9 +1,9 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
-#include "gl_helpers.h"
-#include "rsx_gl_texture.h"
-#include "gl_texture_cache.h"
-#include "gl_render_targets.h"
+#include "GLHelpers.h"
+#include "GLTexture.h"
+#include "GLTextureCache.h"
+#include "GLRenderTargets.h"
 #include <Utilities/optional.hpp>
 #include "GLProgramBuffer.h"
 

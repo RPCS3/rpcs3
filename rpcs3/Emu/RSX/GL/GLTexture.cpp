@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "rsx_gl_texture.h"
-#include "gl_helpers.h"
+#include "GLTexture.h"
+#include "GLHelpers.h"
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"

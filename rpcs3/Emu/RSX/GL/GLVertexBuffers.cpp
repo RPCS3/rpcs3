@@ -2,7 +2,7 @@
 #include "GLGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
-#include "gl_helpers.h"
+#include "GLHelpers.h"
 
 namespace
 {

@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "gl_helpers.h"
+#include "GLHelpers.h"
 
 namespace gl
 {
