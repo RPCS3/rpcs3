@@ -2,7 +2,7 @@
 #include "Utilities/types.h"
 #include "Utilities/BitField.h"
 #include <tuple>
-#include "GCM.h"
+#include "gcm_enums.h"
 #pragma warning(disable:4503)
 
 namespace

@@ -73,21 +73,6 @@ rsx::window_pixel_center rsx::to_window_pixel_center(u8 in)
 	fmt::throw_exception("Unknown window pixel center 0x%x" HERE, in);
 }
 
-enum
-{
-	CELL_GCM_NEVER = 0x0200,
-	CELL_GCM_LESS = 0x0201,
-	CELL_GCM_EQUAL = 0x0202,
-	CELL_GCM_LEQUAL = 0x0203,
-	CELL_GCM_GREATER = 0x0204,
-	CELL_GCM_NOTEQUAL = 0x0205,
-	CELL_GCM_GEQUAL = 0x0206,
-	CELL_GCM_ALWAYS = 0x0207,
-
-	CELL_GCM_ZERO = 0,
-	CELL_GCM_ONE = 1,
-};
-
 rsx::comparison_function rsx::to_comparison_function(u16 in)
 {
 	switch (in)
@@ -829,12 +814,6 @@ rsx::logic_op rsx::to_logic_op(u16 in)
 	fmt::throw_exception("Unknown logic op 0x%x" HERE, in);
 }
 
-enum
-{
-	CELL_GCM_CW = 0x0900,
-	CELL_GCM_CCW = 0x0901,
-};
-
 rsx::front_face rsx::to_front_face(u16 in)
 {
 	switch (in)
@@ -845,13 +824,6 @@ rsx::front_face rsx::to_front_face(u16 in)
 	}
 	fmt::throw_exception("Unknown front face 0x%x" HERE, in);
 }
-
-enum
-{
-	CELL_GCM_FRONT = 0x0404,
-	CELL_GCM_BACK = 0x0405,
-	CELL_GCM_FRONT_AND_BACK = 0x0408,
-};
 
 rsx::cull_face rsx::to_cull_face(u16 in)
 {
@@ -989,12 +961,6 @@ rsx::blit_engine::context_surface rsx::blit_engine::to_context_surface(u32 in)
 	}
 	fmt::throw_exception("Unknown context surface 0x%x" HERE, in);
 }
-
-enum
-{
-	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT = 0x66626660,
-	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN = 0xBAD68000,
-};
 
 rsx::blit_engine::context_dma rsx::blit_engine::to_context_dma(u32 in)
 {
