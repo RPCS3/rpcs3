@@ -313,7 +313,7 @@ void GLGSRender::begin()
 
 namespace
 {
-	GLenum get_gl_target_for_texture(const rsx::texture& tex)
+	GLenum get_gl_target_for_texture(const rsx::fragment_texture& tex)
 	{
 		switch (tex.get_extended_texture_dimension())
 		{

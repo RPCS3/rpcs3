@@ -188,7 +188,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 	fmt::throw_exception("Wrong format 0x%x" HERE, format);
 }
 
-std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &texture)
+std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture)
 {
 	return get_subresources_layout_impl(texture);
 }
@@ -385,7 +385,7 @@ static size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, 
 	return result * (cubemap ? 6 : 1);
 }
 
-size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t row_pitch_alignement, size_t mipmap_alignment)
+size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignement, size_t mipmap_alignment)
 {
 	return get_placed_texture_storage_size(texture.width(), texture.height(), texture.depth(), texture.format(), texture.mipmap(), texture.cubemap(),
 		row_pitch_alignement, mipmap_alignment);
@@ -468,7 +468,7 @@ static size_t get_texture_size(u32 w, u32 h, u8 format)
 	}
 }
 
-size_t get_texture_size(const rsx::texture &texture)
+size_t get_texture_size(const rsx::fragment_texture &texture)
 {
 	return get_texture_size(texture.width(), texture.height(), texture.format());
 }

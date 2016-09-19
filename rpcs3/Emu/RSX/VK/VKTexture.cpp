@@ -282,7 +282,7 @@ namespace vk
 		create(device, format, usage, tiling, width, height, mipmaps, gpu_only, swizzle);
 	}
 
-	void texture::init(rsx::texture& tex, vk::command_buffer &cmd, bool ignore_checks)
+	void texture::init(rsx::fragment_texture& tex, vk::command_buffer &cmd, bool ignore_checks)
 	{
 		VkImageViewType best_type = VK_IMAGE_VIEW_TYPE_2D;
 		

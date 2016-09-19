@@ -433,7 +433,7 @@ namespace rsx
 			return false;
 		}
 
-		void texture::init(int index, rsx::texture& tex)
+		void texture::init(int index, rsx::fragment_texture& tex)
 		{
 			switch (tex.dimension())
 			{

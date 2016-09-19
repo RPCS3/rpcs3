@@ -4,7 +4,7 @@
 namespace rsx
 {
 	class vertex_texture;
-	class texture;
+	class fragment_texture;
 
 	namespace gl
 	{
@@ -38,7 +38,7 @@ namespace rsx
 				return (v << 2) | (v >> 4);
 			}
 
-			void init(int index, rsx::texture& tex);
+			void init(int index, rsx::fragment_texture& tex);
 			void init(int index, rsx::vertex_texture& tex);
 			
 			/**
