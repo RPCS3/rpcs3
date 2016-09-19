@@ -35,7 +35,7 @@ D3D12_COMPARISON_FUNC get_sampler_compare_func[] =
 	D3D12_COMPARISON_FUNC_ALWAYS
 };
 
-D3D12_SAMPLER_DESC get_sampler_desc(const rsx::texture &texture)
+D3D12_SAMPLER_DESC get_sampler_desc(const rsx::fragment_texture &texture)
 {
 	D3D12_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = get_texture_filter(texture.min_filter(), texture.mag_filter());
@@ -56,7 +56,7 @@ D3D12_SAMPLER_DESC get_sampler_desc(const rsx::texture &texture)
 
 namespace
 {
-	CD3DX12_RESOURCE_DESC get_texture_description(const rsx::texture &texture)
+	CD3DX12_RESOURCE_DESC get_texture_description(const rsx::fragment_texture &texture)
 	{
 		const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		DXGI_FORMAT dxgi_format = get_texture_format(format);
@@ -92,7 +92,7 @@ namespace {
 	 * Allocate buffer in texture_buffer_heap big enough and upload data into existing_texture which should be in COPY_DEST state
 	 */
 	void update_existing_texture(
-		const rsx::texture &texture,
+		const rsx::fragment_texture &texture,
 		ID3D12GraphicsCommandList *command_list,
 		d3d12_data_heap &texture_buffer_heap,
 		ID3D12Resource *existing_texture)
@@ -145,7 +145,7 @@ namespace {
  * using a temporary texture buffer.
  */
 ComPtr<ID3D12Resource> upload_single_texture(
-	const rsx::texture &texture,
+	const rsx::fragment_texture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *command_list,
 	d3d12_data_heap &texture_buffer_heap)
@@ -165,7 +165,7 @@ ComPtr<ID3D12Resource> upload_single_texture(
 }
 
 
-D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::texture &tex)
+D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::fragment_texture &tex)
 {
 	D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
 	switch (tex.get_extended_texture_dimension())

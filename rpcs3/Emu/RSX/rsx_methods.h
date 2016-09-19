@@ -142,7 +142,7 @@ namespace rsx
 			return *this;
 		}
 
-		std::array<texture, 16> fragment_textures;
+		std::array<fragment_texture, 16> fragment_textures;
 		std::array<vertex_texture, 4> vertex_textures;
 
 
@@ -171,7 +171,7 @@ namespace rsx
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
 		rsx_state() :
-			fragment_textures(fill_array<texture>(registers, std::make_index_sequence<16>())),
+			fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())),
 			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
 			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{ }

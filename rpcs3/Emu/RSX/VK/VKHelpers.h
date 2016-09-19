@@ -19,7 +19,7 @@ extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 namespace rsx
 {
-	class texture;
+	class fragment_texture;
 }
 
 namespace vk
@@ -458,7 +458,7 @@ namespace vk
 		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps = 1, bool gpu_only = false, VkComponentMapping swizzle = default_component_map());
 		void destroy();
 
-		void init(rsx::texture &tex, vk::command_buffer &cmd, bool ignore_checks = false);
+		void init(rsx::fragment_texture &tex, vk::command_buffer &cmd, bool ignore_checks = false);
 		void flush(vk::command_buffer & cmd);
 
 		//Fill with debug color 0xFF

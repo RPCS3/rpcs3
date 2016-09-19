@@ -14,15 +14,15 @@ namespace rsx
 		texture_dimension_3d = 3,
 	};
 
-	class texture
+	class fragment_texture
 	{
 	protected:
 		const u8 m_index;
 		std::array<u32, 0x10000 / 4> &registers;
 
 	public:
-		texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
-		texture() = delete;
+		fragment_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
+		fragment_texture() = delete;
 
 		//initialize texture registers with default values
 		void init();
