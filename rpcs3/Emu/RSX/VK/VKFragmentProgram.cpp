@@ -117,7 +117,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	int location = 2;
+	int location = 0;
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{

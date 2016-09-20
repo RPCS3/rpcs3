@@ -106,7 +106,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "layout(std140, set=0, binding = 1) uniform VertexConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	vec4 vc[468];" << std::endl;
-	OS << "};" << std::endl;
+	OS << "};" << std::endl << std::endl;
 
 	vk::glsl::program_input in;
 	in.location = 1;
@@ -115,6 +115,33 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	in.type = vk::glsl::input_type_uniform_buffer;
 
 	inputs.push_back(in);
+
+	//We offset this value by the index of the first fragment texture (19) below
+	//and allow 16 fragment textures to precede this slot
+	int location = 16;
+
+	for (const ParamType &PT : constants)
+	{
+		for (const ParamItem &PI : PT.items)
+		{
+			if (PI.name == "vc[468]")
+				continue;
+
+			if (PT.type == "sampler2D" ||
+				PT.type == "samplerCube" ||
+				PT.type == "sampler1D" ||
+				PT.type == "sampler3D")
+			{
+				in.location = location;
+				in.name = PI.name;
+				in.type = vk::glsl::input_type_texture;
+
+				inputs.push_back(in);
+
+				OS << "layout(set = 0, binding=" << 19 + location++ << ") uniform " << PT.type << " " << PI.name << ";" << std::endl;
+			}
+		}
+	}
 }
 
 struct reg_info

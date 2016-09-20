@@ -133,7 +133,6 @@ namespace
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
@@ -151,18 +150,19 @@ namespace
 			return { GL_GREEN, GL_RED, GL_GREEN, GL_RED};
 
 		case CELL_GCM_TEXTURE_X16: 
-			return { GL_RED, GL_ONE, GL_RED, GL_ONE };
+			return { GL_RED, GL_RED, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_Y16_X16: 
 			return { GL_RED, GL_GREEN, GL_RED, GL_GREEN};
 
 		case CELL_GCM_TEXTURE_X32_FLOAT: 
-			return { GL_RED, GL_ONE, GL_ONE, GL_ONE };
+			return { GL_RED, GL_RED, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: 
 			return { GL_GREEN, GL_RED, GL_GREEN, GL_RED };
 
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 			return { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 
 		case CELL_GCM_TEXTURE_D1R5G5B5:
@@ -595,50 +595,18 @@ namespace rsx
 
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.get_exact_mipmap_count() - 1);
 
-			/*
-			if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
-			{
-				u8 remap_a = tex.remap() & 0x3;
-				u8 remap_r = (tex.remap() >> 2) & 0x3;
-				u8 remap_g = (tex.remap() >> 4) & 0x3;
-				u8 remap_b = (tex.remap() >> 6) & 0x3;
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
 
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
-			}
-			else
-			{
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
-			}
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
-			*/
-
-			__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
-
-			int min_filter = gl_tex_min_filter(tex.min_filter());
-
-			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
-			{
-				if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
-				{
-					LOG_WARNING(RSX, "Texture %d, target 0x%x, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
-					min_filter = GL_LINEAR;
-				}
-			}
-
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
-			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.f);
 		}
 
 		void texture::bind()

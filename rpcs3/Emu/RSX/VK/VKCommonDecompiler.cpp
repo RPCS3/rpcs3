@@ -73,6 +73,8 @@ namespace vk
 			return "dFdx($0)";
 		case FUNCTION::FUNCTION_DFDY:
 			return "dFdy($0)";
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
+			return "textureLod($t, $0.xy, 0)";
 		}
 	}
 

@@ -301,11 +301,6 @@ void GLGSRender::begin()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
-	{
-		__glcheck glPrimitiveRestartIndex(rsx::method_registers.restart_index());
-	}
-
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 	m_draw_calls++;
@@ -384,6 +379,28 @@ void GLGSRender::end()
 		}
 	}
 
+	//Vertex textures
+	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	{
+		int texture_index = i + rsx::limits::fragment_textures_count;
+		int location;
+		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &location))
+		{
+			if (!rsx::method_registers.vertex_textures[i].enabled())
+			{
+				glActiveTexture(GL_TEXTURE0 + texture_index);
+				glBindTexture(GL_TEXTURE_2D, 0);
+				glProgramUniform1i(m_program->id(), location, texture_index);
+				continue;
+			}
+
+			m_gl_vertex_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.vertex_textures[i]));
+
+			__glcheck m_gl_texture_cache.upload_texture(texture_index, rsx::method_registers.vertex_textures[i], m_gl_vertex_textures[i], m_rtts);
+			glProgramUniform1i(m_program->id(), location, texture_index);
+		}
+	}
+
 	u32 vertex_draw_count;
 	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
 	std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
@@ -398,6 +415,12 @@ void GLGSRender::end()
 
 	if (indexed_draw_info)
 	{
+		if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		{
+			GLenum index_type = std::get<0>(indexed_draw_info.value());
+			__glcheck glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
+		}
+
 		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, std::get<0>(indexed_draw_info.value()), (GLvoid *)(std::ptrdiff_t)std::get<1>(indexed_draw_info.value()));
 	}
 	else

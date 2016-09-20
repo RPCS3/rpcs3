@@ -90,7 +90,18 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	vec4 vc[468];" << std::endl;
-	OS << "};" << std::endl;
+	OS << "};" << std::endl << std::endl;
+
+	for (const ParamType &PT: constants)
+	{
+		for (const ParamItem &PI : PT.items)
+		{
+			if (PI.name == "vc[468]")
+				continue;
+
+			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
+		}
+	}
 }
 
 struct reg_info
@@ -201,6 +212,17 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		for (const ParamItem &PI : PT.items)
 			add_input(OS, PI, rsx_vertex_program.rsx_vertex_inputs);
 	}
+
+	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type == "sampler2D")
+		{
+			for (const ParamItem &PI : PT.items)
+			{
+				OS << "	vec2 " << PI.name << "_coord_scale = vec2(1.);" << std::endl;
+			}
+		}
+	}
 }
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
@@ -246,6 +268,9 @@ void GLVertexProgram::Compile()
 
 	const char* str = shader.c_str();
 	const int strlen = ::narrow<int>(shader.length());
+
+	fs::create_path(fs::get_config_dir() + "/shaderlog");
+	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);

@@ -15,9 +15,6 @@ struct GLTraits
 	{
 		fragmentProgramData.Decompile(RSXFP);
 		fragmentProgramData.Compile();
-		//checkForGlError("m_fragment_prog.Compile");
-
-		fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram.glsl", fs::rewrite).write(fragmentProgramData.shader);
 	}
 
 	static
@@ -25,9 +22,6 @@ struct GLTraits
 	{
 		vertexProgramData.Decompile(RSXVP);
 		vertexProgramData.Compile();
-		//checkForGlError("m_vertex_prog.Compile");
-
-		fs::file(fs::get_config_dir() + "shaderlog/VertexProgram.glsl", fs::rewrite).write(vertexProgramData.shader);
 	}
 
 	static
