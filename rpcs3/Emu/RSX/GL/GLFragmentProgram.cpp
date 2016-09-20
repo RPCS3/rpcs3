@@ -88,10 +88,10 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			int index = atoi(&PI.name.data()[3]);
 
 			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
-			OS << "uniform " << "vec4 " << "f" << PI.name << "_cm = vec4(1.0);" << std::endl;
 		}
 	}
 
+	OS << std::endl;
 	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
 
@@ -147,41 +147,42 @@ namespace
 		OS << "	vec4 fogc = clamp(vec4(" << fog_func << ", 0., 0.), 0., 1.);\n";
 	}
 
-	void insert_texture_fetch(std::stringstream & OS, const RSXFragmentProgram& prog, const ParamArray& param)
+	void insert_texture_scale(std::stringstream & OS, const RSXFragmentProgram& prog, int index)
 	{
-		OS << "vec4 texture_fetch(int index, vec4 coord)\n{\n";
-		OS << "	switch (index)\n\t{\n";
+		std::string vec_type = "vec2";
 
-		for (u8 id = 0; id < 16; id++)
+		switch (prog.get_texture_dimension(index))
 		{
-			if (prog.textures_alpha_kill[id])
-			{
-				OS << "	case " + std::to_string(id) + ": return ";
-
-				switch (prog.get_texture_dimension(id))
-				{
-				case rsx::texture_dimension_extended::texture_dimension_1d: OS << "texture(tex" + std::to_string(id) + ", coord.x)"; break;
-				case rsx::texture_dimension_extended::texture_dimension_2d: OS << "texture(tex" + std::to_string(id) + ", coord.xy)"; break;
-				case rsx::texture_dimension_extended::texture_dimension_3d:
-				case rsx::texture_dimension_extended::texture_dimension_cubemap: OS << "texture(tex" + std::to_string(id) + ", coord.xyz)"; break;
-
-				default: OS << "vec4(0.0)";
-				}
-
-				OS << ";\n";
-			}
+		case rsx::texture_dimension_extended::texture_dimension_1d: vec_type = "float"; break;
+		case rsx::texture_dimension_extended::texture_dimension_2d: vec_type = "vec2"; break;
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: vec_type = "vec3";
 		}
 
-		OS << "	default: return vec4(0.0);\n";
-		OS << "	}\n";
-		OS << "}\n";
+		if (prog.unnormalized_coords & (1 << index))
+			OS << "\t" << vec_type << " tex" << index << "_coord_scale = 1. / textureSize(tex" << index << ", 0);\n";
+		else
+			OS << "\t" << vec_type << " tex" << index << "_coord_scale = " << vec_type << "(1.);\n";
+	}
+
+	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
+	{
+		std::string tex_name = "tex" + std::to_string(index);
+		std::string coord_name = "tc" + std::to_string(index);
+
+		switch (prog.get_texture_dimension(index))
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d: return "texture(" + tex_name + ", (" + coord_name + ".x * " + tex_name + "_coord_scale))";
+		case rsx::texture_dimension_extended::texture_dimension_2d: return "texture(" + tex_name + ", (" + coord_name + ".xy * " + tex_name + "_coord_scale))";
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", (" + coord_name + ".xyz * " + tex_name + "_coord_scale))";
+		}
 	}
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS);
-	insert_texture_fetch(OS, m_prog, m_parr);
 
 	OS << "void main ()" << std::endl;
 	OS << "{" << std::endl;
@@ -209,14 +210,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
-			if (m_prog.unnormalized_coords & (1 << index))
-			{
-				OS << "	vec2 tex" << index << "_coord_scale = 1. / textureSize(" << PI.name << ", 0);\n";
-			}
-			else
-			{
-				OS << "	vec2 tex" << index << "_coord_scale = vec2(1.);\n";
-			}
+			insert_texture_scale(OS, m_prog, index);
 		}
 	}
 
@@ -292,8 +286,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		{
 			if (m_prog.textures_alpha_kill[index])
 			{
-				std::string index_string = std::to_string(index);
-				std::string fetch_texture = "texture_fetch(" + index_string + ", tc" + index_string + " * ftex" + index_string + "_cm).a";
+				std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
 				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
 			}
 		}
