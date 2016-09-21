@@ -29,6 +29,8 @@ namespace vk
 				return false;
 			if (memcmp(&rs, &other.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
 				return false;
+			if (render_pass != other.render_pass)
+				return false;
 
 			return num_targets == other.num_targets;
 		}

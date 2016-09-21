@@ -108,10 +108,18 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	//We always bind the first usable image to index 0, even if surface type is surface_type::b
+	//If only surface 1 is being written to, redirect to output 0
+
+	if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[1].second) && !m_parr.HasParam(PF_PARAM_NONE, "vec4", table[0].second))
+		OS << "layout(location=0) out vec4 " << table[1].first << ";" << std::endl;
+	else
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-			OS << "layout(location=" << i << ") " << "out vec4 " << table[i].first << ";" << std::endl;
+		for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+		{
+			if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+				OS << "layout(location=" << i << ") " << "out vec4 " << table[i].first << ";" << std::endl;
+		}
 	}
 }
 
@@ -201,6 +209,20 @@ namespace vk
 		case rsx::fog_mode::exponential2_abs:
 			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.), 0., 0.);\n";
 			return;
+		}
+	}
+
+	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
+	{
+		std::string tex_name = "tex" + std::to_string(index);
+		std::string coord_name = "tc" + std::to_string(index);
+
+		switch (prog.get_texture_dimension(index))
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d: return "texture(" + tex_name + ", " + coord_name + ".x)";
+		case rsx::texture_dimension_extended::texture_dimension_2d: return "texture(" + tex_name + ", " + coord_name + ".xy)";
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", " + coord_name + ".xyz)";
 		}
 	}
 }
@@ -314,27 +336,36 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	if (!first_output_name.empty())
 	{
-		switch (m_prog.alpha_func)
+		auto make_comparison_test = [](rsx::comparison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
 		{
-		case rsx::comparison_function::equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a != alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::not_equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a == alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::less_or_equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a > alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::less:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a >= alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::greater:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a <= alpha_ref) discard;\n";
-			break;
-		case rsx::comparison_function::greater_or_equal:
-			OS << "	if (bool(alpha_test) && " << first_output_name << ".a < alpha_ref) discard;\n";
-			break;
+			if (compare_func == rsx::comparison_function::always) return{};
+
+			if (compare_func == rsx::comparison_function::never) return " discard;\n";
+
+			std::string compare;
+			switch (compare_func)
+			{
+			case rsx::comparison_function::equal:            compare = " == "; break;
+			case rsx::comparison_function::not_equal:        compare = " != "; break;
+			case rsx::comparison_function::less_or_equal:    compare = " <= "; break;
+			case rsx::comparison_function::less:             compare = " < ";  break;
+			case rsx::comparison_function::greater:          compare = " > ";  break;
+			case rsx::comparison_function::greater_or_equal: compare = " >= "; break;
+			}
+
+			return "	if (" + test + "!(" + a + compare + b + ")) discard;\n";
+		};
+
+		for (u8 index = 0; index < 16; ++index)
+		{
+			if (m_prog.textures_alpha_kill[index])
+			{
+				std::string fetch_texture = vk::insert_texture_fetch(m_prog, index) + ".a";
+				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+			}
 		}
+
+		OS << make_comparison_test(m_prog.alpha_func, "bool(alpha_test) && ", first_output_name + ".a", "alpha_ref");
 	}
 
 	OS << "}" << std::endl;

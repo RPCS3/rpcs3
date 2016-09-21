@@ -165,7 +165,7 @@ namespace vk
 			float queue_priorities[1] = { 0.f };
 			pgpu = &pdev;
 
-			VkDeviceQueueCreateInfo queue;
+			VkDeviceQueueCreateInfo queue = {};
 			queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queue.pNext = NULL;
 			queue.queueFamilyIndex = graphics_queue_idx;
@@ -183,7 +183,7 @@ namespace vk
 			if (g_cfg_rsx_debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
-			VkDeviceCreateInfo device;
+			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			device.pNext = NULL;
 			device.queueCreateInfoCount = 1;

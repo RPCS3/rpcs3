@@ -842,8 +842,7 @@ void VKGSRender::clear_surface(u32 mask)
 {
 	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
 	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
-	
-	//TODO: Build clear commands into current renderpass descriptor set
+
 	if (!(mask & 0xF3)) return;
 	if (m_current_present_image == 0xFFFF) return;
 
@@ -851,11 +850,22 @@ void VKGSRender::clear_surface(u32 mask)
 
 	float depth_clear = 1.f;
 	u32   stencil_clear = 0;
+	u32   depth_stencil_mask = 0;
+
+	std::vector<VkClearAttachment> clear_descriptors;
+	std::vector<VkClearRect> clear_regions;
 
 	VkClearValue depth_stencil_clear_values, color_clear_values;
-	VkImageSubresourceRange depth_range = vk::get_image_subresource_range(0, 0, 1, 1, 0);
 
-	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	u16 scissor_x = rsx::method_registers.scissor_origin_x();
+	u16 scissor_w = rsx::method_registers.scissor_width();
+	u16 scissor_y = rsx::method_registers.scissor_origin_y();
+	u16 scissor_h = rsx::method_registers.scissor_height();
+
+	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
+
+	auto targets = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
+	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (mask & 0x1)
 	{
@@ -864,19 +874,23 @@ void VKGSRender::clear_surface(u32 mask)
 		u32 clear_depth = rsx::method_registers.z_clear_value();
 		float depth_clear = (float)clear_depth / max_depth_value;
 
-		depth_range.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
 		depth_stencil_clear_values.depthStencil.depth = depth_clear;
 		depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
+
+		depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
 	}
 
 	if (mask & 0x2)
 	{
-		u8 clear_stencil = rsx::method_registers.stencil_clear_value();
-		u32 stencil_mask = rsx::method_registers.stencil_mask();
+		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+		{
+			u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+			u32 stencil_mask = rsx::method_registers.stencil_mask();
 
-		//TODO set stencil mask
-		depth_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-		depth_stencil_clear_values.depthStencil.stencil = stencil_mask;
+			depth_stencil_clear_values.depthStencil.stencil = stencil_mask;
+
+			depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
 	}
 
 	if (mask & 0xF0)
@@ -886,38 +900,44 @@ void VKGSRender::clear_surface(u32 mask)
 		u8 clear_g = rsx::method_registers.clear_color_g();
 		u8 clear_b = rsx::method_registers.clear_color_b();
 
-		//TODO set color mask
-		/*VkBool32 clear_red = (VkBool32)!!(mask & 0x20);
-		VkBool32 clear_green = (VkBool32)!!(mask & 0x40);
-		VkBool32 clear_blue = (VkBool32)!!(mask & 0x80);
-		VkBool32 clear_alpha = (VkBool32)!!(mask & 0x10);*/
-
 		color_clear_values.color.float32[0] = (float)clear_r / 255;
 		color_clear_values.color.float32[1] = (float)clear_g / 255;
 		color_clear_values.color.float32[2] = (float)clear_b / 255;
 		color_clear_values.color.float32[3] = (float)clear_a / 255;
 
-		for (u32 i = 0; i < m_rtts.m_bound_render_targets.size(); ++i)
+		for (int index = 0; index < targets.size(); ++index)
 		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
-			if (std::get<1>(m_rtts.m_bound_render_targets[i]) == nullptr) continue;
-
-			VkImage color_image = std::get<1>(m_rtts.m_bound_render_targets[i])->value;
-			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, range);
-			vkCmdClearColorImage(m_command_buffer, color_image, VK_IMAGE_LAYOUT_GENERAL, &color_clear_values.color, 1, &range);
-			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
+			clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, (uint32_t)index, color_clear_values });
+			clear_regions.push_back(region);
 		}
 	}
 
 	if (mask & 0x3)
 	{
-		VkImageAspectFlags depth_stencil_aspect = (surface_depth_format == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
-		VkImage depth_stencil_image = std::get<1>(m_rtts.m_bound_depth_stencil)->value;
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, vk::get_image_subresource_range(0, 0, 1, 1, depth_stencil_aspect));
-		vkCmdClearDepthStencilImage(m_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil)->value, VK_IMAGE_LAYOUT_GENERAL, &depth_stencil_clear_values.depthStencil, 1, &depth_range);
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, depth_stencil_aspect));
+		clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
+		clear_regions.push_back(region);
 	}
 
+	size_t idx = vk::get_render_pass_location(
+		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
+		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, surface_depth_format),
+		(u8)targets.size());
+	VkRenderPass current_render_pass = m_render_passes[idx];
+
+	VkRenderPassBeginInfo rp_begin = {};
+	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	rp_begin.renderPass = current_render_pass;
+	rp_begin.framebuffer = m_framebuffer_to_clean.back()->value;
+	rp_begin.renderArea.offset.x = 0;
+	rp_begin.renderArea.offset.y = 0;
+	rp_begin.renderArea.extent.width = m_framebuffer_to_clean.back()->width();
+	rp_begin.renderArea.extent.height = m_framebuffer_to_clean.back()->height();
+
+	vkCmdBeginRenderPass(m_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdClearAttachments(m_command_buffer, clear_descriptors.size(), clear_descriptors.data(), clear_regions.size(), clear_regions.data());
+
+	vkCmdEndRenderPass(m_command_buffer);
 }
 
 void VKGSRender::sync_at_semaphore_release()
