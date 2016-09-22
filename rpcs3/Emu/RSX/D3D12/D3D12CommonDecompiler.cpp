@@ -80,6 +80,8 @@ std::string getFunctionImp(FUNCTION f)
 		return "ddx($0)";
 	case FUNCTION::FUNCTION_DFDY:
 		return "ddy($0)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
+		return "texture2DReconstruct($t.Sample($tsampler, $0.xy * $t_scale))";
 	}
 }
 
@@ -201,6 +203,15 @@ void insert_d3d12_legacy_function(std::ostream& OS)
 	OS << "float2 unpackHalf2x16(uint val)";
 	OS << "{\n";
 	OS << "	return unpackSnorm2x16(val) * 6.1E+5;\n";
+	OS << "}\n\n";
+
+	OS << "float4 texture2DReconstruct(float depth_value)\n";
+	OS << "{\n";
+	OS << "	uint value = round(depth_value * 16777215);\n";
+	OS << "	uint b = (value & 0xff);\n";
+	OS << "	uint g = (value >> 8) & 0xff;\n";
+	OS << "	uint r = (value >> 16) & 0xff;\n";
+	OS << "	return float4(r/255., g/255., b/255., 1.);\n";
 	OS << "}\n\n";
 }
 #endif

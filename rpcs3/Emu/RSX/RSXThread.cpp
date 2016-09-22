@@ -828,6 +828,8 @@ namespace rsx
 		result.origin_mode = rsx::method_registers.shader_window_origin();
 		result.pixel_center_mode = rsx::method_registers.shader_window_pixel();
 		result.height = rsx::method_registers.shader_window_height();
+		result.redirected_textures = 0;
+
 
 		std::array<texture_dimension_extended, 16> texture_dimensions;
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)

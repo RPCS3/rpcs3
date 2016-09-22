@@ -448,7 +448,10 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D));
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
+			if (m_prog.redirected_textures & (1 << dst.tex_num))
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA));
+			else
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE));
