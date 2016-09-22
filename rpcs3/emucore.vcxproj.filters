@@ -206,9 +206,6 @@
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
       <Filter>Emu\GPU\RSX\Null</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\GCM.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\rsx_utils.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
@@ -886,6 +883,9 @@
     </ClCompile>
     <ClCompile Include="Loader\ELF.cpp">
       <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\gcm_printing.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1701,6 +1701,9 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\bit_set.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\gcm_printing.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

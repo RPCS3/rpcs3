@@ -867,6 +867,7 @@ namespace rsx
 
 		for (auto& tex : fragment_textures) tex.init();
 		for (auto& tex : vertex_textures) tex.init();
+		for (auto& vtx : vertex_arrays_info) vtx.reset();
 	}
 
 	void rsx_state::decode(u32 reg, u32 value)

@@ -38,8 +38,6 @@ public:
 
 	u8 size() const
 	{
-		if (decode_reg().type() == rsx::vertex_base_type::cmp)
-			return 4;
 		return decode_reg().size();
 	}
 
@@ -51,6 +49,11 @@ public:
 	vertex_base_type type() const
 	{
 		return decode_reg().type();
+	}
+
+	void reset()
+	{
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index] = 0x2;
 	}
 };
 
