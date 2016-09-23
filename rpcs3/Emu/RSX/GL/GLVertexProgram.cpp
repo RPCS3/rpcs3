@@ -198,13 +198,42 @@ static const reg_info reg_table[] =
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
-	for (const auto &i : reg_table)
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+
+	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+
+	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
+	bool front_back_specular = (insert_back_specular && insert_front_specular);
+
+	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
 		{
-			OS << "out vec4 " << i.name << ";" << std::endl;
+			if (i.name == "front_diff_color")
+				insert_front_diffuse = false;
+
+			if (i.name == "front_spec_color")
+				insert_front_specular = false;
+
+			std::string name = i.name;
+
+			if (front_back_diffuse && name == "diff_color")
+				name = "back_diff_color";
+
+			if (front_back_specular && name == "spec_color")
+				name = "back_spec_color";
+
+			OS << "out vec4 " << name << ";" << std::endl;
 		}
 	}
+
+	if (insert_back_diffuse && insert_front_diffuse)
+		OS << "out vec4 front_diff_color;" << std::endl;
+
+	if (insert_back_specular && insert_front_specular)
+		OS << "out vec4 front_spec_color;" << std::endl;
 }
 
 void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
@@ -282,16 +311,49 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
-	for (const auto &i : reg_table)
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
+	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+
+	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
+	bool front_back_specular = (insert_back_specular && insert_front_specular);
+
+	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
-			OS << "	" << i.name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+		{
+			if (i.name == "front_diff_color")
+				insert_front_diffuse = false;
+
+			if (i.name == "front_spec_color")
+				insert_front_specular = false;
+
+			std::string name = i.name;
+
+			if (front_back_diffuse && name == "diff_color")
+				name = "back_diff_color";
+
+			if (front_back_specular && name == "spec_color")
+				name = "back_spec_color";
+
+			OS << "	" << name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+		}
 	}
 
 	for (const auto& uc : get_user_clip_planes(rsx_vertex_program))
 	{
 		OS << uc.second;
 	}
+
+	if (insert_back_diffuse && insert_front_diffuse)
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg1"))
+			OS << "	front_diff_color = dst_reg1;\n";
+
+	if (insert_back_specular && insert_front_specular)
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
+			OS << "	front_spec_color = dst_reg2;\n";
 
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
 	OS << "}" << std::endl;

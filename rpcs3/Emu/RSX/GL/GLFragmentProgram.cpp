@@ -42,15 +42,43 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 {
+	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
 		{
-			//Rename fogc to fog_c to differentiate the input register from the variable
-			if (PI.name == "fogc")
-				OS << "in vec4 fog_c;" << std::endl;
-			
-			OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
+			//ssa is defined in the program body and is not a varying type
+			if (PI.name == "ssa") continue;
+
+			std::string var_name = PI.name;
+
+			if (two_sided_enabled)
+			{
+				if (m_prog.back_color_diffuse_output && var_name == "diff_color")
+					var_name = "back_diff_color";
+
+				if (m_prog.back_color_specular_output && var_name == "spec_color")
+					var_name = "back_spec_color";
+			}
+
+			if (var_name == "fogc")
+				var_name = "fog_c";
+
+			OS << "in " << PT.type << " " << var_name << ";" << std::endl;
+		}
+	}
+
+	if (two_sided_enabled)
+	{
+		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
+		{
+			OS << "in vec4 front_diff_color;" << std::endl;
+		}
+
+		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
+		{
+			OS << "in vec4 front_spec_color;" << std::endl;
 		}
 	}
 }
@@ -214,11 +242,49 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	// search if there is fogc in inputs
+	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
 		{
+			if (two_sided_enabled)
+			{
+				if (PI.name == "spec_color")
+				{
+					if (m_prog.back_color_specular_output)
+					{
+						if (m_prog.back_color_specular_output && m_prog.front_color_specular_output)
+						{
+							OS << "	vec4 spec_color = gl_FrontFacing ? front_spec_color : back_spec_color;\n";
+						}
+						else
+						{
+							OS << "	vec4 spec_color = back_spec_color;\n";
+						}
+					}
+
+					continue;
+				}
+
+				else if (PI.name == "diff_color")
+				{
+					if (m_prog.back_color_diffuse_output)
+					{
+						if (m_prog.back_color_diffuse_output && m_prog.front_color_diffuse_output)
+						{
+							OS << "	vec4 diff_color = gl_FrontFacing ? front_diff_color : back_diff_color;\n";
+						}
+						else
+						{
+							OS << "	vec4 diff_color = back_diff_color;\n";
+						}
+					}
+
+					continue;
+				}
+			}
+
 			if (PI.name == "fogc")
 			{
 				insert_fog_declaration(OS, m_prog.fog_equation);
