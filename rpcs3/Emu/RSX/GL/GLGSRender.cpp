@@ -477,31 +477,17 @@ void GLGSRender::end()
 
 void GLGSRender::set_viewport()
 {
-	u16 viewport_x = rsx::method_registers.viewport_origin_x();
-	u16 viewport_y = rsx::method_registers.viewport_origin_y();
-	u16 viewport_w = rsx::method_registers.viewport_width();
-	u16 viewport_h = rsx::method_registers.viewport_height();
+	//NOTE: scale offset matrix already contains the viewport transformation
+	glViewport(0, 0, rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
 
 	u16 scissor_x = rsx::method_registers.scissor_origin_x();
 	u16 scissor_w = rsx::method_registers.scissor_width();
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
 
-	rsx::window_origin shader_window_origin = rsx::method_registers.shader_window_origin();
-
-	if (shader_window_origin == rsx::window_origin::bottom)
-	{
-		__glcheck glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
-		__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
-	}
-	else
-	{
-		u16 shader_window_height = rsx::method_registers.shader_window_height();
-
-		__glcheck glViewport(viewport_x, shader_window_height - viewport_y - viewport_h + 1, viewport_w, viewport_h);
-		__glcheck glScissor(scissor_x, shader_window_height - scissor_y - scissor_h + 1, scissor_w, scissor_h);
-	}
-
+	//NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
+	//See LIMBO [NPUB-30373] which uses shader window origin = top
+	__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
 	glEnable(GL_SCISSOR_TEST);
 }
 
