@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <set>
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLFragmentProgram.h"
@@ -212,16 +213,38 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS);
 
-	OS << "void main ()" << std::endl;
+	const std::set<std::string> output_values =
+	{
+		"r0", "r1", "r2", "r3", "r4",
+		"h0", "h2", "h4", "h6", "h8"
+	};
+
+	std::string parameters = "";
+	for (auto &reg_name : output_values)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += "inout vec4 " + reg_name;
+		}
+	}
+
+	OS << "void fs_main(" << parameters << ")" << std::endl;
 	OS << "{" << std::endl;
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem& PI : PT.items)
 		{
+			if (output_values.find(PI.name) != output_values.end())
+				continue;
+
 			OS << "	" << PT.type << " " << PI.name;
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
+
 			OS << ";" << std::endl;
 		}
 	}
@@ -296,6 +319,32 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
+	const std::set<std::string> output_values =
+	{
+		"r0", "r1", "r2", "r3", "r4",
+		"h0", "h2", "h4", "h6", "h8"
+	};
+
+	OS << "}" << std::endl << std::endl;
+
+	OS << "void main()" << std::endl;
+	OS << "{" << std::endl;
+
+	std::string parameters = "";
+	for (auto &reg_name : output_values)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += reg_name;
+			OS << "	vec4 " << reg_name << " = vec4(0.);" << std::endl;
+		}
+	}
+
+	OS << std::endl << "	fs_main(" + parameters + ");" << std::endl << std::endl;
+
 	const std::pair<std::string, std::string> table[] =
 	{
 		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },

@@ -276,17 +276,44 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS);
 
-	OS << "void main()" << std::endl;
+	std::string parameters = "";
+	for (auto &reg : reg_table)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg.src_reg))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += "inout vec4 " + reg.src_reg;
+		}
+	}
+
+	OS << "void vs_main(" << parameters << ")" << std::endl;
 	OS << "{" << std::endl;
 
-	// Declare inside main function
-	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
+	//Declare temporary registers, ignoring those mapped to outputs
+	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
 		{
+			bool skip = false;
+
+			for (auto &reg : reg_table)
+			{
+				if (reg.src_reg == PI.name)
+				{
+					skip = true;
+					break;
+				}
+			}
+
+			if (skip)
+				continue;
+
 			OS << "	" << PT.type << " " << PI.name;
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
+
 			OS << ";" << std::endl;
 		}
 	}
@@ -311,6 +338,38 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
+	OS << "}" << std::endl << std::endl;
+
+	OS << "void main ()" << std::endl;
+	OS << "{" << std::endl;
+
+	std::string parameters = "";
+	
+	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_NONE, "vec4"))
+	{
+		for (auto &reg : reg_table)
+		{
+			for (auto &PI : vec4Types->items)
+			{
+				if (reg.src_reg == PI.name)
+				{
+					if (parameters.length())
+						parameters += ", ";
+
+					parameters += reg.src_reg;
+					OS << "	vec4 " << reg.src_reg;
+
+					if (!PI.value.empty())
+						OS << "= " << PI.value;
+
+					OS << ";" << std::endl;
+				}
+			}
+		}
+	}
+
+	OS << std::endl << "	vs_main(" << parameters << ");" << std::endl << std::endl;
+
 	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
 	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
 
