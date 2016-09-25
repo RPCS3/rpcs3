@@ -326,32 +326,6 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
-	const std::set<std::string> output_values =
-	{
-		"r0", "r1", "r2", "r3", "r4",
-		"h0", "h2", "h4", "h6", "h8"
-	};
-
-	OS << "}" << std::endl << std::endl;
-
-	OS << "void main()" << std::endl;
-	OS << "{" << std::endl;
-
-	std::string parameters = "";
-	for (auto &reg_name : output_values)
-	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
-		{
-			if (parameters.length())
-				parameters += ", ";
-
-			parameters += reg_name;
-			OS << "	vec4 " << reg_name << " = vec4(0.);" << std::endl;
-		}
-	}
-
-	OS << std::endl << "	fs_main(" + parameters + ");" << std::endl << std::endl;
-
 	const std::pair<std::string, std::string> table[] =
 	{
 		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
@@ -360,25 +334,21 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	std::string first_output_name;
+	const std::set<std::string> output_values =
+	{
+		"r0", "r1", "r2", "r3", "r4",
+		"h0", "h2", "h4", "h6", "h8"
+	};
+
+	std::string first_output_name = "";
+	std::string color_output_block = "";
+
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
 		{
-			OS << "	" << table[i].first << " = " << table[i].second << ";" << std::endl;
-			if (first_output_name.empty()) first_output_name = table[i].first;
-		}
-	}
-
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
-	{
-		{
-			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-			* but it writes depth in r1.z and not h2.z.
-			* Maybe there's a different flag for depth ?
-			*/
-			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
-			OS << "	gl_FragDepth = r1.z;\n";
+			color_output_block += "	" + table[i].first + " = " + table[i].second + ";\n";
+			if (first_output_name.empty()) first_output_name = table[i].second;
 		}
 	}
 
@@ -414,6 +384,41 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		}
 
 		OS << make_comparison_test(m_prog.alpha_func, "bool(alpha_test) && ", first_output_name + ".a", "alpha_ref");
+	}
+
+	OS << "}" << std::endl << std::endl;
+
+	OS << "void main()" << std::endl;
+	OS << "{" << std::endl;
+
+	std::string parameters = "";
+	for (auto &reg_name : output_values)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += reg_name;
+			OS << "	vec4 " << reg_name << " = vec4(0.);" << std::endl;
+		}
+	}
+
+	OS << std::endl << "	fs_main(" + parameters + ");" << std::endl << std::endl;
+
+	//Append the color output assignments
+	OS << color_output_block;
+
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	{
+		{
+			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
+			* but it writes depth in r1.z and not h2.z.
+			* Maybe there's a different flag for depth ?
+			*/
+			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
+			OS << "	gl_FragDepth = r1.z;\n";
+		}
 	}
 
 	OS << "}" << std::endl;
