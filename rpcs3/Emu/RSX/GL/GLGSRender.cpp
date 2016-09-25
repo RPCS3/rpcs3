@@ -302,7 +302,7 @@ void GLGSRender::begin()
 				value = 0;
 				break;
 
-			case rsx::user_clip_plane_op::greather_or_equal:
+			case rsx::user_clip_plane_op::greater_or_equal:
 				value = 1;
 				break;
 
