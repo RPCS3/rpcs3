@@ -376,7 +376,7 @@ namespace rsx
 		switch (op)
 		{
 		case user_clip_plane_op::disable: return "disabled";
-		case user_clip_plane_op::greather_or_equal: return "greater or equal";
+		case user_clip_plane_op::greater_or_equal: return "greater or equal";
 		case user_clip_plane_op::less_than: return "less than";
 		}
 		throw;
@@ -985,7 +985,7 @@ rsx::user_clip_plane_op rsx::to_user_clip_plane_op(u8 in)
 	{
 	case CELL_GCM_USER_CLIP_PLANE_DISABLE: return rsx::user_clip_plane_op::disable;
 	case CELL_GCM_USER_CLIP_PLANE_ENABLE_LT: return rsx::user_clip_plane_op::less_than;
-	case CELL_GCM_USER_CLIP_PLANE_ENABLE_GE: return rsx::user_clip_plane_op::greather_or_equal;
+	case CELL_GCM_USER_CLIP_PLANE_ENABLE_GE: return rsx::user_clip_plane_op::greater_or_equal;
 	}
 	fmt::throw_exception("Unknown user clip plane 0x%x" HERE, in);
 }

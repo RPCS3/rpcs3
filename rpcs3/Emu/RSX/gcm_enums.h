@@ -284,7 +284,7 @@ namespace rsx
 	{
 		disable,
 		less_than,
-		greather_or_equal,
+		greater_or_equal,
 	};
 
 	user_clip_plane_op to_user_clip_plane_op(u8 in);
