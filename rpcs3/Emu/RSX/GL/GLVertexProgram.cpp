@@ -277,14 +277,15 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	insert_glsl_legacy_function(OS);
 
 	std::string parameters = "";
-	for (auto &reg : reg_table)
+	for (int i = 0; i < 16; ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg.src_reg))
+		std::string reg_name = "dst_reg" + std::to_string(i);
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
 		{
 			if (parameters.length())
 				parameters += ", ";
 
-			parameters += "inout vec4 " + reg.src_reg;
+			parameters += "inout vec4 " + reg_name;
 		}
 	}
 
@@ -296,18 +297,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			bool skip = false;
-
-			for (auto &reg : reg_table)
-			{
-				if (reg.src_reg == PI.name)
-				{
-					skip = true;
-					break;
-				}
-			}
-
-			if (skip)
+			if (PI.name.substr(0, 7) == "dst_reg")
 				continue;
 
 			OS << "	" << PT.type << " " << PI.name;
@@ -347,17 +337,18 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	
 	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_NONE, "vec4"))
 	{
-		for (auto &reg : reg_table)
+		for (int i = 0; i < 16; ++i)
 		{
+			std::string reg_name = "dst_reg" + std::to_string(i);
 			for (auto &PI : vec4Types->items)
 			{
-				if (reg.src_reg == PI.name)
+				if (reg_name == PI.name)
 				{
 					if (parameters.length())
 						parameters += ", ";
 
-					parameters += reg.src_reg;
-					OS << "	vec4 " << reg.src_reg;
+					parameters += reg_name;
+					OS << "	vec4 " << reg_name;
 
 					if (!PI.value.empty())
 						OS << "= " << PI.value;
