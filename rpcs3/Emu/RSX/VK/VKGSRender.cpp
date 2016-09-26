@@ -792,24 +792,17 @@ void VKGSRender::end()
 
 void VKGSRender::set_viewport()
 {
-	u16 viewport_x = rsx::method_registers.viewport_origin_x();
-	u16 viewport_y = rsx::method_registers.viewport_origin_y();
-	u16 viewport_w = rsx::method_registers.viewport_width();
-	u16 viewport_h = rsx::method_registers.viewport_height();
-
 	u16 scissor_x = rsx::method_registers.scissor_origin_x();
 	u16 scissor_w = rsx::method_registers.scissor_width();
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
 
-	//	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
-	//	rsx::window_origin shader_window_origin = rsx::to_window_origin((shader_window >> 12) & 0xf);
-
+	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	VkViewport viewport = {};
-	viewport.x = viewport_x;
-	viewport.y = viewport_y;
-	viewport.width = viewport_w;
-	viewport.height = viewport_h;
+	viewport.x = 0;
+	viewport.y = 0;
+	viewport.width = rsx::method_registers.surface_clip_width();
+	viewport.height = rsx::method_registers.surface_clip_height();
 	viewport.minDepth = 0.f;
 	viewport.maxDepth = 1.f;
 

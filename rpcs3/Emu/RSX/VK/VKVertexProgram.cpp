@@ -253,17 +253,34 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	vk::insert_glsl_legacy_function(OS);
 
-	OS << "void main()" << std::endl;
+	std::string parameters = "";
+	for (int i = 0; i < 16; ++i)
+	{
+		std::string reg_name = "dst_reg" + std::to_string(i);
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += "inout vec4 " + reg_name;
+		}
+	}
+
+	OS << "void vs_main(" << parameters << ")" << std::endl;
 	OS << "{" << std::endl;
 
-	// Declare inside main function
+	//Declare temporary registers, ignoring those mapped to outputs
 	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
 		{
+			if (PI.name.substr(0, 7) == "dst_reg")
+				continue;
+
 			OS << "	" << PT.type << " " << PI.name;
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
+
 			OS << ";" << std::endl;
 		}
 	}
@@ -277,6 +294,39 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
+	OS << "}" << std::endl << std::endl;
+
+	OS << "void main ()" << std::endl;
+	OS << "{" << std::endl;
+
+	std::string parameters = "";
+
+	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_NONE, "vec4"))
+	{
+		for (int i = 0; i < 16; ++i)
+		{
+			std::string reg_name = "dst_reg" + std::to_string(i);
+			for (auto &PI : vec4Types->items)
+			{
+				if (reg_name == PI.name)
+				{
+					if (parameters.length())
+						parameters += ", ";
+
+					parameters += reg_name;
+					OS << "	vec4 " << reg_name;
+
+					if (!PI.value.empty())
+						OS << "= " << PI.value;
+
+					OS << ";" << std::endl;
+				}
+			}
+		}
+	}
+
+	OS << std::endl << "	vs_main(" << parameters << ");" << std::endl << std::endl;
+
 	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
 	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
 

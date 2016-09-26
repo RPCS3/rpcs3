@@ -128,6 +128,7 @@ namespace
 		case CELL_GCM_TEXTURE_R5G5B5A1:
 		case CELL_GCM_TEXTURE_R6G5B5:
 		case CELL_GCM_TEXTURE_R5G6B5:
+		//case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_A8R8G8B8: // TODO
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
@@ -140,23 +141,19 @@ namespace
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 			return { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 
-		case CELL_GCM_TEXTURE_B8: 
-			return { GL_RED, GL_RED, GL_RED, GL_RED };
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+			return{ GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA };
 
-		case CELL_GCM_TEXTURE_A4R4G4B4: 
-			return { GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
+		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+			return { GL_RED, GL_RED, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_G8B8: 
 			return { GL_GREEN, GL_RED, GL_GREEN, GL_RED};
 
-		case CELL_GCM_TEXTURE_X16: 
-			return { GL_RED, GL_RED, GL_RED, GL_RED };
-
 		case CELL_GCM_TEXTURE_Y16_X16: 
 			return { GL_RED, GL_GREEN, GL_RED, GL_GREEN};
-
-		case CELL_GCM_TEXTURE_X32_FLOAT: 
-			return { GL_RED, GL_RED, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: 
 			return { GL_GREEN, GL_RED, GL_GREEN, GL_RED };
@@ -492,25 +489,15 @@ namespace rsx
 
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.get_exact_mipmap_count() - 1);
 
-			if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
-			{
-				u8 remap_a = tex.remap() & 0x3;
-				u8 remap_r = (tex.remap() >> 2) & 0x3;
-				u8 remap_g = (tex.remap() >> 4) & 0x3;
-				u8 remap_b = (tex.remap() >> 6) & 0x3;
+			u8 remap_a = tex.remap() & 0x3;
+			u8 remap_r = (tex.remap() >> 2) & 0x3;
+			u8 remap_g = (tex.remap() >> 4) & 0x3;
+			u8 remap_b = (tex.remap() >> 6) & 0x3;
 
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
-			}
-			else
-			{
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
-			}
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
 
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));

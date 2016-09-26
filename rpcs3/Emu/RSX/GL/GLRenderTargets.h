@@ -122,6 +122,7 @@ struct gl_render_target_traits
 			.type(format.type)
 			.format(format.format)
 			.internal_format(format.internal_format)
+			.swizzle(gl::texture::channel::r, gl::texture::channel::r, gl::texture::channel::r, gl::texture::channel::r)
 			.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
 			.apply();
 
