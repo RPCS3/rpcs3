@@ -351,7 +351,6 @@ namespace
 		    const rsx::draw_indexed_array_command& command)
 		{
 			u32 min_index = 0, max_index = 0;
-			u32 max_vertex_attrib_size = 0;
 
 			rsx::index_array_type type = rsx::method_registers.index_type();
 			u32 type_size              = ::narrow<u32>(get_index_type_size(type));

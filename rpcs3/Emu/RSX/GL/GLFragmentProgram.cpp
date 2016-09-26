@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <set>
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLFragmentProgram.h"
@@ -42,15 +43,43 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 {
+	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
 		{
-			//Rename fogc to fog_c to differentiate the input register from the variable
-			if (PI.name == "fogc")
-				OS << "in vec4 fog_c;" << std::endl;
-			
-			OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
+			//ssa is defined in the program body and is not a varying type
+			if (PI.name == "ssa") continue;
+
+			std::string var_name = PI.name;
+
+			if (two_sided_enabled)
+			{
+				if (m_prog.back_color_diffuse_output && var_name == "diff_color")
+					var_name = "back_diff_color";
+
+				if (m_prog.back_color_specular_output && var_name == "spec_color")
+					var_name = "back_spec_color";
+			}
+
+			if (var_name == "fogc")
+				var_name = "fog_c";
+
+			OS << "in " << PT.type << " " << var_name << ";" << std::endl;
+		}
+	}
+
+	if (two_sided_enabled)
+	{
+		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
+		{
+			OS << "in vec4 front_diff_color;" << std::endl;
+		}
+
+		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
+		{
+			OS << "in vec4 front_spec_color;" << std::endl;
 		}
 	}
 }
@@ -184,16 +213,38 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS);
 
-	OS << "void main ()" << std::endl;
+	const std::set<std::string> output_values =
+	{
+		"r0", "r1", "r2", "r3", "r4",
+		"h0", "h2", "h4", "h6", "h8"
+	};
+
+	std::string parameters = "";
+	for (auto &reg_name : output_values)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += "inout vec4 " + reg_name;
+		}
+	}
+
+	OS << "void fs_main(" << parameters << ")" << std::endl;
 	OS << "{" << std::endl;
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem& PI : PT.items)
 		{
+			if (output_values.find(PI.name) != output_values.end())
+				continue;
+
 			OS << "	" << PT.type << " " << PI.name;
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
+
 			OS << ";" << std::endl;
 		}
 	}
@@ -214,11 +265,49 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	// search if there is fogc in inputs
+	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
 		{
+			if (two_sided_enabled)
+			{
+				if (PI.name == "spec_color")
+				{
+					if (m_prog.back_color_specular_output)
+					{
+						if (m_prog.back_color_specular_output && m_prog.front_color_specular_output)
+						{
+							OS << "	vec4 spec_color = gl_FrontFacing ? front_spec_color : back_spec_color;\n";
+						}
+						else
+						{
+							OS << "	vec4 spec_color = back_spec_color;\n";
+						}
+					}
+
+					continue;
+				}
+
+				else if (PI.name == "diff_color")
+				{
+					if (m_prog.back_color_diffuse_output)
+					{
+						if (m_prog.back_color_diffuse_output && m_prog.front_color_diffuse_output)
+						{
+							OS << "	vec4 diff_color = gl_FrontFacing ? front_diff_color : back_diff_color;\n";
+						}
+						else
+						{
+							OS << "	vec4 diff_color = back_diff_color;\n";
+						}
+					}
+
+					continue;
+				}
+			}
+
 			if (PI.name == "fogc")
 			{
 				insert_fog_declaration(OS, m_prog.fog_equation);
@@ -238,25 +327,21 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	std::string first_output_name;
+	const std::set<std::string> output_values =
+	{
+		"r0", "r1", "r2", "r3", "r4",
+		"h0", "h2", "h4", "h6", "h8"
+	};
+
+	std::string first_output_name = "";
+	std::string color_output_block = "";
+
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
 		{
-			OS << "	" << table[i].first << " = " << table[i].second << ";" << std::endl;
-			if (first_output_name.empty()) first_output_name = table[i].first;
-		}
-	}
-
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
-	{
-		{
-			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-			* but it writes depth in r1.z and not h2.z.
-			* Maybe there's a different flag for depth ?
-			*/
-			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
-			OS << "	gl_FragDepth = r1.z;\n";
+			color_output_block += "	" + table[i].first + " = " + table[i].second + ";\n";
+			if (first_output_name.empty()) first_output_name = table[i].second;
 		}
 	}
 
@@ -292,6 +377,41 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		OS << make_comparison_test(m_prog.alpha_func, "alpha_test != 0 && ", first_output_name + ".a", "alpha_ref");
 	}
 
+	OS << "}" << std::endl << std::endl;
+
+	OS << "void main()" << std::endl;
+	OS << "{" << std::endl;
+
+	std::string parameters = "";
+	for (auto &reg_name : output_values)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += reg_name;
+			OS << "	vec4 " << reg_name << " = vec4(0.);" << std::endl;
+		}
+	}
+
+	OS << std::endl << "	fs_main(" + parameters + ");" << std::endl << std::endl;
+
+	//Append the color output assignments
+	OS << color_output_block;
+
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	{
+		{
+			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
+			* but it writes depth in r1.z and not h2.z.
+			* Maybe there's a different flag for depth ?
+			*/
+			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
+			OS << "	gl_FragDepth = r1.z;\n";
+		}
+	}
+
 	OS << "}" << std::endl;
 }
 
@@ -318,8 +438,12 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	{
 		for (const ParamItem& PI : PT.items)
 		{
-			if (PT.type == "sampler2D")
+			if (PT.type == "sampler1D" ||
+				PT.type == "sampler2D" ||
+				PT.type == "sampler3D" ||
+				PT.type == "samplerCube")
 				continue;
+
 			size_t offset = atoi(PI.name.c_str() + 2);
 			FragmentConstantOffsetCache.push_back(offset);
 		}

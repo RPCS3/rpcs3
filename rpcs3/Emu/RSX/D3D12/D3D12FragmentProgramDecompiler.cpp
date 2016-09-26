@@ -172,6 +172,21 @@ namespace
 			return;
 		}
 	}
+	
+	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
+	{
+		std::string tex_name = "tex" + std::to_string(index) + ".Sample";
+		std::string sampler_name = "tex" + std::to_string(index) + "sampler";
+		std::string coord_name = "In.tc" + std::to_string(index);
+
+		switch (prog.get_texture_dimension(index))
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d: return " " + tex_name + " (" + sampler_name + ", " + coord_name + ".x) ";
+		case rsx::texture_dimension_extended::texture_dimension_2d: return " " + tex_name + " (" + sampler_name + ", " + coord_name + ".xy) ";
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: return " " + tex_name + " (" + sampler_name + ", " + coord_name + ".xyz) ";
+		}
+	}
 }
 
 void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
@@ -296,27 +311,34 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	// Shaders don't always output colors (for instance if they write to depth only)
 	if (!first_output_name.empty())
 	{
-		switch (m_prog.alpha_func)
+		auto make_comparison_test = [](rsx::comparison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
 		{
-		case rsx::comparison_function::equal:
-			OS << "	if (isAlphaTested && Out." << first_output_name << ".a != alphaRef) discard;\n";
-			break;
-		case rsx::comparison_function::not_equal:
-			OS << "	if (isAlphaTested && Out." << first_output_name << ".a == alphaRef) discard;\n";
-			break;
-		case rsx::comparison_function::less_or_equal:
-			OS << "	if (isAlphaTested && Out." << first_output_name << ".a > alphaRef) discard;\n";
-			break;
-		case rsx::comparison_function::less:
-			OS << "	if (isAlphaTested && Out." << first_output_name << ".a >= alphaRef) discard;\n";
-			break;
-		case rsx::comparison_function::greater:
-			OS << "	if (isAlphaTested && Out." << first_output_name << ".a <= alphaRef) discard;\n";
-			break;
-		case rsx::comparison_function::greater_or_equal:
-			OS << "	if (isAlphaTested && Out." << first_output_name << ".a < alphaRef) discard;\n";
-			break;
+			std::string compare;
+			switch (compare_func)
+			{
+			case rsx::comparison_function::equal:            compare = " == "; break;
+			case rsx::comparison_function::not_equal:        compare = " != "; break;
+			case rsx::comparison_function::less_or_equal:    compare = " <= "; break;
+			case rsx::comparison_function::less:             compare = " < ";  break;
+			case rsx::comparison_function::greater:          compare = " > ";  break;
+			case rsx::comparison_function::greater_or_equal: compare = " >= "; break;
+			default:
+				return "";
+			}
+
+			return "	if (" + test + "!(" + a + compare + b + ")) discard;\n";
+		};
+
+		for (u8 index = 0; index < 16; ++index)
+		{
+			if (m_prog.textures_alpha_kill[index])
+			{
+				std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
+				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+			}
 		}
+
+		OS << make_comparison_test(m_prog.alpha_func, "isAlphaTested && ", "Out." + first_output_name + ".a", "alphaRef");
 		
 	}
 	OS << "	return Out;" << std::endl;
