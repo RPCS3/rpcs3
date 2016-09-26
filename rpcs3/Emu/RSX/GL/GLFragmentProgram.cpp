@@ -264,10 +264,6 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		auto make_comparison_test = [](rsx::comparison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
 		{
-			if (compare_func == rsx::comparison_function::always) return{};
-
-			if (compare_func == rsx::comparison_function::never) return " discard;\n";
-
 			std::string compare;
 			switch (compare_func)
 			{
@@ -277,6 +273,8 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			case rsx::comparison_function::less:             compare = " < ";  break;
 			case rsx::comparison_function::greater:          compare = " > ";  break;
 			case rsx::comparison_function::greater_or_equal: compare = " >= "; break;
+			default:
+				return "";
 			}
 
 			return "	if (" + test + "!(" + a + compare + b + ")) discard;\n";
