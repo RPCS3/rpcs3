@@ -158,24 +158,24 @@ namespace
 
 	GLenum front_face(rsx::front_face op)
 	{
-		GLenum mask = 0;
-		if (rsx::method_registers.shader_window_origin() == rsx::window_origin::bottom)
-			mask = 1;
+		bool invert = (rsx::method_registers.shader_window_origin() == rsx::window_origin::bottom);
 
 		switch (op)
 		{
-		case rsx::front_face::cw: return GL_CW ^ mask;
-		case rsx::front_face::ccw: return GL_CCW ^ mask;
+		case rsx::front_face::cw: return (invert ? GL_CCW : GL_CW);
+		case rsx::front_face::ccw: return (invert ? GL_CW : GL_CCW);
 		}
 		throw;
 	}
 
 	GLenum cull_face(rsx::cull_face op)
 	{
+		bool invert = (rsx::method_registers.shader_window_origin() == rsx::window_origin::top);
+
 		switch (op)
 		{
-		case rsx::cull_face::front: return GL_FRONT;
-		case rsx::cull_face::back: return GL_BACK;
+		case rsx::cull_face::front: return (invert ? GL_BACK : GL_FRONT);
+		case rsx::cull_face::back: return (invert ? GL_FRONT : GL_BACK);
 		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
 		}
 		throw;
