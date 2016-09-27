@@ -276,7 +276,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 	{
 		static const std::string reg_table[] =
 		{
-			"gl_FragCoord",
+			"wpos",
 			"diff_color", "spec_color",
 			"fogc",
 			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
