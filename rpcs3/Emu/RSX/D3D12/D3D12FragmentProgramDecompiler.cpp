@@ -228,9 +228,9 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 		}
 	}
 	// A bit unclean, but works.
-	OS << "	" << "float4 gl_FragCoord = In.Position;" << std::endl;
+	OS << "	" << "float4 wpos = In.Position;" << std::endl;
 	if (m_prog.origin_mode == rsx::window_origin::bottom)
-		OS << "	gl_FragCoord.y = (" << std::to_string(m_prog.height) << " - gl_FragCoord.y);\n";
+		OS << "	wpos.y = (" << std::to_string(m_prog.height) << " - wpos.y);\n";
 	OS << "	float4 ssa = is_front_face ? float4(1., 1., 1., 1.) : float4(-1., -1., -1., -1.);\n";
 
 	// Declare output

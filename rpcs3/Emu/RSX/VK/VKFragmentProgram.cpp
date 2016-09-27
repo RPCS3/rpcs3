@@ -268,6 +268,12 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	}
 
 	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
+	OS << "	vec4 wpos = gl_FragCoord;\n";
+
+	//Flip wpos in Y
+	//We could optionally export wpos from the VS, but this is so much easier
+	if (m_prog.origin_mode == rsx::window_origin::bottom)
+		OS << "	wpos.y = " << std::to_string(m_prog.height) << " - wpos.y;\n";
 
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
 
