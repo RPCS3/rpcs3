@@ -370,7 +370,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			case rsx::comparison_function::less_or_equal:    compare = " <= "; break;
 			case rsx::comparison_function::less:             compare = " < ";  break;
 			case rsx::comparison_function::greater:          compare = " > ";  break;
-			case rsx::comparison_function::greater_or_equal: compare = " >= "; break;			
+			case rsx::comparison_function::greater_or_equal: compare = " >= "; break;
 			default:
 				return "";
 			}
