@@ -142,7 +142,7 @@ namespace vk
 		OS << "	uint b = (value & 0xff);\n";
 		OS << "	uint g = (value >> 8) & 0xff;\n";
 		OS << "	uint r = (value >> 16) & 0xff;\n";
-		OS << "	return vec4(r/255., g/255., b/255., 1.);\n";
+		OS << "	return vec4(float(r)/255., float(g)/255., float(b)/255., 1.);\n";
 		OS << "}\n\n";
 	}
 
