@@ -975,6 +975,23 @@ bool VKGSRender::load_program()
 	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program = get_current_fragment_program();
 
+	for (int i = 0; i < 16; ++i)
+	{
+		auto &tex = rsx::method_registers.fragment_textures[i];
+		if (tex.enabled())
+		{
+			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+			{
+				u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+				if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
+				{
+					fragment_program.redirected_textures |= (1 << i);
+				}
+			}
+		}
+	}
+
 	vk::pipeline_props properties = {};
 
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

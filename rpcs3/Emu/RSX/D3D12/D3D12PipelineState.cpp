@@ -43,6 +43,23 @@ void D3D12GSRender::load_program()
 	m_vertex_program = get_current_vertex_program();
 	m_fragment_program = get_current_fragment_program();
 
+	for (int i = 0; i < 16; ++i)
+	{
+		auto &tex = rsx::method_registers.fragment_textures[i];
+		if (tex.enabled())
+		{
+			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+			{
+				u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+				if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
+				{
+					m_fragment_program.redirected_textures |= (1 << i);
+				}
+			}
+		}
+	}
+
 	D3D12PipelineProperties prop = {};
 	prop.Topology = get_primitive_topology_type(rsx::method_registers.current_draw_clause.primitive);
 

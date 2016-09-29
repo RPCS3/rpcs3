@@ -106,7 +106,7 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 	if (binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
 		binary1.height != binary2.height || binary1.origin_mode != binary2.origin_mode || binary1.pixel_center_mode != binary2.pixel_center_mode ||
 		binary1.back_color_diffuse_output != binary2.back_color_diffuse_output || binary1.back_color_specular_output != binary2.back_color_specular_output ||
-		binary1.front_back_color_enabled != binary2.front_back_color_enabled || binary1.alpha_func != binary2.alpha_func)
+		binary1.front_back_color_enabled != binary2.front_back_color_enabled || binary1.alpha_func != binary2.alpha_func || binary1.redirected_textures != binary2.redirected_textures)
 		return false;
 	const qword *instBuffer1 = (const qword*)binary1.addr;
 	const qword *instBuffer2 = (const qword*)binary2.addr;
