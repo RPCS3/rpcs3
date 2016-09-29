@@ -41,10 +41,10 @@ namespace vk
 		* Set up buffer fetches to only work on 4-component access. This is hardware dependant so we use 4-component access to avoid branching based on IHV implementation
 		* AMD GCN 1.0 for example does not support RGB32 formats for texel buffers
 		*/
-		const VkFormat vec1_types[] = { VK_FORMAT_R16_UNORM, VK_FORMAT_R32_SFLOAT, VK_FORMAT_R16_SFLOAT, VK_FORMAT_R8_UNORM, VK_FORMAT_R16_SINT, VK_FORMAT_R16_SFLOAT, VK_FORMAT_R8_UINT };
-		const VkFormat vec2_types[] = { VK_FORMAT_R16G16_UNORM, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R16G16_SFLOAT, VK_FORMAT_R8G8_UNORM, VK_FORMAT_R16G16_SINT, VK_FORMAT_R16G16_SFLOAT, VK_FORMAT_R8G8_UINT };
-		const VkFormat vec3_types[] = { VK_FORMAT_R16G16B16A16_UNORM, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SINT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R8G8B8A8_UINT };	//VEC3 COMPONENTS NOT SUPPORTED!
-		const VkFormat vec4_types[] = { VK_FORMAT_R16G16B16A16_UNORM, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SINT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R8G8B8A8_UINT };
+		const VkFormat vec1_types[] = { VK_FORMAT_R16_UNORM, VK_FORMAT_R32_SFLOAT, VK_FORMAT_R16_SFLOAT, VK_FORMAT_R8_UNORM, VK_FORMAT_R16_SINT, VK_FORMAT_R16_UNORM, VK_FORMAT_R8_UINT };
+		const VkFormat vec2_types[] = { VK_FORMAT_R16G16_UNORM, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R16G16_SFLOAT, VK_FORMAT_R8G8_UNORM, VK_FORMAT_R16G16_SINT, VK_FORMAT_R16G16_UNORM, VK_FORMAT_R8G8_UINT };
+		const VkFormat vec3_types[] = { VK_FORMAT_R16G16B16A16_UNORM, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SINT, VK_FORMAT_R16G16B16A16_UNORM, VK_FORMAT_R8G8B8A8_UINT };	//VEC3 COMPONENTS NOT SUPPORTED!
+		const VkFormat vec4_types[] = { VK_FORMAT_R16G16B16A16_UNORM, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SINT, VK_FORMAT_R16G16B16A16_UNORM, VK_FORMAT_R8G8B8A8_UINT };
 
 		const VkFormat* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 
@@ -83,6 +83,13 @@ namespace vk
 		default:
 			fmt::throw_exception("Unsupported primitive topology 0x%x", (u8)mode);
 		}
+	}
+
+	bool is_primitive_native(rsx::primitive_type& mode)
+	{
+		bool result;
+		get_appropriate_topology(mode, result);
+		return !result;
 	}
 
 	template <typename T, u32 padding>
@@ -393,8 +400,9 @@ namespace
 			rsx::index_array_type index_type = rsx::method_registers.index_type();
 			u32 type_size = gsl::narrow<u32>(get_index_type_size(index_type));
 
-			u32 index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive,
-				rsx::method_registers.current_draw_clause.get_elements_count());
+			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			if (primitives_emulated)
+				index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, index_count);
 			u32 upload_size = index_count * type_size;
 
 			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
@@ -410,7 +418,7 @@ namespace
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
 				rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
-				[](auto prim) { return !is_primitive_native(prim); });
+				[](auto prim) { return !vk::is_primitive_native(prim); });
 
 			m_index_buffer_ring_info.unmap();
 

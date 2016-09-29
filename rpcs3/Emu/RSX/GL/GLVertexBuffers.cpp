@@ -171,7 +171,8 @@ namespace
 	{
 		u32 min_index, max_index, vertex_draw_count = initial_vertex_count;
 
-		vertex_draw_count = (u32)get_index_count(draw_mode, ::narrow<int>(vertex_draw_count));
+		if (!gl::is_primitive_native(draw_mode))
+			vertex_draw_count = (u32)get_index_count(draw_mode, ::narrow<int>(vertex_draw_count));
 
 		u32 type_size = ::narrow<u32>(get_index_type_size(type));
 		u32 block_sz = vertex_draw_count * type_size;
@@ -179,7 +180,7 @@ namespace
 		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), ::narrow<u32>(block_sz) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, raw_index_buffer,
 			type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
-			[](auto prim) { return !is_primitive_native(prim); });
+			[](auto prim) { return !gl::is_primitive_native(prim); });
 
 		return std::make_tuple(min_index, max_index, vertex_draw_count);
 	}
@@ -355,25 +356,26 @@ namespace
 			rsx::index_array_type type = rsx::method_registers.index_type();
 			u32 type_size              = ::narrow<u32>(get_index_type_size(type));
 
-			u32 index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive,
-			    rsx::method_registers.current_draw_clause.get_elements_count());
+			u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			u32 index_count = vertex_count;
+			
+			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
+				index_count = (u32)get_index_count(rsx::method_registers.current_draw_clause.primitive, vertex_count);
 
 			u32 max_size               = index_count * type_size;
 			auto mapping               = m_index_ring_buffer.alloc_and_map(max_size);
 			void* ptr                  = mapping.first;
 			u32 offset_in_index_buffer = mapping.second;
 
-			u32 expanded_index_count;
-			std::tie(min_index, max_index, expanded_index_count) = upload_index_buffer(
+			std::tie(min_index, max_index, index_count) = upload_index_buffer(
 			    command.raw_index_buffer, ptr, type, rsx::method_registers.current_draw_clause.primitive,
-			    rsx::method_registers.current_draw_clause.first_count_commands, index_count);
-			min_index = 0; // we must keep index to vertex mapping
+			    rsx::method_registers.current_draw_clause.first_count_commands, vertex_count);
+			
 			m_index_ring_buffer.unmap();
+			
+			upload_vertex_buffers(0, max_index, max_vertex_attrib_size, texture_index_offset);
 
-			upload_vertex_buffers(min_index, max_index, max_vertex_attrib_size, texture_index_offset);
-
-			return std::make_tuple(
-			    expanded_index_count, std::make_tuple(get_index_type(type), offset_in_index_buffer));
+			return std::make_tuple(index_count, std::make_tuple(get_index_type(type), offset_in_index_buffer));
 		}
 
 		std::tuple<u32, std::optional<std::tuple<GLenum, u32>>> operator()(
