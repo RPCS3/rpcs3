@@ -177,7 +177,7 @@ namespace rsx
 	template<typename AT>
 	static inline u32 make_jump(vm::_ptr_base<be_t<u32>, AT>& dst, u32 offset)
 	{
-		*dst++ = CELL_GCM_METHOD_FLAG_JUMP | offset;
+		*dst++ = RSX_METHOD_OLD_JUMP_CMD | offset;
 
 		return SIZE_32(u32);
 	}

@@ -1297,7 +1297,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	std::pair<u32, u32> newCommandBuffer = getNextCommandBufferBeginEnd(context->current.addr());
 	u32 offset = getOffsetFromAddress(newCommandBuffer.first);
 	// Write jump instruction
-	*context->current = CELL_GCM_METHOD_FLAG_JUMP | offset;
+	*context->current = RSX_METHOD_OLD_JUMP_CMD | offset;
 	// Update current command buffer
 	context->begin.set(newCommandBuffer.first);
 	context->current.set(newCommandBuffer.first);

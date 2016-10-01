@@ -297,8 +297,10 @@ void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 			if(vm::check_addr(m_addr))
 			{
 				u32 cmd = vm::ps3::read32(m_addr);
-				u32 count = (cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL))
-					|| cmd == CELL_GCM_METHOD_FLAG_RETURN ? 0 : (cmd >> 18) & 0x7ff;
+				u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
+					|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
+					|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
+					|| cmd == RSX_METHOD_RETURN_CMD ? 0 : (cmd >> 18) & 0x7ff;
 
 				offset = 1 + count;
 			}
@@ -642,7 +644,10 @@ void RSXDebugger::GetMemory()
 			m_list_commands->SetItem(i, 3, wxString::Format("%d", count));
 			m_list_commands->SetItem(i, 2, DisAsmCommand(cmd, count, addr, 0));
 
-			if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
+			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
+				&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
+				&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
+				&& cmd != RSX_METHOD_RETURN_CMD)
 			{
 				addr += 4 * count;
 			}
@@ -1092,17 +1097,22 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	wxString disasm = wxEmptyString;
 
 #define DISASM(string, ...) { if(disasm.IsEmpty()) disasm = wxString::Format((string), ##__VA_ARGS__); else disasm += (wxString(' ') + wxString::Format((string), ##__VA_ARGS__)); }
-	if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
+	if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 	{
-		u32 jumpAddr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
+		u32 jumpAddr = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
 		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr+jumpAddr);
 	}
-	else if(cmd & CELL_GCM_METHOD_FLAG_CALL)
+	else if((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 	{
-		u32 callAddr = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
+		u32 jumpAddr = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
+		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr + jumpAddr);
+	}
+	else if((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
+	{
+		u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
 		DISASM("CALL: %08x -> %08x", currentAddr, ioAddr+callAddr);
 	}
-	if(cmd == CELL_GCM_METHOD_FLAG_RETURN)
+	if(cmd == RSX_METHOD_RETURN_CMD)
 	{
 		DISASM("RETURN");
 	}
@@ -1111,7 +1121,10 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	{
 		DISASM("Null cmd");
 	}
-	else if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
+	else if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
+		&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
+		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
+		&& cmd != RSX_METHOD_RETURN_CMD)
 	{
 		auto args = vm::ps3::ptr<u32>::make(currentAddr + 4);
 
@@ -1147,7 +1160,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		}
 		}
 
-		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
+		if((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD)
 		{
 			DISASM("Non Increment cmd");
 		}
