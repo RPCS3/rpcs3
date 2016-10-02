@@ -12,6 +12,11 @@ endif()
 if(POLICY CMP0015)
 	cmake_policy(SET CMP0015 OLD)
 endif()
+# see https://cmake.org/cmake/help/latest/policy/CMP0042.html
+if(POLICY CMP0042)
+	# Enable MACOSX_RPATH by default.
+	cmake_policy(SET CMP0042 NEW)
+endif()
 
 include(CheckCXXCompilerFlag)
 
