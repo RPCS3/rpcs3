@@ -683,48 +683,27 @@ void VKGSRender::end()
 
 			VkFilter min_filter;
 			VkSamplerMipmapMode mip_mode;
+			float min_lod = 0.f, max_lod = 0.f;
+			float lod_bias = 0.f;
+
 			std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
+			
+			if (rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
+			{
+				min_lod = (float)(rsx::method_registers.fragment_textures[i].min_lod() >> 8);
+				max_lod = (float)(rsx::method_registers.fragment_textures[i].max_lod() >> 8);
+				lod_bias = rsx::method_registers.fragment_textures[i].bias();
+			}
+			else
+			{
+				mip_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			}
 			
 			m_sampler_to_clean.push_back(std::make_unique<vk::sampler>(
 				*m_device,
 				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
 				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
-				rsx::method_registers.fragment_textures[i].bias(), vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), rsx::method_registers.fragment_textures[i].min_lod(), rsx::method_registers.fragment_textures[i].max_lod(),
-				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color())
-				));
-
-			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
-		}
-	}
-
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
-	{
-		if (m_program->has_uniform("tex" + std::to_string(i)))
-		{
-			if (!rsx::method_registers.fragment_textures[i].enabled())
-			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
-				continue;
-			}
-
-			vk::image_view *texture0 = m_texture_cache.upload_texture(m_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
-
-			if (!texture0)
-			{
-				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
-				continue;
-			}
-
-			VkFilter min_filter;
-			VkSamplerMipmapMode mip_mode;
-			std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
-
-			m_sampler_to_clean.push_back(std::make_unique<vk::sampler>(
-				*m_device,
-				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
-				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
-				rsx::method_registers.fragment_textures[i].bias(), vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), rsx::method_registers.fragment_textures[i].min_lod(), rsx::method_registers.fragment_textures[i].max_lod(),
+				lod_bias, vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), min_lod, max_lod,
 				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color())
 				));
 
@@ -983,6 +962,9 @@ bool VKGSRender::load_program()
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
+				if (m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+					continue;
+
 				u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 				if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
 				{
