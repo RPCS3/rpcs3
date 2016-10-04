@@ -661,6 +661,10 @@ bool GLGSRender::load_program()
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
+				//Ignore this rtt since we have an aloasing color texture that will be used
+				if (m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+					continue;
+
 				u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 				if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
 				{

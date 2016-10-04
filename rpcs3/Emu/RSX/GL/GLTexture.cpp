@@ -486,6 +486,7 @@ namespace rsx
 
 			const std::array<GLenum, 4>& glRemap = get_swizzle_remap(format);
 
+			glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.get_exact_mipmap_count() - 1);
 
 			u8 remap_a = tex.remap() & 0x3;
@@ -502,22 +503,43 @@ namespace rsx
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
 
-			__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
-
-			int min_filter = gl_tex_min_filter(tex.min_filter());
-			
-			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
+			if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
 			{
-				if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
+				GLint min_filter = gl_tex_min_filter(tex.min_filter());
+				
+				if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
 				{
 					LOG_WARNING(RSX, "Texture %d, target 0x%x, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
-					min_filter = GL_LINEAR;
+					
+					switch (min_filter)
+					{
+					case GL_NEAREST_MIPMAP_NEAREST:
+					case GL_NEAREST_MIPMAP_LINEAR:
+						min_filter = GL_NEAREST; break;
+					case GL_LINEAR_MIPMAP_NEAREST:
+					case GL_LINEAR_MIPMAP_LINEAR:
+						min_filter = GL_LINEAR; break;
+					default:
+						LOG_ERROR(RSX, "No mipmap fallback defined for rsx_min_filter = 0x%X", (u32)tex.min_filter());
+						min_filter = GL_NEAREST;
+					}
 				}
+
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
+
+				__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, 0.);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, 0);
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, 0);
+			}
+			else
+			{
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter(tex.min_filter()));
+
+				__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+				__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 			}
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
 			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
 		}
