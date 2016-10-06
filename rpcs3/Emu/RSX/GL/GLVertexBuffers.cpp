@@ -331,19 +331,11 @@ namespace
 
 				upload_vertex_buffers(min_index, max_index, max_vertex_attrib_size, texture_index_offset);
 
-				//			std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-				//			m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now -
-				//then).count();
-
 				return std::make_tuple(index_count,
 				    std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer));
 			}
 
 			upload_vertex_buffers(min_index, max_index, max_vertex_attrib_size, texture_index_offset);
-
-			//		std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-			//		m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now -
-			//then).count();
 
 			return std::make_tuple(vertex_count, std::optional<std::tuple<GLenum, u32>>());
 		}
@@ -509,12 +501,16 @@ namespace
 std::tuple<u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::set_vertex_buffer()
 {
 	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
-	return std::apply_visitor(draw_command_visitor(m_index_ring_buffer, m_attrib_ring_buffer,
+	auto result = std::apply_visitor(draw_command_visitor(m_index_ring_buffer, m_attrib_ring_buffer,
 	                              m_gl_attrib_buffers, m_program, m_min_texbuffer_alignment,
 	                              [this](const auto& state, const auto& list) {
 		                              return this->get_vertex_buffers(state, list);
 		                             }),
 	    get_draw_command(rsx::method_registers));
+
+	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
+	return result;
 }
 
 namespace

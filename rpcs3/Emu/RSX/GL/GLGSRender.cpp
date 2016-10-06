@@ -519,6 +519,7 @@ void GLGSRender::on_init_thread()
 
 	m_vao.element_array_buffer = m_index_ring_buffer;
 	m_gl_texture_cache.initialize_rtt_cache();
+	m_text_printer.init();
 }
 
 void GLGSRender::on_exit()
@@ -833,22 +834,18 @@ void GLGSRender::flip(int buffer)
 
 	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical());
 
-	m_frame->flip(m_context);
-
 	if (g_cfg_rsx_overlay)
 	{
-		//TODO: Display overlay in a cross-platform manner
-		//Core context throws wgl font functions out of the window as they use display lists
-		//Only show debug info if the user really requests it
-
-		if (g_cfg_rsx_debug_output)
-		{
-			std::string message =
-				"draw_calls: " + std::to_string(m_draw_calls) + ", " + "draw_call_setup: " + std::to_string(m_begin_time) + "us, " + "vertex_upload_time: " + std::to_string(m_vertex_upload_time) + "us, " + "draw_call_execution: " + std::to_string(m_draw_time) + "us";
-
-			LOG_ERROR(RSX, "%s", message);
-		}
+		gl::screen.bind();
+		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
+		
+		m_text_printer.print_text(0, 0, m_frame->client_width(), m_frame->client_height(), "draw calls: " + std::to_string(m_draw_calls));
+		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), "draw call setup: " + std::to_string(m_begin_time) + "us");
+		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
+		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 	}
+
+	m_frame->flip(m_context);
 
 	m_draw_calls = 0;
 	m_begin_time = 0;

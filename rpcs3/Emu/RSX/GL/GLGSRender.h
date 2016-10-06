@@ -6,6 +6,7 @@
 #include "GLRenderTargets.h"
 #include <Utilities/optional.hpp>
 #include "GLProgramBuffer.h"
+#include "GLTextOut.h"
 
 #pragma comment(lib, "opengl32.lib")
 
@@ -36,6 +37,8 @@ private:
 	
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
+
+	gl::text_writer m_text_printer;
 
 public:
 	gl::fbo draw_fbo;
