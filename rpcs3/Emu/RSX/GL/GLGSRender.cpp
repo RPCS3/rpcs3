@@ -374,7 +374,7 @@ namespace
 
 void GLGSRender::end()
 {
-	if (!draw_fbo || !load_program())
+	if (!draw_fbo)
 	{
 		rsx::thread::end();
 		return;
@@ -396,6 +396,8 @@ void GLGSRender::end()
 
 		ds->set_cleared();
 	}
+
+	std::chrono::time_point<std::chrono::system_clock> textures_start = std::chrono::system_clock::now();
 
 	//Setup textures
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -440,12 +442,15 @@ void GLGSRender::end()
 		}
 	}
 
+	std::chrono::time_point<std::chrono::system_clock> textures_end = std::chrono::system_clock::now();
+	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+
 	u32 vertex_draw_count;
 	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
 	std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
 	m_vao.bind();
 
-	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
+	std::chrono::time_point<std::chrono::system_clock> draw_start = std::chrono::system_clock::now();
 
 	if (g_cfg_rsx_debug_output)
 	{
@@ -467,8 +472,8 @@ void GLGSRender::end()
 		draw_fbo.draw_arrays(rsx::method_registers.current_draw_clause.primitive, vertex_draw_count);
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
+	std::chrono::time_point<std::chrono::system_clock> draw_end = std::chrono::system_clock::now();
+	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 
 	write_buffers();
 
@@ -556,6 +561,8 @@ void GLGSRender::on_exit()
 	m_attrib_ring_buffer.remove();
 	m_uniform_ring_buffer.remove();
 	m_index_ring_buffer.remove();
+
+	m_text_printer.close();
 
 	return GSRender::on_exit();
 }
@@ -842,7 +849,8 @@ void GLGSRender::flip(int buffer)
 		m_text_printer.print_text(0, 0, m_frame->client_width(), m_frame->client_height(), "draw calls: " + std::to_string(m_draw_calls));
 		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), "draw call setup: " + std::to_string(m_begin_time) + "us");
 		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
-		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
+		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), "textures upload time: " + std::to_string(m_textures_upload_time) + "us");
+		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 	}
 
 	m_frame->flip(m_context);
@@ -851,6 +859,7 @@ void GLGSRender::flip(int buffer)
 	m_begin_time = 0;
 	m_draw_time = 0;
 	m_vertex_upload_time = 0;
+	m_textures_upload_time = 0;
 
 	for (auto &tex : m_rtts.invalidated_resources)
 	{

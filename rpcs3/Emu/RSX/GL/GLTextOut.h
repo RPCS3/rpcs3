@@ -80,19 +80,7 @@ namespace gl
 
 		text_writer() {}
 
-		~text_writer()
-		{
-			if (initialized)
-			{
-				m_scale_offsets_buffer.remove();
-				m_text_buffer.remove();
-				m_vao.remove();
-
-				m_program.remove();
-				m_fs.remove();
-				m_vs.remove();
-			}
-		}
+		~text_writer(){}
 
 		void init()
 		{
@@ -129,6 +117,8 @@ namespace gl
 
 		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
+			verify(HERE), initialized;
+
 			std::vector<GLint> offsets;
 			std::vector<GLsizei> counts;
 			std::vector<float> shader_offsets;
@@ -188,6 +178,22 @@ namespace gl
 
 			glMultiDrawArrays(GL_POINTS, offsets.data(), counts.data(), counts.size());
 			glBindVertexArray(old_vao);
+		}
+
+		void close()
+		{
+			if (initialized)
+			{
+				m_scale_offsets_buffer.remove();
+				m_text_buffer.remove();
+				m_vao.remove();
+
+				m_program.remove();
+				m_fs.remove();
+				m_vs.remove();
+
+				initialized = false;
+			}
 		}
 	};
 }

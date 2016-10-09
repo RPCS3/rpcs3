@@ -4,6 +4,7 @@
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
+#include "VkTextOut.h"
 #include <Utilities\optional.hpp>
 
 #define RSX_DEBUG 1
@@ -32,6 +33,8 @@ private:
 
 	std::unique_ptr<vk::buffer> null_buffer;
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
+
+	std::unique_ptr<vk::text_writer> m_text_writer;
 
 public:
 	//vk::fbo draw_fbo;
@@ -72,6 +75,12 @@ private:
 	u32 m_client_height = 0;
 
 	u32 m_draw_calls = 0;
+	u32 m_setup_time = 0;
+	u32 m_vertex_upload_time = 0;
+	u32 m_textures_upload_time = 0;
+	u32 m_draw_time = 0;
+	u32 m_flip_time = 0;
+
 	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;
 
