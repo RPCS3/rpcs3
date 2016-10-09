@@ -38,6 +38,22 @@ struct GLTraits
 			.make();
 		__glcheck result.use();
 
+		//Progam locations are guaranteed to not change after linking
+		//Texture locations are simply bound to the TIUs so this can be done once
+		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		{
+			int location;
+			if (result.uniforms.has_location("tex" + std::to_string(i), &location))
+				result.uniforms[location] = i;
+		}
+
+		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+		{
+			int location;
+			if (result.uniforms.has_location("vtex" + std::to_string(i), &location))
+				result.uniforms[location] = (i + rsx::limits::fragment_textures_count);
+		}
+
 		LOG_NOTICE(RSX, "*** prog id = %d", result.id());
 		LOG_NOTICE(RSX, "*** vp id = %d", vertexProgramData.id);
 		LOG_NOTICE(RSX, "*** fp id = %d", fragmentProgramData.id);
