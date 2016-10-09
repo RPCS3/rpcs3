@@ -238,7 +238,8 @@ namespace
 			texture.copy_from(m_attrib_ring_info, gl_type, buffer_offset, data_size);
 
 			//Link texture to uniform
-			m_program->uniforms.texture(location, vertex_array.index + texture_index_offset, texture);
+			glActiveTexture(GL_TEXTURE0 + texture_index_offset + vertex_array.index);
+			texture.bind();
 		}
 
 		void operator()(const rsx::vertex_array_register& vertex_register)
@@ -263,7 +264,8 @@ namespace
 				texture.copy_from(m_attrib_ring_info, gl_type, mapping.second, data_size);
 
 				//Link texture to uniform
-				m_program->uniforms.texture(location, vertex_register.index + texture_index_offset, texture);
+				glActiveTexture(GL_TEXTURE0 + texture_index_offset + vertex_register.index);
+				texture.bind();
 				break;
 			}
 			default:
@@ -274,12 +276,6 @@ namespace
 
 		void operator()(const rsx::empty_vertex_array& vbo)
 		{
-			int location;
-			if (!m_program->uniforms.has_location(s_reg_table[vbo.index], &location))
-				return;
-			glActiveTexture(GL_TEXTURE0 + vbo.index + texture_index_offset);
-			glBindTexture(GL_TEXTURE_BUFFER, 0);
-			glProgramUniform1i(m_program->id(), location, vbo.index + texture_index_offset);
 		}
 
 	protected:
@@ -406,17 +402,7 @@ namespace
 		{
 			u32 verts_allocated = max_index - min_index + 1;
 			__glcheck m_attrib_ring_buffer.reserve_and_map(verts_allocated * max_vertex_attrib_size);
-			// Disable texture then reenable them
-			// Is it really necessary ?
-			for (int index = 0; index < rsx::limits::vertex_count; ++index) {
-				int location;
-				if (!m_program->uniforms.has_location(s_reg_table[index], &location)) continue;
 
-				glActiveTexture(GL_TEXTURE0 + index + texture_index_offset);
-				glBindTexture(GL_TEXTURE_BUFFER, 0);
-				glProgramUniform1i(m_program->id(), location, index + texture_index_offset);
-				continue;
-			}
 			vertex_buffer_visitor visitor(verts_allocated, texture_index_offset, m_attrib_ring_buffer,
 			    m_program, m_gl_attrib_buffers, m_min_texbuffer_alignment);
 			const auto& vertex_buffers =
@@ -450,12 +436,7 @@ namespace
 				if (!m_program->uniforms.has_location(s_reg_table[index], &location)) continue;
 
 				if (!vertex_info.size()) // disabled, bind a null sampler
-				{
-					glActiveTexture(GL_TEXTURE0 + index + texture_index_offset);
-					glBindTexture(GL_TEXTURE_BUFFER, 0);
-					glProgramUniform1i(m_program->id(), location, index + texture_index_offset);
 					continue;
-				}
 
 				const u32 element_size =
 				    rsx::get_vertex_type_size_on_host(vertex_info.type(), vertex_info.size());
@@ -490,7 +471,8 @@ namespace
 				texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
 
 				// Link texture to uniform
-				m_program->uniforms.texture(location, index + texture_index_offset, texture);
+				glActiveTexture(GL_TEXTURE0 + texture_index_offset + index);
+				texture.bind();
 				m_attrib_ring_buffer.unmap();
 			}
 			return vertex_draw_count;
