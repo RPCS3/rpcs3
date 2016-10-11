@@ -507,10 +507,16 @@ void GLGSRender::on_init_thread()
 	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
 	m_vao.create();
 
-	for (gl::texture &tex : m_gl_attrib_buffers)
+	const u32 texture_index_offset =
+		rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
+	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
+		auto &tex = m_gl_attrib_buffers[index];
 		tex.create();
 		tex.set_target(gl::texture::target::textureBuffer);
+
+		glActiveTexture(GL_TEXTURE0 + texture_index_offset + index);
+		tex.bind();
 	}
 
 	m_attrib_ring_buffer.create(gl::buffer::target::texture, 16 * 0x100000);

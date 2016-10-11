@@ -201,12 +201,10 @@ namespace
 
 	struct vertex_buffer_visitor
 	{
-		vertex_buffer_visitor(u32 vtx_cnt, u32 texture_idx_offset, gl::ring_buffer& heap,
-		    gl::glsl::program* prog, gl::texture* attrib_buffer, u32 min_texbuffer_offset)
+		vertex_buffer_visitor(u32 vtx_cnt, gl::ring_buffer& heap, gl::glsl::program* prog, gl::texture* attrib_buffer, u32 min_texbuffer_offset)
 		    : vertex_count(vtx_cnt)
 		    , m_attrib_ring_info(heap)
 		    , m_program(prog)
-		    , texture_index_offset(texture_idx_offset)
 		    , m_gl_attrib_buffers(attrib_buffer)
 		    , m_min_texbuffer_alignment(min_texbuffer_offset)
 		{
@@ -236,10 +234,6 @@ namespace
 			write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size));
 
 			texture.copy_from(m_attrib_ring_info, gl_type, buffer_offset, data_size);
-
-			//Link texture to uniform
-			glActiveTexture(GL_TEXTURE0 + texture_index_offset + vertex_array.index);
-			texture.bind();
 		}
 
 		void operator()(const rsx::vertex_array_register& vertex_register)
@@ -262,10 +256,6 @@ namespace
 
 				memcpy(dst, vertex_register.data.data(), element_size);
 				texture.copy_from(m_attrib_ring_info, gl_type, mapping.second, data_size);
-
-				//Link texture to uniform
-				glActiveTexture(GL_TEXTURE0 + texture_index_offset + vertex_register.index);
-				texture.bind();
 				break;
 			}
 			default:
@@ -282,7 +272,6 @@ namespace
 		u32 vertex_count;
 		gl::ring_buffer& m_attrib_ring_info;
 		gl::glsl::program* m_program;
-		u32 texture_index_offset;
 		gl::texture* m_gl_attrib_buffers;
 		GLint m_min_texbuffer_alignment;
 	};
@@ -325,13 +314,13 @@ namespace
 				    rsx::method_registers.current_draw_clause.first_count_commands,
 				    rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer);
 
-				upload_vertex_buffers(min_index, max_index, max_vertex_attrib_size, texture_index_offset);
+				upload_vertex_buffers(min_index, max_index, max_vertex_attrib_size);
 
 				return std::make_tuple(index_count,
 				    std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer));
 			}
 
-			upload_vertex_buffers(min_index, max_index, max_vertex_attrib_size, texture_index_offset);
+			upload_vertex_buffers(min_index, max_index, max_vertex_attrib_size);
 
 			return std::make_tuple(vertex_count, std::optional<std::tuple<GLenum, u32>>());
 		}
@@ -361,7 +350,7 @@ namespace
 			
 			m_index_ring_buffer.unmap();
 			
-			upload_vertex_buffers(0, max_index, max_vertex_attrib_size, texture_index_offset);
+			upload_vertex_buffers(0, max_index, max_vertex_attrib_size);
 
 			return std::make_tuple(index_count, std::make_tuple(get_index_type(type), offset_in_index_buffer));
 		}
@@ -370,7 +359,7 @@ namespace
 		    const rsx::draw_inlined_array& command)
 		{
 			// We need to go through array to determine vertex count so upload it
-			u32 vertex_count = upload_inline_array(max_vertex_attrib_size, texture_index_offset);
+			u32 vertex_count = upload_inline_array(max_vertex_attrib_size);
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive)) {
 				u32 offset_in_index_buffer;
@@ -385,8 +374,6 @@ namespace
 		}
 
 	private:
-		const u32 texture_index_offset =
-		    rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 		u32 max_vertex_attrib_size = 0;
 		gl::ring_buffer& m_index_ring_buffer;
 		gl::ring_buffer& m_attrib_ring_buffer;
@@ -397,13 +384,12 @@ namespace
 		std::function<attribute_storage(rsx::rsx_state, std::vector<std::pair<u32, u32>>)>
 		    get_vertex_buffers;
 
-		void upload_vertex_buffers(u32 min_index, u32 max_index, const u32& max_vertex_attrib_size,
-		    const u32& texture_index_offset)
+		void upload_vertex_buffers(u32 min_index, u32 max_index, const u32& max_vertex_attrib_size)
 		{
 			u32 verts_allocated = max_index - min_index + 1;
 			__glcheck m_attrib_ring_buffer.reserve_and_map(verts_allocated * max_vertex_attrib_size);
 
-			vertex_buffer_visitor visitor(verts_allocated, texture_index_offset, m_attrib_ring_buffer,
+			vertex_buffer_visitor visitor(verts_allocated, m_attrib_ring_buffer,
 			    m_program, m_gl_attrib_buffers, m_min_texbuffer_alignment);
 			const auto& vertex_buffers =
 			    get_vertex_buffers(rsx::method_registers, {{min_index, verts_allocated}});
@@ -411,7 +397,7 @@ namespace
 			m_attrib_ring_buffer.unmap();
 		}
 
-		u32 upload_inline_array(const u32& max_vertex_attrib_size, const u32& texture_index_offset)
+		u32 upload_inline_array(const u32& max_vertex_attrib_size)
 		{
 			u32 stride                             = 0;
 			u32 offsets[rsx::limits::vertex_count] = {0};
@@ -435,7 +421,7 @@ namespace
 				int location;
 				if (!m_program->uniforms.has_location(s_reg_table[index], &location)) continue;
 
-				if (!vertex_info.size()) // disabled, bind a null sampler
+				if (!vertex_info.size())
 					continue;
 
 				const u32 element_size =
@@ -469,10 +455,6 @@ namespace
 				}
 
 				texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
-
-				// Link texture to uniform
-				glActiveTexture(GL_TEXTURE0 + texture_index_offset + index);
-				texture.bind();
 				m_attrib_ring_buffer.unmap();
 			}
 			return vertex_draw_count;
