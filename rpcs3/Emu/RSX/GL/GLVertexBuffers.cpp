@@ -362,7 +362,7 @@ namespace
 				u32 offset_in_index_buffer;
 				u32 index_count;
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
-				    rsx::method_registers.current_draw_clause.first_count_commands,
+					{ std::make_pair(0, vertex_count) },
 				    rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer);
 				return std::make_tuple(index_count,
 				    std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer));
