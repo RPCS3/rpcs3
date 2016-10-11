@@ -6,6 +6,7 @@
 #include "GLRenderTargets.h"
 #include <Utilities/optional.hpp>
 #include "GLProgramBuffer.h"
+#include "GLTextOut.h"
 
 #pragma comment(lib, "opengl32.lib")
 
@@ -33,9 +34,12 @@ private:
 	u32 m_begin_time = 0;
 	u32 m_draw_time = 0;
 	u32 m_vertex_upload_time = 0;
+	u32 m_textures_upload_time = 0;
 	
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
+
+	gl::text_writer m_text_printer;
 
 public:
 	gl::fbo draw_fbo;

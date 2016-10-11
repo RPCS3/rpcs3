@@ -189,7 +189,7 @@ std::string VertexProgramDecompiler::GetFunc()
 
 std::string VertexProgramDecompiler::GetTex()
 {
-	return m_parr.AddParam(PF_PARAM_UNIFORM, "sampler2D", std::string("vtex") + std::to_string(/*?.tex_num*/0));
+	return m_parr.AddParam(PF_PARAM_UNIFORM, "sampler2D", std::string("vtex") + std::to_string(d2.tex_num));
 }
 
 std::string VertexProgramDecompiler::Format(const std::string& code)

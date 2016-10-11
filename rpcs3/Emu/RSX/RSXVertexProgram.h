@@ -118,6 +118,12 @@ union D2
 		u32 iaddrh : 6;
 		u32        : 26;
 	};
+	struct
+	{
+		u32         : 8;
+		u32 tex_num : 2;	/* Actual field may be 4 bits wide, but we only have 4 TIUs */
+		u32         : 22;
+	};
 };
 
 union D3

@@ -1705,5 +1705,8 @@
     <ClInclude Include="Emu\RSX\gcm_printing.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\TextGlyphs.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

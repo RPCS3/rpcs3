@@ -30,6 +30,7 @@
     <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\VK\VKTextOut.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
     <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
