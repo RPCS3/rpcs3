@@ -152,7 +152,7 @@ namespace
 		}
 
 		u32 first = 0;
-		auto mapping = dst.alloc_and_map(vertex_draw_count * sizeof(u16));
+		auto mapping = dst.alloc_from_heap(vertex_draw_count * sizeof(u16), 256);
 		char *mapped_buffer = (char *)mapping.first;
 
 		for (const auto &pair : first_count_commands)
@@ -163,7 +163,6 @@ namespace
 			first += pair.second;
 		}
 
-		dst.unmap();
 		return std::make_tuple(vertex_draw_count, mapping.second);
 	}
 
@@ -224,7 +223,7 @@ namespace
 			auto& texture = m_gl_attrib_buffers[vertex_array.index];
 
 			u32 buffer_offset = 0;
-			auto mapping      = m_attrib_ring_info.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
+			auto mapping      = m_attrib_ring_info.alloc_from_heap(data_size, m_min_texbuffer_alignment);
 			gsl::byte* dst    = static_cast<gsl::byte*>(mapping.first);
 			buffer_offset     = mapping.second;
 			gsl::span<gsl::byte> dest_span(dst, data_size);
@@ -251,7 +250,7 @@ namespace
 
 				auto& texture = m_gl_attrib_buffers[vertex_register.index];
 
-				auto mapping = m_attrib_ring_info.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
+				auto mapping = m_attrib_ring_info.alloc_from_heap(data_size, m_min_texbuffer_alignment);
 				u8 *dst = static_cast<u8*>(mapping.first);
 
 				memcpy(dst, vertex_register.data.data(), element_size);
@@ -340,15 +339,13 @@ namespace
 				index_count = (u32)get_index_count(rsx::method_registers.current_draw_clause.primitive, vertex_count);
 
 			u32 max_size               = index_count * type_size;
-			auto mapping               = m_index_ring_buffer.alloc_and_map(max_size);
+			auto mapping               = m_index_ring_buffer.alloc_from_heap(max_size, 256);
 			void* ptr                  = mapping.first;
 			u32 offset_in_index_buffer = mapping.second;
 
 			std::tie(min_index, max_index, index_count) = upload_index_buffer(
 			    command.raw_index_buffer, ptr, type, rsx::method_registers.current_draw_clause.primitive,
 			    rsx::method_registers.current_draw_clause.first_count_commands, vertex_count);
-			
-			m_index_ring_buffer.unmap();
 			
 			upload_vertex_buffers(0, max_index, max_vertex_attrib_size);
 
@@ -387,14 +384,12 @@ namespace
 		void upload_vertex_buffers(u32 min_index, u32 max_index, const u32& max_vertex_attrib_size)
 		{
 			u32 verts_allocated = max_index - min_index + 1;
-			__glcheck m_attrib_ring_buffer.reserve_and_map(verts_allocated * max_vertex_attrib_size);
 
 			vertex_buffer_visitor visitor(verts_allocated, m_attrib_ring_buffer,
 			    m_program, m_gl_attrib_buffers, m_min_texbuffer_alignment);
 			const auto& vertex_buffers =
 			    get_vertex_buffers(rsx::method_registers, {{min_index, verts_allocated}});
 			for (const auto& vbo : vertex_buffers) std::apply_visitor(visitor, vbo);
-			m_attrib_ring_buffer.unmap();
 		}
 
 		u32 upload_inline_array(const u32& max_vertex_attrib_size)
@@ -413,7 +408,6 @@ namespace
 			u32 vertex_draw_count =
 			    (u32)(rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(u32)) /
 			    stride;
-			m_attrib_ring_buffer.reserve_and_map(vertex_draw_count * max_vertex_attrib_size);
 
 			for (int index = 0; index < rsx::limits::vertex_count; ++index) {
 				auto& vertex_info = rsx::method_registers.vertex_arrays_info[index];
@@ -433,7 +427,7 @@ namespace
 
 				u8* src =
 				    reinterpret_cast<u8*>(rsx::method_registers.current_draw_clause.inline_vertex_array.data());
-				auto mapping = m_attrib_ring_buffer.alloc_from_reserve(data_size, m_min_texbuffer_alignment);
+				auto mapping = m_attrib_ring_buffer.alloc_from_heap(data_size, m_min_texbuffer_alignment);
 				u8* dst      = static_cast<u8*>(mapping.first);
 
 				src += offsets[index];
@@ -455,7 +449,6 @@ namespace
 				}
 
 				texture.copy_from(m_attrib_ring_buffer, gl_type, mapping.second, data_size);
-				m_attrib_ring_buffer.unmap();
 			}
 			return vertex_draw_count;
 		}

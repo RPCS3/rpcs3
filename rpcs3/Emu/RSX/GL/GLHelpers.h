@@ -383,7 +383,7 @@ namespace gl
 			read_write = GL_READ_WRITE
 		};
 
-	private:
+	protected:
 		GLuint m_id = GL_NONE;
 		GLsizeiptr m_size = 0;
 		target m_target = target::array;
@@ -588,80 +588,107 @@ namespace gl
 	class ring_buffer : public buffer
 	{
 		u32 m_data_loc = 0;
+		u32 m_limit = 0;
+		void *m_memory_mapping = nullptr;
 
-		u32 m_mapped_block_size = 0;
-		u32 m_mapped_block_offset;
-		u32 m_mapped_reserve_offset;
-		u32 m_mapped_bytes_available;
-		void *m_mapped_base = nullptr;
+		GLsync m_fence = nullptr;
 
-	public:
-		std::pair<void*, u32> alloc_and_map(u32 alloc_size)
+		void wait_for_sync()
 		{
-			alloc_size = align(alloc_size, 0x100);
+			verify(HERE), m_fence != nullptr;
 
-			buffer::bind();
-			u32 limit = m_data_loc + alloc_size;
-			if (limit > buffer::size())
+			bool done = false;
+			while (!done)
 			{
-				if (alloc_size > buffer::size())
+				//Check if we are finished, wait time = 1us
+				GLenum err = glClientWaitSync(m_fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000);
+				switch (err)
 				{
-					buffer::data(alloc_size);
+				default:
+					LOG_ERROR(RSX, "err Returned 0x%X", err);
+				case GL_ALREADY_SIGNALED:
+				case GL_CONDITION_SATISFIED:
+					done = true;
+					break;
+				case GL_TIMEOUT_EXPIRED:
+					continue;
 				}
-
-				m_data_loc = 0;
 			}
 
-			void *ptr = glMapBufferRange((GLenum)buffer::current_target(), m_data_loc, alloc_size,
-				GL_MAP_WRITE_BIT|GL_MAP_INVALIDATE_RANGE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+			glDeleteSync(m_fence);
+			m_fence = nullptr;
+		}
+
+	public:
+
+		void recreate(GLsizeiptr size, const void* data = nullptr)
+		{
+			if (m_id)
+			{
+				wait_for_sync();
+				remove();
+			}
+			
+			buffer::create();
+
+			glBindBuffer((GLenum)m_target, m_id);
+			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+			m_memory_mapping = glMapBufferRange((GLenum)m_target, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+
+			verify(HERE), m_memory_mapping != nullptr;
+			m_data_loc = 0;
+			m_limit = size;
+		}
+
+		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
+		{
+			m_target = target_;
+			recreate(size, data_);
+		}
+
+		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment)
+		{
 			u32 offset = m_data_loc;
-			m_data_loc += alloc_size;
-			return std::make_pair(ptr, offset);
+			if (m_data_loc) offset = align(offset, alignment);
+
+			if ((offset + alloc_size) > m_limit)
+			{
+				//TODO: Measure the stall here
+				wait_for_sync();
+				m_data_loc = 0;
+				offset = 0;
+			}
+
+			if (!m_data_loc)
+			{
+				verify(HERE), m_fence == nullptr;
+				m_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+			}
+
+			//Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
+			m_data_loc = align(offset + alloc_size, 256);
+			return std::make_pair(((char*)m_memory_mapping) + offset, offset);
+		}
+
+		void remove()
+		{
+			if (m_memory_mapping)
+			{
+				glBindBuffer((GLenum)m_target, m_id);
+				glUnmapBuffer((GLenum)m_target);
+
+				m_memory_mapping = nullptr;
+				m_data_loc = 0;
+				m_limit = 0;
+			}
+
+			glDeleteBuffers(1, &m_id);
+			m_id = 0;
 		}
 
 		void unmap()
 		{
-			buffer::unmap();
-			m_mapped_block_size = 0;
-			m_mapped_base = 0;
-		}
-
-		void reserve_and_map(u32 max_size)
-		{
-			max_size = align(max_size, 0x1000);
-			auto mapping = alloc_and_map(max_size);
-			m_mapped_base = mapping.first;
-			m_mapped_block_offset = mapping.second;
-			m_mapped_reserve_offset = 0;
-			m_mapped_bytes_available = max_size;
-		}
-
-		std::pair<void*, u32> alloc_from_reserve(u32 size, u32 alignment = 16)
-		{
-			size = align(size, alignment);
-
-			if (m_mapped_bytes_available < size || !m_mapped_base)
-			{
-				if (m_mapped_base)
-				{
-					//This doesn't really work for some reason, probably since the caller should bind the target
-					//before making this call as the block may be reallocated
-					LOG_ERROR(RSX, "reserved allocation exceeded. check for corruption!");
-					unmap();
-				}
-
-				reserve_and_map((size > 4096) ? size : 4096);
-			}
-
-			verify(HERE), m_mapped_bytes_available >= size;
-
-			void *ptr = (char*)m_mapped_base + m_mapped_reserve_offset;
-			u32 offset = m_mapped_reserve_offset + m_mapped_block_offset;
-			m_mapped_reserve_offset += size;
-			m_mapped_bytes_available -= size;
-
-			verify(HERE), (offset & (alignment - 1)) == 0;
-			return std::make_pair(ptr, offset);
+			LOG_ERROR(RSX, "An attempt was made to unmap a persistent mapped buffer!");
 		}
 
 		void bind_range(u32 index, u32 offset, u32 size) const

@@ -519,9 +519,9 @@ void GLGSRender::on_init_thread()
 		tex.bind();
 	}
 
-	m_attrib_ring_buffer.create(gl::buffer::target::texture, 16 * 0x100000);
-	m_uniform_ring_buffer.create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_index_ring_buffer.create(gl::buffer::target::element_array, 0x100000);
+	m_attrib_ring_buffer.create(gl::buffer::target::texture, 256 * 0x100000);
+	m_uniform_ring_buffer.create(gl::buffer::target::uniform, 256 * 0x100000);
+	m_index_ring_buffer.create(gl::buffer::target::element_array, 16 * 0x100000);
 
 	m_vao.element_array_buffer = m_index_ring_buffer;
 	m_gl_texture_cache.initialize_rtt_cache();
@@ -689,7 +689,6 @@ bool GLGSRender::load_program()
 	u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	fragment_constants_size = std::max(32U, fragment_constants_size);
 	u32 max_buffer_sz = 512 + 8192 + align(fragment_constants_size, m_uniform_buffer_offset_align);
-	m_uniform_ring_buffer.reserve_and_map(max_buffer_sz);
 
 	u8 *buf;
 	u32 scale_offset_offset;
@@ -697,7 +696,7 @@ bool GLGSRender::load_program()
 	u32 fragment_constants_offset;
 
 	// Scale offset
-	auto mapping = m_uniform_ring_buffer.alloc_from_reserve(512);
+	auto mapping = m_uniform_ring_buffer.alloc_from_heap(512, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	scale_offset_offset = mapping.second;
 	fill_scale_offset_data(buf, false);
@@ -713,7 +712,7 @@ bool GLGSRender::load_program()
 	memcpy(buf + 19 * sizeof(float), &alpha_ref, sizeof(float));
 
 	// Vertex constants
-	mapping = m_uniform_ring_buffer.alloc_from_reserve(8192);
+	mapping = m_uniform_ring_buffer.alloc_from_heap(8192, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	vertex_constants_offset = mapping.second;
 	fill_vertex_program_constants_data(buf);
@@ -721,13 +720,11 @@ bool GLGSRender::load_program()
 	// Fragment constants
 	if (fragment_constants_size)
 	{
-		mapping = m_uniform_ring_buffer.alloc_from_reserve(fragment_constants_size);
+		mapping = m_uniform_ring_buffer.alloc_from_heap(fragment_constants_size, m_uniform_buffer_offset_align);
 		buf = static_cast<u8*>(mapping.first);
 		fragment_constants_offset = mapping.second;
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
 	}
-
-	m_uniform_ring_buffer.unmap();
 
 	m_uniform_ring_buffer.bind_range(0, scale_offset_offset, 512);
 	m_uniform_ring_buffer.bind_range(1, vertex_constants_offset, 8192);
