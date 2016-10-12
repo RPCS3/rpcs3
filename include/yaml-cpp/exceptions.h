@@ -89,7 +89,7 @@ const char* const BAD_FILE = "bad file";
 
 template <typename T>
 inline const std::string KEY_NOT_FOUND_WITH_KEY(
-    const T&, typename disable_if<is_numeric<T> >::type* = 0) {
+    const T&, typename disable_if<is_numeric<T>>::type* = 0) {
   return KEY_NOT_FOUND;
 }
 
@@ -101,7 +101,7 @@ inline const std::string KEY_NOT_FOUND_WITH_KEY(const std::string& key) {
 
 template <typename T>
 inline const std::string KEY_NOT_FOUND_WITH_KEY(
-    const T& key, typename enable_if<is_numeric<T> >::type* = 0) {
+    const T& key, typename enable_if<is_numeric<T>>::type* = 0) {
   std::stringstream stream;
   stream << KEY_NOT_FOUND << ": " << key;
   return stream.str();

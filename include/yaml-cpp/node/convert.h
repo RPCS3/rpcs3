@@ -163,7 +163,7 @@ struct convert<bool> {
 
 // std::map
 template <typename K, typename V>
-struct convert<std::map<K, V> > {
+struct convert<std::map<K, V>> {
   static Node encode(const std::map<K, V>& rhs) {
     Node node(NodeType::Map);
     for (typename std::map<K, V>::const_iterator it = rhs.begin();
@@ -190,7 +190,7 @@ struct convert<std::map<K, V> > {
 
 // std::vector
 template <typename T>
-struct convert<std::vector<T> > {
+struct convert<std::vector<T>> {
   static Node encode(const std::vector<T>& rhs) {
     Node node(NodeType::Sequence);
     for (typename std::vector<T>::const_iterator it = rhs.begin();
@@ -217,7 +217,7 @@ struct convert<std::vector<T> > {
 
 // std::list
 template <typename T>
-struct convert<std::list<T> > {
+struct convert<std::list<T>> {
   static Node encode(const std::list<T>& rhs) {
     Node node(NodeType::Sequence);
     for (typename std::list<T>::const_iterator it = rhs.begin();
@@ -269,8 +269,7 @@ struct convert<std::array<T, N>> {
     return true;
   }
 
-private:
-
+ private:
   static bool isNodeValid(const Node& node) {
     return node.IsSequence() && node.size() == N;
   }
@@ -278,7 +277,7 @@ private:
 
 // std::pair
 template <typename T, typename U>
-struct convert<std::pair<T, U> > {
+struct convert<std::pair<T, U>> {
   static Node encode(const std::pair<T, U>& rhs) {
     Node node(NodeType::Sequence);
     node.push_back(rhs.first);

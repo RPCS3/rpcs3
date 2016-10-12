@@ -48,9 +48,8 @@ void NodeBuilder::OnScalar(const Mark& mark, const std::string& tag,
   Pop();
 }
 
-void NodeBuilder::OnSequenceStart(const Mark& mark,
-                                  const std::string& tag, anchor_t anchor,
-                                  EmitterStyle::value style) {
+void NodeBuilder::OnSequenceStart(const Mark& mark, const std::string& tag,
+                                  anchor_t anchor, EmitterStyle::value style) {
   detail::node& node = Push(mark, anchor);
   node.set_tag(tag);
   node.set_type(NodeType::Sequence);

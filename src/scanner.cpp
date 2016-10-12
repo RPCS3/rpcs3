@@ -65,9 +65,9 @@ void Scanner::EnsureTokensInQueue() {
     }
 
     // no token? maybe we've actually finished
-      if (m_endedStream) {
+    if (m_endedStream) {
       return;
-      }
+    }
 
     // no? then scan...
     ScanNextToken();
