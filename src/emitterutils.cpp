@@ -380,6 +380,8 @@ bool WriteChar(ostream_wrapper& out, char ch) {
     out << "\"\\n\"";
   } else if (ch == '\b') {
     out << "\"\\b\"";
+  } else if (ch == '\\') {
+    out << "\"\\\\\"";
   } else if ((0x20 <= ch && ch <= 0x7e) || ch == ' ') {
     out << "\"" << ch << "\"";
   } else {

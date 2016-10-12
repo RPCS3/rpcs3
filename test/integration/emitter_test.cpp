@@ -970,6 +970,14 @@ TEST_F(EmitterTest, ValueOfDoubleQuote) {
   ExpectEmit("foo: \"\\\"\"");
 }
 
+TEST_F(EmitterTest, ValueOfBackslash) {
+  out << YAML::BeginMap;
+  out << YAML::Key << "foo" << YAML::Value << '\\';
+  out << YAML::EndMap;
+
+  ExpectEmit("foo: \"\\\\\"");
+}
+
 class EmitterErrorTest : public ::testing::Test {
  protected:
   void ExpectEmitError(const std::string& expectedError) {
