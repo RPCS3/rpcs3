@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <algorithm>
 
 #include "OpenGL.h"
 #include "../GCM.h"
@@ -587,6 +588,8 @@ namespace gl
 
 	class ring_buffer : public buffer
 	{
+	protected:
+
 		u32 m_data_loc = 0;
 		u32 m_limit = 0;
 		void *m_memory_mapping = nullptr;
@@ -621,7 +624,7 @@ namespace gl
 
 	public:
 
-		void recreate(GLsizeiptr size, const void* data = nullptr)
+		virtual void recreate(GLsizeiptr size, const void* data = nullptr)
 		{
 			if (m_id)
 			{
@@ -646,7 +649,7 @@ namespace gl
 			recreate(size, data_);
 		}
 
-		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment)
+		virtual std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment)
 		{
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, alignment);
@@ -670,7 +673,7 @@ namespace gl
 			return std::make_pair(((char*)m_memory_mapping) + offset, offset);
 		}
 
-		void remove()
+		virtual void remove()
 		{
 			if (m_memory_mapping)
 			{
@@ -686,14 +689,106 @@ namespace gl
 			m_id = 0;
 		}
 
-		void unmap()
-		{
-			LOG_ERROR(RSX, "An attempt was made to unmap a persistent mapped buffer!");
-		}
+		virtual void reserve_storage_on_heap(u32 alloc_size) {}
+
+		virtual void unmap() {}
 
 		void bind_range(u32 index, u32 offset, u32 size) const
 		{
 			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
+		}
+	};
+
+	class legacy_ring_buffer : public ring_buffer
+	{
+		u32 m_mapped_bytes = 0;
+		u32 m_mapping_offset = 0;
+
+	public:
+
+		void recreate(GLsizeiptr size, const void* data = nullptr) override
+		{
+			if (m_id)
+				remove();
+
+			buffer::create();
+			buffer::data(size, data);
+			
+			m_memory_mapping = nullptr;
+			m_data_loc = 0;
+			m_limit = size;
+		}
+
+		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
+		{
+			m_target = target_;
+			recreate(size, data_);
+		}
+
+		void reserve_storage_on_heap(u32 alloc_size) override
+		{
+			verify (HERE), m_memory_mapping == nullptr;
+
+			u32 offset = m_data_loc;
+			if (m_data_loc) offset = align(offset, 256);
+
+			if ((offset + alloc_size) > m_limit)
+			{
+				buffer::data(m_limit, nullptr);
+				m_data_loc = 0;
+			}
+
+			glBindBuffer((GLenum)m_target, m_id);
+			m_memory_mapping = glMapBufferRange((GLenum)m_target, m_data_loc, align(alloc_size, 256), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+			m_mapped_bytes = align(alloc_size, 256);
+			m_mapping_offset = m_data_loc;
+
+			verify(HERE), m_mapped_bytes >= alloc_size;
+		}
+
+		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment) override
+		{
+			u32 offset = m_data_loc;
+			if (m_data_loc) offset = align(offset, alignment);
+
+			u32 padding = (offset - m_data_loc);
+			u32 real_size = padding + alloc_size;
+
+			if (real_size > m_mapped_bytes)
+			{
+				//Missed allocation. We take a performance hit on doing this.
+				//Overallocate slightly for the next allocation if requested size is too small
+				unmap();
+				reserve_storage_on_heap(std::max(real_size, 4096U));
+				
+				offset = m_data_loc;
+				if (m_data_loc) offset = align(offset, alignment);
+
+				padding = (offset - m_data_loc);
+				real_size = padding + alloc_size;
+			}
+
+			m_data_loc = offset + alloc_size;
+			m_mapped_bytes -= real_size;
+			
+			u32 local_offset = (offset - m_mapping_offset);
+			return std::make_pair(((char*)m_memory_mapping) + local_offset, offset);
+		}
+
+		void remove() override
+		{
+			ring_buffer::remove();
+			m_mapped_bytes = 0;
+		}
+
+		void unmap() override
+		{
+			buffer::bind();
+			buffer::unmap();
+
+			m_memory_mapping = nullptr;
+			m_mapped_bytes = 0;
+			m_mapping_offset = 0;
 		}
 	};
 
@@ -1277,7 +1372,14 @@ namespace gl
 			if (glTextureBufferRangeEXT == nullptr)
 				fmt::throw_exception("OpenGL error: partial buffer access for textures is unsupported on your system" HERE);
 
+			glGetError();
 			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
+
+			if (glGetError())
+			{
+				LOG_ERROR(RSX, "TexBufferRange has failed!, buffer id = %d, offset=%d, length=%d", buf.id(), offset, length);
+				fmt::throw_exception("OpenGL error: texture buffer allocation has failed" HERE);
+			}
 		}
 
 		void copy_from(buffer &buf, u32 gl_format_type)

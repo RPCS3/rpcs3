@@ -458,7 +458,7 @@ namespace
 std::tuple<u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::set_vertex_buffer()
 {
 	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
-	auto result = std::apply_visitor(draw_command_visitor(m_index_ring_buffer, m_attrib_ring_buffer,
+	auto result = std::apply_visitor(draw_command_visitor(*m_index_ring_buffer, *m_attrib_ring_buffer,
 	                              m_gl_attrib_buffers, m_program, m_min_texbuffer_alignment,
 	                              [this](const auto& state, const auto& list) {
 		                              return this->get_vertex_buffers(state, list);
