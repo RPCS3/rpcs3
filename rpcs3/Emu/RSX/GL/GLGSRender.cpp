@@ -683,8 +683,48 @@ bool GLGSRender::load_program()
 		}
 	}
 
+	auto old_program = m_program;
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	m_program->use();
+
+	if (old_program == m_program && !m_transform_constants_dirty)
+	{
+		//This path is taken alot so the savings are tangible
+		struct scale_offset_layout
+		{
+			u16 clip_w, clip_h;
+			float scale_x, offset_x, scale_y, offset_y, scale_z, offset_z;
+			float fog0, fog1;
+			u32   alpha_tested;
+			float alpha_ref;
+		}
+		tmp = {};
+		
+		tmp.clip_w = rsx::method_registers.surface_clip_width();
+		tmp.clip_h = rsx::method_registers.surface_clip_height();
+		tmp.scale_x = rsx::method_registers.viewport_scale_x();
+		tmp.offset_x = rsx::method_registers.viewport_offset_x();
+		tmp.scale_y = rsx::method_registers.viewport_scale_y();
+		tmp.offset_y = rsx::method_registers.viewport_offset_y();
+		tmp.scale_z = rsx::method_registers.viewport_scale_z();
+		tmp.offset_z = rsx::method_registers.viewport_offset_z();
+		tmp.fog0 = rsx::method_registers.fog_params_0();
+		tmp.fog1 = rsx::method_registers.fog_params_1();
+		tmp.alpha_tested = rsx::method_registers.alpha_test_enabled();
+		tmp.alpha_ref = rsx::method_registers.alpha_ref();
+
+		size_t old_hash = m_transform_buffer_hash;
+		m_transform_buffer_hash = 0;
+
+		u8 *data = reinterpret_cast<u8*>(&tmp);
+		for (int i = 0; i < sizeof(tmp); ++i)
+			m_transform_buffer_hash ^= std::hash<char>()(data[i]);
+
+		if (old_hash == m_transform_buffer_hash)
+			return true;
+	}
+
+	m_transform_constants_dirty = false;
 
 	u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	fragment_constants_size = std::max(32U, fragment_constants_size);

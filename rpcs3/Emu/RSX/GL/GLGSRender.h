@@ -35,6 +35,9 @@ private:
 	u32 m_draw_time = 0;
 	u32 m_vertex_upload_time = 0;
 	u32 m_textures_upload_time = 0;
+
+	//Compare to see if transform matrix have changed
+	size_t m_transform_buffer_hash = 0;
 	
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
