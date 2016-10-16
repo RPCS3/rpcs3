@@ -384,17 +384,16 @@ void GLGSRender::end()
 
 	if (manually_flush_ring_buffers)
 	{
+		//Use approximations to reseve space. This path is mostly for debug purposes anyway
 		u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 		u32 approx_working_buffer_size = approx_vertex_count * 256;
 
-		//Allocate 128K heap if we have no approximation at this time (inlined array)
-		//Based on testing a few titles, 64K doesn't cut it and causes a reallocation
-		m_attrib_ring_buffer->reserve_storage_on_heap(std::min(approx_working_buffer_size, 131072U));
-		m_index_ring_buffer->reserve_storage_on_heap(16384);
+		//Allocate 256K heap if we have no approximation at this time (inlined array)
+		m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
+		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
 	}
 
 	draw_fbo.bind();
-	m_program->use();
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared

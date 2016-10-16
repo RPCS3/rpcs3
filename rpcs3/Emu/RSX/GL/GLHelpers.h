@@ -1372,14 +1372,7 @@ namespace gl
 			if (glTextureBufferRangeEXT == nullptr)
 				fmt::throw_exception("OpenGL error: partial buffer access for textures is unsupported on your system" HERE);
 
-			glGetError();
 			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
-
-			if (glGetError())
-			{
-				LOG_ERROR(RSX, "TexBufferRange has failed!, buffer id = %d, offset=%d, length=%d", buf.id(), offset, length);
-				fmt::throw_exception("OpenGL error: texture buffer allocation has failed" HERE);
-			}
 		}
 
 		void copy_from(buffer &buf, u32 gl_format_type)
