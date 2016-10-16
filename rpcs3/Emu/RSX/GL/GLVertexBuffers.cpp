@@ -22,13 +22,16 @@ namespace
 	u32 to_gl_internal_type(rsx::vertex_base_type type, u8 size)
 	{
 		/**
-		* The buffer texture spec only allows fetches aligned to 8, 16, 32, etc...
+		* NOTE 1. The buffer texture spec only allows fetches aligned to 8, 16, 32, etc...
 		* This rules out most 3-component formats, except for the 32-wide RGB32F, RGB32I, RGB32UI
+		*
+		* NOTE 2. While s1 type is a signed normalized 16-bit integer, some GPU vendors dont support texture buffer access
+		* using these formats. Pass a 16 bit unnormalized integer and convert it in the vertex shader
 		*/
-		const u32 vec1_types[] = { GL_R16_SNORM, GL_R32F, GL_R16F, GL_R8, GL_R16I, GL_R16, GL_R8UI };
-		const u32 vec2_types[] = { GL_RG16_SNORM, GL_RG32F, GL_RG16F, GL_RG8, GL_RG16I, GL_RG16, GL_RG8UI };
-		const u32 vec3_types[] = { GL_RGBA16_SNORM, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };	//VEC3 COMPONENTS NOT SUPPORTED!
-		const u32 vec4_types[] = { GL_RGBA16_SNORM, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };
+		const u32 vec1_types[] = { GL_R16I, GL_R32F, GL_R16F, GL_R8, GL_R16I, GL_R16, GL_R8UI };
+		const u32 vec2_types[] = { GL_RG16I, GL_RG32F, GL_RG16F, GL_RG8, GL_RG16I, GL_RG16, GL_RG8UI };
+		const u32 vec3_types[] = { GL_RGBA16I, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };	//VEC3 COMPONENTS NOT SUPPORTED!
+		const u32 vec4_types[] = { GL_RGBA16I, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };
 
 		const u32* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 

@@ -2,6 +2,7 @@
 #include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "GLGSRender.h"
+#include "GLVertexProgram.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
 #include "../rsx_utils.h"
@@ -695,6 +696,17 @@ bool GLGSRender::load_program()
 {
 	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program = get_current_fragment_program();
+
+	for (auto &vtx : vertex_program.rsx_vertex_inputs)
+	{
+		auto &array_info = rsx::method_registers.vertex_arrays_info[vtx.location];
+		if (array_info.type() == rsx::vertex_base_type::s1)
+		{
+			//Some vendors do not support GL_x_SNORM buffer textures
+			verify(HERE), vtx.flags == 0;
+			vtx.flags |= GL_VP_FORCE_ATTRIB_SCALING | GL_VP_ATTRIB_S16_INT;
+		}
+	}
 
 	for (int i = 0; i < 16; ++i)
 	{

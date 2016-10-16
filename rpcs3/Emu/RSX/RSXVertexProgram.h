@@ -211,10 +211,12 @@ struct rsx_vertex_input
 	bool is_modulo; // either modulo frequency or divide frequency
 	bool is_array; // false if "reg value"
 	bool int_type;
+	u32 flags;		//Initially zero, to be optionally filled by the backend
 
 	bool operator==(const rsx_vertex_input other) const
 	{
-		return location == other.location && size == other.size && frequency == other.frequency && is_modulo == other.is_modulo && is_array == other.is_array && int_type == other.int_type;
+		return location == other.location && size == other.size && frequency == other.frequency && is_modulo == other.is_modulo &&
+			is_array == other.is_array && int_type == other.int_type && flags == other.flags;
 	}
 };
 

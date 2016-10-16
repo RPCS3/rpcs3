@@ -800,7 +800,7 @@ namespace rsx
 				        rsx::method_registers.vertex_arrays_info[index].frequency(),
 				        !!((modulo_mask >> index) & 0x1),
 				        true,
-				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type())});
+				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
@@ -810,7 +810,7 @@ namespace rsx
 				        rsx::method_registers.register_vertex_info[index].frequency,
 				        !!((modulo_mask >> index) & 0x1),
 				        false,
-				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type())});
+				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
 		}
 		return result;
