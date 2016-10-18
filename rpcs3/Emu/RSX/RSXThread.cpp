@@ -27,6 +27,7 @@ cfg::bool_entry g_cfg_rsx_log_programs(cfg::root.video, "Log shader programs");
 cfg::bool_entry g_cfg_rsx_vsync(cfg::root.video, "VSync");
 cfg::bool_entry g_cfg_rsx_debug_output(cfg::root.video, "Debug output");
 cfg::bool_entry g_cfg_rsx_overlay(cfg::root.video, "Debug overlay");
+cfg::bool_entry g_cfg_rsx_gl_legacy_buffers(cfg::root.video, "Use Legacy OpenGL Buffers (Debug)");
 
 bool user_asked_for_frame_capture = false;
 rsx::frame_capture_data frame_debug;
@@ -799,7 +800,7 @@ namespace rsx
 				        rsx::method_registers.vertex_arrays_info[index].frequency(),
 				        !!((modulo_mask >> index) & 0x1),
 				        true,
-				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type())});
+				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
@@ -809,7 +810,7 @@ namespace rsx
 				        rsx::method_registers.register_vertex_info[index].frequency,
 				        !!((modulo_mask >> index) & 0x1),
 				        false,
-				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type())});
+				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
 		}
 		return result;

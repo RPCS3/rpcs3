@@ -4,6 +4,15 @@
 #include "Utilities/Thread.h"
 #include "OpenGL.h"
 
+enum
+{
+	GL_VP_FORCE_ATTRIB_SCALING = 1,	//Scale vertex read result
+	GL_VP_ATTRIB_S16_INT = (1 << 1),	//Attrib is a signed 16-bit integer
+	GL_VP_ATTRIB_S32_INT = (1 << 2),	//Attrib is a signed 32-bit integer
+
+	GL_VP_SINT_MASK = (GL_VP_ATTRIB_S16_INT|GL_VP_ATTRIB_S32_INT)
+};
+
 struct GLVertexDecompilerThread : public VertexProgramDecompiler
 {
 	std::string &m_shader;

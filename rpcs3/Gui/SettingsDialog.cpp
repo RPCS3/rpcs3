@@ -307,6 +307,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
 	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug overlay");
+	wxCheckBox* chbox_gs_gl_legacy_buffers = new wxCheckBox(p_graphics, wxID_ANY, "Use Legacy OpenGL Buffers");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
@@ -382,6 +383,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "VSync" }, chbox_gs_vsync));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug output" }, chbox_gs_debug_output));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug overlay" }, chbox_gs_overlay));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Use Legacy OpenGL Buffers (Debug)" }, chbox_gs_gl_legacy_buffers));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Audio", "Renderer" }, cbox_audio_out));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Dump to file" }, chbox_audio_dump));
@@ -467,6 +469,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	s_subpanel_graphics1->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_read_depth, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics1->Add(chbox_gs_gl_legacy_buffers, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(s_round_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->AddSpacer(68);

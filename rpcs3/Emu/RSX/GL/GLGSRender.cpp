@@ -2,12 +2,14 @@
 #include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "GLGSRender.h"
+#include "GLVertexProgram.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
 #include "../rsx_utils.h"
 
 extern cfg::bool_entry g_cfg_rsx_debug_output;
 extern cfg::bool_entry g_cfg_rsx_overlay;
+extern cfg::bool_entry g_cfg_rsx_gl_legacy_buffers;
 
 #define DUMP_VERTEX_DATA 0
 
@@ -380,8 +382,18 @@ void GLGSRender::end()
 		return;
 	}
 
+	if (manually_flush_ring_buffers)
+	{
+		//Use approximations to reseve space. This path is mostly for debug purposes anyway
+		u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
+		u32 approx_working_buffer_size = approx_vertex_count * 256;
+
+		//Allocate 256K heap if we have no approximation at this time (inlined array)
+		m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
+		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
+	}
+
 	draw_fbo.bind();
-	m_program->use();
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
@@ -452,6 +464,12 @@ void GLGSRender::end()
 		m_program->validate();
 	}
 
+	if (manually_flush_ring_buffers)
+	{
+		m_attrib_ring_buffer->unmap();
+		m_index_ring_buffer->unmap();
+	}
+
 	if (indexed_draw_info)
 	{
 		if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
@@ -507,17 +525,39 @@ void GLGSRender::on_init_thread()
 	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
 	m_vao.create();
 
-	for (gl::texture &tex : m_gl_attrib_buffers)
+	const u32 texture_index_offset =
+		rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
+	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
+		auto &tex = m_gl_attrib_buffers[index];
 		tex.create();
 		tex.set_target(gl::texture::target::textureBuffer);
+
+		glActiveTexture(GL_TEXTURE0 + texture_index_offset + index);
+		tex.bind();
 	}
 
-	m_attrib_ring_buffer.create(gl::buffer::target::texture, 16 * 0x100000);
-	m_uniform_ring_buffer.create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_index_ring_buffer.create(gl::buffer::target::element_array, 0x100000);
+	if (g_cfg_rsx_gl_legacy_buffers)
+	{
+		LOG_WARNING(RSX, "Using legacy openGL buffers.");
+		manually_flush_ring_buffers = true;
 
-	m_vao.element_array_buffer = m_index_ring_buffer;
+		m_attrib_ring_buffer.reset(new gl::legacy_ring_buffer());
+		m_uniform_ring_buffer.reset(new gl::legacy_ring_buffer());
+		m_index_ring_buffer.reset(new gl::legacy_ring_buffer());
+	}
+	else
+	{
+		m_attrib_ring_buffer.reset(new gl::ring_buffer());
+		m_uniform_ring_buffer.reset(new gl::ring_buffer());
+		m_index_ring_buffer.reset(new gl::ring_buffer());
+	}
+
+	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
+	m_uniform_ring_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
+	m_index_ring_buffer->create(gl::buffer::target::element_array, 16 * 0x100000);
+
+	m_vao.element_array_buffer = *m_index_ring_buffer;
 	m_gl_texture_cache.initialize_rtt_cache();
 	m_text_printer.init();
 }
@@ -553,9 +593,9 @@ void GLGSRender::on_exit()
 		tex.remove();
 	}
 
-	m_attrib_ring_buffer.remove();
-	m_uniform_ring_buffer.remove();
-	m_index_ring_buffer.remove();
+	m_attrib_ring_buffer->remove();
+	m_uniform_ring_buffer->remove();
+	m_index_ring_buffer->remove();
 
 	m_text_printer.close();
 
@@ -656,6 +696,18 @@ bool GLGSRender::load_program()
 	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program = get_current_fragment_program();
 
+	for (auto &vtx : vertex_program.rsx_vertex_inputs)
+	{
+		auto &array_info = rsx::method_registers.vertex_arrays_info[vtx.location];
+		if (array_info.type() == rsx::vertex_base_type::s1 ||
+			array_info.type() == rsx::vertex_base_type::cmp)
+		{
+			//Some vendors do not support GL_x_SNORM buffer textures
+			verify(HERE), vtx.flags == 0;
+			vtx.flags |= GL_VP_FORCE_ATTRIB_SCALING | GL_VP_ATTRIB_S16_INT;
+		}
+	}
+
 	for (int i = 0; i < 16; ++i)
 	{
 		auto &tex = rsx::method_registers.fragment_textures[i];
@@ -677,13 +729,55 @@ bool GLGSRender::load_program()
 		}
 	}
 
+	auto old_program = m_program;
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	m_program->use();
+
+	if (old_program == m_program && !m_transform_constants_dirty)
+	{
+		//This path is taken alot so the savings are tangible
+		struct scale_offset_layout
+		{
+			u16 clip_w, clip_h;
+			float scale_x, offset_x, scale_y, offset_y, scale_z, offset_z;
+			float fog0, fog1;
+			u32   alpha_tested;
+			float alpha_ref;
+		}
+		tmp = {};
+		
+		tmp.clip_w = rsx::method_registers.surface_clip_width();
+		tmp.clip_h = rsx::method_registers.surface_clip_height();
+		tmp.scale_x = rsx::method_registers.viewport_scale_x();
+		tmp.offset_x = rsx::method_registers.viewport_offset_x();
+		tmp.scale_y = rsx::method_registers.viewport_scale_y();
+		tmp.offset_y = rsx::method_registers.viewport_offset_y();
+		tmp.scale_z = rsx::method_registers.viewport_scale_z();
+		tmp.offset_z = rsx::method_registers.viewport_offset_z();
+		tmp.fog0 = rsx::method_registers.fog_params_0();
+		tmp.fog1 = rsx::method_registers.fog_params_1();
+		tmp.alpha_tested = rsx::method_registers.alpha_test_enabled();
+		tmp.alpha_ref = rsx::method_registers.alpha_ref();
+
+		size_t old_hash = m_transform_buffer_hash;
+		m_transform_buffer_hash = 0;
+
+		u8 *data = reinterpret_cast<u8*>(&tmp);
+		for (int i = 0; i < sizeof(tmp); ++i)
+			m_transform_buffer_hash ^= std::hash<char>()(data[i]);
+
+		if (old_hash == m_transform_buffer_hash)
+			return true;
+	}
+
+	m_transform_constants_dirty = false;
 
 	u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	fragment_constants_size = std::max(32U, fragment_constants_size);
 	u32 max_buffer_sz = 512 + 8192 + align(fragment_constants_size, m_uniform_buffer_offset_align);
-	m_uniform_ring_buffer.reserve_and_map(max_buffer_sz);
+
+	if (manually_flush_ring_buffers)
+		m_uniform_ring_buffer->reserve_storage_on_heap(align(max_buffer_sz, 512));
 
 	u8 *buf;
 	u32 scale_offset_offset;
@@ -691,7 +785,7 @@ bool GLGSRender::load_program()
 	u32 fragment_constants_offset;
 
 	// Scale offset
-	auto mapping = m_uniform_ring_buffer.alloc_from_reserve(512);
+	auto mapping = m_uniform_ring_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	scale_offset_offset = mapping.second;
 	fill_scale_offset_data(buf, false);
@@ -707,7 +801,7 @@ bool GLGSRender::load_program()
 	memcpy(buf + 19 * sizeof(float), &alpha_ref, sizeof(float));
 
 	// Vertex constants
-	mapping = m_uniform_ring_buffer.alloc_from_reserve(8192);
+	mapping = m_uniform_ring_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	vertex_constants_offset = mapping.second;
 	fill_vertex_program_constants_data(buf);
@@ -715,20 +809,21 @@ bool GLGSRender::load_program()
 	// Fragment constants
 	if (fragment_constants_size)
 	{
-		mapping = m_uniform_ring_buffer.alloc_from_reserve(fragment_constants_size);
+		mapping = m_uniform_ring_buffer->alloc_from_heap(fragment_constants_size, m_uniform_buffer_offset_align);
 		buf = static_cast<u8*>(mapping.first);
 		fragment_constants_offset = mapping.second;
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
 	}
 
-	m_uniform_ring_buffer.unmap();
-
-	m_uniform_ring_buffer.bind_range(0, scale_offset_offset, 512);
-	m_uniform_ring_buffer.bind_range(1, vertex_constants_offset, 8192);
+	m_uniform_ring_buffer->bind_range(0, scale_offset_offset, 512);
+	m_uniform_ring_buffer->bind_range(1, vertex_constants_offset, 8192);
 	if (fragment_constants_size)
 	{
-		m_uniform_ring_buffer.bind_range(2, fragment_constants_offset, fragment_constants_size);
+		m_uniform_ring_buffer->bind_range(2, fragment_constants_offset, fragment_constants_size);
 	}
+
+	if (manually_flush_ring_buffers)
+		m_uniform_ring_buffer->unmap();
 
 	return true;
 }

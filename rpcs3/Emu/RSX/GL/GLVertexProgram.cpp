@@ -122,7 +122,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					{
 						if (attrib.location == std::get<0>(item))
 						{
-							if (attrib.int_type) is_int = true;
+							if (attrib.int_type || attrib.flags & GL_VP_SINT_MASK) is_int = true;
 							break;
 						}
 					}
@@ -247,9 +247,18 @@ void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rs
 		if (real_input.int_type)
 			vecType = "	ivec4 ";
 
+		std::string scale = "";
+		if (real_input.flags & GL_VP_SINT_MASK)
+		{
+			if (real_input.flags & GL_VP_ATTRIB_S16_INT)
+				scale = " / 32767.";
+			else
+				scale = " / 2147483647.";
+		}
+
 		if (!real_input.is_array)
 		{
-			OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0);" << std::endl;
+			OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";" << std::endl;
 			return;
 		}
 
@@ -257,19 +266,21 @@ void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rs
 		{
 			if (real_input.is_modulo)
 			{
-				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ");" << std::endl;
+				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";" << std::endl;
 				return;
 			}
 
-			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ");" << std::endl;
+			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";" << std::endl;
 			return;
 		}
 
-		OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID).rgba;" << std::endl;
+		OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";" << std::endl;
 		return;
 	}
 
-	OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID).rgba;" << std::endl;
+	LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
+	
+	OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
 }
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
