@@ -699,7 +699,8 @@ bool GLGSRender::load_program()
 	for (auto &vtx : vertex_program.rsx_vertex_inputs)
 	{
 		auto &array_info = rsx::method_registers.vertex_arrays_info[vtx.location];
-		if (array_info.type() == rsx::vertex_base_type::s1)
+		if (array_info.type() == rsx::vertex_base_type::s1 ||
+			array_info.type() == rsx::vertex_base_type::cmp)
 		{
 			//Some vendors do not support GL_x_SNORM buffer textures
 			verify(HERE), vtx.flags == 0;
