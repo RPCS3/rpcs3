@@ -20,6 +20,7 @@ namespace gl
 		std::unordered_map<u8, std::pair<u32, u32>> m_offsets;
 
 		bool initialized = false;
+		bool enabled = false;
 
 		void init_program()
 		{
@@ -84,6 +85,28 @@ namespace gl
 
 		void init()
 		{
+			//Check for ARB_shader_draw_parameters
+			//While it is possible to draw text without full multidraw support, issuing separate draw calls per character is not effecient
+
+			int ext_count;
+			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
+			
+			for (int i = 0; i < ext_count; i++)
+			{
+				const char *ext = (const char*)glGetStringi(GL_EXTENSIONS, i);
+				if (std::string(ext) == "GL_ARB_shader_draw_parameters")
+				{
+					enabled = true;
+					break;
+				}
+			}
+
+			if (!enabled)
+			{
+				LOG_ERROR(RSX, "Debug overlay could not start because ARB_shader_draw_parameters is not supported by your GPU");
+				return;
+			}
+
 			m_text_buffer.create();
 			m_scale_offsets_buffer.create();
 
@@ -117,6 +140,8 @@ namespace gl
 
 		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
+			if (!enabled) return;
+
 			verify(HERE), initialized;
 
 			std::vector<GLint> offsets;
