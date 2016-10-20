@@ -559,7 +559,9 @@ void GLGSRender::on_init_thread()
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 	m_gl_texture_cache.initialize_rtt_cache();
-	m_text_printer.init();
+
+	if (g_cfg_rsx_overlay)
+		m_text_printer.init();
 }
 
 void GLGSRender::on_exit()
