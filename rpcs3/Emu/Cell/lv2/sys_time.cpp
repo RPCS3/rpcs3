@@ -49,8 +49,6 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 #define CLOCK_REALTIME  1 // #define CALENDAR_CLOCK 1 from mach/clock_types.h
 #define CLOCK_MONOTONIC 0 // #define SYSTEM_CLOCK 0
 
-typedef int clockid_t;
-
 // the mach kernel uses struct mach_timespec, so struct timespec is loaded from <sys/_types/_timespec.h> for compatability
 // struct timespec { time_t tv_sec; long tv_nsec; };
 
@@ -68,7 +66,7 @@ typedef int clockid_t;
 static double mt_timebase = 0.0;
 static uint64_t mt_timestart = 0;
 
-static int clock_gettime(clockid_t clk_id, struct timespec* tp)
+static int clock_gettime(int clk_id, struct timespec* tp)
 {
 	kern_return_t retval = KERN_SUCCESS;
 	if (clk_id == TIMER_ABSTIME)
