@@ -103,7 +103,7 @@ struct as_if<std::string, S> {
   explicit as_if(const Node& node_) : node(node_) {}
   const Node& node;
 
-  const std::string operator()(const S& fallback) const {
+  std::string operator()(const S& fallback) const {
     if (node.Type() != NodeType::Scalar)
       return fallback;
     return node.Scalar();
@@ -115,7 +115,7 @@ struct as_if<T, void> {
   explicit as_if(const Node& node_) : node(node_) {}
   const Node& node;
 
-  const T operator()() const {
+  T operator()() const {
     if (!node.m_pNode)
       throw TypedBadConversion<T>(node.Mark());
 
@@ -131,7 +131,7 @@ struct as_if<std::string, void> {
   explicit as_if(const Node& node_) : node(node_) {}
   const Node& node;
 
-  const std::string operator()() const {
+  std::string operator()() const {
     if (node.Type() != NodeType::Scalar)
       throw TypedBadConversion<std::string>(node.Mark());
     return node.Scalar();
