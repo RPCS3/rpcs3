@@ -1,9 +1,10 @@
-#include <fstream>
-#include <iostream>
-
 #include "yaml-cpp/emitterstyle.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
+
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
 
 class NullEventHandler : public YAML::EventHandler {
  public:
