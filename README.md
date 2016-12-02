@@ -55,3 +55,7 @@ Build against the shared libpng instead of using the builtin one. libpng 1.6+ hi
 
 - ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*) </br>
 Build against the shared ffmpeg libraries instead of using the builtin patched version. Try this if the builtin version breaks the OpenGL renderer for you.
+
+### License
+
+Most files are licensed under the terms of GNU GPLv2 License, see LICENSE file for details. Some files may be licensed differently, check appropriate file headers for details.
