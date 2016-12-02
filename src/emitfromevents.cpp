@@ -111,7 +111,7 @@ void EmitFromEvents::BeginNode() {
 }
 
 void EmitFromEvents::EmitProps(const std::string& tag, anchor_t anchor) {
-  if (!tag.empty() && tag != "?")
+  if (!tag.empty() && tag != "?" && tag != "!")
     m_emitter << VerbatimTag(tag);
   if (anchor)
     m_emitter << Anchor(ToString(anchor));

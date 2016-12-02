@@ -46,6 +46,12 @@ TEST_F(EmitterTest, SimpleScalar) {
   ExpectEmit("Hello, World!");
 }
 
+TEST_F(EmitterTest, SimpleQuotedScalar) {
+  Node n(Load("\"test\""));
+  out << n;
+  ExpectEmit("test");
+}
+
 TEST_F(EmitterTest, SimpleSeq) {
   out << BeginSeq;
   out << "eggs";
