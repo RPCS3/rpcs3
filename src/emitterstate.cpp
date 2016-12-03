@@ -124,7 +124,8 @@ void EmitterState::StartedScalar() {
 void EmitterState::StartedGroup(GroupType::value type) {
   StartedNode();
 
-  const std::size_t lastGroupIndent = (m_groups.empty() ? 0 : m_groups.back()->indent);
+  const std::size_t lastGroupIndent =
+      (m_groups.empty() ? 0 : m_groups.back()->indent);
   m_curIndent += lastGroupIndent;
 
   // TODO: Create move constructors for settings types to simplify transfer
@@ -348,14 +349,15 @@ bool EmitterState::SetMapKeyFormat(EMITTER_MANIP value, FmtScope::value scope) {
 }
 
 bool EmitterState::SetFloatPrecision(std::size_t value, FmtScope::value scope) {
-  if (value < 0 || value > std::numeric_limits<float>::digits10 + 1)
+  if (value > std::numeric_limits<float>::digits10 + 1)
     return false;
   _Set(m_floatPrecision, value, scope);
   return true;
 }
 
-bool EmitterState::SetDoublePrecision(std::size_t value, FmtScope::value scope) {
-  if (value < 0 || value > std::numeric_limits<double>::digits10 + 1)
+bool EmitterState::SetDoublePrecision(std::size_t value,
+                                      FmtScope::value scope) {
+  if (value > std::numeric_limits<double>::digits10 + 1)
     return false;
   _Set(m_doublePrecision, value, scope);
   return true;
