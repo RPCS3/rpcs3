@@ -58,12 +58,12 @@ class EmitterState {
 
   GroupType::value CurGroupType() const;
   FlowType::value CurGroupFlowType() const;
-  int CurGroupIndent() const;
+  std::size_t CurGroupIndent() const;
   std::size_t CurGroupChildCount() const;
   bool CurGroupLongKey() const;
 
-  int LastIndent() const;
-  int CurIndent() const { return m_curIndent; }
+  std::size_t LastIndent() const;
+  std::size_t CurIndent() const { return m_curIndent; }
   bool HasAnchor() const { return m_hasAnchor; }
   bool HasTag() const { return m_hasTag; }
   bool HasBegunNode() const {
@@ -95,12 +95,12 @@ class EmitterState {
   EMITTER_MANIP GetIntFormat() const { return m_intFmt.get(); }
 
   bool SetIndent(std::size_t value, FmtScope::value scope);
-  int GetIndent() const { return m_indent.get(); }
+  std::size_t GetIndent() const { return m_indent.get(); }
 
   bool SetPreCommentIndent(std::size_t value, FmtScope::value scope);
-  int GetPreCommentIndent() const { return m_preCommentIndent.get(); }
+  std::size_t GetPreCommentIndent() const { return m_preCommentIndent.get(); }
   bool SetPostCommentIndent(std::size_t value, FmtScope::value scope);
-  int GetPostCommentIndent() const { return m_postCommentIndent.get(); }
+  std::size_t GetPostCommentIndent() const { return m_postCommentIndent.get(); }
 
   bool SetFlowType(GroupType::value groupType, EMITTER_MANIP value,
                    FmtScope::value scope);
@@ -109,9 +109,9 @@ class EmitterState {
   bool SetMapKeyFormat(EMITTER_MANIP value, FmtScope::value scope);
   EMITTER_MANIP GetMapKeyFormat() const { return m_mapKeyFmt.get(); }
 
-  bool SetFloatPrecision(int value, FmtScope::value scope);
+  bool SetFloatPrecision(std::size_t value, FmtScope::value scope);
   std::size_t GetFloatPrecision() const { return m_floatPrecision.get(); }
-  bool SetDoublePrecision(int value, FmtScope::value scope);
+  bool SetDoublePrecision(std::size_t value, FmtScope::value scope);
   std::size_t GetDoublePrecision() const { return m_doublePrecision.get(); }
 
  private:
@@ -137,8 +137,8 @@ class EmitterState {
   Setting<EMITTER_MANIP> m_seqFmt;
   Setting<EMITTER_MANIP> m_mapFmt;
   Setting<EMITTER_MANIP> m_mapKeyFmt;
-  Setting<int> m_floatPrecision;
-  Setting<int> m_doublePrecision;
+  Setting<std::size_t> m_floatPrecision;
+  Setting<std::size_t> m_doublePrecision;
 
   SettingChanges m_modifiedSettings;
   SettingChanges m_globalModifiedSettings;
@@ -149,7 +149,7 @@ class EmitterState {
 
     GroupType::value type;
     FlowType::value flowType;
-    int indent;
+    std::size_t indent;
     std::size_t childCount;
     bool longKey;
 

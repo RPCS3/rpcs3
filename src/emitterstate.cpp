@@ -124,7 +124,7 @@ void EmitterState::StartedScalar() {
 void EmitterState::StartedGroup(GroupType::value type) {
   StartedNode();
 
-  const int lastGroupIndent = (m_groups.empty() ? 0 : m_groups.back()->indent);
+  const std::size_t lastGroupIndent = (m_groups.empty() ? 0 : m_groups.back()->indent);
   m_curIndent += lastGroupIndent;
 
   // TODO: Create move constructors for settings types to simplify transfer
@@ -193,7 +193,7 @@ FlowType::value EmitterState::CurGroupFlowType() const {
   return m_groups.empty() ? FlowType::NoType : m_groups.back()->flowType;
 }
 
-int EmitterState::CurGroupIndent() const {
+std::size_t EmitterState::CurGroupIndent() const {
   return m_groups.empty() ? 0 : m_groups.back()->indent;
 }
 
@@ -205,7 +205,7 @@ bool EmitterState::CurGroupLongKey() const {
   return m_groups.empty() ? false : m_groups.back()->longKey;
 }
 
-int EmitterState::LastIndent() const {
+std::size_t EmitterState::LastIndent() const {
   if (m_groups.size() <= 1) {
     return 0;
   }
@@ -347,14 +347,14 @@ bool EmitterState::SetMapKeyFormat(EMITTER_MANIP value, FmtScope::value scope) {
   }
 }
 
-bool EmitterState::SetFloatPrecision(int value, FmtScope::value scope) {
+bool EmitterState::SetFloatPrecision(std::size_t value, FmtScope::value scope) {
   if (value < 0 || value > std::numeric_limits<float>::digits10 + 1)
     return false;
   _Set(m_floatPrecision, value, scope);
   return true;
 }
 
-bool EmitterState::SetDoublePrecision(int value, FmtScope::value scope) {
+bool EmitterState::SetDoublePrecision(std::size_t value, FmtScope::value scope) {
   if (value < 0 || value > std::numeric_limits<double>::digits10 + 1)
     return false;
   _Set(m_doublePrecision, value, scope);
