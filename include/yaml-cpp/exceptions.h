@@ -9,9 +9,9 @@
 
 #include "yaml-cpp/mark.h"
 #include "yaml-cpp/traits.h"
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <sstream>
 
 namespace YAML {
 // error messages
@@ -112,7 +112,7 @@ class Exception : public std::runtime_error {
  public:
   Exception(const Mark& mark_, const std::string& msg_)
       : std::runtime_error(build_what(mark_, msg_)), mark(mark_), msg(msg_) {}
-  virtual ~Exception() noexcept {}
+  virtual ~Exception() noexcept;
 
   Exception(const Exception&) = default;
 
@@ -137,12 +137,14 @@ class ParserException : public Exception {
  public:
   ParserException(const Mark& mark_, const std::string& msg_)
       : Exception(mark_, msg_) {}
+  virtual ~ParserException() noexcept;
 };
 
 class RepresentationException : public Exception {
  public:
   RepresentationException(const Mark& mark_, const std::string& msg_)
       : Exception(mark_, msg_) {}
+  virtual ~RepresentationException() noexcept;
 };
 
 // representation exceptions
@@ -150,6 +152,7 @@ class InvalidScalar : public RepresentationException {
  public:
   InvalidScalar(const Mark& mark_)
       : RepresentationException(mark_, ErrorMsg::INVALID_SCALAR) {}
+  virtual ~InvalidScalar() noexcept;
 };
 
 class KeyNotFound : public RepresentationException {
@@ -158,6 +161,7 @@ class KeyNotFound : public RepresentationException {
   KeyNotFound(const Mark& mark_, const T& key_)
       : RepresentationException(mark_, ErrorMsg::KEY_NOT_FOUND_WITH_KEY(key_)) {
   }
+  virtual ~KeyNotFound() noexcept;
 };
 
 template <typename T>
@@ -180,12 +184,14 @@ class InvalidNode : public RepresentationException {
  public:
   InvalidNode()
       : RepresentationException(Mark::null_mark(), ErrorMsg::INVALID_NODE) {}
+  virtual ~InvalidNode() noexcept;
 };
 
 class BadConversion : public RepresentationException {
  public:
   explicit BadConversion(const Mark& mark_)
       : RepresentationException(mark_, ErrorMsg::BAD_CONVERSION) {}
+  virtual ~BadConversion() noexcept;
 };
 
 template <typename T>
@@ -198,35 +204,41 @@ class BadDereference : public RepresentationException {
  public:
   BadDereference()
       : RepresentationException(Mark::null_mark(), ErrorMsg::BAD_DEREFERENCE) {}
+  virtual ~BadDereference() noexcept;
 };
 
 class BadSubscript : public RepresentationException {
  public:
   BadSubscript()
       : RepresentationException(Mark::null_mark(), ErrorMsg::BAD_SUBSCRIPT) {}
+  virtual ~BadSubscript() noexcept;
 };
 
 class BadPushback : public RepresentationException {
  public:
   BadPushback()
       : RepresentationException(Mark::null_mark(), ErrorMsg::BAD_PUSHBACK) {}
+  virtual ~BadPushback() noexcept;
 };
 
 class BadInsert : public RepresentationException {
  public:
   BadInsert()
       : RepresentationException(Mark::null_mark(), ErrorMsg::BAD_INSERT) {}
+  virtual ~BadInsert() noexcept;
 };
 
 class EmitterException : public Exception {
  public:
   EmitterException(const std::string& msg_)
       : Exception(Mark::null_mark(), msg_) {}
+  virtual ~EmitterException() noexcept;
 };
 
 class BadFile : public Exception {
  public:
   BadFile() : Exception(Mark::null_mark(), ErrorMsg::BAD_FILE) {}
+  virtual ~BadFile() noexcept;
 };
 }
 
