@@ -152,9 +152,11 @@ if(WIN32)
 	endif()
 endif()
 
-# GCC or Clang specialities
+# GCC or Clang or Intel Compiler specialities
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR
-   CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+   CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+
 	### General stuff
 	if(WIN32)
 		set(CMAKE_SHARED_LIBRARY_PREFIX "")	# DLLs do not have a "lib" prefix
