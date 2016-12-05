@@ -197,7 +197,9 @@ s32 cellHddGameExitBroken()
 
 s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 {
-	if (size) {
+	cellGame.warning("cellGameDataGetSizeKB(): Unimplemented, returning 0");
+	if (size)
+	{
 		*size = 0;
 	}
 	return CELL_OK;
