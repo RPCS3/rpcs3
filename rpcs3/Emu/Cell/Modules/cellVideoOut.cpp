@@ -133,7 +133,12 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	switch (videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
-		// TODO
+		if (config->resolutionId != g_cfg_video_out_resolution.get()
+			|| config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8
+			|| (config->aspect != CELL_VIDEO_OUT_ASPECT_AUTO && config->aspect != g_cfg_video_out_aspect_ratio.get()))
+		{
+			return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+		}
 		return CELL_OK;
 
 	case CELL_VIDEO_OUT_SECONDARY:
@@ -177,7 +182,7 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	// Use standard dummy values for now.
 	info->portType = CELL_VIDEO_OUT_PORT_HDMI;
 	info->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
-	info->latency = 1000;
+	info->latency = 100;
 	info->availableModeCount = 1;
 	info->state = CELL_VIDEO_OUT_DEVICE_STATE_AVAILABLE;
 	info->rgbOutputRange = 1;
@@ -190,12 +195,11 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	info->colorInfo.whiteX = 0xFFFF;
 	info->colorInfo.whiteY = 0xFFFF;
 	info->colorInfo.gamma = 100;
-	info->availableModes[0].aspect = 0;
-	info->availableModes[0].conversion = 0;
-	info->availableModes[0].refreshRates = 0xF;
-	info->availableModes[0].resolutionId = 1;
-	info->availableModes[0].scanMode = 0;
-
+	info->availableModes[0].aspect = g_cfg_video_out_aspect_ratio.get();
+	info->availableModes[0].conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
+	info->availableModes[0].refreshRates =  CELL_VIDEO_OUT_REFRESH_RATE_60HZ;
+	info->availableModes[0].resolutionId = g_cfg_video_out_resolution.get();
+	info->availableModes[0].scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 	return CELL_OK;
 }
 
@@ -218,7 +222,10 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 
 	switch (videoOut)
 	{
-	case CELL_VIDEO_OUT_PRIMARY: return not_an_error(1);
+	case CELL_VIDEO_OUT_PRIMARY: return not_an_error(
+		resolutionId == g_cfg_video_out_resolution.get()
+		&& (aspect == CELL_VIDEO_OUT_ASPECT_AUTO || aspect == g_cfg_video_out_aspect_ratio.get())
+	);
 	case CELL_VIDEO_OUT_SECONDARY: return not_an_error(0);
 	}
 

@@ -195,9 +195,12 @@ s32 cellHddGameExitBroken()
 }
 
 
-s32 cellGameDataGetSizeKB()
+s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	if (size) {
+		*size = 0;
+	}
+	return CELL_OK;
 }
 
 s32 cellGameDataSetSystemVer()
