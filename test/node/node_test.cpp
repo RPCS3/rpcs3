@@ -88,6 +88,13 @@ TEST(NodeTest, MapWithUndefinedValues) {
   EXPECT_EQ(2, node.size());
 }
 
+TEST(NodeTest, RemoveUnassignedNode) {
+  Node node(NodeType::Map);
+  node["key"];
+  node.remove("key");
+  EXPECT_EQ(node.size(), 0);
+}
+
 TEST(NodeTest, MapForceInsert) {
   Node node;
   Node k1("k1");
