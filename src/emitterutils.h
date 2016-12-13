@@ -34,10 +34,10 @@ bool WriteSingleQuotedString(ostream_wrapper& out, const std::string& str);
 bool WriteDoubleQuotedString(ostream_wrapper& out, const std::string& str,
                              bool escapeNonAscii);
 bool WriteLiteralString(ostream_wrapper& out, const std::string& str,
-                        int indent);
+                        std::size_t indent);
 bool WriteChar(ostream_wrapper& out, char ch);
 bool WriteComment(ostream_wrapper& out, const std::string& str,
-                  int postCommentIndent);
+                  std::size_t postCommentIndent);
 bool WriteAlias(ostream_wrapper& out, const std::string& str);
 bool WriteAnchor(ostream_wrapper& out, const std::string& str);
 bool WriteTag(ostream_wrapper& out, const std::string& str, bool verbatim);
