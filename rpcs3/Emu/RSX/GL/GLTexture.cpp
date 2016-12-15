@@ -334,7 +334,8 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							__glcheck glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							__glcheck glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, get_sized_internal_format(format), size, staging_buffer.data());
 						}
 					}
 					return;
@@ -357,7 +358,8 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, staging_buffer.data());
 						}
 					}
 					return;
@@ -384,7 +386,8 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, staging_buffer.data());
 							mip_level++;
 						}
 					}
@@ -408,7 +411,8 @@ namespace rsx
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-							__glcheck glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, get_sized_internal_format(format), size, layout.data.data());
+							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							__glcheck glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, get_sized_internal_format(format), size, staging_buffer.data());
 						}
 					}
 					return;
