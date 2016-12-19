@@ -1436,7 +1436,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 void ppu_acontext::UNK(ppu_opcode_t op)
 {
-	std::fill_n(gpr, 32, spec_gpr{});
+	std::fill_n(gpr, 32, spec_gpr());
 	LOG_ERROR(PPU, "Unknown/Illegal opcode: 0x%08x at 0x%x" HERE, op.opcode, cia);
 }
 
@@ -2563,7 +2563,7 @@ void ppu_acontext::MULHW(ppu_opcode_t op)
 
 void ppu_acontext::LDARX(ppu_opcode_t op)
 {
-	gpr[op.rd] = {};
+	gpr[op.rd] = spec_gpr();
 }
 
 void ppu_acontext::DCBF(ppu_opcode_t op)
@@ -2879,7 +2879,7 @@ void ppu_acontext::LVRX(ppu_opcode_t op)
 
 void ppu_acontext::LSWI(ppu_opcode_t op)
 {
-	std::fill_n(gpr, 32, spec_gpr{});
+	std::fill_n(gpr, 32, spec_gpr());
 }
 
 void ppu_acontext::LFSUX(ppu_opcode_t op)
@@ -3106,7 +3106,7 @@ void ppu_acontext::STHU(ppu_opcode_t op)
 
 void ppu_acontext::LMW(ppu_opcode_t op)
 {
-	std::fill_n(gpr, 32, spec_gpr{});
+	std::fill_n(gpr, 32, spec_gpr());
 }
 
 void ppu_acontext::STMW(ppu_opcode_t op)

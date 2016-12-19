@@ -10,14 +10,14 @@ version: '0.0.4-{build}'
 #---------------------------------#
 
 # Build worker image (VM template)
-image: Visual Studio 2015
+image: Visual Studio 2017
 
 # clone directory
 clone_folder: c:\projects\rpcs3
 
 # environment variables
 environment:
-  QTDIR: C:\Qt\5.9\msvc2015_64
+  QTDIR: C:\Qt\5.9\msvc2017_64
 
 # build cache to preserve files/folders between builds
 cache:
