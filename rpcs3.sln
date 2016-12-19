@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asmjit", "asmjitsrc\asmjit.vcxproj", "{AC40FF01-426E-4838-A317-66354CEFAE88}"
 EndProject
@@ -252,5 +252,8 @@ Global
 		{FDC361C5-7734-493B-8CFB-037308B35122} = {DDF904CA-2771-441A-8629-5DF2EB922A79}
 		{A107C21C-418A-4697-BB10-20C3AA60E2E4} = {FA1E6C16-CA63-45F8-8D52-E21DF396BE36}
 		{939FE206-1182-ABC3-1234-FEAB88E98404} = {D16E245C-CC5A-4B9A-8BAB-1176F02C1631}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {06CC7920-E085-4B81-9582-8DE8AAD42510}
 	EndGlobalSection
 EndGlobal
