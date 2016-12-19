@@ -1,6 +1,6 @@
 version: '0.0.3-{build}'
 
-os: Visual Studio 2015
+os: Visual Studio 2017
 platform: x64
 clone_folder: C:\rpcs3
 clone_depth: 3
@@ -18,8 +18,8 @@ before_build:
  - set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
  - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
  - set CXXFLAGS=-DBRANCH=%BRANCH%
- - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
-   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/lib/cmake/llvm -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
+ - if %configuration%==Release (cmake -G "Visual Studio 15 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
+   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 15 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/lib/cmake/llvm -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
 
 build_script:
  - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
@@ -28,9 +28,9 @@ install:
  - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
  - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRaHYxV3VOS2d0a0U" -FileName vulkan.7z
  - if not exist zlib.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B-HVE3xvheVFX05lRFdnZlh5aUU" -FileName zlib.7z
- - set QTDIR=C:\Qt\5.8\msvc2015_64
+ - set QTDIR=C:\Qt\5.9.1\msvc2017_64
  - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL
- - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%QTDIR%;%PATH%
+ - set PATH=C:\Program Files (x86)\MSBuild\15.0\Bin;%QTDIR%;%PATH%
  - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 
 artifacts:
