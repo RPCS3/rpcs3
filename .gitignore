@@ -59,6 +59,7 @@ rpcs3/git-version.h
 
 # Visual Studio Files
 .vs/*
+*.ipch
 *.vspx
 *.psess
 *.VC.*
