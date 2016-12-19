@@ -23,7 +23,7 @@
 	url = https://github.com/madler/zlib
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi
-	url = https://github.com/RPCS3/hidapi
+	url = https://github.com/Zangetsu38/hidapi
 	branch = master
 	ignore = dirty
 [submodule "3rdparty/Optional"]

@@ -20,15 +20,15 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ## Dependencies
 
 ### Windows
-* [Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/)
-* [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
+* [Visual Studio 2017](https://www.visualstudio.com/en/downloads/)
+* [Visual C++ Redistributable Packages for Visual Studio 2017](https://go.microsoft.com/fwlink/?LinkId=746572)
 * [Cmake 3.1.0+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
 * [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 * [Qt 5.10+](https://www.qt.io/download-open-source/)
 
 
-**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.11.1\msvc2015_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2015)**
+**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.11.1\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2017)**
 
 ### Linux
 * [Qt 5.10+](https://www.qt.io/download-open-source/)
@@ -53,7 +53,7 @@ To initialize the repository don't forget to execute `git submodule update --ini
 
 ### Configuring the Qt plugin (if used)
 
-1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.11.1\msvc2015_64`.
+1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.11.1\msvc2017_64`.
 2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
 
 ### Building the projects
