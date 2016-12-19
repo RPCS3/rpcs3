@@ -15,7 +15,7 @@
 	branch = release_40
 [submodule "rsx_program_decompiler"]
 	path = rsx_program_decompiler
-	url = https://github.com/RPCS3/rsx_program_decompiler
+	url = https://github.com/Zangetsu38/rsx_program_decompiler
 [submodule "GSL"]
 	path = 3rdparty/GSL
 	url = https://github.com/Microsoft/GSL.git
