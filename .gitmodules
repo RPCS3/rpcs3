@@ -17,7 +17,7 @@
 	url = https://github.com/Microsoft/GSL.git
 [submodule "libpng"]
 	path = 3rdparty/libpng
-	url = https://github.com/RPCS3/libpng
+	url = https://github.com/Zangetsu38/libpng
 	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
@@ -42,5 +42,5 @@
 	url = https://github.com/madler/zlib
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi
-	url = https://github.com/RPCS3/hidapi
+	url = https://github.com/Zangetsu38/hidapi
 	branch = master
