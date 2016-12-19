@@ -21,8 +21,8 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ### Dependencies
 
 __Windows__
-* [Visual Studio 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
-* [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
+* [Visual Studio 2017](https://www.visualstudio.com/downloads/)
+* [Visual C++ Redistributable Packages for Visual Studio 2017](https://go.microsoft.com/fwlink/?LinkId=746572)
 * [Cmake 3.1.0+](http://www.cmake.org/download/) (required; add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (required; add to PATH)
 
