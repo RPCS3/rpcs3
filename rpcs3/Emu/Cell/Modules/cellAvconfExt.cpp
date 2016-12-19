@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -132,11 +132,11 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 
 DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
 {
-	REG_VNID(cellSysutilAvconfExt, 0x00000000, g_gamma, []
+	/*REG_VNID(cellSysutilAvconfExt, 0x00000000, g_gamma, []
 	{
 		// Test
 		*g_gamma = 1.0f;
-	});
+	});*/
 
 	REG_FUNC(cellSysutilAvconfExt, cellAudioOutUnregisterDevice);
 	REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetDeviceInfo2);

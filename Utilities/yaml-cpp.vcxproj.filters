@@ -7,85 +7,85 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\binary.cpp">
+    <ClCompile Include="yaml-cpp\src\binary.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\convert.cpp">
+    <ClCompile Include="yaml-cpp\src\convert.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\directives.cpp">
+    <ClCompile Include="yaml-cpp\src\directives.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\emit.cpp">
+    <ClCompile Include="yaml-cpp\src\emit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\emitfromevents.cpp">
+    <ClCompile Include="yaml-cpp\src\emitfromevents.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\emitter.cpp">
+    <ClCompile Include="yaml-cpp\src\emitter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\emitterstate.cpp">
+    <ClCompile Include="yaml-cpp\src\emitterstate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\emitterutils.cpp">
+    <ClCompile Include="yaml-cpp\src\emitterutils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\exp.cpp">
+    <ClCompile Include="yaml-cpp\src\exp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\memory.cpp">
+    <ClCompile Include="yaml-cpp\src\memory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\node.cpp">
+    <ClCompile Include="yaml-cpp\src\node.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\node_data.cpp">
+    <ClCompile Include="yaml-cpp\src\nodebuilder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\nodebuilder.cpp">
+    <ClCompile Include="yaml-cpp\src\nodeevents.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\nodeevents.cpp">
+    <ClCompile Include="yaml-cpp\src\node_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\null.cpp">
+    <ClCompile Include="yaml-cpp\src\null.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\ostream_wrapper.cpp">
+    <ClCompile Include="yaml-cpp\src\ostream_wrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\parse.cpp">
+    <ClCompile Include="yaml-cpp\src\parse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\parser.cpp">
+    <ClCompile Include="yaml-cpp\src\parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\regex_yaml.cpp">
+    <ClCompile Include="yaml-cpp\src\regex_yaml.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\scanner.cpp">
+    <ClCompile Include="yaml-cpp\src\scanner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\scanscalar.cpp">
+    <ClCompile Include="yaml-cpp\src\scanscalar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\scantag.cpp">
+    <ClCompile Include="yaml-cpp\src\scantag.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\scantoken.cpp">
+    <ClCompile Include="yaml-cpp\src\scantoken.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\simplekey.cpp">
+    <ClCompile Include="yaml-cpp\src\simplekey.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\singledocparser.cpp">
+    <ClCompile Include="yaml-cpp\src\singledocparser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\stream.cpp">
+    <ClCompile Include="yaml-cpp\src\stream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tag.cpp">
+    <ClCompile Include="yaml-cpp\src\tag.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
