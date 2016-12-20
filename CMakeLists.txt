@@ -11,6 +11,14 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
 	message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
 endif()
 
+if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.1)
+	message( FATAL_ERROR "RPCS3 requires at least gcc-5.1." )
+endif()
+
+if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 6.1)
+	message( FATAL_ERROR "RPCS3 can't be compiled with gcc-6.1, see #1691." )
+endif()
+
 add_definitions(-DCMAKE_BUILD)
 
 # We use libpng's static library and don't need to build the shared library and run the tests
