@@ -88,11 +88,22 @@ TEST(NodeTest, MapWithUndefinedValues) {
   EXPECT_EQ(2, node.size());
 }
 
+TEST(NodeTest, SeqIntoMap) {
+  Node node;
+  node[0] = "test";
+  node[1];
+  node[2] = "value";
+  EXPECT_TRUE(node.IsMap());
+  EXPECT_EQ("test", node[0].as<std::string>());
+  EXPECT_EQ("value", node[2].as<std::string>());
+  EXPECT_EQ(2, node.size());
+}
+
 TEST(NodeTest, RemoveUnassignedNode) {
   Node node(NodeType::Map);
   node["key"];
   node.remove("key");
-  EXPECT_EQ(node.size(), 0);
+  EXPECT_EQ(0, node.size());
 }
 
 TEST(NodeTest, MapForceInsert) {

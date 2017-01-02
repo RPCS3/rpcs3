@@ -32,7 +32,7 @@ struct get_idx<Key,
 
   static node* get(std::vector<node*>& sequence, const Key& key,
                    shared_memory_holder pMemory) {
-    if (key > sequence.size())
+   if (key > sequence.size() || (key > 0 && !sequence[key-1]->is_defined()))
       return 0;
     if (key == sequence.size())
       sequence.push_back(&pMemory->create_node());
