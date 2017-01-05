@@ -47,7 +47,7 @@ class YAML_CPP_API Parser : private noncopyable {
   void Load(std::istream& in);
 
   /**
-   * Handles the next document by calling events on the {@param eventHandler}.
+   * Handles the next document by calling events on the {@code eventHandler}.
    *
    * @throw a ParserException on error.
    * @return false if there are no more documents
