@@ -79,11 +79,8 @@ void D3D12VertexProgramDecompiler::insertConstants(std::stringstream & OS, const
 {
 	OS << "cbuffer CONSTANT_BUFFER : register(b1)" << std::endl;
 	OS << "{" << std::endl;
-	for (const ParamType PT : constants)
-	{
-		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
-	}
+	OS << "	float4 vc[468];" << std::endl;
+	OS << "	uint transform_branch_bits;" << std::endl;
 	OS << "};" << std::endl;
 }
 

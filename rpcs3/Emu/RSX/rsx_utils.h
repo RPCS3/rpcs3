@@ -120,4 +120,6 @@ namespace rsx
 		float scale_x, float scale_y, float scale_z);
 	void fill_window_matrix(void *dest, bool transpose);
 	void fill_viewport_matrix(void *buffer, bool transpose);
+
+	std::array<float, 4> get_constant_blend_colors();
 }
