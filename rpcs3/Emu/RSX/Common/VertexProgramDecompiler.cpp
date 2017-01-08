@@ -487,7 +487,6 @@ std::string VertexProgramDecompiler::Decompile()
 			switch (d1.sca_opcode)
 			{
 			case RSX_SCA_OPCODE_BRA:
-			case RSX_SCA_OPCODE_BRB:
 				is_has_BRA = true;
 				m_jump_lvls.clear();
 				d3.HEX = m_data[++i];
@@ -672,7 +671,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;
 		case RSX_SCA_OPCODE_BRB:
 			// works differently (BRB o[1].x !b0, L0;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X");
+			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX);
 			
 			AddCode("$if (!$bconst) //BRB");	//If only the cond flags are set, we can just use $ifcond
 			AddCode("{");
