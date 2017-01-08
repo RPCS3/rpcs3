@@ -69,6 +69,7 @@ struct VertexProgramDecompiler
 	std::string GetFunc();
 	std::string GetTex();
 	std::string GetCond();
+	std::string GetBooleanConstantCond();
 	std::string AddAddrMask();
 	std::string AddAddrReg();
 	std::string AddAddrRegWithoutMask();

@@ -216,10 +216,20 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		return "if(" + cond + ") ";
 	}
 		},
-		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) }
+		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
+		{ "$bconst", std::bind(std::mem_fn(&VertexProgramDecompiler::GetBooleanConstantCond), this) }
 	};
 
 	return fmt::replace_all(code, repl_list);
+}
+
+std::string VertexProgramDecompiler::GetBooleanConstantCond()
+{
+	if (d0.cond == 0) return "false";
+	if (d0.cond == 7) return "true";
+
+	LOG_ERROR(RSX, "Boolean constant condition not found; returning false");
+	return "false";
 }
 
 std::string VertexProgramDecompiler::GetCond()
@@ -476,15 +486,15 @@ std::string VertexProgramDecompiler::Decompile()
 
 			switch (d1.sca_opcode)
 			{
-			case 0x08: //BRA
-				LOG_ERROR(RSX, "BRA found. Please report to RPCS3 team.");
+			case RSX_SCA_OPCODE_BRA:
+			case RSX_SCA_OPCODE_BRB:
 				is_has_BRA = true;
 				m_jump_lvls.clear();
 				d3.HEX = m_data[++i];
 				i += 4;
 				break;
 
-			case 0x09: //BRI
+			case RSX_SCA_OPCODE_BRI:
 				d2.HEX = m_data[i++];
 				d3.HEX = m_data[i];
 				i += 2;
@@ -635,7 +645,7 @@ std::string VertexProgramDecompiler::Decompile()
 				}
 			}
 
-			AddCode("$ifcond ");
+			AddCode("$ifcond //BRI");
 			AddCode("{");
 			m_cur_instr->open_scopes++;
 			AddCode(fmt::format("jump_position = %u;", jump_position));
@@ -662,11 +672,21 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;
 		case RSX_SCA_OPCODE_BRB:
 			// works differently (BRB o[1].x !b0, L0;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB");
+			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X");
+			
+			AddCode("$if (!$bconst) //BRB");	//If only the cond flags are set, we can just use $ifcond
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode("jump_position = $a$am;");
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
+
 			break;
 		case RSX_SCA_OPCODE_CLB: break;
 			// works same as BRB
 			LOG_ERROR(RSX, "Unimplemented sca_opcode CLB");
+			AddCode("$if (!$bconst) $f(); //CLB");
 			break;
 		case RSX_SCA_OPCODE_PSH: break;
 			// works differently (PSH o[1].x A0;)
