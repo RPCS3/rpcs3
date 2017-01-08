@@ -674,6 +674,7 @@ std::string VertexProgramDecompiler::Decompile()
 			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			u32 jump_position = find_jump_lvl(GetAddr());
 
+			AddCode(fmt::format("//BRB opcode, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX));
 			AddCode("if (!$bconst) //BRB");	//If only the cond flags are set, we can just use $ifcond
 			AddCode("{");
 			m_cur_instr->open_scopes++;
