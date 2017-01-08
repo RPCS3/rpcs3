@@ -382,6 +382,9 @@ GLVertexProgram::~GLVertexProgram()
 
 void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
+	fs::create_path(fs::get_config_dir() + "/shaderlog");
+	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram.raw", fs::rewrite).write(prog.data.data(), prog.data.size() * sizeof(u32));
+
 	GLVertexDecompilerThread decompiler(prog, shader, parr);
 	decompiler.Task();
 }

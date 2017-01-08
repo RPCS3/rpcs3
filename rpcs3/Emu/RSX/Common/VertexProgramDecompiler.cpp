@@ -670,8 +670,9 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;
 		case RSX_SCA_OPCODE_BRB:
 			// works differently (BRB o[1].x !b0, L0;)
+		{
 			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
-			
+
 			u32 jump_position = find_jump_lvl(GetAddr());
 
 			AddCode("$if (!$bconst) //BRB");	//If only the cond flags are set, we can just use $ifcond
@@ -683,6 +684,7 @@ std::string VertexProgramDecompiler::Decompile()
 			AddCode("}");
 
 			break;
+		}
 		case RSX_SCA_OPCODE_CLB: break;
 			// works same as BRB
 			LOG_ERROR(RSX, "Unimplemented sca_opcode CLB");
