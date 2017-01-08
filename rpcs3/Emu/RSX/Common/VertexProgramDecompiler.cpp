@@ -687,7 +687,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_CLB: break;
 			// works same as BRB
 			LOG_ERROR(RSX, "Unimplemented sca_opcode CLB");
-			AddCode("$if (!$bconst) $f(); //CLB");
+			AddCode("if (!$bconst) $f(); //CLB");
 			break;
 		case RSX_SCA_OPCODE_PSH: break;
 			// works differently (PSH o[1].x A0;)
