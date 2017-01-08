@@ -538,7 +538,7 @@ std::string VertexProgramDecompiler::Decompile()
 
 	auto find_jump_lvl = [this](u32 address)
 	{
-		u32 jump = 0;
+		u32 jump = 1;
 
 		for (auto pos : m_jump_lvls)
 		{
