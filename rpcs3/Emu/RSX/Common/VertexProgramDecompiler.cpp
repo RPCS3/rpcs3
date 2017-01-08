@@ -493,6 +493,7 @@ std::string VertexProgramDecompiler::Decompile()
 				i += 4;
 				break;
 
+			case RSX_SCA_OPCODE_BRB:
 			case RSX_SCA_OPCODE_BRI:
 				d2.HEX = m_data[i++];
 				d3.HEX = m_data[i];
@@ -534,6 +535,21 @@ std::string VertexProgramDecompiler::Decompile()
 		AddCode("{");
 		m_cur_instr->open_scopes++;
 	}
+
+	auto find_jump_lvl = [this](u32 address)
+	{
+		u32 jump = 0;
+
+		for (auto pos : m_jump_lvls)
+		{
+			if (address == pos)
+				break;
+
+			++jump;
+		}
+
+		return jump;
+	};
 
 	for (u32 i = 0; i < m_instr_count; ++i)
 	{
@@ -614,7 +630,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_LIT: SetDSTSca("lit_legacy($s)"); break;
 		case RSX_SCA_OPCODE_BRA:
 		{
-			AddCode("$if ($cond)");
+			AddCode("$if ($cond) //BRA");
 			AddCode("{");
 			m_cur_instr->open_scopes++;
 			AddCode("jump_position = $a$am;");
@@ -625,24 +641,7 @@ std::string VertexProgramDecompiler::Decompile()
 		break;
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
-			u32 jump_position = 1;
-
-			if (is_has_BRA)
-			{
-				jump_position = GetAddr();
-			}
-			else
-			{
-				u32 addr = GetAddr();
-
-				for (auto pos : m_jump_lvls)
-				{
-					if (addr == pos)
-						break;
-
-					++jump_position;
-				}
-			}
+			u32 jump_position = find_jump_lvl(GetAddr());
 
 			AddCode("$ifcond //BRI");
 			AddCode("{");
@@ -673,10 +672,12 @@ std::string VertexProgramDecompiler::Decompile()
 			// works differently (BRB o[1].x !b0, L0;)
 			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			
+			u32 jump_position = find_jump_lvl(GetAddr());
+
 			AddCode("$if (!$bconst) //BRB");	//If only the cond flags are set, we can just use $ifcond
 			AddCode("{");
 			m_cur_instr->open_scopes++;
-			AddCode("jump_position = $a$am;");
+			AddCode(fmt::format("jump_position = %u;", jump_position));
 			AddCode("continue;");
 			m_cur_instr->close_scopes++;
 			AddCode("}");
