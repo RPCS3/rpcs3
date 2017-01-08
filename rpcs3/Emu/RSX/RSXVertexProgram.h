@@ -146,9 +146,12 @@ union D3
 		u32 sca_writemask_x : 1;
 		u32 src2l           : 11;
 	};
+
 	struct
 	{
-		u32                 : 29;
+		u32                 : 25;
+		u32 brb_cond_true   : 1;
+		u32                 : 3;
 		u32 iaddrl          : 3;
 	};
 };

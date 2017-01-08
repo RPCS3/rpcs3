@@ -216,20 +216,10 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		return "if(" + cond + ") ";
 	}
 		},
-		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
-		{ "$bconst", std::bind(std::mem_fn(&VertexProgramDecompiler::GetBooleanConstantCond), this) }
+		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) }
 	};
 
 	return fmt::replace_all(code, repl_list);
-}
-
-std::string VertexProgramDecompiler::GetBooleanConstantCond()
-{
-	if (d0.cond == 0) return "false";
-	if (d0.cond == 7) return "true";
-
-	LOG_ERROR(RSX, "Boolean constant condition not found; returning false");
-	return "false";
 }
 
 std::string VertexProgramDecompiler::GetCond()
@@ -671,24 +661,30 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_BRB:
 			// works differently (BRB o[1].x !b0, L0;)
 		{
-			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
-			u32 jump_position = find_jump_lvl(GetAddr());
-
+			LOG_WARNING(RSX, "sca_opcode BRB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			AddCode(fmt::format("//BRB opcode, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX));
-			AddCode("if (!$bconst) //BRB");	//If only the cond flags are set, we can just use $ifcond
-			AddCode("{");
-			m_cur_instr->open_scopes++;
-			AddCode(fmt::format("jump_position = %u;", jump_position));
-			AddCode("continue;");
-			m_cur_instr->close_scopes++;
-			AddCode("}");
+			
+			if (d3.brb_cond_true)
+			{
+				u32 jump_position = find_jump_lvl(GetAddr());
+				AddCode(fmt::format("jump_position = %u;", jump_position));
+				AddCode("continue;");
+				AddCode("");
+			}
 
 			break;
 		}
 		case RSX_SCA_OPCODE_CLB: break;
 			// works same as BRB
-			LOG_ERROR(RSX, "Unimplemented sca_opcode CLB");
-			AddCode("if (!$bconst) $f(); //CLB");
+			LOG_WARNING(RSX, "sca_opcode CLB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
+			AddCode("//CLB");
+			
+			if (d3.brb_cond_true)
+			{
+				AddCode("$f(); //CLB");
+				AddCode("");
+			}
+
 			break;
 		case RSX_SCA_OPCODE_PSH: break;
 			// works differently (PSH o[1].x A0;)
