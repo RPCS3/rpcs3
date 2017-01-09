@@ -149,9 +149,9 @@ union D3
 
 	struct
 	{
-		u32                 : 22;
+		u32                 : 24;
 		u32 brb_cond_true   : 1;
-		u32                 : 6;
+		u32                 : 4;
 		u32 iaddrl          : 3;
 	};
 };
