@@ -664,7 +664,11 @@ std::string VertexProgramDecompiler::Decompile()
 			LOG_WARNING(RSX, "sca_opcode BRB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			AddCode(fmt::format("//BRB opcode, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX));
 			
-			if (d3.brb_cond_true)
+			// BRB is identifiable by having dst_tmp=0x3f, sca_dst_tmp=0x3f, cond=true, cond_test_enable = false, cond_test_update=false and bit 25 on D3 is set
+			// When a vector opcode is issued together with BRB, it seems to be ignored. Since cc update and test are disabled, its possible that the compiler
+			// uses this as some kind of optimization to allow the same shader to execute differently based on some other state.
+			// Tested using saint seiya games as well as hellboy: the science of evil
+			if (d3.brb_cond_true && d1.vec_opcode == RSX_VEC_OPCODE_NOP)
 			{
 				u32 jump_position = find_jump_lvl(GetAddr());
 				AddCode(fmt::format("jump_position = %u;", jump_position));
@@ -679,7 +683,7 @@ std::string VertexProgramDecompiler::Decompile()
 			LOG_WARNING(RSX, "sca_opcode CLB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			AddCode("//CLB");
 			
-			if (d3.brb_cond_true)
+			if (d3.brb_cond_true && d1.vec_opcode == RSX_VEC_OPCODE_NOP)
 			{
 				AddCode("$f(); //CLB");
 				AddCode("");
@@ -721,5 +725,6 @@ std::string VertexProgramDecompiler::Decompile()
 	{
 		m_funcs.erase(m_funcs.begin() + 2, m_funcs.end());
 	}
+
 	return result;
 }
