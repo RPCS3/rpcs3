@@ -556,7 +556,7 @@ void GLGSRender::on_init_thread()
 
 	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
 	m_uniform_ring_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
-	m_index_ring_buffer->create(gl::buffer::target::element_array, 16 * 0x100000);
+	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 	m_gl_texture_cache.initialize_rtt_cache();

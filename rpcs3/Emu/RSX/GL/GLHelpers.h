@@ -601,10 +601,13 @@ namespace gl
 			verify(HERE), m_fence != nullptr;
 
 			bool done = false;
+			GLenum flag = GL_SYNC_FLUSH_COMMANDS_BIT;
 			while (!done)
 			{
 				//Check if we are finished, wait time = 1us
-				GLenum err = glClientWaitSync(m_fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000);
+				GLenum err = glClientWaitSync(m_fence, flag, 1000);
+				flag = 0;
+
 				switch (err)
 				{
 				default:
