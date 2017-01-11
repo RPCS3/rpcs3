@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "VKGSRender.h"
 #include "../rsx_methods.h"
+#include "../rsx_utils.h"
 #include "../Common/BufferUtils.h"
 #include "VKFormats.h"
 
