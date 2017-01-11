@@ -1047,7 +1047,6 @@ bool VKGSRender::load_program()
 		VkBlendOp equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
 		VkBlendOp equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
 
-		//TODO: Separate target blending
 		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
 		{
 			properties.att_state[render_targets[idx]].blendEnable = VK_TRUE;
@@ -1058,6 +1057,12 @@ bool VKGSRender::load_program()
 			properties.att_state[render_targets[idx]].colorBlendOp = equation_rgb;
 			properties.att_state[render_targets[idx]].alphaBlendOp = equation_a;
 		}
+		
+		auto blend_colors = rsx::get_constant_blend_colors();
+		properties.cs.blendConstants[0] = blend_colors[0];
+		properties.cs.blendConstants[1] = blend_colors[1];
+		properties.cs.blendConstants[2] = blend_colors[2];
+		properties.cs.blendConstants[3] = blend_colors[3];
 	}
 	else
 	{

@@ -223,24 +223,8 @@ void GLGSRender::begin()
 			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
 			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
 
-		if (rsx::method_registers.surface_color() == rsx::surface_color_format::w16z16y16x16) //TODO: check another color formats
-		{
-			u16 blend_color_r = rsx::method_registers.blend_color_16b_r();
-			u16 blend_color_g = rsx::method_registers.blend_color_16b_g();
-			u16 blend_color_b = rsx::method_registers.blend_color_16b_b();
-			u16 blend_color_a = rsx::method_registers.blend_color_16b_a();
-
-			__glcheck glBlendColor(blend_color_r / 65535.f, blend_color_g / 65535.f, blend_color_b / 65535.f, blend_color_a / 65535.f);
-		}
-		else
-		{
-			u8 blend_color_r = rsx::method_registers.blend_color_8b_r();
-			u8 blend_color_g = rsx::method_registers.blend_color_8b_g();
-			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
-			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
-
-			__glcheck glBlendColor(blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f);
-		}
+		auto blend_colors = rsx::get_constant_blend_colors();
+		__glcheck glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
 
 		__glcheck glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
 			blend_equation(rsx::method_registers.blend_equation_a()));
