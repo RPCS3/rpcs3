@@ -720,6 +720,8 @@ bool GLGSRender::load_program()
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	m_program->use();
 
+	LOG_ERROR(RSX, "Program id=%d, Transform program bits = %llx", m_program->id(), rsx::method_registers.transform_branch_bits());
+
 	if (old_program == m_program && !m_transform_constants_dirty)
 	{
 		//This path is taken alot so the savings are tangible
