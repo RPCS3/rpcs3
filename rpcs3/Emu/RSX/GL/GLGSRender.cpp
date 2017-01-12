@@ -720,7 +720,6 @@ bool GLGSRender::load_program()
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	m_program->use();
 
-	LOG_ERROR(RSX, "Program id=%d, Transform program bits = %llx", m_program->id(), rsx::method_registers.transform_branch_bits());
 
 	if (old_program == m_program && !m_transform_constants_dirty)
 	{
@@ -784,10 +783,15 @@ bool GLGSRender::load_program()
 	float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 	f32 fog0 = rsx::method_registers.fog_params_0();
 	f32 fog1 = rsx::method_registers.fog_params_1();
+	u32 branch_bits_lo = (rsx::method_registers.transform_branch_bits() & 0xffffffff);
+	u32 branch_bits_hi = (rsx::method_registers.transform_branch_bits() >> 32) & 0xffffffff;
+
 	memcpy(buf + 16 * sizeof(float), &fog0, sizeof(float));
 	memcpy(buf + 17 * sizeof(float), &fog1, sizeof(float));
 	memcpy(buf + 18 * sizeof(float), &is_alpha_tested, sizeof(u32));
 	memcpy(buf + 19 * sizeof(float), &alpha_ref, sizeof(float));
+	memcpy(buf + 20 * sizeof(float), &branch_bits_lo, sizeof(u32));
+	memcpy(buf + 21 * sizeof(float), &branch_bits_hi, sizeof(u32));
 
 	// Vertex constants
 	mapping = m_uniform_ring_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);

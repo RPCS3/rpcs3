@@ -33,11 +33,13 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
 	OS << "{\n";
-	OS << "	mat4 scaleOffsetMat;\n";
+	OS << "	mat4  scaleOffsetMat;\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
-	OS << "	uint alpha_test;\n";
+	OS << "	uint  alpha_test;\n";
 	OS << "	float alpha_ref;\n";
+	OS << " uint  transform_branch_bits_lo;\n";
+	OS << " uint  transform_branch_bits_hi;\n";
 	OS << "};\n";
 }
 
@@ -120,6 +122,8 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
+	int constants_count = 0;
+
 	OS << std::endl;
 	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
@@ -133,11 +137,18 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			continue;
 
 		for (const ParamItem& PI : PT.items)
+		{
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
+			constants_count++;
+		}
 	}
 
-	// A dummy value otherwise it's invalid to create an empty uniform buffer
-	OS << "	vec4 void_value;" << std::endl;
+	if (!constants_count)
+	{
+		// A dummy value otherwise it's invalid to create an empty uniform buffer
+		OS << "	vec4 void_value;" << std::endl;
+	}
+
 	OS << "};" << std::endl;
 }
 

@@ -30,15 +30,18 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 430" << std::endl << std::endl;
-	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	mat4 scaleOffsetMat;" << std::endl;
+	OS << "#version 430" << std::endl;
+
+	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
+	OS << "{\n";
+	OS << "	mat4  scaleOffsetMat;\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
-	OS << "	uint alpha_test;\n";
+	OS << "	uint  alpha_test;\n";
 	OS << "	float alpha_ref;\n";
-	OS << "};" << std::endl;
+	OS << " uint  transform_branch_bits_lo;\n";
+	OS << " uint  transform_branch_bits_hi;\n";
+	OS << "};\n";
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
@@ -96,6 +99,7 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	vec4 vc[468];" << std::endl;
+	OS << "" << std::endl;
 	OS << "};" << std::endl << std::endl;
 
 	for (const ParamType &PT: constants)

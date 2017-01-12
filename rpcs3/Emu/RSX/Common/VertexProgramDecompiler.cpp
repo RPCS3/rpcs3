@@ -216,7 +216,8 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		return "if(" + cond + ") ";
 	}
 		},
-		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) }
+		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
+		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) }
 	};
 
 	return fmt::replace_all(code, repl_list);
@@ -255,6 +256,22 @@ std::string VertexProgramDecompiler::GetCond()
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 	return "any(" + compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
+}
+
+std::string VertexProgramDecompiler::GetOptionalBranchCond()
+{
+	u32 bit_index = d3.branch_index;
+	u32 lookup_field = 0;
+
+	if (bit_index > 31)
+	{
+		bit_index -= 32;
+		lookup_field = 1;
+	}
+
+	std::string lookup[] = {"transform_branch_bits_lo", "transform_branch_bits_hi"};
+	std::string cond = "(" + lookup[lookup_field] + " & (1 << " + std::to_string(bit_index) + ")) == 0";
+	return "if (" + cond + ")";
 }
 
 void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
@@ -664,17 +681,16 @@ std::string VertexProgramDecompiler::Decompile()
 			LOG_WARNING(RSX, "sca_opcode BRB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			AddCode(fmt::format("//BRB opcode, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX));
 			
-			// BRB is identifiable by having dst_tmp=0x3f, sca_dst_tmp=0x3f, cond=true, cond_test_enable = false, cond_test_update=false and bit 25 on D3 is set
-			// When a vector opcode is issued together with BRB, it seems to be ignored. Since cc update and test are disabled, its possible that the compiler
-			// uses this as some kind of optimization to allow the same shader to execute differently based on some other state.
-			// Tested using saint seiya games as well as hellboy: the science of evil
-			if (d3.brb_cond_true && d1.vec_opcode == RSX_VEC_OPCODE_NOP)
-			{
-				u32 jump_position = find_jump_lvl(GetAddr());
-				AddCode(fmt::format("jump_position = %u;", jump_position));
-				AddCode("continue;");
-				AddCode("");
-			}
+			u32 jump_position = find_jump_lvl(GetAddr());
+			
+			AddCode("$ifbcond //BRB");
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode(fmt::format("jump_position = %u;", jump_position));
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
+			AddCode("");
 
 			break;
 		}
@@ -683,11 +699,8 @@ std::string VertexProgramDecompiler::Decompile()
 			LOG_WARNING(RSX, "sca_opcode CLB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			AddCode("//CLB");
 			
-			if (d3.brb_cond_true && d1.vec_opcode == RSX_VEC_OPCODE_NOP)
-			{
-				AddCode("$f(); //CLB");
-				AddCode("");
-			}
+			AddCode("$ifbcond $f(); //CLB");
+			AddCode("");
 
 			break;
 		case RSX_SCA_OPCODE_PSH: break;
