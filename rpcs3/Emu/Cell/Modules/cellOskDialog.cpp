@@ -18,6 +18,7 @@ s32 cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInf
 	OutputInfo->result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 
 	be_t<u16> input[6] = { 'r', 'p', 'c', 's', '3', 0x0 }; //TODO: Get actual input instead.
+	std::memcpy(OutputInfo->pResultString.get_ptr(), input, sizeof(input));
 
 	return CELL_OSKDIALOG_OK;
 }
