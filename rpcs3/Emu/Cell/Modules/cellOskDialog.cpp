@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
 
@@ -18,13 +17,7 @@ s32 cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInf
 	cellOskDialog.warning("cellOskDialogUnloadAsync(OutputInfo=*0x%x)", OutputInfo);
 	OutputInfo->result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 
-	//TODO: Return actual input. 
-	*OutputInfo->pResultString = 'r'; 
-	*(OutputInfo->pResultString + 1) = 'p';
-	*(OutputInfo->pResultString + 2) = 'c';
-	*(OutputInfo->pResultString + 3) = 's';
-	*(OutputInfo->pResultString + 4) = '3';
-	*(OutputInfo->pResultString + 5) = 0x0; //Excplicit null termination.
+	be_t<u16> input[6] = { 'r', 'p', 'c', 's', '3', 0x0 }; //TODO: Get actual input instead.
 
 	return CELL_OSKDIALOG_OK;
 }
