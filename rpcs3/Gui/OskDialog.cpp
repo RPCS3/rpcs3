@@ -1,0 +1,48 @@
+#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "rpcs3.h"
+#include "Emu/System.h"
+#include "Emu/Memory/Memory.h"
+#include "wx/ustring.h"
+#include "Emu/Cell/lv2/sys_time.h"
+#include "MsgDialog.h"
+
+void MsgDialogFrame::CreateOsk(const std::string& msg, char16_t* osk_text)
+{
+	if (m_dialog) m_dialog->Destroy();
+
+	osk_button_ok = nullptr;
+	osk_text_input = nullptr;
+	osk_text_return = osk_text;
+
+	m_dialog = new wxDialog(nullptr, wxID_ANY, type.se_normal ? "Normal dialog" : msg, wxDefaultPosition, wxDefaultSize);
+	wxSizer* osk_sizer = new wxBoxSizer(wxVERTICAL);
+
+	osk_text_input = new wxTextCtrl(m_dialog, wxID_OK);
+	osk_sizer->Add(osk_text_input, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, wxTOP, 16);
+	osk_sizer->AddSpacer(16);
+	osk_button_ok = new wxButton(m_dialog, wxID_OK);
+	osk_sizer->Add(osk_button_ok, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, wxBOTTOM, 16);
+
+	if (type.default_cursor == 0)
+	{
+		osk_text_input->SetFocus();
+	}
+
+	m_dialog->SetSizerAndFit(osk_sizer);
+	m_dialog->Centre(wxBOTH);
+	m_dialog->Show();
+	m_dialog->Enable();
+
+	m_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
+	{
+		wxUString wx_osk_string = osk_text_input->GetValue();
+		std::memcpy(osk_text_return, wx_osk_string.utf16_str(), std::min(sizeof(wx_osk_string.utf16_str()), sizeof(osk_text_return-1)));
+		on_close(CELL_MSGDIALOG_BUTTON_OK);
+	});
+
+	m_dialog->Bind(wxEVT_CLOSE_WINDOW, [on_close = on_close](wxCloseEvent& event)
+	{
+		on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+	});
+}

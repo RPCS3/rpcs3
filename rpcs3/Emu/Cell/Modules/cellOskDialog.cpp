@@ -1,14 +1,48 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
+#include "cellMsgDialog.h"
+#include <thread>
+#include "Emu/System.h"
 
 logs::channel cellOskDialog("cellOskDialog", logs::level::notice);
+
+char16_t* osk_text;
 
 s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogParam, vm::ptr<CellOskDialogInputFieldInfo> inputFieldInfo)
 {
 	cellOskDialog.warning("cellOskDialogLoadAsync(container=0x%x, dialogParam=*0x%x, inputFieldInfo=*0x%x)", container, dialogParam, inputFieldInfo);
-	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0); //Immediately signal that input is finished. TODO: Get actual input.
+
+	osk_text = new char16_t[CELL_OSKDIALOG_STRING_SIZE];
+	std::memset(osk_text, 0, sizeof(osk_text));
+
+	const auto osk = Emu.GetCallbacks().get_msg_dialog();
+	bool result = false;
+
+	osk->on_close = [&](s32 status)
+	{
+		if (status == 1) {
+			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
+		}
+		else {
+			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED, 0);
+		}
+		result = true;
+	};
+
+	Emu.CallAfter([&]()
+	{
+		osk->CreateOsk("osk", osk_text);
+	});
+
+	while (!result)
+	{
+		CHECK_EMU_STATUS;
+		std::this_thread::sleep_for(1ms);
+	}
+
 	return CELL_OSKDIALOG_OK;
 }
 
@@ -17,8 +51,9 @@ s32 cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInf
 	cellOskDialog.warning("cellOskDialogUnloadAsync(OutputInfo=*0x%x)", OutputInfo);
 	OutputInfo->result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 
-	be_t<u16> input[6] = { 'r', 'p', 'c', 's', '3', 0x0 }; //TODO: Get actual input instead.
-	std::memcpy(OutputInfo->pResultString.get_ptr(), input, sizeof(input));
+	for (int i = 0; i < OutputInfo->numCharsResultString; i++) {
+		*(OutputInfo->pResultString + i) = (be_t<u16>)*(osk_text + i);
+	}
 
 	return CELL_OSKDIALOG_OK;
 }
@@ -33,7 +68,8 @@ s32 cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, vm::ptr<CellOs
 
 s32 cellOskDialogAbort()
 {
-	cellOskDialog.todo("cellOskDialogAbort()");
+	cellOskDialog.warning("cellOskDialogAbort()");
+	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 	return CELL_OSKDIALOG_OK;
 }
 
