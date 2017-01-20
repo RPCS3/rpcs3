@@ -1228,6 +1228,7 @@ namespace rsx
 		bind_array<NV4097_SET_TEXTURE_CONTROL2, 1, 16, nullptr>();
 		bind_array<NV4097_SET_TEX_COORD_CONTROL, 1, 10, nullptr>();
 		bind_array<NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nullptr>();
+		bind_array<NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA3F_M, 1, 48, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nullptr>();
