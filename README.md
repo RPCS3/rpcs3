@@ -10,6 +10,9 @@ An open-source PlayStation 3 emulator/debugger written in C++.
 
 You can find some basic information in the [FAQ](https://github.com/RPCS3/rpcs3/wiki/FAQ). For discussion about this emulator and PS3 emulation please visit the [official forums](http://www.emunewz.net/forum/forumdisplay.php?fid=162).
 
+Official Discord server: https://discord.me/RPCS3
+
+Support Nekotekina on Patreon: https://www.patreon.com/Nekotekina
 
 ### Development
 
