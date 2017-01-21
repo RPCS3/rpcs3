@@ -245,13 +245,14 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
 	LLVMLinkInMCJIT();
+	const auto _cpu = llvm::sys::getHostCPUName();
 
 	m_engine.reset(llvm::EngineBuilder(std::move(_module))
 		.setErrorStr(&result)
 		.setMCJITMemoryManager(std::make_unique<MemoryManager>(std::move(table)))
 		.setOptLevel(llvm::CodeGenOpt::Aggressive)
 		.setCodeModel((u64)s_memory <= 0x60000000 ? llvm::CodeModel::Small : llvm::CodeModel::Large) // TODO
-		.setMCPU(llvm::sys::getHostCPUName())
+		.setMCPU(_cpu == "skylake" ? "haswell" : _cpu)
 		.create());
 
 	if (!m_engine)
