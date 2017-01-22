@@ -116,8 +116,6 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
-extern void ppu_initialize(const std::string& name, const std::vector<ppu_function>& set);
-
 extern u32 g_ps3_sdk_version;
 
 // Function lookup table. Not supposed to grow after emulation start.
@@ -1278,17 +1276,17 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Analyse executable
-	const auto funcs = ppu_analyse(segments, sections, 0);
+	std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0);
 
-	ppu_validate(vfs::get(Emu.GetPath()), funcs, 0);
+	ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
 
-	for (const auto& pair : funcs)
-	{
-		exec_set.emplace_back(pair);
-	}
+	// Append
+	exec_set.insert(exec_set.cend(),
+		std::make_move_iterator(main_funcs.begin()),
+		std::make_move_iterator(main_funcs.end()));
 
-	// Initialize interpreter/recompiler
-	ppu_initialize("", exec_set);
+	// Share function list
+	fxm::make<std::vector<ppu_function>>(std::move(exec_set));
 
 	// Set SDK version
 	g_ps3_sdk_version = sdk_version;
@@ -1314,6 +1312,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	// Initialize main thread
 	auto ppu = idm::make_ptr<ppu_thread>("main_thread", primary_prio, primary_stacksize);
+
+	ppu->cmd_push({ppu_cmd::initialize, 0});
 
 	// TODO: adjust for liblv2 loading option
 	if (!g_cfg_load_liblv2)
