@@ -38,6 +38,7 @@
 
 #include "Utilities/JIT.h"
 #include "PPUTranslator.h"
+#include "Modules/cellMsgDialog.h"
 #endif
 
 enum class ppu_decoder_type
@@ -57,6 +58,7 @@ cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder"
 const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
 
+static void ppu_initialize();
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
@@ -162,6 +164,11 @@ void ppu_thread::cpu_task()
 		case ppu_cmd::hle_call:
 		{
 			cmd_pop(), ppu_execute_function(*this, arg);
+			break;
+		}
+		case ppu_cmd::initialize:
+		{
+			cmd_pop(), ppu_initialize();
 			break;
 		}
 		default:
@@ -510,9 +517,11 @@ static bool adde_carry(u64 a, u64 b, bool c)
 #endif
 }
 
-extern void ppu_initialize(const std::string& name, const std::vector<ppu_function>& funcs)
+static void ppu_initialize()
 {
-	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm || funcs.empty())
+	const auto _funcs = fxm::get_always<std::vector<ppu_function>>();
+
+	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm || _funcs->empty())
 	{
 		if (!Emu.GetCPUThreadStop())
 		{
@@ -555,7 +564,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	using namespace llvm;
 
 	// Create LLVM module
-	std::unique_ptr<Module> module = std::make_unique<Module>(name, g_llvm_ctx);
+	std::unique_ptr<Module> module = std::make_unique<Module>("", g_llvm_ctx);
 
 	// Initialize target
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
@@ -568,7 +577,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	const auto _func = FunctionType::get(_void, { translator->GetContextType()->getPointerTo() }, false);
 
 	// Initialize function list
-	for (const auto& info : funcs)
+	for (const auto& info : *_funcs)
 	{
 		if (info.size)
 		{
@@ -608,11 +617,48 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	pm.add(createCFGSimplificationPass());
 	//pm.add(createLintPass()); // Check
 
-	// Translate functions
-	for (const auto& info : funcs)
+	// Initialize message dialog
+	const auto dlg = Emu.GetCallbacks().get_msg_dialog();
+	dlg->type.se_normal = true;
+	dlg->type.bg_invisible = true;
+	dlg->type.progress_bar_count = 1;
+	dlg->on_close = [](s32 status)
 	{
+		Emu.CallAfter([]()
+		{
+			// Abort everything
+			Emu.Stop();
+		});
+	};
+
+	Emu.CallAfter([=]()
+	{
+		dlg->Create("Recompiling PPU executable.\nPlease wait...");
+	});
+
+	// Translate functions
+	for (size_t fi = 0; fi < _funcs->size(); fi++)
+	{
+		if (Emu.IsStopped())
+		{
+			LOG_SUCCESS(PPU, "LLVM: Translation cancelled");
+			return;
+		}
+
+		auto& info = _funcs->at(fi);
+
 		if (info.size)
 		{
+			// Update dialog
+			Emu.CallAfter([=, max = _funcs->size()]()
+			{
+				dlg->ProgressBarSetMsg(0, fmt::format("Compiling %u of %u", fi + 1, max));
+
+				if (fi * 100 / max != (fi + 1) * 100 / max)
+					dlg->ProgressBarInc(0, 1);
+			});
+
+			// Translate
 			const auto func = translator->TranslateToIR(info, vm::_ptr<u32>(info.addr));
 
 			// Run optimization passes
@@ -699,6 +745,13 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	mpm.add(createDeadInstEliminationPass());
 	mpm.run(*module);
 
+	// Update dialog
+	Emu.CallAfter([=]()
+	{
+		dlg->ProgressBarSetMsg(0, "Generating code...");
+		dlg->ProgressBarInc(0, 100);
+	});
+
 	std::string result;
 	raw_string_ostream out(result);
 
@@ -711,7 +764,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	if (verifyModule(*module, &out))
 	{
 		out.flush();
-		LOG_ERROR(PPU, "{%s} LLVM: Translation failed:\n%s", name, result);
+		LOG_ERROR(PPU, "LLVM: Translation failed:\n%s", result);
 		return;
 	}
 
@@ -730,7 +783,7 @@ extern void ppu_initialize(const std::string& name, const std::vector<ppu_functi
 	memory_helper::free_reserved_memory(s_ppu_compiled, 0x100000000); // TODO
 
 	// Get and install function addresses
-	for (const auto& info : funcs)
+	for (const auto& info : *_funcs)
 	{
 		if (info.size)
 		{
