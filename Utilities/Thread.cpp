@@ -1588,6 +1588,17 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
 }
 
+#ifdef __linux__
+extern "C" struct dwarf_eh_bases
+{
+	void* tbase;
+	void* dbase;
+	void* func;
+};
+
+extern "C" struct fde* _Unwind_Find_FDE(void* pc, struct dwarf_eh_bases* bases);
+#endif
+
 // Detect leaf function
 static bool is_leaf_function(u64 rip)
 {
@@ -1604,8 +1615,31 @@ static bool is_leaf_function(u64 rip)
 
 	// No unwind info implies leaf function
 	return true;
+#elif __linux__
+	struct dwarf_eh_bases bases;
+
+	if (struct fde* f = _Unwind_Find_FDE(reinterpret_cast<void*>(rip), &bases))
+	{
+		const auto words = (const u32*)f;
+
+		if (words[0] < 0x14)
+		{
+			return true;
+		}
+
+		if (words[0] == 0x14 && !words[3] && !words[4])
+		{
+			return true;
+		}
+
+		// TODO
+		return false;
+	}
+
+	// No unwind info implies leaf function
+	return true;
 #else
-	// TODO
+	// Unsupported
 	return false;
 #endif
 }
