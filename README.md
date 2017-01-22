@@ -29,26 +29,32 @@ __Windows__
 
 __Linux__
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
-* Debian & Ubuntu: `sudo apt-get install cmake build-essential libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev`
+* Debian & Ubuntu: `sudo apt-get install cmake build-essential libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev git`
 * Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
 
 __Mac OSX__
+Mac OSX is not supported at this moment because it doesn't meet system requirements (OpenGL 4.3)
 * Xcode 6+ (tested with Xcode 6.4)
 * Install with Homebrew: `brew install glew wxwidgets`
 * Remove '-framework QuickTime' from '_ldflags' in /usr/local/bin/wx-config
 
-
 ### Building
 
-To initialize the repository don't forget to execute `git submodule update --init` to pull the submodules.
-* __Windows__:
-1) Open the *.SLN* file.
-2) Build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*.
-3) Press *BUILD* > *Build Solution* or *Rebuild Solution*.
-* __Linux & Mac OSX__:
-If you want to build with LLVM, then LLVM 3.8 is required.
-`cd rpcs3 && cmake CMakeLists.txt && make && cd ../` then run with `cd bin && ./rpcs3`.
+- __Windows__: </br>
+1) To initialize the repository don't forget to execute `git submodule update --init` to pull the submodules. </br>
+2) Open the *.SLN* file. </br>
+3) Build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*. </br>
+4) Press *BUILD* > *Build Solution* or *Rebuild Solution*. </br>
+
+- __Linux & Mac OSX__: </br>
+1) `git clone https://github.com/RPCS3/rpcs3.git` </br>
+2) `cd rpcs3/` </br>
+3) `git submodule update --init` </br>
+4) `cmake CMakeLists.txt && make GitVersion && make` </br>
+5) Run RPCS3 with `./bin/rpcs3` </br>
+
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=...` (or wherever llvm brew was installed) to cmake invocation.
+
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
 
 ##### CMake Build Options (Linux & Mac OSX)
