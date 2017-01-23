@@ -41,55 +41,6 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};" << std::endl;
 }
 
-std::vector<std::pair<std::string, std::string>> get_user_clip_planes(const RSXVertexProgram& prog)
-{
-	std::vector<std::pair<std::string, std::string>> uc_planes;
-
-	if (prog.output_mask & (1 << 5))
-	{
-		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC0)
-		{
-			uc_planes.push_back({ "uniform int uc_m0 = 0;\n",
-				"\tgl_ClipDistance[0] = uc_m0 * dst_reg5.y;\n" });
-		}
-
-		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC1)
-		{
-			uc_planes.push_back({ "uniform int uc_m1 = 0;\n",
-				"\tgl_ClipDistance[1] = uc_m1 * dst_reg5.z;\n" });
-		}
-
-		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC2)
-		{
-			uc_planes.push_back({ "uniform int uc_m2 = 0;\n",
-				"\tgl_ClipDistance[2] = uc_m2 * dst_reg5.w;\n" });
-		}
-	}
-
-	if (prog.output_mask & (1 << 6))
-	{
-		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC3)
-		{
-			uc_planes.push_back({ "uniform int uc_m3 = 0;\n",
-				"\tgl_ClipDistance[3] = uc_m3 * dst_reg6.y;\n" });
-		}
-
-		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC4)
-		{
-			uc_planes.push_back({ "uniform int uc_m4 = 0;\n",
-				"\tgl_ClipDistance[4] = uc_m4 * dst_reg6.z;\n" });
-		}
-
-		if (prog.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_UC5)
-		{
-			uc_planes.push_back({ "uniform int uc_m5 = 0;\n",
-				"\tgl_ClipDistance[5] = uc_m5 * dst_reg6.w;\n" });
-		}
-	}
-
-	return uc_planes;
-}
-
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
 	std::vector<std::tuple<size_t, std::string>> input_data;
@@ -134,9 +85,9 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 		}
 	}
 
-	for (const auto& uc : get_user_clip_planes(rsx_vertex_program))
+	for (int i = 0; i <= 5; i++)
 	{
-		OS << uc.first;
+		OS << "uniform int uc_m" + std::to_string(i) + "= 0;\n";
 	}
 }
 
@@ -176,14 +127,13 @@ static const reg_info reg_table[] =
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
 	{ "fog_c", true, "dst_reg5", ".xxxx", true },
-	//{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
-	//{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
-	//{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * uc_m0", false },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * uc_m1", false },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * uc_m2", false },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-	//Disable user clip planes until they are properly handled
-	//{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
-	//{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
-	//{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * uc_m3", false },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * uc_m4", false },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * uc_m5", false },
 	{ "tc0", true, "dst_reg7", "", false },
 	{ "tc1", true, "dst_reg8", "", false },
 	{ "tc2", true, "dst_reg9", "", false },
@@ -401,11 +351,6 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 			OS << "	" << name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
 		}
-	}
-
-	for (const auto& uc : get_user_clip_planes(rsx_vertex_program))
-	{
-		OS << uc.second;
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
