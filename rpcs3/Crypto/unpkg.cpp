@@ -94,14 +94,18 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 
 			for (u64 i = 0; i < blocks; i++)
 			{
-				// Initialize "debug key" for current position
+				// Initialize stream cipher for current position
 				input[7] = offset / 16 + i;
 
-				u128 key;
+				union sha1_hash
+				{
+					u8 data[20];
+					u128 _v128;
+				} hash;
 				
-				sha1(reinterpret_cast<const u8*>(input), sizeof(input), reinterpret_cast<u8*>(&key));
+				sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
-				buf[i] ^= key;
+				buf[i] ^= hash._v128;
 			}
 		}
 
@@ -109,13 +113,13 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		{
 			aes_context ctx;
 
-			// Set decryption key
+			// Set encryption key for stream cipher
 			aes_setkey_enc(&ctx, psp ? PKG_AES_KEY2 : PKG_AES_KEY, 128);
 
-			// Initialize "release key" for start position
+			// Initialize stream cipher for start position
 			be_t<u128> input = header.klicensee.value() + offset / 16;
 
-			// Increment "release key" for every block
+			// Increment stream position for every block
 			for (u64 i = 0; i < blocks; i++, input++)
 			{
 				u128 key;

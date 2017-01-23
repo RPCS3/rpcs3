@@ -14,6 +14,7 @@ enum class ppu_cmd : u32
 	set_args, // Set general-purpose args (+arg cmd)
 	lle_call, // Load addr and rtoc at *arg or *gpr[arg] and execute
 	hle_call, // Execute function by index (arg)
+	initialize, // ppu_initialize()
 };
 
 class ppu_thread : public cpu_thread

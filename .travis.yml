@@ -4,7 +4,7 @@ dist: trusty
 
 os:
  - linux
- - osx
+# - osx
 
 osx_image: xcode6.4
 
