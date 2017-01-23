@@ -369,9 +369,9 @@ class SELFDecrypter
 	std::vector<MetadataSectionHeader> meta_shdr;
 
 	// Internal data buffers.
-	u8 *data_keys;
+	std::unique_ptr<u8[]> data_keys;
 	u32 data_keys_length;
-	u8 *data_buf;
+	std::unique_ptr<u8[]> data_buf;
 	u32 data_buf_length;
 
 	// Main key vault instance.
