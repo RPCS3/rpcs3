@@ -77,14 +77,37 @@ rsx::comparison_function rsx::to_comparison_function(u16 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_NEVER: return rsx::comparison_function::never;
-	case CELL_GCM_LESS: return rsx::comparison_function::less;
-	case CELL_GCM_EQUAL: return rsx::comparison_function::equal;
-	case CELL_GCM_LEQUAL: return rsx::comparison_function::less_or_equal;
-	case CELL_GCM_GREATER: return rsx::comparison_function::greater;
-	case CELL_GCM_NOTEQUAL: return rsx::comparison_function::not_equal;
-	case CELL_GCM_GEQUAL: return rsx::comparison_function::greater_or_equal;
-	case CELL_GCM_ALWAYS: return rsx::comparison_function::always;
+	case CELL_GCM_TEXTURE_ZFUNC_NEVER & CELL_GCM_SCULL_SFUNC_NEVER:
+	case CELL_GCM_NEVER:
+		return rsx::comparison_function::never;
+
+	case CELL_GCM_TEXTURE_ZFUNC_LESS & CELL_GCM_SCULL_SFUNC_LESS:
+	case CELL_GCM_LESS:
+		return rsx::comparison_function::less;
+
+	case CELL_GCM_TEXTURE_ZFUNC_EQUAL & CELL_GCM_SCULL_SFUNC_EQUAL:
+	case CELL_GCM_EQUAL:
+		return rsx::comparison_function::equal;
+
+	case CELL_GCM_TEXTURE_ZFUNC_LEQUAL & CELL_GCM_SCULL_SFUNC_LEQUAL:
+	case CELL_GCM_LEQUAL:
+		return rsx::comparison_function::less_or_equal;
+
+	case CELL_GCM_TEXTURE_ZFUNC_GREATER & CELL_GCM_SCULL_SFUNC_GREATER:
+	case CELL_GCM_GREATER:
+		return rsx::comparison_function::greater;
+
+	case CELL_GCM_TEXTURE_ZFUNC_NOTEQUAL & CELL_GCM_SCULL_SFUNC_NOTEQUAL:
+	case CELL_GCM_NOTEQUAL:
+		return rsx::comparison_function::not_equal;
+
+	case CELL_GCM_TEXTURE_ZFUNC_GEQUAL & CELL_GCM_SCULL_SFUNC_GEQUAL:
+	case CELL_GCM_GEQUAL:
+		return rsx::comparison_function::greater_or_equal;
+
+	case CELL_GCM_TEXTURE_ZFUNC_ALWAYS & CELL_GCM_SCULL_SFUNC_ALWAYS:
+	case CELL_GCM_ALWAYS:
+		return rsx::comparison_function::always;
 	}
 	fmt::throw_exception("Unknown comparison function 0x%x" HERE, in);
 }
