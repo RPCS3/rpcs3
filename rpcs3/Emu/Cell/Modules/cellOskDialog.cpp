@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
 #include "cellMsgDialog.h"
@@ -34,7 +33,7 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 
 	Emu.CallAfter([&]()
 	{
-		osk->CreateOsk("osk", osk_text);
+		osk->CreateOsk("On Screen Keyboard", osk_text);
 	});
 
 	while (!result)

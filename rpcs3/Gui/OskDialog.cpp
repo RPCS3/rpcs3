@@ -10,26 +10,29 @@
 void MsgDialogFrame::CreateOsk(const std::string& msg, char16_t* osk_text)
 {
 	if (m_dialog) m_dialog->Destroy();
-
 	osk_button_ok = nullptr;
 	osk_text_input = nullptr;
 	osk_text_return = osk_text;
 
-	m_dialog = new wxDialog(nullptr, wxID_ANY, type.se_normal ? "Normal dialog" : msg, wxDefaultPosition, wxDefaultSize);
-	wxSizer* osk_sizer = new wxBoxSizer(wxVERTICAL);
+	m_dialog = new wxDialog(nullptr, wxID_ANY, msg, wxDefaultPosition, wxDefaultSize);
+	wxSizer* osk_dialog_sizer = new wxBoxSizer(wxVERTICAL);
+	wxSizer* osk_text_sizer = new wxBoxSizer(wxHORIZONTAL);
+	wxSizer* osk_button_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	osk_text_input = new wxTextCtrl(m_dialog, wxID_OK);
-	osk_sizer->Add(osk_text_input, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, wxTOP, 16);
-	osk_sizer->AddSpacer(16);
-	osk_button_ok = new wxButton(m_dialog, wxID_OK);
-	osk_sizer->Add(osk_button_ok, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, wxBOTTOM, 16);
-
+	osk_text_input = new wxTextCtrl(m_dialog, wxID_OK, wxEmptyString, wxDefaultPosition, wxSize(200, -1));
+	osk_text_sizer->Add(osk_text_input, 0, wxALL, 4);
 	if (type.default_cursor == 0)
 	{
 		osk_text_input->SetFocus();
 	}
 
-	m_dialog->SetSizerAndFit(osk_sizer);
+	osk_button_ok = new wxButton(m_dialog, wxID_OK);
+	osk_button_sizer->Add(osk_button_ok, 0, wxLEFT | wxRIGHT | wxBOTTOM, 4);
+
+	osk_dialog_sizer->Add(osk_text_sizer, 0, wxCENTER);
+	osk_dialog_sizer->Add(osk_button_sizer, 0, wxCENTER);
+
+	m_dialog->SetSizerAndFit(osk_dialog_sizer);
 	m_dialog->Centre(wxBOTH);
 	m_dialog->Show();
 	m_dialog->Enable();
@@ -37,7 +40,7 @@ void MsgDialogFrame::CreateOsk(const std::string& msg, char16_t* osk_text)
 	m_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
 	{
 		wxUString wx_osk_string = osk_text_input->GetValue();
-		std::memcpy(osk_text_return, wx_osk_string.utf16_str(), std::min(sizeof(wx_osk_string.utf16_str()), sizeof(osk_text_return-1)));
+		std::memcpy(osk_text_return, wx_osk_string.utf16_str(), sizeof(wx_osk_string));
 		on_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 
