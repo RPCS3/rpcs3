@@ -83,6 +83,7 @@ namespace
 	{
 		switch (op)
 		{
+		case rsx::stencil_op::invert: return GL_INVERT;
 		case rsx::stencil_op::keep: return GL_KEEP;
 		case rsx::stencil_op::zero: return GL_ZERO;
 		case rsx::stencil_op::replace: return GL_REPLACE;
