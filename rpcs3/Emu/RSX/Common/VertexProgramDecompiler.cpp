@@ -151,7 +151,7 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 	std::string dest;
 
-	if (d0.cond_update_enable_0 && d0.cond_update_enable_1)
+	if (d0.cond_update_enable_0 || d0.cond_update_enable_1)
 	{
 		dest = m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)") + mask;
 	}
