@@ -56,6 +56,52 @@ struct ppu_pattern
 	}
 };
 
+struct ppu_pattern_array
+{
+	const ppu_pattern* ptr;
+	std::size_t count;
+
+	template <std::size_t N>
+	constexpr ppu_pattern_array(const ppu_pattern(&array)[N])
+		: ptr(array)
+		, count(N)
+	{
+	}
+
+	constexpr const ppu_pattern* begin() const
+	{
+		return ptr;
+	}
+
+	constexpr const ppu_pattern* end() const
+	{
+		return ptr + count;
+	}
+};
+
+struct ppu_pattern_matrix
+{
+	const ppu_pattern_array* ptr;
+	std::size_t count;
+
+	template <std::size_t N>
+	constexpr ppu_pattern_matrix(const ppu_pattern_array(&array)[N])
+		: ptr(array)
+		, count(N)
+	{
+	}
+
+	constexpr const ppu_pattern_array* begin() const
+	{
+		return ptr;
+	}
+
+	constexpr const ppu_pattern_array* end() const
+	{
+		return ptr + count;
+	}
+};
+
 extern void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc);
 
 extern std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc);

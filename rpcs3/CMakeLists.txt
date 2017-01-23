@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+set(RES_FILES "")
 include(cotire)
 
 project(rpcs3)
@@ -15,9 +16,11 @@ add_custom_command(OUTPUT something_that_never_exists
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
 
+
 if(WIN32)
 	add_definitions(-DUNICODE)
 	add_definitions(-D_WIN32_WINNT=0x0601)
+	set(RES_FILES "rpcs3_.rc")
 endif()
 
 if(NOT MSVC)
@@ -193,7 +196,7 @@ if(NOT WIN32)
 	endforeach(TMP_PATH)
 endif()
 
-add_executable(rpcs3 ${RPCS3_SRC})
+add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES})
 
 
 if(MSVC)
