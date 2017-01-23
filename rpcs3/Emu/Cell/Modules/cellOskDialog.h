@@ -93,6 +93,11 @@ enum CellOskDialogType
 	CELL_OSKDIALOG_TYPE_SEPARATE_CANDIDATE_WINDOW = 8,
 };
 
+enum 
+{
+	CELL_OSKDIALOG_STRING_SIZE = 512, //Theroretical maxium for osk input, games can specify a lower limit
+};
+
 struct CellOskDialogInputFieldInfo
 {
 	vm::bptr<u16> message;
@@ -151,3 +156,4 @@ struct CellOskDialogImeDictionaryInfo
 	be_t<u32> targetLanguage;
 	vm::bcptr<char> dictionaryPath;
 };
+

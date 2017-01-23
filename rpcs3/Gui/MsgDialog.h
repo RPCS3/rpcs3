@@ -15,10 +15,14 @@ class MsgDialogFrame : public MsgDialogBase
 	wxStaticText* m_text;
 	wxSizer* m_sizer1;
 	wxSizer* m_buttons;
+	wxButton* osk_button_ok;
+	wxTextCtrl*  osk_text_input;
+	char16_t* osk_text_return;
 
 public:
 	virtual ~MsgDialogFrame() override;
 	virtual void Create(const std::string& msg) override;
+	virtual void CreateOsk(const std::string& msg, char16_t* osk_text);
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
