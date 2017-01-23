@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <memory>
+
 // Auxiliary functions (endian swap, xor and prng).
 u16 swap16(u16 i)
 {
@@ -82,8 +84,8 @@ void hex_to_bytes(unsigned char *data, const char *hex_str, unsigned int str_len
 	// Don't convert if the string length is odd.
 	if (!(strn_length % 2))
 	{
-		u8 *out = (u8 *)malloc(strn_length * sizeof(u8));
-		u8 *pos = out;
+		auto out = std::make_unique<u8[]>(strn_length * sizeof(u8));
+		u8 *pos = out.get();
 
 		while (strn_length--)
 		{
@@ -94,8 +96,7 @@ void hex_to_bytes(unsigned char *data, const char *hex_str, unsigned int str_len
 		}
 
 		// Copy back to our array.
-		memcpy(data, out, data_length);
-		free(out);
+		memcpy(data, out.get(), data_length);
 	}
 }
 
