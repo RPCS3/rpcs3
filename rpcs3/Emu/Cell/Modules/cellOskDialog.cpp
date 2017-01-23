@@ -8,14 +8,13 @@
 
 logs::channel cellOskDialog("cellOskDialog", logs::level::notice);
 
-char16_t* osk_text;
+static char16_t s_osk_text[CELL_OSKDIALOG_STRING_SIZE];
 
 s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogParam, vm::ptr<CellOskDialogInputFieldInfo> inputFieldInfo)
 {
 	cellOskDialog.warning("cellOskDialogLoadAsync(container=0x%x, dialogParam=*0x%x, inputFieldInfo=*0x%x)", container, dialogParam, inputFieldInfo);
 
-	osk_text = new char16_t[CELL_OSKDIALOG_STRING_SIZE];
-	std::memset(osk_text, 0, sizeof(osk_text));
+	std::memset(s_osk_text, 0, sizeof(s_osk_text));
 
 	const auto osk = Emu.GetCallbacks().get_msg_dialog();
 	bool result = false;
@@ -33,7 +32,7 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 
 	Emu.CallAfter([&]()
 	{
-		osk->CreateOsk("On Screen Keyboard", osk_text);
+		osk->CreateOsk("On Screen Keyboard", s_osk_text);
 	});
 
 	while (!result)
@@ -51,7 +50,7 @@ s32 cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInf
 	OutputInfo->result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 
 	for (int i = 0; i < OutputInfo->numCharsResultString; i++) {
-		*(OutputInfo->pResultString + i) = (be_t<u16>)*(osk_text + i);
+		*(OutputInfo->pResultString + i) = (be_t<u16>)*(s_osk_text + i);
 	}
 
 	return CELL_OSKDIALOG_OK;

@@ -133,6 +133,7 @@
     <ClCompile Include="Gui\MemoryStringSearcher.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\MsgDialog.cpp" />
+    <ClCompile Include="Gui\OskDialog.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
     <ClCompile Include="Gui\RegisterEditor.cpp" />
     <ClCompile Include="Gui\RSXDebugger.cpp" />

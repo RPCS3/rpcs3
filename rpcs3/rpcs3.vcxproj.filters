@@ -105,6 +105,9 @@
     <ClCompile Include="Gui\InstructionEditor.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\OskDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Utilities\MTProgressDialog.h">
