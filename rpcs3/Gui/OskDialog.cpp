@@ -40,7 +40,7 @@ void MsgDialogFrame::CreateOsk(const std::string& msg, char16_t* osk_text)
 	m_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
 	{
 		wxUString wx_osk_string = osk_text_input->GetValue();
-		std::memcpy(osk_text_return, wx_osk_string.utf16_str(), sizeof(wx_osk_string));
+		std::memcpy(osk_text_return, wx_osk_string.utf16_str(), wx_osk_string.size() * 2);
 		on_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 

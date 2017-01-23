@@ -107,7 +107,7 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 	}
 }
 
-static u32 ppu_test(const vm::cptr<u32> ptr, vm::cptr<void> fend, std::initializer_list<ppu_pattern> pat)
+static u32 ppu_test(const vm::cptr<u32> ptr, vm::cptr<void> fend, ppu_pattern_array pat)
 {
 	vm::cptr<u32> cur = ptr;
 
@@ -139,7 +139,7 @@ static u32 ppu_test(const vm::cptr<u32> ptr, vm::cptr<void> fend, std::initializ
 	return cur.addr() - ptr.addr();
 }
 
-static u32 ppu_test(vm::cptr<u32> ptr, vm::cptr<void> fend, std::initializer_list<std::initializer_list<ppu_pattern>> pats)
+static u32 ppu_test(vm::cptr<u32> ptr, vm::cptr<void> fend, ppu_pattern_matrix pats)
 {
 	for (auto pat : pats)
 	{
@@ -156,7 +156,7 @@ namespace ppu_patterns
 {
 	using namespace ppu_instructions;
 
-	const std::initializer_list<ppu_pattern> abort1
+	const ppu_pattern abort1[]
 	{
 		{ STDU(r1, r1, -0xc0) },
 		{ MFLR(r0) },
@@ -240,7 +240,7 @@ namespace ppu_patterns
 		{ B(0, false, true), 0x3fffffc }, // .exit
 	};
 
-	const std::initializer_list<ppu_pattern> abort2
+	const ppu_pattern abort2[]
 	{
 		{ STDU(r1, r1, -0xc0) },
 		{ MFLR(r0) },
@@ -319,7 +319,7 @@ namespace ppu_patterns
 		{ B(0, false, true), 0x3fffffc }, // .exit
 	};
 
-	const std::initializer_list<std::initializer_list<ppu_pattern>> abort
+	const ppu_pattern_array abort[]
 	{
 		abort1,
 		abort2,
@@ -385,7 +385,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				if (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && ptr[1] == toc)
 				{
 					// New function
-					LOG_NOTICE(PPU, "OPD*: [0x%x] 0x%x (TOC=0x%x)", ptr, ptr[0], ptr[1]);
+					LOG_TRACE(PPU, "OPD*: [0x%x] 0x%x (TOC=0x%x)", ptr, ptr[0], ptr[1]);
 					add_func(*ptr, toc, ptr.addr());
 					ptr++;
 				}
@@ -459,7 +459,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			// Add function and TOC
 			const u32 addr = ptr[0];
 			const u32 toc = ptr[1];
-			LOG_NOTICE(PPU, "OPD: [0x%x] 0x%x (TOC=0x%x)", ptr, addr, toc);
+			LOG_TRACE(PPU, "OPD: [0x%x] 0x%x (TOC=0x%x)", ptr, addr, toc);
 
 			TOCs.emplace(toc);
 			auto& func = add_func(addr, toc, ptr.addr());
@@ -529,7 +529,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			if (ptr[1] == 0)
 			{
 				// CIE
-				LOG_NOTICE(PPU, ".eh_frame: [0x%x] CIE 0x%x", ptr, ptr[0]);
+				LOG_TRACE(PPU, ".eh_frame: [0x%x] CIE 0x%x", ptr, ptr[0]);
 			}
 			else
 			{
@@ -566,7 +566,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					addr += ptr.addr() + 8;
 				}
 
-				LOG_NOTICE(PPU, ".eh_frame: [0x%x] FDE 0x%x (cie=*0x%x, addr=0x%x, size=0x%x)", ptr, ptr[0], cie, addr, size);
+				LOG_TRACE(PPU, ".eh_frame: [0x%x] FDE 0x%x (cie=*0x%x, addr=0x%x, size=0x%x)", ptr, ptr[0], cie, addr, size);
 
 				// TODO: invalid offsets, zero offsets (removed functions?)
 				if (addr % 4 || size % 4 || size > (end - start) || addr < start || addr + size > end)
