@@ -679,6 +679,7 @@ rsx::surface_color_format rsx::to_surface_color_format(u8 in)
 
 enum
 {
+	CELL_GCM_INVERT = 0x150A,
 	CELL_GCM_KEEP = 0x1E00,
 	CELL_GCM_REPLACE = 0x1E01,
 	CELL_GCM_INCR = 0x1E02,
@@ -691,6 +692,7 @@ rsx::stencil_op rsx::to_stencil_op(u16 in)
 {
 	switch (in)
 	{
+	case CELL_GCM_INVERT: return rsx::stencil_op::invert;
 	case CELL_GCM_KEEP: return rsx::stencil_op::keep;
 	case CELL_GCM_REPLACE: return rsx::stencil_op::replace;
 	case CELL_GCM_INCR: return rsx::stencil_op::incr;
@@ -782,7 +784,6 @@ enum
 	CELL_GCM_OR = 0x1507,
 	CELL_GCM_NOR = 0x1508,
 	CELL_GCM_EQUIV = 0x1509,
-	CELL_GCM_INVERT = 0x150A,
 	CELL_GCM_OR_REVERSE = 0x150B,
 	CELL_GCM_COPY_INVERTED = 0x150C,
 	CELL_GCM_OR_INVERTED = 0x150D,
