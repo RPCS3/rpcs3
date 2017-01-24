@@ -160,13 +160,16 @@ void Emulator::Load()
 
 		const std::string& elf_dir = fs::get_parent_dir(m_path);
 
-		if (IsSelf(m_path))
+		fs::file* file = new fs::file(m_path);
+		fs::file *elf_file = nullptr;
+
+		if (IsSelf(*file))
 		{
 			const std::size_t elf_ext_pos = m_path.find_last_of('.');
 			const std::string& elf_ext = fmt::to_upper(m_path.substr(elf_ext_pos != -1 ? elf_ext_pos : m_path.size()));
 			const std::string& elf_name = m_path.substr(elf_dir.size());
 
-			if (elf_name.compare(elf_name.find_last_of("/\\", -1, 2) + 1, 9, "EBOOT.BIN", 9) == 0)
+			/*if (elf_name.compare(elf_name.find_last_of("/\\", -1, 2) + 1, 9, "EBOOT.BIN", 9) == 0)
 			{
 				m_path.erase(m_path.size() - 9, 1); // change EBOOT.BIN to BOOT.BIN
 			}
@@ -177,13 +180,21 @@ void Emulator::Load()
 			else
 			{
 				m_path += ".decrypted.elf";
-			}
+			}*/
 
-			if (!DecryptSelf(m_path, elf_dir + elf_name))
+			//If we pass elf_file as a nullptr, it is changed to a pointer pointing to a memory file
+			if (!DecryptSelf(elf_file, *file)) 
 			{
 				LOG_ERROR(LOADER, "Failed to decrypt %s", elf_dir + elf_name);
 				return;
 			}
+
+			file->close();
+			delete file;
+		}
+		else
+		{
+			elf_file = std::move(file); //We are not a SELF, so just use the file itself
 		}
 
 		SetCPUThreadStop(0);
@@ -197,7 +208,6 @@ void Emulator::Load()
 			cfg::root.from_string(cfg_file.to_string());
 		}
 
-		const fs::file elf_file(m_path);
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		spu_exec_object spu_exec;
@@ -208,7 +218,7 @@ void Emulator::Load()
 			LOG_ERROR(LOADER, "Failed to open %s", m_path);
 			return;
 		}
-		else if (ppu_exec.open(elf_file) == elf_error::ok)
+		else if (ppu_exec.open(*elf_file) == elf_error::ok)
 		{
 			// PS3 executable
 			g_system = system_type::ps3;
@@ -277,7 +287,7 @@ void Emulator::Load()
 
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
 		}
-		else if (ppu_prx.open(elf_file) == elf_error::ok)
+		else if (ppu_prx.open(*elf_file) == elf_error::ok)
 		{
 			// PPU PRX (experimental)
 			g_system = system_type::ps3;
@@ -285,7 +295,7 @@ void Emulator::Load()
 			vm::ps3::init();
 			ppu_load_prx(ppu_prx);
 		}
-		else if (spu_exec.open(elf_file) == elf_error::ok)
+		else if (spu_exec.open(*elf_file) == elf_error::ok)
 		{
 			// SPU executable (experimental)
 			g_system = system_type::ps3;
@@ -293,7 +303,7 @@ void Emulator::Load()
 			vm::ps3::init();
 			spu_load_exec(spu_exec);
 		}
-		else if (arm_exec.open(elf_file) == elf_error::ok)
+		else if (arm_exec.open(*elf_file) == elf_error::ok)
 		{
 			// ARMv7 executable
 			g_system = system_type::psv;
@@ -314,6 +324,9 @@ void Emulator::Load()
 
 		debug::autopause::reload();
 		if (g_cfg_autostart) Run();
+
+		elf_file->close();
+		if (elf_file != nullptr) { delete elf_file; }
 	}
 	catch (const std::exception& e)
 	{

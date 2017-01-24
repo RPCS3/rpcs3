@@ -1038,13 +1038,18 @@ bool SELFDecrypter::DecryptData()
 	return true;
 }
 
-bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
+// If elf is a nullptr, we make it point to a file in memory
+bool SELFDecrypter::MakeElf(fs::file*& elf, bool isElf32)
 {
-	// Create a new ELF file.
-	fs::file e(elf, fs::rewrite);
-	if(!e)
+	char* buf = new char[data_buf_length*5]; // HACK: we need an algorithm here to determine the size of the elf in advance (is that even possible?)
+	if (elf == nullptr)
 	{
-		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
+		elf = new fs::file(buf, data_buf_length*5, fs::read + fs::write);
+	}
+
+	if(!elf)
+	{
+		LOG_ERROR(LOADER, "Could not create ELF file!");
 		return false;
 	}
 
@@ -1054,12 +1059,12 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 	if (isElf32)
 	{
 		// Write ELF header.
-		WriteEhdr(e, elf32_hdr);
+		WriteEhdr(*elf, elf32_hdr);
 
 		// Write program headers.
 		for (u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
-			WritePhdr(e, phdr32_arr[i]);
+			WritePhdr(*elf, phdr32_arr[i]);
 		}
 
 		for (unsigned int i = 0; i < meta_hdr.section_count; i++)
@@ -1068,8 +1073,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 			if (meta_shdr[i].type == 2)
 			{
 				// Seek to the program header data offset and write the data.
-				e.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
-				e.write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
+				elf->seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
+				elf->write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
 
 				// Advance the data buffer offset by data size.
 				data_buf_offset += meta_shdr[i].data_size;
@@ -1079,23 +1084,23 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if (self_hdr.se_shdroff != 0)
 		{
-			e.seek(elf32_hdr.e_shoff);
+			elf->seek(elf32_hdr.e_shoff);
 
 			for (u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 			{
-				WriteShdr(e, shdr32_arr[i]);
+				WriteShdr(*elf, shdr32_arr[i]);
 			}
 		}
 	}
 	else
 	{
 		// Write ELF header.
-		WriteEhdr(e, elf64_hdr);
+		WriteEhdr(*elf, elf64_hdr);
 
 		// Write program headers.
 		for (u32 i = 0; i < elf64_hdr.e_phnum; ++i)
 		{
-			WritePhdr(e, phdr64_arr[i]);
+			WritePhdr(*elf, phdr64_arr[i]);
 		}
 
 		// Write data.
@@ -1135,14 +1140,14 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 					}
 
 					// Seek to the program header data offset and write the data.
-					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					e.write(decomp_buf.get(), phdr64_arr[meta_shdr[i].program_idx].p_filesz);
+					elf->seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					elf->write(decomp_buf.get(), phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 				}
 				else
 				{
 					// Seek to the program header data offset and write the data.
-					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					e.write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
+					elf->seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					elf->write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
 				}
 
 				// Advance the data buffer offset by data size.
@@ -1153,11 +1158,11 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if (self_hdr.se_shdroff != 0)
 		{
-			e.seek(elf64_hdr.e_shoff);
+			elf->seek(elf64_hdr.e_shoff);
 
 			for (u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 			{
-				WriteShdr(e, shdr64_arr[i]);
+				WriteShdr(*elf, shdr64_arr[i]);
 			}
 		}
 	}
@@ -1201,54 +1206,54 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	return true;
 }
 
-bool IsSelf(const std::string& path)
+bool IsSelf(const fs::file& elf)
 {
-	fs::file f(path);
+	//fs::file f(path);
 
-	if (!f) return false;
+	if (!elf) return false;
 
 	SceHeader hdr;
-	hdr.Load(f);
+	hdr.Load(elf);
 
 	return hdr.CheckMagic();
 }
 
-bool IsSelfElf32(const std::string& path)
+bool IsSelfElf32(const fs::file& elf)
 {
-	fs::file f(path);
+	//fs::file f(path);
 
-	if (!f) return false;
+	if (!elf) return false;
 
 	SceHeader hdr;
 	SelfHeader sh;
-	hdr.Load(f);
-	sh.Load(f);
+	hdr.Load(elf);
+	sh.Load(elf);
 	
 	// Locate the class byte and check it.
 	u8 elf_class[0x8];
 
-	f.seek(sh.se_elfoff);
-	f.read(elf_class, 0x8);
+	elf.seek(sh.se_elfoff);
+	elf.read(elf_class, 0x8);
 
 	return (elf_class[4] == 1);
 }
 
-bool CheckDebugSelf(const std::string& self, const std::string& elf)
+bool CheckDebugSelf(const fs::file& self, fs::file& elf)
 {
 	// Open the SELF file.
-	fs::file s(self);
+	//fs::file s(self);
 
-	if (!s)
+	if (!self)
 	{
-		LOG_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
+		LOG_ERROR(LOADER, "Could not open SELF file!");
 		return false;
 	}
 
 	// Get the key version.
-	s.seek(0x08);
+	self.seek(0x08);
 
 	u16 key_version;
-	s.read(&key_version, sizeof(key_version));
+	self.read(&key_version, sizeof(key_version));
 
 	// Check for DEBUG version.
 	if (swap16(key_version) == 0x8000)
@@ -1256,29 +1261,30 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
-		s.seek(0x10);
+		self.seek(0x10);
 
 		u64 elf_offset;
-		s.read(&elf_offset, sizeof(elf_offset));
+		self.read(&elf_offset, sizeof(elf_offset));
 
 		// Start at the real elf offset.
 		elf_offset = swap64(elf_offset);
 
-		s.seek(elf_offset);
+		self.seek(elf_offset);
 
-		// Write the real ELF file back.
-		fs::file e(elf, fs::rewrite);
-		if (!e)
+		char* elf_buf = new char[self.size() - self.pos()];
+		elf = fs::file(elf_buf, self.size() - self.pos());
+
+		if (!elf || (elf.size() == 0))
 		{
-			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
+			LOG_ERROR(LOADER, "Could not create ELF file!");
 			return false;
 		}
 
 		// Copy the data.
 		char buf[2048];
-		while (u64 size = s.read(buf, 2048))
+		while (u64 size = self.read(buf, 2048))
 		{
-			e.write(buf, size);
+			elf.write(buf, size);
 		}
 
 		return true;
@@ -1288,24 +1294,26 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 	return false;
 }
 
-bool DecryptSelf(const std::string& elf, const std::string& self)
+// Decrypt self and write it to elf.
+// If passed nullptr for elf, it will make elf point to file in memory.
+bool DecryptSelf(fs::file*& elf, const fs::file& self)
 {
-	LOG_NOTICE(LOADER, "Decrypting %s", self);
+	LOG_NOTICE(LOADER, "Decrypting SELF");
 
 	// Check for a debug SELF first.
-	if (!CheckDebugSelf(self, elf))
+	if (!CheckDebugSelf(self, *elf))
 	{
 		// Set a virtual pointer to the SELF file.
-		fs::file self_vf(self);
+		//fs::file self_vf(self);
 
-		if (!self_vf)
+		if (!self)
 			return false;
 
 		// Check the ELF file class (32 or 64 bit).
 		bool isElf32 = IsSelfElf32(self);
 
 		// Start the decrypter on this SELF file.
-		SELFDecrypter self_dec(self_vf);
+		SELFDecrypter self_dec(self);
 
 		// Load the SELF file headers.
 		if (!self_dec.LoadHeaders(isElf32))

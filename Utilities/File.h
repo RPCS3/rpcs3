@@ -158,8 +158,14 @@ namespace fs
 		// Open file with specified mode
 		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);		
 
-		// Open memory for read
-		explicit file(const void* ptr, std::size_t size);
+		// Open memory for read || write, dont take ownership of memory
+		explicit file(const void* ptr, std::size_t size, bs_t<open_mode> mode = ::fs::read);
+
+		// Open memory for read || write, take ownership of memory
+		explicit file(std::unique_ptr<u8[]> ptr, std::size_t size, bs_t<open_mode> mode = ::fs::read);
+
+		// Open memory for read || write, allocate own memory of 'size' size
+		explicit file(std::size_t size, bs_t<open_mode> mode = ::fs::read + ::fs::write) : file(std::unique_ptr<u8[]>(nullptr), size, mode) {};
 
 		// Open file with specified args (forward to constructor)
 		template <typename... Args>

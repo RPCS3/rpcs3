@@ -915,7 +915,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 #endif
 }
 
-fs::file::file(const void* ptr, std::size_t size)
+fs::file::file(const void* ptr, std::size_t size, bs_t<open_mode> mode)
 {
 	class memory_stream : public file_base
 	{
@@ -923,17 +923,19 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		const char* m_ptr;
 		const u64 m_size;
+		bs_t<open_mode> m_mode;
 
 	public:
-		memory_stream(const void* ptr, u64 size)
+		memory_stream(const void* ptr, u64 size, bs_t<open_mode> mode)
 			: m_ptr(static_cast<const char*>(ptr))
 			, m_size(size)
+			, m_mode(mode)
 		{
 		}
 
 		~memory_stream() override
 		{
-			delete m_ptr;
+
 		}
 
 		fs::stat_t stat() override
@@ -948,6 +950,7 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		u64 read(void* buffer, u64 count) override
 		{
+			if (!test(m_mode & fs::read)) fmt::throw_exception<std::logic_error>("Tried to read a write-only stream" HERE);
 			const u64 start = m_pos;
 			const u64 end = seek(count, fs::seek_cur);
 			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
@@ -958,6 +961,7 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		u64 write(const void* buffer, u64 count) override
 		{
+			if (!test(m_mode & fs::write)) fmt::throw_exception<std::logic_error>("Tried to write a read-only stream" HERE);
 			const u64 start = m_pos;
 			const u64 end = seek(count, fs::seek_cur);
 			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
@@ -981,7 +985,84 @@ fs::file::file(const void* ptr, std::size_t size)
 		}
 	};
 
-	m_file = std::make_unique<memory_stream>(ptr, size);
+	m_file = std::make_unique<memory_stream>(ptr, size, mode);
+}
+
+fs::file::file(std::unique_ptr<u8[]> ptr, std::size_t size, bs_t<open_mode> mode)
+{
+	class memory_stream : public file_base
+	{
+		u64 m_pos{};
+
+		std::unique_ptr<u8[]> m_ptr;
+		const u64 m_size;
+		bs_t<open_mode> m_mode;
+
+	public:
+		memory_stream(std::unique_ptr<u8[]> ptr, u64 size, bs_t<open_mode> mode)
+			: m_ptr(std::move(ptr))
+			, m_size(size)
+			, m_mode(mode)
+		{
+			if (m_ptr == nullptr)
+			{
+				m_ptr = std::make_unique<u8[]>(m_size);
+			}
+		}
+
+		~memory_stream() override
+		{
+			
+		}
+
+		fs::stat_t stat() override
+		{
+			fmt::throw_exception<std::logic_error>("Not supported" HERE);
+		}
+
+		bool trunc(u64 length) override
+		{
+			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
+		}
+
+		u64 read(void* buffer, u64 count) override
+		{
+			if (!test(m_mode & fs::read)) fmt::throw_exception<std::logic_error>("Tried to read a write-only stream" HERE);
+			const u64 start = m_pos;
+			const u64 end = seek(count, fs::seek_cur);
+			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
+			const u64 read_size = end - start;
+			std::memcpy(buffer, m_ptr.get() + start, read_size);
+			return read_size;
+		}
+
+		u64 write(const void* buffer, u64 count) override
+		{
+			if (!test(m_mode & fs::write)) fmt::throw_exception<std::logic_error>("Tried to write a read-only stream" HERE);
+			const u64 start = m_pos;
+			const u64 end = seek(count, fs::seek_cur);
+			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
+			const u64 write_size = end - start;
+			std::memcpy((void*)(m_ptr.get() + start), buffer, write_size);
+			return write_size;
+		}
+
+		u64 seek(s64 offset, fs::seek_mode whence) override
+		{
+			return
+				whence == fs::seek_set ? m_pos = std::min<u64>(offset, m_size) :
+				whence == fs::seek_cur ? m_pos = std::min<u64>(offset + m_pos, m_size) :
+				whence == fs::seek_end ? m_pos = std::min<u64>(offset + m_size, m_size) :
+				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
+		}
+
+		u64 size() override
+		{
+			return m_size;
+		}
+	};
+
+	m_file = std::make_unique<memory_stream>(std::move(ptr), size, mode);
 }
 
 void fs::dir::xnull() const
