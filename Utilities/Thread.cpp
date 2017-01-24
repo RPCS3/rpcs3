@@ -2043,7 +2043,7 @@ void thread_ctrl::push_atexit(task_stack task)
 thread_ctrl::thread_ctrl(std::string&& name)
 	: m_name(std::move(name))
 {
-	CHECK_STORAGE(std::thread, m_thread);
+	static_assert(sizeof(std::thread) <= sizeof(m_thread), "Small storage");
 
 #pragma push_macro("new")
 #undef new

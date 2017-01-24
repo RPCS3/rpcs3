@@ -182,9 +182,6 @@
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\Semaphore.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\VirtualMemory.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -650,9 +647,6 @@
     <ClCompile Include="Emu\VFS.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\SharedMutex.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Memory\wait_engine.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
@@ -887,6 +881,15 @@
     <ClCompile Include="Emu\RSX\gcm_printing.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\mutex.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\cond.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\sema.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1093,9 +1096,6 @@
     <ClInclude Include="Emu\RSX\Common\VertexProgramDecompiler.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\Semaphore.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Cell\Common.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>
@@ -1107,9 +1107,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUAnalyser.h">
       <Filter>Emu\Cell</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\SharedMutex.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\Atomic.h">
       <Filter>Utilities</Filter>
@@ -1707,6 +1704,15 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\mutex.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\cond.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\sema.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
