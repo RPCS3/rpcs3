@@ -10,6 +10,10 @@
 
 extern logs::channel cellSysutil;
 
+MsgDialogBase::~MsgDialogBase()
+{
+}
+
 s32 cellMsgDialogOpen()
 {
 	fmt::throw_exception("Unimplemented" HERE);

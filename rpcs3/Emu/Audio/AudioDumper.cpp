@@ -1,5 +1,10 @@
 #include "stdafx.h"
 #include "AudioDumper.h"
+#include "AudioThread.h"
+
+AudioThread::~AudioThread()
+{
+}
 
 AudioDumper::AudioDumper(u16 ch)
 	: m_header(ch)

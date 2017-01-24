@@ -141,10 +141,7 @@ namespace cfg
 			return *this;
 		}
 
-		void from_default() override
-		{
-			value = def;
-		}
+		void from_default() override;
 
 		std::string to_string() const override
 		{
@@ -428,10 +425,7 @@ namespace cfg
 			return m_value.size();
 		}
 
-		void from_default() override
-		{
-			*this = def;
-		}
+		void from_default() override;
 
 		std::string to_string() const override
 		{
@@ -473,11 +467,7 @@ namespace cfg
 			m_set = std::move(set);
 		}
 
-		void from_default() override
-		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			m_set = {};
-		}
+		void from_default() override;
 
 		std::vector<std::string> to_list() const override
 		{

@@ -8,6 +8,10 @@
 
 extern u64 get_system_time();
 
+spu_recompiler_base::~spu_recompiler_base()
+{
+}
+
 void spu_recompiler_base::enter(SPUThread& spu)
 {
 	if (spu.pc >= 0x40000 || spu.pc % 4)

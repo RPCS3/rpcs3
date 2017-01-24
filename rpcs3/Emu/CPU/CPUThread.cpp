@@ -149,7 +149,7 @@ void cpu_thread::run()
 void cpu_thread::set_signal()
 {
 	verify("cpu_flag::signal" HERE), !state.test_and_set(cpu_flag::signal);
-	notify(); // TODO: lock_notify?
+	notify();
 }
 
 std::string cpu_thread::dump() const

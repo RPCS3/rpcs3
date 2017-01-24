@@ -40,7 +40,7 @@ namespace logs
 	public:
 		constexpr listener() = default;
 
-		virtual ~listener() = default;
+		virtual ~listener();
 
 		// Process log message
 		virtual void log(const message& msg, const std::string& prefix, const std::string& text) = 0;

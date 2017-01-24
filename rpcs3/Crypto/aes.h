@@ -1,5 +1,5 @@
 #pragma once
-
+#define POLARSSL_AES_ROM_TABLES
 /**
  * \file aes.h
  *
