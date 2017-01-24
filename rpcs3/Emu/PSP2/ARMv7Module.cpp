@@ -375,7 +375,7 @@ void arm_load_exec(const arm_exec_object& elf)
 	{
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
-			if (!vm::falloc(prog.p_vaddr, prog.p_memsz, vm::main))
+			if (!vm::falloc(prog.p_vaddr & ~0xfff, prog.p_memsz + (prog.p_vaddr & 0xfff), vm::main))
 			{
 				fmt::throw_exception("vm::falloc() failed (addr=0x%x, size=0x%x)", prog.p_vaddr, prog.p_memsz);
 			}

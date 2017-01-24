@@ -1,7 +1,192 @@
 #pragma once
+
 #include <functional>
 #include <deque>
 #include <list>
+
+#include "Atomic.h"
+
+template <typename T, T Mod = T::__state_enum_max, typename Under = std::underlying_type_t<T>>
+T operator ++(T& value, int)
+{
+	return std::exchange(value, static_cast<T>(value < T{} || value >= Mod ? static_cast<Under>(0) : static_cast<Under>(value) + 1));
+}
+
+template <typename T, T Mod = T::__state_enum_max, typename Under = std::underlying_type_t<T>>
+T operator --(T& value, int)
+{
+	return std::exchange(value, static_cast<T>(value <= T{} || value >= static_cast<Under>(Mod) - 1 ? static_cast<Under>(Mod) - 1 : static_cast<Under>(value) - 1));
+}
+
+template <typename T, typename CRT, std::size_t Size = static_cast<std::underlying_type_t<T>>(T::__state_enum_max)>
+class state_machine
+{
+	using under = std::underlying_type_t<T>;
+	using ftype = void(CRT::*)(T);
+
+	atomic_t<T> m_value;
+
+	template <std::size_t... Ind>
+	static inline ftype transition_map(std::integer_sequence<std::size_t, Ind...>, T state)
+	{
+		// Constantly initialized list of functions
+		static constexpr ftype map[Size]{&CRT::template transition<static_cast<T>(Ind)>...};
+
+		// Unsafe table lookup (TODO)
+		return map[static_cast<under>(state)];
+	}
+
+	// "Convert" variable argument to template argument
+	static inline ftype transition_get(T state)
+	{
+		return transition_map(std::make_index_sequence<Size>(), state);
+	}
+
+public:
+	constexpr state_machine()
+		: m_value{T{}}
+	{
+	}
+
+	constexpr state_machine(T state)
+		: m_value{state}
+	{
+	}
+
+	// Get current state
+	T state_get() const
+	{
+		return m_value;
+	}
+
+	// Unconditionally set state
+	void state_set(T state)
+	{
+		T _old = m_value.exchange(state);
+
+		if (_old != state)
+		{
+			(static_cast<CRT*>(this)->*transition_get(state))(_old);
+		}
+	}
+
+	// Conditionally set state (optimized)
+	explicit_bool_t state_test_and_set(T expected, T state)
+	{
+		if (m_value == expected && m_value.compare_and_swap_test(expected, state))
+		{
+			(static_cast<CRT*>(this)->*transition_get(state))(expected);
+			return true;
+		}
+
+		return false;
+	}
+
+	// Conditionally set state (list version)
+	explicit_bool_t state_test_and_set(std::initializer_list<T> expected, T state)
+	{
+		T _old;
+
+		if (m_value.atomic_op([&](T& value)
+		{
+			for (T x : expected)
+			{
+				if (value == x)
+				{
+					_old = std::exchange(value, state);
+					return true;
+				}
+			}
+
+			return false;
+		}))
+		{
+			(static_cast<CRT*>(this)->*transition_get(state))(_old);
+			return true;
+		}
+
+		return false;
+	}
+
+	// Unconditionally set next state
+	void state_next()
+	{
+		T _old, state = m_value.op_fetch([&](T& value)
+		{
+			_old = value++;
+		});
+
+		(static_cast<CRT*>(this)->*transition_get(state))(_old);
+	}
+
+	// Unconditionally set previous state
+	void state_prev()
+	{
+		T _old, state = m_value.op_fetch([&](T& value)
+		{
+			_old = value--;
+		});
+
+		(static_cast<CRT*>(this)->*transition_get(state))(_old);
+	}
+
+	// Get number of states
+	static constexpr std::size_t size()
+	{
+		return Size;
+	}
+};
+
+//enum class test_state
+//{
+//	on,
+//	off,
+//	la,
+//
+//	__state_enum_max // 3
+//};
+//
+//struct test_machine final : state_machine<test_state, test_machine>
+//{
+//	template <test_state>
+//	void transition(test_state old_state);
+//
+//	void on()
+//	{
+//		state_set(test_state::on);
+//	}
+//
+//	void off()
+//	{
+//		state_set(test_state::off);
+//	}
+//
+//	void test()
+//	{
+//		state_next();
+//	}
+//};
+//
+//template <>
+//void test_machine::transition<test_state::on>(test_state)
+//{
+//	LOG_SUCCESS(GENERAL, "ON");
+//}
+//
+//template <>
+//void test_machine::transition<test_state::off>(test_state)
+//{
+//	LOG_SUCCESS(GENERAL, "OFF");
+//}
+//
+//
+//template <>
+//void test_machine::transition<test_state::la>(test_state)
+//{
+//	on();
+//	off();
+//	test();
+//}
 
 enum class event_result
 {
