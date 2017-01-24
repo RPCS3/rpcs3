@@ -30,16 +30,12 @@
 #define SAFE_BUFFERS
 #define NEVER_INLINE __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline)) inline
-
-// Some platforms don't support thread_local well yet.
-#define thread_local __thread
 #endif
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
 #define CHECK_ALIGN(type, align) static_assert(alignof(type) == align, "Invalid " #type " type alignment")
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
-#define CHECK_STORAGE(type, storage) static_assert(sizeof(type) <= sizeof(storage) && alignof(type) <= alignof(decltype(storage)), #type " is too small")
 
 // Return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
 #define SIZE_32(...) static_cast<u32>(sizeof(__VA_ARGS__))
@@ -533,7 +529,7 @@ struct verify_impl
 		// Verification (can be safely disabled)
 		if (!verify_func()(std::forward<T>(value)))
 		{
-			fmt::raw_verify_error(cause, fmt::get_type_info<uint>(), N);
+			fmt::raw_verify_error(cause, nullptr, N);
 		}
 
 		return verify_impl<N + 1>{cause};

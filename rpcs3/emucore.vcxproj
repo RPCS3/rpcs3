@@ -73,6 +73,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
+    <ClCompile Include="..\Utilities\cond.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp" />
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -84,11 +87,11 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\Config.cpp" />
-    <ClCompile Include="..\Utilities\rXml.cpp" />
-    <ClCompile Include="..\Utilities\Semaphore.cpp">
+    <ClCompile Include="..\Utilities\mutex.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Utilities\SharedMutex.cpp">
+    <ClCompile Include="..\Utilities\rXml.cpp" />
+    <ClCompile Include="..\Utilities\sema.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
@@ -259,11 +262,7 @@
     <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\gcm_printing.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Emu\RSX\gcm_enums.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -394,20 +393,21 @@
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\bit_set.h" />
     <ClInclude Include="..\Utilities\cfmt.h" />
+    <ClInclude Include="..\Utilities\cond.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
+    <ClInclude Include="..\Utilities\mutex.h" />
+    <ClInclude Include="..\Utilities\sema.h" />
     <ClInclude Include="..\Utilities\SleepQueue.h" />
     <ClInclude Include="..\Utilities\sync.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\Config.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
-    <ClInclude Include="..\Utilities\Semaphore.h" />
-    <ClInclude Include="..\Utilities\SharedMutex.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\StrUtil.h" />
     <ClInclude Include="..\Utilities\Thread.h" />

@@ -3,7 +3,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "Utilities/SharedMutex.h"
+#include "Utilities/mutex.h"
 
 // IPC manager for objects of type T and IPC keys of type K.
 // External declaration of g_ipc is required.
