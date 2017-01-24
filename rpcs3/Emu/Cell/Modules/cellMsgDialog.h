@@ -80,7 +80,7 @@ public:
 
 	std::function<void(s32 status)> on_close;
 
-	virtual ~MsgDialogBase() = default;
+	virtual ~MsgDialogBase();
 	virtual void Create(const std::string& msg) = 0;
 	virtual void CreateOsk(const std::string& msg, char16_t* osk_text) = 0;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;

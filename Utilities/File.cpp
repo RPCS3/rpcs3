@@ -136,6 +136,18 @@ namespace fs
 		static device_manager instance;
 		return instance;
 	}
+
+	file_base::~file_base()
+	{
+	}
+
+	dir_base::~dir_base()
+	{
+	}
+
+	device_base::~device_base()
+	{
+	}
 }
 
 std::shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path)

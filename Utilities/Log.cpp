@@ -76,6 +76,10 @@ namespace logs
 	channel ARMv7("ARMv7");
 }
 
+logs::listener::~listener()
+{
+}
+
 void logs::listener::add(logs::listener* _new)
 {
 	// Get first (main) listener

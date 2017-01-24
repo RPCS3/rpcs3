@@ -261,6 +261,22 @@ void cfg::node::from_default()
 	}
 }
 
+void cfg::bool_entry::from_default()
+{
+	value = def;
+}
+
+void cfg::string_entry::from_default()
+{
+	*this = def;
+}
+
+void cfg::set_entry::from_default()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	m_set = {};
+}
+
 cfg::root_node& cfg::get_root()
 {
 	// Magic static

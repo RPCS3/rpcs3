@@ -15,7 +15,7 @@ protected:
 	u32 m_pos; // current position
 
 public:
-	virtual ~spu_recompiler_base() = default;
+	virtual ~spu_recompiler_base();
 
 	// Compile specified function
 	virtual void compile(spu_function_t& f) = 0;

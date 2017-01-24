@@ -57,7 +57,7 @@ namespace fs
 	// File handle base
 	struct file_base
 	{
-		virtual ~file_base() = default;
+		virtual ~file_base();
 
 		virtual stat_t stat() = 0;
 		virtual bool trunc(u64 length) = 0;
@@ -76,7 +76,7 @@ namespace fs
 	// Directory handle base
 	struct dir_base
 	{
-		virtual ~dir_base() = default;
+		virtual ~dir_base();
 
 		virtual bool read(dir_entry&) = 0;
 		virtual void rewind() = 0;
@@ -85,7 +85,7 @@ namespace fs
 	// Virtual device
 	struct device_base
 	{
-		virtual ~device_base() = default;
+		virtual ~device_base();
 
 		virtual bool stat(const std::string& path, stat_t& info) = 0;
 		virtual bool remove_dir(const std::string& path) = 0;

@@ -3,7 +3,7 @@
 class AudioThread
 {
 public:
-	virtual ~AudioThread() = default;
+	virtual ~AudioThread();
 
 	virtual void Play() = 0;
 	virtual void Open(const void* src, int size) = 0;
