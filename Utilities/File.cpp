@@ -921,7 +921,7 @@ fs::file::file(const void* ptr, std::size_t size)
 	{
 		u64 m_pos{};
 
-		const char* const m_ptr;
+		const char* m_ptr;
 		const u64 m_size;
 
 	public:
@@ -929,6 +929,11 @@ fs::file::file(const void* ptr, std::size_t size)
 			: m_ptr(static_cast<const char*>(ptr))
 			, m_size(size)
 		{
+		}
+
+		~memory_stream() override
+		{
+			delete m_ptr;
 		}
 
 		fs::stat_t stat() override
@@ -953,7 +958,12 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
+			const u64 start = m_pos;
+			const u64 end = seek(count, fs::seek_cur);
+			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
+			const u64 write_size = end - start;
+			std::memcpy((void*)(m_ptr + start), buffer, write_size);
+			return write_size;
 		}
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
