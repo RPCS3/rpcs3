@@ -11,6 +11,10 @@ using sys_mempool_t = u32;
 
 struct memory_pool_t
 {
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
+	static const u32 id_count = 32767;
+
 	vm::ptr<void> chunk;
 	u64 chunk_size;
 	u64 block_size;

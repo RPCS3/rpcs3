@@ -139,6 +139,10 @@ class SPUThread;
 
 struct lv2_spu_group_t
 {
+	static const u32 id_base = 1; // Wrong?
+	static const u32 id_step = 1;
+	static const u32 id_count = 8192;
+
 	const std::string name;
 	const u32 num; // SPU Number
 	const s32 type; // SPU Thread Group Type

@@ -501,6 +501,10 @@ protected:
 	SPUThread(const std::string& name);
 
 public:
+	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
+	static const u32 id_step = 1;
+	static const u32 id_count = 65535;
+
 	SPUThread(const std::string& name, u32 index);
 
 	std::array<v128, 128> gpr; // General-Purpose Registers

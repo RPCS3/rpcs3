@@ -96,19 +96,18 @@ struct lv2_fs_mount_point;
 
 struct lv2_fs_object
 {
-	// ID Manager setups
-	using id_base = lv2_fs_object;
+	static const u32 id_base = 3;
+	static const u32 id_step = 1;
+	static const u32 id_count = 255 - id_base;
 
-	static constexpr u32 id_min = 3;
-	static constexpr u32 id_max = 255;
-
-	const id_value<> id{};
+	const u32 id;
 
 	// Mount Point
 	const std::add_pointer_t<lv2_fs_mount_point> mp;
 
 	lv2_fs_object(lv2_fs_mount_point* mp)
 		: mp(mp)
+		, id(idm::last_id())
 	{
 	}
 

@@ -229,3 +229,8 @@ s32 sys_prx_stop()
 	sys_prx.todo("sys_prx_stop()");
 	return CELL_OK;
 }
+
+lv2_prx_t::lv2_prx_t()
+	: id(idm::last_id())
+{
+}

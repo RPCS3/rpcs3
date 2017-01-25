@@ -46,6 +46,10 @@ struct sys_page_attr_t
 
 struct lv2_memory_container
 {
+	static const u32 id_base = 0x1; // Wrong?
+	static const u32 id_step = 0x1;
+	static const u32 id_count = 16;
+
 	const u32 size = 0x10000000; // Amount of "physical" memory in this container
 
 	atomic_t<u32> used{}; // Amount of "physical" memory currently used

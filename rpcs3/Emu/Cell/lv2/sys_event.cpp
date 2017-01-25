@@ -18,20 +18,25 @@ extern u64 get_system_time();
 
 std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
 {
-	auto queue = std::make_shared<lv2_event_queue_t>(protocol, type, name, ipc_key, size);
+	std::shared_ptr<lv2_event_queue_t> result;
 
-	auto make_expr = [&] { return idm::import<lv2_event_queue_t>([&] { return queue; }); };
+	auto make_expr = [&]() -> const std::shared_ptr<lv2_event_queue_t>&
+	{
+		result = idm::make_ptr<lv2_event_queue_t>(protocol, type, name, ipc_key, size);
+		return result;
+	};
 
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
 	{
 		// Not an IPC queue
-		return make_expr();
+		make_expr();
+		return result;
 	}
 
 	// IPC queue
 	if (ipc_manager<lv2_event_queue_t, u64>::add(ipc_key, make_expr))
 	{
-		return queue;
+		return result;
 	}
 
 	return nullptr;
@@ -48,6 +53,16 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
 	return ipc_manager<lv2_event_queue_t, u64>::get(ipc_key);
 }
 
+lv2_event_queue_t::lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
+	: protocol(protocol)
+	, type(type)
+	, name(name)
+	, ipc_key(ipc_key)
+	, size(size)
+	, id(idm::last_id())
+{
+}
+
 void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3)
 {
 	verify(HERE), m_sq.empty() || m_events.empty();
@@ -61,7 +76,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	// notify waiter; protocol is ignored in current implementation
 	auto& thread = m_sq.front();
 
-	if (type == SYS_PPU_QUEUE && thread->id >= ppu_thread::id_min)
+	if (type == SYS_PPU_QUEUE && thread->id_type() == 1)
 	{
 		// store event data in registers
 		auto& ppu = static_cast<ppu_thread&>(*thread);
@@ -71,7 +86,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 		ppu.gpr[6] = data2;
 		ppu.gpr[7] = data3;
 	}
-	else if (type == SYS_SPU_QUEUE && thread->id < ppu_thread::id_min)
+	else if (type == SYS_SPU_QUEUE && thread->id_type() != 1)
 	{
 		// store event data in In_MBox
 		auto& spu = static_cast<SPUThread&>(*thread);
@@ -162,11 +177,11 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	// signal all threads to return CELL_ECANCELED
 	for (auto& thread : queue->thread_queue(lv2_lock))
 	{
-		if (queue->type == SYS_PPU_QUEUE && thread->id >= ppu_thread::id_min)
+		if (queue->type == SYS_PPU_QUEUE && thread->id_type() == 1)
 		{
 			static_cast<ppu_thread&>(*thread).gpr[3] = 1;
 		}
-		else if (queue->type == SYS_SPU_QUEUE && thread->id < ppu_thread::id_min)
+		else if (queue->type == SYS_SPU_QUEUE && thread->id_type() != 1)
 		{
 			static_cast<SPUThread&>(*thread).ch_in_mbox.set_values(1, CELL_ECANCELED);
 		}

@@ -86,10 +86,9 @@ int inet_pton(int af, const char *src, char *dst)
 // We map host sockets to sequential IDs to return as descriptors because syscalls expect socket IDs to be under 1024.
 struct sys_net_socket final
 {
-	using id_base = sys_net_socket;
-
-	static constexpr u32 id_min = 0; // Minimal valid socket number is 0 (not 1).
-	static constexpr u32 id_max = 1023;
+	static const u32 id_base = 0;
+	static const u32 id_step = 1;
+	static const u32 id_count = 1024;
 
 	sys_net::socket_t s = -1;
 

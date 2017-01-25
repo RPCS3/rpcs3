@@ -24,11 +24,15 @@ class lv2_timer_t final : public named_thread
 	void on_task() override;
 
 public:
+	static const u32 id_base = 0x11000000;
+	static const u32 id_step = 0x100;
+	static const u32 id_count = 8192;
+
 	std::string get_name() const override;
 
 	void on_stop() override;
 
-	const id_value<> id{};
+	const u32 id = idm::last_id();
 
 	atomic_t<u32> state{ SYS_TIMER_STATE_RUN }; // Timer state
 

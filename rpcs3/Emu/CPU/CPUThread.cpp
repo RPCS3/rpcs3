@@ -93,7 +93,8 @@ cpu_thread::~cpu_thread()
 {
 }
 
-cpu_thread::cpu_thread()
+cpu_thread::cpu_thread(u32 id)
+	: id(id)
 {
 }
 

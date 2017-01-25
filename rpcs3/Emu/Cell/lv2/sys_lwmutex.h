@@ -46,6 +46,10 @@ struct sys_lwmutex_t
 
 struct lv2_lwmutex_t
 {
+	static const u32 id_base = 0x95000000;
+	static const u32 id_step = 0x100;
+	static const u32 id_count = 8192;
+
 	const u32 protocol;
 	const u64 name;
 

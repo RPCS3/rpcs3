@@ -16,7 +16,11 @@ logs::channel sceNpTrophy("sceNpTrophy", logs::level::notice);
 
 struct trophy_context_t
 {
-	const id_value<> id{};
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
+	static const u32 id_count = 32767;
+
+	const u32 id = idm::last_id();
 
 	std::string trp_name;
 	fs::file trp_stream;
@@ -25,7 +29,11 @@ struct trophy_context_t
 
 struct trophy_handle_t
 {
-	const id_value<> id{};
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
+	static const u32 id_count = 32767;
+
+	const u32 id = idm::last_id();
 };
 
 // Functions

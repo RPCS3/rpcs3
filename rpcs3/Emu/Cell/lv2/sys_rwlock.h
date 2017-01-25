@@ -19,6 +19,10 @@ struct sys_rwlock_attribute_t
 
 struct lv2_rwlock_t
 {
+	static const u32 id_base = 0x88000000;
+	static const u32 id_step = 0x100;
+	static const u32 id_count = 8192;
+
 	const u64 name;
 	const u32 protocol;
 

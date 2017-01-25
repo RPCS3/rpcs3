@@ -238,7 +238,7 @@ SPUThread::~SPUThread()
 }
 
 SPUThread::SPUThread(const std::string& name)
-	: cpu_thread()
+	: cpu_thread(idm::last_id())
 	, m_name(name)
 	, index(0)
 	, offset(0)
@@ -246,7 +246,7 @@ SPUThread::SPUThread(const std::string& name)
 }
 
 SPUThread::SPUThread(const std::string& name, u32 index)
-	: cpu_thread()
+	: cpu_thread(idm::last_id())
 	, m_name(name)
 	, index(index)
 	, offset(verify("SPU LS" HERE, vm::alloc(0x40000, vm::main)))

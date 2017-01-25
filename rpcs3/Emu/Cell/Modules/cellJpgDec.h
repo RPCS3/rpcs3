@@ -109,6 +109,10 @@ struct CellJpgDecDataOutInfo
 // Custom structs
 struct CellJpgDecSubHandle
 {
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
+	static const u32 id_count = 32767;
+
 	u32 fd;
 	u64 fileSize;
 	CellJpgDecInfo info;

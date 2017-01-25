@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "IdManager.h"
 
-DECLARE(idm::g_map);
-DECLARE(idm::g_id);
-DECLARE(idm::g_mutex);
+shared_mutex id_manager::g_mutex;
 
-DECLARE(fxm::g_map);
-DECLARE(fxm::g_mutex);
+thread_local DECLARE(idm::g_id);
+DECLARE(idm::g_map);
+DECLARE(fxm::g_vec);
 
 std::vector<id_manager::typeinfo>& id_manager::typeinfo::access()
 {
@@ -24,20 +23,40 @@ u32 id_manager::typeinfo::add_type()
 	return ::size32(list) - 1;
 }
 
-id_manager::id_map::pointer idm::allocate_id(u32 tag, u32 type, u32 min, u32 max)
+id_manager::id_map::pointer idm::allocate_id(std::pair<u32, u32> types, u32 base, u32 step, u32 count)
 {
-	// Check all IDs starting from "next id"
-	for (u32 i = 0; i <= max - min; i++)
+	auto& map = g_map[types.first];
+
+	// Assume next ID
+	u32 next = base;
+	
+	if (std::size_t _count = map.size())
 	{
-		// Fix current ID (wrap around)
-		if (g_id[tag] < min || g_id[tag] > max) g_id[tag] = min;
-
-		// Get ID
-		const auto r = g_map[tag].emplace(id_manager::id_key{g_id[tag]++, type}, nullptr);
-
-		if (r.second)
+		if (_count >= count)
 		{
-			return &*r.first;
+			return nullptr;
+		}
+
+		const u32 _next = map.rbegin()->first.id() + step;
+
+		if (_next > base && _next < base + step * count)
+		{
+			next = _next;
+		}
+	}
+
+	// Check all IDs starting from "next id" (TODO)
+	for (next; next < base + step * count; next += step)
+	{
+		// Get ID
+		const auto result = map.emplace(id_manager::id_key(next, types.second), nullptr);
+
+		if (result.second)
+		{
+			// Acknowledge the ID
+			g_id = next;
+
+			return std::addressof(*result.first);
 		}
 	}
 
@@ -45,47 +64,61 @@ id_manager::id_map::pointer idm::allocate_id(u32 tag, u32 type, u32 min, u32 max
 	return nullptr;
 }
 
-std::shared_ptr<void> idm::deallocate_id(u32 tag, u32 id)
+id_manager::id_map::pointer idm::find_id(u32 type, u32 id)
 {
-	const auto found = g_map[tag].find(id);
+	auto& map = g_map[type];
 
-	if (found == g_map[tag].end()) return nullptr;
+	const auto found = map.find(id);
 
-	auto ptr = std::move(found->second);
-
-	g_map[tag].erase(found);
-
-	return ptr;
+	return found == map.end() ? nullptr : std::addressof(*found);
 }
 
 id_manager::id_map::pointer idm::find_id(u32 type, u32 true_type, u32 id)
 {
-	const auto found = g_map[type].find(id);
+	auto& map = g_map[type];
 
-	if (found == g_map[type].end()) return nullptr;
+	const auto found = map.find(id);
 
-	if (true_type != get_type<void>() && found->first.type() != true_type) return nullptr;
-
-	return &*found;
+	return found == map.end() || found->first.type() != true_type ? nullptr : std::addressof(*found);
 }
 
-std::shared_ptr<void> idm::delete_id(u32 type, u32 true_type, u32 tag, u32 id)
+std::shared_ptr<void> idm::delete_id(u32 type, u32 id)
 {
-	writer_lock lock(g_mutex);
+	auto& map = g_map[type];
 
-	if (!find_id(type, true_type, id)) return nullptr; // ???
+	const auto found = map.find(id);
 
-	auto&& ptr = deallocate_id(tag, id);
+	std::shared_ptr<void> result;
 
-	g_map[type].erase(id);
+	if (found != map.end())
+	{
+		result = std::move(found->second);
+		map.erase(found);
+	}
 
-	return ptr;
+	return result;
+}
+
+std::shared_ptr<void> idm::delete_id(u32 type, u32 true_type, u32 id)
+{
+	auto& map = g_map[type];
+
+	const auto found = map.find(id);
+
+	std::shared_ptr<void> result;
+
+	if (found != map.end() && found->first.type() == true_type)
+	{
+		result = std::move(found->second);
+		map.erase(found);
+	}
+
+	return result;
 }
 
 void idm::init()
 {
-	g_map.resize(id_manager::typeinfo::get().size(), {});
-	g_id.resize(id_manager::typeinfo::get().size(), 0);
+	g_map.resize(id_manager::typeinfo::get().size());
 }
 
 void idm::clear()
@@ -101,32 +134,24 @@ void idm::clear()
 		}
 
 		g_map[i].clear();
-		g_id[i] = 0;
 	}
-}
-
-std::shared_ptr<void> fxm::remove(u32 type)
-{
-	writer_lock lock(g_mutex);
-
-	return std::move(g_map[type]);
 }
 
 void fxm::init()
 {
-	g_map.resize(id_manager::typeinfo::get().size(), {});
+	g_vec.resize(id_manager::typeinfo::get().size(), {});
 }
 
 void fxm::clear()
 {
 	// Call recorded finalization functions for all IDs
-	for (std::size_t i = 0; i < g_map.size(); i++)
+	for (std::size_t i = 0; i < g_vec.size(); i++)
 	{
-		if (g_map[i])
+		if (g_vec[i])
 		{
-			id_manager::typeinfo::get()[i].on_stop(g_map[i].get());
+			id_manager::typeinfo::get()[i].on_stop(g_vec[i].get());
 		}
 
-		g_map[i].reset();
+		g_vec[i].reset();
 	}
 }

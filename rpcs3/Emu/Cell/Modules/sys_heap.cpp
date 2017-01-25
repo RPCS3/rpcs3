@@ -9,6 +9,10 @@ extern logs::channel sysPrxForUser;
 
 struct HeapInfo
 {
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
+	static const u32 id_count = 32767;
+
 	const std::string name;
 
 	HeapInfo(const char* name)

@@ -58,7 +58,7 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 	{
 	case system_type::ps3:
 	{
-		if (_cpu->id >= ppu_thread::id_min)
+		if (_cpu->id_type() == 1)
 		{
 			for (int i = 0; i < 32; i++) t1_register->Append(wxString::Format("GPR[%d]", i));
 			for (int i = 0; i < 32; i++) t1_register->Append(wxString::Format("FPR[%d]", i));
@@ -89,7 +89,7 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 		std::string reg = fmt::ToUTF8(t1_register->GetStringSelection());
 		std::string value = fmt::ToUTF8(t2_value->GetValue());
 
-		if (g_system == system_type::ps3 && cpu->id >= ppu_thread::id_min)
+		if (g_system == system_type::ps3 && cpu->id_type() == 1)
 		{
 			auto& ppu = *static_cast<ppu_thread*>(cpu);
 
@@ -134,7 +134,7 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 			{
 			}
 		}
-		else if (g_system == system_type::ps3 && cpu->id < ppu_thread::id_min)
+		else if (g_system == system_type::ps3 && cpu->id_type() != 1)
 		{
 			auto& spu = *static_cast<SPUThread*>(cpu);
 
@@ -169,7 +169,7 @@ void RegisterEditorDialog::updateRegister(wxCommandEvent& event)
 	std::string reg = fmt::ToUTF8(t1_register->GetStringSelection());
 	std::string str;
 
-	if (g_system == system_type::ps3 && cpu->id >= ppu_thread::id_min)
+	if (g_system == system_type::ps3 && cpu->id_type() == 1)
 	{
 		auto& ppu = *static_cast<ppu_thread*>(cpu);
 
@@ -185,7 +185,7 @@ void RegisterEditorDialog::updateRegister(wxCommandEvent& event)
 		if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
 		if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
 	}
-	else if (g_system == system_type::ps3 && cpu->id < ppu_thread::id_min)
+	else if (g_system == system_type::ps3 && cpu->id_type() != 1)
 	{
 		auto& spu = *static_cast<SPUThread*>(cpu);
 

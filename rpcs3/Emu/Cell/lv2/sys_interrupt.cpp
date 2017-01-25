@@ -10,6 +10,14 @@
 
 logs::channel sys_interrupt("sys_interrupt", logs::level::notice);
 
+lv2_int_serv_t::lv2_int_serv_t(const std::shared_ptr<ppu_thread>& thread, u64 arg1, u64 arg2)
+	: thread(thread)
+	, arg1(arg1)
+	, arg2(arg2)
+	, id(idm::last_id())
+{
+}
+
 void lv2_int_serv_t::exec()
 {
 	thread->cmd_list
@@ -148,4 +156,9 @@ void sys_interrupt_thread_eoi(ppu_thread& ppu) // Low-level PPU function example
 		ppu->interrupt_disable();
 		throw cpu_flag::ret;
 	}
+}
+
+lv2_int_tag_t::lv2_int_tag_t()
+	: id(idm::last_id())
+{
 }
