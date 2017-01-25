@@ -839,34 +839,6 @@ struct multicast<T, Value, void>
 	}
 };
 
-// Tagged ID type
-template <typename T = void, typename ID = u32>
-class id_value
-{
-	// Initial value
-	mutable ID m_value{static_cast<ID>(-1)};
-
-	// Allow access for ID manager
-	friend class idm;
-
-	// Update ID
-	void operator=(const ID& value) const
-	{
-		m_value = value;
-	}
-
-public:
-	constexpr id_value()
-	{
-	}
-
-	// Get the value
-	operator ID() const
-	{
-		return m_value;
-	}
-};
-
 // Error code type (return type), implements error reporting. Could be a template.
 struct error_code
 {
@@ -921,14 +893,3 @@ constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
 {
 	return static_cast<error_code::not_an_error>(static_cast<s32>(value));
 }
-
-template <typename T, typename ID>
-struct fmt_unveil<id_value<T, ID>>
-{
-	using type = typename fmt_unveil<ID>::type;
-
-	static inline auto get(const id_value<T, ID>& value)
-	{
-		return fmt_unveil<ID>::get(value);
-	}
-};

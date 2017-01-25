@@ -143,10 +143,14 @@ class ElementaryStream
 	bool is_full(u32 space);
 
 public:
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
+	static const u32 id_count = 32767;
+
 	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec);
 
 	Demuxer* dmux;
-	const id_value<> id{};
+	const u32 id = idm::last_id();
 	const u32 memAddr;
 	const u32 memSize;
 	const u32 fidMajor;

@@ -31,6 +31,10 @@ struct sys_event_flag_attribute_t
 
 struct lv2_event_flag_t
 {
+	static const u32 id_base = 0x98000000;
+	static const u32 id_step = 0x100;
+	static const u32 id_count = 8192;
+
 	const u32 protocol;
 	const s32 type;
 	const u64 name;

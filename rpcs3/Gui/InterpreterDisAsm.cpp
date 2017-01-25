@@ -25,7 +25,7 @@ u32 InterpreterDisAsmFrame::GetPc() const
 {
 	switch (g_system)
 	{
-	case system_type::ps3: return cpu->id >= ppu_thread::id_min ? static_cast<ppu_thread*>(cpu)->cia : static_cast<SPUThread*>(cpu)->pc;
+	case system_type::ps3: return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu)->cia : static_cast<SPUThread*>(cpu)->pc;
 	case system_type::psv: return static_cast<ARMv7Thread*>(cpu)->PC;
 	}
 	
@@ -140,7 +140,7 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 		{
 		case system_type::ps3:
 		{
-			if (cpu->id >= ppu_thread::id_min)
+			if (cpu->id_type() == 1)
 			{
 				m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
 			}
@@ -250,7 +250,7 @@ void InterpreterDisAsmFrame::ShowAddr(u32 addr)
 	}
 	else
 	{
-		const u32 cpu_offset = g_system == system_type::ps3 && cpu->id < ppu_thread::id_min ? static_cast<SPUThread&>(*cpu).offset : 0;
+		const u32 cpu_offset = g_system == system_type::ps3 && cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
 		m_disasm->offset = (u8*)vm::base(cpu_offset);
 		for (uint i = 0, count = 4; i<m_item_count; ++i, m_pc += count)
 		{

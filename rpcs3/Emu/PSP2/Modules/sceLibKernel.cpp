@@ -808,6 +808,10 @@ s32 sceKernelWaitMultipleEventsCB(vm::ptr<SceKernelWaitEvent> pWaitEventList, s3
 
 struct psp2_event_flag final
 {
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
+	static const u32 id_count = 32767;
+
 	struct alignas(8) ctrl_t
 	{
 		u32 waiters;

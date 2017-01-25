@@ -14,6 +14,10 @@ enum ARMv7InstructionSet
 class ARMv7Thread final : public cpu_thread
 {
 public:
+	static const u32 id_base = 1;
+	static const u32 id_step = 2;
+	static const u32 id_count = 32767;
+
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
 	virtual void cpu_task() override;

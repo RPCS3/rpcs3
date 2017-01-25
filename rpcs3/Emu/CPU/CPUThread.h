@@ -31,9 +31,9 @@ public:
 	virtual void on_stop() override;
 	virtual ~cpu_thread() override;
 
-	const id_value<> id{};
+	const u32 id;
 
-	cpu_thread();
+	cpu_thread(u32 id);
 
 	// Public thread state
 	atomic_t<bs_t<cpu_flag>> state{+cpu_flag::stop};
@@ -49,6 +49,12 @@ public:
 
 	// Set cpu_flag::signal
 	void set_signal();
+
+	// Check thread type
+	u32 id_type()
+	{
+		return id >> 24;
+	}
 
 	// Print CPU state
 	virtual std::string dump() const;

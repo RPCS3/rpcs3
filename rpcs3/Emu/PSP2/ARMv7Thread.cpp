@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/IdManager.h"
 #include "Emu/System.h"
 
 #include "ARMv7Thread.h"
@@ -94,7 +95,7 @@ ARMv7Thread::~ARMv7Thread()
 }
 
 ARMv7Thread::ARMv7Thread(const std::string& name, u32 prio, u32 stack)
-	: cpu_thread()
+	: cpu_thread(idm::last_id())
 	, m_name(name)
 	, prio(prio)
 	, stack_addr(vm::alloc(stack, vm::main))

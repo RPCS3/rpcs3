@@ -253,7 +253,7 @@ ppu_thread::~ppu_thread()
 }
 
 ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
-	: cpu_thread()
+	: cpu_thread(idm::last_id())
 	, prio(prio)
 	, stack_size(std::max<u32>(stack, 0x4000))
 	, stack_addr(vm::alloc(stack_size, vm::stack))
@@ -404,7 +404,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 u32 ppu_thread::stack_push(u32 size, u32 align_v)
 {
-	if (auto cpu = get_current_cpu_thread()) if (cpu->id >= id_min)
+	if (auto cpu = get_current_cpu_thread()) if (cpu->id_type() == 1)
 	{
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
@@ -430,7 +430,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 
 void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 {
-	if (auto cpu = get_current_cpu_thread()) if (cpu->id >= id_min)
+	if (auto cpu = get_current_cpu_thread()) if (cpu->id_type() == 1)
 	{
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
