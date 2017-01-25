@@ -909,7 +909,7 @@ struct psp2_event_flag final
 
 			case task::signal:
 			{
-				idm::get<ARMv7Thread>(cmd.arg, [&](u32, ARMv7Thread& cpu)
+				idm::get<ARMv7Thread>(cmd.arg, [&](ARMv7Thread& cpu)
 				{
 					cpu.state += cpu_flag::signal;
 					cpu.lock_notify();
@@ -954,7 +954,7 @@ private:
 	// Check condition
 	void op_wait(u32 thread_id)
 	{
-		idm::get<ARMv7Thread>(thread_id, [&](u32, ARMv7Thread& cpu)
+		idm::get<ARMv7Thread>(thread_id, [&](ARMv7Thread& cpu)
 		{
 			const u32 pattern = ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state) -> u32
 			{
@@ -987,7 +987,7 @@ private:
 	// Check condition
 	void op_poll(u32 thread_id)
 	{
-		idm::get<ARMv7Thread>(thread_id, [&](u32, ARMv7Thread& cpu)
+		idm::get<ARMv7Thread>(thread_id, [&](ARMv7Thread& cpu)
 		{
 			cpu.GPR[1] = ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state) -> u32
 			{
@@ -1043,7 +1043,7 @@ private:
 			}
 			else
 			{
-				idm::get<ARMv7Thread>(new_state.waiters, [&](u32 id, ARMv7Thread& cpu)
+				idm::get<ARMv7Thread>(new_state.waiters, [&](ARMv7Thread& cpu)
 				{
 					if (cpu->lock_if([&] { return cpu.owner == this && pat_test(new_state.pattern, cpu.GPR[1], cpu.GPR[0]); }))
 					{
