@@ -206,32 +206,68 @@ class idm
 	template<typename F, typename R, typename A1, typename A2>
 	struct function_traits<R(F::*)(A1, A2&) const>
 	{
-		using second_type = A2;
-		using return_type = R;
+		using object_type = A2;
+		using result_type = R;
+	};
+
+	template<typename F, typename R, typename A1, typename A2>
+	struct function_traits<R(F::*)(A1, A2&)>
+	{
+		using object_type = A2;
+		using result_type = R;
+	};
+
+	template<typename F, typename A1, typename A2>
+	struct function_traits<void(F::*)(A1, A2&) const>
+	{
+		using object_type = A2;
+		using void_type = void;
+	};
+
+	template<typename F, typename A1, typename A2>
+	struct function_traits<void(F::*)(A1, A2&)>
+	{
+		using object_type = A2;
+		using void_type = void;
 	};
 
 	// Helper
-	template<bool Value>
-	struct bool_if_void
+	template<typename T, typename RT>
+	struct return_pair
 	{
-		friend bool operator ,(bool lhs, const bool_if_void&)
+		std::shared_ptr<T> ptr;
+		RT value;
+
+		explicit operator bool() const
 		{
-			return lhs;
+			return ptr.operator bool();
 		}
 
-		operator bool() const
+		auto operator->() const
 		{
-			return Value;
+			return ptr.get();
 		}
 	};
 
-	// Prepares new ID, returns nullptr if out of resources
+	template<typename RT>
+	struct return_pair<bool, RT>
+	{
+		bool result;
+		RT value;
+
+		explicit operator bool() const
+		{
+			return result;
+		}
+	};
+
+	// Prepare new ID (returns nullptr if out of resources)
 	static id_manager::id_map::pointer allocate_id(u32 tag, u32 type, u32 min, u32 max);
 
 	// Deallocate ID, returns object
 	static std::shared_ptr<void> deallocate_id(u32 tag, u32 id);
 
-	// Allocate new ID and construct it from the provider()
+	// Allocate new ID and assign the object from the provider()
 	template<typename T, typename Set, typename F>
 	static id_manager::id_map::pointer create_id(F&& provider)
 	{
@@ -265,7 +301,7 @@ class idm
 	// Get ID (internal)
 	static id_manager::id_map::pointer find_id(u32 type, u32 true_type, u32 id);
 
-	// Remove ID and return object
+	// Remove ID and return the object
 	static std::shared_ptr<void> delete_id(u32 type, u32 true_type, u32 tag, u32 id);
 
 public:
@@ -331,16 +367,53 @@ public:
 		return nullptr;
 	}
 
-	// Check whether the ID exists
+	// Check the ID
 	template<typename T, typename Get = void>
-	static inline bool check(u32 id)
+	static inline explicit_bool_t check(u32 id)
 	{
 		reader_lock lock(g_mutex);
 
 		return find_id(get_type<T>(), get_type<Get>(), id) != nullptr;
 	}
 
-	// Get the ID
+	// Check the ID, access object under shared lock
+	template<typename T, typename Get = void, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
+	static inline explicit_bool_t check(u32 id, F&& func, int = 0)
+	{
+		using pointer_type = std::conditional_t<std::is_void<Get>::value, T, Get>;
+
+		reader_lock lock(g_mutex);
+
+		const auto found = find_id(get_type<T>(), get_type<Get>(), id);
+
+		if (UNLIKELY(found == nullptr))
+		{
+			return false;
+		}
+
+		func(*static_cast<pointer_type*>(found->second.get()));
+		return true;
+	}
+
+	// Check the ID, access object under reader lock, propagate return value
+	template<typename T, typename Get = void, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
+	static inline return_pair<bool, FRT> check(u32 id, F&& func)
+	{
+		using pointer_type = std::conditional_t<std::is_void<Get>::value, T, Get>;
+
+		reader_lock lock(g_mutex);
+
+		const auto found = find_id(get_type<T>(), get_type<Get>(), id);
+
+		if (UNLIKELY(found == nullptr))
+		{
+			return {false};
+		}
+
+		return {true, func(*static_cast<pointer_type*>(found->second.get()))};
+	}
+
+	// Get the object
 	template<typename T, typename Get = void, typename Made = std::conditional_t<std::is_void<Get>::value, T, Get>>
 	static inline std::shared_ptr<Made> get(u32 id)
 	{
@@ -353,14 +426,15 @@ public:
 			return nullptr;
 		}
 
-		return{ found->second, static_cast<Made*>(found->second.get()) };
+		return {found->second, static_cast<Made*>(found->second.get())};
 	}
 
-	// Conditionally get the ID, almost similar to select() but for the single object only.
-	template<typename T, typename Get = void, typename F, typename FT = decltype(&F::operator()), typename A2 = typename function_traits<FT>::second_type>
-	static inline auto get(u32 id, F&& pred)
+	// Get the object, access object under reader lock
+	template<typename T, typename Get = void, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
+	static inline auto get(u32 id, F&& func, int = 0)
 	{
-		using result_type = std::conditional_t<std::is_void<typename function_traits<FT>::return_type>::value, void, std::shared_ptr<A2>>;
+		using pointer_type = std::conditional_t<std::is_void<Get>::value, T, Get>;
+		using result_type = std::shared_ptr<pointer_type>;
 
 		reader_lock lock(g_mutex);
 
@@ -368,22 +442,63 @@ public:
 
 		if (UNLIKELY(found == nullptr))
 		{
-			return static_cast<result_type>(nullptr);
+			return result_type{nullptr};
 		}
 
-		if (pred(id, *static_cast<A2*>(found->second.get())), bool_if_void<false>())
-		{
-			return static_cast<result_type>(std::static_pointer_cast<A2>(found->second));
-		}
+		const auto ptr = static_cast<pointer_type*>(found->second.get());
 
-		return static_cast<result_type>(nullptr);
+		func(*ptr);
+
+		return result_type{found->second, ptr};
 	}
 
-	// Execute for all IDs (unsorted), may return void. If the result evaluates to true, the loop stops and returns the object.
-	template<typename... Types, typename F, typename FT = decltype(&F::operator()), typename A2 = typename function_traits<FT>::second_type>
-	static inline auto select(F&& pred)
+	// Get the object, access object under reader lock, propagate return value
+	template<typename T, typename Get = void, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
+	static inline auto get(u32 id, F&& func)
 	{
-		using result_type = std::conditional_t<std::is_void<typename function_traits<FT>::return_type>::value, void, std::shared_ptr<A2>>;
+		using pointer_type = std::conditional_t<std::is_void<Get>::value, T, Get>;
+		using result_type = return_pair<pointer_type, FRT>;
+
+		reader_lock lock(g_mutex);
+
+		const auto found = find_id(get_type<T>(), get_type<Get>(), id);
+
+		if (UNLIKELY(found == nullptr))
+		{
+			return result_type{nullptr};
+		}
+
+		const auto ptr = static_cast<pointer_type*>(found->second.get());
+
+		return result_type{{found->second, ptr}, func(*ptr)};
+	}
+
+	// Access all objects of specified types under reader lock (use lambda or callable object), return the number of objects processed
+	template<typename... Types, typename F, typename FT = decltype(&std::decay_t<F>::operator()), typename FRT = typename function_traits<FT>::void_type>
+	static inline u32 select(F&& func, int = 0)
+	{
+		reader_lock lock(g_mutex);
+
+		u32 result = 0;
+
+		for (u32 type : { get_type<Types>()... })
+		{
+			for (auto& id : g_map[type])
+			{
+				func(id.first.id(), *static_cast<typename function_traits<FT>::object_type*>(id.second.get()));
+				result++;
+			}
+		}
+
+		return result;
+	}
+
+	// Access all objects of specified types under reader lock (use lambda or callable object), if return value evaluates to true, stop and return the object and the value
+	template<typename... Types, typename F, typename FT = decltype(&std::decay_t<F>::operator()), typename FRT = typename function_traits<FT>::result_type>
+	static inline auto select(F&& func)
+	{
+		using object_type = typename function_traits<FT>::object_type;
+		using result_type = return_pair<object_type, FRT>;
 
 		reader_lock lock(g_mutex);
 
@@ -391,14 +506,14 @@ public:
 		{
 			for (auto& id : g_map[type])
 			{
-				if (pred(id.first.id(), *static_cast<A2*>(id.second.get())), bool_if_void<false>())
+				if (FRT result = func(id.first.id(), *static_cast<object_type*>(id.second.get())))
 				{
-					return static_cast<result_type>(std::static_pointer_cast<A2>(id.second));
+					return result_type{{id.second, static_cast<object_type*>(id.second.get())}, std::move(result)};
 				}
 			}
 		}
 
-		return static_cast<result_type>(nullptr);
+		return result_type{nullptr};
 	}
 
 	// Get count of objects
@@ -427,9 +542,9 @@ public:
 
 	// Remove the ID
 	template<typename T, typename Get = void>
-	static inline bool remove(u32 id)
+	static inline explicit_bool_t remove(u32 id)
 	{
-		auto&& ptr = delete_id(get_type<T>(), get_type<Get>(), get_tag<T>(), id);
+		auto ptr = delete_id(get_type<T>(), get_type<Get>(), get_tag<T>(), id);
 
 		if (LIKELY(ptr))
 		{
@@ -439,33 +554,76 @@ public:
 		return ptr.operator bool();
 	}
 
-	// Remove the ID and return it
+	// Remove the ID and return the object
 	template<typename T, typename Get = void, typename Made = std::conditional_t<std::is_void<Get>::value, T, Get>>
 	static inline std::shared_ptr<Made> withdraw(u32 id)
 	{
-		auto&& ptr = delete_id(get_type<T>(), get_type<Get>(), get_tag<T>(), id);
+		auto ptr = delete_id(get_type<T>(), get_type<Get>(), get_tag<T>(), id);
 
 		if (LIKELY(ptr))
 		{
 			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 		}
 
-		return{ ptr, static_cast<Made*>(ptr.get()) };
+		return {ptr, static_cast<Made*>(ptr.get())};
 	}
 
-	// Conditionally remove the ID and return it.
-	template<typename T, typename Get = void, typename Made = std::conditional_t<std::is_void<Get>::value, T, Get>, typename F>
-	static inline std::shared_ptr<Made> withdraw(u32 id, F&& pred)
+	// Remove the ID after accessing the object under writer lock, return the object and propagate return value
+	template<typename T, typename Get = void, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
+	static inline auto withdraw(u32 id, F&& func, int = 0)
 	{
+		using pointer_type = std::conditional_t<std::is_void<Get>::value, T, Get>;
+		using result_type = std::shared_ptr<pointer_type>;
+
 		std::shared_ptr<void> ptr;
 		{
 			writer_lock lock(g_mutex);
 
 			const auto found = find_id(get_type<T>(), get_type<Get>(), id);
 
-			if (UNLIKELY(found == nullptr || !pred(id, *static_cast<T*>(found->second.get()))))
+			if (UNLIKELY(found == nullptr))
 			{
-				return nullptr;
+				return result_type{nullptr};
+			}
+
+			func(*static_cast<pointer_type*>(found->second.get()));
+
+			ptr = deallocate_id(get_tag<T>(), id);
+
+			g_map[get_type<T>()].erase(id);
+		}
+
+		id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+
+		return result_type{ptr, static_cast<pointer_type*>(ptr.get())};
+	}
+
+	// Conditionally remove the ID (if return value evaluates to false) after accessing the object under writer lock, return the object and propagate return value
+	template<typename T, typename Get = void, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
+	static inline auto withdraw(u32 id, F&& func)
+	{
+		using pointer_type = std::conditional_t<std::is_void<Get>::value, T, Get>;
+		using result_type = return_pair<pointer_type, FRT>;
+
+		std::shared_ptr<void> ptr;
+		FRT ret;
+		{
+			writer_lock lock(g_mutex);
+
+			const auto found = find_id(get_type<T>(), get_type<Get>(), id);
+
+			if (UNLIKELY(found == nullptr))
+			{
+				return result_type{nullptr};
+			}
+
+			const auto _ptr = static_cast<pointer_type*>(found->second.get());
+
+			ret = func(*_ptr);
+
+			if (ret)
+			{
+				return result_type{{found->second, _ptr}, std::move(ret)};
 			}
 
 			ptr = deallocate_id(get_tag<T>(), id);
@@ -475,7 +633,7 @@ public:
 		
 		id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 
-		return{ ptr, static_cast<Made*>(ptr.get()) };
+		return result_type{{ptr, static_cast<pointer_type*>(ptr.get())}, std::move(ret)};
 	}
 };
 
@@ -637,7 +795,7 @@ public:
 
 	// Check whether the object exists
 	template<typename T>
-	static inline bool check()
+	static inline explicit_bool_t check()
 	{
 		reader_lock lock(g_mutex);
 
@@ -657,9 +815,9 @@ public:
 
 	// Delete the object
 	template<typename T>
-	static inline bool remove()
+	static inline explicit_bool_t remove()
 	{
-		auto&& ptr = remove(get_type<T>());
+		auto ptr = remove(get_type<T>());
 		
 		if (ptr)
 		{
@@ -673,7 +831,7 @@ public:
 	template<typename T>
 	static inline std::shared_ptr<T> withdraw()
 	{
-		auto&& ptr = remove(get_type<T>());
+		auto ptr = remove(get_type<T>());
 
 		if (ptr)
 		{

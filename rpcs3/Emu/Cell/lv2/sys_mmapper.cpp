@@ -143,7 +143,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 
 	error_code result{};
 
-	const auto ct = idm::get<lv2_memory_container>(cid, [&](u32, lv2_memory_container& ct)
+	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct)
 	{
 		// Try to get "physical memory"
 		if (!ct.take(size))
@@ -166,7 +166,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 	}
 
 	// Generate a new mem ID
-	*mem_id = idm::make<lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, ct);
+	*mem_id = idm::make<lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, ct.ptr);
 
 	return CELL_OK;
 }
@@ -205,7 +205,7 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 	error_code result{};
 
 	// Conditionally remove memory ID
-	const auto mem = idm::withdraw<lv2_memory>(mem_id, [&](u32, lv2_memory& mem)
+	const auto mem = idm::withdraw<lv2_memory>(mem_id, [&](lv2_memory& mem)
 	{
 		if (mem.addr.compare_and_swap_test(0, -1))
 		{
