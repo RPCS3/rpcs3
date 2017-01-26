@@ -69,6 +69,15 @@ static time_t to_time(const FILETIME& ft)
 	return to_time(v);
 }
 
+static FILETIME from_time(s64 _time)
+{
+	const ullong wtime = (_time + 11644473600ULL) * 10000000ULL;
+	FILETIME result;
+	result.dwLowDateTime = static_cast<DWORD>(wtime);
+	result.dwHighDateTime = static_cast<DWORD>(wtime >> 32);
+	return result;
+}
+
 static fs::error to_error(DWORD e)
 {
 	switch (e)
@@ -94,6 +103,7 @@ static fs::error to_error(DWORD e)
 #include <libgen.h>
 #include <string.h>
 #include <unistd.h>
+#include <utime.h>
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <copyfile.h>
@@ -594,6 +604,48 @@ bool fs::truncate_file(const std::string& path, u64 length)
 	return true;
 #else
 	if (::truncate(path.c_str(), length) != 0)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+
+	return true;
+#endif
+}
+
+bool fs::utime(const std::string& path, s64 atime, s64 mtime)
+{
+	if (auto device = get_virtual_device(path))
+	{
+		return device->utime(path, atime, mtime);
+	}
+
+#ifdef _WIN32
+	// Open the file
+	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (handle == INVALID_HANDLE_VALUE)
+	{
+		g_tls_error = to_error(GetLastError());
+		return false;
+	}
+
+	FILETIME _atime = from_time(atime);
+	FILETIME _mtime = from_time(mtime);
+	if (!SetFileTime(handle, nullptr, &_atime, &_mtime))
+	{
+		g_tls_error = to_error(GetLastError());
+		CloseHandle(handle);
+		return false;
+	}
+
+	CloseHandle(handle);
+	return true;
+#else
+	::utimbuf buf;
+	buf.actime = atime;
+	buf.modtime = mtime;
+
+	if (::utime(path.c_str(), &buf) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;

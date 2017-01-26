@@ -730,7 +730,7 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	BIND_FUNC(sys_fs_rename),                               //812 (0x32C)
 	BIND_FUNC(sys_fs_rmdir),                                //813 (0x32D)
 	BIND_FUNC(sys_fs_unlink),                               //814 (0x32E)
-	null_func,//BIND_FUNC(sys_fs_utime),                    //815 (0x32F)
+	BIND_FUNC(sys_fs_utime),                                //815 (0x32F)
 	null_func,//BIND_FUNC(sys_fs_access),                   //816 (0x330)
 	BIND_FUNC(sys_fs_fcntl),                                //817 (0x331)
 	BIND_FUNC(sys_fs_lseek),                                //818 (0x332)

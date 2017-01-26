@@ -93,6 +93,7 @@ namespace fs
 		virtual bool rename(const std::string& from, const std::string& to) = 0;
 		virtual bool remove(const std::string& path) = 0;
 		virtual bool trunc(const std::string& path, u64 length) = 0;
+		virtual bool utime(const std::string& path, s64 atime, s64 mtime) = 0;
 
 		virtual std::unique_ptr<file_base> open(const std::string& path, bs_t<open_mode> mode) = 0;
 		virtual std::unique_ptr<dir_base> open_dir(const std::string& path) = 0;
@@ -139,6 +140,9 @@ namespace fs
 
 	// Change file size (possibly appending zeros)
 	bool truncate_file(const std::string& path, u64 length);
+
+	// Set file access/modification time
+	bool utime(const std::string& path, s64 atime, s64 mtime);
 
 	class file final
 	{

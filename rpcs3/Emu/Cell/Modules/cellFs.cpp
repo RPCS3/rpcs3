@@ -206,6 +206,16 @@ s32 cellFsChmod(vm::cptr<char> path, s32 mode)
 	return sys_fs_chmod(path, mode);
 }
 
+s32 cellFsUtime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep)
+{
+	cellFs.warning("cellFsUtime(path=%s, timep=*0x%x) -> sys_fs_utime()", path, timep);
+
+	// TODO
+
+	// Call the syscall
+	return sys_fs_utime(path, timep);
+}
+
 s32 cellFsGetFreeSize(vm::cptr<char> path, vm::ptr<u32> block_size, vm::ptr<u64> block_count)
 {
 	cellFs.warning("cellFsGetFreeSize(path=%s, block_size=*0x%x, block_count=*0x%x)", path, block_size, block_count);
@@ -846,11 +856,6 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 	}
 
 	return CELL_OK;
-}
-
-s32 cellFsUtime()
-{
-	fmt::throw_exception("Unimplemented" HERE);
 }
 
 s32 cellFsArcadeHddSerialNumber()

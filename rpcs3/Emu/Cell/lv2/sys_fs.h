@@ -205,3 +205,4 @@ error_code sys_fs_get_block_size(vm::ps3::cptr<char> path, vm::ps3::ptr<u64> sec
 error_code sys_fs_truncate(vm::ps3::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(u32 fd, u64 size);
 error_code sys_fs_chmod(vm::ps3::cptr<char> path, s32 mode);
+error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep);
