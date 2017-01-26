@@ -291,33 +291,34 @@ struct vdec_thread : ppu_thread
 								case 50: case 0x100000000ull + 100: frame.frc = CELL_VDEC_FRC_50; break;
 								case 60: case 0x100000000ull + 120: frame.frc = CELL_VDEC_FRC_60; break;
 								default:
-								{
 									fmt::throw_exception("Unsupported time_base.den (%d/1, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
-								}
 								}
 							}
 							else if (ctx->time_base.num == 1001)
 							{
-								if (ctx->time_base.den / ctx->ticks_per_frame == 24000)
+								switch (ctx->time_base.den / ctx->ticks_per_frame)
 								{
-									frame.frc = CELL_VDEC_FRC_24000DIV1001;
-								}
-								else if (ctx->time_base.den / ctx->ticks_per_frame == 30000)
-								{
-									frame.frc = CELL_VDEC_FRC_30000DIV1001;
-								}
-								else if (ctx->time_base.den / ctx->ticks_per_frame == 60000)
-								{
-									frame.frc = CELL_VDEC_FRC_60000DIV1001;
-								}
-								else
-								{
+								case 24000: frame.frc = CELL_VDEC_FRC_24000DIV1001; break;
+								case 30000: frame.frc = CELL_VDEC_FRC_30000DIV1001; break;
+								case 60000: frame.frc = CELL_VDEC_FRC_60000DIV1001; break;
+								default:
 									fmt::throw_exception("Unsupported time_base.den (%d/1001, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
+								}
+							}
+							else if (ctx->time_base.num == 50)
+							{
+								switch (ctx->time_base.den / ctx->ticks_per_frame)
+								{
+								case 1199: frame.frc = CELL_VDEC_FRC_24000DIV1001; break;
+								case 1498: frame.frc = CELL_VDEC_FRC_30000DIV1001; break;
+								case 2997: frame.frc = CELL_VDEC_FRC_60000DIV1001; break;
+								default:
+									fmt::throw_exception("Unsupported time_base.den(%d/50, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
 								}
 							}
 							else
 							{
-								fmt::throw_exception("Unsupported time_base.num (%d)" HERE, ctx->time_base.num);
+								fmt::throw_exception("Unsupported time_base.num (%d/%d, tpf=%d)" HERE, ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
 							}
 						}
 
@@ -552,7 +553,8 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 		}
 		}
 
-		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
+		// TODO: color matrix
+		if (format->colorMatrixType & ~1)
 		{
 			fmt::throw_exception("Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
 		}
