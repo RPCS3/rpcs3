@@ -143,7 +143,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		return CELL_ENOENT;
 	}
 
-	const auto _file = idm::make_ptr<lv2_file>(path.get_ptr(), std::move(file), mode, flags);
+	const auto _file = idm::make_ptr<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags);
 
 	if (!_file)
 	{
@@ -165,7 +165,7 @@ error_code sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread
 		return CELL_EFAULT;
 	}
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || file->flags & CELL_FS_O_WRONLY)
 	{
@@ -183,7 +183,7 @@ error_code sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwr
 {
 	sys_fs.trace("sys_fs_write(fd=%d, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
@@ -203,7 +203,7 @@ error_code sys_fs_close(u32 fd)
 {
 	sys_fs.trace("sys_fs_close(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -212,7 +212,7 @@ error_code sys_fs_close(u32 fd)
 
 	// TODO: return CELL_EBUSY if locked
 
-	idm::remove<lv2_file>(fd);
+	idm::remove<lv2_fs_object, lv2_file>(fd);
 
 	return CELL_OK;
 }
@@ -245,7 +245,7 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 		return CELL_ENOENT;
 	}
 
-	const auto _dir = idm::make_ptr<lv2_dir>(path.get_ptr(), std::move(dir));
+	const auto _dir = idm::make_ptr<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(dir));
 
 	if (!_dir)
 	{
@@ -263,7 +263,7 @@ error_code sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 {
 	sys_fs.warning("sys_fs_readdir(fd=%d, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
 
-	const auto directory = idm::get<lv2_dir>(fd);
+	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
 
 	if (!directory)
 	{
@@ -291,14 +291,14 @@ error_code sys_fs_closedir(u32 fd)
 {
 	sys_fs.warning("sys_fs_closedir(fd=%d)", fd);
 
-	const auto directory = idm::get<lv2_dir>(fd);
+	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
 
 	if (!directory)
 	{
 		return CELL_EBADF;
 	}
 
-	idm::remove<lv2_dir>(fd);
+	idm::remove<lv2_fs_object, lv2_dir>(fd);
 
 	return CELL_OK;
 }
@@ -339,7 +339,7 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.warning("sys_fs_fstat(fd=%d, sb=*0x%x)", fd, sb);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -449,7 +449,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 			return CELL_EINVAL;
 		}
 
-		const auto file = idm::get<lv2_file>(fd);
+		const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 		if (!file)
 		{
@@ -500,7 +500,7 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 		return CELL_EINVAL;
 	}
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -518,7 +518,7 @@ error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64>
 {
 	sys_fs.todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -563,7 +563,7 @@ error_code sys_fs_ftruncate(u32 fd, u64 size)
 {
 	sys_fs.warning("sys_fs_ftruncate(fd=%d, size=0x%llx)", fd, size);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{

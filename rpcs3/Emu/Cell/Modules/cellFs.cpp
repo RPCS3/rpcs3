@@ -221,7 +221,7 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 {
 	cellFs.warning("cellFsGetDirectoryEntries(fd=%d, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
 
-	const auto directory = idm::get<lv2_dir>(fd);
+	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
 
 	if (!directory)
 	{
@@ -345,7 +345,7 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 		return CELL_EINVAL;
 	}
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -366,7 +366,7 @@ s32 cellFsStReadFinish(u32 fd)
 {
 	cellFs.todo("cellFsStReadFinish(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -382,7 +382,7 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
 	cellFs.todo("cellFsStReadGetRingBuf(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -398,7 +398,7 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 {
 	cellFs.todo("cellFsStReadGetRingBuf(fd=%d, status=*0x%x)", fd, status);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -414,7 +414,7 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 {
 	cellFs.todo("cellFsStReadGetRingBuf(fd=%d, regid=*0x%x)", fd, regid);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -430,7 +430,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 {
 	cellFs.todo("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -446,7 +446,7 @@ s32 cellFsStReadStop(u32 fd)
 {
 	cellFs.todo("cellFsStReadStop(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -462,7 +462,7 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 {
 	cellFs.todo("cellFsStRead(fd=%d, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
 	
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -478,7 +478,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 {
 	cellFs.todo("cellFsStReadGetCurrentAddr(fd=%d, addr=*0x%x, size=*0x%x)", fd, addr, size);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -494,7 +494,7 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 {
 	cellFs.todo("cellFsStReadPutCurrentAddr(fd=%d, addr=*0x%x, size=0x%llx)", fd, addr, size);
 	
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -510,7 +510,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 {
 	cellFs.todo("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
 	
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -526,7 +526,7 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void(s32 xfd, u64 xsize)>
 {
 	cellFs.todo("cellFsStReadWaitCallback(fd=%d, size=0x%llx, func=*0x%x)", fd, size, func);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -710,7 +710,7 @@ struct fs_aio_thread : ppu_thread
 			s32 error = CELL_OK;
 			u64 result = 0;
 
-			const auto file = idm::get<lv2_file>(aio->fd);
+			const auto file = idm::get<lv2_fs_object, lv2_file>(aio->fd);
 
 			if (!file || (type == 1 && file->flags & CELL_FS_O_WRONLY) || (type == 2 && !(file->flags & CELL_FS_O_ACCMODE)))
 			{
@@ -838,7 +838,7 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 {
 	cellFs.todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
-	const auto file = idm::get<lv2_file>(fd);
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
