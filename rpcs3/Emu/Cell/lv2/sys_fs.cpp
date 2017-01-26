@@ -592,3 +592,21 @@ error_code sys_fs_chmod(vm::cptr<char> path, s32 mode)
 
 	return CELL_OK;
 }
+
+error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep)
+{
+	sys_fs.warning("sys_fs_utime(path=%s, timep=*0x%x)", path, timep);
+
+	if (!fs::utime(vfs::get(path.get_ptr()), timep->actime, timep->modtime))
+	{
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent: return CELL_ENOENT;
+		default: sys_fs.error("sys_fs_utime(): unknown error %s", error);
+		}
+
+		return CELL_EIO; // ???
+	}
+
+	return CELL_OK;
+}
