@@ -172,7 +172,7 @@ struct vdec_thread : ppu_thread
 				AVPacket packet{};
 				packet.pos = -1;
 
-				u32 au_type{};
+				u32 au_mode{};
 				u32 au_addr{};
 				u32 au_size{};
 				u64 au_pts{};
@@ -182,7 +182,7 @@ struct vdec_thread : ppu_thread
 
 				if (vcmd == vdec_cmd::decode)
 				{
-					au_type = cmd.arg2<u32>();  // TODO
+					au_mode = cmd.arg2<u32>();  // TODO
 					au_addr = cmd_get(1).arg1<u32>();
 					au_size = cmd_get(1).arg2<u32>();
 					au_pts = cmd_get(2).as<u64>();
@@ -208,6 +208,10 @@ struct vdec_thread : ppu_thread
 
 				while (true)
 				{
+					ctx->skip_frame =
+						au_mode == CELL_VDEC_DEC_MODE_NORMAL ? AVDISCARD_DEFAULT :
+						au_mode == CELL_VDEC_DEC_MODE_B_SKIP ? AVDISCARD_NONREF : AVDISCARD_NONINTRA;
+
 					vdec_frame frame;
 					frame.avf.reset(av_frame_alloc());
 
@@ -482,11 +486,6 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 	if (mode > CELL_VDEC_DEC_MODE_PB_SKIP || !vdec)
 	{
 		return CELL_VDEC_ERROR_ARG;
-	}
-
-	if (mode != CELL_VDEC_DEC_MODE_NORMAL)
-	{
-		fmt::throw_exception("Unsupported decoding mode (%d)" HERE, (s32)mode);
 	}
 
 	// TODO: check info
