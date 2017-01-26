@@ -64,39 +64,18 @@ id_manager::id_map::pointer idm::allocate_id(std::pair<u32, u32> types, u32 base
 	return nullptr;
 }
 
-id_manager::id_map::pointer idm::find_id(u32 type, u32 id)
-{
-	auto& map = g_map[type];
-
-	const auto found = map.find(id);
-
-	return found == map.end() ? nullptr : std::addressof(*found);
-}
-
 id_manager::id_map::pointer idm::find_id(u32 type, u32 true_type, u32 id)
 {
 	auto& map = g_map[type];
 
 	const auto found = map.find(id);
 
-	return found == map.end() || found->first.type() != true_type ? nullptr : std::addressof(*found);
-}
-
-std::shared_ptr<void> idm::delete_id(u32 type, u32 id)
-{
-	auto& map = g_map[type];
-
-	const auto found = map.find(id);
-
-	std::shared_ptr<void> result;
-
-	if (found != map.end())
+	if (found != map.end() && (type == true_type || found->first.type() == true_type))
 	{
-		result = std::move(found->second);
-		map.erase(found);
+		return std::addressof(*found);
 	}
 
-	return result;
+	return nullptr;
 }
 
 std::shared_ptr<void> idm::delete_id(u32 type, u32 true_type, u32 id)
@@ -107,7 +86,7 @@ std::shared_ptr<void> idm::delete_id(u32 type, u32 true_type, u32 id)
 
 	std::shared_ptr<void> result;
 
-	if (found != map.end() && found->first.type() == true_type)
+	if (found != map.end() && (type == true_type || found->first.type() == true_type))
 	{
 		result = std::move(found->second);
 		map.erase(found);

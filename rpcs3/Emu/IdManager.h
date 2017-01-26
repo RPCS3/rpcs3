@@ -232,16 +232,10 @@ class idm
 	// Prepare new ID (returns nullptr if out of resources)
 	static id_manager::id_map::pointer allocate_id(std::pair<u32, u32> types, u32 base, u32 step, u32 count);
 
-	// Remove ID and return the object
-	static std::shared_ptr<void> delete_id(u32 type, u32 id);
-
-	// Remove ID and return the object (check type)
+	// Remove ID and return the object (additionally check true_type if not equal)
 	static std::shared_ptr<void> delete_id(u32 type, u32 true_type, u32 id);
 
-	// Get ID
-	static id_manager::id_map::pointer find_id(u32 type, u32 id);
-
-	// Get ID (check type)
+	// Get ID (additionally check true_type if not equal)
 	static id_manager::id_map::pointer find_id(u32 type, u32 true_type, u32 id);
 
 	// Allocate new ID and assign the object from the provider()
@@ -267,7 +261,7 @@ class idm
 			}
 			catch (...)
 			{
-				delete_id(types.first, place->first.id());
+				delete_id(types.first, types.first, place->first.id());
 				throw;
 			}
 		}
@@ -488,7 +482,7 @@ public:
 	}
 
 	// Get count of objects
-	template<typename T, typename Get = T>
+	template<typename T, typename Get = void>
 	static inline u32 get_count()
 	{
 		reader_lock lock(id_manager::g_mutex);
@@ -558,7 +552,7 @@ public:
 
 			func(*static_cast<Get*>(found->second.get()));
 
-			ptr = delete_id(get_type<T>(), id);
+			ptr = delete_id(get_type<T>(), get_type<Get>(), id);
 
 			g_map[get_type<T>()].erase(id);
 		}
@@ -595,7 +589,7 @@ public:
 				return result_type{{found->second, _ptr}, std::move(ret)};
 			}
 
-			ptr = delete_id(get_type<T>(), id);
+			ptr = delete_id(get_type<T>(), get_type<Get>(), id);
 
 			g_map[get_type<T>()].erase(id);
 		}
