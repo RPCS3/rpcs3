@@ -737,12 +737,6 @@ struct fs_aio_thread : ppu_thread
 struct fs_aio_manager
 {
 	std::shared_ptr<fs_aio_thread> thread;
-
-	fs_aio_manager()
-		: thread(idm::make_ptr<ppu_thread, fs_aio_thread>("FS AIO Thread", 500))
-	{
-		thread->run();
-	}
 };
 
 s32 cellFsAioInit(vm::cptr<char> mount_point)
@@ -750,7 +744,13 @@ s32 cellFsAioInit(vm::cptr<char> mount_point)
 	cellFs.warning("cellFsAioInit(mount_point=%s)", mount_point);
 
 	// TODO: create AIO thread (if not exists) for specified mount point
-	fxm::get_always<fs_aio_manager>();
+	const auto m = fxm::make<fs_aio_manager>();
+
+	if (m)
+	{
+		m->thread = idm::make_ptr<ppu_thread, fs_aio_thread>("FS AIO Thread", 500);
+		m->thread->run();
+	}
 
 	return CELL_OK;
 }
@@ -772,9 +772,14 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	const s32 xid = (*id = ++g_fs_aio_id);
+	const auto m = fxm::get<fs_aio_manager>();
 
-	const auto m = fxm::get_always<fs_aio_manager>();
+	if (!m)
+	{
+		return CELL_ENXIO;
+	}
+
+	const s32 xid = (*id = ++g_fs_aio_id);
 
 	m->thread->cmd_list
 	({
@@ -793,9 +798,14 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	const s32 xid = (*id = ++g_fs_aio_id);
+	const auto m = fxm::get<fs_aio_manager>();
 
-	const auto m = fxm::get_always<fs_aio_manager>();
+	if (!m)
+	{
+		return CELL_ENXIO;
+	}
+
+	const s32 xid = (*id = ++g_fs_aio_id);
 
 	m->thread->cmd_list
 	({
