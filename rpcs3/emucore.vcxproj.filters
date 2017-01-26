@@ -1714,5 +1714,8 @@
     <ClInclude Include="..\Utilities\sema.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

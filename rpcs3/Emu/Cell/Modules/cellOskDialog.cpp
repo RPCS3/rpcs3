@@ -131,14 +131,15 @@ s32 cellOskDialogExtInputDeviceUnlock()
 	return CELL_OSKDIALOG_OK;
 }
 
-s32 cellOskDialogExtRegisterKeyboardEventHookCallback()
+s32 cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	return CELL_OK;
 }
 
-s32 cellOskDialogExtAddJapaneseOptionDictionary(vm::cptr<char> filePath)
+s32 cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
 {
-	cellOskDialog.todo("cellOskDialogExtAddJapaneseOptionDictionary(filePath=*0x%0x)", filePath);
+	cellOskDialog.todo("cellOskDialogExtAddJapaneseOptionDictionary(filePath=**0x%0x)", filePath);
 	return CELL_OSKDIALOG_OK;
 }
 
@@ -148,9 +149,9 @@ s32 cellOskDialogExtEnableClipboard()
 	return CELL_OSKDIALOG_OK;
 }
 
-s32 cellOskDialogExtSendFinishMessage(vm::ptr<CellOskDialogFinishReason> finishReason)
+s32 cellOskDialogExtSendFinishMessage(s32 /*CellOskDialogFinishReason*/ finishReason)
 {
-	cellOskDialog.todo("cellOskDialogExtSendFinishMessage(finishReason=*0x%x)", finishReason);
+	cellOskDialog.todo("cellOskDialogExtSendFinishMessage(finishReason=%d)", finishReason);
 	return CELL_OSKDIALOG_OK;
 }
 
@@ -162,7 +163,7 @@ s32 cellOskDialogExtAddOptionDictionary(vm::cptr<CellOskDialogImeDictionaryInfo>
 
 s32 cellOskDialogExtSetInitialScale(f32 initialScale)
 {
-	cellOskDialog.todo("cellOskDialogExtSetInitialScale(initialScale=0x%x)", initialScale);
+	cellOskDialog.todo("cellOskDialogExtSetInitialScale(initialScale=%f)", initialScale);
 	return CELL_OSKDIALOG_OK;
 }
 
@@ -174,24 +175,25 @@ s32 cellOskDialogExtInputDeviceLock()
 
 s32 cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
 {
-	cellOskDialog.warning("cellOskDialogExtSetBaseColor(red=0x%x, blue=0x%x, green=0x%x, alpha=0x%x)", red, blue, green, alpha);
+	cellOskDialog.warning("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
 	return CELL_OSKDIALOG_OK;
 }
 
-s32 cellOskDialogExtRegisterConfirmWordFilterCallback()
+s32 cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDialogConfirmWordFilterCallback> pCallback)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellOskDialog.todo("cellOskDialogExtRegisterConfirmWordFilterCallback(pCallback=*0x%x)", pCallback);
+	return CELL_OK;
 }
 
 s32 cellOskDialogExtUpdateInputText()
 {
-	cellOskDialog.todo("cellOskDialogExtUpdateInputText");
+	cellOskDialog.todo("cellOskDialogExtUpdateInputText()");
 	return CELL_OSKDIALOG_OK;
 }
 
 s32 cellOskDialogExtDisableHalfByteKana()
 {
-	cellOskDialog.todo("cellOskDialogExtDisableHalfByteKana");
+	cellOskDialog.todo("cellOskDialogExtDisableHalfByteKana()");
 	return CELL_OSKDIALOG_OK;
 }
 
@@ -203,7 +205,7 @@ s32 cellOskDialogExtSetPointerEnable(b8 enable)
 
 s32 cellOskDialogExtUpdatePointerDisplayPos()
 {
-	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos()");
+	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos"); // Missing arguments
 	return CELL_OSKDIALOG_OK;
 }
 
@@ -213,9 +215,9 @@ s32 cellOskDialogExtEnableHalfByteKana()
 	return CELL_OSKDIALOG_OK;
 }
 
-s32 cellOskDialogExtRegisterForceFinishCallback()
+s32 cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForceFinishCallback> pCallback)
 {
-	cellOskDialog.todo("cellOskDialogExtRegisterForceFinishCallback()");
+	cellOskDialog.todo("cellOskDialogExtRegisterForceFinishCallback(pCallback=*0x%x)", pCallback);
 	return CELL_OSKDIALOG_OK;
 }
 
