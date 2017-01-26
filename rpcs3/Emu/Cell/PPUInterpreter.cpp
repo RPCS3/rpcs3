@@ -292,12 +292,18 @@ const g_ppu_scale_table;
 
 bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	fmt::throw_exception<std::logic_error>("MFVSCR instruction at 0x%x (%s)", ppu.cia, Emu.GetTitleID());
+	// TODO: In precise interpreter, SAT and NJ flags must be implemented and warnings removed
+	LOG_WARNING(PPU, "MFVSCR");
+	ppu.vr[op.vd] = v128::from32(0, 0, 0, ppu.sat | (u32{ppu.nj} << 16));
+	return true;
 }
 
 bool ppu_interpreter::MTVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
 	LOG_WARNING(PPU, "MTVSCR");
+	const u32 vscr = ppu.vr[op.vb]._u32[3];
+	ppu.sat = (vscr & 1) != 0;
+	ppu.nj  = (vscr & 0x10000) != 0;
 	return true;
 }
 
