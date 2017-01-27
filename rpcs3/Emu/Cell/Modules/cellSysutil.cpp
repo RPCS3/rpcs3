@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -413,6 +413,90 @@ s32 cellSysutilGameReboot_I()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 _ZN4cxml7Element11AppendChildERS0_()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN4cxml8DocumentC1Ev()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN4cxml8DocumentD1Ev()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN4cxml8Document13CreateElementEPKciPNS_7ElementE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN4cxml8Document14SetHeaderMagicEPKc()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN4cxml8Document16CreateFromBufferEPKvjb()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN4cxml8Document18GetDocumentElementEv()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZNK4cxml4File7GetAddrEv()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN8cxmlutil16FindChildElementERKN4cxml7ElementEPKcS5_S5_()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
 extern void cellSysutil_MsgDialog_init();
@@ -463,4 +547,22 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilGameExit_I);
 	REG_FUNC(cellSysutil, cellSysutilGamePowerOff_I);
 	REG_FUNC(cellSysutil, cellSysutilGameReboot_I);
+
+	REG_FUNC(cellSysutil, _ZN4cxml7Element11AppendChildERS0_);
+
+	REG_FUNC(cellSysutil, _ZN4cxml8DocumentC1Ev);
+	REG_FUNC(cellSysutil, _ZN4cxml8DocumentD1Ev);
+	REG_FUNC(cellSysutil, _ZN4cxml8Document13CreateElementEPKciPNS_7ElementE);
+	REG_FUNC(cellSysutil, _ZN4cxml8Document14SetHeaderMagicEPKc);
+	REG_FUNC(cellSysutil, _ZN4cxml8Document16CreateFromBufferEPKvjb);
+	REG_FUNC(cellSysutil, _ZN4cxml8Document18GetDocumentElementEv);
+
+	REG_FUNC(cellSysutil, _ZNK4cxml4File7GetAddrEv);
+
+	REG_FUNC(cellSysutil, _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil16FindChildElementERKN4cxml7ElementEPKcS5_S5_);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE);
 });
