@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
