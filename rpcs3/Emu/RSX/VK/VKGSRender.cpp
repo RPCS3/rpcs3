@@ -196,6 +196,7 @@ namespace vk
 		case rsx::logic_op::logic_copy_inverted: return VK_LOGIC_OP_COPY_INVERTED;
 		case rsx::logic_op::logic_or_inverted: return VK_LOGIC_OP_OR_INVERTED;
 		case rsx::logic_op::logic_nand: return VK_LOGIC_OP_NAND;
+		case rsx::logic_op::logic_set: return VK_LOGIC_OP_SET;
 		default:
 			fmt::throw_exception("Unknown logic op 0x%x" HERE, (u32)op);
 		}
