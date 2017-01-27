@@ -18,13 +18,6 @@ cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16 bit")
 
 void audio_config::on_task()
 {
-	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
-	{
-		ports[i].number = i;
-		ports[i].addr = m_buffer + AUDIO_PORT_OFFSET * i;
-		ports[i].index = m_indexes + i;
-	}
-
 	AudioDumper m_dump(g_cfg_audio_dump_to_file ? 2 : 0); // Init AudioDumper for 2 channels if enabled
 
 	float buf2ch[2 * BUFFER_SIZE]{}; // intermediate buffer for 2 channels

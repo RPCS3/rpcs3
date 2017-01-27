@@ -137,7 +137,17 @@ public:
 
 	std::vector<u64> keys;
 
-	~audio_config() noexcept = default;
+	audio_config()
+	{
+		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+		{
+			ports[i].number = i;
+			ports[i].addr = m_buffer + AUDIO_PORT_OFFSET * i;
+			ports[i].index = m_indexes + i;
+		}
+	}
+
+	~audio_config() = default;
 
 	audio_port* open_port()
 	{
