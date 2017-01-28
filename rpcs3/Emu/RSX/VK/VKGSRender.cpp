@@ -622,7 +622,7 @@ void VKGSRender::begin()
 	//Ease resource pressure if the number of draw calls becomes too high
 	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS)
 	{
-		std::chrono::time_point<std::chrono::system_clock> submit_start = std::chrono::system_clock::now();
+		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
 		close_and_submit_command_buffer({}, m_submit_fence);
 		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
@@ -638,11 +638,11 @@ void VKGSRender::begin()
 		m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
 		m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
 
-		std::chrono::time_point<std::chrono::system_clock> submit_end = std::chrono::system_clock::now();
+		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> start = steady_clock::now();
 
 	VkDescriptorSetAllocateInfo alloc_info = {};
 	alloc_info.descriptorPool = descriptor_pool;
@@ -666,7 +666,7 @@ void VKGSRender::begin()
 
 	//TODO: Set up other render-state parameters into the program pipeline
 
-	std::chrono::time_point<std::chrono::system_clock> stop = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
 	m_draw_calls++;
@@ -681,7 +681,7 @@ void VKGSRender::end()
 		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	std::chrono::time_point<std::chrono::system_clock> textures_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -763,7 +763,7 @@ void VKGSRender::end()
 		}
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> textures_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	VkRenderPassBeginInfo rp_begin = {};
@@ -779,7 +779,7 @@ void VKGSRender::end()
 
 	auto upload_info = upload_vertex_data();
 
-	std::chrono::time_point<std::chrono::system_clock> vertex_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - textures_end).count();
 
 	vkCmdBindPipeline(m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
@@ -803,7 +803,7 @@ void VKGSRender::end()
 
 	vkCmdEndRenderPass(m_command_buffer);
 
-	std::chrono::time_point<std::chrono::system_clock> draw_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - vertex_end).count();
 
 	rsx::thread::end();
@@ -1364,7 +1364,7 @@ void VKGSRender::flip(int buffer)
 			resize_screen = true;
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> flip_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> flip_start = steady_clock::now();
 
 	if (!resize_screen)
 	{
@@ -1538,7 +1538,7 @@ void VKGSRender::flip(int buffer)
 		vkDestroyFence((*m_device), resize_fence, nullptr);
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> flip_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
 	m_flip_time = std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
 
 	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();

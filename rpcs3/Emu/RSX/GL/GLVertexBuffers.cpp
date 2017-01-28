@@ -460,7 +460,7 @@ namespace
 
 std::tuple<u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::set_vertex_buffer()
 {
-	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> then = steady_clock::now();
 	auto result = std::apply_visitor(draw_command_visitor(*m_index_ring_buffer, *m_attrib_ring_buffer,
 	                              m_gl_attrib_buffers, m_program, m_min_texbuffer_alignment,
 	                              [this](const auto& state, const auto& list) {
@@ -468,7 +468,7 @@ std::tuple<u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::set_vertex_b
 		                             }),
 	    get_draw_command(rsx::method_registers));
 
-	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 	return result;
 }
