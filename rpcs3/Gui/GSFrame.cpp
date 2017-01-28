@@ -116,8 +116,11 @@ void GSFrame::flip(draw_context_t)
 		if (!Emu.GetTitleID().empty())
 			title += " | [" + Emu.GetTitleID() + ']';
 
-		// can freeze
-		SetTitle(wxString(title.c_str(), wxConvUTF8));
+		wxGetApp().CallAfter([this, title = std::move(title)]
+		{
+			SetTitle(wxString(title.c_str(), wxConvUTF8));
+		});
+
 		m_frames = 0;
 		fps_t.Start();
 	}
