@@ -191,7 +191,7 @@ void GLGSRender::begin()
 
 	init_buffers();
 
-	std::chrono::time_point<std::chrono::system_clock> then = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> then = steady_clock::now();
 
 	bool color_mask_b = rsx::method_registers.color_mask_b();
 	bool color_mask_g = rsx::method_registers.color_mask_g();
@@ -343,7 +343,7 @@ void GLGSRender::begin()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 	m_draw_calls++;
 }
@@ -410,7 +410,7 @@ void GLGSRender::end()
 		ds->set_cleared();
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> textures_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 	//Setup textures
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -450,7 +450,7 @@ void GLGSRender::end()
 		}
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> textures_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	u32 vertex_draw_count;
@@ -458,7 +458,7 @@ void GLGSRender::end()
 	std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
 	m_vao.bind();
 
-	std::chrono::time_point<std::chrono::system_clock> draw_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
 	if (g_cfg_rsx_debug_output)
 	{
@@ -486,7 +486,7 @@ void GLGSRender::end()
 		draw_fbo.draw_arrays(rsx::method_registers.current_draw_clause.primitive, vertex_draw_count);
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> draw_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 
 	write_buffers();

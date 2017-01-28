@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <utility>
+#include <chrono>
 
 // Assume little-endian
 #define IS_LE_MACHINE 1
@@ -79,6 +80,10 @@ using s8  = std::int8_t;
 using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
+
+using steady_clock = std::conditional<
+    std::chrono::high_resolution_clock::is_steady,
+    std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
 
 namespace gsl
 {

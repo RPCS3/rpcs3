@@ -301,15 +301,15 @@ bool D3D12GSRender::do_method(u32 cmd, u32 arg)
 
 void D3D12GSRender::end()
 {
-	std::chrono::time_point<std::chrono::system_clock> start_duration = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> start_duration = steady_clock::now();
 
-	std::chrono::time_point<std::chrono::system_clock> rtt_duration_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> rtt_duration_start = steady_clock::now();
 	prepare_render_targets(get_current_resource_storage().command_list.Get());
 
-	std::chrono::time_point<std::chrono::system_clock> rtt_duration_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> rtt_duration_end = steady_clock::now();
 	m_timers.prepare_rtt_duration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
 
-	std::chrono::time_point<std::chrono::system_clock> vertex_index_duration_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> vertex_index_duration_start = steady_clock::now();
 
 	size_t currentDescriptorIndex = get_current_resource_storage().descriptors_heap_index;
 
@@ -320,18 +320,18 @@ void D3D12GSRender::end()
 
 	UINT vertex_buffer_count = static_cast<UINT>(vertex_buffer_views.size());
 
-	std::chrono::time_point<std::chrono::system_clock> vertex_index_duration_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> vertex_index_duration_end = steady_clock::now();
 	m_timers.vertex_index_duration += std::chrono::duration_cast<std::chrono::microseconds>(vertex_index_duration_end - vertex_index_duration_start).count();
 
-	std::chrono::time_point<std::chrono::system_clock> program_load_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> program_load_start = steady_clock::now();
 	load_program();
-	std::chrono::time_point<std::chrono::system_clock> program_load_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> program_load_end = steady_clock::now();
 	m_timers.program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
 	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_shared_root_signature.Get());
 	get_current_resource_storage().command_list->OMSetStencilRef(rsx::method_registers.stencil_func_ref());
 
-	std::chrono::time_point<std::chrono::system_clock> constants_duration_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> constants_duration_start = steady_clock::now();
 
 	INT offset = 0;
 	for (const auto view : vertex_buffer_views)
@@ -368,12 +368,12 @@ void D3D12GSRender::end()
 	}
 
 
-	std::chrono::time_point<std::chrono::system_clock> constants_duration_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> constants_duration_end = steady_clock::now();
 	m_timers.constants_duration += std::chrono::duration_cast<std::chrono::microseconds>(constants_duration_end - constants_duration_start).count();
 
 	get_current_resource_storage().command_list->SetPipelineState(std::get<0>(m_current_pso).Get());
 
-	std::chrono::time_point<std::chrono::system_clock> texture_duration_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> texture_duration_start = steady_clock::now();
 
 	get_current_resource_storage().descriptors_heap_index += 2 + vertex_buffer_count;
 	size_t texture_count = std::get<2>(m_current_pso);
@@ -421,7 +421,7 @@ void D3D12GSRender::end()
 		get_current_resource_storage().descriptors_heap_index += texture_count;
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> texture_duration_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> texture_duration_end = steady_clock::now();
 	m_timers.texture_duration += std::chrono::duration_cast<std::chrono::microseconds>(texture_duration_end - texture_duration_start).count();
 	set_rtt_and_ds(get_current_resource_storage().command_list.Get());
 
@@ -449,7 +449,7 @@ void D3D12GSRender::end()
 	else
 		get_current_resource_storage().command_list->DrawInstanced((UINT)vertex_count, 1, 0, 0);
 
-	std::chrono::time_point<std::chrono::system_clock> end_duration = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> end_duration = steady_clock::now();
 	m_timers.draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
 	m_timers.draw_calls_count++;
 
@@ -633,7 +633,7 @@ void D3D12GSRender::flip(int buffer)
 
 	reset_timer();
 
-	std::chrono::time_point<std::chrono::system_clock> flip_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> flip_start = steady_clock::now();
 
 	CHECK_HRESULT(m_swap_chain->Present(g_cfg_rsx_vsync ? 1 : 0, 0));
 	// Add an event signaling queue completion
@@ -667,7 +667,7 @@ void D3D12GSRender::flip(int buffer)
 	m_frame->flip(nullptr);
 
 
-	std::chrono::time_point<std::chrono::system_clock> flip_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
 	m_timers.flip_duration += std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
 }
 

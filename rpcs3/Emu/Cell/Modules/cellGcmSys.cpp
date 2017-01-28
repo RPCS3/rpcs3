@@ -1290,7 +1290,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	cellGcmSys.trace("cellGcmCallback(context=*0x%x, count=0x%x)", context, count);
 
 	auto& ctrl = vm::_ref<CellGcmControl>(gcm_info.control_addr);
-	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
+	const std::chrono::time_point<steady_clock> enterWait = steady_clock::now();
 	// Flush command buffer (ie allow RSX to read up to context->current)
 	ctrl.put.exchange(getOffsetFromAddress(context->current.addr()));
 
@@ -1309,7 +1309,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 		u32 getPos = ctrl.get.load();
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
-		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
+		std::chrono::time_point<steady_clock> waitPoint = steady_clock::now();
 		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();
 		if (elapsedTime > 0)
 			cellGcmSys.error("Has wait for more than a second for command buffer to be released by RSX");
