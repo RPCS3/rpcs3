@@ -442,7 +442,7 @@ u32 arm_tls_manager::alloc()
 	return 0;
 }
 
-void arm_tls_manager::free(u32 addr)
+void arm_tls_manager::dealloc(u32 addr)
 {
 	if (!addr)
 	{
@@ -555,7 +555,7 @@ error_code sceKernelDeleteThread(s32 threadId)
 	//	return SCE_KERNEL_ERROR_NOT_DORMANT;
 	//}
 
-	fxm::get<arm_tls_manager>()->free(thread->TLS);
+	fxm::get<arm_tls_manager>()->dealloc(thread->TLS);
 	idm::remove<ARMv7Thread>(threadId);
 	return SCE_OK;
 }
@@ -567,7 +567,7 @@ error_code sceKernelExitDeleteThread(ARMv7Thread& cpu, s32 exitStatus)
 	//cpu.state += cpu_flag::stop;
 
 	// Delete current thread; exit status is stored in r0
-	fxm::get<arm_tls_manager>()->free(cpu.TLS);
+	fxm::get<arm_tls_manager>()->dealloc(cpu.TLS);
 	idm::remove<ARMv7Thread>(cpu.id);
 
 	return SCE_OK;

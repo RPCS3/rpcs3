@@ -7,7 +7,9 @@
 #include "../Common/BufferUtils.h"
 #include "D3D12Formats.h"
 #include "../rsx_methods.h"
-#include <Utilities/variant.hpp>
+#include "restore_new.h"
+#include "Utilities/variant.hpp"
+#include "define_new_memleakdetect.h"
 
 namespace
 {

@@ -11,6 +11,7 @@
 #include "../rpcs3/Emu/Cell/PPUOpcodes.h"
 #include "../rpcs3/Emu/Cell/PPUAnalyser.h"
 
+#include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #endif
@@ -20,6 +21,7 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+#include "define_new_memleakdetect.h"
 
 #include "../Utilities/types.h"
 #include "../Utilities/StrFmt.h"

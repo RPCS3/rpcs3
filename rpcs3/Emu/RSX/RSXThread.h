@@ -17,7 +17,9 @@
 #include "Utilities/Timer.h"
 #include "Utilities/geometry.h"
 #include "rsx_trace.h"
+#include "restore_new.h"
 #include "Utilities/variant.hpp"
+#include "define_new_memleakdetect.h"
 
 extern u64 get_system_time();
 

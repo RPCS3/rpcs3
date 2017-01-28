@@ -21,7 +21,7 @@ public:
 	u32 alloc();
 
 	// Deallocate by address
-	void free(u32 addr);
+	void dealloc(u32 addr);
 };
 
 // Error Codes

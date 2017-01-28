@@ -10,6 +10,7 @@
 #include "PPUModule.h"
 
 #ifdef LLVM_AVAILABLE
+#include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #endif
@@ -35,6 +36,7 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+#include "define_new_memleakdetect.h"
 
 #include "Utilities/JIT.h"
 #include "PPUTranslator.h"

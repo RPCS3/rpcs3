@@ -264,9 +264,9 @@ struct CellPngDecCbCtrlDisp
 // Custom structs
 struct PngHandle
 {
-	vm::ptr<CellPngDecCbControlMalloc> malloc;
+	vm::ptr<CellPngDecCbControlMalloc> malloc_;
 	vm::ptr<void> malloc_arg;
-	vm::ptr<CellPngDecCbControlFree> free;
+	vm::ptr<CellPngDecCbControlFree> free_;
 	vm::ptr<void> free_arg;
 };
 
