@@ -37,7 +37,7 @@ id_manager::id_map::pointer idm::allocate_id(std::pair<u32, u32> types, u32 base
 			return nullptr;
 		}
 
-		const u32 _next = map.rbegin()->first.id() + step;
+		const u32 _next = next + step * count;
 
 		if (_next > base && _next < base + step * count)
 		{
@@ -46,9 +46,15 @@ id_manager::id_map::pointer idm::allocate_id(std::pair<u32, u32> types, u32 base
 	}
 
 	// Check all IDs starting from "next id" (TODO)
-	for (next; next < base + step * count; next += step)
+	for (u32 i = 0; i < count; i++, next += step)
 	{
-		// Get ID
+		// Get correct ID value
+		if (next >= base + step * count)
+		{
+			next = base;
+		}
+
+		// Try to allocate ID storage
 		const auto result = map.emplace(id_manager::id_key(next, types.second), nullptr);
 
 		if (result.second)
@@ -64,9 +70,9 @@ id_manager::id_map::pointer idm::allocate_id(std::pair<u32, u32> types, u32 base
 	return nullptr;
 }
 
-id_manager::id_map::pointer idm::find_id(u32 type, u32 true_type, u32 id)
+id_manager::id_map::const_pointer idm::find_id(u32 type, u32 true_type, u32 id)
 {
-	auto& map = g_map[type];
+	const auto& map = g_map[type];
 
 	const auto found = map.find(id);
 

@@ -5,7 +5,7 @@
 
 #include <memory>
 #include <vector>
-#include <map>
+#include <unordered_map>
 
 // idm/fxm: helper namespace
 namespace id_manager
@@ -149,7 +149,15 @@ namespace id_manager
 		}
 	};
 
-	using id_map = std::map<id_key, std::shared_ptr<void>>;
+	struct id_hash
+	{
+		std::size_t operator()(const id_key& id) const
+		{
+			return id ^ (id >> 8);
+		}
+	};
+
+	using id_map = std::unordered_map<id_key, std::shared_ptr<void>, id_hash>;
 }
 
 // Object manager for emulated process. Multiple objects of specified arbitrary type are given unique IDs.
@@ -236,7 +244,7 @@ class idm
 	static std::shared_ptr<void> delete_id(u32 type, u32 true_type, u32 id);
 
 	// Get ID (additionally check true_type if not equal)
-	static id_manager::id_map::pointer find_id(u32 type, u32 true_type, u32 id);
+	static id_manager::id_map::const_pointer find_id(u32 type, u32 true_type, u32 id);
 
 	// Allocate new ID and assign the object from the provider()
 	template<typename T, typename Type, typename F>
@@ -509,28 +517,26 @@ public:
 	template<typename T, typename Get = T>
 	static inline explicit_bool_t remove(u32 id)
 	{
-		auto ptr = delete_id(get_type<T>(), get_type<Get>(), id);
-
-		if (LIKELY(ptr))
+		if (auto ptr = (writer_lock{id_manager::g_mutex}, delete_id(get_type<T>(), get_type<Get>(), id)))
 		{
 			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			return true;
 		}
 
-		return ptr.operator bool();
+		return false;
 	}
 
 	// Remove the ID and return the object
 	template<typename T, typename Get = T>
 	static inline std::shared_ptr<Get> withdraw(u32 id)
 	{
-		auto ptr = delete_id(get_type<T>(), get_type<Get>(), id);
-
-		if (LIKELY(ptr))
+		if (auto ptr = (writer_lock{id_manager::g_mutex}, delete_id(get_type<T>(), get_type<Get>(), id)))
 		{
 			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			return {ptr, static_cast<Get*>(ptr.get())};
 		}
 
-		return {ptr, static_cast<Get*>(ptr.get())};
+		return nullptr;
 	}
 
 	// Remove the ID after accessing the object under writer lock, return the object and propagate return value
@@ -553,8 +559,6 @@ public:
 			func(*static_cast<Get*>(found->second.get()));
 
 			ptr = delete_id(get_type<T>(), get_type<Get>(), id);
-
-			g_map[get_type<T>()].erase(id);
 		}
 
 		id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
@@ -590,8 +594,6 @@ public:
 			}
 
 			ptr = delete_id(get_type<T>(), get_type<Get>(), id);
-
-			g_map[get_type<T>()].erase(id);
 		}
 		
 		id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
