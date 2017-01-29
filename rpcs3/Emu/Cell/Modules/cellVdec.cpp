@@ -14,7 +14,6 @@ extern "C"
 #include "cellVdec.h"
 
 #include <mutex>
-#include <thread>
 #include <queue>
 #include <cmath>
 
@@ -77,7 +76,6 @@ struct vdec_thread : ppu_thread
 
 	std::mutex mutex;
 	std::queue<vdec_frame> out;
-	std::queue<u64> user_data; // TODO
 
 	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 		: ppu_thread("HLE Video Decoder")
@@ -338,6 +336,12 @@ struct vdec_thread : ppu_thread
 				}
 
 				cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
+
+				while (std::lock_guard<std::mutex>{mutex}, out.size() > 60)
+				{
+					thread_ctrl::wait();
+				}
+
 				break;
 			}
 
@@ -525,6 +529,11 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 		frame = std::move(vdec->out.front());
 
 		vdec->out.pop();
+
+		if (vdec->out.size() <= 60)
+		{
+			vdec->notify();
+		}
 	}
 
 	vdec->notify();
