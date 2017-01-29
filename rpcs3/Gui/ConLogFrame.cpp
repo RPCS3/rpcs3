@@ -264,7 +264,7 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 		return wxString::FromUTF8(buf.data(), size);
 	};
 
-	const auto start = std::chrono::high_resolution_clock::now();
+	const auto start = steady_clock::now();
 
 	// Check TTY logs
 	while (const u64 size = std::min<u64>(sizeof(buf), m_tty_file.size() - m_tty_file.pos()))
@@ -274,7 +274,7 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 		if (get_cfg_tty()) m_tty->AppendText(text);
 
 		// Limit processing time
-		if (std::chrono::high_resolution_clock::now() >= start + 4ms || text.empty()) break;
+		if (steady_clock::now() >= start + 4ms || text.empty()) break;
 	}
 
 	// Check main logs
@@ -309,6 +309,6 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 		s_gui_listener.pop();
 
 		// Limit processing time
-		if (std::chrono::high_resolution_clock::now() >= start + 7ms) break;
+		if (steady_clock::now() >= start + 7ms) break;
 	}
 }
