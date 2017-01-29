@@ -134,7 +134,7 @@ s32 cellOskDialogExtInputDeviceUnlock()
 s32 cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
-	return CELL_OK;
+	return CELL_OSKDIALOG_OK;
 }
 
 s32 cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
@@ -182,7 +182,7 @@ s32 cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
 s32 cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDialogConfirmWordFilterCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterConfirmWordFilterCallback(pCallback=*0x%x)", pCallback);
-	return CELL_OK;
+	return CELL_OSKDIALOG_OK;
 }
 
 s32 cellOskDialogExtUpdateInputText()
