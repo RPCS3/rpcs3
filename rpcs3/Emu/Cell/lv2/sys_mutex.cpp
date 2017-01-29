@@ -13,7 +13,7 @@ logs::channel sys_mutex("sys_mutex", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_mutex_t::unlock(lv2_lock_t)
+void lv2_mutex::unlock(lv2_lock_t)
 {
 	owner.reset();
 
@@ -58,7 +58,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 		return CELL_EINVAL;
 	}
 
-	*mutex_id = idm::make<lv2_mutex_t>(recursive, protocol, attr->name_u64);
+	*mutex_id = idm::make<lv2_obj, lv2_mutex>(recursive, protocol, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -69,7 +69,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_mutex_t>(mutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
 
 	if (!mutex)
 	{
@@ -86,7 +86,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 		return CELL_EPERM;
 	}
 
-	idm::remove<lv2_mutex_t>(mutex_id);
+	idm::remove<lv2_obj, lv2_mutex>(mutex_id);
 
 	return CELL_OK;
 }
@@ -99,7 +99,7 @@ s32 sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_mutex_t>(mutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
 
 	if (!mutex)
 	{
@@ -171,7 +171,7 @@ s32 sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_mutex_t>(mutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
 
 	if (!mutex)
 	{
@@ -213,7 +213,7 @@ s32 sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_mutex_t>(mutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
 
 	if (!mutex)
 	{

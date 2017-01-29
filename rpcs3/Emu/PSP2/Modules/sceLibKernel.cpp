@@ -809,8 +809,8 @@ s32 sceKernelWaitMultipleEventsCB(vm::ptr<SceKernelWaitEvent> pWaitEventList, s3
 struct psp2_event_flag final
 {
 	static const u32 id_base = 1;
-	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
+	static const u32 id_step = 2;
+	static const u32 id_count = 8192;
 
 	using ipc = ipc_manager<psp2_event_flag, std::string>;
 

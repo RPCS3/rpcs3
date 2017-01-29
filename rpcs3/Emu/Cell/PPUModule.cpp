@@ -733,7 +733,7 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 	}
 }
 
-std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
+std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf)
 {
 	std::vector<std::pair<u32, u32>> segments;
 	std::vector<std::pair<u32, u32>> sections;
@@ -887,7 +887,7 @@ std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object& elf)
 	const auto link = fxm::get_always<ppu_linkage_info>();
 
 	// Create new PRX object
-	auto prx = idm::make_ptr<lv2_prx_t>();
+	auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
 	if (!elf.progs.empty() && elf.progs[0].p_paddr)
 	{

@@ -278,7 +278,7 @@ void audio_config::on_task()
 
 			for (u64 key : keys)
 			{
-				if (auto&& queue = lv2_event_queue_t::find(key))
+				if (auto&& queue = lv2_event_queue::find(key))
 				{
 					if (queue->events() < queue->size)
 						queue->push(lv2_lock, 0, 0, 0, 0); // TODO: check arguments
@@ -656,7 +656,7 @@ s32 cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 		const u64 key_value = 0x80004d494f323221ull + k;
 
 		// Create an event queue "bruteforcing" an available key
-		if (auto&& queue = lv2_event_queue_t::make(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0, key_value, 32))
+		if (auto&& queue = lv2_event_queue::make(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0, key_value, 32))
 		{
 			*id = queue->id;
 			*key = key_value;

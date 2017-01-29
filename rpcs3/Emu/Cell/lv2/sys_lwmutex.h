@@ -44,11 +44,9 @@ struct sys_lwmutex_t
 	be_t<u32> pad;
 };
 
-struct lv2_lwmutex_t
+struct lv2_lwmutex final : lv2_obj
 {
 	static const u32 id_base = 0x95000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u32 protocol;
 	const u64 name;
@@ -58,7 +56,7 @@ struct lv2_lwmutex_t
 
 	sleep_queue<cpu_thread> sq;
 
-	lv2_lwmutex_t(u32 protocol, u64 name)
+	lv2_lwmutex(u32 protocol, u64 name)
 		: protocol(protocol)
 		, name(name)
 	{

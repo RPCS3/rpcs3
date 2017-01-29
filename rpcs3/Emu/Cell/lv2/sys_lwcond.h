@@ -17,22 +17,20 @@ struct sys_lwcond_t
 	be_t<u32> lwcond_queue; // lwcond pseudo-id
 };
 
-struct lv2_lwcond_t
+struct lv2_lwcond final : lv2_obj
 {
 	static const u32 id_base = 0x97000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u64 name;
 
 	sleep_queue<cpu_thread> sq;
 
-	lv2_lwcond_t(u64 name)
+	lv2_lwcond(u64 name)
 		: name(name)
 	{
 	}
 
-	void notify(lv2_lock_t, cpu_thread* thread, const std::shared_ptr<lv2_lwmutex_t>& mutex, bool mode2);
+	void notify(lv2_lock_t, cpu_thread* thread, const std::shared_ptr<lv2_lwmutex>& mutex, bool mode2);
 };
 
 // Aux

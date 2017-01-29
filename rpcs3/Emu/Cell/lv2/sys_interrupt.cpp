@@ -12,7 +12,7 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_interrupt("sys_interrupt", logs::level::notice);
 
-lv2_int_serv_t::lv2_int_serv_t(const std::shared_ptr<ppu_thread>& thread, u64 arg1, u64 arg2)
+lv2_int_serv::lv2_int_serv(const std::shared_ptr<ppu_thread>& thread, u64 arg1, u64 arg2)
 	: thread(thread)
 	, arg1(arg1)
 	, arg2(arg2)
@@ -20,7 +20,7 @@ lv2_int_serv_t::lv2_int_serv_t(const std::shared_ptr<ppu_thread>& thread, u64 ar
 {
 }
 
-void lv2_int_serv_t::exec()
+void lv2_int_serv::exec()
 {
 	thread->cmd_list
 	({
@@ -31,7 +31,7 @@ void lv2_int_serv_t::exec()
 	thread->notify();
 }
 
-void lv2_int_serv_t::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
+void lv2_int_serv::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
 {
 	// Enqueue _sys_ppu_thread_exit call
 	thread->cmd_list
@@ -52,7 +52,7 @@ void lv2_int_serv_t::join(ppu_thread& ppu, lv2_lock_t lv2_lock)
 	}
 
 	// Cleanup
-	idm::remove<lv2_int_serv_t>(id);
+	idm::remove<lv2_obj, lv2_int_serv>(id);
 }
 
 s32 sys_interrupt_tag_destroy(u32 intrtag)
@@ -61,7 +61,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 
 	LV2_LOCK;
 
-	const auto tag = idm::get<lv2_int_tag_t>(intrtag);
+	const auto tag = idm::get<lv2_obj, lv2_int_tag>(intrtag);
 
 	if (!tag)
 	{
@@ -73,7 +73,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 		return CELL_EBUSY;
 	}
 
-	idm::remove<lv2_int_tag_t>(intrtag);
+	idm::remove<lv2_obj, lv2_int_tag>(intrtag);
 
 	return CELL_OK;
 }
@@ -85,7 +85,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	LV2_LOCK;
 
 	// Get interrupt tag
-	const auto tag = idm::get<lv2_int_tag_t>(intrtag);
+	const auto tag = idm::get<lv2_obj, lv2_int_tag>(intrtag);
 
 	if (!tag)
 	{
@@ -113,7 +113,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 		return CELL_ESTAT;
 	}
 
-	tag->handler = idm::make_ptr<lv2_int_serv_t>(it, arg1, arg2);
+	tag->handler = idm::make_ptr<lv2_obj, lv2_int_serv>(it, arg1, arg2);
 
 	it->run();
 
@@ -128,7 +128,7 @@ s32 _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u64> r13
 
 	LV2_LOCK;
 
-	const auto handler = idm::get<lv2_int_serv_t>(ih);
+	const auto handler = idm::get<lv2_obj, lv2_int_serv>(ih);
 
 	if (!handler)
 	{
@@ -160,7 +160,7 @@ void sys_interrupt_thread_eoi(ppu_thread& ppu) // Low-level PPU function example
 	}
 }
 
-lv2_int_tag_t::lv2_int_tag_t()
+lv2_int_tag::lv2_int_tag()
 	: id(idm::last_id())
 {
 }

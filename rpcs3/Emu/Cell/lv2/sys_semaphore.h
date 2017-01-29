@@ -17,11 +17,9 @@ struct sys_semaphore_attribute_t
 	};
 };
 
-struct lv2_sema_t
+struct lv2_sema final : lv2_obj
 {
 	static const u32 id_base = 0x96000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u32 protocol;
 	const s32 max;
@@ -31,7 +29,7 @@ struct lv2_sema_t
 
 	sleep_queue<cpu_thread> sq;
 
-	lv2_sema_t(u32 protocol, s32 max, u64 name, s32 value)
+	lv2_sema(u32 protocol, s32 max, u64 name, s32 value)
 		: protocol(protocol)
 		, max(max)
 		, name(name)

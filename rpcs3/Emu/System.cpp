@@ -49,7 +49,7 @@ extern u64 get_system_time();
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
-extern std::shared_ptr<struct lv2_prx_t> ppu_load_prx(const ppu_prx_object&);
+extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&);
 
 fs::file g_tty;
 
@@ -346,10 +346,15 @@ void Emulator::Run()
 	m_pause_amend_time = 0;
 	m_status = Running;
 
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.run();
-	});
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	SendDbgCommand(DID_STARTED_EMU);
 }
@@ -374,10 +379,15 @@ bool Emulator::Pause()
 
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_pause;
-	});
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	SendDbgCommand(DID_PAUSED_EMU);
 
@@ -411,11 +421,16 @@ void Emulator::Resume()
 	{
 		LV2_LOCK;
 
-		idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+		auto on_select = [](u32, cpu_thread& cpu)
 		{
 			cpu.state -= cpu_flag::dbg_global_pause;
 			cpu.notify();
-		});
+		};
+
+		idm::select<ppu_thread>(on_select);
+		idm::select<ARMv7Thread>(on_select);
+		idm::select<RawSPUThread>(on_select);
+		idm::select<SPUThread>(on_select);
 	}
 
 	rpcs3::on_resume()();
@@ -438,12 +453,16 @@ void Emulator::Stop()
 	{
 		LV2_LOCK;
 
-		idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+		auto on_select = [](u32, cpu_thread& cpu)
 		{
 			cpu.state += cpu_flag::dbg_global_stop;
 			cpu.get()->set_exception(std::make_exception_ptr(EmulationStopped()));
-			cpu.notify();
-		});
+		};
+
+		idm::select<ppu_thread>(on_select);
+		idm::select<ARMv7Thread>(on_select);
+		idm::select<RawSPUThread>(on_select);
+		idm::select<SPUThread>(on_select);
 	}
 
 	LOG_NOTICE(GENERAL, "All threads signaled...");

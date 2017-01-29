@@ -42,7 +42,7 @@ s32 sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t>
 		return CELL_EINVAL;
 	}
 
-	*sem_id = idm::make<lv2_sema_t>(protocol, max_val, attr->name_u64, initial_val);
+	*sem_id = idm::make<lv2_obj, lv2_sema>(protocol, max_val, attr->name_u64, initial_val);
 
 	return CELL_OK;
 }
@@ -53,7 +53,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 
 	LV2_LOCK;
 
-	const auto sem = idm::get<lv2_sema_t>(sem_id);
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id);
 
 	if (!sem)
 	{
@@ -65,7 +65,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 		return CELL_EBUSY;
 	}
 
-	idm::remove<lv2_sema_t>(sem_id);
+	idm::remove<lv2_obj, lv2_sema>(sem_id);
 
 	return CELL_OK;
 }
@@ -78,7 +78,7 @@ s32 sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto sem = idm::get<lv2_sema_t>(sem_id);
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id);
 
 	if (!sem)
 	{
@@ -125,7 +125,7 @@ s32 sys_semaphore_trywait(u32 sem_id)
 
 	LV2_LOCK;
 
-	const auto sem = idm::get<lv2_sema_t>(sem_id);
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id);
 
 	if (!sem)
 	{
@@ -148,7 +148,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 
 	LV2_LOCK;
 
-	const auto sem = idm::get<lv2_sema_t>(sem_id);
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id);
 
 	if (!sem)
 	{
@@ -197,7 +197,7 @@ s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 		return CELL_EFAULT;
 	}
 
-	const auto sem = idm::get<lv2_sema_t>(sem_id);
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id);
 
 	if (!sem)
 	{

@@ -10,7 +10,7 @@
 
 namespace vm { using namespace ps3; }
 
-extern std::shared_ptr<lv2_prx_t> ppu_load_prx(const ppu_prx_object&);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&);
 
 logs::channel sys_prx("sys_prx", logs::level::notice);
 
@@ -83,7 +83,7 @@ s32 sys_prx_start_module(s32 id, u64 flags, vm::ptr<sys_prx_start_module_option_
 {
 	sys_prx.warning("sys_prx_start_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
-	const auto prx = idm::get<lv2_prx_t>(id);
+	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
 
 	if (!prx)
 	{
@@ -103,7 +103,7 @@ s32 sys_prx_stop_module(s32 id, u64 flags, vm::ptr<sys_prx_stop_module_option_t>
 {
 	sys_prx.warning("sys_prx_stop_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
-	const auto prx = idm::get<lv2_prx_t>(id);
+	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
 
 	if (!prx)
 	{
@@ -124,7 +124,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	sys_prx.warning("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
 	// Get the PRX, free the used memory and delete the object and its ID
-	const auto prx = idm::get<lv2_prx_t>(id);
+	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
 
 	if (!prx)
 	{
@@ -134,7 +134,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	//Memory.Free(prx->address);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
-	idm::remove<lv2_prx_t>(id);
+	idm::remove<lv2_obj, lv2_prx>(id);
 	
 	return CELL_OK;
 }
@@ -232,7 +232,7 @@ s32 sys_prx_stop()
 	return CELL_OK;
 }
 
-lv2_prx_t::lv2_prx_t()
+lv2_prx::lv2_prx()
 	: id(idm::last_id())
 {
 }

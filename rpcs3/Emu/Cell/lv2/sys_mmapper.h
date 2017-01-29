@@ -1,12 +1,11 @@
 #pragma once
 
+#include "sys_sync.h"
 #include "sys_memory.h"
 
-struct lv2_memory
+struct lv2_memory : lv2_obj
 {
 	static const u32 id_base = 0x08000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u32 size; // Memory size
 	const u32 align; // Alignment required

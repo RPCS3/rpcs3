@@ -497,8 +497,8 @@ struct SceKernelSemaInfo
 struct psp2_semaphore
 {
 	static const u32 id_base = 1;
-	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
+	static const u32 id_step = 2;
+	static const u32 id_count = 8192;
 
 	const std::string name; // IPC Name
 
@@ -541,8 +541,8 @@ struct SceKernelMutexInfo
 struct psp2_mutex
 {
 	static const u32 id_base = 1;
-	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
+	static const u32 id_step = 2;
+	static const u32 id_count = 8192;
 
 	const std::string name; // IPC Name
 
@@ -605,8 +605,8 @@ struct SceKernelCondInfo
 struct psp2_cond
 {
 	static const u32 id_base = 1;
-	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
+	static const u32 id_step = 2;
+	static const u32 id_count = 8192;
 
 	const std::string name; // IPC Name
 

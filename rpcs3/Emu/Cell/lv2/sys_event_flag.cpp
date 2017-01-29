@@ -15,7 +15,7 @@ logs::channel sys_event_flag("sys_event_flag", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_event_flag_t::notify_all(lv2_lock_t)
+void lv2_event_flag::notify_all(lv2_lock_t)
 {
 	auto pred = [this](cpu_thread* thread) -> bool
 	{
@@ -74,7 +74,7 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> a
 		return CELL_EINVAL;
 	}
 
-	*id = idm::make<lv2_event_flag_t>(init, protocol, type, attr->name_u64);
+	*id = idm::make<lv2_obj, lv2_event_flag>(init, protocol, type, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -85,7 +85,7 @@ s32 sys_event_flag_destroy(u32 id)
 
 	LV2_LOCK;
 
-	const auto eflag = idm::get<lv2_event_flag_t>(id);
+	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
 
 	if (!eflag)
 	{
@@ -97,7 +97,7 @@ s32 sys_event_flag_destroy(u32 id)
 		return CELL_EBUSY;
 	}
 
-	idm::remove<lv2_event_flag_t>(id);
+	idm::remove<lv2_obj, lv2_event_flag>(id);
 
 	return CELL_OK;
 }
@@ -117,13 +117,13 @@ s32 sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u
 
 	if (result) *result = 0; // This is very annoying.
 
-	if (!lv2_event_flag_t::check_mode(mode))
+	if (!lv2_event_flag::check_mode(mode))
 	{
 		sys_event_flag.error("sys_event_flag_wait(): unknown mode (0x%x)", mode);
 		return CELL_EINVAL;
 	}
 
-	const auto eflag = idm::get<lv2_event_flag_t>(id);
+	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
 
 	if (!eflag)
 	{
@@ -193,13 +193,13 @@ s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 
 	if (result) *result = 0; // This is very annoying.
 
-	if (!lv2_event_flag_t::check_mode(mode))
+	if (!lv2_event_flag::check_mode(mode))
 	{
 		sys_event_flag.error("sys_event_flag_trywait(): unknown mode (0x%x)", mode);
 		return CELL_EINVAL;
 	}
 
-	const auto eflag = idm::get<lv2_event_flag_t>(id);
+	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
 
 	if (!eflag)
 	{
@@ -224,7 +224,7 @@ s32 sys_event_flag_set(u32 id, u64 bitptn)
 
 	LV2_LOCK;
 
-	const auto eflag = idm::get<lv2_event_flag_t>(id);
+	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
 
 	if (!eflag)
 	{
@@ -245,7 +245,7 @@ s32 sys_event_flag_clear(u32 id, u64 bitptn)
 
 	LV2_LOCK;
 
-	const auto eflag = idm::get<lv2_event_flag_t>(id);
+	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
 
 	if (!eflag)
 	{
@@ -268,7 +268,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		*num = 0;
 	}
 
-	const auto eflag = idm::get<lv2_event_flag_t>(id);
+	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
 
 	if (!eflag)
 	{
@@ -312,7 +312,7 @@ s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags)
 		return CELL_EFAULT;
 	}
 
-	const auto eflag = idm::get<lv2_event_flag_t>(id);
+	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
 
 	if (!eflag)
 	{

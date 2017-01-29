@@ -16,7 +16,7 @@ logs::channel sys_cond("sys_cond", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_cond_t::notify(lv2_lock_t, cpu_thread* thread)
+void lv2_cond::notify(lv2_lock_t, cpu_thread* thread)
 {
 	if (mutex->owner)
 	{
@@ -36,7 +36,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_mutex_t>(mutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
 
 	if (!mutex)
 	{
@@ -54,7 +54,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 		fmt::throw_exception("Unexpected cond_count" HERE);
 	}
 
-	*cond_id = idm::make<lv2_cond_t>(mutex, attr->name_u64);
+	*cond_id = idm::make<lv2_obj, lv2_cond>(mutex, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -65,7 +65,7 @@ s32 sys_cond_destroy(u32 cond_id)
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_cond_t>(cond_id);
+	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id);
 
 	if (!cond)
 	{
@@ -82,7 +82,7 @@ s32 sys_cond_destroy(u32 cond_id)
 		fmt::throw_exception("Unexpected cond_count" HERE);
 	}
 
-	idm::remove<lv2_cond_t>(cond_id);
+	idm::remove<lv2_obj, lv2_cond>(cond_id);
 
 	return CELL_OK;
 }
@@ -93,7 +93,7 @@ s32 sys_cond_signal(u32 cond_id)
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_cond_t>(cond_id);
+	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id);
 
 	if (!cond)
 	{
@@ -116,7 +116,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_cond_t>(cond_id);
+	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id);
 
 	if (!cond)
 	{
@@ -140,7 +140,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_cond_t>(cond_id);
+	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id);
 
 	if (!cond)
 	{
@@ -173,7 +173,7 @@ s32 sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_cond_t>(cond_id);
+	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id);
 
 	if (!cond)
 	{

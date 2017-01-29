@@ -34,7 +34,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	lwmutex->lock_var.store({ lwmutex_free, 0 });
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
-	lwmutex->sleep_queue = idm::make<lv2_lwmutex_t>(protocol, reinterpret_cast<u64&>(attr->name));
+	lwmutex->sleep_queue = idm::make<lv2_obj, lv2_lwmutex>(protocol, reinterpret_cast<u64&>(attr->name));
 
 	return CELL_OK;
 }

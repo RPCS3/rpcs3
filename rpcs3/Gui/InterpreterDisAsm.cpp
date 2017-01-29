@@ -122,10 +122,15 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 	m_choice_units->Freeze();
 	m_choice_units->Clear();
 
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([&](u32, cpu_thread& cpu)
+	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		m_choice_units->Append(cpu.get_name(), &cpu);
-	});
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	m_choice_units->Thaw();
 }

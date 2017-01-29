@@ -13,7 +13,7 @@ logs::channel sys_lwmutex("sys_lwmutex", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_lwmutex_t::unlock(lv2_lock_t)
+void lv2_lwmutex::unlock(lv2_lock_t)
 {
 	if (signaled)
 	{
@@ -48,7 +48,7 @@ s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmut
 		fmt::throw_exception("Unknown arguments (arg4=0x%x, arg6=0x%x)" HERE, arg4, arg6);
 	}
 
-	*lwmutex_id = idm::make<lv2_lwmutex_t>(protocol, name);
+	*lwmutex_id = idm::make<lv2_obj, lv2_lwmutex>(protocol, name);
 
 	return CELL_OK;
 }
@@ -59,7 +59,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -71,7 +71,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 		return CELL_EBUSY;
 	}
 
-	idm::remove<lv2_lwmutex_t>(lwmutex_id);
+	idm::remove<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	return CELL_OK;
 }
@@ -84,7 +84,7 @@ s32 _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -131,7 +131,7 @@ s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -154,7 +154,7 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!mutex)
 	{

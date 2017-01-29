@@ -14,7 +14,7 @@ logs::channel sys_lwcond("sys_lwcond", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_lwcond_t::notify(lv2_lock_t, cpu_thread* thread, const std::shared_ptr<lv2_lwmutex_t>& mutex, bool mode2)
+void lv2_lwcond::notify(lv2_lock_t, cpu_thread* thread, const std::shared_ptr<lv2_lwmutex>& mutex, bool mode2)
 {
 	auto& ppu = static_cast<ppu_thread&>(*thread);
 
@@ -37,7 +37,7 @@ s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcon
 {
 	sys_lwcond.warning("_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx, arg5=0x%x)", lwcond_id, lwmutex_id, control, name, arg5);
 
-	*lwcond_id = idm::make<lv2_lwcond_t>(name);
+	*lwcond_id = idm::make<lv2_obj, lv2_lwcond>(name);
 
 	return CELL_OK;
 }
@@ -48,7 +48,7 @@ s32 _sys_lwcond_destroy(u32 lwcond_id)
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_lwcond_t>(lwcond_id);
+	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id);
 
 	if (!cond)
 	{
@@ -60,7 +60,7 @@ s32 _sys_lwcond_destroy(u32 lwcond_id)
 		return CELL_EBUSY;
 	}
 
-	idm::remove<lv2_lwcond_t>(lwcond_id);
+	idm::remove<lv2_obj, lv2_lwcond>(lwcond_id);
 
 	return CELL_OK;
 }
@@ -71,8 +71,8 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_lwcond_t>(lwcond_id);
-	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
+	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id);
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!cond || (lwmutex_id && !mutex))
 	{
@@ -124,8 +124,8 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_lwcond_t>(lwcond_id);
-	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
+	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id);
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!cond || (lwmutex_id && !mutex))
 	{
@@ -162,8 +162,8 @@ s32 _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 t
 
 	LV2_LOCK;
 
-	const auto cond = idm::get<lv2_lwcond_t>(lwcond_id);
-	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
+	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id);
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 	if (!cond || !mutex)
 	{

@@ -5,9 +5,9 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "MFC.h"
 
-class lv2_event_queue_t;
-struct lv2_spu_group_t;
-struct lv2_int_tag_t;
+class lv2_event_queue;
+struct lv2_spu_group;
+struct lv2_int_tag;
 
 // SPU Channels
 enum : u32
@@ -343,7 +343,7 @@ struct spu_int_ctrl_t
 	atomic_t<u64> mask;
 	atomic_t<u64> stat;
 
-	std::shared_ptr<struct lv2_int_tag_t> tag;
+	std::shared_ptr<struct lv2_int_tag> tag;
 
 	void set(u64 ints);
 
@@ -503,7 +503,7 @@ protected:
 public:
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = 65535;
+	static const u32 id_count = 2048;
 
 	SPUThread(const std::string& name, u32 index);
 
@@ -544,10 +544,10 @@ public:
 
 	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
 
-	std::weak_ptr<lv2_spu_group_t> tg; // SPU Thread Group
+	std::weak_ptr<lv2_spu_group> tg; // SPU Thread Group
 
-	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
-	std::weak_ptr<lv2_event_queue_t> spup[64]; // SPU Ports
+	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue>>, 32> spuq; // Event Queue Keys for SPU Thread
+	std::weak_ptr<lv2_event_queue> spup[64]; // SPU Ports
 
 	u32 pc = 0; // 
 	const u32 index; // SPU index

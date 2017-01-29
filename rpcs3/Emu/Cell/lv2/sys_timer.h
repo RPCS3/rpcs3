@@ -17,14 +17,12 @@ struct sys_timer_information_t
 	be_t<u32> pad;
 };
 
-class lv2_timer_t final : public named_thread
+class lv2_timer final : public lv2_obj, public named_thread
 {
 	void on_task() override;
 
 public:
 	static const u32 id_base = 0x11000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	std::string get_name() const override;
 
@@ -34,7 +32,7 @@ public:
 
 	atomic_t<u32> state{ SYS_TIMER_STATE_RUN }; // Timer state
 
-	std::weak_ptr<lv2_event_queue_t> port; // Event queue
+	std::weak_ptr<lv2_event_queue> port; // Event queue
 	u64 source; // Event source
 	u64 data1; // Event arg 1
 	u64 data2; // Event arg 2

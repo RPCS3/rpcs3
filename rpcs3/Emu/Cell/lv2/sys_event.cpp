@@ -14,17 +14,17 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_event("sys_event", logs::level::notice);
 
-template<> DECLARE(ipc_manager<lv2_event_queue_t, u64>::g_ipc) {};
+template<> DECLARE(ipc_manager<lv2_event_queue, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
-std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
+std::shared_ptr<lv2_event_queue> lv2_event_queue::make(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
 {
-	std::shared_ptr<lv2_event_queue_t> result;
+	std::shared_ptr<lv2_event_queue> result;
 
-	auto make_expr = [&]() -> const std::shared_ptr<lv2_event_queue_t>&
+	auto make_expr = [&]() -> const std::shared_ptr<lv2_event_queue>&
 	{
-		result = idm::make_ptr<lv2_event_queue_t>(protocol, type, name, ipc_key, size);
+		result = idm::make_ptr<lv2_obj, lv2_event_queue>(protocol, type, name, ipc_key, size);
 		return result;
 	};
 
@@ -36,7 +36,7 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 typ
 	}
 
 	// IPC queue
-	if (ipc_manager<lv2_event_queue_t, u64>::add(ipc_key, make_expr))
+	if (ipc_manager<lv2_event_queue, u64>::add(ipc_key, make_expr))
 	{
 		return result;
 	}
@@ -44,7 +44,7 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 typ
 	return nullptr;
 }
 
-std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
+std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 {
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
 	{
@@ -52,10 +52,10 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
 		return{};
 	}
 
-	return ipc_manager<lv2_event_queue_t, u64>::get(ipc_key);
+	return ipc_manager<lv2_event_queue, u64>::get(ipc_key);
 }
 
-lv2_event_queue_t::lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
+lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
 	: protocol(protocol)
 	, type(type)
 	, name(name)
@@ -65,7 +65,7 @@ lv2_event_queue_t::lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 ipc_k
 {
 }
 
-void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3)
+void lv2_event_queue::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3)
 {
 	verify(HERE), m_sq.empty() || m_events.empty();
 
@@ -105,7 +105,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	return m_sq.pop_front();
 }
 
-lv2_event_queue_t::event_type lv2_event_queue_t::pop(lv2_lock_t)
+lv2_event_queue::event_type lv2_event_queue::pop(lv2_lock_t)
 {
 	verify(HERE), m_events.size();
 	auto result = m_events.front();
@@ -138,7 +138,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attri
 		return CELL_EINVAL;
 	}
 
-	const auto queue = lv2_event_queue_t::make(protocol, type, reinterpret_cast<u64&>(attr->name), event_queue_key, size);
+	const auto queue = lv2_event_queue::make(protocol, type, reinterpret_cast<u64&>(attr->name), event_queue_key, size);
 
 	if (!queue)
 	{
@@ -156,7 +156,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 
 	LV2_LOCK;
 
-	const auto queue = idm::get<lv2_event_queue_t>(equeue_id);
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
 
 	if (!queue)
 	{
@@ -174,7 +174,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	}
 
 	// cleanup
-	idm::remove<lv2_event_queue_t>(equeue_id);
+	idm::remove<lv2_obj, lv2_event_queue>(equeue_id);
 
 	// signal all threads to return CELL_ECANCELED
 	for (auto& thread : queue->thread_queue(lv2_lock))
@@ -205,7 +205,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	LV2_LOCK;
 
-	const auto queue = idm::get<lv2_event_queue_t>(equeue_id);
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
 
 	if (!queue)
 	{
@@ -244,7 +244,7 @@ s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t>
 
 	LV2_LOCK;
 
-	const auto queue = idm::get<lv2_event_queue_t>(equeue_id);
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
 
 	if (!queue)
 	{
@@ -305,7 +305,7 @@ s32 sys_event_queue_drain(u32 equeue_id)
 
 	LV2_LOCK;
 
-	const auto queue = idm::get<lv2_event_queue_t>(equeue_id);
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
 
 	if (!queue)
 	{
@@ -327,7 +327,7 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 		return CELL_EINVAL;
 	}
 
-	*eport_id = idm::make<lv2_event_port_t>(port_type, name);
+	*eport_id = idm::make<lv2_obj, lv2_event_port>(port_type, name);
 
 	return CELL_OK;
 }
@@ -338,7 +338,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 
 	LV2_LOCK;
 
-	const auto port = idm::get<lv2_event_port_t>(eport_id);
+	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
 
 	if (!port)
 	{
@@ -350,7 +350,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 		return CELL_EISCONN;
 	}
 
-	idm::remove<lv2_event_port_t>(eport_id);
+	idm::remove<lv2_obj, lv2_event_port>(eport_id);
 
 	return CELL_OK;
 }
@@ -361,8 +361,8 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 
 	LV2_LOCK;
 
-	const auto port = idm::get<lv2_event_port_t>(eport_id);
-	const auto queue = idm::get<lv2_event_queue_t>(equeue_id);
+	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
 
 	if (!port || !queue)
 	{
@@ -390,7 +390,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 
 	LV2_LOCK;
 
-	const auto port = idm::get<lv2_event_port_t>(eport_id);
+	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
 
 	if (!port)
 	{
@@ -417,7 +417,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	LV2_LOCK;
 
-	const auto port = idm::get<lv2_event_port_t>(eport_id);
+	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
 
 	if (!port)
 	{

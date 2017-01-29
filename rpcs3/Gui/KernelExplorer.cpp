@@ -19,6 +19,10 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_spu.h"
+#include "Emu/Cell/lv2/sys_interrupt.h"
+#include "Emu/Cell/lv2/sys_timer.h"
+#include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 
 #include "KernelExplorer.h"
 
@@ -57,7 +61,15 @@ KernelExplorer::KernelExplorer(wxWindow* parent)
 void KernelExplorer::Update()
 {
 	m_tree->DeleteAllItems();
-	const u32 total_memory_usage = vm::get(vm::user_space)->used();
+
+	const auto vm_block = vm::get(vm::user_space);
+
+	if (!vm_block)
+	{
+		return;
+	}
+
+	const u32 total_memory_usage = vm_block->used();
 
 	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
@@ -67,11 +79,11 @@ void KernelExplorer::Update()
 		char string[8];
 
 		name64(u64 data)
-			: u64_data(data & 0x00ffffffffffffffull)
+		    : u64_data(data & 0x00ffffffffffffffull)
 		{
 		}
 
-		const char* operator &() const
+		const char* operator+() const
 		{
 			return string;
 		}
@@ -79,167 +91,203 @@ void KernelExplorer::Update()
 
 	// TODO: FileSystem
 
-	// Semaphores
-	if (const u32 count = idm::get_count<lv2_sema_t>())
+	struct lv2_obj_rec
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Semaphores (%zu)", count));
+		wxTreeItemId node;
+		u32 count{0};
 
-		idm::select<lv2_sema_t>([&](u32 id, lv2_sema_t& sema)
+		lv2_obj_rec() = default;
+		lv2_obj_rec(wxTreeItemId node)
+			: node(node)
 		{
-			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x '%s', Count = %d, Max Count = %d, Waiters = %#zu", id,
-				&name64(sema.name), sema.value.load(), sema.max, sema.sq.size()));
-		});
-	}
+		}
+	};
 
-	// Mutexes
-	if (const u32 count = idm::get_count<lv2_mutex_t>())
+	std::vector<lv2_obj_rec> lv2_types(256);
+	lv2_types[SYS_MEM_OBJECT] = m_tree->AppendItem(root, "Memory");
+	lv2_types[SYS_MUTEX_OBJECT] = m_tree->AppendItem(root, "Mutexes");
+	lv2_types[SYS_COND_OBJECT] = m_tree->AppendItem(root, "Condition Variables");
+	lv2_types[SYS_RWLOCK_OBJECT] = m_tree->AppendItem(root, "Reader Writer Locks");
+	lv2_types[SYS_INTR_TAG_OBJECT] = m_tree->AppendItem(root, "Interrupt Tags");
+	lv2_types[SYS_INTR_SERVICE_HANDLE_OBJECT] = m_tree->AppendItem(root, "Interrupt Service Handles");
+	lv2_types[SYS_EVENT_QUEUE_OBJECT] = m_tree->AppendItem(root, "Event Queues");
+	lv2_types[SYS_EVENT_PORT_OBJECT] = m_tree->AppendItem(root, "Event Ports");
+	lv2_types[SYS_TRACE_OBJECT] = m_tree->AppendItem(root, "Traces");
+	lv2_types[SYS_SPUIMAGE_OBJECT] = m_tree->AppendItem(root, "SPU Images");
+	lv2_types[SYS_PRX_OBJECT] = m_tree->AppendItem(root, "Modules");
+	lv2_types[SYS_SPUPORT_OBJECT] = m_tree->AppendItem(root, "SPU Ports");
+	lv2_types[SYS_LWMUTEX_OBJECT] = m_tree->AppendItem(root, "Light Weight Mutexes");
+	lv2_types[SYS_TIMER_OBJECT] = m_tree->AppendItem(root, "Timers");
+	lv2_types[SYS_SEMAPHORE_OBJECT] = m_tree->AppendItem(root, "Semaphores");
+	lv2_types[SYS_LWCOND_OBJECT] = m_tree->AppendItem(root, "Light Weight Condition Variables");
+	lv2_types[SYS_EVENT_FLAG_OBJECT] = m_tree->AppendItem(root, "Event Flags");
+
+	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Mutexes (%zu)", count));
+		lv2_types[id >> 24].count++;
 
-		idm::select<lv2_mutex_t>([&](u32 id, lv2_mutex_t& mutex)
+		if (auto& node = lv2_types[id >> 24].node) switch (id >> 24)
 		{
-			m_tree->AppendItem(node, fmt::format("Mutex: ID = 0x%08x '%s'", id,
-				&name64(mutex.name)));
-		});
-	}
-
-	// Lightweight Mutexes
-	if (const u32 count = idm::get_count<lv2_lwmutex_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Mutexes (%zu)", count));
-
-		idm::select<lv2_lwmutex_t>([&](u32 id, lv2_lwmutex_t& lwm)
+		case SYS_MEM_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("LWMutex: ID = 0x%08x '%s'", id,
-				&name64(lwm.name)));
-		});
-	}
-
-	// Condition Variables
-	if (const u32 count = idm::get_count<lv2_cond_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Condition Variables (%zu)", count));
-
-		idm::select<lv2_cond_t>([&](u32 id, lv2_cond_t& cond)
+			auto& mem = static_cast<lv2_memory&>(obj);
+			m_tree->AppendItem(node, fmt::format("Memory: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_MUTEX_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("Cond: ID = 0x%08x '%s'", id,
-				&name64(cond.name)));
-		});
-	}
-
-	// Lightweight Condition Variables
-	if (const u32 count = idm::get_count<lv2_lwcond_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Condition Variables (%zu)", count));
-
-		idm::select<lv2_lwcond_t>([&](u32 id, lv2_lwcond_t& lwc)
+			auto& mutex = static_cast<lv2_mutex&>(obj);
+			m_tree->AppendItem(node, fmt::format("Mutex: ID = 0x%08x \"%s\"", id, +name64(mutex.name)));
+			break;
+		}
+		case SYS_COND_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("LWCond: ID = 0x%08x '%s'", id,
-				&name64(lwc.name)));
-		});
-	}
-
-	// Event Queues
-	if (const u32 count = idm::get_count<lv2_event_queue_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Queues (%zu)", count));
-
-		idm::select<lv2_event_queue_t>([&](u32 id, lv2_event_queue_t& eq)
+			auto& cond = static_cast<lv2_cond&>(obj);
+			m_tree->AppendItem(node, fmt::format("Cond: ID = 0x%08x \"%s\"", id, +name64(cond.name)));
+			break;
+		}
+		case SYS_RWLOCK_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x '%s', %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id,
-				&name64(eq.name), eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.ipc_key, eq.events(), eq.size, eq.waiters()));
-		});
-	}
-
-	// Event Ports
-	if (const u32 count = idm::get_count<lv2_event_port_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Ports (%zu)", count));
-
-		idm::select<lv2_event_port_t>([&](u32 id, lv2_event_port_t& ep)
+			auto& rw = static_cast<lv2_rwlock&>(obj);
+			m_tree->AppendItem(node, fmt::format("RW Lock: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_INTR_TAG_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("Event Port: ID = 0x%08x, Name = %#llx", id,
-				ep.name));
-		});
-	}
-
-	// Event Flags
-	if (const u32 count = idm::get_count<lv2_event_flag_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Flags (%zu)", count));
-
-		idm::select<lv2_event_flag_t>([&](u32 id, lv2_event_flag_t& ef)
+			auto& tag = static_cast<lv2_int_tag&>(obj);
+			m_tree->AppendItem(node, fmt::format("Intr Tag: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_INTR_SERVICE_HANDLE_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x '%s', Type = 0x%x, Pattern = 0x%llx", id,
-				&name64(ef.name), ef.type, ef.pattern.load()));
-		});
-	}
-
-	// Reader/writer Locks
-	if (const u32 count = idm::get_count<lv2_rwlock_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Reader/writer Locks (%zu)", count));
-
-		idm::select<lv2_rwlock_t>([&](u32 id, lv2_rwlock_t&)
+			auto& serv = static_cast<lv2_int_serv&>(obj);
+			m_tree->AppendItem(node, fmt::format("Intr Svc: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_EVENT_QUEUE_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("RWLock: ID = 0x%08x", id));
-		});
-	}
-
-	// PRX Libraries
-	if (const u32 count = idm::get_count<lv2_prx_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("PRX Libraries (%zu)", count));
-
-		idm::select<lv2_prx_t>([&](u32 id, lv2_prx_t&)
+			auto& eq = static_cast<lv2_event_queue&>(obj);
+			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x \"%s\", %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id, +name64(eq.name),
+				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.ipc_key, eq.events(), eq.size, eq.waiters()));
+			break;
+		}
+		case SYS_EVENT_PORT_OBJECT:
 		{
+			auto& ep = static_cast<lv2_event_port&>(obj);
+			m_tree->AppendItem(node, fmt::format("Event Port: ID = 0x%08x, Name = %#llx", id, ep.name));
+			break;
+		}
+		case SYS_TRACE_OBJECT:
+		{
+			m_tree->AppendItem(node, fmt::format("Trace: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_SPUIMAGE_OBJECT:
+		{
+			m_tree->AppendItem(node, fmt::format("SPU Image: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_PRX_OBJECT:
+		{
+			auto& prx = static_cast<lv2_prx&>(obj);
 			m_tree->AppendItem(node, fmt::format("PRX: ID = 0x%08x", id));
-		});
-	}
-
-	// Memory Containers
-	if (const u32 count = idm::get_count<lv2_memory_container>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Containers (%zu)", count));
-
-		idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container&)
+			break;
+		}
+		case SYS_SPUPORT_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("Memory Container: ID = 0x%08x", id));
-		});
-	}
-
-	// Memory Objects
-	if (const u32 count = idm::get_count<lv2_memory>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Objects (%zu)", count));
-
-		idm::select<lv2_memory>([&](u32 id, lv2_memory&)
+			m_tree->AppendItem(node, fmt::format("SPU Port: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_LWMUTEX_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("Memory Object: ID = 0x%08x", id));
-		});
-	}
-
-	// PPU Threads
-	if (const u32 count = idm::get_count<ppu_thread>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("PPU Threads (%zu)", count));
-
-		idm::select<ppu_thread>([&](u32 id, ppu_thread& ppu)
+			auto& lwm = static_cast<lv2_lwmutex&>(obj);
+			m_tree->AppendItem(node, fmt::format("LWMutex: ID = 0x%08x \"%s\"", id, +name64(lwm.name)));
+			break;
+		}
+		case SYS_TIMER_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("PPU Thread: ID = 0x%08x '%s'", id, ppu.get_name()));
-		});
-	}
-
-	// SPU Thread Groups
-	if (const u32 count = idm::get_count<lv2_spu_group_t>())
-	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("SPU Thread Groups (%d)", count));
-
-		idm::select<lv2_spu_group_t>([&](u32 id, lv2_spu_group_t& tg)
+			auto& timer = static_cast<lv2_timer&>(obj);
+			m_tree->AppendItem(node, fmt::format("Timer: ID = 0x%08x", id));
+			break;
+		}
+		case SYS_SEMAPHORE_OBJECT:
 		{
-			m_tree->AppendItem(node, fmt::format("SPU Thread Group: ID = 0x%08x '%s'", id,
-				tg.name.c_str()));
-		});
+			auto& sema = static_cast<lv2_sema&>(obj);
+			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x \"%s\", Count = %d, Max Count = %d, Waiters = %#zu", id, +name64(sema.name),
+				sema.value.load(), sema.max, sema.sq.size()));
+			break;
+		}
+		case SYS_LWCOND_OBJECT:
+		{
+			auto& lwc = static_cast<lv2_cond&>(obj);
+			m_tree->AppendItem(node, fmt::format("LWCond: ID = 0x%08x \"%s\"", id, +name64(lwc.name)));
+			break;
+		}
+		case SYS_EVENT_FLAG_OBJECT:
+		{
+			auto& ef = static_cast<lv2_event_flag&>(obj);
+			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx", id, +name64(ef.name), ef.type, ef.pattern.load()));
+			break;
+		}
+		default:
+		{
+			m_tree->AppendItem(node, fmt::format("Unknown object: ID = 0x%08x", id));
+		}
+		}
+	});
+
+	lv2_types.emplace_back(m_tree->AppendItem(root, "Memory Containers"));
+
+	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container&)
+	{
+		lv2_types.back().count++;
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("Memory Container: ID = 0x%08x", id));
+	});
+
+	lv2_types.emplace_back(m_tree->AppendItem(root, "PPU Threads"));
+
+	idm::select<ppu_thread>([&](u32 id, ppu_thread& ppu)
+	{
+		lv2_types.back().count++;
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("PPU Thread: ID = 0x%08x '%s'", id, ppu.get_name()));
+	});
+
+	lv2_types.emplace_back(m_tree->AppendItem(root, "SPU Threads"));
+
+	idm::select<SPUThread>([&](u32 id, SPUThread& spu)
+	{
+		lv2_types.back().count++;
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("SPU Thread: ID = 0x%08x '%s'", id, spu.get_name()));
+	});
+
+	lv2_types.emplace_back(m_tree->AppendItem(root, "SPU Thread Groups"));
+
+	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
+	{
+		lv2_types.back().count++;
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("SPU Thread Group: ID = 0x%08x '%s'", id, tg.name.c_str()));
+	});
+
+	lv2_types.emplace_back(m_tree->AppendItem(root, "File Descriptors"));
+
+	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
+	{
+		lv2_types.back().count++;
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("FD: ID = 0x%08x '%s'", id));
+	});
+
+	for (auto&& entry : lv2_types)
+	{
+		if (entry.node && entry.count)
+		{
+			// Append object count
+			m_tree->SetItemText(entry.node, m_tree->GetItemText(entry.node) + fmt::format(" (%zu)", entry.count));
+		}
+		else if (entry.node)
+		{
+			// Delete node otherwise
+			m_tree->Delete(entry.node);
+		}
 	}
 
 	// RawSPU Threads (TODO)

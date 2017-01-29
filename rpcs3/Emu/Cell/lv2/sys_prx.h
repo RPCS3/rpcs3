@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/PPUAnalyser.h"
+#include "sys_sync.h"
 
 // Return codes
 enum
@@ -72,11 +73,9 @@ struct sys_prx_get_module_list_t
 	vm::ps3::bptr<s32> idlist;
 };
 
-struct lv2_prx_t
+struct lv2_prx final : lv2_obj
 {
 	static const u32 id_base = 0x23000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u32 id;
 
@@ -89,7 +88,7 @@ struct lv2_prx_t
 	vm::ps3::ptr<s32(int argc, vm::ps3::ptr<void> argv)> stop = vm::null;
 	vm::ps3::ptr<s32()> exit = vm::null;
 	
-	lv2_prx_t();
+	lv2_prx();
 };
 
 // SysCalls

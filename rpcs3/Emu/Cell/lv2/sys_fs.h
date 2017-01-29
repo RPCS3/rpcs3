@@ -96,6 +96,8 @@ struct lv2_fs_mount_point;
 
 struct lv2_fs_object
 {
+	using id_type = lv2_fs_object;
+
 	static const u32 id_base = 3;
 	static const u32 id_step = 1;
 	static const u32 id_count = 255 - id_base;
@@ -114,7 +116,7 @@ struct lv2_fs_object
 	static lv2_fs_mount_point* get_mp(const char* filename);
 };
 
-struct lv2_file : lv2_fs_object
+struct lv2_file final : lv2_fs_object
 {
 	const fs::file file;
 	const s32 mode;
@@ -135,7 +137,7 @@ struct lv2_file : lv2_fs_object
 	u64 op_write(vm::ps3::cptr<void> buf, u64 size);
 };
 
-struct lv2_dir : lv2_fs_object
+struct lv2_dir final : lv2_fs_object
 {
 	const fs::dir dir;
 

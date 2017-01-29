@@ -5,7 +5,7 @@ IndentWidth: 1
 AccessModifierOffset: -1
 PointerAlignment: Left
 NamespaceIndentation: All
-ColumnLimit: 100
+ColumnLimit: 200
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: true
 BreakBeforeBinaryOperators: false

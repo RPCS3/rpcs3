@@ -2,7 +2,7 @@
 
 #include "sys_sync.h"
 
-struct lv2_mutex_t;
+struct lv2_mutex;
 
 struct sys_cond_attribute_t
 {
@@ -17,18 +17,16 @@ struct sys_cond_attribute_t
 	};
 };
 
-struct lv2_cond_t
+struct lv2_cond final : lv2_obj
 {
 	static const u32 id_base = 0x86000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u64 name;
-	const std::shared_ptr<lv2_mutex_t> mutex; // associated mutex
+	const std::shared_ptr<lv2_mutex> mutex; // associated mutex
 
 	sleep_queue<cpu_thread> sq;
 
-	lv2_cond_t(const std::shared_ptr<lv2_mutex_t>& mutex, u64 name)
+	lv2_cond(const std::shared_ptr<lv2_mutex>& mutex, u64 name)
 		: mutex(mutex)
 		, name(name)
 	{

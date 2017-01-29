@@ -17,11 +17,9 @@ struct sys_rwlock_attribute_t
 	};
 };
 
-struct lv2_rwlock_t
+struct lv2_rwlock final : lv2_obj
 {
 	static const u32 id_base = 0x88000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u64 name;
 	const u32 protocol;
@@ -32,7 +30,7 @@ struct lv2_rwlock_t
 	sleep_queue<cpu_thread> rsq; // threads trying to acquire readed lock
 	sleep_queue<cpu_thread> wsq; // threads trying to acquire writer lock
 
-	lv2_rwlock_t(u32 protocol, u64 name)
+	lv2_rwlock(u32 protocol, u64 name)
 		: protocol(protocol)
 		, name(name)
 	{

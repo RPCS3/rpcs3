@@ -13,7 +13,7 @@ s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmut
 {
 	sysPrxForUser.warning("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
 
-	lwcond->lwcond_queue = idm::make<lv2_lwcond_t>(reinterpret_cast<u64&>(attr->name));
+	lwcond->lwcond_queue = idm::make<lv2_obj, lv2_lwcond>(reinterpret_cast<u64&>(attr->name));
 	lwcond->lwmutex = lwmutex;
 
 	return CELL_OK;

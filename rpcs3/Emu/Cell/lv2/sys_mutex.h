@@ -19,11 +19,9 @@ struct sys_mutex_attribute_t
 	};
 };
 
-struct lv2_mutex_t
+struct lv2_mutex final : lv2_obj
 {
 	static const u32 id_base = 0x85000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const bool recursive;
 	const u32 protocol;
@@ -35,7 +33,7 @@ struct lv2_mutex_t
 
 	sleep_queue<cpu_thread> sq;
 
-	lv2_mutex_t(bool recursive, u32 protocol, u64 name)
+	lv2_mutex(bool recursive, u32 protocol, u64 name)
 		: recursive(recursive)
 		, protocol(protocol)
 		, name(name)

@@ -137,11 +137,11 @@ enum : u32
 
 class SPUThread;
 
-struct lv2_spu_group_t
+struct lv2_spu_group
 {
 	static const u32 id_base = 1; // Wrong?
 	static const u32 id_step = 1;
-	static const u32 id_count = 8192;
+	static const u32 id_count = 255;
 
 	const std::string name;
 	const u32 num; // SPU Number
@@ -159,11 +159,11 @@ struct lv2_spu_group_t
 	atomic_t<u32> join_state; // flags used to detect exit cause
 	cond_variable cv; // used to signal waiting PPU thread
 
-	std::weak_ptr<lv2_event_queue_t> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
-	std::weak_ptr<lv2_event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
-	std::weak_ptr<lv2_event_queue_t> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
+	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	std::weak_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
-	lv2_spu_group_t(std::string name, u32 num, s32 prio, s32 type, u32 ct)
+	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, u32 ct)
 		: name(name)
 		, num(num)
 		, prio(prio)

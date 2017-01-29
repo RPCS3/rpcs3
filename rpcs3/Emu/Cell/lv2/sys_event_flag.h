@@ -29,11 +29,9 @@ struct sys_event_flag_attribute_t
 	};
 };
 
-struct lv2_event_flag_t
+struct lv2_event_flag final : lv2_obj
 {
 	static const u32 id_base = 0x98000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u32 protocol;
 	const s32 type;
@@ -43,7 +41,7 @@ struct lv2_event_flag_t
 
 	sleep_queue<cpu_thread> sq;
 
-	lv2_event_flag_t(u64 pattern, u32 protocol, s32 type, u64 name)
+	lv2_event_flag(u64 pattern, u32 protocol, s32 type, u64 name)
 		: pattern(pattern)
 		, protocol(protocol)
 		, type(type)

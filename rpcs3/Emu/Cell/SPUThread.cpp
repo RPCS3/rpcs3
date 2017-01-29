@@ -867,7 +867,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				const auto eflag = idm::get<lv2_event_flag_t>(data);
+				const auto eflag = idm::get<lv2_obj, lv2_event_flag>(data);
 
 				if (!eflag)
 				{
@@ -908,7 +908,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				const auto eflag = idm::get<lv2_event_flag_t>(data);
+				const auto eflag = idm::get<lv2_obj, lv2_event_flag>(data);
 
 				if (!eflag)
 				{
@@ -1179,7 +1179,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
 
-		std::shared_ptr<lv2_event_queue_t> queue;
+		std::shared_ptr<lv2_event_queue> queue;
 
 		for (auto& v : this->spuq)
 		{
