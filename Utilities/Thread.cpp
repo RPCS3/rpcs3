@@ -2055,21 +2055,9 @@ bool thread_ctrl::_wait_for(u64 usec)
 	}
 	_lock{_this->m_mutex};
 	
-	if (u32 sig = _this->m_signal.load())
+	do
 	{
-		thread_ctrl::test();
-
-		if (sig & 1)
-		{
-			_this->m_signal &= ~1;
-			return true;
-		}
-	}
-
-	_this->m_mutex.wait();
-
-	while (_this->m_cond.wait(_lock, usec))
-	{
+		// Mutex is unlocked at the start and after the waiting
 		if (u32 sig = _this->m_signal.load())
 		{
 			thread_ctrl::test();
@@ -2081,13 +2069,16 @@ bool thread_ctrl::_wait_for(u64 usec)
 			}
 		}
 
-		if (usec != -1)
+		if (usec == 0)
 		{
+			// No timeout: return immediately
 			return false;
 		}
 
+		// Lock (semaphore)
 		_this->m_mutex.wait();
 
+		// Double-check the value
 		if (u32 sig = _this->m_signal.load())
 		{
 			if (sig & 2 && _this->m_exception)
@@ -2103,6 +2094,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 			}
 		}
 	}
+	while (_this->m_cond.wait(_lock, std::exchange(usec, usec == -1 ? -1 : 0)));
 
 	// Timeout
 	return false;
