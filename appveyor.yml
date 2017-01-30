@@ -1,19 +1,22 @@
-version: 1.0.{build}
+version: '0.0.1-{build}'
+
 os: Visual Studio 2015
-configuration:
-# - Release
- - ReleaseLLVM
 platform: x64
-clone_folder: c:\rpcs3
+clone_folder: C:\rpcs3
 clone_depth: 3
 test: off
 
+configuration:
+# Release
+ - ReleaseLLVM
+
 before_build:
+ - ps: $env:Date="$(git show -s --date=short --format='%ad')"
  - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp rsx_program_decompiler 3rdparty/cereal
  - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - 7z x vulkan.7z -aos -oC:\rpcs3\Vulkan > null
- - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/)
+ - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
    else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
 
 build_script:
@@ -31,4 +34,5 @@ install:
 
 artifacts:
  - path: bin
-   name: rpcs3-$(configuration)-$(COMMIT_SHA)
+   name: 'rpcs3-v0.0.1-$(Date)-$(COMMIT_SHA)_win64'
+   type: zip
