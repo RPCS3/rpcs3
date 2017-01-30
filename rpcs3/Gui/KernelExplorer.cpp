@@ -214,7 +214,7 @@ void KernelExplorer::Update()
 		{
 			auto& sema = static_cast<lv2_sema&>(obj);
 			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x \"%s\", Count = %d, Max Count = %d, Waiters = %#zu", id, +name64(sema.name),
-				sema.value.load(), sema.max, sema.sq.size()));
+				sema.val.load(), sema.max, sema.sq.size()));
 			break;
 		}
 		case SYS_LWCOND_OBJECT:

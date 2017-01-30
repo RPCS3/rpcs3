@@ -22,18 +22,24 @@ struct lv2_sema final : lv2_obj
 	static const u32 id_base = 0x96000000;
 
 	const u32 protocol;
-	const s32 max;
+	const u32 shared;
+	const u64 key;
 	const u64 name;
+	const s32 flags;
+	const s32 max;
 
-	atomic_t<s32> value;
+	semaphore<> mutex;
+	atomic_t<s32> val;
+	std::deque<cpu_thread*> sq;
 
-	sleep_queue<cpu_thread> sq;
-
-	lv2_sema(u32 protocol, s32 max, u64 name, s32 value)
+	lv2_sema(u32 protocol, u64 name, s32 max, s32 value)
 		: protocol(protocol)
-		, max(max)
+		, shared(0)
+		, key(0)
+		, flags(0)
 		, name(name)
-		, value(value)
+		, max(max)
+		, val(value)
 	{
 	}
 };
@@ -41,10 +47,11 @@ struct lv2_sema final : lv2_obj
 // Aux
 class ppu_thread;
 
-// SysCalls
-s32 sys_semaphore_create(vm::ps3::ptr<u32> sem_id, vm::ps3::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val);
-s32 sys_semaphore_destroy(u32 sem_id);
-s32 sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout);
-s32 sys_semaphore_trywait(u32 sem_id);
-s32 sys_semaphore_post(u32 sem_id, s32 count);
-s32 sys_semaphore_get_value(u32 sem_id, vm::ps3::ptr<s32> count);
+// Syscalls
+
+error_code sys_semaphore_create(vm::ps3::ptr<u32> sem_id, vm::ps3::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val);
+error_code sys_semaphore_destroy(u32 sem_id);
+error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout);
+error_code sys_semaphore_trywait(u32 sem_id);
+error_code sys_semaphore_post(u32 sem_id, s32 count);
+error_code sys_semaphore_get_value(u32 sem_id, vm::ps3::ptr<s32> count);

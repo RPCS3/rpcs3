@@ -52,6 +52,56 @@ struct lv2_obj
 
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 8192;
+
+	// Find and remove the object from the container (deque or vector)
+	template <typename T, typename E>
+	static bool unqueue(std::deque<T*>& queue, const E& object)
+	{
+		for (auto found = queue.cbegin(), end = queue.cend(); found != end; found++)
+		{
+			if (*found == object)
+			{
+				queue.erase(found);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	template <typename E, typename T>
+	static T* schedule(std::deque<T*>& queue, u32 protocol)
+	{
+		if (queue.empty())
+		{
+			return nullptr;
+		}
+
+		if (protocol == SYS_SYNC_FIFO)
+		{
+			const auto res = queue.front();
+			queue.pop_front();
+			return res;
+		}
+
+		u32 prio = -1;
+		auto it = queue.cbegin();
+
+		for (auto found = it, end = queue.cend(); found != end; found++)
+		{
+			const u32 _prio = static_cast<E*>(*found)->prio;
+
+			if (_prio < prio)
+			{
+				it = found;
+				prio = _prio;
+			}
+		}
+
+		const auto res = *it;
+		queue.erase(it);
+		return res;
+	}
 };
 
 // Temporary implementation for LV2_UNLOCK (TODO: remove it)
