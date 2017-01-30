@@ -80,8 +80,8 @@ public:
 		switch (event.GetId())
 		{
 		case b_id_github: wxLaunchDefaultBrowser("https://github.com/RPCS3"); break;
-		case b_id_website: wxLaunchDefaultBrowser("http://rpcs3.net/"); break;
-		case b_id_forum: wxLaunchDefaultBrowser("http://www.emunewz.net/forum/forumdisplay.php?fid=162"); break;
+		case b_id_website: wxLaunchDefaultBrowser("https://rpcs3.net/"); break;
+		case b_id_forum: wxLaunchDefaultBrowser("http://www.emunewz.net/forum/forumdisplay.php?fid=172"); break;
 		}
 	}
 };

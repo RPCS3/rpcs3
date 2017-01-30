@@ -69,317 +69,380 @@ s32 sceNpMatching2Term2()
 
 s32 sceNpMatching2DestroyContext()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2LeaveLobby()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterLobbyMessageCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetWorldInfoList()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterLobbyEventCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetLobbyMemberDataInternalList()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SearchRoom()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SignalingGetConnectionStatus()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SetUserInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetClanLobbyId()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetLobbyMemberDataInternal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2ContextStart()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2CreateServerContext()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetMemoryInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2LeaveRoom()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SetRoomDataExternal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SignalingGetConnectionInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SendRoomMessage()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2JoinLobby()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomMemberDataExternalList()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2AbortRequest()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetServerInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetEventData()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomSlotInfoLocal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SendLobbyChatMessage()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2AbortContextStart()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomMemberIdListLocal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2JoinRoom()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomMemberDataInternalLocal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetCbQueueInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2KickoutRoomMember()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2ContextStartAsync()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SetSignalingOptParam()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterContextCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SendRoomChatMessage()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SetRoomDataInternal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomDataInternal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SignalingGetPingInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetServerIdListLocal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpUtilBuildCdnUrl()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GrantRoomOwner()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2CreateContext()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetSignalingOptParamLocal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterSignalingCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2ClearEventData()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetUserInfoList()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomMemberDataInternal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SetRoomMemberDataInternal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2JoinProhibitiveRoom()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SignalingSetCtxOpt()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2DeleteServerContext()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SetDefaultRequestOptParam()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterRoomEventCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomPasswordLocal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomDataExternalList()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2CreateJoinRoom()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SignalingGetCtxOpt()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetLobbyInfoList()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetLobbyMemberIdListLocal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SendLobbyInvitation()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2ContextStop()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SetLobbyMemberDataInternal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterRoomMessageCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 
