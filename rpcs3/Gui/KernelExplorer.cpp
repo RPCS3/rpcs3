@@ -149,7 +149,9 @@ void KernelExplorer::Update()
 		case SYS_RWLOCK_OBJECT:
 		{
 			auto& rw = static_cast<lv2_rwlock&>(obj);
-			m_tree->AppendItem(node, fmt::format("RW Lock: ID = 0x%08x", id));
+			const s64 val = rw.owner;
+			m_tree->AppendItem(node, fmt::format("RW Lock: ID = 0x%08x \"%s\", Owner = 0x%x(%d), Rq = %zu, Wq = %zu", id, +name64(rw.name),
+				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.rq.size(), rw.wq.size()));
 			break;
 		}
 		case SYS_INTR_TAG_OBJECT:

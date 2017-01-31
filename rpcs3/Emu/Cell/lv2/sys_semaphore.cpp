@@ -144,7 +144,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				}
 
 				verify(HERE), sem->unqueue(sem->sq, &ppu);
-				return CELL_ETIMEDOUT;
+				return not_an_error(CELL_ETIMEDOUT);
 			}
 
 			thread_ctrl::wait_for(timeout - passed);

@@ -13,32 +13,7 @@ logs::channel sys_rwlock("sys_rwlock", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_rwlock::notify_all(lv2_lock_t)
-{
-	// pick a new writer if possible; protocol is ignored in current implementation
-	if (!readers && !writer && wsq.size())
-	{
-		writer = idm::get<ppu_thread>(wsq.front()->id);
-		writer->set_signal();
-
-		return wsq.pop_front();
-	}
-
-	// wakeup all readers if possible
-	if (!writer && !wsq.size())
-	{
-		readers += static_cast<u32>(rsq.size());
-
-		for (auto& thread : rsq)
-		{
-			thread->set_signal();
-		}
-
-		return rsq.clear();
-	}
-}
-
-s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
+error_code sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
 	sys_rwlock.warning("sys_rwlock_create(rw_lock_id=*0x%x, attr=*0x%x)", rw_lock_id, attr);
 
@@ -61,263 +36,406 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 		return CELL_EINVAL;
 	}
 
-	*rw_lock_id = idm::make<lv2_obj, lv2_rwlock>(protocol, attr->name_u64);
+	if (const u32 id = idm::make<lv2_obj, lv2_rwlock>(protocol, attr->name_u64))
+	{
+		*rw_lock_id = id;
+		return CELL_OK;
+	}
 
-	return CELL_OK;
+	return CELL_EAGAIN;
 }
 
-s32 sys_rwlock_destroy(u32 rw_lock_id)
+error_code sys_rwlock_destroy(u32 rw_lock_id)
 {
 	sys_rwlock.warning("sys_rwlock_destroy(rw_lock_id=0x%x)", rw_lock_id);
 
-	LV2_LOCK;
+	const auto rwlock = idm::withdraw<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rw) -> CellError
+	{
+		if (rw.owner)
+		{
+			return CELL_EBUSY;
+		}
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id);
+		return {};
+	});
 
 	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->readers || rwlock->writer || rwlock->rsq.size() || rwlock->wsq.size())
+	if (rwlock.ret)
 	{
-		return CELL_EBUSY;
+		return rwlock.ret;
 	}
-
-	idm::remove<lv2_obj, lv2_rwlock>(rw_lock_id);
 
 	return CELL_OK;
 }
 
-s32 sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
+error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
-	LV2_LOCK;
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	{
+		const s64 val = rwlock.owner;
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id);
+		if (val <= 0 && !(val & 1))
+		{
+			if (rwlock.owner.compare_and_swap_test(val, val - 2))
+			{
+				return true;
+			}
+		}
+
+		semaphore_lock lock(rwlock.mutex);
+
+		const s64 _old = rwlock.owner.fetch_op([&](s64& val)
+		{
+			if (val <= 0 && !(val & 1))
+			{
+				val -= 2;
+			}
+			else
+			{
+				val |= 1;
+			}
+		});
+
+		if (_old > 0 || _old & 1)
+		{
+			rwlock.rq.emplace_back(&ppu);
+			return false;
+		}
+
+		return true;
+	});
 
 	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!rwlock->writer && rwlock->wsq.empty())
+	if (rwlock.ret)
 	{
-		if (!++rwlock->readers)
-		{
-			fmt::throw_exception("Too many readers" HERE);
-		}
-
 		return CELL_OK;
 	}
 
-	// add waiter; protocol is ignored in current implementation
-	sleep_entry<cpu_thread> waiter(rwlock->rsq, ppu);
+	// SLEEP
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
-		CHECK_EMU_STATUS;
-
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - start_time;
 
 			if (passed >= timeout)
 			{
-				return CELL_ETIMEDOUT;
+				semaphore_lock lock(rwlock->mutex);
+
+				if (!rwlock->unqueue(rwlock->rq, &ppu))
+				{
+					timeout = 0;
+					continue;
+				}
+
+				return not_an_error(CELL_ETIMEDOUT);
 			}
 
-			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
+			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			LV2_UNLOCK, thread_ctrl::wait();
+			thread_ctrl::wait();
 		}
 	}
 
-	if (rwlock->writer || !rwlock->readers)
-	{
-		fmt::throw_exception("Unexpected" HERE);
-	}
-
 	return CELL_OK;
 }
 
-s32 sys_rwlock_tryrlock(u32 rw_lock_id)
+error_code sys_rwlock_tryrlock(u32 rw_lock_id)
 {
 	sys_rwlock.trace("sys_rwlock_tryrlock(rw_lock_id=0x%x)", rw_lock_id);
 
-	LV2_LOCK;
+	const auto rwlock = idm::check<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rwlock)
+	{
+		const s64 val = rwlock.owner;
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id);
+		if (val <= 0 && !(val & 1))
+		{
+			if (rwlock.owner.compare_and_swap_test(val, val - 2))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	});
 
 	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer || rwlock->wsq.size())
+	if (!rwlock.ret)
 	{
-		return CELL_EBUSY;
-	}
-
-	if (!++rwlock->readers)
-	{
-		fmt::throw_exception("Too many readers" HERE);
+		return not_an_error(CELL_EBUSY);
 	}
 
 	return CELL_OK;
 }
 
-s32 sys_rwlock_runlock(u32 rw_lock_id)
+error_code sys_rwlock_runlock(u32 rw_lock_id)
 {
 	sys_rwlock.trace("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
 
-	LV2_LOCK;
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rwlock)
+	{
+		const s64 val = rwlock.owner;
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id);
+		if (val < 0 && !(val & 1))
+		{
+			if (rwlock.owner.compare_and_swap_test(val, val + 2))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	});
 
 	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!rwlock->readers)
+	if (rwlock.ret)
 	{
-		return CELL_EPERM;
+		return CELL_OK;
 	}
-
-	if (!--rwlock->readers)
+	else
 	{
-		rwlock->notify_all(lv2_lock);
+		semaphore_lock lock(rwlock->mutex);
+
+		// Remove one reader
+		const s64 _old = rwlock->owner.fetch_op([](s64& val)
+		{
+			if (val < 0)
+			{
+				val++;
+			}
+		});
+
+		if (_old >= 0)
+		{
+			return CELL_EPERM;
+		}
+
+		if (_old == -1)
+		{
+			if (const auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
+			{
+				rwlock->owner = cpu->id << 1 | !rwlock->wq.empty();
+
+				cpu->set_signal();
+			}
+			else
+			{
+				rwlock->owner = 0;
+
+				verify(HERE), rwlock->rq.empty();
+			}
+		}
 	}
 
 	return CELL_OK;
 }
 
-s32 sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
+error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
-	LV2_LOCK;
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	{
+		const s64 val = rwlock.owner;
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id);
+		if (val == 0)
+		{
+			if (rwlock.owner.compare_and_swap_test(0, ppu.id << 1))
+			{
+				return true;
+			}
+		}
+		else if (val >> 1 == ppu.id)
+		{
+			return false;
+		}
+
+		semaphore_lock lock(rwlock.mutex);
+
+		const s64 _old = rwlock.owner.fetch_op([&](s64& val)
+		{
+			if (val == 0)
+			{
+				val = ppu.id << 1;
+			}
+			else
+			{
+				val |= 1;
+			}
+		});
+
+		if (_old != 0)
+		{
+			rwlock.wq.emplace_back(&ppu);
+			return false;
+		}
+
+		return true;
+	});
 
 	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer.get() == &ppu)
+	if (rwlock.ret)
+	{
+		return CELL_OK;
+	}
+
+	if (rwlock->owner >> 1 == ppu.id)
 	{
 		return CELL_EDEADLK;
 	}
 
-	if (!rwlock->readers && !rwlock->writer)
-	{
-		rwlock->writer = idm::get<ppu_thread>(ppu.id);
-
-		return CELL_OK;
-	}
-
-	// add waiter; protocol is ignored in current implementation
-	sleep_entry<cpu_thread> waiter(rwlock->wsq, ppu);
+	// SLEEP
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
-		CHECK_EMU_STATUS;
-
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - start_time;
 
 			if (passed >= timeout)
 			{
-				// if the last waiter quit the writer sleep queue, readers must acquire the lock
-				if (!rwlock->writer && rwlock->wsq.size() == 1)
-				{
-					if (rwlock->wsq.front() != &ppu)
-					{
-						fmt::throw_exception("Unexpected" HERE);
-					}
+				semaphore_lock lock(rwlock->mutex);
 
-					rwlock->wsq.clear();
-					rwlock->notify_all(lv2_lock);
+				if (!rwlock->unqueue(rwlock->wq, &ppu))
+				{
+					timeout = 0;
+					continue;
 				}
 
-				return CELL_ETIMEDOUT;
+				// If the last waiter quit the writer sleep queue, readers must acquire the lock
+				if (!rwlock->rq.empty() && rwlock->wq.empty())
+				{
+					rwlock->owner = (s64{-2} * rwlock->rq.size()) | 1;
+
+					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
+					{
+						cpu->set_signal();
+					}
+
+					rwlock->owner &= ~1;
+				}
+
+				return not_an_error(CELL_ETIMEDOUT);
 			}
 
-			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
+			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			LV2_UNLOCK, thread_ctrl::wait();
+			thread_ctrl::wait();
 		}
 	}
 
-	if (rwlock->readers || rwlock->writer.get() != &ppu)
-	{
-		fmt::throw_exception("Unexpected" HERE);
-	}
-
 	return CELL_OK;
 }
 
-s32 sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
+error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 {
 	sys_rwlock.trace("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
 
-	LV2_LOCK;
+	const auto rwlock = idm::check<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	{
+		const s64 val = rwlock.owner;
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id);
+		// Return previous value
+		return val ? val : rwlock.owner.compare_and_swap(0, ppu.id << 1);
+	});
 
 	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer.get() == &ppu)
+	if (rwlock.ret != 0)
 	{
-		return CELL_EDEADLK;
+		if (rwlock.ret >> 1 == ppu.id)
+		{
+			return CELL_EDEADLK;
+		}
+		
+		return not_an_error(CELL_EBUSY);
 	}
-
-	if (rwlock->readers || rwlock->writer || rwlock->wsq.size())
-	{
-		return CELL_EBUSY;
-	}
-
-	rwlock->writer = idm::get<ppu_thread>(ppu.id);
 
 	return CELL_OK;
 }
 
-s32 sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
+error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 {
 	sys_rwlock.trace("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
 
-	LV2_LOCK;
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	{
+		const s64 val = rwlock.owner;
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id);
+		// Return previous value
+		return val != ppu.id << 1 ? val : rwlock.owner.compare_and_swap(val, 0);
+	});
 
 	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer.get() != &ppu)
+	if (rwlock.ret >> 1 != ppu.id)
 	{
 		return CELL_EPERM;
 	}
 
-	rwlock->writer.reset();
+	if (rwlock.ret & 1)
+	{
+		semaphore_lock lock(rwlock->mutex);
 
-	rwlock->notify_all(lv2_lock);
+		if (auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
+		{
+			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty();
+
+			cpu->set_signal();
+		}
+		else if (auto readers = rwlock->rq.size())
+		{
+			rwlock->owner = (s64{-2} * readers) | 1;
+
+			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
+			{
+				cpu->set_signal();
+			}
+
+			rwlock->owner &= ~1;
+		}
+		else
+		{
+			rwlock->owner = 0;
+		}
+	}
 
 	return CELL_OK;
 }
