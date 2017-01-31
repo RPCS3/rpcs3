@@ -275,11 +275,13 @@ class idm
 			return nullptr;
 		}
 
-		if (const auto ptr = &vec[index])
+		auto& data = vec[index];
+
+		if (data.second)
 		{
-			if (std::is_same<T, Type>::value || ptr->first.type() == get_type<Type>())
+			if (std::is_same<T, Type>::value || data.first.type() == get_type<Type>())
 			{
-				return ptr;
+				return &data;
 			}
 		}
 
@@ -305,7 +307,11 @@ class idm
 		{
 			// Get object, store it
 			place->second = provider();
-			return place;
+
+			if (place->second)
+			{
+				return place;
+			}
 		}
 
 		return nullptr;
@@ -365,15 +371,15 @@ public:
 
 	// Add a new ID for an object returned by provider()
 	template <typename T, typename Made = T, typename F, typename = std::result_of_t<F()>>
-	static inline std::shared_ptr<Made> import(F&& provider)
+	static inline u32 import(F&& provider)
 	{
 		if (auto pair = create_id<T, Made>(std::forward<F>(provider)))
 		{
 			id_manager::on_init<Made>::func(static_cast<Made*>(pair->second.get()), pair->second);
-			return {pair->second, static_cast<Made*>(pair->second.get())};
+			return pair->first;
 		}
 
-		return nullptr;
+		return id_manager::id_traits<Made>::invalid;
 	}
 
 	// Check the ID
@@ -386,7 +392,7 @@ public:
 	}
 
 	// Check the ID, access object under shared lock
-	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
+	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(Get&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
 	static inline explicit_bool_t check(u32 id, F&& func, int = 0)
 	{
 		reader_lock lock(id_manager::g_mutex);
@@ -403,7 +409,7 @@ public:
 	}
 
 	// Check the ID, access object under reader lock, propagate return value
-	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
+	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(Get&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
 	static inline return_pair<bool, FRT> check(u32 id, F&& func)
 	{
 		reader_lock lock(id_manager::g_mutex);
@@ -435,7 +441,7 @@ public:
 	}
 
 	// Get the object, access object under reader lock
-	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
+	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(Get&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
 	static inline auto get(u32 id, F&& func, int = 0)
 	{
 		using result_type = std::shared_ptr<Get>;
@@ -457,7 +463,7 @@ public:
 	}
 
 	// Get the object, access object under reader lock, propagate return value
-	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(T&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
+	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(Get&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
 	static inline auto get(u32 id, F&& func)
 	{
 		using result_type = return_pair<Get, FRT>;
@@ -721,10 +727,14 @@ public:
 			{
 				ptr = provider();
 
-				pair.first = id_manager::typeinfo::get_stop<T>();
-				pair.second = ptr;
+				if (ptr)
+				{
+					pair.first = id_manager::typeinfo::get_stop<T>();
+					pair.second = ptr;
+				}
 			}
-			else
+
+			if (!ptr)
 			{
 				return nullptr;
 			}
@@ -746,10 +756,18 @@ public:
 			auto& pair = g_vec[get_type<T>()];
 
 			ptr = provider();
-			old = std::move(pair.second);
 
-			pair.first = id_manager::typeinfo::get_stop<T>();
-			pair.second = ptr;
+			if (ptr)
+			{
+				old = std::move(pair.second);
+
+				pair.first = id_manager::typeinfo::get_stop<T>();
+				pair.second = ptr;
+			}
+			else
+			{
+				return nullptr;
+			}
 		}
 
 		if (old)
