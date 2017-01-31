@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
@@ -286,7 +286,9 @@ namespace rsx
 			switch (report_dma)
 			{
 			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_LOCATION_LOCAL; break;
-			case blit_engine::context_dma::report_location_main: location = CELL_GCM_LOCATION_MAIN; break;
+			case blit_engine::context_dma::report_location_main:
+			case blit_engine::context_dma::memory_host_buffer: 
+				location = CELL_GCM_LOCATION_MAIN; break;
 			default:
 				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", (u8)report_dma);
 				return;

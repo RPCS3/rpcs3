@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 
 namespace rsx
@@ -376,6 +376,7 @@ namespace rsx
 		{
 			to_memory_get_report,
 			report_location_main,
+			memory_host_buffer,
 		};
 
 		context_dma to_context_dma(u32 in);
