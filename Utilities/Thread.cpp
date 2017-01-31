@@ -1937,7 +1937,7 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 	verify("thread_ctrl::start" HERE), thread != 0;
 #else
 	pthread_t thread;
-	verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get());
+	verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get()) == 0;
 #endif
 
 	// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize

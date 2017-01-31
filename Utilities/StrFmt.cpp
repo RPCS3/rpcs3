@@ -154,12 +154,12 @@ namespace fmt
 #ifdef _WIN32
 		if (DWORD error = GetLastError())
 		{
-			fmt::append(out, " (e%#x)", error);
+			fmt::append(out, " (e=%#x)", error);
 		}
 #else
 		if (int error = errno)
 		{
-			fmt::append(out, " (e%d)", error);
+			fmt::append(out, " (e=%d)", error);
 		}
 #endif
 
