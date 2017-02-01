@@ -572,6 +572,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
 			fs::file file(dir_path + file_path, fs::read);
+			if (!file)
+			{
+				cellSaveData.error("savedata file not found");
+				return CELL_SAVEDATA_ERROR_FAILURE;
+			}
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			break;
