@@ -17,3 +17,6 @@ DEFINES += QT_UI
 OTHER_FILES += $$P/rpcs3qt/qml/*
 
 RESOURCES += $$P/rpcs3qt/qml.qrc
+
+# This line is needed for Qt 5.5 or higher
+LIBS += opengl32.lib
