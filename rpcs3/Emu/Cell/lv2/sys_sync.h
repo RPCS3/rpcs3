@@ -6,6 +6,8 @@
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
+#include "Emu/Cell/ErrorCodes.h"
+
 // attr_protocol (waiting scheduling policy)
 enum
 {

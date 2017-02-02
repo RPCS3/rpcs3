@@ -137,13 +137,14 @@ void KernelExplorer::Update()
 		case SYS_MUTEX_OBJECT:
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
-			m_tree->AppendItem(node, fmt::format("Mutex: ID = 0x%08x \"%s\"", id, +name64(mutex.name)));
+			m_tree->AppendItem(node, fmt::format("Mutex: ID = 0x%08x \"%s\",%s Owner = 0x%x, Locks = %u, Conds = %u, Wq = %zu", id, +name64(mutex.name),
+				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, +mutex.cond_count, mutex.sq.size()));
 			break;
 		}
 		case SYS_COND_OBJECT:
 		{
 			auto& cond = static_cast<lv2_cond&>(obj);
-			m_tree->AppendItem(node, fmt::format("Cond: ID = 0x%08x \"%s\"", id, +name64(cond.name)));
+			m_tree->AppendItem(node, fmt::format("Cond: ID = 0x%08x \"%s\", Waiters = %u", id, +name64(cond.name), +cond.waiters));
 			break;
 		}
 		case SYS_RWLOCK_OBJECT:

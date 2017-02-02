@@ -498,47 +498,46 @@ void Emulator::Stop()
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 {
-	std::string out;
+	logs::channel* channel = &logs::GENERAL;
+	logs::level level = logs::level::error;
+	const char* func = "Unknown function";
 
 	if (auto thread = get_current_cpu_thread())
 	{
 		if (g_system == system_type::ps3 && thread->id_type() == 1)
 		{
-			if (auto func = static_cast<ppu_thread*>(thread)->last_function)
+			auto& ppu = static_cast<ppu_thread&>(*thread);
+
+			// Filter some annoying reports
+			switch (arg)
 			{
-				out += "'";
-				out += func;
-				out += "'";
+			case CELL_EDEADLK:
+			{
+				if (ppu.m_name == "_cellsurMixerMain" && std::memcmp(ppu.last_function, "sys_mutex_lock", 15) == 0)
+				{
+					level = logs::level::trace;
+				}
+
+				break;
+			}
+			}
+
+			if (ppu.last_function)
+			{
+				func = ppu.last_function;
 			}			
 		}
 
 		if (g_system == system_type::psv)
 		{
-			if (auto func = static_cast<ARMv7Thread*>(thread)->last_function)
+			if (auto _func = static_cast<ARMv7Thread*>(thread)->last_function)
 			{
-				out += "'";
-				out += func;
-				out += "'";
+				func = _func;
 			}
 		}
 	}
 
-	if (out.empty())
-	{
-		fmt::append(out, "Unknown function failed with 0x%08x", arg);
-	}
-	else
-	{
-		fmt::append(out, " failed with 0x%08x", arg);
-	}
-	
-	if (sup)
-	{
-		fmt::raw_append(out, " : %s", sup, fmt_args_t<void>{arg});
-	}
-
-	LOG_ERROR(GENERAL, "%s", out);
-
+	channel->format(level, "'%s' failed with 0x%08x%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg));
 	return static_cast<s32>(arg);
 }
 
