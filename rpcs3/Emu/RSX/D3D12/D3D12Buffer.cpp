@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 
@@ -172,7 +172,7 @@ namespace
 
 			void* mapped_buffer =
 				m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			gsl::span<gsl::byte> mapped_buffer_span = {
+			gsl::multi_span<gsl::byte> mapped_buffer_span = {
 				(gsl::byte*)mapped_buffer, gsl::narrow_cast<int>(buffer_size)};
 			write_vertex_array_data_to_buffer(mapped_buffer_span, vertex_array.data, vertex_count,
 				vertex_array.type, vertex_array.attribute_size, vertex_array.stride, element_size);
@@ -294,8 +294,8 @@ namespace
 	}
 
 	std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_vertex_array(
-		gsl::span<const rsx::data_array_format_info, 16> vertex_attribute_infos,
-		gsl::span<const gsl::byte> inlined_array_raw_data, d3d12_data_heap& ring_buffer_data,
+		gsl::multi_span<const rsx::data_array_format_info, 16> vertex_attribute_infos,
+		gsl::multi_span<const gsl::byte> inlined_array_raw_data, d3d12_data_heap& ring_buffer_data,
 		ID3D12Resource* vertex_buffer_placement, ID3D12GraphicsCommandList* command_list)
 	{
 		// We can't rely on vertex_attribute_infos strides here so compute it
@@ -330,7 +330,7 @@ namespace
 
 			void* mapped_buffer =
 				ring_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-			gsl::span<gsl::byte> dst = {(gsl::byte*)mapped_buffer, buffer_size};
+			gsl::multi_span<gsl::byte> dst = {(gsl::byte*)mapped_buffer, buffer_size};
 
 			for (u32 i = 0; i < element_count; i++) {
 				auto subdst = dst.subspan(i * element_size, element_size);
@@ -414,7 +414,7 @@ namespace
 			void* mapped_buffer =
 				m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 			u32 min_index, max_index;
-			gsl::span<gsl::byte> dst{
+			gsl::multi_span<gsl::byte> dst{
 				reinterpret_cast<gsl::byte*>(mapped_buffer), ::narrow<u32>(buffer_size)};
 
 			std::tie(min_index, max_index) =

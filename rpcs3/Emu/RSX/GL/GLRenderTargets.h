@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../Common/surface_store.h"
 #include "GLHelpers.h"
 #include "stdafx.h"
@@ -178,7 +178,7 @@ struct gl_render_target_traits
 	}
 
 	static
-	gsl::span<const gsl::byte> map_downloaded_buffer(const std::vector<u8> &buffer)
+	gsl::multi_span<const gsl::byte> map_downloaded_buffer(const std::vector<u8> &buffer)
 	{
 		return{ reinterpret_cast<const gsl::byte*>(buffer.data()), ::narrow<int>(buffer.size()) };
 	}
