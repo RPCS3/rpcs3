@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <utility>
 #include <d3d12.h>
@@ -225,7 +225,7 @@ struct render_target_traits
 	}
 
 	static
-	gsl::span<const gsl::byte> map_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &sync_data,
+	gsl::multi_span<const gsl::byte> map_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &sync_data,
 		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store)
 	{
 		size_t offset;

@@ -133,7 +133,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
-"${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
+"${RPCS3_SRC_DIR}/../3rdparty/GSL/gsl"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 "${RPCS3_SRC_DIR}/../Vulkan/Vulkan-LoaderAndValidationLayers/include"
