@@ -204,7 +204,7 @@ void KernelExplorer::Update()
 		case SYS_LWMUTEX_OBJECT:
 		{
 			auto& lwm = static_cast<lv2_lwmutex&>(obj);
-			m_tree->AppendItem(node, fmt::format("LWMutex: ID = 0x%08x \"%s\"", id, +name64(lwm.name)));
+			m_tree->AppendItem(node, fmt::format("LWMutex: ID = 0x%08x \"%s\", Wq = %zu", id, +name64(lwm.name), lwm.sq.size()));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -223,7 +223,7 @@ void KernelExplorer::Update()
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_cond&>(obj);
-			m_tree->AppendItem(node, fmt::format("LWCond: ID = 0x%08x \"%s\"", id, +name64(lwc.name)));
+			m_tree->AppendItem(node, fmt::format("LWCond: ID = 0x%08x \"%s\", Waiters = %zu", id, +name64(lwc.name), +lwc.waiters));
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:

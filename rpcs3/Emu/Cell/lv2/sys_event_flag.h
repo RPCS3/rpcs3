@@ -34,6 +34,9 @@ struct lv2_event_flag final : lv2_obj
 	static const u32 id_base = 0x98000000;
 
 	const u32 protocol;
+	const u32 shared;
+	const u64 key;
+	const s32 flags;
 	const s32 type;
 	const u64 name;
 
@@ -41,11 +44,14 @@ struct lv2_event_flag final : lv2_obj
 
 	sleep_queue<cpu_thread> sq;
 
-	lv2_event_flag(u64 pattern, u32 protocol, s32 type, u64 name)
-		: pattern(pattern)
-		, protocol(protocol)
+	lv2_event_flag(u32 protocol, s32 type, u64 name, u64 pattern)
+		: protocol(protocol)
+		, shared(0)
+		, key(0)
+		, flags(0)
 		, type(type)
 		, name(name)
+		, pattern(pattern)
 	{
 	}
 
