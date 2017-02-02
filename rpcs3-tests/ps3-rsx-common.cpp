@@ -10,6 +10,6 @@ TEST_CLASS(rsx_common)
 		std::vector<gsl::byte> dest_buffer(2200);
 		std::vector<gsl::byte> src_buffer(100000); // Big enough
 
-		write_vertex_array_data_to_buffer(gsl::span<gsl::byte>(dest_buffer), src_buffer.data(), 0, 550, rsx::vertex_base_type::ub256, 4, 20, 4);
+		write_vertex_array_data_to_buffer(gsl::multi_span<gsl::byte>(dest_buffer), src_buffer.data(), 0, 550, rsx::vertex_base_type::ub256, 4, 20, 4);
 	}
 };

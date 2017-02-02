@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -664,7 +664,7 @@ namespace rsx
 		return get_system_time() * 1000;
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
+	gsl::multi_span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
 	{
 		if (element_push_buffer.size())
 		{
@@ -692,7 +692,7 @@ namespace rsx
 		return{ ptr, count * type_size };
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	gsl::multi_span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
 	{
 		u32 offset  = vertex_array_info.offset();
 		u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
@@ -739,7 +739,7 @@ namespace rsx
 				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
 				const u8 element_size = info.size * sizeof(u32);
 
-				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
+				gsl::multi_span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
 				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index });
 				continue;
 			}

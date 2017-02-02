@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "VKHelpers.h"
@@ -180,7 +180,7 @@ namespace rsx
 			return nullptr;
 		}
 
-		gsl::span<const gsl::byte> map_downloaded_buffer(download_buffer_object, ...)
+		gsl::multi_span<const gsl::byte> map_downloaded_buffer(download_buffer_object, ...)
 		{
 			return{ (gsl::byte*)nullptr, 0 };
 		}

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKHelpers.h"
 #include "../GCM.h"
 #include "../RSXThread.h"
@@ -149,7 +149,7 @@ namespace vk
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size);
 
 			void *mapped_buffer = upload_buffer->map(offset_in_buffer, image_linear_size);
-			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
+			gsl::multi_span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
 			upload_texture_subresource(mapped, layout, format, is_swizzled, 256);
 			upload_buffer->unmap();
 
@@ -370,7 +370,7 @@ namespace vk
 				}
 
 				CHECK_RESULT(vkMapMemory((*owner), vram_allocation, 0, m_memory_layout.size, 0, (void**)&data));
-				gsl::span<gsl::byte> mapped{ (gsl::byte*)(data + layout_alignment[0].second.offset), ::narrow<int>(layout_alignment[0].second.size) };
+				gsl::multi_span<gsl::byte> mapped{ (gsl::byte*)(data + layout_alignment[0].second.offset), ::narrow<int>(layout_alignment[0].second.size) };
 
 				const std::vector<rsx_subresource_layout> &subresources_layout = get_subresources_layout(tex);
 				for (const rsx_subresource_layout &layout : subresources_layout)
@@ -401,7 +401,7 @@ namespace vk
 				}
 
 				CHECK_RESULT(vkMapMemory((*owner), vram_allocation, 0, m_memory_layout.size, 0, (void**)&data));
-				gsl::span<gsl::byte> mapped{ (gsl::byte*)(data), ::narrow<int>(m_memory_layout.size) };
+				gsl::multi_span<gsl::byte> mapped{ (gsl::byte*)(data), ::narrow<int>(m_memory_layout.size) };
 
 				const std::vector<rsx_subresource_layout> &subresources_layout = get_subresources_layout(tex);
 				size_t idx = 0;
