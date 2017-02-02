@@ -256,7 +256,7 @@ struct render_target_traits
 	}
 
 	static
-	gsl::span<const gsl::byte> map_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &sync_data,
+	gsl::multi_span<const gsl::byte> map_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &sync_data,
 		gsl::not_null<ID3D12Device*>, gsl::not_null<ID3D12CommandQueue*>, d3d12_data_heap &readback_heap, resource_storage&)
 	{
 		size_t offset;

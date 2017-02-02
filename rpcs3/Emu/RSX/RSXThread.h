@@ -65,7 +65,7 @@ namespace rsx
 		rsx::vertex_base_type type;
 		u8 attribute_size;
 		u8 stride;
-		gsl::span<const gsl::byte> data;
+		gsl::multi_span<const gsl::byte> data;
 		u8 index;
 	};
 
@@ -97,7 +97,7 @@ namespace rsx
 		*/
 		std::vector<std::pair<u32, u32>> ranges_to_fetch_in_index_buffer;
 
-		gsl::span<const gsl::byte> raw_index_buffer;
+		gsl::multi_span<const gsl::byte> raw_index_buffer;
 	};
 
 	struct draw_inlined_array
@@ -263,8 +263,8 @@ namespace rsx
 		virtual void clear_zcull_stats(u32 /*type*/) {}
 		virtual u32 get_zcull_stats(u32 /*type*/) { return UINT16_MAX; }
 
-		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
-		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		gsl::multi_span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
+		gsl::multi_span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
 		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;

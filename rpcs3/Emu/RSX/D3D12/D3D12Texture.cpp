@@ -107,7 +107,7 @@ namespace {
 		size_t mip_level = 0;
 
 		void *mapped_buffer_ptr = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-		gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, ::narrow<int>(buffer_size) };
+		gsl::multi_span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, ::narrow<int>(buffer_size) };
 		std::vector<rsx_subresource_layout> input_layouts = get_subresources_layout(texture);
 		u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
 		u8 block_size_in_texel = get_format_block_size_in_texel(format);

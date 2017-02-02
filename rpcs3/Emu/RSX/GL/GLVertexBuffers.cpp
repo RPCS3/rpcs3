@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "GLGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
@@ -40,7 +40,7 @@ namespace
 		return std::make_tuple(element_count, mapping.second);
 	}
 
-	std::tuple<u32, u32, u32> upload_index_buffer(gsl::span<const gsl::byte> raw_index_buffer, void *ptr, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32>>& first_count_commands, u32 initial_vertex_count)
+	std::tuple<u32, u32, u32> upload_index_buffer(gsl::multi_span<const gsl::byte> raw_index_buffer, void *ptr, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32>>& first_count_commands, u32 initial_vertex_count)
 	{
 		u32 min_index, max_index, vertex_draw_count = initial_vertex_count;
 
@@ -50,7 +50,7 @@ namespace
 		u32 type_size = ::narrow<u32>(get_index_type_size(type));
 		u32 block_sz = vertex_draw_count * type_size;
 
-		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), ::narrow<u32>(block_sz) };
+		gsl::multi_span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), ::narrow<u32>(block_sz) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, raw_index_buffer,
 			type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
 			[](auto prim) { return !gl::is_primitive_native(prim); });

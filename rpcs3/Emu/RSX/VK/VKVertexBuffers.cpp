@@ -146,7 +146,7 @@ namespace
 			*/
 			u32 min_index, max_index;
 			std::tie(min_index, max_index) = write_index_array_data_to_buffer(
-				gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), index_count * type_size),
+				gsl::multi_span<gsl::byte>(static_cast<gsl::byte*>(buf), index_count * type_size),
 				command.raw_index_buffer, index_type,
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),

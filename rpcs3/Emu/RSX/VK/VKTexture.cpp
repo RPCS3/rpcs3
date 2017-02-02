@@ -161,7 +161,7 @@ namespace vk
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size);
 
 			void *mapped_buffer = upload_buffer->map(offset_in_buffer, image_linear_size);
-			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
+			gsl::multi_span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
 			upload_texture_subresource(mapped, layout, format, is_swizzled, 256);
 			upload_buffer->unmap();
 

@@ -296,7 +296,7 @@ public:
 		return 0;
 	}
 
-	void fill_fragment_constants_buffer(gsl::span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program) const
+	void fill_fragment_constants_buffer(gsl::multi_span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program) const
 	{
 		const auto I = m_fragment_shader_cache.find(fragment_program);
 		if (I == m_fragment_shader_cache.end())
