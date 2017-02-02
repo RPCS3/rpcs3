@@ -70,9 +70,9 @@ error_code sys_semaphore_destroy(u32 sem_id)
 		return CELL_ESRCH;
 	}
 	
-	if (sem.value)
+	if (sem.ret)
 	{
-		return sem.value;
+		return sem.ret;
 	}
 
 	return CELL_OK;
@@ -112,7 +112,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	if (sem.value)
+	if (sem.ret)
 	{
 		return CELL_OK;
 	}
@@ -182,7 +182,7 @@ error_code sys_semaphore_trywait(u32 sem_id)
 		return CELL_ESRCH;
 	}
 
-	if (!sem.value)
+	if (!sem.ret)
 	{
 		return not_an_error(CELL_EBUSY);
 	}
@@ -219,7 +219,7 @@ error_code sys_semaphore_post(u32 sem_id, s32 count)
 		return CELL_ESRCH;
 	}
 
-	if (sem.value)
+	if (sem.ret)
 	{
 		return CELL_OK;
 	}
