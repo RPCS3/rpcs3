@@ -2,18 +2,19 @@
 
 #include <QQuickItem>
 
-class GLRenderer : public QObject {
-    Q_OBJECT
+class GLRenderer : public QObject
+{
+	Q_OBJECT
 public:
-    GLRenderer() { }
+	GLRenderer() { }
 
-    void setViewportSize(const QSize &size) { m_viewportSize = size; }
+	void setViewportSize(const QSize &size) { m_viewportSize = size; }
 
 public slots:
-    void paint();
+	void paint();
 
 private:
-    QSize m_viewportSize;
+	QSize m_viewportSize;
 };
 
 class GLViewer : public QQuickItem

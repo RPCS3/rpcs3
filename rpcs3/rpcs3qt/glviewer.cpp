@@ -1,13 +1,15 @@
 #ifdef QT_UI
-#include "glviewer.h"
 #include <QQuickWindow>
 #include <QOpenGLContext>
 #include <QCoreApplication>
 
+#include "glviewer.h"
+
 // This class hooks beforeRendering and allows us to draw a scene and reset GL state.
 // In future, we will likely want to manually control the update rate.
 
-void GLRenderer::paint() {
+void GLRenderer::paint()
+{
 	// Do GL here
 	glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
 
@@ -48,7 +50,8 @@ void GLViewer::sync()
 	m_renderer->setViewportSize(window()->size() * window()->devicePixelRatio());
 }
 
-void GLViewer::cleanup() {
+void GLViewer::cleanup()
+{
 	if (m_renderer) {
 		delete m_renderer;
 		m_renderer = 0;
