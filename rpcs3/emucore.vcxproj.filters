@@ -1687,9 +1687,6 @@
     <ClInclude Include="Emu\RSX\rsx_trace.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\SleepQueue.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\gcm_enums.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>

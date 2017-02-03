@@ -317,7 +317,7 @@ s32 sys_spu_thread_group_start(u32 id)
 
 	// because SPU_THREAD_GROUP_STATUS_READY is not possible, run event is delivered immediately
 
-	group->send_run_event(lv2_lock, id, 0, 0); // TODO: check data2 and data3
+	group->send_run_event(id, 0, 0); // TODO: check data2 and data3
 
 	for (auto& thread : group->threads)
 	{

@@ -171,7 +171,7 @@ void KernelExplorer::Update()
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
 			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x \"%s\", %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id, +name64(eq.name),
-				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.ipc_key, eq.events(), eq.size, eq.waiters()));
+				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size()));
 			break;
 		}
 		case SYS_EVENT_PORT_OBJECT:

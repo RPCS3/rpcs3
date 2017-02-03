@@ -278,10 +278,9 @@ void audio_config::on_task()
 
 			for (u64 key : keys)
 			{
-				if (auto&& queue = lv2_event_queue::find(key))
+				if (auto queue = lv2_event_queue::find(key))
 				{
-					if (queue->events() < queue->size)
-						queue->push(lv2_lock, 0, 0, 0, 0); // TODO: check arguments
+					queue->send(0, 0, 0, 0); // TODO: check arguments	
 				}
 			}
 		}
@@ -651,16 +650,26 @@ s32 cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 {
 	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
 
-	for (u64 k = 0; k < 100; k++)
+	vm::var<sys_event_queue_attribute_t> attr;
+	attr->protocol = SYS_SYNC_FIFO;
+	attr->type     = SYS_PPU_QUEUE;
+	attr->name_u64 = 0;
+
+	for (u64 i = 0; i < 100; i++)
 	{
-		const u64 key_value = 0x80004d494f323221ull + k;
-
 		// Create an event queue "bruteforcing" an available key
-		if (auto&& queue = lv2_event_queue::make(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0, key_value, 32))
-		{
-			*id = queue->id;
-			*key = key_value;
+		const u64 key_value = 0x80004d494f323221ull + i;
 
+		if (const s32 res = sys_event_queue_create(id, attr, key_value, 32))
+		{
+			if (res != CELL_EEXIST)
+			{
+				return res;
+			}
+		}
+		else
+		{
+			*key = key_value;
 			return CELL_OK;
 		}
 	}

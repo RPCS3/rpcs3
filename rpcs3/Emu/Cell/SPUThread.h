@@ -5,7 +5,7 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "MFC.h"
 
-class lv2_event_queue;
+struct lv2_event_queue;
 struct lv2_spu_group;
 struct lv2_int_tag;
 

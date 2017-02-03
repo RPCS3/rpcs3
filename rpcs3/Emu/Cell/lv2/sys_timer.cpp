@@ -33,7 +33,7 @@ void lv2_timer::on_task()
 
 				if (queue)
 				{
-					queue->push(lv2_lock, source, data1, data2, expire);
+					queue->send(source, data1, data2, expire);
 				}
 
 				if (period && queue)

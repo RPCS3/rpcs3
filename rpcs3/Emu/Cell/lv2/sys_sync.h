@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Utilities/SleepQueue.h"
 #include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+
+#include <deque>
 
 // attr_protocol (waiting scheduling policy)
 enum

@@ -792,12 +792,10 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					return ch_in_mbox.set_values(1, CELL_ENOTCONN), true; // TODO: check error passing
 				}
 
-				if (queue->events() >= queue->size)
+				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
 					return ch_in_mbox.set_values(1, CELL_EBUSY), true;
 				}
-
-				queue->push(lv2_lock, SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data);
 
 				return ch_in_mbox.set_values(1, CELL_OK), true;
 			}
@@ -829,13 +827,11 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				}
 
 				// TODO: check passing spup value
-				if (queue->events() >= queue->size)
+				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (queue is full)", spup, (value & 0x00ffffff), data);
-					return true;
 				}
 
-				queue->push(lv2_lock, SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data);
 				return true;
 			}
 			else if (code == 128)
@@ -1203,30 +1199,36 @@ bool SPUThread::stop_and_signal(u32 code)
 			fmt::throw_exception("Unexpected SPU Thread Group state (%d)" HERE, (u32)group->state);
 		}
 
-		if (queue->events())
 		{
-			const auto event = queue->pop(lv2_lock);
-			ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(std::get<1>(event)), static_cast<u32>(std::get<2>(event)), static_cast<u32>(std::get<3>(event)));
-		}
-		else
-		{
-			// add waiter; protocol is ignored in current implementation
-			sleep_entry<cpu_thread> waiter(queue->thread_queue(lv2_lock), *this);
+			semaphore_lock lock(queue->mutex);
 
-			// wait on the event queue
-			while (!state.test_and_reset(cpu_flag::signal))
+			if (queue->events.empty())
 			{
-				CHECK_EMU_STATUS;
+				queue->sq.emplace_back(this);
+			}
+			else
+			{
+				const auto event = queue->events.front();
+				const auto data1 = static_cast<u32>(std::get<1>(event));
+				const auto data2 = static_cast<u32>(std::get<2>(event));
+				const auto data3 = static_cast<u32>(std::get<3>(event));
+				ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
+				queue->events.pop_front();
+				state += cpu_flag::signal;
+			}
+		}
 
-				if (test(state & cpu_flag::stop))
-				{
-					return false;
-				}
+		// wait on the event queue
+		while (!state.test_and_reset(cpu_flag::signal))
+		{
+			CHECK_EMU_STATUS;
 
-				LV2_UNLOCK, thread_ctrl::wait();
+			if (test(state & cpu_flag::stop))
+			{
+				return false;
 			}
 
-			// event data must be set by push()
+			LV2_UNLOCK, thread_ctrl::wait();
 		}
 		
 		// restore thread group status

@@ -175,27 +175,27 @@ struct lv2_spu_group
 	{
 	}
 
-	void send_run_event(lv2_lock_t lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_run_event(u64 data1, u64 data2, u64 data3)
 	{
 		if (const auto queue = ep_run.lock())
 		{
-			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
+			queue->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
 		}
 	}
 
-	void send_exception_event(lv2_lock_t lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_exception_event(u64 data1, u64 data2, u64 data3)
 	{
 		if (const auto queue = ep_exception.lock())
 		{
-			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
+			queue->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
 		}
 	}
 
-	void send_sysmodule_event(lv2_lock_t lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_sysmodule_event(u64 data1, u64 data2, u64 data3)
 	{
 		if (const auto queue = ep_sysmodule.lock())
 		{
-			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
+			queue->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
 		}
 	}
 };
