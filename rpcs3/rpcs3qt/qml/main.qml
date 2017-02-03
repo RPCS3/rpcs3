@@ -8,6 +8,7 @@ ApplicationWindow {
 	title: qsTr("RPCS3 Qt")
 	width: Screen.desktopAvailableWidth / 2
 	height: Screen.desktopAvailableHeight / 2
+
 	menuBar: MenuBar {
 		Menu {
 			title: qsTr("&Boot")
@@ -46,7 +47,9 @@ ApplicationWindow {
 			MenuItem { text: qsTr("&About...") }
 		}
 	}
+
 	GLViewer {}
+
 	Rectangle {
 		color: Qt.rgba(0, 0.5, 0.35);
 		height: Math.round(parent.height / 2)
