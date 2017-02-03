@@ -229,7 +229,8 @@ void KernelExplorer::Update()
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx", id, +name64(ef.name), ef.type, ef.pattern.load()));
+			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx, Wq = %zu", id, +name64(ef.name),
+				ef.type, ef.pattern.load(), +ef.waiters));
 			break;
 		}
 		default:

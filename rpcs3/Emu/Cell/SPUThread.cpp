@@ -867,22 +867,8 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				const auto eflag = idm::get<lv2_obj, lv2_event_flag>(data);
-
-				if (!eflag)
-				{
-					return ch_in_mbox.set_values(1, CELL_ESRCH), true;
-				}
-
-				const u64 bitptn = 1ull << flag;
-
-				if (~eflag->pattern.fetch_or(bitptn) & bitptn)
-				{
-					// notify if the bit was set
-					eflag->notify_all(lv2_lock);
-				}
-				
-				return ch_in_mbox.set_values(1, CELL_OK), true;
+				// Use the syscall to set flag
+				return ch_in_mbox.set_values(1, sys_event_flag_set(data, 1ull << flag)), true;
 			}
 			else if (code == 192)
 			{
@@ -908,21 +894,8 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				const auto eflag = idm::get<lv2_obj, lv2_event_flag>(data);
-
-				if (!eflag)
-				{
-					return true;
-				}
-
-				const u64 bitptn = 1ull << flag;
-
-				if (~eflag->pattern.fetch_or(bitptn) & bitptn)
-				{
-					// notify if the bit was set
-					eflag->notify_all(lv2_lock);
-				}
-				
+				// Use the syscall to set flag
+				sys_event_flag_set(data, 1ull << flag);
 				return true;
 			}
 			else
