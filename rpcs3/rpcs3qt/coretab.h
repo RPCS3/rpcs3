@@ -1,6 +1,7 @@
 #ifndef CORETAB_H
 #define CORETAB_H
 
+#include <QLineEdit>
 #include <QWidget>
 
 class CoreTab : public QWidget
@@ -10,9 +11,11 @@ class CoreTab : public QWidget
 public:
 	explicit CoreTab(QWidget *parent = 0);
 
-signals:
+private slots:
+    void OnSearchBoxTextChanged();
 
-public slots:
+private:
+    QLineEdit *searchBox;
 };
 
 #endif // CORETAB_H
