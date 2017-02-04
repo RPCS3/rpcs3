@@ -1,5 +1,5 @@
 # Qt5.2+ project for rpcs3. Works on Windows, Linux and Mac OSX
-QT += gui opengl quick
+QT += gui opengl quick widgets
 CONFIG += c++11
 
 TARGET = rpcs3-qt
