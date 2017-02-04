@@ -6,6 +6,7 @@
 #include <QFileDialog>
 #include <QDebug>
 
+#include "settingsdialog.h"
 #include "mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -92,7 +93,8 @@ void MainWindow::SendExit()
 
 void MainWindow::Settings()
 {
-	qDebug() << "MainWindow::Settings()";
+	SettingsDialog dlg(this);
+	dlg.exec();
 }
 
 void MainWindow::PadSettings()

@@ -1,0 +1,6 @@
+#include "audiotab.h"
+
+AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
+{
+
+}
