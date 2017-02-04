@@ -1,3 +1,5 @@
+#ifdef QT_UI
+
 #include <QCheckBox>
 #include <QGroupBox>
 #include <QRadioButton>
@@ -71,3 +73,5 @@ void CoreTab::OnSearchBoxTextChanged()
 {
 
 }
+
+#endif // QT_UI
