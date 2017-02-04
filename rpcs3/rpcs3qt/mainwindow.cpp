@@ -154,12 +154,23 @@ void MainWindow::DecryptSPRXLibraries()
 {
 	QFileDialog dlg(this, "Select SPRX files", "", "SPRX files (*.sprx)");
 	dlg.setAcceptMode(QFileDialog::AcceptOpen);
-	dlg.setFileMode(QFileDialog::ExistingFile);
+	dlg.setFileMode(QFileDialog::ExistingFiles);
 
 	if (dlg.exec() == QDialog::Rejected)
 	{
 		return;
 	}
+
+	QStringList modules = dlg.selectedFiles();
+
+	qDebug() << "Decrypting SPRX libraries...";
+
+	for (QString& module : modules)
+	{
+		qDebug() << module;
+	}
+
+	qDebug() << "Finished decrypting all SPRX libraries.";
 }
 
 void MainWindow::About()
