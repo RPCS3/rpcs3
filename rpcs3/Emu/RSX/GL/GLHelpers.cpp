@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "GLHelpers.h"
+#include "Utilities/Log.h"
 
 namespace gl
 {
@@ -84,15 +85,18 @@ namespace gl
 		return m_id != 0;
 	}
 
-	void fbo::check() const
+	bool fbo::check() const
 	{
 		save_binding_state save(*this);
 		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 		if (status != GL_FRAMEBUFFER_COMPLETE)
 		{
-			fmt::throw_exception<std::logic_error>("0x%04x", status);
+			LOG_ERROR(RSX, "FBO check failed: 0x%04x", status);
+			return false;
 		}
+
+		return true;
 	}
 
 	void fbo::recreate()
