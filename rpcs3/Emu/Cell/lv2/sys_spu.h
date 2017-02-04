@@ -148,16 +148,17 @@ struct lv2_spu_group
 	const s32 type; // SPU Thread Group Type
 	const u32 ct; // Memory Container Id
 
+	semaphore<> mutex;
+	atomic_t<u32> init; // Initialization Counter
+	atomic_t<s32> prio; // SPU Thread Group Priority
+	atomic_t<u32> run_state; // SPU Thread Group State
+	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
+	atomic_t<u32> join_state; // flags used to detect exit cause
+	cond_variable cv; // used to signal waiting PPU thread
+
 	std::array<std::shared_ptr<SPUThread>, 256> threads; // SPU Threads
 	std::array<vm::ps3::ptr<sys_spu_image_t>, 256> images; // SPU Images
 	std::array<spu_arg_t, 256> args; // SPU Thread Arguments
-
-	s32 prio; // SPU Thread Group Priority
-	volatile u32 state; // SPU Thread Group State
-	s32 exit_status; // SPU Thread Group Exit Status
-
-	atomic_t<u32> join_state; // flags used to detect exit cause
-	cond_variable cv; // used to signal waiting PPU thread
 
 	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
 	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
@@ -166,10 +167,11 @@ struct lv2_spu_group
 	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, u32 ct)
 		: name(name)
 		, num(num)
+		, init(0)
 		, prio(prio)
 		, type(type)
 		, ct(ct)
-		, state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+		, run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 		, exit_status(0)
 		, join_state(0)
 	{
