@@ -12,28 +12,28 @@
 CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
 {
     // PPU Decoder
-    QGroupBox *ppuDecoder = new QGroupBox(tr("PPU Decoder"), this);
+    QGroupBox *ppuDecoder = new QGroupBox(tr("PPU Decoder"));
 
-    QRadioButton *ppuRadio1 = new QRadioButton(tr("Interpreter (precise)"), this);
-    QRadioButton *ppuRadio2 = new QRadioButton(tr("Interpreter (fast)"), this);
-    QRadioButton *ppuRadio3 = new QRadioButton(tr("Recompiler (LLVM)"), this);
+    QRadioButton *ppuRadio1 = new QRadioButton(tr("Interpreter (precise)"));
+    QRadioButton *ppuRadio2 = new QRadioButton(tr("Interpreter (fast)"));
+    QRadioButton *ppuRadio3 = new QRadioButton(tr("Recompiler (LLVM)"));
 
-    QVBoxLayout *ppuVbox = new QVBoxLayout(this);
+    QVBoxLayout *ppuVbox = new QVBoxLayout;
     ppuVbox->addWidget(ppuRadio1);
     ppuVbox->addWidget(ppuRadio2);
     ppuVbox->addWidget(ppuRadio3);
     ppuDecoder->setLayout(ppuVbox);
 
     // SPU Decoder
-    QGroupBox *spuDecoder = new QGroupBox(tr("SPU Decoder"), this);
+    QGroupBox *spuDecoder = new QGroupBox(tr("SPU Decoder"));
 
-    QRadioButton *spuRadio1 = new QRadioButton(tr("Interpreter (precise)"), this);
-    QRadioButton *spuRadio2 = new QRadioButton(tr("Interpreter (fast)"), this);
-    QRadioButton *spuRadio3 = new QRadioButton(tr("Recompiler (ASMJIT)"), this);
-    QRadioButton *spuRadio4 = new QRadioButton(tr("Recompiler (LLVM)"), this);
+    QRadioButton *spuRadio1 = new QRadioButton(tr("Interpreter (precise)"));
+    QRadioButton *spuRadio2 = new QRadioButton(tr("Interpreter (fast)"));
+    QRadioButton *spuRadio3 = new QRadioButton(tr("Recompiler (ASMJIT)"));
+    QRadioButton *spuRadio4 = new QRadioButton(tr("Recompiler (LLVM)"));
     spuRadio4->setEnabled(false); // TODO
 
-    QVBoxLayout *spuVbox = new QVBoxLayout(this);
+    QVBoxLayout *spuVbox = new QVBoxLayout;
     spuVbox->addWidget(spuRadio1);
     spuVbox->addWidget(spuRadio2);
     spuVbox->addWidget(spuRadio3);
@@ -41,14 +41,14 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
     spuDecoder->setLayout(spuVbox);
 
     // Checkboxes
-    QCheckBox *hookStFunc = new QCheckBox(tr("Hook static functions"), this);
-    QCheckBox *loadLiblv2 = new QCheckBox(tr("Load liblv2.sprx only"), this);
+    QCheckBox *hookStFunc = new QCheckBox(tr("Hook static functions"));
+    QCheckBox *loadLiblv2 = new QCheckBox(tr("Load liblv2.sprx only"));
 
     // Load libraries
-    QGroupBox *coreLle = new QGroupBox(tr("Load libraries"), this);
+    QGroupBox *coreLle = new QGroupBox(tr("Load libraries"));
 
-    QListWidget *lleList = new QListWidget(this);
-    searchBox = new QLineEdit(this);
+    QListWidget *lleList = new QListWidget;
+    searchBox = new QLineEdit;
     connect(searchBox, &QLineEdit::textChanged, this, &CoreTab::OnSearchBoxTextChanged);
 
     QVBoxLayout *lleVbox = new QVBoxLayout;
@@ -63,7 +63,7 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
     vbox->addWidget(hookStFunc);
     vbox->addWidget(loadLiblv2);
 
-    QHBoxLayout *hbox = new QHBoxLayout(this);
+    QHBoxLayout *hbox = new QHBoxLayout;
     hbox->addLayout(vbox);
     hbox->addWidget(coreLle);
     setLayout(hbox);

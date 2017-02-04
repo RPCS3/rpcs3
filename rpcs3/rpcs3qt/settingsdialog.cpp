@@ -27,17 +27,20 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 
     QPushButton *okButton = new QPushButton(tr("OK"));
 
-    QPushButton *closeButton = new QPushButton(tr("Close"));
-    connect(closeButton, &QAbstractButton::clicked, this, &QWidget::close);
+    QPushButton *cancelButton = new QPushButton(tr("Cancel"));
+    cancelButton->setDefault(true);
+    connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
     QHBoxLayout *buttonsLayout = new QHBoxLayout;
     buttonsLayout->addWidget(okButton);
-    buttonsLayout->addWidget(closeButton);
+    buttonsLayout->addWidget(cancelButton);
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addWidget(tabWidget);
     mainLayout->addLayout(buttonsLayout);
     setLayout(mainLayout);
+
+    cancelButton->setFocus();
 
     setWindowTitle(tr("Settings"));
 }
