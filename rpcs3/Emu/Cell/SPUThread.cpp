@@ -54,9 +54,12 @@ void spu_int_ctrl_t::set(u64 ints)
 	{
 		LV2_LOCK;
 
-		if (tag && tag->handler)
+		if (tag)
 		{
-			tag->handler->exec();
+			if (auto handler = tag->handler.lock())
+			{
+				handler->exec();
+			}
 		}
 	}
 }

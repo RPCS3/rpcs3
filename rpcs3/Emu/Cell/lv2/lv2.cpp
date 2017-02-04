@@ -973,6 +973,9 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 		STR_CASE(CELL_EOVERFLOW);
 		STR_CASE(CELL_ENOTMOUNTED);
 		STR_CASE(CELL_ENOTSDATA);
+		STR_CASE(CELL_ESDKVER);
+		STR_CASE(CELL_ENOLICDISC);
+		STR_CASE(CELL_ENOLICENT);
 		}
 
 		return unknown;

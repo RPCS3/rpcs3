@@ -1173,18 +1173,42 @@ s32 sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	// Stop thread
 	thread->state += cpu_flag::stop;
 
+	// Kernel objects which must be removed
+	std::unordered_map<lv2_obj*, u32, pointer_hash<lv2_obj, alignof(void*)>> to_remove;
+
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)
 	{
 		if (intr.tag)
 		{
-			if (intr.tag->handler)
+			if (auto handler = intr.tag->handler.lock())
 			{
-				intr.tag->handler->join(ppu, lv2_lock);
+				LV2_UNLOCK, handler->join();
+				to_remove.emplace(handler.get(), 0);
 			}
 
-			idm::remove<lv2_obj, lv2_int_tag>(intr.tag->id);
+			to_remove.emplace(intr.tag.get(), 0);
 		}
+	}
+
+	// Scan all kernel objects to determine IDs
+	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
+	{
+		const auto found = to_remove.find(&obj);
+
+		if (found != to_remove.end())
+		{
+			found->second = id;
+		}
+	});
+
+	// Remove IDs
+	for (auto&& pair : to_remove)
+	{
+		if (pair.second >> 24 == 0xa)
+			idm::remove<lv2_obj, lv2_int_tag>(pair.second);
+		if (pair.second >> 24 == 0xb)
+			idm::remove<lv2_obj, lv2_int_serv>(pair.second);
 	}
 
 	idm::remove<RawSPUThread>(thread->id);
@@ -1219,7 +1243,7 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr
 
 	int_ctrl.tag = idm::make_ptr<lv2_obj, lv2_int_tag>();
 
-	*intrtag = int_ctrl.tag->id;
+	*intrtag = idm::last_id();
 
 	return CELL_OK;
 }
