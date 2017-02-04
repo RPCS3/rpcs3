@@ -867,6 +867,9 @@ namespace rsx
 
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
 
+		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
+		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
+
 		for (auto& tex : fragment_textures) tex.init();
 		for (auto& tex : vertex_textures) tex.init();
 		for (auto& vtx : vertex_arrays_info) vtx.reset();

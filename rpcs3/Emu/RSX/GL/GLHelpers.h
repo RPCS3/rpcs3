@@ -1768,7 +1768,7 @@ namespace gl
 		void bind_as(target target_) const;
 		void remove();
 		bool created() const;
-		void check() const;
+		bool check() const;
 
 		void recreate();
 		void draw_buffer(const attachment& buffer) const;
