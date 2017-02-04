@@ -17,6 +17,22 @@ private slots:
 	void BootElf();
 	void BootGame();
 	void InstallPkg();
+	void Pause();
+	void Stop();
+	void SendOpenSysMenu();
+	void SendExit();
+	void Settings();
+	void PadSettings();
+	void AutoPauseSettings();
+	void VFSManager();
+	void VHDDManager();
+	void SaveData();
+	void ELFCompiler();
+	void CgDisasm();
+	void KernelExplorer();
+	void MemoryViewer();
+	void RSXDebugger();
+	void StringSearch();
 	void DecryptSPRXLibraries();
 	void About();
 

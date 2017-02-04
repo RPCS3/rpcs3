@@ -6,8 +6,6 @@
 #include <QFileDialog>
 #include <QDebug>
 
-//#include "stdafx.h"
-//#include "rpcs3.h"
 #include "mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -72,6 +70,86 @@ void MainWindow::InstallPkg()
 	}
 }
 
+void MainWindow::Pause()
+{
+	qDebug() << "MainWindow::Pause()";
+}
+
+void MainWindow::Stop()
+{
+	qDebug() << "MainWindow::Stop()";
+}
+
+void MainWindow::SendOpenSysMenu()
+{
+	qDebug() << "MainWindow::SendOpenSysMenu()";
+}
+
+void MainWindow::SendExit()
+{
+	qDebug() << "MainWindow::SendExit()";
+}
+
+void MainWindow::Settings()
+{
+	qDebug() << "MainWindow::Settings()";
+}
+
+void MainWindow::PadSettings()
+{
+	qDebug() << "MainWindow::PadSettings()";
+}
+
+void MainWindow::AutoPauseSettings()
+{
+	qDebug() << "MainWindow::AutoPauseSettings()";
+}
+
+void MainWindow::VFSManager()
+{
+	qDebug() << "MainWindow::VFSManager()";
+}
+
+void MainWindow::VHDDManager()
+{
+	qDebug() << "MainWindow::VHDDManager()";
+}
+
+void MainWindow::SaveData()
+{
+	qDebug() << "MainWindow::SaveData()";
+}
+
+void MainWindow::ELFCompiler()
+{
+	qDebug() << "MainWindow::ELFCompiler()";
+}
+
+void MainWindow::CgDisasm()
+{
+	qDebug() << "MainWindow::CgDisasm()";
+}
+
+void MainWindow::KernelExplorer()
+{
+	qDebug() << "MainWindow::KernelExplorer()";
+}
+
+void MainWindow::MemoryViewer()
+{
+	qDebug() << "MainWindow::MemoryViewer()";
+}
+
+void MainWindow::RSXDebugger()
+{
+	qDebug() << "MainWindow::RSXDebugger()";
+}
+
+void MainWindow::StringSearch()
+{
+	qDebug() << "MainWindow::StringSearch()";
+}
+
 void MainWindow::DecryptSPRXLibraries()
 {
 	QFileDialog dlg(this, "Select SPRX files", "", "SPRX files (*.sprx)");
@@ -133,51 +211,68 @@ void MainWindow::CreateActions()
 
 	sysPauseAct = new QAction(tr("&Pause"), this);
 	sysPauseAct->setEnabled(false);
+	connect(sysPauseAct, &QAction::triggered, this, &MainWindow::Pause);
 
 	sysStopAct = new QAction(tr("&Stop"), this);
 	sysStopAct->setShortcut(tr("Ctrl+S"));
 	sysStopAct->setEnabled(false);
+	connect(sysStopAct, &QAction::triggered, this, &MainWindow::Stop);
 
 	sysSendOpenMenuAct = new QAction(tr("Send &open system menu cmd"), this);
 	sysSendOpenMenuAct->setEnabled(false);
+	connect(sysSendOpenMenuAct, &QAction::triggered, this, &MainWindow::SendOpenSysMenu);
 
 	sysSendExitAct = new QAction(tr("Send &exit cmd"), this);
 	sysSendExitAct->setEnabled(false);
+	connect(sysSendExitAct, &QAction::triggered, this, &MainWindow::SendExit);
 
 	confSettingsAct = new QAction(tr("&Settings"), this);
+	connect(confSettingsAct, &QAction::triggered, this, &MainWindow::Settings);
 
 	confPadAct = new QAction(tr("&PAD Settings"), this);
+	connect(confPadAct, &QAction::triggered, this, &MainWindow::PadSettings);
 
 	confAutopauseManagerAct = new QAction(tr("&Auto Pause Settings"), this);
+	connect(confAutopauseManagerAct, &QAction::triggered, this, &MainWindow::AutoPauseSettings);
 
 	confVfsManagerAct = new QAction(tr("Virtual &File System Manager"), this);
 	confVfsManagerAct->setEnabled(false);
+	connect(confVfsManagerAct, &QAction::triggered, this, &MainWindow::VFSManager);
 
 	confVhddManagerAct = new QAction(tr("Virtual &HDD Manager"), this);
 	confVhddManagerAct->setEnabled(false);
+	connect(confVhddManagerAct, &QAction::triggered, this, &MainWindow::VHDDManager);
 
 	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
 	confSavedataManagerAct->setEnabled(false);
+	connect(confSavedataManagerAct, &QAction::triggered, this, &MainWindow::SaveData);
 
 	toolsCompilerAct = new QAction(tr("&ELF Compiler"), this);
 	toolsCompilerAct->setEnabled(false);
+	connect(toolsCompilerAct, &QAction::triggered, this, &MainWindow::ELFCompiler);
 
 	toolsCgDisasmAct = new QAction(tr("&Cg Disasm"), this);
 	toolsCgDisasmAct->setEnabled(false);
+	connect(toolsCgDisasmAct, &QAction::triggered, this, &MainWindow::CgDisasm);
 
 	toolsKernelExplorerAct = new QAction(tr("&Kernel Explorer"), this);
 	toolsKernelExplorerAct->setEnabled(false);
+	connect(toolsKernelExplorerAct, &QAction::triggered, this, &MainWindow::KernelExplorer);
 
 	toolsMemoryViewerAct = new QAction(tr("&Memory Viewer"), this);
 	toolsMemoryViewerAct->setEnabled(false);
+	connect(toolsMemoryViewerAct, &QAction::triggered, this, &MainWindow::MemoryViewer);
 
 	toolsRsxDebuggerAct = new QAction(tr("&RSX Debugger"), this);
 	toolsRsxDebuggerAct->setEnabled(false);
+	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebugger);
 
 	toolsStringSearchAct = new QAction(tr("&String Search"), this);
 	toolsStringSearchAct->setEnabled(false);
+	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
 
 	toolsSecryptSprxLibsAct = new QAction(tr("&Decrypt SPRX libraries"), this);
+	connect(toolsSecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
 
 	aboutAct = new QAction(tr("&About"), this);
 	aboutAct->setStatusTip(tr("Show the application's About box"));
