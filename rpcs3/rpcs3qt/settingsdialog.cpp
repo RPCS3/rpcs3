@@ -26,6 +26,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
     tabWidget->addTab(new SystemTab(this), tr("System"));
 
     QPushButton *okButton = new QPushButton(tr("OK"));
+    connect(okButton, &QAbstractButton::clicked, this, &QDialog::accept);
 
     QPushButton *cancelButton = new QPushButton(tr("Cancel"));
     cancelButton->setDefault(true);
