@@ -77,8 +77,6 @@ struct lv2_prx final : lv2_obj
 {
 	static const u32 id_base = 0x23000000;
 
-	const u32 id;
-
 	bool is_started = false;
 
 	std::unordered_map<u32, u32> specials;
@@ -87,8 +85,6 @@ struct lv2_prx final : lv2_obj
 	vm::ps3::ptr<s32(int argc, vm::ps3::ptr<void> argv)> start = vm::null;
 	vm::ps3::ptr<s32(int argc, vm::ps3::ptr<void> argv)> stop = vm::null;
 	vm::ps3::ptr<s32()> exit = vm::null;
-	
-	lv2_prx();
 };
 
 // SysCalls

@@ -32,7 +32,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	return prx->id;
+	return idm::last_id();
 }
 
 s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
@@ -124,7 +124,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	sys_prx.warning("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
 	// Get the PRX, free the used memory and delete the object and its ID
-	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
+	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id);
 
 	if (!prx)
 	{
@@ -134,7 +134,6 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	//Memory.Free(prx->address);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
-	idm::remove<lv2_obj, lv2_prx>(id);
 	
 	return CELL_OK;
 }
@@ -230,9 +229,4 @@ s32 sys_prx_stop()
 {
 	sys_prx.todo("sys_prx_stop()");
 	return CELL_OK;
-}
-
-lv2_prx::lv2_prx()
-	: id(idm::last_id())
-{
 }
