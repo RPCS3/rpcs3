@@ -191,6 +191,9 @@ void GLGSRender::begin()
 
 	init_buffers();
 
+	if (!draw_fbo.check())
+		return;
+
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
 
 	bool color_mask_b = rsx::method_registers.color_mask_b();
@@ -377,7 +380,7 @@ namespace
 
 void GLGSRender::end()
 {
-	if (!draw_fbo)
+	if (!draw_fbo || !draw_fbo.check())
 	{
 		rsx::thread::end();
 		return;
