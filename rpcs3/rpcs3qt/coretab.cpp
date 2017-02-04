@@ -45,7 +45,7 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
     QCheckBox *loadLiblv2 = new QCheckBox(tr("Load liblv2.sprx only"));
 
     // Load libraries
-    QGroupBox *coreLle = new QGroupBox(tr("Load libraries"));
+    QGroupBox *lle = new QGroupBox(tr("Load libraries"));
 
     QListWidget *lleList = new QListWidget;
     searchBox = new QLineEdit;
@@ -54,7 +54,7 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
     QVBoxLayout *lleVbox = new QVBoxLayout;
     lleVbox->addWidget(lleList);
     lleVbox->addWidget(searchBox);
-    coreLle->setLayout(lleVbox);
+    lle->setLayout(lleVbox);
 
     // Main layout
     QVBoxLayout *vbox = new QVBoxLayout;
@@ -65,7 +65,7 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
 
     QHBoxLayout *hbox = new QHBoxLayout;
     hbox->addLayout(vbox);
-    hbox->addWidget(coreLle);
+    hbox->addWidget(lle);
     setLayout(hbox);
 }
 
