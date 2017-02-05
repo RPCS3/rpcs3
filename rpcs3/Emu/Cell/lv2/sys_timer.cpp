@@ -4,6 +4,7 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "sys_event.h"
 #include "sys_process.h"
 #include "sys_timer.h"
@@ -277,18 +278,18 @@ error_code sys_timer_disconnect_event_queue(u32 timer_id)
 	return CELL_OK;
 }
 
-error_code sys_timer_sleep(u32 sleep_time)
+error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 {
 	sys_timer.trace("sys_timer_sleep(sleep_time=%d) -> sys_timer_usleep()", sleep_time);
 
-	return sys_timer_usleep(sleep_time * u64{1000000});
+	return sys_timer_usleep(ppu, sleep_time * u64{1000000});
 }
 
-error_code sys_timer_usleep(u64 sleep_time)
+error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 {
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
 
-	u64 start = get_system_time();
+	u64 start = ppu.gpr[10] = get_system_time();
 	u64 passed = 0;
 
 	// SLEEP

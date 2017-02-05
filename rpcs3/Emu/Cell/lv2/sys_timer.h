@@ -36,6 +36,8 @@ struct lv2_timer final : public lv2_obj, public named_thread
 	atomic_t<u64> period{0}; // Period (oneshot if 0)
 };
 
+class ppu_thread;
+
 // Syscalls
 
 error_code sys_timer_create(vm::ps3::ptr<u32> timer_id);
@@ -45,5 +47,5 @@ error_code _sys_timer_start(u32 timer_id, u64 basetime, u64 period); // basetime
 error_code sys_timer_stop(u32 timer_id);
 error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);
 error_code sys_timer_disconnect_event_queue(u32 timer_id);
-error_code sys_timer_sleep(u32 sleep_time);
-error_code sys_timer_usleep(u64 sleep_time);
+error_code sys_timer_sleep(ppu_thread&, u32 sleep_time);
+error_code sys_timer_usleep(ppu_thread&, u64 sleep_time);

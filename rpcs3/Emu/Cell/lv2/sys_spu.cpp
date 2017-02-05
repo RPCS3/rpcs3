@@ -44,7 +44,7 @@ u32 LoadSpuImage(const fs::file& stream, u32& spu_ep)
 	return spu_offset;
 }
 
-s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
+error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 {
 	sys_spu.warning("sys_spu_initialize(max_usable_spu=%d, max_raw_spu=%d)", max_usable_spu, max_raw_spu);
 
@@ -56,7 +56,7 @@ s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	return CELL_OK;
 }
 
-s32 sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
+error_code sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
@@ -88,7 +88,7 @@ s32 sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image_t> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
+error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image_t> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
 {
 	sys_spu.warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
 
@@ -135,7 +135,7 @@ s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
+error_code sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 {
 	sys_spu.warning("sys_spu_thread_set_argument(id=0x%x, arg=*0x%x)", id, arg);
 
@@ -158,7 +158,7 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
+error_code sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 {
 	sys_spu.warning("sys_spu_thread_get_exit_status(id=0x%x, status=*0x%x)", id, status);
 
@@ -176,7 +176,7 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
+error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
 {
 	sys_spu.warning("sys_spu_thread_group_create(id=*0x%x, num=%d, prio=%d, attr=*0x%x)", id, num, prio, attr);
 
@@ -197,7 +197,7 @@ s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_destroy(u32 id)
+error_code sys_spu_thread_group_destroy(u32 id)
 {
 	sys_spu.warning("sys_spu_thread_group_destroy(id=0x%x)", id);
 
@@ -235,7 +235,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_start(u32 id)
+error_code sys_spu_thread_group_start(u32 id)
 {
 	sys_spu.warning("sys_spu_thread_group_start(id=0x%x)", id);
 
@@ -296,7 +296,7 @@ s32 sys_spu_thread_group_start(u32 id)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_suspend(u32 id)
+error_code sys_spu_thread_group_suspend(u32 id)
 {
 	sys_spu.trace("sys_spu_thread_group_suspend(id=0x%x)", id);
 
@@ -349,7 +349,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_resume(u32 id)
+error_code sys_spu_thread_group_resume(u32 id)
 {
 	sys_spu.trace("sys_spu_thread_group_resume(id=0x%x)", id);
 
@@ -394,7 +394,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_yield(u32 id)
+error_code sys_spu_thread_group_yield(u32 id)
 {
 	sys_spu.trace("sys_spu_thread_group_yield(id=0x%x)", id);
 
@@ -420,7 +420,7 @@ s32 sys_spu_thread_group_yield(u32 id)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_terminate(u32 id, s32 value)
+error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 {
 	sys_spu.warning("sys_spu_thread_group_terminate(id=0x%x, value=0x%x)", id, value);
 
@@ -479,7 +479,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
+error_code sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 {
 	sys_spu.warning("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
 
@@ -562,7 +562,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
+error_code sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 {
 	sys_spu.trace("sys_spu_thread_write_ls(id=0x%x, lsa=0x%05x, value=0x%llx, type=%d)", id, lsa, value, type);
 
@@ -599,7 +599,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_read_ls(u32 id, u32 lsa, vm::ptr<u64> value, u32 type)
+error_code sys_spu_thread_read_ls(u32 id, u32 lsa, vm::ptr<u64> value, u32 type)
 {
 	sys_spu.trace("sys_spu_thread_read_ls(id=0x%x, lsa=0x%05x, value=*0x%x, type=%d)", id, lsa, value, type);
 
@@ -636,7 +636,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 lsa, vm::ptr<u64> value, u32 type)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
+error_code sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
 	sys_spu.warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x)", id, value);
 
@@ -661,7 +661,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
+error_code sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 {
 	sys_spu.warning("sys_spu_thread_set_spu_cfg(id=0x%x, value=0x%x)", id, value);
 
@@ -682,7 +682,7 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
+error_code sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 {
 	sys_spu.warning("sys_spu_thread_get_spu_cfg(id=0x%x, value=*0x%x)", id, value);
 
@@ -698,7 +698,7 @@ s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
+error_code sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 {
 	sys_spu.trace("sys_spu_thread_write_snr(id=0x%x, number=%d, value=0x%x)", id, number, value);
 
@@ -724,7 +724,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
+error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 {
 	sys_spu.warning("sys_spu_thread_group_connect_event(id=0x%x, eq=0x%x, et=%d)", id, eq, et);
 
@@ -780,7 +780,7 @@ s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
+error_code sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 {
 	sys_spu.warning("sys_spu_thread_group_disconnect_event(id=0x%x, et=%d)", id, et);
 
@@ -835,7 +835,7 @@ s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
+error_code sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 {
 	sys_spu.warning("sys_spu_thread_connect_event(id=0x%x, eq=0x%x, et=%d, spup=%d)", id, eq, et, spup);
 
@@ -867,7 +867,7 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
+error_code sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 {
 	sys_spu.warning("sys_spu_thread_disconnect_event(id=0x%x, et=%d, spup=%d)", id, et, spup);
 
@@ -898,7 +898,7 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
+error_code sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 {
 	sys_spu.warning("sys_spu_thread_bind_queue(id=0x%x, spuq=0x%x, spuq_num=0x%x)", id, spuq, spuq_num);
 
@@ -942,7 +942,7 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 	return CELL_EAGAIN;
 }
 
-s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
+error_code sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 {
 	sys_spu.warning("sys_spu_thread_unbind_queue(id=0x%x, spuq_num=0x%x)", id, spuq_num);
 
@@ -968,7 +968,7 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 	return CELL_ESRCH;
 }
 
-s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::ptr<u8> spup)
+error_code sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::ptr<u8> spup)
 {
 	sys_spu.warning("sys_spu_thread_group_connect_event_all_threads(id=0x%x, eq=0x%x, req=0x%llx, spup=*0x%x)", id, eq, req, spup);
 
@@ -1039,7 +1039,7 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
+error_code sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 {
 	sys_spu.warning("sys_spu_thread_group_disconnect_event_all_threads(id=0x%x, spup=%d)", id, spup);
 
@@ -1068,7 +1068,7 @@ s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
+error_code sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 {
 	sys_spu.warning("sys_raw_spu_create(id=*0x%x, attr=*0x%x)", id, attr);
 
@@ -1088,7 +1088,7 @@ s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
+error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 {
 	sys_spu.warning("sys_raw_spu_destroy(id=%d)", id);
 
@@ -1148,7 +1148,7 @@ s32 sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
+error_code sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
 {
 	sys_spu.warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag=*0x%x)", id, class_id, hwthread, intrtag);
 
@@ -1193,7 +1193,7 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr
 	return error;
 }
 
-s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
+error_code sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 {
 	sys_spu.trace("sys_raw_spu_set_int_mask(id=%d, class_id=%d, mask=0x%llx)", id, class_id, mask);
 
@@ -1214,7 +1214,7 @@ s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
+error_code sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 {
 	sys_spu.trace("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask=*0x%x)", id, class_id, mask);
 
@@ -1235,7 +1235,7 @@ s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
+error_code sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 {
 	sys_spu.trace("sys_raw_spu_set_int_stat(id=%d, class_id=%d, stat=0x%llx)", id, class_id, stat);
 
@@ -1256,7 +1256,7 @@ s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
+error_code sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 {
 	sys_spu.trace("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat=*0x%x)", id, class_id, stat);
 
@@ -1277,7 +1277,7 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
+error_code sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 {
 	sys_spu.trace("sys_raw_spu_read_puint_mb(id=%d, value=*0x%x)", id, value);
 
@@ -1293,7 +1293,7 @@ s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
+error_code sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 {
 	sys_spu.trace("sys_raw_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
 
@@ -1314,7 +1314,7 @@ s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
+error_code sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 {
 	sys_spu.trace("sys_raw_spu_get_spu_afg(id=%d, value=*0x%x)", id, value);
 

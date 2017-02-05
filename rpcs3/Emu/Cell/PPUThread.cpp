@@ -43,6 +43,8 @@
 #include "Modules/cellMsgDialog.h"
 #endif
 
+extern u64 get_system_time();
+
 namespace vm { using namespace ps3; }
 
 enum class ppu_decoder_type
@@ -374,7 +376,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	}
 	catch (EmulationStopped)
 	{
-		if (last_function) LOG_WARNING(PPU, "'%s' aborted", last_function);
+		if (last_function) LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - gpr[10]) / 1000000.);
 		last_function = old_func;
 		throw;
 	}
