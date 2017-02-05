@@ -33,6 +33,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
 	QHBoxLayout *buttonsLayout = new QHBoxLayout;
+	buttonsLayout->addStretch();
 	buttonsLayout->addWidget(okButton);
 	buttonsLayout->addWidget(cancelButton);
 
