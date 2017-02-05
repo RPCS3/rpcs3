@@ -6,17 +6,23 @@
 #include <QFileDialog>
 #include <QDebug>
 #include <QVBoxLayout>
+#include <QDockWidget>
 
+#include "gamelistframe.h"
+#include "debuggerframe.h"
+#include "logframe.h"
 #include "settingsdialog.h"
+#include "padsettingsdialog.h"
 #include "mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
-	setGeometry(0, 0, 900, 600);
-	//setWindowTitle("RPCS3 v" + rpcs3::version.to_string());
-
 	CreateActions();
 	CreateMenus();
+	CreateDockWindows();
+
+	setGeometry(0, 0, 900, 600);
+	setWindowTitle("RPCS3 v");
 }
 
 MainWindow::~MainWindow()
@@ -100,7 +106,8 @@ void MainWindow::Settings()
 
 void MainWindow::PadSettings()
 {
-	qDebug() << "MainWindow::PadSettings()";
+	PadSettingsDialog dlg(this);
+	dlg.exec();
 }
 
 void MainWindow::AutoPauseSettings()
@@ -337,6 +344,17 @@ void MainWindow::CreateMenus()
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
 	helpMenu->addAction(aboutQtAct);
+}
+
+void MainWindow::CreateDockWindows()
+{
+	GameListFrame *gameList = new GameListFrame(this);
+	DebuggerFrame *debugger = new DebuggerFrame(this);
+	LogFrame *log = new LogFrame(this);
+
+	addDockWidget(Qt::LeftDockWidgetArea, gameList);
+	addDockWidget(Qt::RightDockWidgetArea, debugger);
+	addDockWidget(Qt::BottomDockWidgetArea, log);
 }
 
 #endif // QT_UI

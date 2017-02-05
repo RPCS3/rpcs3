@@ -2,7 +2,7 @@
 
 #include "logframe.h"
 
-LogFrame::LogFrame(QWidget *parent, Qt::WindowFlags f) : QFrame(parent, f)
+LogFrame::LogFrame(QWidget *parent) : QDockWidget(tr("Log"), parent)
 {
 
 }

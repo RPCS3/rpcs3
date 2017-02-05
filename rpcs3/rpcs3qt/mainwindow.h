@@ -39,6 +39,7 @@ private slots:
 private:
 	void CreateActions();
 	void CreateMenus();
+	void CreateDockWindows();
 
 	QAction *bootElfAct;
 	QAction *bootGameAct;
