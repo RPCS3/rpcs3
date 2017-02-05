@@ -92,7 +92,6 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 	QCheckBox *logProg = new QCheckBox(tr("Log shader programs"));
 	QCheckBox *vsync = new QCheckBox(tr("VSync"));
 
-
 	// Main layout
 	QVBoxLayout *vbox1 = new QVBoxLayout;
 	vbox1->addWidget(render);
