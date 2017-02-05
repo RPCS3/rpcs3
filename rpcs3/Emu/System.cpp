@@ -418,20 +418,16 @@ void Emulator::Resume()
 
 	SendDbgCommand(DID_RESUME_EMU);
 
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
-		LV2_LOCK;
+		cpu.state -= cpu_flag::dbg_global_pause;
+		cpu.notify();
+	};
 
-		auto on_select = [](u32, cpu_thread& cpu)
-		{
-			cpu.state -= cpu_flag::dbg_global_pause;
-			cpu.notify();
-		};
-
-		idm::select<ppu_thread>(on_select);
-		idm::select<ARMv7Thread>(on_select);
-		idm::select<RawSPUThread>(on_select);
-		idm::select<SPUThread>(on_select);
-	}
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	rpcs3::on_resume()();
 
@@ -450,20 +446,16 @@ void Emulator::Stop()
 	rpcs3::on_stop()();
 	SendDbgCommand(DID_STOP_EMU);
 
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
-		LV2_LOCK;
+		cpu.state += cpu_flag::dbg_global_stop;
+		cpu.get()->set_exception(std::make_exception_ptr(EmulationStopped()));
+	};
 
-		auto on_select = [](u32, cpu_thread& cpu)
-		{
-			cpu.state += cpu_flag::dbg_global_stop;
-			cpu.get()->set_exception(std::make_exception_ptr(EmulationStopped()));
-		};
-
-		idm::select<ppu_thread>(on_select);
-		idm::select<ARMv7Thread>(on_select);
-		idm::select<RawSPUThread>(on_select);
-		idm::select<SPUThread>(on_select);
-	}
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	LOG_NOTICE(GENERAL, "All threads signaled...");
 
