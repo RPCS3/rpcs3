@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QDebug>
+#include <QVBoxLayout>
 
 #include "settingsdialog.h"
 #include "mainwindow.h"

@@ -2,6 +2,7 @@
 #define CORETAB_H
 
 #include <QLineEdit>
+#include <QListWidget>
 #include <QWidget>
 
 class CoreTab : public QWidget
@@ -15,6 +16,7 @@ private slots:
     void OnSearchBoxTextChanged();
 
 private:
+    QListWidget *lleList;
     QLineEdit *searchBox;
 };
 
