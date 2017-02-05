@@ -16,7 +16,6 @@
 SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 {
 	tabWidget = new QTabWidget;
-	tabWidget->setFixedSize(450, 400);
 	tabWidget->addTab(new CoreTab(this), tr("Core"));
 	tabWidget->addTab(new GraphicsTab(this), tr("Graphics"));
 	tabWidget->addTab(new AudioTab(this), tr("Audio"));
