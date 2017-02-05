@@ -536,7 +536,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline T load(const T& dest)
 	{
-		llong result[2];
+		llong result[2]{0, 0};
 		_InterlockedCompareExchange128((volatile llong*)&dest, 0, 0, result);
 		return *(T*)+result;
 	}
