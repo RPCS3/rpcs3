@@ -16,9 +16,5 @@ DEFINES += QT_UI
 # Installation path
 # target.path =
 
-OTHER_FILES += $$P/rpcs3qt/qml/*
-
-RESOURCES += $$P/rpcs3qt/qml.qrc
-
 # This line is needed for Qt 5.5 or higher
 win32:LIBS += opengl32.lib
