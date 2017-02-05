@@ -64,12 +64,12 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	vbox1->addWidget(padHandler);
 	vbox1->addWidget(keyboardHandler);
 	vbox1->addWidget(mouseHandler);
-	vbox1->addStretch(1);
+	vbox1->addStretch();
 
 	QVBoxLayout *vbox2 = new QVBoxLayout;
 	vbox2->addWidget(camera);
 	vbox2->addWidget(cameraType);
-	vbox2->addStretch(1);
+	vbox2->addStretch();
 
 	QHBoxLayout *hbox = new QHBoxLayout;
 	hbox->addLayout(vbox1);

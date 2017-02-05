@@ -30,11 +30,11 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 	vbox->addWidget(audioOut);
 	vbox->addWidget(audioDump);
 	vbox->addWidget(conv);
-	vbox->addStretch(1);
+	vbox->addStretch();
 
 	QHBoxLayout *hbox = new QHBoxLayout;
 	hbox->addLayout(vbox);
-	hbox->addStretch(1);
+	hbox->addStretch();
 	setLayout(hbox);
 }
 

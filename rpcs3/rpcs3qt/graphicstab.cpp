@@ -110,6 +110,7 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 	vbox2->addWidget(debugOverlay);
 	vbox2->addWidget(logProg);
 	vbox2->addWidget(vsync);
+	vbox2->addStretch();
 
 	QHBoxLayout *hbox = new QHBoxLayout;
 	hbox->addLayout(vbox1);

@@ -62,7 +62,7 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
 	vbox->addWidget(spuDecoder);
 	vbox->addWidget(hookStFunc);
 	vbox->addWidget(loadLiblv2);
-	vbox->addStretch(1);
+	vbox->addStretch();
 
 	QHBoxLayout *hbox = new QHBoxLayout;
 	hbox->addLayout(vbox);
