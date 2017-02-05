@@ -46,9 +46,7 @@ void cpu_thread::on_task()
 	// Check thread status
 	while (!test(state & cpu_flag::exit))
 	{
-		CHECK_EMU_STATUS;
-
-		// check stop status
+		// Check stop status
 		if (!test(state & cpu_flag::stop))
 		{
 			try
@@ -92,14 +90,12 @@ bool cpu_thread::check_state()
 {
 	while (true)
 	{
-		CHECK_EMU_STATUS; // check at least once
-
 		if (test(state & cpu_flag::exit))
 		{
 			return true;
 		}
 
-		if (!test(state & cpu_state_pause))
+		if (!test(state & (cpu_state_pause + cpu_flag::dbg_global_stop)))
 		{
 			break;
 		}

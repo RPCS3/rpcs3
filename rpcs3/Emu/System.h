@@ -138,5 +138,3 @@ public:
 };
 
 extern Emulator Emu;
-
-#define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EmulationStopped{}

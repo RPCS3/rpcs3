@@ -489,8 +489,6 @@ void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
-
 		if (spurs->handlerExiting)
 		{
 			CHECK_SUCCESS(CALL_FUNC(ppu, sys_lwmutex_unlock, ppu, spurs.ptr(&CellSpurs::mutex)));
@@ -569,8 +567,6 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
-
 		if (spurs->flags1 & SF1_EXIT_IF_NO_WORK)
 		{
 			_spurs::handler_wait_ready(ppu, spurs);

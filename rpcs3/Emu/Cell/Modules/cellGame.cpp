@@ -738,8 +738,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 
 	while (!result)
 	{
-		CHECK_EMU_STATUS;
-		std::this_thread::sleep_for(1ms);
+		thread_ctrl::wait_for(1000);
 	}
 
 	return CELL_OK;

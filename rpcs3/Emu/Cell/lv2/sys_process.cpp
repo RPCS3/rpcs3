@@ -21,8 +21,6 @@
 #include "sys_fs.h"
 #include "sys_process.h"
 
-#include <thread>
-
 namespace vm { using namespace ps3; }
 
 logs::channel sys_process("sys_process", logs::level::notice);
@@ -51,20 +49,13 @@ s32 sys_process_exit(s32 status)
 {
 	sys_process.warning("sys_process_exit(status=0x%x)", status);
 
-	CHECK_EMU_STATUS;
-	
 	Emu.CallAfter([]()
 	{
 		sys_process.success("Process finished");
 		Emu.Stop();
 	});
 
-	while (true)
-	{
-		CHECK_EMU_STATUS;
-
-		std::this_thread::sleep_for(1ms);
-	}
+	thread_ctrl::eternalize();
 
 	return CELL_OK;
 }

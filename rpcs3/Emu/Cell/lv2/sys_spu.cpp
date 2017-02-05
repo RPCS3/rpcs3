@@ -524,9 +524,9 @@ error_code sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> st
 			break;
 		}
 
-		CHECK_EMU_STATUS;
-
+		// TODO
 		group->cv.wait(lock, 1000);
+		thread_ctrl::test();
 	}
 
 	switch (group->join_state & ~SPU_TGJSF_IS_JOINING)

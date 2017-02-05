@@ -686,11 +686,7 @@ bool spursKernelWorkloadExit(SPUThread& spu)
 // SPURS kernel entry point
 bool spursKernelEntry(SPUThread& spu)
 {
-	while (true)
-	{
-		std::this_thread::sleep_for(100ms);
-		CHECK_EMU_STATUS;
-	}
+	thread_ctrl::eternalize();
 
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	memset(ctxt, 0, sizeof(SpursKernelContext));
@@ -934,7 +930,6 @@ void spursSysServiceMain(SPUThread& spu, u32 pollStatus)
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
 		// Process requests for the system service
 		spursSysServiceProcessRequests(spu, ctxt);
 
@@ -977,7 +972,6 @@ void spursSysServiceMain(SPUThread& spu, u32 pollStatus)
 		cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
 
 		spursSysServiceIdleHandler(spu, ctxt);
-		CHECK_EMU_STATUS;
 
 		goto poll;
 	}

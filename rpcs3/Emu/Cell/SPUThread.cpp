@@ -20,8 +20,6 @@
 
 #include <cmath>
 #include <cfenv>
-#include <thread>
-#include <mutex>
 
 extern u64 get_timebased_time();
 
@@ -1061,7 +1059,7 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 	case 0x001:
 	{
-		std::this_thread::sleep_for(1ms); // hack
+		thread_ctrl::wait_for(1000); // hack
 		return true;
 	}
 
