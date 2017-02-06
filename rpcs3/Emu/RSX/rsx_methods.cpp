@@ -779,6 +779,7 @@ namespace rsx
 			({
 				{ ppu_cmd::set_args, 1 }, u64{1},
 				{ ppu_cmd::lle_call, rsx->flip_handler },
+				{ ppu_cmd::sleep, 0 }
 			});
 
 			rsx->intr_thread->notify();
@@ -793,6 +794,7 @@ namespace rsx
 			({
 				{ ppu_cmd::set_args, 1 }, u64{arg},
 				{ ppu_cmd::lle_call, rsx->user_handler },
+				{ ppu_cmd::sleep, 0 }
 			});
 
 			rsx->intr_thread->notify();

@@ -8,7 +8,7 @@ enum class cpu_flag : u32
 {
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
-	suspend, // Thread paused
+	suspend, // Thread suspended
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)
 
@@ -38,17 +38,11 @@ public:
 	// Public thread state
 	atomic_t<bs_t<cpu_flag>> state{+cpu_flag::stop};
 
-	// Object associated with sleep state, possibly synchronization primitive (mutex, semaphore, etc.)
-	atomic_t<void*> owner{};
-
 	// Process thread state, return true if the checker must return
 	bool check_state();
 
 	// Run thread
 	void run();
-
-	// Set cpu_flag::signal
-	void set_signal();
 
 	// Check thread type
 	u32 id_type()
@@ -64,6 +58,9 @@ public:
 
 	// Thread entry point function
 	virtual void cpu_task() = 0;
+
+	// Callback for cpu_flag::suspend
+	virtual void cpu_sleep() {}
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept

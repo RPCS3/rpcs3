@@ -89,6 +89,8 @@ cpu_thread::cpu_thread(u32 id)
 
 bool cpu_thread::check_state()
 {
+	bool cpu_sleep_called = false;
+
 	while (true)
 	{
 		if (test(state & cpu_flag::exit))
@@ -96,9 +98,21 @@ bool cpu_thread::check_state()
 			return true;
 		}
 
+		if (test(state & cpu_flag::signal) && state.test_and_reset(cpu_flag::signal))
+		{
+			cpu_sleep_called = false;
+		}
+
 		if (!test(state & (cpu_state_pause + cpu_flag::dbg_global_stop)))
 		{
 			break;
+		}
+
+		if (test(state & cpu_flag::suspend) && !cpu_sleep_called)
+		{
+			cpu_sleep();
+			cpu_sleep_called = true;
+			continue;
 		}
 
 		thread_ctrl::wait();
@@ -123,12 +137,6 @@ bool cpu_thread::check_state()
 void cpu_thread::run()
 {
 	state -= cpu_flag::stop;
-	notify();
-}
-
-void cpu_thread::set_signal()
-{
-	verify("cpu_flag::signal" HERE), !state.test_and_set(cpu_flag::signal);
 	notify();
 }
 

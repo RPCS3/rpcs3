@@ -118,5 +118,5 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ps3::ptr<u64> result);
 error_code sys_event_flag_set(u32 id, u64 bitptn);
 error_code sys_event_flag_clear(u32 id, u64 bitptn);
-error_code sys_event_flag_cancel(u32 id, vm::ps3::ptr<u32> num);
+error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ps3::ptr<u32> num);
 error_code sys_event_flag_get(u32 id, vm::ps3::ptr<u64> flags);

@@ -466,6 +466,7 @@ void Emulator::Stop()
 
 	LOG_NOTICE(GENERAL, "All threads stopped...");
 
+	lv2_obj::cleanup();
 	idm::clear();
 	fxm::clear();
 

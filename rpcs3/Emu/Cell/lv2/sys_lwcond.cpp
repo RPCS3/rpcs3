@@ -60,7 +60,7 @@ error_code _sys_lwcond_destroy(u32 lwcond_id)
 	return CELL_OK;
 }
 
-error_code _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode)
+error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode)
 {
 	sys_lwcond.trace("_sys_lwcond_signal(lwcond_id=0x%x, lwmutex_id=0x%x, ppu_thread_id=0x%x, mode=%d)", lwcond_id, lwmutex_id, ppu_thread_id, mode);
 
@@ -106,7 +106,10 @@ error_code _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, 
 			{
 				cond.waiters--;
 
-				static_cast<ppu_thread*>(result)->gpr[3] = mode == 2;
+				if (mode == 2)
+				{
+					static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
+				}
 
 				if (mode != 2 && !mutex->signaled.fetch_op([](u32& v) { if (v) v--; }))
 				{
@@ -129,7 +132,8 @@ error_code _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, 
 
 	if (cond.ret)
 	{
-		cond.ret->set_signal();
+		cond->awake(*cond.ret);
+		ppu.check_state();
 	}
 	else if (mode == 2)
 	{
@@ -147,7 +151,7 @@ error_code _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, 
 	return CELL_OK;
 }
 
-error_code _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
+error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 mode)
 {
 	sys_lwcond.trace("_sys_lwcond_signal_all(lwcond_id=0x%x, lwmutex_id=0x%x, mode=%d)", lwcond_id, lwmutex_id, mode);
 
@@ -177,7 +181,10 @@ error_code _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 			{
 				cond.waiters--;
 
-				static_cast<ppu_thread*>(cpu)->gpr[3] = mode == 2;
+				if (mode == 2)
+				{
+					static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
+				}
 
 				if (mode != 2 && !mutex->signaled.fetch_op([](u32& v) { if (v) v--; }))
 				{
@@ -202,10 +209,14 @@ error_code _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 		return CELL_ESRCH;
 	}
 
-	// TODO: signal only one thread
 	for (auto cpu : threads)
 	{
-		cpu->set_signal();
+		cond->awake(*cpu);
+	}
+
+	if (threads.size())
+	{
+		ppu.check_state();
 	}
 
 	if (mode == 1)
@@ -239,6 +250,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Add a waiter
 		cond.waiters++;
 		cond.sq.emplace_back(&ppu);
+		cond.sleep(ppu, start_time, timeout);
 
 		// Process lwmutex sleep queue
 		if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
@@ -257,10 +269,10 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	if (cond.ret)
 	{
-		cond.ret->set_signal();
+		cond->awake(*cond.ret);
 	}
 
-	// SLEEP
+	ppu.gpr[3] = CELL_OK;
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
@@ -282,10 +294,12 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				if (mutex->signaled.fetch_op([](u32& v) { if (v) v--; }))
 				{
-					return not_an_error(CELL_EDEADLK);
+					ppu.gpr[3] = CELL_EDEADLK;
+					break;
 				}
 
-				return not_an_error(CELL_ETIMEDOUT);
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				break;
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -297,5 +311,6 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	}
 
 	// Return cause
-	return not_an_error(ppu.gpr[3] ? CELL_EBUSY : CELL_OK);
+	ppu.check_state();
+	return not_an_error(ppu.gpr[3]);
 }

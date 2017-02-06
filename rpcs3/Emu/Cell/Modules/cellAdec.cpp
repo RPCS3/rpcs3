@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 extern "C"
 {
@@ -199,6 +200,7 @@ public:
 				// TODO: finalize
 				cellAdec.warning("adecEndSeq:");
 				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, cbArg);
+				lv2_obj::sleep(*this, -1);
 
 				just_finished = true;
 				break;
@@ -375,11 +377,13 @@ public:
 						{
 							frame.data = nullptr; // to prevent destruction
 							cbFunc(*this, id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, cbArg);
+							lv2_obj::sleep(*this, -1);
 						}
 					}
 				}
 
 				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, cbArg);
+				lv2_obj::sleep(*this, -1);
 				break;
 			}
 

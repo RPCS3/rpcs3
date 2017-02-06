@@ -6,6 +6,7 @@
 #include "Loader/ELF.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "sys_interrupt.h"
 #include "sys_event.h"
@@ -470,7 +471,7 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
+error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 {
 	sys_spu.warning("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
 
@@ -493,6 +494,8 @@ error_code sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> st
 		// another PPU thread is joining this thread group
 		return CELL_EBUSY;
 	}
+
+	lv2_obj::sleep(ppu, -1);
 
 	while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
 	{

@@ -273,7 +273,7 @@ s32 sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	lwmutex->vars.owner.exchange(lwmutex_reserved);
 
 	// call the syscall
-	if (_sys_lwmutex_unlock(lwmutex->sleep_queue) == CELL_ESRCH)
+	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) == CELL_ESRCH)
 	{
 		return CELL_ESRCH;
 	}

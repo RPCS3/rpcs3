@@ -17,6 +17,9 @@ error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sy
 {
 	sys_lwmutex.warning("_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, arg4=0x%x, name=0x%llx, arg6=0x%x)", lwmutex_id, protocol, control, arg4, name, arg6);
 
+	if (protocol == SYS_SYNC_RETRY)
+		sys_lwmutex.todo("_sys_lwmutex_create(): SYS_SYNC_RETRY");
+	
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY)
 	{
 		sys_lwmutex.error("_sys_lwmutex_create(): unknown protocol (0x%x)", protocol);
@@ -93,6 +96,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 
 		mutex.sq.emplace_back(&ppu);
+		mutex.sleep(ppu, start_time, timeout);
 		return false;
 	});
 
@@ -106,7 +110,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		return CELL_OK;
 	}
 
-	// SLEEP
+	ppu.gpr[3] = CELL_OK;
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
@@ -124,7 +128,8 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 					continue;
 				}
 
-				return not_an_error(CELL_ETIMEDOUT);
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				break;
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -135,7 +140,8 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 	}
 
-	return CELL_OK;
+	ppu.check_state();
+	return not_an_error(ppu.gpr[3]);
 }
 
 error_code _sys_lwmutex_trylock(u32 lwmutex_id)
@@ -168,7 +174,7 @@ error_code _sys_lwmutex_trylock(u32 lwmutex_id)
 	return CELL_OK;
 }
 
-error_code _sys_lwmutex_unlock(u32 lwmutex_id)
+error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 {
 	sys_lwmutex.trace("_sys_lwmutex_unlock(lwmutex_id=0x%x)", lwmutex_id);
 
@@ -192,7 +198,8 @@ error_code _sys_lwmutex_unlock(u32 lwmutex_id)
 
 	if (mutex.ret)
 	{
-		mutex.ret->set_signal();
+		mutex->awake(*mutex.ret);
+		ppu.check_state();
 	}
 
 	return CELL_OK;

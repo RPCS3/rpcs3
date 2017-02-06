@@ -8,6 +8,7 @@
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
+#include "lv2/sys_sync.h"
 
 #ifdef LLVM_AVAILABLE
 #include "restore_new.h"
@@ -195,7 +196,7 @@ std::string ppu_thread::get_name() const
 std::string ppu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
-	ret += fmt::format("Priority: %d\n", prio);
+	ret += fmt::format("Priority: %d\n", +prio);
 	ret += fmt::format("Last function: %s\n", last_function ? last_function : "");
 	
 	ret += "\nRegisters:\n=========\n";
@@ -284,6 +285,11 @@ void ppu_thread::cpu_task()
 		case ppu_cmd::initialize:
 		{
 			cmd_pop(), ppu_initialize();
+			break;
+		}
+		case ppu_cmd::sleep:
+		{
+			cmd_pop(), lv2_obj::sleep(*this, -1);
 			break;
 		}
 		default:
@@ -402,6 +408,9 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	}
 
 	gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+
+	// Trigger the scheduler
+	state += cpu_flag::suspend;
 }
 
 void ppu_thread::cmd_push(cmd64 cmd)
@@ -449,7 +458,7 @@ cmd64 ppu_thread::cmd_wait()
 	{
 		if (UNLIKELY(test(state)))
 		{
-			if (check_state())
+			if (test(state, cpu_flag::stop + cpu_flag::exit))
 			{
 				return cmd64{};
 			}

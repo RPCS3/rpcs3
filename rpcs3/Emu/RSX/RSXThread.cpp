@@ -375,6 +375,7 @@ namespace rsx
 						({
 							{ ppu_cmd::set_args, 1 }, u64{1},
 							{ ppu_cmd::lle_call, vblank_handler },
+							{ ppu_cmd::sleep, 0 }
 						});
 
 						intr_thread->notify();

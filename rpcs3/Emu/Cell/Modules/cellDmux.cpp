@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellPamf.h"
 #include "cellDmux.h"
@@ -242,6 +243,7 @@ public:
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
 					cbFunc(*this, id, dmuxMsg, cbArg);
+					lv2_obj::sleep(*this, -1);
 
 					is_working = false;
 
@@ -395,6 +397,7 @@ public:
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
 							es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
+							lv2_obj::sleep(*this, -1);
 						}
 					}
 					else
@@ -460,6 +463,7 @@ public:
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
 							es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
+							lv2_obj::sleep(*this, -1);
 						}
 						
 						if (pes.has_ts)
@@ -536,6 +540,7 @@ public:
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
 					cbFunc(*this, id, dmuxMsg, cbArg);
+					lv2_obj::sleep(*this, -1);
 
 					stream = {};
 
@@ -624,6 +629,7 @@ public:
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
 					es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
+					lv2_obj::sleep(*this, -1);
 				}
 				
 				if (es.raw_data.size())
@@ -636,6 +642,7 @@ public:
 				esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 				esMsg->supplementalInfo = stream.userdata;
 				es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
+				lv2_obj::sleep(*this, -1);
 				break;
 			}
 

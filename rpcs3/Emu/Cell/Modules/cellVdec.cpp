@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 extern "C"
 {
@@ -77,8 +78,8 @@ struct vdec_thread : ppu_thread
 	std::mutex mutex;
 	std::queue<vdec_frame> out;
 
-	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
-		: ppu_thread("HLE Video Decoder")
+	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg, u32 prio, u32 stack)
+		: ppu_thread("HLE Video Decoder", prio, stack)
 		, type(type)
 		, profile(profile)
 		, mem_addr(addr)
@@ -327,6 +328,7 @@ struct vdec_thread : ppu_thread
 						std::lock_guard<std::mutex>{mutex}, out.push(std::move(frame));
 
 						cb_func(*this, id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
+						lv2_obj::sleep(*this, -1);
 					}
 
 					if (vcmd == vdec_cmd::decode)
@@ -336,6 +338,7 @@ struct vdec_thread : ppu_thread
 				}
 
 				cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
+				lv2_obj::sleep(*this, -1);
 
 				while (std::lock_guard<std::mutex>{mutex}, out.size() > 60)
 				{
@@ -405,7 +408,7 @@ s32 cellVdecOpen(vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm
 	cellVdec.warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	// Create decoder thread
-	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg, res->ppuThreadPriority, res->ppuThreadStackSize);
 
 	// Hack: store thread id (normally it should be pointer)
 	*handle = vdec->id;
@@ -420,7 +423,7 @@ s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> r
 	cellVdec.warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	// Create decoder thread
-	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg, res->ppuThreadPriority, res->ppuThreadStackSize);
 
 	// Hack: store thread id (normally it should be pointer)
 	*handle = vdec->id;
@@ -430,7 +433,7 @@ s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> r
 	return CELL_OK;
 }
 
-s32 cellVdecClose(u32 handle)
+s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 {
 	cellVdec.warning("cellVdecClose(handle=0x%x)", handle);
 
@@ -441,6 +444,7 @@ s32 cellVdecClose(u32 handle)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
+	lv2_obj::sleep(ppu, -1);
 	vdec->cmd_push({vdec_cmd::close, 0});
 	vdec->notify();
 	vdec->join();
