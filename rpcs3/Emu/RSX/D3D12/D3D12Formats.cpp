@@ -95,6 +95,7 @@ D3D12_LOGIC_OP get_logic_op(rsx::logic_op op)
 	case rsx::logic_op::logic_copy_inverted: return D3D12_LOGIC_OP_COPY_INVERTED;
 	case rsx::logic_op::logic_or_inverted: return D3D12_LOGIC_OP_OR_INVERTED;
 	case rsx::logic_op::logic_nand: return D3D12_LOGIC_OP_NAND;
+	case rsx::logic_op::logic_set: return D3D12_LOGIC_OP_SET;
 	}
 	fmt::throw_exception("Invalid logic op (0x%x)" HERE, (u32)op);
 }
