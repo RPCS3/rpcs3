@@ -24,8 +24,12 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 	QComboBox *renderBox = new QComboBox;
 	renderBox->addItem(tr("Null"));
 	renderBox->addItem(tr("Opengl"));
-	renderBox->addItem(tr("Vulkan"));
+#ifdef _MSC_VER
 	renderBox->addItem(tr("D3D12"));
+#endif // _MSC_VER
+#ifdef _WIN32
+	renderBox->addItem(tr("Vulkan"));
+#endif // _WIN32
 
 	QVBoxLayout *renderVbox = new QVBoxLayout;
 	renderVbox->addWidget(renderBox);

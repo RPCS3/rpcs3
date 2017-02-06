@@ -15,6 +15,9 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 
 	QComboBox *audioOutBox = new QComboBox;
 	audioOutBox->addItem(tr("Null"));
+#ifdef _WIN32
+	audioOutBox->addItem(tr("XAudio2"));
+#endif // _WIN32
 	audioOutBox->addItem(tr("OpenAL"));
 
 	QVBoxLayout *audioOutVbox = new QVBoxLayout;

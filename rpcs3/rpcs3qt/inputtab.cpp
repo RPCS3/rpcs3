@@ -14,6 +14,10 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 
 	QComboBox *padHandlerBox = new QComboBox;
 	padHandlerBox->addItem(tr("Null"));
+	padHandlerBox->addItem(tr("Keyboard"));
+#ifdef _MSC_VER
+	padHandlerBox->addItem(tr("XInput"));
+#endif // _MSC_VER
 
 	QVBoxLayout *padHandlerVbox = new QVBoxLayout;
 	padHandlerVbox->addWidget(padHandlerBox);
@@ -24,6 +28,7 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 
 	QComboBox *keyboardHandlerBox = new QComboBox;
 	keyboardHandlerBox->addItem(tr("Null"));
+	keyboardHandlerBox->addItem(tr("Basic"));
 
 	QVBoxLayout *keyboardHandlerVbox = new QVBoxLayout;
 	keyboardHandlerVbox->addWidget(keyboardHandlerBox);
@@ -34,6 +39,7 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 
 	QComboBox *mouseHandlerBox = new QComboBox;
 	mouseHandlerBox->addItem(tr("Null"));
+	mouseHandlerBox->addItem(tr("Basic"));
 
 	QVBoxLayout *mouseHandlerVbox = new QVBoxLayout;
 	mouseHandlerVbox->addWidget(mouseHandlerBox);
@@ -44,6 +50,7 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 
 	QComboBox *cameraBox = new QComboBox;
 	cameraBox->addItem(tr("Null"));
+	cameraBox->addItem(tr("Fake"));
 
 	QVBoxLayout *cameraVbox = new QVBoxLayout;
 	cameraVbox->addWidget(cameraBox);
@@ -53,7 +60,10 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	QGroupBox *cameraType = new QGroupBox(tr("Camera type"));
 
 	QComboBox *cameraTypeBox = new QComboBox;
-	cameraTypeBox->addItem(tr("Null"));
+	cameraTypeBox->addItem(tr("Unknown"));
+	cameraTypeBox->addItem(tr("EyeToy"));
+	cameraTypeBox->addItem(tr("PS Eye"));
+	cameraTypeBox->addItem(tr("UVC 1.1"));
 
 	QVBoxLayout *cameraTypeVbox = new QVBoxLayout;
 	cameraTypeVbox->addWidget(cameraTypeBox);
