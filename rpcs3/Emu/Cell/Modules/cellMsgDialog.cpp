@@ -14,11 +14,6 @@ MsgDialogBase::~MsgDialogBase()
 {
 }
 
-s32 cellMsgDialogOpen()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
 s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
 	cellSysutil.warning("cellMsgDialogOpen2(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
@@ -121,6 +116,14 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		thread_ctrl::wait_for(1000);
 	}
 
+	return CELL_OK;
+}
+
+s32 cellMsgDialogOpen(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
+{
+	//Note: This function needs proper implementation, solve first argument "type" conflict with MsgDialogOpen2 in cellMsgDialog.h.
+	LOG_TODO(HLE, "cellMsgDialogOpen Unimplemented using cellMsgDialogOpen2 instead");
+	cellMsgDialogOpen2(type, msgString, callback, userData, extParam);
 	return CELL_OK;
 }
 
