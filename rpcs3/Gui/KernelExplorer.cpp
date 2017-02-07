@@ -137,19 +137,22 @@ void KernelExplorer::Update()
 		case SYS_MUTEX_OBJECT:
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
-			m_tree->AppendItem(node, fmt::format("Mutex: ID = 0x%08x \"%s\"", id, +name64(mutex.name)));
+			m_tree->AppendItem(node, fmt::format("Mutex: ID = 0x%08x \"%s\",%s Owner = 0x%x, Locks = %u, Conds = %u, Wq = %zu", id, +name64(mutex.name),
+				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, +mutex.cond_count, mutex.sq.size()));
 			break;
 		}
 		case SYS_COND_OBJECT:
 		{
 			auto& cond = static_cast<lv2_cond&>(obj);
-			m_tree->AppendItem(node, fmt::format("Cond: ID = 0x%08x \"%s\"", id, +name64(cond.name)));
+			m_tree->AppendItem(node, fmt::format("Cond: ID = 0x%08x \"%s\", Waiters = %u", id, +name64(cond.name), +cond.waiters));
 			break;
 		}
 		case SYS_RWLOCK_OBJECT:
 		{
 			auto& rw = static_cast<lv2_rwlock&>(obj);
-			m_tree->AppendItem(node, fmt::format("RW Lock: ID = 0x%08x", id));
+			const s64 val = rw.owner;
+			m_tree->AppendItem(node, fmt::format("RW Lock: ID = 0x%08x \"%s\", Owner = 0x%x(%d), Rq = %zu, Wq = %zu", id, +name64(rw.name),
+				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.rq.size(), rw.wq.size()));
 			break;
 		}
 		case SYS_INTR_TAG_OBJECT:
@@ -168,7 +171,7 @@ void KernelExplorer::Update()
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
 			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x \"%s\", %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id, +name64(eq.name),
-				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.ipc_key, eq.events(), eq.size, eq.waiters()));
+				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size()));
 			break;
 		}
 		case SYS_EVENT_PORT_OBJECT:
@@ -201,7 +204,7 @@ void KernelExplorer::Update()
 		case SYS_LWMUTEX_OBJECT:
 		{
 			auto& lwm = static_cast<lv2_lwmutex&>(obj);
-			m_tree->AppendItem(node, fmt::format("LWMutex: ID = 0x%08x \"%s\"", id, +name64(lwm.name)));
+			m_tree->AppendItem(node, fmt::format("LWMutex: ID = 0x%08x \"%s\", Wq = %zu", id, +name64(lwm.name), lwm.sq.size()));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -220,13 +223,14 @@ void KernelExplorer::Update()
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_cond&>(obj);
-			m_tree->AppendItem(node, fmt::format("LWCond: ID = 0x%08x \"%s\"", id, +name64(lwc.name)));
+			m_tree->AppendItem(node, fmt::format("LWCond: ID = 0x%08x \"%s\", Waiters = %zu", id, +name64(lwc.name), +lwc.waiters));
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx", id, +name64(ef.name), ef.type, ef.pattern.load()));
+			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx, Wq = %zu", id, +name64(ef.name),
+				ef.type, ef.pattern.load(), +ef.waiters));
 			break;
 		}
 		default:

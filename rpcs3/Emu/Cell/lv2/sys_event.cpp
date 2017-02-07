@@ -18,32 +18,6 @@ template<> DECLARE(ipc_manager<lv2_event_queue, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
-std::shared_ptr<lv2_event_queue> lv2_event_queue::make(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
-{
-	std::shared_ptr<lv2_event_queue> result;
-
-	auto make_expr = [&]() -> const std::shared_ptr<lv2_event_queue>&
-	{
-		result = idm::make_ptr<lv2_obj, lv2_event_queue>(protocol, type, name, ipc_key, size);
-		return result;
-	};
-
-	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
-	{
-		// Not an IPC queue
-		make_expr();
-		return result;
-	}
-
-	// IPC queue
-	if (ipc_manager<lv2_event_queue, u64>::add(ipc_key, make_expr))
-	{
-		return result;
-	}
-
-	return nullptr;
-}
-
 std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 {
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
@@ -55,65 +29,51 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 	return ipc_manager<lv2_event_queue, u64>::get(ipc_key);
 }
 
-lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
-	: protocol(protocol)
-	, type(type)
-	, name(name)
-	, ipc_key(ipc_key)
-	, size(size)
-	, id(idm::last_id())
+bool lv2_event_queue::send(lv2_event event)
 {
-}
+	semaphore_lock lock(mutex);
 
-void lv2_event_queue::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3)
-{
-	verify(HERE), m_sq.empty() || m_events.empty();
-
-	// save event if no waiters
-	if (m_sq.empty())
+	if (sq.empty())
 	{
-		return m_events.emplace_back(source, data1, data2, data3);
+		if (events.size() < this->size)
+		{
+			// Save event
+			events.emplace_back(event);
+			return true;
+		}
+
+		return false;
 	}
 
-	// notify waiter; protocol is ignored in current implementation
-	auto& thread = m_sq.front();
-
-	if (type == SYS_PPU_QUEUE && thread->id_type() == 1)
+	if (type == SYS_PPU_QUEUE)
 	{
-		// store event data in registers
-		auto& ppu = static_cast<ppu_thread&>(*thread);
+		// Store event in registers
+		auto& ppu = static_cast<ppu_thread&>(*schedule<ppu_thread>(sq, protocol));
 
-		ppu.gpr[4] = source;
-		ppu.gpr[5] = data1;
-		ppu.gpr[6] = data2;
-		ppu.gpr[7] = data3;
-	}
-	else if (type == SYS_SPU_QUEUE && thread->id_type() != 1)
-	{
-		// store event data in In_MBox
-		auto& spu = static_cast<SPUThread&>(*thread);
+		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
 
-		spu.ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(data1), static_cast<u32>(data2), static_cast<u32>(data3));
+		ppu.set_signal();
 	}
 	else
 	{
-		fmt::throw_exception("Unexpected (queue type=%d, tid=%s)" HERE, type, thread->id);
+		// Store event in In_MBox
+		auto& spu = static_cast<SPUThread&>(*sq.front());
+
+		// TODO: use protocol?
+		sq.pop_front();
+
+		const u32 data1 = static_cast<u32>(std::get<1>(event));
+		const u32 data2 = static_cast<u32>(std::get<2>(event));
+		const u32 data3 = static_cast<u32>(std::get<3>(event));
+		spu.ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
+
+		spu.set_signal();
 	}
 
-	thread->set_signal();
-
-	return m_sq.pop_front();
+	return true;
 }
 
-lv2_event_queue::event_type lv2_event_queue::pop(lv2_lock_t)
-{
-	verify(HERE), m_events.size();
-	auto result = m_events.front();
-	m_events.pop_front();
-	return result;
-}
-
-s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size)
+error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
 
@@ -138,83 +98,101 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attri
 		return CELL_EINVAL;
 	}
 
-	const auto queue = lv2_event_queue::make(protocol, type, reinterpret_cast<u64&>(attr->name), event_queue_key, size);
+	if (event_queue_key == SYS_EVENT_QUEUE_LOCAL)
+	{
+		// Not an IPC queue
+		if (const u32 _id = idm::make<lv2_obj, lv2_event_queue>(protocol, type, attr->name_u64, event_queue_key, size))
+		{
+			*equeue_id = _id;
+			return CELL_OK;
+		}
 
-	if (!queue)
+		return CELL_EAGAIN;
+	}
+
+	std::shared_ptr<lv2_event_queue> result;
+
+	// Create IPC queue
+	if (!ipc_manager<lv2_event_queue, u64>::add(event_queue_key, [&]() -> const std::shared_ptr<lv2_event_queue>&
+	{
+		result = idm::make_ptr<lv2_obj, lv2_event_queue>(protocol, type, attr->name_u64, event_queue_key, size);
+		return result;
+	}))
 	{
 		return CELL_EEXIST;
 	}
 
-	*equeue_id = queue->id;
-	
-	return CELL_OK;
+	if (result)
+	{
+		*equeue_id = idm::last_id();
+		return CELL_OK;
+	}
+
+	return CELL_EAGAIN;
 }
 
-s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
+error_code sys_event_queue_destroy(u32 equeue_id, s32 mode)
 {
 	sys_event.warning("sys_event_queue_destroy(equeue_id=0x%x, mode=%d)", equeue_id, mode);
-
-	LV2_LOCK;
-
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
-
-	if (!queue)
-	{
-		return CELL_ESRCH;
-	}
 
 	if (mode && mode != SYS_EVENT_QUEUE_DESTROY_FORCE)
 	{
 		return CELL_EINVAL;
 	}
 
-	if (!mode && queue->waiters())
+	const auto queue = idm::withdraw<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
-		return CELL_EBUSY;
-	}
+		semaphore_lock lock(queue.mutex);
 
-	// cleanup
-	idm::remove<lv2_obj, lv2_event_queue>(equeue_id);
-
-	// signal all threads to return CELL_ECANCELED
-	for (auto& thread : queue->thread_queue(lv2_lock))
-	{
-		if (queue->type == SYS_PPU_QUEUE && thread->id_type() == 1)
+		if (!mode && !queue.sq.empty())
 		{
-			static_cast<ppu_thread&>(*thread).gpr[3] = 1;
-		}
-		else if (queue->type == SYS_SPU_QUEUE && thread->id_type() != 1)
-		{
-			static_cast<SPUThread&>(*thread).ch_in_mbox.set_values(1, CELL_ECANCELED);
-		}
-		else
-		{
-			fmt::throw_exception("Unexpected (queue type=%d, tid=%s)" HERE, queue->type, thread->id);
+			return CELL_EBUSY;
 		}
 
-		thread->state += cpu_flag::signal;
-		thread->notify();
-	}
-
-	return CELL_OK;
-}
-
-s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
-{
-	sys_event.trace("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
-
-	LV2_LOCK;
-
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
+		return {};
+	});
 
 	if (!queue)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (size < 0)
+	if (queue.ret)
 	{
-		fmt::throw_exception("Negative size (%d)" HERE, size);
+		return queue.ret;
+	}
+
+	if (mode == SYS_EVENT_QUEUE_DESTROY_FORCE)
+	{
+		semaphore_lock lock(queue->mutex);
+
+		for (auto cpu : queue->sq)
+		{
+			if (queue->type == SYS_PPU_QUEUE)
+			{
+				static_cast<ppu_thread&>(*cpu).gpr[3] = CELL_ECANCELED;
+			}
+			else
+			{
+				static_cast<SPUThread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
+			}
+
+			cpu->set_signal();
+		}
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
+{
+	sys_event.trace("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
+
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
+
+	if (!queue)
+	{
+		return CELL_ESRCH;
 	}
 
 	if (queue->type != SYS_PPU_QUEUE)
@@ -222,13 +200,17 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 		return CELL_EINVAL;
 	}
 
+	semaphore_lock lock(queue->mutex);
+
 	s32 count = 0;
 
-	while (queue->waiters() == 0 && count < size && queue->events())
+	while (queue->sq.empty() && count < size && !queue->events.empty())
 	{
 		auto& dest = event_array[count++];
+		auto event = queue->events.front();
+		queue->events.pop_front();
 
-		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = queue->pop(lv2_lock);
+		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = event;
 	}
 
 	*number = count;
@@ -236,88 +218,102 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 	return CELL_OK;
 }
 
-s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
+error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
 {
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
-	const u64 start_time = get_system_time();
+	const u64 start_time = ppu.gpr[10] = get_system_time();
 
-	LV2_LOCK;
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
+	{
+		if (queue.type != SYS_PPU_QUEUE)
+		{
+			return CELL_EINVAL;
+		}
 
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
+		semaphore_lock lock(queue.mutex);
+		
+		if (queue.events.empty())
+		{
+			queue.sq.emplace_back(&ppu);
+			return CELL_EBUSY;
+		}
+
+		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = queue.events.front();
+		queue.events.pop_front();
+		return {};
+	});
 
 	if (!queue)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (queue->type != SYS_PPU_QUEUE)
+	if (queue.ret)
 	{
-		return CELL_EINVAL;
+		if (queue.ret != CELL_EBUSY)
+		{
+			return queue.ret;
+		}
 	}
-
-	if (queue->events())
+	else
 	{
-		// event data is returned in registers (dummy_event is not used)
-		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = queue->pop(lv2_lock);
 		return CELL_OK;
 	}
 
-	// cause (if cancelled) will be returned in r3
+	// If cancelled, gpr[3] will be non-zero. Other registers must contain event data.
 	ppu.gpr[3] = 0;
-
-	// add waiter; protocol is ignored in current implementation
-	sleep_entry<cpu_thread> waiter(queue->thread_queue(lv2_lock), ppu);
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
-		CHECK_EMU_STATUS;
-
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - start_time;
 
 			if (passed >= timeout)
 			{
-				return CELL_ETIMEDOUT;
+				semaphore_lock lock(queue->mutex);
+
+				if (!queue->unqueue(queue->sq, &ppu))
+				{
+					timeout = 0;
+					continue;
+				}
+
+				return not_an_error(CELL_ETIMEDOUT);
 			}
 
-			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
+			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			LV2_UNLOCK, thread_ctrl::wait();
+			thread_ctrl::wait();
 		}
 	}
 
-	if (ppu.gpr[3])
-	{
-		return CELL_ECANCELED;
-	}
-
-	// r4-r7 registers must be set by push()
-	return CELL_OK;
+	return not_an_error(ppu.gpr[3] ? CELL_ECANCELED : CELL_OK);
 }
 
-s32 sys_event_queue_drain(u32 equeue_id)
+error_code sys_event_queue_drain(u32 equeue_id)
 {
 	sys_event.trace("sys_event_queue_drain(equeue_id=0x%x)", equeue_id);
 
-	LV2_LOCK;
+	const auto queue = idm::check<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue)
+	{
+		semaphore_lock lock(queue.mutex);
 
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
+		queue.events.clear();
+	});
 
 	if (!queue)
 	{
 		return CELL_ESRCH;
 	}
 
-	queue->clear(lv2_lock);
-
 	return CELL_OK;
 }
 
-s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
+error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 {
 	sys_event.warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
 
@@ -327,44 +323,51 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 		return CELL_EINVAL;
 	}
 
-	*eport_id = idm::make<lv2_obj, lv2_event_port>(port_type, name);
-
-	return CELL_OK;
+	if (const u32 id = idm::make<lv2_obj, lv2_event_port>(port_type, name))
+	{
+		*eport_id = id;
+		return CELL_OK;
+	}
+	
+	return CELL_EAGAIN;
 }
 
-s32 sys_event_port_destroy(u32 eport_id)
+error_code sys_event_port_destroy(u32 eport_id)
 {
 	sys_event.warning("sys_event_port_destroy(eport_id=0x%x)", eport_id);
 
-	LV2_LOCK;
+	const auto port = idm::withdraw<lv2_obj, lv2_event_port>(eport_id, [](lv2_event_port& port) -> CellError
+	{
+		if (!port.queue.expired())
+		{
+			return CELL_EISCONN;
+		}
 
-	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
+		return {};
+	});
 
 	if (!port)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!port->queue.expired())
+	if (port.ret)
 	{
-		return CELL_EISCONN;
+		return port.ret;
 	}
-
-	idm::remove<lv2_obj, lv2_event_port>(eport_id);
 
 	return CELL_OK;
 }
 
-s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
+error_code sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 {
 	sys_event.warning("sys_event_port_connect_local(eport_id=0x%x, equeue_id=0x%x)", eport_id, equeue_id);
 
-	LV2_LOCK;
+	writer_lock lock(id_manager::g_mutex);
 
-	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
-
-	if (!port || !queue)
+	const auto port = idm::check_unlocked<lv2_obj, lv2_event_port>(eport_id);
+	
+	if (!port || !idm::check_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
 	{
 		return CELL_ESRCH;
 	}
@@ -379,66 +382,71 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 		return CELL_EISCONN;
 	}
 
-	port->queue = queue;
+	port->queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
 
 	return CELL_OK;
 }
 
-s32 sys_event_port_disconnect(u32 eport_id)
+error_code sys_event_port_disconnect(u32 eport_id)
 {
 	sys_event.warning("sys_event_port_disconnect(eport_id=0x%x)", eport_id);
 
-	LV2_LOCK;
+	writer_lock lock(id_manager::g_mutex);
 
-	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
+	const auto port = idm::check_unlocked<lv2_obj, lv2_event_port>(eport_id);
 
 	if (!port)
 	{
 		return CELL_ESRCH;
 	}
 
-	const auto queue = port->queue.lock();
-
-	if (!queue)
+	if (port->queue.expired())
 	{
 		return CELL_ENOTCONN;
 	}
 
-	// CELL_EBUSY is not returned
+	// TODO: return CELL_EBUSY if necessary (can't detect the condition)
 
 	port->queue.reset();
 
 	return CELL_OK;
 }
 
-s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
+error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
-	LV2_LOCK;
+	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
+	{
+		if (const auto queue = port.queue.lock())
+		{
+			const u64 source = port.name ? port.name : ((u64)process_getpid() << 32) | (u64)eport_id;
 
-	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id);
+			if (queue->send(source, data1, data2, data3))
+			{
+				return {};
+			}
+
+			return CELL_EBUSY;
+		}
+
+		return CELL_ENOTCONN;
+	});
 
 	if (!port)
 	{
 		return CELL_ESRCH;
 	}
 
-	const auto queue = port->queue.lock();
-
-	if (!queue)
+	if (port.ret)
 	{
-		return CELL_ENOTCONN;
+		if (port.ret == CELL_EBUSY)
+		{
+			return not_an_error(CELL_EBUSY);
+		}
+
+		return port.ret;
 	}
-
-	if (queue->events() >= queue->size)
-	{
-		return CELL_EBUSY;
-	}
-
-	const u64 source = port->name ? port->name : ((u64)process_getpid() << 32) | (u64)eport_id;
-
-	queue->push(lv2_lock, source, data1, data2, data3);
 
 	return CELL_OK;
 }

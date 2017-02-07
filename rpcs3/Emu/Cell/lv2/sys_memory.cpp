@@ -102,9 +102,9 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 		return CELL_ESRCH;
 	}
 
-	if (ct.value)
+	if (ct.ret)
 	{
-		return ct.value;
+		return ct.ret;
 	}
 
 	// Allocate memory, write back the start address of the allocated area, use cid as the supplementary info
@@ -219,9 +219,9 @@ error_code sys_memory_container_destroy(u32 cid)
 		return CELL_ESRCH;
 	}
 
-	if (ct.value)
+	if (ct.ret)
 	{
-		return ct.value;
+		return ct.ret;
 	}
 
 	// Return "physical memory" to the default container

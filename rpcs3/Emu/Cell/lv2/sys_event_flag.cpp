@@ -15,35 +15,7 @@ logs::channel sys_event_flag("sys_event_flag", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_event_flag::notify_all(lv2_lock_t)
-{
-	auto pred = [this](cpu_thread* thread) -> bool
-	{
-		auto& ppu = static_cast<ppu_thread&>(*thread);
-
-		// load pattern and mode from registers
-		const u64 bitptn = ppu.gpr[4];
-		const u32 mode = static_cast<u32>(ppu.gpr[5]);
-
-		// check specific pattern
-		if (check_pattern(bitptn, mode))
-		{
-			// save pattern
-			ppu.gpr[4] = clear_pattern(bitptn, mode);
-
-			thread->set_signal();
-
-			return true;
-		}
-
-		return false;
-	};
-
-	// check all waiters; protocol is ignored in current implementation
-	sq.erase(std::remove_if(sq.begin(), sq.end(), pred), sq.end());
-}
-
-s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
+error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
 	sys_event_flag.warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
 
@@ -74,48 +46,55 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> a
 		return CELL_EINVAL;
 	}
 
-	*id = idm::make<lv2_obj, lv2_event_flag>(init, protocol, type, attr->name_u64);
+	if (const u32 _id = idm::make<lv2_obj, lv2_event_flag>(protocol, type, attr->name_u64, init))
+	{
+		*id = _id;
+		return CELL_OK;
+	}
 
-	return CELL_OK;
+	return CELL_EAGAIN;
 }
 
-s32 sys_event_flag_destroy(u32 id)
+error_code sys_event_flag_destroy(u32 id)
 {
 	sys_event_flag.warning("sys_event_flag_destroy(id=0x%x)", id);
 
-	LV2_LOCK;
+	const auto flag = idm::withdraw<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag) -> CellError
+	{
+		if (flag.waiters)
+		{
+			return CELL_EBUSY;
+		}
 
-	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
+		return {};
+	});
 
-	if (!eflag)
+	if (!flag)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!eflag->sq.empty())
+	if (flag.ret)
 	{
-		return CELL_EBUSY;
+		return flag.ret;
 	}
-
-	idm::remove<lv2_obj, lv2_event_flag>(id);
 
 	return CELL_OK;
 }
 
-s32 sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
+error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
 {
 	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
-	const u64 start_time = get_system_time();
+	const u64 start_time = ppu.gpr[10] = get_system_time();
 
-	// If this syscall is called through the SC instruction, these registers must already contain corresponding values.
-	// But let's fixup them (in the case of explicit function call or something) because these values are used externally.
+	// Fix function arguments for external access
 	ppu.gpr[4] = bitptn;
 	ppu.gpr[5] = mode;
+	ppu.gpr[6] = 0;
 
-	LV2_LOCK;
-
-	if (result) *result = 0; // This is very annoying.
+	// Always set result
+	if (result) *result = ppu.gpr[6];
 
 	if (!lv2_event_flag::check_mode(mode))
 	{
@@ -123,75 +102,89 @@ s32 sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u
 		return CELL_EINVAL;
 	}
 
-	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
+	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag) -> CellError
+	{
+		if (flag.pattern.atomic_op(lv2_event_flag::check_pattern, bitptn, mode, &ppu.gpr[6]))
+		{
+			// TODO: is it possible to return EPERM in this case?
+			return {};
+		}
 
-	if (!eflag)
+		semaphore_lock lock(flag.mutex);
+
+		if (flag.pattern.atomic_op(lv2_event_flag::check_pattern, bitptn, mode, &ppu.gpr[6]))
+		{
+			return {};
+		}
+
+		if (flag.type == SYS_SYNC_WAITER_SINGLE && flag.sq.size())
+		{
+			return CELL_EPERM;
+		}
+
+		flag.waiters++;
+		flag.sq.emplace_back(&ppu);
+		return CELL_EBUSY;
+	});
+
+	if (!flag)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (eflag->type == SYS_SYNC_WAITER_SINGLE && eflag->sq.size() > 0)
+	if (flag.ret)
 	{
-		return CELL_EPERM;
+		if (flag.ret != CELL_EBUSY)
+		{
+			return flag.ret;
+		}
 	}
-
-	if (eflag->check_pattern(bitptn, mode))
+	else
 	{
-		const u64 pattern = eflag->clear_pattern(bitptn, mode);
-
-		if (result) *result = pattern;
-
+		if (result) *result = ppu.gpr[6];
 		return CELL_OK;
 	}
 
-	// add waiter; protocol is ignored in current implementation
-	sleep_entry<cpu_thread> waiter(eflag->sq, ppu);
+	// SLEEP
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
-		CHECK_EMU_STATUS;
-
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - start_time;
 
 			if (passed >= timeout)
 			{
-				if (result) *result = eflag->pattern;
+				semaphore_lock lock(flag->mutex);
 
-				return CELL_ETIMEDOUT;
+				if (!flag->unqueue(flag->sq, &ppu))
+				{
+					timeout = 0;
+					continue;
+				}
+
+				flag->waiters--;
+				if (result) *result = flag->pattern;
+				return not_an_error(CELL_ETIMEDOUT);
 			}
 
-			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
+			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			LV2_UNLOCK, thread_ctrl::wait();
+			thread_ctrl::wait();
 		}
 	}
 	
-	// load pattern saved upon signaling
-	if (result)
-	{
-		*result = ppu.gpr[4];
-	}
-
-	// check cause
-	if (ppu.gpr[5] == 0)
-	{
-		return CELL_ECANCELED;
-	}
-
-	return CELL_OK;
+	if (result) *result = ppu.gpr[6];
+	return not_an_error(ppu.gpr[5] ? CELL_OK : CELL_ECANCELED);
 }
 
-s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
+error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 {
 	sys_event_flag.trace("sys_event_flag_trywait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x)", id, bitptn, mode, result);
 
-	LV2_LOCK;
-
-	if (result) *result = 0; // This is very annoying.
+	if (result) *result = 0;
 
 	if (!lv2_event_flag::check_mode(mode))
 	{
@@ -199,129 +192,164 @@ s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 		return CELL_EINVAL;
 	}
 
-	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
+	u64 pattern;
 
-	if (!eflag)
+	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag)
+	{
+		return flag.pattern.atomic_op(lv2_event_flag::check_pattern, bitptn, mode, &pattern);
+	});
+
+	if (!flag)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (eflag->check_pattern(bitptn, mode))
+	if (!flag.ret)
 	{
-		const u64 pattern = eflag->clear_pattern(bitptn, mode);
+		return not_an_error(CELL_EBUSY);
+	}
 
-		if (result) *result = pattern;
+	if (result) *result = pattern;
+	return CELL_OK;
+}
 
+error_code sys_event_flag_set(u32 id, u64 bitptn)
+{
+	// Warning: may be called from SPU thread.
+
+	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
+
+	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id);
+
+	if (!flag)
+	{
+		return CELL_ESRCH;
+	}
+
+	if ((flag->pattern & bitptn) == bitptn)
+	{
 		return CELL_OK;
 	}
 
-	return CELL_EBUSY;
-}
+	semaphore_lock lock(flag->mutex);
 
-s32 sys_event_flag_set(u32 id, u64 bitptn)
-{
-	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
-
-	LV2_LOCK;
-
-	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
-
-	if (!eflag)
+	// Sort sleep queue in required order
+	if (flag->protocol != SYS_SYNC_FIFO)
 	{
-		return CELL_ESRCH;
+		std::stable_sort(flag->sq.begin(), flag->sq.end(), [](cpu_thread* a, cpu_thread* b)
+		{
+			return static_cast<ppu_thread*>(a)->prio < static_cast<ppu_thread*>(b)->prio;
+		});
 	}
 
-	if (bitptn && ~eflag->pattern.fetch_or(bitptn) & bitptn)
+	// Process all waiters in single atomic op
+	flag->pattern.atomic_op([&](u64& value)
 	{
-		eflag->notify_all(lv2_lock);
-	}
+		value |= bitptn;
+
+		for (auto cpu : flag->sq)
+		{
+			auto& ppu = static_cast<ppu_thread&>(*cpu);
+
+			const u64 pattern = ppu.gpr[4];
+			const u64 mode = ppu.gpr[5];
+			ppu.gpr[3] = lv2_event_flag::check_pattern(value, pattern, mode, &ppu.gpr[6]);
+		}
+	});
+
+	// Remove waiters
+	const auto tail = std::remove_if(flag->sq.begin(), flag->sq.end(), [&](cpu_thread* cpu)
+	{
+		auto& ppu = static_cast<ppu_thread&>(*cpu);
+
+		if (ppu.gpr[3])
+		{
+			flag->waiters--;
+			ppu.set_signal();
+			return true;
+		}
+
+		return false;
+	});
+
+	flag->sq.erase(tail, flag->sq.end());
 	
 	return CELL_OK;
 }
 
-s32 sys_event_flag_clear(u32 id, u64 bitptn)
+error_code sys_event_flag_clear(u32 id, u64 bitptn)
 {
 	sys_event_flag.trace("sys_event_flag_clear(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
-	LV2_LOCK;
+	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag)
+	{
+		flag.pattern &= bitptn;
+	});
 
-	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
-
-	if (!eflag)
+	if (!flag)
 	{
 		return CELL_ESRCH;
 	}
 
-	eflag->pattern &= bitptn;
-
 	return CELL_OK;
 }
 
-s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
+error_code sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 {
 	sys_event_flag.trace("sys_event_flag_cancel(id=0x%x, num=*0x%x)", id, num);
 
-	LV2_LOCK;
+	if (num) *num = 0;
 
-	if (num)
-	{
-		*num = 0;
-	}
+	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id);
 
-	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
-
-	if (!eflag)
+	if (!flag)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (num)
-	{
-		*num = static_cast<u32>(eflag->sq.size());
-	}
+	semaphore_lock lock(flag->mutex);
 
-	const u64 pattern = eflag->pattern;
+	// Get current pattern
+	const u64 pattern = flag->pattern;
 
-	// signal all threads to return CELL_ECANCELED
-	for (auto& thread : eflag->sq)
+	// Set count
+	*num = ::size32(flag->sq);
+
+	// Signal all threads to return CELL_ECANCELED
+	while (auto thread = flag->schedule<ppu_thread>(flag->sq, flag->protocol))
 	{
 		auto& ppu = static_cast<ppu_thread&>(*thread);
 
-		// save existing pattern
 		ppu.gpr[4] = pattern;
-
-		// clear "mode" as a sign of cancellation
 		ppu.gpr[5] = 0;
 
 		thread->set_signal();
+		flag->waiters--;
 	}
 
-	eflag->sq.clear();
-	
 	return CELL_OK;
 }
 
-s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags)
+error_code sys_event_flag_get(u32 id, vm::ptr<u64> flags)
 {
 	sys_event_flag.trace("sys_event_flag_get(id=0x%x, flags=*0x%x)", id, flags);
-
-	LV2_LOCK;
 
 	if (!flags)
 	{
 		return CELL_EFAULT;
 	}
 
-	const auto eflag = idm::get<lv2_obj, lv2_event_flag>(id);
-
-	if (!eflag)
+	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [](lv2_event_flag& flag)
 	{
-		*flags = 0; // This is very annoying.
+		return +flag.pattern;
+	});
 
+	if (!flag)
+	{
+		*flags = 0;
 		return CELL_ESRCH;
 	}
 
-	*flags = eflag->pattern;
-
+	*flags = flag.ret;
 	return CELL_OK;
 }

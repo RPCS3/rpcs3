@@ -22,8 +22,6 @@ struct trophy_context_t
 	static const u32 id_step = 1;
 	static const u32 id_count = 1023;
 
-	const u32 id = idm::last_id();
-
 	std::string trp_name;
 	fs::file trp_stream;
 	std::unique_ptr<TROPUSRLoader> tropusr;
@@ -34,8 +32,6 @@ struct trophy_handle_t
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
 	static const u32 id_count = 1023;
-
-	const u32 id = idm::last_id();
 };
 
 // Functions
@@ -125,7 +121,7 @@ s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = std::move(name);
 	ctxt->trp_stream = std::move(stream);
-	*context = ctxt->id;
+	*context = idm::last_id();
 
 	return CELL_OK;
 }

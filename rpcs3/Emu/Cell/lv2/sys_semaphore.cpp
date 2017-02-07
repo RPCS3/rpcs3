@@ -70,9 +70,9 @@ error_code sys_semaphore_destroy(u32 sem_id)
 		return CELL_ESRCH;
 	}
 	
-	if (sem.value)
+	if (sem.ret)
 	{
-		return sem.value;
+		return sem.ret;
 	}
 
 	return CELL_OK;
@@ -82,7 +82,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 {
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
-	const u64 start_time = get_system_time();
+	const u64 start_time = ppu.gpr[10] = get_system_time();
 
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
 	{
@@ -112,7 +112,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	if (sem.value)
+	if (sem.ret)
 	{
 		return CELL_OK;
 	}
@@ -144,7 +144,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				}
 
 				verify(HERE), sem->unqueue(sem->sq, &ppu);
-				return CELL_ETIMEDOUT;
+				return not_an_error(CELL_ETIMEDOUT);
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -182,7 +182,7 @@ error_code sys_semaphore_trywait(u32 sem_id)
 		return CELL_ESRCH;
 	}
 
-	if (!sem.value)
+	if (!sem.ret)
 	{
 		return not_an_error(CELL_EBUSY);
 	}
@@ -219,7 +219,7 @@ error_code sys_semaphore_post(u32 sem_id, s32 count)
 		return CELL_ESRCH;
 	}
 
-	if (sem.value)
+	if (sem.ret)
 	{
 		return CELL_OK;
 	}

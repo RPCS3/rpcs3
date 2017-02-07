@@ -5,7 +5,7 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "MFC.h"
 
-class lv2_event_queue;
+struct lv2_event_queue;
 struct lv2_spu_group;
 struct lv2_int_tag;
 
@@ -63,7 +63,7 @@ enum : u32
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR, // Mask of implemented events
+	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM, // Mask of implemented events
 
 	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
 	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
@@ -505,7 +505,7 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	SPUThread(const std::string& name, u32 index);
+	SPUThread(const std::string& name, u32 index, lv2_spu_group* group);
 
 	std::array<v128, 128> gpr; // General-Purpose Registers
 	SPU_FPSCR fpscr;
@@ -544,14 +544,13 @@ public:
 
 	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
 
-	std::weak_ptr<lv2_spu_group> tg; // SPU Thread Group
-
 	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue>>, 32> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<lv2_event_queue> spup[64]; // SPU Ports
 
 	u32 pc = 0; // 
 	const u32 index; // SPU index
 	const u32 offset; // SPU LS offset
+	lv2_spu_group* const group; // SPU Thread Group
 
 	const std::string m_name; // Thread name
 

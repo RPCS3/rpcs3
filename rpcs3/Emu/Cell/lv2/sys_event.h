@@ -54,7 +54,12 @@ struct sys_event_queue_attribute_t
 {
 	be_t<u32> protocol; // SYS_SYNC_PRIORITY or SYS_SYNC_FIFO
 	be_t<s32> type; // SYS_PPU_QUEUE or SYS_SPU_QUEUE
-	char name[8];
+
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
 };
 
 struct sys_event_t
@@ -65,63 +70,51 @@ struct sys_event_t
 	be_t<u64> data3;
 };
 
-class lv2_event_queue final : public lv2_obj
+// Source, data1, data2, data3
+using lv2_event = std::tuple<u64, u64, u64, u64>;
+
+struct lv2_event_queue final : public lv2_obj
 {
-	// Tuple elements: source, data1, data2, data3
-	using event_type = std::tuple<u64, u64, u64, u64>;
-
-	std::deque<event_type> m_events;
-
-	sleep_queue<cpu_thread> m_sq;
-
-public:
 	static const u32 id_base = 0x8d000000;
-
-	// Try to make an event queue with specified global key
-	static std::shared_ptr<lv2_event_queue> make(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size);
-
-	// Get event queue by its global key
-	static std::shared_ptr<lv2_event_queue> find(u64 ipc_key);
 
 	const u32 protocol;
 	const s32 type;
 	const u64 name;
-	const u64 ipc_key;
+	const u64 key;
 	const s32 size;
-	const u32 id;
 
-	lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size);
+	semaphore<> mutex;
+	std::deque<lv2_event> events;
+	std::deque<cpu_thread*> sq;
 
-	// Send an event
-	void push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3);
-
-	// Receive an event (queue shouldn't be empty)
-	event_type pop(lv2_lock_t);
-
-	// Remove all events
-	void clear(lv2_lock_t)
+	lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
+		: protocol(protocol)
+		, type(type)
+		, name(name)
+		, key(ipc_key)
+		, size(size)
 	{
-		m_events.clear();
 	}
 
-	// Get event count
-	std::size_t events() const { return m_events.size(); }
+	bool send(lv2_event);
 
-	// Get waiter count
-	std::size_t waiters() const { return m_sq.size(); }
+	bool send(u64 source, u64 d1, u64 d2, u64 d3)
+	{
+		return send(std::make_tuple(source, d1, d2, d3));
+	}
 
-	// Get threads (TODO)
-	auto& thread_queue(lv2_lock_t) { return m_sq; }
+	// Get event queue by its global key
+	static std::shared_ptr<lv2_event_queue> find(u64 ipc_key);
 };
 
 struct lv2_event_port final : lv2_obj
 {
 	static const u32 id_base = 0x0e000000;
 
-	const s32 type; // port type, must be SYS_EVENT_PORT_LOCAL
-	const u64 name; // passed as event source (generated from id and process id if not set)
+	const s32 type; // Port type, must be SYS_EVENT_PORT_LOCAL
+	const u64 name; // Event source (generated from id and process id if not set)
 
-	std::weak_ptr<lv2_event_queue> queue; // event queue this port is connected to
+	std::weak_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 
 	lv2_event_port(s32 type, u64 name)
 		: type(type)
@@ -132,15 +125,16 @@ struct lv2_event_port final : lv2_obj
 
 class ppu_thread;
 
-// SysCalls
-s32 sys_event_queue_create(vm::ps3::ptr<u32> equeue_id, vm::ps3::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
-s32 sys_event_queue_destroy(u32 equeue_id, s32 mode);
-s32 sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ps3::ptr<sys_event_t> dummy_event, u64 timeout);
-s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ps3::ptr<sys_event_t> event_array, s32 size, vm::ps3::ptr<u32> number);
-s32 sys_event_queue_drain(u32 event_queue_id);
+// Syscalls
 
-s32 sys_event_port_create(vm::ps3::ptr<u32> eport_id, s32 port_type, u64 name);
-s32 sys_event_port_destroy(u32 eport_id);
-s32 sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
-s32 sys_event_port_disconnect(u32 eport_id);
-s32 sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
+error_code sys_event_queue_create(vm::ps3::ptr<u32> equeue_id, vm::ps3::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
+error_code sys_event_queue_destroy(u32 equeue_id, s32 mode);
+error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ps3::ptr<sys_event_t> dummy_event, u64 timeout);
+error_code sys_event_queue_tryreceive(u32 equeue_id, vm::ps3::ptr<sys_event_t> event_array, s32 size, vm::ps3::ptr<u32> number);
+error_code sys_event_queue_drain(u32 event_queue_id);
+
+error_code sys_event_port_create(vm::ps3::ptr<u32> eport_id, s32 port_type, u64 name);
+error_code sys_event_port_destroy(u32 eport_id);
+error_code sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
+error_code sys_event_port_disconnect(u32 eport_id);
+error_code sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);

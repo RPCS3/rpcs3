@@ -3,6 +3,7 @@
 #ifdef QT_UI
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+
 #include "glviewer.h"
 
 int main(int argc, char *argv[])
@@ -13,6 +14,5 @@ int main(int argc, char *argv[])
 	QQmlApplicationEngine engine(QUrl("qrc:/qml/main.qml"));
 
 	return app.exec();
-	Q_UNUSED(engine)
 }
 #endif

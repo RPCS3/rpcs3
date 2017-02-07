@@ -234,7 +234,7 @@ s32 cellSysutilCheckCallback(ppu_thread& ppu)
 			return res;
 		}
 
-		CHECK_EMU_STATUS;
+		thread_ctrl::test();
 	}
 
 	return CELL_OK;

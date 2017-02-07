@@ -179,9 +179,12 @@ s32 cellHddGameCheck2()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellHddGameGetSizeKB()
+s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGame.todo("cellHddGameGetSizeKB(size=*0x%x)", size);
+
+	*size = 0;
+	return CELL_OK;
 }
 
 s32 cellHddGameSetSystemVer()
@@ -197,11 +200,9 @@ s32 cellHddGameExitBroken()
 
 s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 {
-	cellGame.warning("cellGameDataGetSizeKB(): Unimplemented, returning 0");
-	if (size)
-	{
-		*size = 0;
-	}
+	cellGame.todo("cellGameDataGetSizeKB(size=*0x%x)", size);
+
+	*size = 0;
 	return CELL_OK;
 }
 
@@ -669,9 +670,11 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 	return CELL_OK;
 }
 
-s32 cellGameGetSizeKB()
+s32 cellGameGetSizeKB(vm::ptr<s32> size)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameGetSizeKB(size=*0x%x)", size);
+
+	*size = 0;
 	return CELL_OK;
 }
 
@@ -735,8 +738,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 
 	while (!result)
 	{
-		CHECK_EMU_STATUS;
-		std::this_thread::sleep_for(1ms);
+		thread_ctrl::wait_for(1000);
 	}
 
 	return CELL_OK;

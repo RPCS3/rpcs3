@@ -1,10 +1,13 @@
 #pragma once
 
-#include "Utilities/SleepQueue.h"
 #include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
+
+#include "Emu/Cell/ErrorCodes.h"
+
+#include <deque>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -103,27 +106,3 @@ struct lv2_obj
 		return res;
 	}
 };
-
-// Temporary implementation for LV2_UNLOCK (TODO: remove it)
-struct lv2_lock_guard
-{
-	static semaphore<> g_sema;
-
-	lv2_lock_guard(const lv2_lock_guard&) = delete;
-
-	lv2_lock_guard()
-	{
-		g_sema.post();
-	}
-
-	~lv2_lock_guard()
-	{
-		g_sema.wait();
-	}
-};
-
-using lv2_lock_t = semaphore_lock&;
-
-#define LV2_LOCK semaphore_lock lv2_lock(lv2_lock_guard::g_sema)
-
-#define LV2_UNLOCK lv2_lock_guard{}

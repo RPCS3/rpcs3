@@ -222,13 +222,13 @@ u32 cellGcmGetControlRegister()
 u32 cellGcmGetDefaultCommandWordSize()
 {
 	cellGcmSys.trace("cellGcmGetDefaultCommandWordSize()");
-	return 0x400;
+	return gcm_info.command_size;
 }
 
 u32 cellGcmGetDefaultSegmentWordSize()
 {
 	cellGcmSys.trace("cellGcmGetDefaultSegmentWordSize()");
-	return 0x100;
+	return gcm_info.segment_size;
 }
 
 s32 cellGcmInitDefaultFifoMode(s32 mode)
@@ -1134,9 +1134,22 @@ void cellGcmSetDefaultCommandBuffer()
 	vm::write32(fxm::get<GSRender>()->ctxt_addr, gcm_info.context_addr);
 }
 
-s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize()
+s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segmentSize)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.warning("cellGcmSetDefaultCommandBufferAndSegmentWordSize(bufferSize = 0x%x, segmentSize = 0x%x)", bufferSize, segmentSize);
+
+	const auto& put = vm::_ref<CellGcmControl>(gcm_info.control_addr).put;
+	const auto& get = vm::_ref<CellGcmControl>(gcm_info.control_addr).get;
+
+	if (put != 0x1000 || get != 0x1000 || bufferSize < segmentSize * 2)
+	{
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
+	gcm_info.command_size = bufferSize;
+	gcm_info.segment_size = segmentSize;
+
+	return CELL_OK;
 }
 
 //------------------------------------------------------------------------

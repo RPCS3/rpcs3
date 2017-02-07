@@ -12,6 +12,10 @@
 
 logs::channel cellSaveData("cellSaveData", logs::level::notice);
 
+SaveDialogBase::~SaveDialogBase()
+{
+}
+
 // cellSaveData aliases (only for cellSaveData.cpp)
 using PSetList = vm::ptr<CellSaveDataSetList>;
 using PSetBuf = vm::ptr<CellSaveDataSetBuf>;

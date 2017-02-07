@@ -114,7 +114,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 		__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
 	}
 
-	__glcheck draw_fbo.check();
+	if (!draw_fbo.check())
+		return;
 
 	//HACK: read_buffer shouldn't be there
 	switch (rsx::method_registers.surface_color_target())

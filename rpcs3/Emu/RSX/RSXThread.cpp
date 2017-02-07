@@ -388,10 +388,8 @@ namespace rsx
 		});
 
 		// TODO: exit condition
-		while (true)
+		while (!Emu.IsStopped())
 		{
-			CHECK_EMU_STATUS;
-
 			const u32 get = ctrl->get;
 			const u32 put = ctrl->put;
 

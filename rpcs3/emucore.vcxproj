@@ -402,7 +402,6 @@
     <ClInclude Include="..\Utilities\lockless.h" />
     <ClInclude Include="..\Utilities\mutex.h" />
     <ClInclude Include="..\Utilities\sema.h" />
-    <ClInclude Include="..\Utilities\SleepQueue.h" />
     <ClInclude Include="..\Utilities\sync.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />

@@ -6,7 +6,12 @@ struct sys_lwmutex_attribute_t
 {
 	be_t<u32> protocol;
 	be_t<u32> recursive;
-	char name[8];
+
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
 };
 
 enum : u32
@@ -49,28 +54,28 @@ struct lv2_lwmutex final : lv2_obj
 	static const u32 id_base = 0x95000000;
 
 	const u32 protocol;
+	const vm::ps3::ptr<sys_lwmutex_t> control;
 	const u64 name;
 
-	// this object is not truly a mutex and its syscall names may be wrong, it's probably a sleep queue or something
-	atomic_t<u32> signaled{ 0 };
+	semaphore<> mutex;
+	atomic_t<u32> signaled{0};
+	std::deque<cpu_thread*> sq;
 
-	sleep_queue<cpu_thread> sq;
-
-	lv2_lwmutex(u32 protocol, u64 name)
+	lv2_lwmutex(u32 protocol, vm::ps3::ptr<sys_lwmutex_t> control, u64 name)
 		: protocol(protocol)
+		, control(control)
 		, name(name)
 	{
 	}
-
-	void unlock(lv2_lock_t);
 };
 
 // Aux
 class ppu_thread;
 
-// SysCalls
-s32 _sys_lwmutex_create(vm::ps3::ptr<u32> lwmutex_id, u32 protocol, vm::ps3::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);
-s32 _sys_lwmutex_destroy(u32 lwmutex_id);
-s32 _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout);
-s32 _sys_lwmutex_trylock(u32 lwmutex_id);
-s32 _sys_lwmutex_unlock(u32 lwmutex_id);
+// Syscalls
+
+error_code _sys_lwmutex_create(vm::ps3::ptr<u32> lwmutex_id, u32 protocol, vm::ps3::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);
+error_code _sys_lwmutex_destroy(u32 lwmutex_id);
+error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout);
+error_code _sys_lwmutex_trylock(u32 lwmutex_id);
+error_code _sys_lwmutex_unlock(u32 lwmutex_id);

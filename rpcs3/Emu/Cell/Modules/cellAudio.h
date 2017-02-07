@@ -137,6 +137,8 @@ public:
 
 	std::vector<u64> keys;
 
+	semaphore<> mutex;
+
 	audio_config()
 	{
 		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)

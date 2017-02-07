@@ -292,7 +292,7 @@ struct SaveDataEntry
 class SaveDialogBase
 {
 public:
-	virtual ~SaveDialogBase() = default;
+	virtual ~SaveDialogBase();
 
 	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, vm::ptr<CellSaveDataListSet> listSet) = 0;
 };

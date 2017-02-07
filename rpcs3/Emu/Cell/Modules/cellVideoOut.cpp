@@ -134,7 +134,9 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
 		if (config->resolutionId != g_cfg_video_out_resolution.get()
-			|| config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8
+			|| (config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8 &&
+				config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8 &&
+				config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT) 
 			|| (config->aspect != CELL_VIDEO_OUT_ASPECT_AUTO && config->aspect != g_cfg_video_out_aspect_ratio.get()))
 		{
 			return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;

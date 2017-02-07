@@ -157,9 +157,9 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 		return CELL_ESRCH;
 	}
 
-	if (ct.value)
+	if (ct.ret)
 	{
-		return ct.value;
+		return ct.ret;
 	}
 
 	// Generate a new mem ID
@@ -215,9 +215,9 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 		return CELL_ESRCH;
 	}
 
-	if (mem.value)
+	if (mem.ret)
 	{
-		return mem.value;
+		return mem.ret;
 	}
 
 	// Return "physical memory" to the memory container

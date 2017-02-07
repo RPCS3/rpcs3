@@ -11,6 +11,18 @@
 #include <errno.h>
 #endif
 
+template <>
+void fmt_class_string<std::pair<const fmt_type_info*, u64>>::format(std::string& out, u64 arg)
+{
+	// Dynamic format arg
+	const auto& pair = get_object(arg);
+
+	if (pair.first)
+	{
+		pair.first->fmt_string(out, pair.second);
+	}
+}
+
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
 	if (arg)
