@@ -512,7 +512,7 @@ u32 SPUThread::get_events(bool waiting)
 	}
 
 	// SPU Decrementer Event
-	if ((ch_dec_value - (u32)(get_timebased_time() - ch_dec_start_timestamp)) >> 31)
+	if ((ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
 	{
 		ch_event_stat |= SPU_EVENT_TM;
 	}
