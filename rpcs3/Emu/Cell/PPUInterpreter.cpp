@@ -294,7 +294,7 @@ bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// TODO: In precise interpreter, SAT and NJ flags must be implemented and warnings removed
 	LOG_WARNING(PPU, "MFVSCR");
-	ppu.vr[op.vd] = v128::from32(0, 0, 0, ppu.sat | (u32{ppu.nj} << 16));
+	ppu.vr[op.vd] = v128::from32(0, 0, 0, u32{ppu.sat} | (u32{ppu.nj} << 16));
 	return true;
 }
 
@@ -2777,7 +2777,7 @@ bool ppu_interpreter::MFSPR(ppu_thread& ppu, ppu_opcode_t op)
 	case 0x009: ppu.gpr[op.rd] = ppu.ctr; break;
 	case 0x100: ppu.gpr[op.rd] = ppu.vrsave; break;
 
-	case 0x10C: ppu.gpr[op.rd] = get_timebased_time() & 0xffffffff; break;
+	case 0x10C: ppu.gpr[op.rd] = get_timebased_time(); break;
 	case 0x10D: ppu.gpr[op.rd] = get_timebased_time() >> 32; break;
 	default: fmt::throw_exception("MFSPR 0x%x" HERE, n);
 	}
@@ -2817,9 +2817,9 @@ bool ppu_interpreter::MFTB(ppu_thread& ppu, ppu_opcode_t op)
 
 	switch (n)
 	{
-	case 0x10C: ppu.gpr[op.rd] = get_timebased_time() & 0xffffffff; break;
+	case 0x10C: ppu.gpr[op.rd] = get_timebased_time(); break;
 	case 0x10D: ppu.gpr[op.rd] = get_timebased_time() >> 32; break;
-	default: fmt::throw_exception("MFSPR 0x%x" HERE, n);
+	default: fmt::throw_exception("MFTB 0x%x" HERE, n);
 	}
 
 	return true;
@@ -3326,7 +3326,7 @@ bool ppu_interpreter::EXTSB(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STFIWX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	vm::write32(vm::cast(addr, HERE), (u32&)ppu.fpr[op.frs]);
+	vm::write32(vm::cast(addr, HERE), (u32)(u64&)ppu.fpr[op.frs]);
 	return true;
 }
 
@@ -3602,9 +3602,7 @@ bool ppu_interpreter::FSQRTS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FRES(ppu_thread& ppu, ppu_opcode_t op)
 {
-	f32 value = f32(ppu.fpr[op.frb]);
-	_mm_store_ss(&value, _mm_rcp_ss(_mm_load_ss(&value)));
-	ppu.fpr[op.frd] = value;
+	ppu.fpr[op.frd] = f32(1.0 / ppu.fpr[op.frb]);
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -3708,14 +3706,14 @@ bool ppu_interpreter::FRSP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTIW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	(s32&)ppu.fpr[op.frd] = s32(ppu.fpr[op.frb]);
+	(s64&)ppu.fpr[op.frd] = _mm_cvtsd_si32(_mm_load_sd(&ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
 bool ppu_interpreter::FCTIWZ(ppu_thread& ppu, ppu_opcode_t op)
 {
-	(s32&)ppu.fpr[op.frd] = _mm_cvttsd_si32(_mm_load_sd(&ppu.fpr[op.frb]));
+	(s64&)ppu.fpr[op.frd] = _mm_cvttsd_si32(_mm_load_sd(&ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -3764,9 +3762,7 @@ bool ppu_interpreter::FMUL(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FRSQRTE(ppu_thread& ppu, ppu_opcode_t op)
 {
-	f32 value = f32(ppu.fpr[op.frb]);
-	_mm_store_ss(&value, _mm_rsqrt_ss(_mm_load_ss(&value)));
-	ppu.fpr[op.frd] = value;
+	ppu.fpr[op.frd] = 1.0 / std::sqrt(ppu.fpr[op.frb]);
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -3835,7 +3831,7 @@ bool ppu_interpreter::FABS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTID(ppu_thread& ppu, ppu_opcode_t op)
 {
-	(s64&)ppu.fpr[op.frd] = s64(ppu.fpr[op.frb]);
+	(s64&)ppu.fpr[op.frd] = _mm_cvtsd_si64(_mm_load_sd(&ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -3849,7 +3845,7 @@ bool ppu_interpreter::FCTIDZ(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCFID(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = static_cast<double>((s64&)ppu.fpr[op.frb]);
+	_mm_store_sd(&ppu.fpr[op.frd], _mm_cvtsi64_sd(_mm_setzero_pd(), (s64&)ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }

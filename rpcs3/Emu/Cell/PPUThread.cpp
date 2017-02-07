@@ -43,6 +43,8 @@
 #include "Modules/cellMsgDialog.h"
 #endif
 
+#include <cfenv>
+
 extern u64 get_system_time();
 
 namespace vm { using namespace ps3; }
@@ -121,7 +123,7 @@ extern thread_local std::string(*g_tls_log_prefix)();
 
 void ppu_thread::cpu_task()
 {
-	//SetHostRoundingMode(FPSCR_RN_NEAR);
+	std::fesetround(FE_TONEAREST);
 
 	// Execute cmd_queue
 	while (cmd64 cmd = cmd_wait())
@@ -538,7 +540,7 @@ static void ppu_initialize()
 		{ "__trace", (u64)&ppu_trace },
 		{ "__hlecall", (u64)&ppu_execute_function },
 		{ "__syscall", (u64)&ppu_execute_syscall },
-		{ "__get_tbl", (u64)&get_timebased_time },
+		{ "__get_tb", (u64)&get_timebased_time },
 		{ "__lwarx", (u64)&ppu_lwarx },
 		{ "__ldarx", (u64)&ppu_ldarx },
 		{ "__stwcx", (u64)&ppu_stwcx },
