@@ -160,23 +160,12 @@ void Emulator::Load()
 
 		const std::string& elf_dir = fs::get_parent_dir(m_path);
 
-		fs::file file(m_path);
 		fs::file elf_file;
-
-		if (IsSelf(file))
+		if (!DecryptSelf(elf_file, fs::file(m_path))) 
 		{
-			if (!DecryptSelf(elf_file, file)) 
-			{
-				const std::string& elf_name = m_path.substr(elf_dir.size());
-				LOG_ERROR(LOADER, "Failed to decrypt %s", elf_dir + elf_name);
-				return;
-			}
-
-			file.close();
-		}
-		else
-		{
-			elf_file = std::move(file); //We are not a SELF, so just use the file itself
+			const std::string& elf_name = m_path.substr(elf_dir.size());
+			LOG_ERROR(LOADER, "Failed to decrypt %s", elf_dir + elf_name);
+			return;
 		}
 
 		SetCPUThreadStop(0);
