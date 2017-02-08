@@ -84,6 +84,7 @@ static fs::error to_error(DWORD e)
 	{
 	case ERROR_FILE_NOT_FOUND: return fs::error::noent;
 	case ERROR_PATH_NOT_FOUND: return fs::error::noent;
+	case ERROR_ACCESS_DENIED: return fs::error::inval;
 	case ERROR_ALREADY_EXISTS: return fs::error::exist;
 	case ERROR_FILE_EXISTS: return fs::error::exist;
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
