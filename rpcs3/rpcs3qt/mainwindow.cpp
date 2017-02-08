@@ -13,6 +13,7 @@
 #include "logframe.h"
 #include "settingsdialog.h"
 #include "padsettingsdialog.h"
+#include "AutoPauseSettingsDialog.h"
 #include "mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -112,7 +113,8 @@ void MainWindow::PadSettings()
 
 void MainWindow::AutoPauseSettings()
 {
-	qDebug() << "MainWindow::AutoPauseSettings()";
+        AutoPauseSettingsDialog dlg(this);
+	dlg.exec();
 }
 
 void MainWindow::VFSManager()
