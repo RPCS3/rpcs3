@@ -15,7 +15,7 @@ LogFrame::LogFrame(QWidget *parent) : QDockWidget(tr("Log"), parent)
 	tty = new QTextEdit(tabWidget);
 	QPalette ttyPalette = log->palette();
 	ttyPalette.setColor(QPalette::Base, Qt::black);
-	ttyPalette.setColor(QPalette::Text, QColor(255, 255, 255));
+	ttyPalette.setColor(QPalette::Text, Qt::white);
 	tty->setPalette(ttyPalette);
 	tty->setReadOnly(true);
 

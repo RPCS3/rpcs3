@@ -353,8 +353,8 @@ void MainWindow::CreateDockWindows()
 	LogFrame *log = new LogFrame(this);
 
 	addDockWidget(Qt::LeftDockWidgetArea, gameList);
+	addDockWidget(Qt::LeftDockWidgetArea, log);
 	addDockWidget(Qt::RightDockWidgetArea, debugger);
-	addDockWidget(Qt::BottomDockWidgetArea, log);
 }
 
 #endif // QT_UI

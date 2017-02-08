@@ -8,7 +8,7 @@
 
 class LogFrame : public QDockWidget
 {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
 	explicit LogFrame(QWidget *parent = 0);
