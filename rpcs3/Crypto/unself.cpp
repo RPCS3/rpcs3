@@ -1331,9 +1331,16 @@ bool CheckDebugSelf(const fs::file& self, fs::file& elf)
 }
 
 // Decrypt self and write it to elf.
-// If passed nullptr for elf, it will make elf point to file in memory.
-bool DecryptSelf(fs::file& elf, const fs::file& self)
+// If passed empty / invalid file for elf, it will make elf point to file in memory.
+bool DecryptSelf(fs::file& elf, fs::file& self)
 {
+	if (!IsSelf(self))
+	{
+		LOG_NOTICE(LOADER, "No decryption necessary or not a valid SELF.");
+		elf.reset(self.release());
+		return (bool)elf;
+	}
+
 	LOG_NOTICE(LOADER, "Decrypting SELF");
 
 	// Check for a debug SELF first.

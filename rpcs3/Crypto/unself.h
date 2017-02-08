@@ -391,4 +391,4 @@ public:
 extern bool IsSelf(const fs::file& elf);
 extern bool IsSelfElf32(const fs::file& elf);
 extern bool CheckDebugSelf(const fs::file& self, const fs::file& elf);
-extern bool DecryptSelf(fs::file& elf, const fs::file& self);
+extern bool DecryptSelf(fs::file& elf, fs::file& self);
