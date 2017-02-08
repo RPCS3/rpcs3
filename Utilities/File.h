@@ -161,11 +161,8 @@ namespace fs
 		// Open memory for read || write, dont take ownership of memory
 		explicit file(const void* ptr, std::size_t size, bs_t<open_mode> mode = ::fs::read);
 
-		// Open memory for read || write, take ownership of memory
-		explicit file(std::unique_ptr<u8[]> ptr, std::size_t size, bs_t<open_mode> mode = ::fs::read);
-
-		// Open memory for read || write, allocate own memory of 'size' size
-		explicit file(std::size_t size, bs_t<open_mode> mode = ::fs::read + ::fs::write) : file(std::unique_ptr<u8[]>(nullptr), size, mode) {};
+		// Open memory for read || write, use vector as backing memory
+		explicit file(std::vector<u8> vec, bs_t<open_mode> mode = ::fs::read + ::fs::write);
 
 		// Open file with specified args (forward to constructor)
 		template <typename... Args>

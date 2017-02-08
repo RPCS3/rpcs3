@@ -1039,18 +1039,52 @@ bool SELFDecrypter::DecryptData()
 }
 
 // If elf is a nullptr, we make it point to a file in memory
-bool SELFDecrypter::MakeElf(fs::file*& elf, bool isElf32)
+bool SELFDecrypter::MakeElf(fs::file& elf, bool isElf32)
 {
-	char* buf = new char[data_buf_length*5]; // HACK: we need an algorithm here to determine the size of the elf in advance (is that even possible?)
-	if (elf == nullptr)
+	if (!elf)
 	{
-		elf = new fs::file(buf, data_buf_length*5, fs::read + fs::write);
-	}
-
-	if(!elf)
-	{
-		LOG_ERROR(LOADER, "Could not create ELF file!");
-		return false;
+		// Find the length of the binary to be written, so we can allocate the neccesary space in one go.
+		size_t filesize = 0;
+		if (isElf32)
+		{
+			if (elf32_hdr.e_shnum > 0)
+				filesize = elf32_hdr.e_shoff + (elf32_hdr.e_shentsize*elf32_hdr.e_shnum);
+			else
+			{
+				for (u32 i = 0; i < elf32_hdr.e_phnum; ++i)
+				{
+					size_t cur_offset = phdr32_arr[i].p_offset + phdr32_arr[i].p_filesz;
+					if (cur_offset > filesize)
+						filesize = cur_offset;
+				}
+				for (u32 i = 0; i < elf32_hdr.e_shnum; ++i)
+				{
+					size_t cur_offset = shdr32_arr[i].sh_offset + shdr32_arr[i].sh_size;
+					if (cur_offset > filesize)
+						filesize = cur_offset;
+				}
+			}
+		}
+		else {
+			if (elf64_hdr.e_shnum > 0)
+				filesize = elf64_hdr.e_shoff + (elf64_hdr.e_shentsize*elf64_hdr.e_shnum);
+			else
+			{
+				for (u32 i = 0; i < elf64_hdr.e_phnum; ++i)
+				{
+					size_t cur_offset = phdr64_arr[i].p_offset + phdr64_arr[i].p_filesz;
+					if (cur_offset > filesize)
+						filesize = cur_offset;
+				}
+				for (u32 i = 0; i < elf64_hdr.e_shnum; ++i)
+				{
+					size_t cur_offset = shdr64_arr[i].sh_offset + shdr64_arr[i].sh_size;
+					if (cur_offset > filesize)
+						filesize = cur_offset;
+				}
+			}
+		}
+		elf = fs::file(std::vector<u8>(filesize));
 	}
 
 	// Set initial offset.
@@ -1059,12 +1093,12 @@ bool SELFDecrypter::MakeElf(fs::file*& elf, bool isElf32)
 	if (isElf32)
 	{
 		// Write ELF header.
-		WriteEhdr(*elf, elf32_hdr);
+		WriteEhdr(elf, elf32_hdr);
 
 		// Write program headers.
 		for (u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
-			WritePhdr(*elf, phdr32_arr[i]);
+			WritePhdr(elf, phdr32_arr[i]);
 		}
 
 		for (unsigned int i = 0; i < meta_hdr.section_count; i++)
@@ -1073,8 +1107,8 @@ bool SELFDecrypter::MakeElf(fs::file*& elf, bool isElf32)
 			if (meta_shdr[i].type == 2)
 			{
 				// Seek to the program header data offset and write the data.
-				elf->seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
-				elf->write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
+				elf.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
+				elf.write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
 
 				// Advance the data buffer offset by data size.
 				data_buf_offset += meta_shdr[i].data_size;
@@ -1084,23 +1118,23 @@ bool SELFDecrypter::MakeElf(fs::file*& elf, bool isElf32)
 		// Write section headers.
 		if (self_hdr.se_shdroff != 0)
 		{
-			elf->seek(elf32_hdr.e_shoff);
+			elf.seek(elf32_hdr.e_shoff);
 
 			for (u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 			{
-				WriteShdr(*elf, shdr32_arr[i]);
+				WriteShdr(elf, shdr32_arr[i]);
 			}
 		}
 	}
 	else
 	{
 		// Write ELF header.
-		WriteEhdr(*elf, elf64_hdr);
+		WriteEhdr(elf, elf64_hdr);
 
 		// Write program headers.
 		for (u32 i = 0; i < elf64_hdr.e_phnum; ++i)
 		{
-			WritePhdr(*elf, phdr64_arr[i]);
+			WritePhdr(elf, phdr64_arr[i]);
 		}
 
 		// Write data.
@@ -1140,14 +1174,14 @@ bool SELFDecrypter::MakeElf(fs::file*& elf, bool isElf32)
 					}
 
 					// Seek to the program header data offset and write the data.
-					elf->seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					elf->write(decomp_buf.get(), phdr64_arr[meta_shdr[i].program_idx].p_filesz);
+					elf.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					elf.write(decomp_buf.get(), phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 				}
 				else
 				{
 					// Seek to the program header data offset and write the data.
-					elf->seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					elf->write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
+					elf.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					elf.write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
 				}
 
 				// Advance the data buffer offset by data size.
@@ -1158,14 +1192,17 @@ bool SELFDecrypter::MakeElf(fs::file*& elf, bool isElf32)
 		// Write section headers.
 		if (self_hdr.se_shdroff != 0)
 		{
-			elf->seek(elf64_hdr.e_shoff);
+			elf.seek(elf64_hdr.e_shoff);
 
 			for (u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 			{
-				WriteShdr(*elf, shdr64_arr[i]);
+				WriteShdr(elf, shdr64_arr[i]);
 			}
 		}
 	}
+
+	if (elf.pos() != elf.size())
+		fmt::throw_exception("MakeELF written bytes (%llu) does not equal buffer size (%llu).", elf.pos(), elf.size());
 
 	return true;
 }
@@ -1220,9 +1257,9 @@ bool IsSelf(const fs::file& elf)
 
 bool IsSelfElf32(const fs::file& elf)
 {
-	//fs::file f(path);
-
 	if (!elf) return false;
+
+	elf.seek(0);
 
 	SceHeader hdr;
 	SelfHeader sh;
@@ -1271,8 +1308,7 @@ bool CheckDebugSelf(const fs::file& self, fs::file& elf)
 
 		self.seek(elf_offset);
 
-		char* elf_buf = new char[self.size() - self.pos()];
-		elf = fs::file(elf_buf, self.size() - self.pos());
+		elf = fs::file(std::vector<u8>(self.size() - self.pos()));
 
 		if (!elf || (elf.size() == 0))
 		{
@@ -1296,12 +1332,12 @@ bool CheckDebugSelf(const fs::file& self, fs::file& elf)
 
 // Decrypt self and write it to elf.
 // If passed nullptr for elf, it will make elf point to file in memory.
-bool DecryptSelf(fs::file*& elf, const fs::file& self)
+bool DecryptSelf(fs::file& elf, const fs::file& self)
 {
 	LOG_NOTICE(LOADER, "Decrypting SELF");
 
 	// Check for a debug SELF first.
-	if (!CheckDebugSelf(self, *elf))
+	if (!CheckDebugSelf(self, elf))
 	{
 		// Set a virtual pointer to the SELF file.
 		//fs::file self_vf(self);
