@@ -318,8 +318,8 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	}
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 1; // ???
-	sb->gid = 1; // ???
+	sb->uid = 0; // Always zero
+	sb->gid = 0; // Always zero
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
@@ -345,8 +345,8 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	const fs::stat_t& info = file->file.stat();
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 1; // ???
-	sb->gid = 1; // ???
+	sb->uid = 0; // Always zero
+	sb->gid = 0; // Always zero
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime; // ctime may be incorrect
