@@ -28,6 +28,7 @@ enum CellError : u32
 	CELL_ETIMEDOUT     = 0x8001000B, // The operation is timed out
 	CELL_EABORT        = 0x8001000C, // The operation is aborted
 	CELL_EFAULT        = 0x8001000D, // Invalid memory access
+	CELL_ENOCHILD      = 0x8001000E, // Process has no child(s)
 	CELL_ESTAT         = 0x8001000F, // State of the target thread is invalid
 	CELL_EALIGN        = 0x80010010, // Alignment is invalid.
 	CELL_EKRESOURCE    = 0x80010011, // Shortage of the kernel resources
