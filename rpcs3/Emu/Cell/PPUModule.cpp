@@ -1122,7 +1122,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	if (g_cfg_load_liblv2)
 	{
 		fs::file lvl2_file;
-		DecryptSelf(lvl2_file, fs::file(lle_dir + "/liblv2.sprx"));
+		fs::file temp = fs::file(lle_dir + "/liblv2.sprx");
+		DecryptSelf(lvl2_file, temp);
 
 		const ppu_prx_object obj = lvl2_file;
 
@@ -1140,7 +1141,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		for (const auto& name : g_cfg_load_libs.get_set())
 		{
 			fs::file ppu_file;
-			DecryptSelf(ppu_file, fs::file(lle_dir + '/' + name));
+			fs::file temp = fs::file(lle_dir + '/' + name);
+			DecryptSelf(ppu_file, temp);
 
 			const ppu_prx_object obj = ppu_file;
 

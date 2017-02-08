@@ -19,7 +19,8 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 	sys_prx.warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
 
 	fs::file ppu_file;
-	DecryptSelf(ppu_file, fs::file(vfs::get(path)));
+	fs::file temp = fs::file(vfs::get(path));
+	DecryptSelf(ppu_file, temp);
 
 	const ppu_prx_object obj = ppu_file;
 

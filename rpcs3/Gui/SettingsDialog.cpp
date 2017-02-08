@@ -341,7 +341,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 		for (const auto& prxf : fs::dir(lle_dir))
 		{
 			fs::file prx_file;
-			DecryptSelf(prx_file, fs::file(lle_dir + prxf.name));
+			fs::file temp = fs::file(lle_dir + prxf.name);
+			DecryptSelf(prx_file, temp);
 			// List found unselected modules
 			if (!prxf.is_directory && ppu_prx_object(prx_file) == elf_error::ok && !set.count(prxf.name))
 			{
