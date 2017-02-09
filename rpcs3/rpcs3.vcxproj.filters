@@ -19,6 +19,9 @@
     <Filter Include="Io\Basic">
       <UniqueIdentifier>{ce9ce942-07dd-4cbc-9b76-0f754c363eda}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\MMJoystick">
+      <UniqueIdentifier>{92e92511-88b9-4187-9c94-80790248d337}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -107,6 +110,9 @@
     </ClCompile>
     <ClCompile Include="Gui\OskDialog.cpp">
       <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="MMJoystickHandler.cpp">
+      <Filter>Io\MMJoystick</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -203,6 +209,9 @@
     </ClInclude>
     <ClInclude Include="BasicMouseHandler.h">
       <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MMJoystickHandler.h">
+      <Filter>Io\MMJoystick</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

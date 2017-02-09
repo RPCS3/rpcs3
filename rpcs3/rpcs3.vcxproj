@@ -143,6 +143,7 @@
     <ClCompile Include="Gui\SignInDialog.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="KeyboardPadHandler.cpp" />
+    <ClCompile Include="MMJoystickHandler.cpp" />
     <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="XInputPadHandler.cpp" />
   </ItemGroup>
@@ -176,6 +177,7 @@
     <ClInclude Include="Gui\SignInDialog.h" />
     <ClInclude Include="Gui\TextInputDialog.h" />
     <ClInclude Include="KeyboardPadHandler.h" />
+    <ClInclude Include="MMJoystickHandler.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="rpcs3.h" />
     <ClInclude Include="stdafx_gui.h" />
