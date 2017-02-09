@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VFS.h"
-#include "DbgCommand.h"
 
 enum class system_type
 {
@@ -20,7 +19,6 @@ struct EmuCallbacks
 	std::function<void(std::function<void()>)> call_after;
 	std::function<void()> process_events;
 	std::function<void()> exit;
-	std::function<void(DbgCommand, class cpu_thread*)> send_dbg_command;
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
 	std::function<std::shared_ptr<class PadHandlerBase>()> get_pad_handler;
@@ -38,9 +36,6 @@ enum Status : u32
 	Stopped,
 	Ready,
 };
-
-// Emulation Stopped exception event
-class EmulationStopped {};
 
 class Emulator final
 {
@@ -69,11 +64,6 @@ public:
 	const auto& GetCallbacks() const
 	{
 		return m_cb;
-	}
-
-	void SendDbgCommand(DbgCommand cmd, class cpu_thread* thread = nullptr)
-	{
-		if (m_cb.send_dbg_command) m_cb.send_dbg_command(cmd, thread);
 	}
 
 	// Call from the GUI thread
@@ -135,6 +125,7 @@ public:
 	bool IsPaused()  const { return m_status == Paused; }
 	bool IsStopped() const { return m_status == Stopped; }
 	bool IsReady()   const { return m_status == Ready; }
+	auto GetStatus() const { return m_status.load(); }
 };
 
 extern Emulator Emu;

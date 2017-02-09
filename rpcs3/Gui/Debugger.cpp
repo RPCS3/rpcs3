@@ -16,6 +16,7 @@ class DbgEmuPanel : public wxPanel
 	wxButton* m_btn_stop;
 	wxButton* m_btn_restart;
 	wxButton* m_btn_capture_frame;
+	u32 m_last_status = Ready;
 
 public:
 	DbgEmuPanel(wxWindow* parent) : wxPanel(parent)
@@ -43,29 +44,36 @@ public:
 		Layout();
 
 		UpdateUI();
-		wxGetApp().Bind(wxEVT_DBG_COMMAND, &DbgEmuPanel::HandleCommand, this);
 	}
 
 	void UpdateUI()
 	{
-		m_btn_run->Enable(!Emu.IsStopped());
-		m_btn_stop->Enable(!Emu.IsStopped());
-		m_btn_restart->Enable(!Emu.GetPath().empty());
+		const auto status = Emu.GetStatus();
+
+		if (m_last_status != status)
+		{
+			m_last_status = status;
+
+			m_btn_run->Enable(status != Stopped);
+			m_btn_stop->Enable(status != Stopped);
+			m_btn_restart->Enable(!Emu.GetPath().empty());
+			m_btn_run->SetLabel(status == Paused ? "Resume" : status == Running ? "Pause" : "Run");
+		}
 	}
 
 	void OnRun(wxCommandEvent& event)
 	{
-		if(Emu.IsRunning())
+		if (Emu.IsReady())
+		{
+			Emu.Run();
+		}
+		else if (Emu.IsRunning())
 		{
 			Emu.Pause();
 		}
-		else if(Emu.IsPaused())
+		else if (Emu.IsPaused())
 		{
 			Emu.Resume();
-		}
-		else
-		{
-			Emu.Run();
 		}
 	}
 
@@ -84,37 +92,16 @@ public:
 	{
 		user_asked_for_frame_capture = true;
 	}
-
-	void HandleCommand(wxCommandEvent& event)
-	{
-		event.Skip();
-
-		switch(event.GetId())
-		{
-		case DID_STOP_EMU:
-			m_btn_run->SetLabel("Run");
-		break;
-
-		case DID_PAUSE_EMU:
-			m_btn_run->SetLabel("Resume");
-		break;
-
-		case DID_START_EMU:
-		case DID_RESUME_EMU:
-			m_btn_run->SetLabel("Pause");
-		break;
-		}
-
-		UpdateUI();
-	}
 };
 
 DebuggerPanel::DebuggerPanel(wxWindow* parent) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(400, 600), wxTAB_TRAVERSAL)
 {
 	m_aui_mgr.SetManagedWindow(this);
 
-	m_aui_mgr.AddPane(new DbgEmuPanel(this), wxAuiPaneInfo().Top());
-	m_aui_mgr.AddPane(new InterpreterDisAsmFrame(this), wxAuiPaneInfo().Center().CaptionVisible(false).CloseButton().MaximizeButton());
+	m_dbg_panel = new DbgEmuPanel(this);
+	m_disasm_frame = new InterpreterDisAsmFrame(this);
+	m_aui_mgr.AddPane(m_dbg_panel, wxAuiPaneInfo().Top());
+	m_aui_mgr.AddPane(m_disasm_frame, wxAuiPaneInfo().Center().CaptionVisible(false).CloseButton().MaximizeButton());
 	m_aui_mgr.Update();
 }
 
@@ -125,4 +112,6 @@ DebuggerPanel::~DebuggerPanel()
 
 void DebuggerPanel::UpdateUI()
 {
+	m_dbg_panel->UpdateUI();
+	m_disasm_frame->UpdateUI();
 }

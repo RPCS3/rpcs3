@@ -4,6 +4,7 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 #include "sys_mutex.h"

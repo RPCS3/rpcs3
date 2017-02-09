@@ -312,7 +312,6 @@ void Emulator::Load()
 		}
 
 		debug::autopause::reload();
-		SendDbgCommand(DID_READY_EMU);
 		if (g_cfg_autostart) Run();
 	}
 	catch (const std::exception& e)
@@ -340,8 +339,6 @@ void Emulator::Run()
 
 	rpcs3::on_run()();
 
-	SendDbgCommand(DID_START_EMU);
-
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
 	m_status = Running;
@@ -355,8 +352,6 @@ void Emulator::Run()
 	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
-
-	SendDbgCommand(DID_STARTED_EMU);
 }
 
 bool Emulator::Pause()
@@ -377,8 +372,6 @@ bool Emulator::Pause()
 		LOG_ERROR(GENERAL, "Emulator::Pause() error: concurrent access");
 	}
 
-	SendDbgCommand(DID_PAUSE_EMU);
-
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_pause;
@@ -388,9 +381,6 @@ bool Emulator::Pause()
 	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
-
-	SendDbgCommand(DID_PAUSED_EMU);
-
 	return true;
 }
 
@@ -416,8 +406,6 @@ void Emulator::Resume()
 		LOG_ERROR(GENERAL, "Emulator::Resume() error: concurrent access");
 	}
 
-	SendDbgCommand(DID_RESUME_EMU);
-
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::dbg_global_pause;
@@ -430,8 +418,6 @@ void Emulator::Resume()
 	idm::select<SPUThread>(on_select);
 
 	rpcs3::on_resume()();
-
-	SendDbgCommand(DID_RESUMED_EMU);
 }
 
 void Emulator::Stop()
@@ -444,12 +430,11 @@ void Emulator::Stop()
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
 	rpcs3::on_stop()();
-	SendDbgCommand(DID_STOP_EMU);
 
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.get()->set_exception(std::make_exception_ptr(EmulationStopped()));
+		cpu.get()->set_exception(std::make_exception_ptr(cpu_flag::dbg_global_stop));
 	};
 
 	idm::select<ppu_thread>(on_select);
@@ -475,8 +460,6 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
-
-	SendDbgCommand(DID_STOPPED_EMU);
 
 	if (g_cfg_autoexit)
 	{

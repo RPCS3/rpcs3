@@ -139,8 +139,6 @@ public:
 
 	const std::string m_name;
 
-	std::function<void(ARMv7Thread&)> custom_task;
-
 	const char* last_function = nullptr;
 
 	void write_pc(u32 value, u32 size)

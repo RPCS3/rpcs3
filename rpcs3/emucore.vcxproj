@@ -606,7 +606,6 @@
     <ClInclude Include="Emu\Cell\SPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
-    <ClInclude Include="Emu\DbgCommand.h" />
     <ClInclude Include="Emu\Memory\wait_engine.h" />
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\gcm_enums.h" />

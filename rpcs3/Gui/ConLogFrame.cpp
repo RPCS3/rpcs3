@@ -107,17 +107,11 @@ enum
 	id_timer,
 };
 
-BEGIN_EVENT_TABLE(LogFrame, wxPanel)
-EVT_CLOSE(LogFrame::OnQuit)
-EVT_TIMER(id_timer, LogFrame::OnTimer)
-END_EVENT_TABLE()
-
 LogFrame::LogFrame(wxWindow* parent)
 	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(600, 500))
 	, m_tabs(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS)
 	, m_log(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
 	, m_tty(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
-	, m_timer(this, id_timer)
 	, m_cfg_level(g_gui_cfg["Log Level"])
 	, m_cfg_tty(g_gui_cfg["Log TTY"])
 {
@@ -142,13 +136,12 @@ LogFrame::LogFrame(wxWindow* parent)
 	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_level, id_log_level + 7);
 	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_tty);
 
+	Bind(wxEVT_CLOSE_WINDOW, [](wxCloseEvent& event) { event.Skip(); });
+
 	Show();
 
 	// Update listener info
 	s_gui_listener.enabled = get_cfg_level();
-
-	// Check for updates every ~10 ms
-	m_timer.Start(10);
 }
 
 LogFrame::~LogFrame()
@@ -158,11 +151,6 @@ LogFrame::~LogFrame()
 bool LogFrame::Close(bool force)
 {
 	return wxWindowBase::Close(force);
-}
-
-void LogFrame::OnQuit(wxCloseEvent& event)
-{
-	event.Skip();
 }
 
 // Deals with the RightClick on Log Console, shows up the Context Menu.
@@ -237,7 +225,7 @@ void LogFrame::OnContextMenu(wxCommandEvent& event)
 	event.Skip();
 }
 
-void LogFrame::OnTimer(wxTimerEvent& event)
+void LogFrame::UpdateUI()
 {
 	std::vector<char> buf(4096);
 

@@ -65,8 +65,6 @@ void save_gui_cfg()
 	s_gui_cfg.write(out.c_str(), out.size());
 }
 
-wxDEFINE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
-
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
@@ -156,11 +154,6 @@ bool Rpcs3App::OnInit()
 		wxGetApp().Exit();
 	};
 
-	callbacks.send_dbg_command = [](DbgCommand id, cpu_thread* t)
-	{
-		wxGetApp().SendDbgCommand(id, t);
-	};
-
 	callbacks.get_kb_handler = []{ return g_cfg_kb_handler.get()(); };
 
 	callbacks.get_mouse_handler = []{ return g_cfg_mouse_handler.get()(); };
@@ -243,13 +236,6 @@ void Rpcs3App::Exit()
 {
 	Emu.Stop();
 	wxApp::Exit();
-}
-
-void Rpcs3App::SendDbgCommand(DbgCommand id, cpu_thread* thr)
-{
-	wxCommandEvent event(wxEVT_DBG_COMMAND, id);
-	event.SetClientData(thr);
-	AddPendingEvent(event);
 }
 
 Rpcs3App::Rpcs3App()

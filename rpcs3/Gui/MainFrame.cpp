@@ -29,10 +29,6 @@
 #include "frame_icon.xpm"
 #endif
 
-BEGIN_EVENT_TABLE(MainFrame, FrameBase)
-	EVT_CLOSE(MainFrame::OnQuit)
-END_EVENT_TABLE()
-
 enum IDs
 {
 	id_boot_elf = 0x555,
@@ -68,6 +64,7 @@ wxString GetPaneName()
 
 MainFrame::MainFrame()
 	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(900, 600))
+	, m_timer(this, id_update_dbg)
 	, m_aui_mgr(this)
 	, m_sys_menu_opened(false)
 {
@@ -160,9 +157,17 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
 	Bind(wxEVT_MENU, &MainFrame::UpdateUI, this, id_update_dbg);
+	Bind(wxEVT_TIMER, &MainFrame::UpdateUI, this, id_update_dbg);
+	Bind(wxEVT_CLOSE_WINDOW, [&](wxCloseEvent&)
+	{
+		DoSettings(false);
+		TheApp->Exit();
+	});
 
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
-	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
+
+	// Check for updates every ~10 ms
+	m_timer.Start(10);
 }
 
 MainFrame::~MainFrame()
@@ -494,67 +499,11 @@ void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
 	AboutDialog(this).ShowModal();
 }
 
-void MainFrame::UpdateUI(wxCommandEvent& event)
+void MainFrame::UpdateUI(wxEvent& event)
 {
-	event.Skip();
-
-	bool is_running, is_stopped, is_ready;
-
-	if(event.GetEventType() == wxEVT_DBG_COMMAND)
-	{
-		switch(event.GetId())
-		{
-			case DID_START_EMU:
-			case DID_STARTED_EMU:
-				is_running = true;
-				is_stopped = false;
-				is_ready = false;
-			break;
-
-			case DID_STOP_EMU:
-			case DID_STOPPED_EMU:
-				is_running = false;
-				is_stopped = true;
-				is_ready = false;
-				m_sys_menu_opened = false;
-			break;
-
-			case DID_PAUSE_EMU:
-			case DID_PAUSED_EMU:
-				is_running = false;
-				is_stopped = false;
-				is_ready = false;
-			break;
-
-			case DID_RESUME_EMU:
-			case DID_RESUMED_EMU:
-				is_running = true;
-				is_stopped = false;
-				is_ready = false;
-			break;
-
-			case DID_READY_EMU:
-				is_running = false;
-				is_stopped = false;
-				is_ready = true;
-			break;
-
-			case DID_REGISTRED_CALLBACK:
-				is_running = Emu.IsRunning();
-				is_stopped = Emu.IsStopped();
-				is_ready = Emu.IsReady();
-			break;
-
-			default:
-				return;
-		}
-	}
-	else
-	{
-		is_running = Emu.IsRunning();
-		is_stopped = Emu.IsStopped();
-		is_ready = Emu.IsReady();
-	}
+	const bool is_running = Emu.IsRunning();
+	const bool is_stopped = Emu.IsStopped();
+	const bool is_ready = Emu.IsReady();
 
 	// Update menu items based on the state of the emulator
 	wxMenuBar& menubar( *GetMenuBar() );
@@ -583,12 +532,12 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	memory_viewer.Enable(!is_stopped);
 	rsx_debugger.Enable(!is_stopped);
 	string_search.Enable(!is_stopped);
-}
 
-void MainFrame::OnQuit(wxCloseEvent& event)
-{
-	DoSettings(false);
-	TheApp->Exit();
+	// Debugger
+	m_debugger_frame->UpdateUI();
+
+	// Logs
+	m_log_frame->UpdateUI();
 }
 
 void MainFrame::OnKeyDown(wxKeyEvent& event)

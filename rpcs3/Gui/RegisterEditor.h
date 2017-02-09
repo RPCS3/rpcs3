@@ -9,10 +9,10 @@ class RegisterEditorDialog : public wxDialog
 	wxStaticText* t3_preview;
 
 public:
-	cpu_thread* cpu;
+	std::weak_ptr<cpu_thread> cpu;
 
 public:
-	RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread* _cpu, CPUDisAsm* _disasm);
+	RegisterEditorDialog(wxPanel *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
 
 	void updateRegister(wxCommandEvent& event);
 };

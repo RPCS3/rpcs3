@@ -2380,10 +2380,6 @@ void named_thread::start_thread(const std::shared_ptr<void>& _this)
 			LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
 			Emu.Pause();
 		}
-		catch (EmulationStopped)
-		{
-			LOG_NOTICE(GENERAL, "Thread aborted");
-		}
 
 		on_exit();
 	});

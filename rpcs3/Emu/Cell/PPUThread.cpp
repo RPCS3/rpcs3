@@ -44,6 +44,7 @@
 #endif
 
 #include <cfenv>
+#include "Utilities/GSL.h"
 
 extern u64 get_system_time();
 
@@ -90,6 +91,7 @@ std::string ppu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 	ret += fmt::format("Priority: %d\n", prio);
+	ret += fmt::format("Last function: %s\n", last_function ? last_function : "");
 	
 	ret += "\nRegisters:\n=========\n";
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("GPR[%d] = 0x%llx\n", i, gpr[i]);
@@ -210,6 +212,11 @@ void ppu_thread::exec_task()
 		if (UNLIKELY(test(state)))
 		{
 			if (check_state()) return;
+
+			// Decode single instruction (may be step)
+			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
+			if (table[ppu_decode(op)](*this, {op})) { cia += 4; }
+			continue;
 		}
 
 		// Reinitialize
@@ -223,11 +230,11 @@ void ppu_thread::exec_task()
 			func3 = table[_i._u32[3]];
 		}
 
-		while (LIKELY(func0(*this, { _op._u32[0] })))
+		while (LIKELY(func0(*this, {_op._u32[0]})))
 		{
-			if (cia += 4, LIKELY(func1(*this, { _op._u32[1] })))
+			if (cia += 4, LIKELY(func1(*this, {_op._u32[1]})))
 			{
-				if (cia += 4, LIKELY(func2(*this, { _op._u32[2] })))
+				if (cia += 4, LIKELY(func2(*this, {_op._u32[2]})))
 				{
 					cia += 4;
 					func0 = func3;
@@ -343,8 +350,7 @@ be_t<u64>* ppu_thread::get_stack_arg(s32 i, u64 align)
 
 void ppu_thread::fast_call(u32 addr, u32 rtoc)
 {
-	const auto old_pc = cia;
-	const auto old_stack = gpr[1];
+	const auto old_cia = cia;
 	const auto old_rtoc = gpr[2];
 	const auto old_lr = lr;
 	const auto old_func = last_function;
@@ -357,46 +363,46 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 	g_tls_log_prefix = []
 	{
-		const auto ppu = static_cast<ppu_thread*>(get_current_cpu_thread());
+		const auto _this = static_cast<ppu_thread*>(get_current_cpu_thread());
 
-		return fmt::format("%s [0x%08x]", ppu->get_name(), ppu->cia);
+		return fmt::format("%s [0x%08x]", _this->get_name(), _this->cia);
 	};
+
+	auto at_ret = gsl::finally([&]()
+	{
+		if (std::uncaught_exception())
+		{
+			if (last_function)
+			{
+				LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - gpr[10]) / 1000000.);
+			}
+
+			last_function = old_func;
+		}
+		else
+		{
+			state -= cpu_flag::ret;
+			cia = old_cia;
+			gpr[2] = old_rtoc;
+			lr = old_lr;
+			last_function = old_func;
+			g_tls_log_prefix = old_fmt;
+		}
+	});
 
 	try
 	{
 		exec_task();
-
-		if (gpr[1] != old_stack && !test(state, cpu_flag::ret + cpu_flag::exit)) // gpr[1] shouldn't change
-		{
-			fmt::throw_exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, gpr[1], old_stack);
-		}
 	}
 	catch (cpu_flag _s)
 	{
 		state += _s;
-		if (_s != cpu_flag::ret) throw;
-	}
-	catch (EmulationStopped)
-	{
-		if (last_function) LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - gpr[10]) / 1000000.);
-		last_function = old_func;
-		throw;
-	}
-	catch (...)
-	{
-		if (last_function) LOG_ERROR(PPU, "'%s' aborted", last_function);
-		last_function = old_func;
-		throw;
-	}
 
-	state -= cpu_flag::ret;
-
-	cia = old_pc;
-	gpr[1] = old_stack;
-	gpr[2] = old_rtoc;
-	lr = old_lr;
-	last_function = old_func;
-	g_tls_log_prefix = old_fmt;
+		if (_s != cpu_flag::ret)
+		{
+			throw;
+		}
+	}
 }
 
 u32 ppu_thread::stack_push(u32 size, u32 align_v)

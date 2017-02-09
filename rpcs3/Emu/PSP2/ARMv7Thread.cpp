@@ -7,6 +7,8 @@
 #include "ARMv7Opcodes.h"
 #include "ARMv7Interpreter.h"
 
+#include "Utilities/GSL.h"
+
 namespace vm { using namespace psv; }
 
 const arm_decoder<arm_interpreter> s_arm_interpreter;
@@ -19,6 +21,9 @@ std::string ARMv7Thread::get_name() const
 std::string ARMv7Thread::dump() const
 {
 	std::string result = cpu_thread::dump();
+	result += "Last function: ";
+	result += last_function ? last_function : "";
+	result += "\n\n";
 	result += "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
 	{
@@ -40,7 +45,7 @@ extern thread_local std::string(*g_tls_log_prefix)();
 
 void ARMv7Thread::cpu_task()
 {
-	return custom_task ? custom_task(*this) : fast_call(PC);
+	return fast_call(PC);
 }
 
 void ARMv7Thread::cpu_task_main()
@@ -113,50 +118,46 @@ ARMv7Thread::ARMv7Thread(const std::string& name, u32 prio, u32 stack)
 void ARMv7Thread::fast_call(u32 addr)
 {
 	const auto old_PC = PC;
-	const auto old_SP = SP;
 	const auto old_LR = LR;
-	const auto old_task = std::move(custom_task);
 	const auto old_func = last_function;
 
 	PC = addr;
 	LR = Emu.GetCPUThreadStop();
-	custom_task = nullptr;
 	last_function = nullptr;
+
+	auto at_ret = gsl::finally([&]()
+	{
+		if (std::uncaught_exception())
+		{
+			if (last_function)
+			{
+				LOG_ERROR(ARMv7, "'%s' aborted", last_function);
+			}
+
+			last_function = old_func;
+		}
+		else
+		{
+			state -= cpu_flag::ret;
+			PC = old_PC;
+			LR = old_LR;
+			last_function = old_func;
+		}
+	});
 
 	try
 	{
 		cpu_task_main();
-
-		if (SP != old_SP && !test(state, cpu_flag::ret + cpu_flag::exit)) // SP shouldn't change
-		{
-			fmt::throw_exception("Stack inconsistency (addr=0x%x, SP=0x%x, old=0x%x)", addr, SP, old_SP);
-		}
 	}
 	catch (cpu_flag _s)
 	{
 		state += _s;
-		if (_s != cpu_flag::ret) throw;
-	}
-	catch (EmulationStopped)
-	{
-		if (last_function) LOG_WARNING(ARMv7, "'%s' aborted", last_function);
-		last_function = old_func;
-		throw;
-	}
-	catch (...)
-	{
-		if (last_function) LOG_ERROR(ARMv7, "'%s' aborted", last_function);
-		last_function = old_func;
-		throw;
-	}
 
-	state -= cpu_flag::ret;
-
-	PC = old_PC;
-	SP = old_SP;
-	LR = old_LR;
-	custom_task = std::move(old_task);
-	last_function = old_func;
+		if (_s != cpu_flag::ret)
+		{
+			throw;
+		}
+	}
 }
 
 u32 ARMv7Thread::stack_push(u32 size, u32 align_v)

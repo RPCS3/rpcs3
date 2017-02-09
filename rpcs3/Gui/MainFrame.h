@@ -8,9 +8,10 @@ class GameViewer;
 
 class MainFrame : public FrameBase
 {
+	wxTimer m_timer;
 	DebuggerPanel* m_debugger_frame;
 	GameViewer* m_game_viewer;
-	LogFrame * m_log_frame;
+	LogFrame* m_log_frame;
 	wxAuiManager m_aui_mgr;
 	bool m_sys_menu_opened;
 
@@ -22,8 +23,6 @@ public:
 	void DoSettings(bool load);
 
 private:
-	void OnQuit(wxCloseEvent& event);
-
 	void BootGame(wxCommandEvent& event);
 	void BootGameAndRun(wxCommandEvent& event);
 	void InstallPkg(wxCommandEvent& event);
@@ -46,9 +45,6 @@ private:
 	void OpenCgDisasm(wxCommandEvent& evt);
 	void DecryptSPRXLibraries(wxCommandEvent& event);
 	void AboutDialogHandler(wxCommandEvent& event);
-	void UpdateUI(wxCommandEvent& event);
+	void UpdateUI(wxEvent& event);
 	void OnKeyDown(wxKeyEvent& event);
-
-private:
-	DECLARE_EVENT_TABLE()
 };

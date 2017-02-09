@@ -56,6 +56,9 @@ public:
 		return id >> 24;
 	}
 
+	// Thread stats for external observation
+	static atomic_t<u64> g_threads_created, g_threads_deleted;
+
 	// Print CPU state
 	virtual std::string dump() const;
 

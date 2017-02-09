@@ -1000,9 +1000,6 @@
     <ClInclude Include="..\Utilities\Timer.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\DbgCommand.h">
-      <Filter>Emu</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
     </ClInclude>

@@ -2,7 +2,8 @@
 #include "Emu/System.h"
 #include "CPUThread.h"
 
-#include <mutex>
+DECLARE(cpu_thread::g_threads_created){0};
+DECLARE(cpu_thread::g_threads_deleted){0};
 
 template<>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
@@ -11,15 +12,15 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 	{
 		switch (f)
 		{
-		STR_CASE(cpu_flag::stop);
-		STR_CASE(cpu_flag::exit);
-		STR_CASE(cpu_flag::suspend);
-		STR_CASE(cpu_flag::ret);
-		STR_CASE(cpu_flag::signal);
-		STR_CASE(cpu_flag::dbg_global_pause);
-		STR_CASE(cpu_flag::dbg_global_stop);
-		STR_CASE(cpu_flag::dbg_pause);
-		STR_CASE(cpu_flag::dbg_step);
+		case cpu_flag::stop: return "STOP";
+		case cpu_flag::exit: return "EXIT";
+		case cpu_flag::suspend: return "s";
+		case cpu_flag::ret: return "ret";
+		case cpu_flag::signal: return "sig";
+		case cpu_flag::dbg_global_pause: return "G.PAUSE";
+		case cpu_flag::dbg_global_stop: return "G.EXIT";
+		case cpu_flag::dbg_pause: return "PAUSE";
+		case cpu_flag::dbg_step: return "STEP";
 		case cpu_flag::__bitset_enum_max: break;
 		}
 
@@ -41,10 +42,8 @@ void cpu_thread::on_task()
 
 	g_tls_current_cpu_thread = this;
 
-	Emu.SendDbgCommand(DID_CREATE_THREAD, this);
-
 	// Check thread status
-	while (!test(state & cpu_flag::exit))
+	while (!test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
 	{
 		// Check stop status
 		if (!test(state & cpu_flag::stop))
@@ -79,11 +78,13 @@ void cpu_thread::on_stop()
 
 cpu_thread::~cpu_thread()
 {
+	g_threads_deleted++;
 }
 
 cpu_thread::cpu_thread(u32 id)
 	: id(id)
 {
+	g_threads_created++;
 }
 
 bool cpu_thread::check_state()
