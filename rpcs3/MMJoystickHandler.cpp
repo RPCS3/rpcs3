@@ -8,7 +8,7 @@ namespace {
 	const DWORD THREAD_SLEEP_INACTIVE = 100;
 	const DWORD THREAD_TIMEOUT = 1000;
 
-	inline u16 ConvertAxis(SHORT value)
+	inline u16 ConvertAxis(DWORD value)
 	{
 		return static_cast<u16>((value) >> 8);
 	}
@@ -141,10 +141,10 @@ DWORD MMJoystickHandler::ThreadProcedure()
 					pad.m_buttons[j].m_pressed = pressed;
 					pad.m_buttons[j].m_value = pressed ? 255 : 0;
 				}
-				pad.m_sticks[0].m_value = ConvertAxis((SHORT)js_info.dwXpos);
-				pad.m_sticks[1].m_value = ConvertAxis((SHORT)js_info.dwYpos);
-				pad.m_sticks[2].m_value = ConvertAxis((SHORT)js_info.dwZpos);
-				pad.m_sticks[3].m_value = ConvertAxis((SHORT)js_info.dwRpos);
+				pad.m_sticks[0].m_value = ConvertAxis(js_info.dwXpos);
+				pad.m_sticks[1].m_value = ConvertAxis(js_info.dwYpos);
+				pad.m_sticks[2].m_value = ConvertAxis(js_info.dwZpos);
+				pad.m_sticks[3].m_value = ConvertAxis(js_info.dwRpos);
 				break;
 			}
 		}
