@@ -989,7 +989,7 @@ fs::file::file(const void* ptr, std::size_t size, bs_t<open_mode> mode)
 	m_file = std::make_unique<memory_stream>(ptr, size, mode);
 }
 
-fs::file::file(std::vector<u8> vec, bs_t<open_mode> mode)
+fs::file::file(const std::vector<u8> &vec, bs_t<open_mode> mode)
 {
 	class memory_stream : public file_base
 	{
@@ -999,7 +999,7 @@ fs::file::file(std::vector<u8> vec, bs_t<open_mode> mode)
 		bs_t<open_mode> m_mode;
 
 	public:
-		memory_stream(std::vector<u8> vec, bs_t<open_mode> mode)
+		memory_stream(const std::vector<u8> &vec, bs_t<open_mode> mode)
 			: m_vector(vec),
 			  m_mode(mode)
 		{

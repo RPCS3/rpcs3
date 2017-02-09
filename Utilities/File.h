@@ -162,7 +162,7 @@ namespace fs
 		explicit file(const void* ptr, std::size_t size, bs_t<open_mode> mode = ::fs::read);
 
 		// Open memory for read || write, use vector as backing memory
-		explicit file(std::vector<u8> vec, bs_t<open_mode> mode = ::fs::read + ::fs::write);
+		explicit file(const std::vector<u8> &vec, bs_t<open_mode> mode = ::fs::read + ::fs::write);
 
 		// Open file with specified args (forward to constructor)
 		template <typename... Args>
