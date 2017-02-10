@@ -90,15 +90,27 @@ static u32 ppu_cache(u32 addr)
 	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
 }
 
+static void ppu_fallback(ppu_thread& ppu)
+{
+	fmt::throw_exception("Unregistered PPU instruction [0x%08x]", ppu.cia);
+}
+
 extern void ppu_register_range(u32 addr, u32 size)
 {
+	if (!size)
+	{
+		LOG_ERROR(PPU, "ppu_register_range(0x%x): empty range", addr);
+		return;	
+	}
+
 	// Register executable range at
 	memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, size);
 
+	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
+
 	while (size)
 	{
-		// TODO
-		s_ppu_compiled[addr / 4] = 0;
+		s_ppu_compiled[addr / 4] = fallback;
 		addr += 4;
 		size -= 4;
 	}
@@ -106,6 +118,12 @@ extern void ppu_register_range(u32 addr, u32 size)
 
 extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 {
+	if (!size)
+	{
+		LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
+		return;	
+	}
+
 	ppu_register_range(addr, size);
 
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
