@@ -115,6 +115,7 @@ cfg::set_entry g_cfg_load_libs(cfg::root.core, "Load libraries");
 
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
+extern void ppu_register_range(u32 addr, u32 size);
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
@@ -760,9 +761,15 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf)
 					fmt::throw_exception("vm::alloc() failed (size=0x%x)", mem_size);
 				}
 
-				// Copy data
+				// Copy segment data
 				std::memcpy(vm::base(addr), prog.bin.data(), file_size);
 				LOG_WARNING(LOADER, "**** Loaded to 0x%x (size=0x%x)", addr, mem_size);
+
+				// Initialize executable code if necessary
+				if (prog.p_flags & 0x1)
+				{
+					ppu_register_range(addr, mem_size);
+				}
 
 				segments.emplace_back(std::make_pair(addr, mem_size));
 			}
@@ -975,7 +982,14 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			if (!vm::falloc(addr, size, vm::main))
 				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 
+			// Copy segment data
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
+
+			// Initialize executable code if necessary
+			if (prog.p_flags & 0x1)
+			{
+				ppu_register_range(addr, size);
+			}
 
 			segments.emplace_back(std::make_pair(addr, size));
 		}

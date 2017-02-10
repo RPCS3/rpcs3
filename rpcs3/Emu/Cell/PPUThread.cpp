@@ -73,12 +73,48 @@ extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
 const auto s_ppu_compiled = static_cast<u32*>(memory_helper::reserve_memory(0x100000000));
 
-extern void ppu_register_function_at(u32 addr, ppu_function_t ptr)
+// Get interpreter cache value
+static u32 ppu_cache(u32 addr)
 {
+	// Select opcode table
+	const auto& table = *(
+		g_cfg_ppu_decoder.get() == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
+		g_cfg_ppu_decoder.get() == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
+		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
+
+	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
+}
+
+extern void ppu_register_range(u32 addr, u32 size)
+{
+	// Register executable range at
+	memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, size);
+
+	while (size)
+	{
+		// TODO
+		s_ppu_compiled[addr / 4] = 0;
+		addr += 4;
+		size -= 4;
+	}
+}
+
+extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
+{
+	ppu_register_range(addr, size);
+
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, sizeof(s_ppu_compiled[0]));
-		s_ppu_compiled[addr / 4] = (u32)(std::uintptr_t)ptr;
+		s_ppu_compiled[addr / 4] = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
+		return;
+	}
+
+	// Initialize interpreter cache
+	while (size)
+	{
+		s_ppu_compiled[addr / 4] = ppu_cache(addr);
+		addr += 4;
+		size -= 4;
 	}
 }
 
@@ -197,15 +233,12 @@ void ppu_thread::exec_task()
 	}
 
 	const auto base = vm::_ptr<const u8>(0);
-
-	// Select opcode table
-	const auto& table = *(
-		g_cfg_ppu_decoder.get() == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
-		g_cfg_ppu_decoder.get() == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
-		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
+	const auto cache = reinterpret_cast<const u8*>(s_ppu_compiled);
+	const auto bswap4 = _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
 
 	v128 _op;
-	decltype(&ppu_interpreter::UNK) func0, func1, func2, func3;
+	using func_t = decltype(&ppu_interpreter::UNK);
+	func_t func0, func1, func2, func3, func4, func5;
 
 	while (true)
 	{
@@ -215,42 +248,62 @@ void ppu_thread::exec_task()
 
 			// Decode single instruction (may be step)
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
-			if (table[ppu_decode(op)](*this, {op})) { cia += 4; }
+			if (reinterpret_cast<func_t>((std::uintptr_t)s_ppu_compiled[cia / 4])(*this, {op})) { cia += 4; }
+			continue;
+		}
+
+		if (cia % 16)
+		{
+			// Unaligned
+			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
+			if (reinterpret_cast<func_t>((std::uintptr_t)s_ppu_compiled[cia / 4])(*this, {op})) { cia += 4; }
 			continue;
 		}
 
 		// Reinitialize
 		{
-			const auto _ops = _mm_shuffle_epi8(_mm_lddqu_si128(reinterpret_cast<const __m128i*>(base + cia)), _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3));
-			_op.vi = _ops;
-			const v128 _i = v128::fromV(_mm_and_si128(_mm_or_si128(_mm_slli_epi32(_op.vi, 6), _mm_srli_epi32(_op.vi, 26)), _mm_set1_epi32(0x1ffff)));
-			func0 = table[_i._u32[0]];
-			func1 = table[_i._u32[1]];
-			func2 = table[_i._u32[2]];
-			func3 = table[_i._u32[3]];
+			const v128 x = v128::fromV(_mm_load_si128(reinterpret_cast<const __m128i*>(cache + cia)));
+			func0 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[0]);
+			func1 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[1]);
+			func2 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[2]);
+			func3 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[3]);
+			_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + cia)), bswap4);
 		}
 
 		while (LIKELY(func0(*this, {_op._u32[0]})))
 		{
-			if (cia += 4, LIKELY(func1(*this, {_op._u32[1]})))
+			cia += 4;
+
+			if (LIKELY(func1(*this, {_op._u32[1]})))
 			{
-				if (cia += 4, LIKELY(func2(*this, {_op._u32[2]})))
+				cia += 4;
+
+				const v128 x = v128::fromV(_mm_load_si128(reinterpret_cast<const __m128i*>(cache + cia + 8)));
+				func0 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[0]);
+				func1 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[1]);
+				func4 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[2]);
+				func5 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[3]);
+
+				if (LIKELY(func2(*this, {_op._u32[2]})))
 				{
 					cia += 4;
-					func0 = func3;
 
-					const auto _ops = _mm_shuffle_epi8(_mm_lddqu_si128(reinterpret_cast<const __m128i*>(base + cia + 4)), _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3));
-					_op.vi = _mm_alignr_epi8(_ops, _op.vi, 12);
-					const v128 _i = v128::fromV(_mm_and_si128(_mm_or_si128(_mm_slli_epi32(_op.vi, 6), _mm_srli_epi32(_op.vi, 26)), _mm_set1_epi32(0x1ffff)));
-					func1 = table[_i._u32[1]];
-					func2 = table[_i._u32[2]];
-					func3 = table[_i._u32[3]];
-
-					if (UNLIKELY(test(state)))
+					if (LIKELY(func3(*this, {_op._u32[3]})))
 					{
-						break;
+						cia += 4;
+
+						func2 = func4;
+						func3 = func5;
+
+						if (UNLIKELY(test(state)))
+						{
+							break;
+						}
+
+						_op.vi = _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + cia)), bswap4);
+						continue;
 					}
-					continue;
+					break;
 				}
 				break;
 			}
@@ -532,8 +585,14 @@ static void ppu_initialize()
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 			ppu_thr_stop_data[0] = ppu_instructions::HACK(1);
 			ppu_thr_stop_data[1] = ppu_instructions::BLR();
+			ppu_register_function_at(ppu_thr_stop_data.addr(), 8, nullptr);
 		}
-		
+
+		for (const auto& func : *_funcs)
+		{
+			ppu_register_function_at(func.addr, func.size, nullptr);
+		}
+
 		return;
 	}
 
@@ -783,17 +842,15 @@ static void ppu_initialize()
 		return;
 	}
 
-	memory_helper::free_reserved_memory(s_ppu_compiled, 0x100000000); // TODO
-
 	// Get and install function addresses
 	for (const auto& info : *_funcs)
 	{
 		if (info.size)
 		{
 			const std::uintptr_t link = jit->get(fmt::format("__0x%x", info.addr));
-			ppu_register_function_at(info.addr, (ppu_function_t)link);
+			s_ppu_compiled[info.addr / 4] = ::narrow<u32>(link);
 
-			LOG_NOTICE(PPU, "** Function __0x%x -> 0x%llx (size=0x%x, toc=0x%x, attr %#x)", info.addr, link, info.size, info.toc, info.attr);
+			LOG_TRACE(PPU, "** Function __0x%x -> 0x%llx (size=0x%x, toc=0x%x, attr %#x)", info.addr, link, info.size, info.toc, info.attr);
 		}
 	}
 
