@@ -3,6 +3,8 @@
 #ifdef _MSC_VER
 #include "MMJoystickHandler.h"
 
+MMJoystickConfig g_mmjoystick_config;
+
 namespace {
 	const DWORD THREAD_SLEEP = 10;
 	const DWORD THREAD_SLEEP_INACTIVE = 100;
@@ -48,6 +50,7 @@ void MMJoystickHandler::Init(const u32 max_connect)
 
 		for (u32 i = 0, max = std::min(max_connect, u32(1)); i != max; ++i)
 		{
+			g_mmjoystick_config.load();
 			m_pads.emplace_back(
 				CELL_PAD_STATUS_ASSIGN_CHANGES,
 				CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
@@ -56,18 +59,18 @@ void MMJoystickHandler::Init(const u32 max_connect)
 			);
 			auto & pad = m_pads.back();
 
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON1, CELL_PAD_CTRL_TRIANGLE);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON2, CELL_PAD_CTRL_CIRCLE);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON3, CELL_PAD_CTRL_CROSS);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON4, CELL_PAD_CTRL_SQUARE);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON5, CELL_PAD_CTRL_L2);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON6, CELL_PAD_CTRL_R2);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON7, CELL_PAD_CTRL_L1);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, JOY_BUTTON8, CELL_PAD_CTRL_R1);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, JOY_BUTTON9, CELL_PAD_CTRL_START);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, JOY_BUTTON10, CELL_PAD_CTRL_SELECT);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, JOY_BUTTON11, CELL_PAD_CTRL_L3);
-			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, JOY_BUTTON12, CELL_PAD_CTRL_R3);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.triangle, CELL_PAD_CTRL_TRIANGLE);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.circle, CELL_PAD_CTRL_CIRCLE);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.cross, CELL_PAD_CTRL_CROSS);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.square, CELL_PAD_CTRL_SQUARE);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.l2, CELL_PAD_CTRL_L2);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.r2, CELL_PAD_CTRL_R2);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.l1, CELL_PAD_CTRL_L1);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_mmjoystick_config.r1, CELL_PAD_CTRL_R1);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_mmjoystick_config.start, CELL_PAD_CTRL_START);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_mmjoystick_config.select, CELL_PAD_CTRL_SELECT);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_mmjoystick_config.l3, CELL_PAD_CTRL_L3);
+			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_mmjoystick_config.r3, CELL_PAD_CTRL_R3);
 			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
 
 			pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, JOY_POVFORWARD, CELL_PAD_CTRL_UP);
