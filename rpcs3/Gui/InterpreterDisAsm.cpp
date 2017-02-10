@@ -424,7 +424,7 @@ void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 
 	if (cpu && cpu->state.test_and_reset(cpu_flag::dbg_pause))
 	{
-		if (!test(cpu->state, cpu_state_pause))
+		if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
 		{
 			cpu->notify();
 		}

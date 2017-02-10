@@ -73,6 +73,11 @@ extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
 const auto s_ppu_compiled = static_cast<u32*>(memory_helper::reserve_memory(0x100000000));
 
+extern void ppu_finalize()
+{
+	memory_helper::free_reserved_memory(s_ppu_compiled, 0x100000000);
+}
+
 // Get interpreter cache value
 static u32 ppu_cache(u32 addr)
 {

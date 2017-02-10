@@ -207,9 +207,9 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			LOG_FATAL(GENERAL, "VirtualFree(%p) failed! Error %u", s_memory, GetLastError());
 		}
 #else
-		if (::mprotect(s_memory, s_memory_size, PROT_NONE))
+		if (!::mmap(s_memory, s_memory_size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0))
 		{
-			LOG_FATAL(GENERAL, "mprotect(%p) failed! Error %d", s_memory, errno);
+			LOG_FATAL(GENERAL, "mmap(%p) failed! Error %d", s_memory, errno);
 		}
 
 		// TODO: unregister EH frames if necessary

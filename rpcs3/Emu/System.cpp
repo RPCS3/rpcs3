@@ -50,6 +50,7 @@ extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
 extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&);
+extern void ppu_finalize();
 
 fs::file g_tty;
 
@@ -460,6 +461,7 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
+	ppu_finalize();
 
 	if (g_cfg_autoexit)
 	{

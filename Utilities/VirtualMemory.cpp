@@ -13,7 +13,7 @@
 
 namespace memory_helper
 {
-	void* reserve_memory(size_t size)
+	void* reserve_memory(std::size_t size)
 	{
 #ifdef _WIN32
 		return verify("reserve_memory" HERE, VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS));
@@ -22,21 +22,21 @@ namespace memory_helper
 #endif
 	}
 
-	void commit_page_memory(void* pointer, size_t size)
+	void commit_page_memory(void* pointer, std::size_t size)
 	{
 #ifdef _WIN32
 		verify(HERE), VirtualAlloc(pointer, size, MEM_COMMIT, PAGE_READWRITE);
 #else
-		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), size, PROT_READ | PROT_WRITE) != -1;
+		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), PROT_READ | PROT_WRITE) != -1;
 #endif
 	}
 
-	void free_reserved_memory(void* pointer, size_t size)
+	void free_reserved_memory(void* pointer, std::size_t size)
 	{
 #ifdef _WIN32
 		verify(HERE), VirtualFree(pointer, 0, MEM_DECOMMIT);
 #else
-		verify(HERE), ::mprotect(pointer, size, PROT_NONE) != -1;
+		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
 	}
 }
