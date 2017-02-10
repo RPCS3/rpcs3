@@ -19,6 +19,7 @@
 #include "KeyboardPadHandler.h"
 #ifdef _MSC_VER
 #include "XInputPadHandler.h"
+#include "MMJoystickHandler.h"
 #endif
 
 #include "Emu/RSX/Null/NullGSRender.h"
@@ -87,6 +88,7 @@ cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handl
 	{ "Keyboard", &std::make_shared<KeyboardPadHandler> },
 #ifdef _MSC_VER
 	{ "XInput", &std::make_shared<XInputPadHandler> },
+	{ "MMJoystick", &std::make_shared<MMJoystickHandler>},
 #endif
 });
 
