@@ -5,6 +5,7 @@
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+
 #include "Gui/PADManager.h"
 #include "Gui/AboutDialog.h"
 #include "Gui/GameViewer.h"
@@ -16,12 +17,15 @@
 #include "Gui/SettingsDialog.h"
 #include "Gui/MemoryStringSearcher.h"
 #include "Gui/CgDisasm.h"
+
 #include "Crypto/unpkg.h"
+#include "Crypto/unself.h"
+
+#include "Loader/PUP.h"
+#include "Loader/TAR.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"
-
-#include "../Crypto/unself.h"
 
 #include <thread>
 
@@ -51,6 +55,7 @@ enum IDs
 	id_tools_rsx_debugger,
 	id_tools_string_search,
 	id_tools_decrypt_sprx_libraries,
+	id_tools_install_firmware,
 	id_tools_cg_disasm,
 	id_help_about,
 	id_update_dbg
@@ -111,6 +116,7 @@ MainFrame::MainFrame()
 	menu_tools->Append(id_tools_string_search, "&String Search")->Enable(false);
 	menu_tools->AppendSeparator();
 	menu_tools->Append(id_tools_decrypt_sprx_libraries, "&Decrypt SPRX libraries");
+	menu_tools->Append(id_tools_install_firmware, "&Install Firmware");
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "&Help");
@@ -146,6 +152,8 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
 	Bind(wxEVT_MENU, &MainFrame::DecryptSPRXLibraries, this, id_tools_decrypt_sprx_libraries);
+	Bind(wxEVT_MENU, &MainFrame::InstallFirmware, this, id_tools_install_firmware);
+
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
@@ -406,6 +414,41 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 	}
 
 	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
+}
+
+void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
+{
+	wxFileDialog ctrl(this, L"Select PS3UPDAT.PUP file", wxEmptyString, wxEmptyString,
+		"PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP",
+		wxFD_OPEN);
+
+	if (ctrl.ShowModal() == wxID_CANCEL)
+	{
+		return;
+	}
+
+	fs::file pup_f(ctrl.GetPath());
+	pup_object pup(pup_f);
+	if (!pup)
+		fmt::raw_error("Error while installing firmware: PUP file is invalid.");
+	fs::file update_files_f = pup.get_file(0x300);
+	tar_object update_files(update_files_f);
+	for (auto updatefilename : update_files.get_filenames())
+	{
+		if (updatefilename.find("dev_flash_") == std::string::npos) continue;
+
+		fs::file updatefile = update_files.get_file(updatefilename);
+
+		fs::file dev_flash_f = fs::make_stream<std::vector<u8>>();
+		SCEDecrypter self_dec(updatefile);
+		self_dec.LoadHeaders();
+		self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
+		self_dec.DecryptData();
+		self_dec.MakeFile(dev_flash_f);
+
+		tar_object dev_flash_tar(dev_flash_f, 128);
+		dev_flash_tar.extract(fs::get_executable_dir());
+	}
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
