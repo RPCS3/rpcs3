@@ -13,13 +13,17 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/PSP2/ARMv7DisAsm.h"
+#include "Emu/Cell/PPUInterpreter.h"
 
 #include "InstructionEditor.h"
 #include "RegisterEditor.h"
 
 //static const int show_lines = 30;
 #include <map>
+
 std::map<u32, bool> g_breakpoints;
+
+extern void ppu_breakpoint(u32 addr);
 
 u32 InterpreterDisAsmFrame::GetPc() const
 {
@@ -158,6 +162,11 @@ void InterpreterDisAsmFrame::UpdateUI()
 				m_btn_pause->Enable();
 			}
 		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		g_breakpoints.clear();
 	}
 }
 
@@ -516,9 +525,11 @@ bool InterpreterDisAsmFrame::IsBreakPoint(u32 pc)
 void InterpreterDisAsmFrame::AddBreakPoint(u32 pc)
 {
 	g_breakpoints.emplace(pc, false);
+	ppu_breakpoint(pc);
 }
 
-bool InterpreterDisAsmFrame::RemoveBreakPoint(u32 pc)
+void InterpreterDisAsmFrame::RemoveBreakPoint(u32 pc)
 {
-	return g_breakpoints.erase(pc) != 0;
+	g_breakpoints.erase(pc);
+	ppu_breakpoint(pc);
 }

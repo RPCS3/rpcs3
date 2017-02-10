@@ -118,6 +118,46 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	}
 }
 
+// Breakpoint entry point
+static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
+{
+	// Pause and wait if necessary
+	if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
+	{
+		return false;
+	}
+
+	// Fallback to the interpreter function
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{ppu_cache(ppu.cia)})(ppu, op))
+	{
+		ppu.cia += 4;
+	}
+
+	return false;
+}
+
+// Set or remove breakpoint
+extern void ppu_breakpoint(u32 addr)
+{
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
+	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
+
+	if (s_ppu_compiled[addr / 4] == _break)
+	{
+		// Remove breakpoint
+		s_ppu_compiled[addr / 4] = ppu_cache(addr);
+	}
+	else
+	{
+		// Set breakpoint
+		s_ppu_compiled[addr / 4] = _break;
+	}
+}
+
 std::string ppu_thread::get_name() const
 {
 	return fmt::format("PPU[0x%x] Thread (%s)", id, m_name);

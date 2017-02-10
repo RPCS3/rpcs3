@@ -51,5 +51,5 @@ public:
 	void MouseWheel(wxMouseEvent& event);
 	bool IsBreakPoint(u32 pc);
 	void AddBreakPoint(u32 pc);
-	bool RemoveBreakPoint(u32 pc);
+	void RemoveBreakPoint(u32 pc);
 };
