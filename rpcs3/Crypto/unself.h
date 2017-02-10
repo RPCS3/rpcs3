@@ -338,16 +338,40 @@ struct SelfHeader
 	void Show(){}
 };
 
-class SELFDecrypter
+class SCEDecrypter
 {
+protected:
 	// Main SELF file stream.
-	const fs::file& self_f;
+	const fs::file& sce_f;
 
-	// SCE, SELF and APP headers.
+	// SCE headers.
 	SceHeader sce_hdr;
+
+	// Metadata structs.
+	MetadataInfo meta_info;
+	MetadataHeader meta_hdr;
+	std::vector<MetadataSectionHeader> meta_shdr;
+
+	// Internal data buffers.
+	std::unique_ptr<u8[]> data_keys;
+	u32 data_keys_length;
+	std::unique_ptr<u8[]> data_buf;
+	u32 data_buf_length;
+
+public:
+	SCEDecrypter(const fs::file& s);
+	bool MakeFile(fs::file& elf);
+	bool LoadHeaders();
+	bool LoadMetadata(u8 erk[32], u8 riv[16]);
+	bool DecryptData();
+};
+
+class SELFDecrypter : SCEDecrypter
+{
+	// SELF, APP headers.
 	SelfHeader self_hdr;
 	AppInfo app_info;
-	
+
 	// ELF64 header and program header/section header arrays.
 	Elf64_Ehdr elf64_hdr;
 	std::vector<Elf64_Shdr> shdr64_arr;
@@ -363,22 +387,11 @@ class SELFDecrypter
 	SCEVersionInfo scev_info;
 	std::vector<ControlInfo> ctrlinfo_arr;
 
-	// Metadata structs.
-	MetadataInfo meta_info;
-	MetadataHeader meta_hdr;
-	std::vector<MetadataSectionHeader> meta_shdr;
-
-	// Internal data buffers.
-	std::unique_ptr<u8[]> data_keys;
-	u32 data_keys_length;
-	std::unique_ptr<u8[]> data_buf;
-	u32 data_buf_length;
-
 	// Main key vault instance.
 	KeyVault key_v;
 
 public:
-	SELFDecrypter(const fs::file& s);
+	SELFDecrypter(const fs::file& s) : SCEDecrypter(s), key_v() {};
 	fs::file MakeElf(bool isElf32);
 	bool LoadHeaders(bool isElf32);
 	void ShowHeaders(bool isElf32);
