@@ -32,6 +32,7 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);
+u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
 
 /**
 * Get number of bytes occupied by texture in RSX mem

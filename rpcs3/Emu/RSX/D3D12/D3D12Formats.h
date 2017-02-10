@@ -89,6 +89,11 @@ DXGI_FORMAT get_depth_stencil_typeless_surface_format(rsx::surface_depth_format 
 DXGI_FORMAT get_depth_samplable_surface_format(rsx::surface_depth_format format);
 
 /**
+* Get block size in bytes for a DXGI_FORMAT
+*/
+UCHAR get_dxgi_texel_size(DXGI_FORMAT format);
+
+/**
  * Convert front face value to bool value telling wheter front face is counterclockwise or not
  */
 BOOL get_front_face_ccw(rsx::front_face set_front_face_value);

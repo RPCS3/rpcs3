@@ -31,23 +31,6 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
 	OS << "#version 420" << std::endl;
 	OS << "#extension GL_ARB_separate_shader_objects: enable" << std::endl << std::endl;
-
-	OS << "layout(std140, set=0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	mat4 scaleOffsetMat;" << std::endl;
-	OS << "	float fog_param0;" << std::endl;
-	OS << "	float fog_param1;" << std::endl;
-	OS << "	uint alpha_test;" << std::endl;
-	OS << "	float alpha_ref;" << std::endl;
-	OS << "};" << std::endl << std::endl;
-
-	vk::glsl::program_input in;
-	in.location = 0;
-	in.domain = vk::glsl::glsl_fragment_program;
-	in.name = "ScaleOffsetBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
-
-	inputs.push_back(in);
 }
 
 void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -170,8 +153,11 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 
-	// A dummy value otherwise it's invalid to create an empty uniform buffer
-	OS << "	vec4 void_value;" << std::endl;
+	OS << "	float fog_param0;" << std::endl;
+	OS << "	float fog_param1;" << std::endl;
+	OS << "	uint alpha_test;" << std::endl;
+	OS << "	float alpha_ref;" << std::endl;
+	OS << "	vec4 texture_parameters[16];" << std::endl;
 	OS << "};" << std::endl;
 
 	vk::glsl::program_input in;

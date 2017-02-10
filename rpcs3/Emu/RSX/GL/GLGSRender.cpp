@@ -699,8 +699,23 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 
 bool GLGSRender::load_program()
 {
+	auto rtt_lookup_func = [this](u32 texaddr, bool is_depth) -> std::tuple<bool, u16>
+	{
+		gl::render_target *surface = nullptr;
+		if (!is_depth)
+			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
+		else
+			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
+
+		if (!surface) return std::make_tuple(false, 0);
+		return std::make_tuple(true, surface->get_native_pitch());
+	};
+
 	RSXVertexProgram vertex_program = get_current_vertex_program();
-	RSXFragmentProgram fragment_program = get_current_fragment_program();
+	RSXFragmentProgram fragment_program = get_current_fragment_program(rtt_lookup_func);
+
+	std::array<float, 16> rtt_scaling;
+	u32 unnormalized_rtts = 0;
 
 	for (auto &vtx : vertex_program.rsx_vertex_inputs)
 	{
@@ -711,27 +726,6 @@ bool GLGSRender::load_program()
 			//Some vendors do not support GL_x_SNORM buffer textures
 			verify(HERE), vtx.flags == 0;
 			vtx.flags |= GL_VP_FORCE_ATTRIB_SCALING | GL_VP_ATTRIB_S16_INT;
-		}
-	}
-
-	for (int i = 0; i < 16; ++i)
-	{
-		auto &tex = rsx::method_registers.fragment_textures[i];
-		if (tex.enabled())
-		{
-			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
-			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
-			{
-				//Ignore this rtt since we have an aloasing color texture that will be used
-				if (m_rtts.get_texture_from_render_target_if_applicable(texaddr))
-					continue;
-
-				u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-				if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
-				{
-					fragment_program.redirected_textures |= (1 << i);
-				}
-			}
 		}
 	}
 
@@ -779,7 +773,7 @@ bool GLGSRender::load_program()
 	m_transform_constants_dirty = false;
 
 	u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	fragment_constants_size = std::max(32U, fragment_constants_size);
+	u32 fragment_buffer_size = fragment_constants_size + (17 * 4 * sizeof(float));
 	u32 max_buffer_sz = 512 + 8192 + align(fragment_constants_size, m_uniform_buffer_offset_align);
 
 	if (manually_flush_ring_buffers)
@@ -796,16 +790,6 @@ bool GLGSRender::load_program()
 	scale_offset_offset = mapping.second;
 	fill_scale_offset_data(buf, false);
 
-	// Fragment state 
-	u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-	float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
-	f32 fog0 = rsx::method_registers.fog_params_0();
-	f32 fog1 = rsx::method_registers.fog_params_1();
-	memcpy(buf + 16 * sizeof(float), &fog0, sizeof(float));
-	memcpy(buf + 17 * sizeof(float), &fog1, sizeof(float));
-	memcpy(buf + 18 * sizeof(float), &is_alpha_tested, sizeof(u32));
-	memcpy(buf + 19 * sizeof(float), &alpha_ref, sizeof(float));
-
 	// Vertex constants
 	mapping = m_uniform_ring_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
@@ -813,20 +797,18 @@ bool GLGSRender::load_program()
 	fill_vertex_program_constants_data(buf);
 
 	// Fragment constants
+	mapping = m_uniform_ring_buffer->alloc_from_heap(fragment_buffer_size, m_uniform_buffer_offset_align);
+	buf = static_cast<u8*>(mapping.first);
+	fragment_constants_offset = mapping.second;
 	if (fragment_constants_size)
-	{
-		mapping = m_uniform_ring_buffer->alloc_from_heap(fragment_constants_size, m_uniform_buffer_offset_align);
-		buf = static_cast<u8*>(mapping.first);
-		fragment_constants_offset = mapping.second;
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
-	}
+	
+	// Fragment state
+	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);
 
 	m_uniform_ring_buffer->bind_range(0, scale_offset_offset, 512);
 	m_uniform_ring_buffer->bind_range(1, vertex_constants_offset, 8192);
-	if (fragment_constants_size)
-	{
-		m_uniform_ring_buffer->bind_range(2, fragment_constants_offset, fragment_constants_size);
-	}
+	m_uniform_ring_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
 
 	if (manually_flush_ring_buffers)
 		m_uniform_ring_buffer->unmap();

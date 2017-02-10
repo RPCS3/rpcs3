@@ -30,15 +30,6 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
 	OS << "#version 420" << std::endl;
-
-	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
-	OS << "{\n";
-	OS << "	mat4 scaleOffsetMat;\n";
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
-	OS << "	uint alpha_test;\n";
-	OS << "	float alpha_ref;\n";
-	OS << "};\n";
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -136,8 +127,12 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 
-	// A dummy value otherwise it's invalid to create an empty uniform buffer
-	OS << "	vec4 void_value;" << std::endl;
+	// Fragment state parameters
+	OS << "	float fog_param0;\n";
+	OS << "	float fog_param1;\n";
+	OS << "	uint alpha_test;\n";
+	OS << "	float alpha_ref;\n";
+	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
 	OS << "};" << std::endl;
 }
 
@@ -189,7 +184,7 @@ namespace
 		}
 
 		if (prog.unnormalized_coords & (1 << index))
-			OS << "\t" << vec_type << " tex" << index << "_coord_scale = 1. / textureSize(tex" << index << ", 0);\n";
+			OS << "\t" << vec_type << " tex" << index << "_coord_scale = texture_parameters[" << index << "].xy / textureSize(tex" << index << ", 0);\n";
 		else
 			OS << "\t" << vec_type << " tex" << index << "_coord_scale = " << vec_type << "(1.);\n";
 	}

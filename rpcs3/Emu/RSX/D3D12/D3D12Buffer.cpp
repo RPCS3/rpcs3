@@ -88,16 +88,7 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	// Separate constant buffer
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 256));
 	fill_scale_offset_data(mapped_buffer);
-	int is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-	u8 alpha_ref_raw = rsx::method_registers.alpha_ref();
-	float alpha_ref = alpha_ref_raw / 255.f;
-	memcpy((char*)mapped_buffer + 16 * sizeof(float), &is_alpha_tested, sizeof(int));
-	memcpy((char*)mapped_buffer + 17 * sizeof(float), &alpha_ref, sizeof(float));
-	f32 fogp0 = rsx::method_registers.fog_params_0();
-	f32 fogp1 = rsx::method_registers.fog_params_1();
-	memcpy((char*)mapped_buffer + 18 * sizeof(float), &fogp0, sizeof(float));
-	memcpy((char*)mapped_buffer + 19 * sizeof(float), &fogp1, sizeof(float));
-
+	fill_fragment_state_buffer((char *)mapped_buffer + 64, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 256));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {

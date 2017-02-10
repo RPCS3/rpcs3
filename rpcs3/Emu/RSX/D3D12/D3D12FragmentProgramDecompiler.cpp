@@ -38,10 +38,11 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
-	OS << "	int isAlphaTested;" << std::endl;
-	OS << "	float alphaRef;" << std::endl;
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
+	OS << "	int isAlphaTested;" << std::endl;
+	OS << "	float alphaRef;" << std::endl;
+	OS << "	float4 texture_parameters[16];\n";
 	OS << "};" << std::endl;
 }
 
@@ -255,9 +256,10 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 				OS << "	float2  " << PI.name << "_scale = float2(1., 1.);" << std::endl;
 				continue;
 			}
+
 			OS << "	float2  " << PI.name << "_dim;" << std::endl;
 			OS << "	" << PI.name << ".GetDimensions(" << PI.name << "_dim.x, " << PI.name << "_dim.y);" << std::endl;
-			OS << "	float2  " << PI.name << "_scale = float2(1., 1.) / " << PI.name << "_dim;" << std::endl;
+			OS << "	float2  " << PI.name << "_scale = texture_parameters[" << textureIndex << "] / " << PI.name << "_dim;" << std::endl;
 		}
 	}
 }

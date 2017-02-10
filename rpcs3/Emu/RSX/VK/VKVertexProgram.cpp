@@ -33,10 +33,6 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, set = 0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
-	OS << "	uint alpha_test;\n";
-	OS << "	float alpha_ref;\n";
 	OS << "};" << std::endl;
 
 	vk::glsl::program_input in;
