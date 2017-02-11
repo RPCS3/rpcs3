@@ -160,30 +160,13 @@ void Emulator::Load()
 
 		const std::string& elf_dir = fs::get_parent_dir(m_path);
 
-		if (IsSelf(m_path))
+		fs::file elf_file;
+		fs::file temp = fs::file(m_path);
+		if (!DecryptSelf(elf_file, temp))
 		{
-			const std::size_t elf_ext_pos = m_path.find_last_of('.');
-			const std::string& elf_ext = fmt::to_upper(m_path.substr(elf_ext_pos != -1 ? elf_ext_pos : m_path.size()));
 			const std::string& elf_name = m_path.substr(elf_dir.size());
-
-			if (elf_name.compare(elf_name.find_last_of("/\\", -1, 2) + 1, 9, "EBOOT.BIN", 9) == 0)
-			{
-				m_path.erase(m_path.size() - 9, 1); // change EBOOT.BIN to BOOT.BIN
-			}
-			else if (elf_ext == ".SELF" || elf_ext == ".SPRX")
-			{
-				m_path.erase(m_path.size() - 4, 1); // change *.self to *.elf, *.sprx to *.prx
-			}
-			else
-			{
-				m_path += ".decrypted.elf";
-			}
-
-			if (!DecryptSelf(m_path, elf_dir + elf_name))
-			{
-				LOG_ERROR(LOADER, "Failed to decrypt %s", elf_dir + elf_name);
-				return;
-			}
+			LOG_ERROR(LOADER, "Failed to decrypt %s", elf_dir + elf_name);
+			return;
 		}
 
 		SetCPUThreadStop(0);
@@ -197,7 +180,6 @@ void Emulator::Load()
 			cfg::root.from_string(cfg_file.to_string());
 		}
 
-		const fs::file elf_file(m_path);
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		spu_exec_object spu_exec;

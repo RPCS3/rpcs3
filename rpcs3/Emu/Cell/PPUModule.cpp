@@ -2,6 +2,7 @@
 #include "Utilities/Config.h"
 #include "Utilities/AutoPause.h"
 #include "Crypto/sha1.h"
+#include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -1120,7 +1121,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	if (g_cfg_load_liblv2)
 	{
-		const ppu_prx_object obj = fs::file(lle_dir + "/liblv2.sprx");
+		fs::file lvl2_file;
+		fs::file temp = fs::file(lle_dir + "/liblv2.sprx");
+		DecryptSelf(lvl2_file, temp);
+
+		const ppu_prx_object obj = lvl2_file;
 
 		if (obj == elf_error::ok)
 		{
@@ -1135,7 +1140,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		for (const auto& name : g_cfg_load_libs.get_set())
 		{
-			const ppu_prx_object obj = fs::file(lle_dir + '/' + name);
+			fs::file ppu_file;
+			fs::file temp = fs::file(lle_dir + '/' + name);
+			DecryptSelf(ppu_file, temp);
+
+			const ppu_prx_object obj = ppu_file;
 
 			if (obj == elf_error::ok)
 			{

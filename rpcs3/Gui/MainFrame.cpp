@@ -374,7 +374,9 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 		std::string prx_path = fmt::ToUTF8(module);
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);
 
-		if (IsSelf(prx_path))
+		fs::file prx(prx_path);
+
+		if (IsSelf(prx))
 		{
 			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
 			const std::string& prx_ext = fmt::to_upper(prx_path.substr(prx_ext_pos != -1 ? prx_ext_pos : prx_path.size()));
@@ -382,11 +384,12 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 
 			prx_path.erase(prx_path.size() - 4, 1); // change *.sprx to *.prx
 
-			if (DecryptSelf(prx_path, prx_dir + prx_name))
+			fs::file prx_dec(prx_path, fs::rewrite);
+
+			if (DecryptSelf(prx_dec, prx))
 			{
 				LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
 			}
-
 			else
 			{
 				LOG_ERROR(GENERAL, "Failed to decrypt %s", prx_dir + prx_name);
