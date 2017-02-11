@@ -844,6 +844,36 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 	return CELL_OK;
 }
 
+s32 cellVdecOpenExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecStartSeqExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecGetPicItemExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecSetFrameRateExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecSetPts()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 {
 	REG_VAR(libvdec, _cell_vdec_prx_ver); // 0x085a7ecb
@@ -852,16 +882,17 @@ DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 	REG_FUNC(libvdec, cellVdecQueryAttrEx);
 	REG_FUNC(libvdec, cellVdecOpen);
 	REG_FUNC(libvdec, cellVdecOpenEx);
-	//REG_FUNC(libvdec, cellVdecOpenExt); // 0xef4d8ad7
+	REG_FUNC(libvdec, cellVdecOpenExt); // 0xef4d8ad7
 	REG_FUNC(libvdec, cellVdecClose);
 	REG_FUNC(libvdec, cellVdecStartSeq);
-	//REG_FUNC(libvdec, cellVdecStartSeqExt); // 0xebb8e70a
+	REG_FUNC(libvdec, cellVdecStartSeqExt); // 0xebb8e70a
 	REG_FUNC(libvdec, cellVdecEndSeq);
 	REG_FUNC(libvdec, cellVdecDecodeAu);
 	REG_FUNC(libvdec, cellVdecGetPicture);
 	REG_FUNC(libvdec, cellVdecGetPictureExt); // 0xa21aa896
 	REG_FUNC(libvdec, cellVdecGetPicItem);
-	//REG_FUNC(libvdec, cellVdecGetPicItemExt); // 0x2cbd9806
+	REG_FUNC(libvdec, cellVdecGetPicItemExt); // 0x2cbd9806
 	REG_FUNC(libvdec, cellVdecSetFrameRate);
-	//REG_FUNC(libvdec, cellVdecSetFrameRateExt); // 0xcffc42a5
+	REG_FUNC(libvdec, cellVdecSetFrameRateExt); // 0xcffc42a5
+	REG_FUNC(libvdec, cellVdecSetPts); // 0x3ce2e4f8
 });
