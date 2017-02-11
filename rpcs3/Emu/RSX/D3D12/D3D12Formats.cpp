@@ -172,6 +172,35 @@ DXGI_FORMAT get_texture_format(u8 format)
 	fmt::throw_exception("Invalid texture format (0x%x)" HERE, (u32)format);
 }
 
+UCHAR get_dxgi_texel_size(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_R8_UNORM:
+		return 1;
+	case DXGI_FORMAT_B5G5R5A1_UNORM:
+	case DXGI_FORMAT_B5G6R5_UNORM:
+	case DXGI_FORMAT_R8G8_UNORM:
+	case DXGI_FORMAT_D16_UNORM:
+	case DXGI_FORMAT_R16_UNORM:
+	case DXGI_FORMAT_R16_TYPELESS:
+		return 2;
+	case DXGI_FORMAT_B8G8R8X8_UNORM:
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+	case DXGI_FORMAT_R32_FLOAT:
+	case DXGI_FORMAT_D24_UNORM_S8_UINT:
+	case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+	case DXGI_FORMAT_R24G8_TYPELESS:
+		return 4;
+	case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		return 8;
+	case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		return 16;
+	}
+
+	fmt::throw_exception("Unsupported DXGI format 0x%X" HERE, (u32)format);
+}
+
 UINT get_texture_max_aniso(rsx::texture_max_anisotropy aniso)
 {
 	switch (aniso)

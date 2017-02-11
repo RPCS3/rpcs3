@@ -215,7 +215,13 @@ namespace rsx
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 		RSXVertexProgram get_current_vertex_program() const;
-		RSXFragmentProgram get_current_fragment_program() const;
+
+		/**
+		 * Gets current fragment program and associated fragment state
+		 * get_surface_info is a helper takes 2 parameters: rsx_texture_address and surface_is_depth
+		 * returns whether surface is a render target and surface pitch in native format
+		 */
+		RSXFragmentProgram get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, bool)> get_surface_info) const;
 	public:
 		double fps_limit = 59.94;
 
@@ -291,6 +297,12 @@ namespace rsx
 		* Buffer must be at least 512 float4 wide.
 		*/
 		void fill_vertex_program_constants_data(void *buffer);
+
+		/**
+		 * Fill buffer with fragment rasterization state.
+		 * Fills current fog values, alpha test parameters and texture scaling parameters
+		 */
+		void fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program);
 
 		/**
 		* Write inlined array data to buffer.

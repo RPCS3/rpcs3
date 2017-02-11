@@ -8,23 +8,32 @@ namespace gl
 {
 	class render_target : public texture
 	{
-		bool is_cleared;
+		bool is_cleared = false;
+		u16  native_pitch = 0;
 
 	public:
 
-		render_target()
-		{
-			is_cleared = false;
-		}
+		render_target() {}
 
 		void set_cleared()
 		{
 			is_cleared = true;
 		}
 
-		bool cleared()
+		bool cleared() const
 		{
 			return is_cleared;
+		}
+
+		// Internal pitch is the actual row length in bytes of the openGL texture
+		void set_native_pitch(u16 pitch)
+		{
+			native_pitch = pitch;
+		}
+
+		u16 get_native_pitch() const
+		{
+			return native_pitch;
 		}
 	};
 }
@@ -89,6 +98,7 @@ struct gl_render_target_traits
 
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 		result->recreate(gl::texture::target::texture2D);
+		result->set_native_pitch(width * format.channel_count * format.channel_size);
 
 		__glcheck result->config()
 			.size({ (int)width, (int)height })
@@ -128,6 +138,12 @@ struct gl_render_target_traits
 
 		__glcheck result->pixel_pack_settings().aligment(1);
 		__glcheck result->pixel_unpack_settings().aligment(1);
+
+		u16 native_pitch = width * 2;
+		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+			native_pitch *= 2;
+
+		result->set_native_pitch(native_pitch);
 
 		return result;
 	}

@@ -31,10 +31,11 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	float fog_param0;" << std::endl;
+	OS << "	float fog_param1;" << std::endl;
 	OS << "	int isAlphaTested;" << std::endl;
 	OS << "	float alphaRef;" << std::endl;
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
+	OS << "	float4 texture_parameters[16];" << std::endl;
 	OS << "};" << std::endl;
 }
 
