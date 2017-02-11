@@ -466,6 +466,7 @@ namespace fs
 		inval,
 		noent,
 		exist,
+		acces,
 	};
 
 	// Error code returned

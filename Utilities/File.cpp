@@ -84,6 +84,7 @@ static fs::error to_error(DWORD e)
 	{
 	case ERROR_FILE_NOT_FOUND: return fs::error::noent;
 	case ERROR_PATH_NOT_FOUND: return fs::error::noent;
+	case ERROR_ACCESS_DENIED: return fs::error::acces;
 	case ERROR_ALREADY_EXISTS: return fs::error::exist;
 	case ERROR_FILE_EXISTS: return fs::error::exist;
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
@@ -119,6 +120,7 @@ static fs::error to_error(int e)
 	case ENOENT: return fs::error::noent;
 	case EEXIST: return fs::error::exist;
 	case EINVAL: return fs::error::inval;
+	case EACCES: return fs::error::acces;
 	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
