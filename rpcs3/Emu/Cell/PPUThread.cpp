@@ -90,9 +90,15 @@ static u32 ppu_cache(u32 addr)
 	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
 }
 
-static void ppu_fallback(ppu_thread& ppu)
+static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
-	fmt::throw_exception("Unregistered PPU instruction [0x%08x]", ppu.cia);
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	{
+		fmt::throw_exception("Unregistered PPU function [0x%08x]", ppu.cia);
+	}
+
+	s_ppu_compiled[ppu.cia / 4] = ppu_cache(ppu.cia);
+	return false;
 }
 
 extern void ppu_register_range(u32 addr, u32 size)
