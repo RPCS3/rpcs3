@@ -60,25 +60,16 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file f(vfs::get(path.get_ptr()));
-	if (!f)
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+
+	if (!elf_file)
 	{
 		sys_spu.error("sys_spu_image_open() error: %s not found!", path);
 		return CELL_ENOENT;
 	}
 
-	SceHeader hdr;
-	hdr.Load(f);
-
-	if (hdr.CheckMagic())
-	{
-		fmt::throw_exception("sys_spu_image_open() error: %s is encrypted! Try to decrypt it manually and try again.", path);
-	}
-
-	f.seek(0);
-
 	u32 entry;
-	u32 offset = LoadSpuImage(f, entry);
+	u32 offset = LoadSpuImage(elf_file, entry);
 
 	img->type = SYS_SPU_IMAGE_TYPE_USER;
 	img->entry_point = entry;

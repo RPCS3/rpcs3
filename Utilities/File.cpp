@@ -933,36 +933,42 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		fs::stat_t stat() override
 		{
-			fmt::throw_exception<std::logic_error>("Not supported" HERE);
+			fmt::raw_error("fs::file::memory_stream::stat(): not supported");
 		}
 
 		bool trunc(u64 length) override
 		{
-			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
+			return false;
 		}
 
 		u64 read(void* buffer, u64 count) override
 		{
-			const u64 start = m_pos;
-			const u64 end = seek(count, fs::seek_cur);
-			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
-			const u64 read_size = end - start;
-			std::memcpy(buffer, m_ptr + start, read_size);
-			return read_size;
+			if (m_pos < m_size)
+			{
+				// Get readable size
+				if (const u64 result = std::min<u64>(count, m_size - m_pos))
+				{
+					std::memcpy(buffer, m_ptr + m_pos, result);
+					m_pos += result;
+					return result;
+				}
+			}
+
+			return 0;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
+			return 0;
 		}
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
 		{
 			return
-				whence == fs::seek_set ? m_pos = std::min<u64>(offset, m_size) :
-				whence == fs::seek_cur ? m_pos = std::min<u64>(offset + m_pos, m_size) :
-				whence == fs::seek_end ? m_pos = std::min<u64>(offset + m_size, m_size) :
-				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
+				whence == fs::seek_set ? m_pos = offset :
+				whence == fs::seek_cur ? m_pos = offset + m_pos :
+				whence == fs::seek_end ? m_pos = offset + m_size :
+				(fmt::raw_error("fs::file::memory_stream::seek(): invalid whence"), 0);
 		}
 
 		u64 size() override

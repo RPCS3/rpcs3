@@ -374,19 +374,30 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 		std::string prx_path = fmt::ToUTF8(module);
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);
 
-		if (IsSelf(prx_path))
+		fs::file elf_file(prx_path);
+
+		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
 			const std::string& prx_ext = fmt::to_upper(prx_path.substr(prx_ext_pos != -1 ? prx_ext_pos : prx_path.size()));
 			const std::string& prx_name = prx_path.substr(prx_dir.size());
 
+			elf_file = decrypt_self(std::move(elf_file));
+
 			prx_path.erase(prx_path.size() - 4, 1); // change *.sprx to *.prx
 
-			if (DecryptSelf(prx_path, prx_dir + prx_name))
+			if (elf_file)
 			{
-				LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+				if (fs::file new_file{prx_path, fs::rewrite})
+				{
+					new_file.write(elf_file.to_string());
+					LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+				}
+				else
+				{
+					LOG_ERROR(GENERAL, "Failed to create %s", prx_path);
+				}				
 			}
-
 			else
 			{
 				LOG_ERROR(GENERAL, "Failed to decrypt %s", prx_dir + prx_name);

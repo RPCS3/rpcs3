@@ -1038,15 +1038,10 @@ bool SELFDecrypter::DecryptData()
 	return true;
 }
 
-bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
+fs::file SELFDecrypter::MakeElf(bool isElf32)
 {
 	// Create a new ELF file.
-	fs::file e(elf, fs::rewrite);
-	if(!e)
-	{
-		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
-		return false;
-	}
+	fs::file e = fs::make_stream<std::vector<u8>>();
 
 	// Set initial offset.
 	u32 data_buf_offset = 0;
@@ -1162,7 +1157,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		}
 	}
 
-	return true;
+	return e;
 }
 
 bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
@@ -1201,23 +1196,11 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	return true;
 }
 
-bool IsSelf(const std::string& path)
+static bool IsSelfElf32(const fs::file& f)
 {
-	fs::file f(path);
-
 	if (!f) return false;
 
-	SceHeader hdr;
-	hdr.Load(f);
-
-	return hdr.CheckMagic();
-}
-
-bool IsSelfElf32(const std::string& path)
-{
-	fs::file f(path);
-
-	if (!f) return false;
+	f.seek(0);
 
 	SceHeader hdr;
 	SelfHeader sh;
@@ -1233,46 +1216,31 @@ bool IsSelfElf32(const std::string& path)
 	return (elf_class[4] == 1);
 }
 
-bool CheckDebugSelf(const std::string& self, const std::string& elf)
+static bool CheckDebugSelf(fs::file& s)
 {
-	// Open the SELF file.
-	fs::file s(self);
-
-	if (!s)
+	if (s.size() < 0x18)
 	{
-		LOG_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
 		return false;
 	}
 
 	// Get the key version.
 	s.seek(0x08);
 
-	u16 key_version;
-	s.read(&key_version, sizeof(key_version));
+	const u16 key_version = s.read<le_t<u16>>();
 
 	// Check for DEBUG version.
-	if (swap16(key_version) == 0x8000)
+	if (key_version == 0x80 || key_version == 0xc0)
 	{
 		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
 		s.seek(0x10);
 
-		u64 elf_offset;
-		s.read(&elf_offset, sizeof(elf_offset));
-
 		// Start at the real elf offset.
-		elf_offset = swap64(elf_offset);
-
-		s.seek(elf_offset);
+		s.seek(key_version == 0x80 ? +s.read<be_t<u64>>() : +s.read<le_t<u64>>());
 
 		// Write the real ELF file back.
-		fs::file e(elf, fs::rewrite);
-		if (!e)
-		{
-			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
-			return false;
-		}
+		fs::file e = fs::make_stream<std::vector<u8>>();
 
 		// Copy the data.
 		char buf[2048];
@@ -1281,6 +1249,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 			e.write(buf, size);
 		}
 
+		s = std::move(e);
 		return true;
 	}
 
@@ -1288,53 +1257,43 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 	return false;
 }
 
-bool DecryptSelf(const std::string& elf, const std::string& self)
+extern fs::file decrypt_self(fs::file elf_or_self)
 {
-	LOG_NOTICE(LOADER, "Decrypting %s", self);
+	elf_or_self.seek(0);
 
-	// Check for a debug SELF first.
-	if (!CheckDebugSelf(self, elf))
+	// Check SELF header first. Check for a debug SELF.
+	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32 && !CheckDebugSelf(elf_or_self))
 	{
-		// Set a virtual pointer to the SELF file.
-		fs::file self_vf(self);
-
-		if (!self_vf)
-			return false;
-
 		// Check the ELF file class (32 or 64 bit).
-		bool isElf32 = IsSelfElf32(self);
+		bool isElf32 = IsSelfElf32(elf_or_self);
 
 		// Start the decrypter on this SELF file.
-		SELFDecrypter self_dec(self_vf);
+		SELFDecrypter self_dec(elf_or_self);
 
 		// Load the SELF file headers.
 		if (!self_dec.LoadHeaders(isElf32))
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
-			return false;
+			return fs::file{};
 		}
 		
 		// Load and decrypt the SELF file metadata.
 		if (!self_dec.LoadMetadata())
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
-			return false;
+			return fs::file{};
 		}
 		
 		// Decrypt the SELF file data.
 		if (!self_dec.DecryptData())
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to decrypt SELF file data!");
-			return false;
+			return fs::file{};
 		}
 		
 		// Make a new ELF file from this SELF.
-		if (!self_dec.MakeElf(elf, isElf32))
-		{
-			LOG_ERROR(LOADER, "SELF: Failed to make ELF file from SELF!");
-			return false;
-		}
+		return self_dec.MakeElf(isElf32);
 	}
 
-	return true;
+	return elf_or_self;
 }
