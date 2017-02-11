@@ -13,20 +13,31 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/PSP2/ARMv7DisAsm.h"
+#include "Emu/Cell/PPUInterpreter.h"
 
 #include "InstructionEditor.h"
 #include "RegisterEditor.h"
 
 //static const int show_lines = 30;
 #include <map>
+
 std::map<u32, bool> g_breakpoints;
+
+extern void ppu_breakpoint(u32 addr);
 
 u32 InterpreterDisAsmFrame::GetPc() const
 {
+	const auto cpu = this->cpu.lock();
+
+	if (!cpu)
+	{
+		return 0;
+	}
+
 	switch (g_system)
 	{
-	case system_type::ps3: return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu)->cia : static_cast<SPUThread*>(cpu)->pc;
-	case system_type::psv: return static_cast<ARMv7Thread*>(cpu)->PC;
+	case system_type::ps3: return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<SPUThread*>(cpu.get())->pc;
+	case system_type::psv: return static_cast<ARMv7Thread*>(cpu.get())->PC;
 	}
 	
 	return 0xabadcafe;
@@ -40,7 +51,6 @@ u32 InterpreterDisAsmFrame::CentrePc(u32 pc) const
 InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(500, 700), wxTAB_TRAVERSAL)
 	, m_pc(0)
-	, cpu(nullptr)
 	, m_item_count(30)
 {
 	wxBoxSizer* s_p_main = new wxBoxSizer(wxVERTICAL);
@@ -68,19 +78,12 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_DONTWRAP | wxNO_BORDER | wxTE_RICH2);
 	m_regs->SetEditable(false);
 
-	//Call Stack
-	m_calls = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
-		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_DONTWRAP | wxNO_BORDER | wxTE_RICH2);
-	m_calls->SetEditable(false);
-
 	m_list->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_regs->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
-	m_calls->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
 	wxBoxSizer* s_w_list = new wxBoxSizer(wxHORIZONTAL);
 	s_w_list->Add(m_list, 2, wxEXPAND | wxLEFT | wxDOWN, 5);
 	s_w_list->Add(m_regs, 1, wxEXPAND | wxRIGHT | wxDOWN, 5);
-	s_w_list->Add(m_calls, 1, wxEXPAND | wxRIGHT | wxDOWN, 5);
 
 	s_p_main->Add(s_b_main, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
 	s_p_main->Add(s_w_list, 1, wxEXPAND | wxDOWN, 5);
@@ -107,7 +110,6 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 
 	Bind(wxEVT_SIZE, &InterpreterDisAsmFrame::OnResize, this);
 	Bind(wxEVT_KEY_DOWN, &InterpreterDisAsmFrame::OnKeyDown, this);
-	wxGetApp().Bind(wxEVT_DBG_COMMAND, &InterpreterDisAsmFrame::HandleCommand, this);
 
 	ShowAddr(CentrePc(m_pc));
 	UpdateUnitList();
@@ -117,47 +119,122 @@ InterpreterDisAsmFrame::~InterpreterDisAsmFrame()
 {
 }
 
+void InterpreterDisAsmFrame::UpdateUI()
+{
+	UpdateUnitList();
+
+	const auto cpu = this->cpu.lock();
+
+	if (!cpu)
+	{
+		if (m_last_pc != -1 || m_last_stat)
+		{
+			m_last_pc = -1;
+			m_last_stat = 0;
+			DoUpdate();
+
+			m_btn_run->Disable();
+			m_btn_step->Disable();
+			m_btn_pause->Disable();
+		}
+	}
+	else
+	{
+		const auto cia = GetPc();
+		const auto state = cpu->state.load();
+
+		if (m_last_pc != cia || m_last_stat != static_cast<u32>(state))
+		{
+			m_last_pc = cia;
+			m_last_stat = static_cast<u32>(state);
+			DoUpdate();
+
+			if (test(state & cpu_flag::dbg_pause))
+			{
+				m_btn_run->Enable();
+				m_btn_step->Enable();
+				m_btn_pause->Disable();
+			}
+			else
+			{
+				m_btn_run->Disable();
+				m_btn_step->Disable();
+				m_btn_pause->Enable();
+			}
+		}
+	}
+
+	if (Emu.IsStopped())
+	{
+		g_breakpoints.clear();
+	}
+}
+
 void InterpreterDisAsmFrame::UpdateUnitList()
 {
+	const u64 threads_created = cpu_thread::g_threads_created;
+	const u64 threads_deleted = cpu_thread::g_threads_deleted;
+
+	if (threads_created != m_threads_created || threads_deleted != m_threads_deleted)
+	{
+		m_threads_created = threads_created;
+		m_threads_deleted = threads_deleted;
+	}
+	else
+	{
+		// Nothing to do
+		return;
+	}
+
 	m_choice_units->Freeze();
 	m_choice_units->Clear();
 
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([&](u32, cpu_thread& cpu)
+	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		m_choice_units->Append(cpu.get_name(), &cpu);
-	});
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	m_choice_units->Thaw();
+	m_choice_units->Update();
 }
 
 void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 {
 	m_disasm.reset();
 
-	if (cpu = (cpu_thread*)event.GetClientData())
+	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
-		switch (g_system)
-		{
-		case system_type::ps3:
-		{
-			if (cpu->id_type() == 1)
-			{
-				m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
-			}
-			else
-			{
-				m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
-			}
+		return event.GetClientData() == &cpu;
+	};
 
-			break;
-		}
-
-		case system_type::psv:
-		{
-			m_disasm = std::make_unique<ARMv7DisAsm>(CPUDisAsm_InterpreterMode);
-			break;
-		}
-		}
+	if (event.GetClientData() == nullptr)
+	{
+		// Nothing selected
+	}
+	else if (auto ppu = idm::select<ppu_thread>(on_select))
+	{
+		m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
+		cpu = ppu.ptr;
+	}
+	else if (auto spu1 = idm::select<SPUThread>(on_select))
+	{
+		m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+		cpu = spu1.ptr;
+	}
+	else if (auto rspu = idm::select<RawSPUThread>(on_select))
+	{
+		m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+		cpu = rspu.ptr;
+	}
+	else if (auto arm = idm::select<ARMv7Thread>(on_select))
+	{
+		m_disasm = std::make_unique<ARMv7DisAsm>(CPUDisAsm_InterpreterMode);
+		cpu = arm.ptr;
 	}
 
 	DoUpdate();
@@ -233,13 +310,14 @@ void InterpreterDisAsmFrame::DoUpdate()
 	wxCommandEvent ce;
 	Show_PC(ce);
 	WriteRegs();
-	WriteCallStack();
 }
 
 void InterpreterDisAsmFrame::ShowAddr(u32 addr)
 {
 	m_pc = addr;
 	m_list->Freeze();
+
+	const auto cpu = this->cpu.lock();
 
 	if (!cpu)
 	{
@@ -286,6 +364,8 @@ void InterpreterDisAsmFrame::ShowAddr(u32 addr)
 
 void InterpreterDisAsmFrame::WriteRegs()
 {
+	const auto cpu = this->cpu.lock();
+
 	if (!cpu)
 	{
 		m_regs->Clear();
@@ -296,105 +376,6 @@ void InterpreterDisAsmFrame::WriteRegs()
 	m_regs->Clear();
 	m_regs->WriteText(fmt::FromUTF8(cpu->dump()));
 	m_regs->Thaw();
-}
-
-void InterpreterDisAsmFrame::WriteCallStack()
-{
-	if (!cpu)
-	{
-		m_calls->Clear();
-		return;
-	}
-
-	m_calls->Freeze();
-	m_calls->Clear();
-	//m_calls->WriteText(fmt::FromUTF8(data));
-	m_calls->Thaw();
-}
-
-void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
-{
-	cpu_thread* thr = (cpu_thread*)event.GetClientData();
-	event.Skip();
-
-	if (!thr)
-	{
-		switch (event.GetId())
-		{
-		case DID_STOPPED_EMU:
-			UpdateUnitList();
-			break;
-
-		case DID_PAUSED_EMU:
-			//DoUpdate();
-			break;
-		}
-	}
-	else if (cpu && thr == cpu)
-	{
-		switch (event.GetId())
-		{
-		case DID_PAUSE_THREAD:
-			m_btn_run->Disable();
-			m_btn_step->Disable();
-			m_btn_pause->Disable();
-			break;
-
-		case DID_PAUSED_THREAD:
-			m_btn_run->Enable();
-			m_btn_step->Enable();
-			m_btn_pause->Disable();
-			DoUpdate();
-			break;
-
-		case DID_START_THREAD:
-		case DID_EXEC_THREAD:
-		case DID_RESUME_THREAD:
-			m_btn_run->Disable();
-			m_btn_step->Disable();
-			m_btn_pause->Enable();
-			break;
-
-		case DID_REMOVE_THREAD:
-		case DID_STOP_THREAD:
-			m_btn_run->Disable();
-			m_btn_step->Disable();
-			m_btn_pause->Disable();
-
-			if (event.GetId() == DID_REMOVE_THREAD)
-			{
-				//m_choice_units->SetSelection(-1);
-				//wxCommandEvent event;
-				//event.SetInt(-1);
-				//event.SetClientData(nullptr);
-				//OnSelectUnit(event);
-				UpdateUnitList();
-				//DoUpdate();
-			}
-			break;
-		}
-	}
-	else
-	{
-		switch (event.GetId())
-		{
-		case DID_CREATE_THREAD:
-			UpdateUnitList();
-			if (m_choice_units->GetSelection() == -1)
-			{
-				//m_choice_units->SetSelection(0);
-				//wxCommandEvent event;
-				//event.SetInt(0);
-				//event.SetClientData(&Emu.GetCPU().GetThreads()[0]);
-				//OnSelectUnit(event);
-			}
-			break;
-
-		case DID_REMOVED_THREAD:
-			UpdateUnitList();
-			break;
-		}
-	}
 }
 
 void InterpreterDisAsmFrame::OnUpdate(wxCommandEvent& event)
@@ -420,6 +401,8 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit(s_panel);
 
+	const auto cpu = this->cpu.lock();
+
 	if (cpu) p_pc->SetValue(wxString::Format("%x", GetPc()));
 
 	if (diag->ShowModal() == wxID_OK)
@@ -432,21 +415,25 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 {
-	if (cpu) ShowAddr(CentrePc(GetPc()));
+	if (const auto cpu = this->cpu.lock()) ShowAddr(CentrePc(GetPc()));
 }
 
 void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 {
-	if (cpu && test(cpu->state & cpu_state_pause))
+	const auto cpu = this->cpu.lock();
+
+	if (cpu && cpu->state.test_and_reset(cpu_flag::dbg_pause))
 	{
-		cpu->state -= cpu_flag::dbg_pause;
-		(*cpu)->lock_notify();
+		if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
+		{
+			cpu->notify();
+		}
 	}
 }
 
 void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 {
-	if (cpu)
+	if (const auto cpu = this->cpu.lock())
 	{
 		cpu->state += cpu_flag::dbg_pause;
 	}
@@ -454,7 +441,7 @@ void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
-	if (cpu)
+	if (const auto cpu = this->cpu.lock())
 	{
 		if (test(cpu_flag::dbg_pause, cpu->state.fetch_op([](bs_t<cpu_flag>& state)
 		{
@@ -462,13 +449,15 @@ void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 			state -= cpu_flag::dbg_pause;
 		})))
 		{
-			(*cpu)->lock_notify();
+			cpu->notify();
 		}
 	}
 }
 
 void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 {
+	const auto cpu = this->cpu.lock();
+
 	long i = m_list->GetFirstSelected();
 	if (i < 0 || !cpu)
 	{
@@ -536,9 +525,11 @@ bool InterpreterDisAsmFrame::IsBreakPoint(u32 pc)
 void InterpreterDisAsmFrame::AddBreakPoint(u32 pc)
 {
 	g_breakpoints.emplace(pc, false);
+	ppu_breakpoint(pc);
 }
 
-bool InterpreterDisAsmFrame::RemoveBreakPoint(u32 pc)
+void InterpreterDisAsmFrame::RemoveBreakPoint(u32 pc)
 {
-	return g_breakpoints.erase(pc) != 0;
+	g_breakpoints.erase(pc);
+	ppu_breakpoint(pc);
 }

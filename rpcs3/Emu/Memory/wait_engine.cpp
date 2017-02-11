@@ -32,19 +32,18 @@ namespace vm
 				, m_thread(ptr->thread)
 			{
 				// Initialize waiter
-				writer_lock{s_mutex}, s_waiters.emplace(m_ptr);
-
-				m_thread->lock();
+				writer_lock lock(s_mutex);
+				s_waiters.emplace(m_ptr);
 			}
 
 			~waiter()
 			{
 				// Reset thread
-				atomic_storage<thread_ctrl*>::store(m_ptr->thread, nullptr);
-				m_thread->unlock();
+				m_ptr->thread = nullptr;
 
 				// Remove waiter
-				writer_lock{s_mutex}, s_waiters.erase(m_ptr);
+				writer_lock lock(s_mutex);
+				s_waiters.erase(m_ptr);
 			}
 		};
 
@@ -54,23 +53,13 @@ namespace vm
 
 	bool waiter_base::try_notify()
 	{
-		const auto _t = atomic_storage<thread_ctrl*>::load(thread);
-
-		if (UNLIKELY(!_t))
-		{
-			// Return if thread not found
-			return false;
-		}
-
-		// Lock the thread
-		_t->lock();
+		const auto _t = thread.load();
 
 		try
 		{
 			// Test predicate
-			if (UNLIKELY(!thread || !test()))
+			if (UNLIKELY(!_t || !test()))
 			{
-				_t->unlock();
 				return false;
 			}
 		}
@@ -81,9 +70,11 @@ namespace vm
 		}
 
 		// Signal the thread with nullptr
-		atomic_storage<thread_ctrl*>::store(thread, nullptr);
-		_t->unlock();
-		_t->notify();
+		if (auto _t = thread.exchange(nullptr))
+		{
+			_t->notify();
+		}
+		
 		return true;
 	}
 
@@ -128,10 +119,10 @@ namespace vm
 				// Poll waiters periodically (TODO)
 				while (notify_all() && !Emu.IsPaused() && !Emu.IsStopped())
 				{
-					thread_ctrl::sleep(50);
+					thread_ctrl::wait_for(50);
 				}
 
-				thread_ctrl::sleep(1000);
+				thread_ctrl::wait_for(1000);
 			}
 		});
 	}

@@ -26,122 +26,134 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
 	switch (code)
 	{
-	case L10N_UTF8:         retCode = 65001;        return false;
-	case L10N_UTF16:        retCode = 1200;         return false; // 1200=LE,1201=BE
-	case L10N_UTF32:        retCode = 12000;        return false; // 12000=LE,12001=BE
-	case L10N_UCS2:         retCode = 1200;         return false; // Not in OEM, but just the same as UTF16
-	case L10N_UCS4:         retCode = 12000;        return false; // Not in OEM, but just the same as UTF32
+	case L10N_UTF8:             retCode = 65001;        return false;
+	case L10N_UTF16:            retCode = 1200;         return false; // 1200=LE,1201=BE
+	case L10N_UTF32:            retCode = 12000;        return false; // 12000=LE,12001=BE
+	case L10N_UCS2:             retCode = 1200;         return false; // Not in OEM, but just the same as UTF16
+	case L10N_UCS4:             retCode = 12000;        return false; // Not in OEM, but just the same as UTF32
 	//All OEM Code Pages are Multi-Byte, not wchar_t,u16,u32.
-	case L10N_ISO_8859_1:   retCode = 28591;        return true;
-	case L10N_ISO_8859_2:   retCode = 28592;        return true;
-	case L10N_ISO_8859_3:   retCode = 28593;        return true;
-	case L10N_ISO_8859_4:   retCode = 28594;        return true;
-	case L10N_ISO_8859_5:   retCode = 28595;        return true;
-	case L10N_ISO_8859_6:   retCode = 28596;        return true;
-	case L10N_ISO_8859_7:   retCode = 28597;        return true;
-	case L10N_ISO_8859_8:   retCode = 28598;        return true;
-	case L10N_ISO_8859_9:   retCode = 28599;        return true;
-	case L10N_ISO_8859_10:  retCode = 28600;        return true;
-	case L10N_ISO_8859_11:  retCode = 28601;        return true;
-	case L10N_ISO_8859_13:  retCode = 28603;        return true; // No ISO-8859-12 ha ha.
-	case L10N_ISO_8859_14:  retCode = 28604;        return true;
-	case L10N_ISO_8859_15:  retCode = 28605;        return true;
-	case L10N_ISO_8859_16:  retCode = 28606;        return true;
-	case L10N_CODEPAGE_437: retCode = 437;          return true;
-	case L10N_CODEPAGE_850: retCode = 850;          return true;
-	case L10N_CODEPAGE_863: retCode = 863;          return true;
-	case L10N_CODEPAGE_866: retCode = 866;          return true;
-	case L10N_CODEPAGE_932: retCode = 932;          return true;
-	case L10N_CODEPAGE_936: retCode = 936;          return true;
-	case L10N_CODEPAGE_949: retCode = 949;          return true;
-	case L10N_CODEPAGE_950: retCode = 950;          return true;
-	case L10N_CODEPAGE_1251:retCode = 1251;         return true; // CYRL
-	case L10N_CODEPAGE_1252:retCode = 1252;         return true; // ANSI
-	case L10N_EUC_CN:       retCode = 51936;        return true; // GB2312
-	case L10N_EUC_JP:       retCode = 51932;        return true;
-	case L10N_EUC_KR:       retCode = 51949;        return true;
-	case L10N_ISO_2022_JP:  retCode = 50222;        return true;
+	case L10N_ISO_8859_1:       retCode = 28591;        return true;
+	case L10N_ISO_8859_2:       retCode = 28592;        return true;
+	case L10N_ISO_8859_3:       retCode = 28593;        return true;
+	case L10N_ISO_8859_4:       retCode = 28594;        return true;
+	case L10N_ISO_8859_5:       retCode = 28595;        return true;
+	case L10N_ISO_8859_6:       retCode = 28596;        return true;
+	case L10N_ISO_8859_7:       retCode = 28597;        return true;
+	case L10N_ISO_8859_8:       retCode = 28598;        return true;
+	case L10N_ISO_8859_9:       retCode = 28599;        return true;
+	case L10N_ISO_8859_10:      retCode = 28600;        return true;
+	case L10N_ISO_8859_11:      retCode = 28601;        return true;
+	case L10N_ISO_8859_13:      retCode = 28603;        return true; // No ISO-8859-12 ha ha.
+	case L10N_ISO_8859_14:      retCode = 28604;        return true;
+	case L10N_ISO_8859_15:      retCode = 28605;        return true;
+	case L10N_ISO_8859_16:      retCode = 28606;        return true;
+	case L10N_CODEPAGE_437:     retCode = 437;          return true;
+	case L10N_CODEPAGE_850:     retCode = 850;          return true;
+	case L10N_CODEPAGE_863:     retCode = 863;          return true;
+	case L10N_CODEPAGE_866:     retCode = 866;          return true;
+	case L10N_CODEPAGE_932:     retCode = 932;          return true;
+	case L10N_CODEPAGE_936:     retCode = 936;          return true; // GBK
+	case L10N_GBK:              retCode = 936;          return true; 
+	case L10N_CODEPAGE_949:     retCode = 949;          return true; // UHC 
+	case L10N_UHC:              retCode = 949;          return true; // UHC
+	case L10N_CODEPAGE_950:     retCode = 950;          return true;
+	case L10N_CODEPAGE_1251:    retCode = 1251;         return true; // CYRL
+	case L10N_CODEPAGE_1252:    retCode = 1252;         return true; // ANSI
+	case L10N_EUC_CN:           retCode = 51936;        return true; // GB2312
+	case L10N_EUC_JP:           retCode = 51932;        return true;
+	case L10N_EUC_KR:           retCode = 51949;        return true;
+	case L10N_ISO_2022_JP:      retCode = 50222;        return true;
+	case L10N_JIS:              retCode = 50222;        return true;
 	// Maybe 708/720/864/1256/10004/20420/28596/
-	case L10N_ARIB:         retCode = 20420;        return true; // TODO: think that should be ARABIC.
-	case L10N_HZ:           retCode = 52936;        return true;
-	case L10N_GB18030:      retCode = 54936;        return true;
-	case L10N_RIS_506:      retCode = 932;          return true; // MusicShiftJIS, MS_KANJI, TODO: Code page
+	case L10N_ARIB:             retCode = 20420;        return true; // TODO: think that should be ARABIC.
+	case L10N_HZ:               retCode = 52936;        return true;
+	case L10N_GB18030:          retCode = 54936;        return true;
+	case L10N_RIS_506:          retCode = 932;          return true; // MS_KANJI, TODO: Code page
+	case L10N_SHIFT_JIS:        retCode = 932;          return true; // SJIS
+	case L10N_MUSIC_SHIFT_JIS:  retCode = 932;          return true; // MSJIS
 	// These are only supported with FW 3.10 and above
-	case L10N_CODEPAGE_852: retCode = 852;          return true;
-	case L10N_CODEPAGE_1250:retCode = 1250;         return true; // EE
-	case L10N_CODEPAGE_737: retCode = 737;          return true;
-	case L10N_CODEPAGE_1253:retCode = 1253;         return true; // Greek
-	case L10N_CODEPAGE_857: retCode = 857;          return true;
-	case L10N_CODEPAGE_1254:retCode = 1254;         return true; // Turk
-	case L10N_CODEPAGE_775: retCode = 775;          return true;
-	case L10N_CODEPAGE_1257:retCode = 1257;         return true; // WINBALTRIM
-	case L10N_CODEPAGE_855: retCode = 855;          return true;
-	case L10N_CODEPAGE_858: retCode = 858;          return true;
-	case L10N_CODEPAGE_860: retCode = 860;          return true;
-	case L10N_CODEPAGE_861: retCode = 861;          return true;
-	case L10N_CODEPAGE_865: retCode = 865;          return true;
-	case L10N_CODEPAGE_869: retCode = 869;          return true;
-	default:                                        return false;
+	case L10N_CODEPAGE_852:     retCode = 852;          return true;
+	case L10N_CODEPAGE_1250:    retCode = 1250;         return true; // EE
+	case L10N_CODEPAGE_737:     retCode = 737;          return true;
+	case L10N_CODEPAGE_1253:    retCode = 1253;         return true; // Greek
+	case L10N_CODEPAGE_857:     retCode = 857;          return true;
+	case L10N_CODEPAGE_1254:    retCode = 1254;         return true; // Turk
+	case L10N_CODEPAGE_775:     retCode = 775;          return true;
+	case L10N_CODEPAGE_1257:    retCode = 1257;         return true; // WINBALTRIM
+	case L10N_CODEPAGE_855:     retCode = 855;          return true;
+	case L10N_CODEPAGE_858:     retCode = 858;          return true;
+	case L10N_CODEPAGE_860:     retCode = 860;          return true;
+	case L10N_CODEPAGE_861:     retCode = 861;          return true;
+	case L10N_CODEPAGE_865:     retCode = 865;          return true;
+	case L10N_CODEPAGE_869:     retCode = 869;          return true;
+	case L10N_BIG5:             retCode = 950;          return true; // Codepage 950
+	default:                                            return false;
 	}
 #else
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
 	switch (code)
 	{
 	// I don't know these Unicode Variants is LB or BE.
-	case L10N_UTF8:         retCode = "UTF-8";          return true;
-	case L10N_UTF16:        retCode = "UTF-16";         return true;
-	case L10N_UTF32:        retCode = "UTF-32";         return true;
-	case L10N_UCS2:         retCode = "UCS-2";          return true;
-	case L10N_UCS4:         retCode = "UCS-4";          return true;
-	case L10N_ISO_8859_1:   retCode = "ISO-8859-1";     return true;
-	case L10N_ISO_8859_2:   retCode = "ISO-8859-2";     return true;
-	case L10N_ISO_8859_3:   retCode = "ISO-8859-3";     return true;
-	case L10N_ISO_8859_4:   retCode = "ISO-8859-4";     return true;
-	case L10N_ISO_8859_5:   retCode = "ISO-8859-5";     return true;
-	case L10N_ISO_8859_6:   retCode = "ISO-8859-6";     return true;
-	case L10N_ISO_8859_7:   retCode = "ISO-8859-7";     return true;
-	case L10N_ISO_8859_8:   retCode = "ISO-8859-8";     return true;
-	case L10N_ISO_8859_9:   retCode = "ISO-8859-9";     return true;
-	case L10N_ISO_8859_10:  retCode = "ISO-8859-10";    return true;
-	case L10N_ISO_8859_11:  retCode = "ISO-8859-11";    return true;
-	case L10N_ISO_8859_13:  retCode = "ISO-8859-13";    return true; // No ISO-8859-12 ha ha.
-	case L10N_ISO_8859_14:  retCode = "ISO-8859-14";    return true;
-	case L10N_ISO_8859_15:  retCode = "ISO-8859-15";    return true;
-	case L10N_ISO_8859_16:  retCode = "ISO-8859-16";    return true;
-	case L10N_CODEPAGE_437: retCode = "CP437";          return true;
-	case L10N_CODEPAGE_850: retCode = "CP850";          return true;
-	case L10N_CODEPAGE_863: retCode = "CP863";          return true;
-	case L10N_CODEPAGE_866: retCode = "CP866";          return true;
-	case L10N_CODEPAGE_932: retCode = "CP932";          return true;
-	case L10N_CODEPAGE_936: retCode = "CP936";          return true;
-	case L10N_CODEPAGE_949: retCode = "CP949";          return true;
-	case L10N_CODEPAGE_950: retCode = "CP950";          return true;
-	case L10N_CODEPAGE_1251:retCode = "CP1251";         return true; // CYRL
-	case L10N_CODEPAGE_1252:retCode = "CP1252";         return true; // ANSI
-	case L10N_EUC_CN:       retCode = "EUC-CN";         return true; // GB2312
-	case L10N_EUC_JP:       retCode = "EUC-JP";         return true;
-	case L10N_EUC_KR:       retCode = "EUC-KR";         return true;
-	case L10N_ISO_2022_JP:  retCode = "ISO-2022-JP";    return true;
-	case L10N_ARIB:         retCode = "ARABIC";         return true; // TODO: think that should be ARABIC.
-	case L10N_HZ:           retCode = "HZ";             return true;
-	case L10N_GB18030:      retCode = "GB18030";        return true;
-	case L10N_RIS_506:      retCode = "SHIFT-JIS";      return true; // MusicShiftJIS, MS_KANJI
-	// These are only supported with FW 3.10 and above
-	case L10N_CODEPAGE_852: retCode = "CP852";          return true;
-	case L10N_CODEPAGE_1250:retCode = "CP1250";         return true; // EE
-	case L10N_CODEPAGE_737: retCode = "CP737";          return true;
-	case L10N_CODEPAGE_1253:retCode = "CP1253";         return true; // Greek
-	case L10N_CODEPAGE_857: retCode = "CP857";          return true;
-	case L10N_CODEPAGE_1254:retCode = "CP1254";         return true; // Turk
-	case L10N_CODEPAGE_775: retCode = "CP775";          return true;
-	case L10N_CODEPAGE_1257:retCode = "CP1257";         return true; // WINBALTRIM
-	case L10N_CODEPAGE_855: retCode = "CP855";          return true;
-	case L10N_CODEPAGE_858: retCode = "CP858";          return true;
-	case L10N_CODEPAGE_860: retCode = "CP860";          return true;
-	case L10N_CODEPAGE_861: retCode = "CP861";          return true;
-	case L10N_CODEPAGE_865: retCode = "CP865";          return true;
-	case L10N_CODEPAGE_869: retCode = "CP869";          return true;
-	default:                                            return false;
+	case L10N_UTF8:             retCode = "UTF-8";          return true;
+	case L10N_UTF16:            retCode = "UTF-16";         return true;
+	case L10N_UTF32:            retCode = "UTF-32";         return true;
+	case L10N_UCS2:             retCode = "UCS-2";          return true;
+	case L10N_UCS4:             retCode = "UCS-4";          return true;
+	case L10N_ISO_8859_1:       retCode = "ISO-8859-1";     return true;
+	case L10N_ISO_8859_2:       retCode = "ISO-8859-2";     return true;
+	case L10N_ISO_8859_3:       retCode = "ISO-8859-3";     return true;
+	case L10N_ISO_8859_4:       retCode = "ISO-8859-4";     return true;
+	case L10N_ISO_8859_5:       retCode = "ISO-8859-5";     return true;
+	case L10N_ISO_8859_6:       retCode = "ISO-8859-6";     return true;
+	case L10N_ISO_8859_7:       retCode = "ISO-8859-7";     return true;
+	case L10N_ISO_8859_8:       retCode = "ISO-8859-8";     return true;
+	case L10N_ISO_8859_9:       retCode = "ISO-8859-9";     return true;
+	case L10N_ISO_8859_10:      retCode = "ISO-8859-10";    return true;
+	case L10N_ISO_8859_11:      retCode = "ISO-8859-11";    return true;
+	case L10N_ISO_8859_13:      retCode = "ISO-8859-13";    return true; // No ISO-8859-12 ha ha.
+	case L10N_ISO_8859_14:      retCode = "ISO-8859-14";    return true;
+	case L10N_ISO_8859_15:      retCode = "ISO-8859-15";    return true;
+	case L10N_ISO_8859_16:      retCode = "ISO-8859-16";    return true;
+	case L10N_CODEPAGE_437:     retCode = "CP437";          return true;
+	case L10N_CODEPAGE_850:     retCode = "CP850";          return true;
+	case L10N_CODEPAGE_863:     retCode = "CP863";          return true;
+	case L10N_CODEPAGE_866:     retCode = "CP866";          return true;
+	case L10N_CODEPAGE_932:     retCode = "CP932";          return true;
+	case L10N_CODEPAGE_936:     retCode = "CP936";          return true;
+	case L10N_GBK:              retCode = "CP936";          return true;
+	case L10N_CODEPAGE_949:     retCode = "CP949";          return true;
+	case L10N_UHC:              retCode = "CP949";          return true;
+	case L10N_CODEPAGE_950:     retCode = "CP950";          return true;
+	case L10N_BIG5:             retCode = "CP950";          return true; // BIG5 = CodePage 950
+	case L10N_CODEPAGE_1251:    retCode = "CP1251";         return true; // CYRL
+	case L10N_CODEPAGE_1252:    retCode = "CP1252";         return true; // ANSI
+	case L10N_EUC_CN:           retCode = "EUC-CN";         return true; // GB2312
+	case L10N_EUC_JP:           retCode = "EUC-JP";         return true;
+	case L10N_EUC_KR:           retCode = "EUC-KR";         return true;
+	case L10N_ISO_2022_JP:      retCode = "ISO-2022-JP";    return true;
+	case L10N_JIS:              retCode = "ISO-2022-JP";    return true;
+	case L10N_ARIB:             retCode = "ARABIC";         return true; // TODO: think that should be ARABIC.
+	case L10N_HZ:               retCode = "HZ";             return true;
+	case L10N_GB18030:          retCode = "GB18030";        return true;
+	case L10N_RIS_506:          retCode = "Shift_JIS";      return true; // MS_KANJI
+	case L10N_SHIFT_JIS:        retCode = "Shift_JIS";      return true; // CP932 for Microsoft
+	case L10N_MUSIC_SHIFT_JIS:  retCode = "Shift_JIS";      return true; // MusicShiftJIS
+	// These are only supported with FW 3.10 and below
+	case L10N_CODEPAGE_852:     retCode = "CP852";          return true;
+	case L10N_CODEPAGE_1250:    retCode = "CP1250";         return true; // EE
+	case L10N_CODEPAGE_737:     retCode = "CP737";          return true;
+	case L10N_CODEPAGE_1253:    retCode = "CP1253";         return true; // Greek
+	case L10N_CODEPAGE_857:     retCode = "CP857";          return true;
+	case L10N_CODEPAGE_1254:    retCode = "CP1254";         return true; // Turk
+	case L10N_CODEPAGE_775:     retCode = "CP775";          return true;
+	case L10N_CODEPAGE_1257:    retCode = "CP1257";         return true; // WINBALTRIM
+	case L10N_CODEPAGE_855:     retCode = "CP855";          return true;
+	case L10N_CODEPAGE_858:     retCode = "CP858";          return true;
+	case L10N_CODEPAGE_860:     retCode = "CP860";          return true;
+	case L10N_CODEPAGE_861:     retCode = "CP861";          return true;
+	case L10N_CODEPAGE_865:     retCode = "CP865";          return true;
+	case L10N_CODEPAGE_869:     retCode = "CP869";          return true;
+	default:                                                return false;
 	}
 #endif
 }
@@ -294,122 +306,181 @@ s32 _L10nConvertCharNoResult(s32 src_code, const void *src, s32 src_len, s32 dst
 
 s32 UCS2toEUCJP()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toEUCJP()");
+	return 0;
 }
 
 s32 l10n_convert()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("l10n_convert()");
+	return 0;
 }
 
 s32 UCS2toUTF32()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toUTF32()");
+	return 0;
 }
 
 s32 jis2kuten()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("jis2kuten()");
+	return 0;
 }
 
 s32 UTF8toGB18030()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toGB18030()");
+	return ConversionOK;
 }
 
-s32 JISstoUTF8s()
+s32 JISstoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("JISstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
-s32 SjisZen2Han()
+s32 SjisZen2Han(vm::cptr<u16> src)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SjisZen2Han()");
+	return ConversionOK;
 }
 
 s32 ToSjisLower()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToSjisLower()");
+	return ConversionOK;
 }
 
 s32 UCS2toGB18030()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toGB18030()");
+	return ConversionOK;
 }
 
-s32 HZstoUCS2s()
+s32 HZstoUCS2s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("HZstoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
-s32 UCS2stoHZs()
+s32 UCS2stoHZs(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoHZs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
-s32 UCS2stoSJISs()
+s32 UCS2stoSJISs(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoSJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 kuten2eucjp()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("kuten2eucjp()");
+	return 0;
 }
 
 s32 sjis2jis()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("sjis2jis()");
+	return 0;
 }
 
-s32 EUCKRstoUCS2s()
+s32 EUCKRstoUCS2s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCKRstoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
-s32 UHCstoEUCKRs()
+s32 UHCstoEUCKRs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UHCstoEUCKRs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 jis2sjis()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("jis2sjis()");
+	return 0;
 }
 
-s32 jstrnchk()
+s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	u8 r = 0;
+	
+	for (u32 len = 0; len < src_len; len++)
+	{
+		if (src != vm::null)
+		{
+			if (*src >= 0xa1 && *src <= 0xfe)
+			{
+				cellL10n.warning("jstrnchk: EUCJP (src=*0x%x, src_len=*0x%x)", src, src_len);
+				r |= L10N_STR_EUCJP;
+			} 
+			else if( ((*src >=  0x81 && *src <= 0x9f) || (*src >= 0xe0 && *src <= 0xfc)) || (*src >= 0x40 && *src <= 0xfc && *src != 0x7f) ) 
+			{
+				cellL10n.warning("jstrnchk: SJIS (src=*0x%x, src_len=*0x%x)", src, src_len);
+				r |= L10N_STR_SJIS;
+			}
+			// ISO-2022-JP. (JIS X 0202) That's an inaccurate general range which (contains ASCII and UTF-8 characters?).
+			else if (*src >= 0x21 && *src <= 0x7e) 
+			{
+				cellL10n.warning("jstrnchk: JIS (src=*0x%x, src_len=*0x%x)", src, src_len);
+				r |= L10N_STR_JIS;
+			}
+			else
+			{
+				cellL10n.todo("jstrnchk: Unimplemented (src=*0x%x, src_len=*0x%x)", src, src_len);
+			}
+			// TODO:
+			// L10N_STR_ASCII
+			// L10N_STR_UTF8
+			
+			// L10N_STR_UNKNOWN
+			// L10N_STR_ILLEGAL
+			// L10N_STR_ERROR
+		}
+		src++;
+	}
+	return r;
 }
 
 s32 L10nConvert()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("L10nConvert()");
+	return 0;
 }
 
 s32 EUCCNstoUTF8s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCCNstoUTF8s()");
+	return ConversionOK;
 }
 
 s32 GBKstoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GBKstoUCS2s()");
+	return ConversionOK;
 }
 
-s32 eucjphan2zen()
+s32 eucjphan2zen(vm::cptr<u16> src)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("eucjphan2zen()");
+	return *src; // Returns the character itself if conversion fails
 }
 
 s32 ToSjisHira()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToSjisHira()");
+	return ConversionOK;
 }
 
 s32 GBKtoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GBKtoUCS2()");
+	return ConversionOK;
 }
 
 s32 eucjp2jis()
@@ -417,59 +488,70 @@ s32 eucjp2jis()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 UTF32stoUTF8s()
+s32 UTF32stoUTF8s(vm::cptr<u32> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF32stoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 sjishan2zen()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("sjishan2zen()");
+	return 0;
 }
 
 s32 UCS2toSBCS()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toSBCS()");
+	return 0;
 }
 
 s32 UTF8stoGBKs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toSBCS()");
+	return ConversionOK;
 }
 
 s32 UTF8toUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toUCS2()");
+	return 0;
 }
 
-s32 UCS2stoUTF8s()
+s32 UCS2stoUTF8s(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 EUCKRstoUTF8s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCKRstoUTF8s()");
+	return ConversionOK;
 }
 
-s32 UTF16stoUTF32s()
+s32 UTF16stoUTF32s(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u32> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.warning("UTF16stoUTF32s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return _L10nConvertStr(L10N_UTF16, src, src_len, L10N_UTF32, dst, dst_len);
 }
 
 s32 UTF8toEUCKR()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toEUCKR()");
+	return 0;
 }
 
 s32 UTF16toUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF16toUTF8()");
+	return 0;
 }
 
 s32 ARIBstoUTF8s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ARIBstoUTF8s()");
+	return ConversionOK;
 }
 
 s32 SJISstoUTF8s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
@@ -478,248 +560,297 @@ s32 SJISstoUTF8s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, v
 	return _L10nConvertStr(L10N_CODEPAGE_932, src, src_len, L10N_UTF8, dst, dst_len);
 }
 
-s32 sjiszen2han()
+s32 sjiszen2han(vm::cptr<u16> src)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("sjiszen2han()");
+	return *src; // Returns the character itself if conversion fails
 }
 
 s32 ToEucJpLower()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToEucJpLower()");
+	return ConversionOK;
 }
 
 s32 MSJIStoUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("MSJIStoUTF8()");
+	return 0;
 }
 
 s32 UCS2stoMSJISs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoMSJISs()");
+	return ConversionOK;
 }
 
 s32 EUCJPtoUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCJPtoUTF8()");
+	return 0;
 }
 
 s32 eucjp2sjis()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("eucjp2sjis()");
+	return 0;
 }
 
 s32 ToEucJpHira()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToEucJpHira()");
+	return ConversionOK;
 }
 
 s32 UHCstoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UHCstoUCS2s()");
+	return ConversionOK;
 }
 
 s32 ToEucJpKata()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToEucJpKata()");
+	return ConversionOK;
 }
 
-s32 HZstoUTF8s()
+s32 HZstoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("HZstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 UTF8toMSJIS()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toMSJIS()");
+	return 0;
 }
 
 s32 BIG5toUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("BIG5toUTF8()");
+	return 0;
 }
 
-s32 EUCJPstoSJISs()
+s32 EUCJPstoSJISs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCJPstoSJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 UTF8stoBIG5s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoBIG5s()");
+	return ConversionOK;
 }
 
-s32 UTF16stoUCS2s()
+s32 UTF16stoUCS2s(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.warning("UTF16stoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return _L10nConvertStr(L10N_UTF16, src, src_len, L10N_UCS2, dst, dst_len);
 }
 
 s32 UCS2stoGB18030s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoGB18030s()");
+	return ConversionOK;
 }
 
 s32 EUCJPtoSJIS()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCJPtoSJIS()");
+	return 0;
 }
 
 s32 EUCJPtoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCJPtoUCS2()");
+	return 0;
 }
 
 s32 UCS2stoGBKs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoGBKs()");
+	return ConversionOK;
 }
 
 s32 EUCKRtoUHC()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCKRtoUHC()");
+	return 0;
 }
 
 s32 UCS2toSJIS(u16 ch, vm::ptr<void> dst)
 {
-	cellL10n.warning("UCS2toSJIS(ch=%d, dst=*0x%x)", ch, dst);
-	return _L10nConvertCharNoResult(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst);
+	cellL10n.todo("UCS2toSJIS(ch=%d, dst=*0x%x)", ch, dst);
+	// Should be L10N_UCS2 (16bit) not L10N_UTF8 (8bit) and L10N_SHIFT_JIS 
+	// return _L10nConvertCharNoResult(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst);
+	return 0;
 }
 
 s32 MSJISstoUTF8s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("MSJISstoUTF8s()");
+	return ConversionOK;
 }
 
-s32 EUCJPstoUTF8s()
+s32 EUCJPstoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCJPstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 UCS2toBIG5()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toBIG5()");
+	return 0;
 }
 
 s32 UTF8stoEUCKRs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoEUCKRs()");
+	return ConversionOK;
 }
 
 s32 UHCstoUTF8s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UHCstoUTF8s()");
+	return ConversionOK;
 }
 
 s32 GB18030stoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GB18030stoUCS2s()");
+	return ConversionOK;
 }
 
-s32 SJIStoUTF8()
+s32 SJIStoUTF8(u8 ch, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SJIStoUTF8(ch=%d, dst=*0x%x, dst_len=*0x%x)", ch, dst, dst_len);
+	return 0;
 }
 
-s32 JISstoSJISs()
+s32 JISstoSJISs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("JISstoSJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
 s32 UTF8toUTF16()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toUTF16()");
+	return 0;
 }
 
 s32 UTF8stoMSJISs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoMSJISs()");
+	return ConversionOK;
 }
 
 s32 EUCKRtoUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCKRtoUTF8()");
+	return 0;
 }
 
 s32 SjisHan2Zen()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SjisHan2Zen()");
+	return ConversionOK;
 }
 
 s32 UCS2toUTF16()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toUTF16()");
+	return 0;
 }
 
 s32 UCS2toMSJIS()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toMSJIS()");
+	return 0;
 }
 
 s32 sjis2kuten()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("sjis2kuten()");
+	return 0;
 }
 
 s32 UCS2toUHC()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toUHC()");
+	return 0;
 }
 
 s32 UTF32toUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF32toUCS2()");
+	return 0;
 }
 
 s32 ToSjisUpper()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToSjisUpper()");
+	return ConversionOK;
 }
 
 s32 UTF8toEUCJP()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toEUCJP()");
+	return 0;
 }
 
 s32 UCS2stoEUCJPs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoEUCJPs()");
+	return ConversionOK;
 }
 
 s32 UTF16toUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF16toUCS2()");
+	return 0;
 }
 
-s32 UCS2stoUTF16s()
+s32 UCS2stoUTF16s(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoUTF16s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 UCS2stoEUCCNs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoEUCCNs()");
+	return ConversionOK;
 }
 
-s32 SBCSstoUTF8s()
+s32 SBCSstoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len, s32 enc)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.warning("SBCSstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x, enc=*0x%x)", src, src_len, dst, dst_len, enc);
+	return _L10nConvertStr(enc, src, src_len, L10N_UTF8, dst, dst_len); // Might not work in some scenarios
 }
 
-s32 SJISstoJISs()
+s32 SJISstoJISs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SJISstoJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
 s32 SBCStoUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SBCStoUTF8()");
+	return 0;
 }
 
 s32 UTF8toUTF32()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toUTF32()");
+	return 0;
 }
 
-s32 jstrchk(vm::cptr<void> jstr)
+s32 jstrchk(vm::cptr<u8> jstr)
 {
 	cellL10n.todo("jstrchk(jstr=*0x%x) -> utf8", jstr);
 
@@ -729,77 +860,92 @@ s32 jstrchk(vm::cptr<void> jstr)
 
 s32 UHCtoEUCKR()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UHCtoEUCKR()");
+	return 0;
 }
 
 s32 kuten2jis()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("kuten2jis()");
+	return 0;
 }
 
 s32 UTF8toEUCCN()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toEUCCN()");
+	return 0;
 }
 
 s32 EUCCNtoUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCCNtoUTF8()");
+	return 0;
 }
 
 s32 EucJpZen2Han()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EucJpZen2Han()");
+	return ConversionOK;
 }
 
-s32 UTF32stoUTF16s()
+s32 UTF32stoUTF16s(vm::cptr<u32> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF32stoUTF16s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 GBKtoUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GBKtoUTF8()");
+	return 0;
 }
 
 s32 ToEucJpUpper()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToEucJpUpper()");
+	return ConversionOK;
 }
 
 s32 UCS2stoJISs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoJISs()");
+	return ConversionOK;
 }
 
 s32 UTF8stoGB18030s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoGB18030s()");
+	return ConversionOK;
 }
 
-s32 EUCKRstoUHCs()
+s32 EUCKRstoUHCs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCKRstoUHCs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
-s32 UTF8stoUTF32s()
+s32 UTF8stoUTF32s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u32> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoUTF32s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 UTF8stoEUCCNs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoEUCCNs()");
+	return ConversionOK;
 }
 
-s32 EUCJPstoUCS2s()
+s32 EUCJPstoUCS2s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCJPstoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
 s32 UHCtoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UHCtoUCS2()");
+	return 0;
 }
 
 s32 L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::ptr<s32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<s32> dst_len)
@@ -810,82 +956,98 @@ s32 L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::ptr<s32> src_len, s32 d
 
 s32 GBKstoUTF8s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GBKstoUTF8s()");
+	return ConversionOK;
 }
 
 s32 UTF8toUHC()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toUHC()");
+	return 0;
 }
 
 s32 UTF32toUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF32toUTF8()");
+	return 0;
 }
 
 s32 sjis2eucjp()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("sjis2eucjp()");
+	return 0;
 }
 
 s32 UCS2toEUCCN()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toEUCCN()");
+	return 0;
 }
 
 s32 UTF8stoUHCs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoUHCs()");
+	return ConversionOK;
 }
 
 s32 EUCKRtoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCKRtoUCS2()");
+	return 0;
 }
 
 s32 UTF32toUTF16()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF32toUTF16()");
+	return 0;
 }
 
 s32 EUCCNstoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCCNstoUCS2s()");
+	return ConversionOK;
 }
 
 s32 SBCSstoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SBCSstoUCS2s()");
+	return ConversionOK;
 }
 
-s32 UTF8stoJISs()
+s32 UTF8stoJISs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
 s32 ToSjisKata()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ToSjisKata()");
+	return 0;
 }
 
 s32 jis2eucjp()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("jis2eucjp()");
+	return 0;
 }
 
 s32 BIG5toUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("BIG5toUCS2()");
+	return 0;
 }
 
 s32 UCS2toGBK()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toGBK()");
+	return 0;
 }
 
 s32 UTF16toUTF32()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF16toUTF32()");
+	return 0;
 }
 
 s32 l10n_convert_str(s32 cd, vm::cptr<void> src, vm::ptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
@@ -898,104 +1060,124 @@ s32 l10n_convert_str(s32 cd, vm::cptr<void> src, vm::ptr<s32> src_len, vm::ptr<v
 	return _L10nConvertStr(src_code, src, src_len, dst_code, dst, dst_len);
 }
 
-s32 EUCJPstoJISs()
+s32 EUCJPstoJISs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.warning("EUCJPstoJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return _L10nConvertStr(L10N_EUC_JP, src, src_len, L10N_ISO_2022_JP, dst, dst_len);
 }
 
 s32 UTF8stoARIBs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoARIBs()");
+	return ConversionOK;
 }
 
 s32 JISstoEUCJPs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("JISstoEUCJPs()");
+	return ConversionOK;
 }
 
 s32 EucJpHan2Zen()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EucJpHan2Zen()");
+	return ConversionOK;
 }
 
 s32 isEucJpKigou()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("isEucJpKigou()");
+	return 0;
 }
 
 s32 UCS2toUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toUTF8()");
+	return 0;
 }
 
 s32 GB18030toUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GB18030toUCS2()");
+	return 0;
 }
 
 s32 UHCtoUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UHCtoUTF8()");
+	return 0;
 }
 
 s32 MSJIStoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("MSJIStoUCS2()");
+	return 0;
 }
 
 s32 UTF8toGBK()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toGBK()");
+	return 0;
 }
 
 s32 kuten2sjis()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("kuten2sjis()");
+	return 0;
 }
 
 s32 UTF8toSBCS()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toSBCS()");
+	return 0;
 }
 
 s32 SJIStoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SJIStoUCS2()");
+	return 0;
 }
 
-s32 eucjpzen2han()
+s32 eucjpzen2han(vm::cptr<u16> src)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("eucjpzen2han()");
+	return *src; // Returns the character itself if conversion fails
 }
 
 s32 UCS2stoARIBs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoARIBs()");
+	return ConversionOK;
 }
 
 s32 isSjisKigou()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("isSjisKigou()");
+	return 0;
 }
 
 s32 UTF8stoEUCJPs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoEUCJPs()");
+	return ConversionOK;
 }
 
 s32 UCS2toEUCKR()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2toEUCKR()");
+	return 0;
 }
 
 s32 SBCStoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SBCStoUCS2()");
+	return 0;
 }
 
 s32 MSJISstoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("MSJISstoUCS2s()");
+	return ConversionOK;
 }
 
 s32 l10n_get_converter(u32 src_code, u32 dst_code)
@@ -1006,22 +1188,26 @@ s32 l10n_get_converter(u32 src_code, u32 dst_code)
 
 s32 GB18030stoUTF8s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GB18030stoUTF8s()");
+	return ConversionOK;
 }
 
-s32 SJISstoEUCJPs()
+s32 SJISstoEUCJPs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SJISstoEUCJPs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
-s32 UTF32stoUCS2s()
+s32 UTF32stoUCS2s(vm::cptr<u32> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF32stoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
-s32 BIG5stoUTF8s()
+s32 BIG5stoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("BIG5stoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
 s32 EUCCNtoUCS2()
@@ -1031,32 +1217,38 @@ s32 EUCCNtoUCS2()
 
 s32 UTF8stoSBCSs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoSBCSs()");
+	return ConversionOK;
 }
 
-s32 UCS2stoEUCKRs()
+s32 UCS2stoEUCKRs(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoEUCKRs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return 0;
 }
 
 s32 UTF8stoSJISs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoSJISs()");
+	return ConversionOK;
 }
 
 s32 UTF8stoHZs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoHZs()");
+	return 0;
 }
 
 s32 eucjp2kuten()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("eucjp2kuten()");
+	return 0;
 }
 
 s32 UTF8toBIG5()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8toBIG5()");
+	return 0;
 }
 
 s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8, vm::ref<s32> utf8_len)
@@ -1103,15 +1295,17 @@ s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8,
 
 s32 JISstoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("JISstoUCS2s()");
+	return ConversionOK;
 }
 
 s32 GB18030toUTF8()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("GB18030toUTF8()");
+	return 0;
 }
 
-s32 UTF8toSJIS(u8 ch, vm::ptr<void> dst, vm::ptr<s32> dst_len)
+s32 UTF8toSJIS(u8 ch, vm::ptr<u8> dst, vm::ptr<s32> dst_len) // Doesn't work backwards
 {
 	cellL10n.warning("UTF8toSJIS(ch=%d, dst=*0x%x, dst_len=*0x%x)", ch, dst, dst_len);
 	return _L10nConvertChar(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst, dst_len);
@@ -1119,41 +1313,47 @@ s32 UTF8toSJIS(u8 ch, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 
 s32 ARIBstoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("ARIBstoUCS2s()");
+	return ConversionOK;
 }
 
-s32 UCS2stoUTF32s()
+s32 UCS2stoUTF32s(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u32> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoUTF32s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 s32 UCS2stoSBCSs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoSBCSs()");
+	return ConversionOK;
 }
 
 s32 UCS2stoBIG5s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoBIG5s()");
+	return ConversionOK;
 }
 
 s32 UCS2stoUHCs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UCS2stoUHCs()");
+	return ConversionOK;
 }
 
 s32 SJIStoEUCJP()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("SJIStoEUCJP()");
+	return 0;
 }
 
-s32 UTF8stoUTF16s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
+s32 UTF8stoUTF16s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
 	cellL10n.warning("UTF8stoUTF16s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
 	return _L10nConvertStr(L10N_UTF8, src, src_len, L10N_UTF16, dst, dst_len);
 }
 
-s32 SJISstoUCS2s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
+s32 SJISstoUCS2s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
 	cellL10n.warning("SJISstoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
 	return _L10nConvertStr(L10N_CODEPAGE_932, src, src_len, L10N_UCS2, dst, dst_len);
@@ -1161,12 +1361,14 @@ s32 SJISstoUCS2s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, v
 
 s32 BIG5stoUCS2s()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("BIG5stoUCS2s()");
+	return ConversionOK;
 }
 
-s32 UTF8stoUCS2s()
+s32 UTF8stoUCS2s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u16> dst, vm::ptr<s32> dst_len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("UTF8stoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return ConversionOK;
 }
 
 

@@ -402,7 +402,6 @@
     <ClInclude Include="..\Utilities\lockless.h" />
     <ClInclude Include="..\Utilities\mutex.h" />
     <ClInclude Include="..\Utilities\sema.h" />
-    <ClInclude Include="..\Utilities\SleepQueue.h" />
     <ClInclude Include="..\Utilities\sync.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
@@ -607,7 +606,6 @@
     <ClInclude Include="Emu\Cell\SPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
-    <ClInclude Include="Emu\DbgCommand.h" />
     <ClInclude Include="Emu\Memory\wait_engine.h" />
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\gcm_enums.h" />

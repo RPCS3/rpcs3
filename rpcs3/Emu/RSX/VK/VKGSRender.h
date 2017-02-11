@@ -4,8 +4,10 @@
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
-#include "VkTextOut.h"
-#include <Utilities\optional.hpp>
+#include "VKTextOut.h"
+#include "restore_new.h"
+#include <Utilities/optional.hpp>
+#include "define_new_memleakdetect.h"
 
 #define RSX_DEBUG 1
 

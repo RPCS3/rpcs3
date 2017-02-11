@@ -196,6 +196,7 @@ namespace vk
 		case rsx::logic_op::logic_copy_inverted: return VK_LOGIC_OP_COPY_INVERTED;
 		case rsx::logic_op::logic_or_inverted: return VK_LOGIC_OP_OR_INVERTED;
 		case rsx::logic_op::logic_nand: return VK_LOGIC_OP_NAND;
+		case rsx::logic_op::logic_set: return VK_LOGIC_OP_SET;
 		default:
 			fmt::throw_exception("Unknown logic op 0x%x" HERE, (u32)op);
 		}
@@ -621,7 +622,7 @@ void VKGSRender::begin()
 	//Ease resource pressure if the number of draw calls becomes too high
 	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS)
 	{
-		std::chrono::time_point<std::chrono::system_clock> submit_start = std::chrono::system_clock::now();
+		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
 		close_and_submit_command_buffer({}, m_submit_fence);
 		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
@@ -637,11 +638,11 @@ void VKGSRender::begin()
 		m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
 		m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
 
-		std::chrono::time_point<std::chrono::system_clock> submit_end = std::chrono::system_clock::now();
+		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> start = steady_clock::now();
 
 	VkDescriptorSetAllocateInfo alloc_info = {};
 	alloc_info.descriptorPool = descriptor_pool;
@@ -665,7 +666,7 @@ void VKGSRender::begin()
 
 	//TODO: Set up other render-state parameters into the program pipeline
 
-	std::chrono::time_point<std::chrono::system_clock> stop = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
 	m_draw_calls++;
@@ -680,7 +681,7 @@ void VKGSRender::end()
 		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	std::chrono::time_point<std::chrono::system_clock> textures_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -762,7 +763,7 @@ void VKGSRender::end()
 		}
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> textures_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	VkRenderPassBeginInfo rp_begin = {};
@@ -778,7 +779,7 @@ void VKGSRender::end()
 
 	auto upload_info = upload_vertex_data();
 
-	std::chrono::time_point<std::chrono::system_clock> vertex_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - textures_end).count();
 
 	vkCmdBindPipeline(m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
@@ -802,7 +803,7 @@ void VKGSRender::end()
 
 	vkCmdEndRenderPass(m_command_buffer);
 
-	std::chrono::time_point<std::chrono::system_clock> draw_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - vertex_end).count();
 
 	rsx::thread::end();
@@ -979,28 +980,21 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 
 bool VKGSRender::load_program()
 {
-	RSXVertexProgram vertex_program = get_current_vertex_program();
-	RSXFragmentProgram fragment_program = get_current_fragment_program();
-
-	for (int i = 0; i < 16; ++i)
+	auto rtt_lookup_func = [this](u32 texaddr, bool is_depth) -> std::tuple<bool, u16>
 	{
-		auto &tex = rsx::method_registers.fragment_textures[i];
-		if (tex.enabled())
-		{
-			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
-			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
-			{
-				if (m_rtts.get_texture_from_render_target_if_applicable(texaddr))
-					continue;
+		vk::render_target *surface = nullptr;
+		if (!is_depth)
+			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
+		else
+			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-				u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-				if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
-				{
-					fragment_program.redirected_textures |= (1 << i);
-				}
-			}
-		}
-	}
+		if (!surface) return std::make_tuple(false, 0);
+
+		return std::make_tuple(true, surface->native_pitch);
+	};
+
+	RSXVertexProgram vertex_program = get_current_vertex_program();
+	RSXFragmentProgram fragment_program = get_current_fragment_program(rtt_lookup_func);
 
 	vk::pipeline_props properties = {};
 
@@ -1182,16 +1176,6 @@ bool VKGSRender::load_program()
 		stream_vector((char*)buf + 48, 0, 0, 0, (u32&)one);
 	}
 
-	u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-	u8 alpha_ref_raw = rsx::method_registers.alpha_ref();
-	float alpha_ref = alpha_ref_raw / 255.f;
-
-	f32 fog0 = rsx::method_registers.fog_params_0();
-	f32 fog1 = rsx::method_registers.fog_params_1();
-	memcpy((char*)buf + 64, &fog0, sizeof(float));
-	memcpy((char*)buf + 68, &fog1, sizeof(float));
-	memcpy((char*)buf + 72, &is_alpha_tested, sizeof(u32));
-	memcpy((char*)buf + 76, &alpha_ref, sizeof(float));
 	m_uniform_buffer_ring_info.unmap();
 
 	const size_t vertex_constants_offset = m_uniform_buffer_ring_info.alloc<256>(512 * 4 * sizeof(float));
@@ -1200,18 +1184,19 @@ bool VKGSRender::load_program()
 	m_uniform_buffer_ring_info.unmap();
 
 	const size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(std::max(fragment_constants_sz, static_cast<size_t>(32)));
+	const size_t fragment_buffer_sz = fragment_constants_sz + (17 * 4 * sizeof(float));
+	const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(fragment_buffer_sz);
 
+	buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_buffer_sz);
 	if (fragment_constants_sz)
-	{
-		buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_constants_sz);
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
-		m_uniform_buffer_ring_info.unmap();
-	}
+
+	fill_fragment_state_buffer(buf+fragment_constants_sz, fragment_program);
+	m_uniform_buffer_ring_info.unmap();
 
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);	
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, (fragment_constants_sz? fragment_constants_sz: 32) }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
 
 	return true;
 }
@@ -1363,7 +1348,7 @@ void VKGSRender::flip(int buffer)
 			resize_screen = true;
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> flip_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> flip_start = steady_clock::now();
 
 	if (!resize_screen)
 	{
@@ -1537,7 +1522,7 @@ void VKGSRender::flip(int buffer)
 		vkDestroyFence((*m_device), resize_fence, nullptr);
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> flip_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
 	m_flip_time = std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
 
 	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();

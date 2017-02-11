@@ -157,6 +157,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code)
 		{ "$1", [this]() -> std::string {return GetSRC<SRC1>(src1);} },//std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC1>), this, src1) },
 		{ "$2", [this]() -> std::string {return GetSRC<SRC2>(src2);} },//std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC2>), this, src2) },
 		{ "$t", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddTex), this) },
+		{ "$_i", [this]() -> std::string {return std::to_string(dst.tex_num);} },
 		{ "$m", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetMask), this) },
 		{ "$ifcond ", [this]() -> std::string
 	{
@@ -166,7 +167,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code)
 	}
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
-		{ "$c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
+		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
 	};
 
 	return fmt::replace_all(code, repl_list);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utilities/types.h"
+#include "Utilities/Atomic.h"
 
 class thread_ctrl;
 
@@ -10,7 +11,7 @@ namespace vm
 	{
 		u32 addr;
 		u32 mask;
-		thread_ctrl* thread{};
+		atomic_t<thread_ctrl*> thread{};
 
 		void initialize(u32 addr, u32 size);
 		bool try_notify();

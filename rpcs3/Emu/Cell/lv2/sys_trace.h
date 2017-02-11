@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // SysCalls
 s32 sys_trace_create();
 s32 sys_trace_start();

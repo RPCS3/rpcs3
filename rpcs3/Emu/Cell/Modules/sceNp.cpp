@@ -1464,6 +1464,24 @@ s32 sceNpUtilCmpNpIdInOrder()
 	return CELL_OK;
 }
 
+s32 sceNpUtilCmpOnlineId()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpUtilGetPlatformType()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpUtilSetPlatformType()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
 s32 _sceNpSysutilClientMalloc()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
@@ -1744,6 +1762,9 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, sceNpSignalingGetPeerNetInfoResult);
 	REG_FUNC(sceNp, sceNpUtilCmpNpId);
 	REG_FUNC(sceNp, sceNpUtilCmpNpIdInOrder);
+	REG_FUNC(sceNp, sceNpUtilCmpOnlineId); // 0x8C760B52
+	REG_FUNC(sceNp, sceNpUtilGetPlatformType); // 0xC611029A
+	REG_FUNC(sceNp, sceNpUtilSetPlatformType); // 0xAFC62605
 	REG_FUNC(sceNp, _sceNpSysutilClientMalloc);
 	REG_FUNC(sceNp, _sceNpSysutilClientFree);
 	REG_FUNC(sceNp, _Z33_sce_np_sysutil_send_empty_packetiPN16sysutil_cxmlutil11FixedMemoryEPKcS3_);

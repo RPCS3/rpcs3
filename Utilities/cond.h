@@ -20,13 +20,13 @@ public:
 	constexpr cond_variable() = default;
 
 	// Intrusive wait algorithm for lockable objects
-	template <typename T, void (T::*Unlock)() = &T::unlock, void (T::*Lock)() = &T::lock>
+	template <typename T>
 	explicit_bool_t wait(T& object, u64 usec_timeout = -1)
 	{
 		const u32 _old = m_value.fetch_add(1); // Increment waiter counter
-		(object.*Unlock)();
+		object.unlock();
 		const bool res = imp_wait(_old, usec_timeout);
-		(object.*Lock)();
+		object.lock();
 		return res;
 	}
 

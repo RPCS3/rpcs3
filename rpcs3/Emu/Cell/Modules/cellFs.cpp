@@ -10,6 +10,8 @@
 
 #include <mutex>
 
+namespace vm { using namespace ps3; }
+
 logs::channel cellFs("cellFs", logs::level::notice);
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
@@ -797,7 +799,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 		{ aio, func },
 	});
 
-	m->thread->lock_notify();
+	m->thread->notify();
 
 	return CELL_OK;
 }
@@ -823,7 +825,7 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 		{ aio, func },
 	});
 
-	m->thread->lock_notify();
+	m->thread->notify();
 
 	return CELL_OK;
 }

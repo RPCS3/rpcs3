@@ -1,11 +1,8 @@
 #pragma once
 
 #include "Gui/MainFrame.h"
-#include "Emu/DbgCommand.h"
 #include <wx/app.h>
 #include <wx/cmdline.h>
-
-wxDECLARE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
 
 class Rpcs3App : public wxApp
 {
@@ -20,8 +17,6 @@ public:
 	virtual void Exit();
 
 	Rpcs3App();
-
-	void SendDbgCommand(DbgCommand id, class cpu_thread* thr = nullptr);
 };
 
 DECLARE_APP(Rpcs3App)

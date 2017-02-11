@@ -82,7 +82,7 @@ addons:
     project:
       name: $TRAVIS_REPO_SLUG
       description: "PS3 emulator/debugger"
-    notification_email: raul.tambre@gmail.com
+    notification_email: nekotekina@gmail.com
     build_command: "make -j 4"
     branch_pattern: coverity_scan
 

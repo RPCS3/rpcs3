@@ -22,7 +22,7 @@ class ppu_thread : public cpu_thread
 public:
 	static const u32 id_base = 0x01000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = 65535;
+	static const u32 id_count = 2048;
 
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
@@ -120,10 +120,10 @@ public:
 	u32 prio = 0; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
-	bool is_joinable = true;
-	bool is_joining = false;
+	
+	atomic_t<u32> joiner{~0u}; // Joining thread (-1 if detached)
 
-	lf_fifo<atomic_t<cmd64>, 255> cmd_queue; // Command queue for asynchronous operations.
+	lf_fifo<atomic_t<cmd64>, 127> cmd_queue; // Command queue for asynchronous operations.
 
 	void cmd_push(cmd64);
 	void cmd_list(std::initializer_list<cmd64>);

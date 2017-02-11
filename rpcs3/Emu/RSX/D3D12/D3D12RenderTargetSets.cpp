@@ -111,12 +111,12 @@ void D3D12GSRender::clear_surface(u32 arg)
 	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
 	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 	
-	std::chrono::time_point<std::chrono::system_clock> start_duration = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> start_duration = steady_clock::now();
 
-	std::chrono::time_point<std::chrono::system_clock> rtt_duration_start = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> rtt_duration_start = steady_clock::now();
 	prepare_render_targets(get_current_resource_storage().command_list.Get());
 
-	std::chrono::time_point<std::chrono::system_clock> rtt_duration_end = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> rtt_duration_end = steady_clock::now();
 	m_timers.prepare_rtt_duration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
 
 	if (arg & 0x1 || arg & 0x2)
@@ -153,7 +153,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> end_duration = std::chrono::system_clock::now();
+	std::chrono::time_point<steady_clock> end_duration = steady_clock::now();
 	m_timers.draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
 	m_timers.draw_calls_count++;
 

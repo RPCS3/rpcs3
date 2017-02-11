@@ -333,11 +333,9 @@ struct surmixer_thread : ppu_thread
 
 		while (port.state != audio_port_state::closed)
 		{
-			CHECK_EMU_STATUS;
-
 			if (g_surmx.mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
-				std::this_thread::sleep_for(1ms); // hack
+				thread_ctrl::wait_for(1000); // hack
 				continue;
 			}
 

@@ -5,6 +5,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_rsx.h"
 
+namespace vm { using namespace ps3; }
+
 logs::channel sys_rsx("sys_rsx", logs::level::notice);
 
 s32 sys_rsx_device_open()

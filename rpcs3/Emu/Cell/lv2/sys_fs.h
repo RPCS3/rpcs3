@@ -2,7 +2,6 @@
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/IdManager.h"
 
 // Open Flags
 enum : s32
@@ -96,25 +95,24 @@ struct lv2_fs_mount_point;
 
 struct lv2_fs_object
 {
+	using id_type = lv2_fs_object;
+
 	static const u32 id_base = 3;
 	static const u32 id_step = 1;
 	static const u32 id_count = 255 - id_base;
-
-	const u32 id;
 
 	// Mount Point
 	const std::add_pointer_t<lv2_fs_mount_point> mp;
 
 	lv2_fs_object(lv2_fs_mount_point* mp)
 		: mp(mp)
-		, id(idm::last_id())
 	{
 	}
 
 	static lv2_fs_mount_point* get_mp(const char* filename);
 };
 
-struct lv2_file : lv2_fs_object
+struct lv2_file final : lv2_fs_object
 {
 	const fs::file file;
 	const s32 mode;
@@ -135,7 +133,7 @@ struct lv2_file : lv2_fs_object
 	u64 op_write(vm::ps3::cptr<void> buf, u64 size);
 };
 
-struct lv2_dir : lv2_fs_object
+struct lv2_dir final : lv2_fs_object
 {
 	const fs::dir dir;
 
@@ -183,7 +181,8 @@ struct lv2_file_op_rw : lv2_file_op
 
 CHECK_SIZE(lv2_file_op_rw, 0x38);
 
-// SysCalls
+// Syscalls
+
 error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> arg5, u32 arg6);
 error_code sys_fs_open(vm::ps3::cptr<char> path, s32 flags, vm::ps3::ptr<u32> fd, s32 mode, vm::ps3::cptr<void> arg, u64 size);
 error_code sys_fs_read(u32 fd, vm::ps3::ptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nread);

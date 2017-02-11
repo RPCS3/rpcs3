@@ -323,7 +323,7 @@ class VpostInstance
 public:
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
+	static const u32 id_count = 1023;
 
 	const bool to_rgba;
 

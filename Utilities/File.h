@@ -156,16 +156,18 @@ namespace fs
 		file() = default;
 
 		// Open file with specified mode
-		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read)
-		{
-			open(path, mode);
-		}
-
-		// Open file with specified mode
-		bool open(const std::string& path, bs_t<open_mode> mode = ::fs::read);
+		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);		
 
 		// Open memory for read
 		explicit file(const void* ptr, std::size_t size);
+
+		// Open file with specified args (forward to constructor)
+		template <typename... Args>
+		bool open(Args&&... args)
+		{
+			*this = fs::file(std::forward<Args>(args)...);
+			return m_file.operator bool();
+		}
 
 		// Check whether the handle is valid (opened file)
 		explicit operator bool() const

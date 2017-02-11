@@ -608,9 +608,7 @@ s32 cellAdecClose(u32 handle)
 
 	while (!adec->is_finished)
 	{
-		CHECK_EMU_STATUS;
-
-		std::this_thread::sleep_for(1ms); // hack
+		thread_ctrl::wait_for(1000); // hack
 	}
 
 	idm::remove<ppu_thread>(handle);

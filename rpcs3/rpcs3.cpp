@@ -19,6 +19,7 @@
 #include "KeyboardPadHandler.h"
 #ifdef _MSC_VER
 #include "XInputPadHandler.h"
+#include "MMJoystickHandler.h"
 #endif
 
 #include "Emu/RSX/Null/NullGSRender.h"
@@ -64,8 +65,6 @@ void save_gui_cfg()
 	s_gui_cfg.write(out.c_str(), out.size());
 }
 
-wxDEFINE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
-
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
@@ -87,6 +86,7 @@ cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handl
 	{ "Keyboard", &std::make_shared<KeyboardPadHandler> },
 #ifdef _MSC_VER
 	{ "XInput", &std::make_shared<XInputPadHandler> },
+	{ "MMJoystick", &std::make_shared<MMJoystickHandler>},
 #endif
 });
 
@@ -152,11 +152,6 @@ bool Rpcs3App::OnInit()
 	callbacks.exit = [this]()
 	{
 		wxGetApp().Exit();
-	};
-
-	callbacks.send_dbg_command = [](DbgCommand id, cpu_thread* t)
-	{
-		wxGetApp().SendDbgCommand(id, t);
 	};
 
 	callbacks.get_kb_handler = []{ return g_cfg_kb_handler.get()(); };
@@ -241,13 +236,6 @@ void Rpcs3App::Exit()
 {
 	Emu.Stop();
 	wxApp::Exit();
-}
-
-void Rpcs3App::SendDbgCommand(DbgCommand id, cpu_thread* thr)
-{
-	wxCommandEvent event(wxEVT_DBG_COMMAND, id);
-	event.SetClientData(thr);
-	AddPendingEvent(event);
 }
 
 Rpcs3App::Rpcs3App()

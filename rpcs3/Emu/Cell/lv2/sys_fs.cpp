@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
 #include "Utilities/StrUtil.h"
 
 namespace vm { using namespace ps3; }
@@ -143,17 +144,14 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		return CELL_ENOENT;
 	}
 
-	const auto _file = idm::make_ptr<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags);
-
-	if (!_file)
+	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags))
 	{
-		// out of file descriptors
-		return CELL_EMFILE;
+		*fd = id;
+		return CELL_OK;
 	}
 
-	*fd = _file->id;
-
-	return CELL_OK;
+	// Out of file descriptors
+	return CELL_EMFILE;
 }
 
 error_code sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
@@ -245,18 +243,14 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 		return CELL_ENOENT;
 	}
 
-	const auto _dir = idm::make_ptr<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(dir));
-
-	if (!_dir)
+	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(dir)))
 	{
-		// out of file descriptors
-		return CELL_EMFILE;
+		*fd = id;
+		return CELL_OK;
 	}
 
-	*fd = _dir->id;
-	sys_fs.notice("sys_fs_opendir(%s) -> lv2_fs_id %d", path, _dir->id);
-
-	return CELL_OK;
+	// Out of file descriptors
+	return CELL_EMFILE;
 }
 
 error_code sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
@@ -324,8 +318,8 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	}
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 1; // ???
-	sb->gid = 1; // ???
+	sb->uid = 0; // Always zero
+	sb->gid = 0; // Always zero
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
@@ -351,8 +345,8 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	const fs::stat_t& info = file->file.stat();
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 1; // ???
-	sb->gid = 1; // ???
+	sb->uid = 0; // Always zero
+	sb->gid = 0; // Always zero
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime; // ctime may be incorrect

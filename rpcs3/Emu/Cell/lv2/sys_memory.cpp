@@ -86,28 +86,25 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	}
 	}
 
-	error_code result{};
-
-	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct)
+	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct) -> CellError
 	{
 		// Try to get "physical memory"
 		if (!ct.take(size))
 		{
-			result = CELL_ENOMEM;
-			return false;
+			return CELL_ENOMEM;
 		}
 
-		return true;
+		return {};
 	});
 
-	if (!ct && !result)
+	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!ct)
+	if (ct.ret)
 	{
-		return result;
+		return ct.ret;
 	}
 
 	// Allocate memory, write back the start address of the allocated area, use cid as the supplementary info
@@ -206,28 +203,25 @@ error_code sys_memory_container_destroy(u32 cid)
 {
 	sys_memory.warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
-	error_code result{};
-
-	const auto ct = idm::withdraw<lv2_memory_container>(cid, [&](lv2_memory_container& ct)
+	const auto ct = idm::withdraw<lv2_memory_container>(cid, [](lv2_memory_container& ct) -> CellError
 	{
 		// Check if some memory is not deallocated (the container cannot be destroyed in this case)
 		if (!ct.used.compare_and_swap_test(0, ct.size))
 		{
-			result = CELL_EBUSY;
-			return false;
+			return CELL_EBUSY;
 		}
 
-		return true;
+		return {};
 	});
 
-	if (!ct && !result)
+	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!ct)
+	if (ct.ret)
 	{
-		return result;
+		return ct.ret;
 	}
 
 	// Return "physical memory" to the default container

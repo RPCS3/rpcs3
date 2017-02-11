@@ -3,7 +3,9 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "restore_new.h"
 #include "Utilities/rXml.h"
+#include "define_new_memleakdetect.h"
 #include "Loader/TRP.h"
 #include "Loader/TROPUSR.h"
 
@@ -18,9 +20,7 @@ struct trophy_context_t
 {
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
-
-	const u32 id = idm::last_id();
+	static const u32 id_count = 1023;
 
 	std::string trp_name;
 	fs::file trp_stream;
@@ -31,9 +31,7 @@ struct trophy_handle_t
 {
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
-
-	const u32 id = idm::last_id();
+	static const u32 id_count = 1023;
 };
 
 // Functions
@@ -123,7 +121,7 @@ s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = std::move(name);
 	ctxt->trp_stream = std::move(stream);
-	*context = ctxt->id;
+	*context = idm::last_id();
 
 	return CELL_OK;
 }

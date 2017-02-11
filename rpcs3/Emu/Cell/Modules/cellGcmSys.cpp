@@ -13,7 +13,7 @@
 logs::channel cellGcmSys("cellGcmSys", logs::level::notice);
 
 extern s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count);
-extern void ppu_register_function_at(u32 addr, ppu_function_t ptr);
+extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
 
 const u32 tiled_pitches[] = {
 	0x00000000, 0x00000200, 0x00000300, 0x00000400,
@@ -222,13 +222,13 @@ u32 cellGcmGetControlRegister()
 u32 cellGcmGetDefaultCommandWordSize()
 {
 	cellGcmSys.trace("cellGcmGetDefaultCommandWordSize()");
-	return 0x400;
+	return gcm_info.command_size;
 }
 
 u32 cellGcmGetDefaultSegmentWordSize()
 {
 	cellGcmSys.trace("cellGcmGetDefaultSegmentWordSize()");
-	return 0x100;
+	return gcm_info.segment_size;
 }
 
 s32 cellGcmInitDefaultFifoMode(s32 mode)
@@ -385,7 +385,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	vm::write32(gcm_info.context_addr + 0x44, 0xabadcafe);
 	vm::write32(gcm_info.context_addr + 0x48, ppu_instructions::HACK(FIND_FUNC(cellGcmCallback)));
 	vm::write32(gcm_info.context_addr + 0x4c, ppu_instructions::BLR());
-	ppu_register_function_at(gcm_info.context_addr + 0x48, BIND_FUNC(cellGcmCallback));
+	ppu_register_function_at(gcm_info.context_addr + 0x48, 8, BIND_FUNC(cellGcmCallback));
 
 	vm::_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	context->set(gcm_info.context_addr);
@@ -1134,9 +1134,22 @@ void cellGcmSetDefaultCommandBuffer()
 	vm::write32(fxm::get<GSRender>()->ctxt_addr, gcm_info.context_addr);
 }
 
-s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize()
+s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segmentSize)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.warning("cellGcmSetDefaultCommandBufferAndSegmentWordSize(bufferSize = 0x%x, segmentSize = 0x%x)", bufferSize, segmentSize);
+
+	const auto& put = vm::_ref<CellGcmControl>(gcm_info.control_addr).put;
+	const auto& get = vm::_ref<CellGcmControl>(gcm_info.control_addr).get;
+
+	if (put != 0x1000 || get != 0x1000 || bufferSize < segmentSize * 2)
+	{
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
+	gcm_info.command_size = bufferSize;
+	gcm_info.segment_size = segmentSize;
+
+	return CELL_OK;
 }
 
 //------------------------------------------------------------------------
@@ -1290,7 +1303,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	cellGcmSys.trace("cellGcmCallback(context=*0x%x, count=0x%x)", context, count);
 
 	auto& ctrl = vm::_ref<CellGcmControl>(gcm_info.control_addr);
-	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
+	const std::chrono::time_point<steady_clock> enterWait = steady_clock::now();
 	// Flush command buffer (ie allow RSX to read up to context->current)
 	ctrl.put.exchange(getOffsetFromAddress(context->current.addr()));
 
@@ -1309,7 +1322,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 		u32 getPos = ctrl.get.load();
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
-		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
+		std::chrono::time_point<steady_clock> waitPoint = steady_clock::now();
 		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();
 		if (elapsedTime > 0)
 			cellGcmSys.error("Has wait for more than a second for command buffer to be released by RSX");

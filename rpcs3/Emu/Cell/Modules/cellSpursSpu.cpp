@@ -10,6 +10,7 @@
 #include "cellSpurs.h"
 
 #include <thread>
+#include <mutex>
 
 //----------------------------------------------------------------------------
 // Externs
@@ -685,11 +686,7 @@ bool spursKernelWorkloadExit(SPUThread& spu)
 // SPURS kernel entry point
 bool spursKernelEntry(SPUThread& spu)
 {
-	while (true)
-	{
-		std::this_thread::sleep_for(100ms);
-		CHECK_EMU_STATUS;
-	}
+	thread_ctrl::eternalize();
 
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	memset(ctxt, 0, sizeof(SpursKernelContext));
@@ -771,8 +768,6 @@ bool spursSysServiceEntry(SPUThread& spu)
 void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 {
 	bool shouldExit;
-
-	std::unique_lock<named_thread> lock(spu, std::defer_lock);
 
 	while (true)
 	{
@@ -861,8 +856,6 @@ void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 		if (spuIdling && shouldExit == false && foundReadyWorkload == false)
 		{
 			// The system service blocks by making a reservation and waiting on the lock line reservation lost event.
-			CHECK_EMU_STATUS;
-			if (!lock) { lock.lock(); continue; }
 			thread_ctrl::wait_for(1000);
 			continue;
 		}
@@ -937,7 +930,6 @@ void spursSysServiceMain(SPUThread& spu, u32 pollStatus)
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
 		// Process requests for the system service
 		spursSysServiceProcessRequests(spu, ctxt);
 
@@ -980,7 +972,6 @@ void spursSysServiceMain(SPUThread& spu, u32 pollStatus)
 		cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
 
 		spursSysServiceIdleHandler(spu, ctxt);
-		CHECK_EMU_STATUS;
 
 		goto poll;
 	}

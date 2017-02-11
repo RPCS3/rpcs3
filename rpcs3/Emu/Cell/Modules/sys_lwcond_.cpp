@@ -11,11 +11,17 @@ extern logs::channel sysPrxForUser;
 
 s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
 {
-	sysPrxForUser.warning("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
+	sysPrxForUser.trace("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
 
-	lwcond->lwcond_queue = idm::make<lv2_lwcond_t>(reinterpret_cast<u64&>(attr->name));
-	lwcond->lwmutex = lwmutex;
+	vm::var<u32> out_id;
 
+	if (s32 res = _sys_lwcond_create(out_id, lwmutex->sleep_queue, lwcond, attr->name_u64, 0))
+	{
+		return res;
+	}
+
+	lwcond->lwmutex      = lwmutex;
+	lwcond->lwcond_queue = *out_id;
 	return CELL_OK;
 }
 
@@ -23,14 +29,13 @@ s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 {
 	sysPrxForUser.trace("sys_lwcond_destroy(lwcond=*0x%x)", lwcond);
 
-	const s32 res = _sys_lwcond_destroy(lwcond->lwcond_queue);
-
-	if (res == CELL_OK)
+	if (s32 res = _sys_lwcond_destroy(lwcond->lwcond_queue))
 	{
-		lwcond->lwcond_queue = lwmutex_dead;
+		return res;
 	}
 
-	return res;
+	lwcond->lwcond_queue = lwmutex_dead;
+	return CELL_OK;
 }
 
 s32 sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)

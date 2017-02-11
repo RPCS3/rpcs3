@@ -20,7 +20,6 @@
 
 #include <cmath>
 #include <cfenv>
-#include <thread>
 
 extern u64 get_timebased_time();
 
@@ -51,11 +50,14 @@ void spu_int_ctrl_t::set(u64 ints)
 	// notify if at least 1 bit was set
 	if (ints && ~stat.fetch_or(ints) & ints && tag)
 	{
-		LV2_LOCK;
+		reader_lock rlock(id_manager::g_mutex);
 
-		if (tag && tag->handler)
+		if (tag)
 		{
-			tag->handler->exec();
+			if (auto handler = tag->handler.lock())
+			{
+				handler->exec();
+			}
 		}
 	}
 }
@@ -210,7 +212,7 @@ void SPUThread::cpu_task()
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS base address
-	const auto base = vm::_ptr<const u32>(offset);
+	const auto base = vm::ps3::_ptr<const u32>(offset);
 
 	while (true)
 	{
@@ -242,14 +244,16 @@ SPUThread::SPUThread(const std::string& name)
 	, m_name(name)
 	, index(0)
 	, offset(0)
+	, group(nullptr)
 {
 }
 
-SPUThread::SPUThread(const std::string& name, u32 index)
+SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 	: cpu_thread(idm::last_id())
 	, m_name(name)
 	, index(index)
 	, offset(verify("SPU LS" HERE, vm::alloc(0x40000, vm::main)))
+	, group(group)
 {
 }
 
@@ -282,8 +286,6 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 	{
 		const u32 index = (eal - SYS_SPU_THREAD_BASE_LOW) / SYS_SPU_THREAD_OFFSET; // thread number in group
 		const u32 offset = (eal - SYS_SPU_THREAD_BASE_LOW) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
-
-		const auto group = tg.lock();
 
 		if (group && index < group->num && group->threads[index])
 		{
@@ -348,7 +350,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 
 	for (u32 i = 0; i < list_size; i++)
 	{
-		auto rec = vm::ptr<list_element>::make(offset + list_addr + i * 8);
+		auto rec = vm::ps3::ptr<list_element>::make(offset + list_addr + i * 8);
 
 		const u32 size = rec->ts;
 		const u32 addr = rec->ea;
@@ -502,11 +504,17 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 u32 SPUThread::get_events(bool waiting)
 {
 	// check reservation status and set SPU_EVENT_LR if lost
-	if (last_raddr != 0 && !vm::reservation_test(operator->()))
+	if (last_raddr != 0 && !vm::reservation_test(this->get()))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 
 		last_raddr = 0;
+	}
+
+	// SPU Decrementer Event
+	if ((ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
+	{
+		ch_event_stat |= SPU_EVENT_TM;
 	}
 
 	// initialize waiting
@@ -545,7 +553,7 @@ void SPUThread::set_events(u32 mask)
 	// Notify if some events were set
 	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING && ch_event_stat & SPU_EVENT_WAITING)
 	{
-		lock_notify();
+		notify();
 	}
 }
 
@@ -599,7 +607,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		if (!channel.try_pop(out))
 		{
-			thread_lock{*this}, thread_ctrl::wait([&] { return test(state & cpu_flag::stop) || channel.try_pop(out); });
+			thread_ctrl::wait([&] { return test(state & cpu_flag::stop) || channel.try_pop(out); });
 
 			return !test(state & cpu_flag::stop);
 		}
@@ -614,8 +622,6 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	//	break;
 	case SPU_RdInMbox:
 	{
-		std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 		while (true)
 		{
 			if (const uint old_count = ch_in_mbox.try_pop(out))
@@ -628,17 +634,9 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 				return true;
 			}
 
-			CHECK_EMU_STATUS;
-
 			if (test(state & cpu_flag::stop))
 			{
 				return false;
-			}
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
 			}
 
 			thread_ctrl::wait();
@@ -690,8 +688,6 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdEventStat:
 	{
-		std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 		// start waiting or return immediately
 		if (u32 res = get_events(true))
 		{
@@ -706,13 +702,9 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		}
 		else
 		{
-			lock.lock();
-
 			// simple waiting loop otherwise
 			while (!get_events(true) && !test(state & cpu_flag::stop))
 			{
-				CHECK_EMU_STATUS;
-
 				thread_ctrl::wait();
 			}
 		}
@@ -753,21 +745,11 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
-			std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 			while (!ch_out_intr_mbox.try_push(value))
 			{
-				CHECK_EMU_STATUS;
-
 				if (test(state & cpu_flag::stop))
 				{
 					return false;
-				}
-
-				if (!lock)
-				{
-					lock.lock();
-					continue;
 				}
 
 				thread_ctrl::wait();
@@ -776,18 +758,17 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
 			return true;
 		}
-		else
+		
+		const u32 code = value >> 24;
 		{
-			const u8 code = value >> 24;
 			if (code < 64)
 			{
 				/* ===== sys_spu_thread_send_event (used by spu_printf) ===== */
 
-				LV2_LOCK;
+				u32 spup = code & 63;
+				u32 data;
 
-				const u8 spup = code & 63;
-
-				if (!ch_out_mbox.get_count())
+				if (!ch_out_mbox.try_pop(data))
 				{
 					fmt::throw_exception("sys_spu_thread_send_event(value=0x%x, spup=%d): Out_MBox is empty" HERE, value, spup);
 				}
@@ -797,13 +778,9 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					fmt::throw_exception("sys_spu_thread_send_event(value=0x%x, spup=%d): In_MBox is not empty (count=%d)" HERE, value, spup, count);
 				}
 
-				const u32 data = ch_out_mbox.get_value();
-
-				ch_out_mbox.set_value(data, 0);
-
 				LOG_TRACE(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = this->spup[spup].lock();
+				const auto queue = (semaphore_lock{group->mutex}, this->spup[spup].lock());
 
 				if (!queue)
 				{
@@ -811,12 +788,10 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					return ch_in_mbox.set_values(1, CELL_ENOTCONN), true; // TODO: check error passing
 				}
 
-				if (queue->events() >= queue->size)
+				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
 					return ch_in_mbox.set_values(1, CELL_EBUSY), true;
 				}
-
-				queue->push(lv2_lock, SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data);
 
 				return ch_in_mbox.set_values(1, CELL_OK), true;
 			}
@@ -824,22 +799,17 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			{
 				/* ===== sys_spu_thread_throw_event ===== */
 
-				LV2_LOCK;
+				u32 spup = code & 63;
+				u32 data;
 
-				const u8 spup = code & 63;
-
-				if (!ch_out_mbox.get_count())
+				if (!ch_out_mbox.try_pop(data))
 				{
 					fmt::throw_exception("sys_spu_thread_throw_event(value=0x%x, spup=%d): Out_MBox is empty" HERE, value, spup);
 				}
 
-				const u32 data = ch_out_mbox.get_value();
-
-				ch_out_mbox.set_value(data, 0);
-
 				LOG_TRACE(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = this->spup[spup].lock();
+				const auto queue = (semaphore_lock{group->mutex}, this->spup[spup].lock());
 
 				if (!queue)
 				{
@@ -848,24 +818,21 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				}
 
 				// TODO: check passing spup value
-				if (queue->events() >= queue->size)
+				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (queue is full)", spup, (value & 0x00ffffff), data);
-					return true;
 				}
 
-				queue->push(lv2_lock, SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data);
 				return true;
 			}
 			else if (code == 128)
 			{
 				/* ===== sys_event_flag_set_bit ===== */
 
-				LV2_LOCK;
+				u32 flag = value & 0xffffff;
+				u32 data;
 
-				const u32 flag = value & 0xffffff;
-
-				if (!ch_out_mbox.get_count())
+				if (!ch_out_mbox.try_pop(data))
 				{
 					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): Out_MBox is empty" HERE, value, flag);
 				}
@@ -875,10 +842,6 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)" HERE, value, flag, count);
 				}
 
-				const u32 data = ch_out_mbox.get_value();
-
-				ch_out_mbox.set_value(data, 0);
-
 				if (flag > 63)
 				{
 					fmt::throw_exception("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d)): Invalid flag" HERE, data, value, flag);
@@ -886,39 +849,20 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				const auto eflag = idm::get<lv2_event_flag_t>(data);
-
-				if (!eflag)
-				{
-					return ch_in_mbox.set_values(1, CELL_ESRCH), true;
-				}
-
-				const u64 bitptn = 1ull << flag;
-
-				if (~eflag->pattern.fetch_or(bitptn) & bitptn)
-				{
-					// notify if the bit was set
-					eflag->notify_all(lv2_lock);
-				}
-				
-				return ch_in_mbox.set_values(1, CELL_OK), true;
+				// Use the syscall to set flag
+				return ch_in_mbox.set_values(1, sys_event_flag_set(data, 1ull << flag)), true;
 			}
 			else if (code == 192)
 			{
 				/* ===== sys_event_flag_set_bit_impatient ===== */
 
-				LV2_LOCK;
+				u32 flag = value & 0xffffff;
+				u32 data;
 
-				const u32 flag = value & 0xffffff;
-
-				if (!ch_out_mbox.get_count())
+				if (!ch_out_mbox.try_pop(data))
 				{
 					fmt::throw_exception("sys_event_flag_set_bit_impatient(value=0x%x (flag=%d)): Out_MBox is empty" HERE, value, flag);
 				}
-
-				const u32 data = ch_out_mbox.get_value();
-
-				ch_out_mbox.set_value(data, 0);
 
 				if (flag > 63)
 				{
@@ -927,21 +871,8 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				const auto eflag = idm::get<lv2_event_flag_t>(data);
-
-				if (!eflag)
-				{
-					return true;
-				}
-
-				const u64 bitptn = 1ull << flag;
-
-				if (~eflag->pattern.fetch_or(bitptn) & bitptn)
-				{
-					// notify if the bit was set
-					eflag->notify_all(lv2_lock);
-				}
-				
+				// Use the syscall to set flag
+				sys_event_flag_set(data, 1ull << flag);
 				return true;
 			}
 			else
@@ -960,21 +891,11 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
-		std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 		while (!ch_out_mbox.try_push(value))
 		{
-			CHECK_EMU_STATUS;
-
 			if (test(state & cpu_flag::stop))
 			{
 				return false;
-			}
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
 			}
 
 			thread_ctrl::wait();
@@ -1144,7 +1065,7 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 	case 0x001:
 	{
-		std::this_thread::sleep_for(1ms); // hack
+		thread_ctrl::wait_for(1000); // hack
 		return true;
 	}
 
@@ -1175,9 +1096,9 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 		/* ===== sys_spu_thread_receive_event ===== */
 
-		LV2_LOCK;
+		u32 spuq;
 
-		if (!ch_out_mbox.get_count())
+		if (!ch_out_mbox.try_pop(spuq))
 		{
 			fmt::throw_exception("sys_spu_thread_receive_event(): Out_MBox is empty" HERE);
 		}
@@ -1188,126 +1109,129 @@ bool SPUThread::stop_and_signal(u32 code)
 			return ch_in_mbox.set_values(1, CELL_EBUSY), true;
 		}
 
-		const u32 spuq = ch_out_mbox.get_value();
-
-		ch_out_mbox.set_value(spuq, 0);
-
 		LOG_TRACE(SPU, "sys_spu_thread_receive_event(spuq=0x%x)", spuq);
-
-		const auto group = tg.lock();
-
-		if (!group)
-		{
-			fmt::throw_exception("Invalid SPU Thread Group" HERE);
-		}
 
 		if (group->type & SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT) // this check may be inaccurate
 		{
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
 
-		std::shared_ptr<lv2_event_queue_t> queue;
+		std::shared_ptr<lv2_event_queue> queue;
 
-		for (auto& v : this->spuq)
+		while (true)
 		{
-			if (spuq == v.first)
+			queue.reset();
+
+			// Check group status, wait if necessary
+			while (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_SUSPENDED)
 			{
-				queue = v.second.lock();
-
-				if (queue)
-				{
-					break;
-				}
-			}
-		}
-
-		if (!queue)
-		{
-			return ch_in_mbox.set_values(1, CELL_EINVAL), true; // TODO: check error value
-		}
-
-		// check thread group status
-		while (group->state >= SPU_THREAD_GROUP_STATUS_WAITING && group->state <= SPU_THREAD_GROUP_STATUS_SUSPENDED)
-		{
-			CHECK_EMU_STATUS;
-
-			if (test(state & cpu_flag::stop))
-			{
-				return false;
-			}
-
-			group->cv.wait_for(lv2_lock, 1ms);
-		}
-
-		// change group status
-		if (group->state == SPU_THREAD_GROUP_STATUS_RUNNING)
-		{
-			group->state = SPU_THREAD_GROUP_STATUS_WAITING;
-
-			for (auto& thread : group->threads)
-			{
-				if (thread)
-				{
-					thread->state += cpu_flag::suspend;
-				}
-			}
-		}
-		else
-		{
-			fmt::throw_exception("Unexpected SPU Thread Group state (%d)" HERE, (u32)group->state);
-		}
-
-		if (queue->events())
-		{
-			const auto event = queue->pop(lv2_lock);
-			ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(std::get<1>(event)), static_cast<u32>(std::get<2>(event)), static_cast<u32>(std::get<3>(event)));
-		}
-		else
-		{
-			// add waiter; protocol is ignored in current implementation
-			sleep_entry<cpu_thread> waiter(queue->thread_queue(lv2_lock), *this);
-
-			// wait on the event queue
-			while (!state.test_and_reset(cpu_flag::signal))
-			{
-				CHECK_EMU_STATUS;
-
 				if (test(state & cpu_flag::stop))
 				{
 					return false;
 				}
 
-				get_current_thread_cv().wait(lv2_lock);
+				thread_ctrl::wait();
 			}
 
-			// event data must be set by push()
+			reader_lock rlock(id_manager::g_mutex);
+
+			semaphore_lock lock(group->mutex);
+
+			if (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+			{
+				// Try again
+				continue;
+			}
+
+			for (auto& v : this->spuq)
+			{
+				if (spuq == v.first)
+				{
+					queue = v.second.lock();
+
+					if (queue)
+					{
+						break;
+					}
+				}
+			}
+
+			if (!queue)
+			{
+				return ch_in_mbox.set_values(1, CELL_EINVAL), true; // TODO: check error value
+			}
+
+			semaphore_lock qlock(queue->mutex);
+
+			if (queue->events.empty())
+			{
+				queue->sq.emplace_back(this);
+				group->run_state = SPU_THREAD_GROUP_STATUS_WAITING;
+
+				for (auto& thread : group->threads)
+				{
+					if (thread)
+					{
+						thread->state += cpu_flag::suspend;
+					}
+				}
+
+				// Wait
+				break;
+			}
+			else
+			{
+				// Return the event immediately
+				const auto event = queue->events.front();
+				const auto data1 = static_cast<u32>(std::get<1>(event));
+				const auto data2 = static_cast<u32>(std::get<2>(event));
+				const auto data3 = static_cast<u32>(std::get<3>(event));
+				ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
+				queue->events.pop_front();
+				return true;
+			}
 		}
+
+		while (true)
+		{
+			if (test(state & cpu_flag::stop))
+			{
+				return false;
+			}
+
+			if (!state.test_and_reset(cpu_flag::signal))
+			{
+				thread_ctrl::wait();
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		semaphore_lock lock(group->mutex);
 		
-		// restore thread group status
-		if (group->state == SPU_THREAD_GROUP_STATUS_WAITING)
+		if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING)
 		{
-			group->state = SPU_THREAD_GROUP_STATUS_RUNNING;
+			group->run_state = SPU_THREAD_GROUP_STATUS_RUNNING;
 		}
-		else if (group->state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		else if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 		{
-			group->state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
-		}
-		else
-		{
-			fmt::throw_exception("Unexpected SPU Thread Group state (%d)" HERE, (u32)group->state);
+			group->run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
 		}
 
 		for (auto& thread : group->threads)
 		{
-			if (thread && thread.get() != this)
+			if (thread)
 			{
 				thread->state -= cpu_flag::suspend;
-				thread->lock_notify();
+
+				if (thread.get() != this)
+				{
+					thread->notify();
+				}
 			}
 		}
-
-		state -= cpu_flag::suspend;
-		group->cv.notify_all();
 
 		return true;
 	}
@@ -1316,36 +1240,27 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 		/* ===== sys_spu_thread_group_exit ===== */
 
-		LV2_LOCK;
+		u32 value;
 
-		if (!ch_out_mbox.get_count())
+		if (!ch_out_mbox.try_pop(value))
 		{
 			fmt::throw_exception("sys_spu_thread_group_exit(): Out_MBox is empty" HERE);
 		}
 
-		const u32 value = ch_out_mbox.get_value();
-
-		ch_out_mbox.set_value(value, 0);
-
 		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
 
-		const auto group = tg.lock();
-
-		if (!group)
-		{
-			fmt::throw_exception("Invalid SPU Thread Group" HERE);
-		}
+		semaphore_lock lock(group->mutex);
 
 		for (auto& thread : group->threads)
 		{
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_flag::stop;
-				thread->lock_notify();
+				thread->notify();
 			}
 		}
 
-		group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 		group->exit_status = value;
 		group->join_state |= SPU_TGJSF_GROUP_EXIT;
 		group->cv.notify_one();
@@ -1358,8 +1273,6 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 		/* ===== sys_spu_thread_exit ===== */
 
-		LV2_LOCK;
-
 		if (!ch_out_mbox.get_count())
 		{
 			fmt::throw_exception("sys_spu_thread_exit(): Out_MBox is empty" HERE);
@@ -1367,12 +1280,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
 
-		const auto group = tg.lock();
-
-		if (!group)
-		{
-			fmt::throw_exception("Invalid SPU Thread Group" HERE);
-		}
+		semaphore_lock lock(group->mutex);
 
 		status |= SPU_STATUS_STOPPED_BY_STOP;
 		group->cv.notify_one();

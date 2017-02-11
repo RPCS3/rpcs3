@@ -442,7 +442,7 @@ u32 arm_tls_manager::alloc()
 	return 0;
 }
 
-void arm_tls_manager::free(u32 addr)
+void arm_tls_manager::dealloc(u32 addr)
 {
 	if (!addr)
 	{
@@ -555,7 +555,7 @@ error_code sceKernelDeleteThread(s32 threadId)
 	//	return SCE_KERNEL_ERROR_NOT_DORMANT;
 	//}
 
-	fxm::get<arm_tls_manager>()->free(thread->TLS);
+	fxm::get<arm_tls_manager>()->dealloc(thread->TLS);
 	idm::remove<ARMv7Thread>(threadId);
 	return SCE_OK;
 }
@@ -567,7 +567,7 @@ error_code sceKernelExitDeleteThread(ARMv7Thread& cpu, s32 exitStatus)
 	//cpu.state += cpu_flag::stop;
 
 	// Delete current thread; exit status is stored in r0
-	fxm::get<arm_tls_manager>()->free(cpu.TLS);
+	fxm::get<arm_tls_manager>()->dealloc(cpu.TLS);
 	idm::remove<ARMv7Thread>(cpu.id);
 
 	return SCE_OK;
@@ -809,17 +809,8 @@ s32 sceKernelWaitMultipleEventsCB(vm::ptr<SceKernelWaitEvent> pWaitEventList, s3
 struct psp2_event_flag final
 {
 	static const u32 id_base = 1;
-	static const u32 id_step = 1;
-	static const u32 id_count = 32767;
-
-	struct alignas(8) ctrl_t
-	{
-		u32 waiters;
-		u32 pattern;
-	};
-
-	atomic_t<ctrl_t> ctrl;    // Sync variable
-	atomic_t<u64> wait_ctr{}; // FIFO ordering helper
+	static const u32 id_step = 2;
+	static const u32 id_count = 8192;
 
 	using ipc = ipc_manager<psp2_event_flag, std::string>;
 
@@ -829,11 +820,15 @@ struct psp2_event_flag final
 	const u32 attr;
 	const u32 init;
 
+	atomic_t<u32> pattern{0}; // Sync variable
+	atomic_t<u32> waiters{0}; // Waiter number or waiter id
+	atomic_t<u64> wait_ctr;   // FIFO ordering helper
+
 	psp2_event_flag(std::string&& name, u32 attr, u32 pattern)
-		: ctrl({0, pattern})
-		, name(std::move(name))
+		: name(std::move(name))
 		, attr(attr)
 		, init(pattern)
+		, pattern(pattern)
 	{
 	}
 
@@ -856,14 +851,15 @@ struct psp2_event_flag final
 	// Commands
 	enum class task : u32
 	{
-		null = 0,
-		wait,
-		poll,
-		set,
-		clear,
-		cancel,
-		destroy,
-		signal,
+		null,
+		wait,    // Check condition, enqueue waiting thread
+		poll,    // Check condition only
+		set,     // Set pattern bits and wake up threads
+		clear,   // Clear pattern bits (bitwise AND)
+		cancel,  // Wake up all threads with SCE_KERNEL_ERROR_WAIT_CANCEL
+		destroy, // Wake up all threads with SCE_KERNEL_ERROR_WAIT_DELETE
+		timeout, // Dequeue waiting thread (cleanup)
+		signal,  // Signal selected thread (aux)
 	};
 
 	struct alignas(8) cmd_t
@@ -907,16 +903,32 @@ struct psp2_event_flag final
 			case task::wait:    op_wait(cmd.arg); break;
 			case task::poll:    op_poll(cmd.arg); break;
 			case task::set:     op_set(cmd.arg); break;
-			case task::clear:   op_clear(cmd.arg); break;
+			case task::clear:   pattern &= cmd.arg; break;
 			case task::cancel:  op_stop(vm::cast(cmd.arg), SCE_KERNEL_ERROR_WAIT_CANCEL); break;
 			case task::destroy: op_stop(vm::cast(cmd.arg), SCE_KERNEL_ERROR_WAIT_DELETE); break;
 
+			case task::timeout:
+			{
+				// Timeout cleanup
+				idm::check<ARMv7Thread>(cmd.arg, [&](ARMv7Thread& cpu)
+				{
+					if (cpu.owner.compare_and_swap_test(this, nullptr))
+					{
+						cpu.GPR[0] = SCE_KERNEL_ERROR_WAIT_TIMEOUT;
+						cpu.GPR[1] = pattern;
+						waiters -= attr & SCE_KERNEL_ATTR_MULTI ? 1 : cpu.id;
+					}
+				});
+
+				break;
+			}
+
 			case task::signal:
 			{
-				idm::get<ARMv7Thread>(cmd.arg, [&](ARMv7Thread& cpu)
+				idm::check<ARMv7Thread>(cmd.arg, [](auto& cpu)
 				{
 					cpu.state += cpu_flag::signal;
-					cpu.lock_notify();
+					cpu.notify();
 				});
 
 				break;
@@ -943,7 +955,7 @@ struct psp2_event_flag final
 		{
 			if (!exec(task::signal, cpu.id))
 			{
-				thread_lock{cpu}, thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
+				thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
 			}
 			else
 			{
@@ -955,30 +967,42 @@ struct psp2_event_flag final
 private:
 	lf_fifo<atomic_t<cmd_t>, 16> m_workload;
 
-	// Check condition
 	void op_wait(u32 thread_id)
 	{
-		idm::get<ARMv7Thread>(thread_id, [&](ARMv7Thread& cpu)
+		idm::check<ARMv7Thread>(thread_id, [=](ARMv7Thread& cpu)
 		{
-			const u32 pattern = ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state) -> u32
+			if (attr & SCE_KERNEL_ATTR_MULTI)
 			{
-				const u32 pat = state.pattern;
+				waiters++;
+			}
+			else if (!waiters.compare_and_swap_test(0, thread_id))
+			{
+				cpu.GPR[0] = SCE_KERNEL_ERROR_EVF_MULTI;
+				cpu.GPR[1] = pattern;
+				cpu.state += cpu_flag::signal;
+				cpu.notify();
+				return;
+			}
+
+			const u32 old_pattern = pattern.atomic_op([&](u32& value) -> u32
+			{
+				const u32 pat = value;
 				if (pat_test(pat, cpu.GPR[1], cpu.GPR[0]))
 				{
-					state.pattern &= pat_clear(cpu.GPR[1], cpu.GPR[0]);
-					state.waiters -= attr & SCE_KERNEL_ATTR_MULTI ? 1 : cpu.id;
+					value &= pat_clear(cpu.GPR[1], cpu.GPR[0]);
 					return pat;
 				}
 
 				return 0;
 			});
 
-			if (pattern)
+			if (old_pattern)
 			{
+				waiters -= attr & SCE_KERNEL_ATTR_MULTI ? 1 : cpu.id;
 				cpu.GPR[0] = SCE_OK;
-				cpu.GPR[1] = pattern;
+				cpu.GPR[1] = old_pattern;
 				cpu.state += cpu_flag::signal;
-				cpu->lock_notify();
+				cpu.notify();
 			}
 			else
 			{
@@ -988,17 +1012,16 @@ private:
 		});
 	}
 
-	// Check condition
 	void op_poll(u32 thread_id)
 	{
-		idm::get<ARMv7Thread>(thread_id, [&](ARMv7Thread& cpu)
+		idm::check<ARMv7Thread>(thread_id, [&](ARMv7Thread& cpu)
 		{
-			cpu.GPR[1] = ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state) -> u32
+			cpu.GPR[1] = pattern.atomic_op([&](u32& value) -> u32
 			{
-				const u32 pat = state.pattern;
+				const u32 pat = value;
 				if (pat_test(pat, cpu.GPR[1], cpu.GPR[0]))
 				{
-					state.pattern &= pat_clear(cpu.GPR[1], cpu.GPR[0]);
+					value &= pat_clear(cpu.GPR[1], cpu.GPR[0]);
 					return pat;
 				}
 
@@ -1007,26 +1030,24 @@ private:
 		});
 	}
 
-	// Set pattern bits and wake up threads
-	void op_set(u32 pattern)
+	void op_set(u32 _pattern)
 	{
-		const auto new_state = ctrl.op_fetch([&](psp2_event_flag::ctrl_t& state)
-		{
-			state.pattern |= pattern;
-		});
+		pattern |= _pattern;
 
-		if (new_state.waiters)
+		if (const u32 _waiters = waiters)
 		{
+			const u32 new_pattern = pattern;
+
 			std::vector<std::reference_wrapper<ARMv7Thread>> threads;
 
-			// Check and lock appropriate threads
+			// Enumerate appropriate threads
 			if (attr & SCE_KERNEL_ATTR_MULTI)
 			{
-				threads.reserve(new_state.waiters);
+				threads.reserve(_waiters);
 
-				idm::select<ARMv7Thread>([&](u32 id, ARMv7Thread& cpu)
+				idm::select<ARMv7Thread>([&](u32, ARMv7Thread& cpu)
 				{
-					if (cpu->lock_if([&] { return cpu.owner == this && pat_test(new_state.pattern, cpu.GPR[1], cpu.GPR[0]); }))
+					if (cpu.owner == this && pat_test(new_pattern, cpu.GPR[1], cpu.GPR[0]))
 					{
 						threads.emplace_back(cpu);
 					}
@@ -1047,9 +1068,9 @@ private:
 			}
 			else
 			{
-				idm::get<ARMv7Thread>(new_state.waiters, [&](ARMv7Thread& cpu)
+				idm::check<ARMv7Thread>(_waiters, [&](ARMv7Thread& cpu)
 				{
-					if (cpu->lock_if([&] { return cpu.owner == this && pat_test(new_state.pattern, cpu.GPR[1], cpu.GPR[0]); }))
+					if (cpu.owner == this && pat_test(new_pattern, cpu.GPR[1], cpu.GPR[0]))
 					{
 						threads.emplace_back(cpu);
 					}
@@ -1059,14 +1080,13 @@ private:
 			// Wake up threads
 			for (ARMv7Thread& cpu : threads)
 			{
-				const u32 old_pattern = ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state) -> u32
+				const u32 old_pattern = pattern.atomic_op([&](u32& value) -> u32
 				{
-					const u32 pat = state.pattern;
+					const u32 pat = value;
 
 					if (pat_test(pat, cpu.GPR[1], cpu.GPR[0]))
 					{
-						state.pattern &= pat_clear(cpu.GPR[1], cpu.GPR[0]);
-						state.waiters -= attr & SCE_KERNEL_ATTR_MULTI ? 1 : cpu.id;
+						value &= pat_clear(cpu.GPR[1], cpu.GPR[0]);
 						return pat;
 					}
 
@@ -1079,56 +1099,43 @@ private:
 					cpu.GPR[1] = old_pattern;
 					cpu.state += cpu_flag::signal;
 					cpu.owner = nullptr;
-					cpu->unlock();
-					cpu->notify();
-				}
-				else
-				{
-					cpu->unlock();
+					waiters -= attr & SCE_KERNEL_ATTR_MULTI ? 1 : cpu.id;
+					cpu.notify();
 				}
 			}
 		}
 	}
 
-	// Clear pattern bits (bitwise AND)
-	void op_clear(u32 pattern)
-	{
-		ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state)
-		{
-			state.pattern &= pattern;
-		});
-	}
-
-	// Wake up all threads
 	void op_stop(vm::ptr<u32> ptr, s32 error)
 	{
-		s32 result = 0;
-		const u32 pattern = ptr ? ptr->value() : ctrl.load().pattern;
+		const u32 _pattern = ptr ? ptr->value() : pattern.load();
+
+		std::vector<std::reference_wrapper<ARMv7Thread>> threads;
 
 		idm::select<ARMv7Thread>([&](u32, ARMv7Thread& cpu)
 		{
-			if (cpu->lock_if([&] { return cpu.owner == this; }))
+			if (cpu.owner == this)
 			{
-				cpu.GPR[0] = error;
-				cpu.GPR[1] = pattern;
-				cpu.state += cpu_flag::signal;
-				cpu.owner = nullptr;
-				cpu->unlock();
-				cpu->notify();
-				result++;
+				threads.emplace_back(cpu);
 			}
 		});
 
 		if (ptr)
 		{
-			*ptr = result;
+			*ptr = static_cast<u32>(threads.size());
 		}
 
-		ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state)
+		for (ARMv7Thread& cpu : threads)
 		{
-			state.pattern = pattern;
-			state.waiters = attr & SCE_KERNEL_ATTR_MULTI ? state.waiters - result : 0;
-		});
+			cpu.GPR[0] = error;
+			cpu.GPR[1] = _pattern;
+			cpu.state += cpu_flag::signal;
+			cpu.owner = nullptr;
+			cpu.notify();
+		}
+
+		pattern = _pattern;
+		waiters = 0;
 	}
 };
 
@@ -1226,62 +1233,80 @@ error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
-	// First chance
-	const auto state = evf->ctrl.fetch_op([&](psp2_event_flag::ctrl_t& state)
-	{
-		if (!state.waiters && psp2_event_flag::pat_test(state.pattern, bitPattern, waitMode))
-		{
-			state.pattern &= psp2_event_flag::pat_clear(bitPattern, waitMode);
-		}
-		else if (evf->attr & SCE_KERNEL_ATTR_MULTI)
-		{
-			state.waiters++;
-		}
-		else if (!state.waiters)
-		{
-			state.waiters = cpu.id;
-		}
-	});
+	// First chance (TODO)
+	//const auto state = evf->ctrl.fetch_op([&](psp2_event_flag::ctrl_t& state)
+	//{
+	//	if (!state.waiters && psp2_event_flag::pat_test(state.pattern, bitPattern, waitMode))
+	//	{
+	//		state.pattern &= psp2_event_flag::pat_clear(bitPattern, waitMode);
+	//	}
+	//	else if (evf->attr & SCE_KERNEL_ATTR_MULTI)
+	//	{
+	//		state.waiters++;
+	//	}
+	//	else if (!state.waiters)
+	//	{
+	//		state.waiters = cpu.id;
+	//	}
+	//});
 
-	if (state.waiters && !(evf->attr & SCE_KERNEL_ATTR_MULTI))
-	{
-		return SCE_KERNEL_ERROR_EVF_MULTI;
-	}
+	//if (evf->waiters && !(evf->attr & SCE_KERNEL_ATTR_MULTI))
+	//{
+	//	return SCE_KERNEL_ERROR_EVF_MULTI;
+	//}
 
-	if (!state.waiters && psp2_event_flag::pat_test(state.pattern, bitPattern, waitMode))
-	{
-		if (pResultPat) *pResultPat = state.pattern;
-		return SCE_OK;
-	}
+	//if (!state.waiters && psp2_event_flag::pat_test(state.pattern, bitPattern, waitMode))
+	//{
+	//	if (pResultPat) *pResultPat = state.pattern;
+	//	return SCE_OK;
+	//}
 
 	// Set register values for external use
 	cpu.GPR[0] = waitMode;
 	cpu.GPR[1] = bitPattern;
 
 	// Second chance
-	if (evf->exec(psp2_event_flag::task::wait, cpu.id) && cpu.state.test_and_reset(cpu_flag::signal))
+	if (!evf->exec(psp2_event_flag::task::wait, cpu.id) || !cpu.state.test_and_reset(cpu_flag::signal))
 	{
-		if (pResultPat) *pResultPat = cpu.GPR[1];
-		return SCE_OK;
+		while (!cpu.state.test_and_reset(cpu_flag::signal))
+		{
+			if (timeout)
+			{
+				const u64 passed = get_system_time() - start_time;
+
+				if (passed >= timeout)
+				{
+					if (!evf->exec(psp2_event_flag::task::timeout, cpu.id))
+					{
+						if (!evf->exec(psp2_event_flag::task::signal, cpu.id))
+						{
+							thread_ctrl::wait([&] { return cpu.state.test_and_reset(cpu_flag::signal); });
+						}
+						else
+						{
+							cpu.state -= cpu_flag::signal;
+						}
+					}
+
+					break;
+				}
+
+				thread_ctrl::wait_for(timeout - passed);
+			}
+			else
+			{
+				thread_ctrl::wait();
+			}
+		}
 	}
 
-	thread_lock entry(cpu);
-
-	if (!thread_ctrl::wait_for(timeout, [&] { return cpu.state.test_and_reset(cpu_flag::signal); }))
+	if (cpu.GPR[0] == SCE_KERNEL_ERROR_EVF_MULTI)
 	{
-		// Timeout cleanup
-		cpu.owner = nullptr;
-		cpu.GPR[0] = SCE_KERNEL_ERROR_WAIT_TIMEOUT;
-		cpu.GPR[1] = evf->ctrl.atomic_op([&](psp2_event_flag::ctrl_t& state)
-		{
-			state.waiters -= evf->attr & SCE_KERNEL_ATTR_MULTI ? 1 : cpu.id;
-			return state.pattern;
-		});
+		return SCE_KERNEL_ERROR_EVF_MULTI;
 	}
 
 	if (pResultPat) *pResultPat = cpu.GPR[1];
 	if (pTimeout) *pTimeout = static_cast<u32>(std::max<s64>(0, timeout - (get_system_time() - start_time)));
-
 	return not_an_error(cpu.GPR[0]);
 }
 
@@ -1303,23 +1328,17 @@ error_code sceKernelPollEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPattern, u
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
-	// First chance
-	const auto state = evf->ctrl.fetch_op([&](psp2_event_flag::ctrl_t& state)
-	{
-		if (!state.waiters && psp2_event_flag::pat_test(state.pattern, bitPattern, waitMode))
-		{
-			state.pattern &= psp2_event_flag::pat_clear(bitPattern, waitMode);
-		}
-	});
+	// First chance (TODO)
+	//const auto state = evf->ctrl.fetch_op([&](psp2_event_flag::ctrl_t& state)
+	//{
+	//	if (!state.waiters && psp2_event_flag::pat_test(state.pattern, bitPattern, waitMode))
+	//	{
+	//		state.pattern &= psp2_event_flag::pat_clear(bitPattern, waitMode);
+	//	}
+	//});
 
-	if (psp2_event_flag::pat_test(state.pattern, bitPattern, waitMode))
+	if (psp2_event_flag::pat_test(evf->pattern, bitPattern, waitMode))
 	{
-		if (!state.waiters)
-		{
-			*pResultPat = state.pattern;
-			return SCE_OK;
-		}
-
 		cpu.GPR[0] = waitMode;
 		cpu.GPR[1] = bitPattern;
 		
@@ -1407,11 +1426,8 @@ error_code sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> 
 
 	pInfo->attr = evf->attr;
 	pInfo->initPattern = evf->init;
-
-	const auto state = evf->ctrl.load();
-
-	pInfo->currentPattern = state.pattern;
-	pInfo->numWaitThreads = evf->attr & SCE_KERNEL_ATTR_MULTI ? state.waiters : state.waiters != 0;
+	pInfo->currentPattern = evf->pattern;
+	pInfo->numWaitThreads = evf->attr & SCE_KERNEL_ATTR_MULTI ? evf->waiters.load() : evf->waiters != 0;
 
 	return SCE_OK;
 }

@@ -1,10 +1,13 @@
 #pragma once
 
-#include "Utilities/SleepQueue.h"
-#include <mutex>
-#include <condition_variable>
+#include "Utilities/Thread.h"
+#include "Utilities/mutex.h"
+#include "Utilities/sema.h"
+#include "Utilities/cond.h"
 
-namespace vm { using namespace ps3; }
+#include "Emu/Cell/ErrorCodes.h"
+
+#include <deque>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -45,27 +48,61 @@ enum
 	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
 };
 
-extern std::condition_variable& get_current_thread_cv();
-
-// Simple class for global mutex to pass unique_lock and check it
-struct lv2_lock_t
+// Base class for some kernel objects (shared set of 8192 objects).
+struct lv2_obj
 {
-	using type = std::unique_lock<std::mutex>;
+	using id_type = lv2_obj;
 
-	type& ref;
+	static const u32 id_step = 0x100;
+	static const u32 id_count = 8192;
 
-	lv2_lock_t(type& lv2_lock)
-		: ref(lv2_lock)
+	// Find and remove the object from the container (deque or vector)
+	template <typename T, typename E>
+	static bool unqueue(std::deque<T*>& queue, const E& object)
 	{
-		verify(HERE), ref.owns_lock(), ref.mutex() == &mutex;
+		for (auto found = queue.cbegin(), end = queue.cend(); found != end; found++)
+		{
+			if (*found == object)
+			{
+				queue.erase(found);
+				return true;
+			}
+		}
+
+		return false;
 	}
 
-	operator type&() const
+	template <typename E, typename T>
+	static T* schedule(std::deque<T*>& queue, u32 protocol)
 	{
-		return ref;
-	}
+		if (queue.empty())
+		{
+			return nullptr;
+		}
 
-	static type::mutex_type mutex;
+		if (protocol == SYS_SYNC_FIFO)
+		{
+			const auto res = queue.front();
+			queue.pop_front();
+			return res;
+		}
+
+		u32 prio = -1;
+		auto it = queue.cbegin();
+
+		for (auto found = it, end = queue.cend(); found != end; found++)
+		{
+			const u32 _prio = static_cast<E*>(*found)->prio;
+
+			if (_prio < prio)
+			{
+				it = found;
+				prio = _prio;
+			}
+		}
+
+		const auto res = *it;
+		queue.erase(it);
+		return res;
+	}
 };
-
-#define LV2_LOCK lv2_lock_t::type lv2_lock(lv2_lock_t::mutex)

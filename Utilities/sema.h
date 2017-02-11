@@ -13,6 +13,8 @@ class semaphore_base
 
 	void imp_post(s32 _old);
 
+	friend class semaphore_lock;
+
 protected:
 	explicit constexpr semaphore_base(s32 value)
 		: m_value{value}
@@ -106,5 +108,36 @@ public:
 	static constexpr s32 size()
 	{
 		return Max;
+	}
+};
+
+class semaphore_lock
+{
+	semaphore_base& m_base;
+
+	void lock()
+	{
+		m_base.wait();
+	}
+
+	void unlock()
+	{
+		m_base.post(INT32_MAX);
+	}
+
+	friend class cond_variable;
+
+public:
+	explicit semaphore_lock(const semaphore_lock&) = delete;
+
+	semaphore_lock(semaphore_base& sema)
+		: m_base(sema)
+	{
+		lock();
+	}
+
+	~semaphore_lock()
+	{
+		unlock();
 	}
 };

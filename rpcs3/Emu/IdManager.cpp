@@ -7,130 +7,86 @@ thread_local DECLARE(idm::g_id);
 DECLARE(idm::g_map);
 DECLARE(fxm::g_vec);
 
-std::vector<id_manager::typeinfo>& id_manager::typeinfo::access()
+id_manager::id_map::pointer idm::allocate_id(const id_manager::id_key& info, u32 base, u32 step, u32 count)
 {
-	static std::vector<typeinfo> list;
-	
-	return list;
-}
+	// Base type id is stored in value
+	auto& vec = g_map[info.value()];
 
-u32 id_manager::typeinfo::add_type()
-{
-	auto& list = access();
+	// Preallocate memory
+	vec.reserve(count);
 
-	list.emplace_back();
-
-	return ::size32(list) - 1;
-}
-
-id_manager::id_map::pointer idm::allocate_id(std::pair<u32, u32> types, u32 base, u32 step, u32 count)
-{
-	auto& map = g_map[types.first];
-
-	// Assume next ID
-	u32 next = base;
-	
-	if (std::size_t _count = map.size())
+	if (vec.size() < count)
 	{
-		if (_count >= count)
-		{
-			return nullptr;
-		}
+		// Try to emplace back
+		const u32 _next = base + step * ::size32(vec);
 
-		const u32 _next = map.rbegin()->first.id() + step;
-
-		if (_next > base && _next < base + step * count)
+		if (_next >= base && _next < base + step * count)
 		{
-			next = _next;
+			g_id = _next;
+			vec.emplace_back(id_manager::id_key(_next, info.type(), info.on_stop()), nullptr);
+			return &vec.back();
 		}
 	}
 
 	// Check all IDs starting from "next id" (TODO)
-	for (next; next < base + step * count; next += step)
+	for (u32 i = 0, next = base; i < count; i++, next += step)
 	{
-		// Get ID
-		const auto result = map.emplace(id_manager::id_key(next, types.second), nullptr);
+		const auto ptr = &vec[i];
 
-		if (result.second)
+		// Look for free ID
+		if (!ptr->second)
 		{
-			// Acknowledge the ID
 			g_id = next;
-
-			return std::addressof(*result.first);
+			ptr->first = id_manager::id_key(next, info.type(), info.on_stop());
+			return ptr;
 		}
 	}
 
-	// Nothing found
+	// Out of IDs
 	return nullptr;
-}
-
-id_manager::id_map::pointer idm::find_id(u32 type, u32 true_type, u32 id)
-{
-	auto& map = g_map[type];
-
-	const auto found = map.find(id);
-
-	if (found != map.end() && (type == true_type || found->first.type() == true_type))
-	{
-		return std::addressof(*found);
-	}
-
-	return nullptr;
-}
-
-std::shared_ptr<void> idm::delete_id(u32 type, u32 true_type, u32 id)
-{
-	auto& map = g_map[type];
-
-	const auto found = map.find(id);
-
-	std::shared_ptr<void> result;
-
-	if (found != map.end() && (type == true_type || found->first.type() == true_type))
-	{
-		result = std::move(found->second);
-		map.erase(found);
-	}
-
-	return result;
 }
 
 void idm::init()
 {
-	g_map.resize(id_manager::typeinfo::get().size());
+	// Allocate
+	g_map.resize(id_manager::typeinfo::get_count());
 }
 
 void idm::clear()
 {
 	// Call recorded finalization functions for all IDs
-	for (std::size_t i = 0; i < g_map.size(); i++)
+	for (auto& map : g_map)
 	{
-		const auto on_stop = id_manager::typeinfo::get()[i].on_stop;
-
-		for (auto& id : g_map[i])
+		for (auto& pair : map)
 		{
-			on_stop(id.second.get());
+			if (auto ptr = pair.second.get())
+			{
+				pair.first.on_stop()(ptr);
+				pair.second.reset();
+				pair.first = {};
+			}
 		}
 
-		g_map[i].clear();
+		map.clear();
 	}
 }
 
 void fxm::init()
 {
-	g_vec.resize(id_manager::typeinfo::get().size(), {});
+	// Allocate
+	g_vec.resize(id_manager::typeinfo::get_count());
 }
 
 void fxm::clear()
 {
 	// Call recorded finalization functions for all IDs
-	for (std::size_t i = 0; i < g_vec.size(); i++)
+	for (auto& pair : g_vec)
 	{
-		if (g_vec[i])
+		if (auto ptr = pair.second.get())
 		{
-			id_manager::typeinfo::get()[i].on_stop(g_vec[i].get());
+			pair.first(ptr);
+			pair.second.reset();
+			pair.first = nullptr;
 		}
-
-		g_vec[i].reset();
 	}
 }

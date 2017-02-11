@@ -99,10 +99,22 @@ public:
 	}
 };
 
-// Simplified shared (reader) lock implementation, std::shared_lock compatible.
+// Simplified shared (reader) lock implementation.
 class reader_lock final
 {
 	shared_mutex& m_mutex;
+
+	void lock()
+	{
+		m_mutex.lock_shared();
+	}
+
+	void unlock()
+	{
+		m_mutex.unlock_shared();
+	}
+
+	friend class cond_variable;
 
 public:
 	reader_lock(const reader_lock&) = delete;
@@ -110,16 +122,16 @@ public:
 	explicit reader_lock(shared_mutex& mutex)
 		: m_mutex(mutex)
 	{
-		m_mutex.lock_shared();
+		lock();
 	}
 
 	~reader_lock()
 	{
-		m_mutex.unlock_shared();
+		unlock();
 	}
 };
 
-// Simplified exclusive (writer) lock implementation, std::lock_guard compatible.
+// Simplified exclusive (writer) lock implementation.
 class writer_lock final
 {
 	shared_mutex& m_mutex;

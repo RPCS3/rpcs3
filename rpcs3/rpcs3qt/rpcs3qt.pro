@@ -2,6 +2,8 @@
 QT += gui opengl quick
 CONFIG += c++11
 
+TARGET = rpcs3-qt
+
 # Qt UI
 SOURCES += $$P/rpcs3qt/*.cpp
 HEADERS += $$P/rpcs3qt/*.h
@@ -17,3 +19,6 @@ DEFINES += QT_UI
 OTHER_FILES += $$P/rpcs3qt/qml/*
 
 RESOURCES += $$P/rpcs3qt/qml.qrc
+
+# This line is needed for Qt 5.5 or higher
+win32:LIBS += opengl32.lib

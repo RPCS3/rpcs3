@@ -665,17 +665,17 @@ void fs::file::xfail() const
 	fmt::throw_exception("Unexpected fs::error %s", g_tls_error);
 }
 
-bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
+fs::file::file(const std::string& path, bs_t<open_mode> mode)
 {
 	if (auto device = get_virtual_device(path))
 	{
 		if (auto&& _file = device->open(path, mode))
 		{
 			m_file = std::move(_file);
-			return true;
+			return;
 		}
 
-		return false;
+		return;
 	}
 
 #ifdef _WIN32
@@ -695,7 +695,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 		if (test(mode & fs::excl))
 		{
 			g_tls_error = error::inval;
-			return false;
+			return;
 		}
 
 		disp = test(mode & fs::trunc) ? TRUNCATE_EXISTING : OPEN_EXISTING;
@@ -706,7 +706,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
-		return false;
+		return;
 	}
 
 	class windows_file final : public file_base
@@ -827,7 +827,7 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 	if (fd == -1)
 	{
 		g_tls_error = to_error(errno);
-		return false;
+		return;
 	}
 
 	class unix_file final : public file_base
@@ -913,8 +913,6 @@ bool fs::file::open(const std::string& path, bs_t<open_mode> mode)
 
 	m_file = std::make_unique<unix_file>(fd);
 #endif
-
-	return true;
 }
 
 fs::file::file(const void* ptr, std::size_t size)

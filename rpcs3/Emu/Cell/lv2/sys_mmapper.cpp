@@ -103,7 +103,7 @@ error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::
 	}
 
 	// Generate a new mem ID
-	*mem_id = idm::make<lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, dct);
+	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, dct);
 
 	return CELL_OK;
 }
@@ -141,32 +141,29 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 	}
 	}
 
-	error_code result{};
-
-	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct)
+	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct) -> CellError
 	{
 		// Try to get "physical memory"
 		if (!ct.take(size))
 		{
-			result = CELL_ENOMEM;
-			return false;
+			return CELL_ENOMEM;
 		}
 
-		return true;
+		return {};
 	});
 
-	if (!ct && !result)
+	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!ct)
+	if (ct.ret)
 	{
-		return result;
+		return ct.ret;
 	}
 
 	// Generate a new mem ID
-	*mem_id = idm::make<lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, ct.ptr);
+	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, ct.ptr);
 
 	return CELL_OK;
 }
@@ -202,28 +199,25 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 {
 	sys_mmapper.warning("sys_mmapper_free_shared_memory(mem_id=0x%x)", mem_id);
 
-	error_code result{};
-
 	// Conditionally remove memory ID
-	const auto mem = idm::withdraw<lv2_memory>(mem_id, [&](lv2_memory& mem)
+	const auto mem = idm::withdraw<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
 		if (mem.addr.compare_and_swap_test(0, -1))
 		{
-			result = CELL_EBUSY;
-			return false;
+			return CELL_EBUSY;
 		}
 
-		return true;
+		return {};
 	});
 
-	if (!mem && !result)
+	if (!mem)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!mem)
+	if (mem.ret)
 	{
-		return result;
+		return mem.ret;
 	}
 
 	// Return "physical memory" to the memory container
@@ -243,7 +237,7 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 		return CELL_EINVAL;
 	}
 
-	const auto mem = idm::get<lv2_memory>(mem_id);
+	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id);
 
 	if (!mem)
 	{
@@ -282,7 +276,7 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 		return CELL_EINVAL;
 	}
 
-	const auto mem = idm::get<lv2_memory>(mem_id);
+	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id);
 
 	if (!mem)
 	{
@@ -318,7 +312,7 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 		return CELL_EINVAL;
 	}
 
-	const auto mem = idm::select<lv2_memory>([&](u32 id, lv2_memory& mem)
+	const auto mem = idm::select<lv2_obj, lv2_memory>([&](u32 id, lv2_memory& mem)
 	{
 		if (mem.addr == addr)
 		{

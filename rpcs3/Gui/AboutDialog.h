@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "rpcs3_version.h"
 
 class AboutDialog : public wxDialog
@@ -8,6 +8,7 @@ class AboutDialog : public wxDialog
 		b_id_github,
 		b_id_website,
 		b_id_forum,
+		b_id_patreon,
 	};
 
 public:
@@ -17,7 +18,7 @@ public:
 		wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
 
 		//Logo
-		wxPanel* s_panel_logo(new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(512, 92)));
+		wxPanel* s_panel_logo(new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(552, 92)));
 		s_panel_logo->SetBackgroundColour(wxColor(100, 100, 100));
 
 		wxStaticText* t_name = new wxStaticText(this, wxID_ANY, "RPCS3");
@@ -26,7 +27,7 @@ public:
 		t_name->SetForegroundColour(wxColor(255, 255, 255));
 		t_name->SetPosition(wxPoint(10, 6));
 
-		wxStaticText* t_descr = new wxStaticText(this, wxID_ANY, "PS3 emulator and debugger.");
+		wxStaticText* t_descr = new wxStaticText(this, wxID_ANY, "A PlayStation 3 emulator and debugger.");
 		t_descr->SetBackgroundColour(wxColor(100, 100, 100));
 		t_descr->SetForegroundColour(wxColor(255, 255, 255));
 		t_descr->SetPosition(wxPoint(12, 50));
@@ -52,19 +53,23 @@ public:
 		wxButton* b_github = new wxButton(this, b_id_github, "GitHub");
 		wxButton* b_website = new wxButton(this, b_id_website, "Website");
 		wxButton* b_forum = new wxButton(this, b_id_forum, "Forum");
+		wxButton* b_patreon = new wxButton(this, b_id_patreon, "Patreon");
 		Connect(b_id_github, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AboutDialog::OpenWebsite));
 		Connect(b_id_website, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AboutDialog::OpenWebsite));
 		Connect(b_id_forum, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AboutDialog::OpenWebsite));
+		Connect(b_id_patreon, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AboutDialog::OpenWebsite));
 
-		s_panel_buttons->AddSpacer(12);
-		s_panel_buttons->Add(b_github, 16, 0, 5);
+		s_panel_buttons->AddSpacer(10);
+		s_panel_buttons->Add(b_github, 18, 0, 5);
 		s_panel_buttons->AddStretchSpacer();
-		s_panel_buttons->Add(b_website, 16, 0, 5);
+		s_panel_buttons->Add(b_website, 18, 0, 5);
 		s_panel_buttons->AddStretchSpacer();
-		s_panel_buttons->Add(b_forum, 16, 0, 5);
-		s_panel_buttons->AddStretchSpacer(20);
-		s_panel_buttons->Add(new wxButton(this, wxID_OK), 16, 0, 5);
-		s_panel_buttons->AddSpacer(12);
+		s_panel_buttons->Add(b_forum, 18, 0, 5);
+		s_panel_buttons->AddStretchSpacer();
+		s_panel_buttons->Add(b_patreon, 18, 0, 5);
+		s_panel_buttons->AddStretchSpacer(14);
+		s_panel_buttons->Add(new wxButton(this, wxID_OK, "Close") , 18, 0, 5);
+		s_panel_buttons->AddSpacer(10);
 
 		//Panels
 		s_panel->Add(s_panel_logo);
@@ -80,8 +85,9 @@ public:
 		switch (event.GetId())
 		{
 		case b_id_github: wxLaunchDefaultBrowser("https://github.com/RPCS3"); break;
-		case b_id_website: wxLaunchDefaultBrowser("http://rpcs3.net/"); break;
-		case b_id_forum: wxLaunchDefaultBrowser("http://www.emunewz.net/forum/forumdisplay.php?fid=162"); break;
+		case b_id_website: wxLaunchDefaultBrowser("https://rpcs3.net/"); break;
+		case b_id_forum: wxLaunchDefaultBrowser("http://www.emunewz.net/forum/forumdisplay.php?fid=172"); break;
+		case b_id_patreon: wxLaunchDefaultBrowser("https://www.patreon.com/Nekotekina"); break;
 		}
 	}
 };

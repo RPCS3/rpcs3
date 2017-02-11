@@ -2768,10 +2768,10 @@ void PPUTranslator::MFSPR(ppu_opcode_t op)
 		result = ZExt(m_ir->CreateLoad(m_reg_vrsave));
 		break;
 	case 0x10C: // MFTB
-		result = ZExt(Call(GetType<u32>(), m_pure_attr, "__get_tbl"));
+		result = Call(GetType<u64>(), m_pure_attr, "__get_tb");
 		break;
 	case 0x10D: // MFTBU
-		result = ZExt(Call(GetType<u32>(), m_pure_attr, "__get_tbh"));
+		result = m_ir->CreateLShr(Call(GetType<u64>(), m_pure_attr, "__get_tb"), 32);
 		break;
 	default:
 		result = Call(GetType<u64>(), fmt::format("__mfspr_%u", n));
@@ -2802,7 +2802,21 @@ void PPUTranslator::LVXL(ppu_opcode_t op)
 
 void PPUTranslator::MFTB(ppu_opcode_t op)
 {
-	return MFSPR(op);
+	Value* result;
+	switch (const u32 n = (op.spr >> 5) | ((op.spr & 0x1f) << 5))
+	{
+	case 0x10C: // MFTB
+		result = Call(GetType<u64>(), m_pure_attr, "__get_tb");
+		break;
+	case 0x10D: // MFTBU
+		result = m_ir->CreateLShr(Call(GetType<u64>(), m_pure_attr, "__get_tb"), 32);
+		break;
+	default:
+		result = Call(GetType<u64>(), fmt::format("__mftb_%u", n));
+		break;
+	}
+
+	SetGpr(op.rd, result);
 }
 
 void PPUTranslator::LWAUX(ppu_opcode_t op)
@@ -3966,8 +3980,8 @@ Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
 void PPUTranslator::SetFpr(u32 r, Value* val)
 {
 	const auto f64_val =
-		val->getType() == GetType<u32>() ? m_ir->CreateBitCast(ZExt(val), GetType<f64>()) :
-		val->getType() == GetType<u64>() ? m_ir->CreateBitCast(val, GetType<f64>()) :
+		val->getType() == GetType<s32>() ? m_ir->CreateBitCast(SExt(val), GetType<f64>()) :
+		val->getType() == GetType<s64>() ? m_ir->CreateBitCast(val, GetType<f64>()) :
 		val->getType() == GetType<f32>() ? m_ir->CreateFPExt(val, GetType<f64>()) : val;
 
 	m_ir->CreateAlignedStore(f64_val, m_fpr[r], 8);

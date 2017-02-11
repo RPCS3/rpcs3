@@ -10,6 +10,7 @@
 #include "PPUModule.h"
 
 #ifdef LLVM_AVAILABLE
+#include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #endif
@@ -35,11 +36,19 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+#include "define_new_memleakdetect.h"
 
 #include "Utilities/JIT.h"
 #include "PPUTranslator.h"
 #include "Modules/cellMsgDialog.h"
 #endif
+
+#include <cfenv>
+#include "Utilities/GSL.h"
+
+extern u64 get_system_time();
+
+namespace vm { using namespace ps3; }
 
 enum class ppu_decoder_type
 {
@@ -64,12 +73,117 @@ extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
 const auto s_ppu_compiled = static_cast<u32*>(memory_helper::reserve_memory(0x100000000));
 
-extern void ppu_register_function_at(u32 addr, ppu_function_t ptr)
+extern void ppu_finalize()
+{
+	memory_helper::free_reserved_memory(s_ppu_compiled, 0x100000000);
+}
+
+// Get interpreter cache value
+static u32 ppu_cache(u32 addr)
+{
+	// Select opcode table
+	const auto& table = *(
+		g_cfg_ppu_decoder.get() == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
+		g_cfg_ppu_decoder.get() == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
+		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
+
+	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
+}
+
+static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, sizeof(s_ppu_compiled[0]));
-		s_ppu_compiled[addr / 4] = (u32)(std::uintptr_t)ptr;
+		fmt::throw_exception("Unregistered PPU function [0x%08x]", ppu.cia);
+	}
+
+	s_ppu_compiled[ppu.cia / 4] = ppu_cache(ppu.cia);
+	return false;
+}
+
+extern void ppu_register_range(u32 addr, u32 size)
+{
+	if (!size)
+	{
+		LOG_ERROR(PPU, "ppu_register_range(0x%x): empty range", addr);
+		return;	
+	}
+
+	// Register executable range at
+	memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, size);
+
+	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
+
+	while (size)
+	{
+		s_ppu_compiled[addr / 4] = fallback;
+		addr += 4;
+		size -= 4;
+	}
+}
+
+extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
+{
+	if (!size)
+	{
+		LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
+		return;	
+	}
+
+	ppu_register_range(addr, size);
+
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	{
+		s_ppu_compiled[addr / 4] = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
+		return;
+	}
+
+	// Initialize interpreter cache
+	while (size)
+	{
+		s_ppu_compiled[addr / 4] = ppu_cache(addr);
+		addr += 4;
+		size -= 4;
+	}
+}
+
+// Breakpoint entry point
+static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
+{
+	// Pause and wait if necessary
+	if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
+	{
+		return false;
+	}
+
+	// Fallback to the interpreter function
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{ppu_cache(ppu.cia)})(ppu, op))
+	{
+		ppu.cia += 4;
+	}
+
+	return false;
+}
+
+// Set or remove breakpoint
+extern void ppu_breakpoint(u32 addr)
+{
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
+	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
+
+	if (s_ppu_compiled[addr / 4] == _break)
+	{
+		// Remove breakpoint
+		s_ppu_compiled[addr / 4] = ppu_cache(addr);
+	}
+	else
+	{
+		// Set breakpoint
+		s_ppu_compiled[addr / 4] = _break;
 	}
 }
 
@@ -82,6 +196,7 @@ std::string ppu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 	ret += fmt::format("Priority: %d\n", prio);
+	ret += fmt::format("Last function: %s\n", last_function ? last_function : "");
 	
 	ret += "\nRegisters:\n=========\n";
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("GPR[%d] = 0x%llx\n", i, gpr[i]);
@@ -115,7 +230,7 @@ extern thread_local std::string(*g_tls_log_prefix)();
 
 void ppu_thread::cpu_task()
 {
-	//SetHostRoundingMode(FPSCR_RN_NEAR);
+	std::fesetround(FE_TONEAREST);
 
 	// Execute cmd_queue
 	while (cmd64 cmd = cmd_wait())
@@ -187,55 +302,77 @@ void ppu_thread::exec_task()
 	}
 
 	const auto base = vm::_ptr<const u8>(0);
-
-	// Select opcode table
-	const auto& table = *(
-		g_cfg_ppu_decoder.get() == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
-		g_cfg_ppu_decoder.get() == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
-		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
+	const auto cache = reinterpret_cast<const u8*>(s_ppu_compiled);
+	const auto bswap4 = _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
 
 	v128 _op;
-	decltype(&ppu_interpreter::UNK) func0, func1, func2, func3;
+	using func_t = decltype(&ppu_interpreter::UNK);
+	func_t func0, func1, func2, func3, func4, func5;
 
 	while (true)
 	{
 		if (UNLIKELY(test(state)))
 		{
 			if (check_state()) return;
+
+			// Decode single instruction (may be step)
+			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
+			if (reinterpret_cast<func_t>((std::uintptr_t)s_ppu_compiled[cia / 4])(*this, {op})) { cia += 4; }
+			continue;
+		}
+
+		if (cia % 16)
+		{
+			// Unaligned
+			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
+			if (reinterpret_cast<func_t>((std::uintptr_t)s_ppu_compiled[cia / 4])(*this, {op})) { cia += 4; }
+			continue;
 		}
 
 		// Reinitialize
 		{
-			const auto _ops = _mm_shuffle_epi8(_mm_lddqu_si128(reinterpret_cast<const __m128i*>(base + cia)), _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3));
-			_op.vi = _ops;
-			const v128 _i = v128::fromV(_mm_and_si128(_mm_or_si128(_mm_slli_epi32(_op.vi, 6), _mm_srli_epi32(_op.vi, 26)), _mm_set1_epi32(0x1ffff)));
-			func0 = table[_i._u32[0]];
-			func1 = table[_i._u32[1]];
-			func2 = table[_i._u32[2]];
-			func3 = table[_i._u32[3]];
+			const v128 x = v128::fromV(_mm_load_si128(reinterpret_cast<const __m128i*>(cache + cia)));
+			func0 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[0]);
+			func1 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[1]);
+			func2 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[2]);
+			func3 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[3]);
+			_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + cia)), bswap4);
 		}
 
-		while (LIKELY(func0(*this, { _op._u32[0] })))
+		while (LIKELY(func0(*this, {_op._u32[0]})))
 		{
-			if (cia += 4, LIKELY(func1(*this, { _op._u32[1] })))
+			cia += 4;
+
+			if (LIKELY(func1(*this, {_op._u32[1]})))
 			{
-				if (cia += 4, LIKELY(func2(*this, { _op._u32[2] })))
+				cia += 4;
+
+				const v128 x = v128::fromV(_mm_load_si128(reinterpret_cast<const __m128i*>(cache + cia + 8)));
+				func0 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[0]);
+				func1 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[1]);
+				func4 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[2]);
+				func5 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[3]);
+
+				if (LIKELY(func2(*this, {_op._u32[2]})))
 				{
 					cia += 4;
-					func0 = func3;
 
-					const auto _ops = _mm_shuffle_epi8(_mm_lddqu_si128(reinterpret_cast<const __m128i*>(base + cia + 4)), _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3));
-					_op.vi = _mm_alignr_epi8(_ops, _op.vi, 12);
-					const v128 _i = v128::fromV(_mm_and_si128(_mm_or_si128(_mm_slli_epi32(_op.vi, 6), _mm_srli_epi32(_op.vi, 26)), _mm_set1_epi32(0x1ffff)));
-					func1 = table[_i._u32[1]];
-					func2 = table[_i._u32[2]];
-					func3 = table[_i._u32[3]];
-
-					if (UNLIKELY(test(state)))
+					if (LIKELY(func3(*this, {_op._u32[3]})))
 					{
-						break;
+						cia += 4;
+
+						func2 = func4;
+						func3 = func5;
+
+						if (UNLIKELY(test(state)))
+						{
+							break;
+						}
+
+						_op.vi = _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + cia)), bswap4);
+						continue;
 					}
-					continue;
+					break;
 				}
 				break;
 			}
@@ -308,33 +445,22 @@ void ppu_thread::cmd_pop(u32 count)
 
 cmd64 ppu_thread::cmd_wait()
 {
-	std::unique_lock<named_thread> lock(*this, std::defer_lock);
-
 	while (true)
 	{
 		if (UNLIKELY(test(state)))
 		{
-			if (lock) lock.unlock();
-
-			if (check_state()) // check_status() requires unlocked mutex
+			if (check_state())
 			{
 				return cmd64{};
 			}
 		}
 
-		// Lightweight queue doesn't care about mutex state
 		if (cmd64 result = cmd_queue[cmd_queue.peek()].exchange(cmd64{}))
 		{
 			return result;
 		}
 
-		if (!lock)
-		{
-			lock.lock();
-			continue;
-		}
-
-		thread_ctrl::wait(); // Waiting requires locked mutex
+		thread_ctrl::wait();
 	}
 }
 
@@ -346,8 +472,7 @@ be_t<u64>* ppu_thread::get_stack_arg(s32 i, u64 align)
 
 void ppu_thread::fast_call(u32 addr, u32 rtoc)
 {
-	const auto old_pc = cia;
-	const auto old_stack = gpr[1];
+	const auto old_cia = cia;
 	const auto old_rtoc = gpr[2];
 	const auto old_lr = lr;
 	const auto old_func = last_function;
@@ -360,46 +485,46 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 	g_tls_log_prefix = []
 	{
-		const auto ppu = static_cast<ppu_thread*>(get_current_cpu_thread());
+		const auto _this = static_cast<ppu_thread*>(get_current_cpu_thread());
 
-		return fmt::format("%s [0x%08x]", ppu->get_name(), ppu->cia);
+		return fmt::format("%s [0x%08x]", _this->get_name(), _this->cia);
 	};
+
+	auto at_ret = gsl::finally([&]()
+	{
+		if (std::uncaught_exception())
+		{
+			if (last_function)
+			{
+				LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - gpr[10]) / 1000000.);
+			}
+
+			last_function = old_func;
+		}
+		else
+		{
+			state -= cpu_flag::ret;
+			cia = old_cia;
+			gpr[2] = old_rtoc;
+			lr = old_lr;
+			last_function = old_func;
+			g_tls_log_prefix = old_fmt;
+		}
+	});
 
 	try
 	{
 		exec_task();
-
-		if (gpr[1] != old_stack && !test(state, cpu_flag::ret + cpu_flag::exit)) // gpr[1] shouldn't change
-		{
-			fmt::throw_exception("Stack inconsistency (addr=0x%x, rtoc=0x%x, SP=0x%llx, old=0x%llx)", addr, rtoc, gpr[1], old_stack);
-		}
 	}
 	catch (cpu_flag _s)
 	{
 		state += _s;
-		if (_s != cpu_flag::ret) throw;
-	}
-	catch (EmulationStopped)
-	{
-		if (last_function) LOG_WARNING(PPU, "'%s' aborted", last_function);
-		last_function = old_func;
-		throw;
-	}
-	catch (...)
-	{
-		if (last_function) LOG_ERROR(PPU, "'%s' aborted", last_function);
-		last_function = old_func;
-		throw;
-	}
 
-	state -= cpu_flag::ret;
-
-	cia = old_pc;
-	gpr[1] = old_stack;
-	gpr[2] = old_rtoc;
-	lr = old_lr;
-	last_function = old_func;
-	g_tls_log_prefix = old_fmt;
+		if (_s != cpu_flag::ret)
+		{
+			throw;
+		}
+	}
 }
 
 u32 ppu_thread::stack_push(u32 size, u32 align_v)
@@ -529,8 +654,14 @@ static void ppu_initialize()
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 			ppu_thr_stop_data[0] = ppu_instructions::HACK(1);
 			ppu_thr_stop_data[1] = ppu_instructions::BLR();
+			ppu_register_function_at(ppu_thr_stop_data.addr(), 8, nullptr);
 		}
-		
+
+		for (const auto& func : *_funcs)
+		{
+			ppu_register_function_at(func.addr, func.size, nullptr);
+		}
+
 		return;
 	}
 
@@ -543,7 +674,7 @@ static void ppu_initialize()
 		{ "__trace", (u64)&ppu_trace },
 		{ "__hlecall", (u64)&ppu_execute_function },
 		{ "__syscall", (u64)&ppu_execute_syscall },
-		{ "__get_tbl", (u64)&get_timebased_time },
+		{ "__get_tb", (u64)&get_timebased_time },
 		{ "__lwarx", (u64)&ppu_lwarx },
 		{ "__ldarx", (u64)&ppu_ldarx },
 		{ "__stwcx", (u64)&ppu_stwcx },
@@ -780,17 +911,15 @@ static void ppu_initialize()
 		return;
 	}
 
-	memory_helper::free_reserved_memory(s_ppu_compiled, 0x100000000); // TODO
-
 	// Get and install function addresses
 	for (const auto& info : *_funcs)
 	{
 		if (info.size)
 		{
 			const std::uintptr_t link = jit->get(fmt::format("__0x%x", info.addr));
-			ppu_register_function_at(info.addr, (ppu_function_t)link);
+			s_ppu_compiled[info.addr / 4] = ::narrow<u32>(link);
 
-			LOG_NOTICE(PPU, "** Function __0x%x -> 0x%llx (size=0x%x, toc=0x%x, attr %#x)", info.addr, link, info.size, info.toc, info.attr);
+			LOG_TRACE(PPU, "** Function __0x%x -> 0x%llx (size=0x%x, toc=0x%x, attr %#x)", info.addr, link, info.size, info.toc, info.attr);
 		}
 	}
 

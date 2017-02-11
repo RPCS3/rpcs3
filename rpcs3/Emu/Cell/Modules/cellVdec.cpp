@@ -14,8 +14,8 @@ extern "C"
 #include "cellVdec.h"
 
 #include <mutex>
-#include <thread>
 #include <queue>
+#include <cmath>
 
 std::mutex g_mutex_avcodec_open2;
 
@@ -71,11 +71,11 @@ struct vdec_thread : ppu_thread
 	u32 mem_bias{};
 
 	u32 frc_set{}; // Frame Rate Override
-	u64 last_pts{};
-	u64 last_dts{};
+	u64 next_pts{};
+	u64 next_dts{};
 
+	std::mutex mutex;
 	std::queue<vdec_frame> out;
-	std::queue<u64> user_data; // TODO
 
 	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 		: ppu_thread("HLE Video Decoder")
@@ -160,8 +160,8 @@ struct vdec_thread : ppu_thread
 				avcodec_flush_buffers(ctx);
 
 				frc_set = 0; // TODO: ???
-				last_pts = 0;
-				last_dts = 0;
+				next_pts = 0;
+				next_dts = 0;
 				cellVdec.trace("Start sequence...");
 				break;
 			}
@@ -172,29 +172,38 @@ struct vdec_thread : ppu_thread
 				AVPacket packet{};
 				packet.pos = -1;
 
-				u32 au_mode{};
-				u32 au_addr{};
-				u32 au_size{};
-				u64 au_pts{};
-				u64 au_dts{};
 				u64 au_usrd{};
-				u64 au_spec{};
 
 				if (vcmd == vdec_cmd::decode)
 				{
-					au_mode = cmd.arg2<u32>();  // TODO
-					au_addr = cmd_get(1).arg1<u32>();
-					au_size = cmd_get(1).arg2<u32>();
-					au_pts = cmd_get(2).as<u64>();
-					au_dts = cmd_get(3).as<u64>();
+					const u32 au_mode = cmd.arg2<u32>();  // TODO
+					const u32 au_addr = cmd_get(1).arg1<u32>();
+					const u32 au_size = cmd_get(1).arg2<u32>();
+					const u64 au_pts = cmd_get(2).as<u64>();
+					const u64 au_dts = cmd_get(3).as<u64>();
 					au_usrd = cmd_get(4).as<u64>(); // TODO
-					au_spec = cmd_get(5).as<u64>(); // TODO
+					const u64 au_spec = cmd_get(5).as<u64>(); // Unused
 					cmd_pop(5);
 
 					packet.data = vm::_ptr<u8>(au_addr);
 					packet.size = au_size;
 					packet.pts = au_pts != -1 ? au_pts : AV_NOPTS_VALUE;
 					packet.dts = au_dts != -1 ? au_dts : AV_NOPTS_VALUE;
+
+					if (next_pts == 0 && au_pts != -1)
+					{
+						next_pts = au_pts;
+					}
+
+					if (next_dts == 0 && au_dts != -1)
+					{
+						next_dts = au_dts;
+					}
+
+					ctx->skip_frame =
+						au_mode == CELL_VDEC_DEC_MODE_NORMAL ? AVDISCARD_DEFAULT :
+						au_mode == CELL_VDEC_DEC_MODE_B_SKIP ? AVDISCARD_NONREF : AVDISCARD_NONINTRA;
+
 					cellVdec.trace("AU decoding: size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", au_size, au_pts, au_dts, au_usrd);
 				}
 				else
@@ -208,10 +217,6 @@ struct vdec_thread : ppu_thread
 
 				while (true)
 				{
-					ctx->skip_frame =
-						au_mode == CELL_VDEC_DEC_MODE_NORMAL ? AVDISCARD_DEFAULT :
-						au_mode == CELL_VDEC_DEC_MODE_B_SKIP ? AVDISCARD_NONREF : AVDISCARD_NONINTRA;
-
 					vdec_frame frame;
 					frame.avf.reset(av_frame_alloc());
 
@@ -251,6 +256,20 @@ struct vdec_thread : ppu_thread
 							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
+						if (frame->pkt_pts != AV_NOPTS_VALUE)
+						{
+							next_pts = frame->pkt_pts;
+						}
+
+						if (frame->pkt_dts != AV_NOPTS_VALUE)
+						{
+							next_dts = frame->pkt_dts;
+						}
+
+						frame.pts = next_pts;
+						frame.dts = next_dts;
+						frame.userdata = au_usrd;
+
 						if (frc_set)
 						{
 							u64 amend = 0;
@@ -271,64 +290,41 @@ struct vdec_thread : ppu_thread
 							}
 							}
 
-							last_pts += amend;
-							last_dts += amend;
+							next_pts += amend;
+							next_dts += amend;
 							frame.frc = frc_set;
 						}
 						else
 						{
-							const u64 amend = ctx->time_base.num * 90000 * ctx->ticks_per_frame / ctx->time_base.den;
-							last_pts += amend;
-							last_dts += amend;
+							const u64 amend = u64{90000} * ctx->time_base.num * ctx->ticks_per_frame / ctx->time_base.den;
+							next_pts += amend;
+							next_dts += amend;
 
-							if (ctx->time_base.num == 1)
-							{
-								switch ((u64)ctx->time_base.den + (u64)(ctx->ticks_per_frame - 1) * 0x100000000ull)
-								{
-								case 24: case 0x100000000ull + 48: frame.frc = CELL_VDEC_FRC_24; break;
-								case 25: case 0x100000000ull + 50: frame.frc = CELL_VDEC_FRC_25; break;
-								case 30: case 0x100000000ull + 60: frame.frc = CELL_VDEC_FRC_30; break;
-								case 50: case 0x100000000ull + 100: frame.frc = CELL_VDEC_FRC_50; break;
-								case 60: case 0x100000000ull + 120: frame.frc = CELL_VDEC_FRC_60; break;
-								default:
-									fmt::throw_exception("Unsupported time_base.den (%d/1, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
-								}
-							}
-							else if (ctx->time_base.num == 1001)
-							{
-								switch (ctx->time_base.den / ctx->ticks_per_frame)
-								{
-								case 24000: frame.frc = CELL_VDEC_FRC_24000DIV1001; break;
-								case 30000: frame.frc = CELL_VDEC_FRC_30000DIV1001; break;
-								case 60000: frame.frc = CELL_VDEC_FRC_60000DIV1001; break;
-								default:
-									fmt::throw_exception("Unsupported time_base.den (%d/1001, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
-								}
-							}
-							else if (ctx->time_base.num == 50)
-							{
-								switch (ctx->time_base.den / ctx->ticks_per_frame)
-								{
-								case 1199: frame.frc = CELL_VDEC_FRC_24000DIV1001; break;
-								case 1498: frame.frc = CELL_VDEC_FRC_30000DIV1001; break;
-								case 2997: frame.frc = CELL_VDEC_FRC_60000DIV1001; break;
-								default:
-									fmt::throw_exception("Unsupported time_base.den(%d/50, tpf=%d)" HERE, ctx->time_base.den, ctx->ticks_per_frame);
-								}
-							}
+							const auto freq = 1. * ctx->time_base.den / ctx->time_base.num / ctx->ticks_per_frame;
+
+							if (std::abs(freq - 23.976) < 0.002)
+								frame.frc = CELL_VDEC_FRC_24000DIV1001;
+							else if (std::abs(freq - 24.000) < 0.001)
+								frame.frc = CELL_VDEC_FRC_24;
+							else if (std::abs(freq - 25.000) < 0.001)
+								frame.frc = CELL_VDEC_FRC_25;
+							else if (std::abs(freq - 29.970) < 0.002)
+								frame.frc = CELL_VDEC_FRC_30000DIV1001;
+							else if (std::abs(freq - 30.000) < 0.001)
+								frame.frc = CELL_VDEC_FRC_30;
+							else if (std::abs(freq - 50.000) < 0.001)
+								frame.frc = CELL_VDEC_FRC_50;
+							else if (std::abs(freq - 59.940) < 0.002)
+								frame.frc = CELL_VDEC_FRC_60000DIV1001;
+							else if (std::abs(freq - 60.000) < 0.001)
+								frame.frc = CELL_VDEC_FRC_60;
 							else
-							{
 								fmt::throw_exception("Unsupported time_base.num (%d/%d, tpf=%d)" HERE, ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
-							}
 						}
 
-						frame.pts = last_pts = frame->pkt_pts != AV_NOPTS_VALUE ? frame->pkt_pts : last_pts;
-						frame.dts = last_dts = frame->pkt_dts != AV_NOPTS_VALUE ? frame->pkt_dts : last_dts;
-						frame.userdata = au_usrd;
+						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pkt_pts, frame.dts, frame->pkt_dts);
 
-						cellVdec.trace("Got picture (pts=0x%llx, dts=0x%llx)", frame.pts, frame.dts);
-
-						thread_lock{*this}, out.push(std::move(frame));
+						std::lock_guard<std::mutex>{mutex}, out.push(std::move(frame));
 
 						cb_func(*this, id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
 					}
@@ -340,6 +336,12 @@ struct vdec_thread : ppu_thread
 				}
 
 				cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
+
+				while (std::lock_guard<std::mutex>{mutex}, out.size() > 60)
+				{
+					thread_ctrl::wait();
+				}
+
 				break;
 			}
 
@@ -440,7 +442,7 @@ s32 cellVdecClose(u32 handle)
 	}
 
 	vdec->cmd_push({vdec_cmd::close, 0});
-	vdec->lock_notify();
+	vdec->notify();
 	vdec->join();
 	idm::remove<ppu_thread>(handle);
 	return CELL_OK;
@@ -458,7 +460,7 @@ s32 cellVdecStartSeq(u32 handle)
 	}
 
 	vdec->cmd_push({vdec_cmd::start_seq, 0});
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 
@@ -474,7 +476,7 @@ s32 cellVdecEndSeq(u32 handle)
 	}
 
 	vdec->cmd_push({vdec_cmd::end_seq, 0});
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 
@@ -500,7 +502,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 		auInfo->codecSpecificData,
 	});
 
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 
@@ -517,7 +519,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 	vdec_frame frame;
 	{
-		thread_lock lock(*vdec);
+		std::lock_guard<std::mutex> lock(vdec->mutex);
 
 		if (vdec->out.empty())
 		{
@@ -527,6 +529,11 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 		frame = std::move(vdec->out.front());
 
 		vdec->out.pop();
+
+		if (vdec->out.size() <= 60)
+		{
+			vdec->notify();
+		}
 	}
 
 	vdec->notify();
@@ -642,7 +649,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	u64 usrd;
 	u32 frc;
 	{
-		thread_lock lock(*vdec);
+		std::lock_guard<std::mutex> lock(vdec->mutex);
 
 		if (vdec->out.empty())
 		{
@@ -833,7 +840,7 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 	// TODO: check frc value
 	vdec->cmd_push({vdec_cmd::set_frc, frc});
-	vdec->lock_notify();
+	vdec->notify();
 	return CELL_OK;
 }
 

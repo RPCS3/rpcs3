@@ -11,8 +11,6 @@ class LogFrame : public wxPanel
 	//Copy Action in Context Menu
 	wxTextDataObject* m_tdo;
 
-	wxTimer m_timer;
-
 	YAML::Node m_cfg_level;
 	YAML::Node m_cfg_tty;
 
@@ -32,14 +30,9 @@ public:
 	~LogFrame();
 
 	bool Close(bool force = false);
+	void UpdateUI();
 
 private:
-	virtual void Task(){};
-
-	void OnQuit(wxCloseEvent& event);
 	void OnRightClick(wxMouseEvent& event); // Show context menu
 	void OnContextMenu(wxCommandEvent& event); // After select
-	void OnTimer(wxTimerEvent& event);
-
-	DECLARE_EVENT_TABLE();
 };

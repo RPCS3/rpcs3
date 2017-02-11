@@ -263,9 +263,9 @@ s32 pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thread_in_
 	}
 
 	// Set the allocation functions in the handle
-	handle->malloc = thread_in_param->cbCtrlMallocFunc;
+	handle->malloc_ = thread_in_param->cbCtrlMallocFunc;
 	handle->malloc_arg = thread_in_param->cbCtrlMallocArg;
-	handle->free = thread_in_param->cbCtrlFreeFunc;
+	handle->free_ = thread_in_param->cbCtrlFreeFunc;
 	handle->free_arg = thread_in_param->cbCtrlFreeArg;
 
 	// Set handle pointer
@@ -280,7 +280,7 @@ s32 pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thread_in_
 s32 pngDecDestroy(ppu_thread& ppu, PHandle handle)
 {
 	// Deallocate the decoder handle memory
-	if (handle->free(ppu, handle, handle->free_arg) != 0)
+	if (handle->free_(ppu, handle, handle->free_arg) != 0)
 	{
 		cellPngDec.error("PNG decoder deallocation failed.");
 		return CELL_PNGDEC_ERROR_FATAL;
@@ -298,7 +298,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	}
 
 	// Allocate memory for the stream structure
-	auto stream = vm::ptr<PngStream>::make(handle->malloc(ppu, sizeof(PngStream), handle->malloc_arg).addr());
+	auto stream = vm::ptr<PngStream>::make(handle->malloc_(ppu, sizeof(PngStream), handle->malloc_arg).addr());
 
 	// Check if the allocation of memory for the stream structure failed
 	if (!stream)
@@ -320,7 +320,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	*png_stream = stream;
 
 	// Allocate memory for the PNG buffer for decoding
-	auto buffer = vm::ptr<PngBuffer>::make(handle->malloc(ppu, sizeof(PngBuffer), handle->malloc_arg).addr());
+	auto buffer = vm::ptr<PngBuffer>::make(handle->malloc_(ppu, sizeof(PngBuffer), handle->malloc_arg).addr());
 
 	// Check for if the buffer structure allocation failed
 	if (!buffer)
@@ -453,7 +453,7 @@ s32 pngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
 	// Deallocate the PNG buffer structure used to decode from memory, if we decoded from memory
 	if (stream->buffer)
 	{
-		if (handle->free(ppu, stream->buffer, handle->free_arg) != 0)
+		if (handle->free_(ppu, stream->buffer, handle->free_arg) != 0)
 		{
 			cellPngDec.error("PNG buffer decoding structure deallocation failed.");
 			return CELL_PNGDEC_ERROR_FATAL;
@@ -464,7 +464,7 @@ s32 pngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
 	png_destroy_read_struct(&stream->png_ptr, &stream->info_ptr, nullptr);
 
 	// Deallocate the stream memory
-	if (handle->free(ppu, stream, handle->free_arg) != 0)
+	if (handle->free_(ppu, stream, handle->free_arg) != 0)
 	{
 		cellPngDec.error("PNG stream deallocation failed.");
 		return CELL_PNGDEC_ERROR_FATAL;

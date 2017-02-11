@@ -377,7 +377,7 @@ namespace rsx
 							{ ppu_cmd::lle_call, vblank_handler },
 						});
 
-						intr_thread->lock_notify();
+						intr_thread->notify();
 					}
 
 					continue;
@@ -388,10 +388,8 @@ namespace rsx
 		});
 
 		// TODO: exit condition
-		while (true)
+		while (!Emu.IsStopped())
 		{
-			CHECK_EMU_STATUS;
-
 			const u32 get = ctrl->get;
 			const u32 put = ctrl->put;
 
@@ -524,6 +522,26 @@ namespace rsx
 			local_transform_constants[entry.first] = entry.second;
 		for (const auto &entry : local_transform_constants)
 			stream_vector_from_memory((char*)buffer + entry.first * 4 * sizeof(float), (void*)entry.second.rgba);
+	}
+
+	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
+	{
+		u32 *dst = static_cast<u32*>(buffer);
+
+		const u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
+		const float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		const f32 fog0 = rsx::method_registers.fog_params_0();
+		const f32 fog1 = rsx::method_registers.fog_params_1();
+		const float one = 1.f;
+
+		stream_vector(dst, (u32&)fog0, (u32&)fog1, is_alpha_tested, (u32&)alpha_ref);
+
+		size_t offset = 4;
+		for (int index = 0; index < 16; ++index)
+		{
+			stream_vector(&dst[offset], (u32&)fragment_program.texture_pitch_scale[index], (u32&)one, 0U, 0U);
+			offset += 4;
+		}
 	}
 
 	void thread::write_inline_array_to_buffer(void *dst_buffer)
@@ -697,7 +715,7 @@ namespace rsx
 
 	//void thread::invoke(std::function<bool()> callback)
 	//{
-	//	if (operator->() == thread_ctrl::get_current())
+	//	if (get() == thread_ctrl::get_current())
 	//	{
 	//		while (true)
 	//		{
@@ -816,8 +834,7 @@ namespace rsx
 		return result;
 	}
 
-
-	RSXFragmentProgram thread::get_current_fragment_program() const
+	RSXFragmentProgram thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, bool)> get_surface_info) const
 	{
 		RSXFragmentProgram result = {};
 		u32 shader_program = rsx::method_registers.shader_program_address();
@@ -841,23 +858,52 @@ namespace rsx
 		std::array<texture_dimension_extended, 16> texture_dimensions;
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
-			if (!rsx::method_registers.fragment_textures[i].enabled())
+			auto &tex = rsx::method_registers.fragment_textures[i];
+			result.texture_pitch_scale[i] = 1.f;
+
+			if (!tex.enabled())
 			{
 				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
 				result.textures_alpha_kill[i] = 0;
 				result.textures_zfunc[i] = 0;
 			}
-
 			else
 			{
-				texture_dimensions[i] = rsx::method_registers.fragment_textures[i].get_extended_texture_dimension();
-				result.textures_alpha_kill[i] = rsx::method_registers.fragment_textures[i].alpha_kill_enabled() ? 1 : 0;
-				result.textures_zfunc[i] = rsx::method_registers.fragment_textures[i].zfunc();
-			}
+				texture_dimensions[i] = tex.get_extended_texture_dimension();
+				result.textures_alpha_kill[i] = tex.alpha_kill_enabled() ? 1 : 0;
+				result.textures_zfunc[i] = tex.zfunc();
 
-			if (rsx::method_registers.fragment_textures[i].enabled() && (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN))
-				result.unnormalized_coords |= (1 << i);
+				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+				const u32 raw_format = tex.format();
+
+				if (raw_format & CELL_GCM_TEXTURE_UN)
+					result.unnormalized_coords |= (1 << i);
+
+				bool surface_exists;
+				u16  surface_pitch;
+
+				std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, false);
+
+				if (surface_exists && surface_pitch)
+				{
+					if (raw_format & CELL_GCM_TEXTURE_UN)
+						result.texture_pitch_scale[i] = (float)surface_pitch / tex.pitch();
+				}
+				else
+				{
+					std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, true);
+					if (surface_exists)
+					{
+						u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+						if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
+						{
+							result.redirected_textures |= (1 << i);
+						}
+					}
+				}
+			}
 		}
+
 		result.set_texture_dimension(texture_dimensions);
 
 		return result;

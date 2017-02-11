@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
+namespace vm { using namespace ps3; }
+
 logs::channel cellOvis("cellOvis", logs::level::notice);
 
 // Return Codes

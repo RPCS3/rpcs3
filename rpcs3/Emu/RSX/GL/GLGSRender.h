@@ -4,7 +4,9 @@
 #include "GLTexture.h"
 #include "GLTextureCache.h"
 #include "GLRenderTargets.h"
-#include <Utilities/optional.hpp>
+#include "restore_new.h"
+#include "Utilities/optional.hpp"
+#include "define_new_memleakdetect.h"
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
 

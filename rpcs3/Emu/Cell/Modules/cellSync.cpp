@@ -848,8 +848,6 @@ error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 	{
 		while (true)
 		{
-			CHECK_EMU_STATUS;
-
 			const auto old = queue->push1.load(); _mm_lfence();
 			auto push = old;
 
@@ -1091,8 +1089,6 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
-
 		s32 res;
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1111,7 +1107,7 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 			break;
 		}
 
-		std::this_thread::sleep_for(1ms); // hack
+		thread_ctrl::wait_for(1000); // hack
 	}
 
 	const s32 depth = queue->m_depth;
@@ -1147,8 +1143,6 @@ error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueu
 	{
 		while (true)
 		{
-			CHECK_EMU_STATUS;
-
 			const auto old = queue->pop1.load(); _mm_lfence();
 			auto pop = old;
 
@@ -1390,8 +1384,6 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
-
 		s32 res;
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1410,7 +1402,7 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 			break;
 		}
 
-		std::this_thread::sleep_for(1ms); // hack
+		thread_ctrl::wait_for(1000); // hack
 	}
 
 	const s32 depth = queue->m_depth;

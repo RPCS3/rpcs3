@@ -49,7 +49,8 @@ extern u64 get_system_time();
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
-extern std::shared_ptr<struct lv2_prx_t> ppu_load_prx(const ppu_prx_object&);
+extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&);
+extern void ppu_finalize();
 
 fs::file g_tty;
 
@@ -312,7 +313,6 @@ void Emulator::Load()
 		}
 
 		debug::autopause::reload();
-		SendDbgCommand(DID_READY_EMU);
 		if (g_cfg_autostart) Run();
 	}
 	catch (const std::exception& e)
@@ -340,18 +340,19 @@ void Emulator::Run()
 
 	rpcs3::on_run()();
 
-	SendDbgCommand(DID_START_EMU);
-
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
 	m_status = Running;
 
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.run();
-	});
+	};
 
-	SendDbgCommand(DID_STARTED_EMU);
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 }
 
 bool Emulator::Pause()
@@ -372,15 +373,15 @@ bool Emulator::Pause()
 		LOG_ERROR(GENERAL, "Emulator::Pause() error: concurrent access");
 	}
 
-	SendDbgCommand(DID_PAUSE_EMU);
-
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_pause;
-	});
+	};
 
-	SendDbgCommand(DID_PAUSED_EMU);
-
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 	return true;
 }
 
@@ -406,17 +407,18 @@ void Emulator::Resume()
 		LOG_ERROR(GENERAL, "Emulator::Resume() error: concurrent access");
 	}
 
-	SendDbgCommand(DID_RESUME_EMU);
-
-	idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::dbg_global_pause;
-		cpu.lock_notify();
-	});
+		cpu.notify();
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	rpcs3::on_resume()();
-
-	SendDbgCommand(DID_RESUMED_EMU);
 }
 
 void Emulator::Stop()
@@ -429,20 +431,17 @@ void Emulator::Stop()
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
 	rpcs3::on_stop()();
-	SendDbgCommand(DID_STOP_EMU);
 
+	auto on_select = [](u32, cpu_thread& cpu)
 	{
-		LV2_LOCK;
+		cpu.state += cpu_flag::dbg_global_stop;
+		cpu.get()->set_exception(std::make_exception_ptr(cpu_flag::dbg_global_stop));
+	};
 
-		idm::select<ppu_thread, SPUThread, RawSPUThread, ARMv7Thread>([](u32, cpu_thread& cpu)
-		{
-			cpu.state += cpu_flag::dbg_global_stop;
-			cpu->lock();
-			cpu->set_exception(std::make_exception_ptr(EmulationStopped()));
-			cpu->unlock();
-			cpu->notify();
-		});
-	}
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 
 	LOG_NOTICE(GENERAL, "All threads signaled...");
 
@@ -462,8 +461,7 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
-
-	SendDbgCommand(DID_STOPPED_EMU);
+	ppu_finalize();
 
 	if (g_cfg_autoexit)
 	{
@@ -477,47 +475,51 @@ void Emulator::Stop()
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 {
-	std::string out;
+	logs::channel* channel = &logs::GENERAL;
+	logs::level level = logs::level::error;
+	const char* func = "Unknown function";
 
 	if (auto thread = get_current_cpu_thread())
 	{
 		if (g_system == system_type::ps3 && thread->id_type() == 1)
 		{
-			if (auto func = static_cast<ppu_thread*>(thread)->last_function)
+			auto& ppu = static_cast<ppu_thread&>(*thread);
+
+			// Filter some annoying reports
+			switch (arg)
 			{
-				out += "'";
-				out += func;
-				out += "'";
+			case CELL_ESRCH:
+			case CELL_EDEADLK:
+			{
+				if (ppu.m_name == "_cellsurMixerMain" || ppu.m_name == "_sys_MixerChStripMain")
+				{
+					if (std::memcmp(ppu.last_function, "sys_mutex_lock", 15) == 0 ||
+						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0)
+					{
+						level = logs::level::trace;
+					}
+				}
+
+				break;
+			}
+			}
+
+			if (ppu.last_function)
+			{
+				func = ppu.last_function;
 			}			
 		}
 
 		if (g_system == system_type::psv)
 		{
-			if (auto func = static_cast<ARMv7Thread*>(thread)->last_function)
+			if (auto _func = static_cast<ARMv7Thread*>(thread)->last_function)
 			{
-				out += "'";
-				out += func;
-				out += "'";
+				func = _func;
 			}
 		}
 	}
 
-	if (out.empty())
-	{
-		fmt::append(out, "Unknown function failed with 0x%08x", arg);
-	}
-	else
-	{
-		fmt::append(out, " failed with 0x%08x", arg);
-	}
-	
-	if (sup)
-	{
-		fmt::raw_append(out, " : %s", sup, fmt_args_t<void>{arg});
-	}
-
-	LOG_ERROR(GENERAL, "%s", out);
-
+	channel->format(level, "'%s' failed with 0x%08x%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg));
 	return static_cast<s32>(arg);
 }
 

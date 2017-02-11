@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 
 namespace rsx
@@ -376,6 +376,7 @@ namespace rsx
 		{
 			to_memory_get_report,
 			report_location_main,
+			memory_host_buffer,
 		};
 
 		context_dma to_context_dma(u32 in);
@@ -689,6 +690,12 @@ enum
 	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT = 0x66626660,
 	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN = 0xBAD68000,
 	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 = 0x6660420F,
+
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 = 0x66604200,
+	CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW = 0x66606660,
+	CELL_GCM_CONTEXT_DMA_SEMAPHORE_R = 0x66616661,
+	CELL_GCM_CONTEXT_DMA_DEVICE_RW = 0x56616660,
+	CELL_GCM_CONTEXT_DMA_DEVICE_R = 0x56616661
 };
 
 enum

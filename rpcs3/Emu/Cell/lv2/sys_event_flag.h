@@ -29,29 +29,35 @@ struct sys_event_flag_attribute_t
 	};
 };
 
-struct lv2_event_flag_t
+struct lv2_event_flag final : lv2_obj
 {
 	static const u32 id_base = 0x98000000;
-	static const u32 id_step = 0x100;
-	static const u32 id_count = 8192;
 
 	const u32 protocol;
+	const u32 shared;
+	const u64 key;
+	const s32 flags;
 	const s32 type;
 	const u64 name;
 
+	semaphore<> mutex;
+	atomic_t<u32> waiters{0};
 	atomic_t<u64> pattern;
+	std::deque<cpu_thread*> sq;
 
-	sleep_queue<cpu_thread> sq;
-
-	lv2_event_flag_t(u64 pattern, u32 protocol, s32 type, u64 name)
-		: pattern(pattern)
-		, protocol(protocol)
+	lv2_event_flag(u32 protocol, s32 type, u64 name, u64 pattern)
+		: protocol(protocol)
+		, shared(0)
+		, key(0)
+		, flags(0)
 		, type(type)
 		, name(name)
+		, pattern(pattern)
 	{
 	}
 
-	static inline bool check_mode(u32 mode)
+	// Check mode arg
+	static bool check_mode(u32 mode)
 	{
 		switch (mode & 0xf)
 		{
@@ -71,54 +77,46 @@ struct lv2_event_flag_t
 		return true;
 	}
 
-	bool check_pattern(u64 bitptn, u32 mode)
+	// Check and clear pattern (must be atomic op)
+	static bool check_pattern(u64& pattern, u64 bitptn, u64 mode, u64* result)
 	{
-		if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_AND)
+		// Write pattern
+		if (result)
 		{
-			return (pattern & bitptn) == bitptn;
+			*result = pattern;
 		}
-		else if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_OR)
-		{
-			return (pattern & bitptn) != 0;
-		}
-		else
-		{
-			fmt::throw_exception("Unknown mode (0x%x)" HERE, mode);
-		}
-	}
 
-	u64 clear_pattern(u64 bitptn, u32 mode)
-	{
+		// Check pattern
+		if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_AND && (pattern & bitptn) != bitptn ||
+			(mode & 0xf) == SYS_EVENT_FLAG_WAIT_OR && (pattern & bitptn) == 0)
+		{
+			return false;
+		}
+
+		// Clear pattern if necessary
 		if ((mode & ~0xf) == SYS_EVENT_FLAG_WAIT_CLEAR)
 		{
-			return pattern.fetch_and(~bitptn);
+			pattern &= ~bitptn;
 		}
 		else if ((mode & ~0xf) == SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
 		{
-			return pattern.exchange(0);
+			pattern = 0;
 		}
-		else if ((mode & ~0xf) == 0)
-		{
-			return pattern;
-		}
-		else
-		{
-			fmt::throw_exception("Unknown mode (0x%x)" HERE, mode);
-		}
-	}
 
-	void notify_all(lv2_lock_t);
+		return true;
+	}
 };
 
 // Aux
 class ppu_thread;
 
-// SysCalls
-s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init);
-s32 sys_event_flag_destroy(u32 id);
-s32 sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
-s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);
-s32 sys_event_flag_set(u32 id, u64 bitptn);
-s32 sys_event_flag_clear(u32 id, u64 bitptn);
-s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num);
-s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags);
+// Syscalls
+
+error_code sys_event_flag_create(vm::ps3::ptr<u32> id, vm::ps3::ptr<sys_event_flag_attribute_t> attr, u64 init);
+error_code sys_event_flag_destroy(u32 id);
+error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ps3::ptr<u64> result, u64 timeout);
+error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ps3::ptr<u64> result);
+error_code sys_event_flag_set(u32 id, u64 bitptn);
+error_code sys_event_flag_clear(u32 id, u64 bitptn);
+error_code sys_event_flag_cancel(u32 id, vm::ps3::ptr<u32> num);
+error_code sys_event_flag_get(u32 id, vm::ps3::ptr<u64> flags);

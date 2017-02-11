@@ -16,7 +16,7 @@ class ARMv7Thread final : public cpu_thread
 public:
 	static const u32 id_base = 1;
 	static const u32 id_step = 2;
-	static const u32 id_count = 32767;
+	static const u32 id_count = 4096;
 
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
@@ -138,8 +138,6 @@ public:
 	u32 stack_size = 0;
 
 	const std::string m_name;
-
-	std::function<void(ARMv7Thread&)> custom_task;
 
 	const char* last_function = nullptr;
 
