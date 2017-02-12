@@ -903,6 +903,30 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 
 DECLARE(ppu_module_manager::cellAdec)("cellAdec", []()
 {
+	static ppu_static_module cell_libac3dec("cell_libac3dec");
+	static ppu_static_module cellAtrac3dec("cellAtrac3dec");
+	static ppu_static_module cellAtracXdec("cellAtracXdec");
+	static ppu_static_module cellCelpDec("cellCelpDec");
+	static ppu_static_module cellDTSdec("cellDTSdec");
+	static ppu_static_module cellM2AACdec("cellM2AACdec");
+	static ppu_static_module cellM2BCdec("cellM2BCdec");
+	static ppu_static_module cellM4AacDec("cellM4AacDec");
+	static ppu_static_module cellMP3dec("cellMP3dec");
+	static ppu_static_module cellTRHDdec("cellTRHDdec");
+	static ppu_static_module cellWMAdec("cellWMAdec");
+	static ppu_static_module cellDTSLBRdec("cellDTSLBRdec");
+	static ppu_static_module cellDDPdec("cellDDPdec");
+	static ppu_static_module cellM4AacDec2ch("cellM4AacDec2ch");
+	static ppu_static_module cellDTSHDdec("cellDTSHDdec");
+	static ppu_static_module cellMPL1dec("cellMPL1dec");
+	static ppu_static_module cellMP3Sdec("cellMP3Sdec");
+	static ppu_static_module cellM4AacDec2chmod("cellM4AacDec2chmod");
+	static ppu_static_module cellCelp8Dec("cellCelp8Dec");
+	static ppu_static_module cellWMAPROdec("cellWMAPROdec");
+	static ppu_static_module cellWMALSLdec("cellWMALSLdec");
+	static ppu_static_module cellDTSHDCOREdec("cellDTSHDCOREdec");
+	static ppu_static_module cellAtrac3multidec("cellAtrac3multidec");
+
 	REG_FUNC(cellAdec, cellAdecQueryAttr);
 	REG_FUNC(cellAdec, cellAdecOpen);
 	REG_FUNC(cellAdec, cellAdecOpenEx);

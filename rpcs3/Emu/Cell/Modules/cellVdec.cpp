@@ -876,6 +876,15 @@ s32 cellVdecSetPts()
 
 DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 {
+	static ppu_static_module libavcdec("libavcdec");
+	static ppu_static_module libdivx311dec("libdivx311dec");
+	static ppu_static_module libdivxdec("libdivxdec");
+	static ppu_static_module libmvcdec("libmvcdec");
+	static ppu_static_module libsjvtd("libsjvtd");
+	static ppu_static_module libsmvd2("libsmvd2");
+	static ppu_static_module libsmvd4("libsmvd4");
+	static ppu_static_module libsvc1d("libsvc1d");
+
 	REG_VAR(libvdec, _cell_vdec_prx_ver); // 0x085a7ecb
 
 	REG_FUNC(libvdec, cellVdecQueryAttr);

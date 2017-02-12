@@ -1366,6 +1366,8 @@ s32 cellDmuxFlushEs(u32 esHandle)
 
 DECLARE(ppu_module_manager::cellDmux)("cellDmux", []()
 {
+	static ppu_static_module cellDmuxPamf("cellDmuxPamf");
+
 	REG_FUNC(cellDmux, cellDmuxQueryAttr);
 	REG_FUNC(cellDmux, cellDmuxQueryAttr2);
 	REG_FUNC(cellDmux, cellDmuxOpen);
