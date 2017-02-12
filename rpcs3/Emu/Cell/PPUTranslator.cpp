@@ -1758,7 +1758,12 @@ void PPUTranslator::HACK(ppu_opcode_t op)
 
 void PPUTranslator::SC(ppu_opcode_t op)
 {
-	Call(GetType<void>(), fmt::format(op.lev == 0 ? "__syscall" : "__lv%ucall", +op.lev), m_thread, m_ir->CreateLoad(m_gpr[11]));
+	if (op.opcode != ppu_instructions::SC(0) && op.opcode != ppu_instructions::SC(1))
+	{
+		return UNK(op);
+	}
+
+	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, m_ir->CreateLoad(m_gpr[11]));
 	UndefineVolatileRegisters();
 }
 

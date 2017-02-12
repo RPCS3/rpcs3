@@ -1944,12 +1944,12 @@ bool ppu_interpreter::HACK(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	switch (u32 lv = op.lev)
+	if (op.opcode != ppu_instructions::SC(0))
 	{
-	case 0x0: ppu_execute_syscall(ppu, ppu.gpr[11]); break;
-	default: fmt::throw_exception("SC lv%u", lv);
+		return UNK(ppu, op);
 	}
 
+	ppu_execute_syscall(ppu, ppu.gpr[11]);
 	return true;
 }
 
