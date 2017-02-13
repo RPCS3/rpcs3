@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -23,6 +23,12 @@ s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> a
 
 	// call the syscall
 	return sys_fs_open(path, flags, fd, flags & CELL_FS_O_CREAT ? CELL_FS_S_IRUSR | CELL_FS_S_IWUSR : 0, arg, size);
+}
+
+s32 cellFsOpen2()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
 }
 
 s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
@@ -171,6 +177,12 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 	return sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>{}, vm::var<u64>{});
 }
 
+s32 cellFsFGetBlockSize2()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
 s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
 	cellFs.warning("cellFsGetBlockSize(path=%s, sector_size=*0x%x, block_size=*0x%x) -> sys_fs_get_block_size()", path, sector_size, block_size);
@@ -179,6 +191,12 @@ s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u6
 
 	// call the syscall
 	return sys_fs_get_block_size(path, sector_size, block_size, vm::var<u64>{});
+}
+
+s32 cellFsGetBlockSize2()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
 }
 
 s32 cellFsTruncate(vm::cptr<char> path, u64 size)
@@ -207,6 +225,12 @@ s32 cellFsChmod(vm::cptr<char> path, s32 mode)
 
 	// call the syscall
 	return sys_fs_chmod(path, mode);
+}
+
+s32 cellFsChown()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
 }
 
 s32 cellFsUtime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep)
@@ -609,6 +633,12 @@ s32 cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u64 offs
 	return CELL_OK;
 }
 
+s32 cellFsSdataOpenWithVersion()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
 using fs_aio_cb_t = vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u64 size)>;
 
 // temporarily
@@ -836,12 +866,97 @@ s32 cellFsUnregisterL10nCallbacks()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellFsAclRead()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsAclWrite()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsFcntl()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsFdatasync()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsLink()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsLsnGetCDA()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsLsnGetCDASize()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsLsnLock()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsLsnRead()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsLsnRead2()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsLsnUnlock()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsMappedAllocate()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsMappedFree()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+s32 cellFsSymbolicLink()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
 
 DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 {
 	REG_FUNC(sys_fs, cellFsOpen);
+	REG_FUNC(sys_fs, cellFsOpen2);
 	REG_FUNC(sys_fs, cellFsSdataOpen);
 	REG_FUNC(sys_fs, cellFsSdataOpenByFd);
+	REG_FUNC(sys_fs, cellFsSdataOpenWithVersion);
 	REG_FUNC(sys_fs, cellFsRead).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsWrite).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsClose).flags = MFF_PERFECT;
@@ -853,6 +968,7 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsMkdir);
 	REG_FUNC(sys_fs, cellFsRename);
 	REG_FUNC(sys_fs, cellFsChmod);
+	REG_FUNC(sys_fs, cellFsChown);
 	REG_FUNC(sys_fs, cellFsFsync);
 	REG_FUNC(sys_fs, cellFsRmdir);
 	REG_FUNC(sys_fs, cellFsUnlink);
@@ -860,12 +976,14 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsFtruncate).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsTruncate);
 	REG_FUNC(sys_fs, cellFsFGetBlockSize).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsFGetBlockSize2);
 	REG_FUNC(sys_fs, cellFsAioInit);
 	REG_FUNC(sys_fs, cellFsAioFinish);
 	REG_FUNC(sys_fs, cellFsAioRead);
 	REG_FUNC(sys_fs, cellFsAioWrite);
 	REG_FUNC(sys_fs, cellFsAioCancel);
 	REG_FUNC(sys_fs, cellFsGetBlockSize);
+	REG_FUNC(sys_fs, cellFsGetBlockSize2);
 	REG_FUNC(sys_fs, cellFsGetFreeSize);
 	REG_FUNC(sys_fs, cellFsReadWithOffset);
 	REG_FUNC(sys_fs, cellFsWriteWithOffset);
@@ -897,4 +1015,24 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
 	REG_FUNC(sys_fs, cellFsRegisterConversionCallback);
 	REG_FUNC(sys_fs, cellFsUnregisterL10nCallbacks);
+
+	REG_FUNC(sys_fs, cellFsAclRead);
+	REG_FUNC(sys_fs, cellFsAclWrite);
+
+	REG_FUNC(sys_fs, cellFsFcntl);
+	REG_FUNC(sys_fs, cellFsFdatasync);
+	
+	REG_FUNC(sys_fs, cellFsLink);
+
+	REG_FUNC(sys_fs, cellFsLsnGetCDA);
+	REG_FUNC(sys_fs, cellFsLsnGetCDASize);
+	REG_FUNC(sys_fs, cellFsLsnLock);
+	REG_FUNC(sys_fs, cellFsLsnRead);
+	REG_FUNC(sys_fs, cellFsLsnRead2);
+	REG_FUNC(sys_fs, cellFsLsnUnlock);
+
+	REG_FUNC(sys_fs, cellFsMappedAllocate);
+	REG_FUNC(sys_fs, cellFsMappedFree);
+
+	REG_FUNC(sys_fs, cellFsSymbolicLink);
 });

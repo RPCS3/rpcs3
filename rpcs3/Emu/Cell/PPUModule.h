@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "PPUFunction.h"
 #include "PPUCallback.h"
@@ -120,6 +120,7 @@ public:
 	static const ppu_static_module cellFiber;
 	static const ppu_static_module cellFont;
 	static const ppu_static_module cellFontFT;
+	static const ppu_static_module cell_FreeType2;
 	static const ppu_static_module cellFs;
 	static const ppu_static_module cellGame;
 	static const ppu_static_module cellGameExec;

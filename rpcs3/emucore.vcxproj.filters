@@ -347,6 +347,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cell_FreeType2.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellFs.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
