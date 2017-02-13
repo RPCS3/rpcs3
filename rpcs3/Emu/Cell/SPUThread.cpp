@@ -1058,6 +1058,22 @@ bool SPUThread::stop_and_signal(u32 code)
 
 	switch (code)
 	{
+	case 0x000:
+	{
+		// Hack: wait for an instruction become available
+		while (vm::ps3::read32(offset + pc) == 0)
+		{
+			if (test(state) && check_state())
+			{
+				return false;
+			}
+
+			thread_ctrl::wait_for(1000);
+		}
+
+		return false;
+	}
+
 	case 0x001:
 	{
 		thread_ctrl::wait_for(1000); // hack
