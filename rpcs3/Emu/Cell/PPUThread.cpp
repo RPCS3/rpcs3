@@ -600,6 +600,12 @@ extern void sse_cellbe_stvrx(u64 addr, __m128i a);
 	fmt::throw_exception("Unreachable! (0x%llx)", addr);
 }
 
+static void ppu_check(ppu_thread& ppu, u64 addr)
+{
+	ppu.cia = addr;
+	ppu.check_state();
+}
+
 static void ppu_trace(u64 addr)
 {
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
@@ -671,6 +677,7 @@ static void ppu_initialize()
 		{ "__cptr", (u64)&s_ppu_compiled },
 		{ "__trap", (u64)&ppu_trap },
 		{ "__end", (u64)&ppu_unreachable },
+		{ "__check", (u64)&ppu_check },
 		{ "__trace", (u64)&ppu_trace },
 		{ "__hlecall", (u64)&ppu_execute_function },
 		{ "__syscall", (u64)&ppu_execute_syscall },
