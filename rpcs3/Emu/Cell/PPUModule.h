@@ -76,17 +76,19 @@ public:
 	static const ppu_static_module* get_module(const std::string& name);
 
 	template<typename T, T Func>
-	static void register_static_function(const char* module, const char* name, ppu_function_t func, u32 fnid, u32 flags)
+	static auto& register_static_function(const char* module, const char* name, ppu_function_t func, u32 fnid)
 	{
 		auto& info = access_static_function(module, fnid);
 
 		info.name  = name;
 		info.index = ppu_function_manager::register_function<T, Func>(func);
-		info.flags = flags;
+		info.flags = 0;
+
+		return info;
 	}
 
 	template<typename T, T* Var>
-	static void register_static_variable(const char* module, const char* name, u32 vnid, void(*init)())
+	static auto& register_static_variable(const char* module, const char* name, u32 vnid)
 	{
 		static_assert(std::is_same<u32, std::decay_t<typename T::addr_type>>::value, "Static variable registration: vm::gvar<T> expected");
 
@@ -94,9 +96,11 @@ public:
 
 		info.name  = name;
 		info.var   = reinterpret_cast<vm::ps3::gvar<void>*>(Var);
-		info.init  = init ? init : [] {};
+		info.init  = [] {};
 		info.size  = SIZE_32(typename T::type);
 		info.align = ALIGN_32(typename T::type);
+
+		return info;
 	}
 
 	static const ppu_static_module cellAdec;
@@ -202,12 +206,12 @@ inline RT ppu_execute_function_or_callback(const char* name, ppu_thread& ppu, Ar
 
 #define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(#func, ppu, __VA_ARGS__)
 
-#define REG_FNID(module, nid, func, ...) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), nid, {__VA_ARGS__})
+#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), nid)
 
-#define REG_FUNC(module, func, ...) REG_FNID(module, ppu_generate_id(#func), func, __VA_ARGS__)
+#define REG_FUNC(module, func) REG_FNID(module, ppu_generate_id(#func), func)
 
-#define REG_VNID(module, nid, var, ...) ppu_module_manager::register_static_variable<decltype(var), &var>(#module, #var, nid, {__VA_ARGS__})
+#define REG_VNID(module, nid, var) ppu_module_manager::register_static_variable<decltype(var), &var>(#module, #var, nid)
 
-#define REG_VAR(module, var, ...) REG_VNID(module, ppu_generate_id(#var), var, __VA_ARGS__)
+#define REG_VAR(module, var) REG_VNID(module, ppu_generate_id(#var), var)
 
 #define UNIMPLEMENTED_FUNC(module) module.todo("%s", __func__)
