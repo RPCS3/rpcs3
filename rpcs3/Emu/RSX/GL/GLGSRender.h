@@ -25,7 +25,7 @@ private:
 
 	gl_render_targets m_rtts;
 
-	gl::gl_texture_cache m_gl_texture_cache;
+	gl::texture_cache m_gl_texture_cache;
 
 	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
 	

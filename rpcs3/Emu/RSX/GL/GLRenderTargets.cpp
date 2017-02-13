@@ -228,7 +228,7 @@ void GLGSRender::read_buffers()
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
 				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
 
-				bool success = m_gl_texture_cache.explicit_writeback((*std::get<1>(m_rtts.m_bound_render_targets[i])), texaddr, pitch);
+				bool success = m_gl_texture_cache.load_rtt((*std::get<1>(m_rtts.m_bound_render_targets[i])), texaddr, pitch);
 
 				//Fall back to slower methods if the image could not be fetched from cache.
 				if (!success)
@@ -240,7 +240,7 @@ void GLGSRender::read_buffers()
 					else
 					{
 						u32 range = pitch * height;
-						m_gl_texture_cache.remove_in_range(texaddr, range);
+						m_gl_texture_cache.invalidate_range(texaddr, range);
 
 						std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
 						color_buffer.read(buffer.get(), width, height, pitch);
@@ -287,7 +287,7 @@ void GLGSRender::read_buffers()
 			return;
 
 		u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
-		bool in_cache = m_gl_texture_cache.explicit_writeback((*std::get<1>(m_rtts.m_bound_depth_stencil)), depth_address, pitch);
+		bool in_cache = m_gl_texture_cache.load_rtt((*std::get<1>(m_rtts.m_bound_depth_stencil)), depth_address, pitch);
 
 		if (in_cache)
 			return;
@@ -332,9 +332,6 @@ void GLGSRender::write_buffers()
 	if (!draw_fbo)
 		return;
 
-	//TODO: Detect when the data is actually being used by cell and issue download command on-demand (mark as not present?)
-	//Should also mark cached resources as dirty so that read buffers works out-of-the-box without modification
-
 	if (g_cfg_rsx_write_color_buffers)
 	{
 		auto color_format = rsx::internals::surface_color_format_to_gl(rsx::method_registers.surface_color());
@@ -366,7 +363,7 @@ void GLGSRender::write_buffers()
 				* but using the GPU to perform the caching is many times faster.
 				*/
 
-				__glcheck m_gl_texture_cache.save_render_target(texaddr, range, (*std::get<1>(m_rtts.m_bound_render_targets[i])));
+				__glcheck m_gl_texture_cache.save_rtt(texaddr, range, (*std::get<1>(m_rtts.m_bound_render_targets[i])), width, height, pitch, color_format.format, color_format.type);
 			}
 		};
 
@@ -405,12 +402,14 @@ void GLGSRender::write_buffers()
 		if (pitch <= 64)
 			return;
 
+		u32 width = rsx::method_registers.surface_clip_width();
+		u32 height = rsx::method_registers.surface_clip_height();
+		u32 range = width * height * 2;
 		auto depth_format = rsx::internals::surface_depth_format_to_gl(rsx::method_registers.surface_depth_fmt());
 		u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
-		u32 range = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height() * 2;
 
 		if (rsx::method_registers.surface_depth_fmt() != rsx::surface_depth_format::z16) range *= 2;
 
-		m_gl_texture_cache.save_render_target(depth_address, range, (*std::get<1>(m_rtts.m_bound_depth_stencil)));
+		m_gl_texture_cache.save_rtt(depth_address, range, (*std::get<1>(m_rtts.m_bound_depth_stencil)), width, height, pitch, depth_format.format, depth_format.type);
 	}
 }

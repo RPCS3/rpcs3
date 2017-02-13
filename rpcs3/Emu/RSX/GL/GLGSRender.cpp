@@ -546,7 +546,6 @@ void GLGSRender::on_init_thread()
 	m_index_ring_buffer->create(gl::buffer::target::element_array, 16 * 0x100000);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
-	m_gl_texture_cache.initialize_rtt_cache();
 
 	if (g_cfg_rsx_overlay)
 		m_text_printer.init();
@@ -644,7 +643,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	}
 
 	glClear(mask);
-	renderer->write_buffers();
+	//renderer->write_buffers();
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
@@ -698,7 +697,6 @@ bool GLGSRender::load_program()
 	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program = get_current_fragment_program(rtt_lookup_func);
 
-	std::array<float, 16> rtt_scaling;
 	u32 unnormalized_rtts = 0;
 
 	for (auto &vtx : vertex_program.rsx_vertex_inputs)
@@ -946,6 +944,8 @@ u64 GLGSRender::timestamp() const
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	if (is_writing) return m_gl_texture_cache.mark_as_dirty(address);
-	return false;
+	if (is_writing)
+		return m_gl_texture_cache.mark_as_dirty(address);
+	else
+		return m_gl_texture_cache.flush_section(address);
 }
