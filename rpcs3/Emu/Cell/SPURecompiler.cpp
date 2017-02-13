@@ -76,4 +76,10 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	}
 
 	spu.pc = res & 0x3fffc;
+
+	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST) > SPU_EVENT_INTR_ENABLED)
+	{
+		spu.ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
+		spu.srr0 = std::exchange(spu.pc, 0);
+	}
 }
