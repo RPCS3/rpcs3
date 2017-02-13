@@ -149,6 +149,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFont.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cell_FreeType2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGame.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGameExec.cpp" />
@@ -541,6 +542,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellFiber.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFont.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFontFT.h" />
+    <ClInclude Include="Emu\Cell\Modules\cell_FreeType2.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFs.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGame.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGcmSys.h" />

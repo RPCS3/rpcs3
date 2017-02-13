@@ -483,6 +483,12 @@ s32 _ZNK4cxml4File7GetAddrEv()
 	return CELL_OK;
 }
 
+s32 _ZNK4cxml7Element14GetNextSiblingEv()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 s32 _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -591,6 +597,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN4cxml8Document18GetDocumentElementEv);
 
 	REG_FUNC(cellSysutil, _ZNK4cxml4File7GetAddrEv);
+	REG_FUNC(cellSysutil, _ZNK4cxml7Element14GetNextSiblingEv);
 
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi);

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -740,6 +740,10 @@ s32 cellFontGraphicsGetLineRGBA()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellFontControl()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
 
 DECLARE(ppu_module_manager::cellFont)("cellFont", []()
 {
@@ -827,4 +831,5 @@ DECLARE(ppu_module_manager::cellFont)("cellFont", []()
 	REG_FUNC(cellFont, cellFontGetRenderEffectSlant);
 	REG_FUNC(cellFont, cellFontGetScalePoint);
 	REG_FUNC(cellFont, cellFontGraphicsGetLineRGBA);
+	REG_FUNC(cellFont, cellFontControl);
 });

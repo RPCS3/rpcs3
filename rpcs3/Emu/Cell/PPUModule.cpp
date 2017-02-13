@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/AutoPause.h"
 #include "Crypto/sha1.h"
@@ -33,6 +33,7 @@ LOG_CHANNEL(cellDmux);
 LOG_CHANNEL(cellFiber);
 LOG_CHANNEL(cellFont);
 LOG_CHANNEL(cellFontFT);
+LOG_CHANNEL(cell_FreeType2);
 LOG_CHANNEL(cellFs);
 LOG_CHANNEL(cellGame);
 LOG_CHANNEL(cellGameExec);
@@ -218,6 +219,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellFiber,
 		&ppu_module_manager::cellFont,
 		&ppu_module_manager::cellFontFT,
+		&ppu_module_manager::cell_FreeType2,
 		&ppu_module_manager::cellFs,
 		&ppu_module_manager::cellGame,
 		&ppu_module_manager::cellGameExec,
