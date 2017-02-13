@@ -1678,8 +1678,6 @@ static void prepare_throw_access_violation(x64_context* context, const char* cau
 	RIP(context) = (u64)std::addressof(throw_access_violation);
 }
 
-static void _handle_interrupt(x64_context* ctx);
-
 #ifdef _WIN32
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
@@ -1819,11 +1817,6 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 {
 	x64_context* context = (ucontext_t*)uct;
 
-	if (sig == SIGUSR1)
-	{
-		return _handle_interrupt(context);
-	}
-
 #ifdef __APPLE__
 	const bool is_writing = context->uc_mcontext->__es.__err & 0x2;
 #else
@@ -1862,14 +1855,6 @@ const bool s_exception_handler_set = []() -> bool
 	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
 	{
 		std::printf("sigaction(SIGSEGV) failed (0x%x).", errno);
-		std::abort();
-	}
-
-	sa.sa_sigaction = signal_handler;
-
-	if (::sigaction(SIGUSR1, &sa, NULL) == -1)
-	{
-		std::printf("sigaction(SIGUSR1) failed (0x%x).", errno);
 		std::abort();
 	}
 
@@ -1987,10 +1972,6 @@ void thread_ctrl::initialize()
 
 void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 {
-	// Disable and discard possible interrupts
-	interrupt_disable();
-	test_interrupt();
-
 	// TODO
 	vm::reservation_free();
 
@@ -2184,149 +2165,6 @@ void thread_ctrl::notify()
 	{
 		m_signal |= 1;
 		_notify(&thread_ctrl::m_cond);
-	}
-}
-
-static thread_local x64_context s_tls_context{};
-
-static void _handle_interrupt(x64_context* ctx)
-{
-	// Copy context for further use (TODO: is it safe on all platforms?)
-	s_tls_context = *ctx;
-	thread_ctrl::handle_interrupt();
-}
-
-static thread_local void(*s_tls_handler)() = nullptr;
-
-[[noreturn]] static void execute_interrupt_handler()
-{
-	// Fix stack for throwing
-	if (s_tls_ret_pos) s_tls_ret_addr = std::exchange(*(u64*)s_tls_ret_pos, s_tls_ret_addr);
-
-	// Run either throwing or returning interrupt handler
-	s_tls_handler();
-
-	// Restore context in the case of return
-	const auto ctx = &s_tls_context;
-
-	if (s_tls_ret_pos)
-	{
-		RIP(ctx) = std::exchange(*(u64*)s_tls_ret_pos, s_tls_ret_addr);
-		RSP(ctx) += sizeof(u64);
-	}
-	else
-	{
-		RIP(ctx) = s_tls_ret_addr;
-	}
-
-#ifdef _WIN32
-	RtlRestoreContext(ctx, nullptr);
-#else
-	::setcontext(ctx);
-#endif
-}
-
-void thread_ctrl::handle_interrupt()
-{
-	const auto _this = g_tls_this_thread;
-	const auto ctx = &s_tls_context;
-
-	if (_this->m_guard & 0x80000000)
-	{
-		// Discard interrupt if interrupts are disabled
-		if (_this->m_iptr.exchange(nullptr))
-		{
-			_this->_notify(&thread_ctrl::m_icv);
-		}
-	}
-	else if (_this->m_guard == 0)
-	{
-		// Set interrupt immediately if no guard set
-		if (const auto handler = _this->m_iptr.exchange(nullptr))
-		{
-			_this->_notify(&thread_ctrl::m_icv);
-
-#ifdef _WIN32
-			// Install function call
-			s_tls_ret_addr = RIP(ctx);
-			s_tls_ret_pos = is_leaf_function(s_tls_ret_addr) ? 0 : RSP(ctx) -= sizeof(u64);
-			s_tls_handler = handler;
-			RIP(ctx) = (u64)execute_interrupt_handler;
-#else
-			// Call handler directly (TODO: install function call preserving red zone)
-			return handler();
-#endif
-		}
-	}
-	else
-	{
-		// Set delayed interrupt otherwise
-		_this->m_guard |= 0x40000000;
-	}
-	
-#ifdef _WIN32
-	RtlRestoreContext(ctx, nullptr);
-#endif
-}
-
-void thread_ctrl::interrupt(void(*handler)())
-{
-	semaphore_lock lock(m_mutex);
-
-	verify(HERE), this != g_tls_this_thread; // TODO: self-interrupt
-	verify(HERE), m_iptr.compare_and_swap_test(nullptr, handler); // TODO: multiple interrupts
-
-#ifdef _WIN32
-	const auto ctx = &s_tls_context;
-
-	const HANDLE nt = (HANDLE)m_thread.load();//OpenThread(THREAD_ALL_ACCESS, FALSE, m_data->thread_id);
-	verify(HERE), nt;
-	verify(HERE), SuspendThread(nt) != -1;
-
-	ctx->ContextFlags = CONTEXT_FULL;
-	verify(HERE), GetThreadContext(nt, ctx);
-
-	ctx->ContextFlags = CONTEXT_FULL;
-	const u64 _rip = RIP(ctx);
-	RIP(ctx) = (u64)std::addressof(thread_ctrl::handle_interrupt);
-	verify(HERE), SetThreadContext(nt, ctx);
-
-	RIP(ctx) = _rip;
-	verify(HERE), ResumeThread(nt) != -1;
-	//CloseHandle(nt);
-#else
-	pthread_kill(m_thread.load(), SIGUSR1);
-#endif
-
-	while (m_iptr)
-	{
-		m_icv.wait(lock);
-	}
-}
-
-void thread_ctrl::test_interrupt()
-{
-	if (m_guard & 0x80000000)
-	{
-		if (m_iptr.exchange(nullptr))
-		{
-			_notify(&thread_ctrl::m_icv);
-		}
-		
-		return;
-	}
-
-	if (m_guard == 0x40000000 && !std::uncaught_exception())
-	{
-		m_guard = 0;
-
-		// Execute delayed interrupt handler
-		if (const auto handler = m_iptr.exchange(nullptr))
-		{
-			_notify(&thread_ctrl::m_icv);
-
-			return handler();
-		}
 	}
 }
 

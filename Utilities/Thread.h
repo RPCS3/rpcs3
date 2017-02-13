@@ -112,15 +112,6 @@ class thread_ctrl final
 	// Thread initial task or atexit task
 	task_stack m_task;
 
-	// Thread interrupt guard counter
-	volatile u32 m_guard = 0x80000000;
-
-	// Thread interrupt condition variable
-	cond_variable m_icv;
-
-	// Interrupt function
-	atomic_t<void(*)()> m_iptr{nullptr};
-
 	// Fixed name
 	std::string m_name;
 
@@ -169,42 +160,6 @@ public:
 
 	// Notify the thread
 	void notify();
-
-	// Internal
-	static void handle_interrupt();
-
-	// Interrupt thread with specified handler call
-	void interrupt(void(*handler)());
-
-	// Interrupt guard recursive enter
-	void guard_enter()
-	{
-		m_guard++;
-	}
-
-	// Interrupt guard recursive leave
-	void guard_leave()
-	{
-		if (UNLIKELY(--m_guard & 0x40000000))
-		{
-			test_interrupt();
-		}
-	}
-
-	// Allow interrupts
-	void interrupt_enable()
-	{
-		m_guard &= ~0x80000000;
-	}
-
-	// Disable and discard any interrupt
-	void interrupt_disable()
-	{
-		m_guard |= 0x80000000;
-	}
-
-	// Check interrupt if delayed by guard scope
-	void test_interrupt();
 
 	// Wait once with timeout. Abortable, may throw. May spuriously return false.
 	static inline bool wait_for(u64 usec)
@@ -330,36 +285,6 @@ public:
 	void notify() const
 	{
 		return m_thread->notify();
-	}
-};
-
-// Interrupt guard scope
-class thread_guard final
-{
-	thread_ctrl* m_thread;
-
-public:
-	thread_guard(const thread_guard&) = delete;
-
-	thread_guard(thread_ctrl* thread)
-		//: m_thread(thread)
-	{
-		//m_thread->guard_enter();
-	}
-
-	thread_guard(named_thread& thread)
-		//: thread_guard(thread.get())
-	{
-	}
-
-	thread_guard()
-		//: thread_guard(thread_ctrl::get_current())
-	{
-	}
-
-	~thread_guard() noexcept(false)
-	{
-		//m_thread->guard_leave();
 	}
 };
 
