@@ -360,9 +360,9 @@ protected:
 
 public:
 	SCEDecrypter(const fs::file& s);
-	bool MakeFile(fs::file& elf);
+	std::vector<fs::file> MakeFile();
 	bool LoadHeaders();
-	bool LoadMetadata(u8 erk[32], u8 riv[16]);
+	bool LoadMetadata(const u8 erk[32], const u8 riv[16]);
 	bool DecryptData();
 };
 

@@ -669,7 +669,7 @@ bool SCEDecrypter::LoadHeaders()
 	return true;
 }
 
-bool SCEDecrypter::LoadMetadata(u8 erk[32], u8 riv[16])
+bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 {
 	aes_context aes;
 	u32 metadata_info_size = SIZE_32(meta_info);
@@ -803,13 +803,10 @@ bool SCEDecrypter::DecryptData()
 	return true;
 }
 
-// If elf is a nullptr, we make it point to a file in memory
-bool SCEDecrypter::MakeFile(fs::file& out_f)
+// Each section gets put into its own file.
+std::vector<fs::file> SCEDecrypter::MakeFile()
 {
-	if (!out_f)
-	{
-		out_f = fs::make_stream<std::vector<u8>>();
-	}
+	std::vector<fs::file> vec;
 
 	// Set initial offset.
 	u32 data_buf_offset = 0;
@@ -817,10 +814,14 @@ bool SCEDecrypter::MakeFile(fs::file& out_f)
 	// Write data.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
+		fs::file out_f = fs::make_stream<std::vector<u8>>();
+
+		bool isValid = true;
+
 		// Decompress if necessary.
 		if (meta_shdr[i].compressed == 2)
 		{
-			const size_t BUFSIZE = 128 * 1024;
+			const size_t BUFSIZE = 32 * 1024;
 			u8 tempbuf[BUFSIZE];
 			z_stream strm;
 			strm.zalloc = Z_NULL;
@@ -838,7 +839,7 @@ bool SCEDecrypter::MakeFile(fs::file& out_f)
 				if (ret == Z_STREAM_END)
 					break;
 				if (ret != Z_OK)
-					return false;
+					isValid = false;
 
 				if (!strm.avail_out) {
 					out_f.write(tempbuf, BUFSIZE);
@@ -853,26 +854,27 @@ bool SCEDecrypter::MakeFile(fs::file& out_f)
 			inflate_res = inflate(&strm, Z_FINISH);
 
 			if (inflate_res != Z_STREAM_END)
-				return false;
+				isValid = false;
 
 			out_f.write(tempbuf, BUFSIZE - strm.avail_out);
 			inflateEnd(&strm);
 		}
 		else
 		{
-			// Seek to the program header data offset and write the data.
-			out_f.seek(data_buf_offset);
-			out_f.write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
+			// Write the data.
+			out_f.write(data_buf.get()+data_buf_offset, meta_shdr[i].data_size);
 		}
 
 		// Advance the data buffer offset by data size.
 		data_buf_offset += meta_shdr[i].data_size;
+		
+		if (out_f.pos() != out_f.size())
+			fmt::throw_exception("MakeELF written bytes (%llu) does not equal buffer size (%llu).", out_f.pos(), out_f.size());
+
+		if (isValid) vec.push_back(std::move(out_f));
 	}
 
-	if (out_f.pos() != out_f.size())
-		fmt::throw_exception("MakeELF written bytes (%llu) does not equal buffer size (%llu).", out_f.pos(), out_f.size());
-
-	return true;
+	return vec;
 }
 
 bool SELFDecrypter::LoadHeaders(bool isElf32)

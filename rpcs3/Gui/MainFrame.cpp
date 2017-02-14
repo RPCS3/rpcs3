@@ -429,8 +429,11 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 
 	fs::file pup_f(ctrl.GetPath());
 	pup_object pup(pup_f);
-	if (!pup)
-		fmt::raw_error("Error while installing firmware: PUP file is invalid.");
+	if (!pup) {
+		LOG_ERROR(GENERAL,"Error while installing firmware: PUP file is invalid.");
+		return;
+	}
+	
 	fs::file update_files_f = pup.get_file(0x300);
 	tar_object update_files(update_files_f);
 	for (auto updatefilename : update_files.get_filenames())
@@ -439,16 +442,25 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 
 		fs::file updatefile = update_files.get_file(updatefilename);
 
-		fs::file dev_flash_f = fs::make_stream<std::vector<u8>>();
 		SCEDecrypter self_dec(updatefile);
 		self_dec.LoadHeaders();
 		self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
 		self_dec.DecryptData();
-		self_dec.MakeFile(dev_flash_f);
 
-		tar_object dev_flash_tar(dev_flash_f, 128);
-		dev_flash_tar.extract(fs::get_executable_dir());
+		auto dev_flash_tar_f = self_dec.MakeFile();
+		if (dev_flash_tar_f.size() < 3) {
+			LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
+			return;
+		}	
+
+		tar_object dev_flash_tar(dev_flash_tar_f[2]);
+		if (!dev_flash_tar.extract(fs::get_executable_dir()))
+		{
+			LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
+			return;
+		}
 	}
+	LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))

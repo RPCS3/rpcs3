@@ -115,8 +115,8 @@ bool tar_object::extract(std::string path)
 		}
 
 		default:
-			fmt::raw_error("Tar loader: unknown file type: "+header.filetype);
-			break;
+			LOG_ERROR(GENERAL,"Tar loader: unknown file type: "+header.filetype);
+			return false;
 		}
 	}
 	return true;
