@@ -168,10 +168,12 @@ s32 sceNpBasicRegisterHandler()
 	return CELL_OK;
 }
 
-s32 sceNpBasicRegisterContextSensitiveHandler()
+s32 sceNpBasicRegisterContextSensitiveHandler(vm::cptr<void> context, vm::ptr<void> handler, vm::ptr<void> arg)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
+	sceNp.warning("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+
+	// Hack: User is offline, so it's appropriate to return the following
+	return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 }
 
 s32 sceNpBasicUnregisterHandler()
@@ -414,7 +416,8 @@ s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<
 	// TODO: Check for other error and pass other events
 	*event = SCE_NP_BASIC_EVENT_OFFLINE;
 
-	return CELL_OK;
+	// On NPUB31097 if the function is normally terminated it loops trying to get the next event
+	return SCE_NP_BASIC_ERROR_NO_EVENT;
 }
 
 s32 sceNpCommerceCreateCtx()
@@ -804,10 +807,12 @@ s32 sceNpLookupTitleSmallStorageAsync()
 	return CELL_OK;
 }
 
-s32 sceNpManagerRegisterCallback()
+s32 sceNpManagerRegisterCallback(vm::ptr<void> callback, vm::ptr<void> arg)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
+	sceNp.warning("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
+
+	// Hack: User is offline, so it's appropriate to return the following
+	return SCE_NP_ERROR_OFFLINE;
 }
 
 s32 sceNpManagerUnregisterCallback()
@@ -823,7 +828,8 @@ s32 sceNpManagerGetStatus(vm::ptr<u32> status)
 	// TODO: Support different statuses
 	*status = SCE_NP_MANAGER_STATUS_OFFLINE;
 
-	return CELL_OK;
+	// Hack: User is offline, so it's appropriate to return the following
+	return SCE_NP_ERROR_OFFLINE;
 }
 
 s32 sceNpManagerGetNetworkTime()
