@@ -92,26 +92,50 @@ s32 sceNpTrophyAbortHandle(u32 handle)
 
 	return CELL_OK;
 }
+void deleteTerminateChar(char* myStr,char _char) {
 
+	char *del = &myStr[strlen(myStr)];
+
+	while (del > myStr && *del != _char)
+		del--;
+
+	if (*del == _char)
+		*del = '\0';
+
+	return;
+}
 s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationSignature> commSign, u64 options)
 {
 	sceNpTrophy.warning("sceNpTrophyCreateContext(context=*0x%x, commId=*0x%x, commSign=*0x%x, options=0x%llx)", context, commId, commSign, options);
 
 	// rough checks for further fmt::format call
-	if (commId->term || commId->num > 99)
+	if (commId->num > 99)
 	{
+		sceNpTrophy.error("sceNpTrophyCreateContext Invalid NP_COMM_ID");
 		return SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID;
 	}
-
 	// generate trophy context name
-	std::string name = fmt::format("%s_%02d", commId->data, commId->num);
-
+	std::string name;
+	sceNpTrophy.warning("sceNpTrophyCreateContext term=%s data=%s num=%d", commId->term, commId->data, commId->num);
+	if (commId->term)
+	{
+		char trimchar[9];
+		strcpy(trimchar, commId->data);
+		deleteTerminateChar(trimchar,commId->term);
+		name = fmt::format("%s_%02d", trimchar, commId->num);
+	}
+	else
+	{
+		name = fmt::format("%s_%02d", commId->data,commId->num);
+	}
+	
 	// open trophy pack file
 	fs::file stream(vfs::get("/app_home/../TROPDIR/" + name + "/TROPHY.TRP"));
 
 	// check if exists and opened
 	if (!stream)
 	{
+		sceNpTrophy.error("sceNpTrophyCreateContext CONF does not exist");
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 	}
 
