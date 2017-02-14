@@ -1258,7 +1258,12 @@ static bool CheckDebugSelf(fs::file& s)
 }
 
 extern fs::file decrypt_self(fs::file elf_or_self)
-{
+{	
+	if (!elf_or_self) 
+	{
+		return fs::file{};
+	}
+	
 	elf_or_self.seek(0);
 
 	// Check SELF header first. Check for a debug SELF.
