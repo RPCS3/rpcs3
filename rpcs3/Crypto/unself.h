@@ -366,11 +366,13 @@ public:
 	bool DecryptData();
 };
 
-class SELFDecrypter : SCEDecrypter
+class SELFDecrypter : private SCEDecrypter
 {
 	// SELF, APP headers.
 	SelfHeader self_hdr;
 	AppInfo app_info;
+
+	bool isElf32;
 
 	// ELF64 header and program header/section header arrays.
 	Elf64_Ehdr elf64_hdr;
@@ -391,10 +393,10 @@ class SELFDecrypter : SCEDecrypter
 	KeyVault key_v;
 
 public:
-	SELFDecrypter(const fs::file& s) : SCEDecrypter(s), key_v() {};
-	fs::file MakeElf(bool isElf32);
-	bool LoadHeaders(bool isElf32);
-	void ShowHeaders(bool isElf32);
+	SELFDecrypter(const fs::file& s, bool isElf32) : SCEDecrypter(s), key_v(), isElf32(isElf32) {};
+	fs::file MakeFile();
+	bool LoadHeaders();
+	void ShowHeaders();
 	bool LoadMetadata();
 	bool DecryptData();
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);

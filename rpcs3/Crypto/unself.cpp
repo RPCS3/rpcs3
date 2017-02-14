@@ -877,7 +877,7 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 	return vec;
 }
 
-bool SELFDecrypter::LoadHeaders(bool isElf32)
+bool SELFDecrypter::LoadHeaders()
 {
 	if(!SCEDecrypter::LoadHeaders()) return false;
 
@@ -999,7 +999,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	return true;
 }
 
-void SELFDecrypter::ShowHeaders(bool isElf32)
+void SELFDecrypter::ShowHeaders()
 {
 	LOG_NOTICE(LOADER, "SCE header");
 	LOG_NOTICE(LOADER, "----------------------------------------------------");
@@ -1184,7 +1184,7 @@ bool SELFDecrypter::DecryptData()
 	return true;
 }
 
-fs::file SELFDecrypter::MakeElf(bool isElf32)
+fs::file SELFDecrypter::MakeFile()
 {
 	// Create a new ELF file.
 	fs::file e = fs::make_stream<std::vector<u8>>();
@@ -1419,10 +1419,10 @@ extern fs::file decrypt_self(fs::file elf_or_self)
 		bool isElf32 = IsSelfElf32(elf_or_self);
 
 		// Start the decrypter on this SELF file.
-		SELFDecrypter self_dec(elf_or_self);
+		SELFDecrypter self_dec(elf_or_self, isElf32);
 
 		// Load the SELF file headers.
-		if (!self_dec.LoadHeaders(isElf32))
+		if (!self_dec.LoadHeaders())
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
 			return fs::file{};
@@ -1443,7 +1443,7 @@ extern fs::file decrypt_self(fs::file elf_or_self)
 		}
 		
 		// Make a new ELF file from this SELF.
-		return self_dec.MakeElf(isElf32);
+		return self_dec.MakeFile();
 	}
 
 	return elf_or_self;
