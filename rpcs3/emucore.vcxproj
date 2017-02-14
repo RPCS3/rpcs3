@@ -382,6 +382,7 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="sys_gamepad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
@@ -657,6 +658,7 @@
     <ClInclude Include="restore_new.h" />
     <ClInclude Include="rpcs3_version.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="sys_gamepad.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\3rdparty\libpng\projects\vstudio\libpng\libpng.vcxproj">
