@@ -2,6 +2,7 @@
 
 #include "TAR.h"
 
+#include <cmath>
 #include <cstdlib>
 
 tar_object::tar_object(const fs::file& file, size_t offset) : m_file(file), initial_offset(offset)

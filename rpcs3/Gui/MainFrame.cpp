@@ -427,7 +427,7 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	fs::file pup_f(ctrl.GetPath());
+	fs::file pup_f(ctrl.GetPath().ToStdString());
 	pup_object pup(pup_f);
 	if (!pup) {
 		LOG_ERROR(GENERAL,"Error while installing firmware: PUP file is invalid.");
