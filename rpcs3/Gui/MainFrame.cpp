@@ -430,41 +430,86 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 	fs::file pup_f(ctrl.GetPath().ToStdString());
 	pup_object pup(pup_f);
 	if (!pup) {
-		LOG_ERROR(GENERAL,"Error while installing firmware: PUP file is invalid.");
+		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
 		wxMessageBox("Error while installing firmware: PUP file is invalid.", "Failure!", wxOK | wxICON_ERROR, this);
 		return;
 	}
-	
+
 	fs::file update_files_f = pup.get_file(0x300);
 	tar_object update_files(update_files_f);
-	for (auto updatefilename : update_files.get_filenames())
+	auto updatefilenames = update_files.get_filenames();
+
+	updatefilenames.erase(std::remove_if(
+		updatefilenames.begin(), updatefilenames.end(), [](std::string s) {return s.find("dev_flash_") == std::string::npos; }),
+	updatefilenames.end());
+
+	wxProgressDialog pdlg("Firmware Installer", "Please wait, unpacking...", updatefilenames.size(), this, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
+
+	// Synchronization variable
+	atomic_t<int> progress(0);
 	{
-		if (updatefilename.find("dev_flash_") == std::string::npos) continue;
-
-		fs::file updatefile = update_files.get_file(updatefilename);
-
-		SCEDecrypter self_dec(updatefile);
-		self_dec.LoadHeaders();
-		self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
-		self_dec.DecryptData();
-
-		auto dev_flash_tar_f = self_dec.MakeFile();
-		if (dev_flash_tar_f.size() < 3) {
-			LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
-			wxMessageBox("Error while installing firmware: PUP contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
-			return;
-		}	
-
-		tar_object dev_flash_tar(dev_flash_tar_f[2]);
-		if (!dev_flash_tar.extract(fs::get_executable_dir()))
+		// Run asynchronously
+		scope_thread worker("Firmware Installer", [&]
 		{
-			LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
-			wxMessageBox("Error while installing firmware: TAR contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
-			return;
+			for (auto updatefilename : updatefilenames)
+			{
+				if (progress == -1) break;
+
+				fs::file updatefile = update_files.get_file(updatefilename);
+
+				SCEDecrypter self_dec(updatefile);
+				self_dec.LoadHeaders();
+				self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
+				self_dec.DecryptData();
+
+				auto dev_flash_tar_f = self_dec.MakeFile();
+				if (dev_flash_tar_f.size() < 3) {
+					LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
+					wxMessageBox("Error while installing firmware: PUP contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
+					progress = -1;
+				}
+
+				tar_object dev_flash_tar(dev_flash_tar_f[2]);
+				if (!dev_flash_tar.extract(fs::get_executable_dir()))
+				{
+					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
+					wxMessageBox("Error while installing firmware: TAR contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
+					progress = -1;
+				}
+
+				if(progress >= 0)
+					progress += 1;
+			}
+		});
+
+		// Wait for the completion
+		while (std::this_thread::sleep_for(5ms), std::abs(progress) < pdlg.GetRange())
+		{
+			// Update progress window
+			if (!pdlg.Update(static_cast<int>(progress)))
+			{
+				// Installation cancelled (signal with negative value)
+				progress = -1;
+				break;
+			}
+		}
+
+		update_files_f.close();
+		pup_f.close();
+
+		if (progress > 0)
+		{
+			pdlg.Update(pdlg.GetRange());
+			std::this_thread::sleep_for(100ms);
 		}
 	}
-	LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
-	wxMessageBox("Successfully installed PS3 firmware and LLE Modules!", "Success!", wxOK, this);
+	pdlg.Close();
+
+	if (progress > 0)
+	{
+		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
+		wxMessageBox("Successfully installed PS3 firmware and LLE Modules!", "Success!", wxOK, this);
+	}
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
