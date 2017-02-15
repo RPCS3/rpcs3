@@ -431,6 +431,7 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 	pup_object pup(pup_f);
 	if (!pup) {
 		LOG_ERROR(GENERAL,"Error while installing firmware: PUP file is invalid.");
+		wxMessageBox("Error while installing firmware: PUP file is invalid.", "Failure!", wxOK | wxICON_ERROR, this);
 		return;
 	}
 	
@@ -450,6 +451,7 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 		auto dev_flash_tar_f = self_dec.MakeFile();
 		if (dev_flash_tar_f.size() < 3) {
 			LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
+			wxMessageBox("Error while installing firmware: PUP contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
 			return;
 		}	
 
@@ -457,10 +459,12 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 		if (!dev_flash_tar.extract(fs::get_executable_dir()))
 		{
 			LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
+			wxMessageBox("Error while installing firmware: TAR contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
 			return;
 		}
 	}
 	LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
+	wxMessageBox("Successfully installed PS3 firmware and LLE Modules!", "Success!", wxOK, this);
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
