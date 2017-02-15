@@ -24,7 +24,7 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	}
 
 	return true;
-#elif __linux__
+#else
 	timespec timeout;
 	timeout.tv_sec  = _timeout / 1000000;
 	timeout.tv_nsec = (_timeout % 1000000) * 1000;
@@ -46,11 +46,6 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 		// Not a wakeup
 		verify(HERE), err == EAGAIN;
 	}
-#else
-	// TODO
-	std::this_thread::sleep_for(std::chrono::microseconds(50));
-	verify(HERE), m_value--;
-	return true;
 #endif
 }
 
@@ -73,7 +68,7 @@ void cond_variable::imp_wake(u32 _count) noexcept
 	{
 		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 	}
-#elif __linux__
+#else
 	for (u32 i = _count; i > 0; sched_yield())
 	{
 		const u32 value = m_value;
@@ -104,4 +99,3 @@ void cond_variable::imp_wake(u32 _count) noexcept
 	}
 #endif
 }
-
