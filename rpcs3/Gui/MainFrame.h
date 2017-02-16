@@ -24,7 +24,6 @@ public:
 
 private:
 	void BootGame(wxCommandEvent& event);
-	void BootGameAndRun(wxCommandEvent& event);
 	void InstallPkg(wxCommandEvent& event);
 	void BootElf(wxCommandEvent& event);
 	void Pause(wxCommandEvent& event);
@@ -44,6 +43,7 @@ private:
 	void OpenStringSearch(wxCommandEvent& evt);
 	void OpenCgDisasm(wxCommandEvent& evt);
 	void DecryptSPRXLibraries(wxCommandEvent& event);
+	void InstallFirmware(wxCommandEvent& event);
 	void AboutDialogHandler(wxCommandEvent& event);
 	void UpdateUI(wxEvent& event);
 	void OnKeyDown(wxKeyEvent& event);

@@ -890,6 +890,12 @@
     <ClCompile Include="..\Utilities\sema.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\PUP.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\TAR.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1710,6 +1716,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\PUP.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\TAR.h">
+      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
