@@ -72,6 +72,8 @@ public:
 	GameViewer(wxWindow* parent);
 	~GameViewer();
 
+	void InitPopupMenu();
+
 	void DoResize(wxSize size);
 
 	void LoadGames();
