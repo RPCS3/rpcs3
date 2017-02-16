@@ -1,5 +1,4 @@
 #pragma once
-
 namespace vm { using namespace ps3; }
 
 #include "cellPng.h"
@@ -339,3 +338,11 @@ static bool cellPngColorSpaceHasAlpha(u32 colorspace)
 		return false;
 	}
 }
+
+// Custom exception for libPng errors
+
+class LibPngCustomException : public std::runtime_error
+{
+public:
+	LibPngCustomException(char const* const message) : runtime_error(message) {}
+};
