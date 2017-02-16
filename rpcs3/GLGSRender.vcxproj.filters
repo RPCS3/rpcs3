@@ -10,6 +10,7 @@
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />

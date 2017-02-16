@@ -194,6 +194,12 @@ void GLGSRender::begin()
 	if (!draw_fbo.check())
 		return;
 
+	if (surface_clear_flags)
+	{
+		clear_surface(surface_clear_flags);
+		surface_clear_flags = 0;
+	}
+
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
 
 	bool color_mask_b = rsx::method_registers.color_mask_b();
@@ -332,7 +338,6 @@ void GLGSRender::begin()
 
 	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
-	m_draw_calls++;
 }
 
 namespace
@@ -380,8 +385,6 @@ void GLGSRender::end()
 		m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
 		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
 	}
-
-	draw_fbo.bind();
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
@@ -473,10 +476,17 @@ void GLGSRender::end()
 		draw_fbo.draw_arrays(rsx::method_registers.current_draw_clause.primitive, vertex_draw_count);
 	}
 
+	m_attrib_ring_buffer->notify();
+	m_index_ring_buffer->notify();
+	m_uniform_ring_buffer->notify();
+
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 
-	write_buffers();
+	m_draw_calls++;
+
+	//LOG_WARNING(RSX, "Finished draw call, EID=%d", m_draw_calls);
+	synchronize_buffers();
 
 	rsx::thread::end();
 }
@@ -549,6 +559,8 @@ void GLGSRender::on_init_thread()
 
 	if (g_cfg_rsx_overlay)
 		m_text_printer.init();
+
+	m_gl_texture_cache.initialize(this);
 }
 
 void GLGSRender::on_exit()
@@ -587,11 +599,12 @@ void GLGSRender::on_exit()
 	m_index_ring_buffer->remove();
 
 	m_text_printer.close();
+	m_gl_texture_cache.close();
 
 	return GSRender::on_exit();
 }
 
-void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
+void GLGSRender::clear_surface(u32 arg)
 {
 	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 
@@ -600,9 +613,6 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		//do nothing
 		return;
 	}
-
-	renderer->init_buffers(true);
-	renderer->draw_fbo.bind();
 
 	GLbitfield mask = 0;
 
@@ -617,6 +627,10 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		glDepthMask(GL_TRUE);
 		glClearDepth(double(clear_depth) / max_depth_value);
 		mask |= GLenum(gl::buffers::depth);
+
+		gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		if (ds && !ds->cleared())
+			ds->set_cleared();
 	}
 
 	if (surface_depth_format == rsx::surface_depth_format::z24s8 && (arg & 0x2))
@@ -643,46 +657,28 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	}
 
 	glClear(mask);
-	//renderer->write_buffers();
 }
-
-using rsx_method_impl_t = void(*)(u32, GLGSRender*);
-
-static const std::unordered_map<u32, rsx_method_impl_t> g_gl_method_tbl =
-{
-	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface }
-};
 
 bool GLGSRender::do_method(u32 cmd, u32 arg)
 {
-	auto found = g_gl_method_tbl.find(cmd);
-
-	if (found == g_gl_method_tbl.end())
-	{
-		return false;
-	}
-
-	found->second(arg, this);
-
 	switch (cmd)
 	{
 	case NV4097_CLEAR_SURFACE:
-	{
-		if (arg & 0x1)
-		{
-			gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-			if (ds && !ds->cleared())
-				ds->set_cleared();
-		}
-	}
+		init_buffers(true);
+		surface_clear_flags |= arg;
+		return true;
+	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
+	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
+		flush_draw_buffers = true;
+		return true;
 	}
 
-	return true;
+	return false;
 }
 
 bool GLGSRender::load_program()
 {
-	auto rtt_lookup_func = [this](u32 texaddr, bool is_depth) -> std::tuple<bool, u16>
+	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture &tex, bool is_depth) -> std::tuple<bool, u16>
 	{
 		gl::render_target *surface = nullptr;
 		if (!is_depth)
@@ -690,7 +686,15 @@ bool GLGSRender::load_program()
 		else
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-		if (!surface) return std::make_tuple(false, 0);
+		if (!surface)
+		{
+			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
+			if (!rsc.surface || rsc.is_depth_surface != is_depth)
+				return std::make_tuple(false, 0);
+
+			surface = rsc.surface;
+		}
+
 		return std::make_tuple(true, surface->get_native_pitch());
 	};
 
@@ -817,16 +821,7 @@ void GLGSRender::flip(int buffer)
 	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	u32 absolute_address = buffer_region.address + buffer_region.base;
 
-	if (0)
-	{
-		LOG_NOTICE(RSX, "flip(%d) -> 0x%x [0x%x]", buffer, absolute_address, rsx::get_address(gcm_buffers[1 - buffer].offset, CELL_GCM_LOCATION_LOCAL));
-	}
-
 	gl::texture *render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address);
-
-	/**
-	* Calling read_buffers will overwrite cached content
-	*/
 
 	__glcheck m_flip_fbo.recreate();
 	m_flip_fbo.bind();
@@ -875,32 +870,26 @@ void GLGSRender::flip(int buffer)
 	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 
 	coordi aspect_ratio;
-	if (1) //enable aspect ratio
+
+	sizei csize(m_frame->client_width(), m_frame->client_height());
+	sizei new_size = csize;
+
+	const double aq = (double)buffer_width / buffer_height;
+	const double rq = (double)new_size.width / new_size.height;
+	const double q = aq / rq;
+
+	if (q > 1.0)
 	{
-		sizei csize(m_frame->client_width(), m_frame->client_height());
-		sizei new_size = csize;
-
-		const double aq = (double)buffer_width / buffer_height;
-		const double rq = (double)new_size.width / new_size.height;
-		const double q = aq / rq;
-
-		if (q > 1.0)
-		{
-			new_size.height = int(new_size.height / q);
-			aspect_ratio.y = (csize.height - new_size.height) / 2;
-		}
-		else if (q < 1.0)
-		{
-			new_size.width = int(new_size.width * q);
-			aspect_ratio.x = (csize.width - new_size.width) / 2;
-		}
-
-		aspect_ratio.size = new_size;
+		new_size.height = int(new_size.height / q);
+		aspect_ratio.y = (csize.height - new_size.height) / 2;
 	}
-	else
+	else if (q < 1.0)
 	{
-		aspect_ratio.size = { m_frame->client_width(), m_frame->client_height() };
+		new_size.width = int(new_size.width * q);
+		aspect_ratio.x = (csize.width - new_size.width) / 2;
 	}
+
+	aspect_ratio.size = new_size;
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);
 
@@ -926,6 +915,8 @@ void GLGSRender::flip(int buffer)
 	m_vertex_upload_time = 0;
 	m_textures_upload_time = 0;
 
+	m_gl_texture_cache.clear_temporary_surfaces();
+
 	for (auto &tex : m_rtts.invalidated_resources)
 	{
 		tex->remove();
@@ -948,4 +939,44 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		return m_gl_texture_cache.mark_as_dirty(address);
 	else
 		return m_gl_texture_cache.flush_section(address);
+}
+
+void GLGSRender::do_local_task()
+{
+	std::lock_guard<std::mutex> lock(queue_guard);
+
+	for (work_item& q: work_queue)
+	{
+		std::unique_lock<std::mutex> lock(q.guard_mutex);
+
+		//Process this address
+		q.result = m_gl_texture_cache.flush_section(q.address_to_flush);
+		q.processed = true;
+
+		//Notify thread waiting on this
+		lock.unlock();
+		q.cv.notify_one();
+	}
+
+	work_queue.clear();
+}
+
+work_item& GLGSRender::post_flush_request(u32 address)
+{
+	std::lock_guard<std::mutex> lock(queue_guard);
+
+	work_queue.emplace_back();
+	work_item &result = work_queue.back();
+	result.address_to_flush = address;
+	return result;
+}
+
+void GLGSRender::synchronize_buffers()
+{
+	if (flush_draw_buffers)
+	{
+		//LOG_WARNING(RSX, "Flushing RTT buffers EID=%d", m_draw_calls);
+		write_buffers();
+		flush_draw_buffers = false;
+	}
 }

@@ -9,227 +9,14 @@
 #include <memory>
 #include <unordered_map>
 
-#include "GLGSRender.h"
 #include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
 #include <chrono>
 
-namespace rsx
-{
-	//TODO: Properly move this into rsx shared
-	class buffered_section
-	{
-	protected:
-		u32 cpu_address_base = 0;
-		u32 cpu_address_range = 0;
-
-		u32 locked_address_base = 0;
-		u32 locked_address_range = 0;
-
-		u32 memory_protection = 0;
-
-		bool locked = false;
-		bool dirty = false;
-
-		bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
-		{
-			//Check for memory area overlap. unlock page(s) if needed and add this index to array.
-			//Axis separation test
-			const u32 &block_start = base1;
-			const u32 block_end = limit1;
-
-			if (limit2 < block_start) return false;
-			if (base2 > block_end) return false;
-
-			u32 min_separation = (limit2 - base2) + (limit1 - base1);
-			u32 range_limit = (block_end > limit2) ? block_end : limit2;
-			u32 range_base = (block_start < base2) ? block_start : base2;
-
-			u32 actual_separation = (range_limit - range_base);
-
-			if (actual_separation < min_separation)
-				return true;
-
-			return false;
-		}
-
-	public:
-
-		buffered_section() {}
-		~buffered_section() {}
-
-		void reset(u32 base, u32 length)
-		{
-			verify(HERE), locked == false;
-
-			cpu_address_base = base;
-			cpu_address_range = length;
-
-			locked_address_base = (base & ~4095);
-			locked_address_range = align(base + length, 4096) - locked_address_base;
-
-			memory_protection = vm::page_readable|vm::page_writable;
-
-			locked = false;
-		}
-
-		bool protect(u8 flags_set, u8 flags_clear)
-		{
-			if (vm::page_protect(locked_address_base, locked_address_range, 0, flags_set, flags_clear))
-			{
-				memory_protection &= ~flags_clear;
-				memory_protection |= flags_set;
-
-				locked = memory_protection != (vm::page_readable | vm::page_writable);
-			}
-			else
-				fmt::throw_exception("failed to lock memory @ 0x%X!", locked_address_base);
-
-			return false;
-		}
-
-		bool unprotect()
-		{
-			u32 flags_set = (vm::page_readable | vm::page_writable) & ~memory_protection;
-
-			if (vm::page_protect(locked_address_base, locked_address_range, 0, flags_set, 0))
-			{
-				memory_protection = (vm::page_writable | vm::page_readable);
-				locked = false;
-				return true;
-			}
-			else
-				fmt::throw_exception("failed to unlock memory @ 0x%X!", locked_address_base);
-
-			return false;
-		}
-
-		bool overlaps(std::pair<u32, u32> range)
-		{
-			return region_overlaps(locked_address_base, locked_address_base+locked_address_range, range.first, range.first + range.second);
-		}
-
-		bool overlaps(u32 address)
-		{
-			return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
-		}
-
-		bool is_locked() const
-		{
-			return locked;
-		}
-
-		bool is_dirty() const
-		{
-			return dirty;
-		}
-
-		void set_dirty(bool state)
-		{
-			dirty = state;
-		}
-
-		u32 get_section_base() const
-		{
-			return cpu_address_base;
-		}
-
-		u32 get_section_size() const
-		{
-			return cpu_address_range;
-		}
-
-		bool matches(u32 cpu_address, u32 size) const
-		{
-			return (cpu_address_base == cpu_address && cpu_address_range == size);
-		}
-
-		std::pair<u32, u32> get_min_max(std::pair<u32, u32> current_min_max)
-		{
-			u32 min = std::min(current_min_max.first, locked_address_base);
-			u32 max = std::max(current_min_max.second, locked_address_base + locked_address_range);
-
-			return std::make_pair(min, max);
-		}
-	};
-}
+class GLGSRender;
 
 namespace gl
 {
-	//TODO: Properly move this into helpers
-	class fence
-	{
-		GLsync m_value = nullptr;
-		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
-
-	public:
-
-		fence() {}
-		~fence() {}
-
-		void create()
-		{
-			m_value = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-		}
-
-		void destroy()
-		{
-			glDeleteSync(m_value);
-			m_value = nullptr;
-		}
-
-		void reset()
-		{
-			if (m_value != nullptr)
-				destroy();
-
-			create();
-		}
-
-		bool check_signaled()
-		{
-			verify(HERE), m_value != nullptr;
-
-			GLenum err = glClientWaitSync(m_value, flags, 0);
-			flags = 0;
-			return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
-		}
-
-		bool wait_for_signal()
-		{
-			verify(HERE), m_value != nullptr;
-
-			GLenum err = GL_WAIT_FAILED;
-			bool done = false;
-			
-			while (!done)
-			{
-				//Check if we are finished, wait time = 1us
-				err = glClientWaitSync(m_value, flags, 1000);
-				flags = 0;
-
-				switch (err)
-				{
-				default:
-					LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
-				case GL_ALREADY_SIGNALED:
-				case GL_CONDITION_SATISFIED:
-					done = true;
-					break;
-				case GL_TIMEOUT_EXPIRED:
-					continue;
-				}
-			}
-
-			glDeleteSync(m_value);
-			m_value = nullptr;
-
-			return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
-		}
-	};
-
-
-	//TODO: Unify all cache objects
 	class texture_cache
 	{
 	public:
@@ -253,7 +40,7 @@ namespace gl
 				this->mipmaps = mipmaps;
 			}
 
-			bool matches(u32 rsx_address, u32 width, u32 height, u32 mipmaps)
+			bool matches(u32 rsx_address, u32 width, u32 height, u32 mipmaps) const
 			{
 				if (rsx_address == cpu_address_base && texture_id != 0)
 				{
@@ -275,7 +62,7 @@ namespace gl
 				texture_id = 0;
 			}
 
-			bool is_empty()
+			bool is_empty() const
 			{
 				return (texture_id == 0);
 			}
@@ -293,11 +80,11 @@ namespace gl
 			u32 pbo_id = 0;
 			u32 pbo_size = 0;
 
+			u32 source_texture = 0;
+
+			bool copied = false;
 			bool flushed = false;
 			bool is_depth = false;
-
-			u32 flush_count = 0;
-			u32 copy_count = 0;
 
 			u32 current_width = 0;
 			u32 current_height = 0;
@@ -372,62 +159,27 @@ namespace gl
 				return size;
 			}
 
-		public:
-
-			void reset(u32 base, u32 size)
+			void scale_image_fallback(u8* dst, const u8* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples)
 			{
-				rsx::buffered_section::reset(base, size);
-				flushed = false;
-				flush_count = 0;
-				copy_count = 0;
-			}
+				u32 dst_offset = 0;
+				u32 src_offset = 0;
+				u32 padding = dst_pitch - (src_pitch * samples);
 
-			void init_buffer()
-			{
-				glGenBuffers(1, &pbo_id);
+				for (u16 h = 0; h < src_height; ++h)
+				{
+					for (u16 w = 0; w < src_width; ++w)
+					{
+						for (u8 n = 0; n < samples; ++n)
+						{
+							memcpy(&dst[dst_offset], &src[src_offset], pixel_size);
+							dst_offset += pixel_size;
+						}
 
-				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-				glBufferStorage(GL_PIXEL_PACK_BUFFER, locked_address_range, nullptr, GL_MAP_READ_BIT);
+						src_offset += pixel_size;
+					}
 
-				pbo_size = locked_address_range;
-			}
-
-			void set_dimensions(u32 width, u32 height, u32 pitch)
-			{
-				current_width = width;
-				current_height = height;
-				current_pitch = pitch;
-
-				real_pitch = width * get_pixel_size(format, type);
-			}
-
-			void set_format(texture::format gl_format, texture::type gl_type)
-			{
-				format = gl_format;
-				type = gl_type;
-
-				real_pitch = current_width * get_pixel_size(format, type);
-			}
-
-			void copy_texture(gl::texture &source)
-			{
-				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-				glGetTextureImage(source.id(), 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
-				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-				m_fence.reset();
-				copy_count++;
-			}
-
-			void fill_texture(gl::texture &tex)
-			{
-				u32 min_width = std::min((u32)tex.width(), current_width);
-				u32 min_height = std::min((u32)tex.height(), current_height);
-
-				tex.bind();
-				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_id);
-				glTexSubImage2D((GLenum)tex.get_target(), 0, 0, 0, min_width, min_height, (GLenum)format, (GLenum)type, nullptr);
-				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+					dst_offset += padding;
+				}
 			}
 
 			template <typename T, int N>
@@ -476,8 +228,98 @@ namespace gl
 				}
 			}
 
+		public:
+
+			void reset(u32 base, u32 size)
+			{
+				rsx::buffered_section::reset(base, size);
+				
+				flushed = false;
+				copied = false;
+
+				source_texture = 0;
+			}
+
+			void init_buffer()
+			{
+				glGenBuffers(1, &pbo_id);
+
+				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
+				glBufferStorage(GL_PIXEL_PACK_BUFFER, locked_address_range, nullptr, GL_MAP_READ_BIT);
+
+				pbo_size = locked_address_range;
+			}
+
+			void set_dimensions(u32 width, u32 height, u32 pitch)
+			{
+				current_width = width;
+				current_height = height;
+				current_pitch = pitch;
+
+				real_pitch = width * get_pixel_size(format, type);
+			}
+
+			void set_format(texture::format gl_format, texture::type gl_type)
+			{
+				format = gl_format;
+				type = gl_type;
+
+				real_pitch = current_width * get_pixel_size(format, type);
+			}
+
+			void set_source(gl::texture &source)
+			{
+				source_texture = source.id();
+			}
+
+			void copy_texture()
+			{
+				if (!glIsTexture(source_texture))
+				{
+					LOG_ERROR(RSX, "Attempted to download rtt texture, but texture handle was invalid! (0x%X)", source_texture);
+					return;
+				}
+
+				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
+				glGetTextureImage(source_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
+				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+				m_fence.reset();
+				copied = true;
+			}
+
+			void fill_texture(gl::texture &tex)
+			{
+				if (!copied)
+				{
+					//LOG_WARNING(RSX, "Request to fill texture rejected because contents were not read");
+					return;
+				}
+
+				u32 min_width = std::min((u32)tex.width(), current_width);
+				u32 min_height = std::min((u32)tex.height(), current_height);
+
+				tex.bind();
+				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_id);
+				glTexSubImage2D((GLenum)tex.get_target(), 0, 0, 0, min_width, min_height, (GLenum)format, (GLenum)type, nullptr);
+				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+			}
+
 			void flush()
 			{
+				if (!copied)
+				{
+					LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
+					copy_texture();
+
+					if (!copied)
+					{
+						LOG_WARNING(RSX, "Nothing to copy; Setting section to readable and moving on...");
+						protect(vm::page_readable, 0);
+						return;
+					}
+				}
+
 				protect(vm::page_writable, 0);
 				m_fence.wait_for_signal();
 				flushed = true;
@@ -493,6 +335,7 @@ namespace gl
 					memcpy(dst, data, cpu_address_range);
 				else
 				{
+					//TODO: Use compression hint from the gcm tile information
 					//Scale this image by repeating pixel data n times
 					//n = expected_pitch / real_pitch
 					//Use of fixed argument templates for performance reasons
@@ -521,15 +364,13 @@ namespace gl
 						break;
 					default:
 						LOG_ERROR(RSX, "Unsupported RTT scaling factor: dst_pitch=%d src_pitch=%d", current_pitch, real_pitch);
-						memcpy(dst, data, cpu_address_range);
+						scale_image_fallback(dst, static_cast<u8*>(data), current_width, current_height, current_pitch, real_pitch, pixel_size, sample_count);
 					}
 				}
 
 				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 				protect(vm::page_readable, vm::page_writable);
-
-				flush_count++;
 			}
 
 			void destroy()
@@ -549,45 +390,29 @@ namespace gl
 				return flushed;
 			}
 
-			bool can_skip()
-			{
-				//TODO: Better balancing algorithm. Copying buffers is very expensive
-				//TODO: Add a switch to force strict enforcement
-
-				//Always accept the first attempt at caching after creation
-				if (!copy_count)
-					return false;
-
-				//If surface is flushed often, force buffering
-				if (flush_count)
-				{
-					//TODO: Pick better values. Using 80% and 20% for now
-					if (flush_count >= (4 * copy_count / 5))
-						return false;
-					else
-					{
-						if (flushed) return false;	//fence is guaranteed to have been signaled and destroyed
-						return !m_fence.check_signaled();
-					}
-				}
-
-				return true;
-			}
-
 			void set_flushed(bool state)
 			{
 				flushed = state;
+			}
+
+			void set_copied(bool state)
+			{
+				copied = state;
 			}
 		};
 
 	private:
 		std::vector<cached_texture_section> m_texture_cache;
 		std::vector<cached_rtt_section> m_rtt_cache;
+		std::vector<u32> m_temporary_surfaces;
 
 		std::pair<u32, u32> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
 		std::pair<u32, u32> rtt_cache_range = std::make_pair(0xFFFFFFFF, 0);
 
 		std::mutex m_section_mutex;
+
+		GLGSRender *m_renderer;
+		std::thread::id m_renderer_thread;
 
 		cached_texture_section *find_texture(u64 texaddr, u32 w, u32 h, u16 mipmaps)
 		{
@@ -638,6 +463,8 @@ namespace gl
 
 			m_rtt_cache.resize(0);
 			m_texture_cache.resize(0);
+
+			clear_temporary_surfaces();
 		}
 
 		cached_rtt_section* find_cached_rtt_section(u32 base, u32 size)
@@ -700,11 +527,48 @@ namespace gl
 			return region;
 		}
 
+		u32 create_temporary_subresource(u32 src_id, GLenum sized_internal_fmt, u16 x, u16 y, u16 width, u16 height)
+		{
+			u32 dst_id = 0;
+
+			glGenTextures(1, &dst_id);
+			glBindTexture(GL_TEXTURE_2D, dst_id);
+
+			glTexStorage2D(GL_TEXTURE_2D, 1, sized_internal_fmt, width, height);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			//Empty GL_ERROR
+			glGetError();
+
+			glCopyImageSubData(src_id, GL_TEXTURE_2D, 0, x, y, 0,
+				dst_id, GL_TEXTURE_2D, 0, 0, 0, 0, width, height, 1);
+
+			m_temporary_surfaces.push_back(dst_id);
+
+			//Check for error
+			if (GLenum err = glGetError())
+			{
+				LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
+				return 0;
+			}
+			
+			return dst_id;
+		}
+
 	public:
 
 		texture_cache() {}
 
-		~texture_cache()
+		~texture_cache() {}
+
+		void initialize(GLGSRender *renderer)
+		{
+			m_renderer = renderer;
+			m_renderer_thread = std::this_thread::get_id();
+		}
+
+		void close()
 		{
 			clear();
 		}
@@ -734,12 +598,77 @@ namespace gl
 			}
 
 			/**
+			 * Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
+			 * (Turbo: Super Stunt Squad does this; bypassing the need for a sync object)
+			 * The engine does not read back the texture resource through cell, but specifies a texture location that is
+			 * a bound render target. We can bypass the expensive download in this case
+			 */
+
+			surface_subresource rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex.width(), tex.height(), tex.pitch());
+			if (rsc.surface)
+			{
+				//Check that this region is not cpu-dirty before doing a copy
+				//This section is guaranteed to have a locking section *if* this bit has been bypassed before
+
+				bool upload_from_cpu = false;
+
+				for (cached_rtt_section &section : m_rtt_cache)
+				{
+					if (section.overlaps(std::make_pair(texaddr, range)) && section.is_dirty())
+					{
+						LOG_ERROR(RSX, "Cell wrote to render target section we are uploading from!");
+
+						upload_from_cpu = true;
+						break;
+					}
+				}
+
+				if (!upload_from_cpu)
+				{
+					if (tex.get_extended_texture_dimension() != rsx::texture_dimension_extended::texture_dimension_2d)
+					{
+						LOG_ERROR(RSX, "Sampling of RTT region as non-2D texture! addr=0x%x, Type=%d, dims=%dx%d",
+								texaddr, (u8)tex.get_extended_texture_dimension(), tex.width(), tex.height());
+					}
+					else
+					{
+						const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+
+						GLenum src_format = (GLenum)rsc.surface->get_internal_format();
+						GLenum dst_format = std::get<0>(get_format_type(format));
+
+						u32 bound_index = ~0U;
+
+						if (src_format != dst_format)
+						{
+							LOG_WARNING(RSX, "Sampling from a section of a render target, but formats might be incompatible (0x%X vs 0x%X)", src_format, dst_format);
+						}
+
+						if (!rsc.is_bound)
+						{
+							if (rsc.w == tex.width() && rsc.h == tex.height())
+								rsc.surface->bind();
+							else
+								bound_index = create_temporary_subresource(rsc.surface->id(), (GLenum)rsc.surface->get_compatible_internal_format(), rsc.x, rsc.y, rsc.w, rsc.h);
+						}
+						else
+						{
+							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+							bound_index = create_temporary_subresource(rsc.surface->id(), (GLenum)rsc.surface->get_compatible_internal_format(), rsc.x, rsc.y, rsc.w, rsc.h);
+						}
+
+						if (bound_index)
+							return;
+					}
+				}
+			}
+
+			/**
 			 * If all the above failed, then its probably a generic texture.
 			 * Search in cache and upload/bind
 			 */
 
 			cached_texture_section *cached_texture = find_texture(texaddr, tex.width(), tex.height(), tex.get_exact_mipmap_count());
-			verify(HERE), gl_texture.id() == 0;
 
 			if (cached_texture)
 			{
@@ -771,16 +700,27 @@ namespace gl
 			gl_texture.set_id(0);
 		}
 
-		void save_rtt(u32 base, u32 size, gl::texture &source, u32 width, u32 height, u32 pitch, texture::format format, texture::type type)
+		void save_rtt(u32 base, u32 size)
+		{
+			std::lock_guard<std::mutex> lock(m_section_mutex);
+
+			cached_rtt_section *region = find_cached_rtt_section(base, size);
+
+			if (!region)
+			{
+				LOG_ERROR(RSX, "Attempted to download render target that does not exist. Please report to developers");
+				return;
+			}
+
+			verify(HERE), region->is_locked();
+			region->copy_texture();
+		}
+
+		void lock_rtt_region(const u32 base, const u32 size, const u16 width, const u16 height, const u16 pitch, const texture::format format, const texture::type type, gl::texture &source)
 		{
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
 			cached_rtt_section *region = create_locked_view_of_section(base, size);
-
-			//Ignore this if we haven't finished downloading previous draw call
-			//TODO: Separate locking sections vs downloading to pbo unless address faults often
-			if (0)//region->can_skip())
-				return;
 
 			if (!region->matches(base, size))
 			{
@@ -793,10 +733,11 @@ namespace gl
 			}
 
 			region->set_dimensions(width, height, pitch);
-			region->copy_texture(source);
 			region->set_format(format, type);
 			region->set_dirty(false);
 			region->set_flushed(false);
+			region->set_copied(false);
+			region->set_source(source);
 
 			verify(HERE), region->is_locked() == true;
 		}
@@ -890,32 +831,16 @@ namespace gl
 			}
 		}
 
-		bool flush_section(u32 address)
+		bool flush_section(u32 address);
+
+		void clear_temporary_surfaces()
 		{
-			if (address < rtt_cache_range.first ||
-				address >= rtt_cache_range.second)
-				return false;
-
-			std::lock_guard<std::mutex> lock(m_section_mutex);
-
-			for (cached_rtt_section &rtt : m_rtt_cache)
+			for (u32 &id : m_temporary_surfaces)
 			{
-				if (rtt.is_dirty()) continue;
-
-				if (rtt.is_locked() && rtt.overlaps(address))
-				{
-					if (rtt.is_flushed())
-					{
-						LOG_WARNING(RSX, "Section matches range, but marked as already flushed!, 0x%X+0x%X", rtt.get_section_base(), rtt.get_section_size());
-						continue;
-					}
-
-					rtt.flush();
-					return true;
-				}
+				glDeleteTextures(1, &id);
 			}
 
-			return false;
+			m_temporary_surfaces.clear();
 		}
 	};
 }

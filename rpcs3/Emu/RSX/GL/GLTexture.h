@@ -64,3 +64,9 @@ namespace rsx
 		};
 	}
 }
+
+namespace gl
+{
+	GLenum get_sized_internal_format(u32 gcm_format);
+	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
+}
