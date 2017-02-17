@@ -113,6 +113,8 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	auto spu = idm::make_ptr<SPUThread>(thread_name, spu_num, group.get());
 
+	fxm::get_always<mfc_thread>()->add_spu(spu);
+
 	*thread = spu->id;
 
 	group->threads[spu_num] = std::move(spu);
@@ -223,6 +225,8 @@ error_code sys_spu_thread_group_destroy(u32 id)
 			idm::remove<SPUThread>(thread->id);
 		}
 	}
+
+	fxm::check_unlocked<mfc_thread>()->add_spu(nullptr);
 
 	return CELL_OK;
 }
@@ -1080,7 +1084,11 @@ error_code sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 
 	thread->cpu_init();
 
-	*id = thread->index;
+	const u32 _id = thread->index;
+
+	fxm::get_always<mfc_thread>()->add_spu(std::move(thread));
+
+	*id = _id;
 
 	return CELL_OK;
 }
@@ -1141,6 +1149,8 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	}
 
 	idm::remove<RawSPUThread>(thread->id);
+
+	fxm::check_unlocked<mfc_thread>()->add_spu(nullptr);
 
 	return CELL_OK;
 }

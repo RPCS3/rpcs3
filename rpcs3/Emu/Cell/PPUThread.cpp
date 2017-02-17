@@ -684,28 +684,72 @@ static void ppu_trace(u64 addr)
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
-	be_t<u32> reg_value;
-	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
-	return reg_value;
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(u32));
+	_mm_lfence();
+	ppu.raddr = addr;
+	ppu.rdata = vm::_ref<const atomic_be_t<u32>>(addr);
+	return static_cast<u32>(ppu.rdata);
 }
 
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
-	be_t<u64> reg_value;
-	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
-	return reg_value;
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(u64));
+	_mm_lfence();
+	ppu.raddr = addr;
+	ppu.rdata = vm::_ref<const atomic_be_t<u64>>(addr);
+	return ppu.rdata;
 }
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
-	const be_t<u32> data = reg_value;
-	return vm::reservation_update(addr, &data, sizeof(data));
+	atomic_be_t<u32>& data = vm::_ref<atomic_be_t<u32>>(addr);
+
+	if (ppu.raddr != addr || ppu.rdata != data.load())
+	{
+		ppu.raddr = 0;
+		return false;
+	}
+
+	ppu.state += cpu_flag::is_waiting;
+	writer_lock lock(vm::g_mutex);
+
+	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+	
+	if (result)
+	{
+		vm::reservation_update(addr, sizeof(u32));
+		vm::notify(addr, sizeof(u32));
+	}
+
+	ppu.raddr = 0;
+	ppu.state -= cpu_flag::is_waiting;
+	return result;
 }
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
-	const be_t<u64> data = reg_value;
-	return vm::reservation_update(addr, &data, sizeof(data));
+	atomic_be_t<u64>& data = vm::_ref<atomic_be_t<u64>>(addr);
+
+	if (ppu.raddr != addr || ppu.rdata != data.load())
+	{
+		ppu.raddr = 0;
+		return false;
+	}
+
+	ppu.state += cpu_flag::is_waiting;
+	writer_lock lock(vm::g_mutex);
+
+	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
+
+	if (result)
+	{
+		vm::reservation_update(addr, sizeof(u64));
+		vm::notify(addr, sizeof(u64));
+	}
+
+	ppu.raddr = 0;
+	ppu.state -= cpu_flag::is_waiting;
+	return result;
 }
 
 static bool adde_carry(u64 a, u64 b, bool c)

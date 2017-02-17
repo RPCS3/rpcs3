@@ -186,6 +186,16 @@ public:
 		if (old.wait) spu.notify();
 	}
 
+	bool push_and(u32 value)
+	{
+		const auto old = data.fetch_op([=](sync_var_t& data)
+		{
+			data.value &= ~value;
+		});
+
+		return (old.value & value) != 0;
+	}
+
 	// push unconditionally (overwriting previous value), may require notification
 	void push(cpu_thread& spu, u32 value)
 	{
@@ -510,18 +520,29 @@ public:
 
 	SPUThread(const std::string& name, u32 index, lv2_spu_group* group);
 
-	std::array<v128, 128> gpr; // General-Purpose Registers
+	// General-Purpose Registers
+	std::array<v128, 128> gpr;
 	SPU_FPSCR fpscr;
 
-	std::unordered_map<u32, std::function<bool(SPUThread& SPU)>> m_addr_to_hle_function_map;
+	// MFC command data
+	spu_mfc_cmd ch_mfc_cmd;
 
-	spu_mfc_arg_t ch_mfc_args;
+	// MFC command queue (consumer: MFC thread)
+	lf_spsc<spu_mfc_cmd, 16> mfc_queue;
 
-	std::vector<std::pair<u32, spu_mfc_arg_t>> mfc_queue; // Only used for stalled list transfers
+	// MFC command proxy queue (consumer: MFC thread)
+	lf_mpsc<spu_mfc_cmd, 8> mfc_proxy;
+
+	// Reservation Data
+	u64 rtime = 0;
+	std::array<u128, 8> rdata{};
+	u32 raddr = 0;
 
 	u32 srr0;
-	u32 ch_tag_mask;
+	atomic_t<u32> ch_tag_upd;
+	atomic_t<u32> ch_tag_mask;
 	spu_channel_t ch_tag_stat;
+	atomic_t<u32> ch_stall_mask;
 	spu_channel_t ch_stall_stat;
 	spu_channel_t ch_atomic_stat;
 
@@ -537,7 +558,6 @@ public:
 
 	atomic_t<u32> ch_event_mask;
 	atomic_t<u32> ch_event_stat;
-	u32 last_raddr; // Last Reservation Address (0 if not set)
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
@@ -558,7 +578,6 @@ public:
 
 	const std::string m_name; // Thread name
 
-	std::function<void(SPUThread&)> custom_task;
 	std::exception_ptr pending_exception;
 
 	std::shared_ptr<class SPUDatabase> spu_db;
@@ -566,10 +585,9 @@ public:
 	u32 recursion_level = 0;
 
 	void push_snr(u32 number, u32 value);
-	void do_dma_transfer(u32 cmd, spu_mfc_arg_t args);
-	void do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args);
-	void process_mfc_cmd(u32 cmd);
+	void do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc = true);
 
+	void process_mfc_cmd();
 	u32 get_events(bool waiting = false);
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
@@ -594,8 +612,4 @@ public:
 	{
 		return *_ptr<T>(lsa);
 	}
-
-	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread&)> function);
-	void UnregisterHleFunction(u32 addr);
-	void UnregisterHleFunctions(u32 start_addr, u32 end_addr);
 };

@@ -994,10 +994,12 @@ void arm_interpreter::LDREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 	{
 		const u32 addr = cpu.read_gpr(n) + imm32;
 
-		u32 value;
-		vm::reservation_acquire(&value, addr, sizeof(value));
+		cpu.rtime = vm::reservation_acquire(addr, sizeof(u32));
+		_mm_lfence();
+		cpu.raddr = addr;
+		cpu.rdata = vm::_ref<const atomic_le_t<u32>>(addr);
 
-		cpu.write_gpr(t, value, 4);
+		cpu.write_gpr(t, cpu.rdata, 4);
 	}
 }
 
@@ -2078,7 +2080,28 @@ void arm_interpreter::STREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 	{
 		const u32 addr = cpu.read_gpr(n) + imm32;
 		const u32 value = cpu.read_gpr(t);
-		cpu.write_gpr(d, !vm::reservation_update(addr, &value, sizeof(value)), 4);
+
+		atomic_le_t<u32>& data = vm::_ref<atomic_le_t<u32>>(addr);
+
+		if (cpu.raddr != addr || cpu.rdata != data.load())
+		{
+			// Failure
+			cpu.raddr = 0;
+			cpu.write_gpr(d, true, 4);
+			return;
+		}
+
+		writer_lock lock(vm::g_mutex);
+
+		const bool result = cpu.rtime == vm::reservation_acquire(addr, cpu.rtime) && data.compare_and_swap_test(cpu.rdata, value);
+
+		if (result)
+		{
+			vm::reservation_update(addr, sizeof(u32));
+		}
+		
+		cpu.raddr = 0;
+		cpu.write_gpr(d, !result, 4);
 	}
 }
 
