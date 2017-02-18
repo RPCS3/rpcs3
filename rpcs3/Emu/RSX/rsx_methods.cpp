@@ -374,27 +374,29 @@ namespace rsx
 	{
 		void image_in(thread *rsx, u32 _reg, u32 arg)
 		{
-			rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
+			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
-			u32 clip_x = method_registers.blit_engine_clip_x();
-			u32 clip_y = method_registers.blit_engine_clip_y();
-			u32 clip_w = method_registers.blit_engine_clip_width();
-			u32 clip_h = method_registers.blit_engine_clip_height();
+			const u16 out_x = method_registers.blit_engine_output_x();
+			const u16 out_y = method_registers.blit_engine_output_y();
+			const u16 out_w = method_registers.blit_engine_output_width();
+			const u16 out_h = method_registers.blit_engine_output_height();
 
-			u32 out_x = method_registers.blit_engine_output_x();
-			u32 out_y = method_registers.blit_engine_output_y();
-			u32 out_w = method_registers.blit_engine_output_width();
-			u32 out_h = method_registers.blit_engine_output_height();
+			const u16 in_w = method_registers.blit_engine_input_width();
+			const u16 in_h = method_registers.blit_engine_input_height();
 
-			u16 in_w = method_registers.blit_engine_input_width();
-			u16 in_h = method_registers.blit_engine_input_height();
+			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
+			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
+			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+
+			const f32 in_x = method_registers.blit_engine_in_x();
+			const f32 in_y = method_registers.blit_engine_in_y();
+
+			const u16 clip_x = std::min(method_registers.blit_engine_clip_x(), u16(in_x + in_w - 1));
+			const u16 clip_y = std::min(method_registers.blit_engine_clip_y(), u16(in_y + in_h - 1));
+			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
+			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
-			blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
-			blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
-			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
-
-			f32 in_x = method_registers.blit_engine_in_x();
-			f32 in_y = method_registers.blit_engine_in_y();
 
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
@@ -467,14 +469,16 @@ namespace rsx
 				}
 			}
 
-			u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
-			u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
+			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
+			const u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
 
-			u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
-			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
+			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
+			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
-			u32 dst_address = get_address(dst_offset + out_offset, dst_dma);
+			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
+
+			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
+			u8* pixels_dst = vm::ps3::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
 
 			if (out_pitch == 0)
 			{
@@ -486,20 +490,7 @@ namespace rsx
 				in_pitch = in_bpp * in_w;
 			}
 
-			if (clip_w > out_w)
-			{
-				clip_w = out_w;
-			}
-
-			if (clip_h > out_h)
-			{
-				clip_h = out_h;
-			}
-
 			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
-
-			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address + out_offset);
 
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
@@ -529,10 +520,9 @@ namespace rsx
 			u32 convert_h = (u32)(scale_y * in_h);
 
 			bool need_clip =
-				method_registers.blit_engine_clip_width() != method_registers.blit_engine_input_width() ||
-				method_registers.blit_engine_clip_height() != method_registers.blit_engine_input_height() ||
-				method_registers.blit_engine_clip_x() > 0 ||
-				method_registers.blit_engine_clip_y() > 0 ||
+				clip_w != in_w ||
+				clip_h != in_h ||
+				clip_x > 0 || clip_y > 0 ||
 				convert_w != out_w || convert_h != out_h;
 
 			bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
@@ -566,16 +556,16 @@ namespace rsx
 							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(pixels_dst + out_offset, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(pixels_dst, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
-							clip_image(pixels_dst + out_offset, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							clip_image(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
 					}
 					else
 					{
-						convert_scale_image(pixels_dst + out_offset, out_format, out_w, out_h, out_pitch,
+						convert_scale_image(pixels_dst, out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 				}
@@ -593,7 +583,7 @@ namespace rsx
 					}
 					else
 					{
-						std::memmove(pixels_dst + out_offset, pixels_src, out_pitch * out_h);
+						std::memmove(pixels_dst, pixels_src, out_pitch * out_h);
 					}
 				}
 			}
