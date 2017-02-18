@@ -490,7 +490,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 		{
 			png_process_data(stream->png_ptr, stream->info_ptr, header, 8);
 		}
-		catch (LibPngCustomException)
+		catch (LibPngCustomException&)
 		{
 			return CELL_PNGDEC_ERROR_HEADER;
 		}
@@ -733,7 +733,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 			{
 				png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length - stream->buffer->cursor);
 			}
-			catch (LibPngCustomException)
+			catch (LibPngCustomException&)
 			{
 				freeMem();
 				return CELL_PNGDEC_ERROR_FATAL;
@@ -751,7 +751,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 			{
 				png_process_data(stream->png_ptr, stream->info_ptr, static_cast<u8*>(streamParam->strmPtr.get_ptr()), streamParam->strmSize);
 			}
-			catch (LibPngCustomException)
+			catch (LibPngCustomException&)
 			{
 				freeMem();
 				return CELL_PNGDEC_ERROR_FATAL;
@@ -779,7 +779,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 			}
 			png_read_end(stream->png_ptr, stream->info_ptr);
 		}
-		catch (LibPngCustomException)
+		catch (LibPngCustomException&)
 		{
 			return CELL_PNGDEC_ERROR_FATAL;
 		}
@@ -866,7 +866,7 @@ s32 cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, PExtInfo
 	{
 		png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length);
 	}
-	catch (LibPngCustomException)
+	catch (LibPngCustomException&)
 	{
 		return CELL_PNGDEC_ERROR_HEADER;
 	}
