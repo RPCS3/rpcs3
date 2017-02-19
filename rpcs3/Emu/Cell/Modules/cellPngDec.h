@@ -1,5 +1,4 @@
 #pragma once
-
 namespace vm { using namespace ps3; }
 
 #include "cellPng.h"
@@ -289,16 +288,22 @@ struct PngStream
 	CellPngDecInfo info;
 	CellPngDecOutParam out_param;
 	CellPngDecSrc source;
-	CellPngDecStrmInfo streamInfo;
-	CellPngDecStrmParam streamParam;
 
-	// Fixed alpha value and flag
-	bool fixed_alpha;
-	be_t<u32> fixed_alpha_colour;
+	// Partial decoding
+	CellPngDecCbCtrlStrm cbCtrlStream;
+	CellPngDecCbCtrlDisp cbCtrlDisp;
+	vm::ptr<CellPngDecDispInfo> cbDispInfo;
+	vm::ptr<CellPngDecDispParam> cbDispParam;
+	ppu_thread* ppuContext;
+
+	u32 outputCounts = 0;
+	u32 nextRow = 0;
+	bool endOfFile = false;
 
 	// Pixel packing value
 	be_t<s32> packing;
-	
+	u32 passes;
+
 	// PNG custom read function structure, for decoding from a buffer
 	vm::ptr<PngBuffer> buffer;
 
@@ -320,3 +325,24 @@ static s32 getPngDecColourType(u8 type)
 	default: fmt::throw_exception("Unknown colour type: %d" HERE, type);
 	}
 }
+
+static bool cellPngColorSpaceHasAlpha(u32 colorspace)
+{
+	switch (colorspace) 
+	{
+	case CELL_PNGDEC_RGBA:
+	case CELL_PNGDEC_ARGB:
+	case CELL_PNGDEC_GRAYSCALE_ALPHA:
+		return true;
+	default:
+		return false;
+	}
+}
+
+// Custom exception for libPng errors
+
+class LibPngCustomException : public std::runtime_error
+{
+public:
+	LibPngCustomException(char const* const message) : runtime_error(message) {}
+};
