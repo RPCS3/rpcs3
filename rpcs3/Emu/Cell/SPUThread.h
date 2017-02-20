@@ -63,11 +63,14 @@ enum : u32
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM, // Mask of implemented events
+	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN, // Mask of implemented events
+	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
 
 	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
 	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
 	SPU_EVENT_INTR_ENABLED = 0x20000000, // Originally unused, represents "SPU Interrupts Enabled" status
+
+	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_ENABLED | SPU_EVENT_INTR_IMPLEMENTED
 };
 
 // SPU Class 0 Interrupts
@@ -516,6 +519,7 @@ public:
 
 	std::vector<std::pair<u32, spu_mfc_arg_t>> mfc_queue; // Only used for stalled list transfers
 
+	u32 srr0;
 	u32 ch_tag_mask;
 	spu_channel_t ch_tag_stat;
 	spu_channel_t ch_stall_stat;

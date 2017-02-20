@@ -146,6 +146,7 @@ void SPUThread::cpu_init()
 	ch_mfc_args = {};
 	mfc_queue.clear();
 
+	srr0 = 0;
 	ch_tag_mask = 0;
 	ch_tag_stat.data.store({});
 	ch_stall_stat.data.store({});
@@ -371,6 +372,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 		if (rec->sb & 0x8000)
 		{
 			ch_stall_stat.set_value((1 << args.tag) | ch_stall_stat.get_value());
+			ch_event_stat |= SPU_EVENT_SN;
 
 			spu_mfc_arg_t stalled;
 			stalled.ea = (args.ea & ~0xffffffff) | (list_addr + (i + 1) * 8);
@@ -418,11 +420,6 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 	case MFC_GETLLAR_CMD: // acquire reservation
 	{
-		if (ch_mfc_args.size != 128)
-		{
-			break;
-		}
-
 		const u32 raddr = vm::cast(ch_mfc_args.ea, HERE);
 
 		vm::reservation_acquire(vm::base(offset + ch_mfc_args.lsa), raddr, 128);
@@ -437,11 +434,6 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 	case MFC_PUTLLC_CMD: // store conditionally
 	{
-		if (ch_mfc_args.size != 128)
-		{
-			break;
-		}
-
 		if (vm::reservation_update(vm::cast(ch_mfc_args.ea, HERE), vm::base(offset + ch_mfc_args.lsa), 128))
 		{
 			if (std::exchange(last_raddr, 0) == 0)
@@ -465,11 +457,6 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 	case MFC_PUTLLUC_CMD: // store unconditionally
 	case MFC_PUTQLLUC_CMD:
 	{
-		if (ch_mfc_args.size != 128)
-		{
-			break;
-		}
-
 		vm::reservation_op(vm::cast(ch_mfc_args.ea, HERE), 128, [this]()
 		{
 			std::memcpy(vm::base_priv(vm::cast(ch_mfc_args.ea, HERE)), vm::base(offset + ch_mfc_args.lsa), 128);
@@ -512,9 +499,12 @@ u32 SPUThread::get_events(bool waiting)
 	}
 
 	// SPU Decrementer Event
-	if ((ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
+	if (!ch_dec_value || (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
 	{
-		ch_event_stat |= SPU_EVENT_TM;
+		if ((ch_event_stat & SPU_EVENT_TM) == 0)
+		{
+			ch_event_stat |= SPU_EVENT_TM;
+		}
 	}
 
 	// initialize waiting
@@ -562,7 +552,7 @@ void SPUThread::set_interrupt_status(bool enable)
 	if (enable)
 	{
 		// detect enabling interrupts with events masked
-		if (u32 mask = ch_event_mask)
+		if (u32 mask = ch_event_mask & ~SPU_EVENT_INTR_IMPLEMENTED)
 		{
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
 		}
@@ -617,9 +607,11 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	switch (ch)
 	{
-	//case SPU_RdSRR0:
-	//	value = SRR0;
-	//	break;
+	case SPU_RdSRR0:
+	{
+		out = srr0;
+		break;
+	}
 	case SPU_RdInMbox:
 	{
 		while (true)
@@ -738,9 +730,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	switch (ch)
 	{
-	//case SPU_WrSRR0:
-	//	SRR0 = value & 0x3FFFC;  //LSLR & ~3
-	//	break;
+	case SPU_WrSRR0:
+	{
+		srr0 = value;
+		break;
+	}
+		
 	case SPU_WrOutIntrMbox:
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
@@ -1013,7 +1008,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrEventMask:
 	{
 		// detect masking events with enabled interrupt status
-		if (value && ch_event_stat & SPU_EVENT_INTR_ENABLED)
+		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && ch_event_stat & SPU_EVENT_INTR_ENABLED)
 		{
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, value);
 		}
@@ -1063,6 +1058,22 @@ bool SPUThread::stop_and_signal(u32 code)
 
 	switch (code)
 	{
+	case 0x000:
+	{
+		// Hack: wait for an instruction become available
+		while (vm::ps3::read32(offset + pc) == 0)
+		{
+			if (test(state) && check_state())
+			{
+				return false;
+			}
+
+			thread_ctrl::wait_for(1000);
+		}
+
+		return false;
+	}
+
 	case 0x001:
 	{
 		thread_ctrl::wait_for(1000); // hack

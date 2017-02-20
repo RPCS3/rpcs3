@@ -28,8 +28,9 @@ error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t
 	{
 	case SYS_SYNC_FIFO: break;
 	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_PRIORITY_INHERIT: break;
-
+	case SYS_SYNC_PRIORITY_INHERIT:
+		sys_mutex.todo("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT");
+		break;
 	default:
 	{
 		sys_mutex.error("sys_mutex_create(): unknown protocol (0x%x)", protocol);
@@ -105,7 +106,23 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex)
 	{
-		return mutex.lock(ppu, ppu.id);
+		CellError result = mutex.try_lock(ppu.id);
+
+		if (result == CELL_EBUSY)
+		{
+			semaphore_lock lock(mutex.mutex);
+
+			if (mutex.try_own(ppu, ppu.id))
+			{
+				result = {};
+			}
+			else
+			{
+				mutex.sleep(ppu, start_time, timeout);
+			}
+		}
+
+		return result;
 	});
 
 	if (!mutex)
@@ -125,7 +142,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 		return CELL_OK;
 	}
 
-	// SLEEP
+	ppu.gpr[3] = CELL_OK;
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
@@ -143,7 +160,8 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 					continue;
 				}
 
-				return not_an_error(CELL_ETIMEDOUT);
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				break;
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -154,7 +172,8 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 		}
 	}
 
-	return CELL_OK;
+	ppu.check_state();
+	return not_an_error(ppu.gpr[3]);
 }
 
 error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id)

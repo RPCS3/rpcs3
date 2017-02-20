@@ -105,4 +105,39 @@ struct lv2_obj
 		queue.erase(it);
 		return res;
 	}
+
+	// Remove the current thread from the scheduling queue, register timeout
+	static void sleep(named_thread&, u64 wait_until);
+
+	template <typename T>
+	static void sleep(T& thread, u64 start_time, u64 timeout)
+	{
+		sleep(thread, timeout ? start_time + timeout : -1);
+	}
+
+	// Schedule the thread
+	static void awake(class cpu_thread&, u32 prio);
+
+	template <typename T>
+	static void awake(T& cpu)
+	{
+		awake(cpu, -1);
+	}
+
+	static void cleanup();
+
+private:
+	// Scheduler mutex
+	static semaphore<> g_mutex;
+
+	// Scheduler queue for active PPU threads
+	static std::deque<class ppu_thread*> g_ppu;
+
+	// Waiting for the response from
+	static std::deque<class cpu_thread*> g_pending;
+
+	// Scheduler queue for timeouts (wait until -> thread)
+	static std::deque<std::pair<u64, named_thread*>> g_waiting;
+
+	static void schedule_all();
 };

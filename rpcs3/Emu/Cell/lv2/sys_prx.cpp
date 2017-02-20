@@ -18,7 +18,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 {
 	sys_prx.warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
 
-	const ppu_prx_object obj = fs::file(vfs::get(path));
+	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)));
 
 	if (obj != elf_error::ok)
 	{

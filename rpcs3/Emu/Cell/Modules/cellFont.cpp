@@ -743,6 +743,8 @@ s32 cellFontGraphicsGetLineRGBA()
 
 DECLARE(ppu_module_manager::cellFont)("cellFont", []()
 {
+	static ppu_static_module cell_FreeType2("cell_FreeType2");
+
 	REG_FUNC(cellFont, cellFontSetFontsetOpenMode);
 	REG_FUNC(cellFont, cellFontSetFontOpenMode);
 	REG_FUNC(cellFont, cellFontCreateRenderer);

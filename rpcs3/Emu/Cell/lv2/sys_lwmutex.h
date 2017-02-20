@@ -78,4 +78,4 @@ error_code _sys_lwmutex_create(vm::ps3::ptr<u32> lwmutex_id, u32 protocol, vm::p
 error_code _sys_lwmutex_destroy(u32 lwmutex_id);
 error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout);
 error_code _sys_lwmutex_trylock(u32 lwmutex_id);
-error_code _sys_lwmutex_unlock(u32 lwmutex_id);
+error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id);

@@ -49,6 +49,12 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 	{
 		spu.set_interrupt_status(false);
 	}
+
+	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST) > SPU_EVENT_INTR_ENABLED)
+	{
+		spu.ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
+		spu.srr0 = std::exchange(spu.pc, -4) + 4;
+	}
 }
 
 
@@ -313,8 +319,8 @@ void spu_interpreter::BIZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u32[3] == 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -322,8 +328,8 @@ void spu_interpreter::BINZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u32[3] != 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -331,8 +337,8 @@ void spu_interpreter::BIHZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u16[6] == 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -340,8 +346,8 @@ void spu_interpreter::BIHNZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u16[6] != 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -357,21 +363,22 @@ void spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::BI(SPUThread& spu, spu_opcode_t op)
 {
-	set_interrupt_status(spu, op);
 	spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+	set_interrupt_status(spu, op);
 }
 
 void spu_interpreter::BISL(SPUThread& spu, spu_opcode_t op)
 {
-	set_interrupt_status(spu, op);
 	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
 	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
 	spu.pc = target - 4;
+	set_interrupt_status(spu, op);
 }
 
 void spu_interpreter::IRET(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	spu.pc = spu_branch_target(spu.srr0) - 4;
+	set_interrupt_status(spu, op);
 }
 
 void spu_interpreter::BISLED(SPUThread& spu, spu_opcode_t op)

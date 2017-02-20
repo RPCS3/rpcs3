@@ -68,7 +68,7 @@ error_code sys_cond_destroy(u32 cond_id)
 	return CELL_OK;
 }
 
-error_code sys_cond_signal(u32 cond_id)
+error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 {
 	sys_cond.trace("sys_cond_signal(cond_id=0x%x)", cond_id);
 
@@ -99,13 +99,14 @@ error_code sys_cond_signal(u32 cond_id)
 
 	if (cond.ret)
 	{
-		cond.ret->set_signal();
+		cond->awake(*cond.ret);
+		ppu.check_state();
 	}
 
 	return CELL_OK;
 }
 
-error_code sys_cond_signal_all(u32 cond_id)
+error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 {
 	sys_cond.trace("sys_cond_signal_all(cond_id=0x%x)", cond_id);
 
@@ -138,13 +139,14 @@ error_code sys_cond_signal_all(u32 cond_id)
 
 	if (cond.ret)
 	{
-		cond.ret->set_signal();
+		cond->awake(*cond.ret);
+		ppu.check_state();
 	}
 
 	return CELL_OK;
 }
 
-error_code sys_cond_signal_to(u32 cond_id, u32 thread_id)
+error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 {
 	sys_cond.trace("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
@@ -180,7 +182,8 @@ error_code sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	if (cond.ret && cond.ret != (cpu_thread*)(1))
 	{
-		cond.ret->set_signal();
+		cond->awake(*cond.ret);
+		ppu.check_state();
 	}
 	else if (!cond.ret)
 	{
@@ -223,6 +226,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 		// Register waiter
 		cond->sq.emplace_back(&ppu);
+		cond->sleep(ppu, start_time, timeout);
 
 		// Unlock the mutex
 		cond->mutex->lock_count = 0;
@@ -231,8 +235,6 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		// Further function result
 		ppu.gpr[3] = CELL_OK;
 	}
-
-	// SLEEP
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
@@ -275,6 +277,8 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 	// Restore the recursive value
 	cond->mutex->lock_count = cond.ret;
+
+	ppu.check_state();
 
 	if (ppu.gpr[3] == CELL_ETIMEDOUT)
 	{

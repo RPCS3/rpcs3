@@ -338,6 +338,34 @@ struct SelfHeader
 	void Show(){}
 };
 
+class SCEDecrypter
+{
+protected:
+	// Main SELF file stream.
+	const fs::file& sce_f;
+
+	// SCE headers.
+	SceHeader sce_hdr;
+
+	// Metadata structs.
+	MetadataInfo meta_info;
+	MetadataHeader meta_hdr;
+	std::vector<MetadataSectionHeader> meta_shdr;
+
+	// Internal data buffers.
+	std::unique_ptr<u8[]> data_keys;
+	u32 data_keys_length;
+	std::unique_ptr<u8[]> data_buf;
+	u32 data_buf_length;
+
+public:
+	SCEDecrypter(const fs::file& s);
+	std::vector<fs::file> MakeFile();
+	bool LoadHeaders();
+	bool LoadMetadata(const u8 erk[32], const u8 riv[16]);
+	bool DecryptData();
+};
+
 class SELFDecrypter
 {
 	// Main SELF file stream.
@@ -379,7 +407,7 @@ class SELFDecrypter
 
 public:
 	SELFDecrypter(const fs::file& s);
-	bool MakeElf(const std::string& elf, bool isElf32);
+	fs::file MakeElf(bool isElf32);
 	bool LoadHeaders(bool isElf32);
 	void ShowHeaders(bool isElf32);
 	bool LoadMetadata();
@@ -388,7 +416,4 @@ public:
 	bool GetKeyFromRap(u8 *content_id, u8 *npdrm_key);
 };
 
-extern bool IsSelf(const std::string& path);
-extern bool IsSelfElf32(const std::string& path);
-extern bool CheckDebugSelf(const std::string& self, const std::string& elf);
-extern bool DecryptSelf(const std::string& elf, const std::string& self);
+extern fs::file decrypt_self(fs::file elf_or_self);

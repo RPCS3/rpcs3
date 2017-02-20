@@ -30,6 +30,9 @@ error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attri
 
 	const u32 protocol = attr->protocol;
 
+	if (protocol == SYS_SYNC_PRIORITY_INHERIT)
+		sys_semaphore.todo("sys_semaphore_create(): SYS_SYNC_PRIORITY_INHERIT");
+
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
 		sys_semaphore.error("sys_semaphore_create(): unknown protocol (0x%x)", protocol);
@@ -101,6 +104,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		if (sema.val-- <= 0)
 		{
 			sema.sq.emplace_back(&ppu);
+			sema.sleep(ppu, start_time, timeout);
 			return false;
 		}
 
@@ -117,7 +121,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		return CELL_OK;
 	}
 
-	// SLEEP
+	ppu.gpr[3] = CELL_OK;
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
@@ -144,7 +148,8 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				}
 
 				verify(HERE), sem->unqueue(sem->sq, &ppu);
-				return not_an_error(CELL_ETIMEDOUT);
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				break;
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -155,7 +160,8 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		}
 	}
 
-	return CELL_OK;
+	ppu.check_state();
+	return not_an_error(ppu.gpr[3]);
 }
 
 error_code sys_semaphore_trywait(u32 sem_id)
@@ -190,7 +196,7 @@ error_code sys_semaphore_trywait(u32 sem_id)
 	return CELL_OK;
 }
 
-error_code sys_semaphore_post(u32 sem_id, s32 count)
+error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 {
 	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
@@ -245,10 +251,11 @@ error_code sys_semaphore_post(u32 sem_id, s32 count)
 		{
 			const auto cpu = verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol));
 
-			cpu->set_signal();
+			sem->awake(*cpu);
 		}
 	}
 
+	ppu.check_state();
 	return CELL_OK;
 }
 

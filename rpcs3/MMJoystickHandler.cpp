@@ -31,11 +31,11 @@ void MMJoystickHandler::Init(const u32 max_connect)
 	supportedJoysticks = joyGetNumDevs();
 	if (supportedJoysticks > 0)
 	{
-		LOG_ERROR(HLE, "Driver supports %u joysticks", supportedJoysticks);
+		LOG_NOTICE(GENERAL, "Driver supports %u joysticks", supportedJoysticks);
 	}
 	else
 	{
-		LOG_ERROR(HLE, "Driver doesn't support Joysticks");
+		LOG_ERROR(GENERAL, "Driver doesn't support Joysticks");
 	}
 	js_info.dwSize = sizeof(js_info);
 	js_info.dwFlags = JOY_RETURNALL;
@@ -43,8 +43,8 @@ void MMJoystickHandler::Init(const u32 max_connect)
 	bool JoyPresent = (joyGetPosEx(JOYSTICKID1, &js_info) == JOYERR_NOERROR);
 	if (JoyPresent)
 	{
-		LOG_ERROR(HLE, "Found connected joystick with %u buttons", js_caps.wNumButtons);
-		
+		LOG_NOTICE(GENERAL, "Found connected joystick with %u buttons and %u axes", js_caps.wNumButtons,js_caps.wNumAxes);
+		LOG_NOTICE(GENERAL, "Axes info %u %u %u %u %u %u %u %u", js_caps.wXmin, js_caps.wXmax,js_caps.wYmin,js_caps.wYmax,js_caps.wZmin,js_caps.wZmax,js_caps.wRmin,js_caps.wRmax);
 		std::memset(&m_info, 0, sizeof m_info);
 		m_info.max_connect = max_connect;
 
@@ -90,7 +90,7 @@ void MMJoystickHandler::Init(const u32 max_connect)
 	}
 	else
 	{
-		LOG_ERROR(HLE, "Joystick not found");
+		LOG_ERROR(GENERAL, "Joystick not found");
 	}
 }
 
@@ -102,7 +102,7 @@ void MMJoystickHandler::Close()
 		{
 			active = false;
 			if (WaitForSingleObject(thread, THREAD_TIMEOUT) != WAIT_OBJECT_0)
-				LOG_ERROR(HLE, "MMJoystick thread could not stop within %d milliseconds", (u32)THREAD_TIMEOUT);
+				LOG_ERROR(GENERAL, "MMJoystick thread could not stop within %d milliseconds", (u32)THREAD_TIMEOUT);
 			thread = nullptr;
 		}
 	}

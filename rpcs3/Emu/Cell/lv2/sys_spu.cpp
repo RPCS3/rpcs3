@@ -6,6 +6,7 @@
 #include "Loader/ELF.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "sys_interrupt.h"
 #include "sys_event.h"
@@ -60,25 +61,16 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file f(vfs::get(path.get_ptr()));
-	if (!f)
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+
+	if (!elf_file)
 	{
 		sys_spu.error("sys_spu_image_open() error: %s not found!", path);
 		return CELL_ENOENT;
 	}
 
-	SceHeader hdr;
-	hdr.Load(f);
-
-	if (hdr.CheckMagic())
-	{
-		fmt::throw_exception("sys_spu_image_open() error: %s is encrypted! Try to decrypt it manually and try again.", path);
-	}
-
-	f.seek(0);
-
 	u32 entry;
-	u32 offset = LoadSpuImage(f, entry);
+	u32 offset = LoadSpuImage(elf_file, entry);
 
 	img->type = SYS_SPU_IMAGE_TYPE_USER;
 	img->entry_point = entry;
@@ -479,7 +471,7 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
+error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 {
 	sys_spu.warning("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
 
@@ -502,6 +494,8 @@ error_code sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> st
 		// another PPU thread is joining this thread group
 		return CELL_EBUSY;
 	}
+
+	lv2_obj::sleep(ppu, -1);
 
 	while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
 	{

@@ -84,6 +84,8 @@ void Emulator::Init()
 
 	// Reload global configuration
 	cfg::root.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+
+	SetCPUThreadStop(0);
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -152,43 +154,54 @@ void Emulator::Load()
 	{
 		Init();
 
-		if (!fs::is_file(m_path))
+		// Open SELF or ELF
+		fs::file elf_file(m_path);
+
+		LOG_NOTICE(LOADER, "Path: %s", m_path);
+
+		if (!elf_file)
 		{
-			LOG_ERROR(LOADER, "File not found: %s", m_path);
+			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
 			return;
 		}
 
 		const std::string& elf_dir = fs::get_parent_dir(m_path);
 
-		if (IsSelf(m_path))
+		// Check SELF header
+		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
+			// Decrypt SELF
+			elf_file = decrypt_self(std::move(elf_file));
+
 			const std::size_t elf_ext_pos = m_path.find_last_of('.');
 			const std::string& elf_ext = fmt::to_upper(m_path.substr(elf_ext_pos != -1 ? elf_ext_pos : m_path.size()));
 			const std::string& elf_name = m_path.substr(elf_dir.size());
 
+			// Save ELF (TODO: configuration, cache and different file location)
+			std::string new_path = m_path;
+
 			if (elf_name.compare(elf_name.find_last_of("/\\", -1, 2) + 1, 9, "EBOOT.BIN", 9) == 0)
 			{
-				m_path.erase(m_path.size() - 9, 1); // change EBOOT.BIN to BOOT.BIN
+				new_path.erase(new_path.size() - 9, 1); // change EBOOT.BIN to BOOT.BIN
 			}
 			else if (elf_ext == ".SELF" || elf_ext == ".SPRX")
 			{
-				m_path.erase(m_path.size() - 4, 1); // change *.self to *.elf, *.sprx to *.prx
+				new_path.erase(new_path.size() - 4, 1); // change *.self to *.elf, *.sprx to *.prx
 			}
 			else
 			{
-				m_path += ".decrypted.elf";
+				new_path += ".decrypted.elf";
 			}
 
-			if (!DecryptSelf(m_path, elf_dir + elf_name))
+			if (fs::file elf_out{new_path, fs::rewrite})
 			{
-				LOG_ERROR(LOADER, "Failed to decrypt %s", elf_dir + elf_name);
-				return;
+				elf_out.write(elf_file.to_vector<u8>());
+			}
+			else
+			{
+				LOG_ERROR(LOADER, "Failed to save file: %s", new_path);
 			}
 		}
-
-		SetCPUThreadStop(0);
-
-		LOG_NOTICE(LOADER, "Path: %s", m_path);
 
 		// Load custom config
 		if (fs::file cfg_file{ m_path + ".yml" })
@@ -197,7 +210,6 @@ void Emulator::Load()
 			cfg::root.from_string(cfg_file.to_string());
 		}
 
-		const fs::file elf_file(m_path);
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		spu_exec_object spu_exec;
@@ -205,7 +217,7 @@ void Emulator::Load()
 
 		if (!elf_file)
 		{
-			LOG_ERROR(LOADER, "Failed to open %s", m_path);
+			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", m_path);
 			return;
 		}
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
@@ -454,6 +466,7 @@ void Emulator::Stop()
 
 	LOG_NOTICE(GENERAL, "All threads stopped...");
 
+	lv2_obj::cleanup();
 	idm::clear();
 	fxm::clear();
 

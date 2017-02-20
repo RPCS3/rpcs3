@@ -101,23 +101,6 @@ struct lv2_mutex final : lv2_obj
 		return true;
 	}
 
-	CellError lock(cpu_thread& cpu, u32 id)
-	{
-		CellError result = try_lock(id);
-
-		if (result == CELL_EBUSY)
-		{
-			semaphore_lock lock(mutex);
-
-			if (try_own(cpu, id))
-			{
-				return {};
-			}
-		}
-
-		return result;
-	}
-
 	CellError try_unlock(u32 id)
 	{
 		const u32 value = owner;
@@ -151,7 +134,7 @@ struct lv2_mutex final : lv2_obj
 		{
 			owner = cpu->id << 1 | !sq.empty();
 
-			cpu->set_signal();
+			awake(*cpu);
 		}
 		else
 		{

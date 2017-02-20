@@ -139,6 +139,8 @@ public:
 
 	const std::string m_name;
 
+	atomic_t<void*> owner{};
+
 	const char* last_function = nullptr;
 
 	void write_pc(u32 value, u32 size)
