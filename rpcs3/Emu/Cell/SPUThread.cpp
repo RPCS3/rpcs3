@@ -1058,48 +1058,9 @@ bool SPUThread::stop_and_signal(u32 code)
 
 	switch (code)
 	{
-	case 0x000:
-	{
-		// Hack: wait for an instruction become available
-		while (vm::ps3::read32(offset + pc) == 0)
-		{
-			if (test(state) && check_state())
-			{
-				return false;
-			}
-
-			thread_ctrl::wait_for(1000);
-		}
-
-		return false;
-	}
-
-	case 0x001:
-	{
-		thread_ctrl::wait_for(1000); // hack
-		return true;
-	}
-
 	case 0x002:
 	{
 		state += cpu_flag::ret;
-		return true;
-	}
-
-	case 0x003:
-	{
-		const auto found = m_addr_to_hle_function_map.find(pc);
-
-		if (found == m_addr_to_hle_function_map.end())
-		{
-			fmt::throw_exception("HLE function not registered (PC=0x%05x)" HERE, pc);
-		}
-
-		if (const auto return_to_caller = found->second(*this))
-		{
-			pc = (gpr[0]._u32[3] & 0x3fffc) - 4;
-		}
-
 		return true;
 	}
 
@@ -1299,15 +1260,12 @@ bool SPUThread::stop_and_signal(u32 code)
 		state += cpu_flag::stop;
 		return true;
 	}
-	}
-
-	if (!ch_out_mbox.get_count())
+	default:
 	{
-		fmt::throw_exception("Unknown STOP code: 0x%x (Out_MBox is empty)" HERE, code);
+		if ((code != 0x000) & (code != 0x001) & (code != 0x003)) // Avoid recursive logs > 100Mb in some cases. There is still logtrace in line 1043 for such cases.
+		LOG_TODO(SPU, "bypass: stop_and_signal(code=0x%x)", code);
+ 		return true;
 	}
-	else
-	{
-		fmt::throw_exception("Unknown STOP code: 0x%x (Out_MBox=0x%x)" HERE, code, ch_out_mbox.get_value());
 	}
 }
 
