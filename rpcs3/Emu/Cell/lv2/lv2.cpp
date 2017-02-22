@@ -986,8 +986,11 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 {
 	if (code < g_ppu_syscall_table.size())
 	{
-		// If autopause occures, check_status() will hold the thread till unpaused.
-		if (debug::autopause::pause_syscall(code) && ppu.check_state()) throw cpu_flag::ret;
+		// If autopause occures, check_status() will hold the thread till unpaused
+		if (debug::autopause::pause_syscall(code))
+		{
+			ppu.test_state();
+		}
 
 		if (auto func = g_ppu_syscall_table[code])
 		{
@@ -1026,9 +1029,11 @@ DECLARE(lv2_obj::g_waiting);
 // Amount of PPU threads running simultaneously (must be 2)
 cfg::int_entry<1, 16> g_cfg_ppu_threads(cfg::root.core, "PPU Threads", 2);
 
-void lv2_obj::sleep(named_thread& thread, u64 wait_until)
+void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 {
 	semaphore_lock lock(g_mutex);
+
+	const u64 start_time = get_system_time();
 
 	if (auto ppu = dynamic_cast<ppu_thread*>(&thread))
 	{
@@ -1039,21 +1044,27 @@ void lv2_obj::sleep(named_thread& thread, u64 wait_until)
 			if (!test(val, cpu_flag::signal))
 			{
 				val += cpu_flag::suspend;
+				val += cpu_flag::is_waiting;
 			}
 		});
 
 		if (test(state, cpu_flag::signal))
 		{
-			sys_ppu_thread.error("sleep() failed (signaled)");
+			sys_ppu_thread.trace("sleep() failed (signaled)");
+			return;
 		}
 
 		// Find and remove the thread
 		unqueue(g_ppu, ppu);
 		unqueue(g_pending, ppu);
+
+		ppu->start_time = start_time;
 	}
 
-	if (wait_until < -2)
+	if (timeout)
 	{
+		const u64 wait_until = start_time + timeout;
+
 		// Register timeout if necessary
 		for (auto it = g_waiting.begin(), end = g_waiting.end(); it != end; it++)
 		{
@@ -1160,6 +1171,7 @@ void lv2_obj::schedule_all()
 			{
 				sys_ppu_thread.trace("schedule(): %s", target->id);
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
+				target->start_time = 0;
 
 				if (target->get() != thread_ctrl::get_current())
 				{

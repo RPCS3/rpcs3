@@ -85,8 +85,6 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 {
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
@@ -104,7 +102,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		if (sema.val-- <= 0)
 		{
 			sema.sq.emplace_back(&ppu);
-			sema.sleep(ppu, start_time, timeout);
+			sema.sleep(ppu, timeout);
 			return false;
 		}
 
@@ -127,7 +125,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -160,7 +158,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		}
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -251,11 +249,12 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		{
 			const auto cpu = verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol));
 
+			ppu.state += cpu_flag::is_waiting;
 			sem->awake(*cpu);
 		}
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return CELL_OK;
 }
 

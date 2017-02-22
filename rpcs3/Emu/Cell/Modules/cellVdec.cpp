@@ -77,6 +77,7 @@ struct vdec_thread : ppu_thread
 
 	std::mutex mutex;
 	std::queue<vdec_frame> out;
+	u32 max_frames = 20;
 
 	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg, u32 prio, u32 stack)
 		: ppu_thread("HLE Video Decoder", prio, stack)
@@ -328,7 +329,7 @@ struct vdec_thread : ppu_thread
 						std::lock_guard<std::mutex>{mutex}, out.push(std::move(frame));
 
 						cb_func(*this, id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
-						lv2_obj::sleep(*this, -1);
+						lv2_obj::sleep(*this);
 					}
 
 					if (vcmd == vdec_cmd::decode)
@@ -338,9 +339,9 @@ struct vdec_thread : ppu_thread
 				}
 
 				cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
-				lv2_obj::sleep(*this, -1);
+				lv2_obj::sleep(*this);
 
-				while (std::lock_guard<std::mutex>{mutex}, out.size() > 60)
+				while (std::lock_guard<std::mutex>{mutex}, out.size() > max_frames)
 				{
 					thread_ctrl::wait();
 				}
@@ -444,8 +445,14 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	lv2_obj::sleep(ppu, -1);
-	vdec->cmd_push({vdec_cmd::close, 0});
+	lv2_obj::sleep(ppu);
+
+	{
+		std::lock_guard<std::mutex> lock(vdec->mutex);
+		vdec->cmd_push({vdec_cmd::close, 0});
+		vdec->out = decltype(vdec->out){};
+	}
+	
 	vdec->notify();
 	vdec->join();
 	idm::remove<ppu_thread>(handle);
@@ -534,7 +541,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		vdec->out.pop();
 
-		if (vdec->out.size() <= 60)
+		if (vdec->out.size() <= vdec->max_frames)
 		{
 			vdec->notify();
 		}

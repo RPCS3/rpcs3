@@ -743,7 +743,7 @@ struct fs_aio_thread : ppu_thread
 			}
 
 			func(*this, aio, error, xid, result);
-			lv2_obj::sleep(*this, -1);
+			lv2_obj::sleep(*this);
 		}
 	}
 };

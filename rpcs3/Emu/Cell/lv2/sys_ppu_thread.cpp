@@ -16,6 +16,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	ppu.state += cpu_flag::exit;
+	ppu.state += cpu_flag::is_waiting;
 
 	// Get joiner ID
 	const u32 jid = ppu.joiner.fetch_op([](u32& value)
@@ -48,7 +49,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	}
 
 	// Unqueue
-	lv2_obj::sleep(ppu, -1);
+	lv2_obj::sleep(ppu);
 
 	// Remove suspend state (TODO)
 	ppu.state -= cpu_flag::suspend;
@@ -64,8 +65,9 @@ void sys_ppu_thread_yield(ppu_thread& ppu)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
+	ppu.state += cpu_flag::is_waiting;
 	lv2_obj::awake(ppu, -4);
-	ppu.check_state();
+	ppu.test_state();
 }
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
@@ -104,7 +106,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 		if (!result)
 		{
-			lv2_obj::sleep(ppu, -1);
+			lv2_obj::sleep(ppu);
 		}
 		
 		return result;
@@ -126,12 +128,14 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	// Get the exit status from the register
 	if (vptr)
 	{
+		ppu.test_state();
 		*vptr = thread->gpr[3];
 	}
 
 	// Cleanup
 	idm::remove<ppu_thread>(thread->id);
 
+	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -207,6 +211,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 	{
 		if (thread.prio != prio && thread.prio.exchange(prio) != prio)
 		{
+			ppu.state += cpu_flag::is_waiting;
 			lv2_obj::awake(thread, prio);
 		}
 	});
@@ -216,11 +221,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 		return CELL_ESRCH;
 	}
 
-	if (&ppu == thread)
-	{
-		ppu.check_state();
-	}
-
+	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -338,6 +339,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	const auto thread = idm::get<ppu_thread>(thread_id, [&](ppu_thread& thread)
 	{
+		ppu.state += cpu_flag::is_waiting;
 		lv2_obj::awake(thread, -2);
 	});
 
@@ -356,7 +358,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 		thread->notify();
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return CELL_OK;
 }
 

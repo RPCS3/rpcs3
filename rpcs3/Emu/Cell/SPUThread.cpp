@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
+#include "Utilities/lockless.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -1060,18 +1061,8 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 	case 0x000:
 	{
-		// Hack: wait for an instruction become available
-		while (vm::ps3::read32(offset + pc) == 0)
-		{
-			if (test(state) && check_state())
-			{
-				return false;
-			}
-
-			thread_ctrl::wait_for(1000);
-		}
-
-		return false;
+		// Hack: execute as NOP
+		return true;
 	}
 
 	case 0x001:
@@ -1083,23 +1074,6 @@ bool SPUThread::stop_and_signal(u32 code)
 	case 0x002:
 	{
 		state += cpu_flag::ret;
-		return true;
-	}
-
-	case 0x003:
-	{
-		const auto found = m_addr_to_hle_function_map.find(pc);
-
-		if (found == m_addr_to_hle_function_map.end())
-		{
-			fmt::throw_exception("HLE function not registered (PC=0x%05x)" HERE, pc);
-		}
-
-		if (const auto return_to_caller = found->second(*this))
-		{
-			pc = (gpr[0]._u32[3] & 0x3fffc) - 4;
-		}
-
 		return true;
 	}
 

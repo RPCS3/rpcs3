@@ -216,7 +216,7 @@ error_code sys_spu_thread_initialize(vm::ps3::ptr<u32> thread, u32 group, u32 sp
 error_code sys_spu_thread_set_argument(u32 id, vm::ps3::ptr<sys_spu_thread_argument> arg);
 error_code sys_spu_thread_group_create(vm::ps3::ptr<u32> id, u32 num, s32 prio, vm::ps3::ptr<sys_spu_thread_group_attribute> attr);
 error_code sys_spu_thread_group_destroy(u32 id);
-error_code sys_spu_thread_group_start(u32 id);
+error_code sys_spu_thread_group_start(ppu_thread&, u32 id);
 error_code sys_spu_thread_group_suspend(u32 id);
 error_code sys_spu_thread_group_resume(u32 id);
 error_code sys_spu_thread_group_yield(u32 id);	

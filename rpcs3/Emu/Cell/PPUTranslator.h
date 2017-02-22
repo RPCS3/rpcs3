@@ -139,9 +139,6 @@ class PPUTranslator final //: public CPUTranslator
 	// Basic blocks for current function
 	std::unordered_map<u64, llvm::BasicBlock*> m_blocks;
 
-	// Supplementary block info for all functions
-	std::set<u64> m_block_info;
-
 	// JT resolver block
 	llvm::BasicBlock* m_jtr;
 
@@ -238,9 +235,6 @@ public:
 
 	// Set some registers to undef (after function call)
 	void UndefineVolatileRegisters();
-
-	// Get the basic block for the specified address
-	llvm::BasicBlock* GetBasicBlock(u64 addr);
 
 	// Load gpr
 	llvm::Value* GetGpr(u32 r, u32 num_bits = 64);
@@ -446,9 +440,6 @@ public:
 
 	// Add function
 	void AddFunction(u64 addr, llvm::Function* func, llvm::FunctionType* type = nullptr);
-
-	// Add block entry hint (not essential)
-	void AddBlockInfo(u64 addr);
 
 	// Parses PPU opcodes and translate them into LLVM IR
 	llvm::Function* TranslateToIR(const ppu_function& info, be_t<u32>* bin, void(*custom)(PPUTranslator*) = nullptr);

@@ -99,8 +99,9 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 	if (cond.ret)
 	{
+		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.check_state();
+		ppu.test_state();
 	}
 
 	return CELL_OK;
@@ -139,8 +140,9 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 	if (cond.ret)
 	{
+		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.check_state();
+		ppu.test_state();
 	}
 
 	return CELL_OK;
@@ -182,8 +184,9 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	if (cond.ret && cond.ret != (cpu_thread*)(1))
 	{
+		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.check_state();
+		ppu.test_state();
 	}
 	else if (!cond.ret)
 	{
@@ -196,8 +199,6 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 {
 	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
-
-	const u64 start_time = ppu.gpr[10] = get_system_time();
 
 	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
 	{
@@ -226,11 +227,15 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 		// Register waiter
 		cond->sq.emplace_back(&ppu);
-		cond->sleep(ppu, start_time, timeout);
+		cond->sleep(ppu, timeout);
 
 		// Unlock the mutex
 		cond->mutex->lock_count = 0;
-		cond->mutex->reown<ppu_thread>();
+
+		if (auto cpu = cond->mutex->reown<ppu_thread>())
+		{
+			cond->mutex->awake(*cpu);
+		}
 
 		// Further function result
 		ppu.gpr[3] = CELL_OK;
@@ -240,7 +245,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -278,12 +283,6 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	// Restore the recursive value
 	cond->mutex->lock_count = cond.ret;
 
-	ppu.check_state();
-
-	if (ppu.gpr[3] == CELL_ETIMEDOUT)
-	{
-		return not_an_error(CELL_ETIMEDOUT);
-	}
-
-	return CELL_OK;
+	ppu.test_state();
+	return not_an_error(ppu.gpr[3]);
 }

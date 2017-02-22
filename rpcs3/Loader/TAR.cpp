@@ -5,7 +5,9 @@
 #include <cmath>
 #include <cstdlib>
 
-tar_object::tar_object(const fs::file& file, size_t offset) : m_file(file), initial_offset(offset)
+tar_object::tar_object(const fs::file& file, size_t offset)
+	: m_file(file)
+	, initial_offset(offset)
 {
 	m_file.seek(initial_offset);
 	largest_offset = initial_offset;
@@ -34,8 +36,6 @@ int octalToDecimal(int octalNumber)
 
 std::vector<std::string> tar_object::get_filenames()
 {
-	if (!isValid) return std::vector<std::string>();
-
 	std::vector<std::string> vec;
 	get_file("");
 	for (auto it = m_map.cbegin(); it != m_map.cend(); ++it)
@@ -47,7 +47,7 @@ std::vector<std::string> tar_object::get_filenames()
 
 fs::file tar_object::get_file(std::string path)
 {
-	if (!isValid || !m_file) return fs::file();
+	if (!m_file) return fs::file();
 
 	auto it = m_map.find(path);
 	if (it != m_map.end())
@@ -62,9 +62,9 @@ fs::file tar_object::get_file(std::string path)
 	}
 	else //continue scanning from last file entered
 	{
-		while (m_file.pos() < m_file.size()) {
+		while (m_file.pos() < m_file.size())
+		{
 			TARHeader header = read_header(largest_offset);
-			if (!isValid) return fs::file();
 
 			if (std::string(header.magic).find("ustar") != std::string::npos)
 				m_map[header.name] = largest_offset;
@@ -85,7 +85,7 @@ fs::file tar_object::get_file(std::string path)
 				m_file.seek(offset);
 				largest_offset = offset;
 			}
-		} 
+		}
 		
 		return fs::file();
 	}
@@ -93,7 +93,7 @@ fs::file tar_object::get_file(std::string path)
 
 bool tar_object::extract(std::string path)
 {
-	if (!isValid || !m_file) return false;
+	if (!m_file) return false;
 
 	get_file(""); //Make sure we have scanned all files
 	for (auto iter : m_map)
@@ -101,7 +101,8 @@ bool tar_object::extract(std::string path)
 		TARHeader header = read_header(iter.second);
 		if (std::string(header.name).empty()) continue;
 
-		switch (header.filetype) {
+		switch (header.filetype)
+		{
 		case '0':
 		{
 			fs::file file(header.name, fs::rewrite);
@@ -116,7 +117,7 @@ bool tar_object::extract(std::string path)
 		}
 
 		default:
-			LOG_ERROR(GENERAL,"Tar loader: unknown file type: "+header.filetype);
+			LOG_ERROR(GENERAL,"Tar loader: unknown file type: %c", header.filetype);
 			return false;
 		}
 	}
