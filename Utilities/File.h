@@ -444,9 +444,6 @@ namespace fs
 	// Get configuration directory
 	const std::string& get_config_dir();
 
-	// Get executable directory
-	const std::string& get_executable_dir();
-
 	// Get data/cache directory for specified prefix and suffix
 	std::string get_data_dir(const std::string& prefix, const std::string& location, const std::string& suffix);
 

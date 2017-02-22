@@ -234,13 +234,10 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
-	const bool paused = Emu.Pause();
-
 	wxFileDialog ctrl(this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
 	if (ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if (paused) Emu.Resume();
 		return;
 	}
 
@@ -372,6 +369,8 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
+	Emu.Stop();
+
 	wxArrayString modules;
 	ctrl.GetPaths(modules);
 
@@ -427,9 +426,12 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
+	Emu.Stop();
+
 	fs::file pup_f(ctrl.GetPath().ToStdString());
 	pup_object pup(pup_f);
-	if (!pup) {
+	if (!pup)
+	{
 		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
 		wxMessageBox("Error while installing firmware: PUP file is invalid.", "Failure!", wxOK | wxICON_ERROR, this);
 		return;
@@ -440,7 +442,7 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 	auto updatefilenames = update_files.get_filenames();
 
 	updatefilenames.erase(std::remove_if(
-		updatefilenames.begin(), updatefilenames.end(), [](std::string s) {return s.find("dev_flash_") == std::string::npos; }),
+		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == std::string::npos; }),
 	updatefilenames.end());
 
 	wxProgressDialog pdlg("Firmware Installer", "Please wait, unpacking...", updatefilenames.size(), this, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
@@ -470,7 +472,7 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
-				if (!dev_flash_tar.extract(fs::get_executable_dir()))
+				if (!dev_flash_tar.extract(fs::get_config_dir()))
 				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
 					wxMessageBox("Error while installing firmware: TAR contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);

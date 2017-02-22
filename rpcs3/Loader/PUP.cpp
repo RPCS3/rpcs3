@@ -6,8 +6,8 @@ pup_object::pup_object(const fs::file& file): m_file(file)
 {
 	PUPHeader m_header;
 	m_file.read(m_header);
-	if (m_header.magic != "SCEUF\0\0\0"_u64) 
-	{ 
+	if (m_header.magic != "SCEUF\0\0\0"_u64)
+	{
 		isValid = false;
 		return;
 	}
@@ -22,7 +22,7 @@ fs::file pup_object::get_file(u64 entry_id)
 {
 	if (!isValid) return fs::file();
 
-	for (PUPFileEntry file_entry : m_file_tbl) 
+	for (PUPFileEntry file_entry : m_file_tbl)
 	{
 		if (file_entry.entry_id == entry_id)
 		{

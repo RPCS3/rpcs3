@@ -30,7 +30,7 @@ system_type g_system;
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
 cfg::bool_entry g_cfg_autoexit(cfg::root.misc, "Exit RPCS3 when process finishes");
 
-cfg::string_entry g_cfg_vfs_emulator_dir(cfg::root.vfs, "$(EmulatorDir)"); // Default (empty): taken from fs::get_executable_dir()
+cfg::string_entry g_cfg_vfs_emulator_dir(cfg::root.vfs, "$(EmulatorDir)"); // Default (empty): taken from fs::get_config_dir()
 cfg::string_entry g_cfg_vfs_dev_hdd0(cfg::root.vfs, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/");
 cfg::string_entry g_cfg_vfs_dev_hdd1(cfg::root.vfs, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/");
 cfg::string_entry g_cfg_vfs_dev_flash(cfg::root.vfs, "/dev_flash/", "$(EmulatorDir)dev_flash/");
@@ -131,7 +131,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 std::string Emulator::GetGameDir()
 {
 	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
 	return fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
 }
@@ -139,7 +139,7 @@ std::string Emulator::GetGameDir()
 std::string Emulator::GetLibDir()
 {
 	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
 	return fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
@@ -173,12 +173,12 @@ void Emulator::Load()
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 
 		// Initialize data/cache directory
-		const std::string data_dir = fs::get_data_dir(m_title_id, m_path);
+		m_cache_path = fs::get_data_dir(m_title_id, m_path);
 
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
-			const std::string decrypted_path = data_dir + "boot.elf";
+			const std::string decrypted_path = m_cache_path + "boot.elf";
 
 			fs::stat_t encrypted_stat = elf_file.stat();
 			fs::stat_t decrypted_stat;
@@ -201,13 +201,13 @@ void Emulator::Load()
 				}
 				else
 				{
-					LOG_ERROR(LOADER, "Failed to create boot.elf", data_dir);
+					LOG_ERROR(LOADER, "Failed to create boot.elf");
 				}
 			}
 		}
 
 		// Load custom config-1
-		if (fs::file cfg_file{data_dir + "config.yml"})
+		if (fs::file cfg_file{m_cache_path + "config.yml"})
 		{
 			LOG_NOTICE(LOADER, "Applying custom config (config.yml)");
 			cfg::root.from_string(cfg_file.to_string());
@@ -248,7 +248,7 @@ void Emulator::Load()
 
 			// Mount all devices
 			const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
-			const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+			const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 			const std::string& bdvd_dir = g_cfg_vfs_dev_bdvd;
 			const std::string& home_dir = g_cfg_vfs_app_home;
 

@@ -1125,11 +1125,22 @@ const std::string& fs::get_config_dir()
 	// Use magic static
 	static const std::string s_dir = []
 	{
-#ifdef _WIN32
-		return get_executable_dir(); // ?
-#else
 		std::string dir;
 
+#ifdef _WIN32
+		wchar_t buf[2048];
+		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
+		{
+			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			return dir; // empty
+		}
+
+		to_utf8(dir, buf); // Convert to UTF-8
+
+		std::replace(dir.begin(), dir.end(), '\\', '/');
+
+		dir.resize(dir.rfind('/') + 1);
+#else
 		if (const char* home = ::getenv("XDG_CONFIG_HOME"))
 			dir = home;
 		else if (const char* home = ::getenv("HOME"))
@@ -1142,59 +1153,9 @@ const std::string& fs::get_config_dir()
 		if (!is_dir(dir) && !create_path(dir))
 		{
 			std::printf("Failed to create configuration directory '%s' (%d).\n", dir.c_str(), errno);
-			return get_executable_dir();
 		}
-
-		return dir;
 #endif
-	}();
 
-	return s_dir;
-}
-
-const std::string& fs::get_executable_dir()
-{
-	// Use magic static
-	static const std::string s_dir = []
-	{
-		std::string dir;
-
-#ifdef _WIN32
-		wchar_t buf[2048];
-		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
-		{
-			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_executable_dir()", MB_ICONERROR);
-			return dir; // empty
-		}
-	
-		to_utf8(dir, buf); // Convert to UTF-8
-
-		std::replace(dir.begin(), dir.end(), '\\', '/');
-
-#elif __APPLE__
-		char buf[4096];
-		u32 size = sizeof(buf);
-		if (_NSGetExecutablePath(buf, &size))
-		{
-			std::printf("_NSGetExecutablePath() failed (size=0x%x).\n", size);
-			return dir; // empty
-		}
-
-		dir = buf;
-#else
-		char buf[4096];
-		const auto size = ::readlink("/proc/self/exe", buf, sizeof(buf));
-		if (size <= 0 || size >= sizeof(buf))
-		{
-			std::printf("readlink(/proc/self/exe) failed (%d).\n", errno);
-			return dir; // empty
-		}
-
-		dir.assign(buf, size);
-#endif
-	
-		// Leave only path
-		dir.resize(dir.rfind('/') + 1);
 		return dir;
 	}();
 
