@@ -51,6 +51,31 @@ extern u64 get_system_time();
 
 namespace vm { using namespace ps3; }
 
+enum class join_status : u32
+{
+	joinable = 0,
+	detached = 0u-1,
+	exited = 0u-2,
+	zombie = 0u-3,
+};
+
+template <>
+void fmt_class_string<join_status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](join_status js)
+	{
+		switch (js)
+		{
+		case join_status::joinable: return "";
+		case join_status::detached: return "detached";
+		case join_status::zombie: return "zombie";
+		case join_status::exited: return "exited";
+		}
+
+		return unknown;
+	});
+}
+
 enum class ppu_decoder_type
 {
 	precise,
@@ -197,7 +222,32 @@ std::string ppu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 	ret += fmt::format("Priority: %d\n", +prio);
-	ret += fmt::format("Last function: %s\n", last_function ? last_function : "");
+	ret += fmt::format("Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
+	ret += fmt::format("Joiner: %s\n", join_status(joiner.load()));
+	ret += fmt::format("Commands: %u\n", cmd_queue.size());
+
+	const auto _func = last_function;
+
+	if (_func)
+	{
+		ret += "Last function: ";
+		ret += _func;
+		ret += '\n';
+	}
+
+	if (const auto _time = start_time)
+	{
+		ret += fmt::format("Waiting: %fs\n", (get_system_time() - _time) / 1000000.);
+	}
+	else
+	{
+		ret += '\n';
+	}
+
+	if (!_func)
+	{
+		ret += '\n';
+	}
 	
 	ret += "\nRegisters:\n=========\n";
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("GPR[%d] = 0x%llx\n", i, gpr[i]);
@@ -289,7 +339,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::sleep:
 		{
-			cmd_pop(), lv2_obj::sleep(*this, -1);
+			cmd_pop(), lv2_obj::sleep(*this);
 			break;
 		}
 		default:
@@ -400,6 +450,7 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	, prio(prio)
 	, stack_size(std::max<u32>(stack, 0x4000))
 	, stack_addr(vm::alloc(stack_size, vm::stack))
+	, start_time(get_system_time())
 	, m_name(name)
 {
 	if (!stack_addr)
@@ -505,7 +556,14 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 		{
 			if (last_function)
 			{
-				LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - gpr[10]) / 1000000.);
+				if (start_time)
+				{
+					LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - start_time) / 1000000.);
+				}
+				else
+				{
+					LOG_WARNING(PPU, "'%s' aborted", last_function);
+				}
 			}
 
 			last_function = old_func;
@@ -612,7 +670,7 @@ extern void sse_cellbe_stvrx(u64 addr, __m128i a);
 static void ppu_check(ppu_thread& ppu, u64 addr)
 {
 	ppu.cia = addr;
-	ppu.check_state();
+	ppu.test_state();
 }
 
 static void ppu_trace(u64 addr)

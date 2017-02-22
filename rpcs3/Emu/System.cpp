@@ -311,6 +311,13 @@ void Emulator::Load()
 			g_system = system_type::psv;
 			m_status = Ready;
 			vm::psv::init();
+
+			if (m_elf_path.empty())
+			{
+				m_elf_path = "host_root:" + m_path;
+				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
+			}
+
 			arm_load_exec(arm_exec);
 		}
 		else

@@ -50,7 +50,7 @@ void lv2_timer::on_task()
 			}
 
 			// TODO: use single global dedicated thread for busy waiting, no timer threads
-			lv2_obj::sleep(*this, next);
+			lv2_obj::sleep_timeout(*this, next - _now);
 			thread_ctrl::wait_for(next - _now);
 		}
 		else if (_state == SYS_TIMER_STATE_STOP)
@@ -290,15 +290,14 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 {
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
 
-	u64 start = ppu.gpr[10] = get_system_time();
 	u64 passed = 0;
 
-	lv2_obj::sleep(ppu, start, std::max<u64>(1, sleep_time));
+	lv2_obj::sleep(ppu, std::max<u64>(1, sleep_time));
 
 	while (sleep_time >= passed)
 	{
 		thread_ctrl::wait_for(std::max<u64>(1, sleep_time - passed));
-		passed = get_system_time() - start;
+		passed = get_system_time() - ppu.start_time;
 	}
 
 	return CELL_OK;

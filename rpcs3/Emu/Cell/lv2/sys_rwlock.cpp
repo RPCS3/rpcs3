@@ -79,8 +79,6 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
 	{
 		const s64 val = rwlock.owner;
@@ -110,7 +108,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		if (_old > 0 || _old & 1)
 		{
 			rwlock.rq.emplace_back(&ppu);
-			rwlock.sleep(ppu, start_time, timeout);
+			rwlock.sleep(ppu, timeout);
 			return false;
 		}
 
@@ -133,7 +131,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -157,7 +155,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		}
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -243,6 +241,8 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 		{
 			if (const auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
 			{
+				ppu.state += cpu_flag::is_waiting;
+
 				rwlock->owner = cpu->id << 1 | !rwlock->wq.empty();
 
 				rwlock->awake(*cpu);
@@ -256,15 +256,13 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 		}
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return CELL_OK;
 }
 
 error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
-
-	const u64 start_time = ppu.gpr[10] = get_system_time();
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
 	{
@@ -299,7 +297,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		if (_old != 0)
 		{
 			rwlock.wq.emplace_back(&ppu);
-			rwlock.sleep(ppu, start_time, timeout);
+			rwlock.sleep(ppu, timeout);
 			return false;
 		}
 
@@ -327,7 +325,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -346,6 +344,8 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
 					{
+						ppu.state += cpu_flag::is_waiting;
+
 						rwlock->awake(*cpu);
 					}
 
@@ -364,7 +364,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		}
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -426,6 +426,8 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 
 		if (auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
 		{
+			ppu.state += cpu_flag::is_waiting;
+
 			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty();
 
 			rwlock->awake(*cpu);
@@ -436,6 +438,7 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 
 			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
 			{
+				ppu.state += cpu_flag::is_waiting;
 				rwlock->awake(*cpu);
 			}
 
@@ -449,7 +452,7 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 
 	if (rwlock.ret & 1)
 	{
-		ppu.check_state();
+		ppu.test_state();
 	}
 
 	return CELL_OK;

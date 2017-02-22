@@ -200,7 +200,7 @@ public:
 				// TODO: finalize
 				cellAdec.warning("adecEndSeq:");
 				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, cbArg);
-				lv2_obj::sleep(*this, -1);
+				lv2_obj::sleep(*this);
 
 				just_finished = true;
 				break;
@@ -377,13 +377,13 @@ public:
 						{
 							frame.data = nullptr; // to prevent destruction
 							cbFunc(*this, id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, cbArg);
-							lv2_obj::sleep(*this, -1);
+							lv2_obj::sleep(*this);
 						}
 					}
 				}
 
 				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, cbArg);
-				lv2_obj::sleep(*this, -1);
+				lv2_obj::sleep(*this);
 				break;
 			}
 

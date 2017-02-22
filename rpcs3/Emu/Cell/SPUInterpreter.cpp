@@ -50,7 +50,7 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 		spu.set_interrupt_status(false);
 	}
 
-	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST) > SPU_EVENT_INTR_ENABLED)
+	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST & spu.ch_event_mask) > SPU_EVENT_INTR_ENABLED)
 	{
 		spu.ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
 		spu.srr0 = std::exchange(spu.pc, -4) + 4;
@@ -89,9 +89,15 @@ void spu_interpreter::MFSPR(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::RDCH(SPUThread& spu, spu_opcode_t op)
 {
-	if (!spu.get_ch_value(op.ra, spu.gpr[op.rt]._u32[3]))
+	u32 result;
+
+	if (!spu.get_ch_value(op.ra, result))
 	{
 		spu.pc -= 4;
+	}
+	else
+	{
+		spu.gpr[op.rt] = v128::from32r(result);
 	}
 }
 

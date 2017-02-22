@@ -243,7 +243,7 @@ public:
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
 					cbFunc(*this, id, dmuxMsg, cbArg);
-					lv2_obj::sleep(*this, -1);
+					lv2_obj::sleep(*this);
 
 					is_working = false;
 
@@ -397,7 +397,7 @@ public:
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
 							es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
-							lv2_obj::sleep(*this, -1);
+							lv2_obj::sleep(*this);
 						}
 					}
 					else
@@ -463,7 +463,7 @@ public:
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
 							es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
-							lv2_obj::sleep(*this, -1);
+							lv2_obj::sleep(*this);
 						}
 						
 						if (pes.has_ts)
@@ -540,7 +540,7 @@ public:
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
 					cbFunc(*this, id, dmuxMsg, cbArg);
-					lv2_obj::sleep(*this, -1);
+					lv2_obj::sleep(*this);
 
 					stream = {};
 
@@ -629,7 +629,7 @@ public:
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
 					es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
-					lv2_obj::sleep(*this, -1);
+					lv2_obj::sleep(*this);
 				}
 				
 				if (es.raw_data.size())
@@ -642,7 +642,7 @@ public:
 				esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 				esMsg->supplementalInfo = stream.userdata;
 				es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
-				lv2_obj::sleep(*this, -1);
+				lv2_obj::sleep(*this);
 				break;
 			}
 

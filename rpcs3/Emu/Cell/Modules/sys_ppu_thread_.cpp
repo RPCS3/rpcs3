@@ -45,7 +45,7 @@ s32 sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u6
 	// Dirty hack for sound: confirm the creation of _mxr000 event queue
 	if (threadname && std::memcmp(threadname.get_ptr(), "_cellsurMixerMain", 18) == 0)
 	{
-		lv2_obj::sleep(ppu, -1);
+		lv2_obj::sleep(ppu);
 
 		while (!idm::select<lv2_obj, lv2_event_queue>([](u32, lv2_event_queue& eq)
 		{
@@ -54,6 +54,8 @@ s32 sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u6
 		{
 			thread_ctrl::wait_for(50000);
 		}
+
+		ppu.test_state();
 	}
 
 	return CELL_OK;

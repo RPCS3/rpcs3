@@ -172,6 +172,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			if (queue->type == SYS_PPU_QUEUE)
 			{
 				static_cast<ppu_thread&>(*cpu).gpr[3] = CELL_ECANCELED;
+				ppu.state += cpu_flag::is_waiting;
 				queue->awake(*cpu);
 			}
 			else
@@ -183,8 +184,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		}
 	}
 
-	ppu.check_state();
-
+	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -226,8 +226,6 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 {
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
 		if (queue.type != SYS_PPU_QUEUE)
@@ -240,7 +238,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		if (queue.events.empty())
 		{
 			queue.sq.emplace_back(&ppu);
-			queue.sleep(ppu, start_time, timeout);
+			queue.sleep(ppu, timeout);
 			return CELL_EBUSY;
 		}
 
@@ -273,7 +271,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -297,7 +295,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		}
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -423,6 +421,8 @@ error_code sys_event_port_send(ppu_thread& ppu, u32 eport_id, u64 data1, u64 dat
 {
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
+	ppu.state += cpu_flag::is_waiting;
+
 	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
 	{
 		if (const auto queue = port.queue.lock())
@@ -455,6 +455,6 @@ error_code sys_event_port_send(ppu_thread& ppu, u32 eport_id, u64 data1, u64 dat
 		return port.ret;
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return CELL_OK;
 }
