@@ -98,12 +98,10 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 {
 	static const char* boot_list[] =
 	{
-		"/PS3_GAME/USRDIR/BOOT.BIN",
-		"/USRDIR/BOOT.BIN",
-		"/BOOT.BIN",
 		"/PS3_GAME/USRDIR/EBOOT.BIN",
 		"/USRDIR/EBOOT.BIN",
 		"/EBOOT.BIN",
+		"/eboot.bin",
 	};
 
 	if (direct && fs::is_file(path))
