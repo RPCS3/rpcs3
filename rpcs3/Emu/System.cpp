@@ -155,56 +155,68 @@ void Emulator::Load()
 		// Open SELF or ELF
 		fs::file elf_file(m_path);
 
-		LOG_NOTICE(LOADER, "Path: %s", m_path);
-
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
 			return;
 		}
 
-		const std::string& elf_dir = fs::get_parent_dir(m_path);
+		LOG_NOTICE(LOADER, "Path: %s", m_path);
+
+		const std::string elf_dir = fs::get_parent_dir(m_path);
+		const fs::file sfov(elf_dir + "/sce_sys/param.sfo");
+		const fs::file sfo1(elf_dir + "/../PARAM.SFO");
+
+		// Load PARAM.SFO (TODO)
+		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
+		m_title = psf::get_string(_psf, "TITLE", m_path);
+		m_title_id = psf::get_string(_psf, "TITLE_ID");
+
+		// Initialize data/cache directory
+		const std::string data_dir = fs::get_data_dir(m_title_id, m_path);
 
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
-			// Decrypt SELF
-			elf_file = decrypt_self(std::move(elf_file));
+			const std::string decrypted_path = data_dir + "boot.elf";
 
-			const std::size_t elf_ext_pos = m_path.find_last_of('.');
-			const std::string& elf_ext = fmt::to_upper(m_path.substr(elf_ext_pos != -1 ? elf_ext_pos : m_path.size()));
-			const std::string& elf_name = m_path.substr(elf_dir.size());
+			fs::stat_t encrypted_stat = elf_file.stat();
+			fs::stat_t decrypted_stat;
 
-			// Save ELF (TODO: configuration, cache and different file location)
-			std::string new_path = m_path;
-
-			if (elf_name.compare(elf_name.find_last_of("/\\", -1, 2) + 1, 9, "EBOOT.BIN", 9) == 0)
+			// Check modification time and try to load decrypted ELF
+			if (fs::stat(decrypted_path, decrypted_stat) && decrypted_stat.mtime == encrypted_stat.mtime)
 			{
-				new_path.erase(new_path.size() - 9, 1); // change EBOOT.BIN to BOOT.BIN
-			}
-			else if (elf_ext == ".SELF" || elf_ext == ".SPRX")
-			{
-				new_path.erase(new_path.size() - 4, 1); // change *.self to *.elf, *.sprx to *.prx
+				elf_file.open(decrypted_path);
 			}
 			else
 			{
-				new_path += ".decrypted.elf";
-			}
+				// Decrypt SELF
+				elf_file = decrypt_self(std::move(elf_file));
 
-			if (fs::file elf_out{new_path, fs::rewrite})
-			{
-				elf_out.write(elf_file.to_vector<u8>());
-			}
-			else
-			{
-				LOG_ERROR(LOADER, "Failed to save file: %s", new_path);
+				if (fs::file elf_out{decrypted_path, fs::rewrite})
+				{
+					elf_out.write(elf_file.to_vector<u8>());
+					elf_out.close();
+					fs::utime(decrypted_path, encrypted_stat.atime, encrypted_stat.mtime);
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "Failed to create boot.elf", data_dir);
+				}
 			}
 		}
 
-		// Load custom config
-		if (fs::file cfg_file{ m_path + ".yml" })
+		// Load custom config-1
+		if (fs::file cfg_file{data_dir + "config.yml"})
 		{
-			LOG_NOTICE(LOADER, "Custom config: %s.yml", m_path);
+			LOG_NOTICE(LOADER, "Applying custom config (config.yml)");
+			cfg::root.from_string(cfg_file.to_string());
+		}
+
+		// Load custom config-2
+		if (fs::file cfg_file{m_path + ".yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
 			cfg::root.from_string(cfg_file.to_string());
 		}
 
@@ -230,12 +242,6 @@ void Emulator::Load()
 				m_elf_path = "/host_root/" + m_path;
 				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
-
-			// Load PARAM.SFO
-			const auto _psf = psf::load_object(fs::file(elf_dir + "/../PARAM.SFO"));
-			m_title = psf::get_string(_psf, "TITLE", m_path);
-			m_title_id = psf::get_string(_psf, "TITLE_ID");
-			fs::get_data_dir(m_title_id, m_path);
 
 			LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 			LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
