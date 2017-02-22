@@ -790,14 +790,6 @@ static void ppu_initialize()
 			f->addAttribute(1, Attribute::NoAlias);
 			translator->AddFunction(info.addr, f);
 		}
-		
-		for (const auto& b : info.blocks)
-		{
-			if (b.second)
-			{
-				translator->AddBlockInfo(b.first);
-			}
-		}
 	}
 
 	legacy::FunctionPassManager pm(module.get());
