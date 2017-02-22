@@ -2,5 +2,3 @@
 *
 # Except this file
 !.gitignore
-!cache
-!cache/README.txt

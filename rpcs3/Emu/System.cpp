@@ -85,6 +85,28 @@ void Emulator::Init()
 	// Reload global configuration
 	cfg::root.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
 
+	// Create directories
+	const std::string emu_dir_ = g_cfg_vfs_emulator_dir;
+	const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	const std::string dev_hdd0 = fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd1 = fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir);
+	const std::string dev_usb = fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir);
+
+	fs::create_path(dev_hdd0);
+	fs::create_dir(dev_hdd0 + "game/");
+	fs::create_dir(dev_hdd0 + "game/TEST12345/");
+	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
+	fs::create_dir(dev_hdd0 + "home/");
+	fs::create_dir(dev_hdd0 + "home/00000001/");
+	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
+	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
+	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
+	if (fs::file f{dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write}) f.write("User"s);
+	fs::create_dir(dev_hdd1 + "cache/");
+	fs::create_dir(dev_hdd1 + "game/");
+	fs::create_path(dev_hdd1);
+	fs::create_path(dev_usb);
+
 	SetCPUThreadStop(0);
 }
 
