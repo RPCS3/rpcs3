@@ -841,13 +841,20 @@ public:
 		return ptr;
 	}
 
+	// Unsafe version of check(), can be used in some cases
+	template <typename T>
+	static inline T* check_unlocked()
+	{
+		return static_cast<T*>(g_vec[get_type<T>()].second.get());
+	}
+
 	// Check whether the object exists
 	template <typename T>
 	static inline T* check()
 	{
 		reader_lock lock(id_manager::g_mutex);
 
-		return static_cast<T*>(g_vec[get_type<T>()].second.get());
+		return check_unlocked<T>();
 	}
 
 	// Get the object (returns nullptr if it doesn't exist)
