@@ -1076,6 +1076,30 @@ bool SPUThread::stop_and_signal(u32 code)
 		state += cpu_flag::ret;
 		return true;
 	}
+	
+	case 0x003:
+	{
+		// Hack: execute as NOP
+		return true;
+	}
+
+	case 0x004:
+	{
+		// Hack: execute as NOP
+		return true;
+	}
+
+	case 0x008:
+	{
+		// Hack: execute as NOP
+		return true;
+	}
+
+	case 0x00c:
+	{
+		// Hack: execute as NOP
+		return true;
+	}
 
 	case 0x110:
 	{
@@ -1271,6 +1295,24 @@ bool SPUThread::stop_and_signal(u32 code)
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
+		return true;
+	}
+	
+	case 0x178:
+	{
+		// Hack: execute as NOP
+		return true;
+	}
+
+	case 0x206:
+	{
+		// Hack: execute as NOP
+		return true;
+	}
+
+	case 0x207:
+	{
+		// Hack: execute as NOP
 		return true;
 	}
 	}
