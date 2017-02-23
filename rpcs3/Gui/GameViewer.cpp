@@ -230,8 +230,7 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 {
 	long i = GetFirstSelected();
 	if (i < 0) return;
-
-	LOG_TODO(LOADER, "Configure: %s", m_game_data[i].root);
+	SettingsDialog(this, fs::get_config_dir() + "data/" + m_game_data[i].root + "/config.yml");
 }
 
 void GameViewer::RemoveGame(wxCommandEvent& event)

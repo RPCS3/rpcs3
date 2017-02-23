@@ -202,14 +202,15 @@ struct textctrl_pad : cfg_adapter
 };
 
 
-SettingsDialog::SettingsDialog(wxWindow* parent)
+SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
 	// Load default config
 	loaded = YAML::Load(g_cfg_defaults);
 
 	// Incrementally load config.yml
-	const fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+	const fs::file config(!pergameload.IsEmpty() ? pergameload.ToStdString() : fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+
 	loaded += YAML::Load(config.to_string());
 
 	std::vector<std::unique_ptr<cfg_adapter>> pads;
