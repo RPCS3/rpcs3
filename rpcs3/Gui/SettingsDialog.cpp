@@ -209,7 +209,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
 	loaded = YAML::Load(g_cfg_defaults);
 
 	// Incrementally load config.yml
-	const fs::file config(!pergameload.IsEmpty() ? pergameload : fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+	const fs::file config(!pergameload.IsEmpty() ? pergameload.ToStdString() : fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
 
 	loaded += YAML::Load(config.to_string());
 
