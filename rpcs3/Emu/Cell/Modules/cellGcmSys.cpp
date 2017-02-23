@@ -12,7 +12,7 @@
 
 logs::channel cellGcmSys("cellGcmSys", logs::level::notice);
 
-extern s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count);
+extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
 
 const u32 tiled_pitches[] = {
@@ -1298,12 +1298,12 @@ static bool isInCommandBufferExcept(u32 getPos, u32 bufferBegin, u32 bufferEnd)
 	return true;
 }
 
-s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
+s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys.trace("cellGcmCallback(context=*0x%x, count=0x%x)", context, count);
 
 	auto& ctrl = vm::_ref<CellGcmControl>(gcm_info.control_addr);
-	const std::chrono::time_point<steady_clock> enterWait = steady_clock::now();
+
 	// Flush command buffer (ie allow RSX to read up to context->current)
 	ctrl.put.exchange(getOffsetFromAddress(context->current.addr()));
 
@@ -1317,18 +1317,18 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	context->end.set(newCommandBuffer.second);
 
 	// Wait for rsx to "release" the new command buffer
-	while (!Emu.IsStopped())
+	while (true)
 	{
 		u32 getPos = ctrl.get.load();
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
-		std::chrono::time_point<steady_clock> waitPoint = steady_clock::now();
-		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();
-		if (elapsedTime > 0)
-			cellGcmSys.error("Has wait for more than a second for command buffer to be released by RSX");
-		std::this_thread::yield();
+
+		ppu.state += cpu_flag::is_waiting;
+		ppu.test_state();
+		busy_wait();
 	}
 
+	ppu.test_state();
 	return CELL_OK;
 }
 

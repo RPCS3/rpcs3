@@ -99,8 +99,6 @@ namespace rsx
 
 			void load(const std::string &path, shader_language lang);
 			void load(shader_language lang);
-
-			static std::string path_to_root();
 		};
 	}
 

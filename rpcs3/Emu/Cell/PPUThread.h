@@ -133,6 +133,7 @@ public:
 	cmd64 cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 
+	u64 start_time{0}; // Sleep start timepoint
 	const char* last_function{}; // Last function name for diagnosis, optimized for speed.
 
 	const std::string m_name; // Thread name

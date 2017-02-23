@@ -572,7 +572,7 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			_spurs::handler_wait_ready(ppu, spurs);
 		}
 
-		CHECK_SUCCESS(sys_spu_thread_group_start(spurs->spuTG));
+		CHECK_SUCCESS(sys_spu_thread_group_start(ppu, spurs->spuTG));
 
 		if (s32 rc = sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null))
 		{
@@ -1118,9 +1118,10 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 		}
 
 		// entry point cannot be initialized immediately because SPU LS will be rewritten by sys_spu_thread_group_start()
-		idm::get<SPUThread>(spurs->spus[num])->custom_task = [entry = spurs->spuImg.entry_point](SPUThread& spu)
+		//idm::get<SPUThread>(spurs->spus[num])->custom_task = [entry = spurs->spuImg.entry_point](SPUThread& spu)
 		{
-			spu.RegisterHleFunction(entry, spursKernelEntry);
+			// Disabled
+			//spu.RegisterHleFunction(entry, spursKernelEntry);
 		};
 	}
 

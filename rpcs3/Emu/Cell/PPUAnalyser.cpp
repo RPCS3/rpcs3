@@ -867,7 +867,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 						add_block(_ptr.addr());
 					}
 
-					if (op.lk && (target == iaddr || test(pfunc->attr, ppu_attr::no_return)))
+					if (is_call && test(pfunc->attr, ppu_attr::no_return))
 					{
 						// Nothing
 					}
@@ -946,8 +946,13 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
-				else if (op.opcode == ppu_instructions::TRAP())
+				else if (type == ppu_itype::TW || type == ppu_itype::TWI || type == ppu_itype::TD || type == ppu_itype::TDI)
 				{
+					if (op.opcode != ppu_instructions::TRAP())
+					{
+						add_block(_ptr.addr());
+					}
+
 					block.second = _ptr.addr() - block.first;
 					break;
 				}

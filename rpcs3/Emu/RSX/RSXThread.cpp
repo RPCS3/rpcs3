@@ -38,11 +38,6 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	std::string old_shaders_cache::shaders_cache::path_to_root()
-	{
-		return fs::get_executable_dir() + "data/";
-	}
-
 	void old_shaders_cache::shaders_cache::load(const std::string &path, shader_language lang)
 	{
 		const std::string lang_name(lang == shader_language::glsl ? "glsl" : "hlsl");
@@ -65,7 +60,6 @@ namespace rsx
 			}
 			catch (...)
 			{
-				LOG_WARNING(RSX, "Cache file '%s' ignored", entry.name);
 				continue;
 			}
 
@@ -87,17 +81,7 @@ namespace rsx
 
 	void old_shaders_cache::shaders_cache::load(shader_language lang)
 	{
-		std::string root = path_to_root();
-
-		//shared cache
-		load(root + "cache/", lang);
-
-		std::string title_id = Emu.GetTitleID();
-
-		if (!title_id.empty())
-		{
-			load(root + title_id + "/cache/", lang);
-		}
+		load(Emu.GetCachePath(), lang);
 	}
 
 	u32 get_address(u32 offset, u32 location)

@@ -227,8 +227,10 @@ error_code sys_spu_thread_group_destroy(u32 id)
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_group_start(u32 id)
+error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 {
+	ppu.state += cpu_flag::is_waiting;
+
 	sys_spu.warning("sys_spu_thread_group_start(id=0x%x)", id);
 
 	const auto group = idm::get<lv2_spu_group>(id, [](lv2_spu_group& group)
@@ -285,6 +287,7 @@ error_code sys_spu_thread_group_start(u32 id)
 		}
 	}
 
+	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -495,7 +498,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		return CELL_EBUSY;
 	}
 
-	lv2_obj::sleep(ppu, -1);
+	lv2_obj::sleep(ppu);
 
 	while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
 	{

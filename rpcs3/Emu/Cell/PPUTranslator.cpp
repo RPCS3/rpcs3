@@ -116,11 +116,6 @@ void PPUTranslator::AddFunction(u64 addr, Function* func, FunctionType* type)
 	}
 }
 
-void PPUTranslator::AddBlockInfo(u64 addr)
-{
-	m_block_info.emplace(addr);
-}
-
 Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin, void(*custom)(PPUTranslator*))
 {
 	m_function = m_func_list[info.addr];
@@ -225,8 +220,19 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 
 	m_jtr = BasicBlock::Create(m_context, "__jtr", m_function);
 
+	// Create basic blocks
+	for (auto&& block : info.blocks)
+	{
+		if (block.second && block.first >= m_start_addr && block.first < m_end_addr)
+		{
+			m_blocks[block.first] = BasicBlock::Create(m_context, fmt::format("loc_%llx", block.first), m_function);
+		}
+	}
+
+	m_blocks[m_end_addr] = BasicBlock::Create(m_context, "loc_end", m_function);
+
 	/* Convert each instruction to LLVM IR */
-	const auto start = GetBasicBlock(m_start_addr);
+	const auto start = m_blocks.at(m_start_addr);
 	m_ir->CreateBr(start);
 	m_ir->SetInsertPoint(start);
 
@@ -235,7 +241,7 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 		// Preserve current address (m_current_addr may be changed by the decoder)
 		const u64 addr = m_current_addr;
 
-		if (m_current_addr == m_start_addr || info.blocks.count(m_current_addr))
+		if (m_blocks.count(m_current_addr))
 		{
 			// Bloat the beginning of each block: check state
 			const auto vstate = m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1));
@@ -250,23 +256,29 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 		}
 
 		// Translate opcode
-		const u32 op = *(m_bin = bin + (addr - m_start_addr) / sizeof(u32));
-		(this->*(s_ppu_decoder.decode(op)))({op});
-
-		// Calculate next address if necessary
-		if (m_current_addr == addr) m_current_addr += sizeof(u32);
-
-		// Get next block
-		const auto next = GetBasicBlock(m_current_addr);
-
-		// Finalize current block if necessary (create branch to next address)
 		if (!m_ir->GetInsertBlock()->getTerminator())
 		{
-			m_ir->CreateBr(next);
+			const u32 op = *(m_bin = bin + (addr - m_start_addr) / sizeof(u32));
+			(this->*(s_ppu_decoder.decode(op)))({op});
 		}
 
-		// Start next block
-		m_ir->SetInsertPoint(next);
+		// Get next address
+		if (m_current_addr == addr) m_current_addr += sizeof(u32);
+
+		// Get next block if necessary
+		if (m_blocks.count(m_current_addr))
+		{
+			const auto next = m_blocks.at(m_current_addr);
+
+			// Finalize current block if necessary (create branch to next address)
+			if (!m_ir->GetInsertBlock()->getTerminator())
+			{
+				m_ir->CreateBr(next);
+			}
+
+			// Start next block
+			m_ir->SetInsertPoint(next);
+		}
 	}
 
 	// Run custom IR generation function
@@ -287,20 +299,26 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 	}
 	else
 	{
-		// Get block entries
-		const std::vector<u64> cases{m_block_info.upper_bound(m_start_addr), m_block_info.lower_bound(m_end_addr)};
-
 		const auto _ctr = m_ir->CreateLoad(m_reg_ctr);
 		const auto _default = BasicBlock::Create(m_context, "__jtr.def", m_function);
-		const auto _switch = m_ir->CreateSwitch(_ctr, _default, ::size32(cases));
+		const auto _switch = m_ir->CreateSwitch(_ctr, _default, ::size32(m_blocks));
 
-		for (const u64 addr : cases)
+		for (const auto& pair : m_blocks)
 		{
-			_switch->addCase(m_ir->getInt64(addr), GetBasicBlock(addr));
+			_switch->addCase(m_ir->getInt64(pair.first), pair.second);
 		}
 
 		m_ir->SetInsertPoint(_default);
 		CallFunction(0, true, _ctr);
+	}
+
+	for (auto&& block : *m_function)
+	{
+		if (!block.getTerminator())
+		{
+			m_ir->SetInsertPoint(&block);
+			m_ir->CreateUnreachable();
+		}
 	}
 
 	return m_function;
@@ -392,18 +410,6 @@ void PPUTranslator::UndefineVolatileRegisters()
 	// Cannot undef sticky flags because it makes |= op meaningless
 	//m_ir->CreateStore(m_ir->getFalse(), m_xer_so); // XER.SO
 	//m_ir->CreateStore(m_ir->getFalse(), m_vscr_sat); // VSCR.SAT 
-}
-
-BasicBlock* PPUTranslator::GetBasicBlock(u64 address)
-{
-	if (auto& block = m_blocks[address])
-	{
-		return block;
-	}
-	else
-	{
-		return block = BasicBlock::Create(m_context, fmt::format("loc_%llx", address/* - m_start_addr*/), m_function);
-	}
 }
 
 Value* PPUTranslator::Solid(Value* value)
@@ -565,7 +571,7 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 	if (cond)
 	{
 		const auto local = BasicBlock::Create(m_context, fmt::format("loc_%llx.cond", m_current_addr/* - m_start_addr*/), m_function);
-		m_ir->CreateCondBr(cond, local, GetBasicBlock(m_current_addr + 4), hint);
+		m_ir->CreateCondBr(cond, local, m_blocks.at(m_current_addr + 4), hint);
 		m_ir->SetInsertPoint(local);
 	}
 }
@@ -1761,12 +1767,12 @@ void PPUTranslator::BC(ppu_opcode_t op)
 		}
 		else if (cond)
 		{
-			m_ir->CreateCondBr(cond, GetBasicBlock(target), GetBasicBlock(m_current_addr + 4), CheckBranchProbability(op.bo));
+			m_ir->CreateCondBr(cond, m_blocks.at(target), m_blocks.at(m_current_addr + 4), CheckBranchProbability(op.bo));
 			return;
 		}
 		else
 		{
-			m_ir->CreateBr(GetBasicBlock(target));
+			m_ir->CreateBr(m_blocks.at(target));
 			return;
 		}
 	}
@@ -1809,7 +1815,7 @@ void PPUTranslator::B(ppu_opcode_t op)
 		}
 		else
 		{
-			m_ir->CreateBr(GetBasicBlock(target));
+			m_ir->CreateBr(m_blocks.at(target));
 			return;
 		}
 	}
@@ -1927,7 +1933,7 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 
 			for (const u64 target : targets)
 			{
-				_switch->addCase(m_ir->getInt64(target), GetBasicBlock(target));
+				_switch->addCase(m_ir->getInt64(target), m_blocks.at(target));
 			}
 
 			m_ir->SetInsertPoint(_default);

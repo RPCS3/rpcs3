@@ -132,8 +132,9 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	if (cond.ret)
 	{
+		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.check_state();
+		ppu.test_state();
 	}
 	else if (mode == 2)
 	{
@@ -211,12 +212,13 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	for (auto cpu : threads)
 	{
+		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cpu);
 	}
 
 	if (threads.size())
 	{
-		ppu.check_state();
+		ppu.test_state();
 	}
 
 	if (mode == 1)
@@ -231,8 +233,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 {
 	sys_lwcond.trace("_sys_lwcond_queue_wait(lwcond_id=0x%x, lwmutex_id=0x%x, timeout=0x%llx)", lwcond_id, lwmutex_id, timeout);
-
-	const u64 start_time = ppu.gpr[10] = get_system_time();
 
 	std::shared_ptr<lv2_lwmutex> mutex;
 
@@ -250,7 +250,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Add a waiter
 		cond.waiters++;
 		cond.sq.emplace_back(&ppu);
-		cond.sleep(ppu, start_time, timeout);
+		cond.sleep(ppu, timeout);
 
 		// Process lwmutex sleep queue
 		if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
@@ -269,6 +269,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	if (cond.ret)
 	{
+		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
 	}
 
@@ -278,7 +279,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -311,6 +312,6 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	}
 
 	// Return cause
-	ppu.check_state();
+	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }

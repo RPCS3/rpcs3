@@ -424,6 +424,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	else
 #endif
 	{
+		// Removes D3D12 from Render list when the system doesn't support it
+		cbox_gs_render->Delete(cbox_gs_render->FindString("D3D12"));
 		cbox_gs_d3d_adapter->Enable(false);
 	}
 
