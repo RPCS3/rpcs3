@@ -1166,7 +1166,7 @@ std::string fs::get_data_dir(const std::string& prefix, const std::string& locat
 {
 	static const std::string s_dir = []
 	{
-		const std::string& dir = get_config_dir() + "/data/";
+		const std::string& dir = get_config_dir() + "data/";
 
 		if (!is_dir(dir) && !create_path(dir))
 		{

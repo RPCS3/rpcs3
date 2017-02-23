@@ -229,9 +229,9 @@ void Emulator::Load()
 		}
 
 		// Load custom config-1
-		if (fs::file cfg_file{m_cache_path + "config.yml"})
+		if (fs::file cfg_file{ fs::get_config_dir() + "data/" + m_title_id + "/config.yml" })
 		{
-			LOG_NOTICE(LOADER, "Applying custom config (config.yml)");
+			LOG_NOTICE(LOADER, "Applying custom config %s", fs::get_config_dir() + "data/" + m_title_id + "/config.yml");
 			cfg::root.from_string(cfg_file.to_string());
 		}
 
