@@ -369,6 +369,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
 	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
 	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(ppu_decoder_modes), rbox_ppu_decoder));
+	rbox_ppu_decoder->Enable(0, false); // TODO
 
 	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU Decoder" });
 	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);
