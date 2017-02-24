@@ -433,7 +433,7 @@ namespace rsx
 				ctrl->get = get;
 				continue;
 			}
-			if (cmd == 0) //nop
+			if ((cmd & RSX_METHOD_NON_INCREMENT_COUNT_MASK) == 0) //nop
 			{
 				ctrl->get = get + 4;
 				continue;
