@@ -477,10 +477,12 @@ void Emulator::Stop()
 
 	rpcs3::on_stop()();
 
-	auto on_select = [](u32, cpu_thread& cpu)
+	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
+
+	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.get()->set_exception(std::make_exception_ptr(cpu_flag::dbg_global_stop));
+		cpu.get()->set_exception(e_stop);
 	};
 
 	idm::select<ppu_thread>(on_select);
