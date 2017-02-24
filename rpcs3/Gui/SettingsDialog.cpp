@@ -210,8 +210,15 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
 
 	// Incrementally load config.yml
 	const fs::file config(!pergameload.IsEmpty() ? pergameload.ToStdString() : fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-
-	loaded += YAML::Load(config.to_string());
+	if (config.to_string().length() == 0 && !pergameload.IsEmpty())//empty first time gameconfig
+	{
+		const fs::file configexisted(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+		loaded += YAML::Load(configexisted.to_string());
+	}
+	else
+	{
+		loaded += YAML::Load(config.to_string());
+	}
 
 	std::vector<std::unique_ptr<cfg_adapter>> pads;
 
