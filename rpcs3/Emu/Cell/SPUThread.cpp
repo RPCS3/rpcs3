@@ -1061,8 +1061,37 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 	case 0x000:
 	{
-		// Hack: execute as NOP
-		return true;
+		LOG_WARNING(SPU, "STOP 0x0");
+
+		// HACK: find an ILA instruction
+		for (u32 addr = pc; addr < 0x40000; addr += 4)
+		{
+			const u32 instr = _ref<u32>(addr);
+
+			if (instr >> 25 == 0x21)
+			{
+				pc = addr;
+				return false;
+			}
+
+			if (instr > 0x1fffff)
+			{
+				break;
+			}
+		}
+
+		// HACK: wait for executable code
+		while (!_ref<u32>(pc))
+		{
+			if (test(state & cpu_flag::stop))
+			{
+				return false;
+			}
+
+			thread_ctrl::wait_for(1000);
+		}
+
+		return false;
 	}
 
 	case 0x001:
