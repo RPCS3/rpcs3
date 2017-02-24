@@ -17,6 +17,7 @@ void shared_mutex::imp_lock_shared(s64 _old)
 		}
 	}
 
+#ifdef _WIN32
 	// Acquire writer lock
 	imp_wait(m_value.load());
 
@@ -27,21 +28,72 @@ void shared_mutex::imp_lock_shared(s64 _old)
 	{
 		imp_unlock(value);
 	}
-#ifdef _WIN32
+
 	// Wait as a reader if necessary
 	if (value + c_one - c_min < 0)
 	{
 		NtWaitForKeyedEvent(nullptr, (int*)&m_value + 1, false, nullptr);
 	}
 #else
-	// Use resulting value
-	value += c_one - c_min;
-
-	while (value < 0)
+	while (true)
 	{
-		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAIT_PRIVATE, int(value >> 32), nullptr, nullptr, 0);
+		const s64 value0 = m_value.fetch_op([](s64& value)
+		{
+			if (value >= c_min)
+			{
+				value -= c_min;
+			}
+		});
 
-		value = m_value.load();
+		if (value0 >= c_min)
+		{
+			return;	
+		}
+
+		// Acquire writer lock
+		imp_wait(value0);
+
+		// Convert to reader lock
+		s64 value1 = m_value.fetch_add(c_one - c_min);
+
+		if (value1 != 0)
+		{
+			imp_unlock(value1);
+		}
+
+		value1 += c_one - c_min;
+		
+		if (value1 >= 0)
+		{
+			return;
+		}
+
+		// Wait as a reader if necessary
+		while (futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAIT_PRIVATE, int(value1 >> 32), nullptr, nullptr, 0))
+		{
+			value1 = m_value.load();
+
+			if (value1 >= 0)
+			{
+				return;
+			}
+		}
+
+		// If blocked by writers, release the reader lock and try again
+		const s64 value2 = m_value.fetch_op([](s64& value)
+		{
+			if (value < 0)
+			{
+				value += c_min;
+			}
+		});
+
+		if (value2 >= 0)
+		{
+			return;
+		}
+		
+		imp_unlock_shared(value2);
 	}
 #endif
 }
@@ -56,12 +108,14 @@ void shared_mutex::imp_unlock_shared(s64 _old)
 #ifdef _WIN32
 		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 #else
+		m_value -= c_sig;
+
 		futex((int*)&m_value.raw() + IS_BE_MACHINE, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
 #endif
 	}
 }
 
-void shared_mutex::imp_wait(s64 _old)
+void shared_mutex::imp_wait(s64)
 {
 #ifdef _WIN32
 	if (m_value.sub_fetch(c_one))
@@ -69,24 +123,29 @@ void shared_mutex::imp_wait(s64 _old)
 		NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
 	}
 #else
-	_old = m_value.fetch_sub(c_one);
-
-	// Return immediately if locked
-	while (_old != c_one)
+	if (!m_value.sub_fetch(c_one))
 	{
-		// Load new value
-		const s64 value = m_value.load();
+		// Return immediately if locked
+		return;
+	}
 
-		// Detect addition (unlock op)
-		if (value / c_one > _old / c_one)
+	while (true)
+	{
+		// Load new value, try to acquire c_sig
+		const s64 value = m_value.fetch_op([](s64& value)
+		{
+			if (value <= c_one - c_sig)
+			{
+				value += c_sig;
+			}
+		});
+
+		if (value <= c_one - c_sig)
 		{
 			return;
 		}
 
-		futex((int*)&m_value.raw() + IS_BE_MACHINE, FUTEX_WAIT_PRIVATE, value, nullptr, nullptr, 0);
-
-		// Update old value
-		_old = value;
+		futex((int*)&m_value.raw() + IS_BE_MACHINE, FUTEX_WAIT_PRIVATE, int(value), nullptr, nullptr, 0);
 	}
 #endif
 }
@@ -131,6 +190,8 @@ void shared_mutex::imp_unlock(s64 _old)
 #else
 	if (_old + c_one <= 0)
 	{
+		m_value -= c_sig;
+
 		futex((int*)&m_value.raw() + IS_BE_MACHINE, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
 	}
 	else if (s64 count = -_old / c_min)

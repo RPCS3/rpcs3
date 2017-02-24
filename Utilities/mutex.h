@@ -10,6 +10,7 @@ class shared_mutex final
 	{
 		c_one = 1ull << 31, // Fixed-point 1.0 value (one writer)
 		c_min = 0x00000001, // Fixed-point 1.0/max_readers value
+		c_sig = 1ull << 62,
 		c_max = c_one
 	};
 
