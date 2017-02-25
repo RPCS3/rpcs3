@@ -264,6 +264,7 @@ std::string ppu_thread::dump() const
 		ret += fmt::format("VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
 		ret += fmt::format("FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
 
+		// TODO: support foreign stack
 		ret += "\nCall stack:\n=========\n";
 		ret += fmt::format("0x%08x (0x0) called\n", cia);
 		const u32 stack_max = ::align(stack_addr + stack_size, 0x200) - 0x200;
@@ -604,7 +605,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
 		context.gpr[1] &= ~(align_v - 1); // fix stack alignment
 
-		if (context.gpr[1] < context.stack_addr)
+		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
 		{
 			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)" HERE, size, align_v, old_pos, context.stack_addr);
 		}
