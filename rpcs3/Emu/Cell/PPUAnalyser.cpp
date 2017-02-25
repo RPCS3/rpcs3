@@ -983,7 +983,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			const auto next = func.blocks.upper_bound(block.first);
 
 			// Normalize block if necessary
-			if (next != func.blocks.end())
+			if (next != func.blocks.end() && block.second > next->first - block.first)
 			{
 				block.second = next->first - block.first;
 			}

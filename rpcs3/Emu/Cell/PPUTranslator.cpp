@@ -229,67 +229,60 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 		}
 	}
 
-	m_blocks[m_end_addr] = BasicBlock::Create(m_context, "loc_end", m_function);
+	// Finalize entry block
+	m_ir->CreateBr(m_blocks.at(m_start_addr));
 
-	/* Convert each instruction to LLVM IR */
-	const auto start = m_blocks.at(m_start_addr);
-	m_ir->CreateBr(start);
-	m_ir->SetInsertPoint(start);
-
-	for (m_current_addr = m_start_addr; m_current_addr < m_end_addr;)
+	// Process blocks
+	for (auto&& block : info.blocks)
 	{
-		// Preserve current address (m_current_addr may be changed by the decoder)
-		const u64 addr = m_current_addr;
-
-		if (m_blocks.count(m_current_addr))
+		if (!m_blocks.count(block.first))
 		{
-			// Bloat the beginning of each block: check state
-			const auto vstate = m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1));
-			const auto vblock = BasicBlock::Create(m_context, fmt::format("l0c_%llx", m_current_addr), m_function);
-			const auto vcheck = BasicBlock::Create(m_context, fmt::format("lcc_%llx", m_current_addr), m_function);
-			
-			m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), vblock, vcheck, m_md_unlikely);
-			m_ir->SetInsertPoint(vcheck);
-			Call(GetType<void>(), "__check", m_thread, m_ir->getInt64(m_current_addr));
-			m_ir->CreateBr(vblock);
-			m_ir->SetInsertPoint(vblock);
+			continue;
 		}
 
-		// Translate opcode
-		if (!m_ir->GetInsertBlock()->getTerminator())
+		// Start block
+		m_ir->SetInsertPoint(m_blocks.at(block.first));
+
+		// Bloat the beginning of each block: check state
+		const auto vstate = m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1));
+		const auto vblock = BasicBlock::Create(m_context, fmt::format("l0c_%llx", m_current_addr), m_function);
+		const auto vcheck = BasicBlock::Create(m_context, fmt::format("lcc_%llx", m_current_addr), m_function);
+
+		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), vblock, vcheck, m_md_unlikely);
+		m_ir->SetInsertPoint(vcheck);
+		Call(GetType<void>(), "__check", m_thread, m_ir->getInt64(m_current_addr));
+		m_ir->CreateBr(vblock);
+		m_ir->SetInsertPoint(vblock);
+
+		// Process the instructions
+		for (m_current_addr = block.first; m_current_addr < block.first + block.second; m_current_addr += 4)
 		{
-			const u32 op = *(m_bin = bin + (addr - m_start_addr) / sizeof(u32));
+			if (m_ir->GetInsertBlock()->getTerminator())
+			{
+				break;
+			}
+
+			const u32 op = *(m_bin = bin + (m_current_addr - m_start_addr) / sizeof(u32));
 			(this->*(s_ppu_decoder.decode(op)))({op});
 		}
 
-		// Get next address
-		if (m_current_addr == addr) m_current_addr += sizeof(u32);
-
-		// Get next block if necessary
-		if (m_blocks.count(m_current_addr))
+		// Finalize current block if necessary (create branch to the next address)
+		if (!m_ir->GetInsertBlock()->getTerminator())
 		{
-			const auto next = m_blocks.at(m_current_addr);
-
-			// Finalize current block if necessary (create branch to next address)
-			if (!m_ir->GetInsertBlock()->getTerminator())
+			if (m_blocks.count(m_current_addr))
 			{
-				m_ir->CreateBr(next);
+				m_ir->CreateBr(m_blocks.at(m_current_addr));
 			}
-
-			// Start next block
-			m_ir->SetInsertPoint(next);
+			else
+			{
+				Call(GetType<void>(), "__end", m_ir->getInt64(m_current_addr));
+				m_ir->CreateUnreachable();
+			}
 		}
 	}
 
-	// Run custom IR generation function
+	// Run custom IR generation function (TODO)
 	if (custom) custom(this);
-
-	// Finalize past-the-end block
-	if (!m_ir->GetInsertBlock()->getTerminator())
-	{
-		Call(GetType<void>(), "__end", m_ir->getInt64(m_end_addr));
-		m_ir->CreateUnreachable();
-	}
 
 	m_ir->SetInsertPoint(m_jtr);
 
@@ -1906,7 +1899,7 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 	std::set<u64> targets;
 
 	// Detect a possible jumptable
-	for (u64 jt_addr = (m_current_addr += sizeof(u32)); m_current_addr < m_end_addr; m_current_addr += sizeof(u32))
+	for (u64 jt_addr = m_current_addr + sizeof(u32), addr = jt_addr; addr < m_end_addr; addr += sizeof(u32))
 	{
 		const u64 target = jt_addr + static_cast<s32>(*++m_bin);
 
@@ -1937,7 +1930,8 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 			}
 
 			m_ir->SetInsertPoint(_default);
-			Trap(m_current_addr);
+			Call(GetType<void>(), "__end", m_ir->getInt64(m_current_addr));
+			m_ir->CreateUnreachable();
 		}
 		else
 		{
@@ -2266,7 +2260,7 @@ void PPUTranslator::CMP(ppu_opcode_t op)
 
 void PPUTranslator::TW(ppu_opcode_t op)
 {
-	UseCondition(m_md_unlikely, CheckTrapCondition(op.bo, GetGpr(op.ra, 32), GetGpr(op.rb, 32)));
+	if (op.opcode != ppu_instructions::TRAP()) UseCondition(m_md_unlikely, CheckTrapCondition(op.bo, GetGpr(op.ra, 32), GetGpr(op.rb, 32)));
 	Trap(m_current_addr);
 }
 
