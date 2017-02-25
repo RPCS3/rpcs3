@@ -17,6 +17,14 @@ void gl::init()
 }
 
 #ifdef _WIN32
+
+extern "C" {
+	// NVIDIA Optimus: Default dGPU instead of iGPU (Driver: 302+)
+	_declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+	// AMD: Request dGPU High Performance (Driver: 13.35+)
+	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
 #define OPENGL_PROC(p, n) p gl##n = nullptr
 #define OPENGL_PROC2(p, n, tn) OPENGL_PROC(p, n)
 	#include "GLProcTable.h"

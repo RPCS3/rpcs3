@@ -30,7 +30,7 @@ system_type g_system;
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
 cfg::bool_entry g_cfg_autoexit(cfg::root.misc, "Exit RPCS3 when process finishes");
 
-cfg::string_entry g_cfg_vfs_emulator_dir(cfg::root.vfs, "$(EmulatorDir)"); // Default (empty): taken from fs::get_executable_dir()
+cfg::string_entry g_cfg_vfs_emulator_dir(cfg::root.vfs, "$(EmulatorDir)"); // Default (empty): taken from fs::get_config_dir()
 cfg::string_entry g_cfg_vfs_dev_hdd0(cfg::root.vfs, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/");
 cfg::string_entry g_cfg_vfs_dev_hdd1(cfg::root.vfs, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/");
 cfg::string_entry g_cfg_vfs_dev_flash(cfg::root.vfs, "/dev_flash/", "$(EmulatorDir)dev_flash/");
@@ -85,6 +85,28 @@ void Emulator::Init()
 	// Reload global configuration
 	cfg::root.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
 
+	// Create directories
+	const std::string emu_dir_ = g_cfg_vfs_emulator_dir;
+	const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	const std::string dev_hdd0 = fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd1 = fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir);
+	const std::string dev_usb = fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir);
+
+	fs::create_path(dev_hdd0);
+	fs::create_dir(dev_hdd0 + "game/");
+	fs::create_dir(dev_hdd0 + "game/TEST12345/");
+	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
+	fs::create_dir(dev_hdd0 + "home/");
+	fs::create_dir(dev_hdd0 + "home/00000001/");
+	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
+	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
+	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
+	if (fs::file f{dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write}) f.write("User"s);
+	fs::create_dir(dev_hdd1 + "cache/");
+	fs::create_dir(dev_hdd1 + "game/");
+	fs::create_path(dev_hdd1);
+	fs::create_path(dev_usb);
+
 	SetCPUThreadStop(0);
 }
 
@@ -98,12 +120,10 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 {
 	static const char* boot_list[] =
 	{
-		"/PS3_GAME/USRDIR/BOOT.BIN",
-		"/USRDIR/BOOT.BIN",
-		"/BOOT.BIN",
 		"/PS3_GAME/USRDIR/EBOOT.BIN",
 		"/USRDIR/EBOOT.BIN",
 		"/EBOOT.BIN",
+		"/eboot.bin",
 	};
 
 	if (direct && fs::is_file(path))
@@ -133,7 +153,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 std::string Emulator::GetGameDir()
 {
 	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
 	return fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
 }
@@ -141,7 +161,7 @@ std::string Emulator::GetGameDir()
 std::string Emulator::GetLibDir()
 {
 	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
 	return fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
@@ -157,56 +177,68 @@ void Emulator::Load()
 		// Open SELF or ELF
 		fs::file elf_file(m_path);
 
-		LOG_NOTICE(LOADER, "Path: %s", m_path);
-
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
 			return;
 		}
 
-		const std::string& elf_dir = fs::get_parent_dir(m_path);
+		LOG_NOTICE(LOADER, "Path: %s", m_path);
+
+		const std::string elf_dir = fs::get_parent_dir(m_path);
+		const fs::file sfov(elf_dir + "/sce_sys/param.sfo");
+		const fs::file sfo1(elf_dir + "/../PARAM.SFO");
+
+		// Load PARAM.SFO (TODO)
+		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
+		m_title = psf::get_string(_psf, "TITLE", m_path);
+		m_title_id = psf::get_string(_psf, "TITLE_ID");
+
+		// Initialize data/cache directory
+		m_cache_path = fs::get_data_dir(m_title_id, m_path);
 
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
-			// Decrypt SELF
-			elf_file = decrypt_self(std::move(elf_file));
+			const std::string decrypted_path = m_cache_path + "boot.elf";
 
-			const std::size_t elf_ext_pos = m_path.find_last_of('.');
-			const std::string& elf_ext = fmt::to_upper(m_path.substr(elf_ext_pos != -1 ? elf_ext_pos : m_path.size()));
-			const std::string& elf_name = m_path.substr(elf_dir.size());
+			fs::stat_t encrypted_stat = elf_file.stat();
+			fs::stat_t decrypted_stat;
 
-			// Save ELF (TODO: configuration, cache and different file location)
-			std::string new_path = m_path;
-
-			if (elf_name.compare(elf_name.find_last_of("/\\", -1, 2) + 1, 9, "EBOOT.BIN", 9) == 0)
+			// Check modification time and try to load decrypted ELF
+			if (fs::stat(decrypted_path, decrypted_stat) && decrypted_stat.mtime == encrypted_stat.mtime)
 			{
-				new_path.erase(new_path.size() - 9, 1); // change EBOOT.BIN to BOOT.BIN
-			}
-			else if (elf_ext == ".SELF" || elf_ext == ".SPRX")
-			{
-				new_path.erase(new_path.size() - 4, 1); // change *.self to *.elf, *.sprx to *.prx
+				elf_file.open(decrypted_path);
 			}
 			else
 			{
-				new_path += ".decrypted.elf";
-			}
+				// Decrypt SELF
+				elf_file = decrypt_self(std::move(elf_file));
 
-			if (fs::file elf_out{new_path, fs::rewrite})
-			{
-				elf_out.write(elf_file.to_vector<u8>());
-			}
-			else
-			{
-				LOG_ERROR(LOADER, "Failed to save file: %s", new_path);
+				if (fs::file elf_out{decrypted_path, fs::rewrite})
+				{
+					elf_out.write(elf_file.to_vector<u8>());
+					elf_out.close();
+					fs::utime(decrypted_path, encrypted_stat.atime, encrypted_stat.mtime);
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "Failed to create boot.elf");
+				}
 			}
 		}
 
-		// Load custom config
-		if (fs::file cfg_file{ m_path + ".yml" })
+		// Load custom config-1
+		if (fs::file cfg_file{ fs::get_config_dir() + "data/" + m_title_id + "/config.yml" })
 		{
-			LOG_NOTICE(LOADER, "Custom config: %s.yml", m_path);
+			LOG_NOTICE(LOADER, "Applying custom config %s", fs::get_config_dir() + "data/" + m_title_id + "/config.yml");
+			cfg::root.from_string(cfg_file.to_string());
+		}
+
+		// Load custom config-2
+		if (fs::file cfg_file{m_path + ".yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
 			cfg::root.from_string(cfg_file.to_string());
 		}
 
@@ -233,18 +265,12 @@ void Emulator::Load()
 				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
 
-			// Load PARAM.SFO
-			const auto _psf = psf::load_object(fs::file(elf_dir + "/../PARAM.SFO"));
-			m_title = psf::get_string(_psf, "TITLE", m_path);
-			m_title_id = psf::get_string(_psf, "TITLE_ID");
-			fs::get_data_dir(m_title_id, m_path);
-
 			LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 			LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 
 			// Mount all devices
 			const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
-			const std::string& emu_dir = emu_dir_.empty() ? fs::get_executable_dir() : emu_dir_;
+			const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 			const std::string& bdvd_dir = g_cfg_vfs_dev_bdvd;
 			const std::string& home_dir = g_cfg_vfs_app_home;
 
@@ -311,6 +337,13 @@ void Emulator::Load()
 			g_system = system_type::psv;
 			m_status = Ready;
 			vm::psv::init();
+
+			if (m_elf_path.empty())
+			{
+				m_elf_path = "host_root:" + m_path;
+				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
+			}
+
 			arm_load_exec(arm_exec);
 		}
 		else
@@ -444,10 +477,12 @@ void Emulator::Stop()
 
 	rpcs3::on_stop()();
 
-	auto on_select = [](u32, cpu_thread& cpu)
+	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
+
+	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.get()->set_exception(std::make_exception_ptr(cpu_flag::dbg_global_stop));
+		cpu.get()->set_exception(e_stop);
 	};
 
 	idm::select<ppu_thread>(on_select);
@@ -466,6 +501,7 @@ void Emulator::Stop()
 
 	LOG_NOTICE(GENERAL, "All threads stopped...");
 
+	lv2_obj::cleanup();
 	idm::clear();
 	fxm::clear();
 

@@ -5,6 +5,12 @@
 #include "rpcs3_version.h"
 #include <string>
 
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <chrono>
+#endif
+
 // Thread-specific log prefix provider
 thread_local std::string(*g_tls_log_prefix)() = nullptr;
 
@@ -56,7 +62,7 @@ namespace logs
 		}
 
 		// Encode level, current thread name, channel name and write log message
-		virtual void log(const message& msg, const std::string& prefix, const std::string& text) override;
+		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
 	};
 
 	static file_listener* get_logger()
@@ -64,6 +70,39 @@ namespace logs
 		// Use magic static
 		static file_listener logger("RPCS3.log");
 		return &logger;
+	}
+
+	static u64 get_stamp()
+	{
+		static struct time_initializer
+		{
+#ifdef _WIN32
+			LARGE_INTEGER freq;
+			LARGE_INTEGER start;
+
+			time_initializer()
+			{
+				QueryPerformanceFrequency(&freq);
+				QueryPerformanceCounter(&start);
+			}
+#else
+			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+#endif
+
+			u64 get() const
+			{
+#ifdef _WIN32
+				LARGE_INTEGER now;
+				QueryPerformanceCounter(&now);
+				const LONGLONG diff = now.QuadPart - start.QuadPart;
+				return diff / freq.QuadPart * 1'000'000 + diff % freq.QuadPart * 1'000'000 / freq.QuadPart;
+#else
+				return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+#endif
+			}
+		} timebase{};
+
+		return timebase.get();
 	}
 
 	channel GENERAL(nullptr, level::notice);
@@ -94,6 +133,9 @@ void logs::listener::add(logs::listener* _new)
 
 void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u64* args)
 {
+	// Get timestamp
+	const u64 stamp = get_stamp();
+
 	std::string text; fmt::raw_append(text, fmt, sup, args);
 	std::string prefix(g_tls_log_prefix ? g_tls_log_prefix() : "");
 
@@ -103,7 +145,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 	// Send message to all listeners
 	while (lis)
 	{
-		lis->log(*this, prefix, text);
+		lis->log(stamp, *this, prefix, text);
 		lis = lis->m_next;
 	}
 }
@@ -130,7 +172,7 @@ void logs::file_writer::log(const char* text, std::size_t size)
 	m_file.write(text, size);
 }
 
-void logs::file_listener::log(const logs::message& msg, const std::string& prefix, const std::string& _text)
+void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
 {
 	std::string text; text.reserve(prefix.size() + _text.size() + 200);
 
@@ -147,7 +189,12 @@ void logs::file_listener::log(const logs::message& msg, const std::string& prefi
 	case level::trace:   text = u8"·T "; break;
 	}
 
-	// TODO: print time?
+	// Print miscosecond timestamp
+	const u64 hours = stamp / 3600'000'000;
+	const u64 mins = (stamp % 3600'000'000) / 60'000'000;
+	const u64 secs = (stamp % 60'000'000) / 1'000'000;
+	const u64 frac = (stamp % 1'000'000);
+	fmt::append(text, "%u:%02u:%02u.%06u ", hours, mins, secs, frac);
 
 	if (prefix.size() > 0)
 	{

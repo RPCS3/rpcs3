@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "cellFs.h"
 
 #include "Utilities/StrUtil.h"
@@ -742,6 +743,7 @@ struct fs_aio_thread : ppu_thread
 			}
 
 			func(*this, aio, error, xid, result);
+			lv2_obj::sleep(*this);
 		}
 	}
 };
@@ -928,24 +930,24 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsOpen);
 	REG_FUNC(sys_fs, cellFsSdataOpen);
 	REG_FUNC(sys_fs, cellFsSdataOpenByFd);
-	REG_FUNC(sys_fs, cellFsRead, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsWrite, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsClose, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsRead).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsWrite).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsClose).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsOpendir);
-	REG_FUNC(sys_fs, cellFsReaddir, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsClosedir, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsReaddir).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsClosedir).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsStat);
-	REG_FUNC(sys_fs, cellFsFstat, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsFstat).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsMkdir);
 	REG_FUNC(sys_fs, cellFsRename);
 	REG_FUNC(sys_fs, cellFsChmod);
 	REG_FUNC(sys_fs, cellFsFsync);
 	REG_FUNC(sys_fs, cellFsRmdir);
 	REG_FUNC(sys_fs, cellFsUnlink);
-	REG_FUNC(sys_fs, cellFsLseek, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsFtruncate, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsLseek).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsFtruncate).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsTruncate);
-	REG_FUNC(sys_fs, cellFsFGetBlockSize, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsFGetBlockSize).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsAioInit);
 	REG_FUNC(sys_fs, cellFsAioFinish);
 	REG_FUNC(sys_fs, cellFsAioRead);
@@ -978,7 +980,7 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsAllocateFileAreaByFdWithInitialData);
 	REG_FUNC(sys_fs, cellFsTruncate2);
 	REG_FUNC(sys_fs, cellFsChangeFileSizeWithoutAllocation);
-	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill, MFF_FORCED_HLE);
+	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill).flags = MFF_FORCED_HLE;
 	REG_FUNC(sys_fs, cellFsChangeFileSizeByFdWithoutAllocation);
 	REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
 	REG_FUNC(sys_fs, cellFsRegisterConversionCallback);

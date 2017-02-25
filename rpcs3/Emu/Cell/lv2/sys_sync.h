@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 #include <deque>
@@ -105,4 +105,40 @@ struct lv2_obj
 		queue.erase(it);
 		return res;
 	}
+
+	// Remove the current thread from the scheduling queue, register timeout
+	static void sleep_timeout(named_thread&, u64 timeout);
+
+	static void sleep(cpu_thread& thread, u64 timeout = 0)
+	{
+		thread.state += cpu_flag::is_waiting;
+		sleep_timeout(thread, timeout);
+	}
+
+	// Schedule the thread
+	static void awake(cpu_thread&, u32 prio);
+
+	static void awake(cpu_thread& thread)
+	{
+		awake(thread, -1);
+	}
+
+	static void lock_all();
+	static void unlock_all();
+	static void cleanup();
+
+private:
+	// Scheduler mutex
+	static semaphore<> g_mutex;
+
+	// Scheduler queue for active PPU threads
+	static std::deque<class ppu_thread*> g_ppu;
+
+	// Waiting for the response from
+	static std::deque<class cpu_thread*> g_pending;
+
+	// Scheduler queue for timeouts (wait until -> thread)
+	static std::deque<std::pair<u64, named_thread*>> g_waiting;
+
+	static void schedule_all();
 };

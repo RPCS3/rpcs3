@@ -216,12 +216,12 @@ error_code sys_spu_thread_initialize(vm::ps3::ptr<u32> thread, u32 group, u32 sp
 error_code sys_spu_thread_set_argument(u32 id, vm::ps3::ptr<sys_spu_thread_argument> arg);
 error_code sys_spu_thread_group_create(vm::ps3::ptr<u32> id, u32 num, s32 prio, vm::ps3::ptr<sys_spu_thread_group_attribute> attr);
 error_code sys_spu_thread_group_destroy(u32 id);
-error_code sys_spu_thread_group_start(u32 id);
+error_code sys_spu_thread_group_start(ppu_thread&, u32 id);
 error_code sys_spu_thread_group_suspend(u32 id);
 error_code sys_spu_thread_group_resume(u32 id);
 error_code sys_spu_thread_group_yield(u32 id);	
 error_code sys_spu_thread_group_terminate(u32 id, s32 value);
-error_code sys_spu_thread_group_join(u32 id, vm::ps3::ptr<u32> cause, vm::ps3::ptr<u32> status);
+error_code sys_spu_thread_group_join(ppu_thread&, u32 id, vm::ps3::ptr<u32> cause, vm::ps3::ptr<u32> status);
 error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
 error_code sys_spu_thread_group_disconnect_event(u32 id, u32 et);
 error_code sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, vm::ps3::ptr<u8> spup);

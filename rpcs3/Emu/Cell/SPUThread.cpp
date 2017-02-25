@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
+#include "Utilities/lockless.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -146,6 +147,7 @@ void SPUThread::cpu_init()
 	ch_mfc_args = {};
 	mfc_queue.clear();
 
+	srr0 = 0;
 	ch_tag_mask = 0;
 	ch_tag_stat.data.store({});
 	ch_stall_stat.data.store({});
@@ -371,6 +373,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 		if (rec->sb & 0x8000)
 		{
 			ch_stall_stat.set_value((1 << args.tag) | ch_stall_stat.get_value());
+			ch_event_stat |= SPU_EVENT_SN;
 
 			spu_mfc_arg_t stalled;
 			stalled.ea = (args.ea & ~0xffffffff) | (list_addr + (i + 1) * 8);
@@ -418,11 +421,6 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 	case MFC_GETLLAR_CMD: // acquire reservation
 	{
-		if (ch_mfc_args.size != 128)
-		{
-			break;
-		}
-
 		const u32 raddr = vm::cast(ch_mfc_args.ea, HERE);
 
 		vm::reservation_acquire(vm::base(offset + ch_mfc_args.lsa), raddr, 128);
@@ -437,11 +435,6 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 	case MFC_PUTLLC_CMD: // store conditionally
 	{
-		if (ch_mfc_args.size != 128)
-		{
-			break;
-		}
-
 		if (vm::reservation_update(vm::cast(ch_mfc_args.ea, HERE), vm::base(offset + ch_mfc_args.lsa), 128))
 		{
 			if (std::exchange(last_raddr, 0) == 0)
@@ -465,11 +458,6 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 	case MFC_PUTLLUC_CMD: // store unconditionally
 	case MFC_PUTQLLUC_CMD:
 	{
-		if (ch_mfc_args.size != 128)
-		{
-			break;
-		}
-
 		vm::reservation_op(vm::cast(ch_mfc_args.ea, HERE), 128, [this]()
 		{
 			std::memcpy(vm::base_priv(vm::cast(ch_mfc_args.ea, HERE)), vm::base(offset + ch_mfc_args.lsa), 128);
@@ -512,9 +500,12 @@ u32 SPUThread::get_events(bool waiting)
 	}
 
 	// SPU Decrementer Event
-	if ((ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
+	if (!ch_dec_value || (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
 	{
-		ch_event_stat |= SPU_EVENT_TM;
+		if ((ch_event_stat & SPU_EVENT_TM) == 0)
+		{
+			ch_event_stat |= SPU_EVENT_TM;
+		}
 	}
 
 	// initialize waiting
@@ -562,7 +553,7 @@ void SPUThread::set_interrupt_status(bool enable)
 	if (enable)
 	{
 		// detect enabling interrupts with events masked
-		if (u32 mask = ch_event_mask)
+		if (u32 mask = ch_event_mask & ~SPU_EVENT_INTR_IMPLEMENTED)
 		{
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
 		}
@@ -617,9 +608,11 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	switch (ch)
 	{
-	//case SPU_RdSRR0:
-	//	value = SRR0;
-	//	break;
+	case SPU_RdSRR0:
+	{
+		out = srr0;
+		break;
+	}
 	case SPU_RdInMbox:
 	{
 		while (true)
@@ -738,9 +731,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	switch (ch)
 	{
-	//case SPU_WrSRR0:
-	//	SRR0 = value & 0x3FFFC;  //LSLR & ~3
-	//	break;
+	case SPU_WrSRR0:
+	{
+		srr0 = value;
+		break;
+	}
+		
 	case SPU_WrOutIntrMbox:
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
@@ -785,15 +781,18 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!queue)
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
-					return ch_in_mbox.set_values(1, CELL_ENOTCONN), true; // TODO: check error passing
+					ch_in_mbox.set_values(1, CELL_ENOTCONN);
+					return true;
 				}
+
+				ch_in_mbox.set_values(1, CELL_OK);
 
 				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
-					return ch_in_mbox.set_values(1, CELL_EBUSY), true;
+					ch_in_mbox.set_values(1, CELL_EBUSY);
 				}
 
-				return ch_in_mbox.set_values(1, CELL_OK), true;
+				return true;
 			}
 			else if (code < 128)
 			{
@@ -842,15 +841,17 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)" HERE, value, flag, count);
 				}
 
-				if (flag > 63)
-				{
-					fmt::throw_exception("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d)): Invalid flag" HERE, data, value, flag);
-				}
-
 				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
+				ch_in_mbox.set_values(1, CELL_OK);
+
 				// Use the syscall to set flag
-				return ch_in_mbox.set_values(1, sys_event_flag_set(data, 1ull << flag)), true;
+				if (s32 res = sys_event_flag_set(data, 1ull << flag))
+				{
+					ch_in_mbox.set_values(1, res);
+				}
+
+				return true;
 			}
 			else if (code == 192)
 			{
@@ -862,11 +863,6 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!ch_out_mbox.try_pop(data))
 				{
 					fmt::throw_exception("sys_event_flag_set_bit_impatient(value=0x%x (flag=%d)): Out_MBox is empty" HERE, value, flag);
-				}
-
-				if (flag > 63)
-				{
-					fmt::throw_exception("sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d)): Invalid flag" HERE, data, value, flag);
 				}
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
@@ -1013,7 +1009,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrEventMask:
 	{
 		// detect masking events with enabled interrupt status
-		if (value && ch_event_stat & SPU_EVENT_INTR_ENABLED)
+		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && ch_event_stat & SPU_EVENT_INTR_ENABLED)
 		{
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, value);
 		}
@@ -1063,6 +1059,41 @@ bool SPUThread::stop_and_signal(u32 code)
 
 	switch (code)
 	{
+	case 0x000:
+	{
+		LOG_WARNING(SPU, "STOP 0x0");
+
+		// HACK: find an ILA instruction
+		for (u32 addr = pc; addr < 0x40000; addr += 4)
+		{
+			const u32 instr = _ref<u32>(addr);
+
+			if (instr >> 25 == 0x21)
+			{
+				pc = addr;
+				return false;
+			}
+
+			if (instr > 0x1fffff)
+			{
+				break;
+			}
+		}
+
+		// HACK: wait for executable code
+		while (!_ref<u32>(pc))
+		{
+			if (test(state & cpu_flag::stop))
+			{
+				return false;
+			}
+
+			thread_ctrl::wait_for(1000);
+		}
+
+		return false;
+	}
+
 	case 0x001:
 	{
 		thread_ctrl::wait_for(1000); // hack
@@ -1072,23 +1103,6 @@ bool SPUThread::stop_and_signal(u32 code)
 	case 0x002:
 	{
 		state += cpu_flag::ret;
-		return true;
-	}
-
-	case 0x003:
-	{
-		const auto found = m_addr_to_hle_function_map.find(pc);
-
-		if (found == m_addr_to_hle_function_map.end())
-		{
-			fmt::throw_exception("HLE function not registered (PC=0x%05x)" HERE, pc);
-		}
-
-		if (const auto return_to_caller = found->second(*this))
-		{
-			pc = (gpr[0]._u32[3] & 0x3fffc) - 4;
-		}
-
 		return true;
 	}
 

@@ -8,6 +8,7 @@
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
+#include "lv2/sys_sync.h"
 
 #ifdef LLVM_AVAILABLE
 #include "restore_new.h"
@@ -49,6 +50,31 @@
 extern u64 get_system_time();
 
 namespace vm { using namespace ps3; }
+
+enum class join_status : u32
+{
+	joinable = 0,
+	detached = 0u-1,
+	exited = 0u-2,
+	zombie = 0u-3,
+};
+
+template <>
+void fmt_class_string<join_status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](join_status js)
+	{
+		switch (js)
+		{
+		case join_status::joinable: return "";
+		case join_status::detached: return "detached";
+		case join_status::zombie: return "zombie";
+		case join_status::exited: return "exited";
+		}
+
+		return unknown;
+	});
+}
 
 enum class ppu_decoder_type
 {
@@ -195,8 +221,33 @@ std::string ppu_thread::get_name() const
 std::string ppu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
-	ret += fmt::format("Priority: %d\n", prio);
-	ret += fmt::format("Last function: %s\n", last_function ? last_function : "");
+	ret += fmt::format("Priority: %d\n", +prio);
+	ret += fmt::format("Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
+	ret += fmt::format("Joiner: %s\n", join_status(joiner.load()));
+	ret += fmt::format("Commands: %u\n", cmd_queue.size());
+
+	const auto _func = last_function;
+
+	if (_func)
+	{
+		ret += "Last function: ";
+		ret += _func;
+		ret += '\n';
+	}
+
+	if (const auto _time = start_time)
+	{
+		ret += fmt::format("Waiting: %fs\n", (get_system_time() - _time) / 1000000.);
+	}
+	else
+	{
+		ret += '\n';
+	}
+
+	if (!_func)
+	{
+		ret += '\n';
+	}
 	
 	ret += "\nRegisters:\n=========\n";
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("GPR[%d] = 0x%llx\n", i, gpr[i]);
@@ -284,6 +335,11 @@ void ppu_thread::cpu_task()
 		case ppu_cmd::initialize:
 		{
 			cmd_pop(), ppu_initialize();
+			break;
+		}
+		case ppu_cmd::sleep:
+		{
+			cmd_pop(), lv2_obj::sleep(*this);
 			break;
 		}
 		default:
@@ -394,6 +450,7 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	, prio(prio)
 	, stack_size(std::max<u32>(stack, 0x4000))
 	, stack_addr(vm::alloc(stack_size, vm::stack))
+	, start_time(get_system_time())
 	, m_name(name)
 {
 	if (!stack_addr)
@@ -402,6 +459,9 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	}
 
 	gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+
+	// Trigger the scheduler
+	state += cpu_flag::suspend;
 }
 
 void ppu_thread::cmd_push(cmd64 cmd)
@@ -449,7 +509,7 @@ cmd64 ppu_thread::cmd_wait()
 	{
 		if (UNLIKELY(test(state)))
 		{
-			if (check_state())
+			if (test(state, cpu_flag::stop + cpu_flag::exit))
 			{
 				return cmd64{};
 			}
@@ -496,7 +556,14 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 		{
 			if (last_function)
 			{
-				LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - gpr[10]) / 1000000.);
+				if (start_time)
+				{
+					LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - start_time) / 1000000.);
+				}
+				else
+				{
+					LOG_WARNING(PPU, "'%s' aborted", last_function);
+				}
 			}
 
 			last_function = old_func;
@@ -600,6 +667,12 @@ extern void sse_cellbe_stvrx(u64 addr, __m128i a);
 	fmt::throw_exception("Unreachable! (0x%llx)", addr);
 }
 
+static void ppu_check(ppu_thread& ppu, u64 addr)
+{
+	ppu.cia = addr;
+	ppu.test_state();
+}
+
 static void ppu_trace(u64 addr)
 {
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
@@ -671,6 +744,7 @@ static void ppu_initialize()
 		{ "__cptr", (u64)&s_ppu_compiled },
 		{ "__trap", (u64)&ppu_trap },
 		{ "__end", (u64)&ppu_unreachable },
+		{ "__check", (u64)&ppu_check },
 		{ "__trace", (u64)&ppu_trace },
 		{ "__hlecall", (u64)&ppu_execute_function },
 		{ "__syscall", (u64)&ppu_execute_syscall },
@@ -715,14 +789,6 @@ static void ppu_initialize()
 			const auto f = cast<Function>(module->getOrInsertFunction(fmt::format("__0x%x", info.addr), _func));
 			f->addAttribute(1, Attribute::NoAlias);
 			translator->AddFunction(info.addr, f);
-		}
-		
-		for (const auto& b : info.blocks)
-		{
-			if (b.second)
-			{
-				translator->AddBlockInfo(b.first);
-			}
 		}
 	}
 

@@ -12,7 +12,7 @@ extern logs::channel sysPrxForUser;
 extern u32 ppu_alloc_tls();
 extern void ppu_free_tls(u32 addr);
 
-s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
+s32 sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
 {
 	sysPrxForUser.warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=%s)",
 		thread_id, entry, arg, prio, stacksize, flags, threadname);
@@ -37,7 +37,7 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 	}
 
 	// Run the thread
-	if (s32 res = sys_ppu_thread_start(static_cast<u32>(*thread_id)))
+	if (s32 res = sys_ppu_thread_start(ppu, static_cast<u32>(*thread_id)))
 	{
 		return res;
 	}
@@ -45,6 +45,8 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 	// Dirty hack for sound: confirm the creation of _mxr000 event queue
 	if (threadname && std::memcmp(threadname.get_ptr(), "_cellsurMixerMain", 18) == 0)
 	{
+		lv2_obj::sleep(ppu);
+
 		while (!idm::select<lv2_obj, lv2_event_queue>([](u32, lv2_event_queue& eq)
 		{
 			return eq.name == "_mxr000\0"_u64;
@@ -52,6 +54,8 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 		{
 			thread_ctrl::wait_for(50000);
 		}
+
+		ppu.test_state();
 	}
 
 	return CELL_OK;

@@ -18,6 +18,7 @@ void lv2_int_serv::exec()
 	({
 		{ ppu_cmd::set_args, 2 }, arg1, arg2,
 		{ ppu_cmd::lle_call, 2 },
+		{ ppu_cmd::sleep, 0 }
 	});
 
 	thread->notify();

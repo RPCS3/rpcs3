@@ -120,8 +120,10 @@ s32 sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeou
 		return CELL_EINVAL;
 	}
 
-	for (u32 i = 0; i < 300; i++)
+	for (u32 i = 0; i < 10; i++)
 	{
+		busy_wait();
+
 		if (lwmutex->vars.owner.load() == lwmutex_free)
 		{
 			if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
@@ -273,7 +275,7 @@ s32 sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	lwmutex->vars.owner.exchange(lwmutex_reserved);
 
 	// call the syscall
-	if (_sys_lwmutex_unlock(lwmutex->sleep_queue) == CELL_ESRCH)
+	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) == CELL_ESRCH)
 	{
 		return CELL_ESRCH;
 	}

@@ -52,7 +52,7 @@ bool lv2_event_queue::send(lv2_event event)
 
 		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
 
-		ppu.set_signal();
+		awake(ppu);
 	}
 	else
 	{
@@ -67,7 +67,8 @@ bool lv2_event_queue::send(lv2_event event)
 		const u32 data3 = static_cast<u32>(std::get<3>(event));
 		spu.ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
 
-		spu.set_signal();
+		spu.state += cpu_flag::signal;
+		spu.notify();
 	}
 
 	return true;
@@ -131,7 +132,7 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 	return CELL_EAGAIN;
 }
 
-error_code sys_event_queue_destroy(u32 equeue_id, s32 mode)
+error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 {
 	sys_event.warning("sys_event_queue_destroy(equeue_id=0x%x, mode=%d)", equeue_id, mode);
 
@@ -171,16 +172,19 @@ error_code sys_event_queue_destroy(u32 equeue_id, s32 mode)
 			if (queue->type == SYS_PPU_QUEUE)
 			{
 				static_cast<ppu_thread&>(*cpu).gpr[3] = CELL_ECANCELED;
+				ppu.state += cpu_flag::is_waiting;
+				queue->awake(*cpu);
 			}
 			else
 			{
 				static_cast<SPUThread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
+				cpu->state += cpu_flag::signal;
+				cpu->notify();
 			}
-
-			cpu->set_signal();
 		}
 	}
 
+	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -222,8 +226,6 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 {
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
 		if (queue.type != SYS_PPU_QUEUE)
@@ -236,6 +238,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		if (queue.events.empty())
 		{
 			queue.sq.emplace_back(&ppu);
+			queue.sleep(ppu, timeout);
 			return CELL_EBUSY;
 		}
 
@@ -268,7 +271,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -280,7 +283,8 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 					continue;
 				}
 
-				return not_an_error(CELL_ETIMEDOUT);
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				break;
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -291,7 +295,8 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		}
 	}
 
-	return not_an_error(ppu.gpr[3] ? CELL_ECANCELED : CELL_OK);
+	ppu.test_state();
+	return not_an_error(ppu.gpr[3]);
 }
 
 error_code sys_event_queue_drain(u32 equeue_id)
@@ -412,9 +417,11 @@ error_code sys_event_port_disconnect(u32 eport_id)
 	return CELL_OK;
 }
 
-error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
+error_code sys_event_port_send(ppu_thread& ppu, u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
+
+	ppu.state += cpu_flag::is_waiting;
 
 	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
 	{
@@ -448,5 +455,6 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 		return port.ret;
 	}
 
+	ppu.test_state();
 	return CELL_OK;
 }

@@ -643,6 +643,8 @@ namespace ppu_instructions
 		inline u32 EXTRDI(u32 x, u32 y, u32 n, u32 b) { return RLDICL(x, y, b + n, 64 - b, false); }
 		inline u32 SRDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 64 - n, n, false); }
 		inline u32 CLRLDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 0, n, false); }
+
+		inline u32 TRAP() { return 0x7FE00008; } // tw 31,r0,r0
 	}
 
 	using namespace implicts;

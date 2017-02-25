@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellAudio.h"
 #include "libmixer.h"
@@ -347,6 +348,7 @@ struct surmixer_thread : ppu_thread
 				if (g_surmx.cb)
 				{
 					g_surmx.cb(*this, g_surmx.cb_arg, (u32)g_surmx.mixcount, 256);
+					lv2_obj::sleep(*this);
 				}
 
 				//u64 stamp1 = get_system_time();

@@ -51,7 +51,7 @@ error_code sys_rwlock_create(vm::ps3::ptr<u32> rw_lock_id, vm::ps3::ptr<sys_rwlo
 error_code sys_rwlock_destroy(u32 rw_lock_id);
 error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout);
 error_code sys_rwlock_tryrlock(u32 rw_lock_id);
-error_code sys_rwlock_runlock(u32 rw_lock_id);
+error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id);
 error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout);
 error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id);
 error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id);

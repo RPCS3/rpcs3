@@ -30,6 +30,9 @@ error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attri
 
 	const u32 protocol = attr->protocol;
 
+	if (protocol == SYS_SYNC_PRIORITY_INHERIT)
+		sys_semaphore.todo("sys_semaphore_create(): SYS_SYNC_PRIORITY_INHERIT");
+
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
 		sys_semaphore.error("sys_semaphore_create(): unknown protocol (0x%x)", protocol);
@@ -82,8 +85,6 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 {
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
@@ -101,6 +102,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		if (sema.val-- <= 0)
 		{
 			sema.sq.emplace_back(&ppu);
+			sema.sleep(ppu, timeout);
 			return false;
 		}
 
@@ -117,13 +119,13 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		return CELL_OK;
 	}
 
-	// SLEEP
+	ppu.gpr[3] = CELL_OK;
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -144,7 +146,8 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				}
 
 				verify(HERE), sem->unqueue(sem->sq, &ppu);
-				return not_an_error(CELL_ETIMEDOUT);
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				break;
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -155,7 +158,8 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		}
 	}
 
-	return CELL_OK;
+	ppu.test_state();
+	return not_an_error(ppu.gpr[3]);
 }
 
 error_code sys_semaphore_trywait(u32 sem_id)
@@ -190,7 +194,7 @@ error_code sys_semaphore_trywait(u32 sem_id)
 	return CELL_OK;
 }
 
-error_code sys_semaphore_post(u32 sem_id, s32 count)
+error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 {
 	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
@@ -245,10 +249,12 @@ error_code sys_semaphore_post(u32 sem_id, s32 count)
 		{
 			const auto cpu = verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol));
 
-			cpu->set_signal();
+			ppu.state += cpu_flag::is_waiting;
+			sem->awake(*cpu);
 		}
 	}
 
+	ppu.test_state();
 	return CELL_OK;
 }
 

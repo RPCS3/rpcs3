@@ -19,7 +19,7 @@ extern u64 get_system_time();
 
 void lv2_timer::on_task()
 {
-	while (true)
+	while (!Emu.IsStopped())
 	{
 		const u32 _state = state;
 
@@ -50,11 +50,12 @@ void lv2_timer::on_task()
 			}
 
 			// TODO: use single global dedicated thread for busy waiting, no timer threads
+			lv2_obj::sleep_timeout(*this, next - _now);
 			thread_ctrl::wait_for(next - _now);
 		}
 		else if (_state == SYS_TIMER_STATE_STOP)
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_for(10000);
 		}
 		else
 		{
@@ -143,7 +144,7 @@ error_code _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 	if (!period && start_time >= base_time)
 	{
 		// Invalid oneshot (TODO: what will happen if both args are 0?)
-		return CELL_ETIMEDOUT;
+		return not_an_error(CELL_ETIMEDOUT);
 	}
 	
 	if (period && period < 100)
@@ -289,16 +290,14 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 {
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
 
-	u64 start = ppu.gpr[10] = get_system_time();
 	u64 passed = 0;
 
-	// SLEEP
+	lv2_obj::sleep(ppu, std::max<u64>(1, sleep_time));
 
 	while (sleep_time >= passed)
 	{
-		// TODO: use single global dedicated thread for busy waiting
 		thread_ctrl::wait_for(std::max<u64>(1, sleep_time - passed));
-		passed = get_system_time() - start;
+		passed = get_system_time() - ppu.start_time;
 	}
 
 	return CELL_OK;

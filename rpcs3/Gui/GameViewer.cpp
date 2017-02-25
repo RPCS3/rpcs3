@@ -43,6 +43,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	m_sortColumn = 1;
 	m_sortAscending = true;
 	m_popup = new wxMenu();
+	InitPopupMenu();
 
 	Bind(wxEVT_LIST_ITEM_ACTIVATED, &GameViewer::DClick, this);
 	Bind(wxEVT_LIST_COL_CLICK, &GameViewer::OnColClick, this);
@@ -54,6 +55,24 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 GameViewer::~GameViewer()
 {
 	SaveSettings();
+}
+
+void GameViewer::InitPopupMenu()
+{
+	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
+#if defined (_WIN32)
+	// wxMenuItem::Set(Get)Font only available for the wxMSW port
+	wxFont font = GetFont();
+	font.SetWeight(wxFONTWEIGHT_BOLD);
+	boot_item->SetFont(font);
+#endif
+	m_popup->Append(boot_item);
+	m_popup->Append(1, _T("Configure"));
+	m_popup->Append(2, _T("Remove Game"));
+
+	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
+	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
+	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, 2);
 }
 
 void GameViewer::DoResize(wxSize size)
@@ -198,25 +217,6 @@ void GameViewer::DClick(wxListEvent& event)
 
 void GameViewer::RightClick(wxListEvent& event)
 {
-	for (wxMenuItem *item : m_popup->GetMenuItems()) {
-		m_popup->Destroy(item);
-	}
-	
-	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
-#if defined (_WIN32)
-	// wxMenuItem::Set(Get)Font only available for the wxMSW port
-	wxFont font = GetFont();
-	font.SetWeight(wxFONTWEIGHT_BOLD);
-	boot_item->SetFont(font);
-#endif
-	m_popup->Append(boot_item);
-	m_popup->Append(1, _T("Configure"));
-	m_popup->Append(2, _T("Remove Game"));
-
-	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
-	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
-	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, 2);
-
 	PopupMenu(m_popup, event.GetPoint());
 }
 
@@ -230,8 +230,11 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 {
 	long i = GetFirstSelected();
 	if (i < 0) return;
-
-	LOG_TODO(LOADER, "Configure: %s", m_game_data[i].root);
+	if (!fs::exists(fs::get_config_dir() + "data/" + m_game_data[i].root))
+	{
+		fs::create_dir(fs::get_config_dir() + "data/" + m_game_data[i].root);
+	}
+	SettingsDialog(this, fs::get_config_dir() + "data/" + m_game_data[i].root + "/config.yml");
 }
 
 void GameViewer::RemoveGame(wxCommandEvent& event)

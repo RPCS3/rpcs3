@@ -178,6 +178,8 @@ enum // old consts
 
 	CELL_GAMEDATA_ERRDIALOG_NONE   = 0,
 	CELL_GAMEDATA_ERRDIALOG_ALWAYS = 1,
+
+	CELL_DISCGAME_SYSP_TITLEID_SIZE=10,
 };
 
 struct CellGameDataSystemFileParam
@@ -191,6 +193,12 @@ struct CellGameDataSystemFileParam
 	be_t<u32> parentalLevel;
 	be_t<u32> attribute;
 	char reserved2[256];
+};
+struct CellDiscGameSystemFileParam {
+	char titleId[CELL_DISCGAME_SYSP_TITLEID_SIZE];
+	char reserved0[2];
+	be_t<u32> parentalLevel;
+	char reserved1[16];
 };
 
 struct CellGameDataStatGet

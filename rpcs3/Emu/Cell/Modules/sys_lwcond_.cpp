@@ -56,7 +56,7 @@ s32 sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		lwmutex->all_info++;
 
 		// call the syscall
-		if (s32 res = _sys_lwcond_signal(lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 1))
+		if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 1))
 		{
 			lwmutex->all_info--;
 
@@ -76,14 +76,14 @@ s32 sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		}
 
 		// call the syscall
-		return _sys_lwcond_signal(lwcond->lwcond_queue, 0, -1, 2);
+		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, -1, 2);
 	}
 
 	// if locking succeeded
 	lwmutex->all_info++;
 
 	// call the syscall
-	if (s32 res = _sys_lwcond_signal(lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 3))
+	if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 3))
 	{
 		lwmutex->all_info--;
 
@@ -111,7 +111,7 @@ s32 sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	if (lwmutex->vars.owner.load() == ppu.id)
 	{
 		// if owns the mutex, call the syscall
-		const s32 res = _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
+		const s32 res = _sys_lwcond_signal_all(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
 
 		if (res <= 0)
 		{
@@ -134,11 +134,11 @@ s32 sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		}
 
 		// call the syscall
-		return _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
+		return _sys_lwcond_signal_all(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
 	}
 
 	// if locking succeeded, call the syscall
-	s32 res = _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
+	s32 res = _sys_lwcond_signal_all(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
 
 	if (res > 0)
 	{
@@ -171,7 +171,7 @@ s32 sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_
 		lwmutex->all_info++;
 
 		// call the syscall
-		if (s32 res = _sys_lwcond_signal(lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 1))
+		if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 1))
 		{
 			lwmutex->all_info--;
 
@@ -191,14 +191,14 @@ s32 sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_
 		}
 
 		// call the syscall
-		return _sys_lwcond_signal(lwcond->lwcond_queue, 0, ppu_thread_id, 2);
+		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, ppu_thread_id, 2);
 	}
 
 	// if locking succeeded
 	lwmutex->all_info++;
 
 	// call the syscall
-	if (s32 res = _sys_lwcond_signal(lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 3))
+	if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 3))
 	{
 		lwmutex->all_info--;
 

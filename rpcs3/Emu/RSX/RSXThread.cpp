@@ -38,11 +38,6 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	std::string old_shaders_cache::shaders_cache::path_to_root()
-	{
-		return fs::get_executable_dir() + "data/";
-	}
-
 	void old_shaders_cache::shaders_cache::load(const std::string &path, shader_language lang)
 	{
 		const std::string lang_name(lang == shader_language::glsl ? "glsl" : "hlsl");
@@ -65,7 +60,6 @@ namespace rsx
 			}
 			catch (...)
 			{
-				LOG_WARNING(RSX, "Cache file '%s' ignored", entry.name);
 				continue;
 			}
 
@@ -87,56 +81,62 @@ namespace rsx
 
 	void old_shaders_cache::shaders_cache::load(shader_language lang)
 	{
-		std::string root = path_to_root();
-
-		//shared cache
-		load(root + "cache/", lang);
-
-		std::string title_id = Emu.GetTitleID();
-
-		if (!title_id.empty())
-		{
-			load(root + title_id + "/cache/", lang);
-		}
+		load(Emu.GetCachePath(), lang);
 	}
 
 	u32 get_address(u32 offset, u32 location)
 	{
-		u32 res = 0;
 
 		switch (location)
 		{
-		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
-		case CELL_GCM_LOCATION_LOCAL:
-		{
-			//TODO: don't use not named constants like 0xC0000000
-			res = 0xC0000000 + offset;
-			break;
-		}
-
-		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
-		case CELL_GCM_LOCATION_MAIN:
-		{
-			res = (u32)RSXIOMem.RealAddr(offset); // TODO: Error Check?
-			if (res == 0)
+			case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
+			case CELL_GCM_LOCATION_LOCAL:
 			{
-				fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+				// TODO: Don't use unnamed constants like 0xC0000000
+				return 0xC0000000 + offset;
 			}
 
-			//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
-			//{
-			//	_mm_mfence(); // probably doesn't have any effect on current implementation
-			//}
+			case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
+			case CELL_GCM_LOCATION_MAIN:
+			{
+				if (u32 result = RSXIOMem.RealAddr(offset))
+				{
+					return result;
+				}
 
-			break;
-		}
-		default:
-		{
+				fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+
+				//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
+				//{
+				//	_mm_mfence(); // probably doesn't have any effect on current implementation
+				//}
+			}
+
+			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT:
+				return 0x100000 + offset; // TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
+				return 0x800 + offset;	// TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
+				return 0x40 + offset; // TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
+				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+
+			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
+			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
+				return 0x100 + offset; // TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
+				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_RW (offset=0x%x, location=0x%x)" HERE, offset, location);
+
+			case CELL_GCM_CONTEXT_DMA_DEVICE_R:
+				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_R (offset=0x%x, location=0x%x)" HERE, offset, location);
+
 			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
 		}
-		}
 
-		return res;
 	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
@@ -375,6 +375,7 @@ namespace rsx
 						({
 							{ ppu_cmd::set_args, 1 }, u64{1},
 							{ ppu_cmd::lle_call, vblank_handler },
+							{ ppu_cmd::sleep, 0 }
 						});
 
 						intr_thread->notify();

@@ -26,6 +26,11 @@ error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribu
 
 	const u32 protocol = attr->protocol;
 
+	if (protocol == SYS_SYNC_RETRY)
+		sys_event_flag.todo("sys_event_flag_create(): SYS_SYNC_RETRY");
+	if (protocol == SYS_SYNC_PRIORITY_INHERIT)
+		sys_event_flag.todo("sys_event_flag_create(): SYS_SYNC_PRIORITY_INHERIT");
+
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
 		sys_event_flag.error("sys_event_flag_create(): unknown protocol (0x%x)", protocol);
@@ -86,9 +91,8 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 {
 	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	// Fix function arguments for external access
+	ppu.gpr[3] = -1;
 	ppu.gpr[4] = bitptn;
 	ppu.gpr[5] = mode;
 	ppu.gpr[6] = 0;
@@ -124,6 +128,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 		flag.waiters++;
 		flag.sq.emplace_back(&ppu);
+		flag.sleep(ppu, timeout);
 		return CELL_EBUSY;
 	});
 
@@ -145,13 +150,11 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		return CELL_OK;
 	}
 
-	// SLEEP
-
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -164,8 +167,9 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 				}
 
 				flag->waiters--;
-				if (result) *result = flag->pattern;
-				return not_an_error(CELL_ETIMEDOUT);
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				ppu.gpr[6] = flag->pattern;
+				break;
 			}
 
 			thread_ctrl::wait_for(timeout - passed);
@@ -176,8 +180,9 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 	}
 	
+	ppu.test_state();
 	if (result) *result = ppu.gpr[6];
-	return not_an_error(ppu.gpr[5] ? CELL_OK : CELL_ECANCELED);
+	return not_an_error(ppu.gpr[3]);
 }
 
 error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
@@ -216,6 +221,12 @@ error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> res
 error_code sys_event_flag_set(u32 id, u64 bitptn)
 {
 	// Warning: may be called from SPU thread.
+	auto cpu = get_current_cpu_thread();
+
+	if (cpu && cpu->id_type() != 1)
+	{
+		cpu = nullptr;
+	}
 
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
@@ -231,49 +242,70 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 		return CELL_OK;
 	}
 
-	semaphore_lock lock(flag->mutex);
-
-	// Sort sleep queue in required order
-	if (flag->protocol != SYS_SYNC_FIFO)
+	if (true)
 	{
-		std::stable_sort(flag->sq.begin(), flag->sq.end(), [](cpu_thread* a, cpu_thread* b)
+		semaphore_lock lock(flag->mutex);
+
+		// Sort sleep queue in required order
+		if (flag->protocol != SYS_SYNC_FIFO)
 		{
-			return static_cast<ppu_thread*>(a)->prio < static_cast<ppu_thread*>(b)->prio;
+			std::stable_sort(flag->sq.begin(), flag->sq.end(), [](cpu_thread* a, cpu_thread* b)
+			{
+				return static_cast<ppu_thread*>(a)->prio < static_cast<ppu_thread*>(b)->prio;
+			});
+		}
+
+		// Process all waiters in single atomic op
+		const u32 count = flag->pattern.atomic_op([&](u64& value)
+		{
+			value |= bitptn;
+			u32 count = 0;
+
+			for (auto cpu : flag->sq)
+			{
+				auto& ppu = static_cast<ppu_thread&>(*cpu);
+
+				const u64 pattern = ppu.gpr[4];
+				const u64 mode = ppu.gpr[5];
+				
+				if (lv2_event_flag::check_pattern(value, pattern, mode, &ppu.gpr[6]))
+				{
+					ppu.gpr[3] = CELL_OK;
+					count++;
+				}
+			}
+
+			return count;
 		});
-	}
 
-	// Process all waiters in single atomic op
-	flag->pattern.atomic_op([&](u64& value)
-	{
-		value |= bitptn;
+		if (!count)
+		{
+			return CELL_OK;
+		}
+		else if (cpu)
+		{
+			cpu->state += cpu_flag::is_waiting;
+		}
 
-		for (auto cpu : flag->sq)
+		// Remove waiters
+		const auto tail = std::remove_if(flag->sq.begin(), flag->sq.end(), [&](cpu_thread* cpu)
 		{
 			auto& ppu = static_cast<ppu_thread&>(*cpu);
 
-			const u64 pattern = ppu.gpr[4];
-			const u64 mode = ppu.gpr[5];
-			ppu.gpr[3] = lv2_event_flag::check_pattern(value, pattern, mode, &ppu.gpr[6]);
-		}
-	});
+			if (ppu.gpr[3] == CELL_OK)
+			{
+				flag->waiters--;
+				flag->awake(ppu);
+				return true;
+			}
 
-	// Remove waiters
-	const auto tail = std::remove_if(flag->sq.begin(), flag->sq.end(), [&](cpu_thread* cpu)
-	{
-		auto& ppu = static_cast<ppu_thread&>(*cpu);
+			return false;
+		});
 
-		if (ppu.gpr[3])
-		{
-			flag->waiters--;
-			ppu.set_signal();
-			return true;
-		}
-
-		return false;
-	});
-
-	flag->sq.erase(tail, flag->sq.end());
+		flag->sq.erase(tail, flag->sq.end());
+	}
 	
+	if (cpu) cpu->test_state();
 	return CELL_OK;
 }
 
@@ -294,7 +326,7 @@ error_code sys_event_flag_clear(u32 id, u64 bitptn)
 	return CELL_OK;
 }
 
-error_code sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
+error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 {
 	sys_event_flag.trace("sys_event_flag_cancel(id=0x%x, num=*0x%x)", id, num);
 
@@ -307,26 +339,33 @@ error_code sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		return CELL_ESRCH;
 	}
 
-	semaphore_lock lock(flag->mutex);
-
-	// Get current pattern
-	const u64 pattern = flag->pattern;
-
-	// Set count
-	*num = ::size32(flag->sq);
-
-	// Signal all threads to return CELL_ECANCELED
-	while (auto thread = flag->schedule<ppu_thread>(flag->sq, flag->protocol))
+	u32 value = 0;
 	{
-		auto& ppu = static_cast<ppu_thread&>(*thread);
+		semaphore_lock lock(flag->mutex);
 
-		ppu.gpr[4] = pattern;
-		ppu.gpr[5] = 0;
+		// Get current pattern
+		const u64 pattern = flag->pattern;
 
-		thread->set_signal();
-		flag->waiters--;
+		// Set count
+		value = ::size32(flag->sq);
+
+		// Signal all threads to return CELL_ECANCELED
+		while (auto thread = flag->schedule<ppu_thread>(flag->sq, flag->protocol))
+		{
+			ppu.state += cpu_flag::is_waiting;
+
+			auto& ppu = static_cast<ppu_thread&>(*thread);
+
+			ppu.gpr[3] = CELL_ECANCELED;
+			ppu.gpr[6] = pattern;
+
+			flag->waiters--;
+			flag->awake(ppu);
+		}
 	}
 
+	ppu.test_state();
+	if (num) *num = value;
 	return CELL_OK;
 }
 

@@ -68,17 +68,19 @@ public:
 	static const arm_static_module* get_module(const std::string& name);
 
 	template<typename T, T Func>
-	static void register_static_function(const char* module, const char* name, arm_function_t func, u32 fnid, u32 flags)
+	static auto& register_static_function(const char* module, const char* name, arm_function_t func, u32 fnid)
 	{
 		auto& info = access_static_function(module, fnid);
 
 		info.name  = name;
 		info.index = arm_function_manager::register_function<T, Func>(func);
-		info.flags = flags;
+		info.flags = 0;
+
+		return info;
 	}
 
 	template<typename T, T* Var>
-	static void register_static_variable(const char* module, const char* name, u32 vnid, void(*init)())
+	static auto& register_static_variable(const char* module, const char* name, u32 vnid)
 	{
 		static_assert(std::is_same<u32, typename T::addr_type>::value, "Static variable registration: vm::gvar<T> expected");
 
@@ -86,9 +88,11 @@ public:
 
 		info.name  = name;
 		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
-		info.init  = init ? init : [] {};
+		info.init  = [] {};
 		info.size  = SIZE_32(typename T::type);
 		info.align = ALIGN_32(typename T::type);
+
+		return info;
 	}
 
 	static const arm_static_module SceAppMgr;
@@ -163,6 +167,6 @@ public:
 	static const arm_static_module SceVoiceQoS;
 };
 
-#define REG_FNID(module, nid, func, ...) arm_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), nid, {__VA_ARGS__})
+#define REG_FNID(module, nid, func) arm_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), nid)
 
-#define REG_VNID(module, nid, var, ...) arm_module_manager::register_static_variable<decltype(var), &var>(#module, #var, nid, {__VA_ARGS__})
+#define REG_VNID(module, nid, var) arm_module_manager::register_static_variable<decltype(var), &var>(#module, #var, nid)

@@ -43,6 +43,6 @@ class ppu_thread;
 
 error_code _sys_lwcond_create(vm::ps3::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ps3::ptr<sys_lwcond_t> control, u64 name, u32 arg5);
 error_code _sys_lwcond_destroy(u32 lwcond_id);
-error_code _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode);
-error_code _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode);
+error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode);
+error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 mode);
 error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 timeout);

@@ -917,7 +917,10 @@ void spu_recompiler::BISL(spu_opcode_t op)
 
 void spu_recompiler::IRET(spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	c->mov(*addr, SPU_OFF_32(srr0));
+	c->and_(*addr, 0x3fffc);
+	if (op.d || op.e) c->or_(*addr, op.e << 26 | op.d << 27); // interrupt flags neutralize jump table
+	c->jmp(*jt);
 }
 
 void spu_recompiler::BISLED(spu_opcode_t op)

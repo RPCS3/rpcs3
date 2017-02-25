@@ -60,7 +60,7 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 
 				while (addr > found && index + 1 < funcs.size())
 				{
-					LOG_ERROR(LOADER, "%s.yml : validation failed at 0x%x (0x%x, 0x%x)", fname, found, addr, size);
+					LOG_WARNING(LOADER, "%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", fname, found, addr, size);
 					index++;
 					found = funcs[index].addr - reloc;
 				}
@@ -71,14 +71,12 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 					continue;
 				}
 
-				if (size && size < funcs[index].size)
+				if (size && size != funcs[index].size)
 				{
-					LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", fname, found, funcs[index].size, addr, size);
-				}
-
-				if (size > funcs[index].size)
-				{
-					LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", fname, found, funcs[index].size, addr, size);
+					if (size + 4 != funcs[index].size || vm::read32(addr + size) != ppu_instructions::NOP())
+					{
+						LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", fname, found, funcs[index].size, addr, size);
+					}
 				}
 
 				index++;
@@ -631,6 +629,34 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				}
 			}
 
+			if (ptr + 0x4 <= fend &&
+				(ptr[0] & 0xffff0000) == LIS(r11, 0) &&
+				(ptr[1] & 0xffff0000) == ADDI(r11, r11, 0) &&
+				ptr[2] == MTCTR(r11) &&
+				ptr[3] == BCTR())
+			{
+				// Simple gate
+				const u32 target = (ptr[0] << 16) + ppu_opcode_t{ptr[1]}.simm16;
+
+				if (target >= start && target < end)
+				{
+					auto& new_func = add_func(target, func.toc, func.addr);
+
+					if (new_func.blocks.empty())
+					{
+						func_queue.emplace_back(func);
+						continue;
+					}
+
+					func.size = 0x10;
+					func.blocks.emplace(func.addr, func.size);
+					func.attr += new_func.attr & ppu_attr::no_return;
+					func.called_from.emplace(target);
+					func.gate_target = target;
+					continue;
+				}
+			}
+
 			if (ptr + 4 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r2, r2, {}) &&
@@ -663,6 +689,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			}
 
 			if (ptr + 8 <= fend &&
+				(ptr[0] == STD(r2, r1, 0x28) && (ptr[1] & 0xfc000000) == HACK(0) && ptr[2] == BLR() ||
 				(ptr[0] & 0xffff0000) == LI(r12, 0) &&
 				(ptr[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
 				(ptr[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
@@ -670,13 +697,48 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				ptr[4] == LWZ(r0, r12, 0) &&
 				ptr[5] == LWZ(r2, r12, 4) &&
 				ptr[6] == MTCTR(r0) &&
-				ptr[7] == BCTR())
+				ptr[7] == BCTR()))
 			{
 				// The most used simple import stub
 				func.size = 0x20;
 				func.blocks.emplace(func.addr, func.size);
 				func.attr += ppu_attr::known_addr;
 				func.attr += ppu_attr::known_size;
+
+				// Look for another imports to fill gaps (hack)
+				auto p2 = ptr + 8;
+
+				while (p2 + 8 <= fend &&
+					(p2[0] == STD(r2, r1, 0x28) && (p2[1] & 0xfc000000) == HACK(0) && p2[2] == BLR() ||
+					(p2[0] & 0xffff0000) == LI(r12, 0) &&
+					(p2[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
+					(p2[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
+					p2[3] == STD(r2, r1, 0x28) &&
+					p2[4] == LWZ(r0, r12, 0) &&
+					p2[5] == LWZ(r2, r12, 4) &&
+					p2[6] == MTCTR(r0) &&
+					p2[7] == BCTR()))
+				{
+					auto& next = add_func(p2.addr(), 0, func.addr);
+					next.size = 0x20;
+					next.blocks.emplace(next.addr, next.size);
+					next.attr += ppu_attr::known_addr;
+					next.attr += ppu_attr::known_size;
+					p2 += 8;
+				}
+
+				continue;
+			}
+
+			if (ptr + 3 <= fend &&
+				ptr[0] == 0x7c0004ac &&
+				ptr[1] == 0x00000000 &&
+				ptr[2] == BLR())
+			{
+				// Weird function (illegal instruction)
+				func.size = 0xc;
+				func.blocks.emplace(func.addr, func.size);
+				//func.attr += ppu_attr::no_return;
 				continue;
 			}
 
@@ -805,7 +867,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 						add_block(_ptr.addr());
 					}
 
-					if (op.lk && (target == iaddr || test(pfunc->attr, ppu_attr::no_return)))
+					if (is_call && test(pfunc->attr, ppu_attr::no_return))
 					{
 						// Nothing
 					}
@@ -879,6 +941,16 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 						{
 							LOG_TRACE(PPU, "[0x%x] Jump table found: 0x%x-0x%x", func.addr, jt_addr, _ptr);
 						}
+					}
+
+					block.second = _ptr.addr() - block.first;
+					break;
+				}
+				else if (type == ppu_itype::TW || type == ppu_itype::TWI || type == ppu_itype::TD || type == ppu_itype::TDI)
+				{
+					if (op.opcode != ppu_instructions::TRAP())
+					{
+						add_block(_ptr.addr());
 					}
 
 					block.second = _ptr.addr() - block.first;
@@ -995,6 +1067,68 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				{
 					block.second = block.first >= next ? 0 : next - block.first;
 				}
+			}
+		}
+
+		// Suspicious block start
+		u32 start = func.addr + func.size;
+
+		if (next == end)
+		{
+			continue;
+		}
+
+		// Analyse gaps between functions
+		for (vm::cptr<u32> _ptr = vm::cast(start); _ptr.addr() < next;)
+		{
+			const u32 addr = _ptr.addr();
+			const ppu_opcode_t op{*_ptr++};
+			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+
+			if (type == ppu_itype::UNK)
+			{
+				break;
+			}
+			else if (addr == start && op.opcode == ppu_instructions::NOP())
+			{
+				if (start == func.addr + func.size)
+				{
+					// Extend function with tail NOPs (hack)
+					func.size += 4;
+				}
+
+				start += 4;
+				continue;
+			}
+			else if (type == ppu_itype::SC && op.opcode != ppu_instructions::SC(0))
+			{
+				break;
+			}
+			else if (addr == start && op.opcode == ppu_instructions::BLR())
+			{
+				start += 4;
+				continue;
+			}
+			else if (type == ppu_itype::B || type == ppu_itype::BC)
+			{
+				const u32 target = (op.aa ? 0 : addr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
+
+				if (target == addr)
+				{
+					break;
+				}
+
+				_ptr.set(next);
+			}
+			else if (type == ppu_itype::BCLR || type == ppu_itype::BCCTR)
+			{
+				_ptr.set(next);
+			}
+			
+			if (_ptr.addr() >= next)
+			{
+				LOG_WARNING(PPU, "Function gap: [0x%x] 0x%x bytes at 0x%x", func.addr, next - start, start);
+				break;
 			}
 		}
 	}

@@ -383,7 +383,27 @@ s32 cellSysutilRegisterCallbackDispatcher()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellSysutilUnregisterCallbackDispatcher()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellSysutilPacketRead()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 s32 cellSysutilPacketWrite()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellSysutilPacketBegin()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellSysutilPacketEnd()
 {
 	fmt::throw_exception("Unimplemented" HERE);
 }
@@ -497,6 +517,13 @@ s32 _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE()
 	return CELL_OK;
 }
 
+s32 cellSysutil_E1EC7B6A(vm::ptr<u32> unk)
+{
+	cellSysutil.todo("cellSysutil_E1EC7B6A(unk=*0x%x)", unk);
+	*unk = 0;
+	return CELL_OK;
+}
+
 extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
 extern void cellSysutil_MsgDialog_init();
@@ -540,7 +567,11 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysCacheClear);
 
 	REG_FUNC(cellSysutil, cellSysutilRegisterCallbackDispatcher);
+	REG_FUNC(cellSysutil, cellSysutilUnregisterCallbackDispatcher);
+	REG_FUNC(cellSysutil, cellSysutilPacketRead);
 	REG_FUNC(cellSysutil, cellSysutilPacketWrite);
+	REG_FUNC(cellSysutil, cellSysutilPacketBegin);
+	REG_FUNC(cellSysutil, cellSysutilPacketEnd);
 
 	REG_FUNC(cellSysutil, cellSysutilGameDataAssignVmc);
 	REG_FUNC(cellSysutil, cellSysutilGameDataExit);
@@ -565,4 +596,6 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16FindChildElementERKN4cxml7ElementEPKcS5_S5_);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE);
+
+	REG_FNID(cellSysutil, 0xE1EC7B6A, cellSysutil_E1EC7B6A);
 });
