@@ -898,3 +898,9 @@ constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
 {
 	return static_cast<error_code::not_an_error>(static_cast<s32>(value));
 }
+
+// Synchronization helper (cache-friendly busy waiting)
+inline void busy_wait(std::size_t count = 100)
+{
+	while (count--) _mm_pause();
+}

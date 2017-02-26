@@ -6,10 +6,10 @@
 // Lightweight semaphore helper class
 class semaphore_base
 {
-	// Semaphore value (shifted; negative values imply 0 with waiters, LSB is used to ping-pong signals between threads)
+	// Semaphore value
 	atomic_t<s32> m_value;
 
-	void imp_wait(bool lsb);
+	void imp_wait();
 
 	void imp_post(s32 _old);
 
@@ -23,10 +23,13 @@ protected:
 
 	void wait()
 	{
-		// Unconditional decrement
-		if (UNLIKELY(m_value.sub_fetch(1 << 1) < 0))
+		// Load value
+		const s32 value = m_value.load();
+
+		// Conditional decrement
+		if (UNLIKELY(value <= 0 || !m_value.compare_and_swap_test(value, value - 1)))
 		{
-			imp_wait(false);
+			imp_wait();
 		}
 	}
 
@@ -35,11 +38,11 @@ protected:
 	void post(s32 _max)
 	{
 		// Unconditional increment
-		const s32 value = m_value.fetch_add(1 << 1);
+		const s32 value = m_value.fetch_add(1);
 
 		if (UNLIKELY(value < 0 || value >= _max))
 		{
-			imp_post(value & ~1);
+			imp_post(value);
 		}
 	}
 
@@ -53,7 +56,7 @@ public:
 		const s32 value = m_value;
 
 		// Return only positive value
-		return value < 0 ? 0 : value >> 1;
+		return value < 0 ? 0 : value;
 	}
 };
 
@@ -61,8 +64,8 @@ public:
 template <s32 Max = 1, s32 Def = Max>
 class semaphore final : public semaphore_base
 {
-	static_assert(Max >= 0 && Max < (1 << 30), "semaphore<>: Max is out of bounds");
-	static_assert(Def >= 0 && Def < (1 << 30), "semaphore<>: Def is out of bounds");
+	static_assert(Max >= 0, "semaphore<>: Max is out of bounds");
+	static_assert(Def >= 0, "semaphore<>: Def is out of bounds");
 	static_assert(Def <= Max, "semaphore<>: Def is too big");
 
 	using base = semaphore_base;
@@ -70,13 +73,13 @@ class semaphore final : public semaphore_base
 public:
 	// Default constructor (recommended)
 	constexpr semaphore()
-		: base{Def << 1}
+		: base{Def}
 	{
 	}
 
 	// Explicit value constructor (not recommended)
 	explicit constexpr semaphore(s32 value)
-		: base{value << 1}
+		: base{value}
 	{
 	}
 
@@ -95,13 +98,13 @@ public:
 	// Return a semaphore
 	void post()
 	{
-		return base::post(Max << 1);
+		return base::post(Max);
 	}
 
 	// Try to return a semaphore
 	explicit_bool_t try_post()
 	{
-		return base::try_post(Max << 1);
+		return base::try_post(Max);
 	}
 
 	// Get max semaphore value

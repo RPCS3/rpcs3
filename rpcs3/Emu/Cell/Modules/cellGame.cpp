@@ -757,9 +757,21 @@ s32 cellGameThemeInstallFromBuffer()
 }
 
 
-s32 cellDiscGameGetBootDiscInfo()
+s32 cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getParam)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.warning("cellDiscGameGetBootDiscInfo(getParam=*0x%x)", getParam);
+	//this should only appear in disc games
+	const std::string dir = "/dev_bdvd/PS3_GAME"s;
+
+	if (!fs::is_dir(vfs::get(dir)))
+	{
+		cellGame.warning("cellDiscGameGetBootDiscInfo(): directory '%s' not found", dir);
+	}
+	const auto& psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+
+	if (psf.count("PARENTAL_LEVEL") != 0) getParam->parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
+	if (psf.count("TITLE_ID") != 0) strcpy_trunc(getParam->titleId, psf.at("TITLE_ID").as_string());
+
 	return CELL_OK;
 }
 

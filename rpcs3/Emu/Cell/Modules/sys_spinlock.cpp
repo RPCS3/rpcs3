@@ -4,30 +4,34 @@
 
 #include "sysPrxForUser.h"
 
-#include "Emu/Memory/wait_engine.h"
-
 extern logs::channel sysPrxForUser;
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_initialize(lock=*0x%x)", lock);
 
-	lock->exchange(0);
+	if (*lock)
+	{
+		*lock = 0;
+	}
 }
 
-void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
+void sys_spinlock_lock(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_lock(lock=*0x%x)", lock);
 
-	// Try exchange with 0xabadcafe, repeat until exchanged with 0
-	vm::wait_op(lock.addr(), 4, [&] { return lock->exchange(0xabadcafe) == 0; });
+	// Try to exchange with 0xabadcafe, repeat until exchanged with 0
+	while (*lock || lock->exchange(0xabadcafe))
+	{
+		ppu.test_state();
+	}
 }
 
 s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_trylock(lock=*0x%x)", lock);
 
-	if (lock->exchange(0xabadcafe))
+	if (*lock || lock->exchange(0xabadcafe))
 	{
 		return CELL_EBUSY;
 	}
@@ -39,9 +43,7 @@ void sys_spinlock_unlock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_unlock(lock=*0x%x)", lock);
 
-	lock->exchange(0);
-
-	vm::notify_at(lock.addr(), 4);
+	*lock = 0;
 }
 
 void sysPrxForUser_sys_spinlock_init()

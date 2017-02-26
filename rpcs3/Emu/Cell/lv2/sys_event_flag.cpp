@@ -91,8 +91,6 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 {
 	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	// Fix function arguments for external access
 	ppu.gpr[3] = -1;
 	ppu.gpr[4] = bitptn;
@@ -130,7 +128,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 		flag.waiters++;
 		flag.sq.emplace_back(&ppu);
-		flag.sleep(ppu, start_time, timeout);
+		flag.sleep(ppu, timeout);
 		return CELL_EBUSY;
 	});
 
@@ -156,7 +154,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -182,7 +180,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 	}
 	
-	ppu.check_state();
+	ppu.test_state();
 	if (result) *result = ppu.gpr[6];
 	return not_an_error(ppu.gpr[3]);
 }
@@ -223,6 +221,12 @@ error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> res
 error_code sys_event_flag_set(u32 id, u64 bitptn)
 {
 	// Warning: may be called from SPU thread.
+	auto cpu = get_current_cpu_thread();
+
+	if (cpu && cpu->id_type() != 1)
+	{
+		cpu = nullptr;
+	}
 
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
@@ -252,9 +256,10 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 		}
 
 		// Process all waiters in single atomic op
-		flag->pattern.atomic_op([&](u64& value)
+		const u32 count = flag->pattern.atomic_op([&](u64& value)
 		{
 			value |= bitptn;
+			u32 count = 0;
 
 			for (auto cpu : flag->sq)
 			{
@@ -266,9 +271,21 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 				if (lv2_event_flag::check_pattern(value, pattern, mode, &ppu.gpr[6]))
 				{
 					ppu.gpr[3] = CELL_OK;
+					count++;
 				}
 			}
+
+			return count;
 		});
+
+		if (!count)
+		{
+			return CELL_OK;
+		}
+		else if (cpu)
+		{
+			cpu->state += cpu_flag::is_waiting;
+		}
 
 		// Remove waiters
 		const auto tail = std::remove_if(flag->sq.begin(), flag->sq.end(), [&](cpu_thread* cpu)
@@ -287,15 +304,8 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 
 		flag->sq.erase(tail, flag->sq.end());
 	}
-
-	if (auto cpu = get_current_cpu_thread())
-	{
-		if (cpu->id_type() == 1)
-		{
-			static_cast<ppu_thread&>(*cpu).check_state();
-		}
-	}
 	
+	if (cpu) cpu->test_state();
 	return CELL_OK;
 }
 
@@ -342,6 +352,8 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 		// Signal all threads to return CELL_ECANCELED
 		while (auto thread = flag->schedule<ppu_thread>(flag->sq, flag->protocol))
 		{
+			ppu.state += cpu_flag::is_waiting;
+
 			auto& ppu = static_cast<ppu_thread&>(*thread);
 
 			ppu.gpr[3] = CELL_ECANCELED;
@@ -352,10 +364,8 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 		}
 	}
 
+	ppu.test_state();
 	if (num) *num = value;
-
-	ppu.check_state();
-
 	return CELL_OK;
 }
 

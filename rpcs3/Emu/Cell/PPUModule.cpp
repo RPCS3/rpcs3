@@ -117,6 +117,8 @@ cfg::set_entry g_cfg_load_libs(cfg::root.core, "Load libraries");
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
+extern void ppu_initialize(const ppu_module& info);
+extern void ppu_initialize();
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
@@ -145,8 +147,8 @@ extern void ppu_execute_function(ppu_thread& ppu, u32 index)
 {
 	if (index < g_ppu_function_cache.size())
 	{
-		// If autopause occures, check_status() will hold the thread until unpaused.
-		if (debug::autopause::pause_function(g_ppu_fnid_cache[index]) && ppu.check_state()) throw cpu_flag::ret;
+		// If autopause occures, check_status() will hold the thread until unpaused
+		if (debug::autopause::pause_function(g_ppu_fnid_cache[index])) ppu.test_state();
 
 		if (const auto func = g_ppu_function_cache[index])
 		{
@@ -735,7 +737,7 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 	}
 }
 
-std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf)
+std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& name)
 {
 	std::vector<std::pair<u32, u32>> segments;
 	std::vector<std::pair<u32, u32>> sections;
@@ -931,7 +933,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf)
 	prx->start.set(prx->specials[0xbc9a0086]);
 	prx->stop.set(prx->specials[0xab779874]);
 	prx->exit.set(prx->specials[0x3ab9a95e]);
-
+	prx->name = name;
 	return prx;
 }
 
@@ -952,9 +954,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	// Section info (optional)
 	std::vector<std::pair<u32, u32>> sections;
-
-	// Functions
-	std::vector<ppu_function> exec_set;
 
 	// TLS information
 	u32 tls_vaddr = 0;
@@ -1114,7 +1113,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Initialize process
-	std::vector<u32> start_funcs;
+	std::vector<std::shared_ptr<lv2_prx>> loaded_modules;
 
 	// Load modules
 	const std::string& lle_dir = vfs::get("/dev_flash/sys/external");
@@ -1125,7 +1124,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		if (obj == elf_error::ok)
 		{
-			start_funcs.push_back(ppu_load_prx(obj)->start.addr());
+			loaded_modules.push_back(ppu_load_prx(obj, "liblv2.sprx"));
 		}
 		else
 		{
@@ -1142,16 +1141,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{
 				LOG_WARNING(LOADER, "Loading library: %s", name);
 
-				const auto prx = ppu_load_prx(obj);
-
-				// Register start function
-				if (prx->start)
-				{
-					start_funcs.push_back(prx->start.addr());
-				}
-
-				// Add functions
-				exec_set.insert(exec_set.end(), prx->funcs.begin(), prx->funcs.end());
+				auto prx = ppu_load_prx(obj, name);
 
 				if (prx->funcs.empty())
 				{
@@ -1162,6 +1152,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					// TODO: fix arguments
 					ppu_validate(lle_dir + '/' + name, prx->funcs, prx->funcs[0].addr);
 				}
+
+				loaded_modules.emplace_back(std::move(prx));
 			}
 			else
 			{
@@ -1292,18 +1284,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 	}
 
-	// Analyse executable
-	std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0);
+	{
+		// Analyse executable
+		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0);
 
-	ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
+		ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
 
-	// Append
-	exec_set.insert(exec_set.cend(),
-		std::make_move_iterator(main_funcs.begin()),
-		std::make_move_iterator(main_funcs.end()));
-
-	// Share function list
-	fxm::make<std::vector<ppu_function>>(std::move(exec_set));
+		// Share function list
+		fxm::make<std::vector<ppu_function>>(std::move(main_funcs));
+	}
 
 	// Set SDK version
 	g_ps3_sdk_version = sdk_version;
@@ -1344,13 +1333,18 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Run start functions
-	for (u32 func : start_funcs)
+	for (const auto& prx : loaded_modules)
 	{
+		if (!prx->start)
+		{
+			continue;
+		}
+
 		// Reset arguments, run module entry point function
 		ppu->cmd_list
 		({
 			{ ppu_cmd::set_args, 2 }, u64{0}, u64{0},
-			{ ppu_cmd::lle_call, func },
+			{ ppu_cmd::lle_call, prx->start.addr() },
 		});
 	}
 

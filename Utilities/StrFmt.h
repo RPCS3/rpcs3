@@ -153,7 +153,7 @@ struct fmt_class_string
 
 		out += prefix;
 
-		for (u64 i = 0; i < 64; i++)
+		for (u64 i = 0; i < 63; i++)
 		{
 			const u64 mask = 1ull << i;
 
@@ -161,11 +161,16 @@ struct fmt_class_string
 			{
 				fmt(out, i);
 
-				if (arg > mask)
+				if (arg >> (i + 1))
 				{
 					out += delim;
 				}
 			}
+		}
+
+		if (arg & (1ull << 63))
+		{
+			fmt(out, 63);
 		}
 
 		out += suffix;

@@ -2,6 +2,8 @@
 #include "Emu/System.h"
 #include "CPUThread.h"
 
+#include <thread>
+
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
 
@@ -17,10 +19,11 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::suspend: return "s";
 		case cpu_flag::ret: return "ret";
 		case cpu_flag::signal: return "sig";
-		case cpu_flag::dbg_global_pause: return "G.PAUSE";
-		case cpu_flag::dbg_global_stop: return "G.EXIT";
+		case cpu_flag::dbg_global_pause: return "G-PAUSE";
+		case cpu_flag::dbg_global_stop: return "G-EXIT";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
+		case cpu_flag::is_waiting: return "w";
 		case cpu_flag::__bitset_enum_max: break;
 		}
 
@@ -63,6 +66,7 @@ void cpu_thread::on_task()
 			}
 
 			state -= cpu_flag::ret;
+			state += cpu_flag::is_waiting;
 			continue;
 		}
 
@@ -93,8 +97,9 @@ bool cpu_thread::check_state()
 
 	while (true)
 	{
-		if (test(state & cpu_flag::exit))
+		if (test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
 		{
+			state += cpu_flag::is_waiting;
 			return true;
 		}
 
@@ -103,9 +108,19 @@ bool cpu_thread::check_state()
 			cpu_sleep_called = false;
 		}
 
-		if (!test(state & (cpu_state_pause + cpu_flag::dbg_global_stop)))
+		if (!test(state, cpu_state_pause))
 		{
+			if (test(state, cpu_flag::is_waiting))
+			{
+				state -= cpu_flag::is_waiting;
+			}
+			
 			break;
+		}
+
+		if (!state.test_and_set(cpu_flag::is_waiting))
+		{
+			continue;
 		}
 
 		if (test(state & cpu_flag::suspend) && !cpu_sleep_called)
@@ -122,6 +137,7 @@ bool cpu_thread::check_state()
 
 	if (test(state_, cpu_flag::ret + cpu_flag::stop))
 	{
+		state += cpu_flag::is_waiting;
 		return true;
 	}
 
@@ -131,7 +147,19 @@ bool cpu_thread::check_state()
 		state -= cpu_flag::dbg_step;
 	}
 
+	state -= cpu_flag::is_waiting;
 	return false;
+}
+
+void cpu_thread::test_state()
+{
+	if (UNLIKELY(test(state)))
+	{
+		if (check_state())
+		{
+			throw cpu_flag::ret;
+		}
+	}
 }
 
 void cpu_thread::run()

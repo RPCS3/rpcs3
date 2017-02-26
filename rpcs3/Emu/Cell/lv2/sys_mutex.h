@@ -128,17 +128,17 @@ struct lv2_mutex final : lv2_obj
 	}
 
 	template <typename T>
-	void reown()
+	T* reown()
 	{
 		if (auto cpu = schedule<T>(sq, protocol))
 		{
 			owner = cpu->id << 1 | !sq.empty();
-
-			awake(*cpu);
+			return static_cast<T*>(cpu);
 		}
 		else
 		{
 			owner = 0;
+			return nullptr;
 		}
 	}
 };

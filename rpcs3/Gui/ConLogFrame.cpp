@@ -46,7 +46,7 @@ struct gui_listener : logs::listener
 		delete read;
 	}
 
-	void log(const logs::message& msg, const std::string& prefix, const std::string& text)
+	void log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& text)
 	{
 		if (msg.sev <= enabled)
 		{

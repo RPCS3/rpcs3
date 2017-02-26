@@ -338,6 +338,34 @@ struct SelfHeader
 	void Show(){}
 };
 
+class SCEDecrypter
+{
+protected:
+	// Main SELF file stream.
+	const fs::file& sce_f;
+
+	// SCE headers.
+	SceHeader sce_hdr;
+
+	// Metadata structs.
+	MetadataInfo meta_info;
+	MetadataHeader meta_hdr;
+	std::vector<MetadataSectionHeader> meta_shdr;
+
+	// Internal data buffers.
+	std::unique_ptr<u8[]> data_keys;
+	u32 data_keys_length;
+	std::unique_ptr<u8[]> data_buf;
+	u32 data_buf_length;
+
+public:
+	SCEDecrypter(const fs::file& s);
+	std::vector<fs::file> MakeFile();
+	bool LoadHeaders();
+	bool LoadMetadata(const u8 erk[32], const u8 riv[16]);
+	bool DecryptData();
+};
+
 class SELFDecrypter
 {
 	// Main SELF file stream.

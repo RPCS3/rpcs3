@@ -867,7 +867,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 						add_block(_ptr.addr());
 					}
 
-					if (op.lk && (target == iaddr || test(pfunc->attr, ppu_attr::no_return)))
+					if (is_call && test(pfunc->attr, ppu_attr::no_return))
 					{
 						// Nothing
 					}
@@ -946,8 +946,13 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
-				else if (op.opcode == ppu_instructions::TRAP())
+				else if (type == ppu_itype::TW || type == ppu_itype::TWI || type == ppu_itype::TD || type == ppu_itype::TDI)
 				{
+					if (op.opcode != ppu_instructions::TRAP())
+					{
+						add_block(_ptr.addr());
+					}
+
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
@@ -978,7 +983,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			const auto next = func.blocks.upper_bound(block.first);
 
 			// Normalize block if necessary
-			if (next != func.blocks.end())
+			if (next != func.blocks.end() && block.second > next->first - block.first)
 			{
 				block.second = next->first - block.first;
 			}
@@ -1131,9 +1136,11 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Convert map to vector (destructive)
 	std::vector<ppu_function> result;
 
-	for (auto&& func : funcs)
+	for (auto&& pair : funcs)
 	{
-		result.emplace_back(std::move(func.second));
+		auto& func = pair.second;
+		LOG_TRACE(PPU, "Function __0x%x (size=0x%x, toc=0x%x, attr %#x)", func.addr, func.size, func.toc, func.attr);
+		result.emplace_back(std::move(func));
 	}
 
 	LOG_NOTICE(PPU, "Function analysis: %zu functions (%zu enqueued)", result.size(), func_queue.size());

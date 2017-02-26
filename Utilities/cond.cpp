@@ -1,6 +1,10 @@
 #include "cond.h"
 #include "sync.h"
 
+#ifndef _WIN32
+#include <thread>
+#endif
+
 bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 {
 	verify(HERE), _old != -1; // Very unlikely: it requires 2^32 distinct threads to wait simultaneously
@@ -24,7 +28,7 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	}
 
 	return true;
-#elif __linux__
+#else
 	timespec timeout;
 	timeout.tv_sec  = _timeout / 1000000;
 	timeout.tv_nsec = (_timeout % 1000000) * 1000;
@@ -46,11 +50,6 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 		// Not a wakeup
 		verify(HERE), err == EAGAIN;
 	}
-#else
-	// TODO
-	std::this_thread::sleep_for(std::chrono::microseconds(50));
-	verify(HERE), m_value--;
-	return true;
 #endif
 }
 
@@ -73,8 +72,8 @@ void cond_variable::imp_wake(u32 _count) noexcept
 	{
 		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 	}
-#elif __linux__
-	for (u32 i = _count; i > 0; sched_yield())
+#else
+	for (u32 i = _count; i > 0; std::this_thread::yield())
 	{
 		const u32 value = m_value;
 
@@ -92,7 +91,7 @@ void cond_variable::imp_wake(u32 _count) noexcept
 
 		if (const int res = futex((int*)&m_value.raw(), FUTEX_WAKE_PRIVATE, i > INT_MAX ? INT_MAX : i, nullptr, nullptr, 0))
 		{
-			verify(HERE), res >= 0 && res <= i;
+			verify(HERE), res >= 0 && (u32)res <= i;
 			i -= res;
 		}
 
@@ -104,4 +103,3 @@ void cond_variable::imp_wake(u32 _count) noexcept
 	}
 #endif
 }
-

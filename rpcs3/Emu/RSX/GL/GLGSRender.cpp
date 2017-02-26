@@ -226,24 +226,8 @@ void GLGSRender::begin()
 			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
 			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
 
-		if (rsx::method_registers.surface_color() == rsx::surface_color_format::w16z16y16x16) //TODO: check another color formats
-		{
-			u16 blend_color_r = rsx::method_registers.blend_color_16b_r();
-			u16 blend_color_g = rsx::method_registers.blend_color_16b_g();
-			u16 blend_color_b = rsx::method_registers.blend_color_16b_b();
-			u16 blend_color_a = rsx::method_registers.blend_color_16b_a();
-
-			__glcheck glBlendColor(blend_color_r / 65535.f, blend_color_g / 65535.f, blend_color_b / 65535.f, blend_color_a / 65535.f);
-		}
-		else
-		{
-			u8 blend_color_r = rsx::method_registers.blend_color_8b_r();
-			u8 blend_color_g = rsx::method_registers.blend_color_8b_g();
-			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
-			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
-
-			__glcheck glBlendColor(blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f);
-		}
+		auto blend_colors = rsx::get_constant_blend_colors();
+		__glcheck glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
 
 		__glcheck glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
 			blend_equation(rsx::method_registers.blend_equation_a()));
@@ -733,6 +717,7 @@ bool GLGSRender::load_program()
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	m_program->use();
 
+
 	if (old_program == m_program && !m_transform_constants_dirty)
 	{
 		//This path is taken alot so the savings are tangible
@@ -743,6 +728,7 @@ bool GLGSRender::load_program()
 			float fog0, fog1;
 			u32   alpha_tested;
 			float alpha_ref;
+			u32   transform_branch_bits;
 		}
 		tmp = {};
 		
@@ -758,7 +744,9 @@ bool GLGSRender::load_program()
 		tmp.fog1 = rsx::method_registers.fog_params_1();
 		tmp.alpha_tested = rsx::method_registers.alpha_test_enabled();
 		tmp.alpha_ref = rsx::method_registers.alpha_ref();
+		tmp.transform_branch_bits = rsx::method_registers.transform_branch_bits();
 
+		//TODO: Faster comparison algorithm
 		size_t old_hash = m_transform_buffer_hash;
 		m_transform_buffer_hash = 0;
 
@@ -795,6 +783,7 @@ bool GLGSRender::load_program()
 	buf = static_cast<u8*>(mapping.first);
 	vertex_constants_offset = mapping.second;
 	fill_vertex_program_constants_data(buf);
+	*(reinterpret_cast<u32*>(buf + (468 * 4 * sizeof(float)))) = rsx::method_registers.transform_branch_bits();
 
 	// Fragment constants
 	mapping = m_uniform_ring_buffer->alloc_from_heap(fragment_buffer_size, m_uniform_buffer_offset_align);

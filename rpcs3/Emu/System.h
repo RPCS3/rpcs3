@@ -50,6 +50,7 @@ class Emulator final
 
 	std::string m_path;
 	std::string m_elf_path;
+	std::string m_cache_path;
 	std::string m_title_id;
 	std::string m_title;
 
@@ -96,6 +97,11 @@ public:
 	const std::string& GetTitle() const
 	{
 		return m_title;
+	}
+
+	const std::string& GetCachePath() const
+	{
+		return m_cache_path;
 	}
 
 	u64 GetPauseTime()

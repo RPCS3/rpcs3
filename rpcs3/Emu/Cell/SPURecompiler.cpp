@@ -26,7 +26,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	const auto func = spu.spu_db->analyse(_ls, spu.pc);
 
 	// Reset callstack if necessary
-	if (func->does_reset_stack && spu.recursion_level)
+	if ((func->does_reset_stack && spu.recursion_level) || spu.recursion_level >= 128)
 	{
 		spu.state += cpu_flag::ret;
 		return;
@@ -77,7 +77,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 
 	spu.pc = res & 0x3fffc;
 
-	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST) > SPU_EVENT_INTR_ENABLED)
+	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST & spu.ch_event_mask) > SPU_EVENT_INTR_ENABLED)
 	{
 		spu.ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
 		spu.srr0 = std::exchange(spu.pc, 0);

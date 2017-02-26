@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 #include <deque>
@@ -107,23 +107,24 @@ struct lv2_obj
 	}
 
 	// Remove the current thread from the scheduling queue, register timeout
-	static void sleep(named_thread&, u64 wait_until);
+	static void sleep_timeout(named_thread&, u64 timeout);
 
-	template <typename T>
-	static void sleep(T& thread, u64 start_time, u64 timeout)
+	static void sleep(cpu_thread& thread, u64 timeout = 0)
 	{
-		sleep(thread, timeout ? start_time + timeout : -1);
+		thread.state += cpu_flag::is_waiting;
+		sleep_timeout(thread, timeout);
 	}
 
 	// Schedule the thread
-	static void awake(class cpu_thread&, u32 prio);
+	static void awake(cpu_thread&, u32 prio);
 
-	template <typename T>
-	static void awake(T& cpu)
+	static void awake(cpu_thread& thread)
 	{
-		awake(cpu, -1);
+		awake(thread, -1);
 	}
 
+	static void lock_all();
+	static void unlock_all();
 	static void cleanup();
 
 private:

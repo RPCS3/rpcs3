@@ -4,4 +4,4 @@
 
 //Syscalls
 
-error_code sys_gamepad_ycon_if(uint32_t packet_id, uint8_t *in, uint8_t *out);
+u32 sys_gamepad_ycon_if(uint8_t packet_id, vm::ps3::ptr<uint8_t> in, vm::ps3::ptr<uint8_t> out);

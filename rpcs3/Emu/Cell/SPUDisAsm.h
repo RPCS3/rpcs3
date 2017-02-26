@@ -140,7 +140,7 @@ public:
 	//0 - 10
 	void STOP(spu_opcode_t op)
 	{
-		DisAsm("stop", op.opcode & 0x1fffff);
+		op.rb ? UNK(op) : DisAsm("stop", op.opcode & 0x3fff);
 	}
 	void LNOP(spu_opcode_t op)
 	{

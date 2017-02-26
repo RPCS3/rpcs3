@@ -73,8 +73,6 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 {
 	sys_lwmutex.trace("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
 
-	const u64 start_time = ppu.gpr[10] = get_system_time();
-
 	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
 		if (u32 value = mutex.signaled)
@@ -96,7 +94,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 
 		mutex.sq.emplace_back(&ppu);
-		mutex.sleep(ppu, start_time, timeout);
+		mutex.sleep(ppu, timeout);
 		return false;
 	});
 
@@ -116,7 +114,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
@@ -140,7 +138,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 	}
 
-	ppu.check_state();
+	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -198,8 +196,9 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 	if (mutex.ret)
 	{
+		ppu.state += cpu_flag::is_waiting;
 		mutex->awake(*mutex.ret);
-		ppu.check_state();
+		ppu.test_state();
 	}
 
 	return CELL_OK;
