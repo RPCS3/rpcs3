@@ -116,6 +116,9 @@ enum
 	SCE_NP_COMMUNITY_ERROR_TOO_LARGE_RANGE              = 0x8002a1ae,
 	SCE_NP_COMMUNITY_ERROR_INVALID_PARTITION            = 0x8002a1af,
 	SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID              = 0x8002a1b1,
+
+	// DRM
+	SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND                  = 0x80029521,
 };
 
 using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
