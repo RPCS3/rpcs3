@@ -49,7 +49,7 @@ extern u64 get_system_time();
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
-extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&);
+extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_finalize();
 
 fs::file g_tty;
@@ -321,7 +321,7 @@ void Emulator::Load()
 			g_system = system_type::ps3;
 			m_status = Ready;
 			vm::ps3::init();
-			ppu_load_prx(ppu_prx);
+			ppu_load_prx(ppu_prx, "");
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{

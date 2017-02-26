@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/VirtualMemory.h"
+#include "Crypto/sha1.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -9,6 +10,7 @@
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
 #include "lv2/sys_sync.h"
+#include "lv2/sys_prx.h"
 
 #ifdef LLVM_AVAILABLE
 #include "restore_new.h"
@@ -93,7 +95,8 @@ cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder"
 const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
 
-static void ppu_initialize();
+extern void ppu_initialize();
+extern void ppu_initialize(const ppu_module& info);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
@@ -679,27 +682,27 @@ static void ppu_trace(u64 addr)
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 }
 
-static u32 ppu_lwarx(u32 addr)
+extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
 	be_t<u32> reg_value;
 	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
 	return reg_value;
 }
 
-static u64 ppu_ldarx(u32 addr)
+extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
 	be_t<u64> reg_value;
 	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
 	return reg_value;
 }
 
-static bool ppu_stwcx(u32 addr, u32 reg_value)
+extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
 	const be_t<u32> data = reg_value;
 	return vm::reservation_update(addr, &data, sizeof(data));
 }
 
-static bool ppu_stdcx(u32 addr, u64 reg_value)
+extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
 	const be_t<u64> data = reg_value;
 	return vm::reservation_update(addr, &data, sizeof(data));
@@ -716,9 +719,14 @@ static bool adde_carry(u64 a, u64 b, bool c)
 #endif
 }
 
-static void ppu_initialize()
+extern void ppu_initialize()
 {
-	const auto _funcs = fxm::get_always<std::vector<ppu_function>>();
+	const auto _funcs = fxm::withdraw<std::vector<ppu_function>>();
+
+	if (!_funcs)
+	{
+		return;
+	}
 
 	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm || _funcs->empty())
 	{
@@ -739,38 +747,145 @@ static void ppu_initialize()
 		return;
 	}
 
-	std::unordered_map<std::string, std::uintptr_t> link_table
+	std::size_t fpos = 0;
+
+	while (fpos < _funcs->size())
 	{
-		{ "__mptr", (u64)&vm::g_base_addr },
-		{ "__cptr", (u64)&s_ppu_compiled },
-		{ "__trap", (u64)&ppu_trap },
-		{ "__end", (u64)&ppu_unreachable },
-		{ "__check", (u64)&ppu_check },
-		{ "__trace", (u64)&ppu_trace },
-		{ "__hlecall", (u64)&ppu_execute_function },
-		{ "__syscall", (u64)&ppu_execute_syscall },
-		{ "__get_tb", (u64)&get_timebased_time },
-		{ "__lwarx", (u64)&ppu_lwarx },
-		{ "__ldarx", (u64)&ppu_ldarx },
-		{ "__stwcx", (u64)&ppu_stwcx },
-		{ "__stdcx", (u64)&ppu_stdcx },
-		{ "__adde_get_ca", (u64)&adde_carry },
-		{ "__vexptefp", (u64)&sse_exp2_ps },
-		{ "__vlogefp", (u64)&sse_log2_ps },
-		{ "__vperm", (u64)&sse_altivec_vperm },
-		{ "__lvsl", (u64)&sse_altivec_lvsl },
-		{ "__lvsr", (u64)&sse_altivec_lvsr },
-		{ "__lvlx", (u64)&sse_cellbe_lvlx },
-		{ "__lvrx", (u64)&sse_cellbe_lvrx },
-		{ "__stvlx", (u64)&sse_cellbe_stvlx },
-		{ "__stvrx", (u64)&sse_cellbe_stvrx },
-	};
+		// Split module (TODO)
+		ppu_module info;
+		info.name = fmt::format("%05X", _funcs->at(fpos).addr);
+		info.funcs.reserve(2000);
+		
+		while (fpos < _funcs->size() && info.funcs.size() < 2000)
+		{
+			info.funcs.emplace_back(std::move(_funcs->at(fpos++)));
+		}
+
+		if (!Emu.IsStopped())
+		{
+			ppu_initialize(info);
+		}
+	}
+
+	idm::select<lv2_obj, lv2_prx>([](u32, lv2_prx& prx)
+	{
+		if (!Emu.IsStopped())
+		{
+			ppu_initialize(prx);
+		}
+	});	
+}
+
+extern void ppu_initialize(const ppu_module& info)
+{
+	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm)
+	{
+		for (const auto& func : info.funcs)
+		{
+			ppu_register_function_at(func.addr, func.size, nullptr);
+		}
+
+		return;
+	}
+
+	// Compute module hash
+	std::string obj_name;
+	{
+		sha1_context ctx;
+		u8 output[20];
+		sha1_starts(&ctx);
+
+		for (const auto& func : info.funcs)
+		{
+			if (func.size == 0)
+			{
+				continue;
+			}
+
+			const be_t<u32> addr = func.addr;
+			const be_t<u32> size = func.size;
+			sha1_update(&ctx, reinterpret_cast<const u8*>(&addr), sizeof(addr));
+			sha1_update(&ctx, reinterpret_cast<const u8*>(&size), sizeof(size));
+
+			for (const auto& block : func.blocks)
+			{
+				if (block.second == 0)
+				{
+					continue;
+				}
+
+				sha1_update(&ctx, vm::ps3::_ptr<const u8>(block.first), block.second);
+			}
+		}
+		
+		sha1_finish(&ctx, output);
+
+		// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
+		fmt::append(obj_name, "v0-%s-%016X.obj", info.name, reinterpret_cast<be_t<u64>&>(output));
+	}
 
 #ifdef LLVM_AVAILABLE
 	using namespace llvm;
 
+	if (!fxm::check<jit_compiler>())
+	{
+		std::unordered_map<std::string, std::uintptr_t> link_table
+		{
+			{ "__mptr", (u64)&vm::g_base_addr },
+			{ "__cptr", (u64)&s_ppu_compiled },
+			{ "__trap", (u64)&ppu_trap },
+			{ "__end", (u64)&ppu_unreachable },
+			{ "__check", (u64)&ppu_check },
+			{ "__trace", (u64)&ppu_trace },
+			{ "__hlecall", (u64)&ppu_execute_function },
+			{ "__syscall", (u64)&ppu_execute_syscall },
+			{ "__get_tb", (u64)&get_timebased_time },
+			{ "__lwarx", (u64)&ppu_lwarx },
+			{ "__ldarx", (u64)&ppu_ldarx },
+			{ "__stwcx", (u64)&ppu_stwcx },
+			{ "__stdcx", (u64)&ppu_stdcx },
+			{ "__adde_get_ca", (u64)&adde_carry },
+			{ "__vexptefp", (u64)&sse_exp2_ps },
+			{ "__vlogefp", (u64)&sse_log2_ps },
+			{ "__vperm", (u64)&sse_altivec_vperm },
+			{ "__lvsl", (u64)&sse_altivec_lvsl },
+			{ "__lvsr", (u64)&sse_altivec_lvsr },
+			{ "__lvlx", (u64)&sse_cellbe_lvlx },
+			{ "__lvrx", (u64)&sse_cellbe_lvrx },
+			{ "__stvlx", (u64)&sse_cellbe_stvlx },
+			{ "__stvrx", (u64)&sse_cellbe_stvrx },
+		};
+
+		for (u64 index = 0; index < 1024; index++)
+		{
+			if (auto sc = ppu_get_syscall(index))
+			{
+				link_table.emplace(ppu_get_syscall_name(index), (u64)sc);
+			}
+		}
+
+		for (u64 index = 1; ; index++)
+		{
+			if (auto func = ppu_get_function(index))
+			{
+				link_table.emplace(ppu_get_module_function_name(index), (u64)func);
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		const auto jit = fxm::make<jit_compiler>(std::move(link_table));
+
+		LOG_SUCCESS(PPU, "LLVM: JIT initialized (%s)", jit->cpu());
+	}
+
+	// Initialize compiler
+	const auto jit = fxm::get<jit_compiler>();
+
 	// Create LLVM module
-	std::unique_ptr<Module> module = std::make_unique<Module>("", g_llvm_ctx);
+	std::unique_ptr<Module> module = std::make_unique<Module>(obj_name, g_llvm_ctx);
 
 	// Initialize target
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
@@ -783,14 +898,42 @@ static void ppu_initialize()
 	const auto _func = FunctionType::get(_void, { translator->GetContextType()->getPointerTo() }, false);
 
 	// Initialize function list
-	for (const auto& info : *_funcs)
+	for (const auto& func : info.funcs)
 	{
-		if (info.size)
+		if (func.size)
 		{
-			const auto f = cast<Function>(module->getOrInsertFunction(fmt::format("__0x%x", info.addr), _func));
+			const auto f = cast<Function>(module->getOrInsertFunction(fmt::format("__0x%x", func.addr), _func));
 			f->addAttribute(1, Attribute::NoAlias);
-			translator->AddFunction(info.addr, f);
+			translator->AddFunction(func.addr, f);
 		}
+	}
+
+	if (fs::file cached{Emu.GetCachePath() + obj_name})
+	{
+		std::string buf;
+		buf.reserve(cached.size());
+		cached.read(buf, cached.size());
+		auto buffer = llvm::MemoryBuffer::getMemBuffer(buf, obj_name);
+		auto result = llvm::object::ObjectFile::createObjectFile(*buffer);
+		
+		if (result)
+		{
+			jit->load(std::move(module), std::move(result.get()));
+
+			for (const auto& func : info.funcs)
+			{
+				if (func.size)
+				{
+					const std::uintptr_t link = jit->get(fmt::format("__0x%x", func.addr));
+					s_ppu_compiled[func.addr / 4] = ::narrow<u32>(link);
+				}
+			}
+
+			LOG_SUCCESS(PPU, "LLVM: Loaded executable: %s", obj_name);
+			return;
+		}
+		
+		LOG_ERROR(PPU, "LLVM: Failed to load executable: %s", obj_name);
 	}
 
 	legacy::FunctionPassManager pm(module.get());
@@ -831,11 +974,11 @@ static void ppu_initialize()
 
 	Emu.CallAfter([=]()
 	{
-		dlg->Create("Recompiling PPU executable.\nPlease wait...");
+		dlg->Create("Compiling PPU executable: " + info.name + "\nPlease wait...");
 	});
 
 	// Translate functions
-	for (size_t fi = 0; fi < _funcs->size(); fi++)
+	for (size_t fi = 0, fmax = info.funcs.size(); fi < fmax; fi++)
 	{
 		if (Emu.IsStopped())
 		{
@@ -843,21 +986,19 @@ static void ppu_initialize()
 			return;
 		}
 
-		auto& info = _funcs->at(fi);
-
-		if (info.size)
+		if (info.funcs[fi].size)
 		{
-			// Update dialog
-			Emu.CallAfter([=, max = _funcs->size()]()
+			// Update dialog		
+			Emu.CallAfter([=, max = info.funcs.size()]()
 			{
-				dlg->ProgressBarSetMsg(0, fmt::format("Compiling %u of %u", fi + 1, max));
+				dlg->ProgressBarSetMsg(0, fmt::format("Compiling %u of %u", fi + 1, fmax));
 
-				if (fi * 100 / max != (fi + 1) * 100 / max)
+				if (fi * 100 / fmax != (fi + 1) * 100 / fmax)
 					dlg->ProgressBarInc(0, 1);
 			});
 
 			// Translate
-			const auto func = translator->TranslateToIR(info, vm::_ptr<u32>(info.addr));
+			const auto func = translator->TranslateToIR(info.funcs[fi], vm::_ptr<u32>(info.funcs[fi].addr));
 
 			// Run optimization passes
 			pm.run(*func);
@@ -883,7 +1024,6 @@ static void ppu_initialize()
 						{
 							const auto n = ppu_get_syscall_name(index);
 							const auto f = cast<Function>(module->getOrInsertFunction(n, _func));
-							link_table.emplace(n, reinterpret_cast<std::uintptr_t>(ptr));
 
 							// Call the syscall directly
 							ReplaceInstWithInst(ci, CallInst::Create(f, {ci->getArgOperand(0)}));
@@ -898,7 +1038,6 @@ static void ppu_initialize()
 						{
 							const auto n = ppu_get_module_function_name(index);
 							const auto f = cast<Function>(module->getOrInsertFunction(n, _func));
-							link_table.emplace(n, reinterpret_cast<std::uintptr_t>(ptr));
 
 							// Call the function directly
 							ReplaceInstWithInst(ci, CallInst::Create(f, {ci->getArgOperand(0)}));
@@ -966,30 +1105,20 @@ static void ppu_initialize()
 		return;
 	}
 
-	LOG_SUCCESS(PPU, "LLVM: %zu functions generated", module->getFunctionList().size());
+	LOG_NOTICE(PPU, "LLVM: %zu functions generated", module->getFunctionList().size());
 
-	Module* module_ptr = module.get();
-
-	const auto jit = fxm::make<jit_compiler>(std::move(module), std::move(link_table));
-
-	if (!jit)
-	{
-		LOG_FATAL(PPU, "LLVM: Multiple modules are not yet supported");
-		return;
-	}
+	jit->make(std::move(module), Emu.GetCachePath() + obj_name);
 
 	// Get and install function addresses
-	for (const auto& info : *_funcs)
+	for (const auto& func : info.funcs)
 	{
-		if (info.size)
+		if (func.size)
 		{
-			const std::uintptr_t link = jit->get(fmt::format("__0x%x", info.addr));
-			s_ppu_compiled[info.addr / 4] = ::narrow<u32>(link);
-
-			LOG_TRACE(PPU, "** Function __0x%x -> 0x%llx (size=0x%x, toc=0x%x, attr %#x)", info.addr, link, info.size, info.toc, info.attr);
+			const std::uintptr_t link = jit->get(fmt::format("__0x%x", func.addr));
+			s_ppu_compiled[func.addr / 4] = ::narrow<u32>(link);
 		}
 	}
 
-	LOG_SUCCESS(PPU, "LLVM: Compilation finished (%s)", sys::getHostCPUName().data());
+	LOG_SUCCESS(PPU, "LLVM: Created executable: %s", obj_name);
 #endif
 }
