@@ -121,7 +121,7 @@ union D2
 	struct
 	{
 		u32         : 8;
-		u32 tex_num : 2;	/* Actual field may be 4 bits wide, but we only have 4 TIUs */
+		u32 tex_num : 2;	// Actual field may be 4 bits wide, but we only have 4 TIUs
 		u32         : 22;
 	};
 };
@@ -146,9 +146,12 @@ union D3
 		u32 sca_writemask_x : 1;
 		u32 src2l           : 11;
 	};
+
 	struct
 	{
-		u32                 : 29;
+		u32                 : 23;
+		u32 branch_index	: 5;	//Index into transform_program_branch_bits [x]
+		u32 brb_cond_true	: 1;	//If set, branch is taken if (b[x]) else if (!b[x])
 		u32 iaddrl          : 3;
 	};
 };

@@ -1140,6 +1140,11 @@ namespace rsx
 		{
 			return decode<NV4097_SET_TRANSFORM_CONSTANT_LOAD>().transform_constant_load();
 		}
+
+		u32 transform_branch_bits()
+		{
+			return registers[NV4097_SET_TRANSFORM_BRANCH_BITS];
+		}
 	};
 
 	extern rsx_state method_registers;
