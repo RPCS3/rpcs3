@@ -1136,9 +1136,11 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Convert map to vector (destructive)
 	std::vector<ppu_function> result;
 
-	for (auto&& func : funcs)
+	for (auto&& pair : funcs)
 	{
-		result.emplace_back(std::move(func.second));
+		auto& func = pair.second;
+		LOG_TRACE(PPU, "Function __0x%x (size=0x%x, toc=0x%x, attr %#x)", func.addr, func.size, func.toc, func.attr);
+		result.emplace_back(std::move(func));
 	}
 
 	LOG_NOTICE(PPU, "Function analysis: %zu functions (%zu enqueued)", result.size(), func_queue.size());

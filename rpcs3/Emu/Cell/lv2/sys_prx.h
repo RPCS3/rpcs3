@@ -73,14 +73,13 @@ struct sys_prx_get_module_list_t
 	vm::ps3::bptr<s32> idlist;
 };
 
-struct lv2_prx final : lv2_obj
+struct lv2_prx final : lv2_obj, ppu_module
 {
 	static const u32 id_base = 0x23000000;
 
 	bool is_started = false;
 
 	std::unordered_map<u32, u32> specials;
-	std::vector<ppu_function> funcs;
 
 	vm::ps3::ptr<s32(int argc, vm::ps3::ptr<void> argv)> start = vm::null;
 	vm::ps3::ptr<s32(int argc, vm::ps3::ptr<void> argv)> stop = vm::null;
