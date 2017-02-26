@@ -36,7 +36,7 @@ s32 sceNpTerm()
 	return CELL_OK;
 }
 
-s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	const std::string& enc_drm_path = drm_path.get_ptr();
 
@@ -51,9 +51,9 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 
 	if (k_licensee_addr)
 	{
-		for (s32 i = 0; i < 0x10; i++)
+		for (s8 i = 0; i < 0x10; i++)
 		{
-			k_licensee[i] = vm::read8(k_licensee_addr + i);
+			k_licensee[i] = *(k_licensee_addr + i);
 			k_licensee_str += fmt::format("%02x", k_licensee[i]);
 		}
 	}
@@ -101,14 +101,14 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 	return CELL_OK;
 }
 
-s32 sceNpDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 sceNpDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-s32 sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
 
@@ -117,15 +117,35 @@ s32 sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
 
 s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.todo("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
 
+	std::string rap_name = *content_id + ".rap";
+	fs::file rap_file = fs::file(vfs::get("/dev_hdd0/home/00000001/exdata/" + rap_name));
+
+	if (!rap_file)
+	{
+		// Game hasn't been purchased therefore no RAP file present
+		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
+	}
+
+	// Game has been purchased and there's a RAP file present
 	return CELL_OK;
 }
 
 s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
-	sceNp.todo("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
 
+	std::string rap_name = *content_id + ".rap";
+	fs::file rap_file = fs::file(vfs::get("/dev_hdd0/home/00000001/exdata/" + rap_name));
+
+	if (!rap_file)
+	{
+		// Game hasn't been purchased therefore no RAP file present
+		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
+	}
+	
+	// Game has been purchased and there's a RAP file present
 	return CELL_OK;
 }
 
@@ -144,18 +164,24 @@ s32 sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.warning("sceNpDrmProcessExitSpawn() -> sys_game_process_exitspawn");
 
+	sceNp.warning("klicensee: 0x%x", klicensee);
+	npDrmIsAvailable(klicensee, path);
+	
 	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn2(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.warning("sceNpDrmProcessExitSpawn2() -> sys_game_process_exitspawn2");
+	
+	sceNp.warning("klicensee: 0x%x", klicensee);
+	npDrmIsAvailable(klicensee, path);
 
 	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
