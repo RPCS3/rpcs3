@@ -245,12 +245,12 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 
 		// Bloat the beginning of each block: check state
 		const auto vstate = m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1));
-		const auto vblock = BasicBlock::Create(m_context, fmt::format("l0c_%llx", m_current_addr), m_function);
-		const auto vcheck = BasicBlock::Create(m_context, fmt::format("lcc_%llx", m_current_addr), m_function);
+		const auto vblock = BasicBlock::Create(m_context, fmt::format("l0c_%llx", block.first), m_function);
+		const auto vcheck = BasicBlock::Create(m_context, fmt::format("lcc_%llx", block.first), m_function);
 
 		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), vblock, vcheck, m_md_unlikely);
 		m_ir->SetInsertPoint(vcheck);
-		Call(GetType<void>(), "__check", m_thread, m_ir->getInt64(m_current_addr));
+		Call(GetType<void>(), "__check", m_thread, m_ir->getInt64(block.first));
 		m_ir->CreateBr(vblock);
 		m_ir->SetInsertPoint(vblock);
 
@@ -2355,7 +2355,7 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 
 void PPUTranslator::LWARX(ppu_opcode_t op)
 {
-	SetGpr(op.rd, Call(GetType<u32>(), "__lwarx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	SetGpr(op.rd, Call(GetType<u32>(), "__lwarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
 void PPUTranslator::LDX(ppu_opcode_t op)
@@ -2491,7 +2491,7 @@ void PPUTranslator::MULHW(ppu_opcode_t op)
 
 void PPUTranslator::LDARX(ppu_opcode_t op)
 {
-	SetGpr(op.rd, Call(GetType<u64>(), "__ldarx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	SetGpr(op.rd, Call(GetType<u64>(), "__ldarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
 void PPUTranslator::DCBF(ppu_opcode_t op)
@@ -2601,7 +2601,7 @@ void PPUTranslator::STDX(ppu_opcode_t op)
 
 void PPUTranslator::STWCX(ppu_opcode_t op)
 {
-	const auto bit = Call(GetType<bool>(), "__stwcx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetGpr(op.rs, 32));
+	const auto bit = Call(GetType<bool>(), "__stwcx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetGpr(op.rs, 32));
 	SetCrField(0, m_ir->getFalse(), m_ir->getFalse(), bit);
 }
 
@@ -2662,7 +2662,7 @@ void PPUTranslator::SUBFZE(ppu_opcode_t op)
 
 void PPUTranslator::STDCX(ppu_opcode_t op)
 {
-	const auto bit = Call(GetType<bool>(), "__stdcx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetGpr(op.rs));
+	const auto bit = Call(GetType<bool>(), "__stdcx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetGpr(op.rs));
 	SetCrField(0, m_ir->getFalse(), m_ir->getFalse(), bit);
 }
 
