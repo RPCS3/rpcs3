@@ -144,18 +144,20 @@ s32 sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.warning("sceNpDrmProcessExitSpawn() -> sys_game_process_exitspawn");
+	sceNp.warning("klicensee: 0x%x", klicensee);
 
 	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn2(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.warning("sceNpDrmProcessExitSpawn2() -> sys_game_process_exitspawn2");
+	sceNp.warning("klicensee: 0x%x", klicensee);
 
 	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
