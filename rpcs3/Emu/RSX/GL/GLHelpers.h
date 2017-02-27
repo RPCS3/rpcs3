@@ -80,6 +80,7 @@ namespace gl
 		void create()
 		{
 			m_value = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+			flags = GL_SYNC_FLUSH_COMMANDS_BIT;
 		}
 
 		void destroy()
@@ -132,7 +133,7 @@ namespace gl
 			{
 				if (flags)
 				{
-					err = glClientWaitSync(m_value, flags, 1000);
+					err = glClientWaitSync(m_value, flags, 0);
 					flags = 0;
 
 					switch (err)

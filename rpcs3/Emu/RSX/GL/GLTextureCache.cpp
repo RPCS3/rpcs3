@@ -54,7 +54,7 @@ namespace gl
 				task.cv.wait(lock, [&task] { return task.processed; });
 			}
 
-			verify(HERE), task.result == true;
+			task.received = true;
 			return task.result;
 		}
 

@@ -942,6 +942,8 @@ void GLGSRender::do_local_task()
 {
 	std::lock_guard<std::mutex> lock(queue_guard);
 
+	work_queue.remove_if([](work_item &q) { return q.received; });
+
 	for (work_item& q: work_queue)
 	{
 		std::unique_lock<std::mutex> lock(q.guard_mutex);
@@ -954,8 +956,6 @@ void GLGSRender::do_local_task()
 		lock.unlock();
 		q.cv.notify_one();
 	}
-
-	work_queue.clear();
 }
 
 work_item& GLGSRender::post_flush_request(u32 address)

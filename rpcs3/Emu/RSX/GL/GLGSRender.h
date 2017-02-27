@@ -17,9 +17,10 @@ struct work_item
 	std::condition_variable cv;
 	std::mutex guard_mutex;
 	
-	u32  address_to_flush;
-	bool processed;
-	bool result;
+	u32  address_to_flush = 0;
+	bool processed = false;
+	bool result = false;
+	bool received = false;
 };
 
 struct gcm_buffer_info
