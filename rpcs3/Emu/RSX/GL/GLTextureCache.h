@@ -712,7 +712,15 @@ namespace gl
 				return;
 			}
 
-			verify(HERE), region->is_locked();
+			if (!region->is_locked())
+			{
+				verify(HERE), region->is_dirty();
+				LOG_WARNING(RSX, "Cell write to bound render target area");
+
+				region->protect(0, vm::page_writable | vm::page_readable);
+				region->set_dirty(false);
+			}
+
 			region->copy_texture();
 		}
 

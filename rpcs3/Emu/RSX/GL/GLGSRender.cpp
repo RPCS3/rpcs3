@@ -194,12 +194,6 @@ void GLGSRender::begin()
 	if (!draw_fbo.check())
 		return;
 
-	if (surface_clear_flags)
-	{
-		clear_surface(surface_clear_flags);
-		surface_clear_flags = 0;
-	}
-
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
 
 	bool color_mask_b = rsx::method_registers.color_mask_b();
@@ -664,9 +658,12 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 	switch (cmd)
 	{
 	case NV4097_CLEAR_SURFACE:
+	{
 		init_buffers(true);
-		surface_clear_flags |= arg;
+		synchronize_buffers();
+		clear_surface(arg);
 		return true;
+	}
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
 		flush_draw_buffers = true;

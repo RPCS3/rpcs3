@@ -89,7 +89,6 @@ private:
 	gcm_buffer_info surface_info[rsx::limits::color_buffers_count];
 	gcm_buffer_info depth_surface_info;
 
-	u32 surface_clear_flags = 0;
 	bool flush_draw_buffers = false;
 
 public:

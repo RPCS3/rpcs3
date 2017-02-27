@@ -153,16 +153,6 @@ namespace
 
 void GLGSRender::init_buffers(bool skip_reading)
 {
-	//NOTE 1: Sometimes, we process clear before sync flushing rsx buffers. Leads to downloading of blank data
-	//Clearing of surfaces is deferred to handle this
-	//NOTE 2: It is possible for a game to do:
-	//1. Bind buffer 1
-	//2. Clear
-	//3. Bind buffer 2 without touching 1
-	//4. Clear
-	//5. Bind buffer 1
-	//6. Draw without clear
-
 	if (draw_fbo && !m_rtts_dirty)
 	{
 		set_viewport();
@@ -172,13 +162,6 @@ void GLGSRender::init_buffers(bool skip_reading)
 	//We are about to change buffers, flush any pending requests for the old buffers
 	//LOG_WARNING(RSX, "Render targets have changed; checking for sync points (EID=%d)", m_draw_calls);
 	synchronize_buffers();
-
-	//If the old buffers were dirty, clear them before we bind new buffers
-	if (surface_clear_flags)
-	{
-		clear_surface(surface_clear_flags);
-		surface_clear_flags = 0;
-	}
 
 	m_rtts_dirty = false;
 
