@@ -228,26 +228,34 @@ namespace gl
 				}
 			}
 
-		public:
-
-			void reset(u32 base, u32 size)
-			{
-				rsx::buffered_section::reset(base, size);
-				
-				flushed = false;
-				copied = false;
-
-				source_texture = 0;
-			}
-
 			void init_buffer()
 			{
+				if (pbo_id)
+				{
+					glDeleteBuffers(1, &pbo_id);
+					pbo_id = 0;
+					pbo_size = 0;
+				}
+
 				glGenBuffers(1, &pbo_id);
 
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 				glBufferStorage(GL_PIXEL_PACK_BUFFER, locked_address_range, nullptr, GL_MAP_READ_BIT);
 
 				pbo_size = locked_address_range;
+			}
+
+		public:
+
+			void reset(u32 base, u32 size)
+			{
+				rsx::buffered_section::reset(base, size);
+				init_buffer();
+				
+				flushed = false;
+				copied = false;
+
+				source_texture = 0;
 			}
 
 			void set_dimensions(u32 width, u32 height, u32 pitch)
@@ -502,7 +510,6 @@ namespace gl
 					cached_rtt_section section;
 					section.reset(base, size);
 					section.set_dirty(true);
-					section.init_buffer();
 					section.protect(0, vm::page_readable | vm::page_writable);
 
 					m_rtt_cache.push_back(section);
