@@ -577,7 +577,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 				auto& func = add_func(addr, 0, ptr.addr());
 				func.attr += ppu_attr::known_addr;
-				func.attr += ppu_attr::known_size;
+				//func.attr += ppu_attr::known_size;
 				func.size = size;
 			}
 		}

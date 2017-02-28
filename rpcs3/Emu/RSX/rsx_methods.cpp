@@ -391,10 +391,14 @@ namespace rsx
 			const f32 in_x = method_registers.blit_engine_in_x();
 			const f32 in_y = method_registers.blit_engine_in_y();
 
-			const u16 clip_x = std::min(method_registers.blit_engine_clip_x(), u16(in_x + in_w - 1));
-			const u16 clip_y = std::min(method_registers.blit_engine_clip_y(), u16(in_y + in_h - 1));
 			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
 			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+
+            // if the clip'd region will end up outside of the source area, we ignore the given clip x/y and just use 0
+            // see: Spyro - BLES00382 intro, psgl sdk samples
+            const u16 clip_x = method_registers.blit_engine_clip_x() > (in_x + in_w - clip_w) ? 0 : method_registers.blit_engine_clip_x();
+            const u16 clip_y = method_registers.blit_engine_clip_y() > (in_y + in_h - clip_h) ? 0 : method_registers.blit_engine_clip_y();
+
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 
@@ -490,8 +494,6 @@ namespace rsx
 				in_pitch = in_bpp * in_w;
 			}
 
-			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
-
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
@@ -503,10 +505,6 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", (u8)src_color_format);
 			}
-
-			//LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: SIZE=0x%08x, pitch=0x%x, offset=0x%x, scaleX=%f, scaleY=%f, CLIP_SIZE=0x%08x, OUT_SIZE=0x%08x",
-			//	method_registers[NV3089_IMAGE_IN_SIZE], in_pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
-			//	method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
 
 			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
 

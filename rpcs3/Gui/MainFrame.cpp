@@ -553,7 +553,7 @@ void MainFrame::SendOpenCloseSysMenu(wxCommandEvent& event)
 
 void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 {
-	SettingsDialog(this,"");
+	SettingsDialog(this, "");
 }
 
 void MainFrame::ConfigPad(wxCommandEvent& WXUNUSED(event))
