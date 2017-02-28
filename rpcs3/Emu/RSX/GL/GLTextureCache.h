@@ -289,7 +289,7 @@ namespace gl
 				}
 
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-				glGetTextureImage(source_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
+				glGetTextureImageEXT(source_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 				m_fence.reset();
