@@ -3,7 +3,7 @@
 class SettingsDialog : public wxDialog
 {
 public:
-	SettingsDialog(wxWindow* parent, const wxString& pergameload);
+	SettingsDialog(wxWindow* parent, const std::string& path);
 
 private:
 	wxCheckListBox* chbox_list_core_lle;

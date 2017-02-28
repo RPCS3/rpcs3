@@ -3,6 +3,7 @@
 #include "sha1.h"
 #include "utils.h"
 #include "unself.h"
+#include "Emu/VFS.h"
 
 // TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
 #include <zlib.h>
@@ -1390,30 +1391,22 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 	return e;
 }
 
-bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
+bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 {
 	// Set empty RAP key.
 	u8 rap_key[0x10];
 	memset(rap_key, 0, 0x10);
 
 	// Try to find a matching RAP file under exdata folder.
-	std::string ci_str((const char *)content_id);
-	std::string pf_str("00000001");  // TODO: Allow multiple profiles. Use default for now.
-	std::string rap_path("dev_hdd0/home/" + pf_str + "/exdata/" + ci_str + ".rap");
-
-	// Check if we have a valid RAP file.
-	if (!fs::is_file(rap_path))
-	{
-		LOG_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
-		return false;
-	}
+	const std::string ci_str = reinterpret_cast<const char*>(content_id);
+	const std::string rap_path = "/dev_hdd0/home/00000001/exdata/" + ci_str + ".rap";
 
 	// Open the RAP file and read the key.
-	fs::file rap_file(rap_path);
+	const fs::file rap_file(vfs::get(rap_path));
 
 	if (!rap_file)
 	{
-		LOG_ERROR(LOADER, "Failed to load RAP file!");
+		LOG_FATAL(LOADER, "Failed to load RAP file: %s", rap_path);
 		return false;
 	}
 
