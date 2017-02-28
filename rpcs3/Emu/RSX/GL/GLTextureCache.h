@@ -7,7 +7,8 @@
 #include <functional>
 #include <vector>
 #include <memory>
-#include <unordered_map>
+#include <thread>
+#include <condition_variable>
 
 #include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
