@@ -29,6 +29,7 @@
 #include "sys_vm.h"
 #include "sys_fs.h"
 #include "sys_dbg.h"
+#include "sys_gamepad.h"
 
 LOG_CHANNEL(sys_cond);
 LOG_CHANNEL(sys_dbg);
@@ -53,6 +54,7 @@ LOG_CHANNEL(sys_timer);
 LOG_CHANNEL(sys_trace);
 LOG_CHANNEL(sys_tty);
 LOG_CHANNEL(sys_vm);
+LOG_CHANNEL(sys_gamepad);
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -600,7 +602,7 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_storage_set_region_acl)       //618 (0x26A)
 	null_func,//BIND_FUNC(sys_storage_async_send_device_command) //619 (0x26B)
 	null_func,//BIND_FUNC(sys_...)                          //620 (0x26C)  ROOT
-	null_func,//BIND_FUNC(sys_gamepad_ycon_if)              //621 (0x26D)
+	BIND_FUNC(sys_gamepad_ycon_if),              //621 (0x26D)
 	null_func,//BIND_FUNC(sys_storage_get_region_offset)    //622 (0x26E)
 	null_func,//BIND_FUNC(sys_storage_set_emulated_speed)   //623 (0x26F)
 	null_func,//BIND_FUNC(sys_io_buffer_create)             //624 (0x270)
