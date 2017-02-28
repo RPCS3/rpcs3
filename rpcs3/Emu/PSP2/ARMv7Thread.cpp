@@ -170,7 +170,7 @@ u32 ARMv7Thread::stack_push(u32 size, u32 align_v)
 		context.SP -= align(size + 4, 4); // room minimal possible size
 		context.SP &= ~(align_v - 1); // fix stack alignment
 
-		if (context.SP < context.stack_addr)
+		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.SP < context.stack_addr)
 		{
 			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%x, stack=*0x%x)" HERE, size, align_v, context.SP, context.stack_addr);
 		}

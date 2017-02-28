@@ -781,15 +781,18 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!queue)
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
-					return ch_in_mbox.set_values(1, CELL_ENOTCONN), true; // TODO: check error passing
+					ch_in_mbox.set_values(1, CELL_ENOTCONN);
+					return true;
 				}
+
+				ch_in_mbox.set_values(1, CELL_OK);
 
 				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
-					return ch_in_mbox.set_values(1, CELL_EBUSY), true;
+					ch_in_mbox.set_values(1, CELL_EBUSY);
 				}
 
-				return ch_in_mbox.set_values(1, CELL_OK), true;
+				return true;
 			}
 			else if (code < 128)
 			{
@@ -838,15 +841,17 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)" HERE, value, flag, count);
 				}
 
-				if (flag > 63)
-				{
-					fmt::throw_exception("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d)): Invalid flag" HERE, data, value, flag);
-				}
-
 				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
+				ch_in_mbox.set_values(1, CELL_OK);
+
 				// Use the syscall to set flag
-				return ch_in_mbox.set_values(1, sys_event_flag_set(data, 1ull << flag)), true;
+				if (s32 res = sys_event_flag_set(data, 1ull << flag))
+				{
+					ch_in_mbox.set_values(1, res);
+				}
+
+				return true;
 			}
 			else if (code == 192)
 			{
@@ -858,11 +863,6 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!ch_out_mbox.try_pop(data))
 				{
 					fmt::throw_exception("sys_event_flag_set_bit_impatient(value=0x%x (flag=%d)): Out_MBox is empty" HERE, value, flag);
-				}
-
-				if (flag > 63)
-				{
-					fmt::throw_exception("sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d)): Invalid flag" HERE, data, value, flag);
 				}
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
@@ -1061,8 +1061,37 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 	case 0x000:
 	{
-		// Hack: execute as NOP
-		return true;
+		LOG_WARNING(SPU, "STOP 0x0");
+
+		// HACK: find an ILA instruction
+		for (u32 addr = pc; addr < 0x40000; addr += 4)
+		{
+			const u32 instr = _ref<u32>(addr);
+
+			if (instr >> 25 == 0x21)
+			{
+				pc = addr;
+				return false;
+			}
+
+			if (instr > 0x1fffff)
+			{
+				break;
+			}
+		}
+
+		// HACK: wait for executable code
+		while (!_ref<u32>(pc))
+		{
+			if (test(state & cpu_flag::stop))
+			{
+				return false;
+			}
+
+			thread_ctrl::wait_for(1000);
+		}
+
+		return false;
 	}
 
 	case 0x001:

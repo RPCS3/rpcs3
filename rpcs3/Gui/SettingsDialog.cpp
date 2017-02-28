@@ -202,15 +202,27 @@ struct textctrl_pad : cfg_adapter
 };
 
 
-SettingsDialog::SettingsDialog(wxWindow* parent)
+SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
 	// Load default config
 	loaded = YAML::Load(g_cfg_defaults);
 
+	// Create config path if necessary
+	fs::create_path(fs::get_config_dir() + path);
+
 	// Incrementally load config.yml
-	const fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	loaded += YAML::Load(config.to_string());
+	const fs::file config(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
+
+	if (config.size() == 0 && !path.empty()) // First time
+	{
+		const fs::file configexisted(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+		loaded += YAML::Load(configexisted.to_string());
+	}
+	else
+	{
+		loaded += YAML::Load(config.to_string());
+	}
 
 	std::vector<std::unique_ptr<cfg_adapter>> pads;
 
@@ -361,6 +373,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
 	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(ppu_decoder_modes), rbox_ppu_decoder));
+	rbox_ppu_decoder->Enable(0, false); // TODO
 
 	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU Decoder" });
 	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);

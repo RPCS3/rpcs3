@@ -4,6 +4,8 @@
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
 
+#include <map>
+
 // Generate FNID or VNID for given name
 extern u32 ppu_generate_id(const char* name);
 
@@ -41,8 +43,8 @@ public:
 	task_stack on_load;
 	task_stack on_unload;
 
-	std::unordered_map<u32, ppu_static_function> functions;
-	std::unordered_map<u32, ppu_static_variable> variables;
+	std::map<u32, ppu_static_function> functions;
+	std::map<u32, ppu_static_variable> variables;
 
 public:
 	ppu_static_module(const char* name);

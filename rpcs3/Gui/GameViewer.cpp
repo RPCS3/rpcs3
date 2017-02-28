@@ -129,7 +129,7 @@ void GameViewer::LoadPSF()
 
 		GameInfo game;
 		game.root = m_games[i];
-		game.serial = psf::get_string(psf, "TITLE_ID", "unknown");
+		game.serial = psf::get_string(psf, "TITLE_ID", "");
 		game.name = psf::get_string(psf, "TITLE", "unknown");
 		game.app_ver = psf::get_string(psf, "APP_VER", "unknown");
 		game.category = psf::get_string(psf, "CATEGORY", "unknown");
@@ -137,11 +137,6 @@ void GameViewer::LoadPSF()
 		game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
 		game.resolution = psf::get_integer(psf, "RESOLUTION");
 		game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
-		
-		if (game.serial.length() == 9)
-		{
-			game.serial.insert(4, 1, '-');
-		}
 
 		if (game.category == "HG")
 		{
@@ -230,8 +225,7 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 {
 	long i = GetFirstSelected();
 	if (i < 0) return;
-
-	LOG_TODO(LOADER, "Configure: %s", m_game_data[i].root);
+	SettingsDialog(this, "data/" + m_game_data[i].serial);
 }
 
 void GameViewer::RemoveGame(wxCommandEvent& event)

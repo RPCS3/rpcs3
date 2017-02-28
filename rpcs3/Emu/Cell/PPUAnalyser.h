@@ -35,6 +35,13 @@ struct ppu_function
 	std::set<u32> called_from; // Set of called functions
 };
 
+// PPU Module Information
+struct ppu_module
+{
+	std::string name;
+	std::vector<ppu_function> funcs;
+};
+
 // Aux
 struct ppu_pattern
 {

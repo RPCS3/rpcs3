@@ -890,6 +890,9 @@
     <ClCompile Include="..\Utilities\sema.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="sys_gamepad.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
     <ClCompile Include="Loader\PUP.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -1716,6 +1719,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="sys_gamepad.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Loader\PUP.h">
       <Filter>Loader</Filter>

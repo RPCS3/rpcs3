@@ -6,6 +6,7 @@
 #include "D3D12GSRender.h"
 #include "D3D12Formats.h"
 #include "../rsx_methods.h"
+#include "../rsx_utils.h"
 
 #define TO_STRING(x) #x
 
@@ -88,21 +89,7 @@ void D3D12GSRender::load_program()
 		D3D12_BLEND d3d_sfactor_alpha = get_blend_factor_alpha(sfactor_a);
 		D3D12_BLEND d3d_dfactor_alpha = get_blend_factor_alpha(dfactor_a);
 		
-		FLOAT BlendColor[4];
-		
-		//TODO: Check surface color format for u16 colors
-		{
-			u8 blend_color_r = rsx::method_registers.blend_color_8b_r();
-			u8 blend_color_g = rsx::method_registers.blend_color_8b_g();
-			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
-			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
-
-			BlendColor[0] = blend_color_r / 255.f;
-			BlendColor[1] = blend_color_g / 255.f;
-			BlendColor[2] = blend_color_b / 255.f;
-			BlendColor[3] = blend_color_a / 255.f;
-		}
-		
+		auto BlendColor = rsx::get_constant_blend_colors();
 		bool color_blend_possible = true;
 
 		if (sfactor_rgb == rsx::blend_factor::constant_alpha ||
@@ -144,7 +131,7 @@ void D3D12GSRender::load_program()
 		}
 		else
 		{
-			get_current_resource_storage().command_list->OMSetBlendFactor(BlendColor);
+			get_current_resource_storage().command_list->OMSetBlendFactor(BlendColor.data());
 		}
 
 		prop.Blend.RenderTarget[0].BlendEnable = true;
