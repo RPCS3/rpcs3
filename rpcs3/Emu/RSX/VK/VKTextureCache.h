@@ -270,20 +270,33 @@ namespace vk
 			return view;
 		}
 
-		bool invalidate_address(u32 rsx_address)
+		bool invalidate_address(u32 address)
 		{
-			if (rsx_address < texture_cache_range.first ||
-				rsx_address > texture_cache_range.second)
+			if (address < texture_cache_range.first ||
+				address > texture_cache_range.second)
 				return false;
 
 			bool response = false;
+			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 
-			for (auto &tex : m_cache)
+			for (int i = 0; i < m_cache.size(); ++i)
 			{
+				auto &tex = m_cache[i];
+
 				if (tex.is_dirty()) continue;
 
-				if (tex.overlaps(rsx_address))
+				auto overlapped = tex.overlaps_page(trampled_range, address);
+				if (std::get<0>(overlapped))
 				{
+					auto &new_range = std::get<1>(overlapped);
+
+					if (new_range.first != trampled_range.first ||
+						new_range.second != trampled_range.second)
+					{
+						trampled_range = new_range;
+						i = 0;
+					}
+
 					tex.set_dirty(true);
 					tex.unprotect();
 
