@@ -266,6 +266,7 @@ namespace vk
 			region.protect(0, vm::page_writable);
 			region.set_dirty(false);
 
+			texture_cache_range = region.get_min_max(texture_cache_range);
 			return view;
 		}
 
