@@ -981,7 +981,7 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 
 bool VKGSRender::load_program()
 {
-	auto rtt_lookup_func = [this](u32 texaddr, bool is_depth) -> std::tuple<bool, u16>
+	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture&, bool is_depth) -> std::tuple<bool, u16>
 	{
 		vk::render_target *surface = nullptr;
 		if (!is_depth)

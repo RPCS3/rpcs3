@@ -41,7 +41,7 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 
 void D3D12GSRender::load_program()
 {
-	auto rtt_lookup_func = [this](u32 texaddr, bool is_depth) -> std::tuple<bool, u16>
+	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture&, bool is_depth) -> std::tuple<bool, u16>
 	{
 		ID3D12Resource *surface = nullptr;
 		if (!is_depth)
