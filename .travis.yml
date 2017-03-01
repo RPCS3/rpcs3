@@ -12,6 +12,11 @@ compiler:
  - clang
  - gcc
 
+cache:
+  ccache: true
+  directories:
+    - $HOME/hombebrew_cache
+
 env:
   global:
    - secure: "Vf+FY48nip9JppMnq11105NealdErSWsoUhHo63/V3V+LKfA9guenxCp93/qoSIdSGC/sJwb0yIIMGvkTT/rxDJNh6Z+BWUTb2E0WEIIQbvTJNOSUzoq7dfF1LT61XjVjByFzcbC2xjtaBowmcAYEs1jGUUuEjYVCMmD5lY8hUg="
@@ -42,7 +47,7 @@ before_install:
       sudo pip install cpp-coveralls requests[security];
     else
       brew update; brew update;
-      brew install glew wxwidgets llvm38;
+      brew install ccache glew wxwidgets llvm38;
     fi;
 
 before_script:
