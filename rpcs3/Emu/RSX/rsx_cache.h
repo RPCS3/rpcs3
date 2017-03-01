@@ -163,6 +163,24 @@ namespace rsx
 			return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
 		}
 
+		/**
+		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
+		 * If true, returns the range <min, max> with updated invalid range 
+		 */
+		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address)
+		{
+			const u32 page_base = address & ~4095;
+			const u32 page_limit = address + 4096;
+
+			const u32 compare_min = std::min(old_range.first, page_base);
+			const u32 compare_max = std::max(old_range.second, page_limit);
+
+			if (!region_overlaps(locked_address_base, locked_address_base + locked_address_range, compare_min, compare_max))
+				return std::make_tuple(false, old_range);
+
+			return std::make_tuple(true, get_min_max(std::make_pair(compare_min, compare_max)));
+		}
+
 		bool is_locked() const
 		{
 			return locked;

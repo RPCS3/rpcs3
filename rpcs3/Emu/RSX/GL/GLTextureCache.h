@@ -776,18 +776,33 @@ namespace gl
 		bool mark_as_dirty(u32 address)
 		{
 			bool response = false;
+			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
+
+			//TODO: Optimize this function!
+			//Multi-pass checking is slow. Pre-calculate dependency tree at section creation
 
 			if (address >= texture_cache_range.first &&
 				address < texture_cache_range.second)
 			{
 				std::lock_guard<std::mutex> lock(m_section_mutex);
 
-				for (cached_texture_section &tex : m_texture_cache)
+				for (int i = 0; i < m_texture_cache.size(); ++i)
 				{
+					auto &tex = m_texture_cache[i];
 					if (!tex.is_locked()) continue;
 
-					if (tex.overlaps(address))
+					auto overlapped = tex.overlaps_page(trampled_range, address);
+					if (std::get<0>(overlapped))
 					{
+						auto &new_range = std::get<1>(overlapped);
+
+						if (new_range.first != trampled_range.first ||
+							new_range.second != trampled_range.second)
+						{
+							trampled_range = new_range;
+							i = 0;
+						}
+
 						tex.unprotect();
 						tex.set_dirty(true);
 
@@ -801,12 +816,23 @@ namespace gl
 			{
 				std::lock_guard<std::mutex> lock(m_section_mutex);
 
-				for (cached_rtt_section &rtt : m_rtt_cache)
+				for (int i = 0; i < m_rtt_cache.size(); ++i)
 				{
-					if (rtt.is_dirty()) continue;
+					auto &rtt = m_rtt_cache[i];
+					if (rtt.is_dirty() || !rtt.is_locked()) continue;
 
-					if (rtt.is_locked() && rtt.overlaps(address))
+					auto overlapped = rtt.overlaps_page(trampled_range, address);
+					if (std::get<0>(overlapped))
 					{
+						auto &new_range = std::get<1>(overlapped);
+
+						if (new_range.first != trampled_range.first ||
+							new_range.second != trampled_range.second)
+						{
+							trampled_range = new_range;
+							i = 0;
+						}
+
 						rtt.unprotect();
 						rtt.set_dirty(true);
 
