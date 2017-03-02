@@ -219,7 +219,7 @@ namespace rsx
 		 * get_surface_info is a helper takes 2 parameters: rsx_texture_address and surface_is_depth
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
-		RSXFragmentProgram get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, bool)> get_surface_info) const;
+		RSXFragmentProgram get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info) const;
 	public:
 		double fps_limit = 59.94;
 
@@ -239,6 +239,11 @@ namespace rsx
 
 		virtual void on_task() override;
 		virtual void on_exit() override;
+		
+		/**
+		 * Execute a backend local task queue
+		 */
+		virtual void do_local_task() {}
 
 	public:
 		virtual std::string get_name() const override;
