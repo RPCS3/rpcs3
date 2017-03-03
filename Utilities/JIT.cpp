@@ -68,16 +68,16 @@ static u8* s_unwind_info;
 static u64 s_unwind_size;
 
 #ifdef _WIN32
-static std::vector<RUNTIME_FUNCTION> s_unwind; // Custom .pdata section replacement
+static std::vector<std::vector<RUNTIME_FUNCTION>> s_unwind; // .pdata
 #endif
 
 // Helper class
 struct MemoryManager final : llvm::RTDyldMemoryManager
 {
-	std::unordered_map<std::string, std::uintptr_t> table;
+	std::unordered_map<std::string, std::uintptr_t>& m_link;
 
-	MemoryManager(std::unordered_map<std::string, std::uintptr_t>&& table)
-		: table(std::move(table))
+	MemoryManager(std::unordered_map<std::string, std::uintptr_t>& table)
+		: m_link(table)
 	{
 	}
 
@@ -95,9 +95,9 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			return addr;
 		}
 
-		const auto found = table.find(name);
+		const auto found = m_link.find(name);
 
-		if (found != table.end())
+		if (found != m_link.end())
 		{
 			return found->second;
 		}
@@ -131,7 +131,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		s_code_addr = (u8*)m_next;
 		s_code_size = size;
 
-		LOG_SUCCESS(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), m_next, size, align);
+		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), m_next, size, align);
 		return (u8*)std::exchange(m_next, (void*)next);
 	}
 
@@ -161,21 +161,21 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			return nullptr;
 		}
 
-		LOG_SUCCESS(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), m_next, size, align, is_ro ? "ro" : "rw");
+		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), m_next, size, align, is_ro ? "ro" : "rw");
 		return (u8*)std::exchange(m_next, (void*)next);
 	}
 
 	virtual bool finalizeMemory(std::string* = nullptr) override
 	{
 		// TODO: make only read-only sections read-only
-#ifdef _WIN32
-		DWORD op;
-		VirtualProtect(s_memory, (u64)m_next - (u64)s_memory, PAGE_READONLY, &op);
-		VirtualProtect(s_code_addr, s_code_size, PAGE_EXECUTE_READ, &op);
-#else
-		::mprotect(s_memory, (u64)m_next - (u64)s_memory, PROT_READ);
-		::mprotect(s_code_addr, s_code_size, PROT_READ | PROT_EXEC);
-#endif
+//#ifdef _WIN32
+//		DWORD op;
+//		VirtualProtect(s_memory, (u64)m_next - (u64)s_memory, PAGE_READONLY, &op);
+//		VirtualProtect(s_code_addr, s_code_size, PAGE_EXECUTE_READ, &op);
+//#else
+//		::mprotect(s_memory, (u64)m_next - (u64)s_memory, PROT_READ);
+//		::mprotect(s_code_addr, s_code_size, PROT_READ | PROT_EXEC);
+//#endif
 		return false;
 	}
 
@@ -197,10 +197,15 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 	~MemoryManager()
 	{
 #ifdef _WIN32
-		if (!RtlDeleteFunctionTable(s_unwind.data()))
+		for (auto&& unwind : s_unwind)
 		{
-			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable(%p) failed! Error %u", s_unwind_info, GetLastError());
+			if (!RtlDeleteFunctionTable(unwind.data()))
+			{
+				LOG_FATAL(GENERAL, "RtlDeleteFunctionTable() failed! Error %u", GetLastError());
+			}
 		}
+
+		s_unwind.clear();
 
 		if (!VirtualFree(s_memory, 0, MEM_DECOMMIT))
 		{
@@ -223,36 +228,44 @@ private:
 // Helper class
 struct EventListener final : llvm::JITEventListener
 {
+	std::string path;
+
 	virtual void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
 	{
-		const llvm::StringRef elf = obj.getData();
-		fs::file(fs::get_config_dir() + "LLVM.obj", fs::rewrite)
-			.write(elf.data(), elf.size());
+		if (!path.empty())
+		{
+			const llvm::StringRef elf = obj.getData();
+			fs::file(path, fs::rewrite).write(elf.data(), elf.size());
+		}
 	}
 };
 
 static EventListener s_listener;
 
-jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unordered_map<std::string, std::uintptr_t>&& table)
+jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_linkage_info)
+	: m_link(std::move(init_linkage_info))
 {
 	verify(HERE), s_memory;
-
-	std::string result;
-
-	const auto module_ptr = _module.get();
 
 	// Initialization
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
 	LLVMLinkInMCJIT();
-	const auto _cpu = llvm::sys::getHostCPUName();
+	m_cpu = llvm::sys::getHostCPUName();
 
-	m_engine.reset(llvm::EngineBuilder(std::move(_module))
+	if (m_cpu == "skylake")
+	{
+		m_cpu = "haswell";
+	}
+
+	std::string result;
+
+	m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("", g_llvm_ctx))
 		.setErrorStr(&result)
-		.setMCJITMemoryManager(std::make_unique<MemoryManager>(std::move(table)))
+		.setMCJITMemoryManager(std::make_unique<MemoryManager>(m_link))
 		.setOptLevel(llvm::CodeGenOpt::Aggressive)
 		.setCodeModel((u64)s_memory <= 0x60000000 ? llvm::CodeModel::Small : llvm::CodeModel::Large) // TODO
-		.setMCPU(_cpu == "skylake" ? "haswell" : _cpu)
+		.setMCPU(m_cpu)
 		.create());
 
 	if (!m_engine)
@@ -262,7 +275,44 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 
 	m_engine->setProcessAllSections(true); // ???
 	m_engine->RegisterJITEventListener(&s_listener);
+}
+
+void jit_compiler::load(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::object::ObjectFile> object)
+{
+	s_listener.path.clear();
+
+	auto* module_ptr = module.get();
+
+	m_engine->addModule(std::move(module));
+	m_engine->addObjectFile(std::move(object));
 	m_engine->finalizeObject();
+
+	m_map.clear();
+
+	for (auto& func : module_ptr->functions())
+	{
+		const std::string& name = func.getName();
+
+		if (!m_link.count(name))
+		{
+			// Register compiled function
+			m_map[name] = m_engine->getFunctionAddress(name);
+		}
+	}
+
+	init();
+}
+
+void jit_compiler::make(std::unique_ptr<llvm::Module> module, std::string path)
+{
+	s_listener.path = std::move(path);
+
+	auto* module_ptr = module.get();
+
+	m_engine->addModule(std::move(module));
+	m_engine->finalizeObject();
+
+	m_map.clear();
 
 	for (auto& func : module_ptr->functions())
 	{
@@ -278,6 +328,11 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 		func.deleteBody();
 	}
 
+	init();
+}
+
+void jit_compiler::init()
+{
 #ifdef _WIN32
 	// Register .xdata UNWIND_INFO (.pdata section is empty for some reason)
 	std::set<u64> func_set;
@@ -290,8 +345,8 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 	const u64 base = (u64)s_memory;
 	const u8* bits = s_unwind_info;
 
-	s_unwind.clear();
-	s_unwind.reserve(m_map.size());
+	std::vector<RUNTIME_FUNCTION> unwind;
+	unwind.reserve(m_map.size());
 
 	for (const u64 addr : func_set)
 	{
@@ -304,7 +359,7 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 		uw.BeginAddress = static_cast<u32>(addr - base);
 		uw.EndAddress   = static_cast<u32>(next - base);
 		uw.UnwindData   = static_cast<u32>((u64)bits - base);
-		s_unwind.emplace_back(uw);
+		unwind.emplace_back(uw);
 
 		// Parse .xdata UNWIND_INFO record
 		const u8 flags = *bits++; // Version and flags
@@ -327,14 +382,16 @@ jit_compiler::jit_compiler(std::unique_ptr<llvm::Module>&& _module, std::unorder
 	{
 		LOG_ERROR(GENERAL, "LLVM: .xdata analysis failed! (%p != %p)", s_unwind_info + s_unwind_size, bits);
 	}
-	else if (!RtlAddFunctionTable(s_unwind.data(), (DWORD)s_unwind.size(), base))
+	else if (!RtlAddFunctionTable(unwind.data(), (DWORD)unwind.size(), base))
 	{
 		LOG_ERROR(GENERAL, "RtlAddFunctionTable(%p) failed! Error %u", s_unwind_info, GetLastError());
 	}
 	else
 	{
-		LOG_SUCCESS(GENERAL, "LLVM: UNWIND_INFO registered (%p, size=0x%llx)", s_unwind_info, s_unwind_size);
+		LOG_NOTICE(GENERAL, "LLVM: UNWIND_INFO registered (%p, size=0x%llx)", s_unwind_info, s_unwind_size);
 	}
+
+	s_unwind.emplace_back(std::move(unwind));
 #endif
 }
 

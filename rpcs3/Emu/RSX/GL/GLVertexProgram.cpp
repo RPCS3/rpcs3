@@ -92,6 +92,7 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	vec4 vc[468];" << std::endl;
+	OS << "	uint transform_branch_bits;" << std::endl;
 	OS << "};" << std::endl << std::endl;
 
 	for (const ParamType &PT: constants)

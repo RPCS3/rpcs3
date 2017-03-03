@@ -10,7 +10,8 @@
 
 namespace vm { using namespace ps3; }
 
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern void ppu_initialize(const ppu_module&);
 
 logs::channel sys_prx("sys_prx", logs::level::notice);
 
@@ -25,12 +26,14 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = ppu_load_prx(obj);
+	const auto prx = ppu_load_prx(obj, path.substr(path.find_last_of('/') + 1));
 
 	if (!prx)
 	{
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
+
+	ppu_initialize(*prx);
 
 	return idm::last_id();
 }

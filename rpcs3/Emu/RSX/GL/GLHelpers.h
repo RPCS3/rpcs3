@@ -67,6 +67,106 @@ namespace gl
 		}
 	};
 
+	class fence
+	{
+		GLsync m_value = nullptr;
+		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+
+	public:
+
+		fence() {}
+		~fence() {}
+
+		void create()
+		{
+			m_value = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+			flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+		}
+
+		void destroy()
+		{
+			glDeleteSync(m_value);
+			m_value = nullptr;
+		}
+
+		void reset()
+		{
+			if (m_value != nullptr)
+				destroy();
+
+			create();
+		}
+
+		bool is_empty()
+		{
+			return (m_value == nullptr);
+		}
+
+		bool check_signaled()
+		{
+			verify(HERE), m_value != nullptr;
+
+			if (flags)
+			{
+				GLenum err = glClientWaitSync(m_value, flags, 0);
+				flags = 0;
+				return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+			}
+			else
+			{
+				GLint status = GL_UNSIGNALED;
+				GLint tmp;
+
+				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
+				return (status == GL_SIGNALED);
+			}
+		}
+
+		bool wait_for_signal()
+		{
+			verify(HERE), m_value != nullptr;
+
+			GLenum err = GL_WAIT_FAILED;
+			bool done = false;
+
+			while (!done)
+			{
+				if (flags)
+				{
+					err = glClientWaitSync(m_value, flags, 0);
+					flags = 0;
+
+					switch (err)
+					{
+					default:
+						LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
+					case GL_ALREADY_SIGNALED:
+					case GL_CONDITION_SATISFIED:
+						done = true;
+						break;
+					case GL_TIMEOUT_EXPIRED:
+						continue;
+					}
+				}
+				else
+				{
+					GLint status = GL_UNSIGNALED;
+					GLint tmp;
+
+					glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
+
+					if (status == GL_SIGNALED)
+						break;
+				}
+			}
+
+			glDeleteSync(m_value);
+			m_value = nullptr;
+
+			return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+		}
+	};
+
 	template<typename Type, uint BindId, uint GetStateId>
 	class save_binding_state_base
 	{
@@ -594,33 +694,7 @@ namespace gl
 		u32 m_limit = 0;
 		void *m_memory_mapping = nullptr;
 
-		GLsync m_fence = nullptr;
-
-		void wait_for_sync()
-		{
-			verify(HERE), m_fence != nullptr;
-
-			bool done = false;
-			while (!done)
-			{
-				//Check if we are finished, wait time = 1us
-				GLenum err = glClientWaitSync(m_fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000);
-				switch (err)
-				{
-				default:
-					LOG_ERROR(RSX, "err Returned 0x%X", err);
-				case GL_ALREADY_SIGNALED:
-				case GL_CONDITION_SATISFIED:
-					done = true;
-					break;
-				case GL_TIMEOUT_EXPIRED:
-					continue;
-				}
-			}
-
-			glDeleteSync(m_fence);
-			m_fence = nullptr;
-		}
+		fence m_fence;
 
 	public:
 
@@ -628,7 +702,7 @@ namespace gl
 		{
 			if (m_id)
 			{
-				wait_for_sync();
+				m_fence.wait_for_signal();
 				remove();
 			}
 			
@@ -656,17 +730,15 @@ namespace gl
 
 			if ((offset + alloc_size) > m_limit)
 			{
-				//TODO: Measure the stall here
-				wait_for_sync();
+				if (!m_fence.is_empty())
+					m_fence.wait_for_signal();
+				
 				m_data_loc = 0;
 				offset = 0;
 			}
 
 			if (!m_data_loc)
-			{
-				verify(HERE), m_fence == nullptr;
-				m_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-			}
+				m_fence.reset();
 
 			//Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
 			m_data_loc = align(offset + alloc_size, 256);
@@ -696,6 +768,13 @@ namespace gl
 		void bind_range(u32 index, u32 offset, u32 size) const
 		{
 			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
+		}
+
+		//Notification of a draw command
+		virtual void notify()
+		{
+			if (m_fence.is_empty())
+				m_fence.reset();
 		}
 	};
 
@@ -790,6 +869,8 @@ namespace gl
 			m_mapped_bytes = 0;
 			m_mapping_offset = 0;
 		}
+
+		void notify() override {}
 	};
 
 	class vao
@@ -1019,7 +1100,16 @@ namespace gl
 			compressed_rgb_s3tc_dxt1 = GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
 			compressed_rgba_s3tc_dxt1 = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
 			compressed_rgba_s3tc_dxt3 = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,
-			compressed_rgba_s3tc_dxt5 = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+			compressed_rgba_s3tc_dxt5 = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
+
+			//Sized internal formats, see opengl spec document on glTexImage2D, table 3
+			rgba8 = GL_RGBA8,
+			r5g6b5 = GL_RGB565,
+			r8 = GL_R8,
+			rg8 = GL_RG8,
+			r32f = GL_R32F,
+			rgba16f = GL_RGBA16F,
+			rgba32f = GL_RGBA32F
 		};
 
 		enum class wrap

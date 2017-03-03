@@ -202,15 +202,19 @@ struct textctrl_pad : cfg_adapter
 };
 
 
-SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
+SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
 	// Load default config
 	loaded = YAML::Load(g_cfg_defaults);
 
+	// Create config path if necessary
+	fs::create_path(fs::get_config_dir() + path);
+
 	// Incrementally load config.yml
-	const fs::file config(!pergameload.IsEmpty() ? pergameload.ToStdString() : fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	if (config.to_string().length() == 0 && !pergameload.IsEmpty())//empty first time gameconfig
+	const fs::file config(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
+
+	if (config.size() == 0 && !path.empty()) // First time
 	{
 		const fs::file configexisted(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
 		loaded += YAML::Load(configexisted.to_string());
@@ -307,6 +311,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
 
 	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx only");
+	wxCheckBox* chbox_core_load_libreq = new wxCheckBox(p_core, wxID_ANY, "Load required libraries");
 	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
 	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log Shader Programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
@@ -378,7 +383,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
 
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load liblv2.sprx only" }, chbox_core_load_liblv2));
-
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load required libraries" }, chbox_core_load_libreq));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
@@ -469,6 +474,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const wxString& pergameload)
 	s_subpanel_core1->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core1->Add(chbox_core_load_libreq, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core2->Add(s_round_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(s_subpanel_core1);
 	s_subpanel_core->Add(s_subpanel_core2);

@@ -40,6 +40,8 @@ void MMJoystickHandler::Init(const u32 max_connect)
 	js_info.dwSize = sizeof(js_info);
 	js_info.dwFlags = JOY_RETURNALL;
 	joyGetDevCaps(JOYSTICKID1, &js_caps, sizeof(js_caps));
+
+
 	bool JoyPresent = (joyGetPosEx(JOYSTICKID1, &js_info) == JOYERR_NOERROR);
 	if (JoyPresent)
 	{

@@ -49,7 +49,7 @@ extern u64 get_system_time();
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
-extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&);
+extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_finalize();
 
 fs::file g_tty;
@@ -194,8 +194,76 @@ void Emulator::Load()
 		m_title = psf::get_string(_psf, "TITLE", m_path);
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 
+		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
+		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
+
 		// Initialize data/cache directory
 		m_cache_path = fs::get_data_dir(m_title_id, m_path);
+		LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
+
+		// Load custom config-0
+		if (fs::file cfg_file{m_cache_path + "/config.yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: %s/config.yml", m_cache_path);
+			cfg::root.from_string(cfg_file.to_string());
+		}
+
+		// Load custom config-1
+		if (fs::file cfg_file{fs::get_config_dir() + "data/" + m_title_id + "/config.yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: data/%s/config.yml", m_title_id);
+			cfg::root.from_string(cfg_file.to_string());
+		}
+
+		// Load custom config-2
+		if (fs::file cfg_file{m_path + ".yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
+			cfg::root.from_string(cfg_file.to_string());
+		}
+
+		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
+
+		// Mount all devices
+		const std::string emu_dir_ = g_cfg_vfs_emulator_dir;
+		const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+		const std::string bdvd_dir = g_cfg_vfs_dev_bdvd;
+		const std::string home_dir = g_cfg_vfs_app_home;
+
+		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_flash", fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_usb", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_usb000", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
+
+		// Mount /dev_bdvd/ if necessary
+		if (bdvd_dir.empty() && fs::is_file(elf_dir + "/../../PS3_DISC.SFB"))
+		{
+			const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
+
+			// Check latest two directories
+			if (dir_list.size() >= 2 && dir_list.back() == "USRDIR" && *(dir_list.end() - 2) == "PS3_GAME")
+			{
+				vfs::mount("dev_bdvd", elf_dir.substr(0, elf_dir.length() - 15));
+			}
+			else
+			{
+				vfs::mount("dev_bdvd", elf_dir + "/../../");
+			}
+
+			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
+		}
+		else if (bdvd_dir.size())
+		{
+			vfs::mount("dev_bdvd", fmt::replace_all(bdvd_dir, "$(EmulatorDir)", emu_dir));
+		}
+
+		// Mount /host_root/ if necessary
+		if (g_cfg_vfs_allow_host_root)
+		{
+			vfs::mount("host_root", {});
+		}
 
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
@@ -228,20 +296,6 @@ void Emulator::Load()
 			}
 		}
 
-		// Load custom config-1
-		if (fs::file cfg_file{ fs::get_config_dir() + "data/" + m_title_id + "/config.yml" })
-		{
-			LOG_NOTICE(LOADER, "Applying custom config %s", fs::get_config_dir() + "data/" + m_title_id + "/config.yml");
-			cfg::root.from_string(cfg_file.to_string());
-		}
-
-		// Load custom config-2
-		if (fs::file cfg_file{m_path + ".yml"})
-		{
-			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
-			cfg::root.from_string(cfg_file.to_string());
-		}
-
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		spu_exec_object spu_exec;
@@ -265,52 +319,6 @@ void Emulator::Load()
 				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
 
-			LOG_NOTICE(LOADER, "Title: %s", GetTitle());
-			LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
-
-			// Mount all devices
-			const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
-			const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-			const std::string& bdvd_dir = g_cfg_vfs_dev_bdvd;
-			const std::string& home_dir = g_cfg_vfs_app_home;
-
-			vfs::mount("dev_hdd0", fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir));
-			vfs::mount("dev_hdd1", fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir));
-			vfs::mount("dev_flash", fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir));
-			vfs::mount("dev_usb", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
-			vfs::mount("dev_usb000", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
-			vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
-
-			// Mount /dev_bdvd/ if necessary
-			if (bdvd_dir.empty() && fs::is_file(elf_dir + "/../../PS3_DISC.SFB"))
-			{
-				const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
-
-				// Check latest two directories
-				if (dir_list.size() >= 2 && dir_list.back() == "USRDIR" && *(dir_list.end() - 2) == "PS3_GAME")
-				{
-					vfs::mount("dev_bdvd", elf_dir.substr(0, elf_dir.length() - 15));
-				}
-				else
-				{
-					vfs::mount("dev_bdvd", elf_dir + "/../../");
-				}
-
-				LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
-			}
-			else if (bdvd_dir.size())
-			{
-				vfs::mount("dev_bdvd", fmt::replace_all(bdvd_dir, "$(EmulatorDir)", emu_dir));
-			}
-
-			// Mount /host_root/ if necessary
-			if (g_cfg_vfs_allow_host_root)
-			{
-				vfs::mount("host_root", {});
-			}
-
-			LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
-
 			ppu_load_exec(ppu_exec);
 
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
@@ -321,7 +329,7 @@ void Emulator::Load()
 			g_system = system_type::ps3;
 			m_status = Ready;
 			vm::ps3::init();
-			ppu_load_prx(ppu_prx);
+			ppu_load_prx(ppu_prx, "");
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{

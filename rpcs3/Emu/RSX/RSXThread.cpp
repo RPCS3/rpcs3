@@ -391,6 +391,9 @@ namespace rsx
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{
+			//Execute backend-local tasks first
+			do_local_task();
+
 			const u32 get = ctrl->get;
 			const u32 put = ctrl->put;
 
@@ -634,6 +637,8 @@ namespace rsx
 	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
+		result.reserve(rsx::limits::vertex_count);
+
 		u32 input_mask = state.vertex_attrib_input_mask();
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -835,7 +840,7 @@ namespace rsx
 		return result;
 	}
 
-	RSXFragmentProgram thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, bool)> get_surface_info) const
+	RSXFragmentProgram thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info) const
 	{
 		RSXFragmentProgram result = {};
 		u32 shader_program = rsx::method_registers.shader_program_address();
@@ -883,7 +888,7 @@ namespace rsx
 				bool surface_exists;
 				u16  surface_pitch;
 
-				std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, false);
+				std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, false);
 
 				if (surface_exists && surface_pitch)
 				{
@@ -892,7 +897,7 @@ namespace rsx
 				}
 				else
 				{
-					std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, true);
+					std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, true);
 					if (surface_exists)
 					{
 						u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
