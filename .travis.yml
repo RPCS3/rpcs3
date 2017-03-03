@@ -61,7 +61,7 @@ script:
   #- echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
   # And to ensure the versions of toolchain
   - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
-  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
+  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 3; fi
 
 addons:
   apt:
@@ -88,7 +88,7 @@ addons:
       name: $TRAVIS_REPO_SLUG
       description: "PS3 emulator/debugger"
     notification_email: nekotekina@gmail.com
-    build_command: "make -j 4"
+    build_command: "make -j 3"
     branch_pattern: coverity_scan
 
 after_success:
