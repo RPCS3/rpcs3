@@ -1,5 +1,5 @@
 language: cpp
-sudo: required
+sudo: false
 dist: trusty
 
 os:
@@ -41,7 +41,7 @@ before_install:
     fi;
   # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      sudo pip install cpp-coveralls requests[security];
+      pip install --user cpp-coveralls requests[security];
     else
       brew update; brew update;
       brew install ccache glew wxwidgets llvm38;
