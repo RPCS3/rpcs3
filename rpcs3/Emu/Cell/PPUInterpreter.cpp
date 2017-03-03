@@ -5,9 +5,6 @@
 
 #include <cmath>
 
-// TODO: fix rol8 and rol16 for __GNUG__ (probably with __asm__)
-inline u8 rol8(const u8 x, const u8 n) { return x << n | x >> (8 - n); }
-inline u16 rol16(const u16 x, const u16 n) { return x << n | x >> (16 - n); }
 inline u32 rol32(const u32 x, const u32 n) { return x << n | x >> (32 - n); }
 inline u64 rol64(const u64 x, const u64 n) { return x << n | x >> (64 - n); }
 inline u64 dup32(const u32 x) { return x | static_cast<u64>(x) << 32; }
@@ -29,8 +26,22 @@ inline s64 MULH64(s64 a, s64 b)
 #endif
 
 #if defined(_MSC_VER)
+#define rol8 _rotl8
+#define rol16 _rotl16
 #define UMULH64 __umulh
 #define MULH64 __mulh
+#else
+inline u8 rol8(u8 x, u8 n)
+{
+	__asm__("rolb %1, %0" : "+mq" (x) : "I" ((unsigned char)n));
+	return x;
+}
+
+inline u16 rol16(u16 x, u16 n)
+{
+	__asm__("rolw %1, %0" : "+g" (x) : "I" ((unsigned char)n));
+	return x;
+}
 #endif
 
 // Write values to CR field
