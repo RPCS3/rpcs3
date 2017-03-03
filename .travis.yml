@@ -3,14 +3,14 @@ sudo: required
 dist: trusty
 
 os:
- - linux
-# - osx
+  - linux
+  #- osx
 
 osx_image: xcode6.4
 
 compiler:
- - clang
- - gcc
+  - clang
+  - gcc
 
 cache:
   ccache: true
@@ -19,22 +19,22 @@ cache:
 
 env:
   global:
-   - secure: "Vf+FY48nip9JppMnq11105NealdErSWsoUhHo63/V3V+LKfA9guenxCp93/qoSIdSGC/sJwb0yIIMGvkTT/rxDJNh6Z+BWUTb2E0WEIIQbvTJNOSUzoq7dfF1LT61XjVjByFzcbC2xjtaBowmcAYEs1jGUUuEjYVCMmD5lY8hUg="
-   # Which Travis environment to run Coverity on
-   - coverity_scan_run_condition='"$TRAVIS_OS_NAME" = linux -a "$CC" = gcc'
-   # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
-   - coverity_scan_script_test_mode=false
+    - secure: "Vf+FY48nip9JppMnq11105NealdErSWsoUhHo63/V3V+LKfA9guenxCp93/qoSIdSGC/sJwb0yIIMGvkTT/rxDJNh6Z+BWUTb2E0WEIIQbvTJNOSUzoq7dfF1LT61XjVjByFzcbC2xjtaBowmcAYEs1jGUUuEjYVCMmD5lY8hUg="
+    # Which Travis environment to run Coverity on
+    - coverity_scan_run_condition='"$TRAVIS_OS_NAME" = linux -a "$CC" = gcc'
+    # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
+    - coverity_scan_script_test_mode=false
 
 matrix:
- exclude:
-  - os: osx
-    compiler: gcc
+  exclude:
+    - os: osx
+      compiler: gcc
 
 git:
   submodules: false
 
 before_install:
-# shutdown services on Travis, which may have a memory impact
+  # shutdown services on Travis, which may have a memory impact
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       sudo apt-get install -y libwxgtk3.0-dev;
     fi;
@@ -42,7 +42,7 @@ before_install:
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     fi;
-# Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
+  # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       sudo pip install cpp-coveralls requests[security];
     else
@@ -51,38 +51,38 @@ before_install:
     fi;
 
 before_script:
- - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal
- - mkdir build
- - cd build
- - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cmake ..; else cmake .. -DLLVM_DIR=/usr/local/opt/llvm38/lib/llvm-3.8/share/llvm/cmake; fi
+  - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal
+  - mkdir build
+  - cd build
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cmake ..; else cmake .. -DLLVM_DIR=/usr/local/opt/llvm38/lib/llvm-3.8/share/llvm/cmake; fi
 
 script:
-# Add a command to show all the variables. May be useful for debugging Travis.
-# - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
-# And to ensure the versions of toolchain
-- echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
-- if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
+  # Add a command to show all the variables. May be useful for debugging Travis.
+  #- echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
+  # And to ensure the versions of toolchain
+  - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
+  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
 
 addons:
   apt:
     sources:
-    - ubuntu-toolchain-r-test
-#    - llvm-toolchain-trusty-3.8 temporarily disabled
+      - ubuntu-toolchain-r-test
+      #- llvm-toolchain-trusty-3.8 temporarily disabled
     packages:
-    - cmake
-    - libopenal-dev
-    - freeglut3-dev
-    - libglew-dev
-    - libc6-dev
-#    - llvm-3.8
-#    - llvm-3.8-dev
-    - libedit-dev
-    - g++-5
-    - gcc-5
-#    - clang-3.6
-    - libstdc++-5-dev
-    - lib32stdc++6
-    - zlib1g-dev
+      - cmake
+      - libopenal-dev
+      - freeglut3-dev
+      - libglew-dev
+      - libc6-dev
+      #- llvm-3.8
+      #- llvm-3.8-dev
+      - libedit-dev
+      - g++-5
+      - gcc-5
+      #- clang-3.6
+      - libstdc++-5-dev
+      - lib32stdc++6
+      - zlib1g-dev
   coverity_scan:
     project:
       name: $TRAVIS_REPO_SLUG
@@ -92,4 +92,4 @@ addons:
     branch_pattern: coverity_scan
 
 after_success:
-- if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
+  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
