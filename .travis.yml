@@ -35,9 +35,6 @@ git:
 
 before_install:
   # shutdown services on Travis, which may have a memory impact
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      sudo apt-get install -y libwxgtk3.0-dev;
-    fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
@@ -83,6 +80,7 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
+      - libwxgtk3.0-dev
   coverity_scan:
     project:
       name: $TRAVIS_REPO_SLUG
