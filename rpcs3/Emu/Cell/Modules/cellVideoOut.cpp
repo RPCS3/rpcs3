@@ -19,10 +19,10 @@ cfg::map_entry<u8> g_cfg_video_out_resolution(cfg::root.video, "Resolution", "12
 	{ "960x1080", CELL_VIDEO_OUT_RESOLUTION_960x1080 },
 });
 
-cfg::map_entry<u8> g_cfg_video_out_aspect_ratio(cfg::root.video, "Aspect ratio", "16x9",
+cfg::map_entry<u8> g_cfg_video_out_aspect_ratio(cfg::root.video, "Aspect ratio", "16:9",
 {
-	{ "4x3", CELL_VIDEO_OUT_ASPECT_4_3 },
-	{ "16x9", CELL_VIDEO_OUT_ASPECT_16_9 },
+	{ "4:3", CELL_VIDEO_OUT_ASPECT_4_3 },
+	{ "16:9", CELL_VIDEO_OUT_ASPECT_16_9 },
 });
 
 const extern std::unordered_map<u8, std::pair<int, int>> g_video_out_resolution_map
