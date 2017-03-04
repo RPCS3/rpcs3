@@ -8,34 +8,6 @@
 inline u64 dup32(const u32 x) { return x | static_cast<u64>(x) << 32; }
 
 #if defined(__GNUG__)
-inline u8 rol8(const u8 x, const u8 n)
-{
-	u8 result = x;
-	__asm__("rolb %[n], %[result]" : [result] "+g" (result) : [n] "c" (n));
-	return result;
-}
-
-inline u16 rol16(const u16 x, const u16 n)
-{
-	u16 result = x;
-	__asm__("rolw %b[n], %[result]" : [result] "+g" (result) : [n] "c" (n));
-	return result;
-}
-
-inline u32 rol32(const u32 x, const u32 n)
-{
-	u32 result = x;
-	__asm__("roll %b[n], %[result]" : [result] "+g" (result) : [n] "c" (n));
-	return result;
-}
-
-inline u64 rol64(const u64 x, const u64 n)
-{
-	u64 result = x;
-	__asm__("rolq %b[n], %[result]" : [result] "+g" (result) : [n] "c" (n));
-	return result;
-}
-
 inline u64 UMULH64(u64 a, u64 b)
 {
 	u64 result;
@@ -52,11 +24,6 @@ inline s64 MULH64(s64 a, s64 b)
 #endif
 
 #if defined(_MSC_VER)
-#define rol8 _rotl8
-#define rol16 _rotl16
-#define rol32 _rotl
-#define rol64 _rotl64
-
 #define UMULH64 __umulh
 #define MULH64 __mulh
 #endif
