@@ -89,11 +89,16 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	}
 
 	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
-	const std::string& dec_drm_path_local = vfs::get(dec_drm_path);
+	const fs::file enc_file(enc_drm_path_local);
 
-	if (DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_lpath, k_licensee, false) >= 0)
+	if (const fs::file dec_file = DecryptEDAT(enc_file, enc_drm_path_local, 8, rap_lpath, k_licensee, false))
 	{
 		// If decryption succeeds, replace the encrypted file with it.
+		const std::string& dec_drm_path_local = vfs::get(dec_drm_path);
+
+		fs::file dec_out(dec_drm_path_local, fs::rewrite);
+		dec_out.write(dec_file.to_vector<u8>());
+
 		fs::remove_file(enc_drm_path_local);
 		fs::rename(dec_drm_path_local, enc_drm_path_local);
 	}
