@@ -1175,7 +1175,7 @@ bool ppu_interpreter::VRLB(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint i = 0; i < 16; i++)
 	{
-		d._u8[i] = rol8(a._u8[i], b._u8[i] & 0x7);
+		d._u8[i] = rol8(a._u8[i], b._u8[i]);
 	}
 	return true;
 }

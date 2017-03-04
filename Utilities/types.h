@@ -905,8 +905,9 @@ inline void busy_wait(std::size_t count = 100)
 	while (count--) _mm_pause();
 }
 
-// Left rotate helpers
+// Rotate helpers
 #if defined(__GNUG__)
+
 inline u8 rol8(const u8 x, const u8 n)
 {
 	u8 result = x;
@@ -934,9 +935,18 @@ inline u64 rol64(const u64 x, const u64 n)
 	__asm__("rolq %b[n], %[result]" : [result] "+g" (result) : [n] "c" (n));
 	return result;
 }
+
+inline u64 ror64(const u64 x, const u64 n)
+{
+	u64 result = x;
+	__asm__("rorq %b[n], %[result]" : [result] "+g" (result) : [n] "c" (n));
+	return result;
+}
+
 #elif defined(_MSC_VER)
 inline u8 rol8(const u8 x, const u8 n) { return _rotl8(x, n); }
-inline u16 rol16(const u16 x, const u16 n) { return _rotl16(x, n); }
-inline u32 rol32(const u32 x, const u32 n) { return _rotl(x, n); }
-inline u64 rol64(const u64 x, const u64 n) { return _rotl64(x, n); }
+inline u16 rol16(const u16 x, const u16 n) { return _rotl16(x, (u8)n); }
+inline u32 rol32(const u32 x, const u32 n) { return _rotl(x, (int)n); }
+inline u64 rol64(const u64 x, const u64 n) { return _rotl64(x, (int)n); }
+inline u64 ror64(const u64 x, const u64 n) { return _rotr64(x, (int)n); }
 #endif
