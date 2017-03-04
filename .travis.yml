@@ -34,7 +34,6 @@ git:
   submodules: false
 
 before_install:
-  # shutdown services on Travis, which may have a memory impact
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
@@ -51,7 +50,11 @@ before_script:
   - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal
   - mkdir build
   - cd build
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cmake ..; else cmake .. -DLLVM_DIR=/usr/local/opt/llvm38/lib/llvm-3.8/share/llvm/cmake; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      cmake ..;
+    else
+      cmake .. -DLLVM_DIR=/usr/local/opt/llvm38/lib/llvm-3.8/share/llvm/cmake;
+    fi;
 
 script:
   # Add a command to show all the variables. May be useful for debugging Travis.
