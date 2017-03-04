@@ -117,12 +117,9 @@ s32 sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 
 s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
 
-	std::string rap_name = *content_id + ".rap";
-	fs::file rap_file = fs::file(vfs::get("/dev_hdd0/home/00000001/exdata/" + rap_name));
-
-	if (!rap_file)
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -136,10 +133,7 @@ s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
 	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
 
-	std::string rap_name = *content_id + ".rap";
-	fs::file rap_file = fs::file(vfs::get("/dev_hdd0/home/00000001/exdata/" + rap_name));
-
-	if (!rap_file)
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;

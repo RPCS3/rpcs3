@@ -5,11 +5,6 @@
 
 #include <cmath>
 
-// TODO: fix rol8 and rol16 for __GNUG__ (probably with __asm__)
-inline u8 rol8(const u8 x, const u8 n) { return x << n | x >> (8 - n); }
-inline u16 rol16(const u16 x, const u16 n) { return x << n | x >> (16 - n); }
-inline u32 rol32(const u32 x, const u32 n) { return x << n | x >> (32 - n); }
-inline u64 rol64(const u64 x, const u64 n) { return x << n | x >> (64 - n); }
 inline u64 dup32(const u32 x) { return x | static_cast<u64>(x) << 32; }
 
 #if defined(__GNUG__)
@@ -1180,7 +1175,7 @@ bool ppu_interpreter::VRLB(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (uint i = 0; i < 16; i++)
 	{
-		d._u8[i] = rol8(a._u8[i], b._u8[i] & 0x7);
+		d._u8[i] = rol8(a._u8[i], b._u8[i]);
 	}
 	return true;
 }

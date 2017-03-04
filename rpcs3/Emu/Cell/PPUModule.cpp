@@ -111,6 +111,7 @@ LOG_CHANNEL(sysPrxForUser);
 
 cfg::bool_entry g_cfg_hook_ppu_funcs(cfg::root.core, "Hook static functions");
 cfg::bool_entry g_cfg_load_liblv2(cfg::root.core, "Load liblv2.sprx only");
+cfg::bool_entry g_cfg_load_libreq(cfg::root.core, "Load required libraries", true);
 
 cfg::set_entry g_cfg_load_libs(cfg::root.core, "Load libraries");
 
@@ -1115,27 +1116,114 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Initialize process
 	std::vector<std::shared_ptr<lv2_prx>> loaded_modules;
 
-	// Load modules
-	const std::string& lle_dir = vfs::get("/dev_flash/sys/external");
+	// Get LLE module list
+	std::set<std::string> load_libs;
 
-	if (g_cfg_load_liblv2)
+	if (!!g_cfg_load_liblv2 == !!g_cfg_load_libreq)
 	{
-		const ppu_prx_object obj = decrypt_self(fs::file(lle_dir + "/liblv2.sprx"));
+		// Load required set of modules
+		load_libs = g_cfg_load_libs.get_set();
+	}
 
-		if (obj == elf_error::ok)
+	if (g_cfg_load_liblv2 && !g_cfg_load_libreq)
+	{
+		// Load only liblv2.sprx
+		load_libs.emplace("liblv2.sprx");
+	}
+	else if (g_cfg_load_libreq)
+	{
+		// Load recommended set of modules: Module name -> SPRX
+		const std::unordered_multimap<std::string, std::string> sprx_map
 		{
-			loaded_modules.push_back(ppu_load_prx(obj, "liblv2.sprx"));
-		}
-		else
+			{ "cellAdec", "libadec.sprx" }, // cellSpurs|cell_libac3dec|cellAtrac3dec|cellAtracXdec|cellCelpDec|cellDTSdec|cellM2AACdec|cellM2BCdec|cellM4AacDec|cellMP3dec|cellTRHDdec|cellWMAdec|cellDTSLBRdec|cellDDPdec|cellM4AacDec2ch|cellDTSHDdec|cellMPL1dec|cellMP3Sdec|cellM4AacDec2chmod|cellCelp8Dec|cellWMAPROdec|cellWMALSLdec|cellDTSHDCOREdec|cellAtrac3multidec
+			{ "cellAdec", "libsre.sprx" },
+			{ "cellAdec", "libac3dec.sprx" },
+			{ "cellAdec", "libat3dec.sprx" },
+			{ "cellAdec", "libat3multidec.sprx" },
+			{ "cellAdec", "libatxdec.sprx" },
+			{ "cellAdec", "libcelp8dec.sprx" },
+			{ "cellAdec", "libcelpdec.sprx" },
+			{ "cellAdec", "libddpdec.sprx" },
+			{ "cellAdec", "libdtslbrdec.sprx" },
+			{ "cellAdec", "libm2bcdec.sprx" },
+			{ "cellAdec", "libm4aacdec.sprx" },
+			{ "cellAdec", "libm4aacdec2ch.sprx" },
+			{ "cellAdec", "libmp3dec.sprx" },
+			{ "cellAdec", "libmpl1dec.sprx" },
+			{ "cellAdec", "libwmadec.sprx" },
+			{ "cellAtrac", "libatrac3plus.sprx" },
+			{ "cellAtrac", "cellAdec" },
+			{ "cellAtracMulti", "libatrac3multi.sprx" },
+			{ "cellAtracMulti", "cellAdec" },
+			{ "cellDmux", "libdmux.sprx" },
+			{ "cellDmux", "libdmuxpamf.sprx" },
+			{ "cellDmux", "libsre.sprx" },
+			{ "cellFiber", "libfiber.sprx" },
+			{ "cellFont", "libfont.sprx" },
+			{ "cellFontFT", "libfontFT.sprx" },
+			{ "cellFontFT", "libfreetype.sprx" },
+			{ "cellGifDec", "libgifdec.sprx" },
+			{ "cellGifDec", "libsre.sprx" },
+			{ "cellJpgDec", "libjpgdec.sprx" },
+			{ "cellJpgDec", "libsre.sprx" },
+			{ "cellKey2char", "libkey2char.sprx" },
+			{ "cellL10n", "libl10n.sprx" },
+			{ "cellPamf", "libpamf.sprx" },
+			{ "cellPngDec", "libpngdec.sprx" },
+			{ "cellPngDec", "libsre.sprx" },
+			{ "cellResc", "libresc.sprx" },
+			{ "cellRtc", "librtc.sprx" },
+			{ "cellSail", "libsail.sprx" },
+			{ "cellSail", "libsre.sprx" },
+			{ "cellSail", "libmp4.sprx" },
+			{ "cellSail", "libpamf.sprx" },
+			{ "cellSail", "libdmux.sprx" },
+			{ "cellSail", "libdmuxpamf.sprx" },
+			{ "cellSail", "libapostsrc_mini.sprx" },
+			{ "cellSail", "libsail_avi.sprx" },
+			{ "cellSail", "libvpost.sprx" },
+			{ "cellSail", "cellAdec" },
+			{ "cellSpursJq", "libspurs_jq.sprx" },
+			{ "cellSpursJq", "libsre.sprx" },
+			{ "cellSync", "libsre.sprx" },
+			{ "cellSheap", "libsre.sprx" },
+			{ "cellOvis", "libsre.sprx" },
+			{ "cellSpurs", "libsre.sprx" },
+			{ "cellDaisy", "libsre.sprx" },
+			{ "cellSpudll", "libsre.sprx" },
+			{ "cellSync2", "libsync2.sprx" },
+			{ "cellSync2", "libsre.sprx" },
+			{ "cellVpost", "libvpost.sprx" },
+			{ "cellVpost", "libsre.sprx" },
+		};
+
+		for (const auto& pair : link->modules)
 		{
-			fmt::throw_exception("Failed to load liblv2.sprx: %s", obj.get_error());
+			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second;)
+			{
+				// Dependencies (workaround for cellAdec)
+				auto range2 = sprx_map.equal_range(range.first->second);
+
+				if (range2.first != range2.second)
+				{
+					range = range2;
+				}
+				else
+				{
+					load_libs.emplace(range.first->second);
+					range.first++;
+				}
+			}
 		}
 	}
-	else
+	
+	if (!load_libs.empty())
 	{
-		for (const auto& name : g_cfg_load_libs.get_set())
+		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
+
+		for (const auto& name : load_libs)
 		{
-			const ppu_prx_object obj = decrypt_self(fs::file(lle_dir + '/' + name));
+			const ppu_prx_object obj = decrypt_self(fs::file(lle_dir + name));
 
 			if (obj == elf_error::ok)
 			{
@@ -1150,7 +1238,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				else
 				{
 					// TODO: fix arguments
-					ppu_validate(lle_dir + '/' + name, prx->funcs, prx->funcs[0].addr);
+					ppu_validate(lle_dir + name, prx->funcs, prx->funcs[0].addr);
 				}
 
 				loaded_modules.emplace_back(std::move(prx));

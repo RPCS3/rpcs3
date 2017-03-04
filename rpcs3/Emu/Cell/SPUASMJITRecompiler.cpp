@@ -478,7 +478,7 @@ void spu_recompiler::ROT(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
-			t[i] = (a[i] << b[i]) | (a[i] >> (32 - b[i]));
+			t[i] = rol32(a[i], b[i]);
 		}
 	};
 
@@ -588,7 +588,7 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 	{
 		for (u32 i = 0; i < 8; i++)
 		{
-			t[i] = (a[i] << b[i]) | (a[i] >> (16 - b[i]));
+			t[i] = rol16(a[i], b[i]);
 		}
 	};
 

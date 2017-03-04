@@ -46,6 +46,73 @@ u64 lv2_file::op_write(vm::ps3::cptr<void> buf, u64 size)
 	return file.write(local_buf.get(), size);
 }
 
+struct lv2_file::file_view : fs::file_base
+{
+	const std::shared_ptr<lv2_file> m_file;
+	const u64 m_off;
+	u64 m_pos;
+
+	explicit file_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
+		: m_file(_file)
+		, m_off(offset)
+		, m_pos(0)
+	{
+	}
+
+	~file_view() override
+	{
+	}
+
+	fs::stat_t stat() override
+	{
+		return m_file->file.stat();
+	}
+
+	bool trunc(u64 length) override
+	{
+		return false;
+	}
+
+	u64 read(void* buffer, u64 size) override
+	{
+		std::lock_guard<std::mutex> lock(m_file->mp->mutex);
+
+		const u64 old_pos = m_file->file.pos();
+		const u64 new_pos = m_file->file.seek(m_off + m_pos);
+		const u64 result = m_file->file.read(buffer, size);
+		verify(HERE), old_pos == m_file->file.seek(old_pos);
+
+		m_pos += result;
+		return result;
+	}
+
+	u64 write(const void* buffer, u64 size) override
+	{
+		return 0;
+	}
+
+	u64 seek(s64 offset, fs::seek_mode whence) override
+	{
+		return
+			whence == fs::seek_set ? m_pos = offset :
+			whence == fs::seek_cur ? m_pos = offset + m_pos :
+			whence == fs::seek_end ? m_pos = offset + size() :
+			(fmt::raw_error("lv2_file::file_view::seek(): invalid whence"), 0);
+	}
+
+	u64 size() override
+	{
+		return m_off + m_file->file.size();
+	}
+};
+
+fs::file lv2_file::make_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
+{
+	fs::file result;
+	result.reset(std::make_unique<lv2_file::file_view>(_file, offset));
+	return result;
+}
+
 error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6)
 {
 	sys_fs.todo("sys_fs_test(arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x, arg5=*0x%x, arg6=0x%x) -> CELL_OK", arg1, arg2, arg3, arg4, arg5, arg6);
@@ -475,6 +542,35 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 		break;
 	}
+
+	case 0x80000009: // cellFsSdataOpenByFd
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_op_09>(_arg);
+
+		if (_size < arg.size())
+		{
+			return CELL_EINVAL;
+		}
+
+		const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+		if (!file)
+		{
+			return CELL_EBADF;
+		}
+
+		// TODO
+		if (const u32 id = idm::make<lv2_fs_object, lv2_file>(file->mp, lv2_file::make_view(file, arg->offset), file->mode, file->flags))
+		{
+			arg->out_code = CELL_OK;
+			arg->out_fd = id;
+			return CELL_OK;
+		}
+
+		// Out of file descriptors
+		return CELL_EMFILE;
+	}
+
 	default:
 	{
 		sys_fs.todo("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);

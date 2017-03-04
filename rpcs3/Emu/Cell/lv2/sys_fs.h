@@ -126,11 +126,25 @@ struct lv2_file final : lv2_fs_object
 	{
 	}
 
+	lv2_file(lv2_fs_mount_point* mp, fs::file&& file, s32 mode, s32 flags)
+		: lv2_fs_object(mp)
+		, file(std::move(file))
+		, mode(mode)
+		, flags(flags)
+	{
+	}
+
 	// File reading with intermediate buffer
 	u64 op_read(vm::ps3::ptr<void> buf, u64 size);
 
 	// File writing with intermediate buffer
 	u64 op_write(vm::ps3::cptr<void> buf, u64 size);
+
+	// For MSELF support
+	struct file_view;
+
+	// Make file view from lv2_file object (for MSELF support)
+	static fs::file make_view(const std::shared_ptr<lv2_file>& _file, u64 offset);
 };
 
 struct lv2_dir final : lv2_fs_object
@@ -180,6 +194,29 @@ struct lv2_file_op_rw : lv2_file_op
 };
 
 CHECK_SIZE(lv2_file_op_rw, 0x38);
+
+// sys_fs_fcntl: cellFsSdataOpenByFd
+struct lv2_file_op_09 : lv2_file_op
+{
+	vm::bptrb<vtable::lv2_file_op> _vtable;
+
+	be_t<u32> op;
+	be_t<u32> _x8;
+	be_t<u32> _xc;
+
+	be_t<u32> fd;
+	be_t<u64> offset;
+	be_t<u32> _vtabl2;
+	be_t<u32> arg1; // 0x180
+	be_t<u32> arg2; // 0x10
+	be_t<u32> arg_size; // 6th arg
+	be_t<u32> arg_ptr; // 5th arg
+
+	be_t<s32> out_code;
+	be_t<u32> out_fd;
+};
+
+CHECK_SIZE(lv2_file_op_09, 0x40);
 
 // Syscalls
 

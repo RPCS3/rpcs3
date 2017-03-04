@@ -145,7 +145,7 @@ void spu_interpreter::ROT(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 4; i++)
 	{
-		spu.gpr[op.rt]._u32[i] = (a._u32[i] << b._s32[i]) | (a._u32[i] >> (32 - b._s32[i]));
+		spu.gpr[op.rt]._u32[i] = rol32(a._u32[i], b._u32[i]);
 	}
 }
 
@@ -192,7 +192,7 @@ void spu_interpreter::ROTH(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 8; i++)
 	{
-		spu.gpr[op.rt]._u16[i] = (a._u16[i] << b._s16[i]) | (a._u16[i] >> (16 - b._s16[i]));
+		spu.gpr[op.rt]._u16[i] = rol16(a._u16[i], b._s16[i]);
 	}
 }
 
