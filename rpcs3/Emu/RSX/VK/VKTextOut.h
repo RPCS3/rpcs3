@@ -328,10 +328,14 @@ namespace vk
 				s++;
 			}
 
-			VkViewport vp = {0, 0, target_w, target_h, 0., 1.};
+			VkViewport vp{};
+			vp.width = target_w;
+			vp.height = target_h;
+			vp.minDepth = 0.f;
+			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);
 
-			VkRect2D vs = { {0, 0}, {target_w, target_h} };
+			VkRect2D vs = { {0, 0}, {0u+target_w, 0u+target_h} };
 			vkCmdSetScissor(cmd, 0, 1, &vs);
 
 			//TODO: Add drop shadow if deemed necessary for visibility
