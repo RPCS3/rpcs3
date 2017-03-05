@@ -143,12 +143,38 @@ namespace vk
 		//Helpers
 		VkComponentMapping get_component_map(rsx::fragment_texture &tex, u32 gcm_format)
 		{
-			return vk::get_component_mapping(gcm_format, tex.remap());
+			//Decoded remap returns 2 arrays; a redirection table and a lookup reference
+			auto decoded_remap = tex.decoded_remap();
+
+			//NOTE: Returns mapping in A-R-G-B
+			auto native_mapping = vk::get_component_mapping(gcm_format);
+			VkComponentSwizzle final_mapping[4] = {};
+
+			for (u8 channel = 0; channel < 4; ++channel)
+			{
+				switch (decoded_remap.second[channel])
+				{
+				case CELL_GCM_TEXTURE_REMAP_ONE:
+					final_mapping[channel] = VK_COMPONENT_SWIZZLE_ONE;
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ZERO:
+					final_mapping[channel] = VK_COMPONENT_SWIZZLE_ZERO;
+					break;
+				default:
+					LOG_ERROR(RSX, "Unknown remap lookup value %d", decoded_remap.second[channel]);
+				case CELL_GCM_TEXTURE_REMAP_REMAP:
+					final_mapping[channel] = native_mapping[decoded_remap.first[channel]];
+					break;
+				}
+			}
+
+			return { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 		}
 
 		VkComponentMapping get_component_map(rsx::vertex_texture &tex, u32 gcm_format)
 		{
-			return vk::get_component_mapping(gcm_format, (0 | 1 << 2 | 2 << 4 | 3 << 6));
+			auto mapping = vk::get_component_mapping(gcm_format);
+			return { mapping[1], mapping[2], mapping[3], mapping[0] };
 		}
 
 	public:

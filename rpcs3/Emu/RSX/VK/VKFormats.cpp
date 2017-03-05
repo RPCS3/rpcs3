@@ -109,13 +109,8 @@ float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
 }
 
 
-VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask)
+std::array<VkComponentSwizzle, 4> get_component_mapping(u32 format)
 {
-	const u8 remap_a = swizzle_mask & 0x3;
-	const u8 remap_r = (swizzle_mask >> 2) & 0x3;
-	const u8 remap_g = (swizzle_mask >> 4) & 0x3;
-	const u8 remap_b = (swizzle_mask >> 6) & 0x3;
-
 	//Component map in ARGB format
 	std::array<VkComponentSwizzle, 4> mapping = {};
 
@@ -174,7 +169,7 @@ VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask)
 		fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)" HERE, format);
 	}
 	
-	return {mapping[remap_r], mapping[remap_g], mapping[remap_b], mapping[remap_a]};
+	return mapping;
 }
 
 }
