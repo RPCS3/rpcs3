@@ -22,6 +22,6 @@ namespace vk
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter);
 	VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap);
 	float max_aniso(rsx::texture_max_anisotropy gcm_aniso);
-	VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask);
+	std::array<VkComponentSwizzle, 4> get_component_mapping(u32 format);
 	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type& mode, bool &requires_modification);
 }

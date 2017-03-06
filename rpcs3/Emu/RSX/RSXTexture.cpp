@@ -178,6 +178,32 @@ namespace rsx
 		return (registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)]);
 	}
 
+	std::pair<std::array<u8, 4>, std::array<u8, 4>> fragment_texture::decoded_remap() const
+	{
+		const u32 remap_ctl = registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)];
+
+		//Remapping tables; format is A-R-G-B
+		//Remap input table. Contains channel index to read color from 
+		const std::array<u8, 4> remap_inputs =
+		{
+			static_cast<u8>(remap_ctl & 0x3),
+			static_cast<u8>((remap_ctl >> 2) & 0x3),
+			static_cast<u8>((remap_ctl >> 4) & 0x3),
+			static_cast<u8>((remap_ctl >> 6) & 0x3),
+		};
+
+		//Remap control table. Controls whether the remap value is used, or force either 0 or 1
+		const std::array<u8, 4> remap_lookup =
+		{
+			static_cast<u8>((remap_ctl >> 8) & 0x3),
+			static_cast<u8>((remap_ctl >> 10) & 0x3),
+			static_cast<u8>((remap_ctl >> 12) & 0x3),
+			static_cast<u8>((remap_ctl >> 14) & 0x3),
+		};
+
+		return std::make_pair(remap_inputs, remap_lookup);
+	}
+
 	float fragment_texture::bias() const
 	{
 		return float(f16((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff));
