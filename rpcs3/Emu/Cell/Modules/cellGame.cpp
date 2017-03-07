@@ -601,6 +601,7 @@ static const char* get_param_string_key(s32 id)
 	case CELL_GAME_PARAMID_TITLE_POLISH:             return "TITLE_16";
 	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return "TITLE_17";
 	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return "TITLE_18";
+	case CELL_GAME_PARAMID_TITLE_TURKISH:            return "TITLE_19";
 
 	case CELL_GAME_PARAMID_TITLE_ID:                 return "TITLE_ID";
 	case CELL_GAME_PARAMID_VERSION:                  return "VERSION";
