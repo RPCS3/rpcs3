@@ -399,9 +399,16 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
 			break;
+				
+		case CELL_GCM_TEXTURE_D8R8G8B8:	
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1);
+			break;
 			
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-		case CELL_GCM_TEXTURE_D8R8G8B8:
 		{
 			u8 remap_a = rsx::method_registers.fragment_textures[i].remap() & 0x3;
 			u8 remap_r = (rsx::method_registers.fragment_textures[i].remap() >> 2) & 0x3;
