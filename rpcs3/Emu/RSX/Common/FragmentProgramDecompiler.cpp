@@ -41,6 +41,10 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	{
 		code = saturate(code);
 	}
+	else if (!dst.no_dest)
+	{
+		code = NoOverflow(code);
+	}
 
 	code += (append_mask ? "$m" : "");
 
@@ -59,6 +63,13 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 
 	std::string dest = AddReg(dst.dest_reg, dst.fp16) + "$m";
+
+	if (dst.exp_tex)
+	{
+		//TODO
+		//If exp_tex really sets _bx2 flag, we may need to perform extra modifications to the src
+		AddCode("//TODO: exp tex flag is set");
+	}
 
 	AddCodeCond(Format(dest), code);
 	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
@@ -146,6 +157,45 @@ std::string FragmentProgramDecompiler::AddTex()
 		break;
 	}
 	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("tex") + std::to_string(dst.tex_num));
+}
+
+//Both of these were tested with a trace SoulCalibur IV title screen
+//Failure to catch causes infinite values since theres alot of rcp(0)
+std::string FragmentProgramDecompiler::NotZero(const std::string& code)
+{
+	return "(max(abs(" + code + "), 1.E-10) * sign(" + code + "))";
+}
+
+std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
+{
+	return "max(" + code + ", 1.E-10)";
+}
+
+std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
+{
+	//FP16 is expected to overflow alot easier at 0+-65504
+	//FP32 can still work upto 0+-3.4E38
+	//See http://http.download.nvidia.com/developer/Papers/2005/FP_Specials/FP_Specials.pdf
+
+	if (dst.exp_tex)
+	{
+		//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
+		return "((" + code + "- 0.5) * 2.)";
+	}
+
+	switch (dst.prec)
+	{
+	case 0:
+		break;
+	case 1:
+		//Disabled: Causes blue output in some games such as persona V and soul calibur IV
+		//return "clamp(" + code + ", -65504., 65504.)";
+		break;
+	case 2:
+		return "clamp(" + code + ", -1., 1.)";
+	}
+
+	return code;
 }
 
 std::string FragmentProgramDecompiler::Format(const std::string& code)
@@ -358,10 +408,10 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	switch (opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
-	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1.xxxx)"); return true;
+	case RSX_FP_OPCODE_DIV: SetDst("($0 / " + NotZero("$1.x") + ")"); return true;
 	// Note: DIVSQ is not IEEE compliant. divsq(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
 	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
-	case RSX_FP_OPCODE_DIVSQ: SetDst("divsq_legacy($0, $1)"); return true;
+	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt(" + NotZeroPositive("$1.x") + "))"); return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
 	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
@@ -372,10 +422,10 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
 	// Note: It's higly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
-	case RSX_FP_OPCODE_RCP: SetDst("rcp_legacy($0)"); return true;
+	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0") + ")"); return true;
 	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
 	// It is not know what happens if 0 is negative.
-	case RSX_FP_OPCODE_RSQ: SetDst("rsq_legacy($0)"); return true;
+	case RSX_FP_OPCODE_RSQ: SetDst("(" + getFloatTypeName(4) + "(1.) / sqrt(" + NotZeroPositive("$0.x") + "))"); return true;
 	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
 	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
 	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
@@ -394,10 +444,10 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1.xxxx)"); return true;
+	case RSX_FP_OPCODE_DIV: SetDst("($0 / " + NotZero("$1.x") + ")"); return true;
 	// Note: DIVSQ is not IEEE compliant. sqrt(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
 	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
-	case RSX_FP_OPCODE_DIVSQ: SetDst("divsq_legacy($0, sqrt($1).xxxx)"); return true;
+	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt(" + NotZeroPositive("$1.x") + "))"); return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
 	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
@@ -416,10 +466,10 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
-	case RSX_FP_OPCODE_PK2: SetDst("float(packSnorm2x16($0.xy))"); return true;
-	case RSX_FP_OPCODE_PK4: SetDst("float(packSnorm4x8($0))"); return true;
-	case RSX_FP_OPCODE_PK16: SetDst("float(packHalf2x16($0.xy))"); return true;
-	case RSX_FP_OPCODE_PKB: SetDst("packUnorm4x8($0 / 255.)"); return true;
+	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(packSnorm2x16($0.xy))"); return true;
+	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(packSnorm4x8($0))"); return true;
+	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(packHalf2x16($0.xy))"); return true;
+	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(packUnorm4x8($0 / 255.))"); return true;
 	case RSX_FP_OPCODE_PKG: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKG"); return true;
 	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
 	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
@@ -440,8 +490,11 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	{
 	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); return true;
 	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); return true;
-	case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); return true;
+	case RSX_FP_OPCODE_NRM: SetDst("normalize($0.xyz)"); return true;
 	case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); return true;
+	case RSX_FP_OPCODE_TEXBEM:
+		//treat as TEX for now
+		LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TEXBEM");
 	case RSX_FP_OPCODE_TEX:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
@@ -462,7 +515,9 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		}
 		return false;
-	case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); return true;
+	case RSX_FP_OPCODE_TXPBEM:
+		//Treat as TXP for now
+		LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXPBEM");
 	case RSX_FP_OPCODE_TXP:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
@@ -480,7 +535,6 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		}
 		return false;
-	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXD:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
@@ -498,7 +552,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		}
 		return false;
-	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;
+	case RSX_FP_OPCODE_TXB:
 	case RSX_FP_OPCODE_TXL:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{

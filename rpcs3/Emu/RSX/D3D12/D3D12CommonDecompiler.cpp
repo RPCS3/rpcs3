@@ -108,26 +108,6 @@ std::string compareFunctionImp(COMPARE f, const std::string &Op0, const std::str
 
 void insert_d3d12_legacy_function(std::ostream& OS)
 {
-	OS << "float4 divsq_legacy(float4 num, float4 denum)\n";
-	OS << "{\n";
-	OS << "	return num / sqrt(max(denum.xxxx, 1.E-10));\n";
-	OS << "}\n";
-
-	OS << "float4 rcp_legacy(float4 denum)\n";
-	OS << "{\n";
-	OS << "	return 1. / denum;\n";
-	OS << "}\n";
-
-	OS << "float4 rsq_legacy(float4 val)\n";
-	OS << "{\n";
-	OS << "	return float(1.0 / sqrt(max(val.x, 1.E-10))).xxxx;\n";
-	OS << "}\n\n";
-
-	OS << "float4 log2_legacy(float4 val)\n";
-	OS << "{\n";
-	OS << "	return log2(max(val.x, 1.E-10)).xxxx;\n";
-	OS << "}\n\n";
-
 	OS << "float4 lit_legacy(float4 val)";
 	OS << "{\n";
 	OS << "	float4 clamped_val = val;\n";
