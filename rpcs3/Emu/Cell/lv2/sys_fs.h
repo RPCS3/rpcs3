@@ -91,6 +91,26 @@ struct CellFsUtimbuf
 
 CHECK_SIZE_ALIGN(CellFsUtimbuf, 16, 4);
 
+// MSelf file structs
+struct FsMselfHeader
+{
+	be_t<u32> m_magic;
+	be_t<u32> m_format_version;
+	be_t<u64> m_file_size;
+	be_t<u32> m_entry_num;
+	be_t<u32> m_entry_size;
+	u8 m_reserve[40];
+
+};
+
+struct FsMselfEntry
+{
+	char m_name[32];
+	be_t<u64> m_offset;
+	be_t<u64> m_size;
+	u8 m_reserve[16];
+};
+
 struct lv2_fs_mount_point;
 
 struct lv2_fs_object
