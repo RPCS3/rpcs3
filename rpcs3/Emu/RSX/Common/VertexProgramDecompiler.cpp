@@ -368,6 +368,11 @@ void VertexProgramDecompiler::SetDSTSca(const std::string& code)
 	SetDST(true, code);
 }
 
+std::string VertexProgramDecompiler::NotZeroPositive(const std::string code)
+{
+	return "max(" + code + ", 1.E-10)";
+}
+
 std::string VertexProgramDecompiler::BuildFuncBody(const FuncInfo& func)
 {
 	std::string result;
@@ -623,7 +628,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
 		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
 		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
-		case RSX_SCA_OPCODE_RSQ: SetDSTSca("rsq_legacy($s)"); break;
+		case RSX_SCA_OPCODE_RSQ: SetDSTSca("1. / " + NotZeroPositive("$s")); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
 		case RSX_SCA_OPCODE_LIT: SetDSTSca("lit_legacy($s)"); break;
@@ -663,7 +668,7 @@ std::string VertexProgramDecompiler::Decompile()
 			// works like BRI but shorter (RET o[1].x(TR);)
 			AddCode("$ifcond return;");
 			break;
-		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2_legacy($s)"); break;
+		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2(" + NotZeroPositive("$s") + ")"); break;
 		case RSX_SCA_OPCODE_EX2: SetDSTSca("exp2($s)"); break;
 		case RSX_SCA_OPCODE_SIN: SetDSTSca("sin($s)"); break;
 		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;
