@@ -595,6 +595,13 @@ namespace gl
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
 
+			if (!texaddr || !range)
+			{
+				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, range);
+				gl_texture.bind();
+				return;
+			}
+
 			glActiveTexture(GL_TEXTURE0 + index);
 
 			/**
