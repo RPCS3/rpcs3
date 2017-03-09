@@ -405,7 +405,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 {
 	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
+	//older sdk. it might not care about game type.
+	const auto prm = fxm::make<content_permission>(dirName.get_ptr(), psf::registry{});
+
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1 || !prm || prm->dir.empty())
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -417,18 +420,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
 	vm::var<CellGameDataStatSet>  cbSet;
-
-	if (!fs::is_dir(vfs::get(dir)))
-	{
-		//No existing data, callback will most likely ask to create it.
-		cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_YES;
-	}
-	else
-	{
-		cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_NO;
-	}
-
-	
+	(!fs::is_dir(vfs::get(dir)))? cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_YES : cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_NO;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
@@ -453,15 +445,15 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	strcpy_trunc(cbGet->getParam.dataVersion, psf::get_string(sfo, "APP_VER", ""));
 	strcpy_trunc(cbGet->getParam.titleId, psf::get_string(sfo, "TITLE_ID", ""));
 	strcpy_trunc(cbGet->getParam.title, psf::get_string(sfo, "TITLE", ""));
-	// TODO: write lang titles
+	for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+	{
+		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
+	}
+
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
-	if (cbSet->setParam)
-	{
-		// TODO: write PARAM.SFO from cbSet
-		cellGame.todo("cellGameDataCheckCreate2(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam);
-	}
+	
 
 	switch ((s32)cbResult->result)
 	{
@@ -472,11 +464,28 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 		//game confirmed that it wants to create directory
 	case CELL_GAMEDATA_CBRESULT_OK:	
-		if (!fs::create_path(vfs::get(dir + "/USRDIR")))
+		if (!fs::is_dir(vfs::get(dir)) && !fs::create_path(vfs::get(dir + "/USRDIR")))
 			{
 				cellGame.error("cellGameDataCheckCreate2(): folder creation failed");
 				return CELL_GAME_ERROR_NOSPACE;	//don't know which error. picked one at random
 			}
+		if (cbSet->setParam)
+		{
+			prm->is_temporary = false;
+
+			//older SDK does not define not settable values, hopefully it doesn't just change some values(overwrite)
+			prm->sfo =
+			{
+				{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId) },
+				{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title) },
+				{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion) }		
+			};
+			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+			{
+				prm->sfo.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
+			}
+			psf::save_object(fs::file(dir + "/PARAM.SFO", fs::rewrite), prm->sfo);
+		}
 		return CELL_OK;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
