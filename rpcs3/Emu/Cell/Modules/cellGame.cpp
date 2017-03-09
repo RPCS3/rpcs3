@@ -420,7 +420,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
 	vm::var<CellGameDataStatSet>  cbSet;
-	(!fs::is_dir(vfs::get(dir)))? cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_YES : cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_NO;
+	cbGet->isNewData = fs::is_dir(vfs::get(dir)) ? CELL_GAMEDATA_ISNEWDATA_NO : CELL_GAMEDATA_ISNEWDATA_YES;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
@@ -452,7 +452,6 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
-
 	
 
 	switch ((s32)cbResult->result)
@@ -480,11 +479,12 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title) },
 				{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion) }		
 			};
+			prm->sfo.emplace("PARENTAL_LEVEL", 0); // I don't care about age restrictions.
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 			{
 				prm->sfo.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
 			}
-			psf::save_object(fs::file(dir + "/PARAM.SFO", fs::rewrite), prm->sfo);
+			(fs::is_file(dir + "/PARAM.SFO")) ? psf::save_object(fs::file(dir + "/PARAM.SFO", fs::rewrite), prm->sfo) : psf::save_object(fs::file(dir + "/PARAM.SFO", fs::create), prm->sfo);
 		}
 		return CELL_OK;
 
