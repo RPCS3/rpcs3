@@ -414,21 +414,26 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	const std::string& dir = "/dev_hdd0/game/"s + dirName.get_ptr();
 
-	if (!fs::is_dir(vfs::get(dir)))
-	{
-		cellGame.todo("cellGameDataCheckCreate2(): should create directory '%s'", dir);
-		// TODO: create data
-		return CELL_OK;
-	}
-
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
 	vm::var<CellGameDataStatSet>  cbSet;
 
+	if (!fs::is_dir(vfs::get(dir)))
+	{
+		//No existing data, callback will most likely ask to create it.
+		cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_YES;
+	}
+	else
+	{
+		cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_NO;
+	}
+
+	
+
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
 
-	cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_NO;
+	
 	strcpy_trunc(cbGet->contentInfoPath, dir);
 	strcpy_trunc(cbGet->gameDataPath, dir + "/USRDIR");
 
@@ -461,10 +466,17 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	switch ((s32)cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
-		// TODO: do not process game data
+		// TODO: do not process game data(directory)
 		cellGame.warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
+		return CELL_OK;
 
-	case CELL_GAMEDATA_CBRESULT_OK:
+		//game confirmed that it wants to create directory
+	case CELL_GAMEDATA_CBRESULT_OK:	
+		if (!fs::create_path(vfs::get(dir + "/USRDIR")))
+			{
+				cellGame.error("cellGameDataCheckCreate2(): folder creation failed");
+				return CELL_GAME_ERROR_NOSPACE;	//don't know which error. picked one at random
+			}
 		return CELL_OK;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
