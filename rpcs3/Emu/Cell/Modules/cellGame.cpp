@@ -470,6 +470,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			}
 		if (cbSet->setParam)
 		{
+			const auto vdir = vfs::get(dir);
 			prm->is_temporary = false;
 
 			//older SDK does not define not settable values, hopefully it doesn't just change some values(overwrite)
@@ -489,15 +490,15 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				cellGame.fatal("directory where param.sfo is to be created does not exist");
 				return CELL_GAME_ERROR_INTERNAL;
 			}
-			if (!fs::is_file(dir + "/PARAM.SFO")) 
+			if (!fs::is_file(vdir + "/PARAM.SFO")) 
 			{
 				cellGame.error("param.sfo file does not exists trying to create it");
-				psf::save_object(fs::file(dir + "/PARAM.SFO", fs::create +fs::excl+ fs::write), prm->sfo);
+				psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::create +fs::excl+ fs::write), prm->sfo);
 			}
 			else
 			{
 				cellGame.error("param.sfo file exists. rewriting");
-				psf::save_object(fs::file(dir + "/PARAM.SFO", fs::rewrite), prm->sfo);
+				psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), prm->sfo);
 			}
 		}
 		else
