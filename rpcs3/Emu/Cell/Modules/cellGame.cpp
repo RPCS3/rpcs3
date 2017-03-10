@@ -461,8 +461,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		cellGame.warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 		return CELL_OK;
 
-		//game confirmed that it wants to create directory
+		
 	case CELL_GAMEDATA_CBRESULT_OK:	
+		//game confirmed that it wants to create directory
 		if (!fs::is_dir(vfs::get(dir + "/USRDIR")) && !fs::create_path(vfs::get(dir + "/USRDIR")))
 			{
 				cellGame.error("cellGameDataCheckCreate2(): folder creation failed");
@@ -490,20 +491,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				cellGame.fatal("directory where param.sfo is to be created does not exist");
 				return CELL_GAME_ERROR_INTERNAL;
 			}
-			if (!fs::is_file(vdir + "/PARAM.SFO")) 
-			{
-				cellGame.error("param.sfo file does not exists trying to create it");
-				psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::create +fs::excl+ fs::write), prm->sfo);
-			}
-			else
-			{
-				cellGame.error("param.sfo file exists. rewriting");
-				psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), prm->sfo);
-			}
-		}
-		else
-		{
-			cellGame.warning("Game does not want to save/rewrite param.sfo");
+			(fs::is_file(vdir + "/PARAM.SFO"))? psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), prm->sfo) : psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::create + fs::excl + fs::write), prm->sfo);
+
 		}
 		return CELL_OK;
 
