@@ -406,7 +406,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	//older sdk. it might not care about game type.
-	const auto prm = fxm::make<content_permission>(dirName.get_ptr(), psf::registry{});
+
+	//should take care of succesive function calls
+	const auto prm = (fxm::get<content_permission>())? fxm::get<content_permission>() :  fxm::make<content_permission>(dirName.get_ptr(), psf::registry{});
+	
 
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1 || !prm || prm->dir.empty())
 	{
