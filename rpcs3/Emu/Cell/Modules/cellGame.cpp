@@ -405,13 +405,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 {
 	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	//older sdk. it might not care about game type.
+	//older sdk. it might not care about game type.	
 
-	//should take care of succesive function calls
-	const auto prm = (fxm::get<content_permission>())? fxm::get<content_permission>() :  fxm::make<content_permission>(dirName.get_ptr(), psf::registry{});
-	
-
-	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1 || !prm || prm->dir.empty())
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -475,26 +471,25 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		if (cbSet->setParam)
 		{
 			const auto vdir = vfs::get(dir);
-			prm->is_temporary = false;
 
 			//older SDK does not define not settable values, hopefully it doesn't just change some values(overwrite)
-			prm->sfo =
+			psf::registry sfo_write =
 			{
 				{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId) },
 				{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title) },
 				{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion) }		
 			};
-			prm->sfo.emplace("PARENTAL_LEVEL", 0); // I don't care about age restrictions.
+			sfo_write.emplace("PARENTAL_LEVEL", cbSet->setParam->parentalLevel); // I don't care about age restrictions.
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 			{
-				prm->sfo.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
+				sfo_write.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
 			}
-			if (!fs::is_dir(vfs::get(dir)))
+			if (!fs::is_dir(vdir))
 			{
 				cellGame.fatal("directory where param.sfo is to be created does not exist");
 				return CELL_GAME_ERROR_INTERNAL;
 			}
-			(fs::is_file(vdir + "/PARAM.SFO"))? psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), prm->sfo) : psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::create + fs::excl + fs::write), prm->sfo);
+			psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), sfo_write);
 
 		}
 		return CELL_OK;
