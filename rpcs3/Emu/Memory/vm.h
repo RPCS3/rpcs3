@@ -4,12 +4,15 @@
 #include <functional>
 #include <memory>
 
-class thread_ctrl;
+#include "Utilities/mutex.h"
+
+class named_thread;
 
 namespace vm
 {
 	extern u8* const g_base_addr;
-	extern u8* const g_priv_addr;
+
+	extern shared_mutex g_mutex;
 
 	enum memory_location_t : uint
 	{
@@ -30,55 +33,50 @@ namespace vm
 
 		page_fault_notification = (1 << 3),
 		page_no_reservations    = (1 << 4),
+		page_64k_size           = (1 << 5),
+		page_1m_size            = (1 << 6),
 
 		page_allocated          = (1 << 7),
+	};
+
+	struct waiter
+	{
+		named_thread* owner;
+		u32 addr;
+		u32 size;
+		u64 stamp;
+		const void* data;
+
+		waiter() = default;
+
+		waiter(const waiter&) = delete;
+
+		void init();
+		void test() const;
+
+		~waiter();
 	};
 
 	// Address type
 	enum addr_t : u32 {};
 
-	struct access_violation : std::runtime_error
-	{
-		access_violation(u64 addr, const char* cause);
-	};
+	// Get reservation status for further atomic update: last update timestamp
+	u64 reservation_acquire(u32 addr, u32 size);
 
-	[[noreturn]] void throw_access_violation(u64 addr, const char* cause);
+	// End atomic update
+	void reservation_update(u32 addr, u32 size);
 
-	// This flag is changed by various reservation functions and may have different meaning.
-	// reservation_break() - true if the reservation was successfully broken.
-	// reservation_acquire() - true if another existing reservation was broken.
-	// reservation_free() - true if this thread's reservation was successfully removed.
-	// reservation_op() - false if reservation_update() would succeed if called instead.
-	// Write access to reserved memory - only set to true if the reservation was broken.
-	extern thread_local bool g_tls_did_break_reservation;
+	// Check and notify memory change at address
+	void notify(u32 addr, u32 size);
 
-	// Unconditionally break the reservation at specified address
-	void reservation_break(u32 addr);
-
-	// Reserve memory at the specified address for further atomic update
-	void reservation_acquire(void* data, u32 addr, u32 size);
-
-	// Attempt to atomically update previously reserved memory
-	bool reservation_update(u32 addr, const void* data, u32 size);
-
-	// Process a memory access error if it's caused by the reservation
-	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
-
-	// Returns true if the current thread owns reservation
-	bool reservation_test(thread_ctrl* current);
-
-	// Break all reservations created by the current thread
-	void reservation_free();
-
-	// Perform atomic operation unconditionally
-	void reservation_op(u32 addr, u32 size, std::function<void()> proc);
+	void notify_all();
 
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check if existing memory range is allocated. Checking address before using it is very unsafe.
 	// Return value may be wrong. Even if it's true and correct, actual memory protection may be read-only and no-access.
-	bool check_addr(u32 addr, u32 size = 1);
+	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_allocated);
 
 	// Search and map memory in specified memory location (don't pass alignment smaller than 4096)
 	u32 alloc(u32 size, memory_location_t location, u32 align = 4096, u32 sup = 0);
@@ -98,7 +96,7 @@ namespace vm
 		std::map<u32, u32> m_map; // Mapped memory: addr -> size
 		std::unordered_map<u32, u32> m_sup; // Supplementary info for allocations
 
-		bool try_alloc(u32 addr, u32 size, u32 sup);
+		bool try_alloc(u32 addr, u32 size, u8 flags, u32 sup);
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags = 0);
@@ -223,12 +221,6 @@ namespace vm
 		return g_base_addr + addr;
 	}
 
-	// Convert specified PS3/PSV virtual memory address to a pointer for privileged access (always readable/writable if allocated)
-	inline void* base_priv(u32 addr)
-	{
-		return g_priv_addr + addr;
-	}
-
 	inline const u8& read8(u32 addr)
 	{
 		return g_base_addr[addr];
@@ -247,20 +239,10 @@ namespace vm
 			return static_cast<to_be_t<T>*>(base(addr));
 		}
 
-		template<typename T> inline to_be_t<T>* _ptr_priv(u32 addr)
-		{
-			return static_cast<to_be_t<T>*>(base_priv(addr));
-		}
-
 		// Convert specified PS3 address to a reference of specified (possibly converted to BE) type
 		template<typename T> inline to_be_t<T>& _ref(u32 addr)
 		{
 			return *_ptr<T>(addr);
-		}
-
-		template<typename T> inline to_be_t<T>& _ref_priv(u32 addr)
-		{
-			return *_ptr_priv<T>(addr);
 		}
 
 		inline const be_t<u16>& read16(u32 addr)
@@ -303,19 +285,9 @@ namespace vm
 			return static_cast<to_le_t<T>*>(base(addr));
 		}
 
-		template<typename T> inline to_le_t<T>* _ptr_priv(u32 addr)
-		{
-			return static_cast<to_le_t<T>*>(base_priv(addr));
-		}
-
 		template<typename T> inline to_le_t<T>& _ref(u32 addr)
 		{
 			return *_ptr<T>(addr);
-		}
-
-		template<typename T> inline to_le_t<T>& _ref_priv(u32 addr)
-		{
-			return *_ptr_priv<T>(addr);
 		}
 
 		inline const le_t<u16>& read16(u32 addr)
@@ -359,8 +331,6 @@ namespace vm
 	}
 
 	void close();
-
-	extern thread_local u64 g_tls_fault_count;
 }
 
 #include "vm_var.h"

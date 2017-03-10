@@ -263,6 +263,11 @@ extern u64 get_timebased_time();
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
+extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr);
+extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr);
+extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value);
+extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value);
+
 namespace vm { using namespace ps3; }
 
 class ppu_scale_table_t
@@ -2269,11 +2274,7 @@ bool ppu_interpreter::MFOCRF(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LWARX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-
-	be_t<u32> value;
-	vm::reservation_acquire(&value, vm::cast(addr, HERE), SIZE_32(value));
-
-	ppu.gpr[op.rd] = value;
+	ppu.gpr[op.rd] = ppu_lwarx(ppu, vm::cast(addr, HERE));
 	return true;
 }
 
@@ -2435,11 +2436,7 @@ bool ppu_interpreter::MULHW(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LDARX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-
-	be_t<u64> value;
-	vm::reservation_acquire(&value, vm::cast(addr, HERE), SIZE_32(value));
-
-	ppu.gpr[op.rd] = value;
+	ppu.gpr[op.rd] = ppu_ldarx(ppu, vm::cast(addr, HERE));
 	return true;
 }
 
@@ -2565,9 +2562,7 @@ bool ppu_interpreter::STDX(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STWCX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-
-	const be_t<u32> value = (u32)ppu.gpr[op.rs];
-	ppu_cr_set(ppu, 0, false, false, vm::reservation_update(vm::cast(addr, HERE), &value, SIZE_32(value)), ppu.xer.so);
+	ppu_cr_set(ppu, 0, false, false, ppu_stwcx(ppu, vm::cast(addr, HERE), (u32)ppu.gpr[op.rs]), ppu.xer.so);
 	return true;
 }
 
@@ -2635,9 +2630,7 @@ bool ppu_interpreter::ADDZE(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STDCX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-
-	const be_t<u64> value = ppu.gpr[op.rs];
-	ppu_cr_set(ppu, 0, false, false, vm::reservation_update(vm::cast(addr, HERE), &value, SIZE_32(value)), ppu.xer.so);
+	ppu_cr_set(ppu, 0, false, false, ppu_stdcx(ppu, vm::cast(addr, HERE), ppu.gpr[op.rs]), ppu.xer.so);
 	return true;
 }
 

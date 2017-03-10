@@ -98,11 +98,6 @@ namespace vm
 			return static_cast<T*>(vm::base(vm::cast(m_addr, HERE)));
 		}
 
-		T* get_ptr_priv() const
-		{
-			return static_cast<T*>(vm::base_priv(vm::cast(m_addr, HERE)));
-		}
-
 		T* operator ->() const
 		{
 			return get_ptr();
