@@ -94,6 +94,7 @@ namespace gl
 
 			texture::format format = texture::format::rgba;
 			texture::type type = texture::type::ubyte;
+			bool pack_unpack_swap_bytes = false;
 
 			u8 get_pixel_size(texture::format fmt_, texture::type type_)
 			{
@@ -268,10 +269,11 @@ namespace gl
 				real_pitch = width * get_pixel_size(format, type);
 			}
 
-			void set_format(texture::format gl_format, texture::type gl_type)
+			void set_format(texture::format gl_format, texture::type gl_type, bool swap_bytes)
 			{
 				format = gl_format;
 				type = gl_type;
+				pack_unpack_swap_bytes = swap_bytes;
 
 				real_pitch = current_width * get_pixel_size(format, type);
 			}
@@ -289,6 +291,7 @@ namespace gl
 					return;
 				}
 
+				glPixelStorei(GL_PACK_SWAP_BYTES, pack_unpack_swap_bytes);
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 				glGetTextureImageEXT(source_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -309,6 +312,7 @@ namespace gl
 				u32 min_height = std::min((u32)tex.height(), current_height);
 
 				tex.bind();
+				glPixelStorei(GL_UNPACK_SWAP_BYTES, pack_unpack_swap_bytes);
 				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_id);
 				glTexSubImage2D((GLenum)tex.get_target(), 0, 0, 0, min_width, min_height, (GLenum)format, (GLenum)type, nullptr);
 				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -341,7 +345,9 @@ namespace gl
 				verify(HERE), data != nullptr;
 
 				if (real_pitch >= current_pitch)
+				{
 					memcpy(dst, data, cpu_address_range);
+				}
 				else
 				{
 					//TODO: Use compression hint from the gcm tile information
@@ -732,7 +738,7 @@ namespace gl
 			region->copy_texture();
 		}
 
-		void lock_rtt_region(const u32 base, const u32 size, const u16 width, const u16 height, const u16 pitch, const texture::format format, const texture::type type, gl::texture &source)
+		void lock_rtt_region(const u32 base, const u32 size, const u16 width, const u16 height, const u16 pitch, const texture::format format, const texture::type type, const bool swap_bytes, gl::texture &source)
 		{
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
@@ -749,7 +755,7 @@ namespace gl
 			}
 
 			region->set_dimensions(width, height, pitch);
-			region->set_format(format, type);
+			region->set_format(format, type, swap_bytes);
 			region->set_dirty(false);
 			region->set_flushed(false);
 			region->set_copied(false);
