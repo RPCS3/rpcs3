@@ -1001,24 +1001,11 @@ namespace rsx
 
 bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 {
-	const auto cpu = get_current_cpu_thread();
-
-	if (cpu)
-	{
-		cpu->state += cpu_flag::is_waiting;	
-	}
-
 	g_tls_fault_all++;
 
 	if (rsx::g_access_violation_handler && rsx::g_access_violation_handler(addr, is_writing))
 	{
 		g_tls_fault_rsx++;
-
-		if (cpu)
-		{
-			cpu->state -= cpu_flag::is_waiting;
-		}
-
 		return true;
 	}
 
@@ -1147,23 +1134,23 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 		}
 
-		if (cpu)
-		{
-			cpu->state -= cpu_flag::is_waiting;
-		}
-
 		// skip processed instruction
 		RIP(context) += i_size;
 		g_tls_fault_spu++;
 		return true;
 	}
 
+	if (vm::check_addr(addr, d_size))
+	{
+		return true;
+	}
+
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-	if (cpu)
+	if (const auto cpu = get_current_cpu_thread())
 	{
 		LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 		cpu->state += cpu_flag::dbg_pause;
-		cpu->test_state();
+		cpu->check_state();
 	}
 
 	return true;

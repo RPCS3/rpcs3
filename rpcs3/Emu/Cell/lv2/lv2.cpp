@@ -1047,7 +1047,6 @@ void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 			if (!test(val, cpu_flag::signal))
 			{
 				val += cpu_flag::suspend;
-				val += cpu_flag::is_waiting;
 			}
 		});
 
@@ -1171,84 +1170,6 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	schedule_all();
 }
 
-void lv2_obj::lock_all()
-{
-	std::size_t count = 0;
-	std::array<cpu_thread*, 32> array;
-
-	{
-		semaphore_lock lock(g_mutex);
-
-		if (g_pending.empty() || g_pending.front())
-		{
-			if (auto mfc = fxm::check_unlocked<mfc_thread>())
-			{
-				if (!mfc->state.test_and_set(cpu_flag::suspend))
-				{
-					array.at(count++) = mfc;
-				}
-			}
-		}
-
-		for (std::size_t i = 0, x = g_ppu.size(); i < x; i++)
-		{
-			const auto target = g_ppu[i];
-
-			if (!target->state.test_and_set(cpu_flag::suspend))
-			{
-				g_pending.emplace_back(target);
-			}
-		}
-
-		for (cpu_thread* target : g_pending)
-		{
-			if (target && !test(target->state, cpu_flag::is_waiting))
-			{
-				array.at(count++) = target;
-			}
-		}
-
-		g_pending.emplace_front(nullptr);
-	}
-
-	vm::g_mutex.lock();
-	
-	for (std::size_t i = 0; i < count; i++)
-	{
-		while (!test(array[i]->state, cpu_flag::is_waiting))
-		{
-			busy_wait();
-		}
-	}
-}
-
-void lv2_obj::unlock_all()
-{
-	vm::g_mutex.unlock();
-
-	semaphore_lock lock(g_mutex);
-
-	if (!g_pending.empty() && !g_pending.front())
-	{
-		g_pending.pop_front();
-
-		if (g_pending.empty() || g_pending.front())
-		{
-			if (auto mfc = fxm::check_unlocked<mfc_thread>())
-			{
-				const auto old_state = mfc->state.fetch_sub(cpu_flag::suspend);
-
-				if (!test(old_state, cpu_flag::stop) && test(old_state, cpu_flag::is_waiting))
-				{
-					mfc->notify();
-				}
-			}
-		}
-	}
-
-	schedule_all();
-}
-
 void lv2_obj::cleanup()
 {
 	g_ppu.clear();
@@ -1295,13 +1216,10 @@ void lv2_obj::schedule_all()
 			break;
 		}
 	}
-
-	// Check memory
-	//reader_lock lock(vm::g_mutex);
-	//vm::notify(0, -1);
 }
 
 void ppu_thread::cpu_sleep()
 {
+	vm::temporary_unlock(*this);
 	lv2_obj::awake(*this);
 }

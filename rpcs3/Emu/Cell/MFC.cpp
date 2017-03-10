@@ -69,7 +69,7 @@ std::string mfc_thread::get_name() const
 
 void mfc_thread::cpu_task()
 {
-	state -= cpu_flag::is_waiting;
+	vm::passive_lock(*this);
 
 	u32 no_updates = 0;
 
@@ -78,8 +78,6 @@ void mfc_thread::cpu_task()
 		// Add or remove destroyed SPU threads
 		while (m_spuq.size())
 		{
-			state += cpu_flag::is_waiting;
-
 			auto& thread_ptr = m_spuq[0];
 
 			// Look for deleted threads if nullptr received
@@ -145,8 +143,7 @@ void mfc_thread::cpu_task()
 					no_updates = 0;
 
 					// Store unconditionally
-					state += cpu_flag::is_waiting;
-					writer_lock lock(vm::g_mutex);
+					vm::writer_lock lock(0);
 					data = to_write;
 					vm::reservation_update(cmd.eal, 128);
 					vm::notify(cmd.eal, 128);
@@ -259,8 +256,6 @@ void mfc_thread::cpu_task()
 
 		if (no_updates++)
 		{
-			state += cpu_flag::is_waiting;
-
 			if (no_updates >= 3)
 			{
 				if (m_spuq.size())
@@ -298,16 +293,20 @@ void mfc_thread::cpu_task()
 
 				if (no_updates)
 				{
+					vm::temporary_unlock(*this);
 					thread_ctrl::wait_for(100);
 				}
 			}
 			else
 			{
-				reader_lock lock(vm::g_mutex);
+				vm::reader_lock lock;
 				vm::notify_all();
 			}
 		}
 	}
+
+	vm::passive_unlock(*this);
+	state += cpu_flag::stop;
 }
 
 void mfc_thread::add_spu(spu_ptr _spu)

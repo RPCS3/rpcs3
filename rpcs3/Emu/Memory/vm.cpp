@@ -38,8 +38,161 @@ namespace vm
 	// Registered waiters
 	std::deque<vm::waiter*> g_waiters;
 
-	// Memory mutex
+	// Memory mutex core
 	shared_mutex g_mutex;
+
+	// Memory mutex acknowledgement
+	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
+
+	// Memory mutex: passive locks
+	std::array<atomic_t<cpu_thread*>, 32> g_locks;
+
+	static void _register_lock(cpu_thread* _cpu)
+	{
+		for (u32 i = 0;; i = (i + 1) % g_locks.size())
+		{
+			if (!g_locks[i] && g_locks[i].compare_and_swap_test(nullptr, _cpu))
+			{
+				g_tls_locked = g_locks.data() + i;
+				return;
+			}
+		}
+	}
+
+	void passive_lock(cpu_thread& cpu)
+	{
+		if (g_tls_locked && *g_tls_locked == &cpu)
+		{
+			return;
+		}
+
+		::reader_lock lock(g_mutex);
+
+		_register_lock(&cpu);
+	}
+
+	void passive_unlock(cpu_thread& cpu)
+	{
+		if (g_tls_locked)
+		{
+			g_tls_locked->compare_and_swap_test(&cpu, nullptr);
+			::reader_lock lock(g_mutex);
+			g_tls_locked = nullptr;
+		}
+	}
+
+	void cleanup_unlock(cpu_thread& cpu) noexcept
+	{
+		if (g_tls_locked && cpu.get() == thread_ctrl::get_current())
+		{
+			g_tls_locked = nullptr;
+		}
+
+		for (u32 i = 0; i < g_locks.size(); i++)
+		{
+			if (g_locks[i] == &cpu)
+			{
+				g_locks[i].compare_and_swap_test(&cpu, nullptr);
+				return;
+			}
+		}
+	}
+
+	void temporary_unlock(cpu_thread& cpu) noexcept
+	{
+		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
+		{
+			cpu.state.test_and_set(cpu_flag::memory);
+		}
+	}
+
+	reader_lock::reader_lock()
+		: locked(true)
+	{
+		auto cpu = get_current_cpu_thread();
+
+		if (!cpu || !g_tls_locked || !g_tls_locked->compare_and_swap_test(cpu, nullptr))
+		{
+			cpu = nullptr;
+		}
+		
+		g_mutex.lock_shared();
+
+		if (cpu)
+		{
+			_register_lock(cpu);
+			cpu->state -= cpu_flag::memory;
+		}
+	}
+
+	reader_lock::reader_lock(const try_to_lock_t&)
+		: locked(g_mutex.try_lock_shared())
+	{
+	}
+
+	reader_lock::~reader_lock()
+	{
+		if (locked)
+		{
+			g_mutex.unlock_shared();
+		}
+	}
+
+	writer_lock::writer_lock(int full)
+		: locked(true)
+	{
+		auto cpu = get_current_cpu_thread();
+
+		if (!cpu || !g_tls_locked || !g_tls_locked->compare_and_swap_test(cpu, nullptr))
+		{
+			cpu = nullptr;
+		}
+
+		g_mutex.lock();
+
+		if (full)
+		{
+			for (auto& lock : g_locks)
+			{
+				if (cpu_thread* ptr = lock)
+				{
+					ptr->state.test_and_set(cpu_flag::memory);
+				}
+			}
+
+			for (auto& lock : g_locks)
+			{
+				while (cpu_thread* ptr = lock)
+				{
+					if (test(ptr->state, cpu_flag::dbg_global_stop + cpu_flag::exit))
+					{
+						break;
+					}
+
+					busy_wait();
+				}
+			}
+		}
+
+		if (cpu)
+		{
+			_register_lock(cpu);
+			cpu->state -= cpu_flag::memory;
+		}
+	}
+
+	writer_lock::writer_lock(const try_to_lock_t&)
+		: locked(g_mutex.try_lock())
+	{
+	}
+
+	writer_lock::~writer_lock()
+	{
+		if (locked)
+		{
+			g_mutex.unlock();
+		}
+	}
 
 	// Page information
 	struct memory_page
@@ -73,39 +226,6 @@ namespace vm
 		}
 	};
 
-	template <typename T = writer_lock>
-	struct mem_lock
-	{
-		cpu_thread* thread;
-		T lock;
-
-		template <typename X>
-		mem_lock(X&& mtx)
-			: thread(find_thread())
-			, lock(std::forward<X>(mtx))
-		{
-		}
-
-		~mem_lock()
-		{
-			if (thread)
-			{
-				thread->state -= cpu_flag::is_waiting;
-			}
-		}
-
-		static cpu_thread* find_thread()
-		{
-			if (auto cpu = get_current_cpu_thread())
-			{
-				cpu->state += cpu_flag::is_waiting;
-				return cpu;
-			}
-
-			return nullptr;
-		}
-	};
-
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
@@ -124,7 +244,7 @@ namespace vm
 	void waiter::init()
 	{
 		// Register waiter
-		writer_lock lock(g_mutex);
+		writer_lock lock(0);
 
 		g_waiters.emplace_back(this);
 	}
@@ -156,18 +276,15 @@ namespace vm
 
 	waiter::~waiter()
 	{
-		if (owner)
+		// Unregister waiter
+		writer_lock lock(0);
+
+		// Find waiter
+		const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
+
+		if (found != g_waiters.cend())
 		{
-			// Unregister waiter
-			writer_lock lock(g_mutex);
-
-			// Find waiter
-			const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
-
-			if (found != g_waiters.cend())
-			{
-				g_waiters.erase(found);
-			}
+			g_waiters.erase(found);
 		}
 	}
 
@@ -209,14 +326,11 @@ namespace vm
 
 #ifdef _WIN32
 		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
-		if (!::VirtualAlloc(real_addr, size, MEM_COMMIT, protection))
+		verify(__func__), ::VirtualAlloc(real_addr, size, MEM_COMMIT, protection);
 #else
 		auto protection = flags & page_writable ? PROT_WRITE | PROT_READ : (flags & page_readable ? PROT_READ : PROT_NONE);
-		if (::mprotect(real_addr, size, protection))
+		verify(__func__), !::mprotect(real_addr, size, protection), !::madvise(real_addr, size, MADV_WILLNEED);
 #endif
-		{
-			fmt::throw_exception("System failure (addr=0x%x, size=0x%x, flags=0x%x)" HERE, addr, size, flags);
-		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
@@ -229,7 +343,7 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
-		mem_lock<writer_lock> lock(g_mutex);
+		writer_lock lock(0);
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -277,14 +391,11 @@ namespace vm
 					DWORD old;
 
 					auto protection = start_value & page_writable ? PAGE_READWRITE : (start_value & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
-					if (!::VirtualProtect(vm::base(start * 4096), page_size, protection, &old))
+					verify(__func__), ::VirtualProtect(vm::base(start * 4096), page_size, protection, &old);
 #else
 					auto protection = start_value & page_writable ? PROT_WRITE | PROT_READ : (start_value & page_readable ? PROT_READ : PROT_NONE);
-					if (::mprotect(vm::base(start * 4096), page_size, protection))
+					verify(__func__), !::mprotect(vm::base(start * 4096), page_size, protection);
 #endif
-					{
-						fmt::throw_exception("System failure (addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x)" HERE, addr, size, flags_test, flags_set, flags_clear);
-					}
 				}
 
 				start_value = new_val;
@@ -321,13 +432,10 @@ namespace vm
 		void* real_addr = vm::base(addr);
 
 #ifdef _WIN32
-		if (!::VirtualFree(real_addr, size, MEM_DECOMMIT))
+		verify(__func__), ::VirtualFree(real_addr, size, MEM_DECOMMIT);
 #else
-		if (::madvise(real_addr, size, MADV_REMOVE) || ::mprotect(real_addr, size, PROT_NONE))
+		verify(__func__), ::mmap(real_addr, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
-		{
-			fmt::throw_exception("System failure (addr=0x%x, size=0x%x)" HERE, addr, size);
-		}
 	}
 
 	bool check_addr(u32 addr, u32 size, u8 flags)
@@ -428,7 +536,7 @@ namespace vm
 
 	block_t::~block_t()
 	{
-		mem_lock<writer_lock> lock(g_mutex);
+		writer_lock lock;
 
 		// Deallocate all memory
 		for (auto& entry : m_map)
@@ -439,7 +547,7 @@ namespace vm
 
 	u32 block_t::alloc(u32 size, u32 align, u32 sup)
 	{
-		mem_lock<writer_lock> lock(g_mutex);
+		writer_lock lock;
 
 		// Align to minimal page size
 		size = ::align(size, 4096);
@@ -481,7 +589,7 @@ namespace vm
 
 	u32 block_t::falloc(u32 addr, u32 size, u32 sup)
 	{
-		mem_lock<writer_lock> lock(g_mutex);
+		writer_lock lock;
 
 		// align to minimal page size
 		size = ::align(size, 4096);
@@ -502,7 +610,7 @@ namespace vm
 
 	u32 block_t::dealloc(u32 addr, u32* sup_out)
 	{
-		mem_lock<writer_lock> lock(g_mutex);
+		writer_lock lock;
 
 		const auto found = m_map.find(addr);
 
@@ -530,7 +638,7 @@ namespace vm
 
 	u32 block_t::used()
 	{
-		mem_lock<reader_lock> lock(g_mutex);
+		reader_lock lock;
 
 		u32 result = 0;
 
@@ -544,7 +652,7 @@ namespace vm
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
-		mem_lock<writer_lock> lock(g_mutex);
+		writer_lock lock(0);
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -581,7 +689,7 @@ namespace vm
 
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty)
 	{
-		mem_lock<writer_lock> lock(g_mutex);
+		writer_lock lock(0);
 
 		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
 		{
@@ -603,7 +711,7 @@ namespace vm
 
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
 	{
-		mem_lock<reader_lock> lock(g_mutex);
+		reader_lock lock;
 
 		if (location != any)
 		{

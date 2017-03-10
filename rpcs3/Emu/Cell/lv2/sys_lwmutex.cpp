@@ -138,7 +138,6 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 	}
 
-	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -196,9 +195,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 	if (mutex.ret)
 	{
-		ppu.state += cpu_flag::is_waiting;
 		mutex->awake(*mutex.ret);
-		ppu.test_state();
 	}
 
 	return CELL_OK;

@@ -32,7 +32,7 @@ void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
 		const_cast<u32&>(index) = id;
 		const_cast<u32&>(offset) = verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000));
 
-		SPUThread::on_init(_this);
+		cpu_thread::on_init(_this);
 	}
 }
 

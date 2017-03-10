@@ -9,6 +9,7 @@ using ppu_function_t = void(*)(ppu_thread&);
 	const auto old_f = ppu.last_function;\
 	ppu.last_function = #func;\
 	ppu_func_detail::do_call(ppu, func);\
+	ppu.test_state();\
 	ppu.last_function = old_f;\
 }))
 

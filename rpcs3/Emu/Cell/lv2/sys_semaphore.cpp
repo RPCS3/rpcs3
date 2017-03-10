@@ -158,7 +158,6 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		}
 	}
 
-	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -247,14 +246,10 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		// Wake threads
 		for (s32 i = std::min<s32>(-std::min<s32>(val, 0), count); i > 0; i--)
 		{
-			const auto cpu = verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol));
-
-			ppu.state += cpu_flag::is_waiting;
-			sem->awake(*cpu);
+			sem->awake(*verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
 		}
 	}
 
-	ppu.test_state();
 	return CELL_OK;
 }
 

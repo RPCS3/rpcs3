@@ -20,8 +20,6 @@
 
 #include <cmath>
 #include <cfenv>
-#include <thread>
-#include <shared_mutex>
 
 #ifdef _MSC_VER
 bool operator ==(const u128& lhs, const u128& rhs)
@@ -131,6 +129,16 @@ spu_imm_table_t::spu_imm_table_t()
 		{
 			rldq_pshufb[i]._u8[j] = static_cast<u8>((j - i) & 0xf);
 		}
+	}
+}
+
+void SPUThread::on_init(const std::shared_ptr<void>& _this)
+{
+	if (!offset)
+	{
+		const_cast<u32&>(offset) = verify("SPU LS" HERE, vm::alloc(0x40000, vm::main));
+
+		cpu_thread::on_init(_this);
 	}
 }
 
@@ -259,7 +267,7 @@ SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 	: cpu_thread(idm::last_id())
 	, m_name(name)
 	, index(index)
-	, offset(verify("SPU LS" HERE, vm::alloc(0x40000, vm::main)))
+	, offset(0)
 	, group(group)
 {
 }
@@ -516,7 +524,7 @@ void SPUThread::process_mfc_cmd()
 		if (is_polling || UNLIKELY(vm::reservation_acquire(raddr, 128) != rtime))
 		{
 			// TODO: vm::check_addr
-			reader_lock lock(vm::g_mutex);
+			vm::reader_lock lock;
 			rtime = vm::reservation_acquire(raddr, 128);
 			rdata = data;
 		}
@@ -537,9 +545,8 @@ void SPUThread::process_mfc_cmd()
 
 		if (raddr == ch_mfc_cmd.eal && rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
 		{
-			lv2_obj::lock_all();
-
 			// TODO: vm::check_addr
+			vm::writer_lock lock;
 
 			if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
 			{
@@ -549,8 +556,6 @@ void SPUThread::process_mfc_cmd()
 				vm::reservation_update(raddr, 128);
 				vm::notify(raddr, 128);
 			}
-
-			lv2_obj::unlock_all();
 		}
 
 		if (result)
@@ -583,7 +588,7 @@ void SPUThread::process_mfc_cmd()
 
 		// Store unconditionally
 		// TODO: vm::check_addr
-		writer_lock lock(vm::g_mutex);
+		vm::writer_lock lock(0);
 		data = to_write;
 		vm::reservation_update(ch_mfc_cmd.eal, 128);
 		vm::notify(ch_mfc_cmd.eal, 128);
@@ -616,7 +621,7 @@ void SPUThread::process_mfc_cmd()
 		// Try to process small transfers immediately
 		if (ch_mfc_cmd.size <= 256 && mfc_queue.size() == 0)
 		{
-			std::shared_lock<shared_mutex> lock(vm::g_mutex, std::try_to_lock);
+			vm::reader_lock lock(vm::try_to_lock);
 
 			if (!lock)
 			{
@@ -647,7 +652,7 @@ void SPUThread::process_mfc_cmd()
 	{
 		if (ch_mfc_cmd.size <= 16 * 8 && mfc_queue.size() == 0 && (ch_stall_mask & (1u << ch_mfc_cmd.tag)) == 0)
 		{
-			std::shared_lock<shared_mutex> lock(vm::g_mutex, std::try_to_lock);
+			vm::reader_lock lock(vm::try_to_lock);
 
 			if (!lock)
 			{
@@ -732,7 +737,7 @@ void SPUThread::process_mfc_cmd()
 	// Enqueue
 	verify(HERE), mfc_queue.try_push(ch_mfc_cmd);
 
-	if (test(mfc->state, cpu_flag::is_waiting))
+	//if (test(mfc->state, cpu_flag::is_waiting))
 	{
 		mfc->notify();
 	}
@@ -1191,7 +1196,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		{
 			auto mfc = fxm::check_unlocked<mfc_thread>();
 			
-			if (test(mfc->state, cpu_flag::is_waiting))
+			//if (test(mfc->state, cpu_flag::is_waiting))
 			{
 				mfc->notify();
 			}
@@ -1245,7 +1250,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		{
 			auto mfc = fxm::check_unlocked<mfc_thread>();
 			
-			if (test(mfc->state, cpu_flag::is_waiting))
+			//if (test(mfc->state, cpu_flag::is_waiting))
 			{
 				mfc->notify();
 			}

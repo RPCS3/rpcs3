@@ -16,6 +16,21 @@ logs::channel cellAudio("cellAudio", logs::level::notice);
 cfg::bool_entry g_cfg_audio_dump_to_file(cfg::root.audio, "Dump to file");
 cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16 bit");
 
+void audio_config::on_init(const std::shared_ptr<void>& _this)
+{
+	m_buffer.set(vm::alloc(AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT, vm::main));
+	m_indexes.set(vm::alloc(sizeof(u64) * AUDIO_PORT_COUNT, vm::main));
+
+	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+	{
+		ports[i].number = i;
+		ports[i].addr = m_buffer + AUDIO_PORT_OFFSET * i;
+		ports[i].index = m_indexes + i;
+	}
+
+	named_thread::on_init(_this);
+}
+
 void audio_config::on_task()
 {
 	AudioDumper m_dump(g_cfg_audio_dump_to_file ? 2 : 0); // Init AudioDumper for 2 channels if enabled
