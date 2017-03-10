@@ -463,7 +463,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 		//game confirmed that it wants to create directory
 	case CELL_GAMEDATA_CBRESULT_OK:	
-		if (!fs::is_dir(vfs::get(dir)) && !fs::create_path(vfs::get(dir + "/USRDIR")))
+		if (!fs::is_dir(vfs::get(dir + "/USRDIR")) && !fs::create_path(vfs::get(dir + "/USRDIR")))
 			{
 				cellGame.error("cellGameDataCheckCreate2(): folder creation failed");
 				return CELL_GAME_ERROR_NOSPACE;	//don't know which error. picked one at random
@@ -484,7 +484,25 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			{
 				prm->sfo.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
 			}
-			(fs::is_file(dir + "/PARAM.SFO")) ? psf::save_object(fs::file(dir + "/PARAM.SFO", fs::rewrite), prm->sfo) : psf::save_object(fs::file(dir + "/PARAM.SFO", fs::create), prm->sfo);
+			if (!fs::is_dir(vfs::get(dir)))
+			{
+				cellGame.fatal("directory where param.sfo is to be created does not exist");
+				return CELL_GAME_ERROR_INTERNAL;
+			}
+			if (!fs::is_file(dir + "/PARAM.SFO")) 
+			{
+				cellGame.error("param.sfo file does not exists trying to create it");
+				psf::save_object(fs::file(dir + "/PARAM.SFO", fs::create | fs::excl | fs::write), prm->sfo);
+			}
+			else
+			{
+				cellGame.error("param.sfo file exists. rewriting");
+				psf::save_object(fs::file(dir + "/PARAM.SFO", fs::rewrite), prm->sfo);
+			}
+		}
+		else
+		{
+			cellGame.warning("Game does not want to save/rewrite param.sfo");
 		}
 		return CELL_OK;
 
