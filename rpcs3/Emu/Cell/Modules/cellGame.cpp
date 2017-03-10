@@ -492,7 +492,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			if (!fs::is_file(dir + "/PARAM.SFO")) 
 			{
 				cellGame.error("param.sfo file does not exists trying to create it");
-				psf::save_object(fs::file(dir + "/PARAM.SFO", fs::create | fs::excl | fs::write), prm->sfo);
+				psf::save_object(fs::file(dir + "/PARAM.SFO", fs::create +fs::excl+ fs::write), prm->sfo);
 			}
 			else
 			{
