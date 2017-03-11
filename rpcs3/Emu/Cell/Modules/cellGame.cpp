@@ -477,9 +477,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			{
 				{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId) },
 				{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title) },
-				{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion) }		
+				{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion) },
+				{ "PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value()							}
 			};
-			sfo_write.emplace("PARENTAL_LEVEL", cbSet->setParam->parentalLevel); // I don't care about age restrictions.
+			//sfo_write.emplace("PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value()); // I don't care about age restrictions.
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 			{
 				sfo_write.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
