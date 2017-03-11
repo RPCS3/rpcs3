@@ -275,7 +275,7 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 
 	const auto area = vm::get(vm::any, start_addr);	
 
-	if (!area || start_addr != area->addr || start_addr < 0x30000000 || start_addr >= 0xC0000000)
+	if (!area || start_addr < 0x30000000 || start_addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}

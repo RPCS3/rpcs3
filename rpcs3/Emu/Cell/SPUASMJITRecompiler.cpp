@@ -912,6 +912,10 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->unuse(*addr);
 		return;
 	}
+	case 69:
+	{
+		return;
+	}
 	default:
 	{
 		InterpreterCall(op); // TODO
