@@ -38,7 +38,6 @@ error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::
 			if (const auto area = vm::map(static_cast<u32>(addr), static_cast<u32>(size), flags))
 			{
 				*alloc_addr = static_cast<u32>(addr);
-				sys_mmapper.notice("sys_mmapper: Allocated address:0x%x", *alloc_addr);
 				return CELL_OK;
 			}
 		}
@@ -54,7 +53,7 @@ error_code sys_mmapper_allocate_fixed_address()
 {
 	sys_mmapper.error("sys_mmapper_allocate_fixed_address()");
 
-	if (!vm::map(0xB0000000, 0x10000000)) // TODO: set correct flags (they aren't used currently though)
+	if (!vm::map(0xB0000000, 0x10000000, SYS_MEMORY_PAGE_SIZE_1M))
 	{
 		return CELL_EEXIST;
 	}
@@ -150,7 +149,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 			return CELL_ENOMEM;
 		}
 
-		return{};
+		return {};
 	});
 
 	if (!ct)
@@ -181,7 +180,7 @@ error_code sys_mmapper_free_address(u32 addr)
 	sys_mmapper.error("sys_mmapper_free_address(addr=0x%x)", addr);
 
 	// Try to unmap area
-	const auto area = vm::unmap(addr, true);	//i love it why must it be empty?
+	const auto area = vm::unmap(addr, true);	
 
 	if (!area)
 	{
@@ -268,7 +267,7 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 
 error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	sys_mmapper.error("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
+	sys_mmapper.warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
 
 	const auto area = vm::get(vm::any, start_addr);
 
@@ -304,12 +303,11 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 
 error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 {
-	sys_mmapper.warning("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x, actual mem_id=0x%0)", addr, mem_id,*mem_id);
+	sys_mmapper.warning("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
 
 	const auto area = vm::get(vm::any, addr);
 	if (!area || !((addr >= area->addr) && (addr < area->addr + area->size)) || addr < 0x30000000 || addr >= 0xC0000000)
 	{
-		sys_mmapper.error("Invalid address 0x%x area_addr=0x%x", addr, area->addr);
 		return CELL_EINVAL;
 	}
 

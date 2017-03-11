@@ -12,7 +12,6 @@ error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy
 
 	if (!vsize || !psize || vsize % 0x2000000 || vsize > 0x10000000 || psize > 0x10000000 || policy != SYS_VM_POLICY_AUTO_RECOMMENDED)
 	{
-	//sys_vm: sys_vm_memory_map(vsize = 0x2000000, psize = 0x1 2a0 000, cid = 0xffffffff, flags = 0x200, policy = 0x1, addr = *0x1b55bd8)
 		return CELL_EINVAL;
 	}
 
