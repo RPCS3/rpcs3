@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <array>
+
 #include "utils.h"
 
 constexpr u32 SDAT_FLAG = 0x01000000;
@@ -11,6 +13,12 @@ constexpr u32 EDAT_ENCRYPTED_KEY_FLAG = 0x00000008;
 constexpr u32 EDAT_FLAG_0x10 = 0x00000010;
 constexpr u32 EDAT_FLAG_0x20 = 0x00000020;
 constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
+
+struct EdatKeys_t
+{
+	std::array<u8, 0x10> devKlic{};
+	std::array<u8, 0x10> rifKey{};
+};
 
 struct NPD_HEADER
 {
@@ -36,11 +44,14 @@ struct EDAT_HEADER
 // Decrypts full file, or null/empty file
 extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose);
 
-struct SDATADecrypter final : fs::file_base
+extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const std::array<u8,0x10>& custom_klic);
+
+extern std::array<u8, 0x10> GetEdatRifKeyFromRapFile(const fs::file& rap_file);
+
+struct EDATADecrypter final : fs::file_base
 {
 	// file stream
-	const fs::file sdata_file;
-	const u64 file_offset;
+	const fs::file edata_file;
 	u64 file_size{0};
 	u32 total_blocks{0};
 	u64 pos{0};
@@ -53,9 +64,19 @@ struct SDATADecrypter final : fs::file_base
 	u64 data_buf_size{0};
 
 	std::array<u8, 0x10> dec_key{};
+
+	// edat usage
+	std::array<u8, 0x10> rif_key{};
+	std::array<u8, 0x10> dev_key{};
 public:
-	SDATADecrypter(fs::file&& input, u64 offset=0);
-	~SDATADecrypter() override {}
+	// SdataByFd usage
+	EDATADecrypter(fs::file&& input)
+		: edata_file(std::move(input)) {}
+	// Edat usage
+	EDATADecrypter(fs::file&& input, const std::array<u8, 0x10>& dev_key, const std::array<u8, 0x10>& rif_key)
+		: edata_file(std::move(input)), rif_key(rif_key), dev_key(dev_key) {}
+
+	~EDATADecrypter() override {}
 	// false if invalid 
 	bool ReadHeader();
 	u64 ReadData(u64 pos, u8* data, u64 size);
@@ -92,7 +113,7 @@ public:
 			whence == fs::seek_set ? pos = offset :
 			whence == fs::seek_cur ? pos = offset + pos :
 			whence == fs::seek_end ? pos = offset + size() :
-			(fmt::raw_error("SDATADecrypter::seek(): invalid whence"), 0);
+			(fmt::raw_error("EDATADecrypter::seek(): invalid whence"), 0);
 	}
 	u64 size() override { return file_size; }
 };

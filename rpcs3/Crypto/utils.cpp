@@ -10,7 +10,7 @@
 
 // Auxiliary functions (endian swap, xor and prng).
 
-void xor_key(unsigned char *dest, unsigned char *src1, unsigned char *src2)
+void xor_key(unsigned char *dest, const u8* src1, const u8* src2)
 {
 	for(int i = 0; i < 0x10; i++)
 	{

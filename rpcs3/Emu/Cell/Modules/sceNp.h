@@ -119,6 +119,25 @@ enum
 
 	// DRM
 	SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND                  = 0x80029521,
+	SCE_NP_DRM_ERROR_OUT_OF_MEMORY                      = 0x80029501,
+	SCE_NP_DRM_ERROR_INVALID_PARAM                      = 0x80029502,
+	SCE_NP_DRM_ERROR_SERVER_RESPONSE                    = 0x80029509,
+	SCE_NP_DRM_ERROR_NO_ENTITLEMENT                     = 0x80029513,
+	SCE_NP_DRM_ERROR_BAD_ACT                            = 0x80029514,
+	SCE_NP_DRM_ERROR_BAD_FORMAT                         = 0x80029515,
+	SCE_NP_DRM_ERROR_NO_LOGIN                           = 0x80029516,
+	SCE_NP_DRM_ERROR_INTERNAL                           = 0x80029517,
+	SCE_NP_DRM_ERROR_BAD_PERM                           = 0x80029519,
+	SCE_NP_DRM_ERROR_UNKNOWN_VERSION                    = 0x8002951a,
+	SCE_NP_DRM_ERROR_TIME_LIMIT                         = 0x8002951b,
+	SCE_NP_DRM_ERROR_DIFFERENT_ACCOUNT_ID               = 0x8002951c,
+	SCE_NP_DRM_ERROR_DIFFERENT_DRM_TYPE                 = 0x8002951d,
+	SCE_NP_DRM_ERROR_SERVICE_NOT_STARTED                = 0x8002951e,
+	SCE_NP_DRM_ERROR_BUSY                               = 0x80029520,
+	SCE_NP_DRM_ERROR_IO                                 = 0x80029525,
+	SCE_NP_DRM_ERROR_FORMAT                             = 0x80029530,
+	SCE_NP_DRM_ERROR_FILENAME                           = 0x80029533,
+	SCE_NP_DRM_ERROR_K_LICENSEE                         = 0x80029534,
 };
 
 using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);

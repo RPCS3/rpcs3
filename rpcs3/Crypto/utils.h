@@ -42,7 +42,7 @@ inline u64 swap64(u64 i)
 #endif
 }
 
-void xor_key(unsigned char *dest, unsigned char *src1, unsigned char *src2);
+void xor_key(unsigned char *dest, const u8* src1, const u8* src2);
 inline void xor_key_sse(u8* dest, const u8* src1, const u8* src2)
 {
 	_mm_storeu_si128(&(((__m128i*)dest)[0]),

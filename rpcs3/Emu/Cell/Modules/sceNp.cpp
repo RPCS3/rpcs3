@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/IdManager.h"
 #include "Crypto/unedat.h"
 #include "sceNp.h"
 
@@ -47,7 +48,7 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	}
 
 	std::string k_licensee_str = "0";
-	u8 k_licensee[0x10];
+	std::array<u8,0x10> k_licensee;
 
 	if (k_licensee_addr)
 	{
@@ -58,19 +59,29 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 		}
 	}
 
+	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
+	const fs::file enc_file(vfs::get(enc_drm_path));
+
+	u32 magic;
+	enc_file.read<u32>(magic);
+	enc_file.seek(0);
+	if (magic != "NPD\0"_u32)
+	{
+		// for now assume its just unencrypted
+		sceNp.notice("npDrmIsAvailable(): Assuming edat file is unencrypted at %s", enc_drm_path);
+		return CELL_OK;
+	}
+
 	sceNp.warning("npDrmIsAvailable(): Found DRM license file at %s", enc_drm_path);
 	sceNp.warning("npDrmIsAvailable(): Using k_licensee 0x%s", k_licensee_str);
-
-	// Set the necessary file paths.
-	const std::string& drm_file_name = enc_drm_path.substr(enc_drm_path.find_last_of('/') + 1);
 
 	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
 	const std::string& drm_file_dir = enc_drm_path.substr(15);
 	const std::string& title_id = drm_file_dir.substr(0, drm_file_dir.find_first_of('/'));
 
-	const std::string& dec_drm_path = "/dev_hdd1/cache/" + drm_file_name;
-
 	std::string rap_lpath = vfs::get("/dev_hdd0/home/00000001/exdata/"); // TODO: Allow multiple profiles. Use default for now.
+
+	auto edatkeys = fxm::get_always<EdatKeys_t>();
 
 	// Search for a compatible RAP file. 
 	for (const auto& entry : fs::dir(rap_lpath))
@@ -85,24 +96,23 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	if (rap_lpath.back() == '/')
 	{
 		sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
-		rap_lpath.clear();
+		edatkeys->rifKey.fill(0);
 	}
+	else
+		edatkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
 
-	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
-	const fs::file enc_file(enc_drm_path_local);
-
-	if (const fs::file dec_file = DecryptEDAT(enc_file, enc_drm_path_local, 8, rap_lpath, k_licensee, false))
+	if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee))
 	{
-		// If decryption succeeds, replace the encrypted file with it.
-		const std::string& dec_drm_path_local = vfs::get(dec_drm_path);
-
-		fs::file dec_out(dec_drm_path_local, fs::rewrite);
-		dec_out.write(dec_file.to_vector<u8>());
-
-		fs::remove_file(enc_drm_path_local);
-		fs::rename(dec_drm_path_local, enc_drm_path_local);
+		edatkeys->devKlic = std::move(k_licensee);
+		return CELL_OK;
 	}
-
+	else
+	{
+		sceNp.error("npDrmIsAvailable(): Failed to verify edat file %s", enc_drm_path);
+		edatkeys->devKlic.fill(0);
+		edatkeys->rifKey.fill(0);
+		return SCE_NP_DRM_ERROR_FORMAT;
+	}
 	return CELL_OK;
 }
 

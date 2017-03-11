@@ -269,7 +269,7 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgStrin
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= dlg->type.progress_bar_count)
+	if (progressBarIndex >= dlg->type.progress_bar_count || !msgString)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}

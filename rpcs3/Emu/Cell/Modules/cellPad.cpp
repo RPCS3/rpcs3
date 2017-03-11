@@ -12,15 +12,12 @@ s32 cellPadInit(u32 max_connect)
 {
 	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);
 
-	if (max_connect > CELL_PAD_MAX_PORT_NUM)
-		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
 	const auto handler = fxm::import<PadHandlerBase>(Emu.GetCallbacks().get_pad_handler);
 
 	if (!handler)
 		return CELL_PAD_ERROR_ALREADY_INITIALIZED;
 
-	handler->Init(max_connect);
+	handler->Init(std::min(max_connect, CELL_PAD_MAX_PORT_NUM));
 
 	return CELL_OK;
 }
