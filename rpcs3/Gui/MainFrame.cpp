@@ -210,7 +210,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 {
 	bool stopped = false;
 
-	if(Emu.IsRunning())
+	if (Emu.IsRunning())
 	{
 		Emu.Pause();
 		stopped = true;
@@ -218,17 +218,19 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	wxDirDialog ctrl(this, L"Select game folder", wxEmptyString);
 
-	if(ctrl.ShowModal() == wxID_CANCEL)
+	if (ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if(stopped) Emu.Resume();
+		if (stopped) Emu.Resume();
 		return;
 	}
 
 	Emu.Stop();
+
+	const std::string path = fmt::ToUTF8(ctrl.GetPath());
 	
-	if(!Emu.BootGame(ctrl.GetPath().ToStdString()))
+	if (!Emu.BootGame(path))
 	{
-		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
+		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
 	}
 }
 
@@ -243,12 +245,14 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
+	const std::string path = fmt::ToUTF8(ctrl.GetPath());
+
 	// Open PKG file
-	fs::file pkg_f(ctrl.GetPath().ToStdString());
+	fs::file pkg_f(path);
 
 	if (!pkg_f || pkg_f.size() < 64)
 	{
-		LOG_ERROR(LOADER, "PKG: Failed to open %s", ctrl.GetPath().ToStdString());
+		LOG_ERROR(LOADER, "PKG: Failed to open %s", path);
 		return;
 	}
 
@@ -428,7 +432,9 @@ void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
-	fs::file pup_f(ctrl.GetPath().ToStdString());
+	const std::string path = fmt::ToUTF8(ctrl.GetPath());
+
+	fs::file pup_f(path);
 	pup_object pup(pup_f);
 	if (!pup)
 	{

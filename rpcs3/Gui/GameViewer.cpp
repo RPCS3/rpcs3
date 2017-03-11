@@ -235,7 +235,7 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 
 	if (wxMessageBox("Permanently delete game files?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
 	{
-		fs::remove_all(Emu.GetGameDir() + this->GetItemText(i, 6).ToStdString());
+		fs::remove_all(Emu.GetGameDir() + fmt::ToUTF8(this->GetItemText(i, 6)));
 	}
 
 	Refresh();
