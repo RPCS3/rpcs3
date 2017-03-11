@@ -479,7 +479,6 @@ void GLGSRender::end()
 
 	m_draw_calls++;
 
-	//LOG_WARNING(RSX, "Finished draw call, EID=%d", m_draw_calls);
 	synchronize_buffers();
 
 	rsx::thread::end();
@@ -946,10 +945,26 @@ void GLGSRender::do_local_task()
 
 	for (work_item& q: work_queue)
 	{
+		if (q.processed) continue;
+
 		std::unique_lock<std::mutex> lock(q.guard_mutex);
 
-		//Process this address
-		q.result = m_gl_texture_cache.flush_section(q.address_to_flush);
+		//Check if the suggested section is valid
+		if (!q.section_to_flush->is_flushed())
+		{
+			q.section_to_flush->flush();
+			q.result = true;
+		}
+		else
+		{
+			//TODO: Validate flushing requests before appending to queue.
+			//Highly unlikely that this path will be taken
+			LOG_ERROR(RSX, "Possible race condition for flush @address 0x%X", q.address_to_flush);
+			
+			//Process this address
+			q.result = m_gl_texture_cache.flush_section(q.address_to_flush);
+		}
+
 		q.processed = true;
 
 		//Notify thread waiting on this
@@ -958,13 +973,14 @@ void GLGSRender::do_local_task()
 	}
 }
 
-work_item& GLGSRender::post_flush_request(u32 address)
+work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::cached_rtt_section *section)
 {
 	std::lock_guard<std::mutex> lock(queue_guard);
 
 	work_queue.emplace_back();
 	work_item &result = work_queue.back();
 	result.address_to_flush = address;
+	result.section_to_flush = section;
 	return result;
 }
 
@@ -972,7 +988,6 @@ void GLGSRender::synchronize_buffers()
 {
 	if (flush_draw_buffers)
 	{
-		//LOG_WARNING(RSX, "Flushing RTT buffers EID=%d", m_draw_calls);
 		write_buffers();
 		flush_draw_buffers = false;
 	}
