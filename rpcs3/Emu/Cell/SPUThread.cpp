@@ -1294,6 +1294,11 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		ch_event_stat &= ~value;
 		return true;
 	}
+
+	case 69:
+	{
+		return true;
+	}
 	}
 
 	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s], value=0x%x)" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???", value);
