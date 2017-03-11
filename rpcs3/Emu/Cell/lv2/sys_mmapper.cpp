@@ -60,7 +60,7 @@ error_code sys_mmapper_allocate_fixed_address()
 	{
 		return CELL_EEXIST;
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -98,7 +98,7 @@ error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::
 	}
 
 	// Get "default" memory container
-	const auto dct = fxm::get_always<lv2_memory_container>();		//why default? what's more it does not have that much memory
+	const auto dct = fxm::get_always<lv2_memory_container>();
 
 	if (!dct->take(size))
 	{
@@ -124,7 +124,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 		{
 			return CELL_EALIGN;
 		}
-		
+
 		break;
 	}
 
@@ -152,7 +152,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 			return CELL_ENOMEM;
 		}
 
-		return {};
+		return{};
 	});
 
 	if (!ct)
@@ -210,7 +210,7 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 			return CELL_EBUSY;
 		}
 
-		return {};
+		return{};
 	});
 
 	if (!mem)
@@ -270,12 +270,11 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 
 error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
 {
-		//To analyze later. though idm::get<lv2_obj,lv2memory>
 	sys_mmapper.error("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
 
-	const auto area = vm::get(vm::any, start_addr);	
+	const auto area = vm::get(vm::any, start_addr);
 
-	if (!area || start_addr < 0x30000000 || start_addr >= 0xC0000000)
+	if (!area || start_addr != area->addr || start_addr < 0x30000000 || start_addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}
@@ -302,7 +301,6 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 	}
 
 	*alloc_addr = mem->addr = addr;
-	sys_mmapper.fatal("search_and_map allocated memory: 0x%x", addr);
 	return CELL_OK;
 }
 
@@ -311,9 +309,7 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 	sys_mmapper.warning("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x, actual mem_id=0x%0)", addr, mem_id,*mem_id);
 
 	const auto area = vm::get(vm::any, addr);
-	u32 actual_mem_id = *mem_id;
 	if (!area || !((addr >= area->addr) && (addr < area->addr + area->size)) || addr < 0x30000000 || addr >= 0xC0000000)
-	//if (!area || addr != area->addr || addr < 0x30000000 || addr >= 0xC0000000)
 	{
 		sys_mmapper.error("Invalid address 0x%x area_addr=0x%x", addr, area->addr);
 		return CELL_EINVAL;
@@ -326,7 +322,7 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 			*mem_id = id;
 			return true;
 		}
-		
+
 		return false;
 	});
 
@@ -335,7 +331,7 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 		return CELL_EINVAL;
 	}
 
-	verify(HERE), area->dealloc(addr), mem->addr.exchange(0);// == addr;
+	verify(HERE), area->dealloc(addr), mem->addr.exchange(0) == addr;
 	return CELL_OK;
 }
 
@@ -343,8 +339,4 @@ error_code sys_mmapper_enable_page_fault_notification(u32 addr, u32 eq)
 {
 	sys_mmapper.todo("sys_mmapper_enable_page_fault_notification(addr=0x%x, eq=0x%x)", addr, eq);
 	return CELL_OK;
-	//auto area = vm::get(vm::any, addr);
-	//area->ppu_thread_to_be_notified = ppu;
-
-	//return CELL_OK;
 }

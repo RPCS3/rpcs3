@@ -43,7 +43,7 @@ error_code sys_vm_unmap(u32 addr)
 {
 	sys_vm.warning("sys_vm_unmap(addr=0x%x)", addr);
 
-	if (!vm::unmap(addr))		//and here we do not care about it being empy meh
+	if (!vm::unmap(addr))
 	{
 		return CELL_EINVAL;
 	}
