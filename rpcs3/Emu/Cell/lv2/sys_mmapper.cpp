@@ -202,7 +202,7 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 	// Conditionally remove memory ID
 	const auto mem = idm::withdraw<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
-		if (mem.addr.compare_and_swap_test(0, -1))
+		if (!mem.addr.compare_and_swap_test(0, -1))
 		{
 			return CELL_EBUSY;
 		}
@@ -271,7 +271,7 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 
 	const auto area = vm::get(vm::any, start_addr);
 
-	if (!area || start_addr != area->addr || start_addr < 0x30000000 || start_addr >= 0xC0000000)
+	if (!area || start_addr < 0x30000000 || start_addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}
