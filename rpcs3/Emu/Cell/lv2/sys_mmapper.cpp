@@ -207,7 +207,7 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 			return CELL_EBUSY;
 		}
 
-		return{};
+		return {};
 	});
 
 	if (!mem)
