@@ -4,15 +4,12 @@
 #include <functional>
 #include <memory>
 
-#include "Utilities/mutex.h"
-
 class named_thread;
+class cpu_thread;
 
 namespace vm
 {
 	extern u8* const g_base_addr;
-
-	extern shared_mutex g_mutex;
 
 	enum memory_location_t : uint
 	{
@@ -60,22 +57,62 @@ namespace vm
 	// Address type
 	enum addr_t : u32 {};
 
+	extern thread_local atomic_t<cpu_thread*>* g_tls_locked;
+
+	// Register reader
+	void passive_lock(cpu_thread& cpu);
+
+	// Unregister reader
+	void passive_unlock(cpu_thread& cpu);
+
+	// Unregister reader (foreign thread)
+	void cleanup_unlock(cpu_thread& cpu) noexcept;
+
+	// Optimization (set cpu_flag::memory)
+	void temporary_unlock(cpu_thread& cpu) noexcept;
+
+	constexpr struct try_to_lock_t{} try_to_lock{};
+
+	struct reader_lock final
+	{
+		const bool locked;
+
+		reader_lock(const reader_lock&) = delete;
+		reader_lock();
+		reader_lock(const try_to_lock_t&);
+		~reader_lock();
+
+		explicit operator bool() const { return locked; }
+	};
+
+	struct writer_lock final
+	{
+		const bool locked;
+
+		writer_lock(const writer_lock&) = delete;
+		writer_lock(int full = 1);
+		writer_lock(const try_to_lock_t&);
+		~writer_lock();
+
+		explicit operator bool() const { return locked; }
+	};
+
 	// Get reservation status for further atomic update: last update timestamp
 	u64 reservation_acquire(u32 addr, u32 size);
 
 	// End atomic update
 	void reservation_update(u32 addr, u32 size);
 
-	// Check and notify memory change at address
+	// Check and notify memory changes at address
 	void notify(u32 addr, u32 size);
 
+	// Check and notify memory changes
 	void notify_all();
 
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
-	// Check if existing memory range is allocated. Checking address before using it is very unsafe.
-	// Return value may be wrong. Even if it's true and correct, actual memory protection may be read-only and no-access.
+	// Check flags for specified memory range (unsafe)
 	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_allocated);
 
 	// Search and map memory in specified memory location (don't pass alignment smaller than 4096)

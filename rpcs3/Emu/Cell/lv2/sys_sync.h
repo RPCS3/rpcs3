@@ -4,6 +4,7 @@
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
+#include "Emu/Memory/vm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 
@@ -111,7 +112,7 @@ struct lv2_obj
 
 	static void sleep(cpu_thread& thread, u64 timeout = 0)
 	{
-		thread.state += cpu_flag::is_waiting;
+		vm::temporary_unlock(thread);
 		sleep_timeout(thread, timeout);
 	}
 
@@ -123,8 +124,6 @@ struct lv2_obj
 		awake(thread, -1);
 	}
 
-	static void lock_all();
-	static void unlock_all();
 	static void cleanup();
 
 private:

@@ -2091,7 +2091,7 @@ void arm_interpreter::STREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 			return;
 		}
 
-		writer_lock lock(vm::g_mutex);
+		vm::writer_lock lock(0);
 
 		const bool result = cpu.rtime == vm::reservation_acquire(addr, cpu.rtime) && data.compare_and_swap_test(cpu.rdata, value);
 

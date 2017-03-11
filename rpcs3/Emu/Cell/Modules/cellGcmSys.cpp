@@ -1323,12 +1323,10 @@ s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 co
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
 
-		ppu.state += cpu_flag::is_waiting;
 		ppu.test_state();
 		busy_wait();
 	}
 
-	ppu.test_state();
 	return CELL_OK;
 }
 

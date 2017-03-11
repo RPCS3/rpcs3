@@ -125,12 +125,14 @@ class audio_config final : public named_thread
 
 	std::string get_name() const override { return "Audio Thread"; }
 
-	vm::var<char[], vm::page_allocator<vm::main>> m_buffer{ AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT };
-	vm::var<u64[], vm::page_allocator<vm::main>> m_indexes{ AUDIO_PORT_COUNT };
+	vm::ptr<char> m_buffer = vm::null;
+	vm::ptr<u64> m_indexes = vm::null;
 
 	u64 m_counter{};
 
 public:
+	void on_init(const std::shared_ptr<void>&) override;
+
 	const u64 start_time = get_system_time();
 
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;
@@ -139,17 +141,13 @@ public:
 
 	semaphore<> mutex;
 
-	audio_config()
-	{
-		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
-		{
-			ports[i].number = i;
-			ports[i].addr = m_buffer + AUDIO_PORT_OFFSET * i;
-			ports[i].index = m_indexes + i;
-		}
-	}
+	audio_config() = default;
 
-	~audio_config() = default;
+	~audio_config()
+	{
+		vm::dealloc_verbose_nothrow(m_buffer.addr());
+		vm::dealloc_verbose_nothrow(m_indexes.addr());
+	}
 
 	audio_port* open_port()
 	{
