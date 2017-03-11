@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "sys_mmapper.h"
-#include "sys_event.h"
 
 namespace vm { using namespace ps3; }
 
 logs::channel sys_mmapper("sys_mmapper", logs::level::notice);
 
-error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr) //it is NOT u32
+error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
 {
 	sys_mmapper.error("sys_mmapper_allocate_address(size=0x%llx, flags=0x%llx, alignment=0x%llx, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
 
@@ -38,9 +37,8 @@ error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::
 		{
 			if (const auto area = vm::map(static_cast<u32>(addr), static_cast<u32>(size), flags))
 			{
-				//sys_addr_t aa;
 				*alloc_addr = static_cast<u32>(addr);
-				sys_mmapper.error("sys_mmapper: Allocated address:0x%x", *alloc_addr);
+				sys_mmapper.notice("sys_mmapper: Allocated address:0x%x", *alloc_addr);
 				return CELL_OK;
 			}
 		}
