@@ -435,6 +435,12 @@ bool Emulator::Pause()
 	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
+
+	if (auto mfc = fxm::check<mfc_thread>())
+	{
+		on_select(0, *mfc);
+	}
+
 	return true;
 }
 
@@ -471,6 +477,11 @@ void Emulator::Resume()
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
 
+	if (auto mfc = fxm::check<mfc_thread>())
+	{
+		on_select(0, *mfc);
+	}
+
 	rpcs3::on_resume()();
 }
 
@@ -497,6 +508,11 @@ void Emulator::Stop()
 	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
+
+	if (auto mfc = fxm::check<mfc_thread>())
+	{
+		on_select(0, *mfc);
+	}
 
 	LOG_NOTICE(GENERAL, "All threads signaled...");
 

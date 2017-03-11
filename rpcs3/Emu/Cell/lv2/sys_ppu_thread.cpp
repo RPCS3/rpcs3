@@ -13,10 +13,11 @@ logs::channel sys_ppu_thread("sys_ppu_thread", logs::level::notice);
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	ppu.state += cpu_flag::exit;
-	ppu.state += cpu_flag::is_waiting;
 
 	// Get joiner ID
 	const u32 jid = ppu.joiner.fetch_op([](u32& value)
@@ -65,13 +66,13 @@ void sys_ppu_thread_yield(ppu_thread& ppu)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
-	ppu.state += cpu_flag::is_waiting;
 	lv2_obj::awake(ppu, -4);
-	ppu.test_state();
 }
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
 	const auto thread = idm::get<ppu_thread>(thread_id, [&](ppu_thread& thread) -> CellError
@@ -134,8 +135,6 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 	// Cleanup
 	idm::remove<ppu_thread>(thread->id);
-
-	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -211,7 +210,6 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 	{
 		if (thread.prio != prio && thread.prio.exchange(prio) != prio)
 		{
-			ppu.state += cpu_flag::is_waiting;
 			lv2_obj::awake(thread, prio);
 		}
 	});
@@ -221,7 +219,6 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 		return CELL_ESRCH;
 	}
 
-	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -339,7 +336,6 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	const auto thread = idm::get<ppu_thread>(thread_id, [&](ppu_thread& thread)
 	{
-		ppu.state += cpu_flag::is_waiting;
 		lv2_obj::awake(thread, -2);
 	});
 
@@ -358,7 +354,6 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 		thread->notify();
 	}
 
-	ppu.test_state();
 	return CELL_OK;
 }
 

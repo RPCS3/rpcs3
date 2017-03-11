@@ -1,8 +1,11 @@
 #pragma once
 
-const char* get_mfc_cmd_name(u32 cmd);
+#include "Emu/CPU/CPUThread.h"
+#include "Utilities/lockless.h"
 
-enum : u32
+#include <deque>
+
+enum MFC : u8
 {
 	MFC_PUT_CMD      = 0x20, MFC_PUTB_CMD     = 0x21, MFC_PUTF_CMD     = 0x22,
 	MFC_PUTS_CMD     = 0x28, MFC_PUTBS_CMD    = 0x29, MFC_PUTFS_CMD    = 0x2a,
@@ -80,29 +83,34 @@ enum : u32
 	MFG_MULTISOURCE_SYNC_EVENT         = 0x00001000,
 };
 
-struct spu_mfc_arg_t
+struct alignas(16) spu_mfc_cmd
 {
-	union
-	{
-		u64 ea;
-
-		struct
-		{
-			u32 eal;
-			u32 eah;
-		};
-	};
-
+	MFC cmd;
+	u8 tag;
+	u16 size;
 	u32 lsa;
+	u32 eal;
+	u32 eah;
+};
 
-	union
-	{
-		struct
-		{
-			u16 tag;
-			u16 size;
-		};
+class mfc_thread : public cpu_thread
+{
+	using spu_ptr = std::shared_ptr<class SPUThread>;
 
-		u32 size_tag;
-	};
+	// SPU threads to poll
+	std::vector<spu_ptr> m_spus;
+
+	// SPU threads to enqueue
+	lf_mpsc<spu_ptr, 128> m_spuq;
+
+public:
+	mfc_thread();
+
+	virtual ~mfc_thread() override;
+
+	virtual std::string get_name() const override;
+
+	virtual void cpu_task() override;
+
+	virtual void add_spu(spu_ptr _spu);
 };

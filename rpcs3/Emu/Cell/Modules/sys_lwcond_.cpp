@@ -58,6 +58,7 @@ s32 sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		// call the syscall
 		if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 1))
 		{
+			ppu.test_state();
 			lwmutex->all_info--;
 
 			return res == CELL_EPERM ? CELL_OK : res;
@@ -85,6 +86,7 @@ s32 sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	// call the syscall
 	if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 3))
 	{
+		ppu.test_state();
 		lwmutex->all_info--;
 
 		// unlock the lightweight mutex
@@ -119,6 +121,7 @@ s32 sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 			return res;
 		}
 
+		ppu.test_state();
 		lwmutex->all_info += res;
 
 		return CELL_OK;
@@ -139,6 +142,8 @@ s32 sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 	// if locking succeeded, call the syscall
 	s32 res = _sys_lwcond_signal_all(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
+
+	ppu.test_state();
 
 	if (res > 0)
 	{
@@ -173,6 +178,7 @@ s32 sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_
 		// call the syscall
 		if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 1))
 		{
+			ppu.test_state();
 			lwmutex->all_info--;
 
 			return res;
@@ -200,6 +206,7 @@ s32 sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_
 	// call the syscall
 	if (s32 res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 3))
 	{
+		ppu.test_state();
 		lwmutex->all_info--;
 
 		// unlock the lightweight mutex

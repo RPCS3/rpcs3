@@ -11,13 +11,12 @@ enum class cpu_flag : u32
 	suspend, // Thread suspended
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)
+	memory, // Thread must unlock memory mutex
 
 	dbg_global_pause, // Emulation paused
 	dbg_global_stop, // Emulation stopped
 	dbg_pause, // Thread paused
 	dbg_step, // Thread forced to pause after one step (one instruction, etc)
-
-	is_waiting, // Informational, self-maintained
 
 	__bitset_enum_max
 };
@@ -38,7 +37,7 @@ public:
 	cpu_thread(u32 id);
 
 	// Public thread state
-	atomic_t<bs_t<cpu_flag>> state{cpu_flag::stop + cpu_flag::is_waiting};
+	atomic_t<bs_t<cpu_flag>> state{+cpu_flag::stop};
 
 	// Process thread state, return true if the checker must return
 	bool check_state();

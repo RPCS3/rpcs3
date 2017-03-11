@@ -88,13 +88,6 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 
 	virtual u64 getSymbolAddress(const std::string& name) override
 	{
-		if (u64 addr = RTDyldMemoryManager::getSymbolAddress(name))
-		{
-			// This may be bad if LLVM requests some built-in functions like fma.
-			LOG_ERROR(GENERAL, "LLVM: Symbol requested %s -> 0x%016llx", name, addr);
-			return addr;
-		}
-
 		const auto found = m_link.find(name);
 
 		if (found != m_link.end())
@@ -102,8 +95,15 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			return found->second;
 		}
 
+		if (u64 addr = RTDyldMemoryManager::getSymbolAddress(name))
+		{
+			// This may be bad if LLVM requests some built-in functions like fma.
+			LOG_ERROR(GENERAL, "LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
+			return addr;
+		}
+
 		// It's fine if some function is never called, for example.
-		LOG_ERROR(GENERAL, "LLVM: Linkage failed for %s", name);
+		LOG_ERROR(GENERAL, "LLVM: Symbol not found: %s", name);
 		return (u64)null;
 	}
 
@@ -242,9 +242,17 @@ struct EventListener final : llvm::JITEventListener
 
 static EventListener s_listener;
 
+static void dummy()
+{
+}
+
 jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_linkage_info)
 	: m_link(std::move(init_linkage_info))
 {
+#ifdef _MSC_VER
+	m_link.emplace("__chkstk", (u64)&dummy);
+#endif
+
 	verify(HERE), s_memory;
 
 	// Initialization

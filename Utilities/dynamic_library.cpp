@@ -61,7 +61,7 @@ namespace utils
 	void* get_proc_address(const char* lib, const char* name)
 	{
 #ifdef _WIN32
-		return GetProcAddress(GetModuleHandleA(lib), name);
+		return reinterpret_cast<void*>(GetProcAddress(GetModuleHandleA(lib), name));
 #else
 		return dlsym(dlopen(lib, RTLD_NOLOAD), name);
 #endif

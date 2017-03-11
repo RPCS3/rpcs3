@@ -217,7 +217,7 @@ struct vdec_thread : ppu_thread
 					cellVdec.trace("End sequence...");
 				}
 
-				while (true)
+				while (max_frames)
 				{
 					vdec_frame frame;
 					frame.avf.reset(av_frame_alloc());
@@ -338,10 +338,13 @@ struct vdec_thread : ppu_thread
 					}
 				}
 
-				cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
-				lv2_obj::sleep(*this);
-
-				while (std::lock_guard<std::mutex>{mutex}, out.size() > max_frames)
+				if (max_frames)
+				{
+					cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
+					lv2_obj::sleep(*this);
+				}
+				
+				while (std::lock_guard<std::mutex>{mutex}, max_frames && out.size() > max_frames)
 				{
 					thread_ctrl::wait();
 				}
@@ -450,7 +453,7 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 	{
 		std::lock_guard<std::mutex> lock(vdec->mutex);
 		vdec->cmd_push({vdec_cmd::close, 0});
-		vdec->out = decltype(vdec->out){};
+		vdec->max_frames = 0;
 	}
 	
 	vdec->notify();

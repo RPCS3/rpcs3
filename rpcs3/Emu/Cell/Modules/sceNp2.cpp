@@ -31,7 +31,7 @@ s32 sceNpMatching2Init(u32 poolsize, s32 priority)
 {
 	sceNp2.todo("sceNpMatching2Init(poolsize=0x%x, priority=%d)", poolsize, priority);
 
-	return CELL_OK;
+	return SCE_NP_MATCHING2_ERROR_TIMEDOUT;
 }
 
 s32 sceNpMatching2Init2(u32 poolsize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)

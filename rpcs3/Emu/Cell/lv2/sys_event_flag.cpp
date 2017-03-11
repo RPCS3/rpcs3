@@ -221,13 +221,6 @@ error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> res
 error_code sys_event_flag_set(u32 id, u64 bitptn)
 {
 	// Warning: may be called from SPU thread.
-	auto cpu = get_current_cpu_thread();
-
-	if (cpu && cpu->id_type() != 1)
-	{
-		cpu = nullptr;
-	}
-
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
 	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id);
@@ -282,10 +275,6 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 		{
 			return CELL_OK;
 		}
-		else if (cpu)
-		{
-			cpu->state += cpu_flag::is_waiting;
-		}
 
 		// Remove waiters
 		const auto tail = std::remove_if(flag->sq.begin(), flag->sq.end(), [&](cpu_thread* cpu)
@@ -305,7 +294,6 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 		flag->sq.erase(tail, flag->sq.end());
 	}
 	
-	if (cpu) cpu->test_state();
 	return CELL_OK;
 }
 
@@ -352,8 +340,6 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 		// Signal all threads to return CELL_ECANCELED
 		while (auto thread = flag->schedule<ppu_thread>(flag->sq, flag->protocol))
 		{
-			ppu.state += cpu_flag::is_waiting;
-
 			auto& ppu = static_cast<ppu_thread&>(*thread);
 
 			ppu.gpr[3] = CELL_ECANCELED;

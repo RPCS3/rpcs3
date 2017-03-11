@@ -42,7 +42,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, false, 2, 1 };
 
 	case rsx::surface_color_format::x32:
-		return{ ::gl::texture::type::f32, ::gl::texture::format::red, false, 1, 4 };
+		return{ ::gl::texture::type::f32, ::gl::texture::format::red, true, 1, 4 };
 
 	default:
 		LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", (u32)color_format);
@@ -160,7 +160,6 @@ void GLGSRender::init_buffers(bool skip_reading)
 	}
 
 	//We are about to change buffers, flush any pending requests for the old buffers
-	//LOG_WARNING(RSX, "Render targets have changed; checking for sync points (EID=%d)", m_draw_calls);
 	synchronize_buffers();
 
 	m_rtts_dirty = false;
@@ -189,6 +188,23 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 			std::get<1>(m_rtts.m_bound_render_targets[i])->set_rsx_pitch(pitchs[i]);
 			surface_info[i] = { surface_addresses[i], pitchs[i], false, surface_format, depth_format, clip_horizontal, clip_vertical };
+
+			//Verify pitch given is correct if pitch <= 64 (especially 64)
+			if (pitchs[i] <= 64)
+			{
+				verify(HERE), pitchs[i] == 64;
+				
+				const u16 native_pitch = std::get<1>(m_rtts.m_bound_render_targets[i])->get_native_pitch();
+				if (native_pitch > pitchs[i])
+				{
+					LOG_WARNING(RSX, "Bad color surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
+						clip_horizontal, (u32)surface_format, pitchs[i], native_pitch);
+
+					//Will not transfer this surface between cell and rsx due to misalignment
+					//TODO: Verify correct behaviour
+					surface_info[i].pitch = 0;
+				}
+			}
 		}
 		else
 			surface_info[i] = {};
@@ -198,8 +214,26 @@ void GLGSRender::init_buffers(bool skip_reading)
 	{
 		__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
 
+		const u32 depth_surface_pitch = rsx::method_registers.surface_z_pitch();
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());
-		depth_surface_info = { depth_address, rsx::method_registers.surface_z_pitch(), true, surface_format, depth_format, clip_horizontal, clip_vertical };
+		depth_surface_info = { depth_address, depth_surface_pitch, true, surface_format, depth_format, clip_horizontal, clip_vertical };
+
+		//Verify pitch given is correct if pitch <= 64 (especially 64)
+		if (depth_surface_pitch <= 64)
+		{
+			verify(HERE), depth_surface_pitch == 64;
+
+			const u16 native_pitch = std::get<1>(m_rtts.m_bound_depth_stencil)->get_native_pitch();
+			if (native_pitch > depth_surface_pitch)
+			{
+				LOG_WARNING(RSX, "Bad depth surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
+					clip_horizontal, (u32)depth_format, depth_surface_pitch, native_pitch);
+
+				//Will not transfer this surface between cell and rsx due to misalignment
+				//TODO: Verify correct behaviour
+				depth_surface_info.pitch = 0;
+			}
+		}
 	}
 	else
 		depth_surface_info = {};
@@ -247,17 +281,17 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 		for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 		{
-			if (!surface_info[i].address || pitchs[i] <= 64) continue;
+			if (!surface_info[i].address || !surface_info[i].pitch) continue;
 
 			const u32 range = surface_info[i].pitch * surface_info[i].height;
 			m_gl_texture_cache.lock_rtt_region(surface_info[i].address, range, surface_info[i].width, surface_info[i].height, surface_info[i].pitch,
-				color_format.format, color_format.type, *std::get<1>(m_rtts.m_bound_render_targets[i]));
+				color_format.format, color_format.type, color_format.swap_bytes, *std::get<1>(m_rtts.m_bound_render_targets[i]));
 		}
 	}
 
 	if (g_cfg_rsx_write_depth_buffer)
 	{
-		if (depth_surface_info.address && rsx::method_registers.surface_z_pitch() > 64)
+		if (depth_surface_info.address && depth_surface_info.pitch)
 		{
 			auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(depth_format);
 
@@ -271,7 +305,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 				LOG_WARNING(RSX, "Depth surface pitch does not match computed pitch, %d vs %d", depth_surface_info.pitch, pitch);
 
 			m_gl_texture_cache.lock_rtt_region(depth_surface_info.address, range, depth_surface_info.width, depth_surface_info.height, pitch,
-				depth_format_gl.format, depth_format_gl.type, *std::get<1>(m_rtts.m_bound_depth_stencil));
+				depth_format_gl.format, depth_format_gl.type, true, *std::get<1>(m_rtts.m_bound_depth_stencil));
 		}
 	}
 }
@@ -316,7 +350,7 @@ void GLGSRender::read_buffers()
 				u32 location = locations[i];
 				u32 pitch = pitchs[i];
 
-				if (pitch <= 64)
+				if (!surface_info[i].pitch)
 					continue;
 
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
@@ -375,9 +409,9 @@ void GLGSRender::read_buffers()
 	if (g_cfg_rsx_read_depth_buffer)
 	{
 		//TODO: use pitch
-		u32 pitch = rsx::method_registers.surface_z_pitch();
+		u32 pitch = depth_surface_info.pitch;
 
-		if (pitch <= 64)
+		if (!pitch)
 			return;
 
 		u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
@@ -432,7 +466,7 @@ void GLGSRender::write_buffers()
 		{
 			for (int i = index; i < index + count; ++i)
 			{
-				if (surface_info[i].address == 0 || surface_info[i].pitch <= 64)
+				if (surface_info[i].pitch == 0)
 					continue;
 
 				/**Even tiles are loaded as whole textures during read_buffers from testing.
@@ -451,7 +485,7 @@ void GLGSRender::write_buffers()
 	if (g_cfg_rsx_write_depth_buffer)
 	{
 		//TODO: use pitch
-		if (!depth_surface_info.address || depth_surface_info.pitch <= 64) return;
+		if (depth_surface_info.pitch == 0) return;
 
 		u32 range = depth_surface_info.width * depth_surface_info.height * 2;
 		if (depth_surface_info.depth_format != rsx::surface_depth_format::z16) range *= 2;

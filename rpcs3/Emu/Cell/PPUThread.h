@@ -25,6 +25,7 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
+	virtual void on_init(const std::shared_ptr<void>&) override;
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
 	virtual void cpu_task() override;
@@ -114,11 +115,14 @@ public:
 	}
 	fpscr;
 
-	u32 cia{}; // Current Instruction Address
+	u32 raddr{0}; // Reservation addr
+	u64 rtime{0};
+	u64 rdata{0}; // Reservation data
 	u64 lr{}; // Link Register
 	u64 ctr{}; // Counter Register
 	u32 vrsave{0xffffffff}; // VR Save Register (almost unused)
 
+	u32 cia{}; // Current Instruction Address
 	atomic_t<u32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address

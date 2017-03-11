@@ -493,15 +493,39 @@ namespace rsx
 			glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.get_exact_mipmap_count() - 1);
 
-			u8 remap_a = tex.remap() & 0x3;
-			u8 remap_r = (tex.remap() >> 2) & 0x3;
-			u8 remap_g = (tex.remap() >> 4) & 0x3;
-			u8 remap_b = (tex.remap() >> 6) & 0x3;
+			auto decoded_remap = tex.decoded_remap();
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
+			//Remapping tables; format is A-R-G-B
+			//Remap input table. Contains channel index to read color from 
+			const auto remap_inputs = decoded_remap.first;
+
+			//Remap control table. Controls whether the remap value is used, or force either 0 or 1
+			const auto remap_lookup = decoded_remap.second;
+
+			GLenum remap_values[4];
+
+			for (u8 channel = 0; channel < 4; ++channel)
+			{
+				switch (remap_lookup[channel])
+				{
+				default:
+					LOG_ERROR(RSX, "Unknown remap function 0x%X", remap_lookup[channel]);
+				case CELL_GCM_TEXTURE_REMAP_REMAP:
+					remap_values[channel] = glRemap[remap_inputs[channel]];
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ZERO:
+					remap_values[channel] = GL_ZERO;
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ONE:
+					remap_values[channel] = GL_ONE;
+					break;
+				}
+			}
+
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, remap_values[0]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, remap_values[1]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
 
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));

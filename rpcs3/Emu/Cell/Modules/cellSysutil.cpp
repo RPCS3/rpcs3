@@ -88,6 +88,8 @@ cfg::map_entry<s32> g_cfg_sys_language(cfg::root.sys, "Language",
 	{ "Norwegian", CELL_SYSUTIL_LANG_NORWEGIAN },
 	{ "Polish", CELL_SYSUTIL_LANG_POLISH },
 	{ "English (UK)", CELL_SYSUTIL_LANG_ENGLISH_GB },
+	{ "Portuguese (BR)", CELL_SYSUTIL_LANG_PORTUGUESE_BR },
+	{ "Turkish", CELL_SYSUTIL_LANG_TURKISH },
 });
 
 // For test

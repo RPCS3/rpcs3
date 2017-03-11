@@ -18,9 +18,11 @@ struct work_item
 	std::mutex guard_mutex;
 	
 	u32  address_to_flush = 0;
-	bool processed = false;
-	bool result = false;
-	bool received = false;
+	gl::texture_cache::cached_rtt_section *section_to_flush = nullptr;
+
+	volatile bool processed = false;
+	volatile bool result = false;
+	volatile bool received = false;
 };
 
 struct gcm_buffer_info
@@ -125,7 +127,7 @@ public:
 	void set_viewport();
 
 	void synchronize_buffers();
-	work_item& post_flush_request(u32 address);
+	work_item& post_flush_request(u32 address, gl::texture_cache::cached_rtt_section *section);
 
 protected:
 	void begin() override;

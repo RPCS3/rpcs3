@@ -216,6 +216,23 @@ extern void ppu_breakpoint(u32 addr)
 	}
 }
 
+void ppu_thread::on_init(const std::shared_ptr<void>& _this)
+{
+	if (!stack_addr)
+	{
+		const_cast<u32&>(stack_addr) = vm::alloc(stack_size, vm::stack);
+
+		if (!stack_addr)
+		{
+			fmt::throw_exception("Out of stack memory (size=0x%x)" HERE, stack_size);
+		}
+
+		gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+
+		cpu_thread::on_init(_this);
+	}
+}
+
 std::string ppu_thread::get_name() const
 {
 	return fmt::format("PPU[0x%x] Thread (%s)", id, m_name);
@@ -453,19 +470,12 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	: cpu_thread(idm::last_id())
 	, prio(prio)
 	, stack_size(std::max<u32>(stack, 0x4000))
-	, stack_addr(vm::alloc(stack_size, vm::stack))
+	, stack_addr(0)
 	, start_time(get_system_time())
 	, m_name(name)
 {
-	if (!stack_addr)
-	{
-		fmt::throw_exception("Out of stack memory (size=0x%x)" HERE, stack_size);
-	}
-
-	gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
-
 	// Trigger the scheduler
-	state += cpu_flag::suspend;
+	state += cpu_flag::suspend + cpu_flag::memory;
 }
 
 void ppu_thread::cmd_push(cmd64 cmd)
@@ -684,28 +694,68 @@ static void ppu_trace(u64 addr)
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
-	be_t<u32> reg_value;
-	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
-	return reg_value;
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(u32));
+	_mm_lfence();
+	ppu.raddr = addr;
+	ppu.rdata = vm::_ref<const atomic_be_t<u32>>(addr);
+	return static_cast<u32>(ppu.rdata);
 }
 
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
-	be_t<u64> reg_value;
-	vm::reservation_acquire(&reg_value, addr, sizeof(reg_value));
-	return reg_value;
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(u64));
+	_mm_lfence();
+	ppu.raddr = addr;
+	ppu.rdata = vm::_ref<const atomic_be_t<u64>>(addr);
+	return ppu.rdata;
 }
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
-	const be_t<u32> data = reg_value;
-	return vm::reservation_update(addr, &data, sizeof(data));
+	atomic_be_t<u32>& data = vm::_ref<atomic_be_t<u32>>(addr);
+
+	if (ppu.raddr != addr || ppu.rdata != data.load())
+	{
+		ppu.raddr = 0;
+		return false;
+	}
+
+	vm::writer_lock lock(0);
+
+	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+	
+	if (result)
+	{
+		vm::reservation_update(addr, sizeof(u32));
+		vm::notify(addr, sizeof(u32));
+	}
+
+	ppu.raddr = 0;
+	return result;
 }
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
-	const be_t<u64> data = reg_value;
-	return vm::reservation_update(addr, &data, sizeof(data));
+	atomic_be_t<u64>& data = vm::_ref<atomic_be_t<u64>>(addr);
+
+	if (ppu.raddr != addr || ppu.rdata != data.load())
+	{
+		ppu.raddr = 0;
+		return false;
+	}
+
+	vm::writer_lock lock(0);
+
+	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
+
+	if (result)
+	{
+		vm::reservation_update(addr, sizeof(u64));
+		vm::notify(addr, sizeof(u64));
+	}
+
+	ppu.raddr = 0;
+	return result;
 }
 
 static bool adde_carry(u64 a, u64 b, bool c)

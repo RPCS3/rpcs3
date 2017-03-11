@@ -1,13 +1,12 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/Memory/vm.h"
 #include "CPUThread.h"
-
-#include <thread>
 
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
 
-template<>
+template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](cpu_flag f)
@@ -19,11 +18,11 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::suspend: return "s";
 		case cpu_flag::ret: return "ret";
 		case cpu_flag::signal: return "sig";
+		case cpu_flag::memory: return "mem";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_global_stop: return "G-EXIT";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
-		case cpu_flag::is_waiting: return "w";
 		case cpu_flag::__bitset_enum_max: break;
 		}
 
@@ -66,7 +65,6 @@ void cpu_thread::on_task()
 			}
 
 			state -= cpu_flag::ret;
-			state += cpu_flag::is_waiting;
 			continue;
 		}
 
@@ -82,6 +80,7 @@ void cpu_thread::on_stop()
 
 cpu_thread::~cpu_thread()
 {
+	vm::cleanup_unlock(*this);
 	g_threads_deleted++;
 }
 
@@ -94,12 +93,23 @@ cpu_thread::cpu_thread(u32 id)
 bool cpu_thread::check_state()
 {
 	bool cpu_sleep_called = false;
+	bool cpu_flag_memory = false;
 
 	while (true)
 	{
+		if (test(state, cpu_flag::memory) && state.test_and_reset(cpu_flag::memory))
+		{
+			cpu_flag_memory = true;
+
+			if (auto& ptr = vm::g_tls_locked)
+			{
+				ptr->compare_and_swap(this, nullptr);
+				ptr = nullptr;
+			}
+		}
+
 		if (test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
 		{
-			state += cpu_flag::is_waiting;
 			return true;
 		}
 
@@ -110,20 +120,10 @@ bool cpu_thread::check_state()
 
 		if (!test(state, cpu_state_pause))
 		{
-			if (test(state, cpu_flag::is_waiting))
-			{
-				state -= cpu_flag::is_waiting;
-			}
-			
+			if (cpu_flag_memory) vm::passive_lock(*this);
 			break;
 		}
-
-		if (!state.test_and_set(cpu_flag::is_waiting))
-		{
-			continue;
-		}
-
-		if (test(state & cpu_flag::suspend) && !cpu_sleep_called)
+		else if (!cpu_sleep_called)
 		{
 			cpu_sleep();
 			cpu_sleep_called = true;
@@ -137,7 +137,6 @@ bool cpu_thread::check_state()
 
 	if (test(state_, cpu_flag::ret + cpu_flag::stop))
 	{
-		state += cpu_flag::is_waiting;
 		return true;
 	}
 
@@ -147,7 +146,6 @@ bool cpu_thread::check_state()
 		state -= cpu_flag::dbg_step;
 	}
 
-	state -= cpu_flag::is_waiting;
 	return false;
 }
 

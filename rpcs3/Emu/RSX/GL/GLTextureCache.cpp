@@ -14,6 +14,7 @@ namespace gl
 			return false;
 
 		bool post_task = false;
+		cached_rtt_section* section_to_post = nullptr;
 
 		{
 			std::lock_guard<std::mutex> lock(m_section_mutex);
@@ -35,6 +36,7 @@ namespace gl
 					if (std::this_thread::get_id() != m_renderer_thread)
 					{
 						post_task = true;
+						section_to_post = &rtt;
 						break;
 					}
 
@@ -47,7 +49,7 @@ namespace gl
 		if (post_task)
 		{
 			//LOG_WARNING(RSX, "Cache access not from worker thread! address = 0x%X", address);
-			work_item &task = m_renderer->post_flush_request(address);
+			work_item &task = m_renderer->post_flush_request(address, section_to_post);
 
 			{
 				std::unique_lock<std::mutex> lock(task.guard_mutex);

@@ -113,6 +113,8 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	auto spu = idm::make_ptr<SPUThread>(thread_name, spu_num, group.get());
 
+	fxm::get_always<mfc_thread>()->add_spu(spu);
+
 	*thread = spu->id;
 
 	group->threads[spu_num] = std::move(spu);
@@ -224,12 +226,14 @@ error_code sys_spu_thread_group_destroy(u32 id)
 		}
 	}
 
+	fxm::check_unlocked<mfc_thread>()->add_spu(nullptr);
+
 	return CELL_OK;
 }
 
 error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 {
-	ppu.state += cpu_flag::is_waiting;
+	vm::temporary_unlock(ppu);
 
 	sys_spu.warning("sys_spu_thread_group_start(id=0x%x)", id);
 
@@ -287,7 +291,6 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		}
 	}
 
-	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -476,6 +479,8 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 
 error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_spu.warning("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
 
 	const auto group = idm::get<lv2_spu_group>(id);
@@ -485,48 +490,60 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		return CELL_ESRCH;
 	}
 
-	semaphore_lock lock(group->mutex);
+	u32 join_state = 0;
+	s32 exit_value = 0;
 
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
 	{
-		return CELL_ESTAT;
-	}
+		semaphore_lock lock(group->mutex);
 
-	if (group->join_state.fetch_or(SPU_TGJSF_IS_JOINING) & SPU_TGJSF_IS_JOINING)
-	{
-		// another PPU thread is joining this thread group
-		return CELL_EBUSY;
-	}
-
-	lv2_obj::sleep(ppu);
-
-	while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
-	{
-		bool stopped = true;
-
-		for (auto& t : group->threads)
+		if (group->run_state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
-			if (t)
+			return CELL_ESTAT;
+		}
+
+		if (group->join_state.fetch_or(SPU_TGJSF_IS_JOINING) & SPU_TGJSF_IS_JOINING)
+		{
+			// another PPU thread is joining this thread group
+			return CELL_EBUSY;
+		}
+
+		lv2_obj::sleep(ppu);
+
+		while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
+		{
+			bool stopped = true;
+
+			for (auto& t : group->threads)
 			{
-				if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
+				if (t)
 				{
-					stopped = false;
-					break;
+					if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
+					{
+						stopped = false;
+						break;
+					}
 				}
 			}
+
+			if (stopped)
+			{
+				break;
+			}
+
+			// TODO
+			group->cv.wait(lock, 1000);
+			thread_ctrl::test();
 		}
 
-		if (stopped)
-		{
-			break;
-		}
-
-		// TODO
-		group->cv.wait(lock, 1000);
-		thread_ctrl::test();
+		join_state = group->join_state;
+		exit_value = group->exit_status;
+		group->join_state &= ~SPU_TGJSF_IS_JOINING;
+		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
 	}
+	
+	ppu.test_state();
 
-	switch (group->join_state & ~SPU_TGJSF_IS_JOINING)
+	switch (join_state & ~SPU_TGJSF_IS_JOINING)
 	{
 	case 0:
 	{
@@ -553,9 +570,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 	{
 		*status = group->exit_status;
 	}
-
-	group->join_state &= ~SPU_TGJSF_IS_JOINING;
-	group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
+	
 	return CELL_OK;
 }
 
@@ -1080,7 +1095,11 @@ error_code sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 
 	thread->cpu_init();
 
-	*id = thread->index;
+	const u32 _id = thread->index;
+
+	fxm::get_always<mfc_thread>()->add_spu(std::move(thread));
+
+	*id = _id;
 
 	return CELL_OK;
 }
@@ -1141,6 +1160,8 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	}
 
 	idm::remove<RawSPUThread>(thread->id);
+
+	fxm::check_unlocked<mfc_thread>()->add_spu(nullptr);
 
 	return CELL_OK;
 }

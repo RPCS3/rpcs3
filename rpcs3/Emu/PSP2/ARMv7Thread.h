@@ -123,6 +123,9 @@ public:
 	} ITSTATE;
 
 	u32 TLS = 0;
+	u64 rtime = 0;
+	u32 raddr = 0;
+	u32 rdata = 0;
 
 	struct perf_counter
 	{

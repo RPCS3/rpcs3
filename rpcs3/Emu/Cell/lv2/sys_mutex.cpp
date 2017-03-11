@@ -170,7 +170,6 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 		}
 	}
 
-	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -221,7 +220,6 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 
 		if (auto cpu = mutex->reown<ppu_thread>())
 		{
-			ppu.state += cpu_flag::is_waiting;
 			mutex->awake(*cpu);
 		}
 	}
@@ -230,6 +228,5 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 		return mutex.ret;
 	}
 
-	ppu.test_state();
 	return CELL_OK;
 }

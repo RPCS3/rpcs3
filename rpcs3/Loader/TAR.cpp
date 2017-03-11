@@ -105,7 +105,7 @@ bool tar_object::extract(std::string path)
 		{
 		case '0':
 		{
-			fs::file file(header.name, fs::rewrite);
+			fs::file file(path + header.name, fs::rewrite);
 			file.write(get_file(header.name).to_vector<u8>());
 			break;
 		}

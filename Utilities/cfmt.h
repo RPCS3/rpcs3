@@ -581,7 +581,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		const std::string _fmt(fmt - ctx.size, fmt);
 
-		const u64 arg0 = src.template get<u64>(0);
+		const f64 arg0 = src.template get<f64>(0);
 		const u64 arg1 = ctx.args >= 1 ? src.template get<u64>(1) : 0;
 		const u64 arg2 = ctx.args >= 2 ? src.template get<u64>(2) : 0;
 

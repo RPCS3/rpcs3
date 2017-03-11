@@ -5,6 +5,7 @@
 
 #include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/MFC.h"
 #include "sys_sync.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
@@ -1046,7 +1047,6 @@ void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 			if (!test(val, cpu_flag::signal))
 			{
 				val += cpu_flag::suspend;
-				val += cpu_flag::is_waiting;
 			}
 		});
 
@@ -1093,8 +1093,25 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	if (prio == -4)
 	{
 		// Yield command
+		const u64 start_time = get_system_time();
+
+		for (std::size_t i = 0, pos = -1; i < g_ppu.size(); i++)
+		{
+			if (g_ppu[i] == &cpu)
+			{
+				pos = i;
+				prio = g_ppu[i]->prio;
+			}
+			else if (i == pos + 1 && prio != -4 && g_ppu[i]->prio != prio)
+			{
+				return;
+			}
+		}
+
 		unqueue(g_ppu, &cpu);
 		unqueue(g_pending, &cpu);
+
+		static_cast<ppu_thread&>(cpu).start_time = start_time;
 	}
 
 	if (prio < INT32_MAX && !unqueue(g_ppu, &cpu))
@@ -1203,5 +1220,6 @@ void lv2_obj::schedule_all()
 
 void ppu_thread::cpu_sleep()
 {
+	vm::temporary_unlock(*this);
 	lv2_obj::awake(*this);
 }
