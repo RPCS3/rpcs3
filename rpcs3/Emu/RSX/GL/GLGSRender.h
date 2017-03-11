@@ -67,7 +67,9 @@ private:
 	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
 	
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
-	std::unique_ptr<gl::ring_buffer> m_uniform_ring_buffer;
+	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
+	std::unique_ptr<gl::ring_buffer> m_transform_constants_buffer;
+	std::unique_ptr<gl::ring_buffer> m_scale_offset_buffer;
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
 
 	u32 m_draw_calls = 0;
