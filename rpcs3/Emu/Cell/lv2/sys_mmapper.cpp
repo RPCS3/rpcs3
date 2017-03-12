@@ -53,7 +53,7 @@ error_code sys_mmapper_allocate_fixed_address()
 {
 	sys_mmapper.error("sys_mmapper_allocate_fixed_address()");
 
-	if (!vm::map(0xB0000000, 0x10000000)) // TODO: set correct flags (they aren't used currently though)
+	if (!vm::map(0xB0000000, 0x10000000, SYS_MEMORY_PAGE_SIZE_1M))
 	{
 		return CELL_EEXIST;
 	}
@@ -228,7 +228,7 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 
 error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 {
-	sys_mmapper.error("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%llx)", addr, mem_id, flags);
+	sys_mmapper.warning("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%llx)", addr, mem_id, flags);
 
 	const auto area = vm::get(vm::any, addr);
 
@@ -267,7 +267,7 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 
 error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	sys_mmapper.error("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
+	sys_mmapper.warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
 
 	const auto area = vm::get(vm::any, start_addr);
 
@@ -303,11 +303,11 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 
 error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 {
-	sys_mmapper.error("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
+	sys_mmapper.warning("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
 
 	const auto area = vm::get(vm::any, addr);
 
-	if (!area || addr != area->addr || addr < 0x30000000 || addr >= 0xC0000000)
+	if (!area || addr < 0x30000000 || addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}
