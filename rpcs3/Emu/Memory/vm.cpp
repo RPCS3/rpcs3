@@ -5,6 +5,7 @@
 #include "Utilities/Thread.h"
 #include "Utilities/VirtualMemory.h"
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/lv2/sys_memory.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -599,8 +600,17 @@ namespace vm
 		{
 			return 0;
 		}
+		u8 pflags = page_readable | page_writable;
+		if ((flags & SYS_MEMORY_PAGE_SIZE_1M) == SYS_MEMORY_PAGE_SIZE_1M)
+		{
+			pflags |= page_1m_size;
+		}
+		else if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
+		{
+			pflags |= page_64k_size;
+		}
 
-		if (!try_alloc(addr, size, page_readable | page_writable, sup))
+		if (!try_alloc(addr, size, pflags, sup))
 		{
 			return 0;
 		}
