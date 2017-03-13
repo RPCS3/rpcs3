@@ -344,7 +344,7 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
-		writer_lock lock(0);
+		writer_lock lock;
 
 		if (!size || (size | addr) % 4096)
 		{

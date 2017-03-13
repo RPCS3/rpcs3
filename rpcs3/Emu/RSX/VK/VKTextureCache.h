@@ -289,7 +289,7 @@ namespace vk
 
 			region.reset(texaddr, range);
 			region.create(tex.width(), height, depth, tex.get_exact_mipmap_count(), view, image);
-			region.protect(0, vm::page_writable);
+			region.protect(utils::protection::ro);
 			region.set_dirty(false);
 
 			texture_cache_range = region.get_min_max(texture_cache_range);
