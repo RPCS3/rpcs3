@@ -191,9 +191,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 			//Verify pitch given is correct if pitch <= 64 (especially 64)
 			if (pitchs[i] <= 64)
-			{
-				verify(HERE), pitchs[i] == 64;
-				
+			{	
 				const u16 native_pitch = std::get<1>(m_rtts.m_bound_render_targets[i])->get_native_pitch();
 				if (native_pitch > pitchs[i])
 				{
@@ -221,8 +219,6 @@ void GLGSRender::init_buffers(bool skip_reading)
 		//Verify pitch given is correct if pitch <= 64 (especially 64)
 		if (depth_surface_pitch <= 64)
 		{
-			verify(HERE), depth_surface_pitch == 64;
-
 			const u16 native_pitch = std::get<1>(m_rtts.m_bound_depth_stencil)->get_native_pitch();
 			if (native_pitch > depth_surface_pitch)
 			{
