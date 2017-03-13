@@ -1003,9 +1003,17 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 {
 	g_tls_fault_all++;
 
+	const auto cpu = get_current_cpu_thread();
+
 	if (rsx::g_access_violation_handler && rsx::g_access_violation_handler(addr, is_writing))
 	{
 		g_tls_fault_rsx++;
+
+		if (cpu)
+		{
+			cpu->test_state();
+		}
+
 		return true;
 	}
 
@@ -1142,11 +1150,16 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	if (vm::check_addr(addr, d_size))
 	{
+		if (cpu)
+		{
+			cpu->test_state();
+		}
+
 		return true;
 	}
 
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-	if (const auto cpu = get_current_cpu_thread())
+	if (cpu)
 	{
 		LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 		cpu->state += cpu_flag::dbg_pause;

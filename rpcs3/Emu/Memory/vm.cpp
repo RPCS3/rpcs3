@@ -107,6 +107,14 @@ namespace vm
 		}
 	}
 
+	void temporary_unlock() noexcept
+	{
+		if (auto cpu = get_current_cpu_thread())
+		{
+			temporary_unlock(*cpu);
+		}
+	}
+
 	reader_lock::reader_lock()
 		: locked(true)
 	{

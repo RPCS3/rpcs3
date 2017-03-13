@@ -51,6 +51,7 @@ namespace gl
 			//LOG_WARNING(RSX, "Cache access not from worker thread! address = 0x%X", address);
 			work_item &task = m_renderer->post_flush_request(address, section_to_post);
 
+			vm::temporary_unlock();
 			{
 				std::unique_lock<std::mutex> lock(task.guard_mutex);
 				task.cv.wait(lock, [&task] { return task.processed; });

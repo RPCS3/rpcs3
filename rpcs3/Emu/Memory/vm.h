@@ -70,6 +70,7 @@ namespace vm
 
 	// Optimization (set cpu_flag::memory)
 	void temporary_unlock(cpu_thread& cpu) noexcept;
+	void temporary_unlock() noexcept;
 
 	constexpr struct try_to_lock_t{} try_to_lock{};
 
