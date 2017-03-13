@@ -1500,6 +1500,11 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 	const u64 time = 0;
 #endif
 
+	g_tls_log_prefix = []
+	{
+		return g_tls_this_thread->m_name;
+	};
+
 	LOG_NOTICE(GENERAL, "Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u];",
 		time / 1000000000.,
 		cycles / 1000000000.,
