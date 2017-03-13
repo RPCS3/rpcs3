@@ -100,11 +100,11 @@ extern void ppu_initialize(const ppu_module& info);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
-const auto s_ppu_compiled = static_cast<u32*>(memory_helper::reserve_memory(0x100000000));
+const auto s_ppu_compiled = static_cast<u32*>(utils::memory_reserve(0x100000000));
 
 extern void ppu_finalize()
 {
-	memory_helper::free_reserved_memory(s_ppu_compiled, 0x100000000);
+	utils::memory_decommit(s_ppu_compiled, 0x100000000);
 }
 
 // Get interpreter cache value
@@ -139,7 +139,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 	}
 
 	// Register executable range at
-	memory_helper::commit_page_memory(s_ppu_compiled + addr / 4, size);
+	utils::memory_commit(s_ppu_compiled + addr / 4, size);
 
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
 

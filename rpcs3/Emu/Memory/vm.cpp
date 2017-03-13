@@ -28,7 +28,7 @@
 namespace vm
 {
 	// Emulated virtual memory (4 GiB)
-	u8* const g_base_addr = static_cast<u8*>(memory_helper::reserve_memory(0x100000000));
+	u8* const g_base_addr = static_cast<u8*>(utils::memory_reserve(0x100000000));
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -796,7 +796,7 @@ namespace vm
 	{
 		g_locations.clear();
 
-		memory_helper::free_reserved_memory(g_base_addr, 0x100000000);
+		utils::memory_decommit(g_base_addr, 0x100000000);
 	}
 }
 
