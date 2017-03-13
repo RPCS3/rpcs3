@@ -957,12 +957,9 @@ void GLGSRender::do_local_task()
 		}
 		else
 		{
-			//TODO: Validate flushing requests before appending to queue.
-			//Highly unlikely that this path will be taken
-			LOG_ERROR(RSX, "Possible race condition for flush @address 0x%X", q.address_to_flush);
-			
-			//Process this address
-			q.result = m_gl_texture_cache.flush_section(q.address_to_flush);
+			//Another thread has unlocked this memory region already
+			//Return success
+			q.result = true;
 		}
 
 		q.processed = true;
