@@ -1221,6 +1221,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
 
+		if (!fs::is_dir(lle_dir))
+		{
+			LOG_ERROR(GENERAL, "/dev_flash/sys/external/ directory does not exist!"
+				"\nYou should install the PS3 Firmware (Menu: Tools -> Install Firmware)."
+				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
+		}
+
 		for (const auto& name : load_libs)
 		{
 			const ppu_prx_object obj = decrypt_self(fs::file(lle_dir + name));
@@ -1245,7 +1252,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 			else
 			{
-				LOG_FATAL(LOADER, "Failed to load %s: %s", name, obj.get_error());
+				fmt::throw_exception("Failed to load /dev_flash/sys/external/%s: %s", name, obj.get_error());
 			}
 		}
 	}
