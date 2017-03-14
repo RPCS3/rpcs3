@@ -182,6 +182,21 @@ s32 console_write(vm::ptr<char> data, u32 len)
 	return CELL_OK;
 }
 
+s32 sys_lv2coredump_D725F320()
+{
+	fmt::raw_error(__func__);
+}
+
+s32 sys_crashdump_52696620()
+{
+	fmt::raw_error(__func__);
+}
+
+s32 sys_crashdump_B20F87B3()
+{
+	fmt::raw_error(__func__);
+}
+
 
 extern void sysPrxForUser_sys_lwmutex_init();
 extern void sysPrxForUser_sys_lwcond_init();
@@ -197,6 +212,17 @@ extern void sysPrxForUser_sys_libc_init();
 
 DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 {
+	static ppu_static_module sys_lv2coredump("sys_lv2coredump", []()
+	{
+		REG_FNID(sys_lv2coredump, 0xD725F320, sys_lv2coredump_D725F320);
+	});
+
+	static ppu_static_module sys_crashdump("sys_crashdump", []()
+	{
+		REG_FNID(sys_crashdump, 0x52696620, sys_crashdump_52696620);
+		REG_FNID(sys_crashdump, 0xB20F87B3, sys_crashdump_B20F87B3);
+	});
+
 	sysPrxForUser_sys_lwmutex_init();
 	sysPrxForUser_sys_lwcond_init();
 	sysPrxForUser_sys_ppu_thread_init();
