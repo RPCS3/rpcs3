@@ -1182,6 +1182,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellPngEnc", "libsre.sprx" },
 			{ "cellResc", "libresc.sprx" },
 			{ "cellRtc", "librtc.sprx" },
+			{ "cellSsl", "libssl.sprx" },
+			{ "cellSsl", "librtc.sprx" },
 			{ "cellSail", "libsail.sprx" },
 			{ "cellSail", "libsre.sprx" },
 			{ "cellSail", "libmp4.sprx" },
