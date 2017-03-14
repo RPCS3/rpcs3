@@ -726,6 +726,13 @@ void SPUThread::process_mfc_cmd()
 	case MFC_SYNC_CMD:
 	{
 		ch_mfc_cmd.size = 0;
+
+		if (mfc_queue.size() == 0)
+		{
+			_mm_mfence();
+			return;
+		}
+
 		break;
 	}
 	default:

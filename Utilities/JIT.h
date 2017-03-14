@@ -41,7 +41,7 @@ class jit_compiler final
 	void init();
 
 public:
-	jit_compiler(std::unordered_map<std::string, std::uintptr_t>);
+	jit_compiler(std::unordered_map<std::string, std::uintptr_t>, std::string _cpu);
 	~jit_compiler();
 
 	// Compile module

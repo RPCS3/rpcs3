@@ -92,6 +92,10 @@ cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder"
 	{ "Recompiler (LLVM)", ppu_decoder_type::llvm },
 });
 
+cfg::bool_entry g_cfg_llvm_logs(cfg::root.core, "Save LLVM logs");
+
+cfg::string_entry g_cfg_llvm_cpu(cfg::root.core, "Use LLVM CPU");
+
 const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
 
@@ -926,7 +930,7 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 
-		const auto jit = fxm::make<jit_compiler>(std::move(link_table));
+		const auto jit = fxm::make<jit_compiler>(std::move(link_table), g_cfg_llvm_cpu.get());
 
 		LOG_SUCCESS(PPU, "LLVM: JIT initialized (%s)", jit->cpu());
 	}
@@ -1142,16 +1146,17 @@ extern void ppu_initialize(const ppu_module& info)
 	std::string result;
 	raw_string_ostream out(result);
 
-	out << *module; // print IR
-	fs::file(fs::get_config_dir() + "LLVM.log", fs::rewrite)
-		.write(out.str());
-
-	result.clear();
+	if (g_cfg_llvm_logs)
+	{
+		out << *module; // print IR
+		fs::file(Emu.GetCachePath() + obj_name + ".log", fs::rewrite).write(out.str());
+		result.clear();
+	}
 
 	if (verifyModule(*module, &out))
 	{
 		out.flush();
-		LOG_ERROR(PPU, "LLVM: Translation failed:\n%s", result);
+		LOG_ERROR(PPU, "LLVM: Verification failed for %s:\n%s", obj_name, result);
 		return;
 	}
 

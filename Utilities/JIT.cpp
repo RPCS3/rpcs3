@@ -246,8 +246,9 @@ static void dummy()
 {
 }
 
-jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_linkage_info)
+jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_linkage_info, std::string _cpu)
 	: m_link(std::move(init_linkage_info))
+	, m_cpu(std::move(_cpu))
 {
 #ifdef _MSC_VER
 	m_link.emplace("__chkstk", (u64)&dummy);
@@ -259,7 +260,11 @@ jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
 	LLVMLinkInMCJIT();
-	m_cpu = llvm::sys::getHostCPUName();
+
+	if (m_cpu.empty())
+	{
+		m_cpu = llvm::sys::getHostCPUName();
+	}
 
 	if (m_cpu == "skylake")
 	{
