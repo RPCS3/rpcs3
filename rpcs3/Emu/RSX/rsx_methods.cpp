@@ -564,8 +564,13 @@ namespace rsx
 			dst_info.pixels = pixels_dst;
 			dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
 
-			if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
-				return;
+			if (need_convert)
+			{
+				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
+				//TODO: Figure out more instances where we can use this without problems
+				if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
+					return;
+			}
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{

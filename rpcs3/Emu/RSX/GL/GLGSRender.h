@@ -9,6 +9,7 @@
 #include "define_new_memleakdetect.h"
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
+#include "../rsx_cache.h"
 
 #pragma comment(lib, "opengl32.lib")
 
@@ -130,6 +131,8 @@ public:
 
 	void synchronize_buffers();
 	work_item& post_flush_request(u32 address, gl::texture_cache::cached_rtt_section *section);
+
+	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 
 protected:
 	void begin() override;

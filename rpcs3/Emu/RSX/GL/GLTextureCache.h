@@ -416,6 +416,78 @@ namespace gl
 			}
 		};
 
+		class blitter
+		{
+			fbo fbo_argb8;
+			fbo fbo_rgb565;
+			fbo blit_src;
+
+			u32 argb8_surface = 0;
+			u32 rgb565_surface = 0;
+
+			void init()
+			{
+				fbo_argb8.create();
+				fbo_rgb565.create();
+				blit_src.create();
+
+				glGenTextures(1, &argb8_surface);
+				glBindTexture(GL_TEXTURE_2D, argb8_surface);
+				glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 4096, 4096);
+
+				glGenTextures(1, &rgb565_surface);
+				glBindTexture(GL_TEXTURE_2D, rgb565_surface);
+				glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, 4096, 4096);
+
+				fbo_argb8.color[0] = argb8_surface;
+				fbo_rgb565.color[0] = rgb565_surface;
+
+				fbo_argb8.check();
+				fbo_rgb565.check();
+			}
+
+			void destroy()
+			{
+				fbo_argb8.remove();
+				fbo_rgb565.remove();
+				blit_src.remove();
+
+				glDeleteTextures(1, &argb8_surface);
+				glDeleteTextures(1, &rgb565_surface);
+			}
+
+			u32 scale_image(u32 src, areai src_rect, areai dst_rect, position2i clip_offset, size2i clip_dims, bool is_argb8)
+			{
+				blit_src.color[0] = src;
+				blit_src.check();
+
+				areai src_rect, dst_rect;
+				u32 src_surface = 0;
+				u32 dst_tex = 0;
+
+				glGenTextures(1, &dst_tex);
+				glBindTexture(GL_TEXTURE_2D, dst_tex);
+
+				if (is_argb8)
+				{
+					glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, clip_dims.width, clip_dims.height);
+					blit_src.blit(fbo_argb8, src_rect, dst_rect);
+					src_surface = argb8_surface;
+				}
+				else
+				{
+					glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, clip_dims.width, clip_dims.height);
+					blit_src.blit(fbo_rgb565, src_rect, dst_rect);
+					src_surface = rgb565_surface;
+				}
+
+				glCopyImageSubData(src_surface, GL_TEXTURE_2D, 0, clip_offset.x, clip_offset.y, 0,
+					dst_tex, GL_TEXTURE_2D, 0, 0, 0, 0, clip_dims.width, clip_dims.height, 1);
+
+				return dst_tex;
+			}
+		};
+
 	private:
 		std::vector<cached_texture_section> m_texture_cache;
 		std::vector<cached_rtt_section> m_rtt_cache;
@@ -898,6 +970,12 @@ namespace gl
 			}
 
 			m_temporary_surfaces.clear();
+		}
+
+		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
+		{
+			//TODO
+			return false;
 		}
 	};
 }

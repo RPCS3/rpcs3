@@ -969,3 +969,8 @@ void GLGSRender::synchronize_buffers()
 		flush_draw_buffers = false;
 	}
 }
+
+bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
+{
+	return m_gl_texture_cache.upload_scaled_image(src, dst, interpolate);
+}
