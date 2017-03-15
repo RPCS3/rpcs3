@@ -543,10 +543,34 @@ namespace rsx
 				}
 			}
 
+			blit_src_info src_info;
+			blit_dst_info dst_info;
+
+			src_info.format = src_color_format;
+			src_info.width = in_w;
+			src_info.height = in_h;
+			src_info.pitch = in_pitch;
+			src_info.slice = slice_h;
+			src_info.pixels = pixels_src;
+
+			dst_info.format = dst_color_format;
+			dst_info.width = convert_w;
+			dst_info.height = convert_h;
+			dst_info.clip_x = clip_x;
+			dst_info.clip_y = clip_y;
+			dst_info.clip_width = clip_w;
+			dst_info.clip_height = clip_h;
+			dst_info.pitch = in_pitch;
+			dst_info.pixels = pixels_dst;
+			dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
+
+			if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
+				return;
+
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
 				if (need_convert || need_clip)
-				{
+				{					
 					if (need_clip)
 					{
 						if (need_convert)
