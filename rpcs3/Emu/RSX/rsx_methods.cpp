@@ -543,36 +543,37 @@ namespace rsx
 				}
 			}
 
-			blit_src_info src_info;
-			blit_dst_info dst_info;
-
-			src_info.format = src_color_format;
-			src_info.width = in_w;
-			src_info.height = in_h;
-			src_info.pitch = in_pitch;
-			src_info.slice_h = slice_h;
-			src_info.offset_x = in_x;
-			src_info.offset_y = in_y;
-			src_info.pixels = pixels_src;
-
-			dst_info.format = dst_color_format;
-			dst_info.width = convert_w;
-			dst_info.height = convert_h;
-			dst_info.clip_x = clip_x;
-			dst_info.clip_y = clip_y;
-			dst_info.clip_width = clip_w;
-			dst_info.clip_height = clip_h;
-			dst_info.offset_x = out_x;
-			dst_info.offset_y = out_y;
-			dst_info.pitch = out_pitch;
-			dst_info.pixels = pixels_dst;
-			dst_info.rsx_address = get_address(dst_offset, dst_dma);
-			dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
-
 			if (need_convert)
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
+
+				blit_src_info src_info;
+				blit_dst_info dst_info;
+
+				src_info.format = src_color_format;
+				src_info.width = in_w;
+				src_info.height = in_h;
+				src_info.pitch = in_pitch;
+				src_info.slice_h = slice_h;
+				src_info.offset_x = in_x;
+				src_info.offset_y = in_y;
+				src_info.pixels = pixels_src;
+
+				dst_info.format = dst_color_format;
+				dst_info.width = convert_w;
+				dst_info.height = convert_h;
+				dst_info.clip_x = clip_x;
+				dst_info.clip_y = clip_y;
+				dst_info.clip_width = clip_w;
+				dst_info.clip_height = clip_h;
+				dst_info.offset_x = out_x;
+				dst_info.offset_y = out_y;
+				dst_info.pitch = out_pitch;
+				dst_info.pixels = pixels_dst;
+				dst_info.rsx_address = get_address(dst_offset, dst_dma);
+				dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
+
 				if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
 					return;
 			}

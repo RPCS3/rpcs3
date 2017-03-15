@@ -1056,15 +1056,27 @@ namespace gl
 			const areai src_area = {0, 0, src.width, src.slice_h};
 			const areai dst_area = {0, 0, dst.width, dst.height};
 			const position2i clip_offset = {dst.clip_x, dst.clip_y};
-			const position2i dst_offset = {dst.offset_x, dst.offset_y};
+			
+			position2i dst_offset = {dst.offset_x, dst.offset_y};
 			const size2i clip_dimensions = {dst.clip_width, dst.clip_height};
 			const size2i dst_dimensions = {dst.pitch/(dst_is_argb8? 4: 2), dst.height};
 
 			auto old_cached_texture = find_texture(dst.rsx_address, dst.pitch * dst.height);
 			u32  dst_surface = 0;
 
-			if (old_cached_texture && old_cached_texture->matches(old_cached_texture->get_section_base(), dst.width, dst.height, 1))
+			if (old_cached_texture/* && old_cached_texture->matches(old_cached_texture->get_section_base(), dst.width, dst.height, 1)*/)
+			{
 				dst_surface = old_cached_texture->id();
+				
+				const u32 address_offset = dst.rsx_address - old_cached_texture->get_section_base();
+
+				const u16 bpp = dst_is_argb8 ? 4 : 2;
+				const u16 offset_x = address_offset / dst.pitch;
+				const u16 offset_y = address_offset % dst.pitch;
+
+				dst_offset.x += offset_x / bpp;
+				dst_offset.y += offset_y / bpp;
+			}
 
 			u32 texture_id = m_hw_blitter.scale_image(tmp_tex, dst_surface, src_area, dst_area, dst_offset, clip_offset, dst_dimensions, clip_dimensions, dst_is_argb8);
 			glDeleteTextures(1, &tmp_tex);
@@ -1083,7 +1095,7 @@ namespace gl
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
 			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.height, dst.width, dst.height, 1);
-			cached.protect(utils::protection::ro);
+			cached.protect(utils::protection::no);
 			cached.set_dirty(false);
 
 			return true;

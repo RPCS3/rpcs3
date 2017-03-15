@@ -58,6 +58,7 @@ namespace rsx
 
 		bool swizzled;
 		void *pixels;
+
 		u32  rsx_address;
 	};
 
