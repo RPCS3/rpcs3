@@ -836,7 +836,7 @@ namespace rsx
 		registers[NV4097_SET_LINE_WIDTH] = 1 << 3;
 
 		// These defaults were found using After Burner Climax (which never set fog mode despite using fog input)
-		registers[NV4097_SET_FOG_MODE] = 0x2601; // rsx::fog_mode::linear;
+		registers[NV4097_SET_FOG_MODE] = CELL_GCM_FOG_MODE_LINEAR;
 		(f32&)registers[NV4097_SET_FOG_PARAMS] = 1.;
 		(f32&)registers[NV4097_SET_FOG_PARAMS + 1] = 1.;
 

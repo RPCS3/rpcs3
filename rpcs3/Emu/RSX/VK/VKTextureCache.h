@@ -193,6 +193,12 @@ namespace vk
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
 
+			if (!texaddr || !range)
+			{
+				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, range);
+				return nullptr;
+			}
+
 			//First check if it exists as an rtt...
 			vk::image *rtt_texture = nullptr;
 			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
@@ -289,7 +295,7 @@ namespace vk
 
 			region.reset(texaddr, range);
 			region.create(tex.width(), height, depth, tex.get_exact_mipmap_count(), view, image);
-			region.protect(0, vm::page_writable);
+			region.protect(utils::protection::ro);
 			region.set_dirty(false);
 
 			texture_cache_range = region.get_min_max(texture_cache_range);

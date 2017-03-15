@@ -328,12 +328,12 @@ namespace gl
 					if (!copied)
 					{
 						LOG_WARNING(RSX, "Nothing to copy; Setting section to readable and moving on...");
-						protect(vm::page_readable, 0);
+						protect(utils::protection::ro);
 						return;
 					}
 				}
 
-				protect(vm::page_writable, 0);
+				protect(utils::protection::rw);
 				m_fence.wait_for_signal();
 				flushed = true;
 
@@ -385,7 +385,7 @@ namespace gl
 
 				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-				protect(vm::page_readable, vm::page_writable);
+				protect(utils::protection::ro);
 			}
 
 			void destroy()
@@ -506,7 +506,7 @@ namespace gl
 					if (rtt.is_dirty())
 					{
 						rtt.reset(base, size);
-						rtt.protect(0, vm::page_readable | vm::page_writable);
+						rtt.protect(utils::protection::no);
 						region = &rtt;
 						break;
 					}
@@ -517,7 +517,7 @@ namespace gl
 					cached_rtt_section section;
 					section.reset(base, size);
 					section.set_dirty(true);
-					section.protect(0, vm::page_readable | vm::page_writable);
+					section.protect(utils::protection::no);
 
 					m_rtt_cache.push_back(section);
 					region = &m_rtt_cache.back();
@@ -535,7 +535,9 @@ namespace gl
 				}
 
 				if (!region->is_locked() || region->is_flushed())
-					region->protect(0, vm::page_readable | vm::page_writable);
+				{
+					region->protect(utils::protection::no);
+				}
 			}
 
 			return region;
@@ -592,6 +594,13 @@ namespace gl
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
+
+			if (!texaddr || !range)
+			{
+				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, range);
+				gl_texture.bind();
+				return;
+			}
 
 			glActiveTexture(GL_TEXTURE0 + index);
 
@@ -707,7 +716,7 @@ namespace gl
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
 			cached_texture_section &cached = create_texture(gl_texture.id(), texaddr, get_texture_size(tex), tex.width(), tex.height(), tex.get_exact_mipmap_count());
-			cached.protect(0, vm::page_writable);
+			cached.protect(utils::protection::ro);
 			cached.set_dirty(false);
 
 			//external gl::texture objects should always be undefined/uninitialized!
@@ -731,7 +740,7 @@ namespace gl
 				verify(HERE), region->is_dirty();
 				LOG_WARNING(RSX, "Cell write to bound render target area");
 
-				region->protect(0, vm::page_writable | vm::page_readable);
+				region->protect(utils::protection::no);
 				region->set_dirty(false);
 			}
 
@@ -751,7 +760,7 @@ namespace gl
 					region->unprotect();
 
 				region->reset(base, size);
-				region->protect(0, vm::page_readable | vm::page_writable);
+				region->protect(utils::protection::no);
 			}
 
 			region->set_dimensions(width, height, pitch);

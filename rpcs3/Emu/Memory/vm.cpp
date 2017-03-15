@@ -28,7 +28,7 @@
 namespace vm
 {
 	// Emulated virtual memory (4 GiB)
-	u8* const g_base_addr = static_cast<u8*>(memory_helper::reserve_memory(0x100000000));
+	u8* const g_base_addr = static_cast<u8*>(utils::memory_reserve(0x100000000));
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -104,6 +104,14 @@ namespace vm
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
 			cpu.state.test_and_set(cpu_flag::memory);
+		}
+	}
+
+	void temporary_unlock() noexcept
+	{
+		if (auto cpu = get_current_cpu_thread())
+		{
+			temporary_unlock(*cpu);
 		}
 	}
 
@@ -344,7 +352,7 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
-		writer_lock lock(0);
+		writer_lock lock;
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -796,7 +804,7 @@ namespace vm
 	{
 		g_locations.clear();
 
-		memory_helper::free_reserved_memory(g_base_addr, 0x100000000);
+		utils::memory_decommit(g_base_addr, 0x100000000);
 	}
 }
 

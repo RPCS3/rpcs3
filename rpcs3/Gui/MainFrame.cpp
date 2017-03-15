@@ -359,7 +359,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 
-	LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
+	if (Emu.IsReady()) LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 }
 
 void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))

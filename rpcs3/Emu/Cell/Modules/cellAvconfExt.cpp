@@ -5,6 +5,7 @@
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
+#include "cellSysutil.h"
 
 logs::channel cellAvconfExt("cellAvconfExt", logs::level::notice);
 
@@ -12,32 +13,38 @@ vm::gvar<f32> g_gamma; // TODO
 
 s32 cellAudioOutUnregisterDevice()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellAudioOutGetDeviceInfo2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellVideoOutSetXVColor()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellVideoOutSetupDisplay()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellAudioInGetDeviceInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellVideoOutConvertCursorColor()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
@@ -56,12 +63,14 @@ s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 
 s32 cellAudioInGetAvailableDeviceInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellAudioOutGetAvailableDeviceInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
@@ -85,27 +94,32 @@ s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 
 s32 cellAudioOutRegisterDevice()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellAudioOutSetDeviceMode()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellAudioInSetDeviceMode()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellAudioInRegisterDevice()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellAudioInUnregisterDevice()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	return CELL_OK;
 }
 
 s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)

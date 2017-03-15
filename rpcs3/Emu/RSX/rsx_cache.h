@@ -1,5 +1,6 @@
 #pragma once
 #include <rsx_decompiler.h>
+#include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm.h"
 
 namespace rsx
@@ -75,7 +76,7 @@ namespace rsx
 		u32 locked_address_base = 0;
 		u32 locked_address_range = 0;
 
-		u32 memory_protection = 0;
+		utils::protection protection = utils::protection::rw;
 
 		bool locked = false;
 		bool dirty = false;
@@ -117,40 +118,21 @@ namespace rsx
 			locked_address_base = (base & ~4095);
 			locked_address_range = align(base + length, 4096) - locked_address_base;
 
-			memory_protection = vm::page_readable | vm::page_writable;
+			protection = utils::protection::rw;
 
 			locked = false;
 		}
 
-		bool protect(u8 flags_set, u8 flags_clear)
+		void protect(utils::protection prot)
 		{
-			if (vm::page_protect(locked_address_base, locked_address_range, 0, flags_set, flags_clear))
-			{
-				memory_protection &= ~flags_clear;
-				memory_protection |= flags_set;
-
-				locked = memory_protection != (vm::page_readable | vm::page_writable);
-			}
-			else
-				fmt::throw_exception("failed to lock memory @ 0x%X!", locked_address_base);
-
-			return false;
+			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
+			protection = prot;
+			locked = prot != utils::protection::rw;
 		}
 
-		bool unprotect()
+		void unprotect()
 		{
-			u32 flags_set = (vm::page_readable | vm::page_writable) & ~memory_protection;
-
-			if (vm::page_protect(locked_address_base, locked_address_range, 0, flags_set, 0))
-			{
-				memory_protection = (vm::page_writable | vm::page_readable);
-				locked = false;
-				return true;
-			}
-			else
-				fmt::throw_exception("failed to unlock memory @ 0x%X!", locked_address_base);
-
-			return false;
+			return protect(utils::protection::rw);
 		}
 
 		bool overlaps(std::pair<u32, u32> range)

@@ -1144,7 +1144,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellAdec", "libcelp8dec.sprx" },
 			{ "cellAdec", "libcelpdec.sprx" },
 			{ "cellAdec", "libddpdec.sprx" },
-			{ "cellAdec", "libdtslbrdec.sprx" },
 			{ "cellAdec", "libm2bcdec.sprx" },
 			{ "cellAdec", "libm4aacdec.sprx" },
 			{ "cellAdec", "libm4aacdec2ch.sprx" },
@@ -1155,6 +1154,10 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellAtrac", "cellAdec" },
 			{ "cellAtracMulti", "libatrac3multi.sprx" },
 			{ "cellAtracMulti", "cellAdec" },
+			{ "cellCelp8Enc", "libcelp8enc.sprx" },
+			{ "cellCelp8Enc", "libsre.sprx" },
+			{ "cellCelpEnc", "libcelpenc.sprx" },
+			{ "cellCelpEnc", "libsre.sprx" },
 			{ "cellDmux", "libdmux.sprx" },
 			{ "cellDmux", "libdmuxpamf.sprx" },
 			{ "cellDmux", "libsre.sprx" },
@@ -1166,13 +1169,21 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellGifDec", "libsre.sprx" },
 			{ "cellJpgDec", "libjpgdec.sprx" },
 			{ "cellJpgDec", "libsre.sprx" },
+			{ "cellJpgEnc", "libjpgenc.sprx" },
+			{ "cellJpgEnc", "libsre.sprx" },
 			{ "cellKey2char", "libkey2char.sprx" },
 			{ "cellL10n", "libl10n.sprx" },
+			{ "cellM4hdEnc", "libm4hdenc.sprx" },
+			{ "cellM4hdEnc", "libsre.sprx" },
 			{ "cellPamf", "libpamf.sprx" },
 			{ "cellPngDec", "libpngdec.sprx" },
 			{ "cellPngDec", "libsre.sprx" },
+			{ "cellPngEnc", "libpngenc.sprx" },
+			{ "cellPngEnc", "libsre.sprx" },
 			{ "cellResc", "libresc.sprx" },
 			{ "cellRtc", "librtc.sprx" },
+			{ "cellSsl", "libssl.sprx" },
+			{ "cellSsl", "librtc.sprx" },
 			{ "cellSail", "libsail.sprx" },
 			{ "cellSail", "libsre.sprx" },
 			{ "cellSail", "libmp4.sprx" },
@@ -1221,6 +1232,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
 
+		if (!fs::is_dir(lle_dir))
+		{
+			LOG_ERROR(GENERAL, "/dev_flash/sys/external/ directory does not exist!"
+				"\nYou should install the PS3 Firmware (Menu: Tools -> Install Firmware)."
+				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
+		}
+
 		for (const auto& name : load_libs)
 		{
 			const ppu_prx_object obj = decrypt_self(fs::file(lle_dir + name));
@@ -1245,7 +1263,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 			else
 			{
-				LOG_FATAL(LOADER, "Failed to load %s: %s", name, obj.get_error());
+				fmt::throw_exception("Failed to load /dev_flash/sys/external/%s: %s", name, obj.get_error());
 			}
 		}
 	}

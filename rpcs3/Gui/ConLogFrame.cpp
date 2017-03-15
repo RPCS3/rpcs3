@@ -255,7 +255,7 @@ void LogFrame::UpdateUI()
 	const auto start = steady_clock::now();
 
 	// Check TTY logs
-	while (const u64 size = std::min<u64>(sizeof(buf), m_tty_file.size() - m_tty_file.pos()))
+	while (const u64 size = std::min<u64>(buf.size(), m_tty_file.size() - m_tty_file.pos()))
 	{
 		const wxString& text = get_utf8(m_tty_file, size);
 

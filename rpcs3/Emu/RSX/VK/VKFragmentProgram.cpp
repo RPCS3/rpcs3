@@ -179,23 +179,28 @@ namespace vk
 		{
 		case rsx::fog_mode::linear:
 			OS << "	vec4 fogc = vec4(fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential:
 			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential2:
 			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 2.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::linear_abs:
 			OS << "	vec4 fogc = vec4(fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential_abs:
 			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential2_abs:
 			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.), 0., 0.);\n";
+			break;
+		default:
+			OS << "	vec4 fogc = vec4(0.);\n";
 			return;
 		}
+
+		OS << "	fogc.y = clamp(fogc.y, 0., 1.);\n";
 	}
 
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
@@ -401,6 +406,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
 			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
 			* but it writes depth in r1.z and not h2.z.
@@ -408,6 +414,11 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			*/
 			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
 			OS << "	gl_FragDepth = r1.z;\n";
+		}
+		else
+		{
+			//Input not declared. Leave commented to assist in debugging the shader
+			OS << "	//gl_FragDepth = r1.z;\n";
 		}
 	}
 

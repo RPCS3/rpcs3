@@ -39,13 +39,19 @@ public:
 
 		//Credits
 		wxBoxSizer* s_panel_credits(new wxBoxSizer(wxHORIZONTAL));
-		wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY, "\nDevelopers:\n\nDH\nAlexAltea\nHykem\nOil\nNekotekina\nelisha464\nBigpet\nvlj\n");
-		wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY, "\nThanks:\n\nBlackDaemon\nAishou\nkrofna\nxsacha\n");
+		wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY,
+			fmt::FromUTF8(u8"\nDevelopers:\n\n¬DH\n¬AlexAltea\n¬Hykem\nOil\nNekotekina\nBigpet\n¬gopalsr83\n¬tambry\nvlj\nkd-11\njarveson\nraven02\nAniLeo\ncornytrace\nssshadow\nNuman\n"));
+		wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY,
+			fmt::FromUTF8(u8"\nContributors:\n\nBlackDaemon\nelisha464\nAishou\nkrofna\nxsacha\ndanilaml\nunknownbrackets\nZangetsu38\nlioncash\nachurch\ndarkf\nSyphurith\nBlaypeg\nSurvanium90\ngeorgemoralis\nikki84\n"));
+		wxStaticText* t_section3 = new wxStaticText(this, wxID_ANY,
+			fmt::FromUTF8(u8"\nSupporters:\n\nHoward Garrison\nEXPotemkin\nMarko V.\ndanhp\n"));
 
 		s_panel_credits->AddSpacer(12);
 		s_panel_credits->Add(t_section1, 5);
 		s_panel_credits->AddStretchSpacer();
 		s_panel_credits->Add(t_section2, 5);
+		s_panel_credits->AddStretchSpacer();
+		s_panel_credits->Add(t_section3, 5);
 		s_panel_credits->AddSpacer(12);
 
 		//Buttons
