@@ -2,6 +2,7 @@
 #include <rsx_decompiler.h>
 #include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm.h"
+#include "gcm_enums.h"
 
 namespace rsx
 {
@@ -37,7 +38,7 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 slice;
+		u16 slice_h;
 		u16 pitch;
 		void *pixels;
 	};
@@ -45,6 +46,8 @@ namespace rsx
 	struct blit_dst_info
 	{
 		blit_engine::transfer_destination_format format;
+		u16 offset_x;
+		u16 offset_y;
 		u16 width;
 		u16 height;
 		u16 pitch;
@@ -52,8 +55,10 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
+
 		bool swizzled;
 		void *pixels;
+		u32  rsx_address;
 	};
 
 	class shaders_cache

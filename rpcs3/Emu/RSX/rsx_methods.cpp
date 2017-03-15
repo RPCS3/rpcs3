@@ -550,7 +550,9 @@ namespace rsx
 			src_info.width = in_w;
 			src_info.height = in_h;
 			src_info.pitch = in_pitch;
-			src_info.slice = slice_h;
+			src_info.slice_h = slice_h;
+			src_info.offset_x = in_x;
+			src_info.offset_y = in_y;
 			src_info.pixels = pixels_src;
 
 			dst_info.format = dst_color_format;
@@ -560,8 +562,11 @@ namespace rsx
 			dst_info.clip_y = clip_y;
 			dst_info.clip_width = clip_w;
 			dst_info.clip_height = clip_h;
-			dst_info.pitch = in_pitch;
+			dst_info.offset_x = out_x;
+			dst_info.offset_y = out_y;
+			dst_info.pitch = out_pitch;
 			dst_info.pixels = pixels_dst;
+			dst_info.rsx_address = get_address(dst_offset, dst_dma);
 			dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
 
 			if (need_convert)

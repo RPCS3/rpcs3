@@ -9,10 +9,11 @@
 #include <memory>
 #include <thread>
 #include <condition_variable>
+#include <chrono>
 
 #include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
-#include <chrono>
+#include "../../Memory/vm.h"
 
 class GLGSRender;
 
@@ -441,8 +442,16 @@ namespace gl
 				glBindTexture(GL_TEXTURE_2D, rgb565_surface);
 				glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, 4096, 4096);
 
-				fbo_argb8.color[0] = argb8_surface;
-				fbo_rgb565.color[0] = rgb565_surface;
+				s32 old_fbo = 0;
+				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
+
+				fbo_argb8.bind();
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, argb8_surface, 0);
+				
+				fbo_rgb565.bind();
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rgb565_surface, 0);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 
 				fbo_argb8.check();
 				fbo_rgb565.check();
@@ -458,33 +467,46 @@ namespace gl
 				glDeleteTextures(1, &rgb565_surface);
 			}
 
-			u32 scale_image(u32 src, const areai src_rect, const areai dst_rect, const position2i clip_offset, const size2i clip_dims, bool is_argb8)
+			u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, const position2i dst_offset, const position2i clip_offset, const size2i dst_dims, const size2i clip_dims, bool is_argb8)
 			{
-				blit_src.color[0] = src;
+				s32 old_fbo = 0;
+				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
+				
+				blit_src.bind();
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, src, 0);
 				blit_src.check();
 
 				u32 src_surface = 0;
-				u32 dst_tex = 0;
+				u32 dst_tex = dst;
 
-				glGenTextures(1, &dst_tex);
-				glBindTexture(GL_TEXTURE_2D, dst_tex);
+				if (!dst_tex)
+				{
+					glGenTextures(1, &dst_tex);
+					glBindTexture(GL_TEXTURE_2D, dst_tex);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+					if (is_argb8)
+						glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, dst_dims.width, dst_dims.height);
+					else
+						glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, dst_dims.width, dst_dims.height);
+				}
 
 				if (is_argb8)
 				{
-					glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, clip_dims.width, clip_dims.height);
 					blit_src.blit(fbo_argb8, src_rect, dst_rect);
 					src_surface = argb8_surface;
 				}
 				else
 				{
-					glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, clip_dims.width, clip_dims.height);
 					blit_src.blit(fbo_rgb565, src_rect, dst_rect);
 					src_surface = rgb565_surface;
 				}
 
 				glCopyImageSubData(src_surface, GL_TEXTURE_2D, 0, clip_offset.x, clip_offset.y, 0,
-					dst_tex, GL_TEXTURE_2D, 0, 0, 0, 0, clip_dims.width, clip_dims.height, 1);
+					dst_tex, GL_TEXTURE_2D, 0, dst_offset.x, dst_offset.y, 0, clip_dims.width, clip_dims.height, 1);
 
+				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 				return dst_tex;
 			}
 		};
@@ -509,6 +531,18 @@ namespace gl
 			for (cached_texture_section &tex : m_texture_cache)
 			{
 				if (tex.matches(texaddr, w, h, mipmaps) && !tex.is_dirty())
+					return &tex;
+			}
+
+			return nullptr;
+		}
+
+		cached_texture_section *find_texture(u32 texaddr, u32 range)
+		{
+			auto test = std::make_pair(texaddr, range);
+			for (cached_texture_section &tex : m_texture_cache)
+			{
+				if (tex.overlaps(test) && !tex.is_dirty())
 					return &tex;
 			}
 
@@ -657,11 +691,15 @@ namespace gl
 		{
 			m_renderer = renderer;
 			m_renderer_thread = std::this_thread::get_id();
+
+			m_hw_blitter.init();
 		}
 
 		void close()
 		{
 			clear();
+
+			m_hw_blitter.destroy();
 		}
 
 		template<typename RsxTextureType>
@@ -694,6 +732,8 @@ namespace gl
 				texptr->bind();
 				return;
 			}
+
+			LOG_ERROR(RSX, "REGULAR IFC: address=0x%X + 0x%X, w=%d h=%d", texaddr, range, tex.width(), tex.height());
 
 			/**
 			 * Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
@@ -780,10 +820,25 @@ namespace gl
 				return;
 			}
 
-			if (!tex.width() || !tex.height())
-			{
-				LOG_ERROR(RSX, "Texture upload requested but invalid texture dimensions passed");
-				return;
+			/**
+			 * Check for subslices from the cache in case we only have a subset a larger texture
+			 */
+			cached_texture = find_texture(texaddr, range);
+			if (cached_texture)
+			{	
+				const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+				const u32 address_offset = texaddr - cached_texture->get_section_base();
+				const u32 bpp = get_format_block_size_in_bytes(format);
+
+				u16 offset_y = address_offset / tex.pitch();
+				u16 offset_x = address_offset % tex.pitch();
+
+				offset_y /= bpp;
+				offset_y /= bpp;
+
+				GLenum ifmt = gl::get_sized_internal_format(format);
+				u32 texture_id = create_temporary_subresource(cached_texture->id(), ifmt, offset_x, offset_y, tex.width(), tex.height());
+				if (texture_id) return;
 			}
 
 			gl_texture.init(index, tex);
@@ -977,27 +1032,59 @@ namespace gl
 
 		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 		{
+			if (dst.swizzled)
+				return false;
+
 			u32 tmp_tex = 0;
 
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
 			bool src_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
 
-			GLenum src_gl_format = src_is_argb8? GL_RGBA8: GL_RGB565;
+			GLenum src_gl_sized_format = src_is_argb8? GL_RGBA8: GL_RGB565;
+			GLenum src_gl_format = src_is_argb8 ? GL_RGBA : GL_RGB;
 			GLenum src_gl_type = src_is_argb8? GL_UNSIGNED_INT_8_8_8_8: GL_UNSIGNED_SHORT_5_6_5;
 
 			glGenTextures(1, &tmp_tex);
 			glBindTexture(GL_TEXTURE_2D, tmp_tex);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch);
-			glTexStorage2D(GL_TEXTURE_2D, 0, src_gl_format, src.width, src.height);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, src.height, src_gl_format, src_gl_type, src.pixels);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch / (src_is_argb8? 4: 2));
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, !src_is_argb8);
+			glTexStorage2D(GL_TEXTURE_2D, 1, src_gl_sized_format, src.width, src.height);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, dst.clip_height, src_gl_format, src_gl_type, src.pixels);
 
-			const areai src_area = {src.offset_x, src.offset_y, src.offset_x + src.width, src.offset_y + src.height};
+			const areai src_area = {0, 0, src.width, src.slice_h};
 			const areai dst_area = {0, 0, dst.width, dst.height};
 			const position2i clip_offset = {dst.clip_x, dst.clip_y};
+			const position2i dst_offset = {dst.offset_x, dst.offset_y};
 			const size2i clip_dimensions = {dst.clip_width, dst.clip_height};
+			const size2i dst_dimensions = {dst.pitch/(dst_is_argb8? 4: 2), dst.height};
 
-			u32 texture = m_hw_blitter.scale_image(tmp_tex, src_area, dst_area, clip_offset, clip_dimensions, dst_is_argb8);
+			auto old_cached_texture = find_texture(dst.rsx_address, dst.pitch * dst.height);
+			u32  dst_surface = 0;
+
+			if (old_cached_texture && old_cached_texture->matches(old_cached_texture->get_section_base(), dst.width, dst.height, 1))
+				dst_surface = old_cached_texture->id();
+
+			u32 texture_id = m_hw_blitter.scale_image(tmp_tex, dst_surface, src_area, dst_area, dst_offset, clip_offset, dst_dimensions, clip_dimensions, dst_is_argb8);
 			glDeleteTextures(1, &tmp_tex);
+
+/*			glBindTexture(GL_TEXTURE_2D, texture_id);
+			glPixelStorei(GL_PACK_SWAP_BYTES, !dst_is_argb8);
+			glPixelStorei(GL_PACK_ROW_LENGTH, dst.pitch / (dst_is_argb8 ? 4 : 2));
+			glGetTextureImageEXT(texture_id, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, dst.pixels); */
+
+			LOG_ERROR(RSX, "SIFM: address=0x%X + 0x%X, x=%d(%d), y=%d(%d), w=%d(%d), h=%d(%d)", dst.rsx_address, dst.pitch * dst.height,
+				dst.offset_x, dst.clip_x, dst.offset_y, dst.clip_y, dst.width, dst.clip_width, dst.height, dst.clip_height);
+
+			if (dst_surface)
+				return true;
+
+			std::lock_guard<std::mutex> lock(m_section_mutex);
+
+			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.height, dst.width, dst.height, 1);
+			cached.protect(utils::protection::ro);
+			cached.set_dirty(false);
 
 			return true;
 		}
