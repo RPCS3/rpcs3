@@ -30,6 +30,32 @@ namespace rsx
 		void(*remove_shader)(void *ptr);
 	};
 
+	struct blit_src_info
+	{
+		blit_engine::transfer_source_format format;
+		u16 offset_x;
+		u16 offset_y;
+		u16 width;
+		u16 height;
+		u16 slice;
+		u16 pitch;
+		void *pixels;
+	};
+
+	struct blit_dst_info
+	{
+		blit_engine::transfer_destination_format format;
+		u16 width;
+		u16 height;
+		u16 pitch;
+		u16 clip_x;
+		u16 clip_y;
+		u16 clip_width;
+		u16 clip_height;
+		bool swizzled;
+		void *pixels;
+	};
+
 	class shaders_cache
 	{
 		struct entry_t
