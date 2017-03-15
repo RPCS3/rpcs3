@@ -425,6 +425,8 @@ namespace gl
 			u32 argb8_surface = 0;
 			u32 rgb565_surface = 0;
 
+		public:
+
 			void init()
 			{
 				fbo_argb8.create();
@@ -456,12 +458,11 @@ namespace gl
 				glDeleteTextures(1, &rgb565_surface);
 			}
 
-			u32 scale_image(u32 src, areai src_rect, areai dst_rect, position2i clip_offset, size2i clip_dims, bool is_argb8)
+			u32 scale_image(u32 src, const areai src_rect, const areai dst_rect, const position2i clip_offset, const size2i clip_dims, bool is_argb8)
 			{
 				blit_src.color[0] = src;
 				blit_src.check();
 
-				areai src_rect, dst_rect;
 				u32 src_surface = 0;
 				u32 dst_tex = 0;
 
@@ -495,6 +496,8 @@ namespace gl
 
 		std::pair<u32, u32> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
 		std::pair<u32, u32> rtt_cache_range = std::make_pair(0xFFFFFFFF, 0);
+
+		blitter m_hw_blitter;
 
 		std::mutex m_section_mutex;
 
@@ -974,8 +977,29 @@ namespace gl
 
 		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 		{
-			//TODO
-			return false;
+			u32 tmp_tex = 0;
+
+			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
+			bool src_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
+
+			GLenum src_gl_format = src_is_argb8? GL_RGBA8: GL_RGB565;
+			GLenum src_gl_type = src_is_argb8? GL_UNSIGNED_INT_8_8_8_8: GL_UNSIGNED_SHORT_5_6_5;
+
+			glGenTextures(1, &tmp_tex);
+			glBindTexture(GL_TEXTURE_2D, tmp_tex);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch);
+			glTexStorage2D(GL_TEXTURE_2D, 0, src_gl_format, src.width, src.height);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, src.height, src_gl_format, src_gl_type, src.pixels);
+
+			const areai src_area = {src.offset_x, src.offset_y, src.offset_x + src.width, src.offset_y + src.height};
+			const areai dst_area = {0, 0, dst.width, dst.height};
+			const position2i clip_offset = {dst.clip_x, dst.clip_y};
+			const size2i clip_dimensions = {dst.clip_width, dst.clip_height};
+
+			u32 texture = m_hw_blitter.scale_image(tmp_tex, src_area, dst_area, clip_offset, clip_dimensions, dst_is_argb8);
+			glDeleteTextures(1, &tmp_tex);
+
+			return true;
 		}
 	};
 }
