@@ -1110,7 +1110,7 @@ namespace gl
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
 			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.clip_height, dst.width, dst.clip_height, 1);
-			cached.protect(utils::protection::no);
+			cached.protect(utils::protection::ro);
 			cached.set_dirty(false);
 
 			return true;
