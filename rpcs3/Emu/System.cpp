@@ -25,6 +25,8 @@
 
 #include <thread>
 
+#include "Utilities/GDBDebugServer.h"
+
 system_type g_system;
 
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
@@ -99,6 +101,13 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
+
+#ifdef WITH_GDB_DEBUGGER
+	if (g_gdb_debugger_id) {
+		idm::remove<GDBDebugServer>(g_gdb_debugger_id);
+	}
+	g_gdb_debugger_id = idm::make<GDBDebugServer>();
+#endif
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -486,6 +495,13 @@ void Emulator::Stop()
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
 	rpcs3::on_stop()();
+
+#ifdef WITH_GDB_DEBUGGER
+	if (g_gdb_debugger_id) {
+		idm::remove<GDBDebugServer>(g_gdb_debugger_id);
+		g_gdb_debugger_id = 0;
+	}
+#endif
 
 	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
 

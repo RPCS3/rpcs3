@@ -112,6 +112,9 @@ LOG_CHANNEL(sys_libc);
 LOG_CHANNEL(sys_lv2dbg);
 LOG_CHANNEL(libnet);
 LOG_CHANNEL(sysPrxForUser);
+#ifdef WITH_GDB_DEBUGGER
+LOG_CHANNEL(gdbDebugServer);
+#endif
 
 cfg::bool_entry g_cfg_hook_ppu_funcs(cfg::root.core, "Hook static functions");
 cfg::bool_entry g_cfg_load_liblv2(cfg::root.core, "Load liblv2.sprx only");
