@@ -30,12 +30,15 @@ namespace rsx
 
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch)
 	{
+		u8 *pixels_src = (u8*)src + clip_y * src_pitch + clip_x * bpp;
+		u8 *pixels_dst = dst;
+		const u32 row_length = clip_w * bpp;
+
 		for (int y = 0; y < clip_h; ++y)
 		{
-			u8 *dst_row = dst + y * dst_pitch;
-			const u8 *src_row = src + (y + clip_y) * src_pitch + clip_x * bpp;
-
-			std::memmove(dst_row, src_row, clip_w * bpp);
+			std::memmove(pixels_dst, pixels_src, row_length);
+			pixels_src += src_pitch;
+			pixels_dst += dst_pitch;
 		}
 	}
 

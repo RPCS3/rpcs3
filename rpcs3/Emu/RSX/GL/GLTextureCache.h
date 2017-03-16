@@ -14,6 +14,7 @@
 #include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
 #include "../../Memory/vm.h"
+#include "Utilities/Config.h"
 
 class GLGSRender;
 
