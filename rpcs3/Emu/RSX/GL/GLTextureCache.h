@@ -733,7 +733,7 @@ namespace gl
 				return;
 			}
 
-			LOG_ERROR(RSX, "REGULAR IFC: address=0x%X + 0x%X, w=%d h=%d", texaddr, range, tex.width(), tex.height());
+			//LOG_ERROR(RSX, "REGULAR IFC: address=0x%X + 0x%X, w=%d h=%d", texaddr, range, tex.width(), tex.height());
 
 			/**
 			 * Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
@@ -825,20 +825,31 @@ namespace gl
 			 */
 			cached_texture = find_texture(texaddr, range);
 			if (cached_texture)
-			{	
-				const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-				const u32 address_offset = texaddr - cached_texture->get_section_base();
-				const u32 bpp = get_format_block_size_in_bytes(format);
+			{
+				if (texaddr >= cached_texture->get_section_base())
+				{
+					const u32 address_offset = texaddr - cached_texture->get_section_base();
+					const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+					const GLenum ifmt = gl::get_sized_internal_format(format);
 
-				u16 offset_y = address_offset / tex.pitch();
-				u16 offset_x = address_offset % tex.pitch();
+					u16 offset_x = 0, offset_y = 0;
 
-				offset_y /= bpp;
-				offset_y /= bpp;
+					if (address_offset)
+					{
+						const u32 bpp = get_format_block_size_in_bytes(format);
 
-				GLenum ifmt = gl::get_sized_internal_format(format);
-				u32 texture_id = create_temporary_subresource(cached_texture->id(), ifmt, offset_x, offset_y, tex.width(), tex.height());
-				if (texture_id) return;
+						offset_y = address_offset / tex.pitch();
+						offset_x = address_offset % tex.pitch();
+
+						offset_x /= bpp;
+						offset_y /= bpp;
+					}
+
+					u32 texture_id = create_temporary_subresource(cached_texture->id(), ifmt, offset_x, offset_y, tex.width(), tex.height());
+					if (texture_id) return;
+				}
+				else
+					LOG_ERROR(RSX, "Broken cache overlap search");
 			}
 
 			gl_texture.init(index, tex);
@@ -1038,41 +1049,50 @@ namespace gl
 			u32 tmp_tex = 0;
 
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
-			bool src_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
+			bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
 
 			GLenum src_gl_sized_format = src_is_argb8? GL_RGBA8: GL_RGB565;
-			GLenum src_gl_format = src_is_argb8 ? GL_RGBA : GL_RGB;
+			GLenum src_gl_format = src_is_argb8 ? GL_BGRA : GL_RGB;
 			GLenum src_gl_type = src_is_argb8? GL_UNSIGNED_INT_8_8_8_8: GL_UNSIGNED_SHORT_5_6_5;
 
 			glGenTextures(1, &tmp_tex);
 			glBindTexture(GL_TEXTURE_2D, tmp_tex);
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch / (src_is_argb8? 4: 2));
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, !src_is_argb8);
-			glTexStorage2D(GL_TEXTURE_2D, 1, src_gl_sized_format, src.width, src.height);
+			glTexStorage2D(GL_TEXTURE_2D, 1, src_gl_sized_format, src.width, src.slice_h);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, dst.clip_height, src_gl_format, src_gl_type, src.pixels);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, src.slice_h, src_gl_format, src_gl_type, src.pixels);
 
-			const areai src_area = {0, 0, src.width, src.slice_h};
-			const areai dst_area = {0, 0, dst.width, dst.height};
-			const position2i clip_offset = {dst.clip_x, dst.clip_y};
-			
+			float scale_x = (f32)dst.width / src.width;
+			float scale_y = (f32)dst.height / src.height;
+
+			const position2i clip_offset = {dst.clip_x, dst.clip_y};			
 			position2i dst_offset = {dst.offset_x, dst.offset_y};
-			const size2i clip_dimensions = {dst.clip_width, dst.clip_height};
-			const size2i dst_dimensions = {dst.pitch/(dst_is_argb8? 4: 2), dst.height};
 
-			auto old_cached_texture = find_texture(dst.rsx_address, dst.pitch * dst.height);
+			const size2i clip_dimensions = { dst.clip_width, dst.clip_height};
+			const size2i dst_dimensions = { dst.pitch/(dst_is_argb8? 4: 2), dst.height };
+
+			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
+			//Reproject final clip onto source...
+			const u16 src_w = clip_dimensions.width / scale_x;
+			const u16 src_h = clip_dimensions.height / scale_y;
+
+			const areai src_area = { 0, 0, src_w, src_h };
+			const areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
+
+			auto old_cached_texture = find_texture(dst.rsx_address, dst.pitch * dst.clip_height);
 			u32  dst_surface = 0;
 
-			if (old_cached_texture/* && old_cached_texture->matches(old_cached_texture->get_section_base(), dst.width, dst.height, 1)*/)
+			if (old_cached_texture)
 			{
 				dst_surface = old_cached_texture->id();
 				
 				const u32 address_offset = dst.rsx_address - old_cached_texture->get_section_base();
 
 				const u16 bpp = dst_is_argb8 ? 4 : 2;
-				const u16 offset_x = address_offset / dst.pitch;
-				const u16 offset_y = address_offset % dst.pitch;
+				const u16 offset_y = address_offset / dst.pitch;
+				const u16 offset_x = address_offset % dst.pitch;
 
 				dst_offset.x += offset_x / bpp;
 				dst_offset.y += offset_y / bpp;
@@ -1081,20 +1101,15 @@ namespace gl
 			u32 texture_id = m_hw_blitter.scale_image(tmp_tex, dst_surface, src_area, dst_area, dst_offset, clip_offset, dst_dimensions, clip_dimensions, dst_is_argb8);
 			glDeleteTextures(1, &tmp_tex);
 
-/*			glBindTexture(GL_TEXTURE_2D, texture_id);
-			glPixelStorei(GL_PACK_SWAP_BYTES, !dst_is_argb8);
-			glPixelStorei(GL_PACK_ROW_LENGTH, dst.pitch / (dst_is_argb8 ? 4 : 2));
-			glGetTextureImageEXT(texture_id, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, dst.pixels); */
-
-			LOG_ERROR(RSX, "SIFM: address=0x%X + 0x%X, x=%d(%d), y=%d(%d), w=%d(%d), h=%d(%d)", dst.rsx_address, dst.pitch * dst.height,
-				dst.offset_x, dst.clip_x, dst.offset_y, dst.clip_y, dst.width, dst.clip_width, dst.height, dst.clip_height);
+/*			LOG_ERROR(RSX, "SIFM: address=0x%X + 0x%X, x=%d(%d), y=%d(%d), w=%d(%d), h=%d(%d)", dst.rsx_address, dst.pitch * dst.height,
+				dst.offset_x, dst.clip_x, dst.offset_y, dst.clip_y, dst.width, dst.clip_width, dst.height, dst.clip_height); */
 
 			if (dst_surface)
 				return true;
 
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
-			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.height, dst.width, dst.height, 1);
+			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.clip_height, dst.width, dst.clip_height, 1);
 			cached.protect(utils::protection::no);
 			cached.set_dirty(false);
 
