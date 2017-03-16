@@ -13,6 +13,10 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 
+#ifndef _WIN32
+#include"fcntl.h"
+#endif
+
 extern void ppu_set_breakpoint(u32 addr);
 extern void ppu_remove_breakpoint(u32 addr);
 
@@ -38,9 +42,12 @@ int sock_quit(void)
 }
 
 #ifndef _WIN32
-int closesocket(SOCKET s) {
+int closesocket(socket_t s) {
 	return close(s);
 }
+const int SOCKET_ERROR = -1;
+const socket_t INVALID_SOCKET = -1;
+#define sscanf_s sscanf
 #endif
 
 bool check_errno_again() {
@@ -57,37 +64,37 @@ cfg::int_entry<1, 65535> g_cfg_gdb_server_port(cfg::root.misc, "Port", 2345);
 
 std::string u32_to_hex(u32 i) {
 	char buf[9];
-	ltoa(i, buf, 16);
+	sprintf(buf, "%x", i);
 	return std::string(buf);
 }
 
 std::string u64_to_padded_hex(u64 value) {
 	char buf[17];
-	sprintf(buf, "%.16llx", value);
+	sprintf(buf, "%.16lx", value);
 	return std::string(buf);
 }
 
 std::string u32_to_padded_hex(u32 value) {
 	char buf[9];
-	sprintf(buf, "%.8lx", value);
+	sprintf(buf, "%.8x", value);
 	return std::string(buf);
 }
 
 u8 hex_to_u8(std::string val) {
 	u8 result;
-	sscanf(val.c_str(), "%02hhX", &result);
+	sscanf_s(val.c_str(), "%02hhX", &result);
 	return result;
 }
 
 u32 hex_to_u32(std::string val) {
 	u32 result;
-	sscanf(val.c_str(), "%lx", &result);
+	sscanf_s(val.c_str(), "%x", &result);
 	return result;
 }
 
 u32 hex_to_u64(std::string val) {
 	u64 result;
-	sscanf(val.c_str(), "%llx", &result);
+	sscanf_s(val.c_str(), "%lx", &result);
 	return result;
 }
 
@@ -542,7 +549,7 @@ bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
 	for (u32 i = 0; i < len; ++i) {
 		if (vm::check_addr(addr + i)) {
 			u8 val;
-			int res = sscanf(data_ptr, "%02hhX", &val);
+			int res = sscanf_s(data_ptr, "%02hhX", &val);
 			if (!res) {
 				gdbDebugServer.warning("Couldn't read u8 from string %s", data_ptr);
 				return send_cmd_ack("E02");
@@ -672,7 +679,7 @@ bool GDBDebugServer::cmd_set_breakpoint(gdb_cmd & cmd)
 			gdbDebugServer.warning("Received request to set breakpoint with condition, but they are not supported");
 			return send_cmd_ack("E01");
 		}
-		sscanf_s(cmd.data.c_str(), "0,%lx", &addr);
+		sscanf_s(cmd.data.c_str(), "0,%x", &addr);
 		if (addr == INVALID_PTR) {
 			gdbDebugServer.warning("Can't parse breakpoint request, data: %s", cmd.data.c_str());
 			return send_cmd_ack("E02");
@@ -690,7 +697,7 @@ bool GDBDebugServer::cmd_remove_breakpoint(gdb_cmd & cmd)
 	//software breakpoint
 	if (type == '0') {
 		u32 addr = INVALID_PTR;
-		sscanf_s(cmd.data.c_str(), "0,%lx", &addr);
+		sscanf_s(cmd.data.c_str(), "0,%x", &addr);
 		if (addr == INVALID_PTR) {
 			gdbDebugServer.warning("Can't parse breakpoint remove request, data: %s", cmd.data.c_str());
 			return send_cmd_ack("E01");
@@ -730,7 +737,7 @@ void GDBDebugServer::on_task()
 
 		try {
 			char hostbuf[32];
-			inet_ntop(client.sin_family, reinterpret_cast<PVOID>(&client.sin_addr), hostbuf, 32);
+			inet_ntop(client.sin_family, reinterpret_cast<void*>(&client.sin_addr), hostbuf, 32);
 			gdbDebugServer.success("Got connection to GDB debug server from %s:%d", hostbuf, client.sin_port);
 
 			gdb_cmd cmd;
@@ -801,5 +808,9 @@ void GDBDebugServer::on_stop()
 }
 
 u32 g_gdb_debugger_id = 0;
+
+#ifndef _WIN32
+#undef sscanf_s
+#endif
 
 #endif

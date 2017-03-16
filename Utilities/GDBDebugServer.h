@@ -3,7 +3,7 @@
 #ifdef WITH_GDB_DEBUGGER
 
 #include "Thread.h"
-#include <Emu\IdManager.h>
+#include <Emu/IdManager.h>
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 
