@@ -178,6 +178,19 @@ namespace rsx
 		}
 
 		/**
+		 * Check if range overlaps with this section.
+		 * ignore_protection_range - if true, the test should not check against the aligned protection range, instead
+		 * tests against actual range of contents in memory
+		 */
+		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range)
+		{
+			if (!ignore_protection_range)
+				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
+			else
+				return region_overlaps(cpu_address_base, cpu_address_base + cpu_address_range, range.first, range.first + range.second);
+		}
+
+		/**
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
 		 * If true, returns the range <min, max> with updated invalid range 
 		 */

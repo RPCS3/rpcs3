@@ -17,6 +17,9 @@
 
 class GLGSRender;
 
+extern cfg::bool_entry g_cfg_rsx_write_color_buffers;
+extern cfg::bool_entry g_cfg_rsx_write_depth_buffer;
+
 namespace gl
 {
 	class texture_cache
@@ -542,7 +545,7 @@ namespace gl
 			auto test = std::make_pair(texaddr, range);
 			for (cached_texture_section &tex : m_texture_cache)
 			{
-				if (tex.overlaps(test) && !tex.is_dirty())
+				if (tex.overlaps(test, true) && !tex.is_dirty())
 					return &tex;
 			}
 
@@ -847,6 +850,7 @@ namespace gl
 
 					u32 texture_id = create_temporary_subresource(cached_texture->id(), ifmt, offset_x, offset_y, tex.width(), tex.height());
 					if (texture_id) return;
+
 				}
 				else
 					LOG_ERROR(RSX, "Broken cache overlap search");
@@ -1055,11 +1059,18 @@ namespace gl
 			GLenum src_gl_format = src_is_argb8 ? GL_BGRA : GL_RGB;
 			GLenum src_gl_type = src_is_argb8? GL_UNSIGNED_INT_8_8_8_8: GL_UNSIGNED_SHORT_5_6_5;
 
+			if (g_cfg_rsx_write_color_buffers || g_cfg_rsx_write_depth_buffer)
+			{
+				//Invalidate source if we are blitting from an RTT
+				flush_section((u32)((u64)src.pixels - (u64)vm::base(0)));
+			}
+
 			glGenTextures(1, &tmp_tex);
 			glBindTexture(GL_TEXTURE_2D, tmp_tex);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch / (src_is_argb8? 4: 2));
-			glPixelStorei(GL_UNPACK_SWAP_BYTES, !src_is_argb8);
 			glTexStorage2D(GL_TEXTURE_2D, 1, src_gl_sized_format, src.width, src.slice_h);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch / (src_is_argb8? 4: 2));
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, !src_is_argb8);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, src.slice_h, src_gl_format, src_gl_type, src.pixels);
