@@ -48,6 +48,11 @@ int closesocket(socket_t s) {
 const int SOCKET_ERROR = -1;
 const socket_t INVALID_SOCKET = -1;
 #define sscanf_s sscanf
+#define HEX_U32 "x"
+#define HEX_U64 "lx"
+#else
+#define HEX_U32 "lx"
+#define HEX_U64 "llx"
 #endif
 
 bool check_errno_again() {
@@ -63,21 +68,15 @@ bool check_errno_again() {
 cfg::int_entry<1, 65535> g_cfg_gdb_server_port(cfg::root.misc, "Port", 2345);
 
 std::string u32_to_hex(u32 i) {
-	char buf[9];
-	sprintf(buf, "%x", i);
-	return std::string(buf);
+	return fmt::format("%" HEX_U32, i);
 }
 
 std::string u64_to_padded_hex(u64 value) {
-	char buf[17];
-	sprintf(buf, "%.16lx", value);
-	return std::string(buf);
+	return fmt::format("%.16" HEX_U64, value);
 }
 
 std::string u32_to_padded_hex(u32 value) {
-	char buf[9];
-	sprintf(buf, "%.8x", value);
-	return std::string(buf);
+	return fmt::format("%.8" HEX_U32, value);
 }
 
 u8 hex_to_u8(std::string val) {
@@ -88,13 +87,13 @@ u8 hex_to_u8(std::string val) {
 
 u32 hex_to_u32(std::string val) {
 	u32 result;
-	sscanf_s(val.c_str(), "%x", &result);
+	sscanf_s(val.c_str(), "%" HEX_U32, &result);
 	return result;
 }
 
-u32 hex_to_u64(std::string val) {
+u64 hex_to_u64(std::string val) {
 	u64 result;
-	sscanf_s(val.c_str(), "%lx", &result);
+	sscanf_s(val.c_str(), "%" HEX_U64, &result);
 	return result;
 }
 
@@ -379,7 +378,7 @@ bool GDBDebugServer::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::s
 {
 	switch (rid) {
 	case 64:
-		thread->cia = hex_to_u64(value);
+		thread->cia = static_cast<u32>(hex_to_u64(value));
 		return true;
 		//msr?
 	case 65:
@@ -812,5 +811,8 @@ u32 g_gdb_debugger_id = 0;
 #ifndef _WIN32
 #undef sscanf_s
 #endif
+
+#undef HEX_U32
+#undef HEX_U64
 
 #endif
