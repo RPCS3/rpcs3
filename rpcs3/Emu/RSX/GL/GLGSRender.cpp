@@ -692,6 +692,15 @@ bool GLGSRender::load_program()
 		else
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
+		if (!surface)
+		{
+			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
+			if (!rsc.surface || rsc.is_depth_surface != is_depth)
+				return std::make_tuple(false, 0);
+
+			surface = rsc.surface;
+		}
+
 		return std::make_tuple(true, surface->get_native_pitch());
 	};
 

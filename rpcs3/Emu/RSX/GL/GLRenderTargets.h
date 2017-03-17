@@ -298,11 +298,12 @@ struct surface_subresource
 
 	bool is_bound = false;
 	bool is_depth_surface = false;
+	bool is_clipped = false;
 
 	surface_subresource() {}
 
-	surface_subresource(gl::render_target *src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth)
-		: surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth)
+	surface_subresource(gl::render_target *src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth, bool _Clipped = false)
+		: surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth), is_clipped(_Clipped)
 	{}
 };
 
@@ -361,7 +362,7 @@ private:
 	}
 
 public:
-	surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit =false)
+	surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit =false, bool crop=false)
 	{
 		gl::render_target *surface = nullptr;
 		bool is_subslice = false;
@@ -390,18 +391,18 @@ public:
 					return{ surface, x_offset, y_offset, requested_width, requested_height, is_bound(this_address, false), false };
 				else
 				{
-					if (scale_to_fit) //Forcefully fit the requested region by clipping and scaling
+					if (crop) //Forcefully fit the requested region by clipping and scaling
 					{
 						u16 remaining_width = dims.first - x_offset;
 						u16 remaining_height = dims.second - y_offset;
 
-						return{ surface, x_offset, y_offset, remaining_width, remaining_height, is_bound(this_address, false), false };
+						return{ surface, x_offset, y_offset, remaining_width, remaining_height, is_bound(this_address, false), false, true };
 					}
 
 					if (dims.first >= requested_width && dims.second >= requested_height)
 					{
 						LOG_WARNING(RSX, "Overlapping surface exceeds bounds; returning full surface region");
-						return{ surface, 0, 0, requested_width, requested_height, is_bound(this_address, false), false };
+						return{ surface, 0, 0, requested_width, requested_height, is_bound(this_address, false), false, true };
 					}
 				}
 			}
@@ -430,18 +431,18 @@ public:
 					return{ surface, x_offset, y_offset, requested_width, requested_height, is_bound(this_address, true), true };
 				else
 				{
-					if (scale_to_fit) //Forcefully fit the requested region by clipping and scaling
+					if (crop) //Forcefully fit the requested region by clipping and scaling
 					{
 						u16 remaining_width = dims.first - x_offset;
 						u16 remaining_height = dims.second - y_offset;
 
-						return{ surface, x_offset, y_offset, remaining_width, remaining_height, is_bound(this_address, false), false };
+						return{ surface, x_offset, y_offset, remaining_width, remaining_height, is_bound(this_address, true), true, true };
 					}
 
 					if (dims.first >= requested_width && dims.second >= requested_height)
 					{
 						LOG_WARNING(RSX, "Overlapping depth surface exceeds bounds; returning full surface region");
-						return{ surface, 0, 0, requested_width, requested_height, is_bound(this_address, true), true };
+						return{ surface, 0, 0, requested_width, requested_height, is_bound(this_address, true), true, true };
 					}
 				}
 			}

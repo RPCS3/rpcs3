@@ -754,7 +754,11 @@ namespace gl
 			 * a bound render target. We can bypass the expensive download in this case
 			 */
 
-			surface_subresource rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex.width(), tex.height(), tex.pitch(), true);
+			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+			const f32 internal_scale = (f32)tex.pitch() / (tex.width() * get_format_block_size_in_bytes(format));
+			const u32 internal_width = tex.width() * internal_scale;
+
+			const surface_subresource rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex.height(), tex.pitch(), true);
 			if (rsc.surface)
 			{
 				//Check that this region is not cpu-dirty before doing a copy
@@ -782,8 +786,6 @@ namespace gl
 					}
 					else
 					{
-						const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-
 						GLenum src_format = (GLenum)rsc.surface->get_internal_format();
 						GLenum dst_format = std::get<0>(get_format_type(format));
 
@@ -1075,7 +1077,7 @@ namespace gl
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
 			//Check if src/dst are parts of render targets
-			surface_subresource src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.slice_h, src.pitch, true);
+			surface_subresource src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.slice_h, src.pitch, true, true);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			float scale_x = (f32)dst.width / src.width;
@@ -1147,7 +1149,7 @@ namespace gl
 				source_texture = src_subres.surface->id();
 			}
 
-			surface_subresource dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true);
+			surface_subresource dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			if (!dst_is_render_target)
