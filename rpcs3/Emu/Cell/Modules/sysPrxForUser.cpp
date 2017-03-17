@@ -187,14 +187,15 @@ s32 sys_lv2coredump_D725F320()
 	fmt::raw_error(__func__);
 }
 
-s32 sys_crashdump_52696620()
+s32 sys_crash_dump_get_user_log_area()
 {
 	fmt::raw_error(__func__);
 }
 
-s32 sys_crashdump_B20F87B3()
+s32 sys_crash_dump_set_user_log_area()
 {
-	fmt::raw_error(__func__);
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
 }
 
 
@@ -219,8 +220,8 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 
 	static ppu_static_module sys_crashdump("sys_crashdump", []()
 	{
-		REG_FNID(sys_crashdump, 0x52696620, sys_crashdump_52696620);
-		REG_FNID(sys_crashdump, 0xB20F87B3, sys_crashdump_B20F87B3);
+		REG_FUNC(sys_crashdump, sys_crash_dump_get_user_log_area);
+		REG_FUNC(sys_crashdump, sys_crash_dump_set_user_log_area);
 	});
 
 	sysPrxForUser_sys_lwmutex_init();
