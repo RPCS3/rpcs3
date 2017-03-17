@@ -41,6 +41,8 @@ namespace rsx
 		u16 slice_h;
 		u16 pitch;
 		void *pixels;
+
+		u32 rsx_address;
 	};
 
 	struct blit_dst_info

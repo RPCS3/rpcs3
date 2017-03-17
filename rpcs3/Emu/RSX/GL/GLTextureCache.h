@@ -496,6 +496,10 @@ namespace gl
 						glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, dst_dims.width, dst_dims.height);
 				}
 
+/*				LOG_ERROR(RSX, "First pass blit, copy %d,%d, %dx%d -> %d,%d, %dx%d",
+						src_rect.x1, src_rect.y1, src_rect.x2-src_rect.x1, src_rect.y2-src_rect.y1,
+						dst_rect.x1, dst_rect.y1, dst_rect.x2 - dst_rect.x1, dst_rect.y2 - dst_rect.y1); */
+
 				if (is_argb8)
 				{
 					blit_src.blit(fbo_argb8, src_rect, dst_rect);
@@ -506,6 +510,10 @@ namespace gl
 					blit_src.blit(fbo_rgb565, src_rect, dst_rect);
 					src_surface = rgb565_surface;
 				}
+
+/*				LOG_ERROR(RSX, "Copy %d,%d %dx%d from blit surface to dest @%dx%d",
+						clip_offset.x, clip_offset.y, clip_dims.width, clip_dims.height,
+						dst_offset.x, dst_offset.y); */
 
 				glCopyImageSubData(src_surface, GL_TEXTURE_2D, 0, clip_offset.x, clip_offset.y, 0,
 					dst_tex, GL_TEXTURE_2D, 0, dst_offset.x, dst_offset.y, 0, clip_dims.width, clip_dims.height, 1);
@@ -746,7 +754,7 @@ namespace gl
 			 * a bound render target. We can bypass the expensive download in this case
 			 */
 
-			surface_subresource rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex.width(), tex.height(), tex.pitch());
+			surface_subresource rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex.width(), tex.height(), tex.pitch(), true);
 			if (rsc.surface)
 			{
 				//Check that this region is not cpu-dirty before doing a copy
@@ -1046,13 +1054,13 @@ namespace gl
 			m_temporary_surfaces.clear();
 		}
 
-		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
+		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, gl_render_targets &m_rtts)
 		{
 			if (dst.swizzled)
 				return false;
 
-			u32 tmp_tex = 0;
-
+			bool src_is_render_target = false;	//TODO
+			bool dst_is_render_target = false;	//TODO
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
 			bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
 
@@ -1060,63 +1068,121 @@ namespace gl
 			GLenum src_gl_format = src_is_argb8 ? GL_BGRA : GL_RGB;
 			GLenum src_gl_type = src_is_argb8? GL_UNSIGNED_INT_8_8_8_8: GL_UNSIGNED_SHORT_5_6_5;
 
-			if (g_cfg_rsx_write_color_buffers || g_cfg_rsx_write_depth_buffer)
-			{
-				//Invalidate source if we are blitting from an RTT
-				flush_section((u32)((u64)src.pixels - (u64)vm::base(0)));
-			}
+			u32 source_texture = 0;
+			u32 dest_texture = 0;
 
-			glGenTextures(1, &tmp_tex);
-			glBindTexture(GL_TEXTURE_2D, tmp_tex);
-			glTexStorage2D(GL_TEXTURE_2D, 1, src_gl_sized_format, src.width, src.slice_h);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch / (src_is_argb8? 4: 2));
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glPixelStorei(GL_UNPACK_SWAP_BYTES, !src_is_argb8);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, src.slice_h, src_gl_format, src_gl_type, src.pixels);
+			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
+			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
+
+			//Check if src/dst are parts of render targets
+			surface_subresource src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.slice_h, src.pitch, true);
+			src_is_render_target = src_subres.surface != nullptr;
 
 			float scale_x = (f32)dst.width / src.width;
 			float scale_y = (f32)dst.height / src.height;
 
-			const position2i clip_offset = {dst.clip_x, dst.clip_y};			
-			position2i dst_offset = {dst.offset_x, dst.offset_y};
+			position2i clip_offset = { dst.clip_x, dst.clip_y };
+			position2i dst_offset = { dst.offset_x, dst.offset_y };
 
-			const size2i clip_dimensions = { dst.clip_width, dst.clip_height};
-			const size2i dst_dimensions = { dst.pitch/(dst_is_argb8? 4: 2), dst.height };
+			size2i clip_dimensions = { dst.clip_width, dst.clip_height };
+			const size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
 
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
 			const u16 src_w = clip_dimensions.width / scale_x;
 			const u16 src_h = clip_dimensions.height / scale_y;
 
-			const areai src_area = { 0, 0, src_w, src_h };
-			const areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
+			areai src_area = { 0, 0, src_w, src_h };
+			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
 
-			auto old_cached_texture = find_texture(dst.rsx_address, dst.pitch * dst.clip_height);
-			u32  dst_surface = 0;
-
-			if (old_cached_texture)
+			//Create source texture if does not exist
+			if (!src_is_render_target)
 			{
-				dst_surface = old_cached_texture->id();
-				
-				const u32 address_offset = dst.rsx_address - old_cached_texture->get_section_base();
+				auto preloaded_texture = find_texture(src_address, src.width, src.slice_h, 1);
 
-				const u16 bpp = dst_is_argb8 ? 4 : 2;
-				const u16 offset_y = address_offset / dst.pitch;
-				const u16 offset_x = address_offset % dst.pitch;
+				if (preloaded_texture != nullptr)
+				{
+					source_texture = preloaded_texture->id();
+				}
+				else
+				{
+					flush_section(src_address);
 
-				dst_offset.x += offset_x / bpp;
-				dst_offset.y += offset_y / bpp;
+					glGenTextures(1, &source_texture);
+					glBindTexture(GL_TEXTURE_2D, source_texture);
+					glTexStorage2D(GL_TEXTURE_2D, 1, src_gl_sized_format, src.width, src.slice_h);
+					glPixelStorei(GL_UNPACK_ROW_LENGTH, src.pitch / (src_is_argb8 ? 4 : 2));
+					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+					glPixelStorei(GL_UNPACK_SWAP_BYTES, !src_is_argb8);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, src.slice_h, src_gl_format, src_gl_type, src.pixels);
+
+					std::lock_guard<std::mutex> lock(m_section_mutex);
+					
+					auto section = create_texture(source_texture, src_address, src.pitch * src.slice_h, src.width, src.slice_h, 1);
+					section.protect(utils::protection::ro);
+					section.set_dirty(false);
+				}
+			}
+			else
+			{
+				if (src_subres.w != clip_dimensions.width ||
+					src_subres.h != clip_dimensions.height)
+				{
+					f32 subres_scaling_x = (f32)src.pitch / src_subres.surface->get_native_pitch();
+					
+					dst_area.x2 = (src_subres.w * scale_x * subres_scaling_x);
+					dst_area.y2 = (src_subres.h * scale_y);
+				}
+
+				src_area.x2 = src_subres.w;				
+				src_area.y2 = src_subres.h;
+
+				src_area.x1 += src_subres.x;
+				src_area.x2 += src_subres.x;
+				src_area.y1 += src_subres.y;
+				src_area.y2 += src_subres.y;
+
+				source_texture = src_subres.surface->id();
 			}
 
-			u32 texture_id = m_hw_blitter.scale_image(tmp_tex, dst_surface, src_area, dst_area, dst_offset, clip_offset, dst_dimensions, clip_dimensions, dst_is_argb8);
-			glDeleteTextures(1, &tmp_tex);
+			surface_subresource dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true);
+			dst_is_render_target = dst_subres.surface != nullptr;
+
+			if (!dst_is_render_target)
+			{
+				auto cached_dest = find_texture(dst.rsx_address, dst.pitch * dst.clip_height);
+
+				if (cached_dest)
+				{
+					dest_texture = cached_dest->id();
+
+					//TODO: Move this algo into utils since it is used alot
+					const u32 address_offset = dst.rsx_address - cached_dest->get_section_base();
+
+					const u16 bpp = dst_is_argb8 ? 4 : 2;
+					const u16 offset_y = address_offset / dst.pitch;
+					const u16 offset_x = address_offset % dst.pitch;
+
+					dst_offset.x += offset_x / bpp;
+					dst_offset.y += offset_y;
+				}
+			}
+			else
+			{
+				dst_offset.x = dst_subres.x;
+				dst_offset.y = dst_subres.y;
+
+				dest_texture = dst_subres.surface->id();
+			}
+
+			u32 texture_id = m_hw_blitter.scale_image(source_texture, dest_texture, src_area, dst_area, dst_offset, clip_offset, dst_dimensions, clip_dimensions, dst_is_argb8);
 
 /*			LOG_ERROR(RSX, "SIFM: address=0x%X + 0x%X, x=%d(%d), y=%d(%d), w=%d(%d), h=%d(%d)", dst.rsx_address, dst.pitch * dst.height,
 				dst.offset_x, dst.clip_x, dst.offset_y, dst.clip_y, dst.width, dst.clip_width, dst.height, dst.clip_height); */
 
-			if (dst_surface)
+			if (dest_texture)
 				return true;
 
 			std::lock_guard<std::mutex> lock(m_section_mutex);

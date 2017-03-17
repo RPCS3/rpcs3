@@ -559,6 +559,7 @@ namespace rsx
 				src_info.offset_x = in_x;
 				src_info.offset_y = in_y;
 				src_info.pixels = pixels_src;
+				src_info.rsx_address = get_address(src_offset, src_dma);
 
 				dst_info.format = dst_color_format;
 				dst_info.width = convert_w;
