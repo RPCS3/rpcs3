@@ -1100,16 +1100,25 @@ namespace gl
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
 
-			if (dst.clip_x || dst.clip_y)
+			//clip_x and clip_y are not insets into the scaled region!!
+			//They seem to be absolute coordinates into the full dst texture
+			//Tested with persona 4 arena
+			if (dst.clip_x != dst.offset_x || dst.clip_y != dst.offset_y)
 			{
-				//Reproject clip offsets onto source
-				const u16 scaled_clip_offset_x = dst.clip_x / scale_x;
-				const u16 scaled_clip_offset_y = dst.clip_y / scale_y;
+				const s16 clip_delta_x = dst.clip_x - dst.offset_x;
+				const s16 clip_delta_y = dst.clip_y - dst.offset_x;
 
-				src_area.x1 += scaled_clip_offset_x;
-				src_area.x2 += scaled_clip_offset_x;
-				src_area.y1 += scaled_clip_offset_y;
-				src_area.y2 += scaled_clip_offset_y;
+				if (clip_delta_x || clip_delta_y)
+				{
+					//Reproject clip offsets onto source
+					const s16 scaled_clip_offset_x = clip_delta_x / scale_x;
+					const s16 scaled_clip_offset_y = clip_delta_y / scale_y;
+
+					src_area.x1 += scaled_clip_offset_x;
+					src_area.x2 += scaled_clip_offset_x;
+					src_area.y1 += scaled_clip_offset_y;
+					src_area.y2 += scaled_clip_offset_y;
+				}
 			}
 
 			//Create source texture if does not exist
