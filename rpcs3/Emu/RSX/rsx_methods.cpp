@@ -543,7 +543,7 @@ namespace rsx
 				}
 			}
 
-			if (need_convert || need_clip)
+			if (need_convert)
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
