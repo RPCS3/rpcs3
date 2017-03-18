@@ -1082,7 +1082,7 @@ namespace gl
 			//The implementation here adds the inverse scaled clip dimensions onto the source to completely bypass final clipping step
 
 			float scale_x = (f32)dst.width / src.width;
-			float scale_y = (f32)dst.height / src.slice_h;
+			float scale_y = (f32)dst.height / src.height;
 
 			//Clip offset is unused if the clip offsets are reprojected onto the source
 			position2i clip_offset = {0, 0};//{ dst.clip_x, dst.clip_y };
