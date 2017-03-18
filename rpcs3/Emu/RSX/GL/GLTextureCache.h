@@ -471,7 +471,8 @@ namespace gl
 				glDeleteTextures(1, &rgb565_surface);
 			}
 
-			u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, const position2i dst_offset, const position2i clip_offset, const size2i dst_dims, const size2i clip_dims, bool is_argb8)
+			u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, const position2i dst_offset, const position2i clip_offset,
+					const size2i dst_dims, const size2i clip_dims, bool is_argb8)
 			{
 				s32 old_fbo = 0;
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
@@ -496,10 +497,6 @@ namespace gl
 						glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, dst_dims.width, dst_dims.height);
 				}
 
-/*				LOG_ERROR(RSX, "First pass blit, copy %d,%d, %dx%d -> %d,%d, %dx%d",
-						src_rect.x1, src_rect.y1, src_rect.x2-src_rect.x1, src_rect.y2-src_rect.y1,
-						dst_rect.x1, dst_rect.y1, dst_rect.x2 - dst_rect.x1, dst_rect.y2 - dst_rect.y1); */
-
 				if (is_argb8)
 				{
 					blit_src.blit(fbo_argb8, src_rect, dst_rect);
@@ -510,10 +507,6 @@ namespace gl
 					blit_src.blit(fbo_rgb565, src_rect, dst_rect);
 					src_surface = rgb565_surface;
 				}
-
-/*				LOG_ERROR(RSX, "Copy %d,%d %dx%d from blit surface to dest @%dx%d",
-						clip_offset.x, clip_offset.y, clip_dims.width, clip_dims.height,
-						dst_offset.x, dst_offset.y); */
 
 				glCopyImageSubData(src_surface, GL_TEXTURE_2D, 0, clip_offset.x, clip_offset.y, 0,
 					dst_tex, GL_TEXTURE_2D, 0, dst_offset.x, dst_offset.y, 0, clip_dims.width, clip_dims.height, 1);
@@ -1080,10 +1073,16 @@ namespace gl
 			surface_subresource src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.slice_h, src.pitch, true, true);
 			src_is_render_target = src_subres.surface != nullptr;
 
+			//Prepare areas and offsets
+			//Copy from [src.offset_x, src.offset_y] a region of [clip.width, clip.height]
+			//Stretch onto [dst.offset_x, y] with clipping performed on the source region
+			//The implementation here adds the inverse scaled clip dimensions onto the source to completely bypass final clipping step
+
 			float scale_x = (f32)dst.width / src.width;
 			float scale_y = (f32)dst.height / src.height;
 
-			position2i clip_offset = { dst.clip_x, dst.clip_y };
+			//Clip offset is unused if the clip offsets are reprojected onto the source
+			position2i clip_offset = {0, 0};//{ dst.clip_x, dst.clip_y };
 			position2i dst_offset = { dst.offset_x, dst.offset_y };
 
 			size2i clip_dimensions = { dst.clip_width, dst.clip_height };
@@ -1096,6 +1095,18 @@ namespace gl
 
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
+
+			if (dst.clip_x || dst.clip_y)
+			{
+				//Reproject clip offsets onto source
+				const u16 scaled_clip_offset_x = dst.clip_x / scale_x;
+				const u16 scaled_clip_offset_y = dst.clip_y / scale_y;
+
+				src_area.x1 += scaled_clip_offset_x;
+				src_area.x2 += scaled_clip_offset_x;
+				src_area.y1 += scaled_clip_offset_y;
+				src_area.y2 += scaled_clip_offset_y;
+			}
 
 			//Create source texture if does not exist
 			if (!src_is_render_target)
@@ -1180,9 +1191,6 @@ namespace gl
 			}
 
 			u32 texture_id = m_hw_blitter.scale_image(source_texture, dest_texture, src_area, dst_area, dst_offset, clip_offset, dst_dimensions, clip_dimensions, dst_is_argb8);
-
-/*			LOG_ERROR(RSX, "SIFM: address=0x%X + 0x%X, x=%d(%d), y=%d(%d), w=%d(%d), h=%d(%d)", dst.rsx_address, dst.pitch * dst.height,
-				dst.offset_x, dst.clip_x, dst.offset_y, dst.clip_y, dst.width, dst.clip_width, dst.height, dst.clip_height); */
 
 			if (dest_texture)
 				return true;
