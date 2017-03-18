@@ -104,6 +104,32 @@ namespace gl
 		return 1.0f;
 	}
 
+	int tex_min_filter(rsx::texture_minify_filter min_filter)
+	{
+		switch (min_filter)
+		{
+		case rsx::texture_minify_filter::nearest: return GL_NEAREST;
+		case rsx::texture_minify_filter::linear: return GL_LINEAR;
+		case rsx::texture_minify_filter::nearest_nearest: return GL_NEAREST_MIPMAP_NEAREST;
+		case rsx::texture_minify_filter::linear_nearest: return GL_LINEAR_MIPMAP_NEAREST;
+		case rsx::texture_minify_filter::nearest_linear: return GL_NEAREST_MIPMAP_LINEAR;
+		case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
+		case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
+		}
+		fmt::throw_exception("Unknow min filter" HERE);
+	}
+
+	int tex_mag_filter(rsx::texture_magnify_filter mag_filter)
+	{
+		switch (mag_filter)
+		{
+		case rsx::texture_magnify_filter::nearest: return GL_NEAREST;
+		case rsx::texture_magnify_filter::linear: return GL_LINEAR;
+		case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
+		}
+		fmt::throw_exception("Unknow mag filter" HERE);
+	}
+
 	//Apply sampler state settings
 	void sampler_state::apply(rsx::fragment_texture& tex)
 	{
@@ -114,6 +140,42 @@ namespace gl
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
 		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color_array);
+
+		if (tex.get_exact_mipmap_count() <= 1)
+		{
+			GLint min_filter = tex_min_filter(tex.min_filter());
+
+			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
+			{
+				switch (min_filter)
+				{
+				case GL_NEAREST_MIPMAP_NEAREST:
+				case GL_NEAREST_MIPMAP_LINEAR:
+					min_filter = GL_NEAREST; break;
+				case GL_LINEAR_MIPMAP_NEAREST:
+				case GL_LINEAR_MIPMAP_LINEAR:
+					min_filter = GL_LINEAR; break;
+				default:
+					LOG_ERROR(RSX, "No mipmap fallback defined for rsx_min_filter = 0x%X", (u32)tex.min_filter());
+					min_filter = GL_NEAREST;
+				}
+			}
+
+			glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, min_filter);
+			glSamplerParameteri(samplerHandle,  GL_TEXTURE_LOD_BIAS, 0.);
+			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_LOD, 0);
+			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_LOD, 0);
+		}
+		else
+		{
+			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
+			glSamplerParameteri(samplerHandle,  GL_TEXTURE_LOD_BIAS, tex.bias());
+			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+		}
+
+		glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
+		glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_ANISOTROPY_EXT, ::gl::max_aniso(tex.max_aniso()));
 	}
 }
 
@@ -230,32 +292,6 @@ namespace rsx
 {
 	namespace gl
 	{
-		int gl_tex_min_filter(rsx::texture_minify_filter min_filter)
-		{
-			switch (min_filter)
-			{
-			case rsx::texture_minify_filter::nearest: return GL_NEAREST;
-			case rsx::texture_minify_filter::linear: return GL_LINEAR;
-			case rsx::texture_minify_filter::nearest_nearest: return GL_NEAREST_MIPMAP_NEAREST;
-			case rsx::texture_minify_filter::linear_nearest: return GL_LINEAR_MIPMAP_NEAREST;
-			case rsx::texture_minify_filter::nearest_linear: return GL_NEAREST_MIPMAP_LINEAR;
-			case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
-			case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
-			}
-			fmt::throw_exception("Unknow min filter" HERE);
-		}
-
-		int gl_tex_mag_filter(rsx::texture_magnify_filter mag_filter)
-		{
-			switch (mag_filter)
-			{
-			case rsx::texture_magnify_filter::nearest: return GL_NEAREST;
-			case rsx::texture_magnify_filter::linear: return GL_LINEAR;
-			case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
-			}
-			fmt::throw_exception("Unknow mag filter" HERE);
-		}
-
 		static const int gl_tex_zfunc[] =
 		{
 			GL_NEVER,
@@ -539,49 +575,7 @@ namespace rsx
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, ::gl::wrap_mode(tex.wrap_s()));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, ::gl::wrap_mode(tex.wrap_t()));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, ::gl::wrap_mode(tex.wrap_r()));
-
-			if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
-			{
-				GLint min_filter = gl_tex_min_filter(tex.min_filter());
-				
-				if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
-				{
-					LOG_WARNING(RSX, "Texture %d, target 0x%x, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
-					
-					switch (min_filter)
-					{
-					case GL_NEAREST_MIPMAP_NEAREST:
-					case GL_NEAREST_MIPMAP_LINEAR:
-						min_filter = GL_NEAREST; break;
-					case GL_LINEAR_MIPMAP_NEAREST:
-					case GL_LINEAR_MIPMAP_LINEAR:
-						min_filter = GL_LINEAR; break;
-					default:
-						LOG_ERROR(RSX, "No mipmap fallback defined for rsx_min_filter = 0x%X", (u32)tex.min_filter());
-						min_filter = GL_NEAREST;
-					}
-				}
-
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
-
-				__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, 0.);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, 0);
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, 0);
-			}
-			else
-			{
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter(tex.min_filter()));
-
-				__glcheck glTexParameterf(m_target, GL_TEXTURE_LOD_BIAS, tex.bias());
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-				__glcheck glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
-			}
-
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
-			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, ::gl::max_aniso(tex.max_aniso()));
+			//The rest of sampler state is now handled by sampler state objects
 		}
 
 		void texture::init(int index, rsx::vertex_texture& tex)

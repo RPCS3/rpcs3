@@ -472,7 +472,7 @@ namespace gl
 			}
 
 			u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, const position2i dst_offset, const position2i clip_offset,
-					const size2i dst_dims, const size2i clip_dims, bool is_argb8)
+					const size2i dst_dims, const size2i clip_dims, bool is_argb8, bool linear_interpolation)
 			{
 				s32 old_fbo = 0;
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
@@ -483,6 +483,7 @@ namespace gl
 
 				u32 src_surface = 0;
 				u32 dst_tex = dst;
+				filter interp = linear_interpolation ? filter::linear : filter::nearest;
 
 				if (!dst_tex)
 				{
@@ -499,12 +500,12 @@ namespace gl
 
 				if (is_argb8)
 				{
-					blit_src.blit(fbo_argb8, src_rect, dst_rect);
+					blit_src.blit(fbo_argb8, src_rect, dst_rect, buffers::color, interp);
 					src_surface = argb8_surface;
 				}
 				else
 				{
-					blit_src.blit(fbo_rgb565, src_rect, dst_rect);
+					blit_src.blit(fbo_rgb565, src_rect, dst_rect, buffers::color, interp);
 					src_surface = rgb565_surface;
 				}
 
@@ -1193,7 +1194,8 @@ namespace gl
 				dest_texture = dst_subres.surface->id();
 			}
 
-			u32 texture_id = m_hw_blitter.scale_image(source_texture, dest_texture, src_area, dst_area, dst_offset, clip_offset, dst_dimensions, clip_dimensions, dst_is_argb8);
+			u32 texture_id = m_hw_blitter.scale_image(source_texture, dest_texture, src_area, dst_area, dst_offset, clip_offset,
+					dst_dimensions, clip_dimensions, dst_is_argb8, interpolate);
 
 			if (dest_texture)
 				return true;
