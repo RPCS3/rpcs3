@@ -1051,8 +1051,11 @@ namespace gl
 
 		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, gl_render_targets &m_rtts)
 		{
-			if (dst.swizzled)
-				return false;
+			//Since we will have dst in vram, we can 'safely' ignore the swizzle flag
+			//TODO: Verify correct behavior
+			
+			//if (dst.swizzled)
+				//return false;
 
 			bool src_is_render_target = false;	//TODO
 			bool dst_is_render_target = false;	//TODO
