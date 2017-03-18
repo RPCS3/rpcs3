@@ -1073,7 +1073,7 @@ namespace gl
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
 			//Check if src/dst are parts of render targets
-			surface_subresource src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.slice_h, src.pitch, true, true);
+			surface_subresource src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			//Prepare areas and offsets

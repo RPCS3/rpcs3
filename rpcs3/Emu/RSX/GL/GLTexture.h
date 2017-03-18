@@ -5,7 +5,42 @@ namespace rsx
 {
 	class vertex_texture;
 	class fragment_texture;
+}
 
+namespace gl
+{
+	GLenum get_sized_internal_format(u32 gcm_format);
+	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
+	GLenum wrap_mode(rsx::texture_wrap_mode wrap);
+	float max_aniso(rsx::texture_max_anisotropy aniso);
+
+	class sampler_state
+	{
+		GLuint samplerHandle = 0;
+
+	public:
+
+		void create()
+		{
+			glGenSamplers(1, &samplerHandle);
+		}
+
+		void remove()
+		{
+			glDeleteSamplers(1, &samplerHandle);
+		}
+
+		void bind(int index)
+		{
+			glBindSampler(index, samplerHandle);
+		}
+
+		void apply(rsx::fragment_texture& tex);
+	};
+}
+
+namespace rsx
+{
 	namespace gl
 	{
 		class texture
@@ -15,28 +50,6 @@ namespace rsx
 
 		public:
 			void create();
-
-			int gl_wrap(rsx::texture_wrap_mode in);
-
-			float max_aniso(rsx::texture_max_anisotropy aniso);
-
-			inline static u8 convert_4_to_8(u8 v)
-			{
-				// Swizzle bits: 00001234 -> 12341234
-				return (v << 4) | (v);
-			}
-
-			inline static u8 convert_5_to_8(u8 v)
-			{
-				// Swizzle bits: 00012345 -> 12345123
-				return (v << 3) | (v >> 2);
-			}
-
-			inline static u8 convert_6_to_8(u8 v)
-			{
-				// Swizzle bits: 00123456 -> 12345612
-				return (v << 2) | (v >> 4);
-			}
 
 			void init(int index, rsx::fragment_texture& tex);
 			void init(int index, rsx::vertex_texture& tex);
@@ -63,10 +76,4 @@ namespace rsx
 			u32 id() const;
 		};
 	}
-}
-
-namespace gl
-{
-	GLenum get_sized_internal_format(u32 gcm_format);
-	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
 }

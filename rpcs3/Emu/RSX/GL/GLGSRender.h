@@ -58,6 +58,7 @@ private:
 
 	rsx::gl::texture m_gl_textures[rsx::limits::fragment_textures_count];
 	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
+	gl::sampler_state m_gl_sampler_states[rsx::limits::fragment_textures_count];
 
 	gl::glsl::program *m_program;
 

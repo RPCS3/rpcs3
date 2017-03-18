@@ -397,6 +397,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 	//Setup textures
+	//Setting unused texture to 0 is not needed, but makes program validation happy if we choose to enforce it
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		int location;
@@ -411,6 +412,7 @@ void GLGSRender::end()
 		{
 			m_gl_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]));
 			__glcheck m_gl_texture_cache.upload_texture(i, rsx::method_registers.fragment_textures[i], m_gl_textures[i], m_rtts);
+			__glcheck m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
 		}
 	}
 
@@ -561,6 +563,12 @@ void GLGSRender::on_init_thread()
 	if (g_cfg_rsx_overlay)
 		m_text_printer.init();
 
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	{
+		m_gl_sampler_states[i].create();
+		m_gl_sampler_states[i].bind(i);
+	}
+
 	m_gl_texture_cache.initialize(this);
 }
 
@@ -593,6 +601,11 @@ void GLGSRender::on_exit()
 	for (gl::texture &tex : m_gl_attrib_buffers)
 	{
 		tex.remove();
+	}
+
+	for (auto &sampler : m_gl_sampler_states)
+	{
+		sampler.remove();
 	}
 
 	m_attrib_ring_buffer->remove();

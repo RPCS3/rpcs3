@@ -67,6 +67,54 @@ namespace gl
 		}
 		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
+
+	GLenum wrap_mode(rsx::texture_wrap_mode wrap)
+	{
+		switch (wrap)
+		{
+		case rsx::texture_wrap_mode::wrap: return GL_REPEAT;
+		case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
+		case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
+		case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
+		case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_BORDER;
+		case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+		case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
+		case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
+		}
+
+		LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d)", (u32)wrap);
+		return GL_REPEAT;
+	}
+
+	float max_aniso(rsx::texture_max_anisotropy aniso)
+	{
+		switch (aniso)
+		{
+		case rsx::texture_max_anisotropy::x1: return 1.0f;
+		case rsx::texture_max_anisotropy::x2: return 2.0f;
+		case rsx::texture_max_anisotropy::x4: return 4.0f;
+		case rsx::texture_max_anisotropy::x6: return 6.0f;
+		case rsx::texture_max_anisotropy::x8: return 8.0f;
+		case rsx::texture_max_anisotropy::x10: return 10.0f;
+		case rsx::texture_max_anisotropy::x12: return 12.0f;
+		case rsx::texture_max_anisotropy::x16: return 16.0f;
+		}
+
+		LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d)", (u32)aniso);
+		return 1.0f;
+	}
+
+	//Apply sampler state settings
+	void sampler_state::apply(rsx::fragment_texture& tex)
+	{
+		const f32 border_color = (f32)tex.border_color() / 255;
+		const f32 border_color_array[] = { border_color, border_color, border_color, border_color };
+
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
+		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color_array);
+	}
 }
 
 namespace
@@ -228,42 +276,6 @@ namespace rsx
 			}
 
 			glGenTextures(1, &m_id);
-		}
-
-		int texture::gl_wrap(rsx::texture_wrap_mode wrap)
-		{
-			switch (wrap)
-			{
-			case rsx::texture_wrap_mode::wrap: return GL_REPEAT;
-			case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
-			case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
-			case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
-			case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_BORDER;
-			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
-			case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
-			case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
-			}
-
-			LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d)", (u32)wrap);
-			return GL_REPEAT;
-		}
-
-		float texture::max_aniso(rsx::texture_max_anisotropy aniso)
-		{
-			switch (aniso)
-			{
-			case rsx::texture_max_anisotropy::x1: return 1.0f;
-			case rsx::texture_max_anisotropy::x2: return 2.0f;
-			case rsx::texture_max_anisotropy::x4: return 4.0f;
-			case rsx::texture_max_anisotropy::x6: return 6.0f;
-			case rsx::texture_max_anisotropy::x8: return 8.0f;
-			case rsx::texture_max_anisotropy::x10: return 10.0f;
-			case rsx::texture_max_anisotropy::x12: return 12.0f;
-			case rsx::texture_max_anisotropy::x16: return 16.0f;
-			}
-
-			LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d)", (u32)aniso);
-			return 1.0f;
 		}
 
 		u16 texture::get_pitch_modifier(u32 format)
@@ -527,9 +539,9 @@ namespace rsx
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, ::gl::wrap_mode(tex.wrap_s()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, ::gl::wrap_mode(tex.wrap_t()));
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_R, ::gl::wrap_mode(tex.wrap_r()));
 
 			if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
 			{
@@ -569,7 +581,7 @@ namespace rsx
 			}
 
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
-			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
+			__glcheck glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, ::gl::max_aniso(tex.max_aniso()));
 		}
 
 		void texture::init(int index, rsx::vertex_texture& tex)
