@@ -3703,7 +3703,7 @@ void PPUTranslator::FCTIW(ppu_opcode_t op)
 void PPUTranslator::FCTIWZ(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, m_ir->CreateFPToSI(b, GetType<s32>()));
+	SetFpr(op.frd, Call(GetType<s32>(), "llvm.x86.sse2.cvttsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
 }
 
 void PPUTranslator::FDIV(ppu_opcode_t op)
@@ -3949,7 +3949,7 @@ void PPUTranslator::FCTID(ppu_opcode_t op)
 void PPUTranslator::FCTIDZ(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, m_ir->CreateFPToSI(b, GetType<s64>()));
+	SetFpr(op.frd, Call(GetType<s64>(), "llvm.x86.sse2.cvttsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
 }
 
 void PPUTranslator::FCFID(ppu_opcode_t op)
