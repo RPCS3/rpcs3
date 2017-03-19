@@ -10,6 +10,7 @@
 #include "StrFmt.h"
 #include "File.h"
 #include "Log.h"
+#include "VirtualMemory.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -25,12 +26,6 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-#else
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
 #endif
 
 #include "JIT.h"
@@ -44,19 +39,15 @@ static const u64 s_memory_size = 0x20000000;
 // Try to reserve a portion of virtual memory in the first 2 GB address space beforehand, if possible.
 static void* const s_memory = []() -> void*
 {
-#ifdef _WIN32
-	for (u64 addr = 0x10000000; addr <= 0x60000000; addr += 0x1000000)
+	for (u64 addr = 0x10000000; addr <= 0x80000000 - s_memory_size; addr += 0x1000000)
 	{
-		if (VirtualAlloc((void*)addr, s_memory_size, MEM_RESERVE, PAGE_NOACCESS))
+		if (auto ptr = utils::memory_reserve(s_memory_size, (void*)addr))
 		{
-			return (void*)addr;
+			return ptr;
 		}
 	}
 
-	return VirtualAlloc(NULL, s_memory_size, MEM_RESERVE, PAGE_NOACCESS);
-#else
-	return ::mmap((void*)0x10000000, s_memory_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
-#endif
+	return utils::memory_reserve(s_memory_size);
 }();
 
 // Code section
@@ -76,8 +67,12 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 {
 	std::unordered_map<std::string, std::uintptr_t>& m_link;
 
+	std::array<u8, 16>* m_tramps;
+
 	MemoryManager(std::unordered_map<std::string, std::uintptr_t>& table)
 		: m_link(table)
+		, m_next(s_memory)
+		, m_tramps(nullptr)
 	{
 	}
 
@@ -88,23 +83,57 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 
 	virtual u64 getSymbolAddress(const std::string& name) override
 	{
-		const auto found = m_link.find(name);
+		auto& addr = m_link[name];
 
-		if (found != m_link.end())
+		// Find function address
+		if (!addr)
 		{
-			return found->second;
+			addr = RTDyldMemoryManager::getSymbolAddress(name);
+
+			if (addr)
+			{
+				LOG_WARNING(GENERAL, "LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
+			}
+			else
+			{
+				// It's fine if some function is never called, for example.
+				LOG_ERROR(GENERAL, "LLVM: Linkage failed: %s", name);
+				addr = (u64)null;
+			}
 		}
 
-		if (u64 addr = RTDyldMemoryManager::getSymbolAddress(name))
+		// Verify address for small code model
+		if ((u64)s_memory > 0x80000000 - s_memory_size ? (u64)addr - (u64)s_memory >= s_memory_size : addr >= 0x80000000)
 		{
-			// This may be bad if LLVM requests some built-in functions like fma.
-			LOG_ERROR(GENERAL, "LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
-			return addr;
+			// Allocate memory for trampolines
+			if (!m_tramps)
+			{
+				m_tramps = reinterpret_cast<decltype(m_tramps)>(m_next);
+				utils::memory_commit(m_next, 4096, utils::protection::wx);
+				m_next = (u8*)((u64)m_next + 4096);
+			}
+
+			// Create a trampoline
+			auto& data = *m_tramps++;
+			data[0x0] = 0xff; // JMP [rip+2]
+			data[0x1] = 0x25;
+			data[0x2] = 0x02;
+			data[0x3] = 0x00;
+			data[0x4] = 0x00;
+			data[0x5] = 0x00;
+			data[0x6] = 0x48; // MOV rax, imm64 (not executed)
+			data[0x7] = 0xb8;
+			std::memcpy(data.data() + 8, &addr, 8);
+			addr = (u64)&data;
+
+			// Reset pointer (memory page exhausted)
+			if (((u64)m_tramps % 4096) == 0)
+			{
+				m_tramps = nullptr;
+			}
 		}
 
-		// It's fine if some function is never called, for example.
-		LOG_ERROR(GENERAL, "LLVM: Symbol not found: %s", name);
-		return (u64)null;
+		return addr;
 	}
 
 	virtual u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
@@ -118,16 +147,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			return nullptr;
 		}
 
-#ifdef _WIN32
-		if (!VirtualAlloc(m_next, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE))
-#else
-		if (::mprotect(m_next, size, PROT_READ | PROT_WRITE | PROT_EXEC))
-#endif
-		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate memory at %p", m_next);
-			return nullptr;
-		}
-
+		utils::memory_commit(m_next, size, utils::protection::wx);
 		s_code_addr = (u8*)m_next;
 		s_code_size = size;
 
@@ -151,15 +171,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			LOG_ERROR(GENERAL, "LLVM: Writeable data section not supported!");
 		}
 
-#ifdef _WIN32
-		if (!VirtualAlloc(m_next, size, MEM_COMMIT, PAGE_READWRITE))
-#else
-		if (::mprotect(m_next, size, PROT_READ | PROT_WRITE))
-#endif
-		{
-			LOG_FATAL(GENERAL, "LLVM: Failed to allocate memory at %p", m_next);
-			return nullptr;
-		}
+		utils::memory_commit(m_next, size);
 
 		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), m_next, size, align, is_ro ? "ro" : "rw");
 		return (u8*)std::exchange(m_next, (void*)next);
@@ -206,23 +218,15 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		}
 
 		s_unwind.clear();
-
-		if (!VirtualFree(s_memory, 0, MEM_DECOMMIT))
-		{
-			LOG_FATAL(GENERAL, "VirtualFree(%p) failed! Error %u", s_memory, GetLastError());
-		}
 #else
-		if (!::mmap(s_memory, s_memory_size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0))
-		{
-			LOG_FATAL(GENERAL, "mmap(%p) failed! Error %d", s_memory, errno);
-		}
-
 		// TODO: unregister EH frames if necessary
 #endif
+
+		utils::memory_decommit(s_memory, s_memory_size);
 	}
 
 private:
-	void* m_next = s_memory;
+	void* m_next;
 };
 
 // Helper class
@@ -242,18 +246,10 @@ struct EventListener final : llvm::JITEventListener
 
 static EventListener s_listener;
 
-static void dummy()
-{
-}
-
 jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_linkage_info, std::string _cpu)
 	: m_link(std::move(init_linkage_info))
 	, m_cpu(std::move(_cpu))
 {
-#ifdef _MSC_VER
-	m_link.emplace("__chkstk", (u64)&dummy);
-#endif
-
 	verify(HERE), s_memory;
 
 	// Initialization
@@ -277,7 +273,7 @@ jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_
 		.setErrorStr(&result)
 		.setMCJITMemoryManager(std::make_unique<MemoryManager>(m_link))
 		.setOptLevel(llvm::CodeGenOpt::Aggressive)
-		.setCodeModel((u64)s_memory <= 0x60000000 ? llvm::CodeModel::Small : llvm::CodeModel::Large) // TODO
+		.setCodeModel(llvm::CodeModel::Small)
 		.setMCPU(m_cpu)
 		.create());
 
@@ -405,6 +401,8 @@ void jit_compiler::init()
 	}
 
 	s_unwind.emplace_back(std::move(unwind));
+#else
+	// TODO: register EH frames if necessary
 #endif
 }
 
