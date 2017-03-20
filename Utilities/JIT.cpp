@@ -54,10 +54,6 @@ static void* const s_memory = []() -> void*
 static u8* s_code_addr;
 static u64 s_code_size;
 
-// EH frames
-static u8* s_unwind_info;
-static u64 s_unwind_size;
-
 #ifdef _WIN32
 static std::vector<std::vector<RUNTIME_FUNCTION>> s_unwind; // .pdata
 #endif
@@ -193,8 +189,27 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 
 	virtual void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
-		s_unwind_info = addr;
-		s_unwind_size = size;
+#ifdef _WIN32
+		// Use s_memory as a BASE, compute the difference
+		const u64 code_diff = (u64)s_code_addr - (u64)s_memory;
+		const u64 unwind_diff = (u64)addr - (u64)s_memory;
+
+		// Fix RUNTIME_FUNCTION records (.pdata section)
+		auto& pdata = s_unwind.back();
+
+		for (auto& rf : pdata)
+		{
+			rf.BeginAddress += static_cast<DWORD>(code_diff);
+			rf.EndAddress   += static_cast<DWORD>(code_diff);
+			rf.UnwindData   += static_cast<DWORD>(unwind_diff);
+		}
+
+		// Register .xdata UNWIND_INFO structs
+		if (!RtlAddFunctionTable(pdata.data(), (DWORD)pdata.size(), (u64)s_memory))
+		{
+			LOG_ERROR(GENERAL, "RtlAddFunctionTable() failed! Error %u", GetLastError());
+		}
+#endif
 
 		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
 	}
@@ -241,6 +256,36 @@ struct EventListener final : llvm::JITEventListener
 			const llvm::StringRef elf = obj.getData();
 			fs::file(path, fs::rewrite).write(elf.data(), elf.size());
 		}
+
+#ifdef _WIN32
+		for (auto it = obj.section_begin(), end = obj.section_end(); it != end; ++it)
+		{
+			llvm::StringRef name;
+			it->getName(name);
+
+			if (name == ".pdata")
+			{
+				llvm::StringRef data;
+				it->getContents(data);
+
+				std::vector<RUNTIME_FUNCTION> rfs(data.size() / sizeof(RUNTIME_FUNCTION));
+
+				auto offsets = reinterpret_cast<DWORD*>(rfs.data());
+
+				// Initialize .pdata section using relocation info
+				for (auto ri = it->relocation_begin(), end = it->relocation_end(); ri != end; ++ri)
+				{
+					if (ri->getType() == 3 /*R_X86_64_GOT32*/)
+					{
+						const u64 value = *reinterpret_cast<const DWORD*>(data.data() + ri->getOffset());
+						offsets[ri->getOffset() / sizeof(DWORD)] = static_cast<DWORD>(value + ri->getSymbol()->getAddress().get());
+					}
+				}
+
+				s_unwind.emplace_back(std::move(rfs));
+			}
+		}
+#endif
 	}
 };
 
@@ -250,8 +295,6 @@ jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_
 	: m_link(std::move(init_linkage_info))
 	, m_cpu(std::move(_cpu))
 {
-	verify(HERE), s_memory;
-
 	// Initialization
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
@@ -282,7 +325,6 @@ jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_
 		fmt::throw_exception("LLVM: Failed to create ExecutionEngine: %s", result);
 	}
 
-	m_engine->setProcessAllSections(true); // ???
 	m_engine->RegisterJITEventListener(&s_listener);
 }
 
@@ -308,8 +350,6 @@ void jit_compiler::load(std::unique_ptr<llvm::Module> module, std::unique_ptr<ll
 			m_map[name] = m_engine->getFunctionAddress(name);
 		}
 	}
-
-	init();
 }
 
 void jit_compiler::make(std::unique_ptr<llvm::Module> module, std::string path)
@@ -336,74 +376,6 @@ void jit_compiler::make(std::unique_ptr<llvm::Module> module, std::string path)
 		// Delete IR to lower memory consumption
 		func.deleteBody();
 	}
-
-	init();
-}
-
-void jit_compiler::init()
-{
-#ifdef _WIN32
-	// Register .xdata UNWIND_INFO (.pdata section is empty for some reason)
-	std::set<u64> func_set;
-
-	for (const auto& pair : m_map)
-	{
-		func_set.emplace(pair.second);
-	}
-
-	const u64 base = (u64)s_memory;
-	const u8* bits = s_unwind_info;
-
-	std::vector<RUNTIME_FUNCTION> unwind;
-	unwind.reserve(m_map.size());
-
-	for (const u64 addr : func_set)
-	{
-		// Find next function address
-		const auto _next = func_set.upper_bound(addr);
-		const u64 next = _next != func_set.end() ? *_next : (u64)s_code_addr + s_code_size;
-
-		// Generate RUNTIME_FUNCTION record
-		RUNTIME_FUNCTION uw;
-		uw.BeginAddress = static_cast<u32>(addr - base);
-		uw.EndAddress   = static_cast<u32>(next - base);
-		uw.UnwindData   = static_cast<u32>((u64)bits - base);
-		unwind.emplace_back(uw);
-
-		// Parse .xdata UNWIND_INFO record
-		const u8 flags = *bits++; // Version and flags
-		const u8 prolog = *bits++; // Size of prolog
-		const u8 count = *bits++; // Count of unwind codes
-		const u8 frame = *bits++; // Frame Reg + Off
-		bits += ::align(std::max<u8>(1, count), 2) * sizeof(u16); // UNWIND_CODE array
-
-		if (flags != 1) 
-		{
-			// Can't happen for trivial code
-			LOG_ERROR(GENERAL, "LLVM: unsupported UNWIND_INFO version/flags (0x%02x)", flags);
-			break;
-		}
-
-		LOG_TRACE(GENERAL, "LLVM: .xdata at 0x%llx: function 0x%x..0x%x: p0x%02x, c0x%02x, f0x%02x", uw.UnwindData + base, uw.BeginAddress + base, uw.EndAddress + base, prolog, count, frame);
-	}
-
-	if (s_unwind_info + s_unwind_size != bits)
-	{
-		LOG_ERROR(GENERAL, "LLVM: .xdata analysis failed! (%p != %p)", s_unwind_info + s_unwind_size, bits);
-	}
-	else if (!RtlAddFunctionTable(unwind.data(), (DWORD)unwind.size(), base))
-	{
-		LOG_ERROR(GENERAL, "RtlAddFunctionTable(%p) failed! Error %u", s_unwind_info, GetLastError());
-	}
-	else
-	{
-		LOG_NOTICE(GENERAL, "LLVM: UNWIND_INFO registered (%p, size=0x%llx)", s_unwind_info, s_unwind_size);
-	}
-
-	s_unwind.emplace_back(std::move(unwind));
-#else
-	// TODO: register EH frames if necessary
-#endif
 }
 
 jit_compiler::~jit_compiler()
