@@ -77,6 +77,11 @@ namespace gl
 			{
 				return texture_id;
 			}
+
+			std::tuple<u16, u16, u16> get_dimensions()
+			{
+				return std::make_tuple(width, height, 1);
+			}
 		};
 
 		class cached_rtt_section : public rsx::buffered_section
@@ -1100,25 +1105,6 @@ namespace gl
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
 
-			//Validate clip offsets (Persona 4 Arena at 720p)
-			//Check if can fit
-			//NOTE: It is possible that the check is simpler (if (clip_x >= clip_width))
-			//Needs verification
-			if ((dst.offset_x + dst.clip_x + dst.clip_width) > dst.width) dst.clip_x = 0;
-			if ((dst.offset_y + dst.clip_y + dst.clip_width) > dst.height) dst.clip_y = 0;
-
-			if (dst.clip_x || dst.clip_y)
-			{
-				//Reproject clip offsets onto source
-				const u16 scaled_clip_offset_x = dst.clip_x / scale_x;
-				const u16 scaled_clip_offset_y = dst.clip_y / scale_y;
-
-				src_area.x1 += scaled_clip_offset_x;
-				src_area.x2 += scaled_clip_offset_x;
-				src_area.y1 += scaled_clip_offset_y;
-				src_area.y2 += scaled_clip_offset_y;
-			}
-
 			//Create source texture if does not exist
 			if (!src_is_render_target)
 			{
@@ -1174,6 +1160,9 @@ namespace gl
 			surface_subresource dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
+			u16 max_dst_width = dst.width;
+			u16 max_dst_height = dst.height;
+
 			if (!dst_is_render_target)
 			{
 				auto cached_dest = find_texture(dst.rsx_address, dst.pitch * dst.clip_height);
@@ -1191,6 +1180,8 @@ namespace gl
 
 					dst_offset.x += offset_x / bpp;
 					dst_offset.y += offset_y;
+
+					std::tie(max_dst_width, max_dst_height, std::ignore) = cached_dest->get_dimensions();
 				}
 			}
 			else
@@ -1199,6 +1190,29 @@ namespace gl
 				dst_offset.y = dst_subres.y;
 
 				dest_texture = dst_subres.surface->id();
+
+				auto dims = dst_subres.surface->get_dimensions();
+				max_dst_width = dims.first;
+				max_dst_height = dims.second;
+			}
+
+			//Validate clip offsets (Persona 4 Arena at 720p)
+			//Check if can fit
+			//NOTE: It is possible that the check is simpler (if (clip_x >= clip_width))
+			//Needs verification
+			if ((dst.offset_x + dst.clip_x + dst.clip_width) > max_dst_width) dst.clip_x = 0;
+			if ((dst.offset_y + dst.clip_y + dst.clip_width) > max_dst_height) dst.clip_y = 0;
+
+			if (dst.clip_x || dst.clip_y)
+			{
+				//Reproject clip offsets onto source
+				const u16 scaled_clip_offset_x = dst.clip_x / scale_x;
+				const u16 scaled_clip_offset_y = dst.clip_y / scale_y;
+
+				src_area.x1 += scaled_clip_offset_x;
+				src_area.x2 += scaled_clip_offset_x;
+				src_area.y1 += scaled_clip_offset_y;
+				src_area.y2 += scaled_clip_offset_y;
 			}
 
 			u32 texture_id = m_hw_blitter.scale_image(source_texture, dest_texture, src_area, dst_area, dst_offset, clip_offset,
