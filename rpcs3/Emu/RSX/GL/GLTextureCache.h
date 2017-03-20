@@ -1100,6 +1100,13 @@ namespace gl
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
 
+			//Validate clip offsets (Persona 4 Arena at 720p)
+			//Check if can fit
+			//NOTE: It is possible that the check is simpler (if (clip_x >= clip_width))
+			//Needs verification
+			if ((dst.offset_x + dst.clip_x + dst.clip_width) > dst.width) dst.clip_x = 0;
+			if ((dst.offset_y + dst.clip_y + dst.clip_width) > dst.height) dst.clip_y = 0;
+
 			if (dst.clip_x || dst.clip_y)
 			{
 				//Reproject clip offsets onto source
