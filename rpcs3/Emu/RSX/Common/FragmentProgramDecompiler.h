@@ -46,6 +46,9 @@ class FragmentProgramDecompiler
 	std::string AddTex();
 	std::string Format(const std::string& code);
 
+	//Technically a temporary workaround until we know what type3 is
+	std::string AddType3();
+
 	//Prevent division by zero by catching denormals
 	//Simpler variant where input and output are expected to be positive
 	std::string NotZero(const std::string& code);
