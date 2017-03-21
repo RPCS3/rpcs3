@@ -370,8 +370,12 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		{
 			if (m_prog.textures_alpha_kill[index])
 			{
-				std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
-				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				const std::string texture_name = "tex" + index;
+				if (m_parr.HasParamTypeless(PF_PARAM_NONE, texture_name))
+				{
+					std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
+					OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				}
 			}
 		}
 
