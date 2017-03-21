@@ -305,11 +305,6 @@ jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_
 		m_cpu = llvm::sys::getHostCPUName();
 	}
 
-	if (m_cpu == "skylake")
-	{
-		m_cpu = "haswell";
-	}
-
 	std::string result;
 
 	m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("", g_llvm_ctx))
