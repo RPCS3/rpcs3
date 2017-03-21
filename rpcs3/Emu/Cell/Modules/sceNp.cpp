@@ -47,8 +47,8 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 		return CELL_ENOENT;
 	}
 
-	std::string k_licensee_str = "0";
-	std::array<u8,0x10> k_licensee;
+	std::string k_licensee_str = "";
+	std::array<u8, 0x10> k_licensee;
 
 	if (k_licensee_addr)
 	{
@@ -65,7 +65,11 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	u32 magic;
 	enc_file.read<u32>(magic);
 	enc_file.seek(0);
-	if (magic != "NPD\0"_u32)
+	if (magic == "SCE\0"_u32) {
+		sceNp.notice("npDrmIsAvailable(): Assuming file is encrypted at %s", enc_drm_path);
+		//sprx
+	}
+	else if (magic != "NPD\0"_u32)
 	{
 		// for now assume its just unencrypted
 		sceNp.notice("npDrmIsAvailable(): Assuming edat file is unencrypted at %s", enc_drm_path);
@@ -73,7 +77,9 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	}
 
 	sceNp.warning("npDrmIsAvailable(): Found DRM license file at %s", enc_drm_path);
-	sceNp.warning("npDrmIsAvailable(): Using k_licensee 0x%s", k_licensee_str);
+	if (k_licensee_addr) {
+		sceNp.notice("npDrmIsAvailable(): KLicense key %s", k_licensee_str);
+	}
 
 	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
 	const std::string& drm_file_dir = enc_drm_path.substr(15);
@@ -84,22 +90,24 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	auto edatkeys = fxm::get_always<EdatKeys_t>();
 
 	// Search for a compatible RAP file. 
-	for (const auto& entry : fs::dir(rap_lpath))
-	{
-		if (entry.name.find(title_id) != -1)
+	if (!k_licensee_addr) {
+		for (const auto& entry : fs::dir(rap_lpath))
 		{
-			rap_lpath += entry.name;
-			break;
+			if (entry.name.find(title_id) != -1)
+			{
+				rap_lpath += entry.name;
+				break;
+			}
 		}
-	}
 
-	if (rap_lpath.back() == '/')
-	{
-		sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
-		edatkeys->rifKey.fill(0);
+		if (rap_lpath.back() == '/')
+		{
+			sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
+			edatkeys->rifKey.fill(0);
+		}
+		else
+			edatkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
 	}
-	else
-		edatkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
 
 	if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee))
 	{
@@ -153,7 +161,7 @@ s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
 	}
-	
+
 	// Game has been purchased and there's a RAP file present
 	return CELL_OK;
 }
@@ -179,7 +187,7 @@ s32 sceNpDrmProcessExitSpawn(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 ar
 
 	sceNp.warning("klicensee: 0x%x", klicensee);
 	npDrmIsAvailable(klicensee, path);
-	
+
 	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
 	return CELL_OK;
