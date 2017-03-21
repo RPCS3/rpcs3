@@ -403,6 +403,19 @@ namespace rsx
 				continue;
 			}
 
+			//Validate put and get registers
+			//TODO: Who should handle graphics exceptions??
+			const u32 get_address = RSXIOMem.RealAddr(get);
+			
+			if (!get_address)
+			{
+				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", get, put);
+
+				invalid_command_interrupt_raised = true;
+				ctrl->get = put;
+				continue;
+			}
+
 			const u32 cmd = ReadIO32(get);
 			const u32 count = (cmd >> 18) & 0x7ff;
 
@@ -442,7 +455,20 @@ namespace rsx
 				continue;
 			}
 
-			auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
+			//Validate the args ptr if the command attempts to read from it
+			const u32 args_address = RSXIOMem.RealAddr(get + 4);
+
+			if (!args_address && count)
+			{
+				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", get, cmd, count);
+
+				invalid_command_interrupt_raised = true;
+				ctrl->get = put;
+				continue;
+			}
+
+			auto args = vm::ptr<u32>::make(args_address);
+			invalid_command_interrupt_raised = false;
 
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
@@ -469,7 +495,17 @@ namespace rsx
 				{
 					method(this, reg, value);
 				}
+
+				if (invalid_command_interrupt_raised)
+				{
+					//Ignore processing the rest of the chain
+					ctrl->get = put;
+					break;
+				}
 			}
+
+			if (invalid_command_interrupt_raised)
+				continue;
 
 			ctrl->get = get + (count + 1) * 4;
 		}
