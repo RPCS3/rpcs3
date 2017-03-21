@@ -26,6 +26,13 @@ void MsgDialogFrame::CreateOsk(const std::string& msg, char16_t* osk_text)
 		osk_text_input->SetFocus();
 	}
 
+	osk_text_input->Bind(wxEVT_TEXT, [&](wxCommandEvent& event)
+	{
+		wxUString wx_osk_string = osk_text_input->GetValue();
+		std::memcpy(osk_text_return, wx_osk_string.utf16_str(), wx_osk_string.size() * 2);
+		on_osk_input_entered();
+	});
+
 	osk_button_ok = new wxButton(m_dialog, wxID_OK);
 	osk_button_sizer->Add(osk_button_ok, 0, wxLEFT | wxRIGHT | wxBOTTOM, 4);
 
@@ -39,8 +46,6 @@ void MsgDialogFrame::CreateOsk(const std::string& msg, char16_t* osk_text)
 
 	m_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
 	{
-		wxUString wx_osk_string = osk_text_input->GetValue();
-		std::memcpy(osk_text_return, wx_osk_string.utf16_str(), wx_osk_string.size() * 2);
 		on_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 
 namespace vm { using namespace ps3; }
 
@@ -19,22 +20,20 @@ s32 cellOvisGetOverlayTableSize(vm::cptr<char> elf)
 	return CELL_OK;
 }
 
-s32 cellOvisInitializeOverlayTable()
+s32 cellOvisInitializeOverlayTable(vm::ptr<void> ea_ovly_table, vm::cptr<char> elf)
 {
-	UNIMPLEMENTED_FUNC(cellOvis);
+	cellOvis.todo("cellOvisInitializeOverlayTable(ea_ovly_table=*0x%x, elf=%s)", ea_ovly_table, elf);
 	return CELL_OK;
 }
 
-s32 cellOvisFixSpuSegments()
+void cellOvisFixSpuSegments(vm::ptr<sys_spu_image_t> image)
 {
-	UNIMPLEMENTED_FUNC(cellOvis);
-	return CELL_OK;
+	cellOvis.todo("cellOvisFixSpuSegments(image=*0x%x)", image);
 }
 
-s32 cellOvisInvalidateOverlappedSegments()
+void cellOvisInvalidateOverlappedSegments(vm::ptr<sys_spu_segment> segs, vm::ptr<int> nsegs)
 {
-	UNIMPLEMENTED_FUNC(cellOvis);
-	return CELL_OK;
+	cellOvis.todo("cellOvisInvalidateOverlappedSegments(segs=*0x%x, nsegs=*0x%x)", segs, nsegs);
 }
 
 DECLARE(ppu_module_manager::cellOvis)("cellOvis", []()

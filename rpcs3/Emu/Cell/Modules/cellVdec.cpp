@@ -296,6 +296,14 @@ struct vdec_thread : ppu_thread
 							next_dts += amend;
 							frame.frc = frc_set;
 						}
+						else if (ctx->time_base.num == 0)
+						{
+							// Hack
+							const u64 amend = u64{90000} / 30;
+							frame.frc = CELL_VDEC_FRC_30;
+							next_pts += amend;
+							next_dts += amend;
+						}
 						else
 						{
 							const u64 amend = u64{90000} * ctx->time_base.num * ctx->ticks_per_frame / ctx->time_base.den;

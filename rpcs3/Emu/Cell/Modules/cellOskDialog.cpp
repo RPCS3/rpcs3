@@ -21,7 +21,7 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 
 	osk->on_close = [&](s32 status)
 	{
-		if (status == 1) {
+		if (status == CELL_MSGDIALOG_BUTTON_OK) {
 			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 		}
 		else {
@@ -30,10 +30,17 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 		result = true;
 	};
 
+	osk->on_osk_input_entered = [&]()
+	{
+		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
+	};
+
 	Emu.CallAfter([&]()
 	{
 		osk->CreateOsk("On Screen Keyboard", s_osk_text);
 	});
+
+	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
 
 	while (!result)
 	{
@@ -51,6 +58,8 @@ s32 cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInf
 	for (int i = 0; i < OutputInfo->numCharsResultString; i++) {
 		*(OutputInfo->pResultString + i) = (be_t<u16>)*(s_osk_text + i);
 	}
+
+	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_UNLOADED, 0);
 
 	return CELL_OSKDIALOG_OK;
 }

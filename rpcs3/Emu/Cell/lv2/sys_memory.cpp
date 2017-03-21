@@ -12,6 +12,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	// Check allocation size
 	switch (flags)
 	{
+	case 0:		//handle "default" value, issue 2510
 	case SYS_MEMORY_PAGE_SIZE_1M:
 	{
 		if (size % 0x100000)

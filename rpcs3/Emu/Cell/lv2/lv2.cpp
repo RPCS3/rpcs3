@@ -325,7 +325,7 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	BIND_FUNC(sys_vm_sync),                                 //310 (0x136)
 	BIND_FUNC(sys_vm_test),                                 //311 (0x137)
 	BIND_FUNC(sys_vm_get_statistics),                       //312 (0x138)
-	null_func,//BIND_FUNC(sys_vm_memory_map (different))    //313 (0x139)
+	BIND_FUNC(sys_vm_memory_map_different),				    //313 (0x139) //BIND_FUNC(sys_vm_memory_map (different)) 
 	null_func,//BIND_FUNC(sys_...)                          //314 (0x13A)
 	null_func,//BIND_FUNC(sys_...)                          //315 (0x13B)
 	

@@ -2687,7 +2687,7 @@ bool ppu_interpreter::ADDME(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::MULLW(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.gpr[op.rd] = (s64)((s64)(s32)ppu.gpr[op.ra] * (s64)(s32)ppu.gpr[op.rb]);
-	if (UNLIKELY(op.oe)) ppu_ov_set(ppu, s64(ppu.gpr[op.rd]) < s64(-1) << 31 || s64(ppu.gpr[op.rd]) >= s64(1) << 31);
+	if (UNLIKELY(op.oe)) ppu_ov_set(ppu, s64(ppu.gpr[op.rd]) < INT32_MIN || s64(ppu.gpr[op.rd]) > INT32_MAX);
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
 }
