@@ -875,7 +875,7 @@ extern void ppu_initialize(const ppu_module& info)
 		sha1_finish(&ctx, output);
 
 		// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
-		fmt::append(obj_name, "v0-%s-%016X.obj", info.name, reinterpret_cast<be_t<u64>&>(output));
+		fmt::append(obj_name, "v1-%s-%016X.obj", info.name, reinterpret_cast<be_t<u64>&>(output));
 	}
 
 #ifdef LLVM_AVAILABLE
