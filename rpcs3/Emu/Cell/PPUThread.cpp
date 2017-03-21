@@ -1003,7 +1003,7 @@ extern void ppu_initialize(const ppu_module& info)
 	//pm.add(new MemoryDependenceAnalysis());
 	pm.add(createLICMPass());
 	pm.add(createLoopInstSimplifyPass());
-	//pm.add(createGVNPass());
+	pm.add(createNewGVNPass());
 	pm.add(createDeadStoreEliminationPass());
 	pm.add(createSCCPPass());
 	pm.add(createInstructionCombiningPass());
