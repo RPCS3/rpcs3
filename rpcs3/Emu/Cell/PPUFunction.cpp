@@ -203,6 +203,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 310: return "sys_vm_sync";
 	case 311: return "sys_vm_test";
 	case 312: return "sys_vm_get_statistics";
+	case 313: return "sys_vm_memory_map_different";
 	case 324: return "sys_memory_container_create";
 	case 325: return "sys_memory_container_destroy";
 	case 326: return "sys_mmapper_allocate_fixed_address";
