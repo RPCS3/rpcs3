@@ -1775,12 +1775,6 @@ void PPUTranslator::BC(ppu_opcode_t op)
 	CallFunction(target, !op.lk);
 }
 
-void PPUTranslator::HACK(ppu_opcode_t op)
-{
-	Call(GetType<void>(), "__hlecall", m_thread, m_ir->getInt32(op.opcode & 0x3ffffff));
-	UndefineVolatileRegisters();
-}
-
 void PPUTranslator::SC(ppu_opcode_t op)
 {
 	if (op.opcode != ppu_instructions::SC(0) && op.opcode != ppu_instructions::SC(1))
