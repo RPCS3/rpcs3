@@ -286,7 +286,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 			file.seek(0);
 			if (magic == "NPD\0"_u32)
 			{
-				auto edatkeys = fxm::get_always<EdatKeys_t>();
+				auto edatkeys = fxm::get_always<LoadedNpdrmKeys_t>();
 				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic, edatkeys->rifKey);
 				if (!sdata_file->ReadHeader())
 				{

@@ -5,6 +5,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unedat.h"
+#include "Crypto/unself.h"
 #include "sceNp.h"
 
 logs::channel sceNp("sceNp", logs::level::notice);
@@ -48,7 +49,7 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	}
 
 	std::string k_licensee_str = "";
-	std::array<u8, 0x10> k_licensee;
+    std::array<u8, 0x10> k_licensee{0};
 
 	if (k_licensee_addr)
 	{
@@ -57,29 +58,11 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 			k_licensee[i] = *(k_licensee_addr + i);
 			k_licensee_str += fmt::format("%02x", k_licensee[i]);
 		}
-	}
 
-	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
-	const fs::file enc_file(vfs::get(enc_drm_path));
-
-	u32 magic;
-	enc_file.read<u32>(magic);
-	enc_file.seek(0);
-	if (magic == "SCE\0"_u32) {
-		sceNp.notice("npDrmIsAvailable(): Assuming file is encrypted at %s", enc_drm_path);
-		//sprx
-	}
-	else if (magic != "NPD\0"_u32)
-	{
-		// for now assume its just unencrypted
-		sceNp.notice("npDrmIsAvailable(): Assuming edat file is unencrypted at %s", enc_drm_path);
-		return CELL_OK;
+        sceNp.notice("npDrmIsAvailable(): KLicense key %s", k_licensee_str);
 	}
 
 	sceNp.warning("npDrmIsAvailable(): Found DRM license file at %s", enc_drm_path);
-	if (k_licensee_addr) {
-		sceNp.notice("npDrmIsAvailable(): KLicense key %s", k_licensee_str);
-	}
 
 	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
 	const std::string& drm_file_dir = enc_drm_path.substr(15);
@@ -87,40 +70,68 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 
 	std::string rap_lpath = vfs::get("/dev_hdd0/home/00000001/exdata/"); // TODO: Allow multiple profiles. Use default for now.
 
-	auto edatkeys = fxm::get_always<EdatKeys_t>();
-
 	// Search for a compatible RAP file. 
-	if (!k_licensee_addr) {
-		for (const auto& entry : fs::dir(rap_lpath))
+	for (const auto& entry : fs::dir(rap_lpath))
+	{
+		if (entry.name.find(title_id) != -1)
 		{
-			if (entry.name.find(title_id) != -1)
-			{
-				rap_lpath += entry.name;
-				break;
-			}
+			rap_lpath += entry.name;
+			break;
 		}
-
-		if (rap_lpath.back() == '/')
-		{
-			sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
-			edatkeys->rifKey.fill(0);
-		}
-		else
-			edatkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
 	}
 
-	if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee))
+    auto npdrmkeys = fxm::get_always<LoadedNpdrmKeys_t>();
+
+    npdrmkeys->devKlic.fill(0);
+    npdrmkeys->rifKey.fill(0);
+
+	if (rap_lpath.back() == '/')
 	{
-		edatkeys->devKlic = std::move(k_licensee);
-		return CELL_OK;
+		sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
 	}
 	else
-	{
-		sceNp.error("npDrmIsAvailable(): Failed to verify edat file %s", enc_drm_path);
-		edatkeys->devKlic.fill(0);
-		edatkeys->rifKey.fill(0);
-		return SCE_NP_DRM_ERROR_FORMAT;
-	}
+        npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
+
+    const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
+    const fs::file enc_file(enc_drm_path_local);
+
+    u32 magic;
+
+    enc_file.read<u32>(magic);
+    enc_file.seek(0);
+
+    if (magic == "SCE\0"_u32)
+    {
+        if (verify_npdrm_self_headers(enc_file, k_licensee.data()))
+        {
+            npdrmkeys->devKlic = std::move(k_licensee);
+        }
+        else
+        {
+            sceNp.error("npDrmIsAvailable(): Failed to verify sce file %s", enc_drm_path);
+            return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+        }
+        
+    }
+    else if (magic == "NPD\0"_u32)
+    {
+        // edata / sdata files
+
+        if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee))
+        {
+            npdrmkeys->devKlic = std::move(k_licensee);
+        }
+        else
+        {
+            sceNp.error("npDrmIsAvailable(): Failed to verify npd file %s", enc_drm_path);
+            return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+        }
+    }
+    else
+    {
+        // for now assume its just unencrypted
+        sceNp.notice("npDrmIsAvailable(): Assuming npdrm file is unencrypted at %s", enc_drm_path);
+    }
 	return CELL_OK;
 }
 
