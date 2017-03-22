@@ -181,9 +181,16 @@ s32 cellHddGameCheck2()
 
 s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 {
-	cellGame.todo("cellHddGameGetSizeKB(size=*0x%x)", size);
+	cellGame.warning("cellHddGameGetSizeKB(size=*0x%x)", size);
 
-	*size = 0;
+	const std::string& local_dir = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID());
+	if (!fs::is_dir(local_dir))
+	{
+		return CELL_HDDGAME_ERROR_FAILURE;
+	}
+
+	*size = (u32)fs::get_dir_size(local_dir);
+
 	return CELL_OK;
 }
 
@@ -200,10 +207,18 @@ s32 cellHddGameExitBroken()
 
 s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 {
-	cellGame.todo("cellGameDataGetSizeKB(size=*0x%x)", size);
+	cellGame.warning("cellGameDataGetSizeKB(size=*0x%x)", size);
 
-	*size = 0;
+	const std::string& local_dir = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID());
+	if (!fs::is_dir(local_dir))
+	{
+		return CELL_GAMEDATA_ERROR_FAILURE;
+	}
+
+	*size = (u32)fs::get_dir_size(local_dir);
+
 	return CELL_OK;
+
 }
 
 s32 cellGameDataSetSystemVer()
@@ -701,9 +716,22 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 
 s32 cellGameGetSizeKB(vm::ptr<s32> size)
 {
-	cellGame.todo("cellGameGetSizeKB(size=*0x%x)", size);
+	cellGame.warning("cellGameGetSizeKB(size=*0x%x)", size);
+	const auto prm = fxm::get<content_permission>();
 
-	*size = 0;
+	if (!prm)
+	{
+		return CELL_GAME_ERROR_FAILURE;
+	}
+
+	const std::string& local_dir = prm->is_temporary? vfs::get("/dev_hdd1/game/"s + prm->dir) : vfs::get("/dev_hdd0/game/"s + prm->dir);		//should we check the temporary folder?
+	if (!fs::is_dir(local_dir))
+	{
+		return CELL_GAME_ERROR_FAILURE;
+	}
+
+	*size = (u32)fs::get_dir_size(local_dir);
+
 	return CELL_OK;
 }
 

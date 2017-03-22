@@ -433,7 +433,7 @@ namespace sys_net
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
 
-		if (s <= 0) {
+		if (s < 0) {
 			libnet.error("recvfrom(): invalid socket %d", s);
 			return SYS_NET_EBADF;
 		}
