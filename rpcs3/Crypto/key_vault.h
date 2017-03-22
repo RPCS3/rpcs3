@@ -159,7 +159,7 @@ class KeyVault
 	std::vector<SELF_KEY> sk_LDR_arr;
 	std::vector<SELF_KEY> sk_UNK7_arr;
 	std::vector<SELF_KEY> sk_NPDRM_arr;
-	u8 klicensee_key[0x10];
+	u8 klicensee_key[0x10] = {};
 
 public:
 	KeyVault();

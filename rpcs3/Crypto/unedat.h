@@ -14,7 +14,7 @@ constexpr u32 EDAT_FLAG_0x10 = 0x00000010;
 constexpr u32 EDAT_FLAG_0x20 = 0x00000020;
 constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
 
-struct EdatKeys_t
+struct LoadedNpdrmKeys_t
 {
 	std::array<u8, 0x10> devKlic{};
 	std::array<u8, 0x10> rifKey{};
