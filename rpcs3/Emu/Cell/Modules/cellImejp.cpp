@@ -446,7 +446,6 @@ s32 cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYo
 {
 	cellImeJp.error("cellImeJpGetConfirmYomiString()");
 	*pYomiString = *s_ime_string;
-	cellImeJp.error("cellImeJpGetConfirmYomiString(%s)", *pYomiString);
 	return CELL_OK;
 }
 
@@ -454,7 +453,6 @@ s32 cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConfir
 {
 	cellImeJp.error("cellImeJpGetConfirmString()");
 	*pConfirmString = *s_ime_string;
-	cellImeJp.error("cellImeJpGetConfirmString(%s)", *pConfirmString);
 	return CELL_OK;
 }
 
@@ -462,7 +460,6 @@ s32 cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYo
 {
 	cellImeJp.error("cellImeJpGetConvertYomiString()");
 	*pYomiString = *s_ime_string;
-	cellImeJp.error("cellImeJpGetConvertYomiString(%s)", *pYomiString);
 	return CELL_OK;
 }
 
@@ -470,7 +467,6 @@ s32 cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConver
 {
 	cellImeJp.error("cellImeJpGetConvertString()");
 	*pConvertString = *s_ime_string;
-	cellImeJp.error("cellImeJpGetConvertString(%s)", *pConvertString);
 	return CELL_OK;
 }
 
