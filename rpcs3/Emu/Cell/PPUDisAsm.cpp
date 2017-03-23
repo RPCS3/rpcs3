@@ -892,11 +892,6 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 	Write(fmt::format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi / 4, bi % 4, bd, aa, lk));
 }
 
-void PPUDisAsm::HACK(ppu_opcode_t op)
-{
-	Write(fmt::format("hack %d", op.opcode & 0x3ffffff));
-}
-
 void PPUDisAsm::SC(ppu_opcode_t op)
 {
 	if (op.opcode != ppu_instructions::SC(0))

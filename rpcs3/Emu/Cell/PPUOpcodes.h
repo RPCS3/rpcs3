@@ -121,7 +121,6 @@ public:
 		// Main opcodes (field 0..5)
 		fill_table(0x00, 6, -1,
 		{
-			{ 0x01, &D::HACK },
 			{ 0x02, &D::TDI },
 			{ 0x03, &D::TWI },
 			{ 0x07, &D::MULLI },
@@ -609,7 +608,6 @@ namespace ppu_instructions
 
 	namespace implicts
 	{
-		inline u32 HACK(u32 index) { return 0x01 << 26 | index; }
 		inline u32 NOP() { return ORI(r0, r0, 0); }
 		inline u32 MR(u32 rt, u32 ra) { return OR(rt, ra, ra, false); }
 		inline u32 LI(u32 rt, u32 imm) { return ADDI(rt, r0, imm); }

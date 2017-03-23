@@ -43,18 +43,14 @@ before_install:
       pip install --user cpp-coveralls requests[security];
     else
       brew update; brew update;
-      brew install ccache glew wxwidgets llvm38;
+      brew install ccache glew wxwidgets llvm40;
     fi;
 
 before_script:
   - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal
   - mkdir build
   - cd build
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      cmake ..;
-    else
-      cmake .. -DLLVM_DIR=/usr/local/opt/llvm38/lib/llvm-3.8/share/llvm/cmake;
-    fi;
+  - cmake ..
 
 script:
   # Add a command to show all the variables. May be useful for debugging Travis.
@@ -67,19 +63,18 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      #- llvm-toolchain-trusty-3.8 temporarily disabled
+      - llvm-toolchain-trusty-4.0
     packages:
       - cmake
       - libopenal-dev
       - freeglut3-dev
       - libglew-dev
       - libc6-dev
-      #- llvm-3.8
-      #- llvm-3.8-dev
+      - llvm-4.0
+      - llvm-4.0-dev
       - libedit-dev
       - g++-5
       - gcc-5
-      #- clang-3.6
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev

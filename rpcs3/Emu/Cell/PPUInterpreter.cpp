@@ -1936,12 +1936,6 @@ bool ppu_interpreter::BC(ppu_thread& ppu, ppu_opcode_t op)
 	}
 }
 
-bool ppu_interpreter::HACK(ppu_thread& ppu, ppu_opcode_t op)
-{
-	ppu_execute_function(ppu, op.opcode & 0x3ffffff);
-	return true;
-}
-
 bool ppu_interpreter::SC(ppu_thread& ppu, ppu_opcode_t op)
 {
 	if (op.opcode != ppu_instructions::SC(0))

@@ -62,12 +62,6 @@ namespace rpcs3
 	event<void>& on_resume() { static event<void> on_resume; return on_resume; }
 }
 
-Emulator::Emulator()
-	: m_status(Stopped)
-	, m_cpu_thr_stop(0)
-{
-}
-
 void Emulator::Init()
 {
 	if (!g_tty)
@@ -106,8 +100,6 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
-
-	SetCPUThreadStop(0);
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
