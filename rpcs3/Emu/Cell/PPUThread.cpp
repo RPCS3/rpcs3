@@ -18,6 +18,9 @@
 #pragma warning(push, 0)
 #endif
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/LLVMContext.h"
 //#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
@@ -28,7 +31,7 @@
 //#include "llvm/Analysis/Passes.h"
 //#include "llvm/Analysis/BasicAliasAnalysis.h"
 //#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+//#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 //#include "llvm/Analysis/LoopInfo.h"
 //#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/Lint.h"

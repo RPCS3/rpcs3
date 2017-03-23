@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <set>
 #include <array>
+#include <vector>
 
 #include "../rpcs3/Emu/Cell/PPUOpcodes.h"
 #include "../rpcs3/Emu/Cell/PPUAnalyser.h"
