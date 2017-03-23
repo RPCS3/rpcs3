@@ -95,7 +95,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
 	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
 	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
-	if (fs::file f{dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write}) f.write("User"s);
+	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);

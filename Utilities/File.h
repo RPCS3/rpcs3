@@ -576,4 +576,17 @@ namespace fs
 		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container)));
 		return result;
 	}
+
+	template <typename... Args>
+	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
+	{
+		if (fs::file f{path, mode})
+		{
+			// Write args sequentially
+			int seq[]{ (f.write(args), 0)... };
+			return true;
+		}
+
+		return false;
+	}
 }
