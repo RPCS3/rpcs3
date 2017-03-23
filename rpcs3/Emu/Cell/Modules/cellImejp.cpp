@@ -305,7 +305,7 @@ s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16>
 		//UNKNOWN CASE
 		default:
 			{
-				*s_ime_string = 'あ';
+				*s_ime_string = 'A';
 				cellImeJp.todo("cellImeJpEnterChar undefined UCS2 char code: (0x%x), %s" HERE, inputChar, *s_ime_string);
 				break;
 			}
