@@ -243,53 +243,6 @@ s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16>
 		case 0x3093: *s_ime_string = 'ん'; break;
 		case 0x3094: *s_ime_string = 'ゔ'; break;
 
-
-		//KATAKANA
-		//case: *s_ime_string = 'ア';
-		//case: *s_ime_string = 'イ';
-		//case: *s_ime_string = 'ウ';
-		//case: *s_ime_string = 'エ';
-		//case: *s_ime_string = 'オ';
-		//case: *s_ime_string = 'カ';
-		//case: *s_ime_string = 'キ';
-		//case: *s_ime_string = 'ク';
-		//case: *s_ime_string = 'ケ';
-		//case: *s_ime_string = 'コ';
-		//case: *s_ime_string = 'サ';
-		//case: *s_ime_string = 'シ';
-		//case: *s_ime_string = 'ス';
-		//case: *s_ime_string = 'セ';
-		//case: *s_ime_string = 'ソ';
-		//case: *s_ime_string = 'タ';
-		//case: *s_ime_string = 'チ';
-		//case: *s_ime_string = 'ツ';
-		//case: *s_ime_string = 'テ';
-		//case: *s_ime_string = 'ト';
-		//case: *s_ime_string = 'ナ';
-		//case: *s_ime_string = 'ニ';
-		//case: *s_ime_string = 'ヌ';
-		//case: *s_ime_string = 'ネ';
-		//case: *s_ime_string = 'ノ';
-		//case: *s_ime_string = 'ハ';
-		//case: *s_ime_string = 'ヒ';
-		//case: *s_ime_string = 'フ';
-		//case: *s_ime_string = 'ヘ';
-		//case: *s_ime_string = 'ホ';
-		//case: *s_ime_string = 'マ';
-		//case: *s_ime_string = 'ミ';
-		//case: *s_ime_string = 'ム';
-		//case: *s_ime_string = 'メ';
-		//case: *s_ime_string = 'モ';
-		//case: *s_ime_string = 'ヤ';
-		//case: *s_ime_string = 'ユ';
-		//case: *s_ime_string = 'ヨ';
-		//case: *s_ime_string = 'ラ';
-		//case: *s_ime_string = 'リ';
-		//case: *s_ime_string = 'ル';
-		//case: *s_ime_string = 'レ';
-		//case: *s_ime_string = 'ロ';
-		//case: *s_ime_string = 'ン';
-			
 		//NUMBERS
 		case 0xff10: *s_ime_string = '0'; break;
 		case 0xff11: *s_ime_string = '1'; break;
@@ -302,7 +255,7 @@ s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16>
 		case 0xff18: *s_ime_string = '8'; break;
 		case 0xff19: *s_ime_string = '9'; break;
 		
-		//UNKNOWN CASE
+		//UNDEFINED CHAR: RETURN 'A' BY DEFAULT.
 		default:
 			{
 				*s_ime_string = 'A';
@@ -311,7 +264,7 @@ s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16>
 			}
 	}
 	
-	*pOutputStatus = 2; //CELL_IMEJP_RET_CONFIRMED????
+	*pOutputStatus = CELL_IMEJP_RET_CONFIRMED;
 	return CELL_OK;
 }
 
