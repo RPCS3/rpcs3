@@ -60,7 +60,8 @@ namespace fs
 	{
 		virtual ~file_base();
 
-		virtual stat_t stat() = 0;
+		virtual stat_t stat();
+		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
 		virtual u64 write(const void* buffer, u64 size) = 0;
@@ -83,12 +84,22 @@ namespace fs
 		virtual void rewind() = 0;
 	};
 
+	// Device information
+	struct device_stat
+	{
+		u64 block_size;
+		u64 total_size;
+		u64 total_free; // Total size of free space
+		u64 avail_free; // Free space available to unprivileged user
+	};
+
 	// Virtual device
 	struct device_base
 	{
 		virtual ~device_base();
 
 		virtual bool stat(const std::string& path, stat_t& info) = 0;
+		virtual bool statfs(const std::string& path, device_stat& info) = 0;
 		virtual bool remove_dir(const std::string& path) = 0;
 		virtual bool create_dir(const std::string& path) = 0;
 		virtual bool rename(const std::string& from, const std::string& to) = 0;
@@ -120,6 +131,9 @@ namespace fs
 
 	// Check whether the directory exists and is NOT a file
 	bool is_dir(const std::string& path);
+
+	// Get filesystem information
+	bool statfs(const std::string& path, device_stat& info);
 
 	// Delete empty directory
 	bool remove_dir(const std::string& path);
@@ -204,6 +218,13 @@ namespace fs
 		{
 			if (!m_file) xnull();
 			return m_file->stat();
+		}
+
+		// Sync file buffers
+		void sync() const
+		{
+			if (!m_file) xnull();
+			return m_file->sync();
 		}
 
 		// Read the data from the file and return the amount of data written in buffer
@@ -488,11 +509,6 @@ namespace fs
 		{
 		}
 
-		stat_t stat() override
-		{
-			fmt::raw_error("fs::container_stream<>::stat(): not supported");
-		}
-
 		bool trunc(u64 length) override
 		{
 			obj.resize(length);
@@ -547,11 +563,20 @@ namespace fs
 
 		u64 seek(s64 offset, seek_mode whence) override
 		{
-			return
-				whence == fs::seek_set ? pos = offset :
-				whence == fs::seek_cur ? pos = offset + pos :
-				whence == fs::seek_end ? pos = offset + size() :
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + pos :
+				whence == fs::seek_end ? offset + size() :
 				(fmt::raw_error("fs::container_stream<>::seek(): invalid whence"), 0);
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			pos = new_pos;
+			return pos;
 		}
 
 		u64 size() override
@@ -566,5 +591,18 @@ namespace fs
 		file result;
 		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container)));
 		return result;
+	}
+
+	template <typename... Args>
+	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
+	{
+		if (fs::file f{path, mode})
+		{
+			// Write args sequentially
+			int seq[]{ (f.write(args), 0)... };
+			return true;
+		}
+
+		return false;
 	}
 }

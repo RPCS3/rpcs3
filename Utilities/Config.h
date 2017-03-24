@@ -3,6 +3,7 @@
 #include "Utilities/types.h"
 #include "Utilities/Atomic.h"
 #include "Utilities/StrFmt.h"
+#include "Utilities/Log.h"
 
 #include <initializer_list>
 #include <exception>
@@ -35,6 +36,7 @@ namespace cfg
 		integer, // cfg::int_entry type
 		string, // cfg::string_entry type
 		set, // cfg::set_entry type
+		log,
 	};
 
 	// Config tree entry abstract base class
@@ -485,18 +487,39 @@ namespace cfg
 		}
 	};
 
+	class log_entry final : public entry_base
+	{
+		std::map<std::string, logs::level> m_map;
+
+	public:
+		log_entry(node& owner, const std::string& name)
+			: entry_base(type::log, owner, name)
+		{
+		}
+
+		std::map<std::string, logs::level> get_map() const
+		{
+			return m_map;
+		}
+
+		void set_map(std::map<std::string, logs::level>&& map);
+
+		void from_default() override;
+	};
+
 	// Root type with some predefined nodes. Don't change it, this is not mandatory for adding nodes.
 	struct root_node : node
 	{
-		node core  { *this, "Core" };
-		node vfs   { *this, "VFS" };
-		node log   { *this, "Log" };
-		node video { *this, "Video" };
-		node audio { *this, "Audio" };
-		node io    { *this, "Input/Output" };
-		node sys   { *this, "System" };
-		node net   { *this, "Net" };
-		node misc  { *this, "Miscellaneous" };
+		node core  {*this, "Core"};
+		node vfs   {*this, "VFS"};
+		node video {*this, "Video"};
+		node audio {*this, "Audio"};
+		node io    {*this, "Input/Output"};
+		node sys   {*this, "System"};
+		node net   {*this, "Net"};
+		node misc  {*this, "Miscellaneous"};
+
+		log_entry log{*this, "Log"};
 	};
 
 	// Get global configuration root instance
@@ -505,6 +528,3 @@ namespace cfg
 	// Global configuration root instance (cached reference)
 	static root_node& root = get_root();
 }
-
-// Registered log channel
-#define LOG_CHANNEL(name) extern logs::channel name; namespace logs { static cfg::enum_entry<logs::level, true> name(cfg::root.log, #name, ::name.enabled); }

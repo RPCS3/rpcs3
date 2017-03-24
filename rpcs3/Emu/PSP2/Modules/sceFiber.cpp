@@ -4,7 +4,7 @@
 
 #include "sceFiber.h"
 
-logs::channel sceFiber("sceFiber", logs::level::notice);
+logs::channel sceFiber("sceFiber");
 
 s32 _sceFiberInitializeImpl(vm::ptr<SceFiber> fiber, vm::cptr<char> name, vm::ptr<SceFiberEntry> entry, u32 argOnInitialize, vm::ptr<void> addrContext, u32 sizeContext, vm::cptr<SceFiberOptParam> optParam, u32 buildVersion)
 {

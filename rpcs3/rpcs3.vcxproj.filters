@@ -22,6 +22,9 @@
     <Filter Include="Io\MMJoystick">
       <UniqueIdentifier>{92e92511-88b9-4187-9c94-80790248d337}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\DS4">
+      <UniqueIdentifier>{a3a0bd9d-fcf7-4440-81b7-13fdd39601ae}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -113,6 +116,9 @@
     </ClCompile>
     <ClCompile Include="MMJoystickHandler.cpp">
       <Filter>Io\MMJoystick</Filter>
+    </ClCompile>
+    <ClCompile Include="DS4PadHandler.cpp">
+      <Filter>Io\DS4</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -213,9 +219,12 @@
     <ClInclude Include="MMJoystickHandler.h">
       <Filter>Io\MMJoystick</Filter>
     </ClInclude>
+    <ClInclude Include="DS4PadHandler.h">
+      <Filter>Io\DS4</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="rpcs3.ico" />
+    <Image Include="..\Data\rpcs3.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3_.rc" />

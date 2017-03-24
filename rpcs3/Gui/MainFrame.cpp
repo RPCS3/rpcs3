@@ -30,7 +30,7 @@
 #include <thread>
 
 #ifndef _WIN32
-#include "frame_icon.xpm"
+#include "../../frame_icon.xpm"
 #endif
 
 enum IDs
@@ -98,9 +98,9 @@ MainFrame::MainFrame()
 	wxMenu* menu_conf = new wxMenu();
 	menubar->Append(menu_conf, "&Config");
 	menu_conf->Append(id_config_emu, "&Settings");
-	menu_conf->Append(id_config_pad, "&PAD Settings");
+	menu_conf->Append(id_config_pad, "&Keyboard Settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings");
+	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings")->Enable(false);
 	//menu_conf->AppendSeparator();
 	//menu_conf->Append(id_config_vfs_manager, "Virtual &File System Manager");
 	//menu_conf->Append(id_config_vhdd_manager, "Virtual &HDD Manager");

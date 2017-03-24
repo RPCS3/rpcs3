@@ -11,7 +11,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_fs("sys_fs", logs::level::notice);
+logs::channel sys_fs("sys_fs");
 
 struct lv2_fs_mount_point
 {
@@ -124,11 +124,20 @@ struct lv2_file::file_view : fs::file_base
 
 	u64 seek(s64 offset, fs::seek_mode whence) override
 	{
-		return
-			whence == fs::seek_set ? m_pos = offset :
-			whence == fs::seek_cur ? m_pos = offset + m_pos :
-			whence == fs::seek_end ? m_pos = offset + size() :
+		const s64 new_pos =
+			whence == fs::seek_set ? offset :
+			whence == fs::seek_cur ? offset + m_pos :
+			whence == fs::seek_end ? offset + size() :
 			(fmt::raw_error("lv2_file::file_view::seek(): invalid whence"), 0);
+
+		if (new_pos < 0)
+		{
+			fs::g_tls_error = fs::error::inval;
+			return -1;
+		}
+
+		m_pos = new_pos;
+		return m_pos;
 	}
 
 	u64 size() override
@@ -144,10 +153,36 @@ fs::file lv2_file::make_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
 	return result;
 }
 
-error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6)
+error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> buf, u32 buf_size)
 {
-	sys_fs.todo("sys_fs_test(arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x, arg5=*0x%x, arg6=0x%x) -> CELL_OK", arg1, arg2, arg3, arg4, arg5, arg6);
+	sys_fs.trace("sys_fs_test(arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x, buf=*0x%x, buf_size=0x%x)", arg1, arg2, arg3, arg4, buf, buf_size);
 
+	if (arg1 != 6 || arg2 != 0 || arg4 != sizeof(u32))
+	{
+		sys_fs.todo("sys_fs_test: unknown arguments (arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x)", arg1, arg2, arg3, arg4);
+	}
+
+	if (!arg3)
+	{
+		return CELL_EFAULT;
+	}
+
+	const auto file = idm::get<lv2_fs_object>(*arg3);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	for (u32 i = 0; i < buf_size; i++)
+	{
+		if (!(buf[i] = file->name[i]))
+		{
+			return CELL_OK;
+		}
+	}
+
+	buf[buf_size - 1] = 0;
 	return CELL_OK;
 }
 
@@ -342,9 +377,12 @@ error_code sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwr
 		return CELL_EBADF;
 	}
 
-	// TODO: return CELL_EBUSY if locked by stream
-
 	std::lock_guard<std::mutex> lock(file->mp->mutex);
+
+	if (file->lock)
+	{
+		return CELL_EBUSY;
+	}
 
 	*nwrite = file->op_write(buf, nbytes);
 
@@ -355,16 +393,25 @@ error_code sys_fs_close(u32 fd)
 {
 	sys_fs.trace("sys_fs_close(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd, [](lv2_file& file) -> CellError
+	{
+		if (file.lock)
+		{
+			return CELL_EBUSY;
+		}
+
+		return {};
+	});
 
 	if (!file)
 	{
 		return CELL_EBADF;
 	}
 
-	// TODO: return CELL_EBUSY if locked
-
-	idm::remove<lv2_fs_object, lv2_file>(fd);
+	if (file.ret)
+	{
+		return file.ret;
+	}
 
 	return CELL_OK;
 }
@@ -510,6 +557,13 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	return CELL_OK;
 }
 
+error_code sys_fs_link(vm::cptr<char> from, vm::cptr<char> to)
+{
+	sys_fs.todo("sys_fs_link(from=%s, to=%s)", from, to);
+
+	return CELL_OK;
+}
+
 error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 {
 	sys_fs.warning("sys_fs_mkdir(path=%s, mode=%#o)", path, mode);
@@ -581,14 +635,36 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 	return CELL_OK;
 }
 
+error_code sys_fs_access(vm::ps3::cptr<char> path, s32 mode)
+{
+	sys_fs.todo("sys_fs_access(path=%s, mode=%#o)", path, mode);
+
+	return CELL_OK;
+}
+
 error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 {
 	sys_fs.trace("sys_fs_fcntl(fd=%d, op=0x%x, arg=*0x%x, size=0x%x)", fd, op, _arg, _size);
 
 	switch (op)
 	{
-	case 0x8000000A: // Read with offset
-	case 0x8000000B: // Write with offset
+	case 0x80000006: // cellFsAllocateFileAreaByFdWithInitialData
+	{
+		break;
+	}
+
+	case 0x80000007: // cellFsAllocateFileAreaByFdWithoutZeroFill
+	{
+		break;
+	}
+
+	case 0x80000008: // cellFsChangeFileSizeByFdWithoutAllocation
+	{
+		break;
+	}
+
+	case 0x8000000a: // cellFsReadWithOffset
+	case 0x8000000b: // cellFsWriteWithOffset
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_op_rw>(_arg);
 
@@ -604,30 +680,34 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 			return CELL_EBADF;
 		}
 
-		if (op == 0x8000000A && file->flags & CELL_FS_O_WRONLY)
+		if (op == 0x8000000a && file->flags & CELL_FS_O_WRONLY)
 		{
 			return CELL_EBADF;
 		}
 
-		if (op == 0x8000000B && !(file->flags & CELL_FS_O_ACCMODE))
+		if (op == 0x8000000b && !(file->flags & CELL_FS_O_ACCMODE))
 		{
 			return CELL_EBADF;
 		}
 
 		std::lock_guard<std::mutex> lock(file->mp->mutex);
 
+		if (op == 0x8000000b && file->lock)
+		{
+			return CELL_EBUSY;
+		}
+
 		const u64 old_pos = file->file.pos();
 		const u64 new_pos = file->file.seek(arg->offset);
 
-		arg->out_size = op == 0x8000000A
+		arg->out_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size)
 			: file->op_write(arg->buf, arg->size);
 
 		verify(HERE), old_pos == file->file.seek(old_pos);
 
 		arg->out_code = CELL_OK;
-
-		break;
+		return CELL_OK;
 	}
 
 	case 0x80000009: // cellFsSdataOpenByFd
@@ -655,7 +735,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 		fs::file stream;
 		stream.reset(std::move(sdata_file));
-		if (const u32 id = idm::make<lv2_fs_object, lv2_file>(file->mp, std::move(stream), file->mode, file->flags))
+		if (const u32 id = idm::make<lv2_fs_object, lv2_file>(*file, std::move(stream), file->mode, file->flags))
 		{
 			arg->out_code = CELL_OK;
 			arg->out_fd = id;
@@ -666,12 +746,257 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		return CELL_EMFILE;
 	}
 
-	default:
+	case 0xc0000002: // cellFsGetFreeSize (TODO)
 	{
-		sys_fs.todo("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
+		const auto arg = vm::static_ptr_cast<lv2_file_c0000002>(_arg);
+
+		fs::device_stat info;
+		if (!fs::statfs(vfs::get(arg->path.get_ptr()), info))
+		{
+			return CELL_EIO; // ???
+		}
+
+		arg->out_code = CELL_OK;
+		arg->out_block_size = 4096;
+		arg->out_block_count = info.avail_free / 4096;
+		return CELL_OK;
+	}
+
+	case 0xc0000006: // Unknown
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_c0000006>(_arg);
+
+		sys_fs.warning("0xc0000006: 0x%x, 0x%x, 0x%x, %s, 0x%x, 0x%x, 0x%x", arg->size, arg->_x4, arg->_x8, arg->name, arg->_x14, arg->_x18, arg->_x1c);
+		return CELL_OK;
+	}
+
+	case 0xc0000007: // cellFsArcadeHddSerialNumber
+	{
+		break;
+	}
+
+	case 0xc0000008: // cellFsSetDefaultContainer, cellFsSetIoBuffer, cellFsSetIoBufferFromDefaultContainer
+	{
+		break;
+	}
+
+	case 0xc0000015: // Unknown
+	{
+		break;
+	}
+
+	case 0xc0000016: // ps2disc_8160A811
+	{
+		break;
+	}
+
+	case 0xc000001a: // cellFsSetDiscReadRetrySetting, 5731DF45
+	{
+		break;
+	}
+
+	case 0xc0000021: // 9FDBBA89
+	{
+		break;
+	}
+
+	case 0xe0000000: // Unknown (cellFsGetBlockSize)
+	{
+		break;
+	}
+
+	case 0xe0000001: // Unknown (cellFsStat)
+	{
+		break;
+	}
+
+	case 0xe0000003: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000004: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000005: // Unknown (cellFsMkdir)
+	{
+		break;
+	}
+
+	case 0xe0000006: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000007: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000008: // Unknown (cellFsAclRead)
+	{
+		break;
+	}
+
+	case 0xe0000009: // Unknown (cellFsAccess)
+	{
+		break;
+	}
+
+	case 0xe000000a: // Unknown (E3D28395)
+	{
+		break;
+	}
+
+	case 0xe000000b: // Unknown (cellFsRename, FF29F478)
+	{
+		break;
+	}
+
+	case 0xe000000c: // Unknown (cellFsTruncate)
+	{
+		break;
+	}
+
+	case 0xe000000d: // Unknown (cellFsUtime)
+	{
+		break;
+	}
+
+	case 0xe000000e: // Unknown (cellFsAclWrite)
+	{
+		break;
+	}
+
+	case 0xe000000f: // Unknown (cellFsChmod)
+	{
+		break;
+	}
+
+	case 0xe0000010: // Unknown (cellFsChown)
+	{
+		break;
+	}
+
+	case 0xe0000011: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000012: // cellFsGetDirectoryEntries
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_op_dir::dir_info>(_arg);
+
+		if (_size < arg.size())
+		{
+			return CELL_EINVAL;
+		}
+
+		const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
+
+		if (!directory)
+		{
+			return CELL_EBADF;
+		}
+
+		for (; arg->_size < arg->max; arg->_size++)
+		{
+			fs::dir_entry info;
+
+			if (directory->dir.read(info))
+			{
+				auto& entry = arg->ptr[arg->_size];
+
+				entry.attribute.mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+				entry.attribute.uid = 0;
+				entry.attribute.gid = 0;
+				entry.attribute.atime = info.atime;
+				entry.attribute.mtime = info.mtime;
+				entry.attribute.ctime = info.ctime;
+				entry.attribute.size = info.size;
+				entry.attribute.blksize = 4096; // ???
+
+				entry.entry_name.d_type = info.is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
+				entry.entry_name.d_namlen = u8(std::min<size_t>(info.name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+				strcpy_trunc(entry.entry_name.d_name, info.name);
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		arg->_code = CELL_OK;
+		return CELL_OK;
+	}
+
+	case 0xe0000015: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000016: // cellFsAllocateFileAreaWithInitialData
+	{
+		break;
+	}
+
+	case 0xe0000017: // cellFsAllocateFileAreaWithoutZeroFill
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_e0000017>(_arg);
+
+		if (_size < arg->size || arg->_x4 != 0x10 || arg->_x8 != 0x20)
+		{
+			return CELL_EINVAL;
+		}
+
+		arg->out_code = sys_fs_truncate(arg->file_path, arg->file_size);
+		return CELL_OK;
+	}
+
+	case 0xe0000018: // cellFsChangeFileSizeWithoutAllocation
+	{
+		break;
+	}
+
+	case 0xe0000019: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001b: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001d: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001e: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001f: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000020: // Unknown
+	{
+		break;
+	}
+
+	case 0x00000025: // cellFsSdataOpenWithVersion
+	{
+		break;
 	}
 	}
 
+	sys_fs.fatal("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
 	return CELL_OK;
 }
 
@@ -694,14 +1019,58 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 
 	std::lock_guard<std::mutex> lock(file->mp->mutex);
 
-	*pos = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
+	const u64 result = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
+
+	if (result == -1)
+	{
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::inval: return CELL_EINVAL;
+		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
+		}
+
+		return CELL_EIO; // ???
+	}
+
+	*pos = result;
+	return CELL_OK;
+}
+
+error_code sys_fs_fdatasync(u32 fd)
+{
+	sys_fs.trace("sys_fs_fdadasync(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
+	{
+		return CELL_EBADF;
+	}
+
+	file->file.sync();
 
 	return CELL_OK;
 }
 
-error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<u64> arg5)
+error_code sys_fs_fsync(u32 fd)
 {
-	sys_fs.todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
+	sys_fs.trace("sys_fs_fsync(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
+	{
+		return CELL_EBADF;
+	}
+
+	file->file.sync();
+
+	return CELL_OK;
+}
+
+error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5)
+{
+	sys_fs.warning("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
@@ -710,18 +1079,23 @@ error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64>
 		return CELL_EBADF;
 	}
 
-	*sector_size = 4096; // ?
-	*block_size = 4096; // ?
+	// TODO
+	*sector_size = 4096;
+	*block_size = 4096;
+	*arg4 = 0;
+	*arg5 = file->mode;
 
 	return CELL_OK;
 }
 
 error_code sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4)
 {
-	sys_fs.todo("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
+	sys_fs.warning("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
 
-	*sector_size = 4096; // ?
-	*block_size = 4096; // ?
+	// TODO
+	*sector_size = 4096;
+	*block_size = 4096;
+	*arg4 = 0;
 
 	return CELL_OK;
 }
@@ -771,9 +1145,23 @@ error_code sys_fs_ftruncate(u32 fd, u64 size)
 	return CELL_OK;
 }
 
+error_code sys_fs_symbolic_link(vm::cptr<char> target, vm::cptr<char> linkpath)
+{
+	sys_fs.todo("sys_fs_symbolic_link(target=%s, linkpath=%s)", target, linkpath);
+
+	return CELL_OK;
+}
+
 error_code sys_fs_chmod(vm::cptr<char> path, s32 mode)
 {
-	sys_fs.todo("sys_fs_chmod(path=%s, mode=%#o) -> CELL_OK", path, mode);
+	sys_fs.todo("sys_fs_chmod(path=%s, mode=%#o)", path, mode);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_chown(vm::cptr<char> path, s32 uid, s32 gid)
+{
+	sys_fs.todo("sys_fs_chown(path=%s, uid=%d, gid=%d)", path, uid, gid);
 
 	return CELL_OK;
 }
@@ -792,6 +1180,118 @@ error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> t
 
 		return CELL_EIO; // ???
 	}
+
+	return CELL_OK;
+}
+
+error_code sys_fs_acl_read(vm::ps3::cptr<char> path, vm::ps3::ptr<void> ptr)
+{
+	sys_fs.todo("sys_fs_acl_read(path=%s, ptr=*0x%x)", path, ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_acl_write(vm::ps3::cptr<char> path, vm::ps3::ptr<void> ptr)
+{
+	sys_fs.todo("sys_fs_acl_write(path=%s, ptr=*0x%x)", path, ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr)
+{
+	sys_fs.warning("sys_fs_lsn_get_cda_size(fd=%d, ptr=*0x%x)", fd, ptr);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	// TODO
+	*ptr = 0;
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_get_cda(u32 fd, vm::ps3::ptr<void> arg2, u64 arg3, vm::ps3::ptr<u64> arg4)
+{
+	sys_fs.todo("sys_fs_lsn_get_cda(fd=%d, arg2=*0x%x, arg3=0x%x, arg4=*0x%x)", fd, arg2, arg3, arg4);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_lock(u32 fd)
+{
+	sys_fs.trace("sys_fs_lsn_lock(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	// TODO: research correct implementation
+	if (!file->lock.compare_and_swap_test(0, 1))
+	{
+		return CELL_EBUSY;
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_unlock(u32 fd)
+{
+	sys_fs.trace("sys_fs_lsn_unlock(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	// TODO: research correct implementation
+	if (!file->lock.compare_and_swap_test(1, 0))
+	{
+		return CELL_EPERM;
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_read(u32 fd, vm::ps3::cptr<void> ptr, u64 size)
+{
+	sys_fs.todo("sys_fs_lsn_read(fd=%d, ptr=*0x%x, size=0x%x)", fd, ptr, size);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_write(u32 fd, vm::ps3::cptr<void> ptr, u64 size)
+{
+	sys_fs.todo("sys_fs_lsn_write(fd=%d, ptr=*0x%x, size=0x%x)", fd, ptr, size);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_mapped_allocate(u32 fd, u64 size, vm::ps3::pptr<void> out_ptr)
+{
+	sys_fs.todo("sys_fs_mapped_allocate(fd=%d, arg2=0x%x, out_ptr=**0x%x)", fd, size, out_ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_mapped_free(u32 fd, vm::ps3::ptr<void> ptr)
+{
+	sys_fs.todo("sys_fs_mapped_free(fd=%d, ptr=0x%#x)", fd, ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_truncate2(u32 fd, u64 size)
+{
+	sys_fs.todo("sys_fs_truncate2(fd=%d, size=0x%x)", fd, size);
 
 	return CELL_OK;
 }

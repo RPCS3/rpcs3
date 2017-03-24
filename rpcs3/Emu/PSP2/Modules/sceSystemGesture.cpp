@@ -4,7 +4,7 @@
 
 #include "sceSystemGesture.h"
 
-logs::channel sceSystemGesture("sceSystemGesture", logs::level::notice);
+logs::channel sceSystemGesture("sceSystemGesture");
 
 s32 sceSystemGestureInitializePrimitiveTouchRecognizer(vm::ptr<SceSystemGesturePrimitiveTouchRecognizerParameter> parameter)
 {

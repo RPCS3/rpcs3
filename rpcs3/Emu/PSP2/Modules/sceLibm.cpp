@@ -4,7 +4,7 @@
 
 #include "sceLibm.h"
 
-logs::channel sceLibm("sceLibm", logs::level::notice);
+logs::channel sceLibm("sceLibm");
 
 namespace sce_libm_func
 {

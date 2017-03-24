@@ -44,9 +44,17 @@ namespace utils
 	void* memory_reserve(std::size_t size, void* use_addr)
 	{
 #ifdef _WIN32
-		return verify("reserve_memory" HERE, ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS));
+		return ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS);
 #else
-		return verify("reserve_memory" HERE, ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | (use_addr ? MAP_FIXED : 0), -1, 0));
+		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+
+		if (use_addr && ptr != use_addr)
+		{
+			::munmap(ptr, size);
+			return nullptr;
+		}
+
+		return ptr;
 #endif
 	}
 

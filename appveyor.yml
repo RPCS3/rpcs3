@@ -12,7 +12,7 @@ configuration:
 
 before_build:
  - ps: $env:Date="$(git show -s --date=short --format='%ad')"
- - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp rsx_program_decompiler 3rdparty/cereal
+ - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp rsx_program_decompiler 3rdparty/cereal 3rdparty/hidapi
  - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - 7z x vulkan.7z -aos -oC:\rpcs3\Vulkan > null

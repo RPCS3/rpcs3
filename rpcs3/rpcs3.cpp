@@ -17,6 +17,7 @@
 
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "KeyboardPadHandler.h"
+#include "DS4PadHandler.h"
 #ifdef _MSC_VER
 #include "XInputPadHandler.h"
 #include "MMJoystickHandler.h"
@@ -41,6 +42,9 @@
 #include "Emu/RSX/VK/VKGSRender.h"
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #include <wx/msw/wrapwin.h>
+#endif
+#ifdef __linux__
+#include "Emu/Audio/ALSA/ALSAThread.h"
 #endif
 
 #ifdef __unix__
@@ -84,6 +88,7 @@ cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handl
 {
 	{ "Null", &std::make_shared<NullPadHandler> },
 	{ "Keyboard", &std::make_shared<KeyboardPadHandler> },
+	{ "DualShock 4", &std::make_shared<DS4PadHandler> },
 #ifdef _MSC_VER
 	{ "XInput", &std::make_shared<XInputPadHandler> },
 	{ "MMJoystick", &std::make_shared<MMJoystickHandler>},
@@ -107,6 +112,8 @@ cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render
 	{ "Null", &std::make_shared<NullAudioThread> },
 #ifdef _WIN32
 	{ "XAudio2", &std::make_shared<XAudio2Thread> },
+#elif __linux__
+	{ "ALSA", &std::make_shared<ALSAThread> },
 #endif
 	{ "OpenAL", &std::make_shared<OpenALThread> },
 });

@@ -4,7 +4,7 @@
 
 #include "sceJpegEnc.h"
 
-logs::channel sceJpegEnc("sceJpegEnc", logs::level::notice);
+logs::channel sceJpegEnc("sceJpegEnc");
 
 s32 sceJpegEncoderGetContextSize()
 {

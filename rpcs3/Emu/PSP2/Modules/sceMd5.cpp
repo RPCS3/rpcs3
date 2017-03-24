@@ -4,7 +4,7 @@
 
 #include "sceMd5.h"
 
-logs::channel sceMd5("sceMd5", logs::level::notice);
+logs::channel sceMd5("sceMd5");
 
 s32 sceMd5Digest(vm::cptr<void> plain, u32 len, vm::ptr<u8> digest)
 {

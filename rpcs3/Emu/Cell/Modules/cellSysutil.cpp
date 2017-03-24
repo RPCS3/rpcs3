@@ -11,7 +11,7 @@
 #include <mutex>
 #include <queue>
 
-logs::channel cellSysutil("cellSysutil", logs::level::notice);
+logs::channel cellSysutil("cellSysutil");
 
 struct sysutil_cb_manager
 {
@@ -435,6 +435,16 @@ s32 cellSysutilGameReboot_I()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellSysutilSharedMemoryAlloc()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellSysutilSharedMemoryFree()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 s32 _ZN4cxml7Element11AppendChildERS0_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -483,6 +493,30 @@ s32 _ZNK4cxml4File7GetAddrEv()
 	return CELL_OK;
 }
 
+s32 _ZNK4cxml7Element12GetAttributeEPKcPNS_9AttributeE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZNK4cxml7Element14GetNextSiblingEv()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZNK4cxml9Attribute6GetIntEPi()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZNK4cxml9Attribute7GetFileEPNS_4FileE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 s32 _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -490,6 +524,12 @@ s32 _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci()
 }
 
 s32 _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
@@ -581,6 +621,9 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilGamePowerOff_I);
 	REG_FUNC(cellSysutil, cellSysutilGameReboot_I);
 
+	REG_FUNC(cellSysutil, cellSysutilSharedMemoryAlloc);
+	REG_FUNC(cellSysutil, cellSysutilSharedMemoryFree);
+
 	REG_FUNC(cellSysutil, _ZN4cxml7Element11AppendChildERS0_);
 
 	REG_FUNC(cellSysutil, _ZN4cxml8DocumentC1Ev);
@@ -591,9 +634,14 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN4cxml8Document18GetDocumentElementEv);
 
 	REG_FUNC(cellSysutil, _ZNK4cxml4File7GetAddrEv);
+	REG_FUNC(cellSysutil, _ZNK4cxml7Element12GetAttributeEPKcPNS_9AttributeE);
+	REG_FUNC(cellSysutil, _ZNK4cxml7Element14GetNextSiblingEv);
+	REG_FUNC(cellSysutil, _ZNK4cxml9Attribute6GetIntEPi);
+	REG_FUNC(cellSysutil, _ZNK4cxml9Attribute7GetFileEPNS_4FileE);
 
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16FindChildElementERKN4cxml7ElementEPKcS5_S5_);

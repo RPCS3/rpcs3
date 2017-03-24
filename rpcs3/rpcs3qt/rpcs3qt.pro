@@ -1,5 +1,5 @@
 # Qt5.2+ project for rpcs3. Works on Windows, Linux and Mac OSX
-QT += gui opengl quick
+QT += gui opengl quick widgets
 CONFIG += c++11
 
 TARGET = rpcs3-qt
@@ -15,10 +15,6 @@ DEFINES += QT_UI
 
 # Installation path
 # target.path =
-
-OTHER_FILES += $$P/rpcs3qt/qml/*
-
-RESOURCES += $$P/rpcs3qt/qml.qrc
 
 # This line is needed for Qt 5.5 or higher
 win32:LIBS += opengl32.lib

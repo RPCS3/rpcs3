@@ -4,7 +4,7 @@
 
 #include "scePgf.h"
 
-logs::channel scePgf("scePgf", logs::level::notice);
+logs::channel scePgf("scePgf");
 
 #define REG_FUNC(nid, name) REG_FNID(ScePgf, nid, name)
 

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 
+# uncomment next line if you want to build with GDB stub
+# add_definitions(-DWITH_GDB_DEBUGGER)
+
 set(ASMJIT_STATIC TRUE)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -44,3 +47,33 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
 add_subdirectory( Vulkan )
 add_subdirectory( rpcs3 )
 add_subdirectory( rsx_program_decompiler )
+
+include_directories(3rdparty/hidapi/hidapi)
+if(APPLE)
+	add_subdirectory(3rdparty/hidapi/mac)
+	#list(APPEND LIBS hidapi)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	add_subdirectory(3rdparty/hidapi/linux)
+elseif(MSVC)
+	add_subdirectory(3rdparty/hidapi/windows)
+else()
+	add_subdirectory(3rdparty/hidapi/libusb)
+	#list(APPEND LIBS hidapi-libusb)
+endif()
+
+
+# Linux installation
+
+if(CMAKE_SYSTEM_NAME MATCHES "Linux|FreeBSD|OpenBSD")
+  # Install the application icon and menu item
+  install(FILES Data/rpcs3.svg
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
+  install(FILES Data/rpcs3.png
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
+  install(FILES Data/rpcs3.desktop
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+  # Install the binary
+  install(FILES "${PROJECT_BINARY_DIR}/bin/rpcs3"
+          DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+          PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE) # i.e. 755
+endif()

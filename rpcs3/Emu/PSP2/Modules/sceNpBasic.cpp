@@ -4,7 +4,7 @@
 
 #include "sceNpBasic.h"
 
-logs::channel sceNpBasic("sceNpBasic", logs::level::notice);
+logs::channel sceNpBasic("sceNpBasic");
 
 s32 sceNpBasicInit(vm::ptr<void> opt)
 {

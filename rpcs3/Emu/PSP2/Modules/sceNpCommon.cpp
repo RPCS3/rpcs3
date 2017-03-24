@@ -4,7 +4,7 @@
 
 #include "sceNpCommon.h"
 
-logs::channel sceNpCommon("sceNpCommon", logs::level::notice);
+logs::channel sceNpCommon("sceNpCommon");
 
 s32 sceNpAuthInit()
 {

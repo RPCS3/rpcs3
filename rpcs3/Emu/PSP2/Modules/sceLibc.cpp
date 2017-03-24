@@ -8,7 +8,7 @@
 
 #include <thread>
 
-logs::channel sceLibc("sceLibc", logs::level::notice);
+logs::channel sceLibc("sceLibc");
 
 extern fs::file g_tty;
 

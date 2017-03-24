@@ -4,7 +4,7 @@
 
 #include "sceNpUtility.h"
 
-logs::channel sceNpUtility("sceNpUtility", logs::level::notice);
+logs::channel sceNpUtility("sceNpUtility");
 
 s32 sceNpLookupInit(s32 usesAsync, s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {

@@ -173,7 +173,7 @@ std::string FragmentProgramDecompiler::NotZero(const std::string& code)
 
 std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
 {
-	return "max(" + code + ", 1.E-10)";
+	return "max(abs(" + code + "), 1.E-10)";
 }
 
 std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)

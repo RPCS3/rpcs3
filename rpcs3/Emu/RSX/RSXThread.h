@@ -168,6 +168,8 @@ namespace rsx
 
 	protected:
 		std::stack<u32> m_call_stack;
+		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
+		std::vector<u32> element_push_buffer;
 
 	public:
 		old_shaders_cache::shaders_cache shaders_cache;
@@ -190,7 +192,7 @@ namespace rsx
 		std::shared_ptr<class ppu_thread> intr_thread;
 
 		u32 ioAddress, ioSize;
-		int flip_status;
+		u32 flip_status;
 		int flip_mode;
 		int debug_level;
 		int frequency_mode;
@@ -233,6 +235,7 @@ namespace rsx
 	public:
 		std::set<u32> m_used_gcm_commands;
 		bool invalid_command_interrupt_raised = false;
+		bool in_begin_end = false;
 
 	protected:
 		thread();
@@ -265,9 +268,21 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
-		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
+		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
+
+		/*
+		* Immediate mode rendering requires a temp push buffer to hold attrib values
+		* Appends a value to the push buffer (currently only supports 32-wide types)
+		*/
+		void append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value);
+		u32 get_push_buffer_vertex_count() const;
+
+		void append_array_element(u32 index);
+		u32 get_push_buffer_index_count() const;
 
 	private:
 		std::mutex m_mtx_task;
@@ -294,7 +309,13 @@ namespace rsx
 		 * Vertex shader's position is to be multiplied by this matrix.
 		 * if is_d3d is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const;
+		void fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const;
+
+		/**
+		 * Fill buffer with user clip information
+		*/
+
+		void fill_user_clip_data(void *buffer) const;
 
 		/**
 		* Fill buffer with vertex program constants.
@@ -332,6 +353,8 @@ namespace rsx
 		};
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+
+		virtual bool scaled_image_from_memory(blit_src_info& src_info, blit_dst_info& dst_info, bool interpolate){ return false;  }
 
 		struct raw_program get_raw_program() const;
 	public:

@@ -4,7 +4,7 @@
 
 #include "sceNet.h"
 
-logs::channel sceNet("sceNet", logs::level::notice);
+logs::channel sceNet("sceNet");
 
 s32 sceNetSetDnsInfo(vm::ptr<SceNetDnsInfo> info, s32 flags)
 {

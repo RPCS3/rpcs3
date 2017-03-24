@@ -3,7 +3,9 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
+#include "Crypto/sha1.h"
 #include "Loader/ELF.h"
+#include "Utilities/bin_patch.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -14,35 +16,123 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_spu("sys_spu", logs::level::notice);
+logs::channel sys_spu("sys_spu");
 
-void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr)
+void sys_spu_image::load(const fs::file& stream)
 {
-	const spu_exec_object obj = stream;
+	const spu_exec_object obj{stream};
 
 	if (obj != elf_error::ok)
 	{
 		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
 	}
 
+	this->type = SYS_SPU_IMAGE_TYPE_KERNEL;
+	this->entry_point = obj.header.e_entry;
+	this->segs.set(vm::alloc(65 * 4096, vm::main));
+	this->nsegs = 0;
+
+	const u32 addr = this->segs.addr() + 4096;
+
+	sha1_context ctx;
+	u8 output[20];
+
+	sha1_starts(&ctx);
+	sha1_update(&ctx, reinterpret_cast<const u8*>(&obj.header), sizeof(obj.header));
+
+	for (const auto& shdr : obj.shdrs)
+	{
+		sha1_update(&ctx, reinterpret_cast<const u8*>(&shdr), sizeof(spu_exec_object::shdr_t));
+
+		LOG_NOTICE(SPU, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", shdr.sh_type, shdr.sh_addr, shdr.sh_size, shdr.sh_flags);
+	}
+
 	for (const auto& prog : obj.progs)
 	{
-		if (prog.p_type == 0x1 /* LOAD */)
+		sha1_update(&ctx, reinterpret_cast<const u8*>(&prog), sizeof(spu_exec_object::phdr_t));
+		sha1_update(&ctx, reinterpret_cast<const u8*>(prog.bin.data()), prog.bin.size());
+
+		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+
+		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY)
 		{
-			std::memcpy(vm::base(addr + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
+			auto& seg = segs[nsegs++];
+			seg.type  = prog.p_type;
+			seg.ls    = prog.p_vaddr;
+			seg.addr  = addr + prog.p_vaddr;
+			seg.size  = std::min(prog.p_filesz, prog.p_memsz);
+			std::memcpy(vm::base(seg.addr), prog.bin.data(), seg.size);
+
+			if (prog.p_memsz > prog.p_filesz)
+			{
+				auto& zero = segs[nsegs++];
+				zero.type  = SYS_SPU_SEGMENT_TYPE_FILL;
+				zero.ls    = prog.p_vaddr + prog.p_filesz;
+				zero.addr  = 0;
+				zero.size  = prog.p_memsz - seg.size;
+			}
+		}
+		else if (prog.p_type == SYS_SPU_SEGMENT_TYPE_INFO)
+		{
+			auto& seg = segs[nsegs++];
+			seg.type = SYS_SPU_SEGMENT_TYPE_INFO;
+			seg.ls   = prog.p_vaddr;
+			seg.addr = 0;
+			seg.size = prog.p_filesz;
+		}
+		else
+		{
+			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
 		}
 	}
 
-	spu_ep = obj.header.e_entry;
+	sha1_finish(&ctx, output);
+
+	// Format patch name
+	std::string hash("spu-");
+	for (u8 x : output) fmt::append(hash, "%02x", x);
+	LOG_NOTICE(LOADER, "Loaded SPU image: %s", hash);
+
+	// Apply the patch
+	fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + addr);
+
+	if (!Emu.GetTitleID().empty())
+	{
+		// Alternative patch
+		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + addr);
+	}
 }
 
-u32 LoadSpuImage(const fs::file& stream, u32& spu_ep)
+void sys_spu_image::free()
 {
-	const u32 alloc_size = 256 * 1024;
-	u32 spu_offset = (u32)vm::alloc(alloc_size, vm::main);
+	if (type == SYS_SPU_IMAGE_TYPE_KERNEL)
+	{
+		vm::dealloc_verbose_nothrow(segs.addr(), vm::main);
+	}
+}
 
-	LoadSpuImage(stream, spu_ep, spu_offset);
-	return spu_offset;
+void sys_spu_image::deploy(u32 loc)
+{
+	for (int i = 0; i < nsegs; i++)
+	{
+		auto& seg = segs[i];
+
+		LOG_NOTICE(SPU, "*** Deploy: t=0x%x, ls=0x%x, size=0x%x, addr=0x%x", seg.type, seg.ls, seg.size, seg.addr);
+
+		if (seg.type == SYS_SPU_SEGMENT_TYPE_COPY)
+		{
+			std::memcpy(vm::base(loc + seg.ls), vm::base(seg.addr), seg.size);
+		}
+		else if (seg.type == SYS_SPU_SEGMENT_TYPE_FILL)
+		{
+			if ((seg.ls | seg.size) % 4)
+			{
+				LOG_ERROR(SPU, "Unaligned SPU FILL type segment (ls=0x%x, size=0x%x)", seg.ls, seg.size);
+			}
+
+			std::fill_n(vm::_ptr<u32>(loc + seg.ls), seg.size / 4, seg.addr);
+		}
+	}
 }
 
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
@@ -57,7 +147,7 @@ error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	return CELL_OK;
 }
 
-error_code sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
+error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
@@ -69,18 +159,12 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image_t> img, vm::cptr<char> path)
 		return CELL_ENOENT;
 	}
 
-	u32 entry;
-	u32 offset = LoadSpuImage(elf_file, entry);
-
-	img->type = SYS_SPU_IMAGE_TYPE_USER;
-	img->entry_point = entry;
-	img->segs.set(offset); // TODO: writing actual segment info
-	img->nsegs = 1; // wrong value
+	img->load(elf_file);
 
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image_t> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
+error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
 {
 	sys_spu.warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
 
@@ -119,7 +203,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	group->threads[spu_num] = std::move(spu);
 	group->args[spu_num] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
-	group->images[spu_num] = img;
+	group->imgs[spu_num] = img;
 
 	if (++group->init == group->num)
 	{
@@ -144,10 +228,7 @@ error_code sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> 
 
 	semaphore_lock lock(group->mutex);
 
-	group->args[thread->index].arg1 = arg->arg1;
-	group->args[thread->index].arg2 = arg->arg2;
-	group->args[thread->index].arg3 = arg->arg3;
-	group->args[thread->index].arg4 = arg->arg4;
+	group->args[thread->index] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
 
 	return CELL_OK;
 }
@@ -262,18 +343,16 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		if (thread)
 		{
 			auto& args = group->args[thread->index];
-			auto& image = group->images[thread->index];
+			auto& img = group->imgs[thread->index];
 
-			// Copy SPU image:
-			// TODO: use segment info
-			std::memcpy(vm::base(thread->offset), image->segs.get_ptr(), 256 * 1024);
+			img->deploy(thread->offset);
 
-			thread->pc = image->entry_point;
+			thread->pc = img->entry_point;
 			thread->cpu_init();
-			thread->gpr[3] = v128::from64(0, args.arg1);
-			thread->gpr[4] = v128::from64(0, args.arg2);
-			thread->gpr[5] = v128::from64(0, args.arg3);
-			thread->gpr[6] = v128::from64(0, args.arg4);
+			thread->gpr[3] = v128::from64(0, args[0]);
+			thread->gpr[4] = v128::from64(0, args[1]);
+			thread->gpr[5] = v128::from64(0, args[2]);
+			thread->gpr[6] = v128::from64(0, args[3]);
 
 			thread->status.exchange(SPU_STATUS_RUNNING);
 		}
@@ -571,6 +650,55 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		*status = group->exit_status;
 	}
 	
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_set_priority(u32 id, s32 priority)
+{
+	sys_spu.trace("sys_spu_thread_group_set_priority(id=0x%x, priority=%d)", id, priority);
+
+	if (priority < 16 || priority > 255)
+	{
+		return CELL_EINVAL;
+	}
+
+	const auto group = idm::get<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
+	{
+		return CELL_EINVAL;
+	}
+
+	group->prio = priority;
+
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_get_priority(u32 id, vm::ptr<s32> priority)
+{
+	sys_spu.trace("sys_spu_thread_group_get_priority(id=0x%x, priority=*0x%x)", id, priority);
+
+	const auto group = idm::get<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
+	{
+		*priority = 0;
+	}
+	else
+	{
+		*priority = group->prio;
+	}
+
 	return CELL_OK;
 }
 

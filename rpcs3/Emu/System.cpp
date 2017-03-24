@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
-#include "Utilities/AutoPause.h"
 #include "Utilities/event.h"
+#include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -25,6 +25,8 @@
 
 #include <thread>
 
+#include "Utilities/GDBDebugServer.h"
+
 system_type g_system;
 
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
@@ -38,7 +40,7 @@ cfg::string_entry g_cfg_vfs_dev_usb000(cfg::root.vfs, "/dev_usb000/", "$(Emulato
 cfg::string_entry g_cfg_vfs_dev_bdvd(cfg::root.vfs, "/dev_bdvd/"); // Not mounted
 cfg::string_entry g_cfg_vfs_app_home(cfg::root.vfs, "/app_home/"); // Not mounted
 
-cfg::bool_entry g_cfg_vfs_allow_host_root(cfg::root.vfs, "Enable /host_root/", true);
+cfg::bool_entry g_cfg_vfs_allow_host_root(cfg::root.vfs, "Enable /host_root/");
 
 std::string g_cfg_defaults;
 
@@ -50,7 +52,6 @@ extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
 extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
-extern void ppu_finalize();
 
 fs::file g_tty;
 
@@ -95,11 +96,17 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
 	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
 	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
-	if (fs::file f{dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write}) f.write("User"s);
+	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
+  
+#ifdef WITH_GDB_DEBUGGER
+	fxm::make<GDBDebugServer>();
+#endif
+	// Initialize patch engine
+	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -216,11 +223,15 @@ void Emulator::Load()
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
 
+		// Load patches from different locations
+		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
+		fxm::check_unlocked<patch_engine>()->append(m_cache_path + "/patch.yml");
+
 		// Mount all devices
 		const std::string emu_dir_ = g_cfg_vfs_emulator_dir;
 		const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-		const std::string bdvd_dir = g_cfg_vfs_dev_bdvd;
 		const std::string home_dir = g_cfg_vfs_app_home;
+		std::string bdvd_dir = g_cfg_vfs_dev_bdvd;
 
 		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir));
@@ -230,25 +241,18 @@ void Emulator::Load()
 		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
 
 		// Mount /dev_bdvd/ if necessary
-		if (bdvd_dir.empty() && fs::is_file(elf_dir + "/../../PS3_DISC.SFB"))
+		if (bdvd_dir.empty()) 
 		{
-			const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
-
-			// Check latest two directories
-			if (dir_list.size() >= 2 && dir_list.back() == "USRDIR" && *(dir_list.end() - 2) == "PS3_GAME")
-			{
-				vfs::mount("dev_bdvd", elf_dir.substr(0, elf_dir.length() - 15));
+			size_t pos = elf_dir.rfind("PS3_GAME");
+			std::string temp = elf_dir.substr(0, pos);
+			if ((pos != std::string::npos) && fs::is_file(temp + "/PS3_DISC.SFB")) {
+				bdvd_dir = temp;
 			}
-			else
-			{
-				vfs::mount("dev_bdvd", elf_dir + "/../../");
-			}
-
-			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
 		}
-		else if (bdvd_dir.size())
+		if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 		{
 			vfs::mount("dev_bdvd", fmt::replace_all(bdvd_dir, "$(EmulatorDir)", emu_dir));
+			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
 		}
 
 		// Mount /host_root/ if necessary
@@ -357,8 +361,14 @@ void Emulator::Load()
 			return;
 		}
 
-		debug::autopause::reload();
-		if (g_cfg_autostart) Run();
+		if (g_cfg_autostart && IsReady())
+		{
+			Run();
+		}
+		else if (IsPaused())
+		{
+			m_status = Ready;
+		}
 	}
 	catch (const std::exception& e)
 	{
@@ -407,7 +417,7 @@ bool Emulator::Pause()
 	// Try to pause
 	if (!m_status.compare_and_swap_test(Running, Paused))
 	{
-		return false;
+		return m_status.compare_and_swap_test(Ready, Paused);
 	}
 
 	rpcs3::on_pause()();
@@ -488,6 +498,12 @@ void Emulator::Stop()
 
 	rpcs3::on_stop()();
 
+#ifdef WITH_GDB_DEBUGGER
+	//fxm for some reason doesn't call on_stop
+	fxm::get<GDBDebugServer>()->on_stop();
+	fxm::remove<GDBDebugServer>();
+#endif
+
 	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
 
 	auto on_select = [&](u32, cpu_thread& cpu)
@@ -525,7 +541,6 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
-	ppu_finalize();
 
 	if (g_cfg_autoexit)
 	{
@@ -558,7 +573,9 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 				if (ppu.m_name == "_cellsurMixerMain" || ppu.m_name == "_sys_MixerChStripMain")
 				{
 					if (std::memcmp(ppu.last_function, "sys_mutex_lock", 15) == 0 ||
-						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0)
+						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0 ||
+						std::memcmp(ppu.last_function, "_sys_mutex_lock", 16) == 0 ||
+						std::memcmp(ppu.last_function, "_sys_lwmutex_lock", 18) == 0)
 					{
 						level = logs::level::trace;
 					}

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "TRP.h"
+#include "Crypto/sha1.h"
 
 TRPLoader::TRPLoader(const fs::file& f)
 	: trp_f(f)
@@ -56,6 +57,31 @@ bool TRPLoader::LoadHeader(bool show)
 	if (show)
 	{
 		LOG_NOTICE(LOADER, "TRP version: 0x%x", m_header.trp_version);
+	}
+
+	if (m_header.trp_version >= 2)
+	{
+		unsigned char hash[20];
+		std::vector<unsigned char> file_contents(m_header.trp_file_size);
+
+		trp_f.seek(0);
+		if (!trp_f.read(file_contents))
+		{
+			LOG_NOTICE(LOADER, "Failed verifying checksum");
+		}
+		else
+		{
+			memset(&(reinterpret_cast<TRPHeader*>(file_contents.data()))->sha1, 0, 20);
+			sha1(reinterpret_cast<const unsigned char*>(file_contents.data()), m_header.trp_file_size, hash);
+
+			if (memcmp(hash, m_header.sha1, 20) != 0)
+			{
+				LOG_ERROR(LOADER, "Invalid checksum of TROPHY.TRP file");
+				return false;
+			}
+		}
+
+		trp_f.seek(sizeof(m_header));
 	}
 
 	m_entries.clear();

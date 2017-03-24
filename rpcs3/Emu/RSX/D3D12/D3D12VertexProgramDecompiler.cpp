@@ -31,6 +31,8 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	int4 userClipEnabled[2];" << std::endl;
+	OS << "	float4 userClipFactor[2];" << std::endl;
 	OS << "	float fog_param0;" << std::endl;
 	OS << "	float fog_param1;" << std::endl;
 	OS << "	int isAlphaTested;" << std::endl;
@@ -93,7 +95,7 @@ void D3D12VertexProgramDecompiler::insertOutputs(std::stringstream & OS, const s
 	OS << "	float4 dst_reg2 : COLOR1;" << std::endl;
 	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
 	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
-	OS << "	float dst_reg5 : FOG;" << std::endl;
+	OS << "	float4 dst_reg5 : FOG;" << std::endl;
 	OS << "	float4 dst_reg6 : TEXCOORD9;" << std::endl;
 	OS << "	float4 dst_reg7 : TEXCOORD0;" << std::endl;
 	OS << "	float4 dst_reg8 : TEXCOORD1;" << std::endl;
@@ -104,34 +106,26 @@ void D3D12VertexProgramDecompiler::insertOutputs(std::stringstream & OS, const s
 	OS << "	float4 dst_reg13 : TEXCOORD6;" << std::endl;
 	OS << "	float4 dst_reg14 : TEXCOORD7;" << std::endl;
 	OS << "	float4 dst_reg15 : TEXCOORD8;" << std::endl;
+	OS << "	float4 dst_userClip0 : SV_ClipDistance0;" << std::endl;
+	OS << "	float4 dst_userClip1 : SV_ClipDistance1;" << std::endl;
 	OS << "};" << std::endl;
 }
 
-struct reg_info
-{
-	std::string name;
-	bool need_declare;
-	std::string src_reg;
-	std::string src_reg_mask;
-	bool need_cast;
-};
-
-static const reg_info reg_table[] =
+static const vertex_reg_info reg_table[] =
 {
 	{ "gl_Position", false, "dst_reg0", "", false },
 	{ "diff_color", true, "dst_reg1", "", false },
 	{ "spec_color", true, "dst_reg2", "", false },
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
-	{ "fogc", true, "dst_reg5", ".x", true },
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
-	// TODO: Handle user clip distance properly
-/*	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },*/
+	{ "fogc", true, "dst_reg5", ".xxxx", true },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClipFactor[0].x", false, "userClipEnabled[0].x > 0", "0.5", "Out.dst_userClip0.x" },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".z * userClipFactor[0].y", false, "userClipEnabled[0].y > 0", "0.5", "Out.dst_userClip0.y" },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".w * userClipFactor[0].z", false, "userClipEnabled[0].z > 0", "0.5", "Out.dst_userClip0.z" },
+	//{ "gl_PointSize", false, "dst_reg6", ".x", false },
+	{ "gl_ClipDistance[0]", false, "dst_reg6", ".y * userClipFactor[0].w", false, "userClipEnabled[0].w > 0", "0.5", "Out.dst_userClip0.w" },
+	{ "gl_ClipDistance[0]", false, "dst_reg6", ".z * userClipFactor[1].x", false, "userClipEnabled[1].x > 0", "0.5", "Out.dst_userClip1.x" },
+	{ "gl_ClipDistance[0]", false, "dst_reg6", ".w * userClipFactor[1].y", false, "userClipEnabled[1].y > 0", "0.5", "Out.dst_userClip1.y" },
 	{ "tc9", false, "dst_reg6", "", false },
 	{ "tc0", true, "dst_reg7", "", false },
 	{ "tc1", true, "dst_reg8", "", false },
@@ -226,7 +220,19 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 			if (i.name == "front_spec_color")
 				insert_front_specular = false;
 
-			OS << "	Out." << i.src_reg << " = " << i.src_reg << ";" << std::endl;
+			std::string condition = (!i.cond.empty()) ? "(" + i.cond + ") " : "";
+			std::string output_name = i.dst_alias.empty() ? "Out." + i.src_reg : i.dst_alias;
+
+			if (condition.empty() || i.default_val.empty())
+			{
+				if (!condition.empty()) condition = "if " + condition;
+				OS << "	" << condition << output_name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+			}
+			else
+			{
+				//Condition and fallback values provided
+				OS << "	" << output_name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";" << std::endl;
+			}
 		}
 	}
 

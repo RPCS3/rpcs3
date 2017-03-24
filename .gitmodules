@@ -41,3 +41,7 @@
 [submodule "rsx-debugger"]
 	path = rsx-debugger
 	url = https://github.com/RPCS3/rsx-debugger.git
+[submodule "3rdparty/hidapi"]
+	path = 3rdparty/hidapi
+	url = https://github.com/RPCS3/hidapi
+	branch = master

@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <utility>
 #include <chrono>
+#include <array>
 
 // Assume little-endian
 #define IS_LE_MACHINE 1
@@ -44,9 +45,6 @@
 
 // Return 32 bit alignof() to avoid widening/narrowing conversions with size_t
 #define ALIGN_32(...) static_cast<u32>(alignof(__VA_ARGS__))
-
-// Return 32 bit offsetof()
-#define OFFSET_32(type, x) static_cast<u32>(reinterpret_cast<std::uintptr_t>(&reinterpret_cast<const volatile char&>(reinterpret_cast<type*>(0ull)->x)))
 
 #define CONCATENATE_DETAIL(x, y) x ## y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
@@ -449,6 +447,71 @@ constexpr T align(const T& value, ullong align)
 {
 	return static_cast<T>((value + (align - 1)) & ~(align - 1));
 }
+
+template <typename T, typename T2>
+inline u32 offset32(T T2::*const mptr)
+{
+#ifdef _MSC_VER
+	static_assert(sizeof(mptr) == sizeof(u32), "Invalid pointer-to-member size");
+	return reinterpret_cast<const u32&>(mptr);
+#elif __GNUG__
+	static_assert(sizeof(mptr) == sizeof(std::size_t), "Invalid pointer-to-member size");
+	return static_cast<u32>(reinterpret_cast<const std::size_t&>(mptr));
+#else
+	static_assert(sizeof(mptr) == 0, "Invalid pointer-to-member size");
+#endif
+}
+
+template <typename T>
+struct offset32_array
+{
+	static_assert(std::is_array<T>::value, "Invalid pointer-to-member type (array expected)");
+
+	template <typename Arg>
+	static inline u32 index32(const Arg& arg)
+	{
+		return SIZE_32(std::remove_extent_t<T>) * static_cast<u32>(arg);
+	}
+};
+
+template <typename T, std::size_t N>
+struct offset32_array<std::array<T, N>>
+{
+	template <typename Arg>
+	static inline u32 index32(const Arg& arg)
+	{
+		return SIZE_32(T) * static_cast<u32>(arg);
+	}
+};
+
+template <typename Arg>
+struct offset32_detail;
+
+template <typename T, typename T2, typename Arg, typename... Args>
+inline u32 offset32(T T2::*const mptr, const Arg& arg, const Args&... args)
+{
+	return offset32_detail<Arg>::offset32(mptr, arg, args...);
+}
+
+template <typename Arg>
+struct offset32_detail
+{
+	template <typename T, typename T2, typename... Args>
+	static inline u32 offset32(T T2::*const mptr, const Arg& arg, const Args&... args)
+	{
+		return ::offset32(mptr, args...) + offset32_array<T>::index32(arg);
+	}
+};
+
+template <typename T3, typename T4>
+struct offset32_detail<T3 T4::*>
+{
+	template <typename T, typename T2, typename... Args>
+	static inline u32 offset32(T T2::*const mptr, T3 T4::*const mptr2, const Args&... args)
+	{
+		return ::offset32(mptr) + ::offset32(mptr2, args...);
+	}
+};
 
 inline u32 cntlz32(u32 arg, bool nonzero = false)
 {

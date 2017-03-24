@@ -97,15 +97,18 @@ namespace rsx
 
 	u16 fragment_texture::get_exact_mipmap_count() const
 	{
+		u16 max_mipmap_count = 1;
 		if (is_compressed_format())
 		{
 			// OpenGL considers that highest mipmap level for DXTC format is when either width or height is 1
 			// not both. Assume it's the same for others backend.
-			u16 max_mipmap_count = static_cast<u16>(floor(log2(std::min(width() / 4, height() / 4))) + 1);
-			return std::min(mipmap(), max_mipmap_count);
+			max_mipmap_count = static_cast<u16>(floor(log2(std::min(width() / 4, height() / 4))) + 1);
 		}
-		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
-		return std::min(mipmap(), max_mipmap_count);
+		else
+			max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
+		
+		max_mipmap_count = std::min(mipmap(), max_mipmap_count);
+		return (max_mipmap_count > 0) ? max_mipmap_count : 1;
 	}
 
 	rsx::texture_wrap_mode fragment_texture::wrap_s() const
@@ -351,7 +354,9 @@ namespace rsx
 	u16 vertex_texture::get_exact_mipmap_count() const
 	{
 		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
-		return std::min(mipmap(), max_mipmap_count);
+		max_mipmap_count = std::min(mipmap(), max_mipmap_count);
+
+		return (max_mipmap_count > 0) ? max_mipmap_count : 1;
 	}
 
 	u8 vertex_texture::unsigned_remap() const

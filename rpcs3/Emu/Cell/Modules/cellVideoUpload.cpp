@@ -1,11 +1,15 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellVideoUpload("cellVideoUpload", logs::level::notice);
+#include "cellVideoUpload.h"
 
-s32 cellVideoUploadInitialize()
+logs::channel cellVideoUpload("cellVideoUpload");
+
+s32 cellVideoUploadInitialize(vm::cptr<CellVideoUploadParam> pParam, vm::ptr<CellVideoUploadCallback> cb, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellVideoUpload.todo("cellVideoUploadInitialize(pParam=*0x%x, cb=*0x%x, userdata=*0x%x)", pParam, cb, userdata);
+
+	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellVideoUpload)("cellVideoUpload", []()

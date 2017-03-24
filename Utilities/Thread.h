@@ -258,6 +258,9 @@ protected:
 	// Thread finalization (called after on_task)
 	virtual void on_exit() {}
 
+	// Called once upon thread spawn within the thread's own context
+	virtual void on_spawn() {}
+
 public:
 	// ID initialization
 	virtual void on_init(const std::shared_ptr<void>& _this)

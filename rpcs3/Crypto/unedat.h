@@ -44,7 +44,7 @@ struct EDAT_HEADER
 // Decrypts full file, or null/empty file
 extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose);
 
-extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const std::array<u8,0x10>& custom_klic);
+extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const std::array<u8,0x10>& custom_klic, std::string* contentID);
 
 extern std::array<u8, 0x10> GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 
@@ -109,11 +109,20 @@ public:
 
 	u64 seek(s64 offset, fs::seek_mode whence) override
 	{
-		return
-			whence == fs::seek_set ? pos = offset :
-			whence == fs::seek_cur ? pos = offset + pos :
-			whence == fs::seek_end ? pos = offset + size() :
+		const s64 new_pos =
+			whence == fs::seek_set ? offset :
+			whence == fs::seek_cur ? offset + pos :
+			whence == fs::seek_end ? offset + size() :
 			(fmt::raw_error("EDATADecrypter::seek(): invalid whence"), 0);
+
+		if (new_pos < 0)
+		{
+			fs::g_tls_error = fs::error::inval;
+			return -1;
+		}
+
+		pos = new_pos;
+		return pos;
 	}
 	u64 size() override { return file_size; }
 };

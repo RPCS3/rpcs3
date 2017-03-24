@@ -6,9 +6,12 @@
 #include "Emu/IdManager.h"
 #include "Crypto/unedat.h"
 #include "Crypto/unself.h"
+#include "cellRtc.h"
 #include "sceNp.h"
 
-logs::channel sceNp("sceNp", logs::level::notice);
+logs::channel sceNp("sceNp");
+
+s32 g_psn_connection_status = SCE_NP_MANAGER_STATUS_OFFLINE;
 
 s32 sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
@@ -62,35 +65,13 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 		sceNp.notice("npDrmIsAvailable(): KLicense key %s", k_licensee_str);
 	}
 
-	sceNp.warning("npDrmIsAvailable(): Found DRM license file at %s", enc_drm_path);
-
-	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
-	const std::string& drm_file_dir = enc_drm_path.substr(15);
-	const std::string& title_id = drm_file_dir.substr(0, drm_file_dir.find_first_of('/'));
-
-	std::string rap_lpath = vfs::get("/dev_hdd0/home/00000001/exdata/"); // TODO: Allow multiple profiles. Use default for now.
-
-	// Search for a compatible RAP file. 
-	for (const auto& entry : fs::dir(rap_lpath))
-	{
-		if (entry.name.find(title_id) != -1)
-		{
-			rap_lpath += entry.name;
-			break;
-		}
-	}
-
 	auto npdrmkeys = fxm::get_always<LoadedNpdrmKeys_t>();
 
 	npdrmkeys->devKlic.fill(0);
 	npdrmkeys->rifKey.fill(0);
 
-	if (rap_lpath.back() == '/')
-	{
-		sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
-	}
-	else
-		npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
+	// todo: profile for rap_dir_path
+	std::string rap_dir_path = "/dev_hdd0/home/00000001/exdata/";
 
 	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
 	const fs::file enc_file(enc_drm_path_local);
@@ -117,9 +98,17 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	{
 		// edata / sdata files
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee))
+		std::string contentID;
+
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee, &contentID))
 		{
+			const std::string rap_file = rap_dir_path + contentID + ".rap";
 			npdrmkeys->devKlic = std::move(k_licensee);
+
+			if (fs::is_file(vfs::get(rap_file)))
+				npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ vfs::get(rap_file) });
+			else
+				sceNp.warning("npDrmIsAvailable(): Rap file not found: %s", rap_file.c_str());
 		}
 		else
 		{
@@ -362,37 +351,64 @@ s32 sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count=*0x%x)", options, count);
 
-	return CELL_OK;
-}
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
 
-s32 sceNpBasicGetPlayersHistoryEntry()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
-}
-
-s32 sceNpBasicAddBlockListEntry()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
-}
-
-s32 sceNpBasicGetBlockListEntryCount(u32 count)
-{
-	sceNp.todo("sceNpBasicGetBlockListEntryCount(count=%d)", count);
+	// TODO: Check if there are players histories
+	*count = 0;
 
 	return CELL_OK;
 }
 
-s32 sceNpBasicGetBlockListEntry()
+s32 sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceNpId> npid)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
+
+	return CELL_OK;
+}
+
+s32 sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
+{
+	sceNp.todo("sceNpBasicAddBlockListEntry(npid=*0x%x)", npid);
+
+	return CELL_OK;
+}
+
+s32 sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
+{
+	sceNp.todo("sceNpBasicGetBlockListEntryCount(count=*0x%x)", count);
+
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Check if there are block lists
+	*count = 0;
+
+	return CELL_OK;
+}
+
+s32 sceNpBasicGetBlockListEntry(u32 index, vm::ptr<SceNpId> npid)
+{
+	sceNp.todo("sceNpBasicGetBlockListEntry(index=%d, npid=*0x%x)", index, npid);
+
 	return CELL_OK;
 }
 
 s32 sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMessageAttachmentEntryCount(count=*0x%x)", count);
+
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Check if there are message attachments
+	*count = 0;
 
 	return CELL_OK;
 }
@@ -404,21 +420,39 @@ s32 sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 	return CELL_OK;
 }
 
-s32 sceNpBasicGetCustomInvitationEntryCount()
+s32 sceNpBasicGetCustomInvitationEntryCount(vm::ptr<u32> count)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpBasicGetCustomInvitationEntryCount(count=*0x%x)", count);
+
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Check if there are custom invitations
+	*count = 0;
+
 	return CELL_OK;
 }
 
-s32 sceNpBasicGetCustomInvitationEntry()
+s32 sceNpBasicGetCustomInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpBasicGetCustomInvitationEntry(index=%d, from=*0x%x)", index, from);
+
 	return CELL_OK;
 }
 
 s32 sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMatchingInvitationEntryCount(count=*0x%x)", count);
+
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Check if there are matching invitations
+	*count = 0;
 
 	return CELL_OK;
 }
@@ -433,6 +467,14 @@ s32 sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 s32 sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetClanMessageEntryCount(count=*0x%x)", count);
+
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Check if there are clan messages
+	*count = 0;
 
 	return CELL_OK;
 }
@@ -858,79 +900,233 @@ s32 sceNpLookupTitleSmallStorageAsync()
 	return CELL_OK;
 }
 
-s32 sceNpManagerRegisterCallback()
+s32 sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, vm::ptr<void> arg)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
+
+	if (!callback)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
 	return CELL_OK;
 }
 
 s32 sceNpManagerUnregisterCallback()
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerUnregisterCallback()");
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetStatus(vm::ptr<u32> status)
+s32 sceNpManagerGetStatus(vm::ptr<s32> status)
 {
 	sceNp.warning("sceNpManagerGetStatus(status=*0x%x)", status);
 
-	// TODO: Support different statuses
-	*status = SCE_NP_MANAGER_STATUS_OFFLINE;
+	if (!status)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	*status = g_psn_connection_status;
 
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetNetworkTime()
+s32 sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetNetworkTime(pTick=*0x%x)", pTick);
+
+	if (!pTick)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetOnlineId()
+s32 sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetOnlineId(onlineId=*0x%x)", onlineId);
+
+	if (!onlineId)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetNpId()
+s32 sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetNpId(npId=*0x%x)", npId);
+
+	if (!npId)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetOnlineName()
+s32 sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
+
+	if (!onlineName)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetAvatarUrl()
+s32 sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
+
+	if (!avatarUrl)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetMyLanguages()
+s32 sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
+
+	if (!myLanguages)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetAccountRegion()
+s32 sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, vm::ptr<s32> language)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetAccountRegion(countryCode=*0x%x, language=*0x%x)", countryCode, language);
+
+	if (!countryCode || !language)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetAccountAge()
+s32 sceNpManagerGetAccountAge(vm::ptr<s32> age)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetAccountAge(age=*0x%x)", age);
+
+	if (!age)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
+s32 sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age)
 {
 	sceNp.warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
+
+	if (!isRestricted || !age)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
 
 	// TODO: read user's parental control information
 	*isRestricted = 0;
@@ -939,9 +1135,28 @@ s32 sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age
 	return CELL_OK;
 }
 
-s32 sceNpManagerGetChatRestrictionFlag()
+s32 sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetChatRestrictionFlag(isRestricted=*0x%x)", isRestricted);
+
+	if (!isRestricted)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
+	// TODO: read user's parental control information
+	*isRestricted = 0;
+
 	return CELL_OK;
 }
 

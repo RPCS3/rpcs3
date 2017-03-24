@@ -4,29 +4,31 @@
 
 #include "cellScreenshot.h"
 
-logs::channel cellScreenshot("cellScreenshot", logs::level::notice);
+namespace vm { using namespace ps3; }
 
-s32 cellScreenShotSetParameter() //const CellScreenShotSetParam *param
+logs::channel cellScreenshot("cellScreenshot");
+
+s32 cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
+	cellScreenshot.todo("cellScreenShotSetParameter(param=*0x%x)", param);
 	return CELL_OK;
 }
 
-s32 cellScreenShotSetOverlayImage() //const char *srcDir, const char *srcFile, s32 offset_x, s32 offset_y
+s32 cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> srcFile, s32 offset_x, s32 offset_y)
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
+	cellScreenshot.todo("cellScreenShotSetOverlayImage(srcDir=%s, srcFile=%s, offset_x=%d, offset_y=%d)", srcDir, srcFile, offset_x, offset_y);
 	return CELL_OK;
 }
 
 s32 cellScreenShotEnable()
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
+	cellScreenshot.todo("cellScreenShotEnable()");
 	return CELL_OK;
 }
 
 s32 cellScreenShotDisable()
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
+	cellScreenshot.todo("cellScreenShotDisable()");
 	return CELL_OK;
 }
 

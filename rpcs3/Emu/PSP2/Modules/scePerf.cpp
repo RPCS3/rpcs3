@@ -4,7 +4,7 @@
 
 #include "scePerf.h"
 
-logs::channel scePerf("scePerf", logs::level::notice);
+logs::channel scePerf("scePerf");
 
 extern u64 get_system_time();
 
