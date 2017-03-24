@@ -274,7 +274,6 @@ struct ppu_itype
 		ADDI,
 		ADDIS,
 		BC,
-		HACK,
 		SC,
 		B,
 		MCRF,
@@ -691,7 +690,6 @@ struct ppu_iflag
 		ADDI       = read_ra,
 		ADDIS      = read_ra,
 		BC         = 0,
-		HACK       = 0,
 		SC         = 0,
 		B          = 0,
 		MCRF       = 0,
@@ -1093,7 +1091,6 @@ struct ppu_iname
 	NAME(ADDI)
 	NAME(ADDIS)
 	NAME(BC)
-	NAME(HACK)
 	NAME(SC)
 	NAME(B)
 	NAME(MCRF)

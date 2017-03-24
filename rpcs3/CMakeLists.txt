@@ -88,7 +88,7 @@ if(NOT MSVC)
 endif()
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
-find_package(LLVM 3.8 CONFIG)
+find_package(LLVM 4.0 CONFIG)
 
 include("${wxWidgets_USE_FILE}")
 
@@ -151,7 +151,7 @@ if(WIN32)
 endif()
 
 if(NOT LLVM_FOUND)
-	Message("LLVM not found! LLVM 3.8 is required. RPCS3 will be compiled without LLVM support.")
+	Message("LLVM not found! LLVM 4.0 is required. RPCS3 will be compiled without LLVM support.")
 else()
 	add_definitions(${LLVM_DEFINITIONS})
 	add_definitions(-DLLVM_AVAILABLE)

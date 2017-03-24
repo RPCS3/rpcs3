@@ -689,7 +689,6 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			}
 
 			if (ptr + 8 <= fend &&
-				(ptr[0] == STD(r2, r1, 0x28) && (ptr[1] & 0xfc000000) == HACK(0) && ptr[2] == BLR() ||
 				(ptr[0] & 0xffff0000) == LI(r12, 0) &&
 				(ptr[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
 				(ptr[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
@@ -697,7 +696,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				ptr[4] == LWZ(r0, r12, 0) &&
 				ptr[5] == LWZ(r2, r12, 4) &&
 				ptr[6] == MTCTR(r0) &&
-				ptr[7] == BCTR()))
+				ptr[7] == BCTR())
 			{
 				// The most used simple import stub
 				func.size = 0x20;
@@ -709,7 +708,6 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				auto p2 = ptr + 8;
 
 				while (p2 + 8 <= fend &&
-					(p2[0] == STD(r2, r1, 0x28) && (p2[1] & 0xfc000000) == HACK(0) && p2[2] == BLR() ||
 					(p2[0] & 0xffff0000) == LI(r12, 0) &&
 					(p2[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
 					(p2[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
@@ -717,7 +715,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					p2[4] == LWZ(r0, r12, 0) &&
 					p2[5] == LWZ(r2, r12, 4) &&
 					p2[6] == MTCTR(r0) &&
-					p2[7] == BCTR()))
+					p2[7] == BCTR())
 				{
 					auto& next = add_func(p2.addr(), 0, func.addr);
 					next.size = 0x20;

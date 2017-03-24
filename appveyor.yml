@@ -17,14 +17,14 @@ before_build:
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - 7z x vulkan.7z -aos -oC:\rpcs3\Vulkan > null
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
-   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
+   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/lib/cmake/llvm -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
 
 build_script:
  - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 install:
  - appveyor DownloadFile "https://dl.dropboxusercontent.com/s/c1by0uulee6g8th/wxWidgets.7z?dl=0" -FileName wxWidgets.7z
- - appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B-98fOyaZKJ5YWVnb29JZXFQWkU" -FileName llvmlibs.7z
+ - appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
  - appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRa21fbDQteTN1dGs" -FileName vulkan.7z
  - appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B6v_qtb9hkicQ2hHa2dRbF83cE0" -FileName zlib.7z
  - set WXWIN=C:\rpcs3\wxWidgets

@@ -203,6 +203,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 310: return "sys_vm_sync";
 	case 311: return "sys_vm_test";
 	case 312: return "sys_vm_get_statistics";
+	case 313: return "sys_vm_memory_map_different";
 	case 324: return "sys_memory_container_create";
 	case 325: return "sys_memory_container_destroy";
 	case 326: return "sys_mmapper_allocate_fixed_address";
@@ -2380,8 +2381,17 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 {
 	static std::vector<ppu_function_t> list
 	{
-		nullptr,
-		[](ppu_thread& ppu) { ppu.state += cpu_flag::ret; },
+		[](ppu_thread& ppu) -> bool
+		{
+			LOG_ERROR(PPU, "Unregistered function called (LR=0x%x)", ppu.lr);
+			ppu.gpr[3] = 0;
+			return true;
+		},
+		[](ppu_thread& ppu) -> bool
+		{
+			ppu.state += cpu_flag::ret;
+			return true;
+		},
 	};
 
 	return list;
@@ -2395,3 +2405,5 @@ u32 ppu_function_manager::add_function(ppu_function_t function)
 
 	return ::size32(list) - 1;
 }
+
+DECLARE(ppu_function_manager::addr);

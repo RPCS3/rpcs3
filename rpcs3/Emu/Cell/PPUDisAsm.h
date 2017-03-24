@@ -397,7 +397,6 @@ public:
 	void ADDI(ppu_opcode_t op);
 	void ADDIS(ppu_opcode_t op);
 	void BC(ppu_opcode_t op);
-	void HACK(ppu_opcode_t op);
 	void SC(ppu_opcode_t op);
 	void B(ppu_opcode_t op);
 	void MCRF(ppu_opcode_t op);

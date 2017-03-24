@@ -54,3 +54,5 @@ u32 arm_function_manager::add_function(arm_function_t function)
 
 	return ::size32(list) - 1;
 }
+
+DECLARE(arm_function_manager::addr);

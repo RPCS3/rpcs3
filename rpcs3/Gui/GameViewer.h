@@ -87,6 +87,7 @@ public:
 	void BootGame(wxCommandEvent& event);
 	void ConfigureGame(wxCommandEvent& event);
 	void RemoveGame(wxCommandEvent& event);
+	void RemoveGameConfig(wxCommandEvent& event);
 
 private:
 	virtual void DClick(wxListEvent& event);
