@@ -6,6 +6,7 @@
 #include "ARMv7Thread.h"
 #include "ARMv7Opcodes.h"
 #include "ARMv7Interpreter.h"
+#include "ARMv7Function.h"
 
 #include "Utilities/GSL.h"
 
@@ -122,7 +123,7 @@ void ARMv7Thread::fast_call(u32 addr)
 	const auto old_func = last_function;
 
 	PC = addr;
-	LR = Emu.GetCPUThreadStop();
+	LR = arm_function_manager::addr; // TODO
 	last_function = nullptr;
 
 	auto at_ret = gsl::finally([&]()

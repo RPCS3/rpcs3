@@ -13,21 +13,49 @@
 
 namespace utils
 {
-	void* memory_reserve(std::size_t size)
+	// Convert memory protection (internal)
+	static auto operator +(protection prot)
 	{
 #ifdef _WIN32
-		return verify("reserve_memory" HERE, ::VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS));
+		DWORD _prot = PAGE_NOACCESS;
+		switch (prot)
+		{
+		case protection::rw: _prot = PAGE_READWRITE; break;
+		case protection::ro: _prot = PAGE_READONLY; break;
+		case protection::no: break;
+		case protection::wx: _prot = PAGE_EXECUTE_READWRITE; break;
+		case protection::rx: _prot = PAGE_EXECUTE_READ; break;
+		}
 #else
-		return verify("reserve_memory" HERE, ::mmap(nullptr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0));
+		int _prot = PROT_NONE;
+		switch (prot)
+		{
+		case protection::rw: _prot = PROT_READ | PROT_WRITE; break;
+		case protection::ro: _prot = PROT_READ; break;
+		case protection::no: break;
+		case protection::wx: _prot = PROT_READ | PROT_WRITE | PROT_EXEC; break;
+		case protection::rx: _prot = PROT_READ | PROT_EXEC; break;
+		}
+#endif
+
+		return _prot;
+	}
+
+	void* memory_reserve(std::size_t size, void* use_addr)
+	{
+#ifdef _WIN32
+		return verify("reserve_memory" HERE, ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS));
+#else
+		return verify("reserve_memory" HERE, ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | (use_addr ? MAP_FIXED : 0), -1, 0));
 #endif
 	}
 
-	void memory_commit(void* pointer, std::size_t size)
+	void memory_commit(void* pointer, std::size_t size, protection prot)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualAlloc(pointer, size, MEM_COMMIT, PAGE_READWRITE);
+		verify(HERE), ::VirtualAlloc(pointer, size, MEM_COMMIT, +prot);
 #else
-		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), PROT_READ | PROT_WRITE) != -1;
+		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), +prot) != -1;
 #endif
 	}
 
@@ -43,30 +71,10 @@ namespace utils
 	void memory_protect(void* pointer, std::size_t size, protection prot)
 	{
 #ifdef _WIN32
-		DWORD _prot = PAGE_NOACCESS;
-		switch (prot)
-		{
-		case protection::rw: _prot = PAGE_READWRITE; break;
-		case protection::ro: _prot = PAGE_READONLY; break;
-		case protection::no: break;
-		case protection::wx: _prot = PAGE_EXECUTE_READWRITE; break;
-		case protection::rx: _prot = PAGE_EXECUTE_READ; break;
-		}
-
 		DWORD old;
-		verify(HERE), ::VirtualProtect(pointer, size, _prot, &old);
+		verify(HERE), ::VirtualProtect(pointer, size, +prot, &old);
 #else
-		int _prot = PROT_NONE;
-		switch (prot)
-		{
-		case protection::rw: _prot = PROT_READ | PROT_WRITE; break;
-		case protection::ro: _prot = PROT_READ; break;
-		case protection::no: break;
-		case protection::wx: _prot = PROT_READ | PROT_WRITE | PROT_EXEC; break;
-		case protection::rx: _prot = PROT_READ | PROT_EXEC; break;
-		}
-
-		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), _prot) != -1;
+		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), +prot) != -1;
 #endif
 	}
 }

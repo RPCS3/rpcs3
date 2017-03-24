@@ -29,9 +29,12 @@ namespace rsx
 	
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
-	[[noreturn]] void invalid_method(thread*, u32 _reg, u32 arg)
+	void invalid_method(thread* rsx, u32 _reg, u32 arg)
 	{
-		fmt::throw_exception("Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		//Don't throw, gather information and ignore broken/garbage commands
+		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		rsx->invalid_command_interrupt_raised = true;
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -1244,6 +1247,10 @@ namespace rsx
 		methods[NV3089_IMAGE_IN_OFFSET]                   = nullptr;
 		methods[NV3089_IMAGE_IN]                          = nullptr;
 
+		//Some custom GCM methods
+		methods[GCM_PREPARE_DISPLAY_BUFFER_HEAD0]         = nullptr;
+		methods[GCM_PREPARE_DISPLAY_BUFFER_HEAD1]         = nullptr;
+
 		bind_array<NV4097_SET_ANISO_SPREAD, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nullptr>();
@@ -1333,7 +1340,10 @@ namespace rsx
 
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
+		bind<GCM_FLIP_HEAD0, flip_command>();
+		bind<GCM_FLIP_HEAD1, flip_command>();
 		bind<GCM_SET_USER_COMMAND, user_command>();
+		bind<GCM_SET_USER_COMMAND2, user_command>();
 
 		return true;	
 	}();

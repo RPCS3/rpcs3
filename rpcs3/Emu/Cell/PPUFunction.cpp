@@ -2381,8 +2381,17 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 {
 	static std::vector<ppu_function_t> list
 	{
-		nullptr,
-		[](ppu_thread& ppu) { ppu.state += cpu_flag::ret; },
+		[](ppu_thread& ppu) -> bool
+		{
+			LOG_ERROR(PPU, "Unregistered function called (LR=0x%x)", ppu.lr);
+			ppu.gpr[3] = 0;
+			return true;
+		},
+		[](ppu_thread& ppu) -> bool
+		{
+			ppu.state += cpu_flag::ret;
+			return true;
+		},
 	};
 
 	return list;
@@ -2396,3 +2405,5 @@ u32 ppu_function_manager::add_function(ppu_function_t function)
 
 	return ::size32(list) - 1;
 }
+
+DECLARE(ppu_function_manager::addr);
