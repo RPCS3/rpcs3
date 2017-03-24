@@ -14,7 +14,6 @@ namespace vk
 
 		program::~program()
 		{
-			LOG_ERROR(RSX, "Program destructor invoked!");
 			vkDestroyPipeline(m_device, pipeline, nullptr);
 		}
 
