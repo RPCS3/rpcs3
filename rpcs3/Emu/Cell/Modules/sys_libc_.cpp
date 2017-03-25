@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Utilities/cfmt.h"
 
 namespace vm { using namespace ps3; }
 
@@ -7,146 +8,54 @@ extern logs::channel sysPrxForUser;
 
 extern fs::file g_tty;
 
-// TODO
+// cfmt implementation (TODO)
+struct ps3_fmt_src
+{
+	ppu_thread* ctx;
+	u32 g_count;
+
+	bool test(std::size_t index) const
+	{
+		return true;
+	}
+
+	template <typename T>
+	T get(std::size_t index) const
+	{
+		const u32 i = (u32)index + g_count;
+		return ppu_gpr_cast<T>(i < 8 ? ctx->gpr[3 + i] : +*ctx->get_stack_arg(i));
+	}
+
+	void skip(std::size_t extra)
+	{
+		++g_count += (u32)extra;
+	}
+
+	std::size_t fmt_string(std::string& out, std::size_t extra) const
+	{
+		const std::size_t start = out.size();
+		out += vm::ps3::_ptr<const char>(get<u32>(extra));
+		return out.size() - start;
+	}
+
+	std::size_t type(std::size_t extra) const
+	{
+		return 0;
+	}
+};
+
+template <>
+f64 ps3_fmt_src::get<f64>(std::size_t index) const
+{
+	const u64 value = get<u64>(index);
+	return *reinterpret_cast<const f64*>(reinterpret_cast<const u8*>(&value));
+}
+
 static std::string ps3_fmt(ppu_thread& context, vm::cptr<char> fmt, u32 g_count)
 {
 	std::string result;
 
-	for (char c = *fmt++; c; c = *fmt++)
-	{
-		switch (c)
-		{
-		case '%':
-		{
-			const auto start = fmt - 1;
-
-			// read flags
-			const bool plus_sign = *fmt == '+' ? fmt++, true : false;
-			const bool minus_sign = *fmt == '-' ? fmt++, true : false;
-			const bool space_sign = *fmt == ' ' ? fmt++, true : false;
-			const bool number_sign = *fmt == '#' ? fmt++, true : false;
-			const bool zero_padding = *fmt == '0' ? fmt++, true : false;
-
-			// read width
-			const u32 width = [&]() -> u32
-			{
-				u32 width = 0;
-
-				if (*fmt == '*')
-				{
-					fmt++;
-					return context.get_next_arg(g_count);
-				}
-
-				while (*fmt - '0' < 10)
-				{
-					width = width * 10 + (*fmt++ - '0');
-				}
-
-				return width;
-			}();
-
-			// read precision
-			const u32 prec = [&]() -> u32
-			{
-				u32 prec = 0;
-
-				if (*fmt != '.')
-				{
-					return 0;
-				}
-
-				if (*++fmt == '*')
-				{
-					fmt++;
-					return context.get_next_arg(g_count);
-				}
-
-				while (*fmt - '0' < 10)
-				{
-					prec = prec * 10 + (*fmt++ - '0');
-				}
-
-				return prec;
-			}();
-
-			switch (char cf = *fmt++)
-			{
-			case '%':
-			{
-				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
-
-				result += '%';
-				continue;
-			}
-			case 'd':
-			case 'i':
-			{
-				// signed decimal
-				const s64 value = context.get_next_arg(g_count);
-
-				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
-
-				result += fmt::format("%lld", value);
-				continue;
-			}
-			case 'x':
-			case 'X':
-			{
-				// hexadecimal
-				const u64 value = context.get_next_arg(g_count);
-
-				if (plus_sign || minus_sign || space_sign || prec) break;
-
-				if (number_sign && value)
-				{
-					result += cf == 'x' ? "0x" : "0X";
-				}
-
-				const std::string& hex = fmt::format(cf == 'x' ? "%llx" : "%llX", value);
-
-				if (hex.length() >= width)
-				{
-					result += hex;
-				}
-				else if (zero_padding)
-				{
-					result += std::string(width - hex.length(), '0') + hex;
-				}
-				else
-				{
-					result += hex + std::string(width - hex.length(), ' ');
-				}
-				continue;
-			}
-			case 's':
-			{
-				// string
-				auto string = vm::cptr<char, u64>::make(context.get_next_arg(g_count));
-
-				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
-
-				result += string.get_ptr();
-				continue;
-			}
-			case 'u':
-			{
-				// unsigned decimal
-				const u64 value = context.get_next_arg(g_count);
-
-				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
-
-				result += fmt::format("%llu", value);
-				continue;
-			}
-			}
-
-			fmt::throw_exception("Unknown formatting: '%s'" HERE, start.get_ptr());
-		}
-		}
-
-		result += c;
-	}
+	cfmt_append(result, fmt.get_ptr(), ps3_fmt_src{&context, g_count});
 
 	return result;
 }
@@ -316,7 +225,7 @@ s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> 
 	{
 		count = (u32)std::min<size_t>(count - 1, result.size());
 
-		memcpy(dst.get_ptr(), result.c_str(), count);
+		std::memcpy(dst.get_ptr(), result.c_str(), count);
 		dst[count] = 0;
 		return count;
 	}
@@ -334,9 +243,15 @@ s32 _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 	return CELL_OK;
 }
 
-s32 _sys_sprintf()
+s32 _sys_sprintf(ppu_thread& ppu, vm::ptr<char> buffer, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.warning("_sys_sprintf(buffer=*0x%x, fmt=%s, ...)", buffer, fmt);
+
+	std::string result = ps3_fmt(ppu, fmt, va_args.count);
+
+	std::memcpy(buffer.get_ptr(), result.c_str(), result.size() + 1);
+
+	return static_cast<s32>(result.size());
 }
 
 s32 _sys_vprintf()

@@ -142,18 +142,6 @@ public:
 
 	const std::string m_name; // Thread name
 
-	u64 get_next_arg(u32& g_count)
-	{
-		if (g_count < 8)
-		{
-			return gpr[g_count++ + 3];
-		}
-		else
-		{
-			return *get_stack_arg(++g_count);
-		}
-	}
-
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
 	void fast_call(u32 addr, u32 rtoc);
