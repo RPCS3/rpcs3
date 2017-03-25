@@ -8,11 +8,6 @@
 
 #include <algorithm>
 
-#ifdef _WIN32
-#include <shellapi.h>
-#pragma comment(lib, "shell32")
-#endif
-
 static const std::string m_class_name = "GameViewer";
 
 // Auxiliary classes
