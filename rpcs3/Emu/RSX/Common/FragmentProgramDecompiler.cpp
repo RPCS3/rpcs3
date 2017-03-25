@@ -159,6 +159,11 @@ std::string FragmentProgramDecompiler::AddTex()
 	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("tex") + std::to_string(dst.tex_num));
 }
 
+std::string FragmentProgramDecompiler::AddType3()
+{
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "src3", getFloatTypeName(4) + "(1., 1., 1., 1.)");
+}
+
 //Both of these were tested with a trace SoulCalibur IV title screen
 //Failure to catch causes infinite values since theres alot of rcp(0)
 std::string FragmentProgramDecompiler::NotZero(const std::string& code)
@@ -358,7 +363,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
-		LOG_ERROR(RSX, "Src type 3 used, please report this to a developer.");
+		LOG_ERROR(RSX, "Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
+				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
+
+		ret += AddType3();
 		break;
 
 	default:

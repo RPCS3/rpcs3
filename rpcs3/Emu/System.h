@@ -39,14 +39,12 @@ enum Status : u32
 
 class Emulator final
 {
-	atomic_t<u32> m_status;
+	atomic_t<u32> m_status{Stopped};
 
 	EmuCallbacks m_cb;
 
 	atomic_t<u64> m_pause_start_time; // set when paused
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
-
-	u32 m_cpu_thr_stop;
 
 	std::string m_path;
 	std::string m_elf_path;
@@ -55,7 +53,7 @@ class Emulator final
 	std::string m_title;
 
 public:
-	Emulator();
+	Emulator() = default;
 
 	void SetCallbacks(EmuCallbacks&& cb)
 	{
@@ -108,13 +106,6 @@ public:
 	{
 		return m_pause_amend_time;
 	}
-
-	void SetCPUThreadStop(u32 addr)
-	{
-		m_cpu_thr_stop = addr;
-	}
-
-	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }
 
 	bool BootGame(const std::string& path, bool direct = false);
 

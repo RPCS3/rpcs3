@@ -232,6 +232,7 @@ namespace rsx
 
 	public:
 		std::set<u32> m_used_gcm_commands;
+		bool invalid_command_interrupt_raised = false;
 
 	protected:
 		thread();
