@@ -272,24 +272,6 @@ void GameViewer::OpenGameFolder(wxCommandEvent& event)
 
 	const std::string& spath = Emu.GetGameDir() + m_game_data[i].root;
 
-	////open file for windows with ShellExecute():
-	//char cpath[1024];
-	//strcpy_s(cpath, spath.c_str());
-	//wchar_t wpath[1024];
-	//size_t outSize;
-	//mbstowcs_s(&outSize, wpath, cpath, strlen(cpath) + 1);//null needed at the end 
-	//LPWSTR path = wpath;
-	//long long result = (long long) ShellExecute(NULL, L"explore", path, NULL, NULL, SW_SHOWDEFAULT);
-	//if (result ==ERROR_FILE_NOT_FOUND || result == ERROR_PATH_NOT_FOUND)
-	//{
-	//	LOG_ERROR(LOADER, "Failed to open /dev_hdd0/game/%s", m_game_data[i].root);
-	//	if (wxMessageBox("Folder does not exist! Refresh Library?", "Confirm refresh", wxYES_NO | wxNO_DEFAULT) == wxYES)
-	//	{
-	//		Refresh();
-	//	}
-	//}
-
-	//open with system():
 #ifdef _WIN32
 	std::string command = "explorer " + spath;
 	std::string oldc("/"), newc("\\");
@@ -298,13 +280,13 @@ void GameViewer::OpenGameFolder(wxCommandEvent& event)
 		command.replace(pos, oldc.length(), newc);
 		pos += newc.length();
 	}
-	system(command.c_str());
+	wxExecute(command);
 #elif __APPLE__
 	std::string command = "open " + spath;
-	system(command.c_str());
+	wxExecute(command);
 #elif __Linux
 	std::string command = "xdg-open " + spath;
-	system(command.c_str());
+	wxExecute(command);
 #endif
 }
 
