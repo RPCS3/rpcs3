@@ -375,7 +375,7 @@ namespace
 			u32 min_index =
 				rsx::method_registers.current_draw_clause.first_count_commands.front().first;
 			u32 max_index =
-				rsx::method_registers.current_draw_clause.get_elements_count() + min_index;
+				rsx::method_registers.current_draw_clause.get_elements_count() + min_index - 1;
 
 			if (primitives_emulated) {
 				std::tie(index_count, index_info) =
