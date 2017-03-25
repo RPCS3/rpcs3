@@ -116,6 +116,9 @@ namespace rsx
 			static const size_t attribute_index = index / increment_per_array_index;
 			static const size_t vertex_subreg = index % increment_per_array_index;
 
+			if (rsx->in_begin_end)
+				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, arg);
+
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
 
 			info.type = vertex_data_type_from_element_type<type>::type;
@@ -246,30 +249,12 @@ namespace rsx
 				return;
 			}
 
-			u32 max_vertex_count = 0;
-
-			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
-			{
-				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
-
-				if (vertex_info.size > 0)
-				{
-					u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-					u32 element_count = vertex_info.size;
-
-					vertex_info.frequency = element_count;
-
-					if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
-					{
-						max_vertex_count = std::max<u32>(max_vertex_count, element_count);
-					}
-				}
-			}
-
-			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && max_vertex_count)
+			//Check if we have immediate mode vertex data in a driver-local buffer
+			const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
+			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && push_buffer_vertices_count)
 			{
 				rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, max_vertex_count));
+				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
 			}
 
 			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&

@@ -658,9 +658,6 @@ void VKGSRender::begin()
 
 	init_buffers();
 
-	if (!load_program())
-		return;
-
 	float actual_line_width = rsx::method_registers.line_width();
 
 	vkCmdSetLineWidth(m_command_buffer, actual_line_width);
@@ -681,6 +678,14 @@ void VKGSRender::end()
 		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
 		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
+
+	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
+
+	//Load program here since it is dependent on vertex state
+	load_program();
+
+	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
+	m_setup_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
 
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
