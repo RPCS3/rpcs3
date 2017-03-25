@@ -106,11 +106,10 @@ extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 
-const auto s_ppu_compiled = static_cast<u32*>(utils::memory_reserve(0x100000000));
-
-extern void ppu_finalize()
+// Get pointer to executable cache
+static u32& ppu_ref(u32 addr)
 {
-	utils::memory_decommit(s_ppu_compiled, 0x100000000);
+	return *reinterpret_cast<u32*>(vm::g_exec_addr + addr);
 }
 
 // Get interpreter cache value
@@ -132,7 +131,7 @@ static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 		fmt::throw_exception("Unregistered PPU function [0x%08x]", ppu.cia);
 	}
 
-	s_ppu_compiled[ppu.cia / 4] = ppu_cache(ppu.cia);
+	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
 	return false;
 }
 
@@ -145,13 +144,13 @@ extern void ppu_register_range(u32 addr, u32 size)
 	}
 
 	// Register executable range at
-	utils::memory_commit(s_ppu_compiled + addr / 4, size);
+	utils::memory_commit(&ppu_ref(addr), size);
 
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
 
 	while (size)
 	{
-		s_ppu_compiled[addr / 4] = fallback;
+		ppu_ref(addr) = fallback;
 		addr += 4;
 		size -= 4;
 	}
@@ -162,7 +161,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	// Initialize specific function
 	if (ptr)
 	{
-		s_ppu_compiled[addr / 4] = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
+		ppu_ref(addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
 		return;
 	}
 
@@ -182,9 +181,9 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 
 	while (size)
 	{
-		if (s_ppu_compiled[addr / 4] == fallback)
+		if (ppu_ref(addr) == fallback)
 		{
-			s_ppu_compiled[addr / 4] = ppu_cache(addr);
+			ppu_ref(addr) = ppu_cache(addr);
 		}
 
 		addr += 4;
@@ -220,15 +219,15 @@ extern void ppu_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (s_ppu_compiled[addr / 4] == _break)
+	if (ppu_ref(addr) == _break)
 	{
 		// Remove breakpoint
-		s_ppu_compiled[addr / 4] = ppu_cache(addr);
+		ppu_ref(addr) = ppu_cache(addr);
 	}
 	else
 	{
 		// Set breakpoint
-		s_ppu_compiled[addr / 4] = _break;
+		ppu_ref(addr) = _break;
 	}
 }
 
@@ -391,12 +390,12 @@ void ppu_thread::exec_task()
 {
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>(s_ppu_compiled[cia / 4]))(*this);
+		reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>(ppu_ref(cia)))(*this);
 		return;
 	}
 
 	const auto base = vm::_ptr<const u8>(0);
-	const auto cache = reinterpret_cast<const u8*>(s_ppu_compiled);
+	const auto cache = vm::g_exec_addr;
 	const auto bswap4 = _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
 
 	v128 _op;
@@ -411,7 +410,7 @@ void ppu_thread::exec_task()
 
 			// Decode single instruction (may be step)
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
-			if (reinterpret_cast<func_t>((std::uintptr_t)s_ppu_compiled[cia / 4])(*this, {op})) { cia += 4; }
+			if (reinterpret_cast<func_t>((std::uintptr_t)ppu_ref(cia))(*this, {op})) { cia += 4; }
 			continue;
 		}
 
@@ -419,7 +418,7 @@ void ppu_thread::exec_task()
 		{
 			// Unaligned
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
-			if (reinterpret_cast<func_t>((std::uintptr_t)s_ppu_compiled[cia / 4])(*this, {op})) { cia += 4; }
+			if (reinterpret_cast<func_t>((std::uintptr_t)ppu_ref(cia))(*this, {op})) { cia += 4; }
 			continue;
 		}
 
@@ -878,7 +877,7 @@ extern void ppu_initialize(const ppu_module& info)
 		std::unordered_map<std::string, std::uintptr_t> link_table
 		{
 			{ "__mptr", (u64)&vm::g_base_addr },
-			{ "__cptr", (u64)&s_ppu_compiled },
+			{ "__cptr", (u64)&vm::g_exec_addr },
 			{ "__trap", (u64)&ppu_trap },
 			{ "__end", (u64)&ppu_unreachable },
 			{ "__check", (u64)&ppu_check },
@@ -957,8 +956,8 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				if (func.size)
 				{
-					const std::uintptr_t link = jit->get(fmt::format("__0x%x", func.addr));
-					s_ppu_compiled[func.addr / 4] = ::narrow<u32>(link);
+					const std::uintptr_t uptr = jit->get(fmt::format("__0x%x", func.addr));
+					ppu_ref(func.addr) = ::narrow<u32>(uptr);
 				}
 			}
 
@@ -1133,8 +1132,8 @@ extern void ppu_initialize(const ppu_module& info)
 	{
 		if (func.size)
 		{
-			const std::uintptr_t link = jit->get(fmt::format("__0x%x", func.addr));
-			s_ppu_compiled[func.addr / 4] = ::narrow<u32>(link);
+			const std::uintptr_t uptr = jit->get(fmt::format("__0x%x", func.addr));
+			ppu_ref(func.addr) = ::narrow<u32>(uptr);
 		}
 	}
 
