@@ -1148,7 +1148,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		return true;
 	}
 
-	if (vm::check_addr(addr, d_size))
+	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size)))
 	{
 		if (cpu)
 		{
