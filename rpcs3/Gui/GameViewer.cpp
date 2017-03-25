@@ -69,10 +69,12 @@ void GameViewer::InitPopupMenu()
 	m_popup->Append(boot_item);
 	m_popup->Append(1, _T("Configure"));
 	m_popup->Append(2, _T("Remove Game"));
+	m_popup->Append(3, _T("Remove Custom Configuration"));
 
 	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
 	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
 	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, 2);
+	Bind(wxEVT_MENU, &GameViewer::RemoveGameConfig, this, 3);
 }
 
 void GameViewer::DoResize(wxSize size)
@@ -236,6 +238,22 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 	if (wxMessageBox("Permanently delete game files?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
 	{
 		fs::remove_all(Emu.GetGameDir() + fmt::ToUTF8(this->GetItemText(i, 6)));
+	}
+
+	Refresh();
+}
+
+void GameViewer::RemoveGameConfig(wxCommandEvent& event)
+{
+	long i = GetFirstSelected();
+	if (i < 0) return;
+
+	if (fs::exists(fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml"))
+	{
+		if (wxMessageBox("Delete custom game configuration?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
+		{
+			fs::remove_file(fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml");
+		}
 	}
 
 	Refresh();

@@ -66,7 +66,7 @@ namespace vk
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
 			return "texture($t, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
-			return "textureProj($t, $0.xyzw, $1.x)"; // Note: $1.x is bias
+			return "texture($t, ($0.xyz / $0.w))";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
 			return "textureLod($t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD:
