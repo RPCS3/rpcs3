@@ -898,9 +898,8 @@ void VKGSRender::clear_surface(u32 mask)
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 		{
 			u8 clear_stencil = rsx::method_registers.stencil_clear_value();
-			u32 stencil_mask = rsx::method_registers.stencil_mask();
 
-			depth_stencil_clear_values.depthStencil.stencil = stencil_mask;
+			depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
 
 			depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
