@@ -2,6 +2,7 @@
 
 #include "GCM.h"
 #include "Utilities/types.h"
+#include "Utilities/BEType.h"
 
 namespace rsx
 {
@@ -54,6 +55,39 @@ public:
 	void reset()
 	{
 		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index] = 0x2;
+	}
+};
+
+struct push_buffer_vertex_info
+{
+	u8 size;
+	vertex_base_type type;
+
+	u32 vertex_count = 0;
+	u32 attribute_mask = ~0;
+	std::vector<u32> data;
+
+	void clear()
+	{
+		data.resize(0);
+		attribute_mask = ~0;
+		vertex_count = 0;
+	}
+
+	void append_vertex_data(u32 sub_index, u32 arg)
+	{
+		const u32 element_mask = (1 << sub_index);
+		if (attribute_mask & element_mask)
+		{
+			attribute_mask = 0;
+
+			vertex_count++;
+			data.resize(vertex_count * size);
+		}
+
+		attribute_mask |= element_mask;
+		u32* dst = data.data() + ((vertex_count - 1) * size) + sub_index;
+		*dst = se_storage<u32>::swap(arg);
 	}
 };
 

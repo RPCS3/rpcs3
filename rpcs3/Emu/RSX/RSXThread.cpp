@@ -329,16 +329,38 @@ namespace rsx
 	void thread::begin()
 	{
 		rsx::method_registers.current_draw_clause.inline_vertex_array.clear();
+		in_begin_end = true;
+	}
+
+	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, u32 value)
+	{
+		vertex_push_buffers[attribute].size = size;
+		vertex_push_buffers[attribute].append_vertex_data(subreg_index, value);
+	}
+
+	u32 thread::get_push_buffer_vertex_count()
+	{
+		//There's no restriction on which attrib shall hold vertex data, so we check them all
+		u32 max_vertex_count = 0;
+		for (auto &buf: vertex_push_buffers)
+		{
+			max_vertex_count = std::max(max_vertex_count, buf.vertex_count);
+		}
+
+		return max_vertex_count;
 	}
 
 	void thread::end()
 	{
 		rsx::method_registers.transform_constants.clear();
+		in_begin_end = false;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
 			//rsx::method_registers.register_vertex_info[index].size = 0;
+
+			vertex_push_buffers[index].clear();
 		}
 
 		if (capture_current_frame)
@@ -670,7 +692,8 @@ namespace rsx
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
-	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
+	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
 		result.reserve(rsx::limits::vertex_count);
@@ -687,6 +710,16 @@ namespace rsx
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
 				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
 				    get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index});
+				continue;
+			}
+
+			if (vertex_push_buffers[index].vertex_count > 1)
+			{
+				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
+				const u8 element_size = info.size * sizeof(u32);
+
+				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
+				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index });
 				continue;
 			}
 
@@ -827,7 +860,7 @@ namespace rsx
 	RSXVertexProgram thread::get_current_vertex_program() const
 	{
 		RSXVertexProgram result = {};
-		u32 transform_program_start = rsx::method_registers.transform_program_start();
+		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		result.data.reserve((512 - transform_program_start) * 4);
 
 		for (int i = transform_program_start; i < 512; ++i)
@@ -843,8 +876,8 @@ namespace rsx
 		}
 		result.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 
-		u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
-		u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
+		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 		result.rsx_vertex_inputs.clear();
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -861,6 +894,16 @@ namespace rsx
 				        !!((modulo_mask >> index) & 0x1),
 				        true,
 				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
+			}
+			else if (vertex_push_buffers[index].vertex_count > 1)
+			{
+				result.rsx_vertex_inputs.push_back(
+				{ index,
+					rsx::method_registers.register_vertex_info[index].size,
+					1,
+					false,
+					true,
+					is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
