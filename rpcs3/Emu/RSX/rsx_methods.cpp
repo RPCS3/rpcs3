@@ -116,12 +116,14 @@ namespace rsx
 			static const size_t attribute_index = index / increment_per_array_index;
 			static const size_t vertex_subreg = index % increment_per_array_index;
 
+			const auto vtype = vertex_data_type_from_element_type<type>::type;
+
 			if (rsx->in_begin_end)
-				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, arg);
+				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, vtype, arg);
 
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
 
-			info.type = vertex_data_type_from_element_type<type>::type;
+			info.type = vtype;
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
@@ -187,6 +189,16 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
+			}
+		};
+
+		template<u32 index>
+		struct set_vertex_data_scaled4s_m
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				LOG_ERROR(RSX, "SCALED_4S vertex data format is not properly implemented");
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
 			}
 		};
@@ -1278,6 +1290,7 @@ namespace rsx
 		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
+		bind_range<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nv4097::set_vertex_data_scaled4s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();

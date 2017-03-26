@@ -332,10 +332,10 @@ namespace rsx
 		in_begin_end = true;
 	}
 
-	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, u32 value)
+	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
 	{
 		vertex_push_buffers[attribute].size = size;
-		vertex_push_buffers[attribute].append_vertex_data(subreg_index, value);
+		vertex_push_buffers[attribute].append_vertex_data(subreg_index, type, value);
 	}
 
 	u32 thread::get_push_buffer_vertex_count()

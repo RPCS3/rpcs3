@@ -74,20 +74,58 @@ struct push_buffer_vertex_info
 		vertex_count = 0;
 	}
 
-	void append_vertex_data(u32 sub_index, u32 arg)
+	u8 get_vertex_size_in_dwords(vertex_base_type type)
+	{
+		//NOTE: Types are always provided to fit into 32-bits
+		//i.e no less than 4 8-bit values and no less than 2 16-bit values
+
+		switch (type)
+		{
+		case vertex_base_type::f:
+			return size;
+		case vertex_base_type::ub:
+		case vertex_base_type::ub256:
+			return 1;
+		case vertex_base_type::s32k:
+			return size / 2;
+		default:
+			fmt::throw_exception("Unsupported vertex base type %d", (u8)type);
+		}
+	}
+
+	void append_vertex_data(u32 sub_index, vertex_base_type type, u32 arg)
 	{
 		const u32 element_mask = (1 << sub_index);
+		const u8  vertex_size = get_vertex_size_in_dwords(type);
+
 		if (attribute_mask & element_mask)
 		{
 			attribute_mask = 0;
 
 			vertex_count++;
-			data.resize(vertex_count * size);
+			data.resize(vertex_count * vertex_size);
 		}
 
 		attribute_mask |= element_mask;
-		u32* dst = data.data() + ((vertex_count - 1) * size) + sub_index;
-		*dst = se_storage<u32>::swap(arg);
+
+		void* dst = data.data() + ((vertex_count - 1) * vertex_size) + sub_index;
+		
+		switch (type)
+		{
+		case vertex_base_type::f:
+			*(u32*)dst = se_storage<u32>::swap(arg);
+			break;
+		case vertex_base_type::ub:
+		case vertex_base_type::ub256:
+			*(u32*)dst = arg;
+			break;
+		case vertex_base_type::s32k:
+			((u16*)dst)[0] = se_storage<u16>::swap((u16)(arg & 0xffff));
+			((u16*)dst)[1] = se_storage<u16>::swap((u16)(arg >> 16));
+			break;
+		default:
+			fmt::throw_exception("Unsupported vertex base type %d", (u8)type);
+		}
 	}
 };
 
