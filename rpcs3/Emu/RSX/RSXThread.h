@@ -277,7 +277,7 @@ namespace rsx
 		* Immediate mode rendering requires a temp push buffer to hold attrib values
 		* Appends a value to the push buffer (currently only supports 32-wide types)
 		*/
-		void append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, u32 value);
+		void append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value);
 		u32 get_push_buffer_vertex_count();
 
 	private:
