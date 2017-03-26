@@ -275,13 +275,13 @@ void GameViewer::OpenGameFolder(wxCommandEvent& event)
 		command.replace(pos, oldc.length(), newc);
 		pos += newc.length();
 	}
-	wxExecute(command);
+	wxExecute(fmt::FromUTF8(command));
 #elif __APPLE__
 	std::string command = "open " + spath;
-	wxExecute(command);
+	wxExecute(fmt::FromUTF8(command));
 #elif __Linux
 	std::string command = "xdg-open " + spath;
-	wxExecute(command);
+	wxExecute(fmt::FromUTF8(command));
 #endif
 }
 
