@@ -6,7 +6,7 @@ logs::channel libmedi("libmedi", logs::level::notice);
 
 s32 cellMediatorCloseContext()
 {
-	libmedi.todo("cellMediatorCreateContext");
+	libmedi.todo("cellMediatorCloseContext");
 	return CELL_OK;
 }
 
