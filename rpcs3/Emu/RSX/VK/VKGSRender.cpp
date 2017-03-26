@@ -889,7 +889,7 @@ void VKGSRender::clear_surface(u32 mask)
 	{
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
-		u32 clear_depth = rsx::method_registers.z_clear_value();
+		u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
 		float depth_clear = (float)clear_depth / max_depth_value;
 
 		depth_stencil_clear_values.depthStencil.depth = depth_clear;

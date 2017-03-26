@@ -287,9 +287,9 @@ namespace rsx
 			return decode<NV4097_SET_RESTART_INDEX>().restart_index();
 		}
 
-		u32 z_clear_value() const
+		u32 z_clear_value(bool is_depth_stencil) const
 		{
-			return decode<NV4097_SET_ZSTENCIL_CLEAR_VALUE>().clear_z();
+			return decode<NV4097_SET_ZSTENCIL_CLEAR_VALUE>().clear_z(is_depth_stencil);
 		}
 
 		u8 stencil_clear_value() const

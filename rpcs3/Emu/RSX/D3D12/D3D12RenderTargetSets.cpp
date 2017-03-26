@@ -125,8 +125,9 @@ void D3D12GSRender::clear_surface(u32 arg)
 
 		if (arg & 0x1)
 		{
-			u32 clear_depth = rsx::method_registers.z_clear_value();
-			u32 max_depth_value = get_max_depth_value(rsx::method_registers.surface_depth_fmt());
+			auto depth_format = rsx::method_registers.surface_depth_fmt();
+			u32 clear_depth = rsx::method_registers.z_clear_value(depth_format == rsx::surface_depth_format::z24s8);
+			u32 max_depth_value = get_max_depth_value(depth_format);
 			get_current_resource_storage().command_list->ClearDepthStencilView(m_rtts.current_ds_handle, D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0,
 				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 		}

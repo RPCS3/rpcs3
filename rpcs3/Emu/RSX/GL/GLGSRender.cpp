@@ -635,8 +635,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if (arg & 0x1)
 	{
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
-
-		u32 clear_depth = rsx::method_registers.z_clear_value();
+		u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
 
 		glDepthMask(GL_TRUE);
 		glClearDepth(double(clear_depth) / max_depth_value);
