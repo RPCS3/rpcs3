@@ -59,6 +59,12 @@ s32 sys_spu_image_close(vm::ptr<sys_spu_image_t> img)
 		return CELL_EINVAL;
 	}
 
+	if (!(img->segs.addr()))
+	{
+		sysPrxForUser.error("Invalid spu image address : 0x%x", img->segs.addr());
+		return -1;
+	}
+	
 	verify(HERE), vm::dealloc(img->segs.addr(), vm::main); // Current rough implementation
 	return CELL_OK;
 }
