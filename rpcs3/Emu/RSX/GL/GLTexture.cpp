@@ -345,9 +345,9 @@ namespace rsx
 
 				if (dim == rsx::texture_dimension_extended::texture_dimension_2d)
 				{
-					__glcheck glTexStorage2D(GL_TEXTURE_2D, mipmap_count, ::gl::get_sized_internal_format(format), width, height);
 					if (!is_compressed_format(format))
 					{
+						__glcheck glTexStorage2D(GL_TEXTURE_2D, mipmap_count, ::gl::get_sized_internal_format(format), input_layouts[0].width_in_block, input_layouts[0].height_in_block);
 						const auto &format_type = ::gl::get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
@@ -357,6 +357,7 @@ namespace rsx
 					}
 					else
 					{
+						__glcheck glTexStorage2D(GL_TEXTURE_2D, mipmap_count, ::gl::get_sized_internal_format(format), input_layouts[0].width_in_block * 4, input_layouts[0].height_in_block * 4);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
