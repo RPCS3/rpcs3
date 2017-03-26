@@ -31,6 +31,20 @@
 
 #include "aes.h"
 
+#include <bitset>
+#include <cstdio>
+
+// Returns whether AES-NI is supported
+static bool AESNI() {
+	int cpuInfo[4];
+#ifdef _WIN32
+	__cpuid(cpuInfo, 1);
+#else
+	__cpuid(1, cpuInfo[0], cpuInfo[1], cpuInfo[2], cpuInfo[3]);
+#endif
+	return std::bitset<32>(cpuInfo[2])[25];
+}
+
 /*
  * 32-bit integer manipulation macros (little endian)
  */
@@ -431,11 +445,219 @@ static void aes_gen_tables( void )
 
 #endif
 
+#ifdef AESNI
+inline __m128i AES_128_ASSIST(__m128i temp1, __m128i temp2)
+{
+	__m128i temp3;
+	temp2 = _mm_shuffle_epi32(temp2, 0xff);
+	temp3 = _mm_slli_si128(temp1, 0x4);
+	temp1 = _mm_xor_si128(temp1, temp3);
+	temp3 = _mm_slli_si128(temp3, 0x4);
+	temp1 = _mm_xor_si128(temp1, temp3);
+	temp3 = _mm_slli_si128(temp3, 0x4);
+	temp1 = _mm_xor_si128(temp1, temp3);
+	temp1 = _mm_xor_si128(temp1, temp2);
+	return temp1;
+}
+
+void AES_128_Key_Expansion(const unsigned char *userkey, unsigned char *key) {
+	__m128i temp1, temp2;
+	__m128i *Key_Schedule = (__m128i*)key;
+	temp1 = _mm_loadu_si128((__m128i*)userkey);
+	Key_Schedule[0] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x1);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[1] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x2);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[2] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x4);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[3] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x8);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[4] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x10);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[5] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x20);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[6] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x40);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[7] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x80);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[8] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x1b);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[9] = temp1;
+	temp2 = _mm_aeskeygenassist_si128(temp1, 0x36);
+	temp1 = AES_128_ASSIST(temp1, temp2);
+	Key_Schedule[10] = temp1;
+}
+
+inline void KEY_192_ASSIST(__m128i* temp1, __m128i * temp2, __m128i * temp3)
+{
+	__m128i temp4;
+	*temp2 = _mm_shuffle_epi32(*temp2, 0x55);
+	temp4 = _mm_slli_si128(*temp1, 0x4);
+	*temp1 = _mm_xor_si128(*temp1, temp4);
+	temp4 = _mm_slli_si128(temp4, 0x4);
+	*temp1 = _mm_xor_si128(*temp1, temp4);
+	temp4 = _mm_slli_si128(temp4, 0x4);
+	*temp1 = _mm_xor_si128(*temp1, temp4);
+	*temp1 = _mm_xor_si128(*temp1, *temp2);
+	*temp2 = _mm_shuffle_epi32(*temp1, 0xff);
+	temp4 = _mm_slli_si128(*temp3, 0x4);
+	*temp3 = _mm_xor_si128(*temp3, temp4);
+	*temp3 = _mm_xor_si128(*temp3, *temp2);
+}
+
+void AES_192_Key_Expansion(const unsigned char *userkey,
+	unsigned char *key)
+{
+	__m128i temp1, temp2, temp3;
+	__m128i *Key_Schedule = (__m128i*)key;
+	temp1 = _mm_loadu_si128((__m128i*)userkey);
+	temp3 = _mm_loadu_si128((__m128i*)(userkey + 16));
+	Key_Schedule[0] = temp1;
+	Key_Schedule[1] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x1);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[1] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(Key_Schedule[1]),
+		_mm_castsi128_pd(temp1), 0));
+	Key_Schedule[2] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 1));
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x2);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[3] = temp1;
+	Key_Schedule[4] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x4);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[4] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(Key_Schedule[4]),
+		_mm_castsi128_pd(temp1), 0));
+	Key_Schedule[5] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 1));
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x8);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[6] = temp1;
+	Key_Schedule[7] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x10);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[7] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(Key_Schedule[7]),
+		_mm_castsi128_pd(temp1), 0));
+	Key_Schedule[8] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 1));
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x20);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[9] = temp1;
+	Key_Schedule[10] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x40);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[10] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(Key_Schedule[10]),
+		_mm_castsi128_pd(temp1), 0));
+	Key_Schedule[11] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 1));
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x80);
+	KEY_192_ASSIST(&temp1, &temp2, &temp3);
+	Key_Schedule[12] = temp1;
+}
+
+inline void KEY_256_ASSIST_1(__m128i* temp1, __m128i * temp2)
+{
+	__m128i temp4;
+	*temp2 = _mm_shuffle_epi32(*temp2, 0xff);
+	temp4 = _mm_slli_si128(*temp1, 0x4);
+	*temp1 = _mm_xor_si128(*temp1, temp4);
+	temp4 = _mm_slli_si128(temp4, 0x4);
+	*temp1 = _mm_xor_si128(*temp1, temp4);
+	temp4 = _mm_slli_si128(temp4, 0x4);
+	*temp1 = _mm_xor_si128(*temp1, temp4);
+	*temp1 = _mm_xor_si128(*temp1, *temp2);
+}
+
+inline void KEY_256_ASSIST_2(__m128i* temp1, __m128i * temp3)
+{
+	__m128i temp2, temp4;
+	temp4 = _mm_aeskeygenassist_si128(*temp1, 0x0);
+	temp2 = _mm_shuffle_epi32(temp4, 0xaa);
+	temp4 = _mm_slli_si128(*temp3, 0x4);
+	*temp3 = _mm_xor_si128(*temp3, temp4);
+	temp4 = _mm_slli_si128(temp4, 0x4);
+	*temp3 = _mm_xor_si128(*temp3, temp4);
+	temp4 = _mm_slli_si128(temp4, 0x4);
+	*temp3 = _mm_xor_si128(*temp3, temp4);
+	*temp3 = _mm_xor_si128(*temp3, temp2);
+}
+
+void AES_256_Key_Expansion(const unsigned char *userkey,
+	unsigned char *key)
+{
+	__m128i temp1, temp2, temp3;
+	__m128i *Key_Schedule = (__m128i*)key;
+	temp1 = _mm_loadu_si128((__m128i*)userkey);
+	temp3 = _mm_loadu_si128((__m128i*)(userkey + 16));
+	Key_Schedule[0] = temp1;
+	Key_Schedule[1] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x01);
+	KEY_256_ASSIST_1(&temp1, &temp2);
+	Key_Schedule[2] = temp1;
+	KEY_256_ASSIST_2(&temp1, &temp3);
+	Key_Schedule[3] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x02);
+	KEY_256_ASSIST_1(&temp1, &temp2);
+	Key_Schedule[4] = temp1;
+	KEY_256_ASSIST_2(&temp1, &temp3);
+	Key_Schedule[5] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x04);
+	KEY_256_ASSIST_1(&temp1, &temp2);
+	Key_Schedule[6] = temp1;
+	KEY_256_ASSIST_2(&temp1, &temp3);
+	Key_Schedule[7] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x08);
+	KEY_256_ASSIST_1(&temp1, &temp2);
+	Key_Schedule[8] = temp1;
+	KEY_256_ASSIST_2(&temp1, &temp3);
+	Key_Schedule[9] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x10);
+	KEY_256_ASSIST_1(&temp1, &temp2);
+	Key_Schedule[10] = temp1;
+	KEY_256_ASSIST_2(&temp1, &temp3);
+	Key_Schedule[11] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x20);
+	KEY_256_ASSIST_1(&temp1, &temp2);
+	Key_Schedule[12] = temp1;
+	KEY_256_ASSIST_2(&temp1, &temp3);
+	Key_Schedule[13] = temp3;
+	temp2 = _mm_aeskeygenassist_si128(temp3, 0x40);
+	KEY_256_ASSIST_1(&temp1, &temp2);
+	Key_Schedule[14] = temp1;
+}
+#endif
+
 /*
  * AES key schedule (encryption)
  */
 int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int keysize )
 {
+	switch( keysize )
+    {
+        case 128: ctx->nr = 10; break;
+        case 192: ctx->nr = 12; break;
+        case 256: ctx->nr = 14; break;
+        default : return( POLARSSL_ERR_AES_INVALID_KEY_LENGTH );
+    }
+
+#ifdef AESNI
+	if (AESNI()) {
+		if (ctx->nr == 10)
+			AES_128_Key_Expansion(key, (unsigned char*)ctx->roundkey);
+		else if (ctx->nr == 12)
+			AES_192_Key_Expansion(key, (unsigned char*)ctx->roundkey);
+		else
+			AES_256_Key_Expansion(key, (unsigned char*)ctx->roundkey);
+
+		return 0;
+	}
+#endif
+
     unsigned int i;
     uint32_t *RK;
 
@@ -448,13 +670,6 @@ int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int key
     }
 #endif
 
-    switch( keysize )
-    {
-        case 128: ctx->nr = 10; break;
-        case 192: ctx->nr = 12; break;
-        case 256: ctx->nr = 14; break;
-        default : return( POLARSSL_ERR_AES_INVALID_KEY_LENGTH );
-    }
 
     ctx->rk = RK = ctx->buf;
 
@@ -538,19 +753,44 @@ int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int key
  */
 int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int keysize )
 {
-    int i, j;
-    aes_context cty;
-    uint32_t *RK;
-    uint32_t *SK;
-    int ret;
-
-    switch( keysize )
+	switch( keysize )
     {
         case 128: ctx->nr = 10; break;
         case 192: ctx->nr = 12; break;
         case 256: ctx->nr = 14; break;
         default : return( POLARSSL_ERR_AES_INVALID_KEY_LENGTH );
     }
+
+#ifdef AESNI
+	if (AESNI()) {
+		if (ctx->nr == 10)
+			AES_128_Key_Expansion(key, (unsigned char*)ctx->roundkey);
+		else if (ctx->nr == 12)
+			AES_192_Key_Expansion(key, (unsigned char*)ctx->roundkey);
+		else
+			AES_256_Key_Expansion(key, (unsigned char*)ctx->roundkey);
+
+		alignas(16) __m128i roundkey_dec[15];
+		int nr = ctx->nr;
+		roundkey_dec[nr] = ctx->roundkey[0];
+		for (int i = 1; i < nr; i++)
+			roundkey_dec[nr - i] = _mm_aesimc_si128(ctx->roundkey[i]);
+		roundkey_dec[0] = ctx->roundkey[nr];
+
+		for(int i = 0; i < nr+1; i++)
+			ctx->roundkey[i] = roundkey_dec[i];
+
+		return 0;
+	}
+#endif
+
+    int i, j;
+    aes_context cty;
+    uint32_t *RK;
+    uint32_t *SK;
+    int ret;
+
+
 
     ctx->rk = RK = ctx->buf;
 
@@ -632,14 +872,63 @@ int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int key
                  RT3[ ( Y0 >> 24 ) & 0xFF ];    \
 }
 
+#ifdef AESNI
+void AESNI_encrypt(const unsigned char *in, //pointer to the PLAINTEXT
+	unsigned char *out, //pointer to the CIPHERTEXT buffer
+	const unsigned char *key, //pointer to the expanded key schedule
+	int number_of_rounds) //number of AES rounds 10,12 or 14
+{
+	__m128i tmp;
+	int j;
+	tmp = _mm_loadu_si128(&((__m128i*)in)[0]);
+	tmp = _mm_xor_si128(tmp, ((__m128i*)key)[0]);
+	for (j = 1; j <number_of_rounds; j++) {
+		tmp = _mm_aesenc_si128(tmp, ((__m128i*)key)[j]);
+	}
+	tmp = _mm_aesenclast_si128(tmp, ((__m128i*)key)[j]);
+	_mm_storeu_si128(&(((__m128i*)out)[0]), tmp);
+}
+
+void AESNI_decrypt(const unsigned char *in, //pointer to the PLAINTEXT
+	unsigned char *out, //pointer to the CIPHERTEXT buffer
+	const unsigned char *key, //pointer to the expanded key schedule
+	int number_of_rounds) //number of AES rounds 10,12 or 14
+{
+	__m128i tmp;
+	int j;
+	tmp = _mm_loadu_si128(&((__m128i*)in)[0]);
+	tmp = _mm_xor_si128(tmp, ((__m128i*)key)[0]);
+	for (j = 1; j <number_of_rounds; j++) {
+		tmp = _mm_aesdec_si128(tmp, ((__m128i*)key)[j]);
+	}
+	tmp = _mm_aesdeclast_si128(tmp, ((__m128i*)key)[j]);
+	_mm_storeu_si128(&((__m128i*)out)[0], tmp);
+}
+#endif
+
 /*
  * AES-ECB block encryption/decryption
  */
 int aes_crypt_ecb( aes_context *ctx,
-                    int mode,
-                    const unsigned char input[16],
-                    unsigned char output[16] )
+                   int mode,
+                   const unsigned char input[16],
+                   unsigned char output[16] )
 {
+#ifdef AESNI
+	if (AESNI()) { // AES-NI supported?
+		if (mode == AES_DECRYPT) {
+			AESNI_decrypt(input, output, (unsigned char*)ctx->roundkey, ctx->nr);
+		}
+		else {
+			AESNI_encrypt(input, output, (unsigned char*)ctx->roundkey, ctx->nr);
+		}
+
+		return 0;
+	}
+#endif
+
+	// Software fallback
+
     int i;
     uint32_t *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
 

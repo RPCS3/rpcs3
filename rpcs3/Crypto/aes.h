@@ -35,6 +35,15 @@ typedef UINT32 uint32_t;
 #include <inttypes.h>
 #endif
 
+#if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
+#include <intrin.h>
+#define AESNI AESNI
+#elif defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
+#include <x86intrin.h>
+#include <cpuid.h>
+#define AESNI AESNI
+#endif
+
 #define AES_ENCRYPT     1
 #define AES_DECRYPT     0
 
@@ -49,7 +58,10 @@ typedef UINT32 uint32_t;
  */
 typedef struct
 {
-    int nr;                     /*!<  number of rounds  */
+#ifdef AESNI
+	alignas(16) __m128i roundkey[15]; // AES-NI round keys
+#endif
+	int nr;                     /*!<  number of rounds  */
     uint32_t *rk;               /*!<  AES round keys    */
     uint32_t buf[68];           /*!<  unaligned data    */
 }
