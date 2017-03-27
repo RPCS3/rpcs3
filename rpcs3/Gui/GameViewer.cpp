@@ -59,7 +59,7 @@ GameViewer::~GameViewer()
 
 void GameViewer::InitPopupMenu()
 {
-	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
+	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, "Boot");
 #if defined (_WIN32)
 	// wxMenuItem::Set(Get)Font only available for the wxMSW port
 	wxFont font = GetFont();
@@ -67,15 +67,19 @@ void GameViewer::InitPopupMenu()
 	boot_item->SetFont(font);
 #endif
 	m_popup->Append(boot_item);
-	m_popup->Append(1, _T("Configure"));
-	m_popup->Append(2, _T("Remove Game"));
-	m_popup->Append(3, _T("Remove Custom Configuration"));
-	m_popup->Append(4, _T("Open Game Folder"));
+	m_popup->Append(1, "Configure");
+	m_popup->AppendSeparator();
+	m_popup->Append(2, "Remove Game");
+	m_popup->Append(3, "Remove Custom Configuration");
+	m_popup->AppendSeparator();
+	m_popup->Append(4, "Open Game Folder");
+	m_popup->Append(5, "Open Config Folder");
 	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
 	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
 	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, 2);
 	Bind(wxEVT_MENU, &GameViewer::RemoveGameConfig, this, 3);
 	Bind(wxEVT_MENU, &GameViewer::OpenGameFolder, this, 4);
+	Bind(wxEVT_MENU, &GameViewer::OpenConfigFolder, this, 5);
 }
 
 void GameViewer::DoResize(wxSize size)
@@ -165,7 +169,6 @@ void GameViewer::LoadPSF()
 		{
 			game.category = "Game Data";
 			game.icon_path = dir + "/ICON0.PNG";
-			continue;
 		}
 			
 		m_game_data.push_back(game);
@@ -249,15 +252,41 @@ void GameViewer::RemoveGameConfig(wxCommandEvent& event)
 	long i = GetFirstSelected();
 	if (i < 0) return;
 
-	if (fs::exists(fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml"))
+	const std::string config_path = fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml";
+
+	if (fs::is_file(config_path))
 	{
 		if (wxMessageBox("Delete custom game configuration?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
 		{
-			fs::remove_file(fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml");
+			if (fs::remove_file(config_path))
+			{
+				LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
+			}
+			else
+			{
+				LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
+			}
 		}
 	}
+	else
+	{
+		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
+	}
+}
 
-	Refresh();
+static void open_dir(const std::string& spath)
+{
+	fs::create_dir(spath);
+
+#ifdef _WIN32
+	std::string command = "explorer " + spath;
+	std::replace(command.begin(), command.end(), '/', '\\');
+#elif __APPLE__
+	std::string command = "open " + spath;
+#elif __linux__
+	std::string command = "xdg-open " + spath;
+#endif
+	wxExecute(fmt::FromUTF8(command));
 }
 
 void GameViewer::OpenGameFolder(wxCommandEvent& event)
@@ -265,24 +294,15 @@ void GameViewer::OpenGameFolder(wxCommandEvent& event)
 	long i = GetFirstSelected();
 	if (i < 0) return;
 
-	const std::string& spath = Emu.GetGameDir() + m_game_data[i].root;
+	open_dir(Emu.GetGameDir() + m_game_data[i].root);
+}
 
-#ifdef _WIN32
-	std::string command = "explorer " + spath;
-	std::string oldc("/"), newc("\\");
-	size_t pos = 0;
-	while ((pos = command.find(oldc, pos)) != std::string::npos) {
-		command.replace(pos, oldc.length(), newc);
-		pos += newc.length();
-	}
-	wxExecute(fmt::FromUTF8(command));
-#elif __APPLE__
-	std::string command = "open " + spath;
-	wxExecute(fmt::FromUTF8(command));
-#elif __Linux
-	std::string command = "xdg-open " + spath;
-	wxExecute(fmt::FromUTF8(command));
-#endif
+void GameViewer::OpenConfigFolder(wxCommandEvent& event)
+{
+	long i = GetFirstSelected();
+	if (i < 0) return;
+
+	open_dir(fs::get_config_dir() + "data/" + m_game_data[i].serial);
 }
 
 ColumnsArr::ColumnsArr()

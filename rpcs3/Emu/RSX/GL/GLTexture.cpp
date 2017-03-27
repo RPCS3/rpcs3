@@ -238,7 +238,7 @@ namespace rsx
 			case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
 			case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
 			case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
-			case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_BORDER;
+			case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_EDGE;
 			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
 			case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
 			case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
@@ -319,6 +319,14 @@ namespace rsx
 				std::vector<gsl::byte> staging_buffer)
 			{
 				int mip_level = 0;
+				if (is_compressed_format(format))
+				{
+					//Compressed formats have a 4-byte alignment
+					//TODO: Verify that samplers are not affected by the padding
+					width = align(width, 4);
+					height = align(height, 4);
+				}
+
 				if (dim == rsx::texture_dimension_extended::texture_dimension_1d)
 				{
 					__glcheck glTexStorage1D(GL_TEXTURE_1D, mipmap_count, ::gl::get_sized_internal_format(format), width);

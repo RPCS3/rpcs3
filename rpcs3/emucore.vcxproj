@@ -73,10 +73,16 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
+    <ClCompile Include="..\Utilities\bin_patch.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\cond.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp" />
+    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -396,12 +402,14 @@
     <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\bit_set.h" />
     <ClInclude Include="..\Utilities\cfmt.h" />
     <ClInclude Include="..\Utilities\cond.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
+    <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
@@ -549,6 +557,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellGcmSys.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGem.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGifDec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellImejp.h" />
     <ClInclude Include="Emu\Cell\Modules\cellJpgDec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellKb.h" />
     <ClInclude Include="Emu\Cell\Modules\cellL10n.h" />

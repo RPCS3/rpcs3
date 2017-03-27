@@ -338,7 +338,7 @@ namespace rsx
 		vertex_push_buffers[attribute].append_vertex_data(subreg_index, type, value);
 	}
 
-	u32 thread::get_push_buffer_vertex_count()
+	u32 thread::get_push_buffer_vertex_count() const
 	{
 		//There's no restriction on which attrib shall hold vertex data, so we check them all
 		u32 max_vertex_count = 0;
@@ -348,6 +348,18 @@ namespace rsx
 		}
 
 		return max_vertex_count;
+	}
+
+	void thread::append_array_element(u32 index)
+	{
+		//Endianness is swapped because common upload code expects input in BE
+		//TODO: Implement fast upload path for LE inputs and do away with this
+		element_push_buffer.push_back(se_storage<u32>::swap(index));
+	}
+
+	u32 thread::get_push_buffer_index_count() const
+	{
+		return element_push_buffer.size();
 	}
 
 	void thread::end()
@@ -362,6 +374,8 @@ namespace rsx
 
 			vertex_push_buffers[index].clear();
 		}
+
+		element_push_buffer.resize(0);
 
 		if (capture_current_frame)
 		{
@@ -651,6 +665,12 @@ namespace rsx
 
 	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
 	{
+		if (element_push_buffer.size())
+		{
+			//Indices provided via immediate mode
+			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
+		}
+
 		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
 		rsx::index_array_type type = rsx::method_registers.index_type();
 

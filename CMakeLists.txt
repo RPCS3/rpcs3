@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 
+# uncomment next line if you want to build with GDB stub
+# add_definitions(-DWITH_GDB_DEBUGGER)
+
 set(ASMJIT_STATIC TRUE)
 
 if (NOT CMAKE_BUILD_TYPE)

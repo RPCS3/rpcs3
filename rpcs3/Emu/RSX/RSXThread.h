@@ -169,6 +169,7 @@ namespace rsx
 	protected:
 		std::stack<u32> m_call_stack;
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
+		std::vector<u32> element_push_buffer;
 
 	public:
 		old_shaders_cache::shaders_cache shaders_cache;
@@ -278,7 +279,10 @@ namespace rsx
 		* Appends a value to the push buffer (currently only supports 32-wide types)
 		*/
 		void append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value);
-		u32 get_push_buffer_vertex_count();
+		u32 get_push_buffer_vertex_count() const;
+
+		void append_array_element(u32 index);
+		u32 get_push_buffer_index_count() const;
 
 	private:
 		std::mutex m_mtx_task;

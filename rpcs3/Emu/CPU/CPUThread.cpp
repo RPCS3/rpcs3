@@ -2,6 +2,8 @@
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 #include "CPUThread.h"
+#include "Emu/IdManager.h"
+#include "Utilities/GDBDebugServer.h"
 
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
@@ -92,6 +94,12 @@ cpu_thread::cpu_thread(u32 id)
 
 bool cpu_thread::check_state()
 {
+#ifdef WITH_GDB_DEBUGGER
+	if (test(state, cpu_flag::dbg_pause)) {
+		fxm::get<GDBDebugServer>()->notify();
+	}
+#endif
+
 	bool cpu_sleep_called = false;
 	bool cpu_flag_memory = false;
 
@@ -123,7 +131,7 @@ bool cpu_thread::check_state()
 			if (cpu_flag_memory) vm::passive_lock(*this);
 			break;
 		}
-		else if (!cpu_sleep_called)
+		else if (!cpu_sleep_called && test(state, cpu_flag::suspend))
 		{
 			cpu_sleep();
 			cpu_sleep_called = true;

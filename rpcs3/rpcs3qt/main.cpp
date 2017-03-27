@@ -1,18 +1,19 @@
 // Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge
 #ifdef QT_UI
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
 
-#include "glviewer.h"
+#include <QApplication>
+
+#include "mainwindow.h"
 
 int main(int argc, char *argv[])
 {
-	QGuiApplication app(argc, argv);
+	QApplication app(argc, argv);
 
-	qmlRegisterType<GLViewer>("GLViewer", 1, 0, "GLViewer");
-	QQmlApplicationEngine engine(QUrl("qrc:/qml/main.qml"));
+	MainWindow mainWin;
+	mainWin.show();
 
 	return app.exec();
 }
-#endif
+
+#endif // QT_UI

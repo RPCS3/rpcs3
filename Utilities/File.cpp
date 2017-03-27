@@ -797,7 +797,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_end ? FILE_END :
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
-			verify("file::seek" HERE), SetFilePointerEx(m_handle, pos, &pos, mode);
+			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
+			{
+				g_tls_error = to_error(GetLastError());
+				return -1;
+			}
 
 			return pos.QuadPart;
 		}
@@ -899,7 +903,12 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
-			verify("file::seek" HERE), result != -1;
+			
+			if (result == -1)
+			{
+				g_tls_error = to_error(errno);
+				return -1;
+			}
 
 			return result;
 		}
@@ -966,11 +975,20 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
 		{
-			return
-				whence == fs::seek_set ? m_pos = offset :
-				whence == fs::seek_cur ? m_pos = offset + m_pos :
-				whence == fs::seek_end ? m_pos = offset + m_size :
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + m_pos :
+				whence == fs::seek_end ? offset + size() :
 				(fmt::raw_error("fs::file::memory_stream::seek(): invalid whence"), 0);
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			m_pos = new_pos;
+			return m_pos;
 		}
 
 		u64 size() override
@@ -1313,6 +1331,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::inval: return "Invalid arguments";
 		case fs::error::noent: return "Not found";
 		case fs::error::exist: return "Already exists";
+		case fs::error::acces: return "Access violation";
 		}
 
 		return unknown;

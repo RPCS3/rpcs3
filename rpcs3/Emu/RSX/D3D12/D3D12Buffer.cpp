@@ -395,7 +395,10 @@ namespace
 				get_index_count(rsx::method_registers.current_draw_clause.primitive,
 					::narrow<int>(get_vertex_count(command.ranges_to_fetch_in_index_buffer)));
 
-			rsx::index_array_type indexed_type = rsx::method_registers.index_type();
+			rsx::index_array_type indexed_type = rsx::method_registers.current_draw_clause.is_immediate_draw?
+				rsx::index_array_type::u32:
+				rsx::method_registers.index_type();
+
 			size_t index_size = get_index_type_size(indexed_type);
 
 			// Alloc
