@@ -124,11 +124,20 @@ struct lv2_file::file_view : fs::file_base
 
 	u64 seek(s64 offset, fs::seek_mode whence) override
 	{
-		return
-			whence == fs::seek_set ? m_pos = offset :
-			whence == fs::seek_cur ? m_pos = offset + m_pos :
-			whence == fs::seek_end ? m_pos = offset + size() :
+		const s64 new_pos =
+			whence == fs::seek_set ? offset :
+			whence == fs::seek_cur ? offset + m_pos :
+			whence == fs::seek_end ? offset + size() :
 			(fmt::raw_error("lv2_file::file_view::seek(): invalid whence"), 0);
+
+		if (new_pos < 0)
+		{
+			fs::g_tls_error = fs::error::inval;
+			return -1;
+		}
+
+		m_pos = new_pos;
+		return m_pos;
 	}
 
 	u64 size() override
@@ -286,7 +295,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 			file.seek(0);
 			if (magic == "NPD\0"_u32)
 			{
-				auto edatkeys = fxm::get_always<EdatKeys_t>();
+				auto edatkeys = fxm::get_always<LoadedNpdrmKeys_t>();
 				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic, edatkeys->rifKey);
 				if (!sdata_file->ReadHeader())
 				{
@@ -694,8 +703,20 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 
 	std::lock_guard<std::mutex> lock(file->mp->mutex);
 
-	*pos = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
+	const u64 result = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
 
+	if (result == -1)
+	{
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::inval: return CELL_EINVAL;
+		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
+		}
+
+		return CELL_EIO; // ???
+	}
+
+	*pos = result;
 	return CELL_OK;
 }
 

@@ -25,8 +25,19 @@ namespace sys_net
 {
 #ifdef _WIN32
 	using socket_t = SOCKET;
+
+	bool socket_error(const socket_t& sock)
+	{
+		return sock == SOCKET_ERROR || sock == INVALID_SOCKET;
+	}
 #else
+#define SOCKET_ERROR (-1)
 	using socket_t = int;
+
+	bool socket_error(const socket_t& sock)
+	{
+		return sock < 0;
+	}
 #endif
 }
 
@@ -90,7 +101,7 @@ struct sys_net_socket final
 	static const u32 id_step = 1;
 	static const u32 id_count = 1024;
 
-	sys_net::socket_t s = -1;
+	sys_net::socket_t s = SOCKET_ERROR;
 
 	explicit sys_net_socket(s32 socket) : s(socket)
 	{
@@ -98,7 +109,7 @@ struct sys_net_socket final
 
 	~sys_net_socket()
 	{
-		if (s != -1)
+		if (!sys_net::socket_error(s))
 #ifdef _WIN32
 			::closesocket(s);
 #else
@@ -698,7 +709,7 @@ namespace sys_net
 
 		socket_t sock = ::socket(family, type, protocol);
 
-		if (sock < 0)
+		if (socket_error(sock))
 		{
 			libnet.error("socket(): error %d", get_errno() = get_last_error());
 			return -1;

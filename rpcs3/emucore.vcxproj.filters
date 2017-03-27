@@ -329,6 +329,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellCelpEnc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellCrossController.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -518,6 +521,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -546,6 +552,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\libmedi.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp">

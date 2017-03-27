@@ -1148,7 +1148,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		return true;
 	}
 
-	if (vm::check_addr(addr, d_size))
+	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size)))
 	{
 		if (cpu)
 		{
@@ -1229,12 +1229,21 @@ static bool is_leaf_function(u64 rip)
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
-	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
+	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
+	const u64 exec64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr;
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
 	{
 		if (thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+		{
+			return EXCEPTION_CONTINUE_EXECUTION;
+		}
+	}
+
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && exec64 < 0x100000000ull)
+	{
+		if (thread_ctrl::get_current() && handle_access_violation((u32)exec64, is_writing, pExp->ContextRecord))
 		{
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
@@ -1249,7 +1258,6 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
 	{
-		const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 		const auto cause = pExp->ExceptionRecord->ExceptionInformation[0] != 0 ? "writing" : "reading";
 
 		msg += fmt::format("Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
@@ -1360,13 +1368,22 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 	const bool is_writing = context->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	const u64 addr64 = (u64)info->si_addr - (u64)vm::base(0);
+	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
+	const u64 exec64 = (u64)info->si_addr - (u64)vm::g_exec_addr;
 	const auto cause = is_writing ? "writing" : "reading";
 
 	if (addr64 < 0x100000000ull)
 	{
 		// Try to process access violation
 		if (thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, context))
+		{
+			return;
+		}
+	}
+
+	if (exec64 < 0x100000000ull)
+	{
+		if (thread_ctrl::get_current() && handle_access_violation((u32)exec64, is_writing, context))
 		{
 			return;
 		}

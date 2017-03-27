@@ -14,7 +14,7 @@ constexpr u32 EDAT_FLAG_0x10 = 0x00000010;
 constexpr u32 EDAT_FLAG_0x20 = 0x00000020;
 constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
 
-struct EdatKeys_t
+struct LoadedNpdrmKeys_t
 {
 	std::array<u8, 0x10> devKlic{};
 	std::array<u8, 0x10> rifKey{};
@@ -109,11 +109,20 @@ public:
 
 	u64 seek(s64 offset, fs::seek_mode whence) override
 	{
-		return
-			whence == fs::seek_set ? pos = offset :
-			whence == fs::seek_cur ? pos = offset + pos :
-			whence == fs::seek_end ? pos = offset + size() :
+		const s64 new_pos =
+			whence == fs::seek_set ? offset :
+			whence == fs::seek_cur ? offset + pos :
+			whence == fs::seek_end ? offset + size() :
 			(fmt::raw_error("EDATADecrypter::seek(): invalid whence"), 0);
+
+		if (new_pos < 0)
+		{
+			fs::g_tls_error = fs::error::inval;
+			return -1;
+		}
+
+		pos = new_pos;
+		return pos;
 	}
 	u64 size() override { return file_size; }
 };

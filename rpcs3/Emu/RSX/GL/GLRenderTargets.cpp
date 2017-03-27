@@ -210,7 +210,10 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
-		__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
+		if (depth_format == rsx::surface_depth_format::z24s8)
+			__glcheck draw_fbo.depth_stencil = *std::get<1>(m_rtts.m_bound_depth_stencil);
+		else
+			__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
 
 		const u32 depth_surface_pitch = rsx::method_registers.surface_z_pitch();
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());

@@ -27,8 +27,25 @@
 
 namespace vm
 {
-	// Emulated virtual memory (4 GiB)
-	u8* const g_base_addr = static_cast<u8*>(utils::memory_reserve(0x100000000));
+	static u8* memory_reserve_4GiB(std::uintptr_t addr = 0)
+	{
+		for (u64 addr = 0x100000000;; addr += 0x100000000)
+		{
+			if (auto ptr = utils::memory_reserve(0x100000000, (void*)addr))
+			{
+				return static_cast<u8*>(ptr);
+			}
+		}
+
+		// TODO: a condition to break loop
+		return static_cast<u8*>(utils::memory_reserve(0x100000000));
+	}
+
+	// Emulated virtual memory
+	u8* const g_base_addr = memory_reserve_4GiB(0);
+
+	// Auxiliary virtual memory for executable areas
+	u8* const g_exec_addr = memory_reserve_4GiB((std::uintptr_t)g_base_addr);
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -805,6 +822,7 @@ namespace vm
 		g_locations.clear();
 
 		utils::memory_decommit(g_base_addr, 0x100000000);
+		utils::memory_decommit(g_exec_addr, 0x100000000);
 	}
 }
 

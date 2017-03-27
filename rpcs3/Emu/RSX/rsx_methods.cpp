@@ -116,9 +116,14 @@ namespace rsx
 			static const size_t attribute_index = index / increment_per_array_index;
 			static const size_t vertex_subreg = index % increment_per_array_index;
 
+			const auto vtype = vertex_data_type_from_element_type<type>::type;
+
+			if (rsx->in_begin_end)
+				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, vtype, arg);
+
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
 
-			info.type = vertex_data_type_from_element_type<type>::type;
+			info.type = vtype;
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
@@ -188,6 +193,16 @@ namespace rsx
 			}
 		};
 
+		template<u32 index>
+		struct set_vertex_data_scaled4s_m
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				LOG_ERROR(RSX, "SCALED_4S vertex data format is not properly implemented");
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
+			}
+		};
+
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
@@ -246,30 +261,12 @@ namespace rsx
 				return;
 			}
 
-			u32 max_vertex_count = 0;
-
-			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
-			{
-				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
-
-				if (vertex_info.size > 0)
-				{
-					u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-					u32 element_count = vertex_info.size;
-
-					vertex_info.frequency = element_count;
-
-					if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
-					{
-						max_vertex_count = std::max<u32>(max_vertex_count, element_count);
-					}
-				}
-			}
-
-			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && max_vertex_count)
+			//Check if we have immediate mode vertex data in a driver-local buffer
+			const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
+			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && push_buffer_vertices_count)
 			{
 				rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, max_vertex_count));
+				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
 			}
 
 			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
@@ -1293,6 +1290,7 @@ namespace rsx
 		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
+		bind_range<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nv4097::set_vertex_data_scaled4s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();

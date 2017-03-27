@@ -123,7 +123,7 @@ bool cpu_thread::check_state()
 			if (cpu_flag_memory) vm::passive_lock(*this);
 			break;
 		}
-		else if (!cpu_sleep_called)
+		else if (!cpu_sleep_called && test(state, cpu_flag::suspend))
 		{
 			cpu_sleep();
 			cpu_sleep_called = true;

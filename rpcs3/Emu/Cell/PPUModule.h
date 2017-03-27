@@ -114,6 +114,7 @@ public:
 	static const ppu_static_module cellCamera;
 	static const ppu_static_module cellCelp8Enc;
 	static const ppu_static_module cellCelpEnc;
+	static const ppu_static_module cellCrossController;
 	static const ppu_static_module cellDaisy;
 	static const ppu_static_module cellDmux;
 	static const ppu_static_module cellFiber;
@@ -172,6 +173,7 @@ public:
 	static const ppu_static_module cellSysutilAp;
 	static const ppu_static_module cellSysutilAvc;
 	static const ppu_static_module cellSysutilAvc2;
+	static const ppu_static_module cellSysutilNpEula;
 	static const ppu_static_module cellSysutilMisc;
 	static const ppu_static_module cellUsbd;
 	static const ppu_static_module cellUsbPspcm;
@@ -181,6 +183,7 @@ public:
 	static const ppu_static_module cellVideoUpload;
 	static const ppu_static_module cellVoice;
 	static const ppu_static_module cellVpost;
+	static const ppu_static_module libmedi;
 	static const ppu_static_module libmixer;
 	static const ppu_static_module libsnd3;
 	static const ppu_static_module libsynth2;

@@ -912,8 +912,7 @@ bool EDATADecrypter::ReadHeader()
 			
 			if (dec_key == std::array<u8, 0x10>{0})
 			{
-				LOG_ERROR(LOADER, "EDAT: A valid RAP file is needed for this EDAT file!");
-				return false;
+				LOG_WARNING(LOADER, "EDAT: Empty Dec key!");
 			}
 		}
 		else if ((npdHeader.license & 0x1) == 0x1)      // Type 1: Use network activation.
