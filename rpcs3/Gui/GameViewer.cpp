@@ -59,7 +59,7 @@ GameViewer::~GameViewer()
 
 void GameViewer::InitPopupMenu()
 {
-	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
+	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, "Boot");
 #if defined (_WIN32)
 	// wxMenuItem::Set(Get)Font only available for the wxMSW port
 	wxFont font = GetFont();
@@ -67,17 +67,19 @@ void GameViewer::InitPopupMenu()
 	boot_item->SetFont(font);
 #endif
 	m_popup->Append(boot_item);
-	m_popup->Append(1, _T("Configure"));
+	m_popup->Append(1, "Configure");
 	m_popup->AppendSeparator();
-	m_popup->Append(2, _T("Remove Game"));
-	m_popup->Append(3, _T("Remove Custom Configuration"));
+	m_popup->Append(2, "Remove Game");
+	m_popup->Append(3, "Remove Custom Configuration");
 	m_popup->AppendSeparator();
-	m_popup->Append(4, _T("Open Game Folder"));
+	m_popup->Append(4, "Open Game Folder");
+	m_popup->Append(5, "Open Config Folder");
 	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
 	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
 	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, 2);
 	Bind(wxEVT_MENU, &GameViewer::RemoveGameConfig, this, 3);
 	Bind(wxEVT_MENU, &GameViewer::OpenGameFolder, this, 4);
+	Bind(wxEVT_MENU, &GameViewer::OpenConfigFolder, this, 5);
 }
 
 void GameViewer::DoResize(wxSize size)
@@ -264,6 +266,8 @@ void GameViewer::RemoveGameConfig(wxCommandEvent& event)
 
 static void open_dir(const std::string& spath)
 {
+	fs::create_dir(spath);
+
 #ifdef _WIN32
 	std::string command = "explorer " + spath;
 	std::replace(command.begin(), command.end(), '/', '\\');
@@ -281,6 +285,14 @@ void GameViewer::OpenGameFolder(wxCommandEvent& event)
 	if (i < 0) return;
 
 	open_dir(Emu.GetGameDir() + m_game_data[i].root);
+}
+
+void GameViewer::OpenConfigFolder(wxCommandEvent& event)
+{
+	long i = GetFirstSelected();
+	if (i < 0) return;
+
+	open_dir(fs::get_config_dir() + "data/" + m_game_data[i].serial);
 }
 
 ColumnsArr::ColumnsArr()
