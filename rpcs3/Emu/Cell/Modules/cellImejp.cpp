@@ -2,9 +2,6 @@
 #include "Emu/Cell/PPUModule.h"
 #include "cellImejp.h"
 
-#include <cmath>
-#include <cfenv>
-
 logs::channel cellImeJp("cellImeJp", logs::level::notice);
 
 // Return Codes
@@ -20,7 +17,6 @@ enum
 };
 
 static uint16_t s_ime_string[256];
-
 
 s32 cellImeJpOpen()
 {
