@@ -68,8 +68,10 @@ void GameViewer::InitPopupMenu()
 #endif
 	m_popup->Append(boot_item);
 	m_popup->Append(1, _T("Configure"));
+	m_popup->AppendSeparator();
 	m_popup->Append(2, _T("Remove Game"));
 	m_popup->Append(3, _T("Remove Custom Configuration"));
+	m_popup->AppendSeparator();
 	m_popup->Append(4, _T("Open Game Folder"));
 	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
 	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
@@ -260,29 +262,25 @@ void GameViewer::RemoveGameConfig(wxCommandEvent& event)
 	Refresh();
 }
 
+static void open_dir(const std::string& spath)
+{
+#ifdef _WIN32
+	std::string command = "explorer " + spath;
+	std::replace(command.begin(), command.end(), '/', '\\');
+#elif __APPLE__
+	std::string command = "open " + spath;
+#elif __linux__
+	std::string command = "xdg-open " + spath;
+#endif
+	wxExecute(fmt::FromUTF8(command));
+}
+
 void GameViewer::OpenGameFolder(wxCommandEvent& event)
 {
 	long i = GetFirstSelected();
 	if (i < 0) return;
 
-	const std::string& spath = Emu.GetGameDir() + m_game_data[i].root;
-
-#ifdef _WIN32
-	std::string command = "explorer " + spath;
-	std::string oldc("/"), newc("\\");
-	size_t pos = 0;
-	while ((pos = command.find(oldc, pos)) != std::string::npos) {
-		command.replace(pos, oldc.length(), newc);
-		pos += newc.length();
-	}
-	wxExecute(fmt::FromUTF8(command));
-#elif __APPLE__
-	std::string command = "open " + spath;
-	wxExecute(fmt::FromUTF8(command));
-#elif __Linux
-	std::string command = "xdg-open " + spath;
-	wxExecute(fmt::FromUTF8(command));
-#endif
+	open_dir(Emu.GetGameDir() + m_game_data[i].root);
 }
 
 ColumnsArr::ColumnsArr()
