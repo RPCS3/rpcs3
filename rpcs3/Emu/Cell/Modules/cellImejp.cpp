@@ -86,27 +86,27 @@ s32 cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pInputStatus)
 	return CELL_OK;
 }
 
-s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, vm::ptr<u16> inputChar, vm::ptr<u16> pOutputStatus)
+s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	LOG_TODO(HLE, "cellImeJpEnterChar hImeJpHandle / inputChar / pOutputStatus (%d / 0x%x / %d)" HERE, hImeJpHandle, inputChar, pOutputStatus);
-	*s_ime_string = *inputChar;
+	*s_ime_string = inputChar;
 	*pOutputStatus = CELL_IMEJP_RET_CONFIRMED;
 	return CELL_OK;
 }
 
-s32 cellImeJpEnterCharExt(CellImeJpHandle hImeJpHandle, vm::ptr<u16> inputChar, vm::ptr<u16> pOutputStatus)
+s32 cellImeJpEnterCharExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterCharExt()");
 	return cellImeJpEnterChar(hImeJpHandle, inputChar, pOutputStatus);
 }
 
-s32 cellImeJpEnterString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> inputChar, vm::ptr<u16> pOutputStatus)
+s32 cellImeJpEnterString(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterString()");
 	return cellImeJpEnterChar(hImeJpHandle, inputChar, pOutputStatus);
 }
 
-s32 cellImeJpEnterStringExt(CellImeJpHandle hImeJpHandle, vm::ptr<u16> inputChar, vm::ptr<u16> pOutputStatus)
+s32 cellImeJpEnterStringExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterStringExt()");
 	return cellImeJpEnterChar(hImeJpHandle, inputChar, pOutputStatus);
