@@ -203,6 +203,21 @@ namespace rsx
 			}
 		};
 
+		void set_array_element16(thread* rsx, u32, u32 arg)
+		{
+			if (rsx->in_begin_end)
+			{
+				rsx->append_array_element(arg & 0xFFFF);
+				rsx->append_array_element(arg >> 16);
+			}
+		}
+
+		void set_array_element32(thread* rsx, u32, u32 arg)
+		{
+			if (rsx->in_begin_end)
+				rsx->append_array_element(arg);
+		}
+
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
@@ -262,12 +277,27 @@ namespace rsx
 			}
 
 			//Check if we have immediate mode vertex data in a driver-local buffer
-			const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
-			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && push_buffer_vertices_count)
+			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
 			{
-				rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
+				const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
+				const u32 push_buffer_index_count = rsxthr->get_push_buffer_index_count();
+
+				//Need to set this flag since it overrides some register contents
+				rsx::method_registers.current_draw_clause.is_immediate_draw = true;
+
+				if (push_buffer_index_count)
+				{
+					rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
+					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_index_count));
+				}
+				else if (push_buffer_vertices_count)
+				{
+					rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
+					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
+				}
 			}
+			else
+				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
 
 			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
 			        rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
@@ -1245,8 +1275,10 @@ namespace rsx
 		methods[NV3089_IMAGE_IN]                          = nullptr;
 
 		//Some custom GCM methods
-		methods[GCM_PREPARE_DISPLAY_BUFFER_HEAD0]         = nullptr;
-		methods[GCM_PREPARE_DISPLAY_BUFFER_HEAD1]         = nullptr;
+		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
+		
+		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
+		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
 
 		bind_array<NV4097_SET_ANISO_SPREAD, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr>();
@@ -1290,6 +1322,8 @@ namespace rsx
 		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
+		bind<NV4097_ARRAY_ELEMENT16, nv4097::set_array_element16>();
+		bind<NV4097_ARRAY_ELEMENT32, nv4097::set_array_element32>();
 		bind_range<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nv4097::set_vertex_data_scaled4s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
@@ -1338,10 +1372,7 @@ namespace rsx
 
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
-		bind<GCM_FLIP_HEAD0, flip_command>();
-		bind<GCM_FLIP_HEAD1, flip_command>();
-		bind<GCM_SET_USER_COMMAND, user_command>();
-		bind<GCM_SET_USER_COMMAND2, user_command>();
+		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
 
 		return true;	
 	}();
