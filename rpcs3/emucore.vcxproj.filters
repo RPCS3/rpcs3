@@ -908,6 +908,9 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\bin_patch.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1737,6 +1740,9 @@
     </ClInclude>
     <ClInclude Include="Loader\TAR.h">
       <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\bin_patch.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
