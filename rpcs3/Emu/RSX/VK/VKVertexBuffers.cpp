@@ -269,10 +269,13 @@ namespace
 
 			VkDeviceSize offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(upload_size);
 			void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, upload_size);
-			vk::prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
+			
 			gsl::span<gsl::byte> dest_span(static_cast<gsl::byte*>(dst), upload_size);
-
 			write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, real_element_size);
+
+			//Padding the vertex buffer should be done after the writes have been done
+			//write_vertex_data function may 'dirty' unused sections of the buffer as optimization
+			vk::prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
 
 			m_attrib_ring_info.unmap();
 			const VkFormat format = vk::get_suitable_vk_format(vertex_array.type, vertex_array.attribute_size);

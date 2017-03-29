@@ -501,6 +501,10 @@ void GLGSRender::on_init_thread()
 	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
 	m_vao.create();
 
+	//Set min alignment to 16-bytes for SSE optimizations with aligned addresses to work
+	m_min_texbuffer_alignment = std::max(m_min_texbuffer_alignment, 16);
+	m_uniform_buffer_offset_align = std::max(m_uniform_buffer_offset_align, 16);
+
 	const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
