@@ -263,9 +263,9 @@ extern void ppu_set_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (s_ppu_compiled[addr / 4] != _break)
+	if (ppu_ref(addr / 4) != _break)
 	{
-		s_ppu_compiled[addr / 4] = _break;
+		ppu_ref(addr / 4) = _break;
 	}
 }
 
@@ -279,9 +279,9 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (s_ppu_compiled[addr / 4] == _break)
+	if (ppu_ref(addr / 4) == _break)
 	{
-		s_ppu_compiled[addr / 4] = ppu_cache(addr);
+		ppu_ref(addr / 4) = ppu_cache(addr);
 	}
 }
 
