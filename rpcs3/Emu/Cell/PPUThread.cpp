@@ -11,7 +11,7 @@
 #include "PPUModule.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
-#include <Utilities/GDBDebugServer.h>
+#include "Utilities/GDBDebugServer.h"
 
 #ifdef LLVM_AVAILABLE
 #include "restore_new.h"
@@ -198,7 +198,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 	// Pause and wait if necessary
 	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
 #ifdef WITH_GDB_DEBUGGER
-	idm::get<GDBDebugServer>(g_gdb_debugger_id)->notify();
+	fxm::get<GDBDebugServer>()->notify();
 #endif
 	if (!status && ppu.check_state())
 	{
@@ -441,12 +441,6 @@ void ppu_thread::exec_task()
 
 	while (true)
 	{
-#ifdef WITH_GDB_DEBUGGER
-		if (test(state, cpu_flag::dbg_pause)) {
-			idm::get<GDBDebugServer>(g_gdb_debugger_id)->notify();
-		}
-#endif
-
 		if (UNLIKELY(test(state)))
 		{
 			if (check_state()) return;

@@ -803,6 +803,8 @@ std::string GDBDebugServer::get_name() const
 void GDBDebugServer::on_stop()
 {
 	this->stop = true;
+	//just in case we are waiting for breakpoint
+	this->notify();
 	named_thread::on_stop();
 }
 

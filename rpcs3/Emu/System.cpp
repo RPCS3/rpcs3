@@ -103,10 +103,7 @@ void Emulator::Init()
 	fs::create_path(dev_usb);
 
 #ifdef WITH_GDB_DEBUGGER
-	if (g_gdb_debugger_id) {
-		idm::remove<GDBDebugServer>(g_gdb_debugger_id);
-	}
-	g_gdb_debugger_id = idm::make<GDBDebugServer>();
+	fxm::make<GDBDebugServer>();
 #endif
 }
 
@@ -497,10 +494,9 @@ void Emulator::Stop()
 	rpcs3::on_stop()();
 
 #ifdef WITH_GDB_DEBUGGER
-	if (g_gdb_debugger_id) {
-		idm::remove<GDBDebugServer>(g_gdb_debugger_id);
-		g_gdb_debugger_id = 0;
-	}
+	//fxm for some reason doesn't call on_stop
+	fxm::get<GDBDebugServer>()->on_stop();
+	fxm::remove<GDBDebugServer>();
 #endif
 
 	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
