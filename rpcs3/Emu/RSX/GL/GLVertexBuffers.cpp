@@ -231,9 +231,9 @@ namespace
 			buffer_offset     = mapping.second;
 			gsl::span<gsl::byte> dest_span(dst, data_size);
 
-			prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
-
 			write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size));
+
+			prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
 
 			texture.copy_from(m_attrib_ring_info, gl_type, buffer_offset, data_size);
 		}
