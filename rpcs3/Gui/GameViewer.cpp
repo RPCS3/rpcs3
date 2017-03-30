@@ -169,7 +169,6 @@ void GameViewer::LoadPSF()
 		{
 			game.category = "Game Data";
 			game.icon_path = dir + "/ICON0.PNG";
-			continue;
 		}
 			
 		m_game_data.push_back(game);
