@@ -30,43 +30,43 @@ enum
 
 struct CellHttpUri
 {
-	vm::cptr<char> scheme;
-	vm::cptr<char> hostname;
-	vm::cptr<char> username;
-	vm::cptr<char> password;
-	vm::cptr<char> path;
-	u32 port;
+	vm::bcptr<char> scheme;
+	vm::bcptr<char> hostname;
+	vm::bcptr<char> username;
+	vm::bcptr<char> password;
+	vm::bcptr<char> path;
+	be_t<u32> port;
 	u8 reserved[4];
 };
 
 struct CellHttpUriPath
 {
-	vm::cptr<char> path;
-	vm::cptr<char> query;
-	vm::cptr<char> fragment;
+	vm::bcptr<char> path;
+	vm::bcptr<char> query;
+	vm::bcptr<char> fragment;
 };
 
 struct CellHttpRequestLine
 {
-	vm::cptr<char> method;
-	vm::cptr<char> path;
-	vm::cptr<char> protocol;
-	u32 majorVersion;
-	u32 minorVersion;
+	vm::bcptr<char> method;
+	vm::bcptr<char> path;
+	vm::bcptr<char> protocol;
+	be_t<u32> majorVersion;
+	be_t<u32> minorVersion;
 };
 
 struct CellHttpStatusLine
 {
-	vm::cptr<char> protocol;
-	u32 majorVersion;
-	u32 minorVersion;
-	vm::cptr<char> reasonPhrase;
-	s32 statusCode;
+	vm::bcptr<char> protocol;
+	be_t<u32> majorVersion;
+	be_t<u32> minorVersion;
+	vm::bcptr<char> reasonPhrase;
+	be_t<s32> statusCode;
 	u8 reserved[4];
 };
 
 struct CellHttpHeader
 {
-	vm::cptr<char> name;
-	vm::cptr<char> value;
+	vm::bcptr<char> name;
+	vm::bcptr<char> value;
 };
