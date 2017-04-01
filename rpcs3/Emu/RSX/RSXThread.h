@@ -168,6 +168,8 @@ namespace rsx
 
 	protected:
 		std::stack<u32> m_call_stack;
+		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
+		std::vector<u32> element_push_buffer;
 
 	public:
 		old_shaders_cache::shaders_cache shaders_cache;
@@ -233,6 +235,7 @@ namespace rsx
 	public:
 		std::set<u32> m_used_gcm_commands;
 		bool invalid_command_interrupt_raised = false;
+		bool in_begin_end = false;
 
 	protected:
 		thread();
@@ -265,9 +268,21 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
-		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
+		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
+
+		/*
+		* Immediate mode rendering requires a temp push buffer to hold attrib values
+		* Appends a value to the push buffer (currently only supports 32-wide types)
+		*/
+		void append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value);
+		u32 get_push_buffer_vertex_count() const;
+
+		void append_array_element(u32 index);
+		u32 get_push_buffer_index_count() const;
 
 	private:
 		std::mutex m_mtx_task;

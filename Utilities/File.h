@@ -547,11 +547,20 @@ namespace fs
 
 		u64 seek(s64 offset, seek_mode whence) override
 		{
-			return
-				whence == fs::seek_set ? pos = offset :
-				whence == fs::seek_cur ? pos = offset + pos :
-				whence == fs::seek_end ? pos = offset + size() :
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + pos :
+				whence == fs::seek_end ? offset + size() :
 				(fmt::raw_error("fs::container_stream<>::seek(): invalid whence"), 0);
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			pos = new_pos;
+			return pos;
 		}
 
 		u64 size() override
@@ -566,5 +575,18 @@ namespace fs
 		file result;
 		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container)));
 		return result;
+	}
+
+	template <typename... Args>
+	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
+	{
+		if (fs::file f{path, mode})
+		{
+			// Write args sequentially
+			int seq[]{ (f.write(args), 0)... };
+			return true;
+		}
+
+		return false;
 	}
 }

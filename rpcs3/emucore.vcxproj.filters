@@ -329,6 +329,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellCelpEnc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellCrossController.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -518,6 +521,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -546,6 +552,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\libmedi.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp">
@@ -898,6 +907,9 @@
     </ClCompile>
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\bin_patch.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1728,6 +1740,9 @@
     </ClInclude>
     <ClInclude Include="Loader\TAR.h">
       <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\bin_patch.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

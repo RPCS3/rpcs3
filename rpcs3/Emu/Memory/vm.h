@@ -10,6 +10,7 @@ class cpu_thread;
 namespace vm
 {
 	extern u8* const g_base_addr;
+	extern u8* const g_exec_addr;
 
 	enum memory_location_t : uint
 	{

@@ -28,6 +28,7 @@ LOG_CHANNEL(cellBGDL);
 LOG_CHANNEL(cellCamera);
 LOG_CHANNEL(cellCelp8Enc);
 LOG_CHANNEL(cellCelpEnc);
+LOG_CHANNEL(cellCrossController);
 LOG_CHANNEL(cellDaisy);
 LOG_CHANNEL(cellDmux);
 LOG_CHANNEL(cellFiber);
@@ -85,6 +86,7 @@ LOG_CHANNEL(cellSysutilAp);
 LOG_CHANNEL(cellSysutilAvc);
 LOG_CHANNEL(cellSysutilAvc2);
 LOG_CHANNEL(cellSysutilMisc);
+LOG_CHANNEL(cellSysutilNpEula);
 LOG_CHANNEL(cellUsbd);
 LOG_CHANNEL(cellUsbPspcm);
 LOG_CHANNEL(cellUserInfo);
@@ -93,6 +95,7 @@ LOG_CHANNEL(cellVideoExport);
 LOG_CHANNEL(cellVideoUpload);
 LOG_CHANNEL(cellVoice);
 LOG_CHANNEL(cellVpost);
+LOG_CHANNEL(libmedi);
 LOG_CHANNEL(libmixer);
 LOG_CHANNEL(libsnd3);
 LOG_CHANNEL(libsynth2);
@@ -213,6 +216,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellCamera,
 		&ppu_module_manager::cellCelp8Enc,
 		&ppu_module_manager::cellCelpEnc,
+		&ppu_module_manager::cellCrossController,
 		&ppu_module_manager::cellDaisy,
 		&ppu_module_manager::cellDmux,
 		&ppu_module_manager::cellFiber,
@@ -271,6 +275,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellSysutilAp,
 		&ppu_module_manager::cellSysutilAvc,
 		&ppu_module_manager::cellSysutilAvc2,
+		&ppu_module_manager::cellSysutilNpEula,
 		&ppu_module_manager::cellSysutilMisc,
 		&ppu_module_manager::cellUsbd,
 		&ppu_module_manager::cellUsbPspcm,
@@ -280,6 +285,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellVideoUpload,
 		&ppu_module_manager::cellVoice,
 		&ppu_module_manager::cellVpost,
+		&ppu_module_manager::libmedi,
 		&ppu_module_manager::libmixer,
 		&ppu_module_manager::libsnd3,
 		&ppu_module_manager::libsynth2,
@@ -1051,6 +1057,10 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellRtc", "librtc.sprx" },
 			{ "cellSsl", "libssl.sprx" },
 			{ "cellSsl", "librtc.sprx" },
+			{ "cellHttp", "libhttp.sprx" },
+			{ "cellHttp", "cellSsl" },
+			{ "cellHttpUtil", "libhttp.sprx" },
+			{ "cellHttpUtil", "cellSsl" },
 			{ "cellSail", "libsail.sprx" },
 			{ "cellSail", "libsre.sprx" },
 			{ "cellSail", "libmp4.sprx" },

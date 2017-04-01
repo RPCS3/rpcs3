@@ -444,7 +444,13 @@ namespace sys_net
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
 
-		if (s <= 0) {
+		if (!sock || !buf || len == 0)
+		{
+			libnet.error("recvfrom(): invalid arguments buf= *0x%x, len=%d", buf, len);
+			return SYS_NET_EINVAL;
+		}
+
+		if (s < 0) {
 			libnet.error("recvfrom(): invalid socket %d", s);
 			return SYS_NET_EBADF;
 		}

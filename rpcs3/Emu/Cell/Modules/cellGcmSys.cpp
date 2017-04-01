@@ -808,9 +808,9 @@ s32 cellGcmSetQueueHandler()
 	return CELL_OK;
 }
 
-s32 cellGcmSetSecondVHandler()
+s32 cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmSetSecondVHandler(handler=0x%x)", handler);
 	return CELL_OK;
 }
 

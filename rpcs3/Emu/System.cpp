@@ -2,6 +2,7 @@
 #include "Utilities/Config.h"
 #include "Utilities/AutoPause.h"
 #include "Utilities/event.h"
+#include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -50,7 +51,6 @@ extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
 extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
-extern void ppu_finalize();
 
 fs::file g_tty;
 
@@ -95,11 +95,14 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
 	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
 	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
-	if (fs::file f{dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write}) f.write("User"s);
+	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
+
+	// Initialize patch engine
+	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -215,6 +218,10 @@ void Emulator::Load()
 		}
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
+
+		// Load patches from different locations
+		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
+		fxm::check_unlocked<patch_engine>()->append(m_cache_path + "/patch.yml");
 
 		// Mount all devices
 		const std::string emu_dir_ = g_cfg_vfs_emulator_dir;
@@ -518,7 +525,6 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
-	ppu_finalize();
 
 	if (g_cfg_autoexit)
 	{

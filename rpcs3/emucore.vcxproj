@@ -73,6 +73,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
+    <ClCompile Include="..\Utilities\bin_patch.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\cond.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -144,6 +147,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellCamera.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellCelp8Enc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellCelpEnc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellCrossController.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
@@ -207,6 +211,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUsbpspcm.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUserInfo.cpp" />
@@ -217,6 +222,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libmedi.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libsnd3.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libsynth2.cpp" />
@@ -393,6 +399,7 @@
     <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\bit_set.h" />
     <ClInclude Include="..\Utilities\cfmt.h" />

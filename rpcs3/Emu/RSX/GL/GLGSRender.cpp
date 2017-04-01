@@ -276,45 +276,6 @@ void GLGSRender::begin()
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
 
-	auto set_clip_plane_control = [&](int index, rsx::user_clip_plane_op control)
-	{
-		int value = 0;
-		int location;
-
-		if (m_program->uniforms.has_location("uc_m" + std::to_string(index), &location))
-		{
-			switch (control)
-			{
-			default:
-				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)control);
-
-			case rsx::user_clip_plane_op::disable:
-				value = 0;
-				break;
-
-			case rsx::user_clip_plane_op::greater_or_equal:
-				value = 1;
-				break;
-
-			case rsx::user_clip_plane_op::less_than:
-				value = -1;
-				break;
-			}
-
-			__glcheck m_program->uniforms[location] = value;
-		}
-
-		__glcheck enable(value, GL_CLIP_DISTANCE0 + index);
-	};
-
-	load_program();
-	set_clip_plane_control(0, rsx::method_registers.clip_plane_0_enabled());
-	set_clip_plane_control(1, rsx::method_registers.clip_plane_1_enabled());
-	set_clip_plane_control(2, rsx::method_registers.clip_plane_2_enabled());
-	set_clip_plane_control(3, rsx::method_registers.clip_plane_3_enabled());
-	set_clip_plane_control(4, rsx::method_registers.clip_plane_4_enabled());
-	set_clip_plane_control(5, rsx::method_registers.clip_plane_5_enabled());
-
 	if (__glcheck enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
 	{
 		__glcheck glCullFace(cull_face(rsx::method_registers.cull_face_mode()));
@@ -368,6 +329,56 @@ void GLGSRender::end()
 		rsx::thread::end();
 		return;
 	}
+
+	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
+
+	//Load program here since it is dependent on vertex state
+	load_program();
+
+	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
+	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
+
+	//Set active user clip planes
+	const rsx::user_clip_plane_op clip_plane_control[6] =
+	{
+		rsx::method_registers.clip_plane_0_enabled(),
+		rsx::method_registers.clip_plane_1_enabled(),
+		rsx::method_registers.clip_plane_2_enabled(),
+		rsx::method_registers.clip_plane_3_enabled(),
+		rsx::method_registers.clip_plane_4_enabled(),
+		rsx::method_registers.clip_plane_5_enabled(),
+	};
+
+	for (int index = 0; index < 6; ++index)
+	{
+		int value = 0;
+		int location;
+
+		if (m_program->uniforms.has_location("uc_m" + std::to_string(index), &location))
+		{
+			switch (clip_plane_control[index])
+			{
+			default:
+				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)clip_plane_control[index]);
+
+			case rsx::user_clip_plane_op::disable:
+				value = 0;
+				break;
+
+			case rsx::user_clip_plane_op::greater_or_equal:
+				value = 1;
+				break;
+
+			case rsx::user_clip_plane_op::less_than:
+				value = -1;
+				break;
+			}
+
+			__glcheck m_program->uniforms[location] = value;
+		}
+
+		__glcheck enable(value, GL_CLIP_DISTANCE0 + index);
+	};
 
 	if (manually_flush_ring_buffers)
 	{
@@ -624,8 +635,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if (arg & 0x1)
 	{
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
-
-		u32 clear_depth = rsx::method_registers.z_clear_value();
+		u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
 
 		glDepthMask(GL_TRUE);
 		glClearDepth(double(clear_depth) / max_depth_value);
