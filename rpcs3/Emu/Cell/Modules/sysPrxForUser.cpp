@@ -24,20 +24,28 @@ static std::unique_ptr<atomic_t<bool>[]> s_tls_map; // I'd like to make it std::
 
 u32 ppu_alloc_tls()
 {
+	u32 addr = 0;
+
 	for (u32 i = 0; i < s_tls_max; i++)
 	{
 		if (!s_tls_map[i] && s_tls_map[i].exchange(true) == false)
 		{
-			const u32 addr = s_tls_area + i * s_tls_size; // Calculate TLS address
-			std::memset(vm::base(addr), 0, 0x30); // Clear system area (TODO)
-			std::memcpy(vm::base(addr + 0x30), vm::base(s_tls_addr), s_tls_file); // Copy TLS image
-			std::memset(vm::base(addr + 0x30 + s_tls_file), 0, s_tls_zero); // Clear the rest
-			return addr;
+			// Default (small) TLS allocation
+			addr = s_tls_area + i * s_tls_size;
+			break;			
 		}
 	}
 
-	sysPrxForUser.error("ppu_alloc_tls(): out of TLS memory (max=%zu)", s_tls_max);
-	return 0;
+	if (!addr)
+	{
+		// Alternative (big) TLS allocation
+		addr = vm::alloc(s_tls_size, vm::main);
+	}
+
+	std::memset(vm::base(addr), 0, 0x30); // Clear system area (TODO)
+	std::memcpy(vm::base(addr + 0x30), vm::base(s_tls_addr), s_tls_file); // Copy TLS image
+	std::memset(vm::base(addr + 0x30 + s_tls_file), 0, s_tls_zero); // Clear the rest
+	return addr;
 }
 
 void ppu_free_tls(u32 addr)
@@ -47,7 +55,8 @@ void ppu_free_tls(u32 addr)
 
 	if (addr < s_tls_area || i >= s_tls_max || (addr - s_tls_area) % s_tls_size)
 	{
-		sysPrxForUser.error("ppu_free_tls(0x%x): invalid address", addr);
+		// Alternative TLS allocation detected
+		vm::dealloc_verbose_nothrow(addr, vm::main);
 		return;
 	}
 
@@ -70,8 +79,8 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	s_tls_file = tls_seg_size;
 	s_tls_zero = tls_mem_size - tls_seg_size;
 	s_tls_size = tls_mem_size + 0x30; // 0x30 is system area size
-	s_tls_area = vm::alloc(0x20000, vm::main) + 0x30;
-	s_tls_max = (0xffd0 / s_tls_size) + (0x10000 / s_tls_size);
+	s_tls_area = vm::alloc(0x40000, vm::main) + 0x30;
+	s_tls_max = (0x40000 - 0x30) / s_tls_size;
 	s_tls_map = std::make_unique<atomic_t<bool>[]>(s_tls_max);
 
 	// Allocate TLS for main thread
