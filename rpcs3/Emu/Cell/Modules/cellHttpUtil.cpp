@@ -39,7 +39,7 @@ s32 cellHttpUtilBuildRequestLine(vm::cptr<CellHttpRequestLine> req, vm::ptr<char
 {
 	cellHttpUtil.todo("cellHttpUtilBuildRequestLine(req=*0x%x, buf=*0x%x, len=%d, required=*0x%x)", req, buf, len, required);
 
-	if ((req->method == vm::null) || (req->path == vm::null) || (req->protocol == vm::null)) {
+	if (!req->method || !req->path || !req->protocol) {
 		return CELL_HTTP_UTIL_ERROR_INVALID_REQUEST;
 	}
 
@@ -55,7 +55,7 @@ s32 cellHttpUtilBuildHeader(vm::cptr<CellHttpHeader> header, vm::ptr<char> buf, 
 {
 	cellHttpUtil.todo("cellHttpUtilBuildHeader(header=*0x%x, buf=*0x%x, len=%d, required=*0x%x)", header, buf, len, required);
 
-	if ((header->name == vm::null) || (header->value == vm::null)) {
+	if (!header->name || !header->value) {
 		return CELL_HTTP_UTIL_ERROR_INVALID_HEADER;
 	}
 
