@@ -554,6 +554,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellLibprof.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libmedi.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
