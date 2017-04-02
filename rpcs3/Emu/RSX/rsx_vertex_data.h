@@ -110,6 +110,8 @@ struct push_buffer_vertex_info
 
 		void* dst = data.data() + ((vertex_count - 1) * vertex_size) + sub_index;
 		
+		//NOTE: Endianness on wide types is converted to BE here because unified upload code assumes input in BE
+		//TODO: Implement fast LE source inputs and remove the byteswap
 		switch (type)
 		{
 		case vertex_base_type::f:

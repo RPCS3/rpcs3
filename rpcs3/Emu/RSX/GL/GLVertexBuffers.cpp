@@ -332,7 +332,10 @@ namespace
 		{
 			u32 min_index = 0, max_index = 0;
 
-			rsx::index_array_type type = rsx::method_registers.index_type();
+			rsx::index_array_type type = rsx::method_registers.current_draw_clause.is_immediate_draw?
+				rsx::index_array_type::u32:
+				rsx::method_registers.index_type();
+			
 			u32 type_size              = ::narrow<u32>(get_index_type_size(type));
 
 			u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();

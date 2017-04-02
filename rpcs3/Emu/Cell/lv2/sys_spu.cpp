@@ -3,7 +3,9 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
+#include "Crypto/sha1.h"
 #include "Loader/ELF.h"
+#include "Utilities/bin_patch.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -18,15 +20,29 @@ logs::channel sys_spu("sys_spu", logs::level::notice);
 
 void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr)
 {
-	const spu_exec_object obj = stream;
+	const spu_exec_object obj{stream};
 
 	if (obj != elf_error::ok)
 	{
 		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
 	}
 
+	sha1_context ctx;
+	u8 output[20];
+
+	sha1_starts(&ctx);
+	sha1_update(&ctx, reinterpret_cast<const u8*>(&obj.header), sizeof(obj.header));
+
+	for (const auto& shdr : obj.shdrs)
+	{
+		sha1_update(&ctx, reinterpret_cast<const u8*>(&shdr), sizeof(spu_exec_object::shdr_t));
+	}
+
 	for (const auto& prog : obj.progs)
 	{
+		sha1_update(&ctx, reinterpret_cast<const u8*>(&prog), sizeof(spu_exec_object::phdr_t));
+		sha1_update(&ctx, reinterpret_cast<const u8*>(prog.bin.data()), prog.bin.size());
+
 		if (prog.p_type == 0x1 /* LOAD */)
 		{
 			std::memcpy(vm::base(addr + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
@@ -34,6 +50,22 @@ void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr)
 	}
 
 	spu_ep = obj.header.e_entry;
+
+	sha1_finish(&ctx, output);
+
+	// Format patch name
+	std::string hash("spu-");
+	for (u8 x : output) fmt::append(hash, "%02x", x);
+	LOG_NOTICE(LOADER, "Loaded SPU image: %s", hash);
+
+	// Apply the patch
+	fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + addr);
+
+	if (!Emu.GetTitleID().empty())
+	{
+		// Alternative patch
+		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + addr);
+	}
 }
 
 u32 LoadSpuImage(const fs::file& stream, u32& spu_ep)

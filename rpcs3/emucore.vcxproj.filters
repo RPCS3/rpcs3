@@ -911,6 +911,9 @@
     <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\bin_patch.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1742,6 +1745,9 @@
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\GDBDebugServer.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\bin_patch.h">
       <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>

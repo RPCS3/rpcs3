@@ -291,7 +291,10 @@ void D3D12GSRender::load_program()
 
 	if (rsx::method_registers.restart_index_enabled())
 	{
-		rsx::index_array_type index_type = rsx::method_registers.index_type();
+		rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw?
+			rsx::index_array_type::u32:
+			rsx::method_registers.index_type();
+
 		if (index_type == rsx::index_array_type::u32)
 		{
 			prop.CutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF;

@@ -28,6 +28,8 @@ namespace rsx
 		primitive_type primitive;
 		draw_command command;
 
+		bool is_immediate_draw;
+
 		std::vector<u32> inline_vertex_array;
 
 		/**

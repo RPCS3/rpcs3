@@ -169,7 +169,6 @@ void GameViewer::LoadPSF()
 		{
 			game.category = "Game Data";
 			game.icon_path = dir + "/ICON0.PNG";
-			continue;
 		}
 			
 		m_game_data.push_back(game);
@@ -253,15 +252,26 @@ void GameViewer::RemoveGameConfig(wxCommandEvent& event)
 	long i = GetFirstSelected();
 	if (i < 0) return;
 
-	if (fs::exists(fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml"))
+	const std::string config_path = fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml";
+
+	if (fs::is_file(config_path))
 	{
 		if (wxMessageBox("Delete custom game configuration?", "Confirm Delete", wxYES_NO | wxNO_DEFAULT) == wxYES)
 		{
-			fs::remove_file(fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml");
+			if (fs::remove_file(config_path))
+			{
+				LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
+			}
+			else
+			{
+				LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
+			}
 		}
 	}
-
-	Refresh();
+	else
+	{
+		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
+	}
 }
 
 static void open_dir(const std::string& spath)
