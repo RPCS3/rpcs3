@@ -80,6 +80,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp" />
+    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -406,6 +409,7 @@
     <ClInclude Include="..\Utilities\cond.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
+    <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\JIT.h" />

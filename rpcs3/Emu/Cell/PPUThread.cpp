@@ -11,6 +11,7 @@
 #include "PPUModule.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
+#include "Utilities/GDBDebugServer.h"
 
 #ifdef LLVM_AVAILABLE
 #include "restore_new.h"
@@ -195,7 +196,11 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Pause and wait if necessary
-	if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
+	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
+#ifdef WITH_GDB_DEBUGGER
+	fxm::get<GDBDebugServer>()->notify();
+#endif
+	if (!status && ppu.check_state())
 	{
 		return false;
 	}
@@ -245,6 +250,38 @@ void ppu_thread::on_init(const std::shared_ptr<void>& _this)
 		gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
 
 		cpu_thread::on_init(_this);
+	}
+}
+
+//sets breakpoint, does nothing if there is a breakpoint there already
+extern void ppu_set_breakpoint(u32 addr)
+{
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
+	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
+
+	if (ppu_ref(addr / 4) != _break)
+	{
+		ppu_ref(addr / 4) = _break;
+	}
+}
+
+//removes breakpoint, does nothing if there is no breakpoint at location
+extern void ppu_remove_breakpoint(u32 addr)
+{
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
+	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
+
+	if (ppu_ref(addr / 4) == _break)
+	{
+		ppu_ref(addr / 4) = ppu_cache(addr);
 	}
 }
 
