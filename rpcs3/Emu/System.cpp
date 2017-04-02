@@ -26,6 +26,8 @@
 
 #include <thread>
 
+#include "Utilities/GDBDebugServer.h"
+
 system_type g_system;
 
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
@@ -100,7 +102,10 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
-
+  
+#ifdef WITH_GDB_DEBUGGER
+	fxm::make<GDBDebugServer>();
+#endif
 	// Initialize patch engine
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
@@ -487,6 +492,12 @@ void Emulator::Stop()
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
 	rpcs3::on_stop()();
+
+#ifdef WITH_GDB_DEBUGGER
+	//fxm for some reason doesn't call on_stop
+	fxm::get<GDBDebugServer>()->on_stop();
+	fxm::remove<GDBDebugServer>();
+#endif
 
 	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
 
