@@ -723,6 +723,12 @@ namespace sys_net
 		libnet.warning("socketclose(s=%d)", s);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("socketclose(): socket does not exist, or was already closed");
+			return -1;
+		}
+
 #ifdef _WIN32
 		s32 ret = ::closesocket(sock->s);
 #else
