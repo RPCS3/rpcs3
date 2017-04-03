@@ -132,8 +132,8 @@ inline bool node_data::remove(const Key& key, shared_memory_holder pMemory) {
   if (m_type != NodeType::Map)
     return false;
 
-  kv_pairs::iterator it = m_undefinedPairs.begin();
-  while (it != m_undefinedPairs.end()) {
+  for (kv_pairs::iterator it = m_undefinedPairs.begin();
+       it != m_undefinedPairs.end();) {
     kv_pairs::iterator jt = std::next(it);
     if (it->first->equals(key, pMemory))
       m_undefinedPairs.erase(it);

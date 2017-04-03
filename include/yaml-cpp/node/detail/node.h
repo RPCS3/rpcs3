@@ -106,9 +106,9 @@ class node {
   node_iterator end() { return m_pRef->end(); }
 
   // sequence
-  void push_back(node& node, shared_memory_holder pMemory) {
-    m_pRef->push_back(node, pMemory);
-    node.add_dependency(*this);
+  void push_back(node& input, shared_memory_holder pMemory) {
+    m_pRef->push_back(input, pMemory);
+    input.add_dependency(*this);
   }
   void insert(node& key, node& value, shared_memory_holder pMemory) {
     m_pRef->insert(key, value, pMemory);
