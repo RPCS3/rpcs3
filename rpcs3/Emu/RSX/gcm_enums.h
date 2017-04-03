@@ -1001,7 +1001,7 @@ enum
 	NV3089_IMAGE_IN = 0x0000C40C >> 2,
 
 	//lv1 hypervisor commands
-	GCM_SET_DRIVER_OBJECT = 0x0000E0000 >> 2,
+	GCM_SET_DRIVER_OBJECT = 0x0000E000 >> 2,
 	GCM_FLIP_HEAD = 0X0000E920 >> 2,          //0xE920:0xE924: Flip head 0 or 1
 	GCM_DRIVER_QUEUE = 0X0000E940 >> 2,       //0XE940:0xE95C: First two indices prepare display buffers, rest unknown
 	GCM_SET_USER_COMMAND = 0x0000EB00 >> 2,   //0xEB00:0xEB04: User interrupt

@@ -12,6 +12,7 @@ namespace vk
 	struct render_target : public image
 	{
 		u16 native_pitch = 0;
+		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 
 		render_target(vk::render_device &dev,
 			uint32_t memory_type_index,
@@ -110,27 +111,33 @@ namespace rsx
 			if (format == rsx::surface_depth_format::z24s8)
 				ds->native_pitch *= 2;
 
+			ds->attachment_aspect_flag = range.aspectMask;
+
 			return ds;
 		}
 
 		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
 		}
 
 		static void prepare_rtt_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
 		static void prepare_ds_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 		}
 
 		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
 		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height)
