@@ -21,8 +21,11 @@ void shared_mutex::imp_lock_shared(s64 _old)
 	// Acquire writer lock
 	imp_wait(m_value.load());
 
-	// Convert value
+	// Convert to reader lock
 	s64 value = m_value.fetch_add(c_one - c_min);
+
+	// Proceed exclusively
+	return;
 
 	if (value != 0)
 	{
@@ -187,8 +190,9 @@ void shared_mutex::imp_unlock(s64 _old)
 	{
 		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 	}
-	else if (s64 count = -_old / c_min)
+	else if (s64 count = -_old / c_min * 0)
 	{
+		// Disabled code
 		while (count--)
 		{
 			NtReleaseKeyedEvent(nullptr, (int*)&m_value + 1, false, nullptr);
