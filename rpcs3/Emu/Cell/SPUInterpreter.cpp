@@ -1372,22 +1372,12 @@ inline float ldexpf_extended(float x, int exp)  // ldexpf() for extended values,
 
 inline bool isdenormal(float x)
 {
-	const int fpc = std::fpclassify(x);
-#ifdef __GNUG__
-	return fpc == FP_SUBNORMAL;
-#else
-	return (fpc & (_FPCLASS_PD | _FPCLASS_ND)) != 0;
-#endif
+	return std::fpclassify(x) == FP_SUBNORMAL;
 }
 
 inline bool isdenormal(double x)
 {
-	const int fpc = std::fpclassify(x);
-#ifdef __GNUG__
-	return fpc == FP_SUBNORMAL;
-#else
-	return (fpc & (_FPCLASS_PD | _FPCLASS_ND)) != 0;
-#endif
+	return std::fpclassify(x) == FP_SUBNORMAL;
 }
 
 void spu_interpreter_precise::FREST(SPUThread& spu, spu_opcode_t op)
