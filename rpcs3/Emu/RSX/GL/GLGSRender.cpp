@@ -518,19 +518,37 @@ void GLGSRender::on_init_thread()
 	GSRender::on_init_thread();
 
 	gl::init();
+
 	if (g_cfg_rsx_debug_output)
 		gl::enable_debugging();
+
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
+
+	auto gl_caps = gl::get_driver_caps();
+
+	if (!gl_caps.ARB_texture_buffer_supported)
+	{
+		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_texture_buffer_object is required but not supported by your GPU");
+	}
+
+	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
+	{
+		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
+	}
+
+	//Use industry standard resource alignment values as defaults
+	m_uniform_buffer_offset_align = 256;
+	m_min_texbuffer_alignment = 256;
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_uniform_buffer_offset_align);
 	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
 	m_vao.create();
 
-	const u32 texture_index_offset =
-		rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
+	const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
+
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
 		auto &tex = m_gl_attrib_buffers[index];
@@ -539,6 +557,12 @@ void GLGSRender::on_init_thread()
 
 		glActiveTexture(GL_TEXTURE0 + texture_index_offset + index);
 		tex.bind();
+	}
+
+	if (!gl_caps.ARB_buffer_storage_supported)
+	{
+		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
+		g_cfg_rsx_gl_legacy_buffers = true;
 	}
 
 	if (g_cfg_rsx_gl_legacy_buffers)
@@ -570,7 +594,13 @@ void GLGSRender::on_init_thread()
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
 	if (g_cfg_rsx_overlay)
-		m_text_printer.init();
+	{
+		if (gl_caps.ARB_shader_draw_parameters_supported)
+		{
+			m_text_printer.init();
+			m_text_printer.set_enabled(true);
+		}
+	}
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -783,7 +813,7 @@ bool GLGSRender::load_program()
 	fragment_constants_offset = mapping.second;
 	if (fragment_constants_size)
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
-	
+
 	// Fragment state
 	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);
 
@@ -796,7 +826,7 @@ bool GLGSRender::load_program()
 	{
 		m_scale_offset_buffer->unmap();
 		m_fragment_constants_buffer->unmap();
-		
+
 		if (m_transform_constants_dirty) m_transform_constants_buffer->unmap();
 	}
 
@@ -896,7 +926,7 @@ void GLGSRender::flip(int buffer)
 	{
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
-		
+
 		m_text_printer.print_text(0, 0, m_frame->client_width(), m_frame->client_height(), "draw calls: " + std::to_string(m_draw_calls));
 		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), "draw call setup: " + std::to_string(m_begin_time) + "us");
 		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");

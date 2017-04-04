@@ -17,7 +17,7 @@ struct work_item
 {
 	std::condition_variable cv;
 	std::mutex guard_mutex;
-	
+
 	u32  address_to_flush = 0;
 	gl::texture_cache::cached_texture_section *section_to_flush = nullptr;
 
@@ -30,7 +30,7 @@ struct gcm_buffer_info
 {
 	u32 address = 0;
 	u32 pitch = 0;
-	
+
 	bool is_depth_surface;
 
 	rsx::surface_color_format color_format;
@@ -67,7 +67,7 @@ private:
 	gl::texture_cache m_gl_texture_cache;
 
 	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
-	
+
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
 	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
 	std::unique_ptr<gl::ring_buffer> m_transform_constants_buffer;
@@ -82,7 +82,7 @@ private:
 
 	//Compare to see if transform matrix have changed
 	size_t m_transform_buffer_hash = 0;
-	
+
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
 

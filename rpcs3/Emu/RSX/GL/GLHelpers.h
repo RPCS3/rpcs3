@@ -53,7 +53,10 @@ namespace gl
 #define __glcheck
 #endif
 
+	class capabilities;
+
 	void enable_debugging();
+	capabilities& get_driver_caps();
 
 	class exception : public std::exception
 	{
@@ -64,6 +67,69 @@ namespace gl
 		const char* what() const noexcept override
 		{
 			return m_what.c_str();
+		}
+	};
+
+	class capabilities
+	{
+	public:
+		bool EXT_dsa_supported = false;
+		bool ARB_dsa_supported = false;
+		bool ARB_buffer_storage_supported = false;
+		bool ARB_texture_buffer_supported = false;
+		bool ARB_shader_draw_parameters_supported = false;
+		bool initialized = false;
+
+		void initialize()
+		{
+			int find_count = 5;
+			int ext_count = 0;
+			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
+
+			for (int i = 0; i < ext_count; i++)
+			{
+				if (!find_count) break;
+
+				const char *ext = (const char*)glGetStringi(GL_EXTENSIONS, i);
+				const auto ext_name = std::string(ext);
+
+				if (ext_name == "GL_ARB_shader_draw_parameters")
+				{
+					ARB_shader_draw_parameters_supported = true;
+					find_count --;
+					continue;
+				}
+
+				if (ext_name == "GL_EXT_direct_state_access")
+				{
+					EXT_dsa_supported = true;
+					find_count --;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_direct_state_access")
+				{
+					ARB_dsa_supported = true;
+					find_count --;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_buffer_storage")
+				{
+					ARB_buffer_storage_supported = true;
+					find_count --;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_texture_buffer_object")
+				{
+					ARB_texture_buffer_supported = true;
+					find_count --;
+					continue;
+				}
+			}
+
+			initialized = true;
 		}
 	};
 
@@ -218,7 +284,7 @@ namespace gl
 
 		depth_stencil = depth | stencil
 	};
-	
+
 	class pixel_pack_settings
 	{
 		bool m_swap_bytes = false;
@@ -705,7 +771,7 @@ namespace gl
 				m_fence.wait_for_signal();
 				remove();
 			}
-			
+
 			buffer::create();
 
 			glBindBuffer((GLenum)m_target, m_id);
@@ -732,7 +798,7 @@ namespace gl
 			{
 				if (!m_fence.is_empty())
 					m_fence.wait_for_signal();
-				
+
 				m_data_loc = 0;
 				offset = 0;
 			}
@@ -792,7 +858,7 @@ namespace gl
 
 			buffer::create();
 			buffer::data(size, data);
-			
+
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
 			m_limit = size;
@@ -839,7 +905,7 @@ namespace gl
 				//Overallocate slightly for the next allocation if requested size is too small
 				unmap();
 				reserve_storage_on_heap(std::max(real_size, 4096U));
-				
+
 				offset = m_data_loc;
 				if (m_data_loc) offset = align(offset, alignment);
 
@@ -849,7 +915,7 @@ namespace gl
 
 			m_data_loc = offset + alloc_size;
 			m_mapped_bytes -= real_size;
-			
+
 			u32 local_offset = (offset - m_mapping_offset);
 			return std::make_pair(((char*)m_memory_mapping) + local_offset, offset);
 		}
@@ -1186,7 +1252,7 @@ namespace gl
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
-				
+
 				new_binding.bind();
 				m_target = (GLenum)new_binding.get_target();
 			}
@@ -1453,22 +1519,12 @@ namespace gl
 			if (get_target() != target::textureBuffer)
 				fmt::throw_exception("OpenGL error: texture cannot copy from buffer" HERE);
 
-/*			if (!offset)
-			{
-				copy_from(buf, gl_format_type);
-				return;
-			}*/
+			auto caps = get_driver_caps();
 
-			if (glTextureBufferRangeEXT == nullptr)
-				fmt::throw_exception("OpenGL error: partial buffer access for textures is unsupported on your system" HERE);
-
-			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
-		}
-
-		void copy_from(buffer &buf, u32 gl_format_type)
-		{
-			save_binding_state save(*this);
-			__glcheck glTexBuffer((GLenum)target::textureBuffer, gl_format_type, buf.id());
+			if (caps.EXT_dsa_supported)
+				__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
+			else
+				__glcheck glTextureBufferRange(id(), gl_format_type, buf.id(), offset, length);
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
@@ -1863,7 +1919,7 @@ namespace gl
 		void recreate();
 		void draw_buffer(const attachment& buffer) const;
 		void draw_buffers(const std::initializer_list<attachment>& indexes) const;
-		
+
 		void read_buffer(const attachment& buffer) const;
 
 		void draw_arrays(rsx::primitive_type mode, GLsizei count, GLint first = 0) const;
