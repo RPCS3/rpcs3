@@ -11,8 +11,11 @@ int main(int argc, char *argv[])
 	QApplication app(argc, argv);
 
 	MainWindow mainWin;
-	mainWin.show();
+	QSize defaultSize = QSize(800, 600);
+	mainWin.resize(defaultSize);
 
+	mainWin.show();
+	
 	return app.exec();
 }
 

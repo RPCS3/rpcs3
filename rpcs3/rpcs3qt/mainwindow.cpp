@@ -22,7 +22,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	CreateMenus();
 	CreateDockWindows();
 
-	setGeometry(0, 0, 900, 600);
 	setWindowTitle("RPCS3 v");
 }
 
