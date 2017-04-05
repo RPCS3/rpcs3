@@ -1051,7 +1051,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellJpgEnc", "libsre.sprx" },
 			{ "cellKey2char", "libkey2char.sprx" },
 			{ "cellL10n", "libl10n.sprx" },
-			{ "cellLibprof", "libprof.sprx" },
 			{ "cellM4hdEnc", "libm4hdenc.sprx" },
 			{ "cellM4hdEnc", "libsre.sprx" },
 			{ "cellPamf", "libpamf.sprx" },
