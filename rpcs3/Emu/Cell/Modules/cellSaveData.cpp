@@ -307,6 +307,10 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 					return CELL_OK; // ???
 				}
 			}
+			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
+			{
+				return CELL_OK;
+			}
 		}
 
 		if (funcFixed)
@@ -337,6 +341,10 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			if (selected == -1)
 			{
 				save_entry.dirName = fixedSet->dirName.get_ptr();
+			}
+			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
+			{
+				return CELL_OK;
 			}
 		}
 
@@ -517,6 +525,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
 		}
+	}
+
+	if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
+	{
+		return CELL_OK;
 	}
 
 	// Create save directory if necessary
