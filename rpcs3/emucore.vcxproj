@@ -170,6 +170,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellKb.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellKey2char.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellL10n.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellLibprof.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMic.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMouse.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMsgDialog.cpp" />

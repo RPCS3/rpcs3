@@ -47,6 +47,7 @@ LOG_CHANNEL(cellJpgDec);
 LOG_CHANNEL(cellJpgEnc);
 LOG_CHANNEL(cellKey2char);
 LOG_CHANNEL(cellL10n);
+LOG_CHANNEL(cellLibprof);
 LOG_CHANNEL(cellMic);
 LOG_CHANNEL(cellMusic);
 LOG_CHANNEL(cellMusicDecode);
@@ -239,6 +240,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellJpgEnc,
 		&ppu_module_manager::cellKey2char,
 		&ppu_module_manager::cellL10n,
+		&ppu_module_manager::cellLibprof,
 		&ppu_module_manager::cellMic,
 		&ppu_module_manager::cellMusic,
 		&ppu_module_manager::cellMusicDecode,
@@ -1049,6 +1051,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellJpgEnc", "libsre.sprx" },
 			{ "cellKey2char", "libkey2char.sprx" },
 			{ "cellL10n", "libl10n.sprx" },
+			{ "cellLibprof", "libprof.sprx" },
 			{ "cellM4hdEnc", "libm4hdenc.sprx" },
 			{ "cellM4hdEnc", "libsre.sprx" },
 			{ "cellPamf", "libpamf.sprx" },
