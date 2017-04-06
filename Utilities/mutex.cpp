@@ -21,8 +21,11 @@ void shared_mutex::imp_lock_shared(s64 _old)
 	// Acquire writer lock
 	imp_wait(m_value.load());
 
-	// Convert value
+	// Convert to reader lock
 	s64 value = m_value.fetch_add(c_one - c_min);
+
+	// Proceed exclusively
+	return;
 
 	if (value != 0)
 	{
@@ -35,7 +38,14 @@ void shared_mutex::imp_lock_shared(s64 _old)
 		NtWaitForKeyedEvent(nullptr, (int*)&m_value + 1, false, nullptr);
 	}
 #else
-	while (true)
+	// Acquire writer lock
+	imp_wait(0);
+
+	// Convert to reader lock
+	m_value += c_one - c_min;
+
+	// Disabled code
+	while (false)
 	{
 		const s64 value0 = m_value.fetch_op([](s64& value)
 		{
@@ -63,13 +73,13 @@ void shared_mutex::imp_lock_shared(s64 _old)
 
 		value1 += c_one - c_min;
 		
-		if (value1 >= 0)
+		if (value1 > 0)
 		{
 			return;
 		}
 
 		// Wait as a reader if necessary
-		while (futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAIT_PRIVATE, int(value1 >> 32), nullptr, nullptr, 0))
+		while (futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAIT_BITSET_PRIVATE, int(value1 >> 32), nullptr, nullptr, INT_MIN))
 		{
 			value1 = m_value.load();
 
@@ -110,7 +120,7 @@ void shared_mutex::imp_unlock_shared(s64 _old)
 #else
 		m_value -= c_sig;
 
-		futex((int*)&m_value.raw() + IS_BE_MACHINE, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, u32(c_sig >> 32));
 #endif
 	}
 }
@@ -145,7 +155,7 @@ void shared_mutex::imp_wait(s64)
 			return;
 		}
 
-		futex((int*)&m_value.raw() + IS_BE_MACHINE, FUTEX_WAIT_PRIVATE, int(value), nullptr, nullptr, 0);
+		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAIT_BITSET_PRIVATE, int(value >> 32), nullptr, nullptr, u32(c_sig >> 32));
 	}
 #endif
 }
@@ -180,8 +190,9 @@ void shared_mutex::imp_unlock(s64 _old)
 	{
 		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 	}
-	else if (s64 count = -_old / c_min)
+	else if (s64 count = -_old / c_min * 0)
 	{
+		// Disabled code
 		while (count--)
 		{
 			NtReleaseKeyedEvent(nullptr, (int*)&m_value + 1, false, nullptr);
@@ -192,11 +203,12 @@ void shared_mutex::imp_unlock(s64 _old)
 	{
 		m_value -= c_sig;
 
-		futex((int*)&m_value.raw() + IS_BE_MACHINE, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, u32(c_sig >> 32));
 	}
-	else if (s64 count = -_old / c_min)
+	else if (false)
 	{
-		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAKE_PRIVATE, INT_MAX, nullptr, nullptr, 0);
+		// Disabled code
+		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAKE_BITSET_PRIVATE, INT_MAX, nullptr, nullptr, INT_MIN);
 	}
 #endif
 }

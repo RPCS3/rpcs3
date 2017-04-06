@@ -252,6 +252,48 @@ s32 cellRtcCompareTick(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTick1)
 	return CELL_OK;
 }
 
+s32 cellRtcGetCurrentSecureTick()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcGetTickResolution()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcGetSystemTime()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcSetConf()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcSetCurrentSecureTick()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcSetCurrentTick()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcSetSystemTime()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellRtc)("cellRtc", []()
 {
 	REG_FUNC(cellRtc, cellRtcGetCurrentTick);
@@ -292,4 +334,11 @@ DECLARE(ppu_module_manager::cellRtc)("cellRtc", []()
 	REG_FUNC(cellRtc, cellRtcCheckValid);
 
 	REG_FUNC(cellRtc, cellRtcCompareTick);
+	REG_FUNC(cellRtc, cellRtcGetCurrentSecureTick);
+	REG_FUNC(cellRtc, cellRtcGetTickResolution);
+	REG_FUNC(cellRtc, cellRtcGetSystemTime);
+	REG_FUNC(cellRtc, cellRtcSetConf);
+	REG_FUNC(cellRtc, cellRtcSetCurrentSecureTick);
+	REG_FUNC(cellRtc, cellRtcSetCurrentTick);
+	REG_FUNC(cellRtc, cellRtcSetSystemTime);
 });
