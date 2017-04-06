@@ -44,7 +44,7 @@ public:
 		wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY,
 			fmt::FromUTF8(u8"\nContributors:\n\nBlackDaemon\nelisha464\nAishou\nkrofna\nxsacha\ndanilaml\nunknownbrackets\nZangetsu38\nlioncash\nachurch\ndarkf\nSyphurith\nBlaypeg\nSurvanium90\ngeorgemoralis\nikki84\n"));
 		wxStaticText* t_section3 = new wxStaticText(this, wxID_ANY,
-			fmt::FromUTF8(u8"\nSupporters:\n\nHoward Garrison\nEXPotemkin\nMarko V.\ndanhp\n"));
+			fmt::FromUTF8(u8"\nSupporters:\n\nHoward Garrison\nEXPotemkin\nMarko V.\ndanhp\nJake (5315825)\nIan Reid\nTad Sherlock\nTyler Friesen\nFolzar\nPayton Williams\nRedPill Australia\nyanghong\n"));
 
 		s_panel_credits->AddSpacer(12);
 		s_panel_credits->Add(t_section1, 5);
