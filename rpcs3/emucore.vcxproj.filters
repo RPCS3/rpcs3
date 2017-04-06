@@ -1363,6 +1363,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellSync2.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSysconf.h">
+        <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSysutil.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>

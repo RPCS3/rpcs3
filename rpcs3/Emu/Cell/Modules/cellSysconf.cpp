@@ -1,21 +1,26 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "cellSysconf.h"
+
 logs::channel cellSysconf("cellSysconf", logs::level::notice);
 
 s32 cellSysconfAbort()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysconf.todo("cellSysconfAbort()");
+	return CELL_OK;
 }
 
-s32 cellSysconfOpen()
+s32 cellSysconfOpen(u32 type, vm::ptr<CellSysconfCallback> func, vm::ptr<void> userdata, vm::ptr<void> extparam, u32 id)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysconf.todo("cellSysconfOpen(type=%d, func=*0x%x, userdata=*0x%x, extparam=*0x%x, id=%d)", type, func, userdata, extparam, id);
+	return CELL_OK;
 }
 
-s32 cellSysconfBtGetDeviceList()
+s32 cellSysconfBtGetDeviceList(vm::ptr<CellSysconfBtDeviceList> deviceList)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysconf.todo("cellSysconfBtGetDeviceList(deviceList=*0x%x)", deviceList);
+	return CELL_OK;
 }
 
 void cellSysutil_Sysconf_init()

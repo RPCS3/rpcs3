@@ -584,6 +584,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSubdisplay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSync.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSync2.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSysconf.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc2.h" />
     <ClInclude Include="Emu\Cell\Modules\cellUsbd.h" />
