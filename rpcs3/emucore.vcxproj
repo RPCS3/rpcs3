@@ -548,6 +548,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellAudio.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAudioIn.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAudioOut.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellBgdl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCamera.h" />
     <ClInclude Include="Emu\Cell\Modules\cellDmux.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFiber.h" />

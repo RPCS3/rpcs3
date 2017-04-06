@@ -1255,6 +1255,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellAudioOut.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellBgdl.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellCamera.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
