@@ -467,8 +467,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		}
 	}
 
-	// Secondary attempt (TODO, needs better strategy)
-	if (/*secs.empty() &&*/ lib_toc)
+	// Secondary attempt
+	if (TOCs.empty() && lib_toc)
 	{
 		add_toc(lib_toc);
 	}
@@ -598,7 +598,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 			if (ptr + 1 <= fend && (ptr[0] & 0xfc000001) == B({}, {}))
 			{
-				// Simple gate
+				// Simple trampoline
 				const u32 target = (ptr[0] & 0x2 ? 0 : ptr.addr()) + ppu_opcode_t{ptr[0]}.bt24;
 
 				if (target == func.addr)
@@ -612,7 +612,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				
 				if (target >= start && target < end)
 				{
-					auto& new_func = add_func(target, func.toc, func.addr);
+					auto& new_func = add_func(target, 0, func.addr);
 
 					if (new_func.blocks.empty())
 					{
@@ -623,8 +623,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					func.size = 0x4;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.called_from.emplace(target);
-					func.gate_target = target;
+					func.calls.emplace(target);
+					func.trampoline = target;
 					continue;
 				}
 			}
@@ -635,12 +635,12 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				ptr[2] == MTCTR(r11) &&
 				ptr[3] == BCTR())
 			{
-				// Simple gate
+				// Simple trampoline
 				const u32 target = (ptr[0] << 16) + ppu_opcode_t{ptr[1]}.simm16;
 
 				if (target >= start && target < end)
 				{
-					auto& new_func = add_func(target, func.toc, func.addr);
+					auto& new_func = add_func(target, 0, func.addr);
 
 					if (new_func.blocks.empty())
 					{
@@ -651,8 +651,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					func.size = 0x10;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.called_from.emplace(target);
-					func.gate_target = target;
+					func.calls.emplace(target);
+					func.trampoline = target;
 					continue;
 				}
 			}
@@ -663,7 +663,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				(ptr[2] & 0xffff0000) == ADDI(r2, r2, {}) &&
 				(ptr[3] & 0xfc000001) == B({}, {}))
 			{
-				// TOC change gate
+				// Trampoline with TOC
 				const u32 new_toc = func.toc && func.toc != -1 ? func.toc + (ptr[1] << 16) + s16(ptr[2]) : 0;
 				const u32 target = (ptr[3] & 0x2 ? 0 : (ptr + 3).addr()) + ppu_opcode_t{ptr[3]}.bt24;
 
@@ -671,7 +671,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				{
 					add_toc(new_toc);
 
-					auto& new_func = add_func(target, new_toc, func.addr);
+					auto& new_func = add_func(target, 0, func.addr);
 
 					if (new_func.blocks.empty())
 					{
@@ -682,8 +682,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					func.size = 0x10;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.called_from.emplace(target);
-					func.gate_target = target;
+					func.calls.emplace(target);
+					func.trampoline = target;
 					continue;
 				}
 			}
@@ -699,6 +699,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				ptr[7] == BCTR())
 			{
 				// The most used simple import stub
+				func.toc = -1;
 				func.size = 0x20;
 				func.blocks.emplace(func.addr, func.size);
 				func.attr += ppu_attr::known_addr;
@@ -717,7 +718,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					p2[6] == MTCTR(r0) &&
 					p2[7] == BCTR())
 				{
-					auto& next = add_func(p2.addr(), 0, func.addr);
+					auto& next = add_func(p2.addr(), -1, func.addr);
 					next.size = 0x20;
 					next.blocks.emplace(next.addr, next.size);
 					next.attr += ppu_attr::known_addr;
@@ -1017,8 +1018,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
-							func.called_from.emplace(target);
-							add_func(target, func.toc, func.addr);
+							func.calls.emplace(target);
+							add_func(target, 0, func.addr);
 						}
 					}
 				}

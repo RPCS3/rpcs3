@@ -129,7 +129,7 @@ static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		fmt::throw_exception("Unregistered PPU function [0x%08x]", ppu.cia);
+		fmt::throw_exception("Unregistered PPU function");
 	}
 
 	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
@@ -141,7 +141,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 	if (!size)
 	{
 		LOG_ERROR(PPU, "ppu_register_range(0x%x): empty range", addr);
-		return;	
+		return;
 	}
 
 	// Register executable range at

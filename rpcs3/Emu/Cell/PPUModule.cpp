@@ -1252,7 +1252,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	{
 		// Analyse executable
-		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0);
+		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, vm::read32(elf.header.e_entry + 4));
 
 		ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
 
