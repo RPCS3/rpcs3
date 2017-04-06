@@ -90,23 +90,8 @@ namespace rsx
 
 	programs_cache::programs_cache()
 	{
-		std::string path{ fs::get_executable_dir() + "data/cache/" };
-		std::string title = Emu.GetTitleID();
-
-		if (title.empty())
-		{
-			path += "temporary/";
-			fs::remove_all(path, false);
-		}
-		else
-		{
-			path += title + "/";
-		}
-
-		fs::create_path(path);
-
-		m_vertex_shaders_cache.path(path);
-		m_fragment_shader_cache.path(path);
+		m_vertex_shaders_cache.path(Emu.GetCachePath());
+		m_fragment_shader_cache.path(Emu.GetCachePath());
 	}
 
 	programs_cache::~programs_cache()

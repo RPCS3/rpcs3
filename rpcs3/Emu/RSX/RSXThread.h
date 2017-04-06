@@ -99,8 +99,6 @@ namespace rsx
 
 			void load(const std::string &path, shader_language lang);
 			void load(shader_language lang);
-
-			static std::string path_to_root();
 		};
 	}
 
@@ -170,6 +168,8 @@ namespace rsx
 
 	protected:
 		std::stack<u32> m_call_stack;
+		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
+		std::vector<u32> element_push_buffer;
 
 	public:
 		old_shaders_cache::shaders_cache shaders_cache;
@@ -215,7 +215,13 @@ namespace rsx
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 		RSXVertexProgram get_current_vertex_program() const;
-		RSXFragmentProgram get_current_fragment_program() const;
+
+		/**
+		 * Gets current fragment program and associated fragment state
+		 * get_surface_info is a helper takes 2 parameters: rsx_texture_address and surface_is_depth
+		 * returns whether surface is a render target and surface pitch in native format
+		 */
+		RSXFragmentProgram get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info) const;
 	public:
 		double fps_limit = 59.94;
 
@@ -228,6 +234,8 @@ namespace rsx
 
 	public:
 		std::set<u32> m_used_gcm_commands;
+		bool invalid_command_interrupt_raised = false;
+		bool in_begin_end = false;
 
 	protected:
 		thread();
@@ -235,6 +243,11 @@ namespace rsx
 
 		virtual void on_task() override;
 		virtual void on_exit() override;
+		
+		/**
+		 * Execute a backend local task queue
+		 */
+		virtual void do_local_task() {}
 
 	public:
 		virtual std::string get_name() const override;
@@ -255,9 +268,21 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
-		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
+		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
+
+		/*
+		* Immediate mode rendering requires a temp push buffer to hold attrib values
+		* Appends a value to the push buffer (currently only supports 32-wide types)
+		*/
+		void append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value);
+		u32 get_push_buffer_vertex_count() const;
+
+		void append_array_element(u32 index);
+		u32 get_push_buffer_index_count() const;
 
 	private:
 		std::mutex m_mtx_task;
@@ -291,6 +316,12 @@ namespace rsx
 		* Buffer must be at least 512 float4 wide.
 		*/
 		void fill_vertex_program_constants_data(void *buffer);
+
+		/**
+		 * Fill buffer with fragment rasterization state.
+		 * Fills current fog values, alpha test parameters and texture scaling parameters
+		 */
+		void fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program);
 
 		/**
 		* Write inlined array data to buffer.

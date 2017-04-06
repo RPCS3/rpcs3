@@ -227,33 +227,39 @@ class idm
 		using void_type   = void;
 	};
 
-	// Helper
+	// Helper type: pointer + return value propagated
 	template <typename T, typename RT>
 	struct return_pair
 	{
 		std::shared_ptr<T> ptr;
-		RT value;
+		RT ret;
 
 		explicit operator bool() const
 		{
 			return ptr.operator bool();
 		}
 
-		auto operator->() const
+		T* operator->() const
 		{
 			return ptr.get();
 		}
 	};
 
-	template <typename RT>
-	struct return_pair<bool, RT>
+	// Unsafe specialization (not refcounted)
+	template <typename T, typename RT>
+	struct return_pair<T*, RT>
 	{
-		bool result;
-		RT value;
+		T* ptr;
+		RT ret;
 
 		explicit operator bool() const
 		{
-			return result;
+			return ptr != nullptr;
+		}
+
+		T* operator->() const
+		{
+			return ptr;
 		}
 	};
 
@@ -382,46 +388,75 @@ public:
 		return id_manager::id_traits<Made>::invalid;
 	}
 
+	// Access the ID record without locking (unsafe)
+	template <typename T, typename Get = T>
+	static inline id_manager::id_map::pointer find_unlocked(u32 id)
+	{
+		return find_id<T, Get>(id);
+	}
+
+	// Check the ID without locking (can be called from other method)
+	template <typename T, typename Get = T>
+	static inline Get* check_unlocked(u32 id)
+	{
+		if (const auto found = find_id<T, Get>(id))
+		{
+			return static_cast<Get*>(found->second.get());
+		}
+
+		return nullptr;
+	}
+
 	// Check the ID
 	template <typename T, typename Get = T>
-	static inline explicit_bool_t check(u32 id)
+	static inline Get* check(u32 id)
 	{
 		reader_lock lock(id_manager::g_mutex);
 
-		return find_id<T, Get>(id) != nullptr;
+		return check_unlocked<T, Get>(id);
 	}
 
 	// Check the ID, access object under shared lock
 	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(Get&)>, typename = std::enable_if_t<std::is_void<FRT>::value>>
-	static inline explicit_bool_t check(u32 id, F&& func, int = 0)
+	static inline Get* check(u32 id, F&& func, int = 0)
 	{
 		reader_lock lock(id_manager::g_mutex);
 
-		const auto found = find_id<T, Get>(id);
-
-		if (UNLIKELY(found == nullptr))
+		if (const auto ptr = check_unlocked<T, Get>(id))
 		{
-			return false;
+			func(*ptr);
+			return ptr;
 		}
-
-		func(*static_cast<Get*>(found->second.get()));
-		return true;
+		
+		return nullptr;
 	}
 
 	// Check the ID, access object under reader lock, propagate return value
 	template <typename T, typename Get = T, typename F, typename FRT = std::result_of_t<F(Get&)>, typename = std::enable_if_t<!std::is_void<FRT>::value>>
-	static inline return_pair<bool, FRT> check(u32 id, F&& func)
+	static inline return_pair<Get*, FRT> check(u32 id, F&& func)
 	{
 		reader_lock lock(id_manager::g_mutex);
 
+		if (const auto ptr = check_unlocked<T, Get>(id))
+		{
+			return {ptr, func(*ptr)};
+		}
+
+		return {nullptr};
+	}
+
+	// Get the object without locking (can be called from other method)
+	template <typename T, typename Get = T>
+	static inline std::shared_ptr<Get> get_unlocked(u32 id)
+	{
 		const auto found = find_id<T, Get>(id);
 
 		if (UNLIKELY(found == nullptr))
 		{
-			return {false};
+			return nullptr;
 		}
 
-		return {true, func(*static_cast<Get*>(found->second.get()))};
+		return {found->second, static_cast<Get*>(found->second.get())};
 	}
 
 	// Get the object
@@ -806,13 +841,20 @@ public:
 		return ptr;
 	}
 
+	// Unsafe version of check(), can be used in some cases
+	template <typename T>
+	static inline T* check_unlocked()
+	{
+		return static_cast<T*>(g_vec[get_type<T>()].second.get());
+	}
+
 	// Check whether the object exists
-	template <typename T, typename Get = T>
-	static inline explicit_bool_t check()
+	template <typename T>
+	static inline T* check()
 	{
 		reader_lock lock(id_manager::g_mutex);
 
-		return g_vec[get_type<T>()].second != nullptr;
+		return check_unlocked<T>();
 	}
 
 	// Get the object (returns nullptr if it doesn't exist)

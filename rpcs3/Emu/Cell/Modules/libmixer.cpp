@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellAudio.h"
 #include "libmixer.h"
@@ -333,11 +334,9 @@ struct surmixer_thread : ppu_thread
 
 		while (port.state != audio_port_state::closed)
 		{
-			CHECK_EMU_STATUS;
-
 			if (g_surmx.mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
-				std::this_thread::sleep_for(1ms); // hack
+				thread_ctrl::wait_for(1000); // hack
 				continue;
 			}
 
@@ -349,6 +348,7 @@ struct surmixer_thread : ppu_thread
 				if (g_surmx.cb)
 				{
 					g_surmx.cb(*this, g_surmx.cb_arg, (u32)g_surmx.mixcount, 256);
+					lv2_obj::sleep(*this);
 				}
 
 				//u64 stamp1 = get_system_time();

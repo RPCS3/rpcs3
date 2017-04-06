@@ -7,7 +7,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "RegisterEditor.h"
 
-RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread* _cpu, CPUDisAsm* _disasm)
+RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: wxDialog(parent, wxID_ANY, "Edit registers")
 	, pc(_pc)
 	, cpu(_cpu)
@@ -86,6 +86,8 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 
 	if (ShowModal() == wxID_OK)
 	{
+		const auto cpu = _cpu.get();
+
 		std::string reg = fmt::ToUTF8(t1_register->GetStringSelection());
 		std::string value = fmt::ToUTF8(t2_value->GetValue());
 
@@ -166,12 +168,14 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u32 _pc, cpu_thread*
 
 void RegisterEditorDialog::updateRegister(wxCommandEvent& event)
 {
+	const auto cpu = this->cpu.lock();
+
 	std::string reg = fmt::ToUTF8(t1_register->GetStringSelection());
 	std::string str;
 
 	if (g_system == system_type::ps3 && cpu->id_type() == 1)
 	{
-		auto& ppu = *static_cast<ppu_thread*>(cpu);
+		auto& ppu = *static_cast<ppu_thread*>(cpu.get());
 
 		std::size_t first_brk = reg.find('[');
 		if (first_brk != -1)
@@ -187,7 +191,7 @@ void RegisterEditorDialog::updateRegister(wxCommandEvent& event)
 	}
 	else if (g_system == system_type::ps3 && cpu->id_type() != 1)
 	{
-		auto& spu = *static_cast<SPUThread*>(cpu);
+		auto& spu = *static_cast<SPUThread*>(cpu.get());
 
 		std::string::size_type first_brk = reg.find('[');
 		if (first_brk != std::string::npos)

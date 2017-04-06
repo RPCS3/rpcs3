@@ -60,9 +60,9 @@ struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof
 	using type = T;
 
 	// Convert FP to f64 and reinterpret (TODO?)
-	static inline u64 get(f64 arg)
+	static inline u64 get(const f64 arg)
 	{
-		return reinterpret_cast<u64&>(arg);
+		return *reinterpret_cast<const u64*>(reinterpret_cast<const u8*>(&arg));
 	}
 };
 
@@ -153,7 +153,7 @@ struct fmt_class_string
 
 		out += prefix;
 
-		for (u64 i = 0; i < 64; i++)
+		for (u64 i = 0; i < 63; i++)
 		{
 			const u64 mask = 1ull << i;
 
@@ -161,11 +161,16 @@ struct fmt_class_string
 			{
 				fmt(out, i);
 
-				if (arg > mask)
+				if (arg >> (i + 1))
 				{
 					out += delim;
 				}
 			}
+		}
+
+		if (arg & (1ull << 63))
+		{
+			fmt(out, 63);
 		}
 
 		out += suffix;

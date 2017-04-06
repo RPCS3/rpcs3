@@ -329,6 +329,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellCelpEnc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellCrossController.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -518,6 +521,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -546,6 +552,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\libmedi.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp">
@@ -890,6 +899,21 @@
     <ClCompile Include="..\Utilities\sema.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="sys_gamepad.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\PUP.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\TAR.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\bin_patch.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -999,9 +1023,6 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\Timer.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\DbgCommand.h">
-      <Filter>Emu</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
@@ -1687,9 +1708,6 @@
     <ClInclude Include="Emu\RSX\rsx_trace.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\SleepQueue.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\gcm_enums.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
@@ -1716,6 +1734,21 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="sys_gamepad.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\PUP.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\TAR.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\GDBDebugServer.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\bin_patch.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

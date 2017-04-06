@@ -1,10 +1,14 @@
 #pragma once
 
-#include "Utilities/SleepQueue.h"
-#include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
+
+#include "Emu/Memory/vm.h"
+#include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/ErrorCodes.h"
+
+#include <deque>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -102,28 +106,38 @@ struct lv2_obj
 		queue.erase(it);
 		return res;
 	}
-};
 
-// Temporary implementation for LV2_UNLOCK (TODO: remove it)
-struct lv2_lock_guard
-{
-	static semaphore<> g_sema;
+	// Remove the current thread from the scheduling queue, register timeout
+	static void sleep_timeout(named_thread&, u64 timeout);
 
-	lv2_lock_guard(const lv2_lock_guard&) = delete;
-
-	lv2_lock_guard()
+	static void sleep(cpu_thread& thread, u64 timeout = 0)
 	{
-		g_sema.post();
+		vm::temporary_unlock(thread);
+		sleep_timeout(thread, timeout);
 	}
 
-	~lv2_lock_guard()
+	// Schedule the thread
+	static void awake(cpu_thread&, u32 prio);
+
+	static void awake(cpu_thread& thread)
 	{
-		g_sema.wait();
+		awake(thread, -1);
 	}
+
+	static void cleanup();
+
+private:
+	// Scheduler mutex
+	static semaphore<> g_mutex;
+
+	// Scheduler queue for active PPU threads
+	static std::deque<class ppu_thread*> g_ppu;
+
+	// Waiting for the response from
+	static std::deque<class cpu_thread*> g_pending;
+
+	// Scheduler queue for timeouts (wait until -> thread)
+	static std::deque<std::pair<u64, named_thread*>> g_waiting;
+
+	static void schedule_all();
 };
-
-using lv2_lock_t = semaphore_lock&;
-
-#define LV2_LOCK semaphore_lock lv2_lock(lv2_lock_guard::g_sema)
-
-#define LV2_UNLOCK lv2_lock_guard{}

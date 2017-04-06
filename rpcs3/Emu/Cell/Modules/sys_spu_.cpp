@@ -67,25 +67,16 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
-	const fs::file f(vfs::get(path.get_ptr()));
-	if (!f)
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+
+	if (!elf_file)
 	{
 		sysPrxForUser.error("sys_raw_spu_load() error: %s not found!", path);
 		return CELL_ENOENT;
 	}
 
-	SceHeader hdr;
-	hdr.Load(f);
-
-	if (hdr.CheckMagic())
-	{
-		fmt::throw_exception("sys_raw_spu_load() error: %s is encrypted! Try to decrypt it manually and try again.", path);
-	}
-
-	f.seek(0);
-
 	u32 _entry;
-	LoadSpuImage(f, _entry, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
+	LoadSpuImage(elf_file, _entry, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
 
 	*entry = _entry | 1;
 

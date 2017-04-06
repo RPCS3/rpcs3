@@ -79,6 +79,7 @@ public:
 	MsgDialogType type{};
 
 	std::function<void(s32 status)> on_close;
+	std::function<void()> on_osk_input_entered;
 
 	virtual ~MsgDialogBase();
 	virtual void Create(const std::string& msg) = 0;

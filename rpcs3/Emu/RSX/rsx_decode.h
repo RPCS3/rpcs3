@@ -3410,7 +3410,8 @@ struct registers_decoder<NV4097_SET_ZSTENCIL_CLEAR_VALUE>
 		union
 		{
 			u32 raw_value;
-			bitfield_decoder_t<8, 24> clear_z;
+			bitfield_decoder_t<0, 16> clear_z16;
+			bitfield_decoder_t<8, 24> clear_z24;
 			bitfield_decoder_t<0, 8> clear_stencil;
 		} m_data;
 	public:
@@ -3421,15 +3422,19 @@ struct registers_decoder<NV4097_SET_ZSTENCIL_CLEAR_VALUE>
 			return m_data.clear_stencil;
 		}
 
-		u32 clear_z() const
+		u32 clear_z(bool is_depth_stencil) const
 		{
-			return m_data.clear_z;
+			if (is_depth_stencil)
+				return m_data.clear_z24;
+			
+			return m_data.clear_z16;
 		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Clear: Z = " + std::to_string(decoded_values.clear_z()) +
+		return "Clear: Z24 = " + std::to_string(decoded_values.clear_z(true)) +
+			" z16 = " + std::to_string(decoded_values.clear_z(false)) +
 			" Stencil = " + std::to_string(decoded_values.clear_stencil());
 	}
 };

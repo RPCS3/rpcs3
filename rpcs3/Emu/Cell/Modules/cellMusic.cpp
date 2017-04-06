@@ -16,97 +16,116 @@ struct music2_t
 
 s32 cellMusicGetSelectionContext()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicSetSelectionContext2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicSetVolume2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicGetContentsId()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicSetSelectionContext()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicInitialize2SystemWorkload()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicGetPlaybackStatus2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicGetContentsId2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicFinalize()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicInitializeSystemWorkload()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicInitialize()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicFinalize2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicGetSelectionContext2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicGetVolume()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicGetPlaybackStatus()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicSetPlaybackCommand2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicSetPlaybackCommand()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicSelectContents2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicSelectContents()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData)
@@ -134,12 +153,14 @@ s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> 
 
 s32 cellMusicSetVolume()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 s32 cellMusicGetVolume2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellMusic); 
+	return CELL_OK;
 }
 
 

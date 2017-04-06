@@ -2,7 +2,6 @@
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/IdManager.h"
 
 // Open Flags
 enum : s32
@@ -92,6 +91,26 @@ struct CellFsUtimbuf
 
 CHECK_SIZE_ALIGN(CellFsUtimbuf, 16, 4);
 
+// MSelf file structs
+struct FsMselfHeader
+{
+	be_t<u32> m_magic;
+	be_t<u32> m_format_version;
+	be_t<u64> m_file_size;
+	be_t<u32> m_entry_num;
+	be_t<u32> m_entry_size;
+	u8 m_reserve[40];
+
+};
+
+struct FsMselfEntry
+{
+	char m_name[32];
+	be_t<u64> m_offset;
+	be_t<u64> m_size;
+	u8 m_reserve[16];
+};
+
 struct lv2_fs_mount_point;
 
 struct lv2_fs_object
@@ -102,14 +121,11 @@ struct lv2_fs_object
 	static const u32 id_step = 1;
 	static const u32 id_count = 255 - id_base;
 
-	const u32 id;
-
 	// Mount Point
 	const std::add_pointer_t<lv2_fs_mount_point> mp;
 
 	lv2_fs_object(lv2_fs_mount_point* mp)
 		: mp(mp)
-		, id(idm::last_id())
 	{
 	}
 
@@ -130,11 +146,25 @@ struct lv2_file final : lv2_fs_object
 	{
 	}
 
+	lv2_file(lv2_fs_mount_point* mp, fs::file&& file, s32 mode, s32 flags)
+		: lv2_fs_object(mp)
+		, file(std::move(file))
+		, mode(mode)
+		, flags(flags)
+	{
+	}
+
 	// File reading with intermediate buffer
 	u64 op_read(vm::ps3::ptr<void> buf, u64 size);
 
 	// File writing with intermediate buffer
 	u64 op_write(vm::ps3::cptr<void> buf, u64 size);
+
+	// For MSELF support
+	struct file_view;
+
+	// Make file view from lv2_file object (for MSELF support)
+	static fs::file make_view(const std::shared_ptr<lv2_file>& _file, u64 offset);
 };
 
 struct lv2_dir final : lv2_fs_object
@@ -185,7 +215,31 @@ struct lv2_file_op_rw : lv2_file_op
 
 CHECK_SIZE(lv2_file_op_rw, 0x38);
 
-// SysCalls
+// sys_fs_fcntl: cellFsSdataOpenByFd
+struct lv2_file_op_09 : lv2_file_op
+{
+	vm::bptrb<vtable::lv2_file_op> _vtable;
+
+	be_t<u32> op;
+	be_t<u32> _x8;
+	be_t<u32> _xc;
+
+	be_t<u32> fd;
+	be_t<u64> offset;
+	be_t<u32> _vtabl2;
+	be_t<u32> arg1; // 0x180
+	be_t<u32> arg2; // 0x10
+	be_t<u32> arg_size; // 6th arg
+	be_t<u32> arg_ptr; // 5th arg
+
+	be_t<s32> out_code;
+	be_t<u32> out_fd;
+};
+
+CHECK_SIZE(lv2_file_op_09, 0x40);
+
+// Syscalls
+
 error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> arg5, u32 arg6);
 error_code sys_fs_open(vm::ps3::cptr<char> path, s32 flags, vm::ps3::ptr<u32> fd, s32 mode, vm::ps3::cptr<void> arg, u64 size);
 error_code sys_fs_read(u32 fd, vm::ps3::ptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nread);

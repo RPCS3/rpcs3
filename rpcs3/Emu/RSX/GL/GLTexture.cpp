@@ -7,7 +7,7 @@
 #include "../rsx_utils.h"
 #include "../Common/TextureUtils.h"
 
-namespace
+namespace gl
 {
 	GLenum get_sized_internal_format(u32 texture_format)
 	{
@@ -40,7 +40,6 @@ namespace
 		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
 
-
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format)
 	{
 		switch (texture_format)
@@ -68,7 +67,10 @@ namespace
 		}
 		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
+}
 
+namespace
+{
 	bool is_compressed_format(u32 texture_format)
 	{
 		switch (texture_format)
@@ -236,7 +238,7 @@ namespace rsx
 			case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
 			case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
 			case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
-			case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_BORDER;
+			case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_EDGE;
 			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
 			case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
 			case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
@@ -317,12 +319,20 @@ namespace rsx
 				std::vector<gsl::byte> staging_buffer)
 			{
 				int mip_level = 0;
+				if (is_compressed_format(format))
+				{
+					//Compressed formats have a 4-byte alignment
+					//TODO: Verify that samplers are not affected by the padding
+					width = align(width, 4);
+					height = align(height, 4);
+				}
+
 				if (dim == rsx::texture_dimension_extended::texture_dimension_1d)
 				{
-					__glcheck glTexStorage1D(GL_TEXTURE_1D, mipmap_count, get_sized_internal_format(format), width);
+					__glcheck glTexStorage1D(GL_TEXTURE_1D, mipmap_count, ::gl::get_sized_internal_format(format), width);
 					if (!is_compressed_format(format))
 					{
-						const auto &format_type = get_format_type(format);
+						const auto &format_type = ::gl::get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
@@ -335,7 +345,7 @@ namespace rsx
 						{
 							u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
 							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							__glcheck glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, get_sized_internal_format(format), size, staging_buffer.data());
+							__glcheck glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, ::gl::get_sized_internal_format(format), size, staging_buffer.data());
 						}
 					}
 					return;
@@ -343,10 +353,10 @@ namespace rsx
 
 				if (dim == rsx::texture_dimension_extended::texture_dimension_2d)
 				{
-					__glcheck glTexStorage2D(GL_TEXTURE_2D, mipmap_count, get_sized_internal_format(format), width, height);
+					__glcheck glTexStorage2D(GL_TEXTURE_2D, mipmap_count, ::gl::get_sized_internal_format(format), width, height);
 					if (!is_compressed_format(format))
 					{
-						const auto &format_type = get_format_type(format);
+						const auto &format_type = ::gl::get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
@@ -359,7 +369,7 @@ namespace rsx
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
 							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, staging_buffer.data());
+							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, ::gl::get_sized_internal_format(format), size, staging_buffer.data());
 						}
 					}
 					return;
@@ -367,13 +377,13 @@ namespace rsx
 
 				if (dim == rsx::texture_dimension_extended::texture_dimension_cubemap)
 				{
-					__glcheck glTexStorage2D(GL_TEXTURE_CUBE_MAP, mipmap_count, get_sized_internal_format(format), width, height);
+					__glcheck glTexStorage2D(GL_TEXTURE_CUBE_MAP, mipmap_count, ::gl::get_sized_internal_format(format), width, height);
 					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
 					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
 					// mip_level % mipmap_per_layer will always be equal to mip_level
 					if (!is_compressed_format(format))
 					{
-						const auto &format_type = get_format_type(format);
+						const auto &format_type = ::gl::get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
@@ -387,7 +397,7 @@ namespace rsx
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
 							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, staging_buffer.data());
+							__glcheck glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, ::gl::get_sized_internal_format(format), size, staging_buffer.data());
 							mip_level++;
 						}
 					}
@@ -396,10 +406,10 @@ namespace rsx
 
 				if (dim == rsx::texture_dimension_extended::texture_dimension_3d)
 				{
-					__glcheck glTexStorage3D(GL_TEXTURE_3D, mipmap_count, get_sized_internal_format(format), width, height, depth);
+					__glcheck glTexStorage3D(GL_TEXTURE_3D, mipmap_count, ::gl::get_sized_internal_format(format), width, height, depth);
 					if (!is_compressed_format(format))
 					{
-						const auto &format_type = get_format_type(format);
+						const auto &format_type = ::gl::get_format_type(format);
 						for (const rsx_subresource_layout &layout : input_layouts)
 						{
 							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
@@ -412,7 +422,7 @@ namespace rsx
 						{
 							u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
 							__glcheck upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
-							__glcheck glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, get_sized_internal_format(format), size, staging_buffer.data());
+							__glcheck glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, ::gl::get_sized_internal_format(format), size, staging_buffer.data());
 						}
 					}
 					return;
@@ -491,15 +501,39 @@ namespace rsx
 			glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.get_exact_mipmap_count() - 1);
 
-			u8 remap_a = tex.remap() & 0x3;
-			u8 remap_r = (tex.remap() >> 2) & 0x3;
-			u8 remap_g = (tex.remap() >> 4) & 0x3;
-			u8 remap_b = (tex.remap() >> 6) & 0x3;
+			auto decoded_remap = tex.decoded_remap();
 
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, glRemap[remap_g]);
-			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, glRemap[remap_b]);
+			//Remapping tables; format is A-R-G-B
+			//Remap input table. Contains channel index to read color from 
+			const auto remap_inputs = decoded_remap.first;
+
+			//Remap control table. Controls whether the remap value is used, or force either 0 or 1
+			const auto remap_lookup = decoded_remap.second;
+
+			GLenum remap_values[4];
+
+			for (u8 channel = 0; channel < 4; ++channel)
+			{
+				switch (remap_lookup[channel])
+				{
+				default:
+					LOG_ERROR(RSX, "Unknown remap function 0x%X", remap_lookup[channel]);
+				case CELL_GCM_TEXTURE_REMAP_REMAP:
+					remap_values[channel] = glRemap[remap_inputs[channel]];
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ZERO:
+					remap_values[channel] = GL_ZERO;
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ONE:
+					remap_values[channel] = GL_ONE;
+					break;
+				}
+			}
+
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_A, remap_values[0]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_R, remap_values[1]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
+			__glcheck glTexParameteri(m_target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
 
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
 			__glcheck glTexParameteri(m_target, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));

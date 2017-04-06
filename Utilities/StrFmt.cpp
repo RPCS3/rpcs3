@@ -11,6 +11,18 @@
 #include <errno.h>
 #endif
 
+template <>
+void fmt_class_string<std::pair<const fmt_type_info*, u64>>::format(std::string& out, u64 arg)
+{
+	// Dynamic format arg
+	const auto& pair = get_object(arg);
+
+	if (pair.first)
+	{
+		pair.first->fmt_string(out, pair.second);
+	}
+}
+
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
 	if (arg)
@@ -240,7 +252,7 @@ struct fmt::cfmt_src
 	template <typename T>
 	T get(std::size_t index) const
 	{
-		return reinterpret_cast<const T&>(args[index]);
+		return *reinterpret_cast<const T*>(reinterpret_cast<const u8*>(args + index));
 	}
 
 	void skip(std::size_t extra)

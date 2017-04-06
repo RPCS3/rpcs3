@@ -304,8 +304,8 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	{
 	case rsx::primitive_type::line_loop:
 		for (unsigned i = 0; i < count; ++i)
-			dst[i] = i;
-		dst[count] = 0;
+			typedDst[i] = i;
+		typedDst[count] = 0;
 		return;
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::polygon:
@@ -392,7 +392,7 @@ namespace
 		case rsx::primitive_type::quads:
 			return expand_indexed_quads<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
 		}
-		fmt::throw_exception("Don't know how to expand draw mode" HERE);
+		fmt::throw_exception("Unknown draw mode (0x%x)" HERE, (u32)draw_mode);
 	}
 }
 

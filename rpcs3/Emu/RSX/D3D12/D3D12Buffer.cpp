@@ -82,27 +82,18 @@ namespace
 
 void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 {
-	size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(256);
+	size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(512);
 
 	// Scale offset buffer
 	// Separate constant buffer
-	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 256));
+	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 512));
 	fill_scale_offset_data(mapped_buffer);
-	int is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-	u8 alpha_ref_raw = rsx::method_registers.alpha_ref();
-	float alpha_ref = alpha_ref_raw / 255.f;
-	memcpy((char*)mapped_buffer + 16 * sizeof(float), &is_alpha_tested, sizeof(int));
-	memcpy((char*)mapped_buffer + 17 * sizeof(float), &alpha_ref, sizeof(float));
-	f32 fogp0 = rsx::method_registers.fog_params_0();
-	f32 fogp1 = rsx::method_registers.fog_params_1();
-	memcpy((char*)mapped_buffer + 18 * sizeof(float), &fogp0, sizeof(float));
-	memcpy((char*)mapped_buffer + 19 * sizeof(float), &fogp1, sizeof(float));
-
-	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 256));
+	fill_fragment_state_buffer((char *)mapped_buffer + 64, m_fragment_program);
+	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 512));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
 		m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset,
-		256
+		512
 	};
 	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
@@ -117,6 +108,7 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	fill_vertex_program_constants_data(mapped_buffer);
+	*(reinterpret_cast<u32*>((char *)mapped_buffer + (468 * 4 * sizeof(float)))) = rsx::method_registers.transform_branch_bits();
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
@@ -403,7 +395,10 @@ namespace
 				get_index_count(rsx::method_registers.current_draw_clause.primitive,
 					::narrow<int>(get_vertex_count(command.ranges_to_fetch_in_index_buffer)));
 
-			rsx::index_array_type indexed_type = rsx::method_registers.index_type();
+			rsx::index_array_type indexed_type = rsx::method_registers.current_draw_clause.is_immediate_draw?
+				rsx::index_array_type::u32:
+				rsx::method_registers.index_type();
+
 			size_t index_size = get_index_type_size(indexed_type);
 
 			// Alloc

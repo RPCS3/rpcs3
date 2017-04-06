@@ -16,6 +16,21 @@ logs::channel cellAudio("cellAudio", logs::level::notice);
 cfg::bool_entry g_cfg_audio_dump_to_file(cfg::root.audio, "Dump to file");
 cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16 bit");
 
+void audio_config::on_init(const std::shared_ptr<void>& _this)
+{
+	m_buffer.set(vm::alloc(AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT, vm::main));
+	m_indexes.set(vm::alloc(sizeof(u64) * AUDIO_PORT_COUNT, vm::main));
+
+	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+	{
+		ports[i].number = i;
+		ports[i].addr = m_buffer + AUDIO_PORT_OFFSET * i;
+		ports[i].index = m_indexes + i;
+	}
+
+	named_thread::on_init(_this);
+}
+
 void audio_config::on_task()
 {
 	AudioDumper m_dump(g_cfg_audio_dump_to_file ? 2 : 0); // Init AudioDumper for 2 channels if enabled
@@ -274,14 +289,13 @@ void audio_config::on_task()
 
 			// send aftermix event (normal audio event)
 
-			LV2_LOCK;
+			semaphore_lock lock(mutex);
 
 			for (u64 key : keys)
 			{
-				if (auto&& queue = lv2_event_queue::find(key))
+				if (auto queue = lv2_event_queue::find(key))
 				{
-					if (queue->events() < queue->size)
-						queue->push(lv2_lock, 0, 0, 0, 0); // TODO: check arguments
+					queue->send(0, 0, 0, 0); // TODO: check arguments	
 				}
 			}
 		}
@@ -651,16 +665,26 @@ s32 cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 {
 	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
 
-	for (u64 k = 0; k < 100; k++)
+	vm::var<sys_event_queue_attribute_t> attr;
+	attr->protocol = SYS_SYNC_FIFO;
+	attr->type     = SYS_PPU_QUEUE;
+	attr->name_u64 = 0;
+
+	for (u64 i = 0; i < 100; i++)
 	{
-		const u64 key_value = 0x80004d494f323221ull + k;
-
 		// Create an event queue "bruteforcing" an available key
-		if (auto&& queue = lv2_event_queue::make(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0, key_value, 32))
-		{
-			*id = queue->id;
-			*key = key_value;
+		const u64 key_value = 0x80004d494f323221ull + i;
 
+		if (const s32 res = sys_event_queue_create(id, attr, key_value, 32))
+		{
+			if (res != CELL_EEXIST)
+			{
+				return res;
+			}
+		}
+		else
+		{
+			*key = key_value;
 			return CELL_OK;
 		}
 	}
@@ -693,7 +717,7 @@ s32 cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	LV2_LOCK;
+	semaphore_lock lock(g_audio->mutex);
 
 	for (auto k : g_audio->keys) // check for duplicates
 	{
@@ -728,7 +752,7 @@ s32 cellAudioRemoveNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	LV2_LOCK;
+	semaphore_lock lock(g_audio->mutex);
 
 	for (auto i = g_audio->keys.begin(); i != g_audio->keys.end(); i++)
 	{

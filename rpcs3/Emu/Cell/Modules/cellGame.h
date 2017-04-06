@@ -104,8 +104,9 @@ enum
 	CELL_GAME_PARAMID_TITLE_DANISH            = 16,
 	CELL_GAME_PARAMID_TITLE_NORWEGIAN         = 17,
 	CELL_GAME_PARAMID_TITLE_POLISH            = 18,
-	CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL = 19,
-	CELL_GAME_PARAMID_TITLE_ENGLISH_UK        = 20,
+	CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL = 19, // FW 4.00
+	CELL_GAME_PARAMID_TITLE_ENGLISH_UK        = 20, // FW 4.00
+	CELL_GAME_PARAMID_TITLE_TURKISH           = 21, // FW 4.30
 	CELL_GAME_PARAMID_TITLE_ID                = 100,
 	CELL_GAME_PARAMID_VERSION                 = 101,
 	CELL_GAME_PARAMID_PS3_SYSTEM_VER          = 105,
@@ -178,6 +179,8 @@ enum // old consts
 
 	CELL_GAMEDATA_ERRDIALOG_NONE   = 0,
 	CELL_GAMEDATA_ERRDIALOG_ALWAYS = 1,
+
+	CELL_DISCGAME_SYSP_TITLEID_SIZE=10,
 };
 
 struct CellGameDataSystemFileParam
@@ -191,6 +194,12 @@ struct CellGameDataSystemFileParam
 	be_t<u32> parentalLevel;
 	be_t<u32> attribute;
 	char reserved2[256];
+};
+struct CellDiscGameSystemFileParam {
+	char titleId[CELL_DISCGAME_SYSP_TITLEID_SIZE];
+	char reserved0[2];
+	be_t<u32> parentalLevel;
+	char reserved1[16];
 };
 
 struct CellGameDataStatGet

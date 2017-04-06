@@ -3,7 +3,10 @@
 
 #include <mutex>
 
+#include "Emu/Cell/PPUThread.h"
+#include "Crypto/unedat.h"
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
 #include "Utilities/StrUtil.h"
 
 namespace vm { using namespace ps3; }
@@ -21,6 +24,37 @@ lv2_fs_mount_point g_mp_sys_dev_usb;
 lv2_fs_mount_point g_mp_sys_dev_bdvd;
 lv2_fs_mount_point g_mp_sys_app_home;
 lv2_fs_mount_point g_mp_sys_host_root;
+
+bool verify_mself(u32 fd, fs::file const& mself_file)
+{
+	FsMselfHeader mself_header;
+	if (!mself_file.read<FsMselfHeader>(mself_header))
+	{
+		sys_fs.error("verify_mself: Didn't read expected bytes for header.");
+		return false;
+	}
+
+	if (mself_header.m_magic != 0x4D534600)
+	{
+		sys_fs.error("verify_mself: Header magic is incorrect.");
+		return false;
+	}
+
+	if (mself_header.m_format_version != 1)
+	{
+		sys_fs.error("verify_mself: Unexpected header format version.");
+		return false;
+	}
+
+	// sanity check
+	if (mself_header.m_entry_size != sizeof(FsMselfEntry))
+	{
+		sys_fs.error("verify_mself: Unexpected header entry size.");
+		return false;
+	}
+
+	return true;
+}
 
 lv2_fs_mount_point* lv2_fs_object::get_mp(const char* filename)
 {
@@ -43,6 +77,80 @@ u64 lv2_file::op_write(vm::ps3::cptr<void> buf, u64 size)
 	std::unique_ptr<u8[]> local_buf(new u8[size]);
 	std::memcpy(local_buf.get(), buf.get_ptr(), size);
 	return file.write(local_buf.get(), size);
+}
+
+struct lv2_file::file_view : fs::file_base
+{
+	const std::shared_ptr<lv2_file> m_file;
+	const u64 m_off;
+	u64 m_pos;
+
+	explicit file_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
+		: m_file(_file)
+		, m_off(offset)
+		, m_pos(0)
+	{
+	}
+
+	~file_view() override
+	{
+	}
+
+	fs::stat_t stat() override
+	{
+		return m_file->file.stat();
+	}
+
+	bool trunc(u64 length) override
+	{
+		return false;
+	}
+
+	u64 read(void* buffer, u64 size) override
+	{
+		const u64 old_pos = m_file->file.pos();
+		const u64 new_pos = m_file->file.seek(m_off + m_pos);
+		const u64 result = m_file->file.read(buffer, size);
+		verify(HERE), old_pos == m_file->file.seek(old_pos);
+
+		m_pos += result;
+		return result;
+	}
+
+	u64 write(const void* buffer, u64 size) override
+	{
+		return 0;
+	}
+
+	u64 seek(s64 offset, fs::seek_mode whence) override
+	{
+		const s64 new_pos =
+			whence == fs::seek_set ? offset :
+			whence == fs::seek_cur ? offset + m_pos :
+			whence == fs::seek_end ? offset + size() :
+			(fmt::raw_error("lv2_file::file_view::seek(): invalid whence"), 0);
+
+		if (new_pos < 0)
+		{
+			fs::g_tls_error = fs::error::inval;
+			return -1;
+		}
+
+		m_pos = new_pos;
+		return m_pos;
+	}
+
+	u64 size() override
+	{
+		return m_file->file.size();
+	}
+};
+
+fs::file lv2_file::make_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
+{
+	fs::file result;
+	result.reset(std::make_unique<lv2_file::file_view>(_file, offset));
+	return result;
 }
 
 error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6)
@@ -114,7 +222,17 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		}
 	}
 
-	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND | CELL_FS_O_EXCL))
+	if (flags & CELL_FS_O_MSELF)
+	{
+		open_mode = fs::read;
+		// mself can be mself or mself | rdonly
+		if (flags & ~(CELL_FS_O_MSELF | CELL_FS_O_RDONLY))
+		{
+			open_mode = {};
+		}
+	}
+
+	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND | CELL_FS_O_EXCL | CELL_FS_O_MSELF))
 	{
 		open_mode = {}; // error
 	}
@@ -143,17 +261,60 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		return CELL_ENOENT;
 	}
 
-	const auto _file = idm::make_ptr<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags);
+	if ((flags & CELL_FS_O_MSELF) && (!verify_mself(*fd, file)))
+		return CELL_ENOTMSELF;
 
-	if (!_file)
+	const auto casted_arg = vm::static_ptr_cast<const u64>(arg);//static_cast<const be_t<u32> *>(arg.get_ptr());
+	if (size == 8)
 	{
-		// out of file descriptors
-		return CELL_EMFILE;
+		// check for sdata 
+		if (*casted_arg == 0x18000000010)
+		{
+			// check if the file has the NPD header, or else assume its not encrypted
+			u32 magic;
+			file.read<u32>(magic);
+			file.seek(0);
+			if (magic == "NPD\0"_u32)
+			{
+				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file));
+				if (!sdata_file->ReadHeader())
+				{
+					sys_fs.error("sys_fs_open(%s): Error reading sdata header!", path);
+					return CELL_EFSSPECIFIC;
+				}
+
+				file.reset(std::move(sdata_file));
+			}
+		}
+		// edata 
+		else if (*casted_arg == 0x2)
+		{
+			// check if the file has the NPD header, or else assume its not encrypted
+			u32 magic;
+			file.read<u32>(magic);
+			file.seek(0);
+			if (magic == "NPD\0"_u32)
+			{
+				auto edatkeys = fxm::get_always<LoadedNpdrmKeys_t>();
+				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic, edatkeys->rifKey);
+				if (!sdata_file->ReadHeader())
+				{
+					sys_fs.error("sys_fs_open(%s): Error reading edata header!", path);
+					return CELL_EFSSPECIFIC;
+				}
+
+				file.reset(std::move(sdata_file));
+			}
+		}
+	}
+	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags))
+	{
+		*fd = id;
+		return CELL_OK;
 	}
 
-	*fd = _file->id;
-
-	return CELL_OK;
+	// Out of file descriptors
+	return CELL_EMFILE;
 }
 
 error_code sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
@@ -245,18 +406,14 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 		return CELL_ENOENT;
 	}
 
-	const auto _dir = idm::make_ptr<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(dir));
-
-	if (!_dir)
+	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(dir)))
 	{
-		// out of file descriptors
-		return CELL_EMFILE;
+		*fd = id;
+		return CELL_OK;
 	}
 
-	*fd = _dir->id;
-	sys_fs.notice("sys_fs_opendir(%s) -> lv2_fs_id %d", path, _dir->id);
-
-	return CELL_OK;
+	// Out of file descriptors
+	return CELL_EMFILE;
 }
 
 error_code sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
@@ -324,8 +481,8 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	}
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 1; // ???
-	sb->gid = 1; // ???
+	sb->uid = 0; // Always zero
+	sb->gid = 0; // Always zero
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
@@ -351,8 +508,8 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	const fs::stat_t& info = file->file.stat();
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = 1; // ???
-	sb->gid = 1; // ???
+	sb->uid = 0; // Always zero
+	sb->gid = 0; // Always zero
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime; // ctime may be incorrect
@@ -481,6 +638,43 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 		break;
 	}
+
+	case 0x80000009: // cellFsSdataOpenByFd
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_op_09>(_arg);
+
+		if (_size < arg.size())
+		{
+			return CELL_EINVAL;
+		}
+
+		const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+		if (!file)
+		{
+			return CELL_EBADF;
+		}
+
+		auto sdata_file = std::make_unique<EDATADecrypter>(lv2_file::make_view(file, arg->offset));
+
+		if (!sdata_file->ReadHeader())
+		{
+			return CELL_EFSSPECIFIC;
+		}
+
+		fs::file stream;
+		stream.reset(std::move(sdata_file));
+		if (const u32 id = idm::make<lv2_fs_object, lv2_file>(file->mp, std::move(stream), file->mode, file->flags))
+		{
+			arg->out_code = CELL_OK;
+			arg->out_fd = id;
+			return CELL_OK;
+		}
+
+		// Out of file descriptors
+		return CELL_EMFILE;
+	}
+
 	default:
 	{
 		sys_fs.todo("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
@@ -509,8 +703,20 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 
 	std::lock_guard<std::mutex> lock(file->mp->mutex);
 
-	*pos = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
+	const u64 result = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
 
+	if (result == -1)
+	{
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::inval: return CELL_EINVAL;
+		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
+		}
+
+		return CELL_EIO; // ???
+	}
+
+	*pos = result;
 	return CELL_OK;
 }
 

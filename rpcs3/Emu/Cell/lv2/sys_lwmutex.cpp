@@ -13,30 +13,13 @@ logs::channel sys_lwmutex("sys_lwmutex", logs::level::notice);
 
 extern u64 get_system_time();
 
-void lv2_lwmutex::unlock(lv2_lock_t)
-{
-	if (signaled)
-	{
-		fmt::throw_exception("Unexpected" HERE);
-	}
-
-	if (sq.size())
-	{
-		const auto thread = sq.front();
-		thread->set_signal();
-
-		sq.pop_front();
-	}
-	else
-	{
-		signaled++;
-	}
-}
-
-s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6)
+error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6)
 {
 	sys_lwmutex.warning("_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, arg4=0x%x, name=0x%llx, arg6=0x%x)", lwmutex_id, protocol, control, arg4, name, arg6);
 
+	if (protocol == SYS_SYNC_RETRY)
+		sys_lwmutex.todo("_sys_lwmutex_create(): SYS_SYNC_RETRY");
+	
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY)
 	{
 		sys_lwmutex.error("_sys_lwmutex_create(): unknown protocol (0x%x)", protocol);
@@ -48,120 +31,172 @@ s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmut
 		fmt::throw_exception("Unknown arguments (arg4=0x%x, arg6=0x%x)" HERE, arg4, arg6);
 	}
 
-	*lwmutex_id = idm::make<lv2_obj, lv2_lwmutex>(protocol, name);
-
-	return CELL_OK;
-}
-
-s32 _sys_lwmutex_destroy(u32 lwmutex_id)
-{
-	sys_lwmutex.warning("_sys_lwmutex_destroy(lwmutex_id=0x%x)", lwmutex_id);
-
-	LV2_LOCK;
-
-	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
-
-	if (!mutex)
+	if (const u32 id = idm::make<lv2_obj, lv2_lwmutex>(protocol, control, name))
 	{
-		return CELL_ESRCH;
-	}
-
-	if (!mutex->sq.empty())
-	{
-		return CELL_EBUSY;
-	}
-
-	idm::remove<lv2_obj, lv2_lwmutex>(lwmutex_id);
-
-	return CELL_OK;
-}
-
-s32 _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
-{
-	sys_lwmutex.trace("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
-
-	const u64 start_time = get_system_time();
-
-	LV2_LOCK;
-
-	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
-
-	if (!mutex)
-	{
-		return CELL_ESRCH;
-	}
-
-	if (mutex->signaled)
-	{
-		mutex->signaled--;
-
+		*lwmutex_id = id;
 		return CELL_OK;
 	}
 
-	// add waiter; protocol is ignored in current implementation
-	sleep_entry<cpu_thread> waiter(mutex->sq, ppu);
+	return CELL_EAGAIN;
+}
+
+error_code _sys_lwmutex_destroy(u32 lwmutex_id)
+{
+	sys_lwmutex.warning("_sys_lwmutex_destroy(lwmutex_id=0x%x)", lwmutex_id);
+
+	const auto mutex = idm::withdraw<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex) -> CellError
+	{
+		semaphore_lock lock(mutex.mutex);
+
+		if (!mutex.sq.empty())
+		{
+			return CELL_EBUSY;
+		}
+
+		return {};
+	});
+
+	if (!mutex)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (mutex.ret)
+	{
+		return mutex.ret;
+	}
+
+	return CELL_OK;
+}
+
+error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
+{
+	sys_lwmutex.trace("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
+
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
+	{
+		if (u32 value = mutex.signaled)
+		{
+			if (mutex.signaled.compare_and_swap_test(value, value - 1))
+			{
+				return true;
+			}
+		}
+
+		semaphore_lock lock(mutex.mutex);
+
+		if (u32 value = mutex.signaled)
+		{
+			if (mutex.signaled.compare_and_swap_test(value, value - 1))
+			{
+				return true;
+			}
+		}
+
+		mutex.sq.emplace_back(&ppu);
+		mutex.sleep(ppu, timeout);
+		return false;
+	});
+
+	if (!mutex)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (mutex.ret)
+	{
+		return CELL_OK;
+	}
+
+	ppu.gpr[3] = CELL_OK;
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
-		CHECK_EMU_STATUS;
-
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - ppu.start_time;
 
 			if (passed >= timeout)
 			{
-				return CELL_ETIMEDOUT;
+				semaphore_lock lock(mutex->mutex);
+
+				if (!mutex->unqueue(mutex->sq, &ppu))
+				{
+					timeout = 0;
+					continue;
+				}
+
+				ppu.gpr[3] = CELL_ETIMEDOUT;
+				break;
 			}
 
-			LV2_UNLOCK, thread_ctrl::wait_for(timeout - passed);
+			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			LV2_UNLOCK, thread_ctrl::wait();
+			thread_ctrl::wait();
 		}
 	}
 
-	return CELL_OK;
+	return not_an_error(ppu.gpr[3]);
 }
 
-s32 _sys_lwmutex_trylock(u32 lwmutex_id)
+error_code _sys_lwmutex_trylock(u32 lwmutex_id)
 {
 	sys_lwmutex.trace("_sys_lwmutex_trylock(lwmutex_id=0x%x)", lwmutex_id);
 
-	LV2_LOCK;
+	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
+	{
+		if (u32 value = mutex.signaled)
+		{
+			if (mutex.signaled.compare_and_swap_test(value, value - 1))
+			{
+				return true;
+			}
+		}
 
-	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
+		return false;
+	});
 
 	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!mutex->sq.empty() || !mutex->signaled)
+	if (!mutex.ret)
 	{
-		return CELL_EBUSY;
+		return not_an_error(CELL_EBUSY);
 	}
-
-	mutex->signaled--;
 
 	return CELL_OK;
 }
 
-s32 _sys_lwmutex_unlock(u32 lwmutex_id)
+error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 {
 	sys_lwmutex.trace("_sys_lwmutex_unlock(lwmutex_id=0x%x)", lwmutex_id);
 
-	LV2_LOCK;
+	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex) -> cpu_thread*
+	{
+		semaphore_lock lock(mutex.mutex);
 
-	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
+		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
+		{
+			return cpu;
+		}
+
+		mutex.signaled++;
+		return nullptr;
+	});
 
 	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
 
-	mutex->unlock(lv2_lock);
+	if (mutex.ret)
+	{
+		mutex->awake(*mutex.ret);
+	}
 
 	return CELL_OK;
 }

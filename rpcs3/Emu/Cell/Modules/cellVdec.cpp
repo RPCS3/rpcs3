@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 extern "C"
 {
@@ -76,9 +77,10 @@ struct vdec_thread : ppu_thread
 
 	std::mutex mutex;
 	std::queue<vdec_frame> out;
+	u32 max_frames = 20;
 
-	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
-		: ppu_thread("HLE Video Decoder")
+	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg, u32 prio, u32 stack)
+		: ppu_thread("HLE Video Decoder", prio, stack)
 		, type(type)
 		, profile(profile)
 		, mem_addr(addr)
@@ -215,7 +217,7 @@ struct vdec_thread : ppu_thread
 					cellVdec.trace("End sequence...");
 				}
 
-				while (true)
+				while (max_frames)
 				{
 					vdec_frame frame;
 					frame.avf.reset(av_frame_alloc());
@@ -294,6 +296,14 @@ struct vdec_thread : ppu_thread
 							next_dts += amend;
 							frame.frc = frc_set;
 						}
+						else if (ctx->time_base.num == 0)
+						{
+							// Hack
+							const u64 amend = u64{90000} / 30;
+							frame.frc = CELL_VDEC_FRC_30;
+							next_pts += amend;
+							next_dts += amend;
+						}
 						else
 						{
 							const u64 amend = u64{90000} * ctx->time_base.num * ctx->ticks_per_frame / ctx->time_base.den;
@@ -327,6 +337,7 @@ struct vdec_thread : ppu_thread
 						std::lock_guard<std::mutex>{mutex}, out.push(std::move(frame));
 
 						cb_func(*this, id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
+						lv2_obj::sleep(*this);
 					}
 
 					if (vcmd == vdec_cmd::decode)
@@ -335,9 +346,13 @@ struct vdec_thread : ppu_thread
 					}
 				}
 
-				cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
-
-				while (std::lock_guard<std::mutex>{mutex}, out.size() > 60)
+				if (max_frames)
+				{
+					cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
+					lv2_obj::sleep(*this);
+				}
+				
+				while (std::lock_guard<std::mutex>{mutex}, max_frames && out.size() > max_frames)
 				{
 					thread_ctrl::wait();
 				}
@@ -405,7 +420,7 @@ s32 cellVdecOpen(vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm
 	cellVdec.warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	// Create decoder thread
-	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg, res->ppuThreadPriority, res->ppuThreadStackSize);
 
 	// Hack: store thread id (normally it should be pointer)
 	*handle = vdec->id;
@@ -420,7 +435,7 @@ s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> r
 	cellVdec.warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	// Create decoder thread
-	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	auto&& vdec = idm::make_ptr<ppu_thread, vdec_thread>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg, res->ppuThreadPriority, res->ppuThreadStackSize);
 
 	// Hack: store thread id (normally it should be pointer)
 	*handle = vdec->id;
@@ -430,7 +445,7 @@ s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> r
 	return CELL_OK;
 }
 
-s32 cellVdecClose(u32 handle)
+s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 {
 	cellVdec.warning("cellVdecClose(handle=0x%x)", handle);
 
@@ -441,7 +456,14 @@ s32 cellVdecClose(u32 handle)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	vdec->cmd_push({vdec_cmd::close, 0});
+	lv2_obj::sleep(ppu);
+
+	{
+		std::lock_guard<std::mutex> lock(vdec->mutex);
+		vdec->cmd_push({vdec_cmd::close, 0});
+		vdec->max_frames = 0;
+	}
+	
 	vdec->notify();
 	vdec->join();
 	idm::remove<ppu_thread>(handle);
@@ -530,7 +552,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		vdec->out.pop();
 
-		if (vdec->out.size() <= 60)
+		if (vdec->out.size() <= vdec->max_frames)
 		{
 			vdec->notify();
 		}
@@ -844,24 +866,64 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 	return CELL_OK;
 }
 
+s32 cellVdecOpenExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecStartSeqExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecGetPicItemExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecSetFrameRateExt()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
+s32 cellVdecSetPts()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 {
+	static ppu_static_module libavcdec("libavcdec");
+	static ppu_static_module libdivx311dec("libdivx311dec");
+	static ppu_static_module libdivxdec("libdivxdec");
+	static ppu_static_module libmvcdec("libmvcdec");
+	static ppu_static_module libsjvtd("libsjvtd");
+	static ppu_static_module libsmvd2("libsmvd2");
+	static ppu_static_module libsmvd4("libsmvd4");
+	static ppu_static_module libsvc1d("libsvc1d");
+
 	REG_VAR(libvdec, _cell_vdec_prx_ver); // 0x085a7ecb
 
 	REG_FUNC(libvdec, cellVdecQueryAttr);
 	REG_FUNC(libvdec, cellVdecQueryAttrEx);
 	REG_FUNC(libvdec, cellVdecOpen);
 	REG_FUNC(libvdec, cellVdecOpenEx);
-	//REG_FUNC(libvdec, cellVdecOpenExt); // 0xef4d8ad7
+	REG_FUNC(libvdec, cellVdecOpenExt); // 0xef4d8ad7
 	REG_FUNC(libvdec, cellVdecClose);
 	REG_FUNC(libvdec, cellVdecStartSeq);
-	//REG_FUNC(libvdec, cellVdecStartSeqExt); // 0xebb8e70a
+	REG_FUNC(libvdec, cellVdecStartSeqExt); // 0xebb8e70a
 	REG_FUNC(libvdec, cellVdecEndSeq);
 	REG_FUNC(libvdec, cellVdecDecodeAu);
 	REG_FUNC(libvdec, cellVdecGetPicture);
 	REG_FUNC(libvdec, cellVdecGetPictureExt); // 0xa21aa896
 	REG_FUNC(libvdec, cellVdecGetPicItem);
-	//REG_FUNC(libvdec, cellVdecGetPicItemExt); // 0x2cbd9806
+	REG_FUNC(libvdec, cellVdecGetPicItemExt); // 0x2cbd9806
 	REG_FUNC(libvdec, cellVdecSetFrameRate);
-	//REG_FUNC(libvdec, cellVdecSetFrameRateExt); // 0xcffc42a5
+	REG_FUNC(libvdec, cellVdecSetFrameRateExt); // 0xcffc42a5
+	REG_FUNC(libvdec, cellVdecSetPts); // 0x3ce2e4f8
 });

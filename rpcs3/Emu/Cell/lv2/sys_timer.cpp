@@ -4,9 +4,12 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "sys_event.h"
 #include "sys_process.h"
 #include "sys_timer.h"
+
+#include <thread>
 
 namespace vm { using namespace ps3; }
 
@@ -16,283 +19,290 @@ extern u64 get_system_time();
 
 void lv2_timer::on_task()
 {
-	//thread_lock lock(*this);
-	LV2_LOCK;
-
-	while (state <= SYS_TIMER_STATE_RUN)
+	while (!Emu.IsStopped())
 	{
-		CHECK_EMU_STATUS;
+		const u32 _state = state;
 
-		if (state == SYS_TIMER_STATE_RUN)
+		if (_state == SYS_TIMER_STATE_RUN)
 		{
-			//LV2_LOCK;
+			const u64 _now = get_system_time();
+			const u64 next = expire;
 
-			while (get_system_time() >= expire)
+			if (_now >= next)
 			{
-				const auto queue = port.lock();
+				semaphore_lock lock(mutex);
 
-				if (queue)
+				if (const auto queue = port.lock())
 				{
-					queue->push(lv2_lock, source, data1, data2, expire);
+					queue->send(source, data1, data2, next);
+
+					if (period)
+					{
+						// Set next expiration time and check again (HACK)
+						expire += period;
+						continue;
+					}
 				}
 
-				if (period && queue)
-				{
-					expire += period; // set next expiration time
-
-					continue; // hack: check again
-				}
-				else
-				{
-					state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
-
-					break;
-				}
+				// Stop: oneshot or the event port was disconnected (TODO: is it correct?)
+				state = SYS_TIMER_STATE_STOP; 
+				continue;
 			}
 
-			continue;
+			// TODO: use single global dedicated thread for busy waiting, no timer threads
+			lv2_obj::sleep_timeout(*this, next - _now);
+			thread_ctrl::wait_for(next - _now);
 		}
-
-		LV2_UNLOCK, thread_ctrl::wait_for(1000);
+		else if (_state == SYS_TIMER_STATE_STOP)
+		{
+			thread_ctrl::wait_for(10000);
+		}
+		else
+		{
+			break;
+		}
 	}
-}
-
-std::string lv2_timer::get_name() const
-{
-	return fmt::format("Timer Thread[0x%x]", id);
 }
 
 void lv2_timer::on_stop()
 {
-	// Signal thread using invalid state and join
+	// Signal thread using invalid state
 	state = -1;
-	this->notify();
-	named_thread::on_stop();
+	notify();
+	join();
 }
 
-s32 sys_timer_create(vm::ptr<u32> timer_id)
+error_code sys_timer_create(vm::ptr<u32> timer_id)
 {
 	sys_timer.warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
-	*timer_id = idm::make<lv2_obj, lv2_timer>();
-
-	return CELL_OK;
+	if (const u32 id = idm::make<lv2_obj, lv2_timer>())
+	{
+		*timer_id = id;
+		return CELL_OK;
+	}
+	
+	return CELL_EAGAIN;
 }
 
-s32 sys_timer_destroy(u32 timer_id)
+error_code sys_timer_destroy(u32 timer_id)
 {
 	sys_timer.warning("sys_timer_destroy(timer_id=0x%x)", timer_id);
 
-	LV2_LOCK;
+	const auto timer = idm::withdraw<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
+	{
+		semaphore_lock lock(timer.mutex);
 
-	const auto timer = idm::get<lv2_obj, lv2_timer>(timer_id);
+		if (!timer.port.expired())
+		{
+			return CELL_EISCONN;
+		}
+
+		return {};
+	});
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!timer->port.expired())
+	if (timer.ret)
 	{
-		return CELL_EISCONN;
+		return timer.ret;
 	}
-
-	idm::remove<lv2_obj, lv2_timer>(timer_id);
 
 	return CELL_OK;
 }
 
-s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info)
+error_code sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info)
 {
-	sys_timer.warning("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
+	sys_timer.trace("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
-	LV2_LOCK;
+	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer)
+	{
+		semaphore_lock lock(timer.mutex);
 
-	const auto timer = idm::get<lv2_obj, lv2_timer>(timer_id);
+		info->next_expire = timer.expire;
+		info->period      = timer.period;
+		info->timer_state = timer.state;
+	});
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
 
-	info->next_expiration_time = timer->expire;
-
-	info->period      = timer->period;
-	info->timer_state = timer->state;
-
 	return CELL_OK;
 }
 
-s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
+error_code _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 {
-	sys_timer.warning("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
+	sys_timer.trace("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
 	const u64 start_time = get_system_time();
 
-	LV2_LOCK;
+	if (!period && start_time >= base_time)
+	{
+		// Invalid oneshot (TODO: what will happen if both args are 0?)
+		return not_an_error(CELL_ETIMEDOUT);
+	}
+	
+	if (period && period < 100)
+	{
+		// Invalid periodic timer
+		return CELL_EINVAL;
+	}
 
-	const auto timer = idm::get<lv2_obj, lv2_timer>(timer_id);
+	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
+	{
+		semaphore_lock lock(timer.mutex);
+
+		if (timer.state != SYS_TIMER_STATE_STOP)
+		{
+			return CELL_EBUSY;
+		}
+
+		if (timer.port.expired())
+		{
+			return CELL_ENOTCONN;
+		}
+
+		// sys_timer_start_periodic() will use current time (TODO: is it correct?)
+		timer.expire = base_time ? base_time : start_time + period;
+		timer.period = period;
+		timer.state  = SYS_TIMER_STATE_RUN;
+		timer.notify();
+		return {};
+	});
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (timer->state != SYS_TIMER_STATE_STOP)
+	if (timer.ret)
 	{
-		return CELL_EBUSY;
+		return timer.ret;
 	}
-
-	if (!period)
-	{
-		// oneshot timer (TODO: what will happen if both args are 0?)
-
-		if (start_time >= base_time)
-		{
-			return CELL_ETIMEDOUT;
-		}
-	}
-	else
-	{
-		// periodic timer
-
-		if (period < 100)
-		{
-			return CELL_EINVAL;
-		}
-	}
-
-	if (timer->port.expired())
-	{
-		return CELL_ENOTCONN;
-	}
-
-	// sys_timer_start_periodic() will use current time (TODO: is it correct?)
-	timer->expire = base_time ? base_time : start_time + period;
-	timer->period = period;
-	timer->state  = SYS_TIMER_STATE_RUN;
-	timer->notify();
 
 	return CELL_OK;
 }
 
-s32 sys_timer_stop(u32 timer_id)
+error_code sys_timer_stop(u32 timer_id)
 {
-	sys_timer.warning("sys_timer_stop()");
+	sys_timer.trace("sys_timer_stop()");
 
-	LV2_LOCK;
+	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [](lv2_timer& timer)
+	{
+		semaphore_lock lock(timer.mutex);
 
-	const auto timer = idm::get<lv2_obj, lv2_timer>(timer_id);
+		timer.state = SYS_TIMER_STATE_STOP;
+	});
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
 
-	timer->state = SYS_TIMER_STATE_STOP; // stop timer
-
 	return CELL_OK;
 }
 
-s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
+error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
 {
 	sys_timer.warning("sys_timer_connect_event_queue(timer_id=0x%x, queue_id=0x%x, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
 
-	LV2_LOCK;
-
-	const auto timer = idm::get<lv2_obj, lv2_timer>(timer_id);
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(queue_id);
-
-	if (!timer || !queue)
+	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
 	{
-		return CELL_ESRCH;
-	}
+		const auto found = idm::find_unlocked<lv2_obj, lv2_event_queue>(queue_id);
 
-	if (!timer->port.expired())
-	{
-		return CELL_EISCONN;
-	}
+		if (!found)
+		{
+			return CELL_ESRCH;
+		}
 
-	timer->port   = queue; // connect event queue
-	timer->source = name ? name : ((u64)process_getpid() << 32) | timer_id;
-	timer->data1  = data1;
-	timer->data2  = data2;
+		semaphore_lock lock(timer.mutex);
 
-	return CELL_OK;
-}
+		if (!timer.port.expired())
+		{
+			return CELL_EISCONN;
+		}
 
-s32 sys_timer_disconnect_event_queue(u32 timer_id)
-{
-	sys_timer.warning("sys_timer_disconnect_event_queue(timer_id=0x%x)", timer_id);
-
-	LV2_LOCK;
-
-	const auto timer = idm::get<lv2_obj, lv2_timer>(timer_id);
+		// Connect event queue
+		timer.port   = std::static_pointer_cast<lv2_event_queue>(found->second);
+		timer.source = name ? name : ((u64)process_getpid() << 32) | timer_id;
+		timer.data1  = data1;
+		timer.data2  = data2;
+		return {};
+	});
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (timer->port.expired())
+	if (timer.ret)
 	{
-		return CELL_ENOTCONN;
+		return timer.ret;
 	}
-
-	timer->port.reset(); // disconnect event queue
-	timer->state = SYS_TIMER_STATE_STOP; // stop timer
 
 	return CELL_OK;
 }
 
-#include <thread>
-
-s32 sys_timer_sleep(u32 sleep_time)
+error_code sys_timer_disconnect_event_queue(u32 timer_id)
 {
-	sys_timer.trace("sys_timer_sleep(sleep_time=%d)", sleep_time);
+	sys_timer.warning("sys_timer_disconnect_event_queue(timer_id=0x%x)", timer_id);
 
-	const u64 start_time = get_system_time();
-
-	const u64 useconds = sleep_time * 1000000ull;
-
-	u64 passed;
-
-	while (useconds > (passed = get_system_time() - start_time) + 1000)
+	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [](lv2_timer& timer) -> CellError
 	{
-		CHECK_EMU_STATUS;
+		semaphore_lock lock(timer.mutex);
 
-		std::this_thread::sleep_for(1ms);
-	}
-	
-	if (useconds > passed)
+		if (timer.port.expired())
+		{
+			return CELL_ENOTCONN;
+		}
+
+		timer.state = SYS_TIMER_STATE_STOP;
+		timer.port.reset();
+		return {};
+	});
+
+	if (!timer)
 	{
-		std::this_thread::sleep_for(std::chrono::microseconds(useconds - passed));
+		return CELL_ESRCH;
 	}
 
-	CHECK_EMU_STATUS;
+	if (timer.ret)
+	{
+		return timer.ret;
+	}
+
 	return CELL_OK;
 }
 
-s32 sys_timer_usleep(const u64 sleep_time)
+error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 {
+	vm::temporary_unlock(ppu);
+
+	sys_timer.trace("sys_timer_sleep(sleep_time=%d) -> sys_timer_usleep()", sleep_time);
+
+	return sys_timer_usleep(ppu, sleep_time * u64{1000000});
+}
+
+error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
+{
+	vm::temporary_unlock(ppu);
+
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
 
-	const u64 start_time = get_system_time();
+	u64 passed = 0;
 
-	u64 passed;
+	lv2_obj::sleep(ppu, std::max<u64>(1, sleep_time));
 
-	while (sleep_time > (passed = get_system_time() - start_time) + 1000)
+	while (sleep_time >= passed)
 	{
-		CHECK_EMU_STATUS;
-
-		std::this_thread::sleep_for(1ms);
+		thread_ctrl::wait_for(std::max<u64>(1, sleep_time - passed));
+		passed = get_system_time() - ppu.start_time;
 	}
 
-	if (sleep_time > passed)
-	{
-		std::this_thread::sleep_for(std::chrono::microseconds(sleep_time - passed));
-	}
-
-	CHECK_EMU_STATUS;
 	return CELL_OK;
 }

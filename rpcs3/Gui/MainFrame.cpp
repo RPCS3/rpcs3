@@ -5,6 +5,7 @@
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+
 #include "Gui/PADManager.h"
 #include "Gui/AboutDialog.h"
 #include "Gui/GameViewer.h"
@@ -16,22 +17,21 @@
 #include "Gui/SettingsDialog.h"
 #include "Gui/MemoryStringSearcher.h"
 #include "Gui/CgDisasm.h"
+
 #include "Crypto/unpkg.h"
+#include "Crypto/unself.h"
+
+#include "Loader/PUP.h"
+#include "Loader/TAR.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"
-
-#include "../Crypto/unself.h"
 
 #include <thread>
 
 #ifndef _WIN32
 #include "frame_icon.xpm"
 #endif
-
-BEGIN_EVENT_TABLE(MainFrame, FrameBase)
-	EVT_CLOSE(MainFrame::OnQuit)
-END_EVENT_TABLE()
 
 enum IDs
 {
@@ -55,6 +55,7 @@ enum IDs
 	id_tools_rsx_debugger,
 	id_tools_string_search,
 	id_tools_decrypt_sprx_libraries,
+	id_tools_install_firmware,
 	id_tools_cg_disasm,
 	id_help_about,
 	id_update_dbg
@@ -68,6 +69,7 @@ wxString GetPaneName()
 
 MainFrame::MainFrame()
 	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(900, 600))
+	, m_timer(this, id_update_dbg)
 	, m_aui_mgr(this)
 	, m_sys_menu_opened(false)
 {
@@ -114,6 +116,7 @@ MainFrame::MainFrame()
 	menu_tools->Append(id_tools_string_search, "&String Search")->Enable(false);
 	menu_tools->AppendSeparator();
 	menu_tools->Append(id_tools_decrypt_sprx_libraries, "&Decrypt SPRX libraries");
+	menu_tools->Append(id_tools_install_firmware, "&Install Firmware");
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "&Help");
@@ -149,6 +152,8 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
 	Bind(wxEVT_MENU, &MainFrame::DecryptSPRXLibraries, this, id_tools_decrypt_sprx_libraries);
+	Bind(wxEVT_MENU, &MainFrame::InstallFirmware, this, id_tools_install_firmware);
+
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
@@ -160,9 +165,17 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
 	Bind(wxEVT_MENU, &MainFrame::UpdateUI, this, id_update_dbg);
+	Bind(wxEVT_TIMER, &MainFrame::UpdateUI, this, id_update_dbg);
+	Bind(wxEVT_CLOSE_WINDOW, [&](wxCloseEvent&)
+	{
+		DoSettings(false);
+		TheApp->Exit();
+	});
 
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
-	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
+
+	// Check for updates every ~10 ms
+	m_timer.Start(10);
 }
 
 MainFrame::~MainFrame()
@@ -197,7 +210,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 {
 	bool stopped = false;
 
-	if(Emu.IsRunning())
+	if (Emu.IsRunning())
 	{
 		Emu.Pause();
 		stopped = true;
@@ -205,40 +218,41 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	wxDirDialog ctrl(this, L"Select game folder", wxEmptyString);
 
-	if(ctrl.ShowModal() == wxID_CANCEL)
+	if (ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if(stopped) Emu.Resume();
+		if (stopped) Emu.Resume();
 		return;
 	}
 
 	Emu.Stop();
+
+	const std::string path = fmt::ToUTF8(ctrl.GetPath());
 	
-	if(!Emu.BootGame(ctrl.GetPath().ToStdString()))
+	if (!Emu.BootGame(path))
 	{
-		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
+		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
 	}
 }
 
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
-	const bool paused = Emu.Pause();
-
 	wxFileDialog ctrl(this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
 	if (ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if (paused) Emu.Resume();
 		return;
 	}
 
 	Emu.Stop();
 
+	const std::string path = fmt::ToUTF8(ctrl.GetPath());
+
 	// Open PKG file
-	fs::file pkg_f(ctrl.GetPath().ToStdString());
+	fs::file pkg_f(path);
 
 	if (!pkg_f || pkg_f.size() < 64)
 	{
-		LOG_ERROR(LOADER, "PKG: Failed to open %s", ctrl.GetPath().ToStdString());
+		LOG_ERROR(LOADER, "PKG: Failed to open %s", path);
 		return;
 	}
 
@@ -345,7 +359,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 
-	LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
+	if (Emu.IsReady()) LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 }
 
 void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
@@ -359,6 +373,8 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
+	Emu.Stop();
+
 	wxArrayString modules;
 	ctrl.GetPaths(modules);
 
@@ -369,19 +385,30 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 		std::string prx_path = fmt::ToUTF8(module);
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);
 
-		if (IsSelf(prx_path))
+		fs::file elf_file(prx_path);
+
+		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
 			const std::string& prx_ext = fmt::to_upper(prx_path.substr(prx_ext_pos != -1 ? prx_ext_pos : prx_path.size()));
 			const std::string& prx_name = prx_path.substr(prx_dir.size());
 
+			elf_file = decrypt_self(std::move(elf_file));
+
 			prx_path.erase(prx_path.size() - 4, 1); // change *.sprx to *.prx
 
-			if (DecryptSelf(prx_path, prx_dir + prx_name))
+			if (elf_file)
 			{
-				LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+				if (fs::file new_file{prx_path, fs::rewrite})
+				{
+					new_file.write(elf_file.to_string());
+					LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+				}
+				else
+				{
+					LOG_ERROR(GENERAL, "Failed to create %s", prx_path);
+				}				
 			}
-
 			else
 			{
 				LOG_ERROR(GENERAL, "Failed to decrypt %s", prx_dir + prx_name);
@@ -390,6 +417,107 @@ void MainFrame::DecryptSPRXLibraries(wxCommandEvent& WXUNUSED(event))
 	}
 
 	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
+}
+
+void MainFrame::InstallFirmware(wxCommandEvent& WXUNUSED(event))
+{
+	wxFileDialog ctrl(this, L"Select PS3UPDAT.PUP file", wxEmptyString, wxEmptyString,
+		"PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP",
+		wxFD_OPEN);
+
+	if (ctrl.ShowModal() == wxID_CANCEL)
+	{
+		return;
+	}
+
+	Emu.Stop();
+
+	const std::string path = fmt::ToUTF8(ctrl.GetPath());
+
+	fs::file pup_f(path);
+	pup_object pup(pup_f);
+	if (!pup)
+	{
+		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
+		wxMessageBox("Error while installing firmware: PUP file is invalid.", "Failure!", wxOK | wxICON_ERROR, this);
+		return;
+	}
+
+	fs::file update_files_f = pup.get_file(0x300);
+	tar_object update_files(update_files_f);
+	auto updatefilenames = update_files.get_filenames();
+
+	updatefilenames.erase(std::remove_if(
+		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == std::string::npos; }),
+	updatefilenames.end());
+
+	wxProgressDialog pdlg("Firmware Installer", "Please wait, unpacking...", updatefilenames.size(), this, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
+
+	// Synchronization variable
+	atomic_t<int> progress(0);
+	{
+		// Run asynchronously
+		scope_thread worker("Firmware Installer", [&]
+		{
+			for (auto updatefilename : updatefilenames)
+			{
+				if (progress == -1) break;
+
+				fs::file updatefile = update_files.get_file(updatefilename);
+
+				SCEDecrypter self_dec(updatefile);
+				self_dec.LoadHeaders();
+				self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
+				self_dec.DecryptData();
+
+				auto dev_flash_tar_f = self_dec.MakeFile();
+				if (dev_flash_tar_f.size() < 3) {
+					LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
+					wxMessageBox("Error while installing firmware: PUP contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
+					progress = -1;
+				}
+
+				tar_object dev_flash_tar(dev_flash_tar_f[2]);
+				if (!dev_flash_tar.extract(fs::get_config_dir()))
+				{
+					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
+					wxMessageBox("Error while installing firmware: TAR contents are invalid.", "Failure!", wxOK | wxICON_ERROR, this);
+					progress = -1;
+				}
+
+				if(progress >= 0)
+					progress += 1;
+			}
+		});
+
+		// Wait for the completion
+		while (std::this_thread::sleep_for(5ms), std::abs(progress) < pdlg.GetRange())
+		{
+			// Update progress window
+			if (!pdlg.Update(static_cast<int>(progress)))
+			{
+				// Installation cancelled (signal with negative value)
+				progress = -1;
+				break;
+			}
+		}
+
+		update_files_f.close();
+		pup_f.close();
+
+		if (progress > 0)
+		{
+			pdlg.Update(pdlg.GetRange());
+			std::this_thread::sleep_for(100ms);
+		}
+	}
+	pdlg.Close();
+
+	if (progress > 0)
+	{
+		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
+		wxMessageBox("Successfully installed PS3 firmware and LLE Modules!", "Success!", wxOK, this);
+	}
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
@@ -431,7 +559,7 @@ void MainFrame::SendOpenCloseSysMenu(wxCommandEvent& event)
 
 void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 {
-	SettingsDialog(this);
+	SettingsDialog(this, "");
 }
 
 void MainFrame::ConfigPad(wxCommandEvent& WXUNUSED(event))
@@ -494,67 +622,11 @@ void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
 	AboutDialog(this).ShowModal();
 }
 
-void MainFrame::UpdateUI(wxCommandEvent& event)
+void MainFrame::UpdateUI(wxEvent& event)
 {
-	event.Skip();
-
-	bool is_running, is_stopped, is_ready;
-
-	if(event.GetEventType() == wxEVT_DBG_COMMAND)
-	{
-		switch(event.GetId())
-		{
-			case DID_START_EMU:
-			case DID_STARTED_EMU:
-				is_running = true;
-				is_stopped = false;
-				is_ready = false;
-			break;
-
-			case DID_STOP_EMU:
-			case DID_STOPPED_EMU:
-				is_running = false;
-				is_stopped = true;
-				is_ready = false;
-				m_sys_menu_opened = false;
-			break;
-
-			case DID_PAUSE_EMU:
-			case DID_PAUSED_EMU:
-				is_running = false;
-				is_stopped = false;
-				is_ready = false;
-			break;
-
-			case DID_RESUME_EMU:
-			case DID_RESUMED_EMU:
-				is_running = true;
-				is_stopped = false;
-				is_ready = false;
-			break;
-
-			case DID_READY_EMU:
-				is_running = false;
-				is_stopped = false;
-				is_ready = true;
-			break;
-
-			case DID_REGISTRED_CALLBACK:
-				is_running = Emu.IsRunning();
-				is_stopped = Emu.IsStopped();
-				is_ready = Emu.IsReady();
-			break;
-
-			default:
-				return;
-		}
-	}
-	else
-	{
-		is_running = Emu.IsRunning();
-		is_stopped = Emu.IsStopped();
-		is_ready = Emu.IsReady();
-	}
+	const bool is_running = Emu.IsRunning();
+	const bool is_stopped = Emu.IsStopped();
+	const bool is_ready = Emu.IsReady();
 
 	// Update menu items based on the state of the emulator
 	wxMenuBar& menubar( *GetMenuBar() );
@@ -583,12 +655,12 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	memory_viewer.Enable(!is_stopped);
 	rsx_debugger.Enable(!is_stopped);
 	string_search.Enable(!is_stopped);
-}
 
-void MainFrame::OnQuit(wxCloseEvent& event)
-{
-	DoSettings(false);
-	TheApp->Exit();
+	// Debugger
+	m_debugger_frame->UpdateUI();
+
+	// Logs
+	m_log_frame->UpdateUI();
 }
 
 void MainFrame::OnKeyDown(wxKeyEvent& event)

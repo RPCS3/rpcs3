@@ -46,6 +46,17 @@ class FragmentProgramDecompiler
 	std::string AddTex();
 	std::string Format(const std::string& code);
 
+	//Technically a temporary workaround until we know what type3 is
+	std::string AddType3();
+
+	//Prevent division by zero by catching denormals
+	//Simpler variant where input and output are expected to be positive
+	std::string NotZero(const std::string& code);
+	std::string NotZeroPositive(const std::string& code);
+	
+	//Prevents operations from overflowing the max range (tested with fp_dynamic3 autotest sample)
+	std::string NoOverflow(const std::string& code);
+
 	void AddCodeCond(const std::string& dst, const std::string& src);
 	std::string GetCond();
 	template<typename T> std::string GetSRC(T src);

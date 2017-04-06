@@ -11,13 +11,13 @@ extern logs::channel sysPrxForUser;
 
 s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
-	sysPrxForUser.warning("sys_lwmutex_create(lwmutex=*0x%x, attr=*0x%x)", lwmutex, attr);
+	sysPrxForUser.trace("sys_lwmutex_create(lwmutex=*0x%x, attr=*0x%x)", lwmutex, attr);
 
-	const bool recursive = attr->recursive == SYS_SYNC_RECURSIVE;
+	const u32 recursive = attr->recursive;
 
-	if (!recursive && attr->recursive != SYS_SYNC_NOT_RECURSIVE)
+	if (recursive != SYS_SYNC_RECURSIVE && recursive != SYS_SYNC_NOT_RECURSIVE)
 	{
-		sysPrxForUser.error("sys_lwmutex_create(): invalid recursive attribute (0x%x)", attr->recursive);
+		sysPrxForUser.error("sys_lwmutex_create(): invalid recursive attribute (0x%x)", recursive);
 		return CELL_EINVAL;
 	}
 
@@ -31,11 +31,17 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	default: sysPrxForUser.error("sys_lwmutex_create(): invalid protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
+	vm::var<u32> out_id;
+
+	if (s32 res = _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64, 0))
+	{
+		return res;
+	}
+
 	lwmutex->lock_var.store({ lwmutex_free, 0 });
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
-	lwmutex->sleep_queue = idm::make<lv2_obj, lv2_lwmutex>(protocol, reinterpret_cast<u64&>(attr->name));
-
+	lwmutex->sleep_queue = *out_id;
 	return CELL_OK;
 }
 
@@ -114,8 +120,10 @@ s32 sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeou
 		return CELL_EINVAL;
 	}
 
-	for (u32 i = 0; i < 300; i++)
+	for (u32 i = 0; i < 10; i++)
 	{
+		busy_wait();
+
 		if (lwmutex->vars.owner.load() == lwmutex_free)
 		{
 			if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
@@ -267,7 +275,7 @@ s32 sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	lwmutex->vars.owner.exchange(lwmutex_reserved);
 
 	// call the syscall
-	if (_sys_lwmutex_unlock(lwmutex->sleep_queue) == CELL_ESRCH)
+	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) == CELL_ESRCH)
 	{
 		return CELL_ESRCH;
 	}

@@ -216,7 +216,8 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		return "if(" + cond + ") ";
 	}
 		},
-		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) }
+		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
+		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) }
 	};
 
 	return fmt::replace_all(code, repl_list);
@@ -255,6 +256,14 @@ std::string VertexProgramDecompiler::GetCond()
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 	return "any(" + compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
+}
+
+std::string VertexProgramDecompiler::GetOptionalBranchCond()
+{
+	std::string cond_operator = d3.brb_cond_true ? " != " : " == ";
+	std::string cond = "(transform_branch_bits & (1 << " + std::to_string(d3.branch_index) + "))" + cond_operator + "0";
+	
+	return "if (" + cond + ")";
 }
 
 void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
@@ -357,6 +366,11 @@ void VertexProgramDecompiler::SetDSTVec(const std::string& code)
 void VertexProgramDecompiler::SetDSTSca(const std::string& code)
 {
 	SetDST(true, code);
+}
+
+std::string VertexProgramDecompiler::NotZeroPositive(const std::string code)
+{
+	return "max(" + code + ", 1.E-10)";
 }
 
 std::string VertexProgramDecompiler::BuildFuncBody(const FuncInfo& func)
@@ -476,15 +490,15 @@ std::string VertexProgramDecompiler::Decompile()
 
 			switch (d1.sca_opcode)
 			{
-			case 0x08: //BRA
-				LOG_ERROR(RSX, "BRA found. Please report to RPCS3 team.");
+			case RSX_SCA_OPCODE_BRA:
 				is_has_BRA = true;
 				m_jump_lvls.clear();
 				d3.HEX = m_data[++i];
 				i += 4;
 				break;
 
-			case 0x09: //BRI
+			case RSX_SCA_OPCODE_BRB:
+			case RSX_SCA_OPCODE_BRI:
 				d2.HEX = m_data[i++];
 				d3.HEX = m_data[i];
 				i += 2;
@@ -525,6 +539,21 @@ std::string VertexProgramDecompiler::Decompile()
 		AddCode("{");
 		m_cur_instr->open_scopes++;
 	}
+
+	auto find_jump_lvl = [this](u32 address)
+	{
+		u32 jump = 1;
+
+		for (auto pos : m_jump_lvls)
+		{
+			if (address == pos)
+				break;
+
+			++jump;
+		}
+
+		return jump;
+	};
 
 	for (u32 i = 0; i < m_instr_count; ++i)
 	{
@@ -599,13 +628,13 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
 		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
 		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
-		case RSX_SCA_OPCODE_RSQ: SetDSTSca("rsq_legacy($s)"); break;
+		case RSX_SCA_OPCODE_RSQ: SetDSTSca("1. / sqrt(" + NotZeroPositive("$s.x") +").xxxx"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
 		case RSX_SCA_OPCODE_LIT: SetDSTSca("lit_legacy($s)"); break;
 		case RSX_SCA_OPCODE_BRA:
 		{
-			AddCode("$if ($cond)");
+			AddCode("$if ($cond) //BRA");
 			AddCode("{");
 			m_cur_instr->open_scopes++;
 			AddCode("jump_position = $a$am;");
@@ -616,26 +645,9 @@ std::string VertexProgramDecompiler::Decompile()
 		break;
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
-			u32 jump_position = 1;
+			u32 jump_position = find_jump_lvl(GetAddr());
 
-			if (is_has_BRA)
-			{
-				jump_position = GetAddr();
-			}
-			else
-			{
-				u32 addr = GetAddr();
-
-				for (auto pos : m_jump_lvls)
-				{
-					if (addr == pos)
-						break;
-
-					++jump_position;
-				}
-			}
-
-			AddCode("$ifcond ");
+			AddCode("$ifcond //BRI");
 			AddCode("{");
 			m_cur_instr->open_scopes++;
 			AddCode(fmt::format("jump_position = %u;", jump_position));
@@ -656,17 +668,37 @@ std::string VertexProgramDecompiler::Decompile()
 			// works like BRI but shorter (RET o[1].x(TR);)
 			AddCode("$ifcond return;");
 			break;
-		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2_legacy($s)"); break;
+		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2(" + NotZeroPositive("$s") + ")"); break;
 		case RSX_SCA_OPCODE_EX2: SetDSTSca("exp2($s)"); break;
 		case RSX_SCA_OPCODE_SIN: SetDSTSca("sin($s)"); break;
 		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;
 		case RSX_SCA_OPCODE_BRB:
 			// works differently (BRB o[1].x !b0, L0;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB");
+		{
+			LOG_WARNING(RSX, "sca_opcode BRB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
+			AddCode(fmt::format("//BRB opcode, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX));
+			
+			u32 jump_position = find_jump_lvl(GetAddr());
+			
+			AddCode("$ifbcond //BRB");
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode(fmt::format("jump_position = %u;", jump_position));
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
+			AddCode("");
+
 			break;
+		}
 		case RSX_SCA_OPCODE_CLB: break;
 			// works same as BRB
-			LOG_ERROR(RSX, "Unimplemented sca_opcode CLB");
+			LOG_WARNING(RSX, "sca_opcode CLB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
+			AddCode("//CLB");
+			
+			AddCode("$ifbcond $f(); //CLB");
+			AddCode("");
+
 			break;
 		case RSX_SCA_OPCODE_PSH: break;
 			// works differently (PSH o[1].x A0;)
@@ -703,5 +735,6 @@ std::string VertexProgramDecompiler::Decompile()
 	{
 		m_funcs.erase(m_funcs.begin() + 2, m_funcs.end());
 	}
+
 	return result;
 }

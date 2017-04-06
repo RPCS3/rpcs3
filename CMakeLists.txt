@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 
+# uncomment next line if you want to build with GDB stub
+# add_definitions(-DWITH_GDB_DEBUGGER)
+
 set(ASMJIT_STATIC TRUE)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -17,6 +20,12 @@ endif()
 
 if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 6.1)
 	message( FATAL_ERROR "RPCS3 can't be compiled with gcc-6.1, see #1691." )
+endif()
+
+find_program(CCACHE_FOUND ccache)
+if (CCACHE_FOUND)
+	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+	set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif()
 
 add_definitions(-DCMAKE_BUILD)

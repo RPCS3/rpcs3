@@ -98,11 +98,13 @@ static const char* get_module_name(u16 id)
 	case 0x0050: return "cellSpursJq";
 	case 0x0052: return "cellPngEnc";
 	case 0x0053: return "cellMusicDecodeUtility";
+	case 0x0054: return "libmedi";
 	case 0x0055: return "cellSync2";
 	case 0x0056: return "sceNpUtil";
 	case 0x0057: return "cellRudp";
 	case 0x0059: return "sceNpSns";
 	case 0x005a: return "libgem";
+	case 0x005c: return "cellCrossController";
 	case 0xf00a: return "cellCelpEnc";
 	case 0xf010: return "cellGifDec";
 	case 0xf019: return "cellAdecCelp";
@@ -120,6 +122,7 @@ static const char* get_module_name(u16 id)
 	case 0xf030: return "cellSysutilAvc2";
 	case 0xf034: return "cellSailRec";
 	case 0xf035: return "sceNpTrophy";
+	case 0xf044: return "cellSysutilNpEula";
 	case 0xf053: return "cellAdecAt3multi";
 	case 0xf054: return "cellAtracMulti";
 	}
@@ -213,11 +216,13 @@ static const char* get_module_id(u16 id)
 	case 0x0050: return "CELL_SYSMODULE_SPURS_JQ";
 	case 0x0052: return "CELL_SYSMODULE_PNGENC";
 	case 0x0053: return "CELL_SYSMODULE_SYSUTIL_MUSIC_DECODE2";
+	case 0x0054: return "CELL_SYSMODULE_MEDI";
 	case 0x0055: return "CELL_SYSMODULE_SYNC2";
 	case 0x0056: return "CELL_SYSMODULE_SYSUTIL_NP_UTIL";
 	case 0x0057: return "CELL_SYSMODULE_RUDP";
 	case 0x0059: return "CELL_SYSMODULE_SYSUTIL_NP_SNS";
 	case 0x005a: return "CELL_SYSMODULE_GEM";
+	case 0x005c: return "CELL_SYSMODULE_SYSUTIL_CROSS_CONTROLLER";
 	case 0xf00a: return "CELL_SYSMODULE_CELPENC";
 	case 0xf010: return "CELL_SYSMODULE_GIFDEC";
 	case 0xf019: return "CELL_SYSMODULE_ADEC_CELP";
@@ -235,6 +240,7 @@ static const char* get_module_id(u16 id)
 	case 0xf030: return "CELL_SYSMODULE_SYSUTIL_AVCHAT2";
 	case 0xf034: return "CELL_SYSMODULE_SAIL_REC";
 	case 0xf035: return "CELL_SYSMODULE_SYSUTIL_NP_TROPHY";
+	case 0xf044: return "CELL_SYSMODULE_SYSUTIL_NP_EULA";
 	case 0xf054: return "CELL_SYSMODULE_LIBATRAC3MULTI";
 	case 0xffff: return "CELL_SYSMODULE_INVALID";
 	}
@@ -356,6 +362,12 @@ s32 cellSysmodule_D9B8C0EE()
 	return CELL_OK;
 }
 
+s32 cellSysmodule_1A267F98()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 {
 	REG_FUNC(cellSysmodule, cellSysmoduleInitialize);
@@ -368,4 +380,5 @@ DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 	REG_FUNC(cellSysmodule, cellSysmoduleFetchImage);
 	REG_FNID(cellSysmodule, 0xB498BF77, cellSysmodule_B498BF77);
 	REG_FNID(cellSysmodule, 0xD9B8C0EE, cellSysmodule_D9B8C0EE);
+	REG_FNID(cellSysmodule, 0x1A267F98, cellSysmodule_1A267F98);
 });

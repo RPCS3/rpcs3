@@ -4,24 +4,51 @@
 #include "VKHelpers.h"
 #include "../GCM.h"
 #include "../Common/surface_store.h"
+#include "../Common/TextureUtils.h"
 #include "VKFormats.h"
+
+namespace vk
+{
+	struct render_target : public image
+	{
+		u16 native_pitch = 0;
+		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
+
+		render_target(vk::render_device &dev,
+			uint32_t memory_type_index,
+			uint32_t access_flags,
+			VkImageType image_type,
+			VkFormat format,
+			uint32_t width, uint32_t height, uint32_t depth,
+			uint32_t mipmaps, uint32_t layers,
+			VkSampleCountFlagBits samples,
+			VkImageLayout initial_layout,
+			VkImageTiling tiling,
+			VkImageUsageFlags usage,
+			VkImageCreateFlags image_flags)
+
+			:image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
+					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
+		{}
+	};
+}
 
 namespace rsx
 {
 	struct vk_render_target_traits
 	{
-		using surface_storage_type = std::unique_ptr<vk::image>;
-		using surface_type = vk::image*;
+		using surface_storage_type = std::unique_ptr<vk::render_target>;
+		using surface_type = vk::render_target*;
 		using command_list_type = vk::command_buffer*;
 		using download_buffer_object = void*;
 
-		static std::unique_ptr<vk::image> create_new_surface(u32 address, surface_color_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
+		static std::unique_ptr<vk::render_target> create_new_surface(u32 address, surface_color_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
 		{
 			auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
 
-			std::unique_ptr<vk::image> rtt;
-			rtt.reset(new vk::image(device, mem_mapping.device_local,
+			std::unique_ptr<vk::render_target> rtt;
+			rtt.reset(new vk::render_target(device, mem_mapping.device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -45,10 +72,11 @@ namespace rsx
 			change_image_layout(*cmd, rtt->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			rtt->native_layout = fmt.second;
+			rtt->native_pitch = width * get_format_block_size_in_bytes(format);
 			return rtt;
 		}
 
-		static std::unique_ptr<vk::image> create_new_surface(u32 address, surface_depth_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
+		static std::unique_ptr<vk::render_target> create_new_surface(u32 address, surface_depth_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
 		{
 			VkFormat requested_format = vk::get_compatible_depth_surface_format(support, format);
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -56,8 +84,8 @@ namespace rsx
 			if (requested_format != VK_FORMAT_D16_UNORM)
 				range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
-			std::unique_ptr<vk::image> ds;
-			ds.reset(new vk::image(device, mem_mapping.device_local,
+			std::unique_ptr<vk::render_target> ds;
+			ds.reset(new vk::render_target(device, mem_mapping.device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -73,37 +101,46 @@ namespace rsx
 			//Clear new surface..
 			VkClearDepthStencilValue clear_depth = {};
 
-
 			clear_depth.depth = 1.f;
 			clear_depth.stencil = 0;
 
 			vkCmdClearDepthStencilImage(*cmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear_depth, 1, &range);
 			change_image_layout(*cmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
+			ds->native_pitch = width * 2;
+			if (format == rsx::surface_depth_format::z24s8)
+				ds->native_pitch *= 2;
+
+			ds->attachment_aspect_flag = range.aspectMask;
+
 			return ds;
 		}
 
-		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::image *surface)
+		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
 		}
 
-		static void prepare_rtt_for_sampling(vk::command_buffer* pcmd, vk::image *surface)
+		static void prepare_rtt_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static void prepare_ds_for_drawing(vk::command_buffer* pcmd, vk::image *surface)
+		static void prepare_ds_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 		}
 
-		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::image *surface)
+		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
 		{
-//			surface->change_layout(*pcmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
+			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static bool rtt_has_format_width_height(const std::unique_ptr<vk::image> &rtt, surface_color_format format, size_t width, size_t height)
+		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height)
 		{
 			VkFormat fmt = vk::get_compatible_surface_format(format).first;
 
@@ -115,7 +152,7 @@ namespace rsx
 			return false;
 		}
 
-		static bool ds_has_format_width_height(const std::unique_ptr<vk::image> &ds, surface_depth_format format, size_t width, size_t height)
+		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height)
 		{
 			// TODO: check format
 			//VkFormat fmt = vk::get_compatible_depth_surface_format(format);
@@ -152,7 +189,7 @@ namespace rsx
 		{
 		}
 
-		static vk::image *get(const std::unique_ptr<vk::image> &tex)
+		static vk::render_target *get(const std::unique_ptr<vk::render_target> &tex)
 		{
 			return tex.get();
 		}

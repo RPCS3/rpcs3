@@ -4,31 +4,6 @@
 #include "stdafx.h"
 #include "../RSXThread.h"
 
-namespace gl
-{
-	class render_target : public texture
-	{
-		bool is_cleared;
-
-	public:
-
-		render_target()
-		{
-			is_cleared = false;
-		}
-
-		void set_cleared()
-		{
-			is_cleared = true;
-		}
-
-		bool cleared()
-		{
-			return is_cleared;
-		}
-	};
-}
-
 struct color_swizzle
 {
 	gl::texture::channel a = gl::texture::channel::a;
@@ -64,10 +39,109 @@ namespace rsx
 {
 	namespace internals
 	{
+		::gl::texture::internal_format sized_internal_format(rsx::surface_color_format color_format);
 		color_format surface_color_format_to_gl(rsx::surface_color_format color_format);
 		depth_format surface_depth_format_to_gl(rsx::surface_depth_format depth_format);
 		u8 get_pixel_size(rsx::surface_depth_format format);
 	}
+}
+
+namespace gl
+{
+	class render_target : public texture
+	{
+		bool is_cleared = false;
+
+		u32  rsx_pitch = 0;
+		u16  native_pitch = 0;
+
+		u16  surface_height = 0;
+		u16  surface_width = 0;
+		u16  surface_pixel_size = 0;
+
+		texture::internal_format compatible_internal_format = texture::internal_format::rgba8;
+
+	public:
+
+		render_target() {}
+
+		void set_cleared()
+		{
+			is_cleared = true;
+		}
+
+		bool cleared() const
+		{
+			return is_cleared;
+		}
+
+		// Internal pitch is the actual row length in bytes of the openGL texture
+		void set_native_pitch(u16 pitch)
+		{
+			native_pitch = pitch;
+		}
+
+		u16 get_native_pitch() const
+		{
+			return native_pitch;
+		}
+
+		// Rsx pitch
+		void set_rsx_pitch(u16 pitch)
+		{
+			rsx_pitch = pitch;
+		}
+
+		u16 get_rsx_pitch() const
+		{
+			return rsx_pitch;
+		}
+
+		std::pair<u16, u16> get_dimensions()
+		{
+			if (!surface_height) surface_height = height();
+			if (!surface_width) surface_width = width();
+
+			return std::make_pair(surface_width, surface_height);
+		}
+
+		void set_compatible_format(texture::internal_format format)
+		{
+			compatible_internal_format = format;
+		}
+
+		texture::internal_format get_compatible_internal_format()
+		{
+			return compatible_internal_format;
+		}
+
+		// For an address within the texture, extract this sub-section's rect origin
+		std::tuple<bool, u16, u16> get_texture_subresource(u32 offset)
+		{
+			if (!offset)
+			{
+				return std::make_tuple(true, 0, 0);
+			}
+
+			if (!surface_height) surface_height = height();
+			if (!surface_width) surface_width = width();
+
+			u32 range = rsx_pitch * surface_height;
+			if (offset < range)
+			{
+				if (!surface_pixel_size)
+					surface_pixel_size = native_pitch / surface_width;
+
+				u32 pixel_offset = (offset / surface_pixel_size);
+				u32 y = (pixel_offset / surface_width);
+				u32 x = (pixel_offset % surface_width);
+
+				return std::make_tuple(true, (u16)x, (u16)y);
+			}
+			else
+				return std::make_tuple(false, 0, 0);
+		}
+	};
 }
 
 struct gl_render_target_traits
@@ -88,12 +162,17 @@ struct gl_render_target_traits
 		std::unique_ptr<gl::render_target> result(new gl::render_target());
 
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
+		auto internal_fmt = rsx::internals::sized_internal_format(surface_color_format);
+
 		result->recreate(gl::texture::target::texture2D);
+		result->set_native_pitch(width * format.channel_count * format.channel_size);
+		result->set_compatible_format(internal_fmt);
 
 		__glcheck result->config()
 			.size({ (int)width, (int)height })
 			.type(format.type)
 			.format(format.format)
+			.internal_format(internal_fmt)
 			.swizzle(format.swizzle.r, format.swizzle.g, format.swizzle.b, format.swizzle.a)
 			.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
 			.apply();
@@ -128,6 +207,13 @@ struct gl_render_target_traits
 
 		__glcheck result->pixel_pack_settings().aligment(1);
 		__glcheck result->pixel_unpack_settings().aligment(1);
+
+		u16 native_pitch = width * 2;
+		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+			native_pitch *= 2;
+
+		result->set_native_pitch(native_pitch);
+		result->set_compatible_format(format.internal_format);
 
 		return result;
 	}
@@ -194,7 +280,138 @@ struct gl_render_target_traits
 	}
 };
 
-
-struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
+struct surface_subresource
 {
+	gl::render_target *surface = nullptr;
+	
+	u16 x = 0;
+	u16 y = 0;
+	u16 w = 0;
+	u16 h = 0;
+
+	bool is_bound = false;
+	bool is_depth_surface = false;
+
+	surface_subresource() {}
+
+	surface_subresource(gl::render_target *src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth)
+		: surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth)
+	{}
+};
+
+class gl_render_targets : public rsx::surface_store<gl_render_target_traits>
+{
+private:
+	bool surface_overlaps(gl::render_target *surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y)
+	{
+		bool is_subslice = false;
+		u16  x_offset = 0;
+		u16  y_offset = 0;
+
+		if (surface_address > texaddr)
+			return false;
+
+		u32 offset = texaddr - surface_address;
+		if (offset >= 0)
+		{
+			std::tie(is_subslice, x_offset, y_offset) = surface->get_texture_subresource(offset);
+			if (is_subslice)
+			{
+				*x = x_offset;
+				*y = y_offset;
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool is_bound(u32 address, bool is_depth)
+	{
+		if (is_depth)
+		{
+			const u32 bound_depth_address = std::get<0>(m_bound_depth_stencil);
+			return (bound_depth_address == address);
+		}
+
+		for (auto &surface: m_bound_render_targets)
+		{
+			const u32 bound_address = std::get<0>(surface);
+			if (bound_address == address)
+				return true;
+		}
+
+		return false;
+	}
+
+	bool fits(gl::render_target *src, std::pair<u16, u16> &dims, u16 x_offset, u16 y_offset, u16 width, u16 height) const
+	{
+		if ((x_offset + width) > dims.first) return false;
+		if ((y_offset + height) > dims.second) return false;
+
+		return true;
+	}
+
+public:
+	surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch)
+	{
+		gl::render_target *surface = nullptr;
+		bool is_subslice = false;
+		u16  x_offset = 0;
+		u16  y_offset = 0;
+
+		for (auto &tex_info : m_render_targets_storage)
+		{
+			u32 this_address = std::get<0>(tex_info);
+			surface = std::get<1>(tex_info).get();
+
+			if (surface_overlaps(surface, this_address, texaddr, &x_offset, &y_offset))
+			{
+				if (surface->get_rsx_pitch() != requested_pitch)
+					continue;
+
+				auto dims = surface->get_dimensions();
+				
+				if (fits(surface, dims, x_offset, y_offset, requested_width, requested_height))
+					return{ surface, x_offset, y_offset, requested_width, requested_height, is_bound(this_address, false), false };
+				else
+				{
+					if (dims.first >= requested_width && dims.second >= requested_height)
+					{
+						LOG_WARNING(RSX, "Overlapping surface exceeds bounds; returning full surface region");
+						return{ surface, 0, 0, requested_width, requested_height, is_bound(this_address, false), false };
+					}
+				}
+			}
+		}
+
+		//Check depth surfaces for overlap
+		for (auto &tex_info : m_depth_stencil_storage)
+		{
+			u32 this_address = std::get<0>(tex_info);
+			surface = std::get<1>(tex_info).get();
+
+			if (surface_overlaps(surface, this_address, texaddr, &x_offset, &y_offset))
+			{
+				if (surface->get_rsx_pitch() != requested_pitch)
+					continue;
+
+				auto dims = surface->get_dimensions();
+				
+				if (fits(surface, dims, x_offset, y_offset, requested_width, requested_height))
+					return{ surface, x_offset, y_offset, requested_width, requested_height, is_bound(this_address, true), true };
+				else
+				{
+					if (dims.first >= requested_width && dims.second >= requested_height)
+					{
+						LOG_WARNING(RSX, "Overlapping depth surface exceeds bounds; returning full surface region");
+						return{ surface, 0, 0, requested_width, requested_height, is_bound(this_address, true), true };
+					}
+				}
+			}
+		}
+
+		return {};
+	}
 };

@@ -25,8 +25,19 @@ namespace sys_net
 {
 #ifdef _WIN32
 	using socket_t = SOCKET;
+
+	bool socket_error(const socket_t& sock)
+	{
+		return sock == SOCKET_ERROR || sock == INVALID_SOCKET;
+	}
 #else
+#define SOCKET_ERROR (-1)
 	using socket_t = int;
+
+	bool socket_error(const socket_t& sock)
+	{
+		return sock < 0;
+	}
 #endif
 }
 
@@ -90,7 +101,7 @@ struct sys_net_socket final
 	static const u32 id_step = 1;
 	static const u32 id_count = 1024;
 
-	sys_net::socket_t s = -1;
+	sys_net::socket_t s = SOCKET_ERROR;
 
 	explicit sys_net_socket(s32 socket) : s(socket)
 	{
@@ -98,7 +109,7 @@ struct sys_net_socket final
 
 	~sys_net_socket()
 	{
-		if (s != -1)
+		if (!sys_net::socket_error(s))
 #ifdef _WIN32
 			::closesocket(s);
 #else
@@ -211,6 +222,12 @@ namespace sys_net
 		libnet.warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("accept(): socket does not exist");
+			return -1;
+		}
+
 		s32 ret;
 
 		if (!addr)
@@ -250,6 +267,12 @@ namespace sys_net
 		libnet.warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("bind(): socket does not exist");
+			return -1;
+		}
+
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
@@ -270,6 +293,12 @@ namespace sys_net
 	{
 		libnet.warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("connect(): socket does not exist");
+			return -1;
+		}
 
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
@@ -395,6 +424,12 @@ namespace sys_net
 		libnet.warning("listen(s=%d, backlog=%d)", s, backlog);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("listen(): socket does not exist");
+			return -1;
+		}
+
 		s32 ret = ::listen(sock->s, backlog);
 
 		if (ret != 0)
@@ -410,6 +445,12 @@ namespace sys_net
 	{
 		libnet.warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("recv(): socket does not exist");
+			return -1;
+		}
 
 		s32 ret = ::recv(sock->s, buf.get_ptr(), len, flags);
 		
@@ -432,6 +473,18 @@ namespace sys_net
 
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
+
+		if (!sock || !buf || len == 0)
+		{
+			libnet.error("recvfrom(): invalid arguments buf= *0x%x, len=%d", buf, len);
+			return SYS_NET_EINVAL;
+		}
+
+		if (s < 0) {
+			libnet.error("recvfrom(): invalid socket %d", s);
+			return SYS_NET_EBADF;
+		}
+
 		s32 ret = ::recvfrom(sock->s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
 
@@ -455,6 +508,12 @@ namespace sys_net
 		libnet.warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("send(): socket does not exist");
+			return -1;
+		}
+
 		s32 ret = ::send(sock->s, buf.get_ptr(), len, flags);
 		
 		if (ret < 0)
@@ -477,6 +536,12 @@ namespace sys_net
 		libnet.warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("sendto(): socket does not exist");
+			return -1;
+		}
+
 		::sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
@@ -495,6 +560,12 @@ namespace sys_net
 	{
 		libnet.warning("setsockopt(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("setsockopt(): socket does not exist");
+			return -1;
+		}
 
 		if (level != SOL_SOCKET && level != IPPROTO_TCP)
 		{
@@ -558,6 +629,18 @@ namespace sys_net
 			case  OP_SO_USESIGNATURE:
 			{
 				libnet.warning("Socket option OP_SO_USESIGNATURE is unimplemented");
+				break;
+			}
+			case OP_SO_BROADCAST:
+			{
+				u32 enablebroadcast = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_BROADCAST, (char*)&enablebroadcast, sizeof(enablebroadcast));
+				break;
+			}
+			case OP_SO_REUSEADDR:
+			{
+				u32 reuseaddr = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_REUSEADDR, (char*)&reuseaddr, sizeof(reuseaddr));
 				break;
 			}
 			default:
@@ -650,6 +733,12 @@ namespace sys_net
 		libnet.warning("shutdown(s=%d, how=%d)", s, how);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("shutdown(): non existent socket cannot be shutdown");
+			return -1;
+		}
+
 		s32 ret = ::shutdown(sock->s, how);
 
 		if (ret != 0)
@@ -686,7 +775,7 @@ namespace sys_net
 
 		socket_t sock = ::socket(family, type, protocol);
 
-		if (sock < 0)
+		if (socket_error(sock))
 		{
 			libnet.error("socket(): error %d", get_errno() = get_last_error());
 			return -1;
@@ -699,6 +788,12 @@ namespace sys_net
 	{
 		libnet.warning("socketclose(s=%d)", s);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("socketclose(): socket does not exist, or was already closed");
+			return -1;
+		}
 
 #ifdef _WIN32
 		s32 ret = ::closesocket(sock->s);

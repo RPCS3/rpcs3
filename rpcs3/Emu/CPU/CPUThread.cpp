@@ -1,25 +1,30 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/Memory/vm.h"
 #include "CPUThread.h"
+#include "Emu/IdManager.h"
+#include "Utilities/GDBDebugServer.h"
 
-#include <mutex>
+DECLARE(cpu_thread::g_threads_created){0};
+DECLARE(cpu_thread::g_threads_deleted){0};
 
-template<>
+template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](cpu_flag f)
 	{
 		switch (f)
 		{
-		STR_CASE(cpu_flag::stop);
-		STR_CASE(cpu_flag::exit);
-		STR_CASE(cpu_flag::suspend);
-		STR_CASE(cpu_flag::ret);
-		STR_CASE(cpu_flag::signal);
-		STR_CASE(cpu_flag::dbg_global_pause);
-		STR_CASE(cpu_flag::dbg_global_stop);
-		STR_CASE(cpu_flag::dbg_pause);
-		STR_CASE(cpu_flag::dbg_step);
+		case cpu_flag::stop: return "STOP";
+		case cpu_flag::exit: return "EXIT";
+		case cpu_flag::suspend: return "s";
+		case cpu_flag::ret: return "ret";
+		case cpu_flag::signal: return "sig";
+		case cpu_flag::memory: return "mem";
+		case cpu_flag::dbg_global_pause: return "G-PAUSE";
+		case cpu_flag::dbg_global_stop: return "G-EXIT";
+		case cpu_flag::dbg_pause: return "PAUSE";
+		case cpu_flag::dbg_step: return "STEP";
 		case cpu_flag::__bitset_enum_max: break;
 		}
 
@@ -41,14 +46,10 @@ void cpu_thread::on_task()
 
 	g_tls_current_cpu_thread = this;
 
-	Emu.SendDbgCommand(DID_CREATE_THREAD, this);
-
 	// Check thread status
-	while (!test(state & cpu_flag::exit))
+	while (!test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
 	{
-		CHECK_EMU_STATUS;
-
-		// check stop status
+		// Check stop status
 		if (!test(state & cpu_flag::stop))
 		{
 			try
@@ -81,27 +82,60 @@ void cpu_thread::on_stop()
 
 cpu_thread::~cpu_thread()
 {
+	vm::cleanup_unlock(*this);
+	g_threads_deleted++;
 }
 
 cpu_thread::cpu_thread(u32 id)
 	: id(id)
 {
+	g_threads_created++;
 }
 
 bool cpu_thread::check_state()
 {
+#ifdef WITH_GDB_DEBUGGER
+	if (test(state, cpu_flag::dbg_pause)) {
+		fxm::get<GDBDebugServer>()->notify();
+	}
+#endif
+
+	bool cpu_sleep_called = false;
+	bool cpu_flag_memory = false;
+
 	while (true)
 	{
-		CHECK_EMU_STATUS; // check at least once
+		if (test(state, cpu_flag::memory) && state.test_and_reset(cpu_flag::memory))
+		{
+			cpu_flag_memory = true;
 
-		if (test(state & cpu_flag::exit))
+			if (auto& ptr = vm::g_tls_locked)
+			{
+				ptr->compare_and_swap(this, nullptr);
+				ptr = nullptr;
+			}
+		}
+
+		if (test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
 		{
 			return true;
 		}
 
-		if (!test(state & cpu_state_pause))
+		if (test(state & cpu_flag::signal) && state.test_and_reset(cpu_flag::signal))
 		{
+			cpu_sleep_called = false;
+		}
+
+		if (!test(state, cpu_state_pause))
+		{
+			if (cpu_flag_memory) vm::passive_lock(*this);
 			break;
+		}
+		else if (!cpu_sleep_called && test(state, cpu_flag::suspend))
+		{
+			cpu_sleep();
+			cpu_sleep_called = true;
+			continue;
 		}
 
 		thread_ctrl::wait();
@@ -123,15 +157,20 @@ bool cpu_thread::check_state()
 	return false;
 }
 
+void cpu_thread::test_state()
+{
+	if (UNLIKELY(test(state)))
+	{
+		if (check_state())
+		{
+			throw cpu_flag::ret;
+		}
+	}
+}
+
 void cpu_thread::run()
 {
 	state -= cpu_flag::stop;
-	notify();
-}
-
-void cpu_thread::set_signal()
-{
-	verify("cpu_flag::signal" HERE), !state.test_and_set(cpu_flag::signal);
 	notify();
 }
 

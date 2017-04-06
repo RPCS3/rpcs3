@@ -89,7 +89,8 @@ s32 cellSysutilAvc2SetWindowString()
 
 s32 cellSysutilAvc2EstimateMemoryContainerSize()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellSysutilAvc2); 
+  	return CELL_OK;
 }
 
 s32 cellSysutilAvc2SetVideoMuting()
@@ -304,7 +305,8 @@ s32 cellSysutilAvc2HideWindow()
 
 s32 cellSysutilAvc2GetVoiceMuting()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellSysutilAvc2); 
+  	return CELL_OK;
 }
 
 s32 cellSysutilAvc2GetScreenShowStatus()

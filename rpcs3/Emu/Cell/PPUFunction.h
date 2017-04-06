@@ -2,19 +2,16 @@
 
 #include "PPUThread.h"
 
-using ppu_function_t = void(*)(ppu_thread&);
+using ppu_function_t = bool(*)(ppu_thread&);
 
 // BIND_FUNC macro "converts" any appropriate HLE function to ppu_function_t, binding it to PPU thread context.
-// If function already has type ppu_function_t, it's handled specially and classified as "low-level HLE function".
-// 1) Low-level functions are bound directly so they don't save their name to ppu.last_function variable.
-// 2) Low-level functions don't install thread_guar, so they are very limited, and may be dangerous.
-// If you don't need "low-level function", be sure it's either `void()` or `void(ppu_thread& ppu, ppu_thread&)` for example.
-#define BIND_FUNC(func) (std::is_same<decltype(func), ppu_function_t>::value ? reinterpret_cast<ppu_function_t>(func) : static_cast<ppu_function_t>([](ppu_thread& ppu){\
-	const thread_guard guard(ppu);\
+#define BIND_FUNC(func) (static_cast<ppu_function_t>([](ppu_thread& ppu) -> bool {\
 	const auto old_f = ppu.last_function;\
 	ppu.last_function = #func;\
 	ppu_func_detail::do_call(ppu, func);\
+	ppu.test_state();\
 	ppu.last_function = old_f;\
+	return true;\
 }))
 
 struct ppu_va_args_t
@@ -278,6 +275,9 @@ public:
 	{
 		return access();
 	}
+
+	// Allocation address
+	static u32 addr;
 };
 
 template<typename T, T Func>

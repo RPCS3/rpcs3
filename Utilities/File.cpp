@@ -84,6 +84,7 @@ static fs::error to_error(DWORD e)
 	{
 	case ERROR_FILE_NOT_FOUND: return fs::error::noent;
 	case ERROR_PATH_NOT_FOUND: return fs::error::noent;
+	case ERROR_ACCESS_DENIED: return fs::error::acces;
 	case ERROR_ALREADY_EXISTS: return fs::error::exist;
 	case ERROR_FILE_EXISTS: return fs::error::exist;
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
@@ -119,6 +120,7 @@ static fs::error to_error(int e)
 	case ENOENT: return fs::error::noent;
 	case EEXIST: return fs::error::exist;
 	case EINVAL: return fs::error::inval;
+	case EACCES: return fs::error::acces;
 	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
@@ -795,7 +797,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_end ? FILE_END :
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
-			verify("file::seek" HERE), SetFilePointerEx(m_handle, pos, &pos, mode);
+			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
+			{
+				g_tls_error = to_error(GetLastError());
+				return -1;
+			}
 
 			return pos.QuadPart;
 		}
@@ -897,7 +903,12 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
-			verify("file::seek" HERE), result != -1;
+			
+			if (result == -1)
+			{
+				g_tls_error = to_error(errno);
+				return -1;
+			}
 
 			return result;
 		}
@@ -933,36 +944,51 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		fs::stat_t stat() override
 		{
-			fmt::throw_exception<std::logic_error>("Not supported" HERE);
+			fmt::raw_error("fs::file::memory_stream::stat(): not supported");
 		}
 
 		bool trunc(u64 length) override
 		{
-			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
+			return false;
 		}
 
 		u64 read(void* buffer, u64 count) override
 		{
-			const u64 start = m_pos;
-			const u64 end = seek(count, fs::seek_cur);
-			if (end < start) fmt::throw_exception<std::logic_error>("Stream overflow" HERE);
-			const u64 read_size = end - start;
-			std::memcpy(buffer, m_ptr + start, read_size);
-			return read_size;
+			if (m_pos < m_size)
+			{
+				// Get readable size
+				if (const u64 result = std::min<u64>(count, m_size - m_pos))
+				{
+					std::memcpy(buffer, m_ptr + m_pos, result);
+					m_pos += result;
+					return result;
+				}
+			}
+
+			return 0;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			fmt::throw_exception<std::logic_error>("Not allowed" HERE);
+			return 0;
 		}
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
 		{
-			return
-				whence == fs::seek_set ? m_pos = std::min<u64>(offset, m_size) :
-				whence == fs::seek_cur ? m_pos = std::min<u64>(offset + m_pos, m_size) :
-				whence == fs::seek_end ? m_pos = std::min<u64>(offset + m_size, m_size) :
-				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + m_pos :
+				whence == fs::seek_end ? offset + size() :
+				(fmt::raw_error("fs::file::memory_stream::seek(): invalid whence"), 0);
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			m_pos = new_pos;
+			return m_pos;
 		}
 
 		u64 size() override
@@ -1117,11 +1143,22 @@ const std::string& fs::get_config_dir()
 	// Use magic static
 	static const std::string s_dir = []
 	{
-#ifdef _WIN32
-		return get_executable_dir(); // ?
-#else
 		std::string dir;
 
+#ifdef _WIN32
+		wchar_t buf[2048];
+		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
+		{
+			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			return dir; // empty
+		}
+
+		to_utf8(dir, buf); // Convert to UTF-8
+
+		std::replace(dir.begin(), dir.end(), '\\', '/');
+
+		dir.resize(dir.rfind('/') + 1);
+#else
 		if (const char* home = ::getenv("XDG_CONFIG_HOME"))
 			dir = home;
 		else if (const char* home = ::getenv("HOME"))
@@ -1134,59 +1171,9 @@ const std::string& fs::get_config_dir()
 		if (!is_dir(dir) && !create_path(dir))
 		{
 			std::printf("Failed to create configuration directory '%s' (%d).\n", dir.c_str(), errno);
-			return get_executable_dir();
 		}
-
-		return dir;
 #endif
-	}();
 
-	return s_dir;
-}
-
-const std::string& fs::get_executable_dir()
-{
-	// Use magic static
-	static const std::string s_dir = []
-	{
-		std::string dir;
-
-#ifdef _WIN32
-		wchar_t buf[2048];
-		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
-		{
-			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_executable_dir()", MB_ICONERROR);
-			return dir; // empty
-		}
-	
-		to_utf8(dir, buf); // Convert to UTF-8
-
-		std::replace(dir.begin(), dir.end(), '\\', '/');
-
-#elif __APPLE__
-		char buf[4096];
-		u32 size = sizeof(buf);
-		if (_NSGetExecutablePath(buf, &size))
-		{
-			std::printf("_NSGetExecutablePath() failed (size=0x%x).\n", size);
-			return dir; // empty
-		}
-
-		dir = buf;
-#else
-		char buf[4096];
-		const auto size = ::readlink("/proc/self/exe", buf, sizeof(buf));
-		if (size <= 0 || size >= sizeof(buf))
-		{
-			std::printf("readlink(/proc/self/exe) failed (%d).\n", errno);
-			return dir; // empty
-		}
-
-		dir.assign(buf, size);
-#endif
-	
-		// Leave only path
-		dir.resize(dir.rfind('/') + 1);
 		return dir;
 	}();
 
@@ -1197,7 +1184,7 @@ std::string fs::get_data_dir(const std::string& prefix, const std::string& locat
 {
 	static const std::string s_dir = []
 	{
-		const std::string& dir = get_config_dir() + "/data/";
+		const std::string& dir = get_config_dir() + "data/";
 
 		if (!is_dir(dir) && !create_path(dir))
 		{
@@ -1344,6 +1331,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::inval: return "Invalid arguments";
 		case fs::error::noent: return "Not found";
 		case fs::error::exist: return "Already exists";
+		case fs::error::acces: return "Access violation";
 		}
 
 		return unknown;

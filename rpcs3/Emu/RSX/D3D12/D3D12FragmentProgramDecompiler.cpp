@@ -38,10 +38,11 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
-	OS << "	int isAlphaTested;" << std::endl;
-	OS << "	float alphaRef;" << std::endl;
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
+	OS << "	int isAlphaTested;" << std::endl;
+	OS << "	float alphaRef;" << std::endl;
+	OS << "	float4 texture_parameters[16];\n";
 	OS << "};" << std::endl;
 }
 
@@ -154,23 +155,28 @@ namespace
 		{
 		case rsx::fog_mode::linear:
 			OS << "	float4 fogc = float4(fog_param1 * In.fogc + (fog_param0 - 1.), fog_param1 * In.fogc + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential:
 			OS << "	float4 fogc = float4(11.084 * (fog_param1 * In.fogc + fog_param0 - 1.5), exp(11.084 * (fog_param1 * In.fogc + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential2:
 			OS << "	float4 fogc = float4(4.709 * (fog_param1 * In.fogc + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * In.fogc + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::linear_abs:
 			OS << "	float4 fogc = float4(fog_param1 * abs(In.fogc) + (fog_param0 - 1.), fog_param1 * abs(In.fogc) + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential_abs:
 			OS << "	float4 fogc = float4(11.084 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential2_abs:
 			OS << "	float4 fogc = float4(4.709 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
+			break;
+		default:
+			OS << "	float4 fogc = float4(0., 0., 0., 0.);\n";
 			return;
 		}
+
+		OS << "	fogc.y = saturate(fogc.y);\n";
 	}
 	
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
@@ -255,9 +261,10 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 				OS << "	float2  " << PI.name << "_scale = float2(1., 1.);" << std::endl;
 				continue;
 			}
+
 			OS << "	float2  " << PI.name << "_dim;" << std::endl;
 			OS << "	" << PI.name << ".GetDimensions(" << PI.name << "_dim.x, " << PI.name << "_dim.y);" << std::endl;
-			OS << "	float2  " << PI.name << "_scale = float2(1., 1.) / " << PI.name << "_dim;" << std::endl;
+			OS << "	float2  " << PI.name << "_scale = texture_parameters[" << textureIndex << "] / " << PI.name << "_dim;" << std::endl;
 		}
 	}
 }
@@ -300,13 +307,21 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	}
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
-		/**
-		 * Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-		 * but it writes depth in r1.z and not h2.z.
-		 * Maybe there's a different flag for depth ?
-		 */
-		//		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << std::endl;
-		OS << "	Out.depth = r1.z;\n";
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
+		{
+			/**
+			 * Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
+			 * but it writes depth in r1.z and not h2.z.
+			 * Maybe there's a different flag for depth ?
+			 */
+			 //		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << std::endl;
+			OS << "	Out.depth = r1.z;\n";
+		}
+		else
+		{
+			//Input not declared. Leave commented to assist in debugging the shader
+			OS << "	//Out.depth = r1.z;\n";
+		}
 	}
 	// Shaders don't always output colors (for instance if they write to depth only)
 	if (!first_output_name.empty())
@@ -333,8 +348,12 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		{
 			if (m_prog.textures_alpha_kill[index])
 			{
-				std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
-				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				const std::string texture_name = "tex" + std::to_string(index);
+				if (m_parr.HasParamTypeless(PF_PARAM_UNIFORM, texture_name))
+				{
+					std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
+					OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				}
 			}
 		}
 

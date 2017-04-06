@@ -234,6 +234,7 @@ struct RSXFragmentProgram
 	rsx::fog_mode fog_equation;
 	u16 height;
 
+	float texture_pitch_scale[16];
 	u8 textures_alpha_kill[16];
 	u32 textures_zfunc[16];
 

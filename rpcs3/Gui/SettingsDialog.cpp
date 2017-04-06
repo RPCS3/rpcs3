@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
 #include "Utilities/Config.h"
+#include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "Emu/System.h"
 
@@ -201,15 +202,27 @@ struct textctrl_pad : cfg_adapter
 };
 
 
-SettingsDialog::SettingsDialog(wxWindow* parent)
+SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
 	// Load default config
 	loaded = YAML::Load(g_cfg_defaults);
 
+	// Create config path if necessary
+	fs::create_path(fs::get_config_dir() + path);
+
 	// Incrementally load config.yml
-	const fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	loaded += YAML::Load(config.to_string());
+	const fs::file config(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
+
+	if (config.size() == 0 && !path.empty()) // First time
+	{
+		const fs::file configexisted(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+		loaded += YAML::Load(configexisted.to_string());
+	}
+	else
+	{
+		loaded += YAML::Load(config.to_string());
+	}
 
 	std::vector<std::unique_ptr<cfg_adapter>> pads;
 
@@ -298,15 +311,16 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 
 	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx only");
+	wxCheckBox* chbox_core_load_libreq = new wxCheckBox(p_core, wxID_ANY, "Load required libraries");
 	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
-	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log shader programs");
+	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log Shader Programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
 	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffers");
 	wxCheckBox* chbox_gs_read_depth = new wxCheckBox(p_graphics, wxID_ANY, "Read Depth Buffer");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
-	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug overlay");
+	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug Overlay");
 	wxCheckBox* chbox_gs_gl_legacy_buffers = new wxCheckBox(p_graphics, wxID_ANY, "Use Legacy OpenGL Buffers");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
@@ -340,7 +354,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 		for (const auto& prxf : fs::dir(lle_dir))
 		{
 			// List found unselected modules
-			if (!prxf.is_directory && ppu_prx_object(fs::file(lle_dir + prxf.name)) == elf_error::ok && !set.count(prxf.name))
+			if (!prxf.is_directory && ppu_prx_object(decrypt_self(fs::file(lle_dir + prxf.name))) == elf_error::ok && !set.count(prxf.name))
 			{
 				lle_module_list_unselected.push_back(prxf.name);
 			}
@@ -360,6 +374,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
 	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(ppu_decoder_modes), rbox_ppu_decoder));
+	rbox_ppu_decoder->Enable(0, false); // TODO
 
 	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU Decoder" });
 	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);
@@ -368,7 +383,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load liblv2.sprx only" }, chbox_core_load_liblv2));
-
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load required libraries" }, chbox_core_load_libreq));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
@@ -423,6 +438,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	else
 #endif
 	{
+		// Removes D3D12 from Render list when the system doesn't support it
+		cbox_gs_render->Delete(cbox_gs_render->FindString("D3D12"));
 		cbox_gs_d3d_adapter->Enable(false);
 	}
 
@@ -457,6 +474,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	s_subpanel_core1->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core1->Add(chbox_core_load_libreq, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core2->Add(s_round_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(s_subpanel_core1);
 	s_subpanel_core->Add(s_subpanel_core2);

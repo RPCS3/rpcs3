@@ -123,6 +123,9 @@ public:
 	} ITSTATE;
 
 	u32 TLS = 0;
+	u64 rtime = 0;
+	u32 raddr = 0;
+	u32 rdata = 0;
 
 	struct perf_counter
 	{
@@ -139,7 +142,7 @@ public:
 
 	const std::string m_name;
 
-	std::function<void(ARMv7Thread&)> custom_task;
+	atomic_t<void*> owner{};
 
 	const char* last_function = nullptr;
 

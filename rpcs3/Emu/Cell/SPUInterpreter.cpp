@@ -49,6 +49,12 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 	{
 		spu.set_interrupt_status(false);
 	}
+
+	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST & spu.ch_event_mask) > SPU_EVENT_INTR_ENABLED)
+	{
+		spu.ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
+		spu.srr0 = std::exchange(spu.pc, -4) + 4;
+	}
 }
 
 
@@ -83,9 +89,15 @@ void spu_interpreter::MFSPR(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::RDCH(SPUThread& spu, spu_opcode_t op)
 {
-	if (!spu.get_ch_value(op.ra, spu.gpr[op.rt]._u32[3]))
+	u32 result;
+
+	if (!spu.get_ch_value(op.ra, result))
 	{
 		spu.pc -= 4;
+	}
+	else
+	{
+		spu.gpr[op.rt] = v128::from32r(result);
 	}
 }
 
@@ -133,7 +145,7 @@ void spu_interpreter::ROT(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 4; i++)
 	{
-		spu.gpr[op.rt]._u32[i] = (a._u32[i] << b._s32[i]) | (a._u32[i] >> (32 - b._s32[i]));
+		spu.gpr[op.rt]._u32[i] = rol32(a._u32[i], b._u32[i]);
 	}
 }
 
@@ -180,7 +192,7 @@ void spu_interpreter::ROTH(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 8; i++)
 	{
-		spu.gpr[op.rt]._u16[i] = (a._u16[i] << b._s16[i]) | (a._u16[i] >> (16 - b._s16[i]));
+		spu.gpr[op.rt]._u16[i] = rol16(a._u16[i], b._s16[i]);
 	}
 }
 
@@ -313,8 +325,8 @@ void spu_interpreter::BIZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u32[3] == 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -322,8 +334,8 @@ void spu_interpreter::BINZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u32[3] != 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -331,8 +343,8 @@ void spu_interpreter::BIHZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u16[6] == 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -340,8 +352,8 @@ void spu_interpreter::BIHNZ(SPUThread& spu, spu_opcode_t op)
 {
 	if (spu.gpr[op.rt]._u16[6] != 0)
 	{
-		set_interrupt_status(spu, op);
 		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+		set_interrupt_status(spu, op);
 	}
 }
 
@@ -357,21 +369,22 @@ void spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::BI(SPUThread& spu, spu_opcode_t op)
 {
-	set_interrupt_status(spu, op);
 	spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
+	set_interrupt_status(spu, op);
 }
 
 void spu_interpreter::BISL(SPUThread& spu, spu_opcode_t op)
 {
-	set_interrupt_status(spu, op);
 	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
 	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
 	spu.pc = target - 4;
+	set_interrupt_status(spu, op);
 }
 
 void spu_interpreter::IRET(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	spu.pc = spu_branch_target(spu.srr0) - 4;
+	set_interrupt_status(spu, op);
 }
 
 void spu_interpreter::BISLED(SPUThread& spu, spu_opcode_t op)
@@ -1359,22 +1372,12 @@ inline float ldexpf_extended(float x, int exp)  // ldexpf() for extended values,
 
 inline bool isdenormal(float x)
 {
-	const int fpc = std::fpclassify(x);
-#ifdef __GNUG__
-	return fpc == FP_SUBNORMAL;
-#else
-	return (fpc & (_FPCLASS_PD | _FPCLASS_ND)) != 0;
-#endif
+	return std::fpclassify(x) == FP_SUBNORMAL;
 }
 
 inline bool isdenormal(double x)
 {
-	const int fpc = std::fpclassify(x);
-#ifdef __GNUG__
-	return fpc == FP_SUBNORMAL;
-#else
-	return (fpc & (_FPCLASS_PD | _FPCLASS_ND)) != 0;
-#endif
+	return std::fpclassify(x) == FP_SUBNORMAL;
 }
 
 void spu_interpreter_precise::FREST(SPUThread& spu, spu_opcode_t op)

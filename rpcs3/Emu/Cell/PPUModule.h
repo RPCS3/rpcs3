@@ -4,6 +4,8 @@
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
 
+#include <map>
+
 // Generate FNID or VNID for given name
 extern u32 ppu_generate_id(const char* name);
 
@@ -41,8 +43,8 @@ public:
 	task_stack on_load;
 	task_stack on_unload;
 
-	std::unordered_map<u32, ppu_static_function> functions;
-	std::unordered_map<u32, ppu_static_variable> variables;
+	std::map<u32, ppu_static_function> functions;
+	std::map<u32, ppu_static_variable> variables;
 
 public:
 	ppu_static_module(const char* name);
@@ -76,17 +78,19 @@ public:
 	static const ppu_static_module* get_module(const std::string& name);
 
 	template<typename T, T Func>
-	static void register_static_function(const char* module, const char* name, ppu_function_t func, u32 fnid, u32 flags)
+	static auto& register_static_function(const char* module, const char* name, ppu_function_t func, u32 fnid)
 	{
 		auto& info = access_static_function(module, fnid);
 
 		info.name  = name;
 		info.index = ppu_function_manager::register_function<T, Func>(func);
-		info.flags = flags;
+		info.flags = 0;
+
+		return info;
 	}
 
 	template<typename T, T* Var>
-	static void register_static_variable(const char* module, const char* name, u32 vnid, void(*init)())
+	static auto& register_static_variable(const char* module, const char* name, u32 vnid)
 	{
 		static_assert(std::is_same<u32, std::decay_t<typename T::addr_type>>::value, "Static variable registration: vm::gvar<T> expected");
 
@@ -94,9 +98,11 @@ public:
 
 		info.name  = name;
 		info.var   = reinterpret_cast<vm::ps3::gvar<void>*>(Var);
-		info.init  = init ? init : [] {};
+		info.init  = [] {};
 		info.size  = SIZE_32(typename T::type);
 		info.align = ALIGN_32(typename T::type);
+
+		return info;
 	}
 
 	static const ppu_static_module cellAdec;
@@ -108,6 +114,7 @@ public:
 	static const ppu_static_module cellCamera;
 	static const ppu_static_module cellCelp8Enc;
 	static const ppu_static_module cellCelpEnc;
+	static const ppu_static_module cellCrossController;
 	static const ppu_static_module cellDaisy;
 	static const ppu_static_module cellDmux;
 	static const ppu_static_module cellFiber;
@@ -166,6 +173,7 @@ public:
 	static const ppu_static_module cellSysutilAp;
 	static const ppu_static_module cellSysutilAvc;
 	static const ppu_static_module cellSysutilAvc2;
+	static const ppu_static_module cellSysutilNpEula;
 	static const ppu_static_module cellSysutilMisc;
 	static const ppu_static_module cellUsbd;
 	static const ppu_static_module cellUsbPspcm;
@@ -175,6 +183,7 @@ public:
 	static const ppu_static_module cellVideoUpload;
 	static const ppu_static_module cellVoice;
 	static const ppu_static_module cellVpost;
+	static const ppu_static_module libmedi;
 	static const ppu_static_module libmixer;
 	static const ppu_static_module libsnd3;
 	static const ppu_static_module libsynth2;
@@ -202,12 +211,12 @@ inline RT ppu_execute_function_or_callback(const char* name, ppu_thread& ppu, Ar
 
 #define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(#func, ppu, __VA_ARGS__)
 
-#define REG_FNID(module, nid, func, ...) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), nid, {__VA_ARGS__})
+#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), nid)
 
-#define REG_FUNC(module, func, ...) REG_FNID(module, ppu_generate_id(#func), func, __VA_ARGS__)
+#define REG_FUNC(module, func) REG_FNID(module, ppu_generate_id(#func), func)
 
-#define REG_VNID(module, nid, var, ...) ppu_module_manager::register_static_variable<decltype(var), &var>(#module, #var, nid, {__VA_ARGS__})
+#define REG_VNID(module, nid, var) ppu_module_manager::register_static_variable<decltype(var), &var>(#module, #var, nid)
 
-#define REG_VAR(module, var, ...) REG_VNID(module, ppu_generate_id(#var), var, __VA_ARGS__)
+#define REG_VAR(module, var) REG_VNID(module, ppu_generate_id(#var), var)
 
 #define UNIMPLEMENTED_FUNC(module) module.todo("%s", __func__)

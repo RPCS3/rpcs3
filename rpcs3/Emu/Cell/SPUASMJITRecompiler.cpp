@@ -408,7 +408,37 @@ void spu_recompiler::MFSPR(spu_opcode_t op)
 
 void spu_recompiler::RDCH(spu_opcode_t op)
 {
-	InterpreterCall(op); // TODO
+	switch (op.ra)
+	{
+	case SPU_RdSRR0:
+	{
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, SPU_OFF_32(srr0));
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
+		return;
+	}
+	case MFC_RdTagMask:
+	{
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, SPU_OFF_32(ch_tag_mask));
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
+		return;
+	}
+	case SPU_RdEventMask:
+	{
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, SPU_OFF_32(ch_event_mask));
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
+		return;
+	}
+	default:
+	{
+		InterpreterCall(op); // TODO
+	}
+	}
 }
 
 void spu_recompiler::RCHCNT(spu_opcode_t op)
@@ -478,7 +508,7 @@ void spu_recompiler::ROT(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
-			t[i] = (a[i] << b[i]) | (a[i] >> (32 - b[i]));
+			t[i] = rol32(a[i], b[i]);
 		}
 	};
 
@@ -588,7 +618,7 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 	{
 		for (u32 i = 0; i < 8; i++)
 		{
-			t[i] = (a[i] << b[i]) | (a[i] >> (16 - b[i]));
+			t[i] = rol16(a[i], b[i]);
 		}
 	};
 
@@ -831,7 +861,66 @@ void spu_recompiler::MTSPR(spu_opcode_t op)
 
 void spu_recompiler::WRCH(spu_opcode_t op)
 {
-	InterpreterCall(op); // TODO
+	switch (op.ra)
+	{
+	case SPU_WrSRR0:
+	{
+		c->mov(*addr, SPU_OFF_32(gpr[op.rt]._u32[3]));
+		c->mov(SPU_OFF_32(srr0), *addr);
+		c->unuse(*addr);
+		return;
+	}
+	case MFC_WrTagMask:
+	{
+		c->mov(*addr, SPU_OFF_32(gpr[op.rt]._u32[3]));
+		c->mov(SPU_OFF_32(ch_tag_mask), *addr);
+		c->unuse(*addr);
+		return;
+	}
+	case MFC_LSA:
+	{
+		c->mov(*addr, SPU_OFF_32(gpr[op.rt]._u32[3]));
+		c->mov(SPU_OFF_32(ch_mfc_cmd.lsa), *addr);
+		c->unuse(*addr);
+		return;
+	}
+	case MFC_EAH:
+	{
+		c->mov(*addr, SPU_OFF_32(gpr[op.rt]._u32[3]));
+		c->mov(SPU_OFF_32(ch_mfc_cmd.eah), *addr);
+		c->unuse(*addr);
+		return;
+	}
+	case MFC_EAL:
+	{
+		c->mov(*addr, SPU_OFF_32(gpr[op.rt]._u32[3]));
+		c->mov(SPU_OFF_32(ch_mfc_cmd.eal), *addr);
+		c->unuse(*addr);
+		return;
+	}
+	case MFC_Size:
+	{
+		c->mov(*addr, SPU_OFF_32(gpr[op.rt]._u32[3]));
+		c->mov(SPU_OFF_16(ch_mfc_cmd.size), addr->r16());
+		c->unuse(*addr);
+		return;
+	}
+	case MFC_TagID:
+	{
+		c->mov(*addr, SPU_OFF_32(gpr[op.rt]._u32[3]));
+		c->mov(SPU_OFF_8(ch_mfc_cmd.tag), addr->r8());
+		c->unuse(*addr);
+		return;
+	}
+	case 69:
+	{
+		return;
+	}
+	default:
+	{
+		InterpreterCall(op); // TODO
+	}
+	}
 }
 
 void spu_recompiler::BIZ(spu_opcode_t op)
@@ -917,7 +1006,10 @@ void spu_recompiler::BISL(spu_opcode_t op)
 
 void spu_recompiler::IRET(spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	c->mov(*addr, SPU_OFF_32(srr0));
+	c->and_(*addr, 0x3fffc);
+	if (op.d || op.e) c->or_(*addr, op.e << 26 | op.d << 27); // interrupt flags neutralize jump table
+	c->jmp(*jt);
 }
 
 void spu_recompiler::BISLED(spu_opcode_t op)

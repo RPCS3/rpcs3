@@ -375,7 +375,7 @@ void arm_load_exec(const arm_exec_object& elf)
 	{
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
-			if (!vm::falloc(prog.p_vaddr, prog.p_memsz, vm::main))
+			if (!vm::falloc(prog.p_vaddr & ~0xfff, prog.p_memsz + (prog.p_vaddr & 0xfff), vm::main))
 			{
 				fmt::throw_exception("vm::falloc() failed (addr=0x%x, size=0x%x)", prog.p_vaddr, prog.p_memsz);
 			}
@@ -630,7 +630,7 @@ void arm_load_exec(const arm_exec_object& elf)
 	const auto stop_code = vm::ptr<u32>::make(vm::alloc(3 * 4, vm::main));
 	stop_code[0] = 0xf870; // HACK instruction (Thumb)
 	stop_code[1] = 1; // Predefined function index (HLE return)
-	Emu.SetCPUThreadStop(stop_code.addr());
+	arm_function_manager::addr = stop_code.addr();
 
 	const std::string& thread_name = proc_param->sceUserMainThreadName ? proc_param->sceUserMainThreadName.get_ptr() : "main_thread";
 	const u32 stack_size = proc_param->sceUserMainThreadStackSize ? proc_param->sceUserMainThreadStackSize->value() : 256 * 1024;

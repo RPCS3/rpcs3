@@ -62,8 +62,7 @@ union ppu_opcode_t
 
 inline u64 ppu_rotate_mask(u32 mb, u32 me)
 {
-	const u64 mask = ~0ull << (63 ^ (me - mb));
-	return mask >> mb | mask << (64 - mb); // Rotate
+	return ror64(~0ull << (63 ^ (me - mb)), mb);
 }
 
 inline u32 ppu_decode(u32 inst)
@@ -122,7 +121,6 @@ public:
 		// Main opcodes (field 0..5)
 		fill_table(0x00, 6, -1,
 		{
-			{ 0x01, &D::HACK },
 			{ 0x02, &D::TDI },
 			{ 0x03, &D::TWI },
 			{ 0x07, &D::MULLI },
@@ -610,7 +608,6 @@ namespace ppu_instructions
 
 	namespace implicts
 	{
-		inline u32 HACK(u32 index) { return 0x01 << 26 | index; }
 		inline u32 NOP() { return ORI(r0, r0, 0); }
 		inline u32 MR(u32 rt, u32 ra) { return OR(rt, ra, ra, false); }
 		inline u32 LI(u32 rt, u32 imm) { return ADDI(rt, r0, imm); }
@@ -643,6 +640,8 @@ namespace ppu_instructions
 		inline u32 EXTRDI(u32 x, u32 y, u32 n, u32 b) { return RLDICL(x, y, b + n, 64 - b, false); }
 		inline u32 SRDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 64 - n, n, false); }
 		inline u32 CLRLDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 0, n, false); }
+
+		inline u32 TRAP() { return 0x7FE00008; } // tw 31,r0,r0
 	}
 
 	using namespace implicts;

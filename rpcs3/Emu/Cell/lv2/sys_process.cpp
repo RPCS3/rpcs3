@@ -4,6 +4,7 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 #include "sys_mutex.h"
@@ -20,8 +21,6 @@
 #include "sys_trace.h"
 #include "sys_fs.h"
 #include "sys_process.h"
-
-#include <thread>
 
 namespace vm { using namespace ps3; }
 
@@ -47,24 +46,19 @@ s32 sys_process_getppid()
 	return 0;
 }
 
-s32 sys_process_exit(s32 status)
+s32 sys_process_exit(ppu_thread& ppu, s32 status)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_process.warning("sys_process_exit(status=0x%x)", status);
 
-	CHECK_EMU_STATUS;
-	
 	Emu.CallAfter([]()
 	{
 		sys_process.success("Process finished");
 		Emu.Stop();
 	});
 
-	while (true)
-	{
-		CHECK_EMU_STATUS;
-
-		std::this_thread::sleep_for(1ms);
-	}
+	thread_ctrl::eternalize();
 
 	return CELL_OK;
 }

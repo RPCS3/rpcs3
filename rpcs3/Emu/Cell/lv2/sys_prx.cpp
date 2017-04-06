@@ -6,11 +6,13 @@
 #include "Loader/ELF.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Crypto/unedat.h"
 #include "sys_prx.h"
 
 namespace vm { using namespace ps3; }
 
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern void ppu_initialize(const ppu_module&);
 
 logs::channel sys_prx("sys_prx", logs::level::notice);
 
@@ -18,21 +20,25 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 {
 	sys_prx.warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
 
-	const ppu_prx_object obj = fs::file(vfs::get(path));
+	const auto loadedkeys = fxm::get_always<LoadedNpdrmKeys_t>();
+
+	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)), loadedkeys->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = ppu_load_prx(obj);
+	const auto prx = ppu_load_prx(obj, path.substr(path.find_last_of('/') + 1));
 
 	if (!prx)
 	{
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	return prx->id;
+	ppu_initialize(*prx);
+
+	return idm::last_id();
 }
 
 s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
@@ -124,7 +130,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	sys_prx.warning("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
 	// Get the PRX, free the used memory and delete the object and its ID
-	const auto prx = idm::get<lv2_obj, lv2_prx>(id);
+	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id);
 
 	if (!prx)
 	{
@@ -134,7 +140,6 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	//Memory.Free(prx->address);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
-	idm::remove<lv2_obj, lv2_prx>(id);
 	
 	return CELL_OK;
 }
@@ -230,9 +235,4 @@ s32 sys_prx_stop()
 {
 	sys_prx.todo("sys_prx_stop()");
 	return CELL_OK;
-}
-
-lv2_prx::lv2_prx()
-	: id(idm::last_id())
-{
 }

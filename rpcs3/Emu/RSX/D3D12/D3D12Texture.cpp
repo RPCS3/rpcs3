@@ -279,6 +279,9 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = get_srv_descriptor_with_dimensions(rsx::method_registers.fragment_textures[i]);
 		shared_resource_view_desc.Format = get_texture_format(format);
 
+		bool requires_remap = false;
+		std::array<INT, 4> channel_mapping = {};
+
 		switch (format)
 		{
 		default:
@@ -333,11 +336,8 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2
 				};
 
-				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-					RemapValue[remap_r],
-					RemapValue[remap_g],
-					RemapValue[remap_b],
-					RemapValue[remap_a]);
+				channel_mapping = { RemapValue[remap_r], RemapValue[remap_g], RemapValue[remap_b], RemapValue[remap_a] };
+				requires_remap = true;
 			}
 			else
 			{
@@ -351,11 +351,8 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1
 				};
 
-				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-					RemapValue[remap_r],
-					RemapValue[remap_g],
-					RemapValue[remap_b],
-					RemapValue[remap_a]);
+				channel_mapping = { RemapValue[remap_r], RemapValue[remap_g], RemapValue[remap_b], RemapValue[remap_a] };
+				requires_remap = true;
 			}
 
 			break;
@@ -402,9 +399,16 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
 			break;
+				
+		case CELL_GCM_TEXTURE_D8R8G8B8:	
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1);
+			break;
 			
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-		case CELL_GCM_TEXTURE_D8R8G8B8:
 		{
 			u8 remap_a = rsx::method_registers.fragment_textures[i].remap() & 0x3;
 			u8 remap_r = (rsx::method_registers.fragment_textures[i].remap() >> 2) & 0x3;
@@ -423,11 +427,8 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2
 				};
 
-				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-					RemapValue[remap_r],
-					RemapValue[remap_g],
-					RemapValue[remap_b],
-					RemapValue[remap_a]);
+				channel_mapping = { RemapValue[remap_r], RemapValue[remap_g], RemapValue[remap_b], RemapValue[remap_a] };
+				requires_remap = true;
 			}
 			else if (is_depth_stencil_texture)
 			{
@@ -450,15 +451,39 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3
 				};
 
-				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-					RemapValue[remap_r],
-					RemapValue[remap_g],
-					RemapValue[remap_b],
-					RemapValue[remap_a]);
+				channel_mapping = { RemapValue[remap_r], RemapValue[remap_g], RemapValue[remap_b], RemapValue[remap_a] };
+				requires_remap = true;
 			}
 
 			break;
 		}
+		}
+
+		if (requires_remap)
+		{
+			auto decoded_remap = rsx::method_registers.fragment_textures[i].decoded_remap();
+			u8 remapped_inputs[] = { decoded_remap.second[1], decoded_remap.second[2], decoded_remap.second[3], decoded_remap.second[0] };
+
+			for (u8 channel = 0; channel < 4; channel++)
+			{
+				switch (remapped_inputs[channel])
+				{
+				default:
+				case CELL_GCM_TEXTURE_REMAP_REMAP:
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ONE:
+					channel_mapping[channel] = D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1;
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ZERO:
+					channel_mapping[channel] = D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0;
+				}
+			}
+
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				channel_mapping[0],
+				channel_mapping[1],
+				channel_mapping[2],
+				channel_mapping[3]);
 		}
 
 		m_device->CreateShaderResourceView(vram_texture, &shared_resource_view_desc,

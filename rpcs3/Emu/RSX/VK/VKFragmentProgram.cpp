@@ -31,23 +31,6 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
 	OS << "#version 420" << std::endl;
 	OS << "#extension GL_ARB_separate_shader_objects: enable" << std::endl << std::endl;
-
-	OS << "layout(std140, set=0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	mat4 scaleOffsetMat;" << std::endl;
-	OS << "	float fog_param0;" << std::endl;
-	OS << "	float fog_param1;" << std::endl;
-	OS << "	uint alpha_test;" << std::endl;
-	OS << "	float alpha_ref;" << std::endl;
-	OS << "};" << std::endl << std::endl;
-
-	vk::glsl::program_input in;
-	in.location = 0;
-	in.domain = vk::glsl::glsl_fragment_program;
-	in.name = "ScaleOffsetBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
-
-	inputs.push_back(in);
 }
 
 void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -170,8 +153,11 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 
-	// A dummy value otherwise it's invalid to create an empty uniform buffer
-	OS << "	vec4 void_value;" << std::endl;
+	OS << "	float fog_param0;" << std::endl;
+	OS << "	float fog_param1;" << std::endl;
+	OS << "	uint alpha_test;" << std::endl;
+	OS << "	float alpha_ref;" << std::endl;
+	OS << "	vec4 texture_parameters[16];" << std::endl;
 	OS << "};" << std::endl;
 
 	vk::glsl::program_input in;
@@ -193,23 +179,28 @@ namespace vk
 		{
 		case rsx::fog_mode::linear:
 			OS << "	vec4 fogc = vec4(fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential:
 			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential2:
 			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 2.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::linear_abs:
 			OS << "	vec4 fogc = vec4(fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential_abs:
 			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			break;
 		case rsx::fog_mode::exponential2_abs:
 			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.), 0., 0.);\n";
+			break;
+		default:
+			OS << "	vec4 fogc = vec4(0.);\n";
 			return;
 		}
+
+		OS << "	fogc.y = clamp(fogc.y, 0., 1.);\n";
 	}
 
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
@@ -382,8 +373,12 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		{
 			if (m_prog.textures_alpha_kill[index])
 			{
-				std::string fetch_texture = vk::insert_texture_fetch(m_prog, index) + ".a";
-				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				const std::string texture_name = "tex" + std::to_string(index);
+				if (m_parr.HasParamTypeless(PF_PARAM_UNIFORM, texture_name))
+				{
+					std::string fetch_texture = vk::insert_texture_fetch(m_prog, index) + ".a";
+					OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				}
 			}
 		}
 
@@ -415,6 +410,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
 			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
 			* but it writes depth in r1.z and not h2.z.
@@ -422,6 +418,11 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			*/
 			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
 			OS << "	gl_FragDepth = r1.z;\n";
+		}
+		else
+		{
+			//Input not declared. Leave commented to assist in debugging the shader
+			OS << "	//gl_FragDepth = r1.z;\n";
 		}
 	}
 

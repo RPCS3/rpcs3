@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <set>
 #include <array>
+#include <vector>
 
 #include "../rpcs3/Emu/Cell/PPUOpcodes.h"
 #include "../rpcs3/Emu/Cell/PPUAnalyser.h"
@@ -139,11 +140,11 @@ class PPUTranslator final //: public CPUTranslator
 	// Basic blocks for current function
 	std::unordered_map<u64, llvm::BasicBlock*> m_blocks;
 
-	// Supplementary block info for all functions
-	std::set<u64> m_block_info;
-
 	// JT resolver block
 	llvm::BasicBlock* m_jtr;
+
+	llvm::MDNode* m_md_unlikely;
+	llvm::MDNode* m_md_likely;
 
 	// Current binary data
 	be_t<u32>* m_bin{};
@@ -235,9 +236,6 @@ public:
 
 	// Set some registers to undef (after function call)
 	void UndefineVolatileRegisters();
-
-	// Get the basic block for the specified address
-	llvm::BasicBlock* GetBasicBlock(u64 addr);
 
 	// Load gpr
 	llvm::Value* GetGpr(u32 r, u32 num_bits = 64);
@@ -379,11 +377,14 @@ public:
 	// Emit trap
 	llvm::Value* Trap(u64 addr);
 
-	// Check condition for branch instructions
+	// Get condition for branch instructions
 	llvm::Value* CheckBranchCondition(u32 bo, u32 bi);
 
+	// Get hint for branch instructions
+	llvm::MDNode* CheckBranchProbability(u32 bo);
+
 	// Branch to next instruction if condition failed, never branch on nullptr
-	void UseCondition(llvm::Value* = nullptr);
+	void UseCondition(llvm::MDNode* hint, llvm::Value* = nullptr);
 
 	// Get memory pointer
 	llvm::Value* GetMemory(llvm::Value* addr, llvm::Type* type);
@@ -440,9 +441,6 @@ public:
 
 	// Add function
 	void AddFunction(u64 addr, llvm::Function* func, llvm::FunctionType* type = nullptr);
-
-	// Add block entry hint (not essential)
-	void AddBlockInfo(u64 addr);
 
 	// Parses PPU opcodes and translate them into LLVM IR
 	llvm::Function* TranslateToIR(const ppu_function& info, be_t<u32>* bin, void(*custom)(PPUTranslator*) = nullptr);
@@ -602,7 +600,6 @@ public:
 	void ADDI(ppu_opcode_t op);
 	void ADDIS(ppu_opcode_t op);
 	void BC(ppu_opcode_t op);
-	void HACK(ppu_opcode_t op);
 	void SC(ppu_opcode_t op);
 	void B(ppu_opcode_t op);
 	void MCRF(ppu_opcode_t op);

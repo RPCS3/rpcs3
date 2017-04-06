@@ -31,9 +31,21 @@ class jit_compiler final
 	// Compiled functions
 	std::unordered_map<std::string, std::uintptr_t> m_map;
 
+	// Linkage cache
+	std::unordered_map<std::string, std::uintptr_t> m_link;
+
+	// Arch
+	std::string m_cpu;
+
 public:
-	jit_compiler(std::unique_ptr<llvm::Module>&&, std::unordered_map<std::string, std::uintptr_t>&&);
+	jit_compiler(std::unordered_map<std::string, std::uintptr_t>, std::string _cpu);
 	~jit_compiler();
+
+	// Compile module
+	void make(std::unique_ptr<llvm::Module>, std::string);
+
+	// Load object
+	void load(std::unique_ptr<llvm::Module>, std::unique_ptr<llvm::object::ObjectFile>);
 
 	// Get compiled function address
 	std::uintptr_t get(const std::string& name) const
@@ -46,6 +58,12 @@ public:
 		}
 
 		return 0;
+	}
+
+	// Get CPU info
+	const std::string& cpu() const
+	{
+		return m_cpu;
 	}
 };
 

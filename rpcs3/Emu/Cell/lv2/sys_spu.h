@@ -148,16 +148,17 @@ struct lv2_spu_group
 	const s32 type; // SPU Thread Group Type
 	const u32 ct; // Memory Container Id
 
+	semaphore<> mutex;
+	atomic_t<u32> init; // Initialization Counter
+	atomic_t<s32> prio; // SPU Thread Group Priority
+	atomic_t<u32> run_state; // SPU Thread Group State
+	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
+	atomic_t<u32> join_state; // flags used to detect exit cause
+	cond_variable cv; // used to signal waiting PPU thread
+
 	std::array<std::shared_ptr<SPUThread>, 256> threads; // SPU Threads
 	std::array<vm::ps3::ptr<sys_spu_image_t>, 256> images; // SPU Images
 	std::array<spu_arg_t, 256> args; // SPU Thread Arguments
-
-	s32 prio; // SPU Thread Group Priority
-	volatile u32 state; // SPU Thread Group State
-	s32 exit_status; // SPU Thread Group Exit Status
-
-	atomic_t<u32> join_state; // flags used to detect exit cause
-	cond_variable cv; // used to signal waiting PPU thread
 
 	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
 	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
@@ -166,36 +167,37 @@ struct lv2_spu_group
 	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, u32 ct)
 		: name(name)
 		, num(num)
+		, init(0)
 		, prio(prio)
 		, type(type)
 		, ct(ct)
-		, state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+		, run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 		, exit_status(0)
 		, join_state(0)
 	{
 	}
 
-	void send_run_event(lv2_lock_t lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_run_event(u64 data1, u64 data2, u64 data3)
 	{
 		if (const auto queue = ep_run.lock())
 		{
-			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
+			queue->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
 		}
 	}
 
-	void send_exception_event(lv2_lock_t lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_exception_event(u64 data1, u64 data2, u64 data3)
 	{
 		if (const auto queue = ep_exception.lock())
 		{
-			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
+			queue->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
 		}
 	}
 
-	void send_sysmodule_event(lv2_lock_t lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_sysmodule_event(u64 data1, u64 data2, u64 data3)
 	{
 		if (const auto queue = ep_sysmodule.lock())
 		{
-			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
+			queue->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
 		}
 	}
 };
@@ -206,43 +208,43 @@ class ppu_thread;
 void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr);
 u32 LoadSpuImage(const fs::file& stream, u32& spu_ep);
 
-// SysCalls
-s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
-s32 sys_spu_image_open(vm::ps3::ptr<sys_spu_image_t> img, vm::ps3::cptr<char> path);
-s32 sys_spu_image_close(vm::ps3::ptr<sys_spu_image_t> img);
-s32 sys_spu_thread_initialize(vm::ps3::ptr<u32> thread, u32 group, u32 spu_num, vm::ps3::ptr<sys_spu_image_t> img, vm::ps3::ptr<sys_spu_thread_attribute> attr, vm::ps3::ptr<sys_spu_thread_argument> arg);
-s32 sys_spu_thread_set_argument(u32 id, vm::ps3::ptr<sys_spu_thread_argument> arg);
-s32 sys_spu_thread_group_create(vm::ps3::ptr<u32> id, u32 num, s32 prio, vm::ps3::ptr<sys_spu_thread_group_attribute> attr);
-s32 sys_spu_thread_group_destroy(u32 id);
-s32 sys_spu_thread_group_start(u32 id);
-s32 sys_spu_thread_group_suspend(u32 id);
-s32 sys_spu_thread_group_resume(u32 id);
-s32 sys_spu_thread_group_yield(u32 id);	
-s32 sys_spu_thread_group_terminate(u32 id, s32 value);
-s32 sys_spu_thread_group_join(u32 id, vm::ps3::ptr<u32> cause, vm::ps3::ptr<u32> status);
-s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
-s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et);
-s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, vm::ps3::ptr<u8> spup);
-s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
-s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
-s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ps3::ptr<u64> value, u32 type);
-s32 sys_spu_thread_write_spu_mb(u32 id, u32 value);
-s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value);
-s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ps3::ptr<u64> value);
-s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
-s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
-s32 sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup);
-s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
-s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
-s32 sys_spu_thread_get_exit_status(u32 id, vm::ps3::ptr<u32> status);
+// Syscalls
 
-s32 sys_raw_spu_create(vm::ps3::ptr<u32> id, vm::ps3::ptr<void> attr);
-s32 sys_raw_spu_destroy(ppu_thread& ppu, u32 id);
-s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ps3::ptr<u32> intrtag);
-s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);
-s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ps3::ptr<u64> mask);
-s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat);
-s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ps3::ptr<u64> stat);
-s32 sys_raw_spu_read_puint_mb(u32 id, vm::ps3::ptr<u32> value);
-s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value);
-s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ps3::ptr<u32> value);
+error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
+error_code sys_spu_image_open(vm::ps3::ptr<sys_spu_image_t> img, vm::ps3::cptr<char> path);
+error_code sys_spu_thread_initialize(vm::ps3::ptr<u32> thread, u32 group, u32 spu_num, vm::ps3::ptr<sys_spu_image_t>, vm::ps3::ptr<sys_spu_thread_attribute>, vm::ps3::ptr<sys_spu_thread_argument>);
+error_code sys_spu_thread_set_argument(u32 id, vm::ps3::ptr<sys_spu_thread_argument> arg);
+error_code sys_spu_thread_group_create(vm::ps3::ptr<u32> id, u32 num, s32 prio, vm::ps3::ptr<sys_spu_thread_group_attribute> attr);
+error_code sys_spu_thread_group_destroy(u32 id);
+error_code sys_spu_thread_group_start(ppu_thread&, u32 id);
+error_code sys_spu_thread_group_suspend(u32 id);
+error_code sys_spu_thread_group_resume(u32 id);
+error_code sys_spu_thread_group_yield(u32 id);	
+error_code sys_spu_thread_group_terminate(u32 id, s32 value);
+error_code sys_spu_thread_group_join(ppu_thread&, u32 id, vm::ps3::ptr<u32> cause, vm::ps3::ptr<u32> status);
+error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
+error_code sys_spu_thread_group_disconnect_event(u32 id, u32 et);
+error_code sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, vm::ps3::ptr<u8> spup);
+error_code sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
+error_code sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
+error_code sys_spu_thread_read_ls(u32 id, u32 address, vm::ps3::ptr<u64> value, u32 type);
+error_code sys_spu_thread_write_spu_mb(u32 id, u32 value);
+error_code sys_spu_thread_set_spu_cfg(u32 id, u64 value);
+error_code sys_spu_thread_get_spu_cfg(u32 id, vm::ps3::ptr<u64> value);
+error_code sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
+error_code sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
+error_code sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup);
+error_code sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
+error_code sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
+error_code sys_spu_thread_get_exit_status(u32 id, vm::ps3::ptr<u32> status);
+
+error_code sys_raw_spu_create(vm::ps3::ptr<u32> id, vm::ps3::ptr<void> attr);
+error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id);
+error_code sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ps3::ptr<u32> intrtag);
+error_code sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);
+error_code sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ps3::ptr<u64> mask);
+error_code sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat);
+error_code sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ps3::ptr<u64> stat);
+error_code sys_raw_spu_read_puint_mb(u32 id, vm::ps3::ptr<u32> value);
+error_code sys_raw_spu_set_spu_cfg(u32 id, u32 value);
+error_code sys_raw_spu_get_spu_cfg(u32 id, vm::ps3::ptr<u32> value);

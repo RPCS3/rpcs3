@@ -29,9 +29,12 @@ namespace rsx
 	
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
-	[[noreturn]] void invalid_method(thread*, u32 _reg, u32 arg)
+	void invalid_method(thread* rsx, u32 _reg, u32 arg)
 	{
-		fmt::throw_exception("Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		//Don't throw, gather information and ignore broken/garbage commands
+		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		rsx->invalid_command_interrupt_raised = true;
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -113,9 +116,14 @@ namespace rsx
 			static const size_t attribute_index = index / increment_per_array_index;
 			static const size_t vertex_subreg = index % increment_per_array_index;
 
+			const auto vtype = vertex_data_type_from_element_type<type>::type;
+
+			if (rsx->in_begin_end)
+				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, vtype, arg);
+
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
 
-			info.type = vertex_data_type_from_element_type<type>::type;
+			info.type = vtype;
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
@@ -185,6 +193,31 @@ namespace rsx
 			}
 		};
 
+		template<u32 index>
+		struct set_vertex_data_scaled4s_m
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				LOG_ERROR(RSX, "SCALED_4S vertex data format is not properly implemented");
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
+			}
+		};
+
+		void set_array_element16(thread* rsx, u32, u32 arg)
+		{
+			if (rsx->in_begin_end)
+			{
+				rsx->append_array_element(arg & 0xFFFF);
+				rsx->append_array_element(arg >> 16);
+			}
+		}
+
+		void set_array_element32(thread* rsx, u32, u32 arg)
+		{
+			if (rsx->in_begin_end)
+				rsx->append_array_element(arg);
+		}
+
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
@@ -243,31 +276,28 @@ namespace rsx
 				return;
 			}
 
-			u32 max_vertex_count = 0;
-
-			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+			//Check if we have immediate mode vertex data in a driver-local buffer
+			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
 			{
-				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
+				const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
+				const u32 push_buffer_index_count = rsxthr->get_push_buffer_index_count();
 
-				if (vertex_info.size > 0)
+				//Need to set this flag since it overrides some register contents
+				rsx::method_registers.current_draw_clause.is_immediate_draw = true;
+
+				if (push_buffer_index_count)
 				{
-					u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-					u32 element_count = vertex_info.size;
-
-					vertex_info.frequency = element_count;
-
-					if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
-					{
-						max_vertex_count = std::max<u32>(max_vertex_count, element_count);
-					}
+					rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
+					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_index_count));
+				}
+				else if (push_buffer_vertices_count)
+				{
+					rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
+					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
 				}
 			}
-
-			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && max_vertex_count)
-			{
-				rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, max_vertex_count));
-			}
+			else
+				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
 
 			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
 			        rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
@@ -374,27 +404,33 @@ namespace rsx
 	{
 		void image_in(thread *rsx, u32 _reg, u32 arg)
 		{
-			rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
+			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
-			u32 clip_x = method_registers.blit_engine_clip_x();
-			u32 clip_y = method_registers.blit_engine_clip_y();
-			u32 clip_w = method_registers.blit_engine_clip_width();
-			u32 clip_h = method_registers.blit_engine_clip_height();
+			const u16 out_x = method_registers.blit_engine_output_x();
+			const u16 out_y = method_registers.blit_engine_output_y();
+			const u16 out_w = method_registers.blit_engine_output_width();
+			const u16 out_h = method_registers.blit_engine_output_height();
 
-			u32 out_x = method_registers.blit_engine_output_x();
-			u32 out_y = method_registers.blit_engine_output_y();
-			u32 out_w = method_registers.blit_engine_output_width();
-			u32 out_h = method_registers.blit_engine_output_height();
+			const u16 in_w = method_registers.blit_engine_input_width();
+			const u16 in_h = method_registers.blit_engine_input_height();
 
-			u16 in_w = method_registers.blit_engine_input_width();
-			u16 in_h = method_registers.blit_engine_input_height();
+			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
+			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
+			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+
+			const f32 in_x = method_registers.blit_engine_in_x();
+			const f32 in_y = method_registers.blit_engine_in_y();
+
+			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
+			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+
+            // if the clip'd region will end up outside of the source area, we ignore the given clip x/y and just use 0
+            // see: Spyro - BLES00382 intro, psgl sdk samples
+            const u16 clip_x = method_registers.blit_engine_clip_x() > (in_x + in_w - clip_w) ? 0 : method_registers.blit_engine_clip_x();
+            const u16 clip_y = method_registers.blit_engine_clip_y() > (in_y + in_h - clip_h) ? 0 : method_registers.blit_engine_clip_y();
+
+
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
-			blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
-			blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
-			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
-
-			f32 in_x = method_registers.blit_engine_in_x();
-			f32 in_y = method_registers.blit_engine_in_y();
 
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
@@ -467,14 +503,16 @@ namespace rsx
 				}
 			}
 
-			u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
-			u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
+			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
+			const u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
 
-			u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
-			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
+			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
+			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
-			u32 dst_address = get_address(dst_offset + out_offset, dst_dma);
+			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
+
+			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
+			u8* pixels_dst = vm::ps3::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
 
 			if (out_pitch == 0)
 			{
@@ -485,21 +523,6 @@ namespace rsx
 			{
 				in_pitch = in_bpp * in_w;
 			}
-
-			if (clip_w > out_w)
-			{
-				clip_w = out_w;
-			}
-
-			if (clip_h > out_h)
-			{
-				clip_h = out_h;
-			}
-
-			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
-
-			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address + out_offset);
 
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
@@ -513,10 +536,6 @@ namespace rsx
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", (u8)src_color_format);
 			}
 
-			//LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: SIZE=0x%08x, pitch=0x%x, offset=0x%x, scaleX=%f, scaleY=%f, CLIP_SIZE=0x%08x, OUT_SIZE=0x%08x",
-			//	method_registers[NV3089_IMAGE_IN_SIZE], in_pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
-			//	method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
-
 			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
 
 			AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
@@ -529,10 +548,9 @@ namespace rsx
 			u32 convert_h = (u32)(scale_y * in_h);
 
 			bool need_clip =
-				method_registers.blit_engine_clip_width() != method_registers.blit_engine_input_width() ||
-				method_registers.blit_engine_clip_height() != method_registers.blit_engine_input_height() ||
-				method_registers.blit_engine_clip_x() > 0 ||
-				method_registers.blit_engine_clip_y() > 0 ||
+				clip_w != in_w ||
+				clip_h != in_h ||
+				clip_x > 0 || clip_y > 0 ||
 				convert_w != out_w || convert_h != out_h;
 
 			bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
@@ -566,16 +584,16 @@ namespace rsx
 							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(pixels_dst + out_offset, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(pixels_dst, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
-							clip_image(pixels_dst + out_offset, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							clip_image(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
 					}
 					else
 					{
-						convert_scale_image(pixels_dst + out_offset, out_format, out_w, out_h, out_pitch,
+						convert_scale_image(pixels_dst, out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 				}
@@ -593,7 +611,7 @@ namespace rsx
 					}
 					else
 					{
-						std::memmove(pixels_dst + out_offset, pixels_src, out_pitch * out_h);
+						std::memmove(pixels_dst, pixels_src, out_pitch * out_h);
 					}
 				}
 			}
@@ -779,6 +797,7 @@ namespace rsx
 			({
 				{ ppu_cmd::set_args, 1 }, u64{1},
 				{ ppu_cmd::lle_call, rsx->flip_handler },
+				{ ppu_cmd::sleep, 0 }
 			});
 
 			rsx->intr_thread->notify();
@@ -793,6 +812,7 @@ namespace rsx
 			({
 				{ ppu_cmd::set_args, 1 }, u64{arg},
 				{ ppu_cmd::lle_call, rsx->user_handler },
+				{ ppu_cmd::sleep, 0 }
 			});
 
 			rsx->intr_thread->notify();
@@ -846,7 +866,7 @@ namespace rsx
 		registers[NV4097_SET_LINE_WIDTH] = 1 << 3;
 
 		// These defaults were found using After Burner Climax (which never set fog mode despite using fog input)
-		registers[NV4097_SET_FOG_MODE] = 0x2601; // rsx::fog_mode::linear;
+		registers[NV4097_SET_FOG_MODE] = CELL_GCM_FOG_MODE_LINEAR;
 		(f32&)registers[NV4097_SET_FOG_PARAMS] = 1.;
 		(f32&)registers[NV4097_SET_FOG_PARAMS + 1] = 1.;
 
@@ -859,8 +879,6 @@ namespace rsx
 		registers[NV4097_SET_CULL_FACE] = CELL_GCM_BACK;
 		registers[NV4097_SET_FRONT_FACE] = CELL_GCM_CCW;
 		registers[NV4097_SET_RESTART_INDEX] = -1;
-		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
-
 
 		registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] = (4096 << 16) | 0;
 		registers[NV4097_SET_CLEAR_RECT_VERTICAL] = (4096 << 16) | 0;
@@ -869,6 +887,21 @@ namespace rsx
 
 		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
 		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
+
+		// rsx dma initial values
+		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
+		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
+		registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV309E_SET_CONTEXT_DMA_IMAGE] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_A] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_B] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_C] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_D] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV4097_SET_CONTEXT_DMA_ZETA] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+
+		registers[NV3089_SET_CONTEXT_SURFACE] = 0x313371C3; // CELL_GCM_CONTEXT_SURFACE2D
 
 		for (auto& tex : fragment_textures) tex.init();
 		for (auto& tex : vertex_textures) tex.init();
@@ -978,6 +1011,20 @@ namespace rsx
 		methods[NV4097_SET_WINDOW_CLIP_TYPE]              = nullptr;
 		methods[NV4097_SET_WINDOW_CLIP_HORIZONTAL]        = nullptr;
 		methods[NV4097_SET_WINDOW_CLIP_VERTICAL]          = nullptr;
+		methods[0x2c8 >> 2]                               = nullptr;
+		methods[0x2cc >> 2]                               = nullptr;
+		methods[0x2d0 >> 2]                               = nullptr;
+		methods[0x2d4 >> 2]                               = nullptr;
+		methods[0x2d8 >> 2]                               = nullptr;
+		methods[0x2dc >> 2]                               = nullptr;
+		methods[0x2e0 >> 2]                               = nullptr;
+		methods[0x2e4 >> 2]                               = nullptr;
+		methods[0x2e8 >> 2]                               = nullptr;
+		methods[0x2ec >> 2]                               = nullptr;
+		methods[0x2f0 >> 2]                               = nullptr;
+		methods[0x2f4 >> 2]                               = nullptr;
+		methods[0x2f8 >> 2]                               = nullptr;
+		methods[0x2fc >> 2]                               = nullptr;
 		methods[NV4097_SET_DITHER_ENABLE]                 = nullptr;
 		methods[NV4097_SET_ALPHA_TEST_ENABLE]             = nullptr;
 		methods[NV4097_SET_ALPHA_FUNC]                    = nullptr;
@@ -1227,6 +1274,12 @@ namespace rsx
 		methods[NV3089_IMAGE_IN_OFFSET]                   = nullptr;
 		methods[NV3089_IMAGE_IN]                          = nullptr;
 
+		//Some custom GCM methods
+		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
+		
+		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
+		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
+
 		bind_array<NV4097_SET_ANISO_SPREAD, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nullptr>();
@@ -1269,6 +1322,9 @@ namespace rsx
 		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
+		bind<NV4097_ARRAY_ELEMENT16, nv4097::set_array_element16>();
+		bind<NV4097_ARRAY_ELEMENT32, nv4097::set_array_element32>();
+		bind_range<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nv4097::set_vertex_data_scaled4s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();
@@ -1316,7 +1372,7 @@ namespace rsx
 
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
-		bind<GCM_SET_USER_COMMAND, user_command>();
+		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
 
 		return true;	
 	}();

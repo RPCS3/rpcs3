@@ -8,7 +8,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "InstructionEditor.h"
 
-InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u32 _pc, cpu_thread* _cpu, CPUDisAsm* _disasm)
+InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: wxDialog(parent, wxID_ANY, "Edit instruction", wxDefaultPosition)
 	, pc(_pc)
 	, cpu(_cpu)
@@ -60,6 +60,8 @@ InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u32 _pc, cpu_t
 	s_panel_margin_x->AddSpacer(12);
 	s_panel_margin_x->Add(s_panel_margin_y);
 	s_panel_margin_x->AddSpacer(12);
+
+	const auto cpu = _cpu.get();
 
 	const u32 cpu_offset = g_system == system_type::ps3 && cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
 

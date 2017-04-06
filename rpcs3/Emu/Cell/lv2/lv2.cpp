@@ -5,6 +5,7 @@
 
 #include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/MFC.h"
 #include "sys_sync.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
@@ -29,6 +30,7 @@
 #include "sys_vm.h"
 #include "sys_fs.h"
 #include "sys_dbg.h"
+#include "sys_gamepad.h"
 
 LOG_CHANNEL(sys_cond);
 LOG_CHANNEL(sys_dbg);
@@ -53,6 +55,7 @@ LOG_CHANNEL(sys_timer);
 LOG_CHANNEL(sys_trace);
 LOG_CHANNEL(sys_tty);
 LOG_CHANNEL(sys_vm);
+LOG_CHANNEL(sys_gamepad);
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -322,7 +325,7 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	BIND_FUNC(sys_vm_sync),                                 //310 (0x136)
 	BIND_FUNC(sys_vm_test),                                 //311 (0x137)
 	BIND_FUNC(sys_vm_get_statistics),                       //312 (0x138)
-	null_func,//BIND_FUNC(sys_vm_memory_map (different))    //313 (0x139)
+	BIND_FUNC(sys_vm_memory_map_different),				    //313 (0x139) //BIND_FUNC(sys_vm_memory_map (different)) 
 	null_func,//BIND_FUNC(sys_...)                          //314 (0x13A)
 	null_func,//BIND_FUNC(sys_...)                          //315 (0x13B)
 	
@@ -600,7 +603,7 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_storage_set_region_acl)       //618 (0x26A)
 	null_func,//BIND_FUNC(sys_storage_async_send_device_command) //619 (0x26B)
 	null_func,//BIND_FUNC(sys_...)                          //620 (0x26C)  ROOT
-	null_func,//BIND_FUNC(sys_gamepad_ycon_if)              //621 (0x26D)
+	BIND_FUNC(sys_gamepad_ycon_if),              //621 (0x26D)
 	null_func,//BIND_FUNC(sys_storage_get_region_offset)    //622 (0x26E)
 	null_func,//BIND_FUNC(sys_storage_set_emulated_speed)   //623 (0x26F)
 	null_func,//BIND_FUNC(sys_io_buffer_create)             //624 (0x270)
@@ -973,6 +976,9 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 		STR_CASE(CELL_EOVERFLOW);
 		STR_CASE(CELL_ENOTMOUNTED);
 		STR_CASE(CELL_ENOTSDATA);
+		STR_CASE(CELL_ESDKVER);
+		STR_CASE(CELL_ENOLICDISC);
+		STR_CASE(CELL_ENOLICENT);
 		}
 
 		return unknown;
@@ -983,8 +989,11 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 {
 	if (code < g_ppu_syscall_table.size())
 	{
-		// If autopause occures, check_status() will hold the thread till unpaused.
-		if (debug::autopause::pause_syscall(code) && ppu.check_state()) throw cpu_flag::ret;
+		// If autopause occures, check_status() will hold the thread till unpaused
+		if (debug::autopause::pause_syscall(code))
+		{
+			ppu.test_state();
+		}
 
 		if (auto func = g_ppu_syscall_table[code])
 		{
@@ -1013,4 +1022,204 @@ extern ppu_function_t ppu_get_syscall(u64 code)
 	return nullptr;
 }
 
-DECLARE(lv2_lock_guard::g_sema);
+extern u64 get_system_time();
+
+DECLARE(lv2_obj::g_mutex);
+DECLARE(lv2_obj::g_ppu);
+DECLARE(lv2_obj::g_pending);
+DECLARE(lv2_obj::g_waiting);
+
+// Amount of PPU threads running simultaneously (must be 2)
+cfg::int_entry<1, 16> g_cfg_ppu_threads(cfg::root.core, "PPU Threads", 2);
+
+void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
+{
+	semaphore_lock lock(g_mutex);
+
+	const u64 start_time = get_system_time();
+
+	if (auto ppu = dynamic_cast<ppu_thread*>(&thread))
+	{
+		sys_ppu_thread.trace("sleep() - waiting (%zu)", g_pending.size());
+
+		auto state = ppu->state.fetch_op([&](auto& val)
+		{
+			if (!test(val, cpu_flag::signal))
+			{
+				val += cpu_flag::suspend;
+			}
+		});
+
+		if (test(state, cpu_flag::signal))
+		{
+			sys_ppu_thread.trace("sleep() failed (signaled)");
+			return;
+		}
+
+		// Find and remove the thread
+		unqueue(g_ppu, ppu);
+		unqueue(g_pending, ppu);
+
+		ppu->start_time = start_time;
+	}
+
+	if (timeout)
+	{
+		const u64 wait_until = start_time + timeout;
+
+		// Register timeout if necessary
+		for (auto it = g_waiting.begin(), end = g_waiting.end(); it != end; it++)
+		{
+			if (it->first > wait_until)
+			{
+				g_waiting.emplace(it, wait_until, &thread);
+				return;
+			}
+		}
+
+		g_waiting.emplace_back(wait_until, &thread);
+	}
+
+	schedule_all();
+}
+
+void lv2_obj::awake(cpu_thread& cpu, u32 prio)
+{
+	// Check thread type
+	if (cpu.id_type() != 1) return;
+
+	semaphore_lock lock(g_mutex);
+
+	if (prio == -4)
+	{
+		// Yield command
+		const u64 start_time = get_system_time();
+
+		for (std::size_t i = 0, pos = -1; i < g_ppu.size(); i++)
+		{
+			if (g_ppu[i] == &cpu)
+			{
+				pos = i;
+				prio = g_ppu[i]->prio;
+			}
+			else if (i == pos + 1 && prio != -4 && g_ppu[i]->prio != prio)
+			{
+				return;
+			}
+		}
+
+		unqueue(g_ppu, &cpu);
+		unqueue(g_pending, &cpu);
+
+		static_cast<ppu_thread&>(cpu).start_time = start_time;
+	}
+
+	if (prio < INT32_MAX && !unqueue(g_ppu, &cpu))
+	{
+		// Priority set
+		return;
+	}
+
+	// Emplace current thread
+	for (std::size_t i = 0; i <= g_ppu.size(); i++)
+	{
+		if (i < g_ppu.size() && g_ppu[i] == &cpu)
+		{
+			sys_ppu_thread.trace("sleep() - suspended (p=%zu)", g_pending.size());
+			break;
+		}
+
+		// Use priority, also preserve FIFO order
+		if (i == g_ppu.size() || g_ppu[i]->prio > static_cast<ppu_thread&>(cpu).prio)
+		{
+			sys_ppu_thread.trace("awake(): %s", cpu.id);
+			g_ppu.insert(g_ppu.cbegin() + i, &static_cast<ppu_thread&>(cpu));
+
+			// Unregister timeout if necessary
+			for (auto it = g_waiting.cbegin(), end = g_waiting.cend(); it != end; it++)
+			{
+				if (it->second == &cpu)
+				{
+					g_waiting.erase(it);
+					break;
+				}
+			}
+
+			break;
+		}
+	}
+
+	// Remove pending if necessary
+	if (!g_pending.empty() && cpu.get() == thread_ctrl::get_current())
+	{
+		unqueue(g_pending, &cpu);
+	}
+
+	// Suspend threads if necessary
+	for (std::size_t i = g_cfg_ppu_threads; i < g_ppu.size(); i++)
+	{
+		const auto target = g_ppu[i];
+
+		if (!target->state.test_and_set(cpu_flag::suspend))
+		{
+			sys_ppu_thread.trace("suspend(): %s", target->id);
+			g_pending.emplace_back(target);
+		}
+	}
+
+	schedule_all();
+}
+
+void lv2_obj::cleanup()
+{
+	g_ppu.clear();
+	g_pending.clear();
+	g_waiting.clear();
+}
+
+void lv2_obj::schedule_all()
+{
+	if (g_pending.empty())
+	{
+		// Wake up threads
+		for (std::size_t i = 0, x = std::min<std::size_t>(g_cfg_ppu_threads, g_ppu.size()); i < x; i++)
+		{
+			const auto target = g_ppu[i];
+
+			if (test(target->state, cpu_flag::suspend))
+			{
+				sys_ppu_thread.trace("schedule(): %s", target->id);
+				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
+				target->start_time = 0;
+
+				if (target->get() != thread_ctrl::get_current())
+				{
+					target->notify();
+				}
+			}
+		}
+	}
+
+	// Check registered timeouts
+	while (!g_waiting.empty())
+	{
+		auto& pair = g_waiting.front();
+
+		if (pair.first <= get_system_time())
+		{
+			pair.second->notify();
+			g_waiting.pop_front();
+		}
+		else
+		{
+			// The list is sorted so assume no more timeouts
+			break;
+		}
+	}
+}
+
+void ppu_thread::cpu_sleep()
+{
+	vm::temporary_unlock(*this);
+	lv2_obj::awake(*this);
+}

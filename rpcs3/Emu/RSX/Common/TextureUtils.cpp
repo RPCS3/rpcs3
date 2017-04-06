@@ -365,6 +365,34 @@ u8 get_format_block_size_in_texel(int format)
 	}
 }
 
+u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
+{
+	switch (format)
+	{
+	case rsx::surface_color_format::b8:
+		return 1;
+	case rsx::surface_color_format::g8b8:
+	case rsx::surface_color_format::r5g6b5:
+	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		return 2;
+	case rsx::surface_color_format::a8b8g8r8:
+	case rsx::surface_color_format::a8r8g8b8:
+	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+	case rsx::surface_color_format::x32:
+		return 4;
+	case rsx::surface_color_format::w16z16y16x16:
+		return 8;
+	case rsx::surface_color_format::w32z32y32x32:
+		return 16;
+	default:
+		fmt::throw_exception("Invalid color format 0x%x" HERE, (u32)format);
+	}
+}
+
 static size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignement, size_t mipmap_alignment)
 {
 	size_t w = width;

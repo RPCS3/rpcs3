@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VFS.h"
-#include "DbgCommand.h"
 
 enum class system_type
 {
@@ -20,7 +19,6 @@ struct EmuCallbacks
 	std::function<void(std::function<void()>)> call_after;
 	std::function<void()> process_events;
 	std::function<void()> exit;
-	std::function<void(DbgCommand, class cpu_thread*)> send_dbg_command;
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
 	std::function<std::shared_ptr<class PadHandlerBase>()> get_pad_handler;
@@ -39,27 +37,23 @@ enum Status : u32
 	Ready,
 };
 
-// Emulation Stopped exception event
-class EmulationStopped {};
-
 class Emulator final
 {
-	atomic_t<u32> m_status;
+	atomic_t<u32> m_status{Stopped};
 
 	EmuCallbacks m_cb;
 
 	atomic_t<u64> m_pause_start_time; // set when paused
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
 
-	u32 m_cpu_thr_stop;
-
 	std::string m_path;
 	std::string m_elf_path;
+	std::string m_cache_path;
 	std::string m_title_id;
 	std::string m_title;
 
 public:
-	Emulator();
+	Emulator() = default;
 
 	void SetCallbacks(EmuCallbacks&& cb)
 	{
@@ -69,11 +63,6 @@ public:
 	const auto& GetCallbacks() const
 	{
 		return m_cb;
-	}
-
-	void SendDbgCommand(DbgCommand cmd, class cpu_thread* thread = nullptr)
-	{
-		if (m_cb.send_dbg_command) m_cb.send_dbg_command(cmd, thread);
 	}
 
 	// Call from the GUI thread
@@ -108,17 +97,15 @@ public:
 		return m_title;
 	}
 
+	const std::string& GetCachePath() const
+	{
+		return m_cache_path;
+	}
+
 	u64 GetPauseTime()
 	{
 		return m_pause_amend_time;
 	}
-
-	void SetCPUThreadStop(u32 addr)
-	{
-		m_cpu_thr_stop = addr;
-	}
-
-	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }
 
 	bool BootGame(const std::string& path, bool direct = false);
 
@@ -135,8 +122,7 @@ public:
 	bool IsPaused()  const { return m_status == Paused; }
 	bool IsStopped() const { return m_status == Stopped; }
 	bool IsReady()   const { return m_status == Ready; }
+	auto GetStatus() const { return m_status.load(); }
 };
 
 extern Emulator Emu;
-
-#define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EmulationStopped{}

@@ -38,11 +38,6 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	std::string old_shaders_cache::shaders_cache::path_to_root()
-	{
-		return fs::get_executable_dir() + "data/";
-	}
-
 	void old_shaders_cache::shaders_cache::load(const std::string &path, shader_language lang)
 	{
 		const std::string lang_name(lang == shader_language::glsl ? "glsl" : "hlsl");
@@ -65,7 +60,6 @@ namespace rsx
 			}
 			catch (...)
 			{
-				LOG_WARNING(RSX, "Cache file '%s' ignored", entry.name);
 				continue;
 			}
 
@@ -87,56 +81,62 @@ namespace rsx
 
 	void old_shaders_cache::shaders_cache::load(shader_language lang)
 	{
-		std::string root = path_to_root();
-
-		//shared cache
-		load(root + "cache/", lang);
-
-		std::string title_id = Emu.GetTitleID();
-
-		if (!title_id.empty())
-		{
-			load(root + title_id + "/cache/", lang);
-		}
+		load(Emu.GetCachePath(), lang);
 	}
 
 	u32 get_address(u32 offset, u32 location)
 	{
-		u32 res = 0;
 
 		switch (location)
 		{
-		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
-		case CELL_GCM_LOCATION_LOCAL:
-		{
-			//TODO: don't use not named constants like 0xC0000000
-			res = 0xC0000000 + offset;
-			break;
-		}
-
-		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
-		case CELL_GCM_LOCATION_MAIN:
-		{
-			res = (u32)RSXIOMem.RealAddr(offset); // TODO: Error Check?
-			if (res == 0)
+			case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
+			case CELL_GCM_LOCATION_LOCAL:
 			{
-				fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+				// TODO: Don't use unnamed constants like 0xC0000000
+				return 0xC0000000 + offset;
 			}
 
-			//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
-			//{
-			//	_mm_mfence(); // probably doesn't have any effect on current implementation
-			//}
+			case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
+			case CELL_GCM_LOCATION_MAIN:
+			{
+				if (u32 result = RSXIOMem.RealAddr(offset))
+				{
+					return result;
+				}
 
-			break;
-		}
-		default:
-		{
+				fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+
+				//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
+				//{
+				//	_mm_mfence(); // probably doesn't have any effect on current implementation
+				//}
+			}
+
+			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT:
+				return 0x100000 + offset; // TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
+				return 0x800 + offset;	// TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
+				return 0x40 + offset; // TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
+				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+
+			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
+			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
+				return 0x100 + offset; // TODO: Properly implement
+
+			case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
+				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_RW (offset=0x%x, location=0x%x)" HERE, offset, location);
+
+			case CELL_GCM_CONTEXT_DMA_DEVICE_R:
+				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_R (offset=0x%x, location=0x%x)" HERE, offset, location);
+
 			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
 		}
-		}
 
-		return res;
 	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
@@ -329,17 +329,53 @@ namespace rsx
 	void thread::begin()
 	{
 		rsx::method_registers.current_draw_clause.inline_vertex_array.clear();
+		in_begin_end = true;
+	}
+
+	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
+	{
+		vertex_push_buffers[attribute].size = size;
+		vertex_push_buffers[attribute].append_vertex_data(subreg_index, type, value);
+	}
+
+	u32 thread::get_push_buffer_vertex_count() const
+	{
+		//There's no restriction on which attrib shall hold vertex data, so we check them all
+		u32 max_vertex_count = 0;
+		for (auto &buf: vertex_push_buffers)
+		{
+			max_vertex_count = std::max(max_vertex_count, buf.vertex_count);
+		}
+
+		return max_vertex_count;
+	}
+
+	void thread::append_array_element(u32 index)
+	{
+		//Endianness is swapped because common upload code expects input in BE
+		//TODO: Implement fast upload path for LE inputs and do away with this
+		element_push_buffer.push_back(se_storage<u32>::swap(index));
+	}
+
+	u32 thread::get_push_buffer_index_count() const
+	{
+		return element_push_buffer.size();
 	}
 
 	void thread::end()
 	{
 		rsx::method_registers.transform_constants.clear();
+		in_begin_end = false;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
 			//rsx::method_registers.register_vertex_info[index].size = 0;
+
+			vertex_push_buffers[index].clear();
 		}
+
+		element_push_buffer.resize(0);
 
 		if (capture_current_frame)
 		{
@@ -375,6 +411,7 @@ namespace rsx
 						({
 							{ ppu_cmd::set_args, 1 }, u64{1},
 							{ ppu_cmd::lle_call, vblank_handler },
+							{ ppu_cmd::sleep, 0 }
 						});
 
 						intr_thread->notify();
@@ -388,9 +425,10 @@ namespace rsx
 		});
 
 		// TODO: exit condition
-		while (true)
+		while (!Emu.IsStopped())
 		{
-			CHECK_EMU_STATUS;
+			//Execute backend-local tasks first
+			do_local_task();
 
 			const u32 get = ctrl->get;
 			const u32 put = ctrl->put;
@@ -398,6 +436,19 @@ namespace rsx
 			if (put == get || !Emu.IsRunning())
 			{
 				do_internal_task();
+				continue;
+			}
+
+			//Validate put and get registers
+			//TODO: Who should handle graphics exceptions??
+			const u32 get_address = RSXIOMem.RealAddr(get);
+			
+			if (!get_address)
+			{
+				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", get, put);
+
+				invalid_command_interrupt_raised = true;
+				ctrl->get = put;
 				continue;
 			}
 
@@ -440,7 +491,20 @@ namespace rsx
 				continue;
 			}
 
-			auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
+			//Validate the args ptr if the command attempts to read from it
+			const u32 args_address = RSXIOMem.RealAddr(get + 4);
+
+			if (!args_address && count)
+			{
+				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", get, cmd, count);
+
+				invalid_command_interrupt_raised = true;
+				ctrl->get = put;
+				continue;
+			}
+
+			auto args = vm::ptr<u32>::make(args_address);
+			invalid_command_interrupt_raised = false;
 
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
@@ -467,7 +531,17 @@ namespace rsx
 				{
 					method(this, reg, value);
 				}
+
+				if (invalid_command_interrupt_raised)
+				{
+					//Ignore processing the rest of the chain
+					ctrl->get = put;
+					break;
+				}
 			}
+
+			if (invalid_command_interrupt_raised)
+				continue;
 
 			ctrl->get = get + (count + 1) * 4;
 		}
@@ -526,6 +600,26 @@ namespace rsx
 			stream_vector_from_memory((char*)buffer + entry.first * 4 * sizeof(float), (void*)entry.second.rgba);
 	}
 
+	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
+	{
+		u32 *dst = static_cast<u32*>(buffer);
+
+		const u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
+		const float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		const f32 fog0 = rsx::method_registers.fog_params_0();
+		const f32 fog1 = rsx::method_registers.fog_params_1();
+		const float one = 1.f;
+
+		stream_vector(dst, (u32&)fog0, (u32&)fog1, is_alpha_tested, (u32&)alpha_ref);
+
+		size_t offset = 4;
+		for (int index = 0; index < 16; ++index)
+		{
+			stream_vector(&dst[offset], (u32&)fragment_program.texture_pitch_scale[index], (u32&)one, 0U, 0U);
+			offset += 4;
+		}
+	}
+
 	void thread::write_inline_array_to_buffer(void *dst_buffer)
 	{
 		u8* src =
@@ -571,6 +665,12 @@ namespace rsx
 
 	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
 	{
+		if (element_push_buffer.size())
+		{
+			//Indices provided via immediate mode
+			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
+		}
+
 		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
 		rsx::index_array_type type = rsx::method_registers.index_type();
 
@@ -612,9 +712,12 @@ namespace rsx
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
-	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
+	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
+		result.reserve(rsx::limits::vertex_count);
+
 		u32 input_mask = state.vertex_attrib_input_mask();
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -627,6 +730,16 @@ namespace rsx
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
 				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
 				    get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index});
+				continue;
+			}
+
+			if (vertex_push_buffers[index].vertex_count > 1)
+			{
+				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
+				const u8 element_size = info.size * sizeof(u32);
+
+				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
+				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index });
 				continue;
 			}
 
@@ -767,7 +880,7 @@ namespace rsx
 	RSXVertexProgram thread::get_current_vertex_program() const
 	{
 		RSXVertexProgram result = {};
-		u32 transform_program_start = rsx::method_registers.transform_program_start();
+		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		result.data.reserve((512 - transform_program_start) * 4);
 
 		for (int i = transform_program_start; i < 512; ++i)
@@ -783,8 +896,8 @@ namespace rsx
 		}
 		result.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 
-		u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
-		u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
+		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 		result.rsx_vertex_inputs.clear();
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -802,6 +915,16 @@ namespace rsx
 				        true,
 				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
+			else if (vertex_push_buffers[index].vertex_count > 1)
+			{
+				result.rsx_vertex_inputs.push_back(
+				{ index,
+					rsx::method_registers.register_vertex_info[index].size,
+					1,
+					false,
+					true,
+					is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
 				result.rsx_vertex_inputs.push_back(
@@ -816,8 +939,7 @@ namespace rsx
 		return result;
 	}
 
-
-	RSXFragmentProgram thread::get_current_fragment_program() const
+	RSXFragmentProgram thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info) const
 	{
 		RSXFragmentProgram result = {};
 		u32 shader_program = rsx::method_registers.shader_program_address();
@@ -841,23 +963,52 @@ namespace rsx
 		std::array<texture_dimension_extended, 16> texture_dimensions;
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
-			if (!rsx::method_registers.fragment_textures[i].enabled())
+			auto &tex = rsx::method_registers.fragment_textures[i];
+			result.texture_pitch_scale[i] = 1.f;
+
+			if (!tex.enabled())
 			{
 				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
 				result.textures_alpha_kill[i] = 0;
 				result.textures_zfunc[i] = 0;
 			}
-
 			else
 			{
-				texture_dimensions[i] = rsx::method_registers.fragment_textures[i].get_extended_texture_dimension();
-				result.textures_alpha_kill[i] = rsx::method_registers.fragment_textures[i].alpha_kill_enabled() ? 1 : 0;
-				result.textures_zfunc[i] = rsx::method_registers.fragment_textures[i].zfunc();
-			}
+				texture_dimensions[i] = tex.get_extended_texture_dimension();
+				result.textures_alpha_kill[i] = tex.alpha_kill_enabled() ? 1 : 0;
+				result.textures_zfunc[i] = tex.zfunc();
 
-			if (rsx::method_registers.fragment_textures[i].enabled() && (rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN))
-				result.unnormalized_coords |= (1 << i);
+				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+				const u32 raw_format = tex.format();
+
+				if (raw_format & CELL_GCM_TEXTURE_UN)
+					result.unnormalized_coords |= (1 << i);
+
+				bool surface_exists;
+				u16  surface_pitch;
+
+				std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, false);
+
+				if (surface_exists && surface_pitch)
+				{
+					if (raw_format & CELL_GCM_TEXTURE_UN)
+						result.texture_pitch_scale[i] = (float)surface_pitch / tex.pitch();
+				}
+				else
+				{
+					std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, true);
+					if (surface_exists)
+					{
+						u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+						if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
+						{
+							result.redirected_textures |= (1 << i);
+						}
+					}
+				}
+			}
 		}
+
 		result.set_texture_dimension(texture_dimensions);
 
 		return result;

@@ -160,7 +160,6 @@ struct ppu_interpreter
 	static bool ADDI(ppu_thread&, ppu_opcode_t);
 	static bool ADDIS(ppu_thread&, ppu_opcode_t);
 	static bool BC(ppu_thread&, ppu_opcode_t);
-	static bool HACK(ppu_thread&, ppu_opcode_t);
 	static bool SC(ppu_thread&, ppu_opcode_t);
 	static bool B(ppu_thread&, ppu_opcode_t);
 	static bool MCRF(ppu_thread&, ppu_opcode_t);

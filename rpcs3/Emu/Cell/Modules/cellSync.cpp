@@ -6,10 +6,6 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSync.h"
 
-#include "Emu/Memory/wait_engine.h"
-
-#include <thread>
-
 logs::channel cellSync("cellSync", logs::level::notice);
 
 template<>
@@ -63,7 +59,7 @@ error_code cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
-error_code cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
+error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexLock(mutex=*0x%x)", mutex);
 
@@ -81,10 +77,10 @@ error_code cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	const auto order = mutex->ctrl.atomic_op(&CellSyncMutex::lock_begin);
 
 	// Wait until rel value is equal to old acq value
-	vm::wait_op(mutex.addr(), 4, [&]
+	while (mutex->ctrl.load().rel != order)
 	{
-		return mutex->ctrl.load().rel == order;
-	});
+		ppu.test_state();
+	}
 
 	_mm_mfence();
 
@@ -129,8 +125,6 @@ error_code cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 
 	mutex->ctrl.atomic_op(&CellSyncMutex::unlock);
 
-	vm::notify_at(mutex.addr(), 4);
-
 	return CELL_OK;
 }
 
@@ -159,7 +153,7 @@ error_code cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total
 	return CELL_OK;
 }
 
-error_code cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
+error_code cellSyncBarrierNotify(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierNotify(barrier=*0x%x)", barrier);
 
@@ -173,9 +167,10 @@ error_code cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	vm::wait_op(barrier.addr(), 4, [&] { return barrier->ctrl.atomic_op(&CellSyncBarrier::try_notify); });
-
-	vm::notify_at(barrier.addr(), 4);
+	while (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_notify))
+	{
+		ppu.test_state();
+	}
 
 	return CELL_OK;
 }
@@ -201,12 +196,10 @@ error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
 
-	vm::notify_at(barrier.addr(), 4);
-
 	return CELL_OK;
 }
 
-error_code cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
+error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierWait(barrier=*0x%x)", barrier);
 
@@ -222,9 +215,10 @@ error_code cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 
 	_mm_mfence();
 
-	vm::wait_op(barrier.addr(), 4, [&] { return barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait); });
-
-	vm::notify_at(barrier.addr(), 4);
+	while (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait))
+	{
+		ppu.test_state();
+	}
 
 	return CELL_OK;
 }
@@ -249,8 +243,6 @@ error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
-
-	vm::notify_at(barrier.addr(), 4);
 
 	return CELL_OK;
 }
@@ -284,7 +276,7 @@ error_code cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer,
 	return CELL_OK;
 }
 
-error_code cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
+error_code cellSyncRwmRead(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 {
 	cellSync.trace("cellSyncRwmRead(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
@@ -299,7 +291,10 @@ error_code cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	}
 
 	// wait until `writers` is zero, increase `readers`
-	vm::wait_op(rwm.addr(), 8, [&] { return rwm->ctrl.atomic_op(&CellSyncRwm::try_read_begin); });
+	while (!rwm->ctrl.atomic_op(&CellSyncRwm::try_read_begin))
+	{
+		ppu.test_state();
+	}
 
 	// copy data to buffer
 	std::memcpy(buffer.get_ptr(), rwm->buffer.get_ptr(), rwm->size);
@@ -309,8 +304,6 @@ error_code cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	{
 		return CELL_SYNC_ERROR_ABORT;
 	}
-
-	vm::notify_at(rwm.addr(), 8);
 
 	return CELL_OK;
 }
@@ -344,12 +337,10 @@ error_code cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ABORT;
 	}
 
-	vm::notify_at(rwm.addr(), 8);
-
 	return CELL_OK;
 }
 
-error_code cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
+error_code cellSyncRwmWrite(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 {
 	cellSync.trace("cellSyncRwmWrite(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
@@ -364,18 +355,22 @@ error_code cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 	}
 
 	// wait until `writers` is zero, set to 1
-	vm::wait_op(rwm.addr(), 8, [&] { return rwm->ctrl.atomic_op(&CellSyncRwm::try_write_begin); });
+	while (!rwm->ctrl.atomic_op(&CellSyncRwm::try_write_begin))
+	{
+		ppu.test_state();
+	}
 
 	// wait until `readers` is zero
-	vm::wait_op(rwm.addr(), 8, [&] { return rwm->ctrl.load().readers == 0; });
+	while (rwm->ctrl.load().readers != 0)
+	{
+		ppu.test_state();
+	}
 
 	// copy data from buffer
 	std::memcpy(rwm->buffer.get_ptr(), buffer.get_ptr(), rwm->size);
 
 	// sync and clear `readers` and `writers`
 	rwm->ctrl.exchange({ 0, 0 });
-
-	vm::notify_at(rwm.addr(), 8);
 
 	return CELL_OK;
 }
@@ -405,8 +400,6 @@ error_code cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 
 	// sync and clear `readers` and `writers`
 	rwm->ctrl.exchange({ 0, 0 });
-
-	vm::notify_at(rwm.addr(), 8);
 
 	return CELL_OK;
 }
@@ -446,7 +439,7 @@ error_code cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buf
 	return CELL_OK;
 }
 
-error_code cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> buffer)
+error_code cellSyncQueuePush(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::cptr<void> buffer)
 {
 	cellSync.trace("cellSyncQueuePush(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
@@ -464,14 +457,15 @@ error_code cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> buffer
 
 	u32 position;
 
-	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(&CellSyncQueue::try_push_begin, depth, &position); });
+	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_push_begin, depth, &position))
+	{
+		ppu.test_state();
+	}
 
 	// copy data from the buffer at the position
 	std::memcpy(&queue->buffer[position * queue->size], buffer.get_ptr(), queue->size);
 
 	queue->ctrl.atomic_op(&CellSyncQueue::push_end);
-
-	vm::notify_at(queue.addr(), 8);
 
 	return CELL_OK;
 }
@@ -504,12 +498,10 @@ error_code cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> buf
 
 	queue->ctrl.atomic_op(&CellSyncQueue::push_end);
 
-	vm::notify_at(queue.addr(), 8);
-
 	return CELL_OK;
 }
 
-error_code cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
+error_code cellSyncQueuePop(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 {
 	cellSync.trace("cellSyncQueuePop(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
@@ -527,14 +519,15 @@ error_code cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	
 	u32 position;
 
-	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(&CellSyncQueue::try_pop_begin, depth, &position); });
+	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_pop_begin, depth, &position))
+	{
+		ppu.test_state();
+	}
 
 	// copy data at the position to the buffer
 	std::memcpy(buffer.get_ptr(), &queue->buffer[position % depth * queue->size], queue->size);
 
 	queue->ctrl.atomic_op(&CellSyncQueue::pop_end);
-
-	vm::notify_at(queue.addr(), 8);
 
 	return CELL_OK;
 }
@@ -567,12 +560,10 @@ error_code cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffe
 
 	queue->ctrl.atomic_op(&CellSyncQueue::pop_end);
 
-	vm::notify_at(queue.addr(), 8);
-
 	return CELL_OK;
 }
 
-error_code cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
+error_code cellSyncQueuePeek(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 {
 	cellSync.trace("cellSyncQueuePeek(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
@@ -590,14 +581,15 @@ error_code cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	u32 position;
 
-	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(&CellSyncQueue::try_peek_begin, depth, &position); });
+	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_peek_begin, depth, &position))
+	{
+		ppu.test_state();
+	}
 
 	// copy data at the position to the buffer
 	std::memcpy(buffer.get_ptr(), &queue->buffer[position % depth * queue->size], queue->size);
 
 	queue->ctrl.atomic_op(&CellSyncQueue::pop_end);
-
-	vm::notify_at(queue.addr(), 8);
 
 	return CELL_OK;
 }
@@ -630,8 +622,6 @@ error_code cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buff
 
 	queue->ctrl.atomic_op(&CellSyncQueue::pop_end);
 
-	vm::notify_at(queue.addr(), 8);
-
 	return CELL_OK;
 }
 
@@ -654,7 +644,7 @@ error_code cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 	return not_an_error(queue->ctrl.load().count & 0xffffff);
 }
 
-error_code cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
+error_code cellSyncQueueClear(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue)
 {
 	cellSync.trace("cellSyncQueueClear(queue=*0x%x)", queue);
 
@@ -670,12 +660,17 @@ error_code cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 
 	const u32 depth = queue->check_depth();
 
-	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(&CellSyncQueue::try_clear_begin_1); });
-	vm::wait_op(queue.addr(), 8, [&] { return queue->ctrl.atomic_op(&CellSyncQueue::try_clear_begin_2); });
+	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_clear_begin_1))
+	{
+		ppu.test_state();
+	}
+
+	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_clear_begin_2))
+	{
+		ppu.test_state();
+	}
 
 	queue->ctrl.exchange({ 0, 0 });
-
-	vm::notify_at(queue.addr(), 8);
 
 	return CELL_OK;
 }
@@ -848,8 +843,6 @@ error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 	{
 		while (true)
 		{
-			CHECK_EMU_STATUS;
-
 			const auto old = queue->push1.load(); _mm_lfence();
 			auto push = old;
 
@@ -1091,8 +1084,6 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
-
 		s32 res;
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1111,7 +1102,7 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 			break;
 		}
 
-		std::this_thread::sleep_for(1ms); // hack
+		ppu.test_state();
 	}
 
 	const s32 depth = queue->m_depth;
@@ -1147,8 +1138,6 @@ error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueu
 	{
 		while (true)
 		{
-			CHECK_EMU_STATUS;
-
 			const auto old = queue->pop1.load(); _mm_lfence();
 			auto pop = old;
 
@@ -1390,8 +1379,6 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 
 	while (true)
 	{
-		CHECK_EMU_STATUS;
-
 		s32 res;
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1410,7 +1397,7 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 			break;
 		}
 
-		std::this_thread::sleep_for(1ms); // hack
+		ppu.test_state();
 	}
 
 	const s32 depth = queue->m_depth;

@@ -203,6 +203,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 310: return "sys_vm_sync";
 	case 311: return "sys_vm_test";
 	case 312: return "sys_vm_get_statistics";
+	case 313: return "sys_vm_memory_map_different";
 	case 324: return "sys_memory_container_create";
 	case 325: return "sys_memory_container_destroy";
 	case 326: return "sys_mmapper_allocate_fixed_address";
@@ -557,6 +558,15 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 970: return "sys_dbg_get_event_flag_list";
 	case 971: return "sys_dbg_get_event_flag_information";
 	case 975: return "sys_dbg_read_spu_thread_context2";
+	case 976: return "sys_crypto_engine_create";
+	case 977: return "sys_crypto_engine_destroy";
+	case 978: return "sys_crypto_engine_hasher_prepare";
+	case 979: return "sys_crypto_engine_hasher_run";
+	case 980: return "sys_crypto_engine_hasher_get_hash";
+	case 981: return "sys_crypto_engine_cipher_prepare";
+	case 982: return "sys_crypto_engine_cipher_run";
+	case 983: return "sys_crypto_engine_cipher_get_hash";
+	case 984: return "sys_crypto_engine_random_generate";
 	case 985: return "sys_dbg_get_console_type";
 	}
 
@@ -2204,6 +2214,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 
 	if (module == "sysPrxForUser") switch (fnid)
 	{
+	case 0x02e20ec1: return "__sys_printf_basename";
 	case 0x0341bb97: return "sys_prx_get_module_id_by_address";
 	case 0x04e83d2c: return "_sys_strncmp";
 	case 0x052d29a6: return "_sys_strcat";
@@ -2231,7 +2242,9 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0x35168520: return "_sys_heap_malloc";
 	case 0x3bd53c7b: return "_sys_memchr";
 	case 0x3dd4a957: return "sys_ppu_thread_register_atexit";
+	case 0x3ef17f8c: return "__sys_look_ctype_table";
 	case 0x409ad939: return "sys_mmapper_free_memory";
+	case 0x4232b0db: return "_sys_panic";
 	case 0x42b23552: return "sys_prx_register_library";
 	case 0x44265c08: return "_sys_heap_memalign";
 	case 0x459b4393: return "_sys_strcmp";
@@ -2239,11 +2252,14 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0x4643ba6e: return "sys_mmapper_unmap_memory";
 	case 0x4a071d98: return "sys_interrupt_thread_disestablish";
 	case 0x4b2f301a: return "_sys_tolower";
+	case 0x4bbf59d0: return "_sys_net_eurus_post_command";
+	case 0x4f7172c9: return "sys_process_is_stack";
 	case 0x5267cb35: return "sys_spinlock_unlock";
 	case 0x52aadadf: return "sys_lwcond_signal_to";
 	case 0x5fdfb2fe: return "_sys_spu_printf_detach_group";
 	case 0x608212fc: return "sys_mempool_free_block";
 	case 0x620e35a7: return "sys_game_get_system_sw_version";
+	case 0x637bdaae: return "_proc_spawn";
 	case 0x67f9fedb: return "sys_game_process_exitspawn2";
 	case 0x68b9b011: return "_sys_memset";
 	case 0x6bf66ea7: return "_sys_memcpy";
@@ -2264,10 +2280,11 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0x8a561d92: return "_sys_heap_free";
 	case 0x8bb03ab8: return "sys_game_board_storage_write";
 	case 0x8c2bb498: return "sys_spinlock_initialize";
+	case 0x8cfef376: return "__tls_get_addr";
 	case 0x96328741: return "_sys_process_at_Exitspawn";
-	case 0x4f7172c9: return "sys_process_is_stack";
 	case 0x996f7cf8: return "_sys_strncat";
 	case 0x99c88692: return "_sys_strcpy";
+	case 0x9d2ec4ff: return "sys_process_spawn";
 	case 0x9d3c0f81: return "sys_mempool_destroy";
 	case 0x9e0623b5: return "sys_game_watchdog_start";
 	case 0x9f04f7af: return "_sys_printf";
@@ -2293,7 +2310,9 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0xb6369393: return "_sys_heap_get_total_free_size";
 	case 0xb995662e: return "sys_raw_spu_image_load";
 	case 0xb9bf1078: return "_sys_heap_alloc_heap_memory";
+	case 0xbab62b99: return "_sys_process_wait_for_game_process";
 	case 0xbdb18f83: return "_sys_malloc";
+	case 0xbf8ee5bb: return "sys_process_spawn_with_memory_budget";
 	case 0xc3476d0c: return "sys_lwmutex_destroy";
 	case 0xc4fd6121: return "_sys_qsort";
 	case 0xca9a60bf: return "sys_mempool_create";
@@ -2305,12 +2324,14 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0xdc578057: return "sys_mmapper_map_memory";
 	case 0xdd0c1e09: return "_sys_spu_printf_attach_group";
 	case 0xdd3b27ac: return "_sys_spu_printf_finalize";
+	case 0xde2f9c85: return "sys_process_atexit";
 	case 0xe0998dbf: return "sys_prx_get_module_id_by_name";
 	case 0xe0da8efd: return "sys_spu_image_close";
 	case 0xe66bac36: return "console_putc";
 	case 0xe6f2c1e7: return "sys_process_exit";
 	case 0xe76964f5: return "sys_game_board_storage_read";
 	case 0xe7ef3a80: return "sys_prx_load_module_list_on_memcontainer";
+	case 0xe95ffa0a: return "sys_process_wait_for_game_process";
 	case 0xe9a1bd84: return "sys_lwcond_signal_all";
 	case 0xebe5f72f: return "sys_spu_image_import";
 	case 0xeef75113: return "_sys_toupper";
@@ -2322,6 +2343,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0xfa7f693d: return "_sys_vprintf";
 	case 0xfb5db080: return "_sys_memcmp";
 	case 0xfc52a7a9: return "sys_game_process_exitspawn";
+	case 0xfecc05b6: return "__sys_time";
 	}
 
 	// Check registered functions
@@ -2359,8 +2381,17 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 {
 	static std::vector<ppu_function_t> list
 	{
-		nullptr,
-		[](ppu_thread& ppu) { ppu.state += cpu_flag::ret; },
+		[](ppu_thread& ppu) -> bool
+		{
+			LOG_ERROR(PPU, "Unregistered function called (LR=0x%x)", ppu.lr);
+			ppu.gpr[3] = 0;
+			return true;
+		},
+		[](ppu_thread& ppu) -> bool
+		{
+			ppu.state += cpu_flag::ret;
+			return true;
+		},
 	};
 
 	return list;
@@ -2374,3 +2405,5 @@ u32 ppu_function_manager::add_function(ppu_function_t function)
 
 	return ::size32(list) - 1;
 }
+
+DECLARE(ppu_function_manager::addr);

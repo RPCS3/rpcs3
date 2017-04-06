@@ -95,6 +95,7 @@ D3D12_LOGIC_OP get_logic_op(rsx::logic_op op)
 	case rsx::logic_op::logic_copy_inverted: return D3D12_LOGIC_OP_COPY_INVERTED;
 	case rsx::logic_op::logic_or_inverted: return D3D12_LOGIC_OP_OR_INVERTED;
 	case rsx::logic_op::logic_nand: return D3D12_LOGIC_OP_NAND;
+	case rsx::logic_op::logic_set: return D3D12_LOGIC_OP_SET;
 	}
 	fmt::throw_exception("Invalid logic op (0x%x)" HERE, (u32)op);
 }
@@ -131,7 +132,7 @@ D3D12_COMPARISON_FUNC get_compare_func(rsx::comparison_function op)
 	case rsx::comparison_function::greater_or_equal: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	case rsx::comparison_function::always: return D3D12_COMPARISON_FUNC_ALWAYS;
 	}
-	fmt::throw_exception("Invalid or unsupported compare func (0x%x)" HERE, (u32)op);
+	fmt::throw_exception("Invalid compare func (0x%x)" HERE, (u32)op);
 }
 
 DXGI_FORMAT get_texture_format(u8 format)
@@ -160,16 +161,45 @@ DXGI_FORMAT get_texture_format(u8 format)
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return DXGI_FORMAT_R16G16B16A16_FLOAT;
 	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return DXGI_FORMAT_R32G32B32A32_FLOAT;
 	case CELL_GCM_TEXTURE_D1R5G5B5: return DXGI_FORMAT_B5G5R5A1_UNORM;
-	case CELL_GCM_TEXTURE_D8R8G8B8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case CELL_GCM_TEXTURE_D8R8G8B8: return DXGI_FORMAT_B8G8R8A8_UNORM;
 	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return DXGI_FORMAT_R8G8_B8G8_UNORM;
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return DXGI_FORMAT_R8G8_SNORM;
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return DXGI_FORMAT_R8G8_B8G8_UNORM;
-		break;
 	}
-	fmt::throw_exception("Invalid or unsupported texture format (0x%x)" HERE, (u32)format);
+	fmt::throw_exception("Invalid texture format (0x%x)" HERE, (u32)format);
+}
+
+UCHAR get_dxgi_texel_size(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_R8_UNORM:
+		return 1;
+	case DXGI_FORMAT_B5G5R5A1_UNORM:
+	case DXGI_FORMAT_B5G6R5_UNORM:
+	case DXGI_FORMAT_R8G8_UNORM:
+	case DXGI_FORMAT_D16_UNORM:
+	case DXGI_FORMAT_R16_UNORM:
+	case DXGI_FORMAT_R16_TYPELESS:
+		return 2;
+	case DXGI_FORMAT_B8G8R8A8_UNORM:
+	case DXGI_FORMAT_B8G8R8X8_UNORM:
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+	case DXGI_FORMAT_R32_FLOAT:
+	case DXGI_FORMAT_D24_UNORM_S8_UINT:
+	case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+	case DXGI_FORMAT_R24G8_TYPELESS:
+		return 4;
+	case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		return 8;
+	case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		return 16;
+	}
+
+	fmt::throw_exception("Unsupported DXGI format 0x%X" HERE, (u32)format);
 }
 
 UINT get_texture_max_aniso(rsx::texture_max_anisotropy aniso)
@@ -295,14 +325,16 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(rsx::primitive_type dr
 	case rsx::primitive_type::polygon: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	case rsx::primitive_type::line_loop: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 	}
-	fmt::throw_exception("Invalid or unsupported draw mode (0x%x)" HERE, (u32)draw_mode);
+	fmt::throw_exception("Invalid draw mode (0x%x)" HERE, (u32)draw_mode);
 }
 
 DXGI_FORMAT get_color_surface_format(rsx::surface_color_format format)
 {
 	switch (format)
 	{
-	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5: return DXGI_FORMAT_B5G5R5A1_UNORM;
+	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5: 
+	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		return DXGI_FORMAT_B5G5R5A1_UNORM;
 	case rsx::surface_color_format::r5g6b5: return DXGI_FORMAT_B5G6R5_UNORM;
 	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:

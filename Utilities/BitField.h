@@ -7,6 +7,7 @@ struct bf_base
 {
 	using type = T;
 	using vtype = simple_t<type>;
+	using utype = typename std::make_unsigned<vtype>::type;
 
 	// Datatype bitsize
 	static constexpr uint bitmax = sizeof(T) * 8; static_assert(N - 1 < bitmax, "bf_base<> error: N out of bounds");
@@ -15,7 +16,7 @@ struct bf_base
 	static constexpr uint bitsize = N;
 
 	// Value mask
-	static constexpr vtype vmask = static_cast<vtype>(~std::make_unsigned_t<vtype>{} >> (bitmax - bitsize));
+	static constexpr utype vmask = static_cast<utype>(~utype{} >> (bitmax - bitsize));
 
 protected:
 	type m_data;
@@ -27,14 +28,15 @@ struct bf_t : bf_base<T, N>
 {
 	using type = typename bf_t::type;
 	using vtype = typename bf_t::vtype;
+	using utype = typename bf_t::utype;
 
 	// Field offset
 	static constexpr uint bitpos = I; static_assert(bitpos + N <= bf_t::bitmax, "bf_t<> error: I out of bounds");
 
 	// Get bitmask of size N, at I pos
-	static constexpr vtype data_mask()
+	static constexpr utype data_mask()
 	{
-		return bf_t::vmask << bitpos;
+		return static_cast<utype>(static_cast<utype>(~utype{} >> (bf_t::bitmax - bf_t::bitsize)) << bitpos);
 	}
 
 	// Bitfield extraction helper
@@ -50,7 +52,7 @@ struct bf_t : bf_base<T, N>
 		// Load unsigned value
 		static constexpr T2 extract(const T& data)
 		{
-			return (data >> bitpos) & bf_t::vmask;
+			return static_cast<T2>((static_cast<utype>(data) >> bitpos) & bf_t::vmask);
 		}
 	};
 
@@ -60,7 +62,7 @@ struct bf_t : bf_base<T, N>
 		// Load signed value (sign-extended)
 		static constexpr T2 extract(const T& data)
 		{
-			return data << (bf_t::bitmax - bitpos - N) >> (bf_t::bitmax - N);
+			return static_cast<T2>(static_cast<vtype>(static_cast<utype>(data) << (bf_t::bitmax - bitpos - N)) >> (bf_t::bitmax - N));
 		}
 	};
 
@@ -73,7 +75,7 @@ struct bf_t : bf_base<T, N>
 	// Bitfield insertion
 	static constexpr vtype insert(vtype value)
 	{
-		return (value & bf_t::vmask) << bitpos;
+		return static_cast<vtype>((value & bf_t::vmask) << bitpos);
 	}
 
 	// Load bitfield value
@@ -85,7 +87,7 @@ struct bf_t : bf_base<T, N>
 	// Load raw data with mask applied
 	constexpr T unshifted() const
 	{
-		return this->m_data & data_mask();
+		return static_cast<T>(this->m_data & data_mask());
 	}
 
 	// Optimized bool conversion (must be removed if inappropriate)
@@ -97,14 +99,14 @@ struct bf_t : bf_base<T, N>
 	// Store bitfield value
 	bf_t& operator =(vtype value)
 	{
-		this->m_data = (this->m_data & ~data_mask()) | insert(value);
+		this->m_data = static_cast<vtype>((this->m_data & ~data_mask()) | insert(value));
 		return *this;
 	}
 
 	vtype operator ++(int)
 	{
-		vtype result = *this;
-		*this = result + 1;
+		utype result = *this;
+		*this = static_cast<vtype>(result + 1);
 		return result;
 	}
 
@@ -115,8 +117,8 @@ struct bf_t : bf_base<T, N>
 
 	vtype operator --(int)
 	{
-		vtype result = *this;
-		*this = result - 1;
+		utype result = *this;
+		*this = static_cast<vtype>(result - 1);
 		return result;
 	}
 
@@ -142,19 +144,19 @@ struct bf_t : bf_base<T, N>
 
 	bf_t& operator &=(vtype right)
 	{
-		this->m_data &= (right & bf_t::vmask) << bitpos;
+		this->m_data &= static_cast<vtype>((static_cast<utype>(right) & bf_t::vmask) << bitpos);
 		return *this;
 	}
 
 	bf_t& operator |=(vtype right)
 	{
-		this->m_data |= (right & bf_t::vmask) << bitpos;
+		this->m_data |= static_cast<vtype>((static_cast<utype>(right) & bf_t::vmask) << bitpos);
 		return *this;
 	}
 
 	bf_t& operator ^=(vtype right)
 	{
-		this->m_data ^= (right & bf_t::vmask) << bitpos;
+		this->m_data ^= static_cast<vtype>((static_cast<utype>(right) & bf_t::vmask) << bitpos);
 		return *this;
 	}
 };
@@ -165,23 +167,24 @@ struct cf_t : bf_base<typename F::type, F::bitsize + cf_t<Fields...>::bitsize>
 {
 	using type = typename cf_t::type;
 	using vtype = typename cf_t::vtype;
+	using utype = typename cf_t::utype;
 
 	// Get disjunction of all "data" masks of concatenated values
 	static constexpr vtype data_mask()
 	{
-		return F::data_mask() | cf_t<Fields...>::data_mask();
+		return static_cast<vtype>(F::data_mask() | cf_t<Fields...>::data_mask());
 	}
 
 	// Extract all bitfields and concatenate
 	static constexpr vtype extract(const type& data)
 	{
-		return F::extract(data) << cf_t<Fields...>::bitsize | cf_t<Fields...>::extract(data);
+		return static_cast<vtype>(static_cast<utype>(F::extract(data)) << cf_t<Fields...>::bitsize | cf_t<Fields...>::extract(data));
 	}
 
 	// Split bitfields and insert them
 	static constexpr vtype insert(vtype value)
 	{
-		return F::insert(value >> cf_t<Fields...>::bitsize) | cf_t<Fields...>::insert(value);
+		return static_cast<vtype>(F::insert(value >> cf_t<Fields...>::bitsize) | cf_t<Fields...>::insert(value));
 	}
 
 	// Load value

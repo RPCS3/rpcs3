@@ -3,7 +3,9 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/IdManager.h"
 #include "Crypto/unedat.h"
+#include "Crypto/unself.h"
 #include "sceNp.h"
 
 logs::channel sceNp("sceNp", logs::level::notice);
@@ -36,7 +38,7 @@ s32 sceNpTerm()
 	return CELL_OK;
 }
 
-s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	const std::string& enc_drm_path = drm_path.get_ptr();
 
@@ -46,29 +48,25 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 		return CELL_ENOENT;
 	}
 
-	std::string k_licensee_str = "0";
-	u8 k_licensee[0x10];
+	std::string k_licensee_str = "";
+	std::array<u8, 0x10> k_licensee{0};
 
 	if (k_licensee_addr)
 	{
-		for (s32 i = 0; i < 0x10; i++)
+		for (s8 i = 0; i < 0x10; i++)
 		{
-			k_licensee[i] = vm::read8(k_licensee_addr + i);
+			k_licensee[i] = *(k_licensee_addr + i);
 			k_licensee_str += fmt::format("%02x", k_licensee[i]);
 		}
+
+		sceNp.notice("npDrmIsAvailable(): KLicense key %s", k_licensee_str);
 	}
 
 	sceNp.warning("npDrmIsAvailable(): Found DRM license file at %s", enc_drm_path);
-	sceNp.warning("npDrmIsAvailable(): Using k_licensee 0x%s", k_licensee_str);
-
-	// Set the necessary file paths.
-	const std::string& drm_file_name = enc_drm_path.substr(enc_drm_path.find_last_of('/') + 1);
 
 	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
 	const std::string& drm_file_dir = enc_drm_path.substr(15);
 	const std::string& title_id = drm_file_dir.substr(0, drm_file_dir.find_first_of('/'));
-
-	const std::string& dec_drm_path = "/dev_hdd1/cache/" + drm_file_name;
 
 	std::string rap_lpath = vfs::get("/dev_hdd0/home/00000001/exdata/"); // TODO: Allow multiple profiles. Use default for now.
 
@@ -82,33 +80,69 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 		}
 	}
 
+	auto npdrmkeys = fxm::get_always<LoadedNpdrmKeys_t>();
+
+	npdrmkeys->devKlic.fill(0);
+	npdrmkeys->rifKey.fill(0);
+
 	if (rap_lpath.back() == '/')
 	{
 		sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
-		rap_lpath.clear();
 	}
+	else
+		npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
 
 	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
-	const std::string& dec_drm_path_local = vfs::get(dec_drm_path);
+	const fs::file enc_file(enc_drm_path_local);
 
-	if (DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_lpath, k_licensee, false) >= 0)
+	u32 magic;
+
+	enc_file.read<u32>(magic);
+	enc_file.seek(0);
+
+	if (magic == "SCE\0"_u32)
 	{
-		// If decryption succeeds, replace the encrypted file with it.
-		fs::remove_file(enc_drm_path_local);
-		fs::rename(dec_drm_path_local, enc_drm_path_local);
+		if (verify_npdrm_self_headers(enc_file, k_licensee.data()))
+		{
+			npdrmkeys->devKlic = std::move(k_licensee);
+		}
+		else
+		{
+			sceNp.error("npDrmIsAvailable(): Failed to verify sce file %s", enc_drm_path);
+			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+		}
+		
 	}
+	else if (magic == "NPD\0"_u32)
+	{
+		// edata / sdata files
 
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee))
+		{
+			npdrmkeys->devKlic = std::move(k_licensee);
+		}
+		else
+		{
+			sceNp.error("npDrmIsAvailable(): Failed to verify npd file %s", enc_drm_path);
+			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+		}
+	}
+	else
+	{
+		// for now assume its just unencrypted
+		sceNp.notice("npDrmIsAvailable(): Assuming npdrm file is unencrypted at %s", enc_drm_path);
+	}
 	return CELL_OK;
 }
 
-s32 sceNpDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 sceNpDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-s32 sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=%s)", k_licensee_addr, drm_path);
 
@@ -117,15 +151,29 @@ s32 sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
 
 s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.todo("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
 
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
+	{
+		// Game hasn't been purchased therefore no RAP file present
+		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
+	}
+
+	// Game has been purchased and there's a RAP file present
 	return CELL_OK;
 }
 
 s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
-	sceNp.todo("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
 
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
+	{
+		// Game hasn't been purchased therefore no RAP file present
+		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
+	}
+
+	// Game has been purchased and there's a RAP file present
 	return CELL_OK;
 }
 
@@ -144,18 +192,24 @@ s32 sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.warning("sceNpDrmProcessExitSpawn() -> sys_game_process_exitspawn");
+
+	sceNp.warning("klicensee: 0x%x", klicensee);
+	npDrmIsAvailable(klicensee, path);
 
 	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn2(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.warning("sceNpDrmProcessExitSpawn2() -> sys_game_process_exitspawn2");
+	
+	sceNp.warning("klicensee: 0x%x", klicensee);
+	npDrmIsAvailable(klicensee, path);
 
 	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 

@@ -30,15 +30,6 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
 	OS << "#version 420" << std::endl;
-
-	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
-	OS << "{\n";
-	OS << "	mat4 scaleOffsetMat;\n";
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
-	OS << "	uint alpha_test;\n";
-	OS << "	float alpha_ref;\n";
-	OS << "};\n";
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -136,8 +127,12 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 
-	// A dummy value otherwise it's invalid to create an empty uniform buffer
-	OS << "	vec4 void_value;" << std::endl;
+	// Fragment state parameters
+	OS << "	float fog_param0;\n";
+	OS << "	float fog_param1;\n";
+	OS << "	uint alpha_test;\n";
+	OS << "	float alpha_ref;\n";
+	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
 	OS << "};" << std::endl;
 }
 
@@ -148,32 +143,32 @@ namespace
 	// But it makes more sense to compute exp of interpoled value than to interpolate exp values.
 	void insert_fog_declaration(std::stringstream & OS, rsx::fog_mode mode)
 	{
-		std::string fog_func = {};
 		switch (mode)
 		{
 		case rsx::fog_mode::linear:
-			fog_func = "fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.)";
+			OS << "	vec4 fogc = vec4(fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential:
-			fog_func = "11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5))";
+			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential2:
-			fog_func = "4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 2.)";
+			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 2.), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::linear_abs:
-			fog_func = "fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.)";
+			OS << "	vec4 fogc = vec4(fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential_abs:
-			fog_func = "11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5))";
+			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential2_abs:
-			fog_func = "4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.)";
+			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.), 0., 0.);\n";
 			break;
-
-		default: fog_func = "0.0, 0.0";
+		default:
+			OS << "	vec4 fogc = vec4(0.);\n";
+			return;
 		}
 
-		OS << "	vec4 fogc = clamp(vec4(" << fog_func << ", 0., 0.), 0., 1.);\n";
+		OS << "	fogc.y = clamp(fogc.y, 0., 1.);\n";
 	}
 
 	void insert_texture_scale(std::stringstream & OS, const RSXFragmentProgram& prog, int index)
@@ -189,7 +184,7 @@ namespace
 		}
 
 		if (prog.unnormalized_coords & (1 << index))
-			OS << "\t" << vec_type << " tex" << index << "_coord_scale = 1. / textureSize(tex" << index << ", 0);\n";
+			OS << "\t" << vec_type << " tex" << index << "_coord_scale = texture_parameters[" << index << "].xy / textureSize(tex" << index << ", 0);\n";
 		else
 			OS << "\t" << vec_type << " tex" << index << "_coord_scale = " << vec_type << "(1.);\n";
 	}
@@ -375,8 +370,12 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		{
 			if (m_prog.textures_alpha_kill[index])
 			{
-				std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
-				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				const std::string texture_name = "tex" + std::to_string(index);
+				if (m_parr.HasParamTypeless(PF_PARAM_UNIFORM, texture_name))
+				{
+					std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
+					OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				}
 			}
 		}
 
@@ -408,6 +407,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
 			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
 			* but it writes depth in r1.z and not h2.z.
@@ -415,6 +415,11 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			*/
 			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
 			OS << "	gl_FragDepth = r1.z;\n";
+		}
+		else
+		{
+			//Input not declared. Leave commented to assist in debugging the shader
+			OS << "	//gl_FragDepth = r1.z;\n";
 		}
 	}
 

@@ -168,8 +168,6 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		
 		if (type == BI || type == IRET) // Branch Indirect
 		{
-			if (type == IRET) LOG_ERROR(SPU, "[0x%05x] Interrupt Return", pos);
-
 			blocks.emplace(start);
 			start = pos + 4;
 		}

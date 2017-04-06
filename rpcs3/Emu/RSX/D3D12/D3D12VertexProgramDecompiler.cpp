@@ -31,10 +31,11 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	float fog_param0;" << std::endl;
+	OS << "	float fog_param1;" << std::endl;
 	OS << "	int isAlphaTested;" << std::endl;
 	OS << "	float alphaRef;" << std::endl;
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
+	OS << "	float4 texture_parameters[16];" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -78,11 +79,8 @@ void D3D12VertexProgramDecompiler::insertConstants(std::stringstream & OS, const
 {
 	OS << "cbuffer CONSTANT_BUFFER : register(b1)" << std::endl;
 	OS << "{" << std::endl;
-	for (const ParamType PT : constants)
-	{
-		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
-	}
+	OS << "	float4 vc[468];" << std::endl;
+	OS << "	uint transform_branch_bits;" << std::endl;
 	OS << "};" << std::endl;
 }
 

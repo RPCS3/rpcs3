@@ -892,20 +892,14 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 	Write(fmt::format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi / 4, bi % 4, bd, aa, lk));
 }
 
-void PPUDisAsm::HACK(ppu_opcode_t op)
-{
-	Write(fmt::format("hack %d", op.opcode & 0x3ffffff));
-}
-
 void PPUDisAsm::SC(ppu_opcode_t op)
 {
-	switch (op.lev)
+	if (op.opcode != ppu_instructions::SC(0))
 	{
-	case 0x0: Write("sc"); break;
-	case 0x1: Write("HyperCall LV1"); break;
-	case 0x3: Write("fast_stop()"); break; // hack
-	default: Write(fmt::format("Unknown sc: 0x%x", op.lev));
+		return UNK(op);
 	}
+
+	Write("sc");
 }
 
 void PPUDisAsm::B(ppu_opcode_t op)

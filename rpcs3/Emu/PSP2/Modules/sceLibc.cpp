@@ -177,8 +177,6 @@ namespace sce_libc_func
 	{
 		sceLibc.warning("exit()");
 
-		CHECK_EMU_STATUS;
-
 		for (auto& func : decltype(g_atexit)(std::move(g_atexit)))
 		{
 			func(cpu);
@@ -191,12 +189,7 @@ namespace sce_libc_func
 			Emu.Stop();
 		});
 
-		while (true)
-		{
-			CHECK_EMU_STATUS;
-
-			std::this_thread::sleep_for(1ms);
-		}
+		thread_ctrl::eternalize();
 	}
 
 	void printf(ARMv7Thread& cpu, vm::cptr<char> fmt, arm_va_args_t va_args)

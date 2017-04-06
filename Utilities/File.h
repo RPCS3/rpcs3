@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 namespace fs
 {
@@ -443,9 +444,6 @@ namespace fs
 	// Get configuration directory
 	const std::string& get_config_dir();
 
-	// Get executable directory
-	const std::string& get_executable_dir();
-
 	// Get data/cache directory for specified prefix and suffix
 	std::string get_data_dir(const std::string& prefix, const std::string& location, const std::string& suffix);
 
@@ -465,8 +463,130 @@ namespace fs
 		inval,
 		noent,
 		exist,
+		acces,
 	};
 
 	// Error code returned
 	extern thread_local error g_tls_error;
+
+	template <typename T>
+	struct container_stream final : file_base
+	{
+		// T can be a reference, but this is not recommended
+		using value_type = typename std::remove_reference_t<T>::value_type;
+
+		T obj;
+		u64 pos;
+
+		container_stream(T&& obj)
+			: obj(std::forward<T>(obj))
+			, pos(0)
+		{
+		}
+
+		~container_stream() override
+		{
+		}
+
+		stat_t stat() override
+		{
+			fmt::raw_error("fs::container_stream<>::stat(): not supported");
+		}
+
+		bool trunc(u64 length) override
+		{
+			obj.resize(length);
+			return true;
+		}
+
+		u64 read(void* buffer, u64 size) override
+		{
+			const u64 end = obj.size();
+
+			if (pos < end)
+			{
+				// Get readable size
+				if (const u64 max = std::min<u64>(size, end - pos))
+				{
+					std::copy(obj.cbegin() + pos, obj.cbegin() + pos + max, static_cast<value_type*>(buffer));
+					pos = pos + max;
+					return max;
+				}
+			}
+
+			return 0;
+		}
+
+		u64 write(const void* buffer, u64 size) override
+		{
+			const u64 old_size = obj.size();
+
+			if (old_size + size < old_size)
+			{
+				fmt::raw_error("fs::container_stream<>::write(): overflow");
+			}
+
+			if (pos > old_size)
+			{
+				// Fill gap if necessary (default-initialized)
+				obj.resize(pos);
+			}
+
+			const auto src = static_cast<const value_type*>(buffer);
+
+			// Overwrite existing part
+			const u64 overlap = std::min<u64>(obj.size() - pos, size);
+			std::copy(src, src + overlap, obj.begin() + pos);
+
+			// Append new data
+			obj.insert(obj.end(), src + overlap, src + size);
+			pos += size;
+
+			return size;
+		}
+
+		u64 seek(s64 offset, seek_mode whence) override
+		{
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + pos :
+				whence == fs::seek_end ? offset + size() :
+				(fmt::raw_error("fs::container_stream<>::seek(): invalid whence"), 0);
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			pos = new_pos;
+			return pos;
+		}
+
+		u64 size() override
+		{
+			return obj.size();
+		}
+	};
+
+	template <typename T>
+	file make_stream(T&& container = T{})
+	{
+		file result;
+		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container)));
+		return result;
+	}
+
+	template <typename... Args>
+	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
+	{
+		if (fs::file f{path, mode})
+		{
+			// Write args sequentially
+			int seq[]{ (f.write(args), 0)... };
+			return true;
+		}
+
+		return false;
+	}
 }

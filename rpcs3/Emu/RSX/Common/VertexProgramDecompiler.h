@@ -61,6 +61,7 @@ struct VertexProgramDecompiler
 	const std::vector<u32>& m_data;
 	ParamArray m_parr;
 
+	std::string NotZeroPositive(const std::string code);
 	std::string GetMask(bool is_sca);
 	std::string GetVecMask();
 	std::string GetScaMask();
@@ -69,6 +70,7 @@ struct VertexProgramDecompiler
 	std::string GetFunc();
 	std::string GetTex();
 	std::string GetCond();
+	std::string GetOptionalBranchCond();	//Conditional branch expression modified externally at runtime
 	std::string AddAddrMask();
 	std::string AddAddrReg();
 	std::string AddAddrRegWithoutMask();

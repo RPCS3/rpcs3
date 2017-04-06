@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "cellFs.h"
 
 #include "Utilities/StrUtil.h"
@@ -550,113 +551,6 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void(s32 xfd, u64 xsize)>
 	return CELL_OK;
 }
 
-bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
-{
-	if (version > 4 || flags & 0x7EFFFFC0){
-		printf("ERROR: unknown version");
-		return false;
-	}
-
-	if ((version == 1 && (flags & 0x7FFFFFFE)) ||
-		(version == 2 && (flags & 0x7EFFFFC0))){
-		printf("ERROR: unknown or unsupported type");
-		return false;
-	}
-
-	if (filesizeTmp > filesizeInput){
-		printf("ERROR: input file size is too short.");
-		return false;
-	}
-
-	if (!(flags & 0x80000000)){
-		printf("ERROR: cannot extract finalized edata.");
-		return false;
-	}
-
-	return true;
-}
-
-s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_file)
-{
-	fs::file packed_stream(vfs::get(packed_file));
-	fs::file unpacked_stream(vfs::get(unpacked_file), fs::rewrite);
-
-	if (!packed_stream)
-	{
-		cellFs.error("File '%s' not found!", packed_file);
-		return CELL_ENOENT;
-	}
-
-	if (!unpacked_stream)
-	{
-		cellFs.error("File '%s' couldn't be created!", unpacked_file);
-		return CELL_ENOENT;
-	}
-
-	char buffer[10200];
-	packed_stream.read(buffer, 256);
-	u32 format = *(be_t<u32>*)&buffer[0];
-	if (format != 0x4E504400) // "NPD\x00"
-	{
-		cellFs.error("Illegal format. Expected 0x4E504400, but got 0x%08x", format);
-		return CELL_EFSSPECIFIC;
-	}
-
-	u32 version = *(be_t<u32>*)&buffer[0x04];
-	u32 flags = *(be_t<u32>*)&buffer[0x80];
-	u32 blockSize = *(be_t<u32>*)&buffer[0x84];
-	u64 filesizeOutput = *(be_t<u64>*)&buffer[0x88];
-	u64 filesizeInput = packed_stream.size();
-	u32 blockCount = (u32)((filesizeOutput + blockSize - 1) / blockSize);
-
-	// SDATA file is compressed
-	if (flags & 0x1)
-	{
-		cellFs.warning("cellFsSdataOpen: Compressed SDATA files are not supported yet.");
-		return CELL_EFSSPECIFIC;
-	}
-	// SDATA file is NOT compressed
-	else
-	{
-		u32 t1 = (flags & 0x20) ? 0x20 : 0x10;
-		u32 startOffset = (blockCount * t1) + 0x100;
-		u64 filesizeTmp = (filesizeOutput + 0xF) & 0xFFFFFFF0 + startOffset;
-
-		if (!sdata_check(version, flags, filesizeInput, filesizeTmp))
-		{
-			cellFs.error("cellFsSdataOpen: Wrong header information.");
-			return CELL_EFSSPECIFIC;
-		}
-
-		if (flags & 0x20)
-		{
-			packed_stream.seek(0x100);
-		}
-		else
-		{
-			packed_stream.seek(startOffset);
-		}
-
-		for (u32 i = 0; i < blockCount; i++)
-		{
-			if (flags & 0x20)
-			{
-				packed_stream.seek(t1, fs::seek_cur);
-			}
-
-			if (!(blockCount - i - 1))
-			{
-				blockSize = (u32)(filesizeOutput - i * blockSize);
-			}
-
-			packed_stream.read(buffer + 256, blockSize);
-			unpacked_stream.write(buffer + 256, blockSize);
-		}
-	}
-
-	return CELL_OK;
-}
-
 s32 cellFsSdataOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
 	cellFs.notice("cellFsSdataOpen(path=%s, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
@@ -666,33 +560,52 @@ s32 cellFsSdataOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<vo
 		return CELL_EINVAL;
 	}
 
-	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, vm::make_var<be_t<u32>[2]>({ 0x180, 0x10 }), 8);
-
-	// Don't implement sdata decryption in this function, it should be done in sys_fs_open() syscall or somewhere else
-
-	/*
-	std::string suffix = path.substr(path.length() - 5, 5);
-	if (suffix != ".sdat" && suffix != ".SDAT")
-	return CELL_ENOTSDATA;
-
-	std::string::size_type last_slash = path.rfind('/'); //TODO: use a filesystem library to solve this more robustly
-	last_slash = last_slash == std::string::npos ? 0 : last_slash+1;
-	std::string unpacked_path = "/dev_hdd1/"+path.substr(last_slash,path.length()-last_slash)+".unpacked";
-	s32 ret = sdata_unpack(path, unpacked_path);
-	if (ret) return ret;
-
-	fd = idm::GetNewID(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), TYPE_FS_FILE);
-
-	return CELL_OK;
-	*/
+	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, vm::make_var<be_t<u32>[2]>({0x180, 0x10}), 8);
 }
 
 s32 cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u64 offset, vm::cptr<void> arg, u64 size)
 {
-	cellFs.todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=%#o, sdata_fd=*0x%x, offset=0x%llx, arg=*0x%x, size=0x%llx)", mself_fd, flags, sdata_fd, offset, arg, size);
+	cellFs.notice("cellFsSdataOpenByFd(mself_fd=0x%x, flags=%#o, sdata_fd=*0x%x, offset=0x%llx, arg=*0x%x, size=0x%llx)", mself_fd, flags, sdata_fd, offset, arg, size);
 
-	// TODO:
+	if (!sdata_fd)
+	{
+		return CELL_EFAULT;
+	}
+	
+	*sdata_fd = -1;
 
+	if (mself_fd < 3 || mself_fd > 255)
+	{
+		return CELL_EBADF;
+	}
+
+	if (flags)
+	{
+		return CELL_EINVAL;
+	}
+
+	vm::var<lv2_file_op_09> ctrl;
+	ctrl->_vtable = vm::cast(0xfa880000); // Intentionally wrong (provide correct vtable if necessary)
+	ctrl->op = 0x80000009;
+	ctrl->fd = mself_fd;
+	ctrl->offset = offset;
+	ctrl->_vtabl2 = vm::cast(0xfa880020);
+	ctrl->arg1 = 0x180;
+	ctrl->arg2 = 0x10;
+	ctrl->arg_ptr = arg.addr();
+	ctrl->arg_size = u32(size);
+
+	if (const s32 rc = sys_fs_fcntl(mself_fd, 0x80000009, ctrl, 0x40))
+	{
+		return rc;
+	}
+
+	if (const s32 rc = ctrl->out_code)
+	{
+		return rc;
+	}
+
+	*sdata_fd = ctrl->out_fd;
 	return CELL_OK;
 }
 
@@ -742,6 +655,7 @@ struct fs_aio_thread : ppu_thread
 			}
 
 			func(*this, aio, error, xid, result);
+			lv2_obj::sleep(*this);
 		}
 	}
 };
@@ -928,24 +842,24 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsOpen);
 	REG_FUNC(sys_fs, cellFsSdataOpen);
 	REG_FUNC(sys_fs, cellFsSdataOpenByFd);
-	REG_FUNC(sys_fs, cellFsRead, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsWrite, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsClose, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsRead).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsWrite).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsClose).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsOpendir);
-	REG_FUNC(sys_fs, cellFsReaddir, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsClosedir, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsReaddir).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsClosedir).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsStat);
-	REG_FUNC(sys_fs, cellFsFstat, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsFstat).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsMkdir);
 	REG_FUNC(sys_fs, cellFsRename);
 	REG_FUNC(sys_fs, cellFsChmod);
 	REG_FUNC(sys_fs, cellFsFsync);
 	REG_FUNC(sys_fs, cellFsRmdir);
 	REG_FUNC(sys_fs, cellFsUnlink);
-	REG_FUNC(sys_fs, cellFsLseek, MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsFtruncate, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsLseek).flags = MFF_PERFECT;
+	REG_FUNC(sys_fs, cellFsFtruncate).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsTruncate);
-	REG_FUNC(sys_fs, cellFsFGetBlockSize, MFF_PERFECT);
+	REG_FUNC(sys_fs, cellFsFGetBlockSize).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsAioInit);
 	REG_FUNC(sys_fs, cellFsAioFinish);
 	REG_FUNC(sys_fs, cellFsAioRead);
@@ -978,7 +892,7 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsAllocateFileAreaByFdWithInitialData);
 	REG_FUNC(sys_fs, cellFsTruncate2);
 	REG_FUNC(sys_fs, cellFsChangeFileSizeWithoutAllocation);
-	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill, MFF_FORCED_HLE);
+	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill).flags = MFF_FORCED_HLE;
 	REG_FUNC(sys_fs, cellFsChangeFileSizeByFdWithoutAllocation);
 	REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
 	REG_FUNC(sys_fs, cellFsRegisterConversionCallback);
