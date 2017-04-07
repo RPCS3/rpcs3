@@ -95,6 +95,7 @@ LOG_CHANNEL(cellVideoExport);
 LOG_CHANNEL(cellVideoUpload);
 LOG_CHANNEL(cellVoice);
 LOG_CHANNEL(cellVpost);
+LOG_CHANNEL(cellLibprof);
 LOG_CHANNEL(libmedi);
 LOG_CHANNEL(libmixer);
 LOG_CHANNEL(libsnd3);
@@ -288,6 +289,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellVideoUpload,
 		&ppu_module_manager::cellVoice,
 		&ppu_module_manager::cellVpost,
+		&ppu_module_manager::cellLibprof,
 		&ppu_module_manager::libmedi,
 		&ppu_module_manager::libmixer,
 		&ppu_module_manager::libsnd3,
