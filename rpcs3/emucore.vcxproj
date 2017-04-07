@@ -164,12 +164,13 @@
     <ClCompile Include="Emu\Cell\Modules\cellGifDec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellHttp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellHttpUtil.cpp" />
-    <ClCompile Include="Emu\Cell\Modules\cellImejp.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellImeJp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellJpgDec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellJpgEnc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellKb.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellKey2char.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellL10n.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellLibprof.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMic.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMouse.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMsgDialog.cpp" />
@@ -557,6 +558,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellGcmSys.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGem.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGifDec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellImeJp.h" />
     <ClInclude Include="Emu\Cell\Modules\cellJpgDec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellKb.h" />
     <ClInclude Include="Emu\Cell\Modules\cellL10n.h" />

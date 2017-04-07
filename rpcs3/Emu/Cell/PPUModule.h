@@ -134,6 +134,7 @@ public:
 	static const ppu_static_module cellJpgEnc;
 	static const ppu_static_module cellKey2char;
 	static const ppu_static_module cellL10n;
+	static const ppu_static_module cellLibprof;
 	static const ppu_static_module cellMic;
 	static const ppu_static_module cellMusic;
 	static const ppu_static_module cellMusicDecode;
