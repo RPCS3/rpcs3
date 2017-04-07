@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
-#include "cellImejp.h"
+#include "cellImeJp.h"
 
 logs::channel cellImeJp("cellImeJp", logs::level::notice);
 
