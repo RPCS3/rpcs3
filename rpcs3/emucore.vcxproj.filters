@@ -1348,6 +1348,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellSearch.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSpudll.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSpurs.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
