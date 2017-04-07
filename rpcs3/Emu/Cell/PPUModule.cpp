@@ -1011,7 +1011,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	else if (g_cfg_load_libreq)
 	{
 		// Load recommended set of modules: Module name -> SPRX
-		const std::unordered_multimap<std::string, std::string> sprx_map
+		std::unordered_multimap<std::string, std::string> sprx_map
 		{
 			{ "cellAdec", "libadec.sprx" }, // cellSpurs|cell_libac3dec|cellAtrac3dec|cellAtracXdec|cellCelpDec|cellDTSdec|cellM2AACdec|cellM2BCdec|cellM4AacDec|cellMP3dec|cellTRHDdec|cellWMAdec|cellDTSLBRdec|cellDDPdec|cellM4AacDec2ch|cellDTSHDdec|cellMPL1dec|cellMP3Sdec|cellM4AacDec2chmod|cellCelp8Dec|cellWMAPROdec|cellWMALSLdec|cellDTSHDCOREdec|cellAtrac3multidec
 			{ "cellAdec", "libsre.sprx" },
@@ -1090,22 +1090,37 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellVpost", "libsre.sprx" },
 		};
 
+		// Expand dependencies
+		for (bool repeat = true; repeat;)
+		{
+			repeat = false;
+
+			for (auto it = sprx_map.begin(), end = sprx_map.end(); it != end; ++it)
+			{
+				auto range = sprx_map.equal_range(it->second);
+
+				if (range.first != range.second)
+				{
+					decltype(sprx_map) add;
+
+					for (; range.first != range.second; ++range.first)
+					{
+						add.emplace(it->first, range.first->second);
+					}
+
+					sprx_map.erase(it);
+					sprx_map.insert(add.begin(), add.end());
+					repeat = true;
+					break;
+				}
+			}
+		}
+
 		for (const auto& pair : link->modules)
 		{
-			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second;)
+			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second; ++range.first)
 			{
-				// Dependencies (workaround for cellAdec)
-				auto range2 = sprx_map.equal_range(range.first->second);
-
-				if (range2.first != range2.second)
-				{
-					range = range2;
-				}
-				else
-				{
-					load_libs.emplace(range.first->second);
-					range.first++;
-				}
+				load_libs.emplace(range.first->second);
 			}
 		}
 	}
