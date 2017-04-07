@@ -28,7 +28,7 @@ struct CellVideoUploadParam
 		} youtube;
 	} u;
 	be_t<s32> numOfOption;
-	vm::ptr<CellVideoUploadOption> pOption;
+	vm::bptr<CellVideoUploadOption> pOption;
 };
 
 typedef void(CellVideoUploadCallback)(s32 status, s32 errorCode, vm::cptr<char> pResultURL, vm::ptr<void> userdata);
