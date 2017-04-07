@@ -2311,6 +2311,12 @@ s32 cellSpursWaitForWorkloadShutdown()
 	return CELL_OK;
 }
 
+s32 cellSpursRemoveSystemWorkloadForUtility()
+{
+	UNIMPLEMENTED_FUNC(cellSpurs);
+	return CELL_OK;
+}
+
 /// Remove workload
 s32 cellSpursRemoveWorkload()
 {
@@ -4258,6 +4264,7 @@ DECLARE(ppu_module_manager::cellSpurs)("cellSpurs", []()
 	REG_FUNC(cellSpurs, cellSpursAddWorkload);
 	REG_FUNC(cellSpurs, cellSpursShutdownWorkload);
 	REG_FUNC(cellSpurs, cellSpursWaitForWorkloadShutdown);
+	REG_FUNC(cellSpurs, cellSpursRemoveSystemWorkloadForUtility);
 	REG_FUNC(cellSpurs, cellSpursRemoveWorkload);
 	REG_FUNC(cellSpurs, cellSpursReadyCountStore);
 	REG_FUNC(cellSpurs, cellSpursGetWorkloadFlag);
