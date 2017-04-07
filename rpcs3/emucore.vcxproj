@@ -591,6 +591,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellUserInfo.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVdec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVideoOut.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellVideoUpload.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVpost.h" />
     <ClInclude Include="Emu\Cell\Modules\cellWebBrowser.h" />
     <ClInclude Include="Emu\Cell\Modules\libmixer.h" />

@@ -1384,6 +1384,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellVideoOut.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellVideoUpload.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellVpost.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
