@@ -389,6 +389,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellL10n.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellLibprof.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellMic.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
