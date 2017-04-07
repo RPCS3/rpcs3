@@ -579,6 +579,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSaveData.h" />
     <ClInclude Include="Emu\Cell\Modules\cellScreenshot.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSearch.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSpudll.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSpurs.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSpursJq.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSubdisplay.h" />
