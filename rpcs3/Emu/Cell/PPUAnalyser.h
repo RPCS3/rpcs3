@@ -29,10 +29,10 @@ struct ppu_function
 	bs_t<ppu_attr> attr{};
 
 	u32 stack_frame = 0;
-	u32 gate_target = 0;
+	u32 trampoline = 0;
 
 	std::map<u32, u32> blocks; // Basic blocks: addr -> size
-	std::set<u32> called_from; // Set of called functions
+	std::set<u32> calls; // Set of called functions
 };
 
 // PPU Module Information

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/AutoPause.h"
 #include "Utilities/VirtualMemory.h"
@@ -35,6 +35,7 @@ LOG_CHANNEL(cellDmux);
 LOG_CHANNEL(cellFiber);
 LOG_CHANNEL(cellFont);
 LOG_CHANNEL(cellFontFT);
+LOG_CHANNEL(cell_FreeType2);
 LOG_CHANNEL(cellFs);
 LOG_CHANNEL(cellGame);
 LOG_CHANNEL(cellGameExec);
@@ -48,6 +49,7 @@ LOG_CHANNEL(cellJpgDec);
 LOG_CHANNEL(cellJpgEnc);
 LOG_CHANNEL(cellKey2char);
 LOG_CHANNEL(cellL10n);
+LOG_CHANNEL(cellLibprof);
 LOG_CHANNEL(cellMic);
 LOG_CHANNEL(cellMusic);
 LOG_CHANNEL(cellMusicDecode);
@@ -226,6 +228,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellFiber,
 		&ppu_module_manager::cellFont,
 		&ppu_module_manager::cellFontFT,
+		&ppu_module_manager::cell_FreeType2,
 		&ppu_module_manager::cellFs,
 		&ppu_module_manager::cellGame,
 		&ppu_module_manager::cellGameExec,
@@ -240,6 +243,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellJpgEnc,
 		&ppu_module_manager::cellKey2char,
 		&ppu_module_manager::cellL10n,
+		&ppu_module_manager::cellLibprof,
 		&ppu_module_manager::cellMic,
 		&ppu_module_manager::cellMusic,
 		&ppu_module_manager::cellMusicDecode,
@@ -1010,7 +1014,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	else if (g_cfg_load_libreq)
 	{
 		// Load recommended set of modules: Module name -> SPRX
-		const std::unordered_multimap<std::string, std::string> sprx_map
+		std::unordered_multimap<std::string, std::string> sprx_map
 		{
 			{ "cellAdec", "libadec.sprx" }, // cellSpurs|cell_libac3dec|cellAtrac3dec|cellAtracXdec|cellCelpDec|cellDTSdec|cellM2AACdec|cellM2BCdec|cellM4AacDec|cellMP3dec|cellTRHDdec|cellWMAdec|cellDTSLBRdec|cellDDPdec|cellM4AacDec2ch|cellDTSHDdec|cellMPL1dec|cellMP3Sdec|cellM4AacDec2chmod|cellCelp8Dec|cellWMAPROdec|cellWMALSLdec|cellDTSHDCOREdec|cellAtrac3multidec
 			{ "cellAdec", "libsre.sprx" },
@@ -1089,22 +1093,37 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellVpost", "libsre.sprx" },
 		};
 
+		// Expand dependencies
+		for (bool repeat = true; repeat;)
+		{
+			repeat = false;
+
+			for (auto it = sprx_map.begin(), end = sprx_map.end(); it != end; ++it)
+			{
+				auto range = sprx_map.equal_range(it->second);
+
+				if (range.first != range.second)
+				{
+					decltype(sprx_map) add;
+
+					for (; range.first != range.second; ++range.first)
+					{
+						add.emplace(it->first, range.first->second);
+					}
+
+					sprx_map.erase(it);
+					sprx_map.insert(add.begin(), add.end());
+					repeat = true;
+					break;
+				}
+			}
+		}
+
 		for (const auto& pair : link->modules)
 		{
-			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second;)
+			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second; ++range.first)
 			{
-				// Dependencies (workaround for cellAdec)
-				auto range2 = sprx_map.equal_range(range.first->second);
-
-				if (range2.first != range2.second)
-				{
-					range = range2;
-				}
-				else
-				{
-					load_libs.emplace(range.first->second);
-					range.first++;
-				}
+				load_libs.emplace(range.first->second);
 			}
 		}
 	}
@@ -1251,7 +1270,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	{
 		// Analyse executable
-		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0);
+		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, vm::read32(elf.header.e_entry + 4));
 
 		ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
 

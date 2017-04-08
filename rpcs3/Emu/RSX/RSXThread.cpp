@@ -28,6 +28,7 @@ cfg::bool_entry g_cfg_rsx_vsync(cfg::root.video, "VSync");
 cfg::bool_entry g_cfg_rsx_debug_output(cfg::root.video, "Debug output");
 cfg::bool_entry g_cfg_rsx_overlay(cfg::root.video, "Debug overlay");
 cfg::bool_entry g_cfg_rsx_gl_legacy_buffers(cfg::root.video, "Use Legacy OpenGL Buffers (Debug)");
+cfg::bool_entry g_cfg_rsx_use_gpu_texture_scaling(cfg::root.video, "Use GPU texture scaling");
 
 bool user_asked_for_frame_capture = false;
 rsx::frame_capture_data frame_debug;

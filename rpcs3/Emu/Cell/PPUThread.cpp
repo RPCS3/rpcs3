@@ -129,7 +129,7 @@ static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		fmt::throw_exception("Unregistered PPU function [0x%08x]", ppu.cia);
+		fmt::throw_exception("Unregistered PPU function");
 	}
 
 	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
@@ -141,7 +141,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 	if (!size)
 	{
 		LOG_ERROR(PPU, "ppu_register_range(0x%x): empty range", addr);
-		return;	
+		return;
 	}
 
 	// Register executable range at
@@ -264,9 +264,9 @@ extern void ppu_set_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (ppu_ref(addr / 4) != _break)
+	if (ppu_ref(addr) != _break)
 	{
-		ppu_ref(addr / 4) = _break;
+		ppu_ref(addr) = _break;
 	}
 }
 
@@ -280,9 +280,9 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (ppu_ref(addr / 4) == _break)
+	if (ppu_ref(addr) == _break)
 	{
-		ppu_ref(addr / 4) = ppu_cache(addr);
+		ppu_ref(addr) = ppu_cache(addr);
 	}
 }
 
@@ -828,6 +828,17 @@ extern void ppu_initialize()
 	if (!_funcs)
 	{
 		return;
+	}
+
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	{
+		idm::select<lv2_obj, lv2_prx>([](u32, lv2_prx& prx)
+		{
+			if (prx.name == "libfiber.sprx")
+			{
+				fmt::raw_error("libfiber.sprx is not compatible with PPU LLVM Recompiler.");
+			}
+		});
 	}
 
 	std::size_t fpos = 0;
