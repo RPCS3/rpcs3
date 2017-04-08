@@ -50,6 +50,8 @@ struct TROPUSREntry6
 	be_t<u64> timestamp1;
 	be_t<u64> timestamp2;
 	char unk6[64];           // Just zeroes?
+
+	//Note: One of the fields should hold a flag showing whether the trophy is hidden or not
 };
 
 class TROPUSRLoader
