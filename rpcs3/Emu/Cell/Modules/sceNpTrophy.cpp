@@ -120,7 +120,8 @@ s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId
 	if (commId->term)
 	{
 		char trimchar[9];
-		strcpy(trimchar, commId->data);
+		memcpy(trimchar, commId->data, sizeof(trimchar));
+		trimchar[8] = 0;
 		deleteTerminateChar(trimchar,commId->term);
 		name = fmt::format("%s_%02d", trimchar, commId->num);
 	}
@@ -265,6 +266,8 @@ s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspa
 	}
 
 	// TODO: This is not accurate. It's just an approximation of the real value
+	//       The real value can be obtained in TRP.cpp:
+	//		 m_headers.trp_file_size - sizeof(m_headers) - (m_headers.trp_files_count * m_headers.trp_element_size);
 	*reqspace = ctxt->trp_stream.size();
 
 	return CELL_OK;
@@ -469,21 +472,134 @@ s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceN
 
 s32 sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> percentage)
 {
-	sceNpTrophy.todo("sceNpTrophyGetGameProgress(context=0x%x, handle=0x%x, percentage=*0x%x)", context, handle, percentage);
+	sceNpTrophy.warning("sceNpTrophyGetGameProgress(context=0x%x, handle=0x%x, percentage=*0x%x)", context, handle, percentage);
+
+	if (!percentage)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto ctxt = idm::get<trophy_context_t>(context);
+
+	if (!ctxt)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+	}
+
+	const auto hndl = idm::get<trophy_handle_t>(handle);
+
+	if (!hndl)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+	}
+
+	double accuratePercentage = 0;
+	for (int i = ctxt->tropusr->GetTrophiesCount() - 1; i >= 0; i--)
+	{
+		if (ctxt->tropusr->GetTrophyUnlockState(i))
+		{
+			accuratePercentage++;
+		}
+	}
+
+	*percentage = (s32)(accuratePercentage / ctxt->tropusr->GetTrophiesCount());
 
 	return CELL_OK;
 }
 
 s32 sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
-	sceNpTrophy.todo("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
+	sceNpTrophy.warning("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
+
+	if (!size)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto ctxt = idm::get<trophy_context_t>(context);
+
+	if (!ctxt)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+	}
+
+	const auto hndl = idm::get<trophy_handle_t>(handle);
+
+	if (!hndl)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+	}
+
+	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/ICON0.PNG");
+
+	if (!fs::exists(path))
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_FILE;
+	}
+
+	fs::file gameIconFile(path);
+
+	if (buffer && *size >= gameIconFile.size())
+	{
+		gameIconFile.read(buffer.get_ptr(), gameIconFile.size());
+	}
+
+	*size = gameIconFile.size();
 
 	return CELL_OK;
 }
 
 s32 sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
-	sceNpTrophy.todo("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
+	sceNpTrophy.warning("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
+
+	if (!size)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto ctxt = idm::get<trophy_context_t>(context);
+
+	if (!ctxt)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+	}
+
+	const auto hndl = idm::get<trophy_handle_t>(handle);
+
+	if (!hndl)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+	}
+	
+	if (ctxt->tropusr->GetTrophiesCount() <= (u32)trophyId)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
+	}
+
+	if (!ctxt->tropusr->GetTrophyUnlockState(trophyId))
+	{
+		bool hidden = false; // TODO obtain this value
+		return hidden ? SCE_NP_TROPHY_ERROR_HIDDEN : SCE_NP_TROPHY_ERROR_LOCKED;
+	}
+
+	int padding = 3 - (trophyId == 0 ? 1 : log10(trophyId));
+	std::string trophyFileName = "/TROP" + std::string(padding, '0') + std::to_string(trophyId) + ".PNG";
+	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + trophyFileName);
+
+	if (!fs::exists(path))
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_FILE;
+	}
+
+	fs::file trophyIconFile(path);
+
+	if (buffer && *size >= trophyIconFile.size())
+	{
+		trophyIconFile.read(buffer.get_ptr(), trophyIconFile.size());
+	}
+
+	*size = trophyIconFile.size();
 
 	return CELL_OK;
 }
