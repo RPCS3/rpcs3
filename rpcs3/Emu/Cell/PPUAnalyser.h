@@ -33,6 +33,7 @@ struct ppu_function
 
 	std::map<u32, u32> blocks; // Basic blocks: addr -> size
 	std::set<u32> calls; // Set of called functions
+	std::set<u32> callers;
 };
 
 // PPU Module Information

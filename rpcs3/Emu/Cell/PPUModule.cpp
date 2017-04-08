@@ -346,6 +346,7 @@ static void ppu_initialize_modules()
 
 		// Register the HLE function directly
 		ppu_register_function_at(addr + 0, 4, hle_funcs[index]);
+		ppu_register_function_at(addr + 4, 4, nullptr);
 	}
 
 	// Set memory protection to read-only
