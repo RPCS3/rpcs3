@@ -222,6 +222,8 @@ error_code sys_spu_thread_group_resume(u32 id);
 error_code sys_spu_thread_group_yield(u32 id);	
 error_code sys_spu_thread_group_terminate(u32 id, s32 value);
 error_code sys_spu_thread_group_join(ppu_thread&, u32 id, vm::ps3::ptr<u32> cause, vm::ps3::ptr<u32> status);
+error_code sys_spu_thread_group_set_priority(u32 id, s32 priority);
+error_code sys_spu_thread_group_get_priority(u32 id, vm::ps3::ptr<s32> priority);
 error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
 error_code sys_spu_thread_group_disconnect_event(u32 id, u32 et);
 error_code sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, vm::ps3::ptr<u8> spup);

@@ -606,6 +606,55 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 	return CELL_OK;
 }
 
+error_code sys_spu_thread_group_set_priority(u32 id, s32 priority)
+{
+	sys_spu.trace("sys_spu_thread_group_set_priority(id=0x%x, priority=%d)", id, priority);
+
+	if (priority < 16 || priority > 255)
+	{
+		return CELL_EINVAL;
+	}
+
+	const auto group = idm::get<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
+	{
+		return CELL_EINVAL;
+	}
+
+	group->prio = priority;
+
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_get_priority(u32 id, vm::ptr<s32> priority)
+{
+	sys_spu.trace("sys_spu_thread_group_get_priority(id=0x%x, priority=*0x%x)", id, priority);
+
+	const auto group = idm::get<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
+	{
+		*priority = 0;
+	}
+	else
+	{
+		*priority = group->prio;
+	}
+
+	return CELL_OK;
+}
+
 error_code sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 {
 	sys_spu.trace("sys_spu_thread_write_ls(id=0x%x, lsa=0x%05x, value=0x%llx, type=%d)", id, lsa, value, type);
