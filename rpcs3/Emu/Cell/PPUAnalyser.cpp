@@ -326,7 +326,7 @@ namespace ppu_patterns
 	};
 }
 
-std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc)
+std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc, u32 entry)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].first;
@@ -465,6 +465,12 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			auto& func = add_func(addr, toc, ptr.addr());
 			func.attr += ppu_attr::known_addr;
 		}
+	}
+
+	// Register TOC from entry point
+	if (entry && !lib_toc)
+	{
+		lib_toc = vm::read32(entry) ? vm::read32(entry + 4) : vm::read32(entry + 20);
 	}
 
 	// Secondary attempt
