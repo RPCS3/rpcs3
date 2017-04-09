@@ -283,8 +283,6 @@ void GLGSRender::begin()
 
 	__glcheck glFrontFace(front_face(rsx::method_registers.front_face_mode()));
 
-	__glcheck enable(rsx::method_registers.poly_smooth_enabled(), GL_POLYGON_SMOOTH);
-
 	//NV4097_SET_COLOR_KEY_COLOR
 	//NV4097_SET_SHADER_CONTROL
 	//NV4097_SET_ZMIN_MAX_CONTROL
