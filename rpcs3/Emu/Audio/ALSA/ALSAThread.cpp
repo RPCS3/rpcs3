@@ -10,6 +10,7 @@
 #include <alsa/asoundlib.h>
 
 extern cfg::bool_entry g_cfg_audio_convert_to_u16;
+extern cfg::bool_entry g_cfg_audio_downmix_to_2ch;
 
 thread_local static snd_pcm_t* s_tls_handle{nullptr};
 
@@ -59,7 +60,7 @@ ALSAThread::ALSAThread()
 	if (!check(snd_pcm_hw_params_set_rate(s_tls_handle, hw_params, 48000, 0), "snd_pcm_hw_params_set_rate_near"))
 		return;
 
-	if (!check(snd_pcm_hw_params_set_channels(s_tls_handle, hw_params, 8), "snd_pcm_hw_params_set_channels"))
+	if (!check(snd_pcm_hw_params_set_channels(s_tls_handle, hw_params, g_cfg_audio_downmix_to_2ch ? 2 : 8), "snd_pcm_hw_params_set_channels"))
 		return;
 
 	if (!check(snd_pcm_hw_params_set_buffer_size(s_tls_handle, hw_params, 64 * 256), "snd_pcm_hw_params_set_buffer_size"))
@@ -105,7 +106,8 @@ void ALSAThread::Open(const void* src, int size)
 
 void ALSAThread::AddData(const void* src, int size)
 {
-	size /= g_cfg_audio_convert_to_u16 ? 2 * 8 : 4 * 8;
+	size /= g_cfg_audio_convert_to_u16 ? 2 : 4;
+	size /= g_cfg_audio_downmix_to_2ch ? 2 : 8;
 
 	int res;
 
