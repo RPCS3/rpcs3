@@ -96,6 +96,8 @@ cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder"
 	{ "Recompiler (LLVM)", ppu_decoder_type::llvm },
 });
 
+cfg::bool_entry g_cfg_ppu_debug(cfg::root.core, "PPU Debug");
+
 cfg::bool_entry g_cfg_llvm_logs(cfg::root.core, "Save LLVM logs");
 
 cfg::string_entry g_cfg_llvm_cpu(cfg::root.core, "Use LLVM CPU");
@@ -133,6 +135,38 @@ static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
+
+	if (g_cfg_ppu_debug)
+	{
+		LOG_ERROR(PPU, "Unregistered instruction: 0x%08x", op.opcode);
+	}
+
+	return false;
+}
+
+static std::unordered_map<u32, u32> s_ppu_toc;
+
+static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
+{
+	// Compare TOC with expected value
+	const auto found = s_ppu_toc.find(ppu.cia);
+
+	if (ppu.gpr[2] != found->second)
+	{
+		LOG_ERROR(PPU, "Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], found->second);
+		
+		if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
+		{
+			return false;
+		}
+	}
+
+	// Fallback to the interpreter function
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{ppu_cache(ppu.cia)})(ppu, op))
+	{
+		ppu.cia += 4;
+	}
+
 	return false;
 }
 
@@ -168,7 +202,11 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 
 	if (!size)
 	{
-		LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
+		if (g_cfg_ppu_debug)
+		{
+			LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
+		}
+		
 		return;	
 	}
 
@@ -875,7 +913,16 @@ extern void ppu_initialize(const ppu_module& info)
 	{
 		for (const auto& func : info.funcs)
 		{
-			ppu_register_function_at(func.addr, func.size, nullptr);
+			for (auto& block : func.blocks)
+			{
+				ppu_register_function_at(block.first, block.second, nullptr);
+			}
+
+			if (g_cfg_ppu_debug && func.size && func.toc != -1)
+			{
+				s_ppu_toc.emplace(func.addr, func.toc);
+				ppu_ref(func.addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
+			}
 		}
 
 		return;
