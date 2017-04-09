@@ -66,6 +66,7 @@ addons:
       - llvm-toolchain-trusty-4.0
     packages:
       - cmake
+      - libasound2-dev
       - libopenal-dev
       - freeglut3-dev
       - libglew-dev

@@ -42,6 +42,9 @@
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #include <wx/msw/wrapwin.h>
 #endif
+#ifdef __linux__
+#include "Emu/Audio/ALSA/ALSAThread.h"
+#endif
 
 #ifdef __unix__
 #include <X11/Xlib.h>
@@ -107,6 +110,8 @@ cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render
 	{ "Null", &std::make_shared<NullAudioThread> },
 #ifdef _WIN32
 	{ "XAudio2", &std::make_shared<XAudio2Thread> },
+#elif __linux__
+	{ "ALSA", &std::make_shared<ALSAThread> },
 #endif
 	{ "OpenAL", &std::make_shared<OpenALThread> },
 });

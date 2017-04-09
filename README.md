@@ -28,7 +28,7 @@ __Windows__
 
 __Linux__
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
-* Debian & Ubuntu: `sudo apt-get install cmake build-essential libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev git`
+* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev git`
 * Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
 
 __Mac OSX__
