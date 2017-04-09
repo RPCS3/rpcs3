@@ -61,34 +61,25 @@ bool TRPLoader::LoadHeader(bool show)
 
 	if (m_header.trp_version >= 2)
 	{
-		do
+		unsigned char hash[20];
+		std::vector<unsigned char> file_contents(m_header.trp_file_size);
+
+		trp_f.seek(0);
+		if (!trp_f.read(file_contents))
 		{
-			unsigned char hash[20];
-			char * file_contents = new char[m_header.trp_file_size];
-			if (file_contents == nullptr)
-			{
-				LOG_NOTICE(LOADER, "Failed verifying checksum");
-				break;
-			}
-
-			trp_f.seek(0);
-			if (!trp_f.read(file_contents, m_header.trp_file_size))
-			{
-				LOG_NOTICE(LOADER, "Failed verifying checksum");
-				delete[] file_contents;
-				break;
-			}
-
-			memset(&((TRPHeader *)file_contents)->sha1, 0, 20);
-			sha1((const unsigned char*)file_contents, m_header.trp_file_size, hash);
-			delete[] file_contents;
+			LOG_NOTICE(LOADER, "Failed verifying checksum");
+		}
+		else
+		{
+			memset(&(reinterpret_cast<TRPHeader*>(file_contents.data()))->sha1, 0, 20);
+			sha1(reinterpret_cast<const unsigned char*>(file_contents.data()), m_header.trp_file_size, hash);
 
 			if (memcmp(hash, m_header.sha1, 20) != 0)
 			{
 				LOG_ERROR(LOADER, "Invalid checksum of TROPHY.TRP file");
 				return false;
 			}
-		} while (false);
+		}
 
 		trp_f.seek(sizeof(m_header));
 	}

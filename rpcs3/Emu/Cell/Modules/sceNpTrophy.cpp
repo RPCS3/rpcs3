@@ -284,6 +284,11 @@ s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 {
 	sceNpTrophy.error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
 
+	if (!details && !data)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
+
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
@@ -306,41 +311,54 @@ s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 	rXmlDocument doc;
 	doc.Load(path);
 
-	std::string titleName;
-	std::string titleDetail;
 	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
 	{
-		if (n->GetName() == "title-name")
-			titleName = n->GetNodeContent();
-		if (n->GetName() == "title-detail")
-			titleDetail = n->GetNodeContent();
+		if (details)
+		{
+			if (n->GetName() == "title-name")
+			{
+				std::string titleName = n->GetNodeContent();
+				memcpy(details->title, titleName.c_str(), titleName.size());
+			}
+
+			if (n->GetName() == "title-detail")
+			{
+				std::string titleDetail = n->GetNodeContent();
+				memcpy(details->description, titleDetail.c_str(), titleDetail.size());
+			}
+		}
+
 		if (n->GetName() == "trophy")
 		{
 			u32 trophy_id = atoi(n->GetAttribute("id").c_str());
 
-			details->numTrophies++;
-			switch (n->GetAttribute("ttype")[0]) {
-			case 'B': details->numBronze++;   break;
-			case 'S': details->numSilver++;   break;
-			case 'G': details->numGold++;     break;
-			case 'P': details->numPlatinum++; break;
+			if (details)
+			{
+				details->numTrophies++;
+				switch (n->GetAttribute("ttype")[0]) {
+				case 'B': details->numBronze++;   break;
+				case 'S': details->numSilver++;   break;
+				case 'G': details->numGold++;     break;
+				case 'P': details->numPlatinum++; break;
+				}
 			}
 
-			if (ctxt->tropusr->GetTrophyUnlockState(trophy_id))
+			if (data)
 			{
-				data->unlockedTrophies++;
-				switch (n->GetAttribute("ttype")[0]) {
-				case 'B': data->unlockedBronze++;   break;
-				case 'S': data->unlockedSilver++;   break;
-				case 'G': data->unlockedGold++;     break;
-				case 'P': data->unlockedPlatinum++; break;
+				if (ctxt->tropusr->GetTrophyUnlockState(trophy_id))
+				{
+					data->unlockedTrophies++;
+					switch (n->GetAttribute("ttype")[0]) {
+					case 'B': data->unlockedBronze++;   break;
+					case 'S': data->unlockedSilver++;   break;
+					case 'G': data->unlockedGold++;     break;
+					case 'P': data->unlockedPlatinum++; break;
+					}
 				}
 			}
 		}
 	}
 
-	strcpy_trunc(details->title, titleName);
-	strcpy_trunc(details->description, titleDetail);
 	return CELL_OK;
 }
 
