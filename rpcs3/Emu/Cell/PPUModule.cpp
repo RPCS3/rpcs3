@@ -350,7 +350,7 @@ static void ppu_initialize_modules()
 	}
 
 	// Set memory protection to read-only
-	utils::memory_protect(vm::base(ppu_function_manager::addr), ::size32(hle_funcs) * 8, utils::protection::ro);
+	vm::page_protect(ppu_function_manager::addr, ::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
 }
 
 // Link variable
@@ -1350,7 +1350,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0 /* W */)
 		{
 			// Set memory protection to read-only when necessary
-			verify(HERE), utils::memory_protect(vm::base(addr), size, utils::protection::ro); // Execute isn't really executed, so leave it as ReadOnly
+			verify(HERE), vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable);
 		}
 	}
 }
