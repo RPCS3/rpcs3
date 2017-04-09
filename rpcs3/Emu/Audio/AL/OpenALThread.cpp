@@ -5,6 +5,7 @@
 #include "OpenALThread.h"
 
 extern cfg::bool_entry g_cfg_audio_convert_to_u16;
+extern cfg::bool_entry g_cfg_audio_downmix_to_2ch;
 
 #ifdef _MSC_VER
 #pragma comment(lib, "OpenAL32.lib")
@@ -44,6 +45,15 @@ OpenALThread::OpenALThread()
 
 	alcMakeContextCurrent(m_context);
 	checkForAlcError("alcMakeContextCurrent");
+
+	if (g_cfg_audio_downmix_to_2ch)
+	{
+		m_format = g_cfg_audio_convert_to_u16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32;
+	}
+	else
+	{
+		m_format = g_cfg_audio_convert_to_u16 ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32;
+	}
 }
 
 OpenALThread::~OpenALThread()
@@ -102,7 +112,7 @@ void OpenALThread::Open(const void* src, int size)
 
 	for (uint i = 0; i<g_al_buffers_count; ++i)
 	{
-		alBufferData(m_buffers[i], g_cfg_audio_convert_to_u16 ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32, src, m_buffer_size, 48000);
+		alBufferData(m_buffers[i], m_format, src, m_buffer_size, 48000);
 		checkForAlError("alBufferData");
 	}
 
@@ -137,7 +147,7 @@ void OpenALThread::AddData(const void* src, int size)
 
 		int bsize = size < m_buffer_size ? size : m_buffer_size;
 
-		alBufferData(buffer, g_cfg_audio_convert_to_u16 ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32, bsrc, bsize, 48000);
+		alBufferData(buffer, m_format, bsrc, bsize, 48000);
 		checkForAlError("alBufferData");
 
 		alSourceQueueBuffers(m_source, 1, &buffer);
