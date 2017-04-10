@@ -238,8 +238,8 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	BIND_FUNC(sys_spu_thread_group_yield),                  //176 (0x0B0)
 	BIND_FUNC(sys_spu_thread_group_terminate),              //177 (0x0B1)
 	BIND_FUNC(sys_spu_thread_group_join),                   //178 (0x0B2)
-	null_func,//BIND_FUNC(sys_spu_thread_group_set_priority)//179 (0x0B3)
-	null_func,//BIND_FUNC(sys_spu_thread_group_get_priority)//180 (0x0B4)
+	BIND_FUNC(sys_spu_thread_group_set_priority),           //179 (0x0B3)
+	BIND_FUNC(sys_spu_thread_group_get_priority),           //180 (0x0B4)
 	BIND_FUNC(sys_spu_thread_write_ls),                     //181 (0x0B5)
 	BIND_FUNC(sys_spu_thread_read_ls),                      //182 (0x0B6)
 	null_func,                                              //183 (0x0B7)  UNS
