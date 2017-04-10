@@ -90,7 +90,7 @@ addons:
 
 after_success:
   - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ] && [ -z "$TRAVIS_TAG" ]; then git config --global user.email "travis@travis-ci.org"; git config --global user.name "Travis"; git tag -a v${TRAVIS_BUILD_NUMBER} -m "Travis build $TRAVIS_BUILD_NUMBER pushed a tag."; git push origin --tags; git fetch origin; fi
+  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ] && [ -z "$TRAVIS_TAG" ]; then git config --global user.email "builds@travis-ci.com"; git config --global user.name "Travis CI"; git tag -a v${TRAVIS_BUILD_NUMBER} -m "Travis build $TRAVIS_BUILD_NUMBER pushed a tag."; git push origin --tags; git fetch origin; fi
 
 before_deploy: "zip rpcs3-${TRAVIS_COMMIT}-${TRAVIS_BUILD_NUMBER}-linux-${CXX}-x64.zip ../bin/rpcs3"
   
