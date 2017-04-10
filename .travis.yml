@@ -94,7 +94,7 @@ addons:
 
 after_success:
   - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then zip rpcs3.zip ../bin/rpcs3; curl ${UPLOAD_URL}${TRAVIS_COMMIT}-${TRAVIS_BUILD_NUMBER}-${CC} --upload-file rpcs3.zip; fi
+  - if [ "$TRAVIS_BRANCH" = "master" ]; then zip -r9 rpcs3.zip bin; curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}-${CC} --upload-file rpcs3.zip; fi
 
 deploy:
   provider: releases
