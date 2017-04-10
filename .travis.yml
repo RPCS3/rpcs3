@@ -19,7 +19,7 @@ cache:
 
 env:
   global:
-    - secure: OcSxCkJMYqhVPzg6gnUyoDss2K0ntXGmKrhjBhkR57H14U6n6j5eH4c8Uh9gFn0YjE4ctixR/InZqai8COVv1x/SH5FrWTw+QTXezykAcUQnLd23fx56fGX0smOC8F6n/IgTdk32Dlj9egiP2VFiM/Pm2+jSyGUwxhvXW8HonW8=
+    - secure: BXyNziNYFLqLtY6Q58BDEUpRJr81HUtHpxf2Sr646bDcbG0Rf2rb2utqHZJ1Om926WdH7RqHuoVti4dr2X1lh4nHMkLD7MrIrfIkNN5T9aZdk19uw9IyMtz/cXon7/wqVo24tVqtBI0UghFxKii/GTDJEvRKgfpPp1e1vKSNGa4=
     # Which Travis environment to run Coverity on
     - coverity_scan_run_condition='"$TRAVIS_OS_NAME" = linux -a "$CC" = gcc'
     # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
@@ -94,18 +94,15 @@ addons:
 
 after_success:
   - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ] && [ -z "$TRAVIS_TAG" ]; then git config --global user.email "builds@travis-ci.com"; git config --global user.name "Nekotekina"; git tag -a v${TRAVIS_BUILD_NUMBER} -m "Travis build $TRAVIS_BUILD_NUMBER pushed a tag."; git push origin --tags; git fetch origin; fi
+  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then zip rpcs3.zip ../bin/rpcs3; curl ${UPLOAD_URL}${TRAVIS_COMMIT}-${TRAVIS_BUILD_NUMBER}-${CC} --upload-file rpcs3.zip; fi
 
-before_deploy: "zip rpcs3-${TRAVIS_COMMIT}-${TRAVIS_BUILD_NUMBER}-linux-${CXX}-x64.zip ../bin/rpcs3"
-  
 deploy:
   provider: releases
-  user: "Nekotekina"
-  file: "rpcs3-${TRAVIS_COMMIT}-${TRAVIS_BUILD_NUMBER}-linux-${CXX}-x64.zip"
+  file: rpcs3.zip
   skip_cleanup: true
   on:
     branch: master
     repo: RPCS3/rpcs3
     tags: true
-  password:
-    secure: RTT3Rdwsmllxy2GjftJw2mvJ5HG5qJlrTp2/18rk5M7U9ZznTLE5t/6OHW2cMVdAU85a7QebXXkANbsUhI3zsMFcp+JOavX+bjt/XsF/bpnxB8R7xrvYtKhfB6N0S0818FIDjTNNFGitujZcloCwtBT9YrozrQBJqCwRDcIdpYU=
+  api-key:
+    secure: BXyNziNYFLqLtY6Q58BDEUpRJr81HUtHpxf2Sr646bDcbG0Rf2rb2utqHZJ1Om926WdH7RqHuoVti4dr2X1lh4nHMkLD7MrIrfIkNN5T9aZdk19uw9IyMtz/cXon7/wqVo24tVqtBI0UghFxKii/GTDJEvRKgfpPp1e1vKSNGa4=
