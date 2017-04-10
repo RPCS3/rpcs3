@@ -635,9 +635,7 @@ s32 sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void
 		return hidden ? SCE_NP_TROPHY_ERROR_HIDDEN : SCE_NP_TROPHY_ERROR_LOCKED;
 	}
 
-	int padding = 3 - (trophyId == 0 ? 1 : log10(trophyId));
-	std::string trophyFileName = "/TROP" + std::string(padding, '0') + std::to_string(trophyId) + ".PNG";
-	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + trophyFileName);
+	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + fmt::format("/TROP%03d.PNG", trophyId));
 
 	if (!fs::exists(path))
 	{
