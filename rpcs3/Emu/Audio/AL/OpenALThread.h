@@ -8,6 +8,7 @@ class OpenALThread : public AudioThread
 private:
 	static const uint g_al_buffers_count = 24;
 
+	ALint m_format;
 	ALuint m_source;
 	ALuint m_buffers[g_al_buffers_count];
 	ALsizei m_buffer_size;

@@ -9,25 +9,25 @@ namespace gl
 {
 	bool texture_cache::flush_section(u32 address)
 	{
-		if (address < rtt_cache_range.first ||
-			address >= rtt_cache_range.second)
+		if (address < no_access_range.first ||
+			address >= no_access_range.second)
 			return false;
 
 		bool post_task = false;
-		cached_rtt_section* section_to_post = nullptr;
+		cached_texture_section* section_to_post = nullptr;
 
 		{
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
-			for (cached_rtt_section &rtt : m_rtt_cache)
+			for (cached_texture_section &tex : no_access_memory_sections)
 			{
-				if (rtt.is_dirty()) continue;
+				if (tex.is_dirty()) continue;
 
-				if (rtt.is_locked() && rtt.overlaps(address))
+				if (tex.is_locked() && tex.overlaps(address))
 				{
-					if (rtt.is_flushed())
+					if (tex.is_flushed())
 					{
-						LOG_WARNING(RSX, "Section matches range, but marked as already flushed!, 0x%X+0x%X", rtt.get_section_base(), rtt.get_section_size());
+						LOG_WARNING(RSX, "Section matches range, but marked as already flushed!, 0x%X+0x%X", tex.get_section_base(), tex.get_section_size());
 						continue;
 					}
 
@@ -36,11 +36,11 @@ namespace gl
 					if (std::this_thread::get_id() != m_renderer_thread)
 					{
 						post_task = true;
-						section_to_post = &rtt;
+						section_to_post = &tex;
 						break;
 					}
 
-					rtt.flush();
+					tex.flush();
 					return true;
 				}
 			}

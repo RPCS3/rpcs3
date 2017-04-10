@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
@@ -899,7 +899,25 @@ namespace sys_net
 		return CELL_OK;
 	}
 
+	s32 sys_net_get_if_list()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_net_get_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
 	s32 sys_net_get_netemu_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_net_get_routing_table_af()
 	{
 		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
@@ -1022,6 +1040,221 @@ namespace sys_net
 		libnet.todo("sys_net_free_thread_context(tid=%d, flags=%d)", tid, flags);
 		return CELL_OK;
 	}
+	
+	s32 _sys_net_lib_abort()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_bnet_control()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 __sys_net_lib_calloc()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_free()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_get_system_time()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_if_nametoindex()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_ioctl()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 __sys_net_lib_malloc()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_rand()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 __sys_net_lib_realloc()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_reset_libnetctl_queue()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_set_libnetctl_queue()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_thread_create()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 _sys_net_lib_thread_exit()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_thread_join()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sync_clear()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 _sys_net_lib_sync_create()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sync_destroy()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 _sys_net_lib_sync_signal()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sync_wait()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sysctl()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_usleep()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 sys_netset_abort()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_close()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_get_if_id()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_get_status()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_if_down()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_get_key_value()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	s32 sys_netset_if_up()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_open()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_get_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_add_name_server_with_char()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_flush_route()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_set_default_gateway()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_set_ip_and_mask()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_set_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 }
 
 // Define macro for namespace
@@ -1065,7 +1298,10 @@ DECLARE(ppu_module_manager::libnet)("sys_net", []()
 	REG_FUNC_(sys_net_set_udpp2p_test_param);
 	REG_FUNC_(sys_net_get_lib_name_server);
 	REG_FUNC_(sys_net_if_ctl);
+	REG_FUNC_(sys_net_get_if_list);
+	REG_FUNC_(sys_net_get_name_server);
 	REG_FUNC_(sys_net_get_netemu_test_param);
+	REG_FUNC_(sys_net_get_routing_table_af);
 	REG_FUNC_(sys_net_get_sockinfo);
 	REG_FUNC_(sys_net_close_dump);
 	REG_FUNC_(sys_net_set_test_param);
@@ -1085,4 +1321,47 @@ DECLARE(ppu_module_manager::libnet)("sys_net", []()
 	REG_FUNC_(_sys_net_h_errno_loc);
 	REG_FUNC_(sys_net_set_netemu_test_param);
 	REG_FUNC_(sys_net_free_thread_context);
+	
+	REG_FUNC_(_sys_net_lib_abort);
+	REG_FUNC_(_sys_net_lib_bnet_control);
+	REG_FUNC_(__sys_net_lib_calloc);
+	REG_FUNC_(_sys_net_lib_free);
+	REG_FUNC_(_sys_net_lib_get_system_time);
+	REG_FUNC_(_sys_net_lib_if_nametoindex);
+	REG_FUNC_(_sys_net_lib_ioctl);
+	REG_FUNC_(__sys_net_lib_malloc);
+	REG_FUNC_(_sys_net_lib_rand);
+	REG_FUNC_(__sys_net_lib_realloc);
+	REG_FUNC_(_sys_net_lib_reset_libnetctl_queue);
+	REG_FUNC_(_sys_net_lib_set_libnetctl_queue);
+	
+	REG_FUNC_(_sys_net_lib_thread_create);
+	REG_FUNC_(_sys_net_lib_thread_exit);
+	REG_FUNC_(_sys_net_lib_thread_join);
+
+	REG_FUNC_(_sys_net_lib_sync_clear);
+	REG_FUNC_(_sys_net_lib_sync_create);
+	REG_FUNC_(_sys_net_lib_sync_destroy);
+	REG_FUNC_(_sys_net_lib_sync_signal);
+	REG_FUNC_(_sys_net_lib_sync_wait);
+
+	REG_FUNC_(_sys_net_lib_sysctl);
+	REG_FUNC_(_sys_net_lib_usleep);
+	
+	REG_FUNC_(sys_netset_abort);
+	REG_FUNC_(sys_netset_close);
+	REG_FUNC_(sys_netset_get_if_id);
+	REG_FUNC_(sys_netset_get_key_value);
+	REG_FUNC_(sys_netset_get_status);
+	REG_FUNC_(sys_netset_if_down);
+	REG_FUNC_(sys_netset_if_up);
+	REG_FUNC_(sys_netset_open);
+
+	REG_FUNC_(_sce_net_add_name_server_with_char);
+	REG_FUNC_(_sce_net_flush_route);
+
+	REG_FUNC_(_sce_net_get_name_server);
+	REG_FUNC_(_sce_net_set_default_gateway);
+	REG_FUNC_(_sce_net_set_ip_and_mask);
+	REG_FUNC_(_sce_net_set_name_server);
 });

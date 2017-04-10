@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/AutoPause.h"
 #include "Crypto/sha1.h"
@@ -34,6 +34,7 @@ LOG_CHANNEL(cellDmux);
 LOG_CHANNEL(cellFiber);
 LOG_CHANNEL(cellFont);
 LOG_CHANNEL(cellFontFT);
+LOG_CHANNEL(cell_FreeType2);
 LOG_CHANNEL(cellFs);
 LOG_CHANNEL(cellGame);
 LOG_CHANNEL(cellGameExec);
@@ -226,6 +227,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellFiber,
 		&ppu_module_manager::cellFont,
 		&ppu_module_manager::cellFontFT,
+		&ppu_module_manager::cell_FreeType2,
 		&ppu_module_manager::cellFs,
 		&ppu_module_manager::cellGame,
 		&ppu_module_manager::cellGameExec,
@@ -344,6 +346,7 @@ static void ppu_initialize_modules()
 
 		// Register the HLE function directly
 		ppu_register_function_at(addr + 0, 4, hle_funcs[index]);
+		ppu_register_function_at(addr + 4, 4, nullptr);
 	}
 
 	// Set memory protection to read-only
@@ -800,7 +803,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		ppu_load_imports(link, lib_info->imports_start, lib_info->imports_end);
 
-		prx->funcs = ppu_analyse(segments, sections, lib_info->toc);
+		prx->funcs = ppu_analyse(segments, sections, lib_info->toc, 0);
 	}
 	else
 	{
@@ -1267,7 +1270,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	{
 		// Analyse executable
-		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, vm::read32(elf.header.e_entry + 4));
+		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0, elf.header.e_entry);
 
 		ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
 

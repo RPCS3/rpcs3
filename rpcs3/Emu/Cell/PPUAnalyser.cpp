@@ -326,7 +326,7 @@ namespace ppu_patterns
 	};
 }
 
-std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc)
+std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc, u32 entry)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].first;
@@ -341,22 +341,31 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Function analysis workload
 	std::vector<std::reference_wrapper<ppu_function>> func_queue;
 
+	// Known references (within segs, addr and value alignment = 4)
+	std::set<u32> addr_heap{entry};
+
 	// Register new function
-	auto add_func = [&](u32 addr, u32 toc, u32 origin) -> ppu_function&
+	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function&
 	{
 		ppu_function& func = funcs[addr];
 
+		if (caller)
+		{
+			// Register caller
+			func.callers.emplace(caller);
+		}
+
 		if (func.addr)
 		{
-			// Update TOC (TODO: this doesn't work well, must update TOC recursively)
-			if (func.toc == 0 || toc == -1)
+			if (toc && func.toc && func.toc != -1 && func.toc != toc)
 			{
-				func.toc = toc;
-			}
-			else if (toc && func.toc != -1 && func.toc != toc)
-			{
-				//LOG_WARNING(PPU, "Function 0x%x: TOC mismatch (0x%x vs 0x%x)", addr, toc, func.toc);
 				func.toc = -1;
+			}
+			else if (toc && func.toc == 0)
+			{
+				// Must then update TOC recursively
+				func.toc = toc;
+				func_queue.emplace_back(func);
 			}
 
 			return func;
@@ -365,7 +374,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		func_queue.emplace_back(func);
 		func.addr = addr;
 		func.toc = toc;
-		LOG_TRACE(PPU, "Function 0x%x added (toc=0x%x, origin=0x%x)", addr, toc, origin);
+		LOG_TRACE(PPU, "Function 0x%x added (toc=0x%x)", addr, toc);
 		return func;
 	};
 
@@ -386,7 +395,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				{
 					// New function
 					LOG_TRACE(PPU, "OPD*: [0x%x] 0x%x (TOC=0x%x)", ptr, ptr[0], ptr[1]);
-					add_func(*ptr, toc, ptr.addr());
+					add_func(*ptr, addr_heap.count(ptr.addr()) ? toc : 0, 0);
 					ptr++;
 				}
 			}
@@ -406,6 +415,29 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 		return end;
 	};
+
+	// Find references indiscriminately
+	for (const auto& seg : segs)
+	{
+		for (vm::cptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
+		{
+			const u32 value = *ptr;
+
+			if (value % 4)
+			{
+				continue;
+			}
+
+			for (const auto& _seg : segs)
+			{
+				if (value >= _seg.first && value < _seg.first + _seg.second)
+				{
+					addr_heap.emplace(value);
+					break;
+				}
+			}
+		}
+	}
 
 	// Find OPD section
 	for (const auto& sec : secs)
@@ -462,15 +494,30 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			LOG_TRACE(PPU, "OPD: [0x%x] 0x%x (TOC=0x%x)", ptr, addr, toc);
 
 			TOCs.emplace(toc);
-			auto& func = add_func(addr, toc, ptr.addr());
+			auto& func = add_func(addr, addr_heap.count(ptr.addr()) ? toc : 0, 0);
 			func.attr += ppu_attr::known_addr;
 		}
+	}
+
+	// Register TOC from entry point
+	if (entry && !lib_toc)
+	{
+		lib_toc = vm::read32(entry) ? vm::read32(entry + 4) : vm::read32(entry + 20);
 	}
 
 	// Secondary attempt
 	if (TOCs.empty() && lib_toc)
 	{
 		add_toc(lib_toc);
+	}
+
+	// Clean TOCs
+	for (auto&& pair : funcs)
+	{
+		if (pair.second.toc == -1)
+		{
+			pair.second.toc = 0;
+		}
 	}
 
 	// Find .eh_frame section
@@ -575,7 +622,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					continue;
 				}
 
-				//auto& func = add_func(addr, 0, ptr.addr());
+				//auto& func = add_func(addr, 0, 0);
 				//func.attr += ppu_attr::known_addr;
 				//func.attr += ppu_attr::known_size;
 				//func.size = size;
@@ -587,6 +634,30 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	for (std::size_t i = 0; i < func_queue.size(); i++)
 	{
 		ppu_function& func = func_queue[i];
+
+		// Fixup TOCs
+		if (func.toc && func.toc != -1)
+		{
+			for (u32 addr : func.callers)
+			{
+				ppu_function& caller = funcs[addr];
+
+				if (!caller.toc)
+				{
+					add_func(addr, func.toc - caller.trampoline, 0);
+				}
+			}
+
+			for (u32 addr : func.calls)
+			{
+				ppu_function& callee = funcs[addr];
+
+				if (!callee.toc)
+				{
+					add_func(addr, func.toc + func.trampoline, 0);
+				}
+			}
+		}
 
 		if (func.blocks.empty())
 		{
@@ -612,7 +683,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				
 				if (target >= start && target < end)
 				{
-					auto& new_func = add_func(target, 0, func.addr);
+					auto& new_func = add_func(target, func.toc, func.addr);
 
 					if (new_func.blocks.empty())
 					{
@@ -624,7 +695,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
 					func.calls.emplace(target);
-					func.trampoline = target;
+					func.trampoline = 0;
 					continue;
 				}
 			}
@@ -640,7 +711,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 				if (target >= start && target < end)
 				{
-					auto& new_func = add_func(target, 0, func.addr);
+					auto& new_func = add_func(target, func.toc, func.addr);
 
 					if (new_func.blocks.empty())
 					{
@@ -652,7 +723,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
 					func.calls.emplace(target);
-					func.trampoline = target;
+					func.trampoline = 0;
 					continue;
 				}
 			}
@@ -664,14 +735,30 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				(ptr[3] & 0xfc000001) == B({}, {}))
 			{
 				// Trampoline with TOC
-				const u32 new_toc = func.toc && func.toc != -1 ? func.toc + (ptr[1] << 16) + s16(ptr[2]) : 0;
+				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
 				const u32 target = (ptr[3] & 0x2 ? 0 : (ptr + 3).addr()) + ppu_opcode_t{ptr[3]}.bt24;
 
 				if (target >= start && target < end)
 				{
-					add_toc(new_toc);
-
 					auto& new_func = add_func(target, 0, func.addr);
+
+					if (func.toc && func.toc != -1 && new_func.toc == 0)
+					{
+						const u32 toc = func.toc + toc_add;
+						add_toc(toc);
+						add_func(new_func.addr, toc, 0);
+					}
+					else if (new_func.toc && new_func.toc != -1 && func.toc == 0)
+					{
+						const u32 toc = new_func.toc - toc_add;
+						add_toc(toc);
+						add_func(func.addr, toc, 0);
+					}
+					else if (new_func.toc - func.toc != toc_add)
+					{
+						//func.toc = -1;
+						//new_func.toc = -1;
+					}
 
 					if (new_func.blocks.empty())
 					{
@@ -683,7 +770,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
 					func.calls.emplace(target);
-					func.trampoline = target;
+					func.trampoline = toc_add;
 					continue;
 				}
 			}
@@ -807,19 +894,8 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			// Get limit
 			const u32 func_end2 = _next == funcs.end() ? func_end : std::min<u32>(_next->first, func_end);
 
-			// Find more block entries
-			for (const auto& seg : segs)
-			{
-				for (vm::cptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
-				{
-					const u32 value = *ptr;
-
-					if (value % 4 == 0 && value >= func.addr && value < func_end2)
-					{
-						add_block(value);
-					}
-				}
-			}
+			// Set more block entries
+			std::for_each(addr_heap.lower_bound(func.addr), addr_heap.lower_bound(func_end2), add_block);
 		}
 
 		const bool was_empty = block_queue.empty();
@@ -851,7 +927,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					}
 
 					const bool is_call = op.lk && target != iaddr;
-					const auto pfunc = is_call ? &add_func(target, 0, func.addr) : nullptr;
+					const auto pfunc = is_call ? &add_func(target, 0, 0) : nullptr;
 
 					if (pfunc && pfunc->blocks.empty())
 					{
@@ -873,7 +949,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 					else if (is_call || target < func.addr || target >= func_end)
 					{
 						// Add function call (including obvious tail call)
-						add_func(target, 0, func.addr);
+						add_func(target, 0, 0);
 					}
 					else
 					{
@@ -1019,7 +1095,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 						if (target < func.addr || target >= func.addr + func.size)
 						{
 							func.calls.emplace(target);
-							add_func(target, 0, func.addr);
+							add_func(target, func.toc ? func.toc + func.trampoline : 0, func.addr);
 						}
 					}
 				}
@@ -1128,6 +1204,20 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			{
 				LOG_WARNING(PPU, "Function gap: [0x%x] 0x%x bytes at 0x%x", func.addr, next - start, start);
 				break;
+			}
+		}
+	}
+
+	// Fill TOCs for trivial case
+	if (TOCs.size() == 1)
+	{
+		lib_toc = *TOCs.begin();
+
+		for (auto&& pair : funcs)
+		{
+			if (pair.second.toc == 0)
+			{
+				pair.second.toc = lib_toc;
 			}
 		}
 	}

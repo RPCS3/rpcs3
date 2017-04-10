@@ -322,8 +322,10 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
 	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug Overlay");
 	wxCheckBox* chbox_gs_gl_legacy_buffers = new wxCheckBox(p_graphics, wxID_ANY, "Use Legacy OpenGL Buffers");
+	wxCheckBox* chbox_gs_gpu_texture_scaling = new wxCheckBox(p_graphics, wxID_ANY, "Use GPU texture scaling");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
+	wxCheckBox* chbox_audio_dnmx = new wxCheckBox(p_audio, wxID_ANY, "Downmix to Stereo");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
 	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
@@ -399,10 +401,12 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug output" }, chbox_gs_debug_output));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug overlay" }, chbox_gs_overlay));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Use Legacy OpenGL Buffers (Debug)" }, chbox_gs_gl_legacy_buffers));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Use GPU texture scaling" }, chbox_gs_gpu_texture_scaling));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Audio", "Renderer" }, cbox_audio_out));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Dump to file" }, chbox_audio_dump));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Convert to 16 bit" }, chbox_audio_conv));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Downmix to Stereo" }, chbox_audio_dnmx));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Pad" }, cbox_pad_handler));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Keyboard" }, cbox_keyboard_handler));
@@ -495,6 +499,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_subpanel_graphics2->Add(chbox_gs_overlay, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics2->Add(chbox_gs_gpu_texture_scaling, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_subpanel_graphics1);
 	s_subpanel_graphics->Add(s_subpanel_graphics2);
 
@@ -511,6 +516,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_subpanel_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_audio->Add(chbox_audio_dnmx, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Miscellaneous
 	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());

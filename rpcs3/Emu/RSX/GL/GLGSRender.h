@@ -9,6 +9,7 @@
 #include "define_new_memleakdetect.h"
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
+#include "../rsx_cache.h"
 
 #pragma comment(lib, "opengl32.lib")
 
@@ -18,7 +19,7 @@ struct work_item
 	std::mutex guard_mutex;
 	
 	u32  address_to_flush = 0;
-	gl::texture_cache::cached_rtt_section *section_to_flush = nullptr;
+	gl::texture_cache::cached_texture_section *section_to_flush = nullptr;
 
 	volatile bool processed = false;
 	volatile bool result = false;
@@ -57,6 +58,7 @@ private:
 
 	rsx::gl::texture m_gl_textures[rsx::limits::fragment_textures_count];
 	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
+	gl::sampler_state m_gl_sampler_states[rsx::limits::fragment_textures_count];
 
 	gl::glsl::program *m_program;
 
@@ -129,7 +131,9 @@ public:
 	void set_viewport();
 
 	void synchronize_buffers();
-	work_item& post_flush_request(u32 address, gl::texture_cache::cached_rtt_section *section);
+	work_item& post_flush_request(u32 address, gl::texture_cache::cached_texture_section *section);
+
+	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 
 protected:
 	void begin() override;

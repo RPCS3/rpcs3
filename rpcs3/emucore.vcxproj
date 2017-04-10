@@ -156,6 +156,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFont.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cell_FreeType2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGame.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGameExec.cpp" />
