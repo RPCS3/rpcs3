@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -926,9 +926,25 @@ s32 cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 maxSize
 
 s32 cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.warning("cellSavaDataGetListItem(dirName=%s, dir=*0x%x, sysFileParam=*0x%x, bind=*0x%x, sizeKB=*0x%x)", dirName, dir, sysFileParam, bind, sizeKB);
 
-	return CELL_OK;
+	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/00000001/savedata/%s/", dirName.get_ptr()));
+	std::string sfo = save_path + "param.sfo";
+
+	if (!fs::is_dir(save_path) && !fs::is_file(sfo)) 
+	{
+		cellSaveData.error("cellSaveDataGetListItem(): Savedata at %s does not exist", dirName);
+		return CELL_SAVEDATA_ERROR_NODATA;
+	}
+
+	auto psf = psf::load_object(fs::file(sfo));
+	
+	strcpy_trunc(sysFileParam->listParam, psf.at("SAVEDATA_LIST_PARAM").as_string());
+	strcpy_trunc(sysFileParam->title, psf.at("TITLE").as_string());
+	strcpy_trunc(sysFileParam->subTitle, psf.at("SUB_TITLE").as_string());
+	strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
+
+	return CELL_SAVEDATA_RET_OK;
 }
 
 s32 cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
