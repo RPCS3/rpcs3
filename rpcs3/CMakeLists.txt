@@ -72,6 +72,7 @@ if(NOT WIN32)
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 endif()
 
+set(wxWidgets_USE_STATIC ON)
 find_package(wxWidgets COMPONENTS core base net aui gl xml REQUIRED)
 if(NOT MSVC)
 	if(APPLE)
