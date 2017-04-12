@@ -18,6 +18,13 @@ enum class ppu_cmd : u32
 	sleep,
 };
 
+enum class ppu_decoder_type
+{
+	precise,
+	fast,
+	llvm,
+};
+
 class ppu_thread : public cpu_thread
 {
 public:

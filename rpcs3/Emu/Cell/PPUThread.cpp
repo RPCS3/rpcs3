@@ -82,13 +82,6 @@ void fmt_class_string<join_status>::format(std::string& out, u64 arg)
 	});
 }
 
-enum class ppu_decoder_type
-{
-	precise,
-	fast,
-	llvm,
-};
-
 cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder", 1,
 {
 	{ "Interpreter (precise)", ppu_decoder_type::precise },
@@ -866,17 +859,6 @@ extern void ppu_initialize()
 	if (!_funcs)
 	{
 		return;
-	}
-
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
-	{
-		idm::select<lv2_obj, lv2_prx>([](u32, lv2_prx& prx)
-		{
-			if (prx.name == "libfiber.sprx")
-			{
-				fmt::raw_error("libfiber.sprx is not compatible with PPU LLVM Recompiler.");
-			}
-		});
 	}
 
 	std::size_t fpos = 0;

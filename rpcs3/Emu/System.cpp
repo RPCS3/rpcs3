@@ -363,7 +363,15 @@ void Emulator::Load()
 		}
 
 		debug::autopause::reload();
-		if (g_cfg_autostart) Run();
+
+		if (g_cfg_autostart && IsReady())
+		{
+			Run();
+		}
+		else if (IsPaused())
+		{
+			m_status = Ready;
+		}
 	}
 	catch (const std::exception& e)
 	{
@@ -412,7 +420,7 @@ bool Emulator::Pause()
 	// Try to pause
 	if (!m_status.compare_and_swap_test(Running, Paused))
 	{
-		return false;
+		return m_status.compare_and_swap_test(Ready, Paused);
 	}
 
 	rpcs3::on_pause()();
