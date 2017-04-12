@@ -647,11 +647,30 @@ void GLGSRender::on_exit()
 		sampler.remove();
 	}
 
-	m_attrib_ring_buffer->remove();
-	m_transform_constants_buffer->remove();
-	m_fragment_constants_buffer->remove();
-	m_scale_offset_buffer->remove();
-	m_index_ring_buffer->remove();
+	if (m_attrib_ring_buffer)
+	{
+		m_attrib_ring_buffer->remove();
+	}
+
+	if (m_transform_constants_buffer)
+	{
+		m_transform_constants_buffer->remove();
+	}
+
+	if (m_fragment_constants_buffer)
+	{
+		m_fragment_constants_buffer->remove();
+	}
+
+	if (m_scale_offset_buffer)
+	{
+		m_scale_offset_buffer->remove();
+	}
+
+	if (m_index_ring_buffer)
+	{
+		m_index_ring_buffer->remove();
+	}
 
 	m_text_printer.close();
 	m_gl_texture_cache.close();
