@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/AutoPause.h"
+#include "Utilities/VirtualMemory.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"

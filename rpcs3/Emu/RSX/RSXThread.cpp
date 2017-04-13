@@ -135,9 +135,9 @@ namespace rsx
 			case CELL_GCM_CONTEXT_DMA_DEVICE_R:
 				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_R (offset=0x%x, location=0x%x)" HERE, offset, location);
 
-			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
+			default:
+				fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
 		}
-
 	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
@@ -200,7 +200,7 @@ namespace rsx
 		{
 		case CELL_GCM_COMPMODE_C32_2X1:
 		case CELL_GCM_COMPMODE_DISABLED:
-			for (int y = 0; y < height; ++y)
+			for (u32 y = 0; y < height; ++y)
 			{
 				memcpy(ptr + (offset_y + y) * tile->pitch + offset_x, (u8*)src + pitch * y, pitch);
 			}
@@ -253,7 +253,7 @@ namespace rsx
 		{
 		case CELL_GCM_COMPMODE_C32_2X1:
 		case CELL_GCM_COMPMODE_DISABLED:
-			for (int y = 0; y < height; ++y)
+			for (u32 y = 0; y < height; ++y)
 			{
 				memcpy((u8*)dst + pitch * y, ptr + (offset_y + y) * tile->pitch + offset_x, pitch);
 			}

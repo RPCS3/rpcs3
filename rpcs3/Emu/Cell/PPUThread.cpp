@@ -179,10 +179,11 @@ extern void ppu_register_range(u32 addr, u32 size)
 	}
 
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), size);
+	utils::memory_commit(&ppu_ref(addr), size, utils::protection::rw);
 
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
 
+	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 	while (size)
 	{
 		ppu_ref(addr) = fallback;
@@ -707,7 +708,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 
 		const u32 old_pos = vm::cast(context.gpr[1], HERE);
 		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
-		context.gpr[1] &= ~(align_v - 1); // fix stack alignment
+		context.gpr[1] &= ~((u64)align_v - 1); // fix stack alignment
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
 		{
