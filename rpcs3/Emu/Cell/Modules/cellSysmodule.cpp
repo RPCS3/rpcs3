@@ -93,6 +93,11 @@ static const char* get_module_name(u16 id)
 	case 0x0048: return "cellCelp8Enc";
 	case 0x0049: return "cellSysutilMisc";
 	case 0x004a: return "cellMusicUtility";
+	// TODO: Check if those libad are correctly matched.
+	// They belong to those IDs but actual order is unknown.
+	case 0x004b: return "libad_core";
+	case 0x004c: return "libad_async";
+	case 0x004d: return "libad_billboard_util";
 	case 0x004e: return "cellScreenShotUtility";
 	case 0x004f: return "cellMusicDecodeUtility";
 	case 0x0050: return "cellSpursJq";
@@ -211,6 +216,11 @@ static const char* get_module_id(u16 id)
 	case 0x0048: return "CELL_SYSMODULE_CELP8ENC";
 	case 0x0049: return "CELL_SYSMODULE_SYSUTIL_LICENSEAREA";
 	case 0x004a: return "CELL_SYSMODULE_SYSUTIL_MUSIC2";
+	// TODO: Check if those libad are correctly matched.
+	// They belong to those IDs but actual order is unknown.
+	case 0x004b: return "CELL_SYSMODULE_AD_CORE";
+	case 0x004c: return "CELL_SYSMODULE_AD_ASYNC";
+	case 0x004d: return "CELL_SYSMODULE_AD_BILLBOARD_UTIL";
 	case 0x004e: return "CELL_SYSMODULE_SYSUTIL_SCREENSHOT";
 	case 0x004f: return "CELL_SYSMODULE_SYSUTIL_MUSIC_DECODE";
 	case 0x0050: return "CELL_SYSMODULE_SPURS_JQ";
