@@ -4,6 +4,7 @@
 
 namespace gl
 {
+	capabilities g_driver_caps;
 	const fbo screen{};
 
 	GLenum draw_mode(rsx::primitive_type in)
@@ -47,6 +48,14 @@ namespace gl
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(static_cast<GLDEBUGPROC>(dbgFunc), nullptr);
 #endif
+	}
+
+	capabilities &get_driver_caps()
+	{
+		if (!g_driver_caps.initialized)
+			g_driver_caps.initialize();
+
+		return g_driver_caps;
 	}
 
 	void fbo::create()

@@ -205,7 +205,7 @@ namespace gl
 			void reset(const u32 base, const u32 size, const bool flushable)
 			{
 				rsx::buffered_section::reset(base, size);
-				
+	
 				if (flushable)
 					init_buffer();
 				
@@ -278,7 +278,12 @@ namespace gl
 
 				glPixelStorei(GL_PACK_SWAP_BYTES, pack_unpack_swap_bytes);
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-				glGetTextureImageEXT(vram_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
+
+				if (get_driver_caps().EXT_dsa_supported)
+					glGetTextureImageEXT(vram_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
+				else
+					glGetTextureImage(vram_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
+
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 				m_fence.reset();
@@ -706,7 +711,7 @@ namespace gl
 				LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
 				return 0;
 			}
-			
+
 			return dst_id;
 		}
 
