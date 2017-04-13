@@ -2682,27 +2682,71 @@ void spu_recompiler::MPYA(spu_opcode_t op)
 
 void spu_recompiler::FNMS(spu_opcode_t op)
 {
-	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
 	const XmmLink& vc = XmmGet(op.rc, XmmType::Float);
-	c->mulps(va, SPU_OFF_128(gpr[op.rb]));
-	c->subps(vc, va);
+
+	const auto mask = XmmConst(_mm_set1_epi32(0x7f800000));
+	const XmmLink& tmp_a = XmmAlloc();
+	const XmmLink& tmp_b = XmmAlloc();
+
+	c->movdqa(tmp_a, mask);                     //tmp_a = mask
+	c->andps(tmp_a, SPU_OFF_128(gpr[op.ra]));   //tmp_a = a & mask
+	c->cmpps(tmp_a, mask, 4);                   //tmp_a = tmp_a != mask
+	c->andps(tmp_a, SPU_OFF_128(gpr[op.ra]));   //tmp_a = mask_a & va
+
+	c->movdqa(tmp_b, mask);                      //tmp_b = mask
+	c->andps(tmp_b, SPU_OFF_128(gpr[op.rb]));    //tmp_b = b & mask
+	c->cmpps(tmp_b, mask, 4);                    //tmp_b = tmp_b != mask
+	c->andps(tmp_b, SPU_OFF_128(gpr[op.rb]));    //tmp_b = mask_b & vb
+
+	c->mulps(tmp_a, tmp_b);
+	c->subps(vc, tmp_a);
 	c->movaps(SPU_OFF_128(gpr[op.rt4]), vc);
 }
 
 void spu_recompiler::FMA(spu_opcode_t op)
 {
-	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
-	c->mulps(va, SPU_OFF_128(gpr[op.rb]));
-	c->addps(va, SPU_OFF_128(gpr[op.rc]));
-	c->movaps(SPU_OFF_128(gpr[op.rt4]), va);
+	const XmmLink& vc = XmmGet(op.rc, XmmType::Float);
+
+	const auto mask = XmmConst(_mm_set1_epi32(0x7f800000));
+	const XmmLink& tmp_a = XmmAlloc();
+	const XmmLink& tmp_b = XmmAlloc();
+
+	c->movdqa(tmp_a, mask);                     //tmp_a = mask
+	c->andps(tmp_a, SPU_OFF_128(gpr[op.ra]));   //tmp_a = a & mask
+	c->cmpps(tmp_a, mask, 4);                   //tmp_a = tmp_a != mask
+	c->andps(tmp_a, SPU_OFF_128(gpr[op.ra]));   //tmp_a = mask_a & va
+
+	c->movdqa(tmp_b, mask);                      //tmp_b = mask
+	c->andps(tmp_b, SPU_OFF_128(gpr[op.rb]));    //tmp_b = b & mask
+	c->cmpps(tmp_b, mask, 4);                    //tmp_b = tmp_b != mask
+	c->andps(tmp_b, SPU_OFF_128(gpr[op.rb]));    //tmp_b = mask_b & vb
+
+	c->mulps(tmp_a, tmp_b);
+	c->addps(tmp_a, SPU_OFF_128(gpr[op.rc]));
+	c->movaps(SPU_OFF_128(gpr[op.rt4]), tmp_a);
 }
 
 void spu_recompiler::FMS(spu_opcode_t op)
 {
-	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
-	c->mulps(va, SPU_OFF_128(gpr[op.rb]));
-	c->subps(va, SPU_OFF_128(gpr[op.rc]));
-	c->movaps(SPU_OFF_128(gpr[op.rt4]), va);
+	const XmmLink& vc = XmmGet(op.rc, XmmType::Float);
+
+	const auto mask = XmmConst(_mm_set1_epi32(0x7f800000));
+	const XmmLink& tmp_a = XmmAlloc();
+	const XmmLink& tmp_b = XmmAlloc();
+
+	c->movdqa(tmp_a, mask);                     //tmp_a = mask
+	c->andps(tmp_a, SPU_OFF_128(gpr[op.ra]));   //tmp_a = a & mask
+	c->cmpps(tmp_a, mask, 4);                   //tmp_a = tmp_a != mask
+	c->andps(tmp_a, SPU_OFF_128(gpr[op.ra]));   //tmp_a = mask_a & va
+
+	c->movdqa(tmp_b, mask);                      //tmp_b = mask
+	c->andps(tmp_b, SPU_OFF_128(gpr[op.rb]));    //tmp_b = b & mask
+	c->cmpps(tmp_b, mask, 4);                    //tmp_b = tmp_b != mask
+	c->andps(tmp_b, SPU_OFF_128(gpr[op.rb]));    //tmp_b = mask_b & vb
+
+	c->mulps(tmp_a, tmp_b);
+	c->subps(tmp_a, SPU_OFF_128(gpr[op.rc]));
+	c->movaps(SPU_OFF_128(gpr[op.rt4]), tmp_a);
 }
 
 void spu_recompiler::UNK(spu_opcode_t op)
