@@ -576,7 +576,9 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 				if (ppu.m_name == "_cellsurMixerMain" || ppu.m_name == "_sys_MixerChStripMain")
 				{
 					if (std::memcmp(ppu.last_function, "sys_mutex_lock", 15) == 0 ||
-						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0)
+						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0 ||
+						std::memcmp(ppu.last_function, "_sys_mutex_lock", 16) == 0 ||
+						std::memcmp(ppu.last_function, "_sys_lwmutex_lock", 18) == 0)
 					{
 						level = logs::level::trace;
 					}
