@@ -241,8 +241,15 @@ s32 sceNpTrophyRegisterContext(ppu_thread& CPU, u32 context, u32 handle, vm::ptr
 	ctxt->tropusr.reset(tropusr);
 
 	// TODO: Callbacks
-	statusCb(CPU, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg);
-	statusCb(CPU, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg);
+	if (statusCb(CPU, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
+	{
+		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+	}
+
+	if (statusCb(CPU, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg) < 0)
+	{
+		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+	}
 
 	return CELL_OK;
 }
