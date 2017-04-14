@@ -387,7 +387,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	rbox_lib_loader = new wxRadioBox(p_core, wxID_ANY, "Lib Loader", wxDefaultPosition, wxSize(-1, -1), lib_loader_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(lib_loader_modes), rbox_lib_loader));
 	rbox_lib_loader->Bind(wxEVT_COMMAND_RADIOBOX_SELECTED, &SettingsDialog::OnLibLoaderToggled, this);
-	wxPostEvent(rbox_lib_loader, wxCommandEvent(wxEVT_RADIOBOX));
+	wxPostEvent(this, wxCommandEvent(wxEVT_COMMAND_RADIOBOX_SELECTED));
 
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
