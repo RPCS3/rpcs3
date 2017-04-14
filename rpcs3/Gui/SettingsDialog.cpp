@@ -19,8 +19,6 @@
 #include <unordered_set>
 #include <algorithm>
 
-#include <wx/app.h>
-
 // Node location
 using cfg_location = std::vector<const char*>;
 
