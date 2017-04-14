@@ -64,7 +64,7 @@ s32 cellPadClearBuf(u32 port_no)
 
 	//~399 on sensor y is a level non moving controller
 	pad.m_sensor_y = 399;
-	pad.m_sensor_x = pad.m_sensor_z = pad.m_sensor_g = 0;
+	pad.m_sensor_x = pad.m_sensor_z = pad.m_sensor_g = 512;
 	
 	return CELL_OK;
 }
@@ -346,7 +346,6 @@ s32 cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
-	//Can't have this as const, we need to reset Assign Changes Flag here
 	std::vector<Pad>& pads = handler->GetPads();
 
 	for (u32 i=0; i<CELL_MAX_PADS; ++i)

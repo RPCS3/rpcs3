@@ -1,0 +1,1 @@
+add_library(hidapi-hid hid.c)

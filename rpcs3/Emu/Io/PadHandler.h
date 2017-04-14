@@ -193,10 +193,10 @@ struct Pad
 		, m_press_R1(0)
 		, m_press_R2(0)
 
-		, m_sensor_x(0)
+		, m_sensor_x(512)
 		, m_sensor_y(399)
-		, m_sensor_z(0)
-		, m_sensor_g(0)
+		, m_sensor_z(512)
+		, m_sensor_g(512)
 	{
 	}
 };
@@ -227,9 +227,6 @@ public:
 			{
 				if (button.m_keyCode != code)
 					continue;
-
-				//This is for reporting when a controller connects/disconnects, shouldn't be here
-				//pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 				if (value >= 256){ value = 255; }
 
@@ -274,8 +271,8 @@ public:
 		}
 	}
 
-	PadInfo& GetInfo() { return m_info; }
-	std::vector<Pad>& GetPads() { return m_pads; }
+	virtual PadInfo& GetInfo() { return m_info; }
+	virtual std::vector<Pad>& GetPads() { return m_pads; }
 	std::vector<Button>& GetButtons(const u32 pad) { return m_pads[pad].m_buttons; }
 	std::vector<AnalogStick>& GetSticks(const u32 pad) { return m_pads[pad].m_sticks; }
 };

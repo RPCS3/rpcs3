@@ -162,8 +162,8 @@ DWORD MMJoystickHandler::ThreadProcedure()
 			}
 		}
 
+        m_info.now_connect = online;
 		Sleep((online > 0) ? THREAD_SLEEP : THREAD_SLEEP_INACTIVE);
-		m_info.now_connect = online;
 	}
 
 	return 0;

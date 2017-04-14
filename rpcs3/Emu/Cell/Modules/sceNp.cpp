@@ -65,8 +65,7 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	sceNp.warning("npDrmIsAvailable(): Found DRM license file at %s", enc_drm_path);
 
 	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
-	const std::string& drm_file_dir = enc_drm_path.substr(15);
-	const std::string& title_id = drm_file_dir.substr(0, drm_file_dir.find_first_of('/'));
+	const std::string& title_id = Emu.GetTitleID();
 
 	std::string rap_lpath = vfs::get("/dev_hdd0/home/00000001/exdata/"); // TODO: Allow multiple profiles. Use default for now.
 

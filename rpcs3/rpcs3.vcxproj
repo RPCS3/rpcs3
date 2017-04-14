@@ -118,6 +118,7 @@
   <ItemGroup>
     <ClCompile Include="BasicKeyboardHandler.cpp" />
     <ClCompile Include="BasicMouseHandler.cpp" />
+    <ClCompile Include="DS4PadHandler.cpp" />
     <ClCompile Include="Gui\AutoPauseManager.cpp" />
     <ClCompile Include="Gui\CgDisasm.cpp" />
     <ClCompile Include="Gui\ConLogFrame.cpp" />
@@ -152,6 +153,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
+    <ClInclude Include="DS4PadHandler.h" />
     <ClInclude Include="Gui\AboutDialog.h" />
     <ClInclude Include="Gui\AutoPauseManager.h" />
     <ClInclude Include="Gui\CgDisasm.h" />
@@ -186,6 +188,9 @@
     <ClInclude Include="XInputPadHandler.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\3rdparty\hidapi\windows\hidapi.vcxproj">
+      <Project>{a107c21c-418a-4697-bb10-20c3aa60e2e4}</Project>
+    </ProjectReference>
     <ProjectReference Include="D3D12GSRender.vcxproj">
       <Project>{fac9b17b-f4b8-4b75-8aeb-c8c7cb92b078}</Project>
     </ProjectReference>
