@@ -387,7 +387,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	rbox_lib_loader = new wxRadioBox(p_core, wxID_ANY, "Lib Loader", wxDefaultPosition, wxSize(-1, -1), lib_loader_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(lib_loader_modes), rbox_lib_loader));
 	rbox_lib_loader->Bind(wxEVT_COMMAND_RADIOBOX_SELECTED, &SettingsDialog::OnLibLoaderToggled, this);
-	wxPostEvent(rbox_lib_loader, wxCommandEvent(wxEVT_RADIOBOX));
+	EnableModuleList(rbox_lib_loader->GetSelection());
 
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
@@ -584,8 +584,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 
 void SettingsDialog::OnModuleListItemToggled(wxCommandEvent &event)
 {
-	bool isChecked = chbox_list_core_lle->IsChecked(event.GetSelection());
-	lle_module_list[fmt::ToUTF8(event.GetString())] = isChecked;
+	lle_module_list[fmt::ToUTF8(event.GetString())] = chbox_list_core_lle->IsChecked(event.GetSelection());
 }
 
 void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
@@ -635,20 +634,13 @@ void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
 
 void SettingsDialog::OnLibLoaderToggled(wxCommandEvent& event)
 {
-	if (event.GetSelection() == 0 || event.GetSelection() == 3)
-	{
-		EnableModuleList(false);
-	}
-	else
-	{
-		EnableModuleList(true);
-	}
+	EnableModuleList(event.GetSelection());
 }
 
 // Enables or disables the modul list interaction
-void SettingsDialog::EnableModuleList(bool enabled)
+void SettingsDialog::EnableModuleList(int selection)
 {
-	if (enabled)
+	if (selection == 1 || selection == 2)
 	{
 		chbox_list_core_lle->Enable();
 		s_module_search_box->Enable();

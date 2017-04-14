@@ -13,6 +13,6 @@ private:
 	void OnModuleListItemToggled(wxCommandEvent& event);
 	void OnSearchBoxTextChanged(wxCommandEvent& event);
 	void OnLibLoaderToggled(wxCommandEvent& event);
-	void EnableModuleList(bool enabled);
+	void EnableModuleList(int selection);
 	std::map<std::string, bool> lle_module_list;
 };
