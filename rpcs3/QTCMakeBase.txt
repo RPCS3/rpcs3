@@ -1,3 +1,6 @@
+# This cmake would build the qt stuff when it's all in one folder. But, now the structure has changed and this doesn't work.
+# However, I intend to reference this when I properly merge this to make cmake work on linux. So, keep for now.
+
 cmake_minimum_required(VERSION 2.8.11)
 
 project(RPCS3Qt)
