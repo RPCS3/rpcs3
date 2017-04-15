@@ -25,8 +25,11 @@ __Windows__
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
 * [Cmake 3.1.0+](http://www.cmake.org/download/) (required; add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (required; add to PATH)
+* [QT 5.8+] (https://www.qt.io/download-open-source/) (required;)
+* [Visual Studio Qt Plugin]  (https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2015) (required)
 
 __Linux__
+* Qt 5.8+.  You can use the same link from earlier (https://www.qt.io/download-open-source/)
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
 * Debian & Ubuntu: `sudo apt-get install cmake build-essential libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev git`
 * Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
@@ -42,8 +45,10 @@ Mac OSX is not supported at this moment because it doesn't meet system requireme
 - __Windows__: </br>
 1) To initialize the repository don't forget to execute `git submodule update --init` to pull the submodules. </br>
 2) Open the *.SLN* file. </br>
-3) Build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*. </br>
-4) Press *BUILD* > *Build Solution* or *Rebuild Solution*. </br>
+3) Go to the Qt5 menu and edit Qt5 options.  Add the path to your Qt installation with compiler. For example, mine is "C:\Qt\5.8\msvc2015_64".
+4) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
+5) Build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*. </br>
+6) Press *BUILD* > *Build Solution* or *Rebuild Solution*. </br>
 
 - __Linux & Mac OSX__: </br>
 1) `git clone https://github.com/RPCS3/rpcs3.git` </br>
