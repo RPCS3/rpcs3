@@ -461,6 +461,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		if (statSet->setParam)
 		{
 			// Update PARAM.SFO
+			psf.clear();
 			psf.insert(
 			{
 				{ "ACCOUNT_ID", psf::array(16, "0000000000000000") }, // ???
@@ -938,11 +939,14 @@ s32 cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat>
 	}
 
 	auto psf = psf::load_object(fs::file(sfo));
-	
-	strcpy_trunc(sysFileParam->listParam, psf.at("SAVEDATA_LIST_PARAM").as_string());
-	strcpy_trunc(sysFileParam->title, psf.at("TITLE").as_string());
-	strcpy_trunc(sysFileParam->subTitle, psf.at("SUB_TITLE").as_string());
-	strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
+
+	if (sysFileParam) 
+	{
+		strcpy_trunc(sysFileParam->listParam, psf.at("SAVEDATA_LIST_PARAM").as_string());
+		strcpy_trunc(sysFileParam->title, psf.at("TITLE").as_string());
+		strcpy_trunc(sysFileParam->subTitle, psf.at("SUB_TITLE").as_string());
+		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
+	}
 
 	return CELL_SAVEDATA_RET_OK;
 }
