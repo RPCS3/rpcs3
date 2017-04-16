@@ -7,4 +7,11 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 
 }
 
+
+void DebuggerFrame::closeEvent(QCloseEvent *event)
+{
+	QDockWidget::closeEvent(event);
+	emit DebugFrameClosed();
+}
+
 #endif // QT_UI

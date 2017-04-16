@@ -17,4 +17,10 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 	setWidget(gameList);
 }
 
+void GameListFrame::closeEvent(QCloseEvent *event)
+{
+	QDockWidget::closeEvent(event);
+	emit GameListFrameClosed();
+}
+
 #endif // QT_UI

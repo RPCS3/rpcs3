@@ -11,6 +11,11 @@ class GameListFrame : public QDockWidget
 public:
 	explicit GameListFrame(QWidget *parent = 0);
 
+signals:
+	void GameListFrameClosed();
+protected:
+	/** Override inherited method from Qt to allow signalling when close happened.*/
+	void closeEvent(QCloseEvent* event);
 private:
 	QTableWidget *gameList;
 };

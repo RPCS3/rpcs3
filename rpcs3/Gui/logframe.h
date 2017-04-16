@@ -13,6 +13,11 @@ class LogFrame : public QDockWidget
 public:
 	explicit LogFrame(QWidget *parent = 0);
 
+signals:
+	void LogFrameClosed();
+protected:
+	/** Override inherited method from Qt to allow signalling when close happened.*/
+	void closeEvent(QCloseEvent* event);
 private slots:
 	void Update();
 

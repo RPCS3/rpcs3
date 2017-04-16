@@ -35,4 +35,9 @@ void LogFrame::Update()
 
 }
 
+void LogFrame::closeEvent(QCloseEvent *event)
+{
+	QDockWidget::closeEvent(event);
+	emit LogFrameClosed();
+}
 #endif // QT_UI

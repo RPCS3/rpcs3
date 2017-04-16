@@ -205,14 +205,40 @@ void MainWindow::DecryptSPRXLibraries()
 	qDebug() << "Finished decrypting all SPRX libraries.";
 }
 
-void MainWindow::ShowLog()
+void MainWindow::ToggleDebugFrame(bool state)
 {
-	qDebug() << "MainWindow::ShowLog()";
+	if (state)
+	{
+		debuggerFrame->show();
+	}
+	else
+	{
+		debuggerFrame->hide();
+	}
 }
 
-void MainWindow::ShowDebugger()
+void MainWindow::ToggleLogFrame(bool state)
 {
-	qDebug() << "MainWindow::ShowDebugger()";
+	if (state)
+	{
+		logFrame->show();
+	}
+	else
+	{
+		logFrame->hide();
+	}
+}
+
+void MainWindow::ToggleGameListFrame(bool state)
+{
+	if (state)
+	{
+		gameListFrame->show();
+	}
+	else
+	{
+		gameListFrame->hide();
+	}
 }
 
 void MainWindow::HideGameIcons()
@@ -260,6 +286,30 @@ void MainWindow::About()
 	about.setInformativeText(translatedTextAboutText);
 
 	about.exec();
+}
+
+void MainWindow::OnDebugFrameClosed()
+{
+	if (showDebuggerAct->isChecked())
+	{
+		showDebuggerAct->setChecked(false);
+	}
+}
+
+void MainWindow::OnLogFrameClosed()
+{
+	if (showLogAct->isChecked())
+	{
+		showLogAct->setChecked(false);
+	}
+}
+
+void MainWindow::OnGameListFrameClosed()
+{
+	if (showGameListAct->isChecked())
+	{
+		showGameListAct->setChecked(false);
+	}
 }
 
 void MainWindow::CreateActions()
@@ -346,11 +396,21 @@ void MainWindow::CreateActions()
 	toolsSecryptSprxLibsAct = new QAction(tr("&Decrypt SPRX libraries"), this);
 	connect(toolsSecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
 
-	showLogAct = new QAction(tr("&Show Log/TTY"), this);
-	connect(showLogAct, &QAction::triggered, this, &MainWindow::ShowLog);
+	showDebuggerAct = new QAction(tr("Show Debugger"), this);
+	showDebuggerAct->setCheckable(true);
+	showDebuggerAct->setChecked(false);
+	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);
 
-	showDebuggerAct = new QAction(tr("&Show Debugger"), this);
-	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ShowDebugger);
+	showLogAct = new QAction(tr("Show Log/TTY"), this);
+	showLogAct->setCheckable(true);
+	showLogAct->setChecked(true);
+	connect(showLogAct, &QAction::triggered, this, &MainWindow::ToggleLogFrame);
+
+	showGameListAct = new QAction(tr("Show GameList"), this);
+	showGameListAct->setCheckable(true);
+	showGameListAct->setChecked(true);
+
+	connect(showGameListAct, &QAction::triggered, this, &MainWindow::ToggleGameListFrame);
 
 	hideGameIconsAct = new QAction(tr("&Hide Game Icons"), this);
 	connect(hideGameIconsAct, &QAction::triggered, this, &MainWindow::HideGameIcons);
@@ -409,6 +469,7 @@ void MainWindow::CreateMenus()
 	viewMenu->addAction(showLogAct);
 	viewMenu->addAction(showDebuggerAct);
 	viewMenu->addSeparator();
+	viewMenu->addAction(showGameListAct);
 	viewMenu->addAction(hideGameIconsAct);
 	viewMenu->addAction(refreshGameListAct);
 
@@ -419,13 +480,19 @@ void MainWindow::CreateMenus()
 
 void MainWindow::CreateDockWindows()
 {
-	GameListFrame *gameList = new GameListFrame(this);
-	DebuggerFrame *debugger = new DebuggerFrame(this);
-	LogFrame *log = new LogFrame(this);
+	gameListFrame = new GameListFrame(this);
+	debuggerFrame = new DebuggerFrame(this);
+	logFrame = new LogFrame(this);
 
-	addDockWidget(Qt::LeftDockWidgetArea, gameList);
-	addDockWidget(Qt::LeftDockWidgetArea, log);
-	addDockWidget(Qt::RightDockWidgetArea, debugger);
+	addDockWidget(Qt::LeftDockWidgetArea, gameListFrame);
+	addDockWidget(Qt::LeftDockWidgetArea, logFrame);
+	addDockWidget(Qt::RightDockWidgetArea, debuggerFrame);
+
+	debuggerFrame->hide();
+
+	connect(logFrame, &LogFrame::LogFrameClosed, this, &MainWindow::OnLogFrameClosed);
+	connect(debuggerFrame, &DebuggerFrame::DebugFrameClosed, this, &MainWindow::OnDebugFrameClosed);
+	connect(gameListFrame, &GameListFrame::GameListFrameClosed, this, &MainWindow::OnGameListFrameClosed);
 }
 
 #endif // QT_UI

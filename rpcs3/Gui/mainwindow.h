@@ -3,6 +3,10 @@
 
 #include <QMainWindow>
 
+#include "logframe.h"
+#include "debuggerframe.h"
+#include "GameListFrame.h"
+
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
@@ -35,17 +39,23 @@ private slots:
 	void RSXDebugger();
 	void StringSearch();
 	void DecryptSPRXLibraries();
-	void ShowLog();
-	void ShowDebugger();
+	void ToggleDebugFrame(bool state);
+	void ToggleLogFrame(bool state);
+	void ToggleGameListFrame(bool state);
 	void HideGameIcons();
 	void RefreshGameList();
 	void About();
+
+	void OnDebugFrameClosed();
+	void OnLogFrameClosed();
+	void OnGameListFrameClosed();
 
 private:
 	void CreateActions();
 	void CreateMenus();
 	void CreateDockWindows();
 
+	// Actions
 	QAction *bootElfAct;
 	QAction *bootGameAct;
 	QAction *bootInstallPkgAct;
@@ -67,13 +77,19 @@ private:
 	QAction *toolsRsxDebuggerAct;
 	QAction *toolsStringSearchAct;
 	QAction *toolsSecryptSprxLibsAct;
-	QAction *showLogAct;
+	QAction *exitAct;
 	QAction *showDebuggerAct;
+	QAction *showLogAct;
+	QAction *showGameListAct;
 	QAction *hideGameIconsAct;
 	QAction *refreshGameListAct;
-	QAction *exitAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
+
+	// Dockable widget frames
+	LogFrame *logFrame;
+	DebuggerFrame *debuggerFrame;
+	GameListFrame *gameListFrame;
 };
 
 #endif // MAINWINDOW_H
