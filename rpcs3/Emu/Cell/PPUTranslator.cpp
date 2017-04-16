@@ -84,6 +84,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base)
 	thread_struct.insert(thread_struct.end(), 32, GetType<f64>()); // fpr[0..31]
 	thread_struct.insert(thread_struct.end(), 32, GetType<u32[4]>()); // vr[0..31]
 	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // cr[0..31]
+	thread_struct.insert(thread_struct.end(), 2, GetType<u64>()); // lr, ctr
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
@@ -139,6 +140,7 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 	m_g_gpr[1] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 1, ".spg");
 	m_g_gpr[2] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 2, ".rtoc");
 	m_g_gpr[13] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 13, ".tls");
+	m_g_lr = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 128, ".glr");
 	m_gpr[1] = m_ir->CreateAlloca(GetType<u64>(), nullptr, ".sp");
 
 	// Registers used for args or results (TODO)
@@ -210,12 +212,14 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 
 	/* Initialize local variables */
 	m_ir->CreateStore(m_ir->CreateLoad(m_g_gpr[1]), m_gpr[1]); // SP
+	m_ir->CreateStore(m_ir->CreateLoad(m_g_lr), m_reg_lr); // LR
 	m_ir->CreateStore(m_ir->getFalse(), m_xer_so); // XER.SO
 	m_ir->CreateStore(m_ir->getFalse(), m_vscr_sat); // VSCR.SAT
 	m_ir->CreateStore(m_ir->getTrue(), m_vscr_nj);
 
-	// TODO: only loaded r0 and r12 (r12 is extended argument for program initialization)
+	// TODO: only loaded r0, r11, r12 (extended arguments for program initialization)
 	if (!m_g_gpr[0]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 0)), m_gpr[0]);
+	if (!m_g_gpr[11]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 11)), m_gpr[11]);
 	if (!m_g_gpr[12]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 12)), m_gpr[12]);
 
 	m_jtr = BasicBlock::Create(m_context, "__jtr", m_function);
@@ -1772,6 +1776,7 @@ void PPUTranslator::BC(ppu_opcode_t op)
 
 	// External branch
 	UseCondition(CheckBranchProbability(op.bo), cond);
+	if (op.lk) m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 	CallFunction(target, !op.lk);
 }
 
@@ -1808,6 +1813,7 @@ void PPUTranslator::B(ppu_opcode_t op)
 	}
 
 	// External branch or recursive call
+	if (op.lk) m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 	CallFunction(target, !op.lk);
 }
 
@@ -1827,6 +1833,7 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 	if (op.lk)
 	{
 		// Sort of indirect call
+		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 		CallFunction(0, false, m_ir->CreateLoad(m_reg_lr));
 	}
 	else
@@ -1941,6 +1948,7 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 		}
 
 		// Indirect call
+		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 		CallFunction(0, false, m_ir->CreateLoad(m_reg_ctr));
 	}
 }

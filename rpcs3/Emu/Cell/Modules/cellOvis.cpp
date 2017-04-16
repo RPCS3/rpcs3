@@ -26,7 +26,7 @@ s32 cellOvisInitializeOverlayTable(vm::ptr<void> ea_ovly_table, vm::cptr<char> e
 	return CELL_OK;
 }
 
-void cellOvisFixSpuSegments(vm::ptr<sys_spu_image_t> image)
+void cellOvisFixSpuSegments(vm::ptr<sys_spu_image> image)
 {
 	cellOvis.todo("cellOvisFixSpuSegments(image=*0x%x)", image);
 }

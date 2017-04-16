@@ -82,13 +82,6 @@ void fmt_class_string<join_status>::format(std::string& out, u64 arg)
 	});
 }
 
-enum class ppu_decoder_type
-{
-	precise,
-	fast,
-	llvm,
-};
-
 cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder", 1,
 {
 	{ "Interpreter (precise)", ppu_decoder_type::precise },
@@ -179,10 +172,11 @@ extern void ppu_register_range(u32 addr, u32 size)
 	}
 
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), size);
+	utils::memory_commit(&ppu_ref(addr), size, utils::protection::rw);
 
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
 
+	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 	while (size)
 	{
 		ppu_ref(addr) = fallback;
@@ -364,25 +358,22 @@ std::string ppu_thread::dump() const
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("FPR[%d] = %.6G\n", i, fpr[i]);
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
 
-	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm)
-	{
-		ret += fmt::format("CR = 0x%08x\n", cr_pack());
-		ret += fmt::format("LR = 0x%llx\n", lr);
-		ret += fmt::format("CTR = 0x%llx\n", ctr);
-		ret += fmt::format("VRSAVE = 0x%08x\n", vrsave);
-		ret += fmt::format("XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
-		ret += fmt::format("VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
-		ret += fmt::format("FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
+	ret += fmt::format("CR = 0x%08x\n", cr_pack());
+	ret += fmt::format("LR = 0x%llx\n", lr);
+	ret += fmt::format("CTR = 0x%llx\n", ctr);
+	ret += fmt::format("VRSAVE = 0x%08x\n", vrsave);
+	ret += fmt::format("XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
+	ret += fmt::format("VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
+	ret += fmt::format("FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
 
-		// TODO: support foreign stack
-		ret += "\nCall stack:\n=========\n";
-		ret += fmt::format("0x%08x (0x0) called\n", cia);
-		const u32 stack_max = ::align(stack_addr + stack_size, 0x200) - 0x200;
-		for (u64 sp = vm::read64(static_cast<u32>(gpr[1])); sp >= stack_addr && sp < stack_max; sp = vm::read64(static_cast<u32>(sp)))
-		{
-			// TODO: print also function addresses
-			ret += fmt::format("> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
-		}
+	// TODO: support foreign stack
+	ret += "\nCall stack:\n=========\n";
+	ret += fmt::format("0x%08x (0x0) called\n", g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm ? 0 : cia);
+	const u32 stack_max = ::align(stack_addr + stack_size, 0x200) - 0x200;
+	for (u64 sp = vm::read64(static_cast<u32>(gpr[1])); sp >= stack_addr && sp < stack_max; sp = vm::read64(static_cast<u32>(sp)))
+	{
+		// TODO: print also function addresses
+		ret += fmt::format("> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
 	}
 
 	return ret;
@@ -707,7 +698,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 
 		const u32 old_pos = vm::cast(context.gpr[1], HERE);
 		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
-		context.gpr[1] &= ~(align_v - 1); // fix stack alignment
+		context.gpr[1] &= ~((u64)align_v - 1); // fix stack alignment
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
 		{
@@ -865,17 +856,6 @@ extern void ppu_initialize()
 	if (!_funcs)
 	{
 		return;
-	}
-
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
-	{
-		idm::select<lv2_obj, lv2_prx>([](u32, lv2_prx& prx)
-		{
-			if (prx.name == "libfiber.sprx")
-			{
-				fmt::raw_error("libfiber.sprx is not compatible with PPU LLVM Recompiler.");
-			}
-		});
 	}
 
 	std::size_t fpos = 0;

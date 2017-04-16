@@ -1026,7 +1026,7 @@ s32 cellGcmUnmapEaIoAddress(u32 ea)
 	}
 	else
 	{
-		cellGcmSys.error("cellGcmUnmapEaIoAddress(ea=0x%x): UnmapRealAddress() failed");
+		cellGcmSys.error("cellGcmUnmapEaIoAddress(ea=0x%x): UnmapRealAddress() failed", ea);
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -1050,7 +1050,7 @@ s32 cellGcmUnmapIoAddress(u32 io)
 	}
 	else
 	{
-		cellGcmSys.error("cellGcmUnmapIoAddress(io=0x%x): UnmapAddress() failed");
+		cellGcmSys.error("cellGcmUnmapIoAddress(io=0x%x): UnmapAddress() failed", io);
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -1435,5 +1435,5 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGpadCaptureSnapshot);
 
 	// Special
-	REG_FNID(cellGcmSys, 0x00000000, cellGcmCallback);
+	REG_FUNC(cellGcmSys, cellGcmCallback).flags = MFF_HIDDEN;
 });
