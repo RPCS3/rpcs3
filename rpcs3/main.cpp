@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QDesktopWidget>
 #include "GUI/mainwindow.h"
 
 #include "stdafx.h"
@@ -14,7 +15,7 @@ int main(int argc, char *argv[])
 	QApplication app(argc, argv);
 
 	MainWindow mainWin;
-	QSize defaultSize = QSize(800, 600);
+	QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
 	mainWin.resize(defaultSize);
 
 	mainWin.show();

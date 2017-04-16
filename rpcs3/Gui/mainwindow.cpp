@@ -77,6 +77,10 @@ void MainWindow::InstallPkg()
 		qDebug() << "Rejected!";
 		return;
 	}
+
+	QString dir = dlg.getOpenFileName();
+	qDebug(qUtf8Printable(dir));
+
 }
 
 void MainWindow::InstallPup()
@@ -90,6 +94,9 @@ void MainWindow::InstallPup()
 		qDebug() << "Rejected!";
 		return;
 	}
+
+	QString dir = dlg.getOpenFileName();
+	qDebug(qUtf8Printable(dir));
 }
 
 void MainWindow::Pause()
