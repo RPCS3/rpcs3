@@ -458,6 +458,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellRtc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellRtcAlarm.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellRudp.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
