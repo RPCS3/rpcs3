@@ -1,6 +1,8 @@
 #include "mutex.h"
 #include "sync.h"
 
+#include <limits.h>
+
 void shared_mutex::imp_lock_shared(s64 _old)
 {
 	verify("shared_mutex overflow" HERE), _old <= c_max;
