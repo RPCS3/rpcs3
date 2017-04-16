@@ -99,13 +99,14 @@
       <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;QT_UI;QT_NO_DEBUG;QT_OPENGL_LIB;QT_WIDGETS_LIB;QT_QUICK_LIB;QT_GUI_LIB;QT_QML_LIB;QT_NETWORK_LIB;QT_CORE_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(QtDir)\bin\Qt5Core.dll" "$(OutDir)" /d
-xcopy "$(QtDir)\bin\Qt5Gui.dll" "$(OutDir)" /d
-xcopy "$(QtDir)\bin\Qt5Widgets.dll" "$(OutDir)" /d
-</Command>
+      <Command>
+        xcopy "$(QtDir)\bin\Qt5Core.dll" "$(OutDir)" /d
+        xcopy "$(QtDir)\bin\Qt5Gui.dll" "$(OutDir)" /d
+        xcopy "$(QtDir)\bin\Qt5Widgets.dll" "$(OutDir)" /d
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>copy qt dlls over</Message>
+      <Message></Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -151,13 +152,14 @@ xcopy "$(QtDir)\bin\Qt5Widgets.dll" "$(OutDir)" /d
       <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;QT_UI;QT_OPENGL_LIB;QT_WIDGETS_LIB;QT_QUICK_LIB;QT_GUI_LIB;QT_QML_LIB;QT_NETWORK_LIB;QT_CORE_LIB;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(QtDir)\bin\Qt5Cored.dll" "$(OutDir)" /d
-xcopy "$(QtDir)\bin\Qt5Guid.dll" "$(OutDir)" /d
-xcopy "$(QtDir)\bin\Qt5Widgetsd.dll" "$(OutDir)" /d
-</Command>
+      <Command>
+        xcopy "$(QtDir)\bin\Qt5Cored.dll" "$(OutDir)" /d
+        xcopy "$(QtDir)\bin\Qt5Guid.dll" "$(OutDir)" /d
+        xcopy "$(QtDir)\bin\Qt5Widgetsd.dll" "$(OutDir)" /d
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>copt qt dlls over</Message>
+      <Message></Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
