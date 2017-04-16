@@ -155,6 +155,7 @@ public:
 	static const ppu_static_module cellRemotePlay;
 	static const ppu_static_module cellResc;
 	static const ppu_static_module cellRtc;
+	static const ppu_static_module cellRtcAlarm;
 	static const ppu_static_module cellRudp;
 	static const ppu_static_module cellSail;
 	static const ppu_static_module cellSailRec;

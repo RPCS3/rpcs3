@@ -68,6 +68,7 @@ LOG_CHANNEL(cellRec);
 LOG_CHANNEL(cellRemotePlay);
 LOG_CHANNEL(cellResc);
 LOG_CHANNEL(cellRtc);
+LOG_CHANNEL(cellRtcAlarm);
 LOG_CHANNEL(cellRudp);
 LOG_CHANNEL(cellSail);
 LOG_CHANNEL(cellSailRec);
@@ -270,6 +271,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellRemotePlay,
 		&ppu_module_manager::cellResc,
 		&ppu_module_manager::cellRtc,
+		&ppu_module_manager::cellRtcAlarm,
 		&ppu_module_manager::cellRudp,
 		&ppu_module_manager::cellSail,
 		&ppu_module_manager::cellSailRec,
