@@ -13,12 +13,12 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
 {
 	// PPU Decoder
 	QGroupBox *ppuDecoder = new QGroupBox(tr("PPU Decoder"));
-
 	QRadioButton *ppuRadio1 = new QRadioButton(tr("Interpreter (precise)"));
+	ppuRadio1->setEnabled(false); // TODO
 	QRadioButton *ppuRadio2 = new QRadioButton(tr("Interpreter (fast)"));
 	QRadioButton *ppuRadio3 = new QRadioButton(tr("Recompiler (LLVM)"));
-
 	QVBoxLayout *ppuVbox = new QVBoxLayout;
+
 	ppuVbox->addWidget(ppuRadio1);
 	ppuVbox->addWidget(ppuRadio2);
 	ppuVbox->addWidget(ppuRadio3);

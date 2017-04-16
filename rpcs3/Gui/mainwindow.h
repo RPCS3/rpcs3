@@ -17,6 +17,7 @@ private slots:
 	void BootElf();
 	void BootGame();
 	void InstallPkg();
+	void InstallPup();
 	void Pause();
 	void Stop();
 	void SendOpenSysMenu();
@@ -34,6 +35,10 @@ private slots:
 	void RSXDebugger();
 	void StringSearch();
 	void DecryptSPRXLibraries();
+	void ShowLog();
+	void ShowDebugger();
+	void HideGameIcons();
+	void RefreshGameList();
 	void About();
 
 private:
@@ -43,7 +48,8 @@ private:
 
 	QAction *bootElfAct;
 	QAction *bootGameAct;
-	QAction *bootInstallAct;
+	QAction *bootInstallPkgAct;
+	QAction *bootInstallPupAct;
 	QAction *sysPauseAct;
 	QAction *sysStopAct;
 	QAction *sysSendOpenMenuAct;
@@ -61,6 +67,10 @@ private:
 	QAction *toolsRsxDebuggerAct;
 	QAction *toolsStringSearchAct;
 	QAction *toolsSecryptSprxLibsAct;
+	QAction *showLogAct;
+	QAction *showDebuggerAct;
+	QAction *hideGameIconsAct;
+	QAction *refreshGameListAct;
 	QAction *exitAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
