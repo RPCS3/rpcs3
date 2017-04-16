@@ -193,7 +193,7 @@ void KernelExplorer::Update()
 		case SYS_PRX_OBJECT:
 		{
 			auto& prx = static_cast<lv2_prx&>(obj);
-			m_tree->AppendItem(node, fmt::format("PRX: ID = 0x%08x", id));
+			m_tree->AppendItem(node, fmt::format("PRX: ID = 0x%08x '%s'", id, prx.name));
 			break;
 		}
 		case SYS_SPUPORT_OBJECT:

@@ -539,7 +539,7 @@ struct alignas(128) CellSpurs
 	atomic_t<u8> handlerExiting;                        // 0xD66
 	atomic_be_t<u32> enableEH;                          // 0xD68
 	be_t<u32> exception;                                // 0xD6C
-	sys_spu_image_t spuImg;                             // 0xD70
+	sys_spu_image spuImg;                               // 0xD70
 	be_t<u32> flags;                                    // 0xD80
 	be_t<s32> spuPriority;                              // 0xD84
 	be_t<u32> ppuPriority;                              // 0xD88

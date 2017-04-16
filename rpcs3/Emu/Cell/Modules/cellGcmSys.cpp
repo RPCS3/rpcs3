@@ -1435,5 +1435,5 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGpadCaptureSnapshot);
 
 	// Special
-	REG_FNID(cellGcmSys, 0x00000000, cellGcmCallback);
+	REG_FUNC(cellGcmSys, cellGcmCallback).flags = MFF_HIDDEN;
 });

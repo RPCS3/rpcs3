@@ -4,7 +4,7 @@
 #include "sys_sync.h"
 
 // Return codes
-enum
+enum CellPrxError : u32
 {
 	CELL_PRX_ERROR_ERROR                       = 0x80011001, // Error state
 	CELL_PRX_ERROR_ILLEGAL_PERM                = 0x800110d1, // No permission to execute API
@@ -44,20 +44,45 @@ struct sys_prx_load_module_option_t
 };
 
 struct sys_prx_segment_info_t;// TODO
-struct sys_prx_module_info_t;// TODO
+
+struct sys_prx_module_info_t
+{
+	be_t<u64> size;
+	char name[30];
+	char version[2];
+	be_t<u32> modattribute;
+	be_t<u32> start_entry;
+	be_t<u32> stop_entry;
+	be_t<u32> all_segments_num;
+	vm::ps3::bptr<char> filename;
+	be_t<u32> filename_size;
+	vm::ps3::bptr<sys_prx_segment_info_t> segments;
+	be_t<u32> segments_num;
+};
+
+struct sys_prx_module_info_option_t
+{
+	be_t<u64> size; // 0x10
+	vm::ps3::bptr<sys_prx_module_info_t> info;
+};
 
 struct sys_prx_start_module_option_t
 {
 	be_t<u64> size;
-	be_t<u64> put;
-	vm::ps3::bptr<s32(int argc, vm::ps3::ptr<void> argv), u64> entry_point;
 };
 
 struct sys_prx_stop_module_option_t
 {
 	be_t<u64> size;
-	be_t<u64> put;
-	vm::ps3::bptr<s32(int argc, vm::ps3::ptr<void> argv), u64> entry_point;
+};
+
+struct sys_prx_start_stop_module_option_t
+{
+	be_t<u64> size;
+	be_t<u64> cmd;
+	vm::ps3::bptr<s32(u32 argc, vm::ps3::ptr<void> argv), u64> entry;
+	be_t<u64> res;
+	vm::ps3::bptr<s32(vm::ps3::ptr<s32(u32, vm::ps3::ptr<void>), u64>, u32 argc, vm::ps3::ptr<void> argv), u64> entry2;
 };
 
 struct sys_prx_unload_module_option_t
@@ -70,7 +95,17 @@ struct sys_prx_get_module_list_t
 	be_t<u64> size;
 	be_t<u32> max;
 	be_t<u32> count;
-	vm::ps3::bptr<s32> idlist;
+	vm::ps3::bptr<u32> idlist;
+};
+
+struct sys_prx_get_module_list_option_t
+{
+	be_t<u64> size; // 0x20
+	be_t<u32> pad;
+	be_t<u32> max;
+	be_t<u32> count;
+	vm::ps3::bptr<u32> idlist;
+	be_t<u32> unk; // 0
 };
 
 struct lv2_prx final : lv2_obj, ppu_module
@@ -81,32 +116,33 @@ struct lv2_prx final : lv2_obj, ppu_module
 
 	std::unordered_map<u32, u32> specials;
 
-	vm::ps3::ptr<s32(int argc, vm::ps3::ptr<void> argv)> start = vm::null;
-	vm::ps3::ptr<s32(int argc, vm::ps3::ptr<void> argv)> stop = vm::null;
+	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> start = vm::null;
+	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> stop = vm::null;
 	vm::ps3::ptr<s32()> exit = vm::null;
 };
 
 // SysCalls
-s32 sys_prx_load_module(vm::ps3::cptr<char> path, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt);
-s32 sys_prx_load_module_list(s32 count, vm::ps3::cpptr<char> path_list, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt, vm::ps3::ptr<u32> id_list);
-s32 sys_prx_load_module_on_memcontainer();
-s32 sys_prx_load_module_by_fd();
-s32 sys_prx_load_module_on_memcontainer_by_fd();
-s32 sys_prx_start_module(s32 id, u64 flags, vm::ps3::ptr<sys_prx_start_module_option_t> pOpt);
-s32 sys_prx_stop_module(s32 id, u64 flags, vm::ps3::ptr<sys_prx_stop_module_option_t> pOpt);
-s32 sys_prx_unload_module(s32 id, u64 flags, vm::ps3::ptr<sys_prx_unload_module_option_t> pOpt);
-s32 sys_prx_get_module_list(u64 flags, vm::ps3::ptr<sys_prx_get_module_list_t> pInfo);
-s32 sys_prx_get_my_module_id();
-s32 sys_prx_get_module_id_by_address();
-s32 sys_prx_get_module_id_by_name(vm::ps3::cptr<char> name, u64 flags, vm::ps3::ptr<sys_prx_get_module_id_by_name_option_t> pOpt);
-s32 sys_prx_get_module_info(s32 id, u64 flags, vm::ps3::ptr<sys_prx_module_info_t> info);
-s32 sys_prx_register_library(vm::ps3::ptr<void> library);
-s32 sys_prx_unregister_library(vm::ps3::ptr<void> library);
-s32 sys_prx_get_ppu_guid();
-s32 sys_prx_register_module();
-s32 sys_prx_query_module();
-s32 sys_prx_link_library();
-s32 sys_prx_unlink_library();
-s32 sys_prx_query_library();
-s32 sys_prx_start();
-s32 sys_prx_stop();
+
+error_code sys_prx_get_ppu_guid();
+error_code _sys_prx_load_module_by_fd(s32 fd, u64 offset, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_load_module_on_memcontainer_by_fd(s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_load_module_list(s32 count, vm::ps3::cpptr<char, u32, u64> path_list, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt, vm::ps3::ptr<u32> id_list);
+error_code _sys_prx_load_module_list_on_memcontainer(s32 count, vm::ps3::cpptr<char, u32, u64> path_list, u32 mem_ct, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt, vm::ps3::ptr<u32> id_list);
+error_code _sys_prx_load_module_on_memcontainer(vm::ps3::cptr<char> path, u32 mem_ct, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_load_module(vm::ps3::cptr<char> path, u64 flags, vm::ps3::ptr<sys_prx_load_module_option_t> pOpt);
+error_code _sys_prx_start_module(u32 id, u64 flags, vm::ps3::ptr<sys_prx_start_stop_module_option_t> pOpt);
+error_code _sys_prx_stop_module(u32 id, u64 flags, vm::ps3::ptr<sys_prx_start_stop_module_option_t> pOpt);
+error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ps3::ptr<sys_prx_unload_module_option_t> pOpt);
+error_code _sys_prx_register_module();
+error_code _sys_prx_query_module();
+error_code _sys_prx_register_library(vm::ps3::ptr<void> library);
+error_code _sys_prx_unregister_library(vm::ps3::ptr<void> library);
+error_code _sys_prx_link_library();
+error_code _sys_prx_unlink_library();
+error_code _sys_prx_query_library();
+error_code _sys_prx_get_module_list(u64 flags, vm::ps3::ptr<sys_prx_get_module_list_option_t> pInfo);
+error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ps3::ptr<sys_prx_module_info_option_t> pOpt);
+error_code _sys_prx_get_module_id_by_name(vm::ps3::cptr<char> name, u64 flags, vm::ps3::ptr<sys_prx_get_module_id_by_name_option_t> pOpt);
+error_code _sys_prx_get_module_id_by_address(u32 addr);
+error_code _sys_prx_start();
+error_code _sys_prx_stop();
