@@ -28,6 +28,9 @@
 #ifdef _WIN32
 #include "mm_joystick_handler.h"
 #endif
+#ifdef __linux__
+#include "evdev_joystick_handler.h"
+#endif
 
 
 #include "Emu/RSX/Null/NullGSRender.h"
@@ -134,6 +137,9 @@ void rpcs3_app::InitializeCallbacks()
 #endif
 #ifdef _WIN32
 		case pad_handler::mm: return std::make_shared<mm_joystick_handler>();
+#endif
+#ifdef __linux__
+		case pad_handler::evdev: return std::make_shared<evdev_joystick_handler>();
 #endif
 		default: fmt::throw_exception("Invalid pad handler: %s", type);
 		}

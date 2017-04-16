@@ -74,6 +74,9 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 		case pad_handler::mm: return "MMJoystick";
 #endif
+#ifdef __linux__
+		case pad_handler::evdev: return "Evdev";
+#endif
 		}
 
 		return unknown;

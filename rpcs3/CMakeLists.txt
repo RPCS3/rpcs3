@@ -135,6 +135,12 @@ elseif(WIN32)
 	set(PLATFORM_ARCH "Windows/x86_64")
 else()
 	set(PLATFORM_ARCH "linux/x86_64")
+	set(USE_EVDEV true)
+endif()
+
+if(USE_EVDEV)
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(LIBEVDEV REQUIRED libevdev)
 endif()
 
 # Select the version of libpng to use, default is builtin
@@ -184,6 +190,8 @@ if(WIN32)
 	# Slimmed down version of minidx9 for XAudio2_7 only
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2_7")
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
+elseif(USE_EVDEV)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBEVDEV_CFLAGS}")
 endif()
 
 if(NOT LLVM_FOUND)
@@ -304,6 +312,9 @@ else()
 		target_link_libraries(rpcs3  ${PNG_LIBRARIES})
 	else()
 		target_link_libraries(rpcs3  png16_static)
+	endif()
+	if (USE_EVDEV)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LIBEVDEV_LDFLAGS}")
 	endif()
 endif()
 
