@@ -6,7 +6,10 @@
 
 #include <unordered_map>
 #include <algorithm>
+#include <cstring>
 #include <cerrno>
+
+using namespace std::literals::string_literals;
 
 #ifdef _WIN32
 
