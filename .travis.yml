@@ -1,5 +1,5 @@
 language: cpp
-sudo: false
+sudo: required
 dist: trusty
 
 os:
@@ -19,7 +19,7 @@ cache:
 
 env:
   global:
-    - secure: "Vf+FY48nip9JppMnq11105NealdErSWsoUhHo63/V3V+LKfA9guenxCp93/qoSIdSGC/sJwb0yIIMGvkTT/rxDJNh6Z+BWUTb2E0WEIIQbvTJNOSUzoq7dfF1LT61XjVjByFzcbC2xjtaBowmcAYEs1jGUUuEjYVCMmD5lY8hUg="
+    - secure: BXyNziNYFLqLtY6Q58BDEUpRJr81HUtHpxf2Sr646bDcbG0Rf2rb2utqHZJ1Om926WdH7RqHuoVti4dr2X1lh4nHMkLD7MrIrfIkNN5T9aZdk19uw9IyMtz/cXon7/wqVo24tVqtBI0UghFxKii/GTDJEvRKgfpPp1e1vKSNGa4=
     # Which Travis environment to run Coverity on
     - coverity_scan_run_condition='"$TRAVIS_OS_NAME" = linux -a "$CC" = gcc'
     # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
@@ -39,8 +39,12 @@ before_install:
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     fi;
   # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
+  # Install updated libglew-dev since the version provided by trusty is outdated
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       pip install --user cpp-coveralls requests[security];
+      wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew-dev_1.13.0-2_amd64.deb;
+      wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew1.13_1.13.0-2_amd64.deb;
+      sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb;
     else
       brew update; brew update;
       brew install ccache glew wxwidgets llvm40;
@@ -66,9 +70,10 @@ addons:
       - llvm-toolchain-trusty-4.0
     packages:
       - cmake
+      - libasound2-dev
       - libopenal-dev
       - freeglut3-dev
-      - libglew-dev
+      #- libglew-dev
       - libc6-dev
       - llvm-4.0
       - llvm-4.0-dev
@@ -89,3 +94,15 @@ addons:
 
 after_success:
   - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
+  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then zip -r9 rpcs3.zip bin; curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}-${CC} --upload-file rpcs3.zip; fi
+
+deploy:
+  provider: releases
+  file: rpcs3.zip
+  skip_cleanup: true
+  on:
+    branch: master
+    repo: RPCS3/rpcs3
+    tags: true
+  api-key:
+    secure: BXyNziNYFLqLtY6Q58BDEUpRJr81HUtHpxf2Sr646bDcbG0Rf2rb2utqHZJ1Om926WdH7RqHuoVti4dr2X1lh4nHMkLD7MrIrfIkNN5T9aZdk19uw9IyMtz/cXon7/wqVo24tVqtBI0UghFxKii/GTDJEvRKgfpPp1e1vKSNGa4=

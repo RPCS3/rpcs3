@@ -460,7 +460,17 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	HINSTANCE hInstance = NULL;
 	HWND hWnd = (HWND)m_frame->handle();
 
-	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();
+	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
+	
+	//Actually confirm  that the loader found at least one compatible device
+	if (gpus.size() == 0)
+	{
+		//We can't throw in Emulator::Load, so we show error and return
+		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		m_device = VK_NULL_HANDLE;
+		return;
+	}
+
 	m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
 #endif
 
@@ -543,6 +553,12 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 VKGSRender::~VKGSRender()
 {
+	if (m_device == VK_NULL_HANDLE)
+	{
+		//Initialization failed
+		return;
+	}
+
 	//Wait for queue
 	vkQueueWaitIdle(m_swap_chain->get_present_queue());
 
@@ -844,6 +860,11 @@ void VKGSRender::set_viewport()
 
 void VKGSRender::on_init_thread()
 {
+	if (m_device == VK_NULL_HANDLE)
+	{
+		fmt::throw_exception("No vulkan device was created");
+	}
+
 	GSRender::on_init_thread();
 	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
 	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));

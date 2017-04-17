@@ -175,6 +175,7 @@ class PPUTranslator final //: public CPUTranslator
 	llvm::Value** const m_vr = m_locals + 64;
 
 	llvm::Value* m_cr[32]{};
+	llvm::Value* m_g_lr;
 	llvm::Value* m_reg_lr;
 	llvm::Value* m_reg_ctr; // CTR register (counter)
 	llvm::Value* m_reg_vrsave;

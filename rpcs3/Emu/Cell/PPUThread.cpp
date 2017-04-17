@@ -82,19 +82,14 @@ void fmt_class_string<join_status>::format(std::string& out, u64 arg)
 	});
 }
 
-enum class ppu_decoder_type
-{
-	precise,
-	fast,
-	llvm,
-};
-
 cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder", 1,
 {
 	{ "Interpreter (precise)", ppu_decoder_type::precise },
 	{ "Interpreter (fast)", ppu_decoder_type::fast },
 	{ "Recompiler (LLVM)", ppu_decoder_type::llvm },
 });
+
+cfg::bool_entry g_cfg_ppu_debug(cfg::root.core, "PPU Debug");
 
 cfg::bool_entry g_cfg_llvm_logs(cfg::root.core, "Save LLVM logs");
 
@@ -129,10 +124,42 @@ static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
 	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
 	{
-		fmt::throw_exception("Unregistered PPU function [0x%08x]", ppu.cia);
+		fmt::throw_exception("Unregistered PPU function");
 	}
 
 	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
+
+	if (g_cfg_ppu_debug)
+	{
+		LOG_ERROR(PPU, "Unregistered instruction: 0x%08x", op.opcode);
+	}
+
+	return false;
+}
+
+static std::unordered_map<u32, u32> s_ppu_toc;
+
+static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
+{
+	// Compare TOC with expected value
+	const auto found = s_ppu_toc.find(ppu.cia);
+
+	if (ppu.gpr[2] != found->second)
+	{
+		LOG_ERROR(PPU, "Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], found->second);
+		
+		if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
+		{
+			return false;
+		}
+	}
+
+	// Fallback to the interpreter function
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{ppu_cache(ppu.cia)})(ppu, op))
+	{
+		ppu.cia += 4;
+	}
+
 	return false;
 }
 
@@ -141,14 +168,15 @@ extern void ppu_register_range(u32 addr, u32 size)
 	if (!size)
 	{
 		LOG_ERROR(PPU, "ppu_register_range(0x%x): empty range", addr);
-		return;	
+		return;
 	}
 
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), size);
+	utils::memory_commit(&ppu_ref(addr), size, utils::protection::rw);
 
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
 
+	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 	while (size)
 	{
 		ppu_ref(addr) = fallback;
@@ -168,7 +196,11 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 
 	if (!size)
 	{
-		LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
+		if (g_cfg_ppu_debug)
+		{
+			LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
+		}
+		
 		return;	
 	}
 
@@ -263,9 +295,9 @@ extern void ppu_set_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (ppu_ref(addr / 4) != _break)
+	if (ppu_ref(addr) != _break)
 	{
-		ppu_ref(addr / 4) = _break;
+		ppu_ref(addr) = _break;
 	}
 }
 
@@ -279,9 +311,9 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (ppu_ref(addr / 4) == _break)
+	if (ppu_ref(addr) == _break)
 	{
-		ppu_ref(addr / 4) = ppu_cache(addr);
+		ppu_ref(addr) = ppu_cache(addr);
 	}
 }
 
@@ -326,25 +358,22 @@ std::string ppu_thread::dump() const
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("FPR[%d] = %.6G\n", i, fpr[i]);
 	for (uint i = 0; i < 32; ++i) ret += fmt::format("VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
 
-	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm)
-	{
-		ret += fmt::format("CR = 0x%08x\n", cr_pack());
-		ret += fmt::format("LR = 0x%llx\n", lr);
-		ret += fmt::format("CTR = 0x%llx\n", ctr);
-		ret += fmt::format("VRSAVE = 0x%08x\n", vrsave);
-		ret += fmt::format("XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
-		ret += fmt::format("VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
-		ret += fmt::format("FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
+	ret += fmt::format("CR = 0x%08x\n", cr_pack());
+	ret += fmt::format("LR = 0x%llx\n", lr);
+	ret += fmt::format("CTR = 0x%llx\n", ctr);
+	ret += fmt::format("VRSAVE = 0x%08x\n", vrsave);
+	ret += fmt::format("XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
+	ret += fmt::format("VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
+	ret += fmt::format("FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
 
-		// TODO: support foreign stack
-		ret += "\nCall stack:\n=========\n";
-		ret += fmt::format("0x%08x (0x0) called\n", cia);
-		const u32 stack_max = ::align(stack_addr + stack_size, 0x200) - 0x200;
-		for (u64 sp = vm::read64(static_cast<u32>(gpr[1])); sp >= stack_addr && sp < stack_max; sp = vm::read64(static_cast<u32>(sp)))
-		{
-			// TODO: print also function addresses
-			ret += fmt::format("> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
-		}
+	// TODO: support foreign stack
+	ret += "\nCall stack:\n=========\n";
+	ret += fmt::format("0x%08x (0x0) called\n", g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm ? 0 : cia);
+	const u32 stack_max = ::align(stack_addr + stack_size, 0x200) - 0x200;
+	for (u64 sp = vm::read64(static_cast<u32>(gpr[1])); sp >= stack_addr && sp < stack_max; sp = vm::read64(static_cast<u32>(sp)))
+	{
+		// TODO: print also function addresses
+		ret += fmt::format("> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
 	}
 
 	return ret;
@@ -669,7 +698,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 
 		const u32 old_pos = vm::cast(context.gpr[1], HERE);
 		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
-		context.gpr[1] &= ~(align_v - 1); // fix stack alignment
+		context.gpr[1] &= ~((u64)align_v - 1); // fix stack alignment
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
 		{
@@ -864,7 +893,16 @@ extern void ppu_initialize(const ppu_module& info)
 	{
 		for (const auto& func : info.funcs)
 		{
-			ppu_register_function_at(func.addr, func.size, nullptr);
+			for (auto& block : func.blocks)
+			{
+				ppu_register_function_at(block.first, block.second, nullptr);
+			}
+
+			if (g_cfg_ppu_debug && func.size && func.toc != -1)
+			{
+				s_ppu_toc.emplace(func.addr, func.toc);
+				ppu_ref(func.addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
+			}
 		}
 
 		return;

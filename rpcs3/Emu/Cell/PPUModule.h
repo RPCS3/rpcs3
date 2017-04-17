@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "PPUFunction.h"
 #include "PPUCallback.h"
@@ -14,6 +14,7 @@ enum ppu_static_function_flags : u32
 {
 	MFF_FORCED_HLE = (1 << 0), // Always call HLE function
 	MFF_PERFECT    = (1 << 1), // Indicates complete implementation and LLE interchangeability
+	MFF_HIDDEN     = (1 << 2), // Invisible function for internal use (TODO)
 };
 
 // HLE function information
@@ -43,8 +44,8 @@ public:
 	task_stack on_load;
 	task_stack on_unload;
 
-	std::map<u32, ppu_static_function> functions;
-	std::map<u32, ppu_static_variable> variables;
+	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions;
+	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables;
 
 public:
 	ppu_static_module(const char* name);
@@ -120,6 +121,7 @@ public:
 	static const ppu_static_module cellFiber;
 	static const ppu_static_module cellFont;
 	static const ppu_static_module cellFontFT;
+	static const ppu_static_module cell_FreeType2;
 	static const ppu_static_module cellFs;
 	static const ppu_static_module cellGame;
 	static const ppu_static_module cellGameExec;
@@ -134,6 +136,7 @@ public:
 	static const ppu_static_module cellJpgEnc;
 	static const ppu_static_module cellKey2char;
 	static const ppu_static_module cellL10n;
+	static const ppu_static_module cellLibprof;
 	static const ppu_static_module cellMic;
 	static const ppu_static_module cellMusic;
 	static const ppu_static_module cellMusicDecode;
