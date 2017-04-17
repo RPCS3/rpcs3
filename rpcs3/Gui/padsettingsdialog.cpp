@@ -17,7 +17,7 @@ static const int PadButtonWidth = 50;
 
 PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 {
-    // Left Analog Stick
+	// Left Analog Stick
 	QGroupBox *roundStickL = new QGroupBox(tr("Left Analog Stick"));
 	QVBoxLayout *roundStickLVBox = new QVBoxLayout;
 	QHBoxLayout *roundStickLHBox1 = new QHBoxLayout;
@@ -40,8 +40,8 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	b_right_lstick->setFixedWidth(PadButtonWidth);
 	b_down_lstick->setFixedWidth(PadButtonWidth);
 
-    // D-Pad
-    QGroupBox *roundPadControls = new QGroupBox(tr("D-Pad"));
+	// D-Pad
+	QGroupBox *roundPadControls = new QGroupBox(tr("D-Pad"));
 	QVBoxLayout *roundPadControlsVBox = new QVBoxLayout;
 	QHBoxLayout *roundPadControlsHBox1 = new QHBoxLayout;
 	QHBoxLayout *roundPadControlsHBox2 = new QHBoxLayout;
@@ -89,10 +89,10 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	b_shift_l2->setFixedWidth(PadButtonWidth);
 	b_shift_l3->setFixedWidth(PadButtonWidth);
 
-    // Start / Select
-    QGroupBox *roundPadSystem = new QGroupBox(tr("System"));
-    QGroupBox *roundPadSelect = new QGroupBox(tr("Select"));
-    QGroupBox *roundPadStart = new QGroupBox(tr("Start"));
+	// Start / Select
+	QGroupBox *roundPadSystem = new QGroupBox(tr("System"));
+	QGroupBox *roundPadSelect = new QGroupBox(tr("Select"));
+	QGroupBox *roundPadStart = new QGroupBox(tr("Start"));
 	QVBoxLayout *roundPadSystemVbox = new QVBoxLayout;
 	QVBoxLayout *roundPadSelectVbox = new QVBoxLayout;
 	QVBoxLayout *roundPadStartVbox = new QVBoxLayout;
@@ -108,11 +108,11 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	b_select->setFixedWidth(PadButtonWidth);
 	b_start->setFixedWidth(PadButtonWidth);
 
-    // Right Shifts
-    QGroupBox *roundPadShiftsR = new QGroupBox(tr("Right Shifts"));
-    QGroupBox *roundPadR1 = new QGroupBox(tr("R1"));
-    QGroupBox *roundPadR2 = new QGroupBox(tr("R2"));
-    QGroupBox *roundPadR3 = new QGroupBox(tr("R3"));
+	// Right Shifts
+	QGroupBox *roundPadShiftsR = new QGroupBox(tr("Right Shifts"));
+	QGroupBox *roundPadR1 = new QGroupBox(tr("R1"));
+	QGroupBox *roundPadR2 = new QGroupBox(tr("R2"));
+	QGroupBox *roundPadR3 = new QGroupBox(tr("R3"));
 	QVBoxLayout *roundPadShiftsRVbox = new QVBoxLayout;
 	QVBoxLayout *roundPadR1Vbox = new QVBoxLayout;
 	QVBoxLayout *roundPadR2Vbox = new QVBoxLayout;
@@ -126,10 +126,10 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundPadR1->setLayout(roundPadR1Vbox);
 	roundPadR2->setLayout(roundPadR2Vbox);
 	roundPadR3->setLayout(roundPadR3Vbox);
-    roundPadShiftsRVbox->addWidget(roundPadR1);
-    roundPadShiftsRVbox->addWidget(roundPadR2);
-    roundPadShiftsRVbox->addWidget(roundPadR3);
-    roundPadShiftsR->setLayout(roundPadShiftsRVbox);
+	roundPadShiftsRVbox->addWidget(roundPadR1);
+	roundPadShiftsRVbox->addWidget(roundPadR2);
+	roundPadShiftsRVbox->addWidget(roundPadR3);
+	roundPadShiftsR->setLayout(roundPadShiftsRVbox);
 	b_shift_r1->setFixedWidth(PadButtonWidth);
 	b_shift_r2->setFixedWidth(PadButtonWidth);
 	b_shift_r3->setFixedWidth(PadButtonWidth);
@@ -173,8 +173,8 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	b_circle->setFixedWidth(PadButtonWidth);
 	b_cross->setFixedWidth(PadButtonWidth);
 
-    // Right Analog Stick
-    QGroupBox *roundStickR = new QGroupBox(tr("Right Analog Stick"));
+	// Right Analog Stick
+	QGroupBox *roundStickR = new QGroupBox(tr("Right Analog Stick"));
 	QVBoxLayout *roundStickRVBox = new QVBoxLayout;
 	QHBoxLayout *roundStickRHBox1 = new QHBoxLayout;
 	QHBoxLayout *roundStickRHBox2 = new QHBoxLayout;
@@ -196,14 +196,14 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	b_right_rstick->setFixedWidth(PadButtonWidth);
 	b_down_rstick->setFixedWidth(PadButtonWidth);
 
-    // Buttons
-    b_reset = new QPushButton(tr("By default"));
+	// Buttons
+	b_reset = new QPushButton(tr("By default"));
+	
+	b_ok = new QPushButton(tr("OK"));
 
-    b_ok = new QPushButton(tr("OK"));
-
-    b_cancel = new QPushButton(tr("Cancel"));
+	b_cancel = new QPushButton(tr("Cancel"));
 	b_cancel->setDefault(true);
-    connect(b_cancel, &QAbstractButton::clicked, this, &QWidget::close);
+	connect(b_cancel, &QAbstractButton::clicked, this, &QWidget::close);
 
 	// Handling
 	QButtonGroup *padButtons = new QButtonGroup(this);
