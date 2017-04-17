@@ -122,6 +122,12 @@ s32 FTFaceH_GetMaxHorizontalAdvance()
 	return CELL_OK;
 }
 
+s32 FTFaceH_GetMaxVerticalAdvance()
+{
+	UNIMPLEMENTED_FUNC(cellFontFT);
+	return CELL_OK;
+}
+
 s32 FTFaceH_GetRenderBufferSize()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
@@ -217,6 +223,7 @@ DECLARE(ppu_module_manager::cellFontFT)("cellFontFT", []()
 	REG_FUNC(cellFontFT, FTFaceH_GetGlyphImage);
 	REG_FUNC(cellFontFT, FTFaceH_GetGlyphMetrics);
 	REG_FUNC(cellFontFT, FTFaceH_GetMaxHorizontalAdvance);
+	REG_FUNC(cellFontFT, FTFaceH_GetMaxVerticalAdvance);
 	REG_FUNC(cellFontFT, FTFaceH_GetRenderBufferSize);
 	REG_FUNC(cellFontFT, FTFaceH_GetRenderScale);
 	REG_FUNC(cellFontFT, FTFaceH_GetRenderScalePoint);
