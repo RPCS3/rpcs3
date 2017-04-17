@@ -15,6 +15,12 @@ namespace vm { using namespace ps3; }
 
 logs::channel cellFs("cellFs", logs::level::notice);
 
+s32 cellFsAccess()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
 	cellFs.warning("cellFsOpen(path=%s, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
@@ -952,6 +958,7 @@ s32 cellFsSymbolicLink()
 
 DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 {
+	REG_FUNC(sys_fs, cellFsAccess);
 	REG_FUNC(sys_fs, cellFsOpen);
 	REG_FUNC(sys_fs, cellFsOpen2);
 	REG_FUNC(sys_fs, cellFsSdataOpen);
