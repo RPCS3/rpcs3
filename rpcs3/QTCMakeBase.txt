@@ -1,0 +1,58 @@
+# This cmake would build the qt stuff when it's all in one folder. But, now the structure has changed and this doesn't work.
+# However, I intend to reference this when I properly merge this to make cmake work on linux. So, keep for now.
+
+cmake_minimum_required(VERSION 2.8.11)
+
+project(RPCS3Qt)
+
+# Instruct CMake to run moc automatically when needed.
+set(CMAKE_AUTOMOC ON)
+
+# This isn't platform independent. But, it is the default install directory.
+# CHANGE THIS IF YOU USED DIFFERENT LOCATION OR COMPILER
+if (WIN32)
+    set (QTDIR "C:/Qt/5.8/msvc2015_64")
+else()
+    set (QTDIR "$ENV{HOME}/Qt/5.8/gcc_64")
+endif()
+
+# Early detect if QT doesn't exist for meaningful error message.
+if (NOT EXISTS ${QTDIR})
+    message ( "Qt should be located at ${QTDIR}")
+    message ( FATAL_ERROR "Qt is not probably configured.  Please download Qt ( https://www.qt.io/download-open-source/ ) and/or edit this file to the proper directory.")
+endif()
+
+# Inform CMAKE where Qt is.
+set (CMAKE_PREFIX_PATH "${QTDIR}")
+
+# Windows needs to have the dlls path in environment for visual studio.
+# So, do so here. Should this be WIN32 or MSVC?
+if (MSVC)
+   set(CMAKE_MSVCIDE_RUN_PATH "${QTDIR}/bin/") 
+endif ()
+
+# Handle directX
+if (MSVC)
+    include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/../../3rdparty/minidx12/Include")
+    link_directories("${CMAKE_CURRENT_LIST_DIR}/../../3rdparty/minidx12/")
+endif()
+
+# Qt should set this to be true but I have no idea why it doesn't. For now, just force it to be defined because it should be.
+add_definitions(-DQT_UI)
+
+# Grab the source files for prcs3qt
+file(GLOB RPCS3QT_SRC "*.cpp")
+
+# Find the QtWidgets library. This also includes QtWidget dependencies.
+find_package(Qt5Widgets)
+
+# Tell CMake to create the executable
+add_executable(RPCS3Qt ${RPCS3QT_SRC})
+
+# Use the Widgets module from Qt 5 for linking
+target_link_libraries(RPCS3Qt Qt5::Widgets)
+
+# Handle directx
+if (MSVC)
+    target_link_libraries(RPCS3Qt dxgi.lib d2d1.lib dwrite.lib)
+endif()

@@ -1,14 +1,18 @@
-#pragma once
+#ifndef SETTINGSDIALOG_H
+#define SETTINGSDIALOG_H
 
-class SettingsDialog : public wxDialog
+#include <QDialog>
+#include <QTabWidget>
+
+class SettingsDialog : public QDialog
 {
+	Q_OBJECT
+
 public:
-	SettingsDialog(wxWindow* parent, const std::string& path);
+	explicit SettingsDialog(QWidget *parent = 0, const std::string &path = "");
 
 private:
-	wxCheckListBox* chbox_list_core_lle;
-
-	void OnModuleListItemToggled(wxCommandEvent& event);
-	void OnSearchBoxTextChanged(wxCommandEvent& event);
-	std::map<std::string, bool> lle_module_list;
+	QTabWidget *tabWidget;
 };
+
+#endif // SETTINGSDIALOG_H
