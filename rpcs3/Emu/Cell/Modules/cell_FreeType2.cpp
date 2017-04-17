@@ -47,6 +47,12 @@ s32 FT_Done_Glyph()
 	return CELL_OK;
 }
 
+s32 FT_Done_Library()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
 s32 FT_Get_Char_Index()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
@@ -186,6 +192,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 
 	REG_FUNC(cell_FreeType2, FT_Done_Face);
 	REG_FUNC(cell_FreeType2, FT_Done_Glyph);
+	REG_FUNC(cell_FreeType2, FT_Done_Library);
 
 	REG_FUNC(cell_FreeType2, FT_Get_Char_Index);
 	REG_FUNC(cell_FreeType2, FT_Get_Glyph);
