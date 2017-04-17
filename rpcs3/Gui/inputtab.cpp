@@ -84,3 +84,4 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	hbox->addLayout(vbox2);
 	setLayout(hbox);
 }
+

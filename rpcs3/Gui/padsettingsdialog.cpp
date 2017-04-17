@@ -13,7 +13,7 @@
 // TODO: rewrite with std::chrono or wxTimer
 #include <time.h>
 
-#define PADBUTTONWIDTH 50
+static const int PadButtonWidth = 50;
 
 PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 {
@@ -35,10 +35,10 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundStickLVBox->addLayout(roundStickLHBox2);
 	roundStickLVBox->addLayout(roundStickLHBox3);
 	roundStickL->setLayout(roundStickLVBox);
-	b_up_lstick->setFixedWidth(PADBUTTONWIDTH);
-	b_left_lstick->setFixedWidth(PADBUTTONWIDTH);
-	b_right_lstick->setFixedWidth(PADBUTTONWIDTH);
-	b_down_lstick->setFixedWidth(PADBUTTONWIDTH);
+	b_up_lstick->setFixedWidth(PadButtonWidth);
+	b_left_lstick->setFixedWidth(PadButtonWidth);
+	b_right_lstick->setFixedWidth(PadButtonWidth);
+	b_down_lstick->setFixedWidth(PadButtonWidth);
 
     // D-Pad
     QGroupBox *roundPadControls = new QGroupBox(tr("D-Pad"));
@@ -58,10 +58,10 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundPadControlsVBox->addLayout(roundPadControlsHBox2);
 	roundPadControlsVBox->addLayout(roundPadControlsHBox3);
 	roundPadControls->setLayout(roundPadControlsVBox);
-	b_up->setFixedWidth(PADBUTTONWIDTH);
-	b_left->setFixedWidth(PADBUTTONWIDTH);
-	b_right->setFixedWidth(PADBUTTONWIDTH);
-	b_down->setFixedWidth(PADBUTTONWIDTH);
+	b_up->setFixedWidth(PadButtonWidth);
+	b_left->setFixedWidth(PadButtonWidth);
+	b_right->setFixedWidth(PadButtonWidth);
+	b_down->setFixedWidth(PadButtonWidth);
 	
 	// Left Shifts
 	QGroupBox *roundPadShiftsL = new QGroupBox(tr("Left Shifts"));
@@ -85,9 +85,9 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundPadShiftsLVbox->addWidget(roundPadL2);
 	roundPadShiftsLVbox->addWidget(roundPadL3);
 	roundPadShiftsL->setLayout(roundPadShiftsLVbox);
-	b_shift_l1->setFixedWidth(PADBUTTONWIDTH);
-	b_shift_l2->setFixedWidth(PADBUTTONWIDTH);
-	b_shift_l3->setFixedWidth(PADBUTTONWIDTH);
+	b_shift_l1->setFixedWidth(PadButtonWidth);
+	b_shift_l2->setFixedWidth(PadButtonWidth);
+	b_shift_l3->setFixedWidth(PadButtonWidth);
 
     // Start / Select
     QGroupBox *roundPadSystem = new QGroupBox(tr("System"));
@@ -105,8 +105,8 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundPadSystemVbox->addWidget(roundPadSelect);
 	roundPadSystemVbox->addWidget(roundPadStart);
 	roundPadSystem->setLayout(roundPadSystemVbox);
-	b_select->setFixedWidth(PADBUTTONWIDTH);
-	b_start->setFixedWidth(PADBUTTONWIDTH);
+	b_select->setFixedWidth(PadButtonWidth);
+	b_start->setFixedWidth(PadButtonWidth);
 
     // Right Shifts
     QGroupBox *roundPadShiftsR = new QGroupBox(tr("Right Shifts"));
@@ -130,9 +130,9 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
     roundPadShiftsRVbox->addWidget(roundPadR2);
     roundPadShiftsRVbox->addWidget(roundPadR3);
     roundPadShiftsR->setLayout(roundPadShiftsRVbox);
-	b_shift_r1->setFixedWidth(PADBUTTONWIDTH);
-	b_shift_r2->setFixedWidth(PADBUTTONWIDTH);
-	b_shift_r3->setFixedWidth(PADBUTTONWIDTH);
+	b_shift_r1->setFixedWidth(PadButtonWidth);
+	b_shift_r2->setFixedWidth(PadButtonWidth);
+	b_shift_r3->setFixedWidth(PadButtonWidth);
 
     // Action buttons
 	QGroupBox *roundPadButtons = new QGroupBox(tr("Buttons"));
@@ -168,10 +168,10 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundPadButtonsVBox->addLayout(roundPadButtonsHBox2);
 	roundPadButtonsVBox->addLayout(roundPadButtonsHBox3);
 	roundPadButtons->setLayout(roundPadButtonsVBox);
-	b_triangle->setFixedWidth(PADBUTTONWIDTH);
-	b_square->setFixedWidth(PADBUTTONWIDTH);
-	b_circle->setFixedWidth(PADBUTTONWIDTH);
-	b_cross->setFixedWidth(PADBUTTONWIDTH);
+	b_triangle->setFixedWidth(PadButtonWidth);
+	b_square->setFixedWidth(PadButtonWidth);
+	b_circle->setFixedWidth(PadButtonWidth);
+	b_cross->setFixedWidth(PadButtonWidth);
 
     // Right Analog Stick
     QGroupBox *roundStickR = new QGroupBox(tr("Right Analog Stick"));
@@ -191,10 +191,10 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundStickRVBox->addLayout(roundStickRHBox2);
 	roundStickRVBox->addLayout(roundStickRHBox3);
 	roundStickR->setLayout(roundStickRVBox);
-	b_up_rstick->setFixedWidth(PADBUTTONWIDTH);
-	b_left_rstick->setFixedWidth(PADBUTTONWIDTH);
-	b_right_rstick->setFixedWidth(PADBUTTONWIDTH);
-	b_down_rstick->setFixedWidth(PADBUTTONWIDTH);
+	b_up_rstick->setFixedWidth(PadButtonWidth);
+	b_left_rstick->setFixedWidth(PadButtonWidth);
+	b_right_rstick->setFixedWidth(PadButtonWidth);
+	b_down_rstick->setFixedWidth(PadButtonWidth);
 
     // Buttons
     b_reset = new QPushButton(tr("By default"));
