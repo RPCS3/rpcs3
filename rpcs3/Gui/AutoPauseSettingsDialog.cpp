@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QLabel>
@@ -44,6 +42,4 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(QWidget *parent) : QDialog(pare
 
 	setWindowTitle(tr("Auto Pause Manager"));
 }
-
-#endif // QT_UI
 

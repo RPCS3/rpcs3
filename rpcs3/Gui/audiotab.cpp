@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
@@ -45,5 +43,3 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 	hbox->addStretch();
 	setLayout(hbox);
 }
-
-#endif // QT_UI

@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include "gamelistframe.h"
 
 GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), parent)
@@ -22,5 +20,3 @@ void GameListFrame::closeEvent(QCloseEvent *event)
 	QDockWidget::closeEvent(event);
 	emit GameListFrameClosed();
 }
-
-#endif // QT_UI

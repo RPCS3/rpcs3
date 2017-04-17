@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -494,5 +492,3 @@ void MainWindow::CreateDockWindows()
 	connect(debuggerFrame, &DebuggerFrame::DebugFrameClosed, this, &MainWindow::OnDebugFrameClosed);
 	connect(gameListFrame, &GameListFrame::GameListFrameClosed, this, &MainWindow::OnGameListFrameClosed);
 }
-
-#endif // QT_UI

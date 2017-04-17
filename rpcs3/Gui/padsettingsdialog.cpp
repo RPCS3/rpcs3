@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
@@ -560,5 +558,3 @@ void PadSettingsDialog::OnPadButtonClicked(int id)
 		}
 	}
 }
-
-#endif // QT_UI

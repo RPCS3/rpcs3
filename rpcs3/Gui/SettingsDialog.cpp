@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -45,5 +43,3 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 
 	setWindowTitle(tr("Settings"));
 }
-
-#endif // QT_UI

@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
@@ -143,5 +141,3 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 		d3dAdapter->setEnabled(false);
 	}
 }
-
-#endif // QT_UI
