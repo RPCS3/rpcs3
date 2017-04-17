@@ -40,6 +40,7 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 	resBox->addItem(tr("1920x1080"));
 	resBox->addItem(tr("1280x720"));
 	resBox->addItem(tr("720x480"));
+	resBox->addItem(tr("720x576"));
 	resBox->addItem(tr("1600x1080"));
 	resBox->addItem(tr("1440x1080"));
 	resBox->addItem(tr("1280x1080"));
@@ -50,7 +51,7 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 	res->setLayout(resVbox);
 
 	// D3D Adapter
-	QGroupBox *d3dAdapter = new QGroupBox(tr("D3D Adapter"));
+	QGroupBox *d3dAdapter = new QGroupBox(tr("D3D Adapter (DirectX 12 Only)"));
 
 	QComboBox *d3dAdapterBox = new QComboBox;
 
@@ -74,6 +75,7 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 
 	QComboBox *frameLimitBox = new QComboBox;
 	frameLimitBox->addItem(tr("Off"));
+	frameLimitBox->addItem(tr("59.94"));
 	frameLimitBox->addItem(tr("50"));
 	frameLimitBox->addItem(tr("60"));
 	frameLimitBox->addItem(tr("30"));
@@ -91,33 +93,45 @@ GraphicsTab::GraphicsTab(QWidget *parent) : QWidget(parent)
 	QCheckBox *glLegacyBuffers = new QCheckBox(tr("Use Legacy OpenGL Buffers"));
 	QCheckBox *debugOutput = new QCheckBox(tr("Debug Output"));
 	QCheckBox *debugOverlay = new QCheckBox(tr("Debug Overlay"));
-	QCheckBox *logProg = new QCheckBox(tr("Log shader programs"));
+	QCheckBox *logProg = new QCheckBox(tr("Log Shader Programs"));
 	QCheckBox *vsync = new QCheckBox(tr("VSync"));
+	QCheckBox *gpuTextureScaling = new QCheckBox(tr("Use GPU Texture Scaling"));
 
-	// Main layout
-	QVBoxLayout *vbox1 = new QVBoxLayout;
-	vbox1->addWidget(render);
-	vbox1->addWidget(res);
-	vbox1->addWidget(d3dAdapter);
-	vbox1->addWidget(aspect);
-	vbox1->addWidget(frameLimit);
+	QHBoxLayout *hbox1 = new QHBoxLayout;
+	QVBoxLayout *vbox11 = new QVBoxLayout;
+	vbox11->addWidget(render);
+	vbox11->addWidget(res);
+	vbox11->addWidget(d3dAdapter);
+	vbox11->addStretch();
+	QVBoxLayout *vbox12 = new QVBoxLayout;
+	vbox12->addWidget(aspect);
+	vbox12->addWidget(frameLimit);
+	vbox12->addStretch();
+	hbox1->addLayout(vbox11);
+	hbox1->addLayout(vbox12);
 
-	QVBoxLayout *vbox2 = new QVBoxLayout;
-	vbox2->addWidget(dumpColor);
-	vbox2->addWidget(readColor);
-	vbox2->addWidget(dumpDepth);
-	vbox2->addWidget(readDepth);
-	vbox2->addWidget(glLegacyBuffers);
-	vbox2->addWidget(debugOutput);
-	vbox2->addWidget(debugOverlay);
-	vbox2->addWidget(logProg);
-	vbox2->addWidget(vsync);
-	vbox2->addStretch();
+	QHBoxLayout *hbox2 = new QHBoxLayout;
+	QVBoxLayout *vbox21 = new QVBoxLayout;
+	vbox21->addWidget(dumpColor);
+	vbox21->addWidget(readColor);
+	vbox21->addWidget(dumpDepth);
+	vbox21->addWidget(readDepth);
+	vbox21->addWidget(glLegacyBuffers);
+	QVBoxLayout *vbox22 = new QVBoxLayout;
+	vbox22->addWidget(debugOutput);
+	vbox22->addWidget(debugOverlay);
+	vbox22->addWidget(logProg);
+	vbox22->addWidget(vsync);
+	vbox22->addWidget(gpuTextureScaling);
+	hbox2->addLayout(vbox21);
+	hbox2->addLayout(vbox22);
 
-	QHBoxLayout *hbox = new QHBoxLayout;
-	hbox->addLayout(vbox1);
-	hbox->addLayout(vbox2);
-	setLayout(hbox);
+	QVBoxLayout *vbox = new QVBoxLayout;
+	vbox->addLayout(hbox1);
+	vbox->addSpacing(10);
+	vbox->addLayout(hbox2);
+	vbox->addStretch();
+	setLayout(vbox);
 
 #ifdef _MSC_VER
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;

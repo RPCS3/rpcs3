@@ -11,7 +11,7 @@
 #include "systemtab.h"
 #include "settingsdialog.h"
 
-SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
+SettingsDialog::SettingsDialog(QWidget *parent, const std::string& path) : QDialog(parent)
 {
 	tabWidget = new QTabWidget;
 	tabWidget->addTab(new CoreTab(this), tr("Core"));
