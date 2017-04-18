@@ -2,9 +2,9 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QFileDialog>
-#include <QDebug>
 #include <QVBoxLayout>
 #include <QDockWidget>
+#include <QProgressDialog>
 
 #include "gamelistframe.h"
 #include "debuggerframe.h"
@@ -13,6 +13,22 @@
 #include "padsettingsdialog.h"
 #include "AutoPauseSettingsDialog.h"
 #include "mainwindow.h"
+
+#include <thread>
+
+#include "stdafx.h"
+#include "Emu\System.h"
+#include "Emu\Memory\Memory.h"
+
+#include "Crypto\unpkg.h"
+#include "Crypto\unself.h"
+
+#include "Loader\PUP.h"
+#include "Loader\TAR.h"
+
+#include "Utilities\Thread.h"
+#include "Utilities\StrUtil.h"
+
 #include "rpcs3_version.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -28,93 +44,315 @@ MainWindow::~MainWindow()
 {
 }
 
+void MainWindow::DoSettings(bool load)
+{
+//	auto&& cfg = g_gui_cfg[ini_name]["aui"];
+//
+//	if (load)
+//	{
+//		const auto& perspective = fmt::FromUTF8(cfg.Scalar());
+//
+//		m_aui_mgr.LoadPerspective(perspective.empty() ? m_aui_mgr.SavePerspective() : perspective);
+//	}
+//	else
+//	{
+//		cfg = fmt::ToUTF8(m_aui_mgr.SavePerspective());
+//		save_gui_cfg();
+//	}
+}
+
 void MainWindow::BootElf()
 {
 	bool stopped = false;
 
-	QFileDialog dlg(this, "Select (S)ELF", "", "(S)ELF files (*BOOT.BIN *.elf *.self);;"
-											   "ELF files (BOOT.BIN *.elf);;"
-											   "SELF files (EBOOT.BIN *.self);;"
-											   "BOOT files (*BOOT.BIN);;"
-											   "BIN files (*.bin);;"
-											   "All files (*.*)");
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	QFileDialog dlg(this, tr("Select (S)ELF To Boot"), "", tr("(S)ELF files (*BOOT.BIN *.elf *.self);;"
+		"ELF files (BOOT.BIN *.elf);;"
+		"SELF files (EBOOT.BIN *.self);;"
+		"BOOT files (*BOOT.BIN);;"
+		"BIN files (*.bin);;"
+		"All files (*.*)"));
 	dlg.setAcceptMode(QFileDialog::AcceptOpen);
 	dlg.setFileMode(QFileDialog::ExistingFile);
 
 	if (dlg.exec() == QDialog::Rejected)
 	{
-		qDebug() << "Rejected!";
+		if (stopped) Emu.Resume();
 		return;
 	}
+
+	LOG_NOTICE(LOADER, "(S)ELF: booting...");
+
+	Emu.Stop();
+	Emu.SetPath((std::string) dlg.selectedFiles().first().toUtf8());
+	Emu.Load();
+
+	if (Emu.IsReady()) LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 }
 
 void MainWindow::BootGame()
 {
 	bool stopped = false;
 
-	QFileDialog dlg(this, "Select game folder");
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	QFileDialog dlg(this, tr("Select Game Folder"));
 	dlg.setAcceptMode(QFileDialog::AcceptOpen);
 	dlg.setFileMode(QFileDialog::Directory);
 	dlg.setOptions(QFileDialog::ShowDirsOnly);
 
 	if (dlg.exec() == QDialog::Rejected)
 	{
-		qDebug() << "Rejected!";
+		if (stopped) Emu.Resume();
 		return;
+	}
+	Emu.Stop();
+	const std::string path = dlg.selectedFiles().first().toUtf8();
+
+	if (!Emu.BootGame(path))
+	{
+		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
 	}
 }
 
 void MainWindow::InstallPkg()
 {
-	QFileDialog dlg(this, "Select PKG", "", "PKG files (*.pkg);;All files (*.*)");
+	QFileDialog dlg(this, tr("Select PKG To Install"), "", tr("PKG files (*.pkg);;All files (*.*)"));
 	dlg.setAcceptMode(QFileDialog::AcceptOpen);
 	dlg.setFileMode(QFileDialog::ExistingFile);
 
 	if (dlg.exec() == QDialog::Rejected)
 	{
-		qDebug() << "Rejected!";
+		return;
+	}
+	Emu.Stop();
+	
+	const std::string path = dlg.getOpenFileName().toUtf8();
+
+	// Open PKG file
+	fs::file pkg_f(path);
+
+	if (!pkg_f || pkg_f.size() < 64)
+	{
+		LOG_ERROR(LOADER, "PKG: Failed to open %s", path);
 		return;
 	}
 
-	QString dir = dlg.getOpenFileName();
-	qDebug(qUtf8Printable(dir));
+	// Get title ID
+	std::vector<char> title_id(9);
+	pkg_f.seek(55);
+	pkg_f.read(title_id);
+	pkg_f.seek(0);
 
+	// Get full path
+	const auto& local_path = Emu.GetGameDir() + std::string(std::begin(title_id), std::end(title_id));
+
+	if (!fs::create_dir(local_path))
+	{
+		if (fs::is_dir(local_path))
+		{
+			if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Another installation found. Do you want to overwrite it?")) != QMessageBox::Yes)
+			{
+				LOG_ERROR(LOADER, "PKG: Cancelled installation to existing directory %s", local_path);
+				return;
+			}
+		}
+		else
+		{
+			LOG_ERROR(LOADER, "PKG: Could not create the installation directory %s", local_path);
+			return;
+		}
+	}
+
+	QProgressDialog pdlg(tr("PKG Installer: Please Wait...unpacking"), tr("Cancel"), 0, 1000, this /*wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT*/);
+	// Synchronization variable
+	atomic_t<double> progress(0.);
+	{
+		// Run PKG unpacking asynchronously
+		scope_thread worker("PKG Installer", [&]
+		{
+			if (pkg_install(pkg_f, local_path + '/', progress))
+			{
+				progress = 1.;
+				return;
+			}
+
+			// TODO: Ask user to delete files on cancellation/failure?
+			progress = -1.;
+		});
+		// TODO (Megamouse): Use signals
+		//// Wait for the completion
+		//while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
+		//{
+		//  // Update progress window
+		//  pdlg.setValue(static_cast<int>(progress * pdlg.maximum));
+		//
+		//  if (pldg.wasCanceled())
+		//  {
+		//    progress -= 1.;
+		//    break;
+		//  }
+		//}
+		//
+		//if (progress > 0.)
+		//{
+		//  pdlg.setValue(pdlg.maximum);
+		//  std::this_thread::sleep_for(100ms);
+		//}
+	}
+
+	if (progress >= 1.)
+	{
+		// TODO (Megamouse) Refresh game list
+		//update();
+		//repaint();
+	}
 }
 
 void MainWindow::InstallPup()
 {
-	QFileDialog dlg(this, "Select PUP", "", "PUP files (*.pup);;All files (*.*)");
+	QFileDialog dlg(this, tr("Select PS3UPDAT.PUP To Install"), "", tr("PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP"));
 	dlg.setAcceptMode(QFileDialog::AcceptOpen);
 	dlg.setFileMode(QFileDialog::ExistingFile);
 
 	if (dlg.exec() == QDialog::Rejected)
 	{
-		qDebug() << "Rejected!";
 		return;
 	}
 
-	QString dir = dlg.getOpenFileName();
-	qDebug(qUtf8Printable(dir));
+	Emu.Stop();
+
+	const std::string path = dlg.getOpenFileName().toUtf8();
+
+	fs::file pup_f(path);
+	pup_object pup(pup_f);
+	if (!pup)
+	{
+		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
+		QMessageBox(QMessageBox::Critical, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."), QMessageBox::Ok);
+		return;
+	}
+
+	fs::file update_files_f = pup.get_file(0x300);
+	tar_object update_files(update_files_f);
+	auto updatefilenames = update_files.get_filenames();
+
+	updatefilenames.erase(std::remove_if(
+		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == std::string::npos; }),
+		updatefilenames.end());
+
+	QProgressDialog pdlg(tr("Firmware Installer"), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	//FirmwareInstaller fwi(updatefilenames.size(), this);
+
+	// Synchronization variable
+	atomic_t<int> progress(0);
+	{
+		// Run asynchronously
+		scope_thread worker("Firmware Installer", [&]
+		{
+			for (auto updatefilename : updatefilenames)
+			{
+				if (progress == -1) break;
+
+				fs::file updatefile = update_files.get_file(updatefilename);
+
+				SCEDecrypter self_dec(updatefile);
+				self_dec.LoadHeaders();
+				self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
+				self_dec.DecryptData();
+
+				auto dev_flash_tar_f = self_dec.MakeFile();
+				if (dev_flash_tar_f.size() < 3) {
+					LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
+					QMessageBox(QMessageBox::Critical, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."), QMessageBox::Ok);
+					progress = -1;
+				}
+
+				tar_object dev_flash_tar(dev_flash_tar_f[2]);
+				if (!dev_flash_tar.extract(fs::get_config_dir()))
+				{
+					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
+					QMessageBox(QMessageBox::Critical, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."), QMessageBox::Ok);
+					progress = -1;
+				}
+
+				if (progress >= 0)
+					progress += 1;
+			}
+		});
+
+		// TODO (Megamouse)
+		//// Wait for the completion
+		//while (std::this_thread::sleep_for(5ms), std::abs(progress) < pdlg.maximum)
+		//{
+		//  // Update progress window
+		//  pdlg.setValue(static_cast<int>(progress));
+		//  
+		//  if(pldg.wasCanceled())
+		//  {
+		//    progress = -1;
+		//    break;
+		//  }
+		//}
+		//
+		//update_files_f.close();
+		//pup_f.close();
+		//
+		//if (progress > 0)
+		//{
+		//  pdlg.setValue(pdlg.maximum);
+		//  std::this_thread::sleep_for(100ms);
+		//}
+	}
+
+	if (progress > 0)
+	{
+		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
+		QMessageBox(QMessageBox::Information, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), QMessageBox::Ok);
+	}
 }
 
 void MainWindow::Pause()
 {
-	qDebug() << "MainWindow::Pause()";
+	if (Emu.IsReady())
+	{
+		Emu.Run();
+	}
+	else if (Emu.IsPaused())
+	{
+		Emu.Resume();
+	}
+	else if (Emu.IsRunning())
+	{
+		Emu.Pause();
+	}
 }
 
 void MainWindow::Stop()
 {
-	qDebug() << "MainWindow::Stop()";
-}
-
-void MainWindow::SendOpenSysMenu()
-{
-	qDebug() << "MainWindow::SendOpenSysMenu()";
+	Emu.Stop();
 }
 
 void MainWindow::SendExit()
 {
-	qDebug() << "MainWindow::SendExit()";
+	//sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
+}
+
+void MainWindow::SendOpenSysMenu()
+{
+	//sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
+	//m_sys_menu_opened = !m_sys_menu_opened;
+	//wxCommandEvent ce;
+	//UpdateUI(ce);
 }
 
 void MainWindow::Settings()
@@ -131,76 +369,82 @@ void MainWindow::PadSettings()
 
 void MainWindow::AutoPauseSettings()
 {
-        AutoPauseSettingsDialog dlg(this);
+	AutoPauseSettingsDialog dlg(this);
 	dlg.exec();
 }
 
-void MainWindow::VFSManager()
-{
-	qDebug() << "MainWindow::VFSManager()";
-}
+void MainWindow::VFSManager(){}
 
-void MainWindow::VHDDManager()
-{
-	qDebug() << "MainWindow::VHDDManager()";
-}
+void MainWindow::VHDDManager(){}
 
-void MainWindow::SaveData()
-{
-	qDebug() << "MainWindow::SaveData()";
-}
+void MainWindow::SaveData(){}
 
-void MainWindow::ELFCompiler()
-{
-	qDebug() << "MainWindow::ELFCompiler()";
-}
+void MainWindow::ELFCompiler(){}
 
-void MainWindow::CgDisasm()
-{
-	qDebug() << "MainWindow::CgDisasm()";
-}
+void MainWindow::CgDisasm(){}
 
-void MainWindow::KernelExplorer()
-{
-	qDebug() << "MainWindow::KernelExplorer()";
-}
+void MainWindow::KernelExplorer(){}
 
-void MainWindow::MemoryViewer()
-{
-	qDebug() << "MainWindow::MemoryViewer()";
-}
+void MainWindow::MemoryViewer(){}
 
-void MainWindow::RSXDebugger()
-{
-	qDebug() << "MainWindow::RSXDebugger()";
-}
+void MainWindow::RSXDebugger(){}
 
-void MainWindow::StringSearch()
-{
-	qDebug() << "MainWindow::StringSearch()";
-}
+void MainWindow::StringSearch(){}
 
 void MainWindow::DecryptSPRXLibraries()
 {
-	QFileDialog dlg(this, "Select SPRX files", "", "SPRX files (*.sprx)");
-	dlg.setAcceptMode(QFileDialog::AcceptOpen);
-	dlg.setFileMode(QFileDialog::ExistingFiles);
+	QFileDialog sprxdlg(this, tr("Select SPRX files"), "", tr("SPRX files (*.sprx)"));
+	sprxdlg.setAcceptMode(QFileDialog::AcceptOpen);
+	sprxdlg.setFileMode(QFileDialog::ExistingFiles);
 
-	if (dlg.exec() == QDialog::Rejected)
+	if (sprxdlg.exec() == QDialog::Rejected)
 	{
 		return;
 	}
 
-	QStringList modules = dlg.selectedFiles();
+	Emu.Stop();
 
-	qDebug() << "Decrypting SPRX libraries...";
+	QStringList modules = sprxdlg.selectedFiles();
+
+	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
 
 	for (QString& module : modules)
 	{
-		qDebug() << module;
+		std::string prx_path = module.toUtf8();
+		const std::string& prx_dir = fs::get_parent_dir(prx_path);
+
+		fs::file elf_file(prx_path);
+
+		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
+		{
+			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
+			const std::string& prx_ext = fmt::to_upper(prx_path.substr(prx_ext_pos != -1 ? prx_ext_pos : prx_path.size()));
+			const std::string& prx_name = prx_path.substr(prx_dir.size());
+
+			elf_file = decrypt_self(std::move(elf_file));
+
+			prx_path.erase(prx_path.size() - 4, 1); // change *.sprx to *.prx
+
+			if (elf_file)
+			{
+				if (fs::file new_file{ prx_path, fs::rewrite })
+				{
+					new_file.write(elf_file.to_string());
+					LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+				}
+				else
+				{
+					LOG_ERROR(GENERAL, "Failed to create %s", prx_path);
+				}
+			}
+			else
+			{
+				LOG_ERROR(GENERAL, "Failed to decrypt %s", prx_dir + prx_name);
+			}
+		}
 	}
 
-	qDebug() << "Finished decrypting all SPRX libraries.";
+	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
 }
 
 void MainWindow::ToggleDebugFrame(bool state)
@@ -241,12 +485,12 @@ void MainWindow::ToggleGameListFrame(bool state)
 
 void MainWindow::HideGameIcons()
 {
-	qDebug() << "MainWindow::HideGameIcons()";
+	
 }
 
 void MainWindow::RefreshGameList()
 {
-	qDebug() << "MainWindow::RefreshGameList()";
+	
 }
 
 void MainWindow::About()
@@ -322,7 +566,7 @@ void MainWindow::CreateActions()
 	connect(bootInstallPkgAct, &QAction::triggered, this, &MainWindow::InstallPkg);
 
 	bootInstallPupAct = new QAction(tr("&Install Firmware"), this);
-	connect(bootInstallPupAct, &QAction::triggered, this, &MainWindow::InstallPkg);
+	connect(bootInstallPupAct, &QAction::triggered, this, &MainWindow::InstallPup);
 
 	exitAct = new QAction(tr("E&xit"), this);
 	exitAct->setShortcuts(QKeySequence::Quit);
@@ -349,7 +593,7 @@ void MainWindow::CreateActions()
 	confSettingsAct = new QAction(tr("&Settings"), this);
 	connect(confSettingsAct, &QAction::triggered, this, &MainWindow::Settings);
 
-	confPadAct = new QAction(tr("&PAD Settings"), this);
+	confPadAct = new QAction(tr("&Keyboard Settings"), this);
 	connect(confPadAct, &QAction::triggered, this, &MainWindow::PadSettings);
 
 	confAutopauseManagerAct = new QAction(tr("&Auto Pause Settings"), this);
@@ -391,8 +635,8 @@ void MainWindow::CreateActions()
 	toolsStringSearchAct->setEnabled(false);
 	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
 
-	toolsSecryptSprxLibsAct = new QAction(tr("&Decrypt SPRX libraries"), this);
-	connect(toolsSecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
+	toolsDecryptSprxLibsAct = new QAction(tr("&Decrypt SPRX libraries"), this);
+	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
 
 	showDebuggerAct = new QAction(tr("Show Debugger"), this);
 	showDebuggerAct->setCheckable(true);
@@ -461,7 +705,7 @@ void MainWindow::CreateMenus()
 	toolsMenu->addAction(toolsRsxDebuggerAct);
 	toolsMenu->addAction(toolsStringSearchAct);
 	toolsMenu->addSeparator();
-	toolsMenu->addAction(toolsSecryptSprxLibsAct);
+	toolsMenu->addAction(toolsDecryptSprxLibsAct);
 
 	QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
 	viewMenu->addAction(showLogAct);
@@ -485,10 +729,20 @@ void MainWindow::CreateDockWindows()
 	addDockWidget(Qt::LeftDockWidgetArea, gameListFrame);
 	addDockWidget(Qt::LeftDockWidgetArea, logFrame);
 	addDockWidget(Qt::RightDockWidgetArea, debuggerFrame);
-
 	debuggerFrame->hide();
 
 	connect(logFrame, &LogFrame::LogFrameClosed, this, &MainWindow::OnLogFrameClosed);
 	connect(debuggerFrame, &DebuggerFrame::DebugFrameClosed, this, &MainWindow::OnDebugFrameClosed);
 	connect(gameListFrame, &GameListFrame::GameListFrameClosed, this, &MainWindow::OnGameListFrameClosed);
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *keyEvent)
+{
+	switch (keyEvent->key())
+	{
+	case 'E': case 'e': if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
+	case 'P': case 'p': if (Emu.IsRunning()) Emu.Pause(); return;
+	case 'S': case 's': if (!Emu.IsStopped()) Emu.Stop(); return;
+	case 'R': case 'r': if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
+	}
 }

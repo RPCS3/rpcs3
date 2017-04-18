@@ -54,8 +54,9 @@ private:
 	void CreateActions();
 	void CreateMenus();
 	void CreateDockWindows();
+	void DoSettings(bool load);
+	void keyPressEvent(QKeyEvent *keyEvent);
 
-	// Actions
 	QAction *bootElfAct;
 	QAction *bootGameAct;
 	QAction *bootInstallPkgAct;
@@ -76,7 +77,7 @@ private:
 	QAction *toolsMemoryViewerAct;
 	QAction *toolsRsxDebuggerAct;
 	QAction *toolsStringSearchAct;
-	QAction *toolsSecryptSprxLibsAct;
+	QAction *toolsDecryptSprxLibsAct;
 	QAction *exitAct;
 	QAction *showDebuggerAct;
 	QAction *showLogAct;
