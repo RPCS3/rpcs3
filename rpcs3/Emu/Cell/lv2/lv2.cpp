@@ -444,13 +444,13 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_overlay_get_module_dbg_info)  //458 (0x1CA)
 	null_func,                                              //459 (0x1CB)  UNS
 	null_func,//BIND_FUNC(sys_prx_dbg_get_module_id_list)   //460 (0x1CC)  ROOT
-	null_func,//BIND_FUNC(sys_prx_get_module_id_by_address) //461 (0x1CD)
+	BIND_FUNC(_sys_prx_get_module_id_by_address),           //461 (0x1CD)
 	null_func,                                              //462 (0x1CE)  UNS
-	null_func,//BIND_FUNC(sys_prx_load_module_by_fd)        //463 (0x1CF)
-	null_func,//BIND_FUNC(sys_prx_load_module_on_memcontainer_by_fd) //464 (0x1D0)
-	BIND_FUNC(sys_prx_load_module_list),         //465 (0x1D1)
-	null_func,//BIND_FUNC(sys_prx_load_module_list_on_memcontainer) //466 (0x1D2)
-	null_func,//BIND_FUNC(sys_prx_get_ppu_guid)             //467 (0x1D3)
+	BIND_FUNC(_sys_prx_load_module_by_fd),                  //463 (0x1CF)
+	BIND_FUNC(_sys_prx_load_module_on_memcontainer_by_fd),  //464 (0x1D0)
+	BIND_FUNC(_sys_prx_load_module_list),                   //465 (0x1D1)
+	BIND_FUNC(_sys_prx_load_module_list_on_memcontainer),   //466 (0x1D2)
+	BIND_FUNC(sys_prx_get_ppu_guid),                        //467 (0x1D3)
 	null_func,//BIND_FUNC(sys_...)                          //468 (0x1D4)  ROOT
 	null_func,                                              //469 (0x1D5)  UNS
 	null_func,//BIND_FUNC(sys_...)                          //470 (0x1D6)  ROOT
@@ -463,26 +463,26 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	
 	null_func, null_func, null_func,                        //477-479  UNS
 
-	BIND_FUNC(sys_prx_load_module),                         //480 (0x1E0)
-	BIND_FUNC(sys_prx_start_module),                        //481 (0x1E1)
-	BIND_FUNC(sys_prx_stop_module),                         //482 (0x1E2)
-	BIND_FUNC(sys_prx_unload_module),                       //483 (0x1E3)
-	BIND_FUNC(sys_prx_register_module),                     //484 (0x1E4)
-	BIND_FUNC(sys_prx_query_module),                        //485 (0x1E5)
-	BIND_FUNC(sys_prx_register_library),                    //486 (0x1E6)
-	BIND_FUNC(sys_prx_unregister_library),                  //487 (0x1E7)
-	BIND_FUNC(sys_prx_link_library),                        //488 (0x1E8)
-	BIND_FUNC(sys_prx_unlink_library),                      //489 (0x1E9)
-	BIND_FUNC(sys_prx_query_library),                       //490 (0x1EA)
+	BIND_FUNC(_sys_prx_load_module),                        //480 (0x1E0)
+	BIND_FUNC(_sys_prx_start_module),                       //481 (0x1E1)
+	BIND_FUNC(_sys_prx_stop_module),                        //482 (0x1E2)
+	BIND_FUNC(_sys_prx_unload_module),                      //483 (0x1E3)
+	BIND_FUNC(_sys_prx_register_module),                    //484 (0x1E4)
+	BIND_FUNC(_sys_prx_query_module),                       //485 (0x1E5)
+	BIND_FUNC(_sys_prx_register_library),                   //486 (0x1E6)
+	BIND_FUNC(_sys_prx_unregister_library),                 //487 (0x1E7)
+	BIND_FUNC(_sys_prx_link_library),                       //488 (0x1E8)
+	BIND_FUNC(_sys_prx_unlink_library),                     //489 (0x1E9)
+	BIND_FUNC(_sys_prx_query_library),                      //490 (0x1EA)
 	null_func,                                              //491 (0x1EB)  UNS
 	null_func,//BIND_FUNC(sys_...)                          //492 (0x1EC)  DBG
 	null_func,//BIND_FUNC(sys_prx_dbg_get_module_info)      //493 (0x1ED)  DBG
-	null_func,//BIND_FUNC(sys_prx_get_module_list),         //494 (0x1EE)
-	null_func,//BIND_FUNC(sys_prx_get_module_info),         //495 (0x1EF)
-	null_func,//BIND_FUNC(sys_prx_get_module_id_by_name),   //496 (0x1F0)
-	null_func,//BIND_FUNC(sys_prx_load_module_on_memcontainer),//497 (0x1F1)
-	BIND_FUNC(sys_prx_start),                               //498 (0x1F2)
-	BIND_FUNC(sys_prx_stop),                                //499 (0x1F3)
+	BIND_FUNC(_sys_prx_get_module_list),                    //494 (0x1EE)
+	BIND_FUNC(_sys_prx_get_module_info),                    //495 (0x1EF)
+	BIND_FUNC(_sys_prx_get_module_id_by_name),              //496 (0x1F0)
+	BIND_FUNC(_sys_prx_load_module_on_memcontainer),        //497 (0x1F1)
+	BIND_FUNC(_sys_prx_start),                              //498 (0x1F2)
+	BIND_FUNC(_sys_prx_stop),                               //499 (0x1F3)
 	null_func,//BIND_FUNC(sys_hid_manager_open)             //500 (0x1F4)
 	null_func,//BIND_FUNC(sys_hid_manager_close)            //501 (0x1F5)
 	null_func,//BIND_FUNC(sys_hid_manager_read)             //502 (0x1F6)  ROOT

@@ -586,6 +586,8 @@ void SPUThread::process_mfc_cmd()
 		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 		const auto to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ffff);
 
+		vm::reservation_acquire(ch_mfc_cmd.eal, 128);
+
 		// Store unconditionally
 		// TODO: vm::check_addr
 		vm::writer_lock lock(0);

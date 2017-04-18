@@ -88,7 +88,7 @@ struct sys_spu_segment
 {
 	be_t<s32> type; // copy, fill, info
 	be_t<u32> ls; // local storage address
-	be_t<s32> size;
+	be_t<u32> size;
 
 	union
 	{
@@ -105,26 +105,22 @@ enum : u32
 	SYS_SPU_IMAGE_TYPE_KERNEL = 1,
 };
 
-struct sys_spu_image_t
+struct sys_spu_image
 {
 	be_t<u32> type; // user, kernel
 	be_t<u32> entry_point;
 	vm::ps3::bptr<sys_spu_segment> segs;
 	be_t<s32> nsegs;
+
+	void load(const fs::file& stream);
+	void free();
+	void deploy(u32 loc);
 };
 
 enum : u32
 {
 	SYS_SPU_IMAGE_PROTECT = 0,
 	SYS_SPU_IMAGE_DIRECT  = 1,
-};
-
-struct spu_arg_t
-{
-	u64 arg1;
-	u64 arg2;
-	u64 arg3;
-	u64 arg4;
 };
 
 // SPU Thread Group Join State Flag
@@ -157,8 +153,8 @@ struct lv2_spu_group
 	cond_variable cv; // used to signal waiting PPU thread
 
 	std::array<std::shared_ptr<SPUThread>, 256> threads; // SPU Threads
-	std::array<vm::ps3::ptr<sys_spu_image_t>, 256> images; // SPU Images
-	std::array<spu_arg_t, 256> args; // SPU Thread Arguments
+	std::array<vm::ps3::ptr<sys_spu_image>, 256> imgs; // SPU Images
+	std::array<std::array<u64, 4>, 256> args; // SPU Thread Arguments
 
 	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
 	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
@@ -204,15 +200,11 @@ struct lv2_spu_group
 
 class ppu_thread;
 
-// Aux
-void LoadSpuImage(const fs::file& stream, u32& spu_ep, u32 addr);
-u32 LoadSpuImage(const fs::file& stream, u32& spu_ep);
-
 // Syscalls
 
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
-error_code sys_spu_image_open(vm::ps3::ptr<sys_spu_image_t> img, vm::ps3::cptr<char> path);
-error_code sys_spu_thread_initialize(vm::ps3::ptr<u32> thread, u32 group, u32 spu_num, vm::ps3::ptr<sys_spu_image_t>, vm::ps3::ptr<sys_spu_thread_attribute>, vm::ps3::ptr<sys_spu_thread_argument>);
+error_code sys_spu_image_open(vm::ps3::ptr<sys_spu_image> img, vm::ps3::cptr<char> path);
+error_code sys_spu_thread_initialize(vm::ps3::ptr<u32> thread, u32 group, u32 spu_num, vm::ps3::ptr<sys_spu_image>, vm::ps3::ptr<sys_spu_thread_attribute>, vm::ps3::ptr<sys_spu_thread_argument>);
 error_code sys_spu_thread_set_argument(u32 id, vm::ps3::ptr<sys_spu_thread_argument> arg);
 error_code sys_spu_thread_group_create(vm::ps3::ptr<u32> id, u32 num, s32 prio, vm::ps3::ptr<sys_spu_thread_group_attribute> attr);
 error_code sys_spu_thread_group_destroy(u32 id);

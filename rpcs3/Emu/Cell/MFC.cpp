@@ -142,6 +142,8 @@ void mfc_thread::cpu_task()
 					cmd.size = 0;
 					no_updates = 0;
 
+					vm::reservation_acquire(cmd.eal, 128);
+
 					// Store unconditionally
 					vm::writer_lock lock(0);
 					data = to_write;

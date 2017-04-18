@@ -17,7 +17,7 @@
 
 logs::channel cellSpurs("cellSpurs", logs::level::notice);
 
-s32 sys_spu_image_close(vm::ptr<sys_spu_image_t> img);
+s32 sys_spu_image_close(vm::ptr<sys_spu_image> img);
 
 // TODO
 struct cell_error_t
@@ -1051,9 +1051,9 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 	// Import SPURS kernel
 	spurs->spuImg.type        = SYS_SPU_IMAGE_TYPE_USER;
-	spurs->spuImg.segs        = vm::cast(vm::alloc(0x40000, vm::main));
+	spurs->spuImg.segs        = vm::null;
 	spurs->spuImg.entry_point = isSecond ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR;
-	spurs->spuImg.nsegs       = 1;
+	spurs->spuImg.nsegs       = 0;
 
 	// Create a thread group for this SPURS context
 	std::memcpy(spuTgName.get_ptr(), spurs->prefix, spurs->prefixSize);
