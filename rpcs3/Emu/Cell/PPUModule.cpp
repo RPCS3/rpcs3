@@ -129,7 +129,7 @@ enum class lib_loader_mode
 
 cfg::map_entry<lib_loader_mode> g_cfg_lib_loader(cfg::root.core, "Lib Loader", 1,
 {
-	{ "Automatically load required libraries ", lib_loader_mode::automatic },
+	{ "Automatically load required libraries", lib_loader_mode::automatic },
 	{ "Manually load required libraries", lib_loader_mode::manual },
 	{ "Load automatic and manual selection", lib_loader_mode::both },
 	{ "Load liblv2.sprx only", lib_loader_mode::liblv2only },
