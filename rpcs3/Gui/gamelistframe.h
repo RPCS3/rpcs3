@@ -94,8 +94,8 @@ protected:
 	void closeEvent(QCloseEvent* event);
 private:
 	QTableWidget *gameList;
-	void ShowContextMenu(QPoint &pos);
-	void doubleClickedSlot(QModelIndex index);
+	void ShowContextMenu(const QPoint &pos);
+	void doubleClickedSlot(const QModelIndex& index);
 	void CreateActions();
 	void LoadGames();
 	void LoadPSF();

@@ -10,6 +10,7 @@
 #include <QMenuBar>
 #include <QProcess>
 #include <QMessageBox>
+#include <QDir>
 
 static const std::string m_class_name = "GameViewer";
 
@@ -40,6 +41,7 @@ public:
 GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), parent)
 {
 	gameList = new QTableWidget(this);
+	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	gameList->setColumnCount(7);
 	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
 	gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
@@ -52,9 +54,8 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 	setWidget(gameList);
 
 	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
-	connect(gameList, SIGNAL(customContextMenuRequested(QPoint &pos)), this, SLOT(ShowContextMenu(gameList, QPoint &pos)));
-	connect(gameList, SIGNAL(clicked(QModelIndex)), this, SLOT(clickedSlot(gameList, QModelIndex)));
-	connect(gameList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(doubleClickedSlot(gameList, QModelIndex)));
+	connect(gameList, &QTableWidget::customContextMenuRequested, this, &GameListFrame::ShowContextMenu);
+	connect(gameList, &QTableWidget::doubleClicked, this, &GameListFrame::doubleClickedSlot);
 }
 
 GameListFrame::~GameListFrame()
@@ -177,7 +178,7 @@ void GameListFrame::LoadSettings()
 	m_columns.LoadSave(true, m_class_name);
 }
 
-void GameListFrame::doubleClickedSlot(QModelIndex index)
+void GameListFrame::doubleClickedSlot(const QModelIndex& index)
 {
 	int i = index.row();
 	const std::string& path = Emu.GetGameDir() + m_game_data[i].root;
@@ -190,7 +191,7 @@ void GameListFrame::doubleClickedSlot(QModelIndex index)
 	}
 }
 
-void GameListFrame::ShowContextMenu(QPoint &pos) // this is a slot
+void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 {
 	QModelIndex index = gameList->indexAt(pos);
 	// for most widgets
@@ -360,7 +361,7 @@ void ColumnsArr::Init()
 {
 	m_img_list = new QListWidget();
 	m_img_list->setIconSize(QSize(80, 44));
-	m_img_list->setViewMode(QListWidget::IconMode);
+	//m_img_list->setViewMode(QListWidget::IconMode); // Do we really want icon mode? I'm going to override that when I add the images anyhow probably
 
 	m_columns.clear();
 	m_columns.emplace_back(0, 90, "Icon");
@@ -409,16 +410,22 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 		QImage game_icon(80, 44, QImage::Format_RGB32);
 		if (!path.empty())
 		{
-			//if (game_icon.load(fmt::FromUTF8(path), "PNG"))
-			//{
-			//	game_icon.scaled(80, 44);
-			//	m_icon_indexes.push_back(m_img_list->add(game_icon));
-			//	continue;
-			//}
-			//else
-			//{
-			//	LOG_ERROR(GENERAL, "Error loading image %s", path);
-			//}
+			QListWidgetItem *thumbnail = new QListWidgetItem;
+			thumbnail->setFlags(thumbnail->flags() & ~Qt::ItemIsEditable);
+
+			// Load image.
+			QImage* img = new QImage;
+			bool success = img->load(QString::fromStdString(path));
+			if (success)
+			{
+				thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage(*img));
+				m_img_list->addItem(thumbnail);
+			}
+			else {
+				QString abspath = QDir(QString::fromStdString(path)).absolutePath();
+				LOG_ERROR(HLE, "Count not load image from path %s", abspath.toStdString());
+				m_img_list->addItem("ImgLoadFailed");
+			}
 		}
 
 		m_icon_indexes.push_back(-1);
