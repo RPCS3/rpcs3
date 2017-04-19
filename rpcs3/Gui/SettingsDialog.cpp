@@ -442,12 +442,14 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 		pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "D3D12", "Adapter" }, cbox_gs_d3d_adapter));
 	}
 	else
-#endif
 	{
 		// Removes D3D12 from Render list when the system doesn't support it
 		cbox_gs_render->Delete(cbox_gs_render->FindString("D3D12"));
 		cbox_gs_d3d_adapter->Enable(false);
 	}
+#else
+	cbox_gs_d3d_adapter->Enable(false);
+#endif
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
