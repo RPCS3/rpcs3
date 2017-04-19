@@ -194,6 +194,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellRemotePlay.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellResc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellRtc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellRtcAlarm.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellRudp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSail.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSailRec.cpp" />
