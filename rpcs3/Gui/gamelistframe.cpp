@@ -42,6 +42,7 @@ public:
 
 GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), parent)
 {
+	CreateActions();
 	LoadSettings();
 	gameList = new QTableWidget(this);
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -60,7 +61,10 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 	setWidget(gameList);
 
 	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
+	gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
+
 	connect(gameList, &QTableWidget::customContextMenuRequested, this, &GameListFrame::ShowContextMenu);
+	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &GameListFrame::ShowHeaderContextMenu);
 	connect(gameList, &QTableWidget::doubleClicked, this, &GameListFrame::doubleClickedSlot);
 	connect(gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &GameListFrame::OnColClicked);
 
@@ -206,6 +210,37 @@ void GameListFrame::doubleClickedSlot(const QModelIndex& index)
 	}
 }
 
+void GameListFrame::CreateActions()
+{
+	auto l_InitAct = [this](QAction* act, int col) {
+		act->setCheckable(true);
+		act->setChecked(true);
+
+		auto l_CallBack = [this, col](bool val) {
+			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
+		};
+
+		connect(act, &QAction::triggered, l_CallBack);
+	};
+
+	showIconColAct = new QAction(tr("Show Icons"), this);
+	showNameColAct = new QAction(tr("Show Names"), this);
+	showSerialColAct = new QAction(tr("Show Serials"), this);
+	showFWColAct = new QAction(tr("Show FWs"), this);
+	showAppVersionColAct = new QAction(tr("Show App Verions"), this);
+	showCategoryColAct = new QAction(tr("Show Categories"), this);
+	showPathColAct = new QAction(tr("Show Paths"), this);
+
+	// The index passed is the column to toggle.
+	l_InitAct(showIconColAct, 0);
+	l_InitAct(showNameColAct, 1);
+	l_InitAct(showSerialColAct, 2);
+	l_InitAct(showFWColAct, 3);
+	l_InitAct(showAppVersionColAct, 4);
+	l_InitAct(showCategoryColAct, 5);
+	l_InitAct(showPathColAct, 6);
+}
+
 void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 {
 	int row = gameList->indexAt(pos).row();
@@ -251,6 +286,13 @@ void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 	connect(openConfig, &QAction::triggered, l_openConfig);
 	
 	myMenu.exec(globalPos);
+}
+
+void GameListFrame::ShowHeaderContextMenu(const QPoint& pos)
+{
+	QMenu* configure = new QMenu(this);
+	configure->addActions({ showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct});
+	configure->exec(mapToGlobal(pos));
 }
 
 void GameListFrame::Boot(int row)

@@ -95,7 +95,11 @@ protected:
 	void closeEvent(QCloseEvent* event);
 private:
 	QTableWidget *gameList;
+
+	void CreateActions();
+
 	void ShowContextMenu(const QPoint &pos);
+	void ShowHeaderContextMenu(const QPoint& pos);
 	void doubleClickedSlot(const QModelIndex& index);
 
 	void LoadGames();
@@ -104,6 +108,15 @@ private:
 	void Refresh();
 	void SaveSettings();
 	void LoadSettings();
+
+	// Actions regarding showing/hiding columns
+	QAction* showIconColAct;
+	QAction* showNameColAct;
+	QAction* showSerialColAct;
+	QAction* showFWColAct;
+	QAction* showAppVersionColAct;
+	QAction* showCategoryColAct;
+	QAction* showPathColAct;
 };
 
 #endif // GAMELISTFRAME_H
