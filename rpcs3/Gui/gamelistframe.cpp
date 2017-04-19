@@ -64,9 +64,8 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 	connect(gameList, &QTableWidget::doubleClicked, this, &GameListFrame::doubleClickedSlot);
 	connect(gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &GameListFrame::OnColClicked);
 
-	Refresh();
-
 	m_sortColumn = 1; // sort by name by default
+	Refresh();
 
 	// Refresh game list every 10 seconds.
 	QTimer *timer = new QTimer(this);
