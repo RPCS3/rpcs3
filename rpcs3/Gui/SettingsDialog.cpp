@@ -264,14 +264,14 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 
 	// Core
 	wxStaticBoxSizer* s_round_core_lle = new wxStaticBoxSizer(wxVERTICAL, p_core, "Load libraries");
-	chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, wxLB_EXTENDED);
+	chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), {}, wxLB_EXTENDED);
 	chbox_list_core_lle->Bind(wxEVT_CHECKLISTBOX, &SettingsDialog::OnModuleListItemToggled, this);
-	wxTextCtrl* s_module_search_box = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, {});
+	s_module_search_box = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, {});
 	s_module_search_box->Bind(wxEVT_TEXT, &SettingsDialog::OnSearchBoxTextChanged, this);
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
-	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter");
+	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter (DirectX 12 Only)");
 	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Resolution");
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Aspect ratio");
 	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Frame limit");
@@ -310,8 +310,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 
 	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
-	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx only");
-	wxCheckBox* chbox_core_load_libreq = new wxCheckBox(p_core, wxID_ANY, "Load required libraries");
 	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
 	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log Shader Programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
@@ -383,9 +381,13 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(spu_decoder_modes), rbox_spu_decoder));
 	rbox_spu_decoder->Enable(3, false); // TODO
 
+	radiobox_pad_helper lib_loader_modes({ "Core", "Lib Loader" });
+	rbox_lib_loader = new wxRadioBox(p_core, wxID_ANY, "Lib Loader", wxDefaultPosition, wxSize(-1, -1), lib_loader_modes, 1);
+	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(lib_loader_modes), rbox_lib_loader));
+	rbox_lib_loader->Bind(wxEVT_COMMAND_RADIOBOX_SELECTED, &SettingsDialog::OnLibLoaderToggled, this);
+	EnableModuleList(rbox_lib_loader->GetSelection());
+
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load liblv2.sprx only" }, chbox_core_load_liblv2));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load required libraries" }, chbox_core_load_libreq));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
@@ -449,10 +451,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	cbox_gs_d3d_adapter->Enable(false);
 #endif
 
-	// Core
-	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_core_lle->Add(s_module_search_box, wxSizerFlags().Border(wxALL, 5).Expand());
-
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_d3d_adapter->Add(cbox_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -476,11 +474,12 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Core
+	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 4).Expand());
+	s_round_core_lle->Add(s_module_search_box, wxSizerFlags().Border(wxALL, 4).Expand());
 	s_subpanel_core1->Add(rbox_ppu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(chbox_core_load_libreq, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core2->Add(rbox_lib_loader, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core2->Add(s_round_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(s_subpanel_core1);
 	s_subpanel_core->Add(s_subpanel_core2);
@@ -591,7 +590,7 @@ void SettingsDialog::OnModuleListItemToggled(wxCommandEvent &event)
 void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
 {
 	// helper to preserve alphabetically order while inserting items
-	int item_index = 0;
+	unsigned int item_index = 0;
 
 	if (event.GetString().IsEmpty())
 	{
@@ -632,3 +631,24 @@ void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
 		}
 	}
 }
+
+void SettingsDialog::OnLibLoaderToggled(wxCommandEvent& event)
+{
+	EnableModuleList(event.GetSelection());
+}
+
+// Enables or disables the modul list interaction
+void SettingsDialog::EnableModuleList(int selection)
+{
+	if (selection == 1 || selection == 2)
+	{
+		chbox_list_core_lle->Enable();
+		s_module_search_box->Enable();
+	}
+	else
+	{
+		chbox_list_core_lle->Disable();
+		s_module_search_box->Disable();
+	}
+}
+

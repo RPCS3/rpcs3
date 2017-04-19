@@ -98,7 +98,7 @@ MainFrame::MainFrame()
 	wxMenu* menu_conf = new wxMenu();
 	menubar->Append(menu_conf, "&Config");
 	menu_conf->Append(id_config_emu, "&Settings");
-	menu_conf->Append(id_config_pad, "&PAD Settings");
+	menu_conf->Append(id_config_pad, "&Keyboard Settings");
 	menu_conf->AppendSeparator();
 	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings");
 	//menu_conf->AppendSeparator();
