@@ -382,7 +382,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	rbox_spu_decoder->Enable(3, false); // TODO
 
 	radiobox_pad_helper lib_loader_modes({ "Core", "Lib Loader" });
-	rbox_lib_loader = new wxRadioBox(p_core, wxID_ANY, "Lib Loader", wxDefaultPosition, wxSize(-1, -1), lib_loader_modes, 1);
+	rbox_lib_loader = new wxRadioBox(p_core, wxID_ANY, "Library Loading Mode", wxDefaultPosition, wxSize(-1, -1), lib_loader_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(lib_loader_modes), rbox_lib_loader));
 	rbox_lib_loader->Bind(wxEVT_COMMAND_RADIOBOX_SELECTED, &SettingsDialog::OnLibLoaderToggled, this);
 	EnableModuleList(rbox_lib_loader->GetSelection());
