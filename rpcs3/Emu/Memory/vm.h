@@ -188,12 +188,6 @@ namespace vm
 		fmt::throw_exception("Not a virtual memory pointer (%p)", real_ptr);
 	}
 
-	// Convert pointer-to-member to a vm address compatible offset
-	template<typename MT, typename T> inline u32 get_offset(MT T::*const member_ptr)
-	{
-		return static_cast<u32>(reinterpret_cast<std::uintptr_t>(&reinterpret_cast<char const volatile&>(reinterpret_cast<T*>(0ull)->*member_ptr)));
-	}
-
 	template<typename T>
 	struct cast_impl
 	{
