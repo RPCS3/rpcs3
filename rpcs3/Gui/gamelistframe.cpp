@@ -42,8 +42,10 @@ public:
 
 GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), parent)
 {
+	LoadSettings();
 	gameList = new QTableWidget(this);
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
+	gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	gameList->verticalHeader()->setVisible(false);
 
 	gameList->setColumnCount(7);
@@ -74,7 +76,7 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 
 GameListFrame::~GameListFrame()
 {
-
+	SaveSettings();
 }
 
 void GameListFrame::OnColClicked(int col)
@@ -86,9 +88,7 @@ void GameListFrame::OnColClicked(int col)
 	m_sortColumn = col;
 
 	// Sort entries, update columns and refresh the panel
-	std::sort(m_game_data.begin(), m_game_data.end(), sortGameData(m_sortColumn, m_sortAscending));
-	m_columns.Update(m_game_data);
-	ShowData();
+	Refresh();
 }
 
 
@@ -177,9 +177,11 @@ void GameListFrame::ShowData()
 
 void GameListFrame::Refresh()
 {
+	int row = gameList->currentRow();
 	LoadGames();
 	LoadPSF();
 	ShowData();
+	gameList->selectRow(row);
 }
 
 void GameListFrame::SaveSettings()
@@ -393,6 +395,7 @@ void ColumnsArr::Init()
 
 void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 {
+	m_img_list->clear();
 	m_col_icon->data.clear();
 	m_col_name->data.clear();
 	m_col_serial->data.clear();
@@ -415,6 +418,7 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 		m_col_path->data.push_back(game.root);
 	}
 
+	int c = 0;
 	// load icons
 	for (const auto& path : m_col_icon->data)
 	{
@@ -425,7 +429,7 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 			bool success = img->load(QString::fromStdString(path));
 			if (success)
 			{
-				m_img_list->append(img);
+				m_img_list->append(new QImage(img->scaled(QSize(80, 44),Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation)));
 			}
 			else {
 				// IIRC a load failure means blank image which is fine to have as a placeholder.
@@ -434,8 +438,8 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 				m_img_list->append(img);
 			}
 		}
-
-		m_icon_indexes.push_back(-1);
+		m_icon_indexes.push_back(c);
+		c++;
 	}
 }
 
@@ -464,7 +468,7 @@ void ColumnsArr::ShowData(QTableWidget* table)
 	{
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
-		iconItem->setData(Qt::DecorationRole, QPixmap::fromImage(*m_img_list->at(r)));
+		iconItem->setData(Qt::DecorationRole, QPixmap::fromImage(*m_img_list->at(m_icon_indexes[r])));
 		table->setItem(r, 0, iconItem);
 	}
 
@@ -494,6 +498,9 @@ void ColumnsArr::ShowData(QTableWidget* table)
 			curr->setText(text);
 			table->setItem(r, c, curr);
 		}
+		table->resizeRowsToContents();
+		table->resizeColumnToContents(0);
+		table->setShowGrid(false);
 	}
 }
 
