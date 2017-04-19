@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -23,6 +24,8 @@
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter; // TODO: remove
 const spu_decoder<spu_recompiler> s_spu_decoder;
 
+extern cfg::bool_entry g_cfg_spu_debug;
+
 spu_recompiler::spu_recompiler()
 	: m_jit(std::make_shared<asmjit::JitRuntime>())
 {
@@ -31,7 +34,11 @@ spu_recompiler::spu_recompiler()
 
 	LOG_SUCCESS(SPU, "SPU Recompiler (ASMJIT) created...");
 
-	fs::file(fs::get_config_dir() + "SPUJIT.log", fs::rewrite).write(fmt::format("SPU JIT initialization...\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str()));
+	if (g_cfg_spu_debug)
+	{
+		fs::file log(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
+		log.write(fmt::format("SPU JIT initialization...\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str()));
+	}
 }
 
 void spu_recompiler::compile(spu_function_t& f)
@@ -57,13 +64,23 @@ void spu_recompiler::compile(spu_function_t& f)
 	StringLogger logger;
 	logger.setOption(kLoggerOptionBinaryForm, true);
 
-	std::string log = fmt::format("========== SPU FUNCTION 0x%05x - 0x%05x ==========\n\n", f.addr, f.addr + f.size);
+	std::string log;
+
+	if (g_cfg_spu_debug)
+	{
+		fmt::append(log, "========== SPU FUNCTION 0x%05x - 0x%05x ==========\n\n", f.addr, f.addr + f.size);
+	}
 
 	this->m_func = &f;
 
 	X86Compiler compiler(m_jit.get());
 	this->c = &compiler;
-	compiler.setLogger(&logger);
+
+	if (g_cfg_spu_debug)
+	{
+		// Set logger
+		compiler.setLogger(&logger);
+	}
 
 	compiler.addFunc(kFuncConvHost, FuncBuilder2<u32, void*, void*>());
 
@@ -145,12 +162,15 @@ void spu_recompiler::compile(spu_function_t& f)
 			}
 		}
 
-		// Disasm
-		dis_asm.dump_pc = m_pos;
-		dis_asm.disasm(m_pos);
-		compiler.addComment(dis_asm.last_opcode.c_str());
-		log += dis_asm.last_opcode.c_str();
-		log += '\n';
+		if (g_cfg_spu_debug)
+		{
+			// Disasm
+			dis_asm.dump_pc = m_pos;
+			dis_asm.disasm(m_pos);
+			compiler.addComment(dis_asm.last_opcode.c_str());
+			log += dis_asm.last_opcode.c_str();
+			log += '\n';
+		}
 
 		// Recompiler function
 		(this->*s_spu_decoder.decode(op))({ op });
@@ -169,7 +189,10 @@ void spu_recompiler::compile(spu_function_t& f)
 		m_pos += 4;
 	}
 
-	log += '\n';
+	if (g_cfg_spu_debug)
+	{
+		log += '\n';
+	}
 
 	// Generate default function end (go to the next address)
 	compiler.bind(pos_labels[m_pos / 4 % 0x10000]);
@@ -211,12 +234,15 @@ void spu_recompiler::compile(spu_function_t& f)
 	// Compile and store function address
 	f.compiled = asmjit_cast<decltype(f.compiled)>(compiler.make());
 
-	// Add ASMJIT logs
-	log += logger.getString();
-	log += "\n\n\n";
+	if (g_cfg_spu_debug)
+	{
+		// Add ASMJIT logs
+		log += logger.getString();
+		log += "\n\n\n";
 
-	// Append log file
-	fs::file(fs::get_config_dir() + "SPUJIT.log", fs::write + fs::append).write(log);
+		// Append log file
+		fs::file(Emu.GetCachePath() + "SPUJIT.log", fs::write + fs::append).write(log);
+	}
 }
 
 spu_recompiler::XmmLink spu_recompiler::XmmAlloc() // get empty xmm register

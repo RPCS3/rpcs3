@@ -48,6 +48,8 @@ cfg::map_entry<spu_decoder_type> g_cfg_spu_decoder(cfg::root.core, "SPU Decoder"
 	{ "Recompiler (LLVM)", spu_decoder_type::llvm },
 });
 
+cfg::bool_entry g_cfg_spu_debug(cfg::root.core, "SPU Debug");
+
 const spu_decoder<spu_interpreter_precise> s_spu_interpreter_precise;
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter_fast;
 
