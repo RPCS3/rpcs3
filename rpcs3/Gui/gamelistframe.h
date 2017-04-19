@@ -4,7 +4,7 @@
 #include <QDockWidget>
 #include <QTableWidget>
 #include <QListView>
-#include <QListWidget>
+#include <QList>
 
 #include "Utilities\types.h"
 #include "Emu\GameInfo.h"
@@ -52,7 +52,7 @@ public:
 	Column* m_col_category;
 	Column* m_col_path;
 
-	QListWidget* m_img_list;
+	QList<QImage*>* m_img_list;
 	std::vector<int> m_icon_indexes;
 	
 	void Init();
@@ -61,7 +61,7 @@ public:
 	
 	void Show(QDockWidget* list);
 	
-	void ShowData(QDockWidget* list);
+	void ShowData(QTableWidget* list);
 	
 	void LoadSave(bool isLoad, const std::string& path, QDockWidget* list = NULL);
 };
@@ -80,13 +80,14 @@ public:
 	~GameListFrame();
 
 private slots:
-	void Boot();
-	void Configure();
-	void RemoveGame();
-	void RemoveCustomConfiguration();
-	void OpenGameFolder();
-	void OpenConfigFolder();
-
+	void Boot(int row);
+	void Configure(int row);
+	void RemoveGame(int row);
+	void RemoveCustomConfiguration(int row);
+	void OpenGameFolder(int row);
+	void OpenConfigFolder(int row);
+	
+	void OnColClicked(int col);
 signals:
 	void GameListFrameClosed();
 protected:
@@ -96,20 +97,13 @@ private:
 	QTableWidget *gameList;
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(const QModelIndex& index);
-	void CreateActions();
+
 	void LoadGames();
 	void LoadPSF();
 	void ShowData();
 	void Refresh();
 	void SaveSettings();
 	void LoadSettings();
-
-	QAction *bootAct;
-	QAction *configureAct;
-	QAction *removeGameAct;
-	QAction *removeCustomConfigurationAct;
-	QAction *openGameFolderAct;
-	QAction *openConfigFolderAct;
 };
 
 #endif // GAMELISTFRAME_H

@@ -11,6 +11,8 @@
 #include <QProcess>
 #include <QMessageBox>
 #include <QDir>
+#include <QHeaderView>
+#include <QTimer>
 
 static const std::string m_class_name = "GameViewer";
 
@@ -42,6 +44,8 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 {
 	gameList = new QTableWidget(this);
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
+	gameList->verticalHeader()->setVisible(false);
+
 	gameList->setColumnCount(7);
 	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
 	gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
@@ -56,6 +60,16 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(gameList, &QTableWidget::customContextMenuRequested, this, &GameListFrame::ShowContextMenu);
 	connect(gameList, &QTableWidget::doubleClicked, this, &GameListFrame::doubleClickedSlot);
+	connect(gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &GameListFrame::OnColClicked);
+
+	Refresh();
+
+	m_sortColumn = 1; // sort by name by default
+
+	// Refresh game list every 10 seconds.
+	QTimer *timer = new QTimer(this);
+	connect(timer, &QTimer::timeout, this, &GameListFrame::Refresh);
+	timer->start(10000);
 }
 
 GameListFrame::~GameListFrame()
@@ -63,19 +77,19 @@ GameListFrame::~GameListFrame()
 
 }
 
-//void GameListFrame::OnColClicked(QEvent& event)
-//{
-//	if (event.GetColumn() == m_sortColumn)
-//		m_sortAscending ^= true;
-//	else
-//		m_sortAscending = true;
-//	m_sortColumn = event.GetColumn();
-//
-//	// Sort entries, update columns and refresh the panel
-//	std::sort(m_game_data.begin(), m_game_data.end(), sortGameData(m_sortColumn, m_sortAscending));
-//	m_columns.Update(m_game_data);
-//	ShowData();
-//}
+void GameListFrame::OnColClicked(int col)
+{
+	if (col == m_sortColumn)
+		m_sortAscending ^= true;
+	else
+		m_sortAscending = true;
+	m_sortColumn = col;
+
+	// Sort entries, update columns and refresh the panel
+	std::sort(m_game_data.begin(), m_game_data.end(), sortGameData(m_sortColumn, m_sortAscending));
+	m_columns.Update(m_game_data);
+	ShowData();
+}
 
 
 void GameListFrame::LoadGames()
@@ -158,7 +172,7 @@ void GameListFrame::LoadPSF()
 
 void GameListFrame::ShowData()
 {
-	m_columns.ShowData(this);
+	m_columns.ShowData(gameList);
 }
 
 void GameListFrame::Refresh()
@@ -193,131 +207,130 @@ void GameListFrame::doubleClickedSlot(const QModelIndex& index)
 
 void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 {
-	QModelIndex index = gameList->indexAt(pos);
+	int row = gameList->indexAt(pos).row();
+	
+	if (row == -1)
+	{
+		return; // invalid
+	}
+
 	// for most widgets
 	QPoint globalPos = gameList->mapToGlobal(pos);
 	// for QAbstractScrollArea and derived classes you would use:
 	// QPoint globalPos = myWidget->viewport()->mapToGlobal(pos);
 
 	QMenu myMenu;
-	QFont f = myMenu.menuAction()->font();
+
+	// Make Actions
+	QAction* boot = myMenu.addAction(tr("&Boot"));
+	QFont f = boot->font();
 	f.setBold(true);
-	myMenu.menuAction()->setFont(f);
-	myMenu.addAction(bootAct);
-	f.setBold(false);
-	myMenu.menuAction()->setFont(f);
-	myMenu.addAction(configureAct);
+	boot->setFont(f);
+	QAction* configure = myMenu.addAction(tr("&Configure"));
 	myMenu.addSeparator();
-	myMenu.addAction(removeGameAct);
-	myMenu.addAction(removeCustomConfigurationAct);
+	QAction* removeGame = myMenu.addAction(tr("&Remove Game"));
+	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
 	myMenu.addSeparator();
-	myMenu.addAction(openGameFolderAct);
-	myMenu.addAction(openConfigFolderAct);
+	QAction* openGameFolder = myMenu.addAction(tr("&Open Game Folder"));
+	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
 
-	if (index.isValid()) QAction* selectedItem = myMenu.exec(globalPos);
+	// Create lambdas we need to convert the none argument triggered to have an int argument row.
+	auto l_boot = [=]() {Boot(row); };
+	auto l_configure = [=]() {Configure(row); };
+	auto l_removeGame = [=]() {RemoveGame(row); };
+	auto l_removeConfig = [=]() {RemoveCustomConfiguration(row); };
+	auto l_openGameFolder = [=]() {OpenGameFolder(row); };
+	auto l_openConfig = [=]() {OpenConfigFolder(row); };
+
+	connect(boot, &QAction::triggered, l_boot);
+	connect(configure, &QAction::triggered, l_configure);
+	connect(removeGame, &QAction::triggered, l_removeGame);
+	connect(removeConfig, &QAction::triggered, l_removeConfig);
+	connect(openGameFolder, &QAction::triggered, l_openGameFolder);
+	connect(openConfig, &QAction::triggered, l_openConfig);
+	
+	myMenu.exec(globalPos);
 }
 
-void GameListFrame::Boot()
+void GameListFrame::Boot(int row)
 {
-	for (int i = 0; i < gameList->selectedItems().size(); ++i) {
-		// Get curent item on selected row
-		QTableWidgetItem *item = gameList->takeItem(gameList->currentRow(), gameList->currentColumn());
-		const std::string& path = Emu.GetGameDir() + m_game_data[i].root;
+	const std::string& path = Emu.GetGameDir() + m_game_data[row].root;
 
-		Emu.Stop();
+	Emu.Stop();
 
-		if (!Emu.BootGame(path))
-		{
-			LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[i].root);
-		}
+	if (!Emu.BootGame(path))
+	{
+		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[row].root);
 	}
 }
 
-void GameListFrame::Configure()
+void GameListFrame::Configure(int row)
 {
-	for (int i = 0; i < gameList->selectedItems().size(); ++i) {
-		// Get curent item on selected row
-		QTableWidgetItem *item = gameList->takeItem(gameList->currentRow(), gameList->currentColumn());
-		SettingsDialog(this, "data/" + m_game_data[i].serial);
-	}
+	SettingsDialog(this, "data/" + m_game_data[row].serial).exec();
 }
 
-void GameListFrame::RemoveGame()
+void GameListFrame::RemoveGame(int row)
 {
-	for (int i = 0; i < gameList->selectedItems().size(); ++i) {
-		// Get curent item on selected row
-		QTableWidgetItem *item = gameList->takeItem(gameList->currentRow(), 6); // 6 should be path
-		if (QMessageBox::question(this , tr("Confirm Delete"), tr("Permanently delete game files?")) == QMessageBox::Yes)
-		{
-			fs::remove_all(Emu.GetGameDir() + static_cast<std::string>(item->text().toUtf8()));
-		}
+	QTableWidgetItem *item = gameList->takeItem(row, 6); // 6 should be path
+	if (QMessageBox::question(this , tr("Confirm Delete"), tr("Permanently delete game files?")) == QMessageBox::Yes)
+	{
+		fs::remove_all(Emu.GetGameDir() + static_cast<std::string>(item->text().toUtf8()));
 	}
 	Refresh();
 }
 
-void GameListFrame::RemoveCustomConfiguration()
+void GameListFrame::RemoveCustomConfiguration(int row)
 {
 
-	for (int i = 0; i < gameList->selectedItems().size(); ++i) {
-		// Get curent item on selected row
-		QTableWidgetItem *item = gameList->takeItem(gameList->currentRow(), 6); // 6 should be path
-		const std::string config_path = fs::get_config_dir() + "data/" + m_game_data[i].serial + "/config.yml";
+	QTableWidgetItem *item = gameList->takeItem(row, 6); // 6 should be path
+	const std::string config_path = fs::get_config_dir() + "data/" + m_game_data[row].serial + "/config.yml";
 
-		if (fs::is_file(config_path))
+	if (fs::is_file(config_path))
+	{
+		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete custom game configuration?")) == QMessageBox::Yes)
 		{
-			if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete custom game configuration?")) == QMessageBox::Yes)
+			if (fs::remove_file(config_path))
 			{
-				if (fs::remove_file(config_path))
-				{
-					LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
-				}
-				else
-				{
-					LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
-				}
+				LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
+			}
+			else
+			{
+				LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
 			}
 		}
-		else
-		{
-			LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
-		}
-
 	}
+	else
+	{
+		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
+	}
+
 }
 
 static void open_dir(const std::string& spath)
 {
 	fs::create_dir(spath);
 	QString path = QString::fromStdString(spath);
-	QProcess process;
+	QProcess* process = new QProcess();
 
 #ifdef _WIN32
 	std::string command = "explorer";
 	std::replace(path.begin(), path.end(), '/', '\\');
-	process.start("explorer", QStringList() << path);
+	process->start("explorer", QStringList() << path);
 #elif __APPLE__
-	process.start("open", QStringList() << path);
+	process->start("open", QStringList() << path);
 #elif __linux__
-	process.start("xdg-open", QStringList() << path);
+	process->start("xdg-open", QStringList() << path);
 #endif
 }
 
-void GameListFrame::OpenGameFolder()
+void GameListFrame::OpenGameFolder(int row)
 {
-	for (int i = 0; i < gameList->selectedItems().size(); ++i) {
-		// Get curent item on selected row
-		QTableWidgetItem *item = gameList->takeItem(gameList->currentRow(), gameList->currentColumn());
-		open_dir(Emu.GetGameDir() + m_game_data[i].root);
-	}
+	open_dir(Emu.GetGameDir() + m_game_data[row].root);
 }
 
-void GameListFrame::OpenConfigFolder()
+void GameListFrame::OpenConfigFolder(int row)
 {
-	for (int i = 0; i < gameList->selectedItems().size(); ++i) {
-		// Get curent item on selected row
-		QTableWidgetItem *item = gameList->takeItem(gameList->currentRow(), gameList->currentColumn());
-		open_dir(fs::get_config_dir() + "data/" + m_game_data[i].serial);
-	}
+	open_dir(fs::get_config_dir() + "data/" + m_game_data[row].serial);
 }
 
 ColumnsArr::ColumnsArr()
@@ -359,9 +372,7 @@ Column* ColumnsArr::GetColumnByPos(u32 pos)
 
 void ColumnsArr::Init()
 {
-	m_img_list = new QListWidget();
-	m_img_list->setIconSize(QSize(80, 44));
-	//m_img_list->setViewMode(QListWidget::IconMode); // Do we really want icon mode? I'm going to override that when I add the images anyhow probably
+	m_img_list = new QList<QImage*>();
 
 	m_columns.clear();
 	m_columns.emplace_back(0, 90, "Icon");
@@ -407,24 +418,20 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 	// load icons
 	for (const auto& path : m_col_icon->data)
 	{
-		QImage game_icon(80, 44, QImage::Format_RGB32);
 		if (!path.empty())
 		{
-			QListWidgetItem *thumbnail = new QListWidgetItem;
-			thumbnail->setFlags(thumbnail->flags() & ~Qt::ItemIsEditable);
-
 			// Load image.
-			QImage* img = new QImage;
+			QImage* img = new QImage(80, 44, QImage::Format_RGB32);
 			bool success = img->load(QString::fromStdString(path));
 			if (success)
 			{
-				thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage(*img));
-				m_img_list->addItem(thumbnail);
+				m_img_list->append(img);
 			}
 			else {
+				// IIRC a load failure means blank image which is fine to have as a placeholder.
 				QString abspath = QDir(QString::fromStdString(path)).absolutePath();
 				LOG_ERROR(HLE, "Count not load image from path %s", abspath.toStdString());
-				m_img_list->addItem("ImgLoadFailed");
+				m_img_list->append(img);
 			}
 		}
 
@@ -444,32 +451,50 @@ void ColumnsArr::Show(QDockWidget* list)
 	//}
 }
 
-void ColumnsArr::ShowData(QDockWidget* list)
+void ColumnsArr::ShowData(QTableWidget* table)
 {
-	//list->DeleteAllItems();
-	//list->SetImageList(m_img_list, wxIMAGE_LIST_SMALL);
-	//for (int c = 1; c<list->model()->columnCount(); ++c)
-	//{
-	//	Column* col = GetColumnByPos(c);
-	//
-	//	if (!col)
-	//	{
-	//		LOG_ERROR(HLE, "Columns loaded with error!");
-	//		return;
-	//	}
-	//
-	//	for (u32 i = 0; i<col->data.size(); ++i)
-	//	{
-	//		if (list->model()->rowCount() <= (int)i)
-	//		{
-	//			list->InsertItem(i, QString());
-	//			list->SetItemData(i, i);
-	//		}
-	//		list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
-	//		if (m_icon_indexes[i] >= 0)
-	//			list->SetItemColumnImage(i, 0, m_icon_indexes[i]);
-	//	}
-	//}
+	// Hack to delete everything without removing the headers.
+	table->setRowCount(0);
+
+	// Expect number of columns to be the same as number of icons.
+	table->setRowCount(m_img_list->length());
+	
+	// Add icons.
+	for (int r = 0; r < m_img_list->length(); ++r)
+	{
+		QTableWidgetItem* iconItem = new QTableWidgetItem;
+		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
+		iconItem->setData(Qt::DecorationRole, QPixmap::fromImage(*m_img_list->at(r)));
+		table->setItem(r, 0, iconItem);
+	}
+
+	// Add the other data.
+	for (int c = 1; c < table->columnCount(); ++c)
+	{
+		Column* col = GetColumnByPos(c);
+	
+		if (!col)
+		{
+			LOG_ERROR(HLE, "Columns loaded with error!");
+			return;
+		}
+	
+		int numRows = col->data.size();
+		if (numRows != table->rowCount())
+		{
+			table->setRowCount(numRows);
+			LOG_WARNING(HLE, "Warning. Columns are of different size: number of icons ", m_img_list->length(), " number wanted: ", numRows);
+		}
+
+		for (int r = 0; r<col->data.size(); ++r)
+		{
+			QTableWidgetItem* curr = new QTableWidgetItem;
+			curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
+			QString text = QString::fromStdString(col->data[r]);
+			curr->setText(text);
+			table->setItem(r, c, curr);
+		}
+	}
 }
 
 void ColumnsArr::LoadSave(bool isLoad, const std::string& path, QDockWidget* list)
@@ -546,27 +571,6 @@ void ColumnsArr::LoadSave(bool isLoad, const std::string& path, QDockWidget* lis
 	//{
 	//	save_gui_cfg();
 	//}
-}
-
-void GameListFrame::CreateActions()
-{
-	bootAct = new QAction(tr("&Boot"), this);
-	connect(bootAct, &QAction::triggered, this, &GameListFrame::Boot);
-
-	configureAct = new QAction(tr("&Configure"), this);
-	connect(configureAct, &QAction::triggered, this, &GameListFrame::Configure);
-
-	removeGameAct = new QAction(tr("&Remove Game"), this);
-	connect(removeGameAct, &QAction::triggered, this, &GameListFrame::RemoveGame);
-
-	removeCustomConfigurationAct = new QAction(tr("&Remove Custom Configuration"), this);
-	connect(removeCustomConfigurationAct, &QAction::triggered, this, &GameListFrame::RemoveCustomConfiguration);
-
-	openGameFolderAct = new QAction(tr("&Open Game Folder"), this);
-	connect(openGameFolderAct, &QAction::triggered, this, &GameListFrame::OpenGameFolder);
-
-	openConfigFolderAct = new QAction(tr("&Open Config Folder"), this);
-	connect(openConfigFolderAct, &QAction::triggered, this, &GameListFrame::OpenConfigFolder);
 }
 
 void GameListFrame::closeEvent(QCloseEvent *event)
