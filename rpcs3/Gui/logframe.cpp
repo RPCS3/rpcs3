@@ -100,16 +100,6 @@ struct gui_listener : logs::listener
 // GUI Listener instance
 static gui_listener s_gui_listener;
 
-enum
-{
-	id_log_copy,  // Copy log to ClipBoard
-	id_log_clear, // Clear log
-	id_log_level,
-	id_log_level7 = id_log_level + 7,
-	id_log_tty,
-	id_timer,
-};
-
 LogFrame::LogFrame(QWidget *parent) : QDockWidget(tr("Log"), parent)
 {
 	tabWidget = new QTabWidget;
@@ -154,13 +144,13 @@ void LogFrame::CreateAndConnectActions()
 	// I, for one, welcome our lambda overlord
 	// It's either this or a signal mapper
 	// Then, probably making a list of these actions so that it's easier to iterate to generate the mapper.
-	auto l_initAct = [this](QAction* act, int logLevel)
+	auto l_initAct = [this](QAction* act, logs::level logLevel)
 	{
 		act->setCheckable(true);
 		
 		// This sets the log level properly when the action is triggered.
 		auto l_callback = [this, logLevel]() {
-			s_gui_listener.enabled = static_cast<logs::level>(logLevel - id_log_level);
+			s_gui_listener.enabled = logLevel;
 		};
 
 		connect(act, &QAction::triggered, l_callback);
@@ -182,14 +172,14 @@ void LogFrame::CreateAndConnectActions()
 
 	TTYAct = new QAction(tr("TTY"), this);
 
-	l_initAct(nothingAct, id_log_level + 0);
-	l_initAct(fatalAct, id_log_level + 1);
-	l_initAct(errorAct, id_log_level + 2);
-	l_initAct(todoAct, id_log_level + 3);
-	l_initAct(successAct, id_log_level + 4);
-	l_initAct(warningAct, id_log_level + 5);
-	l_initAct(noticeAct, id_log_level + 6);
-	l_initAct(traceAct, id_log_level + 7);
+	l_initAct(nothingAct, logs::level::always);
+	l_initAct(fatalAct, logs::level::fatal);
+	l_initAct(errorAct, logs::level::error);
+	l_initAct(todoAct, logs::level::todo);
+	l_initAct(successAct, logs::level::success);
+	l_initAct(warningAct, logs::level::warning);
+	l_initAct(noticeAct, logs::level::notice);
+	l_initAct(traceAct, logs::level::trace);
 
 	// I don't think the action needs to be connected as its state is checked in updateui
 	// (TODO: Make Settings)
