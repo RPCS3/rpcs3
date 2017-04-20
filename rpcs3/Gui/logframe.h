@@ -1,6 +1,8 @@
 #ifndef LOGFRAME_H
 #define LOGFRAME_H
 
+#include <Utilities/File.h>
+
 #include <QDockWidget>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -20,14 +22,16 @@ protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
 private slots:
-	void Update();
+	void UpdateUI();
 	void OpenLogContextMenu(const QPoint& point);
 private:
-	void CreateActions();
+	void CreateAndConnectActions();
 
 	QTabWidget *tabWidget;
 	QTextEdit *log;
 	QTextEdit *tty;
+
+	fs::file tty_file;
 
 	QAction* clearAct;
 
@@ -40,6 +44,7 @@ private:
 	QAction* warningAct;
 	QAction* noticeAct;
 	QAction* traceAct;
+
 	QAction* TTYAct;
 };
 
