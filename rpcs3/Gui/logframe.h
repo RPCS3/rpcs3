@@ -4,6 +4,7 @@
 #include <QDockWidget>
 #include <QTabWidget>
 #include <QTextEdit>
+#include <QActionGroup>
 #include <QTimer>
 
 class LogFrame : public QDockWidget
@@ -20,11 +21,26 @@ protected:
 	void closeEvent(QCloseEvent* event);
 private slots:
 	void Update();
-
+	void OpenLogContextMenu(const QPoint& point);
 private:
+	void CreateActions();
+
 	QTabWidget *tabWidget;
 	QTextEdit *log;
 	QTextEdit *tty;
+
+	QAction* clearAct;
+
+	QActionGroup* logLevels;
+	QAction* nothingAct;
+	QAction* fatalAct;
+	QAction* errorAct;
+	QAction* todoAct;
+	QAction* successAct;
+	QAction* warningAct;
+	QAction* noticeAct;
+	QAction* traceAct;
+	QAction* TTYAct;
 };
 
 #endif // LOGFRAME_H
