@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gcm_enums.h"
+
 extern "C"
 {
 #include <libavutil/pixfmt.h>
@@ -7,6 +9,31 @@ extern "C"
 
 namespace rsx
 {
+	//Holds information about a framebuffer
+	struct gcm_framebuffer_info
+	{
+		u32 address = 0;
+		u32 pitch = 0;
+
+		bool is_depth_surface;
+
+		rsx::surface_color_format color_format;
+		rsx::surface_depth_format depth_format;
+
+		u16 width;
+		u16 height;
+
+		gcm_framebuffer_info()
+		{
+			address = 0;
+			pitch = 0;
+		}
+
+		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h)
+			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h)
+		{}
+	};
+
 	template<typename T>
 	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 output_height)
 	{
