@@ -28,7 +28,7 @@ namespace vk
 	
 		cached_texture_section() {}
 
-		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image_view *view, vk::image *image, bool managed=true)
+		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 native_pitch = 0, bool managed=true)
 		{
 			width = w;
 			height = h;
@@ -42,7 +42,7 @@ namespace vk
 				managed_texture.reset(image);
 
 			//TODO: Properly compute these values
-			native_pitch = width * 4;
+			this->native_pitch = native_pitch;
 			pitch = cpu_address_range / height;
 		}
 
@@ -114,7 +114,7 @@ namespace vk
 			return false;
 		}
 
-		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue)
+		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 		{
 			if (m_device == nullptr)
 			{
@@ -135,15 +135,18 @@ namespace vk
 
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
-			copyRegion.bufferRowLength = pitch;
+			copyRegion.bufferRowLength = width;
 			copyRegion.bufferImageHeight = height;
 			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 			copyRegion.imageOffset = {};
 			copyRegion.imageExtent = {width, height, 1};
-			
-			vkCmdCopyImageToBuffer(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &copyRegion);
 
-			//Submit the command buffer but do not wait for the fence here
+			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			
+			change_image_layout(cmd, vram_texture->value, layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+			vkCmdCopyImageToBuffer(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &copyRegion);
+			change_image_layout(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, layout, subresource_range);
+
 			CHECK_RESULT(vkEndCommandBuffer(cmd));
 
 			VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -162,6 +165,7 @@ namespace vk
 			//Now we need to restart the command-buffer to restore it to the way it was before...
 			CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
 			CHECK_RESULT(vkResetCommandPool(*m_device, cmd.get_command_pool(), 0));
+			CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
 
 			VkCommandBufferInheritanceInfo inheritance_info = {};
 			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -173,23 +177,100 @@ namespace vk
 			CHECK_RESULT(vkBeginCommandBuffer(cmd, &begin_infos));
 		}
 
+		template<typename T>
+		void do_memory_transfer(void *pixels_dst, void *pixels_src)
+		{
+			if (pitch == native_pitch)
+			{
+				if (sizeof T == 1)
+					memcpy(pixels_dst, pixels_src, native_pitch * height);
+				else
+				{
+					const u32 block_size = native_pitch * height / sizeof T;
+					
+					auto typed_dst = (be_t<T> *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (u8 n = 0; n < block_size; ++n)
+						typed_dst[n] = typed_src[n];
+				}
+			}
+			else
+			{
+				if (sizeof T == 1)
+				{
+					u8 *typed_dst = (u8 *)pixels_dst;
+					u8 *typed_src = (u8 *)pixels_src;
+
+					//TODO: Scaling
+					for (int row = 0; row < height; ++row)
+					{
+						memcpy(typed_dst, typed_src, native_pitch);
+						typed_dst += pitch;
+						typed_src += native_pitch;
+					}
+				}
+				else
+				{
+					const u32 src_step = native_pitch / sizeof T;
+					const u32 dst_step = pitch / sizeof T;
+
+					auto typed_dst = (be_t<T> *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (int row = 0; row < height; ++row)
+					{
+						for (int px = 0; px < width; ++px)
+						{
+							typed_dst[px] = typed_src[px];
+						}
+
+						typed_dst += dst_step;
+						typed_src += src_step;
+					}
+				}
+			}
+		}
+
 		void flush(vk::render_device& dev, vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue)
 		{
 			if (m_device == nullptr)
 				m_device = &dev;
 
-			if (dma_fence == VK_NULL_HANDLE)
+			if (dma_fence == VK_NULL_HANDLE || dma_buffer.get() == nullptr)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
-				copy_texture(cmd, heap_index, submit_queue);
+				copy_texture(cmd, heap_index, submit_queue, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+				verify (HERE), (dma_fence != VK_NULL_HANDLE && dma_buffer.get());
 			}
 
-			//Now we wait for the fence
-			//CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
+			protect(utils::protection::rw);
 
 			//TODO: Image scaling, etc
 			void* pixels_src = dma_buffer->map(0, VK_WHOLE_SIZE);
-			memcpy(vm::base(cpu_address_base), pixels_src, native_pitch * height);
+			void* pixels_dst = vm::base(cpu_address_base);
+
+			//We have to do our own byte swapping since the driver doesnt do it for us
+			const u8 bpp = native_pitch / width;
+
+			switch (bpp)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid bpp %d", bpp);
+			case 1:
+				do_memory_transfer<u8>(pixels_dst, pixels_src);
+				break;
+			case 2:
+				do_memory_transfer<u16>(pixels_dst, pixels_src);
+				break;
+			case 4:
+				do_memory_transfer<u32>(pixels_dst, pixels_src);
+				break;
+			case 8:
+				do_memory_transfer<u64>(pixels_dst, pixels_src);
+				break;
+			}
 
 			dma_buffer->unmap();
 
@@ -445,10 +526,10 @@ namespace vk
 			return view;
 		}
 
-		void lock_memory_region(vk::image* image, const u32 memory_address, const u32 memory_size, const u32 width, const u32 height)
+		void lock_memory_region(vk::render_target* image, const u32 memory_address, const u32 memory_size, const u32 width, const u32 height)
 		{
 			cached_texture_section& region = find_cached_texture(memory_address, memory_size, true, width, height, 1);
-			region.create(width, height, 1, 1, nullptr, image, false);
+			region.create(width, height, 1, 1, nullptr, image, image->native_pitch, false);
 			
 			if (!region.is_locked())
 			{
@@ -504,7 +585,6 @@ namespace vk
 					//TODO: Map basic host_visible memory without coherent constraint
 					tex.flush(dev, cmd, memory_types.host_visible_coherent, submit_queue);
 					tex.set_dirty(true);
-					tex.unprotect();
 
 					response = true;
 				}
