@@ -993,6 +993,11 @@ namespace vk
 			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
 		}
 
+		vk::command_pool& get_command_pool() const
+		{
+			return *pool;
+		}
+
 		operator VkCommandBuffer()
 		{
 			return commands;

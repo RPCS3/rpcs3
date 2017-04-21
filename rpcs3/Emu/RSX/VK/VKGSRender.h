@@ -8,11 +8,9 @@
 #include "restore_new.h"
 #include <Utilities/optional.hpp>
 #include "define_new_memleakdetect.h"
-
-#define RSX_DEBUG 1
-
 #include "VKProgramBuffer.h"
 #include "../GCM.h"
+#include "../rsx_utils.h"
 
 #pragma comment(lib, "VKstatic.1.lib")
 
@@ -86,6 +84,10 @@ private:
 	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;
 
+	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
+	rsx::gcm_framebuffer_info m_depth_surface_info;
+	bool m_flush_draw_buffers = false;
+
 public:
 	VKGSRender();
 	~VKGSRender();
@@ -96,6 +98,7 @@ private:
 	void open_command_buffer();
 	void sync_at_semaphore_release();
 	void prepare_rtts();
+	void copy_render_targets_to_dma_location();
 	/// returns primitive topology, is_indexed, index_count, offset in index buffer, index type
 	std::tuple<VkPrimitiveTopology, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
 public:
