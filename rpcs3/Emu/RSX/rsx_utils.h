@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gcm_enums.h"
+
 extern "C"
 {
 #include <libavutil/pixfmt.h>
