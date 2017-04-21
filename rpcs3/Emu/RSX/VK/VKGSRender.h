@@ -11,6 +11,7 @@
 #include "VKProgramBuffer.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
+#include <atomic>
 
 #pragma comment(lib, "VKstatic.1.lib")
 
@@ -60,6 +61,9 @@ private:
 	vk::command_pool m_command_buffer_pool;
 	vk::command_buffer m_command_buffer;
 
+	std::mutex m_secondary_cb_guard;
+	vk::command_pool m_secondary_command_buffer_pool;
+	vk::command_buffer m_secondary_command_buffer;
 
 	std::array<VkRenderPass, 120> m_render_passes;
 	VkDescriptorSetLayout descriptor_layouts;
@@ -86,7 +90,13 @@ private:
 
 	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 	rsx::gcm_framebuffer_info m_depth_surface_info;
+
 	bool m_flush_draw_buffers = false;
+	
+	std::atomic<bool> m_flush_commands = false;
+	std::atomic<int> m_queued_threads = 0;
+
+	std::thread::id rsx_thread;
 
 public:
 	VKGSRender();
@@ -94,7 +104,7 @@ public:
 
 private:
 	void clear_surface(u32 mask);
-	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence);
+	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
 	void sync_at_semaphore_release();
 	void prepare_rtts();
@@ -116,6 +126,8 @@ protected:
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
+
+	void do_local_task() override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 };
