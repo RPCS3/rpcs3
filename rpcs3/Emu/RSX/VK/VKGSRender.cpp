@@ -493,6 +493,11 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device));
 	m_command_buffer.create(m_command_buffer_pool);
+	
+	//Create secondar command_buffer for parallel operations
+	m_secondary_command_buffer_pool.create((*m_device));
+	m_secondary_command_buffer.create(m_secondary_command_buffer_pool);
+	
 	open_command_buffer();
 
 	for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
@@ -620,6 +625,9 @@ VKGSRender::~VKGSRender()
 	m_command_buffer.destroy();
 	m_command_buffer_pool.destroy();
 
+	m_secondary_command_buffer.destroy();
+	m_secondary_command_buffer_pool.destroy();
+
 	//Device handles/contexts
 	m_swap_chain->destroy();
 	m_thread_context.close();
@@ -632,7 +640,10 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	if (is_writing)
 		return m_texture_cache.invalidate_address(address);
 	else
-		return m_texture_cache.flush_address(address, *m_device, m_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+	{
+		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+		return m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+	}
 
 	return false;
 }
@@ -987,13 +998,6 @@ void VKGSRender::clear_surface(u32 mask)
 
 void VKGSRender::sync_at_semaphore_release()
 {
-	close_and_submit_command_buffer({}, m_submit_fence);
-	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
-
-	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
-	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
-	open_command_buffer();
-
 	m_flush_draw_buffers = true;
 }
 
@@ -1001,6 +1005,18 @@ void VKGSRender::copy_render_targets_to_dma_location()
 {
 	if (!m_flush_draw_buffers)
 		return;
+
+	if (!g_cfg_rsx_write_color_buffers && !g_cfg_rsx_write_depth_buffer)
+		return;
+
+	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+
+	close_and_submit_command_buffer({}, m_submit_fence);
+	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+	open_command_buffer();
 
 	if (g_cfg_rsx_write_color_buffers)
 	{
@@ -1010,7 +1026,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 				continue;
 
 			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height,
-					m_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+					m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
 
@@ -1019,7 +1035,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 		if (m_depth_surface_info.pitch)
 		{
 			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height,
-				m_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+				m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
 

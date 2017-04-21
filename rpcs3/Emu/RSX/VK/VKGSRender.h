@@ -60,6 +60,9 @@ private:
 	vk::command_pool m_command_buffer_pool;
 	vk::command_buffer m_command_buffer;
 
+	std::mutex m_secondary_cb_guard;
+	vk::command_pool m_secondary_command_buffer_pool;
+	vk::command_buffer m_secondary_command_buffer;
 
 	std::array<VkRenderPass, 120> m_render_passes;
 	VkDescriptorSetLayout descriptor_layouts;

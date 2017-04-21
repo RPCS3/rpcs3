@@ -133,6 +133,17 @@ namespace vk
 				dma_buffer.reset(new vk::buffer(*m_device, native_pitch * height, heap_index, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
 			}
 
+			//cb has to be guaranteed to be in a closed state
+			//This function can be called asynchronously
+			VkCommandBufferInheritanceInfo inheritance_info = {};
+			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+			VkCommandBufferBeginInfo begin_infos = {};
+			begin_infos.pInheritanceInfo = &inheritance_info;
+			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			CHECK_RESULT(vkBeginCommandBuffer(cmd, &begin_infos));
+
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
 			copyRegion.bufferRowLength = width;
@@ -166,15 +177,6 @@ namespace vk
 			CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
 			CHECK_RESULT(vkResetCommandPool(*m_device, cmd.get_command_pool(), 0));
 			CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
-
-			VkCommandBufferInheritanceInfo inheritance_info = {};
-			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-
-			VkCommandBufferBeginInfo begin_infos = {};
-			begin_infos.pInheritanceInfo = &inheritance_info;
-			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			CHECK_RESULT(vkBeginCommandBuffer(cmd, &begin_infos));
 		}
 
 		template<typename T>
@@ -191,8 +193,8 @@ namespace vk
 					auto typed_dst = (be_t<T> *)pixels_dst;
 					auto typed_src = (T *)pixels_src;
 
-					for (u8 n = 0; n < block_size; ++n)
-						typed_dst[n] = typed_src[n];
+					for (u32 px = 0; px < block_size; ++px)
+						typed_dst[px] = typed_src[px];
 				}
 			}
 			else
@@ -203,7 +205,7 @@ namespace vk
 					u8 *typed_src = (u8 *)pixels_src;
 
 					//TODO: Scaling
-					for (int row = 0; row < height; ++row)
+					for (u16 row = 0; row < height; ++row)
 					{
 						memcpy(typed_dst, typed_src, native_pitch);
 						typed_dst += pitch;
@@ -218,9 +220,9 @@ namespace vk
 					auto typed_dst = (be_t<T> *)pixels_dst;
 					auto typed_src = (T *)pixels_src;
 
-					for (int row = 0; row < height; ++row)
+					for (u16 row = 0; row < height; ++row)
 					{
-						for (int px = 0; px < width; ++px)
+						for (u16 px = 0; px < width; ++px)
 						{
 							typed_dst[px] = typed_src[px];
 						}
