@@ -207,20 +207,21 @@ namespace vk
 	{
 		switch (factor)
 		{
-		case rsx::blend_factor::one: return VK_BLEND_FACTOR_ONE;
 		case rsx::blend_factor::zero: return VK_BLEND_FACTOR_ZERO;
-		case rsx::blend_factor::src_alpha: return VK_BLEND_FACTOR_SRC_ALPHA;
-		case rsx::blend_factor::dst_alpha: return VK_BLEND_FACTOR_DST_ALPHA;
+		case rsx::blend_factor::one: return VK_BLEND_FACTOR_ONE;
 		case rsx::blend_factor::src_color: return VK_BLEND_FACTOR_SRC_COLOR;
-		case rsx::blend_factor::dst_color: return VK_BLEND_FACTOR_DST_COLOR;
-		case rsx::blend_factor::constant_color: return VK_BLEND_FACTOR_CONSTANT_COLOR;
-		case rsx::blend_factor::constant_alpha: return VK_BLEND_FACTOR_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_src_color: return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+		case rsx::blend_factor::dst_color: return VK_BLEND_FACTOR_DST_COLOR;
 		case rsx::blend_factor::one_minus_dst_color: return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+		case rsx::blend_factor::src_alpha: return VK_BLEND_FACTOR_SRC_ALPHA;
 		case rsx::blend_factor::one_minus_src_alpha: return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		case rsx::blend_factor::dst_alpha: return VK_BLEND_FACTOR_DST_ALPHA;
 		case rsx::blend_factor::one_minus_dst_alpha: return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-		case rsx::blend_factor::one_minus_constant_alpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+		case rsx::blend_factor::src_alpha_saturate: return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+		case rsx::blend_factor::constant_color: return VK_BLEND_FACTOR_CONSTANT_COLOR;
 		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+		case rsx::blend_factor::constant_alpha: return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+		case rsx::blend_factor::one_minus_constant_alpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
 		default:
 			fmt::throw_exception("Unknown blend factor 0x%x" HERE, (u32)factor);
 		}
