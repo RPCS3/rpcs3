@@ -493,6 +493,11 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device));
 	m_command_buffer.create(m_command_buffer_pool);
+	
+	//Create secondar command_buffer for parallel operations
+	m_secondary_command_buffer_pool.create((*m_device));
+	m_secondary_command_buffer.create(m_secondary_command_buffer_pool);
+	
 	open_command_buffer();
 
 	for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
@@ -620,6 +625,9 @@ VKGSRender::~VKGSRender()
 	m_command_buffer.destroy();
 	m_command_buffer_pool.destroy();
 
+	m_secondary_command_buffer.destroy();
+	m_secondary_command_buffer_pool.destroy();
+
 	//Device handles/contexts
 	m_swap_chain->destroy();
 	m_thread_context.close();
@@ -632,7 +640,29 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	if (is_writing)
 		return m_texture_cache.invalidate_address(address);
 	else
-		return m_texture_cache.flush_address(address, *m_device, m_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+	{
+		if (!m_texture_cache.address_is_flushable(address))
+			return false;
+
+		if (std::this_thread::get_id() != rsx_thread)
+		{
+			//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
+			m_flush_commands = true;
+			m_queued_threads++;
+
+			//This is awful!
+			while (m_flush_commands);
+
+			std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+			bool status = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+
+			m_queued_threads--;
+			return status;
+		}
+
+		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+		return m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+	}
 
 	return false;
 }
@@ -646,7 +676,9 @@ void VKGSRender::begin()
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
-		close_and_submit_command_buffer({}, m_submit_fence);
+		//??Should we wait for the queue to actually render to the GPU? or just flush the queue?
+		//Needs investigation to determine what drivers expect here, bottom_of_pipe is guaranteed to work, but will be too slow
+		close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
 
 		vkResetDescriptorPool(*m_device, descriptor_pool, 0);
@@ -833,9 +865,9 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - vertex_end).count();
 
-	rsx::thread::end();
-
 	copy_render_targets_to_dma_location();
+
+	rsx::thread::end();
 }
 
 void VKGSRender::set_viewport()
@@ -875,6 +907,8 @@ void VKGSRender::on_init_thread()
 	GSRender::on_init_thread();
 	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
 	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+
+	rsx_thread = std::this_thread::get_id();
 }
 
 void VKGSRender::on_exit()
@@ -987,13 +1021,6 @@ void VKGSRender::clear_surface(u32 mask)
 
 void VKGSRender::sync_at_semaphore_release()
 {
-	close_and_submit_command_buffer({}, m_submit_fence);
-	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
-
-	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
-	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
-	open_command_buffer();
-
 	m_flush_draw_buffers = true;
 }
 
@@ -1001,6 +1028,13 @@ void VKGSRender::copy_render_targets_to_dma_location()
 {
 	if (!m_flush_draw_buffers)
 		return;
+
+	if (!g_cfg_rsx_write_color_buffers && !g_cfg_rsx_write_depth_buffer)
+		return;
+
+	//TODO: Make this asynchronous. Should be similar to a glFlush() but in this case its similar to glFinish
+	//This is due to all the hard waits for fences
+	//TODO: Use a command buffer array to allow explicit draw command tracking
 
 	if (g_cfg_rsx_write_color_buffers)
 	{
@@ -1023,7 +1057,28 @@ void VKGSRender::copy_render_targets_to_dma_location()
 		}
 	}
 
-	m_flush_draw_buffers = false;
+	close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+	open_command_buffer();
+}
+
+void VKGSRender::do_local_task()
+{
+	if (m_flush_commands)
+	{
+		close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+		CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+		CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+		open_command_buffer();
+
+		m_flush_commands = false;
+		while (m_queued_threads);
+	}
 }
 
 bool VKGSRender::do_method(u32 cmd, u32 arg)
@@ -1294,17 +1349,16 @@ void VKGSRender::write_buffers()
 {
 }
 
-void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence)
+void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
 {
 	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
 
-	VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	VkCommandBuffer cmd = m_command_buffer;
 
 	VkSubmitInfo infos = {};
 	infos.commandBufferCount = 1;
 	infos.pCommandBuffers = &cmd;
-	infos.pWaitDstStageMask = &pipe_stage_flags;
+	infos.pWaitDstStageMask = &pipeline_stage_flags;
 	infos.pWaitSemaphores = semaphores.data();
 	infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
 	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

@@ -32,7 +32,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) do { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh", (s32)_res); } while (0)
+#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh" HERE, (s32)_res); }
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
