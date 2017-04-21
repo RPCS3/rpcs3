@@ -8,19 +8,27 @@ namespace vk
 {
 	class cached_texture_section : public rsx::buffered_section
 	{
+		u16 pitch;
 		u16 width;
 		u16 height;
 		u16 depth;
 		u16 mipmaps;
 
 		std::unique_ptr<vk::image_view> uploaded_image_view;
-		std::unique_ptr<vk::image> uploaded_texture;
+		std::unique_ptr<vk::image> managed_texture = nullptr;
+
+		//DMA relevant data
+		u16 native_pitch;
+		VkFence dma_fence = VK_NULL_HANDLE;
+		vk::render_device* m_device = nullptr;
+		vk::image *vram_texture = nullptr;
+		std::unique_ptr<vk::buffer> dma_buffer;
 
 	public:
 	
 		cached_texture_section() {}
 
-		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image_view *view, vk::image *image)
+		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 native_pitch = 0, bool managed=true)
 		{
 			width = w;
 			height = h;
@@ -28,7 +36,28 @@ namespace vk
 			this->mipmaps = mipmaps;
 
 			uploaded_image_view.reset(view);
-			uploaded_texture.reset(image);
+			vram_texture = image;
+
+			if (managed)
+				managed_texture.reset(image);
+
+			//TODO: Properly compute these values
+			this->native_pitch = native_pitch;
+			pitch = cpu_address_range / height;
+		}
+
+		void release_dma_resources()
+		{
+			if (dma_buffer.get() != nullptr)
+			{
+				dma_buffer.reset();
+
+				if (dma_fence != nullptr)
+				{
+					vkDestroyFence(*m_device, dma_fence, nullptr);
+					dma_fence = VK_NULL_HANDLE;
+				}
+			}
 		}
 
 		bool matches(u32 rsx_address, u32 rsx_size) const
@@ -51,7 +80,7 @@ namespace vk
 
 		bool exists() const
 		{
-			return (uploaded_texture.get() != nullptr);
+			return (vram_texture != nullptr);
 		}
 
 		u16 get_width() const
@@ -71,7 +100,185 @@ namespace vk
 
 		std::unique_ptr<vk::image>& get_texture()
 		{
-			return uploaded_texture;
+			return managed_texture;
+		}
+
+		bool is_flushable() const
+		{
+			if (protection == utils::protection::ro || protection == utils::protection::no)
+				return true;
+
+			if (uploaded_image_view.get() == nullptr && vram_texture != nullptr)
+				return true;
+
+			return false;
+		}
+
+		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		{
+			if (m_device == nullptr)
+			{
+				m_device = &cmd.get_command_pool().get_owner();
+			}
+
+			if (dma_fence == VK_NULL_HANDLE)
+			{
+				VkFenceCreateInfo createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				vkCreateFence(*m_device, &createInfo, nullptr, &dma_fence);
+			}
+
+			if (dma_buffer.get() == nullptr)
+			{
+				dma_buffer.reset(new vk::buffer(*m_device, native_pitch * height, heap_index, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
+			}
+
+			VkBufferImageCopy copyRegion = {};
+			copyRegion.bufferOffset = 0;
+			copyRegion.bufferRowLength = width;
+			copyRegion.bufferImageHeight = height;
+			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+			copyRegion.imageOffset = {};
+			copyRegion.imageExtent = {width, height, 1};
+
+			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			
+			change_image_layout(cmd, vram_texture->value, layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+			vkCmdCopyImageToBuffer(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &copyRegion);
+			change_image_layout(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, layout, subresource_range);
+
+			CHECK_RESULT(vkEndCommandBuffer(cmd));
+
+			VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			VkCommandBuffer command_buffer = cmd;
+
+			VkSubmitInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			infos.commandBufferCount = 1;
+			infos.pCommandBuffers = &command_buffer;
+			infos.pWaitDstStageMask = &pipe_stage_flags;
+			infos.pWaitSemaphores = nullptr;
+			infos.waitSemaphoreCount = 0;
+
+			CHECK_RESULT(vkQueueSubmit(submit_queue, 1, &infos, dma_fence));
+
+			//Now we need to restart the command-buffer to restore it to the way it was before...
+			CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
+			CHECK_RESULT(vkResetCommandPool(*m_device, cmd.get_command_pool(), 0));
+			CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
+
+			VkCommandBufferInheritanceInfo inheritance_info = {};
+			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+			VkCommandBufferBeginInfo begin_infos = {};
+			begin_infos.pInheritanceInfo = &inheritance_info;
+			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			CHECK_RESULT(vkBeginCommandBuffer(cmd, &begin_infos));
+		}
+
+		template<typename T>
+		void do_memory_transfer(void *pixels_dst, void *pixels_src)
+		{
+			if (pitch == native_pitch)
+			{
+				if (sizeof T == 1)
+					memcpy(pixels_dst, pixels_src, native_pitch * height);
+				else
+				{
+					const u32 block_size = native_pitch * height / sizeof T;
+					
+					auto typed_dst = (be_t<T> *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (u8 n = 0; n < block_size; ++n)
+						typed_dst[n] = typed_src[n];
+				}
+			}
+			else
+			{
+				if (sizeof T == 1)
+				{
+					u8 *typed_dst = (u8 *)pixels_dst;
+					u8 *typed_src = (u8 *)pixels_src;
+
+					//TODO: Scaling
+					for (int row = 0; row < height; ++row)
+					{
+						memcpy(typed_dst, typed_src, native_pitch);
+						typed_dst += pitch;
+						typed_src += native_pitch;
+					}
+				}
+				else
+				{
+					const u32 src_step = native_pitch / sizeof T;
+					const u32 dst_step = pitch / sizeof T;
+
+					auto typed_dst = (be_t<T> *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (int row = 0; row < height; ++row)
+					{
+						for (int px = 0; px < width; ++px)
+						{
+							typed_dst[px] = typed_src[px];
+						}
+
+						typed_dst += dst_step;
+						typed_src += src_step;
+					}
+				}
+			}
+		}
+
+		void flush(vk::render_device& dev, vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue)
+		{
+			if (m_device == nullptr)
+				m_device = &dev;
+
+			if (dma_fence == VK_NULL_HANDLE || dma_buffer.get() == nullptr)
+			{
+				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
+				copy_texture(cmd, heap_index, submit_queue, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+				verify (HERE), (dma_fence != VK_NULL_HANDLE && dma_buffer.get());
+			}
+
+			protect(utils::protection::rw);
+
+			//TODO: Image scaling, etc
+			void* pixels_src = dma_buffer->map(0, VK_WHOLE_SIZE);
+			void* pixels_dst = vm::base(cpu_address_base);
+
+			//We have to do our own byte swapping since the driver doesnt do it for us
+			const u8 bpp = native_pitch / width;
+
+			switch (bpp)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid bpp %d", bpp);
+			case 1:
+				do_memory_transfer<u8>(pixels_dst, pixels_src);
+				break;
+			case 2:
+				do_memory_transfer<u16>(pixels_dst, pixels_src);
+				break;
+			case 4:
+				do_memory_transfer<u32>(pixels_dst, pixels_src);
+				break;
+			case 8:
+				do_memory_transfer<u64>(pixels_dst, pixels_src);
+				break;
+			}
+
+			dma_buffer->unmap();
+
+			//Cleanup
+			//These sections are usually one-use only so we destroy system resources
+			//TODO: Recycle dma buffers
+			release_dma_resources();
+			vram_texture = nullptr;	//Let m_rtts handle lifetime management
 		}
 	};
 
@@ -111,6 +318,7 @@ namespace vk
 						m_temporary_image_view.push_back(std::move(tex.get_view()));
 					}
 
+					tex.release_dma_resources();
 					return tex;
 				}
 			}
@@ -118,6 +326,20 @@ namespace vk
 			m_cache.push_back(cached_texture_section());
 
 			return m_cache[m_cache.size() - 1];
+		}
+
+		cached_texture_section* find_flushable_section(const u32 address, const u32 range)
+		{
+			for (auto &tex : m_cache)
+			{
+				if (tex.is_dirty()) continue;
+				if (!tex.is_flushable()) continue;
+
+				if (tex.matches(address, range))
+					return &tex;
+			}
+
+			return nullptr;
 		}
 
 		void purge_cache()
@@ -132,6 +354,8 @@ namespace vk
 
 				if (tex.is_locked())
 					tex.unprotect();
+
+				tex.release_dma_resources();
 			}
 
 			m_temporary_image_view.clear();
@@ -300,6 +524,73 @@ namespace vk
 
 			texture_cache_range = region.get_min_max(texture_cache_range);
 			return view;
+		}
+
+		void lock_memory_region(vk::render_target* image, const u32 memory_address, const u32 memory_size, const u32 width, const u32 height)
+		{
+			cached_texture_section& region = find_cached_texture(memory_address, memory_size, true, width, height, 1);
+			region.create(width, height, 1, 1, nullptr, image, image->native_pitch, false);
+			
+			if (!region.is_locked())
+			{
+				region.reset(memory_address, memory_size);
+				region.protect(utils::protection::no);
+				region.set_dirty(false);
+				texture_cache_range = region.get_min_max(texture_cache_range);
+			}
+		}
+
+		void flush_memory_to_cache(const u32 memory_address, const u32 memory_size, vk::command_buffer&cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
+		{
+			cached_texture_section* region = find_flushable_section(memory_address, memory_size);
+			
+			//TODO: Make this an assertion
+			if (region == nullptr)
+			{
+				LOG_ERROR(RSX, "Failed to find section for render target 0x%X + 0x%X", memory_address, memory_size);
+				return;
+			}
+
+			region->copy_texture(cmd, memory_types.host_visible_coherent, submit_queue);
+		}
+
+		bool flush_address(u32 address, vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
+		{
+			if (address < texture_cache_range.first ||
+				address > texture_cache_range.second)
+				return false;
+
+			bool response = false;
+			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
+
+			for (int i = 0; i < m_cache.size(); ++i)
+			{
+				auto &tex = m_cache[i];
+
+				if (tex.is_dirty()) continue;
+				if (!tex.is_flushable()) continue;
+
+				auto overlapped = tex.overlaps_page(trampled_range, address);
+				if (std::get<0>(overlapped))
+				{
+					auto &new_range = std::get<1>(overlapped);
+
+					if (new_range.first != trampled_range.first ||
+						new_range.second != trampled_range.second)
+					{
+						trampled_range = new_range;
+						i = 0;
+					}
+
+					//TODO: Map basic host_visible memory without coherent constraint
+					tex.flush(dev, cmd, memory_types.host_visible_coherent, submit_queue);
+					tex.set_dirty(true);
+
+					response = true;
+				}
+			}
+
+			return response;
 		}
 
 		bool invalidate_address(u32 address)
