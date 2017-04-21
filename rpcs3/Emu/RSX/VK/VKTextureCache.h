@@ -105,13 +105,12 @@ namespace vk
 
 		bool is_flushable() const
 		{
-			if (protection == utils::protection::ro || protection == utils::protection::no)
-				return true;
+			return (protection == utils::protection::no);
+		}
 
-			if (uploaded_image_view.get() == nullptr && vram_texture != nullptr)
-				return true;
-
-			return false;
+		bool is_flushed() const
+		{
+			return (managed_texture.get() == nullptr && uploaded_image_view.get() != nullptr && vram_texture == nullptr);
 		}
 
 		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -130,7 +129,7 @@ namespace vk
 
 			if (dma_buffer.get() == nullptr)
 			{
-				dma_buffer.reset(new vk::buffer(*m_device, native_pitch * height, heap_index, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
+				dma_buffer.reset(new vk::buffer(*m_device, align(cpu_address_range, 256), heap_index, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
 			}
 
 			//cb has to be guaranteed to be in a closed state
@@ -182,13 +181,14 @@ namespace vk
 		template<typename T>
 		void do_memory_transfer(void *pixels_dst, void *pixels_src)
 		{
+			//LOG_ERROR(RSX, "COPY %d -> %d", native_pitch, pitch);
 			if (pitch == native_pitch)
 			{
 				if (sizeof T == 1)
-					memcpy(pixels_dst, pixels_src, native_pitch * height);
+					memcpy(pixels_dst, pixels_src, cpu_address_range);
 				else
 				{
-					const u32 block_size = native_pitch * height / sizeof T;
+					const u32 block_size = width * height;
 					
 					auto typed_dst = (be_t<T> *)pixels_dst;
 					auto typed_src = (T *)pixels_src;
@@ -243,14 +243,12 @@ namespace vk
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
 				copy_texture(cmd, heap_index, submit_queue, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-				verify (HERE), (dma_fence != VK_NULL_HANDLE && dma_buffer.get());
 			}
 
 			protect(utils::protection::rw);
 
 			//TODO: Image scaling, etc
-			void* pixels_src = dma_buffer->map(0, VK_WHOLE_SIZE);
+			void* pixels_src = dma_buffer->map(0, cpu_address_range);
 			void* pixels_dst = vm::base(cpu_address_base);
 
 			//We have to do our own byte swapping since the driver doesnt do it for us
@@ -274,7 +272,7 @@ namespace vk
 				break;
 			}
 
-			dma_buffer->unmap();
+			dma_buffer->unmap(); 
 
 			//Cleanup
 			//These sections are usually one-use only so we destroy system resources
@@ -335,7 +333,7 @@ namespace vk
 			for (auto &tex : m_cache)
 			{
 				if (tex.is_dirty()) continue;
-				if (!tex.is_flushable()) continue;
+				if (!tex.is_flushable() && !tex.is_flushed()) continue;
 
 				if (tex.matches(address, range))
 					return &tex;
@@ -531,7 +529,6 @@ namespace vk
 		void lock_memory_region(vk::render_target* image, const u32 memory_address, const u32 memory_size, const u32 width, const u32 height)
 		{
 			cached_texture_section& region = find_cached_texture(memory_address, memory_size, true, width, height, 1);
-			region.create(width, height, 1, 1, nullptr, image, image->native_pitch, false);
 			
 			if (!region.is_locked())
 			{
@@ -540,6 +537,8 @@ namespace vk
 				region.set_dirty(false);
 				texture_cache_range = region.get_min_max(texture_cache_range);
 			}
+
+			region.create(width, height, 1, 1, nullptr, image, image->native_pitch, false);
 		}
 
 		void flush_memory_to_cache(const u32 memory_address, const u32 memory_size, vk::command_buffer&cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
@@ -586,8 +585,6 @@ namespace vk
 
 					//TODO: Map basic host_visible memory without coherent constraint
 					tex.flush(dev, cmd, memory_types.host_visible_coherent, submit_queue);
-					tex.set_dirty(true);
-
 					response = true;
 				}
 			}
@@ -609,6 +606,7 @@ namespace vk
 				auto &tex = m_cache[i];
 
 				if (tex.is_dirty()) continue;
+				if (tex.is_flushable()) continue;
 
 				auto overlapped = tex.overlaps_page(trampled_range, address);
 				if (std::get<0>(overlapped))
