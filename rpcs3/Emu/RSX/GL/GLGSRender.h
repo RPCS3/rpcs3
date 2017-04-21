@@ -9,6 +9,7 @@
 #include "define_new_memleakdetect.h"
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
+#include "../rsx_utils.h"
 #include "../rsx_cache.h"
 
 #pragma comment(lib, "opengl32.lib")
@@ -24,30 +25,6 @@ struct work_item
 	volatile bool processed = false;
 	volatile bool result = false;
 	volatile bool received = false;
-};
-
-struct gcm_buffer_info
-{
-	u32 address = 0;
-	u32 pitch = 0;
-
-	bool is_depth_surface;
-
-	rsx::surface_color_format color_format;
-	rsx::surface_depth_format depth_format;
-
-	u16 width;
-	u16 height;
-
-	gcm_buffer_info()
-	{
-		address = 0;
-		pitch = 0;
-	}
-
-	gcm_buffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h)
-		:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h)
-	{}
 };
 
 class GLGSRender : public GSRender
@@ -93,8 +70,8 @@ private:
 	std::mutex queue_guard;
 	std::list<work_item> work_queue;
 
-	gcm_buffer_info surface_info[rsx::limits::color_buffers_count];
-	gcm_buffer_info depth_surface_info;
+	rsx::gcm_framebuffer_info surface_info[rsx::limits::color_buffers_count];
+	rsx::gcm_framebuffer_info depth_surface_info;
 
 	bool flush_draw_buffers = false;
 
