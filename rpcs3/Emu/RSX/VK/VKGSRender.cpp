@@ -1444,7 +1444,7 @@ void VKGSRender::prepare_rtts()
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height;
 
-			m_texture_cache.lock_memory_region(*std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
+			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
 					m_surface_info[index].width, m_surface_info[index].height);
 		}
 	}
@@ -1457,7 +1457,7 @@ void VKGSRender::prepare_rtts()
 			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) pitch *= 2;
 
 			const u32 range = pitch * m_depth_surface_info.height;
-			m_texture_cache.lock_memory_region(*std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
+			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
 				m_depth_surface_info.width, m_depth_surface_info.height);
 		}
 	}

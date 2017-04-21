@@ -15,19 +15,20 @@ namespace vk
 		u16 mipmaps;
 
 		std::unique_ptr<vk::image_view> uploaded_image_view;
-		std::unique_ptr<vk::image> vram_texture;
+		std::unique_ptr<vk::image> managed_texture = nullptr;
 
 		//DMA relevant data
 		u16 native_pitch;
 		VkFence dma_fence = VK_NULL_HANDLE;
 		vk::render_device* m_device = nullptr;
+		vk::image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
 
 	public:
 	
 		cached_texture_section() {}
 
-		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image_view *view, vk::image *image)
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image_view *view, vk::image *image, bool managed=true)
 		{
 			width = w;
 			height = h;
@@ -35,7 +36,10 @@ namespace vk
 			this->mipmaps = mipmaps;
 
 			uploaded_image_view.reset(view);
-			vram_texture.reset(image);
+			vram_texture = image;
+
+			if (managed)
+				managed_texture.reset(image);
 
 			//TODO: Properly compute these values
 			native_pitch = width * 4;
@@ -76,7 +80,7 @@ namespace vk
 
 		bool exists() const
 		{
-			return (vram_texture.get() != nullptr);
+			return (vram_texture != nullptr);
 		}
 
 		u16 get_width() const
@@ -96,16 +100,27 @@ namespace vk
 
 		std::unique_ptr<vk::image>& get_texture()
 		{
-			return vram_texture;
+			return managed_texture;
 		}
 
 		bool is_flushable() const
 		{
-			return (protection == utils::protection::ro || protection == utils::protection::no);
+			if (protection == utils::protection::ro || protection == utils::protection::no)
+				return true;
+
+			if (uploaded_image_view.get() == nullptr && vram_texture != nullptr)
+				return true;
+
+			return false;
 		}
 
 		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue)
 		{
+			if (m_device == nullptr)
+			{
+				m_device = &cmd.get_command_pool().get_owner();
+			}
+
 			if (dma_fence == VK_NULL_HANDLE)
 			{
 				VkFenceCreateInfo createInfo = {};
@@ -145,6 +160,7 @@ namespace vk
 			CHECK_RESULT(vkQueueSubmit(submit_queue, 1, &infos, dma_fence));
 
 			//Now we need to restart the command-buffer to restore it to the way it was before...
+			CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
 			CHECK_RESULT(vkResetCommandPool(*m_device, cmd.get_command_pool(), 0));
 
 			VkCommandBufferInheritanceInfo inheritance_info = {};
@@ -169,7 +185,7 @@ namespace vk
 			}
 
 			//Now we wait for the fence
-			CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
+			//CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
 
 			//TODO: Image scaling, etc
 			void* pixels_src = dma_buffer->map(0, VK_WHOLE_SIZE);
@@ -181,6 +197,7 @@ namespace vk
 			//These sections are usually one-use only so we destroy system resources
 			//TODO: Recycle dma buffers
 			release_dma_resources();
+			vram_texture = nullptr;	//Let m_rtts handle lifetime management
 		}
 	};
 
@@ -428,15 +445,18 @@ namespace vk
 			return view;
 		}
 
-		void lock_memory_region(vk::image& image, const u32 memory_address, const u32 memory_size, const u32 width, const u32 height)
+		void lock_memory_region(vk::image* image, const u32 memory_address, const u32 memory_size, const u32 width, const u32 height)
 		{
 			cached_texture_section& region = find_cached_texture(memory_address, memory_size, true, width, height, 1);
-			region.reset(memory_address, memory_size);
-			region.create(width, height, 1, 1, nullptr, &image);
-			region.protect(utils::protection::no);
-			region.set_dirty(false);
-
-			texture_cache_range = region.get_min_max(texture_cache_range);
+			region.create(width, height, 1, 1, nullptr, image, false);
+			
+			if (!region.is_locked())
+			{
+				region.reset(memory_address, memory_size);
+				region.protect(utils::protection::no);
+				region.set_dirty(false);
+				texture_cache_range = region.get_min_max(texture_cache_range);
+			}
 		}
 
 		void flush_memory_to_cache(const u32 memory_address, const u32 memory_size, vk::command_buffer&cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
