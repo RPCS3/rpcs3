@@ -110,7 +110,7 @@ struct alignas(8) CellFiberPpuUtilWorkerControlAttribute
 {
 	CellFiberPpuSchedulerAttribute scheduler;
 	be_t<u64> privateHeader[2];
-	u8 __reserved[112];
+	u8 __reserved__[112];
 };
 
 CHECK_SIZE_ALIGN(CellFiberPpuUtilWorkerControlAttribute, 384, 8);
