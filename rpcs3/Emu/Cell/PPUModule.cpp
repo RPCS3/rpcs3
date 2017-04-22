@@ -1198,6 +1198,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellSync2", "libsre.sprx" },
 			{ "cellVpost", "libvpost.sprx" },
 			{ "cellVpost", "libsre.sprx" },
+			{ "sys_fs", "libfs.sprx" },
 		};
 
 		// Expand dependencies
