@@ -189,7 +189,7 @@ namespace vk
 
 				//Now we need to restart the command-buffer to restore it to the way it was before...
 				CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
-				CHECK_RESULT(vkResetCommandPool(*m_device, cmd.get_command_pool(), 0));
+				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
 				CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
 			}
 		}
