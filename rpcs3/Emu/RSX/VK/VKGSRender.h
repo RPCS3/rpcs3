@@ -94,7 +94,7 @@ private:
 	bool m_flush_draw_buffers = false;
 	
 	std::atomic<bool> m_flush_commands = false;
-	std::atomic<int> m_queued_threads_count = 0;
+	std::atomic<int> m_queued_threads = 0;
 
 	std::thread::id rsx_thread;
 
