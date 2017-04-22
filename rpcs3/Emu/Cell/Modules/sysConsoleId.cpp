@@ -5,7 +5,7 @@ logs::channel sysConsoleId("sysConsoleId", logs::level::notice);
 
 s32 sys_get_console_id()
 {
-    UNIMPLEMENTED_FUNC(sysConsoleId);
+	UNIMPLEMENTED_FUNC(sysConsoleId);
 	return CELL_OK;
 }
 
