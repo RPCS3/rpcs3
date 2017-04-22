@@ -676,9 +676,7 @@ void VKGSRender::begin()
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
-		//??Should we wait for the queue to actually render to the GPU? or just flush the queue?
-		//Needs investigation to determine what drivers expect here, bottom_of_pipe is guaranteed to work, but will be too slow
-		close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		close_and_submit_command_buffer({}, m_submit_fence);
 		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
 
 		vkResetDescriptorPool(*m_device, descriptor_pool, 0);
@@ -1057,7 +1055,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 		}
 	}
 
-	close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	close_and_submit_command_buffer({}, m_submit_fence);
 	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
 
 	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
@@ -1069,7 +1067,7 @@ void VKGSRender::do_local_task()
 {
 	if (m_flush_commands)
 	{
-		close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		close_and_submit_command_buffer({}, m_submit_fence);
 		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
 
 		CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
