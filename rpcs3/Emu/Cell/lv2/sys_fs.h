@@ -266,6 +266,21 @@ struct lv2_file_op_dir : lv2_file_op
 
 CHECK_SIZE(lv2_file_op_dir, 0x1c);
 
+// sys_fs_fnctl: unknown (called before cellFsOpen, for example)
+struct lv2_file_c0000006 : lv2_file_op
+{
+	be_t<u32> size; // 0x20
+	be_t<u32> _x4;  // 0x10
+	be_t<u32> _x8;  // 0x18
+	be_t<u32> _xc;  // 0x9
+	vm::ps3::bcptr<char> name;
+	be_t<u32> _x14; // 0
+	be_t<u32> _x18; // 0x80010003
+	be_t<u32> _x1c; // 0
+};
+
+CHECK_SIZE(lv2_file_c0000006, 0x20);
+
 // Syscalls
 
 error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> arg5, u32 arg6);
