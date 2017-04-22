@@ -1034,15 +1034,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	//TODO: Make this asynchronous. Should be similar to a glFlush() but in this case its similar to glFinish
 	//This is due to all the hard waits for fences
-
-	close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
-
-	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
-	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
-	open_command_buffer();
-
-	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+	//TODO: Use a command buffer array to allow explicit draw command tracking
 
 	if (g_cfg_rsx_write_color_buffers)
 	{
@@ -1052,7 +1044,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 				continue;
 
 			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height,
-					m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+					m_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
 
@@ -1061,9 +1053,16 @@ void VKGSRender::copy_render_targets_to_dma_location()
 		if (m_depth_surface_info.pitch)
 		{
 			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height,
-				m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+				m_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
+
+	close_and_submit_command_buffer({}, m_submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+	open_command_buffer();
 }
 
 void VKGSRender::do_local_task()

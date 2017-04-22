@@ -122,7 +122,8 @@ namespace vk
 			return (protection == utils::protection::rw && uploaded_image_view.get() == nullptr && managed_texture.get() == nullptr);
 		}
 
-		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue,
+				bool manage_cb_lifetime = false, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 		{
 			if (m_device == nullptr)
 			{
@@ -141,16 +142,19 @@ namespace vk
 				dma_buffer.reset(new vk::buffer(*m_device, align(cpu_address_range, 256), heap_index, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
 			}
 
-			//cb has to be guaranteed to be in a closed state
-			//This function can be called asynchronously
-			VkCommandBufferInheritanceInfo inheritance_info = {};
-			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+			if (manage_cb_lifetime)
+			{
+				//cb has to be guaranteed to be in a closed state
+				//This function can be called asynchronously
+				VkCommandBufferInheritanceInfo inheritance_info = {};
+				inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 
-			VkCommandBufferBeginInfo begin_infos = {};
-			begin_infos.pInheritanceInfo = &inheritance_info;
-			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			CHECK_RESULT(vkBeginCommandBuffer(cmd, &begin_infos));
+				VkCommandBufferBeginInfo begin_infos = {};
+				begin_infos.pInheritanceInfo = &inheritance_info;
+				begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				CHECK_RESULT(vkBeginCommandBuffer(cmd, &begin_infos));
+			}
 
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
@@ -166,25 +170,28 @@ namespace vk
 			vkCmdCopyImageToBuffer(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &copyRegion);
 			change_image_layout(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, layout, subresource_range);
 
-			CHECK_RESULT(vkEndCommandBuffer(cmd));
+			if (manage_cb_lifetime)
+			{
+				CHECK_RESULT(vkEndCommandBuffer(cmd));
 
-			VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			VkCommandBuffer command_buffer = cmd;
+				VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				VkCommandBuffer command_buffer = cmd;
 
-			VkSubmitInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			infos.commandBufferCount = 1;
-			infos.pCommandBuffers = &command_buffer;
-			infos.pWaitDstStageMask = &pipe_stage_flags;
-			infos.pWaitSemaphores = nullptr;
-			infos.waitSemaphoreCount = 0;
+				VkSubmitInfo infos = {};
+				infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				infos.commandBufferCount = 1;
+				infos.pCommandBuffers = &command_buffer;
+				infos.pWaitDstStageMask = &pipe_stage_flags;
+				infos.pWaitSemaphores = nullptr;
+				infos.waitSemaphoreCount = 0;
 
-			CHECK_RESULT(vkQueueSubmit(submit_queue, 1, &infos, dma_fence));
+				CHECK_RESULT(vkQueueSubmit(submit_queue, 1, &infos, dma_fence));
 
-			//Now we need to restart the command-buffer to restore it to the way it was before...
-			CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
-			CHECK_RESULT(vkResetCommandPool(*m_device, cmd.get_command_pool(), 0));
-			CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
+				//Now we need to restart the command-buffer to restore it to the way it was before...
+				CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
+				CHECK_RESULT(vkResetCommandPool(*m_device, cmd.get_command_pool(), 0));
+				CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
+			}
 		}
 
 		template<typename T>
@@ -251,7 +258,7 @@ namespace vk
 			if (dma_fence == VK_NULL_HANDLE || dma_buffer.get() == nullptr)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
-				copy_texture(cmd, heap_index, submit_queue, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				copy_texture(cmd, heap_index, submit_queue, true, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 
 			protect(utils::protection::rw);
