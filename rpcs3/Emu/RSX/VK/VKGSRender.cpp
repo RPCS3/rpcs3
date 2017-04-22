@@ -651,9 +651,10 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			while (m_flush_commands);
 
 			std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-			bool stat = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+			bool status = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 
 			m_queued_threads--;
+			return status;
 		}
 
 		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
@@ -1055,9 +1056,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 				m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
-
-	m_flush_draw_buffers = false;
-	m_flush_commands = false;
 }
 
 void VKGSRender::do_local_task()
