@@ -34,6 +34,7 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
+	OS << "	vec4 userClip[2];" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -124,13 +125,13 @@ static const reg_info reg_table[] =
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
 	{ "fog_c", true, "dst_reg5", ".xxxx", true },
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * uc_m0", false },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * uc_m1", false },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * uc_m2", false },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClip[0].x", false },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClip[0].y", false },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClip[0].z", false },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * uc_m3", false },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * uc_m4", false },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * uc_m5", false },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClip[0].w", false },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClip[1].x", false },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClip[1].y", false },
 	{ "tc0", true, "dst_reg7", "", false },
 	{ "tc1", true, "dst_reg8", "", false },
 	{ "tc2", true, "dst_reg9", "", false },

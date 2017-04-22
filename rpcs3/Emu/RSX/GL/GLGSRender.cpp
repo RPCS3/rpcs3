@@ -289,6 +289,13 @@ void GLGSRender::begin()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 0);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 1);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 2);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 3);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 4);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 5);
+
 	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 }
@@ -335,48 +342,6 @@ void GLGSRender::end()
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
-
-	//Set active user clip planes
-	const rsx::user_clip_plane_op clip_plane_control[6] =
-	{
-		rsx::method_registers.clip_plane_0_enabled(),
-		rsx::method_registers.clip_plane_1_enabled(),
-		rsx::method_registers.clip_plane_2_enabled(),
-		rsx::method_registers.clip_plane_3_enabled(),
-		rsx::method_registers.clip_plane_4_enabled(),
-		rsx::method_registers.clip_plane_5_enabled(),
-	};
-
-	for (int index = 0; index < 6; ++index)
-	{
-		int value = 0;
-		int location;
-
-		if (m_program->uniforms.has_location("uc_m" + std::to_string(index), &location))
-		{
-			switch (clip_plane_control[index])
-			{
-			default:
-				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)clip_plane_control[index]);
-
-			case rsx::user_clip_plane_op::disable:
-				value = 0;
-				break;
-
-			case rsx::user_clip_plane_op::greater_or_equal:
-				value = 1;
-				break;
-
-			case rsx::user_clip_plane_op::less_than:
-				value = -1;
-				break;
-			}
-
-			__glcheck m_program->uniforms[location] = value;
-		}
-
-		__glcheck enable(value, GL_CLIP_DISTANCE0 + index);
-	};
 
 	if (manually_flush_ring_buffers)
 	{
@@ -814,7 +779,8 @@ bool GLGSRender::load_program()
 	auto mapping = m_scale_offset_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	scale_offset_offset = mapping.second;
-	fill_scale_offset_data(buf, false);
+	fill_scale_offset_data(buf, false, true);
+	fill_user_clip_data((char *)buf + 64);
 
 	if (m_transform_constants_dirty)
 	{
