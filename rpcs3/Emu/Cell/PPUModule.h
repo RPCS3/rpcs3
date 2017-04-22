@@ -124,6 +124,7 @@ public:
 	static const ppu_static_module cell_FreeType2;
 	static const ppu_static_module cellFs;
 	static const ppu_static_module cellGame;
+	static const ppu_static_module cellGamePs1Emu;
 	static const ppu_static_module cellGameExec;
 	static const ppu_static_module cellGcmSys;
 	static const ppu_static_module cellGem;
@@ -172,6 +173,7 @@ public:
 	static const ppu_static_module cellSync;
 	static const ppu_static_module cellSync2;
 	static const ppu_static_module cellSysconf;
+	static const ppu_static_module cellSysconfPs1emu;
 	static const ppu_static_module cellSysmodule;
 	static const ppu_static_module cellSysutil;
 	static const ppu_static_module cellSysutilAp;
@@ -201,7 +203,10 @@ public:
 	static const ppu_static_module sceNpUtil;
 	static const ppu_static_module sys_io;
 	static const ppu_static_module libnet;
+	static const ppu_static_module sysBdMediaId;
+	static const ppu_static_module sysConsoleId;
 	static const ppu_static_module sysPrxForUser;
+    static const ppu_static_module sysPs2Disc;
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
 };

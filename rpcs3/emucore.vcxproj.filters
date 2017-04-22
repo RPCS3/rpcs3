@@ -359,6 +359,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellGameExec.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellGamePs1Emu.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellGcmSys.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -512,6 +515,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysconf.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellSysconfPs1emu.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellSysmodule.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -641,7 +647,16 @@
     <ClCompile Include="Emu\Cell\Modules\sys_spu_.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\sysBdMediaId.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\sysConsoleId.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\sysPs2Disc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPUFunction.cpp">

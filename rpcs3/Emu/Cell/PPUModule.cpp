@@ -38,6 +38,7 @@ LOG_CHANNEL(cellFontFT);
 LOG_CHANNEL(cell_FreeType2);
 LOG_CHANNEL(cellFs);
 LOG_CHANNEL(cellGame);
+LOG_CHANNEL(cellGamePs1Emu);
 LOG_CHANNEL(cellGameExec);
 LOG_CHANNEL(cellGcmSys);
 LOG_CHANNEL(cellGem);
@@ -84,6 +85,7 @@ LOG_CHANNEL(cellSubdisplay);
 LOG_CHANNEL(cellSync);
 LOG_CHANNEL(cellSync2);
 LOG_CHANNEL(cellSysconf);
+LOG_CHANNEL(cellSysconfPs1emu);
 LOG_CHANNEL(cellSysmodule);
 LOG_CHANNEL(cellSysutil);
 LOG_CHANNEL(cellSysutilAp);
@@ -115,7 +117,10 @@ LOG_CHANNEL(sys_io);
 LOG_CHANNEL(sys_libc);
 LOG_CHANNEL(sys_lv2dbg);
 LOG_CHANNEL(libnet);
+LOG_CHANNEL(sysBdMediaId);
+LOG_CHANNEL(sysConsoleId);
 LOG_CHANNEL(sysPrxForUser);
+LOG_CHANNEL(sysPs2Disc);
 #ifdef WITH_GDB_DEBUGGER
 LOG_CHANNEL(gdbDebugServer);
 #endif
@@ -255,6 +260,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellFs,
 		&ppu_module_manager::cellGame,
 		&ppu_module_manager::cellGameExec,
+		&ppu_module_manager::cellGamePs1Emu,
 		&ppu_module_manager::cellGcmSys,
 		&ppu_module_manager::cellGem,
 		&ppu_module_manager::cellGifDec,
@@ -302,6 +308,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellSync,
 		&ppu_module_manager::cellSync2,
 		&ppu_module_manager::cellSysconf,
+		&ppu_module_manager::cellSysconfPs1emu,
 		&ppu_module_manager::cellSysmodule,
 		&ppu_module_manager::cellSysutil,
 		&ppu_module_manager::cellSysutilAp,
@@ -331,7 +338,10 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::sceNpUtil,
 		&ppu_module_manager::sys_io,
 		&ppu_module_manager::libnet,
+		&ppu_module_manager::sysBdMediaId,
+		&ppu_module_manager::sysConsoleId,
 		&ppu_module_manager::sysPrxForUser,
+        &ppu_module_manager::sysPs2Disc,
 		&ppu_module_manager::sys_libc,
 		&ppu_module_manager::sys_lv2dbg,
 	};
