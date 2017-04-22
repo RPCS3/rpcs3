@@ -555,6 +555,20 @@ namespace vk
 			region->copy_texture(cmd, memory_types.host_visible_coherent, submit_queue);
 		}
 
+		bool address_is_flushable(u32 address)
+		{
+			for (auto &tex : m_cache)
+			{
+				if (tex.is_dirty()) continue;
+				if (!tex.is_flushable()) continue;
+
+				if (tex.overlaps(address))
+					return true;
+			}
+
+			return false;
+		}
+
 		bool flush_address(u32 address, vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
 		{
 			if (address < texture_cache_range.first ||

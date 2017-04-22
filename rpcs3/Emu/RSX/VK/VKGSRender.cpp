@@ -643,6 +643,9 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	{
 		if (std::this_thread::get_id() != rsx_thread)
 		{
+			if (!m_texture_cache.address_is_flushable(address))
+				return false;
+
 			//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
 			m_flush_commands = true;
 			m_queued_threads++;
