@@ -159,6 +159,15 @@
     <ClCompile Include="main.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="RPCS3App.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_RPCS3App.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_RPCS3App.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -214,6 +223,9 @@
     </CustomBuild>
     <CustomBuild Include="Gui\AutoPauseSettingsDialog.h">
       <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RPCS3App.h">
+      <Filter>rpcs3</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>
