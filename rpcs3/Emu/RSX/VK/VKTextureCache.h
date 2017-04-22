@@ -28,6 +28,14 @@ namespace vk
 	
 		cached_texture_section() {}
 
+		void reset(u32 base, u32 length)
+		{
+			if (length > cpu_address_range)
+				release_dma_resources();
+
+			rsx::buffered_section::reset(base, length);
+		}
+
 		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 native_pitch = 0, bool managed=true)
 		{
 			width = w;
@@ -38,8 +46,7 @@ namespace vk
 			uploaded_image_view.reset(view);
 			vram_texture = image;
 
-			if (managed)
-				managed_texture.reset(image);
+			if (managed) managed_texture.reset(image);
 
 			//TODO: Properly compute these values
 			this->native_pitch = native_pitch;
@@ -105,12 +112,14 @@ namespace vk
 
 		bool is_flushable() const
 		{
+			//This section is active and can be flushed to cpu
 			return (protection == utils::protection::no);
 		}
 
 		bool is_flushed() const
 		{
-			return (managed_texture.get() == nullptr && uploaded_image_view.get() != nullptr && vram_texture == nullptr);
+			//This memory section was flushable, but a flush has already removed protection
+			return (protection == utils::protection::rw && uploaded_image_view.get() == nullptr && managed_texture.get() == nullptr);
 		}
 
 		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -159,7 +168,7 @@ namespace vk
 
 			CHECK_RESULT(vkEndCommandBuffer(cmd));
 
-			VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			VkCommandBuffer command_buffer = cmd;
 
 			VkSubmitInfo infos = {};
@@ -272,13 +281,8 @@ namespace vk
 				break;
 			}
 
-			dma_buffer->unmap(); 
-
-			//Cleanup
-			//These sections are usually one-use only so we destroy system resources
-			//TODO: Recycle dma buffers
-			release_dma_resources();
-			vram_texture = nullptr;	//Let m_rtts handle lifetime management
+			dma_buffer->unmap();
+			//Its highly likely that this surface will be reused, so we just leave resources in place
 		}
 	};
 
@@ -533,11 +537,11 @@ namespace vk
 			if (!region.is_locked())
 			{
 				region.reset(memory_address, memory_size);
-				region.protect(utils::protection::no);
 				region.set_dirty(false);
 				texture_cache_range = region.get_min_max(texture_cache_range);
 			}
 
+			region.protect(utils::protection::no);
 			region.create(width, height, 1, 1, nullptr, image, image->native_pitch, false);
 		}
 
@@ -620,7 +624,7 @@ namespace vk
 				auto &tex = m_cache[i];
 
 				if (tex.is_dirty()) continue;
-				if (tex.is_flushable()) continue;
+				if (!tex.is_locked()) continue;	//flushable sections can be 'clean' but unlocked. TODO: Handle this better
 
 				auto overlapped = tex.overlaps_page(trampled_range, address);
 				if (std::get<0>(overlapped))

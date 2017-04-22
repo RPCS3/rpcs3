@@ -104,7 +104,7 @@ public:
 
 private:
 	void clear_surface(u32 mask);
-	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence);
+	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
 	void sync_at_semaphore_release();
 	void prepare_rtts();
