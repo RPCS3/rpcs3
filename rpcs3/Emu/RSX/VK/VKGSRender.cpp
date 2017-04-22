@@ -1060,6 +1060,8 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	m_last_flushable_cb = m_current_cb_index;
 	flush_command_queue();
+
+	m_flush_draw_buffers = false;
 }
 
 void VKGSRender::flush_command_queue(bool hard_sync)
@@ -1167,6 +1169,7 @@ void VKGSRender::do_local_task()
 		flush_command_queue(true);
 
 		m_flush_commands = false;
+		m_flush_draw_buffers = false;
 		while (m_queued_threads);
 	}
 }
