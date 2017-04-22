@@ -341,7 +341,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::sysBdMediaId,
 		&ppu_module_manager::sysConsoleId,
 		&ppu_module_manager::sysPrxForUser,
-        &ppu_module_manager::sysPs2Disc,
+		&ppu_module_manager::sysPs2Disc,
 		&ppu_module_manager::sys_libc,
 		&ppu_module_manager::sys_lv2dbg,
 	};

@@ -206,7 +206,7 @@ public:
 	static const ppu_static_module sysBdMediaId;
 	static const ppu_static_module sysConsoleId;
 	static const ppu_static_module sysPrxForUser;
-    static const ppu_static_module sysPs2Disc;
+	static const ppu_static_module sysPs2Disc;
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
 };
