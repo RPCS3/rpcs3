@@ -11,6 +11,7 @@
 #include "VKProgramBuffer.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
+#include <atomic>
 
 #pragma comment(lib, "VKstatic.1.lib")
 
@@ -89,7 +90,13 @@ private:
 
 	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 	rsx::gcm_framebuffer_info m_depth_surface_info;
+
 	bool m_flush_draw_buffers = false;
+	
+	std::atomic<bool> m_flush_commands = false;
+	std::atomic<int> m_queued_threads_count = 0;
+
+	std::thread::id rsx_thread;
 
 public:
 	VKGSRender();
@@ -119,6 +126,8 @@ protected:
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
+
+	void do_local_task() override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 };

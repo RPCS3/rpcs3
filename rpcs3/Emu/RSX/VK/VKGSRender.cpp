@@ -641,6 +641,21 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		return m_texture_cache.invalidate_address(address);
 	else
 	{
+		if (std::this_thread::get_id() != rsx_thread)
+		{
+			//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
+			m_flush_commands = true;
+			m_queued_threads++;
+
+			//This is awful!
+			while (m_flush_commands);
+
+			std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+			bool stat = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+
+			m_queued_threads--;
+		}
+
 		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
 		return m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 	}
@@ -886,6 +901,8 @@ void VKGSRender::on_init_thread()
 	GSRender::on_init_thread();
 	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
 	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+
+	rsx_thread = std::this_thread::get_id();
 }
 
 void VKGSRender::on_exit()
@@ -1040,6 +1057,23 @@ void VKGSRender::copy_render_targets_to_dma_location()
 	}
 
 	m_flush_draw_buffers = false;
+	m_flush_commands = false;
+}
+
+void VKGSRender::do_local_task()
+{
+	if (m_flush_commands)
+	{
+		close_and_submit_command_buffer({}, m_submit_fence);
+		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+		CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+		CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+		open_command_buffer();
+
+		m_flush_commands = false;
+		while (m_queued_threads);
+	}
 }
 
 bool VKGSRender::do_method(u32 cmd, u32 arg)
