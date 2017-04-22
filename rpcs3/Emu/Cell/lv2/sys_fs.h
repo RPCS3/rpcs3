@@ -83,6 +83,12 @@ struct CellFsStat
 
 CHECK_SIZE_ALIGN(CellFsStat, 52, 4);
 
+struct CellFsDirectoryEntry
+{
+	CellFsStat attribute;
+	CellFsDirent entry_name;
+};
+
 struct CellFsUtimbuf
 {
 	be_t<s64, 4> actime;
@@ -237,6 +243,28 @@ struct lv2_file_op_09 : lv2_file_op
 };
 
 CHECK_SIZE(lv2_file_op_09, 0x40);
+
+// sys_fs_fnctl: cellFsGetDirectoryEntries
+struct lv2_file_op_dir : lv2_file_op
+{
+	struct dir_info : lv2_file_op
+	{
+		be_t<s32> _code; // Op result
+		be_t<u32> _size; // Number of entries written
+		vm::bptrb<CellFsDirectoryEntry> ptr;
+		be_t<u32> max;
+	};
+
+	CHECK_SIZE(dir_info, 0x10);
+
+	vm::bptrb<vtable::lv2_file_op> _vtable;
+
+	be_t<u32> op;
+	be_t<u32> _x8;
+	dir_info arg;
+};
+
+CHECK_SIZE(lv2_file_op_dir, 0x1c);
 
 // Syscalls
 

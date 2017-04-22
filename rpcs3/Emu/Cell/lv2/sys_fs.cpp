@@ -675,6 +675,53 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		return CELL_EMFILE;
 	}
 
+	case 0xe0000012: // cellFsGetDirectoryEntries
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_op_dir::dir_info>(_arg);
+
+		if (_size < arg.size())
+		{
+			return CELL_EINVAL;
+		}
+
+		const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
+
+		if (!directory)
+		{
+			return CELL_EBADF;
+		}
+
+		for (; arg->_size < arg->max; arg->_size++)
+		{
+			fs::dir_entry info;
+
+			if (directory->dir.read(info))
+			{
+				auto& entry = arg->ptr[arg->_size];
+
+				entry.attribute.mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+				entry.attribute.uid = 0;
+				entry.attribute.gid = 0;
+				entry.attribute.atime = info.atime;
+				entry.attribute.mtime = info.mtime;
+				entry.attribute.ctime = info.ctime;
+				entry.attribute.size = info.size;
+				entry.attribute.blksize = 4096; // ???
+
+				entry.entry_name.d_type = info.is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
+				entry.entry_name.d_namlen = u8(std::min<size_t>(info.name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+				strcpy_trunc(entry.entry_name.d_name, info.name);
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		arg->_code = CELL_OK;
+		return CELL_OK;
+	}
+
 	default:
 	{
 		sys_fs.todo("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);

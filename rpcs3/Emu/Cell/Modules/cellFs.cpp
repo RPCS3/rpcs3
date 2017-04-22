@@ -260,49 +260,37 @@ s32 cellFsGetFreeSize(vm::cptr<char> path, vm::ptr<u32> block_size, vm::ptr<u64>
 	return CELL_OK;
 }
 
-s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<u32> data_count)
+error_code cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<u32> data_count)
 {
-	cellFs.warning("cellFsGetDirectoryEntries(fd=%d, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
+	cellFs.trace("cellFsGetDirectoryEntries(fd=%d, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
 
-	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
+	if (!data_count || !entries)
+	{
+		return CELL_EFAULT;
+	}
 
-	if (!directory)
+	if (fd - 3 > 252)
 	{
 		return CELL_EBADF;
 	}
 
-	u32 count = 0;
+	vm::var<lv2_file_op_dir> op;
 
-	entries_size /= sizeof(CellFsDirectoryEntry);
+	op->_vtable = vm::cast(0xfae12000); // Intentionally wrong (provide correct vtable if necessary)
 
-	for (; count < entries_size; count++)
-	{
-		fs::dir_entry info;
+	op->op = 0xe0000012;
+	op->arg._code = 0;
+	op->arg._size = 0;
+	op->arg.ptr   = entries;
+	op->arg.max   = entries_size / sizeof(CellFsDirectoryEntry);
 
-		if (directory->dir.read(info))
-		{
-			entries[count].attribute.mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-			entries[count].attribute.uid = 1; // ???
-			entries[count].attribute.gid = 1; // ???
-			entries[count].attribute.atime = info.atime;
-			entries[count].attribute.mtime = info.mtime;
-			entries[count].attribute.ctime = info.ctime;
-			entries[count].attribute.size = info.size;
-			entries[count].attribute.blksize = 4096; // ???
+	// Call the syscall
+	const s32 rc = sys_fs_fcntl(fd, 0xe0000012, op.ptr(&lv2_file_op_dir::arg), 0x10);
 
-			entries[count].entry_name.d_type = info.is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-			entries[count].entry_name.d_namlen = u8(std::min<size_t>(info.name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
-			strcpy_trunc(entries[count].entry_name.d_name, info.name);
-		}
-		else
-		{
-			break;
-		}
-	}
+	*data_count = op->arg._size;
 
-	*data_count = count;
-
-	return CELL_OK;
+	// Select the result
+	return not_an_error(rc ? rc : +op->arg._code);
 }
 
 error_code cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
