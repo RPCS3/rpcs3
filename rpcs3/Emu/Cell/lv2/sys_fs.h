@@ -238,6 +238,7 @@ struct lv2_file_op_09 : lv2_file_op
 	be_t<u32> arg_size; // 6th arg
 	be_t<u32> arg_ptr; // 5th arg
 
+	be_t<u32> _x34;
 	be_t<s32> out_code;
 	be_t<u32> out_fd;
 };
