@@ -572,6 +572,8 @@ VKGSRender::~VKGSRender()
 		return;
 	}
 
+	m_current_command_buffer->reset();
+
 	//Wait for queue
 	vkQueueWaitIdle(m_swap_chain->get_present_queue());
 
@@ -642,29 +644,46 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		return m_texture_cache.invalidate_address(address);
 	else
 	{
-		if (!m_texture_cache.address_is_flushable(address))
+		bool flushable, synchronized;
+		
+		std::tie(flushable, synchronized) = m_texture_cache.address_is_flushable(address);
+		if (!flushable)
 			return false;
 
-		if (m_last_flushable_cb >= 0)
+		if (synchronized)
 		{
-			if (m_primary_cb_list[m_last_flushable_cb].pending)
-				m_primary_cb_list[m_last_flushable_cb].wait();
+			if (m_last_flushable_cb >= 0)
+			{
+				if (m_primary_cb_list[m_last_flushable_cb].pending)
+					m_primary_cb_list[m_last_flushable_cb].wait();
+			}
+
+			m_last_flushable_cb = -1;
 		}
-
-		if (std::this_thread::get_id() != rsx_thread)
+		else
 		{
-			//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
-			m_flush_commands = true;
-			m_queued_threads++;
+			//This region is buffered, but no previous sync point has been put in place to start sync efforts
+			//Just stall and get what we have at this point
+			if (std::this_thread::get_id() != rsx_thread)
+			{
+				//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
+				m_flush_commands = true;
+				m_queued_threads++;
 
-			//This is awful!
-			while (m_flush_commands);
+				//This is awful!
+				while (m_flush_commands);
 
-			std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-			bool status = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+				std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+				bool status = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 
-			m_queued_threads--;
-			return status;
+				m_queued_threads--;
+				return status;
+			}
+			else
+			{
+				//NOTE: If the rsx::thread is trampling its own data, we have an operation that should be moved to the GPU
+				flush_command_queue();
+			}
 		}
 
 		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
@@ -721,7 +740,6 @@ void VKGSRender::begin()
 	std::chrono::time_point<steady_clock> stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
-	m_draw_calls++;
 	m_used_descriptors++;
 }
 
@@ -826,6 +844,13 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
+	//upload_vertex_data is a memory op and can trigger an access violation
+	//render passes are supposed to be uninterruptible, so we have to finish everything first before we start the render pass
+	auto upload_info = upload_vertex_data();
+
+	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
+	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - textures_end).count();
+
 	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	rp_begin.renderPass = current_render_pass;
@@ -836,12 +861,6 @@ void VKGSRender::end()
 	rp_begin.renderArea.extent.height = m_framebuffer_to_clean.back()->height();
 
 	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-
-	auto upload_info = upload_vertex_data();
-
-	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
-	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - textures_end).count();
-
 	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets, 0, nullptr);
 
@@ -867,6 +886,7 @@ void VKGSRender::end()
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - vertex_end).count();
 
 	copy_render_targets_to_dma_location();
+	m_draw_calls++;
 
 	rsx::thread::end();
 }
@@ -928,6 +948,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (m_current_present_image == 0xFFFF) return;
 
 	init_buffers();
+	copy_render_targets_to_dma_location();
 
 	float depth_clear = 1.f;
 	u32   stencil_clear = 0;
@@ -1070,15 +1091,19 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 	if (hard_sync)
 	{
-		m_current_command_buffer->pending = true;
-		m_current_command_buffer->wait();
-
 		//swap handler checks the pending flag, so call it here
 		process_swap_request();
+
+		//wait for the latest intruction to execute
+		m_current_command_buffer->pending = true;
+		m_current_command_buffer->wait();
 
 		//Clear all command buffer statuses
 		for (auto &cb : m_primary_cb_list)
 			cb.poke();
+
+		m_last_flushable_cb = -1;
+		m_flush_commands = false;
 	}
 	else
 	{
@@ -1135,8 +1160,6 @@ void VKGSRender::process_swap_request()
 		present.pImageIndices = &m_current_present_image;
 		CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
 	}
-	else
-		fmt::throw_exception("How can a process be set without a pending flag?");
 
 	//Clean up all the resources from the last frame
 
@@ -1162,14 +1185,11 @@ void VKGSRender::do_local_task()
 {
 	if (m_flush_commands)
 	{
-		//WARNING: This is a hard sync, expect horrendous performance
-		//Need to process this a little better!
-		//TODO: Link cb with draw buffer and wait for that specific cb based on address
-		LOG_ERROR(RSX, "Hard sync point is to be processed. Performance warning");
-		flush_command_queue(true);
+		//TODO: Determine if a hard sync is necessary
+		//Pipeline barriers later may do a better job synchronizing than wholly stalling the pipeline
+		flush_command_queue();
 
 		m_flush_commands = false;
-		m_flush_draw_buffers = false;
 		while (m_queued_threads);
 	}
 }
