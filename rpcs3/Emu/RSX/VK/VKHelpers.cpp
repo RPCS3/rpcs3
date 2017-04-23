@@ -11,6 +11,8 @@ namespace vk
 	VkSampler g_null_sampler      = nullptr;
 	VkImageView g_null_image_view = nullptr;
 
+	bool g_cb_no_interrupt_flag = false;
+
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
 #ifdef _MSC_VER
@@ -251,6 +253,21 @@ namespace vk
 		}
 
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	}
+
+	void enter_uninterruptible()
+	{
+		g_cb_no_interrupt_flag = true;
+	}
+
+	void leave_uninterruptible()
+	{
+		g_cb_no_interrupt_flag = false;
+	}
+
+	bool is_uninterruptible()
+	{
+		return g_cb_no_interrupt_flag;
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,

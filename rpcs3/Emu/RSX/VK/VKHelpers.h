@@ -78,6 +78,10 @@ namespace vk
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
+	void enter_uninterruptible();
+	void leave_uninterruptible();
+	bool is_uninterruptible();
+
 	struct memory_type_mapping
 	{
 		uint32_t host_visible_coherent;
