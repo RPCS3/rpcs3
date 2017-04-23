@@ -644,49 +644,57 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		return m_texture_cache.invalidate_address(address);
 	else
 	{
-		bool flushable, synchronized;
-		
-		std::tie(flushable, synchronized) = m_texture_cache.address_is_flushable(address);
-		if (!flushable)
-			return false;
-
-		if (synchronized)
+		if (g_cfg_rsx_write_color_buffers || g_cfg_rsx_write_depth_buffer)
 		{
-			if (m_last_flushable_cb >= 0)
+			bool flushable, synchronized;
+			std::tie(flushable, synchronized) = m_texture_cache.address_is_flushable(address);
+			
+			if (!flushable)
+				return false;
+
+			if (synchronized)
 			{
-				if (m_primary_cb_list[m_last_flushable_cb].pending)
-					m_primary_cb_list[m_last_flushable_cb].wait();
-			}
+				if (m_last_flushable_cb >= 0)
+				{
+					if (m_primary_cb_list[m_last_flushable_cb].pending)
+						m_primary_cb_list[m_last_flushable_cb].wait();
+				}
 
-			m_last_flushable_cb = -1;
-		}
-		else
-		{
-			//This region is buffered, but no previous sync point has been put in place to start sync efforts
-			//Just stall and get what we have at this point
-			if (std::this_thread::get_id() != rsx_thread)
-			{
-				//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
-				m_flush_commands = true;
-				m_queued_threads++;
-
-				//This is awful!
-				while (m_flush_commands);
-
-				std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-				bool status = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
-
-				m_queued_threads--;
-				return status;
+				m_last_flushable_cb = -1;
 			}
 			else
 			{
-				//NOTE: If the rsx::thread is trampling its own data, we have an operation that should be moved to the GPU
-				//We should never interrupt our own cb recording since some operations are not interruptible
-				if (!vk::is_uninterruptible())
-					//TODO: Investigate driver behaviour to determine if we need a hard sync or a soft flush
-					flush_command_queue();
+				//This region is buffered, but no previous sync point has been put in place to start sync efforts
+				//Just stall and get what we have at this point
+				if (std::this_thread::get_id() != rsx_thread)
+				{
+					//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
+					m_flush_commands = true;
+					m_queued_threads++;
+
+					//This is awful!
+					while (m_flush_commands);
+
+					std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+					bool status = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+
+					m_queued_threads--;
+					return status;
+				}
+				else
+				{
+					//NOTE: If the rsx::thread is trampling its own data, we have an operation that should be moved to the GPU
+					//We should never interrupt our own cb recording since some operations are not interruptible
+					if (!vk::is_uninterruptible())
+						//TODO: Investigate driver behaviour to determine if we need a hard sync or a soft flush
+						flush_command_queue();
+				}
 			}
+		}
+		else
+		{
+			//If we aren't managing buffer sync, dont bother checking the cache
+			return false;
 		}
 
 		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
