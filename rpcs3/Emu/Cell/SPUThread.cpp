@@ -20,6 +20,8 @@
 
 #include <cmath>
 #include <cfenv>
+#include <atomic>
+#include <thread>
 
 #ifdef _MSC_VER
 bool operator ==(const u128& lhs, const u128& rhs)
@@ -49,9 +51,13 @@ cfg::map_entry<spu_decoder_type> g_cfg_spu_decoder(cfg::root.core, "SPU Decoder"
 });
 
 cfg::bool_entry g_cfg_spu_debug(cfg::root.core, "SPU Debug");
+cfg::bool_entry g_cfg_core_bind_spu_cores(cfg::root.core, "Bind SPU threads to secondary cores");
+cfg::bool_entry g_cfg_core_lower_spu_priority(cfg::root.core, "Lower SPU thread priority");
 
 const spu_decoder<spu_interpreter_precise> s_spu_interpreter_precise;
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter_fast;
+
+std::atomic<u64> g_num_spu_threads = { 0ull };
 
 void spu_int_ctrl_t::set(u64 ints)
 {
@@ -134,6 +140,29 @@ spu_imm_table_t::spu_imm_table_t()
 	}
 }
 
+void SPUThread::on_spawn()
+{
+	if (g_cfg_core_bind_spu_cores)
+	{
+		//Get next secondary core number
+		auto core_count = std::thread::hardware_concurrency();
+		if (core_count > 0 && core_count <= 16)
+		{
+			auto half_count = core_count / 2;
+			auto assigned_secondary_core = ((g_num_spu_threads % half_count) * 2) + 1;
+
+			set_ideal_processor_core(assigned_secondary_core);
+		}
+	}
+
+	if (g_cfg_core_lower_spu_priority)
+	{
+		set_native_priority(-1);
+	}
+
+	g_num_spu_threads++;
+}
+
 void SPUThread::on_init(const std::shared_ptr<void>& _this)
 {
 	if (!offset)
@@ -208,7 +237,7 @@ extern thread_local std::string(*g_tls_log_prefix)();
 void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
-
+	
 	if (g_cfg_spu_decoder.get() == spu_decoder_type::asmjit)
 	{
 		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
