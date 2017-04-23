@@ -205,10 +205,21 @@ void SPUThread::cpu_init()
 
 extern thread_local std::string(*g_tls_log_prefix)();
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
 
+#ifdef _WIN32
+	//TODO: Get actual thread priority from creation flags
+	//SPU threads are often just background threads
+	//This is more evident with fewer cores (DeS, P5, etc are all much faster once PPU threads aren't starved)
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+#endif
+	
 	if (g_cfg_spu_decoder.get() == spu_decoder_type::asmjit)
 	{
 		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
