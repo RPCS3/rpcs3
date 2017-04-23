@@ -1385,6 +1385,8 @@ bool VKGSRender::load_program()
 
 	properties.num_targets = m_draw_buffers_count;
 
+	vk::enter_uninterruptible();
+
 	//Load current program from buffer
 	m_program = m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
 
@@ -1446,6 +1448,8 @@ bool VKGSRender::load_program()
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);	
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+
+	vk::leave_uninterruptible();
 
 	return true;
 }
