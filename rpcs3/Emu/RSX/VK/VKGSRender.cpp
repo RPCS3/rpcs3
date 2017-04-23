@@ -651,6 +651,8 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 				m_primary_cb_list[m_last_flushable_cb].wait();
 		}
 
+		m_last_flushable_cb = -1;
+
 		if (std::this_thread::get_id() != rsx_thread)
 		{
 			//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
@@ -721,7 +723,6 @@ void VKGSRender::begin()
 	std::chrono::time_point<steady_clock> stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
-	m_draw_calls++;
 	m_used_descriptors++;
 }
 
@@ -867,6 +868,7 @@ void VKGSRender::end()
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - vertex_end).count();
 
 	copy_render_targets_to_dma_location();
+	m_draw_calls++;
 
 	rsx::thread::end();
 }
@@ -928,6 +930,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (m_current_present_image == 0xFFFF) return;
 
 	init_buffers();
+	copy_render_targets_to_dma_location();
 
 	float depth_clear = 1.f;
 	u32   stencil_clear = 0;
@@ -1079,6 +1082,9 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		//Clear all command buffer statuses
 		for (auto &cb : m_primary_cb_list)
 			cb.poke();
+
+		m_last_flushable_cb = -1;
+		m_flush_commands = false;
 	}
 	else
 	{
@@ -1169,7 +1175,6 @@ void VKGSRender::do_local_task()
 		flush_command_queue(true);
 
 		m_flush_commands = false;
-		m_flush_draw_buffers = false;
 		while (m_queued_threads);
 	}
 }
