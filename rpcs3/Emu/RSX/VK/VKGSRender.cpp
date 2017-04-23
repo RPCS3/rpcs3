@@ -682,7 +682,10 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			else
 			{
 				//NOTE: If the rsx::thread is trampling its own data, we have an operation that should be moved to the GPU
-				flush_command_queue();
+				//We should never interrupt our own cb recording since some operations are not interruptible
+				if (!vk::is_uninterruptible())
+					//TODO: Investigate driver behaviour to determine if we need a hard sync or a soft flush
+					flush_command_queue();
 			}
 		}
 
@@ -844,8 +847,10 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
-	//upload_vertex_data is a memory op and can trigger an access violation
-	//render passes are supposed to be uninterruptible, so we have to finish everything first before we start the render pass
+	//While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
+	//Only textures are synchronized tightly with the GPU and they have been read back above
+	vk::enter_uninterruptible();
+
 	auto upload_info = upload_vertex_data();
 
 	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
@@ -881,6 +886,8 @@ void VKGSRender::end()
 	}
 
 	vkCmdEndRenderPass(*m_current_command_buffer);
+
+	vk::leave_uninterruptible();
 
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - vertex_end).count();
@@ -1058,6 +1065,8 @@ void VKGSRender::copy_render_targets_to_dma_location()
 	//This is due to all the hard waits for fences
 	//TODO: Use a command buffer array to allow explicit draw command tracking
 
+	vk::enter_uninterruptible();
+
 	if (g_cfg_rsx_write_color_buffers)
 	{
 		for (u8 index = 0; index < rsx::limits::color_buffers_count; index++)
@@ -1078,6 +1087,8 @@ void VKGSRender::copy_render_targets_to_dma_location()
 				*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
+
+	vk::leave_uninterruptible();
 
 	m_last_flushable_cb = m_current_cb_index;
 	flush_command_queue();
@@ -1374,6 +1385,8 @@ bool VKGSRender::load_program()
 
 	properties.num_targets = m_draw_buffers_count;
 
+	vk::enter_uninterruptible();
+
 	//Load current program from buffer
 	m_program = m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
 
@@ -1414,6 +1427,8 @@ bool VKGSRender::load_program()
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);	
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+
+	vk::leave_uninterruptible();
 
 	return true;
 }
