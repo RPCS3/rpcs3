@@ -226,7 +226,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 
 	std::vector<std::unique_ptr<cfg_adapter>> pads;
 
-	static const u32 width  = 458;
+	static const u32 width  = 512;
 	static const u32 height = 400;
 
 	// Settings panels
@@ -310,6 +310,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 
 	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
+	wxCheckBox* chbox_core_bind_spu_threads = new wxCheckBox(p_core, wxID_ANY, "Bind SPU threads to secondary cores");
+	wxCheckBox* chbox_core_lower_spu_priority = new wxCheckBox(p_core, wxID_ANY, "Lower SPU thread priority");
 	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
 	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log Shader Programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
@@ -391,6 +393,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	EnableModuleList(rbox_lib_loader->GetSelection());
 
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Bind SPU threads to secondary cores" }, chbox_core_bind_spu_threads));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Lower SPU thread priority" }, chbox_core_lower_spu_priority));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
@@ -482,6 +486,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_subpanel_core1->Add(rbox_ppu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core1->Add(chbox_core_bind_spu_threads, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core1->Add(chbox_core_lower_spu_priority, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core2->Add(rbox_lib_loader, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core2->Add(s_round_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(s_subpanel_core1);

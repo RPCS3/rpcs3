@@ -504,6 +504,7 @@ public:
 class SPUThread : public cpu_thread
 {
 public:
+	virtual void on_spawn() override;
 	virtual void on_init(const std::shared_ptr<void>&) override;
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
