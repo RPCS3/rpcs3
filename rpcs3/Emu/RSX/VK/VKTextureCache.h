@@ -507,10 +507,15 @@ namespace vk
 				mapping,
 				subresource_range);
 
+			//We cannot split mipmap uploads across multiple command buffers (must explicitly open and close operations on the same cb)
+			vk::enter_uninterruptible();
+
 			copy_mipmaped_image_using_buffer(cmd, image->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), tex.get_exact_mipmap_count(),
 				upload_heap, upload_buffer);
 
 			change_image_layout(cmd, image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+
+			vk::leave_uninterruptible();
 
 			region.reset(texaddr, range);
 			region.create(tex.width(), height, depth, tex.get_exact_mipmap_count(), view, image);
