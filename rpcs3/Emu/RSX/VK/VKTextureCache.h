@@ -270,6 +270,11 @@ namespace vk
 			dma_buffer->unmap();
 			//Its highly likely that this surface will be reused, so we just leave resources in place
 		}
+
+		bool is_synchronized() const
+		{
+			return synchronized;
+		}
 	};
 
 	class texture_cache
@@ -545,18 +550,22 @@ namespace vk
 			region->copy_texture(cmd, memory_types.host_visible_coherent, submit_queue);
 		}
 
-		bool address_is_flushable(u32 address)
+		std::tuple<bool, bool> address_is_flushable(u32 address)
 		{
+			if (address < texture_cache_range.first ||
+				address > texture_cache_range.second)
+				return std::make_tuple(false, false);
+
 			for (auto &tex : m_cache)
 			{
 				if (tex.is_dirty()) continue;
 				if (!tex.is_flushable()) continue;
 
 				if (tex.overlaps(address))
-					return true;
+					return std::make_tuple(true, tex.is_synchronized());
 			}
 
-			return false;
+			return std::make_tuple(false, false);
 		}
 
 		bool flush_address(u32 address, vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
