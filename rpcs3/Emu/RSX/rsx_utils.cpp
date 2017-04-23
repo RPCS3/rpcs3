@@ -145,7 +145,7 @@ namespace rsx
 		u32 dst_offset = 0;
 		u32 src_offset = 0;
 
-		u32 padding = (dst_pitch - (src_pitch * samples)) / sizeof T;
+		u32 padding = (dst_pitch - (src_pitch * samples)) / sizeof(T);
 
 		for (u16 h = 0; h < src_height; ++h)
 		{
