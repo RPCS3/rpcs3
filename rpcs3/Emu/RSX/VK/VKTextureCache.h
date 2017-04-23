@@ -3,6 +3,7 @@
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
 #include "../Common/TextureUtils.h"
+#include "../rsx_utils.h"
 
 namespace vk
 {
@@ -195,58 +196,19 @@ namespace vk
 		}
 
 		template<typename T>
-		void do_memory_transfer(void *pixels_dst, void *pixels_src)
+		void do_memory_transfer(void *pixels_dst, const void *pixels_src)
 		{
-			//LOG_ERROR(RSX, "COPY %d -> %d", native_pitch, pitch);
-			if (pitch == native_pitch)
-			{
-				if (sizeof T == 1)
-					memcpy(pixels_dst, pixels_src, cpu_address_range);
-				else
-				{
-					const u32 block_size = width * height;
-					
-					auto typed_dst = (be_t<T> *)pixels_dst;
-					auto typed_src = (T *)pixels_src;
-
-					for (u32 px = 0; px < block_size; ++px)
-						typed_dst[px] = typed_src[px];
-				}
-			}
+			if (sizeof T == 1)
+				memcpy(pixels_dst, pixels_src, cpu_address_range);
 			else
 			{
-				if (sizeof T == 1)
-				{
-					u8 *typed_dst = (u8 *)pixels_dst;
-					u8 *typed_src = (u8 *)pixels_src;
+				const u32 block_size = width * height;
+					
+				auto typed_dst = (be_t<T> *)pixels_dst;
+				auto typed_src = (T *)pixels_src;
 
-					//TODO: Scaling
-					for (u16 row = 0; row < height; ++row)
-					{
-						memcpy(typed_dst, typed_src, native_pitch);
-						typed_dst += pitch;
-						typed_src += native_pitch;
-					}
-				}
-				else
-				{
-					const u32 src_step = native_pitch / sizeof T;
-					const u32 dst_step = pitch / sizeof T;
-
-					auto typed_dst = (be_t<T> *)pixels_dst;
-					auto typed_src = (T *)pixels_src;
-
-					for (u16 row = 0; row < height; ++row)
-					{
-						for (u16 px = 0; px < width; ++px)
-						{
-							typed_dst[px] = typed_src[px];
-						}
-
-						typed_dst += dst_step;
-						typed_src += src_step;
-					}
-				}
+				for (u32 px = 0; px < block_size; ++px)
+					typed_dst[px] = typed_src[px];
 			}
 		}
 
@@ -263,29 +225,39 @@ namespace vk
 
 			protect(utils::protection::rw);
 
-			//TODO: Image scaling, etc
 			void* pixels_src = dma_buffer->map(0, cpu_address_range);
 			void* pixels_dst = vm::base(cpu_address_base);
 
-			//We have to do our own byte swapping since the driver doesnt do it for us
 			const u8 bpp = native_pitch / width;
 
-			switch (bpp)
+			if (pitch == native_pitch)
 			{
-			default:
-				LOG_ERROR(RSX, "Invalid bpp %d", bpp);
-			case 1:
-				do_memory_transfer<u8>(pixels_dst, pixels_src);
-				break;
-			case 2:
-				do_memory_transfer<u16>(pixels_dst, pixels_src);
-				break;
-			case 4:
-				do_memory_transfer<u32>(pixels_dst, pixels_src);
-				break;
-			case 8:
-				do_memory_transfer<u64>(pixels_dst, pixels_src);
-				break;
+				//We have to do our own byte swapping since the driver doesnt do it for us
+				switch (bpp)
+				{
+				default:
+					LOG_ERROR(RSX, "Invalid bpp %d", bpp);
+				case 1:
+					do_memory_transfer<u8>(pixels_dst, pixels_src);
+					break;
+				case 2:
+					do_memory_transfer<u16>(pixels_dst, pixels_src);
+					break;
+				case 4:
+					do_memory_transfer<u32>(pixels_dst, pixels_src);
+					break;
+				case 8:
+					do_memory_transfer<u64>(pixels_dst, pixels_src);
+					break;
+				}
+			}
+			else
+			{
+				//Scale image to fit
+				//usually we can just get away with nearest filtering
+				const u8 samples = pitch / native_pitch;
+
+				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, pitch, native_pitch, bpp, samples, true);
 			}
 
 			dma_buffer->unmap();
