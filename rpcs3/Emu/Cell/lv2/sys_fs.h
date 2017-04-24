@@ -166,6 +166,9 @@ struct lv2_file final : lv2_fs_object
 	const s32 mode;
 	const s32 flags;
 
+	// Stream lock
+	atomic_t<u32> lock{0};
+
 	lv2_file(const char* filename, fs::file&& file, s32 mode, s32 flags)
 		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, file(std::move(file))
@@ -330,3 +333,5 @@ error_code sys_fs_truncate(vm::ps3::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(u32 fd, u64 size);
 error_code sys_fs_chmod(vm::ps3::cptr<char> path, s32 mode);
 error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep);
+error_code sys_fs_lsn_lock(u32 fd);
+error_code sys_fs_lsn_unlock(u32 fd);

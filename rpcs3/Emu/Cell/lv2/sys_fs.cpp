@@ -377,9 +377,12 @@ error_code sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwr
 		return CELL_EBADF;
 	}
 
-	// TODO: return CELL_EBUSY if locked by stream
-
 	std::lock_guard<std::mutex> lock(file->mp->mutex);
+
+	if (file->lock)
+	{
+		return CELL_EBUSY;
+	}
 
 	*nwrite = file->op_write(buf, nbytes);
 
@@ -390,16 +393,25 @@ error_code sys_fs_close(u32 fd)
 {
 	sys_fs.trace("sys_fs_close(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd, [](lv2_file& file) -> CellError
+	{
+		if (file.lock)
+		{
+			return CELL_EBUSY;
+		}
+
+		return {};
+	});
 
 	if (!file)
 	{
 		return CELL_EBADF;
 	}
 
-	// TODO: return CELL_EBUSY if locked
-
-	idm::remove<lv2_fs_object, lv2_file>(fd);
+	if (file.ret)
+	{
+		return file.ret;
+	}
 
 	return CELL_OK;
 }
@@ -650,6 +662,11 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		}
 
 		std::lock_guard<std::mutex> lock(file->mp->mutex);
+
+		if (op == 0x8000000B && file->lock)
+		{
+			return CELL_EBUSY;
+		}
 
 		const u64 old_pos = file->file.pos();
 		const u64 new_pos = file->file.seek(arg->offset);
@@ -925,6 +942,46 @@ error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> t
 		}
 
 		return CELL_EIO; // ???
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_lock(u32 fd)
+{
+	sys_fs.trace("sys_fs_lsn_lock(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	// TODO: research correct implementation
+	if (!file->lock.compare_and_swap_test(0, 1))
+	{
+		return CELL_EBUSY;
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_unlock(u32 fd)
+{
+	sys_fs.trace("sys_fs_lsn_unlock(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	// TODO: research correct implementation
+	if (!file->lock.compare_and_swap_test(1, 0))
+	{
+		return CELL_EPERM;
 	}
 
 	return CELL_OK;
