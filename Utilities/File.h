@@ -60,7 +60,8 @@ namespace fs
 	{
 		virtual ~file_base();
 
-		virtual stat_t stat() = 0;
+		virtual stat_t stat();
+		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
 		virtual u64 write(const void* buffer, u64 size) = 0;
@@ -204,6 +205,13 @@ namespace fs
 		{
 			if (!m_file) xnull();
 			return m_file->stat();
+		}
+
+		// Sync file buffers
+		void sync() const
+		{
+			if (!m_file) xnull();
+			return m_file->sync();
 		}
 
 		// Read the data from the file and return the amount of data written in buffer
@@ -486,11 +494,6 @@ namespace fs
 
 		~container_stream() override
 		{
-		}
-
-		stat_t stat() override
-		{
-			fmt::raw_error("fs::container_stream<>::stat(): not supported");
 		}
 
 		bool trunc(u64 length) override

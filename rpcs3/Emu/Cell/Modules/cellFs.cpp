@@ -163,11 +163,20 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 	return sys_fs_lseek(fd, offset, whence, pos);
 }
 
+s32 cellFsFdatasync(u32 fd)
+{
+	cellFs.trace("cellFsFdatasync(fd=%d)", fd);
+
+	// Call the syscall
+	return sys_fs_fdatasync(fd);
+}
+
 s32 cellFsFsync(u32 fd)
 {
-	cellFs.todo("cellFsFsync(fd=0x%x)", fd);
+	cellFs.trace("cellFsFsync(fd=%d)", fd);
 
-	return CELL_OK;
+	// Call the syscall
+	return sys_fs_fsync(fd);
 }
 
 s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
@@ -873,12 +882,6 @@ s32 cellFsAclWrite()
 }
 
 s32 cellFsFcntl()
-{
-	UNIMPLEMENTED_FUNC(cellFs);
-	return CELL_OK;
-}
-
-s32 cellFsFdatasync()
 {
 	UNIMPLEMENTED_FUNC(cellFs);
 	return CELL_OK;

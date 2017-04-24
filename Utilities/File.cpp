@@ -156,6 +156,16 @@ namespace fs
 	{
 	}
 
+	stat_t file_base::stat()
+	{
+		fmt::throw_exception("fs::file::stat() not supported for %s", typeid(*this).name());
+	}
+
+	void file_base::sync()
+	{
+		// Do notning
+	}
+
 	dir_base::~dir_base()
 	{
 	}
@@ -745,6 +755,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return info;
 		}
 
+		void sync() override
+		{
+			verify("file::sync" HERE), FlushFileBuffers(m_handle);
+		}
+
 		bool trunc(u64 length) override
 		{
 			LARGE_INTEGER old, pos;
@@ -870,6 +885,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return info;
 		}
 
+		void sync() override
+		{
+			verify("file::sync" HERE), ::fsync(m_fd) == 0;
+		}
+
 		bool trunc(u64 length) override
 		{
 			if (::ftruncate(m_fd, length) != 0)
@@ -943,11 +963,6 @@ fs::file::file(const void* ptr, std::size_t size)
 			: m_ptr(static_cast<const char*>(ptr))
 			, m_size(size)
 		{
-		}
-
-		fs::stat_t stat() override
-		{
-			fmt::raw_error("fs::file::memory_stream::stat(): not supported");
 		}
 
 		bool trunc(u64 length) override

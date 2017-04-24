@@ -775,6 +775,38 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 	return CELL_OK;
 }
 
+error_code sys_fs_fdatasync(u32 fd)
+{
+	sys_fs.trace("sys_fs_fdadasync(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	file->file.sync();
+
+	return CELL_OK;
+}
+
+error_code sys_fs_fsync(u32 fd)
+{
+	sys_fs.trace("sys_fs_fsync(fd=%d)", fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	file->file.sync();
+
+	return CELL_OK;
+}
+
 error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<u64> arg5)
 {
 	sys_fs.todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);

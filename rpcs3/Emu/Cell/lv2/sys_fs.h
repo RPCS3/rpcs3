@@ -300,6 +300,8 @@ error_code sys_fs_rmdir(vm::ps3::cptr<char> path);
 error_code sys_fs_unlink(vm::ps3::cptr<char> path);
 error_code sys_fs_fcntl(u32 fd, u32 op, vm::ps3::ptr<void> arg, u32 size);
 error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ps3::ptr<u64> pos);
+error_code sys_fs_fdatasync(u32 fd);
+error_code sys_fs_fsync(u32 fd);
 error_code sys_fs_fget_block_size(u32 fd, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4, vm::ps3::ptr<u64> arg5);
 error_code sys_fs_get_block_size(vm::ps3::cptr<char> path, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4);
 error_code sys_fs_truncate(vm::ps3::cptr<char> path, u64 size);
