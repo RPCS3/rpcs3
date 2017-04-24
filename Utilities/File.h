@@ -84,12 +84,22 @@ namespace fs
 		virtual void rewind() = 0;
 	};
 
+	// Device information
+	struct device_stat
+	{
+		u64 block_size;
+		u64 total_size;
+		u64 total_free; // Total size of free space
+		u64 avail_free; // Free space available to unprivileged user
+	};
+
 	// Virtual device
 	struct device_base
 	{
 		virtual ~device_base();
 
 		virtual bool stat(const std::string& path, stat_t& info) = 0;
+		virtual bool statfs(const std::string& path, device_stat& info) = 0;
 		virtual bool remove_dir(const std::string& path) = 0;
 		virtual bool create_dir(const std::string& path) = 0;
 		virtual bool rename(const std::string& from, const std::string& to) = 0;
@@ -121,6 +131,9 @@ namespace fs
 
 	// Check whether the directory exists and is NOT a file
 	bool is_dir(const std::string& path);
+
+	// Get filesystem information
+	bool statfs(const std::string& path, device_stat& info);
 
 	// Delete empty directory
 	bool remove_dir(const std::string& path);
