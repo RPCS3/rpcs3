@@ -130,12 +130,34 @@ struct lv2_fs_object
 	// Mount Point
 	const std::add_pointer_t<lv2_fs_mount_point> mp;
 
-	lv2_fs_object(lv2_fs_mount_point* mp)
+	// File Name (max 1055)
+	const std::array<char, 0x420> name;
+
+	lv2_fs_object(lv2_fs_mount_point* mp, const char* filename)
 		: mp(mp)
+		, name(get_name(filename))
 	{
 	}
 
 	static lv2_fs_mount_point* get_mp(const char* filename);
+
+	static std::array<char, 0x420> get_name(const char* filename)
+	{
+		std::array<char, 0x420> name;
+
+		for (auto& c : name)
+		{
+			c = *filename++;
+
+			if (!c)
+			{
+				return name;
+			}
+		}
+
+		name.back() = 0;
+		return name;
+	}
 };
 
 struct lv2_file final : lv2_fs_object
@@ -145,15 +167,15 @@ struct lv2_file final : lv2_fs_object
 	const s32 flags;
 
 	lv2_file(const char* filename, fs::file&& file, s32 mode, s32 flags)
-		: lv2_fs_object(lv2_fs_object::get_mp(filename))
+		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
 	{
 	}
 
-	lv2_file(lv2_fs_mount_point* mp, fs::file&& file, s32 mode, s32 flags)
-		: lv2_fs_object(mp)
+	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags)
+		: lv2_fs_object(host.mp, host.name.data())
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -178,7 +200,7 @@ struct lv2_dir final : lv2_fs_object
 	const fs::dir dir;
 
 	lv2_dir(const char* filename, fs::dir&& dir)
-		: lv2_fs_object(lv2_fs_object::get_mp(filename))
+		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, dir(std::move(dir))
 	{
 	}
@@ -284,7 +306,7 @@ CHECK_SIZE(lv2_file_c0000006, 0x20);
 
 // Syscalls
 
-error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> arg5, u32 arg6);
+error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> buf, u32 buf_size);
 error_code sys_fs_open(vm::ps3::cptr<char> path, s32 flags, vm::ps3::ptr<u32> fd, s32 mode, vm::ps3::cptr<void> arg, u64 size);
 error_code sys_fs_read(u32 fd, vm::ps3::ptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nread);
 error_code sys_fs_write(u32 fd, vm::ps3::cptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nwrite);

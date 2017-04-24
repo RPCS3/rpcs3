@@ -153,10 +153,36 @@ fs::file lv2_file::make_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
 	return result;
 }
 
-error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6)
+error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> buf, u32 buf_size)
 {
-	sys_fs.todo("sys_fs_test(arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x, arg5=*0x%x, arg6=0x%x) -> CELL_OK", arg1, arg2, arg3, arg4, arg5, arg6);
+	sys_fs.trace("sys_fs_test(arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x, buf=*0x%x, buf_size=0x%x)", arg1, arg2, arg3, arg4, buf, buf_size);
 
+	if (arg1 != 6 || arg2 != 0 || arg4 != sizeof(u32))
+	{
+		sys_fs.todo("sys_fs_test: unknown arguments (arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x)", arg1, arg2, arg3, arg4);
+	}
+
+	if (!arg3)
+	{
+		return CELL_EFAULT;
+	}
+
+	const auto file = idm::get<lv2_fs_object>(*arg3);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	for (u32 i = 0; i < buf_size; i++)
+	{
+		if (!(buf[i] = file->name[i]))
+		{
+			return CELL_OK;
+		}
+	}
+
+	buf[buf_size - 1] = 0;
 	return CELL_OK;
 }
 
@@ -664,7 +690,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 		fs::file stream;
 		stream.reset(std::move(sdata_file));
-		if (const u32 id = idm::make<lv2_fs_object, lv2_file>(file->mp, std::move(stream), file->mode, file->flags))
+		if (const u32 id = idm::make<lv2_fs_object, lv2_file>(*file, std::move(stream), file->mode, file->flags))
 		{
 			arg->out_code = CELL_OK;
 			arg->out_fd = id;
