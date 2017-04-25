@@ -189,7 +189,7 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 	}
 
 	// call the syscall
-	return sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>{}, vm::var<u64>{});
+	return sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>{}, vm::var<s32>{});
 }
 
 s32 cellFsFGetBlockSize2()
@@ -262,10 +262,10 @@ s32 cellFsGetFreeSize(vm::cptr<char> path, vm::ptr<u32> block_size, vm::ptr<u64>
 {
 	cellFs.todo("cellFsGetFreeSize(path=%s, block_size=*0x%x, block_count=*0x%x)", path, block_size, block_count);
 
-	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
-	*block_size = 4096; // ?
-	*block_count = 10 * 1024 * 1024; // ?
-
+	fs::device_stat info;
+	fs::statfs(vfs::get(path.get_ptr()), info);
+	*block_size = 4096;
+	*block_count = info.avail_free / 4096;
 	return CELL_OK;
 }
 

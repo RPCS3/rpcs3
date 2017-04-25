@@ -292,6 +292,24 @@ struct lv2_file_op_dir : lv2_file_op
 
 CHECK_SIZE(lv2_file_op_dir, 0x1c);
 
+// sys_fs_fcntl: cellFsGetFreeSize (for dev_hdd0)
+struct lv2_file_c0000002 : lv2_file_op
+{
+	vm::bptrb<vtable::lv2_file_op> _vtable;
+
+	be_t<u32> op;
+	be_t<u32> _x8;
+	vm::ps3::bcptr<char> path;
+	be_t<u32> _x10; // 0
+	be_t<u32> _x14;
+
+	be_t<u32> out_code; // CELL_ENOSYS
+	be_t<u32> out_block_size;
+	be_t<u64> out_block_count;
+};
+
+CHECK_SIZE(lv2_file_c0000002, 0x28);
+
 // sys_fs_fnctl: unknown (called before cellFsOpen, for example)
 struct lv2_file_c0000006 : lv2_file_op
 {
@@ -327,7 +345,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ps3::ptr<void> arg, u32 size);
 error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ps3::ptr<u64> pos);
 error_code sys_fs_fdatasync(u32 fd);
 error_code sys_fs_fsync(u32 fd);
-error_code sys_fs_fget_block_size(u32 fd, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4, vm::ps3::ptr<u64> arg5);
+error_code sys_fs_fget_block_size(u32 fd, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4, vm::ps3::ptr<s32> arg5);
 error_code sys_fs_get_block_size(vm::ps3::cptr<char> path, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4);
 error_code sys_fs_truncate(vm::ps3::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(u32 fd, u64 size);

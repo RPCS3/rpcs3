@@ -718,6 +718,22 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		return CELL_EMFILE;
 	}
 
+	case 0xc0000002: // cellFsGetFreeSize (TODO)
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_c0000002>(_arg);
+
+		fs::device_stat info;
+		if (!fs::statfs(vfs::get(arg->path.get_ptr()), info))
+		{
+			return CELL_EIO; // ???
+		}
+
+		arg->out_code = CELL_OK;
+		arg->out_block_size = 4096;
+		arg->out_block_count = info.avail_free / 4096;
+		return CELL_OK;
+	}
+
 	case 0xc0000006: // Unknown
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000006>(_arg);
@@ -850,7 +866,7 @@ error_code sys_fs_fsync(u32 fd)
 	return CELL_OK;
 }
 
-error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<u64> arg5)
+error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5)
 {
 	sys_fs.todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
@@ -863,6 +879,8 @@ error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64>
 
 	*sector_size = 4096; // ?
 	*block_size = 4096; // ?
+	*arg4 = 0;
+	*arg5 = 0; // Probably file->mode
 
 	return CELL_OK;
 }
@@ -873,6 +891,7 @@ error_code sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, 
 
 	*sector_size = 4096; // ?
 	*block_size = 4096; // ?
+	*arg4 = 0;
 
 	return CELL_OK;
 }
