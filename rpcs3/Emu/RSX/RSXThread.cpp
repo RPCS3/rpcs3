@@ -562,7 +562,7 @@ namespace rsx
 		return "rsx::thread";
 	}
 
-	void thread::fill_scale_offset_data(void *buffer, bool is_d3d) const
+	void thread::fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const
 	{
 		int clip_w = rsx::method_registers.surface_clip_width();
 		int clip_h = rsx::method_registers.surface_clip_height();
@@ -574,12 +574,12 @@ namespace rsx
 		float scale_y = rsx::method_registers.viewport_scale_y() / (clip_h / 2.f);
 		float offset_y = (rsx::method_registers.viewport_offset_y() - (clip_h / 2.f));
 		offset_y /= clip_h / 2.f;
-		if (is_d3d) scale_y *= -1;
-		if (is_d3d) offset_y *= -1;
+		if (flip_y) scale_y *= -1;
+		if (flip_y) offset_y *= -1;
 
 		float scale_z = rsx::method_registers.viewport_scale_z();
 		float offset_z = rsx::method_registers.viewport_offset_z();
-		if (!is_d3d) offset_z -= .5;
+		if (symmetrical_z) offset_z -= .5;
 
 		float one = 1.f;
 
@@ -587,6 +587,46 @@ namespace rsx
 		stream_vector((char*)buffer + 16, 0, (u32&)scale_y, 0, (u32&)offset_y);
 		stream_vector((char*)buffer + 32, 0, 0, (u32&)scale_z, (u32&)offset_z);
 		stream_vector((char*)buffer + 48, 0, 0, 0, (u32&)one);
+	}
+
+	void thread::fill_user_clip_data(void *buffer) const
+	{
+		const rsx::user_clip_plane_op clip_plane_control[6] =
+		{
+			rsx::method_registers.clip_plane_0_enabled(),
+			rsx::method_registers.clip_plane_1_enabled(),
+			rsx::method_registers.clip_plane_2_enabled(),
+			rsx::method_registers.clip_plane_3_enabled(),
+			rsx::method_registers.clip_plane_4_enabled(),
+			rsx::method_registers.clip_plane_5_enabled(),
+		};
+
+		std::array<f32, 8> tmp{};
+		for (int index = 0; index < 6; ++index)
+		{
+			f32 value = 0;
+			switch (clip_plane_control[index])
+			{
+			default:
+				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)clip_plane_control[index]);
+
+			case rsx::user_clip_plane_op::disable:
+				value = 0.f;
+				break;
+
+			case rsx::user_clip_plane_op::greater_or_equal:
+				value = 1.f;
+				break;
+
+			case rsx::user_clip_plane_op::less_than:
+				value = -1.f;
+				break;
+			}
+
+			tmp[index] = value;
+		}
+		stream_vector_from_memory((char*)buffer, tmp.data());
+		stream_vector_from_memory((char*)buffer + 16, &tmp[4]);
 	}
 
 	/**
@@ -624,12 +664,12 @@ namespace rsx
 	void thread::write_inline_array_to_buffer(void *dst_buffer)
 	{
 		u8* src =
-		    reinterpret_cast<u8*>(rsx::method_registers.current_draw_clause.inline_vertex_array.data());
+			reinterpret_cast<u8*>(rsx::method_registers.current_draw_clause.inline_vertex_array.data());
 		u8* dst = (u8*)dst_buffer;
 
 		size_t bytes_written = 0;
 		while (bytes_written <
-		       rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(u32))
+			   rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(u32))
 		{
 			for (int index = 0; index < rsx::limits::vertex_count; ++index)
 			{
@@ -730,7 +770,7 @@ namespace rsx
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
 				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
-				    get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index});
+					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index});
 				continue;
 			}
 
@@ -909,12 +949,12 @@ namespace rsx
 			if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
 			{
 				result.rsx_vertex_inputs.push_back(
-				    {index,
-				        rsx::method_registers.vertex_arrays_info[index].size(),
-				        rsx::method_registers.vertex_arrays_info[index].frequency(),
-				        !!((modulo_mask >> index) & 0x1),
-				        true,
-				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
+					{index,
+						rsx::method_registers.vertex_arrays_info[index].size(),
+						rsx::method_registers.vertex_arrays_info[index].frequency(),
+						!!((modulo_mask >> index) & 0x1),
+						true,
+						is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
 			else if (vertex_push_buffers[index].vertex_count > 1)
 			{
@@ -929,12 +969,12 @@ namespace rsx
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
 				result.rsx_vertex_inputs.push_back(
-				    {index,
-				        rsx::method_registers.register_vertex_info[index].size,
-				        rsx::method_registers.register_vertex_info[index].frequency,
-				        !!((modulo_mask >> index) & 0x1),
-				        false,
-				        is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
+					{index,
+						rsx::method_registers.register_vertex_info[index].size,
+						rsx::method_registers.register_vertex_info[index].frequency,
+						!!((modulo_mask >> index) & 0x1),
+						false,
+						is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
 		}
 		return result;
