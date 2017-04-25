@@ -33,7 +33,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, set = 0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
-    OS << "	vec4 userClip[2];" << std::endl;
+	OS << "	vec4 userClip[2];" << std::endl;
 	OS << "};" << std::endl;
 
 	vk::glsl::program_input in;
