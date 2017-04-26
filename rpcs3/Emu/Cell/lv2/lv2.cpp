@@ -744,7 +744,7 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	BIND_FUNC(sys_fs_get_block_size),                       //822 (0x336)
 	null_func,//BIND_FUNC(sys_fs_acl_read),                 //823 (0x337)
 	null_func,//BIND_FUNC(sys_fs_acl_write),                //824 (0x338)
-	null_func,//BIND_FUNC(sys_fs_lsn_get_cda_size),         //825 (0x339)
+	BIND_FUNC(sys_fs_lsn_get_cda_size),                     //825 (0x339)
 	null_func,//BIND_FUNC(sys_fs_lsn_get_cda),              //826 (0x33A)
 	BIND_FUNC(sys_fs_lsn_lock),                             //827 (0x33B)
 	BIND_FUNC(sys_fs_lsn_unlock),                           //828 (0x33C)

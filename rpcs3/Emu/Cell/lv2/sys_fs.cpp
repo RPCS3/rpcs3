@@ -1146,6 +1146,22 @@ error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> t
 	return CELL_OK;
 }
 
+error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr)
+{
+	sys_fs.warning("sys_fs_lsn_get_cda_size(fd=%d, ptr=*0x%x)", fd, ptr);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	// TODO
+	*ptr = 0;
+	return CELL_OK;
+}
+
 error_code sys_fs_lsn_lock(u32 fd)
 {
 	sys_fs.trace("sys_fs_lsn_lock(fd=%d)", fd);
