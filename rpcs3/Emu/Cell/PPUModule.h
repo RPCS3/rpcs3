@@ -9,6 +9,12 @@
 // Generate FNID or VNID for given name
 extern u32 ppu_generate_id(const char* name);
 
+// Overload for REG_FNID, REG_VNID macro 
+constexpr u32 ppu_generate_id(u32 id)
+{
+	return id;
+}
+
 // Flags set with REG_FUNC
 enum ppu_static_function_flags : u32
 {
@@ -220,12 +226,12 @@ inline RT ppu_execute_function_or_callback(const char* name, ppu_thread& ppu, Ar
 
 #define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(#func, ppu, __VA_ARGS__)
 
-#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), nid)
+#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, #func, BIND_FUNC(func), ppu_generate_id(nid))
 
-#define REG_FUNC(module, func) REG_FNID(module, ppu_generate_id(#func), func)
+#define REG_FUNC(module, func) REG_FNID(module, #func, func)
 
-#define REG_VNID(module, nid, var) ppu_module_manager::register_static_variable<decltype(var), &var>(#module, #var, nid)
+#define REG_VNID(module, nid, var) ppu_module_manager::register_static_variable<decltype(var), &var>(#module, #var, ppu_generate_id(nid))
 
-#define REG_VAR(module, var) REG_VNID(module, ppu_generate_id(#var), var)
+#define REG_VAR(module, var) REG_VNID(module, #var, var)
 
 #define UNIMPLEMENTED_FUNC(module) module.todo("%s", __func__)
