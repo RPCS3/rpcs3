@@ -634,8 +634,23 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 	switch (op)
 	{
-	case 0x8000000A: // Read with offset
-	case 0x8000000B: // Write with offset
+	case 0x80000006: // cellFsAllocateFileAreaByFdWithInitialData
+	{
+		break;
+	}
+
+	case 0x80000007: // cellFsAllocateFileAreaByFdWithoutZeroFill
+	{
+		break;
+	}
+
+	case 0x80000008: // cellFsChangeFileSizeByFdWithoutAllocation
+	{
+		break;
+	}
+
+	case 0x8000000a: // cellFsReadWithOffset
+	case 0x8000000b: // cellFsWriteWithOffset
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_op_rw>(_arg);
 
@@ -651,19 +666,19 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 			return CELL_EBADF;
 		}
 
-		if (op == 0x8000000A && file->flags & CELL_FS_O_WRONLY)
+		if (op == 0x8000000a && file->flags & CELL_FS_O_WRONLY)
 		{
 			return CELL_EBADF;
 		}
 
-		if (op == 0x8000000B && !(file->flags & CELL_FS_O_ACCMODE))
+		if (op == 0x8000000b && !(file->flags & CELL_FS_O_ACCMODE))
 		{
 			return CELL_EBADF;
 		}
 
 		std::lock_guard<std::mutex> lock(file->mp->mutex);
 
-		if (op == 0x8000000B && file->lock)
+		if (op == 0x8000000b && file->lock)
 		{
 			return CELL_EBUSY;
 		}
@@ -671,15 +686,14 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		const u64 old_pos = file->file.pos();
 		const u64 new_pos = file->file.seek(arg->offset);
 
-		arg->out_size = op == 0x8000000A
+		arg->out_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size)
 			: file->op_write(arg->buf, arg->size);
 
 		verify(HERE), old_pos == file->file.seek(old_pos);
 
 		arg->out_code = CELL_OK;
-
-		break;
+		return CELL_OK;
 	}
 
 	case 0x80000009: // cellFsSdataOpenByFd
@@ -742,6 +756,121 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		return CELL_OK;
 	}
 
+	case 0xc0000007: // cellFsArcadeHddSerialNumber
+	{
+		break;
+	}
+
+	case 0xc0000008: // cellFsSetDefaultContainer, cellFsSetIoBuffer, cellFsSetIoBufferFromDefaultContainer
+	{
+		break;
+	}
+
+	case 0xc0000015: // Unknown
+	{
+		break;
+	}
+
+	case 0xc0000016: // ps2disc_8160A811
+	{
+		break;
+	}
+
+	case 0xc000001a: // cellFsSetDiscReadRetrySetting, 5731DF45
+	{
+		break;
+	}
+
+	case 0xc0000021: // 9FDBBA89
+	{
+		break;
+	}
+
+	case 0xe0000000: // Unknown (cellFsGetBlockSize)
+	{
+		break;
+	}
+
+	case 0xe0000001: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000003: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000004: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000005: // Unknown (cellFsMkdir)
+	{
+		break;
+	}
+
+	case 0xe0000006: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000007: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000008: // Unknown (cellFsAclRead)
+	{
+		break;
+	}
+
+	case 0xe0000009: // Unknown (cellFsAccess)
+	{
+		break;
+	}
+
+	case 0xe000000a: // Unknown (E3D28395)
+	{
+		break;
+	}
+
+	case 0xe000000b: // Unknown (cellFsRename, FF29F478)
+	{
+		break;
+	}
+
+	case 0xe000000c: // Unknown (cellFsTruncate)
+	{
+		break;
+	}
+
+	case 0xe000000d: // Unknown (cellFsUtime)
+	{
+		break;
+	}
+
+	case 0xe000000e: // Unknown (cellFsAclWrite)
+	{
+		break;
+	}
+
+	case 0xe000000f: // Unknown (cellFsChmod)
+	{
+		break;
+	}
+
+	case 0xe0000010: // Unknown (cellFsChown)
+	{
+		break;
+	}
+
+	case 0xe0000011: // Unknown
+	{
+		break;
+	}
+
 	case 0xe0000012: // cellFsGetDirectoryEntries
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_op_dir::dir_info>(_arg);
@@ -789,12 +918,63 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		return CELL_OK;
 	}
 
-	default:
+	case 0xe0000015: // Unknown
 	{
-		sys_fs.todo("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
+		break;
+	}
+
+	case 0xe0000016: // cellFsAllocateFileAreaWithInitialData
+	{
+		break;
+	}
+
+	case 0xe0000017: // cellFsAllocateFileAreaWithoutZeroFill
+	{
+		break;
+	}
+
+	case 0xe0000018: // cellFsChangeFileSizeWithoutAllocation
+	{
+		break;
+	}
+
+	case 0xe0000019: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001b: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001d: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001e: // Unknown
+	{
+		break;
+	}
+
+	case 0xe000001f: // Unknown
+	{
+		break;
+	}
+
+	case 0xe0000020: // Unknown
+	{
+		break;
+	}
+
+	case 0x00000025: // cellFsSdataOpenWithVersion
+	{
+		break;
 	}
 	}
 
+	sys_fs.fatal("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
 	return CELL_OK;
 }
 
