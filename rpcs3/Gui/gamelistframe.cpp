@@ -70,11 +70,6 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 
 	m_sortColumn = 1; // sort by name by default
 	Refresh();
-
-	// Refresh game list every 10 seconds.
-	QTimer *timer = new QTimer(this);
-	connect(timer, &QTimer::timeout, this, &GameListFrame::Refresh);
-	timer->start(10000);
 }
 
 GameListFrame::~GameListFrame()

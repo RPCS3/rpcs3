@@ -78,6 +78,7 @@ class GameListFrame : public QDockWidget {
 public:
 	explicit GameListFrame(QWidget *parent = 0);
 	~GameListFrame();
+	void Refresh();
 
 private slots:
 	void Boot(int row);
@@ -105,7 +106,6 @@ private:
 	void LoadGames();
 	void LoadPSF();
 	void ShowData();
-	void Refresh();
 	void SaveSettings();
 	void LoadSettings();
 

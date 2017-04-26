@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 #include <QDockWidget>
 #include <QProgressDialog>
+#include <QSizePolicy>
 
 #include "gamelistframe.h"
 #include "debuggerframe.h"
@@ -46,19 +47,19 @@ MainWindow::~MainWindow()
 
 void MainWindow::DoSettings(bool load)
 {
-//	auto&& cfg = g_gui_cfg[ini_name]["aui"];
-//
-//	if (load)
-//	{
-//		const auto& perspective = fmt::FromUTF8(cfg.Scalar());
-//
-//		m_aui_mgr.LoadPerspective(perspective.empty() ? m_aui_mgr.SavePerspective() : perspective);
-//	}
-//	else
-//	{
-//		cfg = fmt::ToUTF8(m_aui_mgr.SavePerspective());
-//		save_gui_cfg();
-//	}
+	//auto&& cfg = g_gui_cfg[ini_name]["aui"];
+	//
+	//if (load)
+	//{
+	//	const auto& perspective = fmt::FromUTF8(cfg.Scalar());
+	//
+	//	m_aui_mgr.LoadPerspective(perspective.empty() ? m_aui_mgr.SavePerspective() : perspective);
+	//}
+	//else
+	//{
+	//	cfg = fmt::ToUTF8(m_aui_mgr.SavePerspective());
+	//	save_gui_cfg();
+	//}
 }
 
 void MainWindow::BootElf()
@@ -126,17 +127,17 @@ void MainWindow::BootGame()
 
 void MainWindow::InstallPkg()
 {
-	QFileDialog dlg(this, tr("Select PKG To Install"), "", tr("PKG files (*.pkg);;All files (*.*)"));
-	dlg.setAcceptMode(QFileDialog::AcceptOpen);
-	dlg.setFileMode(QFileDialog::ExistingFile);
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), "", tr("PKG files (*.pkg);;All files (*.*)"));
 
-	if (dlg.exec() == QDialog::Rejected)
+	if (filePath == NULL)
 	{
 		return;
 	}
 	Emu.Stop();
-	
-	const std::string path = dlg.getOpenFileName().toUtf8();
+
+	const std::string fileName = filePath.section("/", -1, -1).toUtf8();
+
+	const std::string path = filePath.toUtf8();
 
 	// Open PKG file
 	fs::file pkg_f(path);
@@ -173,7 +174,9 @@ void MainWindow::InstallPkg()
 		}
 	}
 
-	QProgressDialog pdlg(tr("PKG Installer: Please Wait...unpacking"), tr("Cancel"), 0, 1000, this /*wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT*/);
+	QProgressDialog pdlg(tr("PKG Installer: Please Wait...unpacking"), tr("Cancel"), 0, 1000, this);
+	pdlg.setWindowModality(Qt::WindowModal);
+
 	// Synchronization variable
 	atomic_t<double> progress(0.);
 	{
@@ -189,56 +192,59 @@ void MainWindow::InstallPkg()
 			// TODO: Ask user to delete files on cancellation/failure?
 			progress = -1.;
 		});
-		// TODO (Megamouse): Use signals
-		//// Wait for the completion
-		//while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
-		//{
-		//  // Update progress window
-		//  pdlg.setValue(static_cast<int>(progress * pdlg.maximum));
-		//
-		//  if (pldg.wasCanceled())
-		//  {
-		//    progress -= 1.;
-		//    break;
-		//  }
-		//}
-		//
-		//if (progress > 0.)
-		//{
-		//  pdlg.setValue(pdlg.maximum);
-		//  std::this_thread::sleep_for(100ms);
-		//}
+		// Wait for the completion
+		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
+		{
+			if (pdlg.wasCanceled())
+			{
+				progress -= 1.;
+				if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Remove incomplete folder?")) == QMessageBox::Yes)
+				{
+					fs::remove_all(local_path);
+					RefreshGameList();
+					LOG_SUCCESS(LOADER, "PKG: removed incomplete installation in %s", local_path);
+					return;
+				}
+				break;
+			}
+			// Update progress window
+			pdlg.setValue(static_cast<int>(progress * pdlg.maximum()));
+		}
+
+		if (progress > 0.)
+		{
+			pdlg.setValue(pdlg.maximum());
+			std::this_thread::sleep_for(100ms);
+		}
 	}
 
 	if (progress >= 1.)
 	{
-		// TODO (Megamouse) Refresh game list
-		//update();
-		//repaint();
+		RefreshGameList();
+		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
+		QMessageBox::information(this, tr("Success!"), tr("Successfully installed software from package!"));
 	}
 }
 
 void MainWindow::InstallPup()
 {
-	QFileDialog dlg(this, tr("Select PS3UPDAT.PUP To Install"), "", tr("PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP"));
-	dlg.setAcceptMode(QFileDialog::AcceptOpen);
-	dlg.setFileMode(QFileDialog::ExistingFile);
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), "", tr("PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP"));
 
-	if (dlg.exec() == QDialog::Rejected)
+	if (filePath == NULL)
 	{
 		return;
 	}
 
 	Emu.Stop();
 
-	const std::string path = dlg.getOpenFileName().toUtf8();
+	const std::string path = filePath.toUtf8();
 
 	fs::file pup_f(path);
 	pup_object pup(pup_f);
 	if (!pup)
 	{
 		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
-		QMessageBox(QMessageBox::Critical, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."), QMessageBox::Ok);
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."));
 		return;
 	}
 
@@ -251,7 +257,7 @@ void MainWindow::InstallPup()
 		updatefilenames.end());
 
 	QProgressDialog pdlg(tr("Firmware Installer"), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
-	//FirmwareInstaller fwi(updatefilenames.size(), this);
+	pdlg.setWindowModality(Qt::WindowModal);
 
 	// Synchronization variable
 	atomic_t<int> progress(0);
@@ -273,7 +279,7 @@ void MainWindow::InstallPup()
 				auto dev_flash_tar_f = self_dec.MakeFile();
 				if (dev_flash_tar_f.size() < 3) {
 					LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
-					QMessageBox(QMessageBox::Critical, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."), QMessageBox::Ok);
+					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."));
 					progress = -1;
 				}
 
@@ -281,7 +287,7 @@ void MainWindow::InstallPup()
 				if (!dev_flash_tar.extract(fs::get_config_dir()))
 				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
-					QMessageBox(QMessageBox::Critical, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."), QMessageBox::Ok);
+					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
 					progress = -1;
 				}
 
@@ -290,34 +296,32 @@ void MainWindow::InstallPup()
 			}
 		});
 
-		// TODO (Megamouse)
-		//// Wait for the completion
-		//while (std::this_thread::sleep_for(5ms), std::abs(progress) < pdlg.maximum)
-		//{
-		//  // Update progress window
-		//  pdlg.setValue(static_cast<int>(progress));
-		//  
-		//  if(pldg.wasCanceled())
-		//  {
-		//    progress = -1;
-		//    break;
-		//  }
-		//}
-		//
-		//update_files_f.close();
-		//pup_f.close();
-		//
-		//if (progress > 0)
-		//{
-		//  pdlg.setValue(pdlg.maximum);
-		//  std::this_thread::sleep_for(100ms);
-		//}
+		// Wait for the completion
+		while (std::this_thread::sleep_for(5ms), std::abs(progress) < pdlg.maximum())
+		{
+			if (pdlg.wasCanceled())
+			{
+				progress = -1;
+				break;
+			}
+			// Update progress window
+			pdlg.setValue(static_cast<int>(progress));
+		}
+
+		update_files_f.close();
+		pup_f.close();
+
+		if (progress > 0)
+		{
+			pdlg.setValue(pdlg.maximum());
+			std::this_thread::sleep_for(100ms);
+		}
 	}
 
 	if (progress > 0)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
-		QMessageBox(QMessageBox::Information, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), QMessageBox::Ok);
+		QMessageBox::information(this, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"));
 	}
 }
 
@@ -373,23 +377,23 @@ void MainWindow::AutoPauseSettings()
 	dlg.exec();
 }
 
-void MainWindow::VFSManager(){}
+void MainWindow::VFSManager() {}
 
-void MainWindow::VHDDManager(){}
+void MainWindow::VHDDManager() {}
 
-void MainWindow::SaveData(){}
+void MainWindow::SaveData() {}
 
-void MainWindow::ELFCompiler(){}
+void MainWindow::ELFCompiler() {}
 
-void MainWindow::CgDisasm(){}
+void MainWindow::CgDisasm() {}
 
-void MainWindow::KernelExplorer(){}
+void MainWindow::KernelExplorer() {}
 
-void MainWindow::MemoryViewer(){}
+void MainWindow::MemoryViewer() {}
 
-void MainWindow::RSXDebugger(){}
+void MainWindow::RSXDebugger() {}
 
-void MainWindow::StringSearch(){}
+void MainWindow::StringSearch() {}
 
 void MainWindow::DecryptSPRXLibraries()
 {
@@ -485,41 +489,41 @@ void MainWindow::ToggleGameListFrame(bool state)
 
 void MainWindow::HideGameIcons()
 {
-	
+
 }
 
 void MainWindow::RefreshGameList()
 {
-	
+	gameListFrame->Refresh();
 }
 
 void MainWindow::About()
 {
-	
+
 	QString translatedTextAboutCaption;
 	translatedTextAboutCaption = tr(
-				"<h1>RPCS3</h1>"
-				"A PlayStation 3 emulator and debugger.<br>"
-				"RPCS3 Version: %1").arg(QString::fromStdString(rpcs3::version.to_string())
-					);
+		"<h1>RPCS3</h1>"
+		"A PlayStation 3 emulator and debugger.<br>"
+		"RPCS3 Version: %1").arg(QString::fromStdString(rpcs3::version.to_string())
+		);
 	QString translatedTextAboutText;
 	translatedTextAboutText = tr(
-				"<br><p><b>Developers:</b> Developers: ¬DH, ¬AlexAltea, ¬Hykem, Oil, Nekotekina, Bigpet, ¬gopalsr83, ¬tambry, "
-				"vlj, kd-11, jarveson, raven02, AniLeo, cornytrace, ssshadow, Numan</p>"
-				"<p><b>Contributors:</b> BlackDaemon, elisha464, Aishou, krofna, xsacha, danilaml, unknownbrackets, Zangetsu38, "
-				"lioncashachurch, darkf, Syphurith, Blaypeg, Survanium90, georgemoralis, ikki84</p>"
-				"<p><b>Supporters:</b> Howard Garrison, EXPotemkin, Marko V., danhp, Jake (5315825), Ian Reid, Tad Sherlock, Tyler Friesen, "
-				"Folzar, Payton Williams, RedPill Australia, yanghong</p>"
-				"<br><p>Please see "
-				"<a href=\"https://%1/\">GitHub</a>, "
-				"<a href=\"https://%2/\">Website</a>, "
-				"<a href=\"http://%3/\">Forum</a> or "
-				"<a href=\"https://%4/\">Patreon</a>"
-				" for more information.</p>"
-				).arg("github.com/RPCS3",
-					  "rpcs3.net",
-					  "www.emunewz.net/forum/forumdisplay.php?fid=172",
-					  "www.patreon.com/Nekotekina");
+		"<br><p><b>Developers:</b> Developers: ¬DH, ¬AlexAltea, ¬Hykem, Oil, Nekotekina, Bigpet, ¬gopalsr83, ¬tambry, "
+		"vlj, kd-11, jarveson, raven02, AniLeo, cornytrace, ssshadow, Numan</p>"
+		"<p><b>Contributors:</b> BlackDaemon, elisha464, Aishou, krofna, xsacha, danilaml, unknownbrackets, Zangetsu38, "
+		"lioncashachurch, darkf, Syphurith, Blaypeg, Survanium90, georgemoralis, ikki84</p>"
+		"<p><b>Supporters:</b> Howard Garrison, EXPotemkin, Marko V., danhp, Jake (5315825), Ian Reid, Tad Sherlock, Tyler Friesen, "
+		"Folzar, Payton Williams, RedPill Australia, yanghong</p>"
+		"<br><p>Please see "
+		"<a href=\"https://%1/\">GitHub</a>, "
+		"<a href=\"https://%2/\">Website</a>, "
+		"<a href=\"http://%3/\">Forum</a> or "
+		"<a href=\"https://%4/\">Patreon</a>"
+		" for more information.</p>"
+	).arg("github.com/RPCS3",
+		"rpcs3.net",
+		"www.emunewz.net/forum/forumdisplay.php?fid=172",
+		"www.patreon.com/Nekotekina");
 
 	QMessageBox about(this);
 	about.setStyleSheet("QLabel{min-width: 500px;}");	// ¯\_(ツ)_/¯
