@@ -1048,7 +1048,7 @@ error_code sys_fs_fsync(u32 fd)
 
 error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5)
 {
-	sys_fs.todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
+	sys_fs.warning("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
@@ -1057,20 +1057,22 @@ error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64>
 		return CELL_EBADF;
 	}
 
-	*sector_size = 4096; // ?
-	*block_size = 4096; // ?
+	// TODO
+	*sector_size = 4096;
+	*block_size = 4096;
 	*arg4 = 0;
-	*arg5 = 0; // Probably file->mode
+	*arg5 = file->mode;
 
 	return CELL_OK;
 }
 
 error_code sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4)
 {
-	sys_fs.todo("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
+	sys_fs.warning("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
 
-	*sector_size = 4096; // ?
-	*block_size = 4096; // ?
+	// TODO
+	*sector_size = 4096;
+	*block_size = 4096;
 	*arg4 = 0;
 
 	return CELL_OK;
