@@ -71,7 +71,7 @@ s32 cellPadClearBuf(u32 port_no)
 
 s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 {
-	sys_io.todo("cellPadPeriphGetInfo(info=*0x%x)", info);
+	sys_io.trace("cellPadPeriphGetInfo(info=*0x%x)", info);
 
 	const auto handler = fxm::get<PadHandlerBase>();
 
@@ -312,7 +312,16 @@ s32 cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadDa
 	if (port_no >= rinfo.now_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return CELL_OK;
+	// TODO: This is used just to get data from a BD/CEC remote,
+	// but if the port isnt a remote, device type is set to 0 and just regular cellPadGetData is returned
+
+	*device_type = 0;
+
+	// set BD data before just incase
+	data->button[24] = 0x0;
+	data->button[25] = 0x0;
+
+	return cellPadGetData(port_no, data);
 }
 
 s32 cellPadSetActDirect(u32 port_no, vm::ptr<struct CellPadActParam> param)
