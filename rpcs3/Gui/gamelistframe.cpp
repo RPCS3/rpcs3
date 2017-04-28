@@ -298,6 +298,7 @@ void GameListFrame::Boot(int row)
 
 	if (!Emu.BootGame(path))
 	{
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + QString::fromStdString(m_game_data[row].root));
 		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[row].root);
 	}
 }
@@ -333,12 +334,14 @@ void GameListFrame::RemoveCustomConfiguration(int row)
 			}
 			else
 			{
+				QMessageBox::warning(this, tr("Warning!"), tr("Failed to delete configuration file!"));
 				LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
 			}
 		}
 	}
 	else
 	{
+		QMessageBox::warning(this, tr("Warning!"), tr("No custom configuration found!"));
 		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
 	}
 
