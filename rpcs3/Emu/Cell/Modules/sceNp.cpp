@@ -62,35 +62,13 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 		sceNp.notice("npDrmIsAvailable(): KLicense key %s", k_licensee_str);
 	}
 
-	sceNp.warning("npDrmIsAvailable(): Found DRM license file at %s", enc_drm_path);
-
-	// TODO: Make more explicit what this actually does (currently it copies "XXXXXXXX" from drm_path (== "/dev_hdd0/game/XXXXXXXXX/*" assumed)
-	const std::string& drm_file_dir = enc_drm_path.substr(15);
-	const std::string& title_id = drm_file_dir.substr(0, drm_file_dir.find_first_of('/'));
-
-	std::string rap_lpath = vfs::get("/dev_hdd0/home/00000001/exdata/"); // TODO: Allow multiple profiles. Use default for now.
-
-	// Search for a compatible RAP file. 
-	for (const auto& entry : fs::dir(rap_lpath))
-	{
-		if (entry.name.find(title_id) != -1)
-		{
-			rap_lpath += entry.name;
-			break;
-		}
-	}
-
 	auto npdrmkeys = fxm::get_always<LoadedNpdrmKeys_t>();
 
 	npdrmkeys->devKlic.fill(0);
 	npdrmkeys->rifKey.fill(0);
 
-	if (rap_lpath.back() == '/')
-	{
-		sceNp.warning("npDrmIsAvailable(): Can't find RAP file for %s", enc_drm_path);
-	}
-	else
-		npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ rap_lpath });
+	// todo: profile for rap_dir_path
+	std::string rap_dir_path = "/dev_hdd0/home/00000001/exdata/";
 
 	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
 	const fs::file enc_file(enc_drm_path_local);
@@ -117,9 +95,17 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	{
 		// edata / sdata files
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee))
+		std::string contentID;
+
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee, &contentID))
 		{
+			const std::string rap_file = rap_dir_path + contentID + ".rap";
 			npdrmkeys->devKlic = std::move(k_licensee);
+
+			if (fs::is_file(vfs::get(rap_file)))
+				npdrmkeys->rifKey = GetEdatRifKeyFromRapFile(fs::file{ vfs::get(rap_file) });
+			else
+				sceNp.warning("npDrmIsAvailable(): Rap file not found: %s", rap_file.c_str());
 		}
 		else
 		{

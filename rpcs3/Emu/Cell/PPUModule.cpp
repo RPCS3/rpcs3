@@ -377,7 +377,11 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 	for (auto& module : registered)
 	{
 		LOG_TRACE(LOADER, "Registered static module: %s", module->name);
+	}
 
+	for (auto& pair : ppu_module_manager::get())
+	{
+		const auto module = pair.second;
 		auto& linkage = link->modules[module->name];
 
 		for (auto& function : module->functions)
@@ -1198,6 +1202,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellSync2", "libsre.sprx" },
 			{ "cellVpost", "libvpost.sprx" },
 			{ "cellVpost", "libsre.sprx" },
+			{ "sys_fs", "libfs.sprx" },
 		};
 
 		// Expand dependencies

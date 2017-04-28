@@ -846,7 +846,11 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 
 	if (port.channel == 2)
 	{
-		cellAudio.error("cellAudioAdd2chData(portNum=%d): port.channel = 2", portNum);
+		for (u32 i = 0; i < samples; i++)
+		{
+			dst[i * 2 + 0] += src[i * 2 + 0] * volume; // mix L ch
+			dst[i * 2 + 1] += src[i * 2 + 1] * volume; // mix R ch
+		}
 	}
 	else if (port.channel == 6)
 	{
@@ -902,9 +906,17 @@ s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	const auto dst = vm::ptr<float>::make(port.addr.addr() + s32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
 
-	if (port.channel == 2 || port.channel == 6)
+	if (port.channel == 6)
 	{
-		cellAudio.error("cellAudioAdd2chData(portNum=%d): port.channel = %d", portNum, port.channel);
+		for (u32 i = 0; i < 256; i++)
+		{
+			dst[i * 6 + 0] += src[i * 6 + 0] * volume; // mix L ch
+			dst[i * 6 + 1] += src[i * 6 + 1] * volume; // mix R ch
+			dst[i * 6 + 2] += src[i * 6 + 2] * volume; // mix center
+			dst[i * 6 + 3] += src[i * 6 + 3] * volume; // mix LFE
+			dst[i * 6 + 4] += src[i * 6 + 4] * volume; // mix rear L
+			dst[i * 6 + 5] += src[i * 6 + 5] * volume; // mix rear R
+		}
 	}
 	else if (port.channel == 8)
 	{

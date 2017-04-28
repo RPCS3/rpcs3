@@ -71,7 +71,7 @@ s32 cellPadClearBuf(u32 port_no)
 
 s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 {
-	sys_io.todo("cellPadPeriphGetInfo(info=*0x%x)", info);
+	sys_io.trace("cellPadPeriphGetInfo(info=*0x%x)", info);
 
 	const auto handler = fxm::get<PadHandlerBase>();
 
@@ -250,7 +250,7 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	}
 
 	//not sure if this should officially change with capabilities/portsettings :(
-	data->len = CELL_PAD_MAX_CODES;
+	data->len = 24;
 
 	//report len 0 if nothing changed and if we havent recently cleared buffer
 	if (pad.m_buffer_cleared)
@@ -261,7 +261,9 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	{
 		data->len = 0;
 	}
-
+	data->button[0] = 0x0; // always 0
+	// bits 15-8 reserved, 7-4 = 0x7, 3-0: data->len/2;
+	data->button[1] = (0x7 << 4) | std::min(data->len / 2, 15) & 0xF;
 	//lets still send new data anyway, not sure whats expected still
 	data->button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = pad.m_digital_1;
 	data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = pad.m_digital_2;
@@ -310,7 +312,16 @@ s32 cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadDa
 	if (port_no >= rinfo.now_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return CELL_OK;
+	// TODO: This is used just to get data from a BD/CEC remote,
+	// but if the port isnt a remote, device type is set to 0 and just regular cellPadGetData is returned
+
+	*device_type = 0;
+
+	// set BD data before just incase
+	data->button[24] = 0x0;
+	data->button[25] = 0x0;
+
+	return cellPadGetData(port_no, data);
 }
 
 s32 cellPadSetActDirect(u32 port_no, vm::ptr<struct CellPadActParam> param)
