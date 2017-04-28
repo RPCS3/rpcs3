@@ -225,6 +225,11 @@ static void arm_initialize_modules()
 	for (auto& module : registered)
 	{
 		LOG_TRACE(LOADER, "Registered static module: %s", module->name);
+	}
+
+	for (auto& pair : arm_module_manager::get())
+	{
+		const auto module = pair.second;
 
 		for (auto& function : module->functions)
 		{

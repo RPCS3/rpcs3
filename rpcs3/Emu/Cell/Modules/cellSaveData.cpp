@@ -995,7 +995,7 @@ s32 cellSaveDataUserGetListItem(u32 userId, vm::cptr<char> dirName, vm::ptr<Cell
 
 void cellSysutil_SaveData_init()
 {
-	REG_VNID(cellSysutil, 0x00000000, g_savedata_context);
+	REG_VNID(cellSysutil, 0x00000000u, g_savedata_context);
 
 	// libsysutil functions:
 	REG_FUNC(cellSysutil, cellSaveDataEnableOverlay);
