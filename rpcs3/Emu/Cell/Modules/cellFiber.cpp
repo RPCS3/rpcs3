@@ -6,75 +6,214 @@
 
 logs::channel cellFiber("cellFiber", logs::level::notice);
 
-s32 _cellFiberPpuInitialize()
+template <>
+void fmt_class_string<CellFiberError>::format(std::string& out, u64 arg)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	format_enum(out, arg, [](CellFiberError value)
+	{
+		switch (value)
+		{
+			STR_CASE(CELL_FIBER_ERROR_AGAIN);
+			STR_CASE(CELL_FIBER_ERROR_INVAL);
+			STR_CASE(CELL_FIBER_ERROR_NOMEM);
+			STR_CASE(CELL_FIBER_ERROR_DEADLK);
+			STR_CASE(CELL_FIBER_ERROR_PERM);
+			STR_CASE(CELL_FIBER_ERROR_BUSY);
+			STR_CASE(CELL_FIBER_ERROR_ABORT);
+			STR_CASE(CELL_FIBER_ERROR_STAT);
+			STR_CASE(CELL_FIBER_ERROR_ALIGN);
+			STR_CASE(CELL_FIBER_ERROR_NULL_POINTER);
+			STR_CASE(CELL_FIBER_ERROR_NOSYSINIT);
+		}
+
+		return unknown;
+	});
+}
+
+error_code _cellFiberPpuInitialize()
+{
+	cellFiber.todo("_cellFiberPpuInitialize()");
+
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuSchedulerAttributeInitialize()
+error_code _cellFiberPpuSchedulerAttributeInitialize(vm::ptr<CellFiberPpuSchedulerAttribute> attr, u32 sdkVersion)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.warning("_cellFiberPpuSchedulerAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
+
+	if (!attr)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!attr.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
+	memset(attr.get_ptr(), 0, sizeof(CellFiberPpuSchedulerAttribute));
+	attr->autoCheckFlags = false;
+	attr->autoCheckFlagsIntervalUsec = 0;
+	attr->debuggerSupport = false;
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuInitializeScheduler()
+error_code cellFiberPpuInitializeScheduler(vm::ptr<CellFiberPpuScheduler> scheduler, vm::ptr<CellFiberPpuSchedulerAttribute> attr)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuInitializeScheduler(scheduler=*0x%x, attr=*0x%x)", scheduler, attr);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuFinalizeScheduler()
+error_code cellFiberPpuFinalizeScheduler(vm::ptr<CellFiberPpuScheduler> scheduler)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuFinalizeScheduler(scheduler=*0x%x)", scheduler);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuRunFibers()
+error_code cellFiberPpuRunFibers(vm::ptr<CellFiberPpuScheduler> scheduler)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuRunFibers(scheduler=*0x%x)", scheduler);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuCheckFlags()
+error_code cellFiberPpuCheckFlags(vm::ptr<CellFiberPpuScheduler> scheduler)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuCheckFlags(scheduler=*0x%x)", scheduler);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuHasRunnableFiber()
+error_code cellFiberPpuHasRunnableFiber(vm::ptr<CellFiberPpuScheduler> scheduler, vm::ptr<b8> flag)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuHasRunnableFiber(scheduler=*0x%x, flag=*0x%x)", scheduler, flag);
+
+	if (!scheduler || !flag)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuAttributeInitialize()
+error_code _cellFiberPpuAttributeInitialize(vm::ptr<CellFiberPpuAttribute> attr, u32 sdkVersion)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.warning("_cellFiberPpuAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
+
+	if (!attr)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!attr.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
+	memset(attr.get_ptr(), 0, sizeof(CellFiberPpuAttribute));
+	attr->onExitCallback = vm::null;
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuCreateFiber()
+error_code cellFiberPpuCreateFiber(vm::ptr<CellFiberPpuScheduler> scheduler, vm::ptr<CellFiberPpu> fiber, vm::ptr<CellFiberPpuEntry> entry, u64 arg, u32 priority, vm::ptr<void> eaStack, u32 sizeStack, vm::cptr<CellFiberPpuAttribute> attr)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuCreateFiber(scheduler=*0x%x, fiber=*0x%x, entry=*0x%x, arg=0x%x, priority=%d, eaStack=*0x%x, sizeStack=0x%x, attr=*0x%x)", scheduler, fiber, entry, arg, priority, eaStack, sizeStack, attr);
+
+	if (!scheduler || !fiber || !entry || !eaStack)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned() || !fiber.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
+	if (priority > 3)
+	{
+		return CELL_FIBER_ERROR_INVAL;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuExit()
+error_code cellFiberPpuExit(s32 status)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuExit(status=%d)", status);
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuYield()
+error_code cellFiberPpuYield()
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuYield()");
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuJoinFiber()
+error_code cellFiberPpuJoinFiber(vm::ptr<CellFiberPpu> fiber, vm::ptr<s32> status)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuJoinFiber(fiber=*0x%x, status=*0x%x)", fiber, status);
+
+	if (!fiber || !status)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!fiber.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
@@ -86,207 +225,499 @@ vm::ptr<void> cellFiberPpuSelf()
 	return vm::null;
 }
 
-s32 cellFiberPpuSendSignal()
+error_code cellFiberPpuSendSignal(vm::ptr<CellFiberPpu> fiber, vm::ptr<u32> numWorker)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuSendSignal(fiber=*0x%x, numWorker=*0x%x)", fiber, numWorker);
+
+	if (!fiber)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!fiber.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuWaitSignal()
+error_code cellFiberPpuWaitSignal()
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuWaitSignal()");
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuWaitFlag()
+error_code cellFiberPpuWaitFlag(vm::ptr<u32> eaFlag, b8 flagValue)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuWaitFlag(eaFlag=*0x%x, flagValue=%d)", eaFlag, flagValue);
+
+	if (!eaFlag)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuGetScheduler()
+error_code cellFiberPpuGetScheduler(vm::ptr<CellFiberPpu> fiber, vm::pptr<CellFiberPpuScheduler> pScheduler)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuGetScheduler(fiber=*0x%x, pScheduler=**0x%x)", fiber, pScheduler);
+
+	if (!fiber || !pScheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!fiber.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSetPriority()
+error_code cellFiberPpuSetPriority(u32 priority)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuSetPriority(priority=%d)", priority);
+
+	if (priority > 3)
+	{
+		return CELL_FIBER_ERROR_INVAL;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuCheckStackLimit()
+error_code cellFiberPpuCheckStackLimit()
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuCheckStackLimit()");
+
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuContextAttributeInitialize()
+error_code _cellFiberPpuContextAttributeInitialize(vm::ptr<CellFiberPpuContextAttribute> attr, u32 sdkVersion)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.warning("_cellFiberPpuContextAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
+
+	if (!attr)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!attr.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
+	memset(attr.get_ptr(), 0, sizeof(CellFiberPpuContextAttribute));
+	attr->debuggerSupport = false;
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextInitialize()
+error_code cellFiberPpuContextInitialize(vm::ptr<CellFiberPpuContext> context, vm::ptr<CellFiberPpuContextEntry> entry, u64 arg, vm::ptr<void> eaStack, u32 sizeStack, vm::cptr<CellFiberPpuContextAttribute> attr)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextInitialize(context=*0x%x, entry=*0x%x, arg=0x%x, eaStack=*0x%x, sizeStack=0x%x, attr=*0x%x)", context, entry, arg, eaStack, sizeStack, attr);
+
+	if (!context || !entry || !eaStack)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!context.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextFinalize()
+error_code cellFiberPpuContextFinalize(vm::ptr<CellFiberPpuContext> context)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextFinalize(context=*0x%x)", context);
+
+	if (!context)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!context.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextRun()
+error_code cellFiberPpuContextRun(vm::ptr<CellFiberPpuContext> context, vm::ptr<s32> cause, vm::pptr<CellFiberPpuContext> fiberFrom, vm::cptr<CellFiberPpuContextExecutionOption> option)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextRun(context=*0x%x, cause=*0x%x, fiberFrom=**0x%x, option=*0x%x)", context, cause, fiberFrom, option);
+
+	if (!context || !cause)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!context.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextSwitch()
+error_code cellFiberPpuContextSwitch(vm::ptr<CellFiberPpuContext> context, vm::pptr<CellFiberPpuContext> fiberFrom, vm::cptr<CellFiberPpuContextExecutionOption> option)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextSwitch(context=*0x%x, fiberFrom=**0x%x, option=*0x%x)", context, fiberFrom, option);
+
+	if (!context)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!context.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextSelf()
+vm::ptr<CellFiberPpuContext> cellFiberPpuContextSelf()
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextSelf()");
+
+	return vm::null;
+}
+
+error_code cellFiberPpuContextReturnToThread(s32 cause)
+{
+	cellFiber.todo("cellFiberPpuContextReturnToThread(cause=%d)", cause);
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextReturnToThread()
+error_code cellFiberPpuContextCheckStackLimit()
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextCheckStackLimit()");
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextCheckStackLimit()
+error_code cellFiberPpuContextRunScheduler(vm::ptr<CellFiberPpuSchedulerCallback> scheduler, u64 arg0, u64 arg1, vm::ptr<s32> cause, vm::pptr<CellFiberPpuContext> fiberFrom, vm::cptr<CellFiberPpuContextExecutionOption> option)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextRunScheduler(scheduler=*0x%x, arg0=0x%x, arg1=0x%x, cause=*0x%x, fiberFrom=**0x%x, option=*0x%x)", scheduler, arg0, arg1, cause, fiberFrom, option);
+
+	if (!scheduler || !cause)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextRunScheduler()
+error_code cellFiberPpuContextEnterScheduler(vm::ptr<CellFiberPpuSchedulerCallback> scheduler, u64 arg0, u64 arg1, vm::pptr<CellFiberPpuContext> fiberFrom, vm::cptr<CellFiberPpuContextExecutionOption> option)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuContextEnterScheduler(scheduler=*0x%x, arg0=0x%x, arg1=0x%x, fiberFrom=**0x%x, option=*0x%x)", scheduler, arg0, arg1, fiberFrom, option);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextEnterScheduler()
+error_code cellFiberPpuSchedulerTraceInitialize(vm::ptr<CellFiberPpuScheduler> scheduler, vm::ptr<void> buffer, u32 size, u32 mode)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuSchedulerTraceInitialize(scheduler=*0x%x, buffer=*0x%x, size=0x%x, mode=0x%x)", scheduler, buffer, size, mode);
+
+	if (!scheduler || !buffer)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceInitialize()
+error_code cellFiberPpuSchedulerTraceFinalize(vm::ptr<CellFiberPpuScheduler> scheduler)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuSchedulerTraceFinalize(scheduler=*0x%x)", scheduler);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceFinalize()
+error_code cellFiberPpuSchedulerTraceStart(vm::ptr<CellFiberPpuScheduler> scheduler)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuSchedulerTraceStart(scheduler=*0x%x)", scheduler);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceStart()
+error_code cellFiberPpuSchedulerTraceStop(vm::ptr<CellFiberPpuScheduler> scheduler)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuSchedulerTraceStop(scheduler=*0x%x)", scheduler);
+
+	if (!scheduler)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!scheduler.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceStop()
+error_code _cellFiberPpuUtilWorkerControlAttributeInitialize(vm::ptr<CellFiberPpuUtilWorkerControlAttribute> attr, u32 sdkVersion)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.warning("_cellFiberPpuUtilWorkerControlAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
+
+	if (!attr)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!attr.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
+	memset(attr.get_ptr(), 0, sizeof(CellFiberPpuUtilWorkerControlAttribute));
+	attr->scheduler.autoCheckFlags = false;
+	attr->scheduler.autoCheckFlagsIntervalUsec = 0;
+	attr->scheduler.debuggerSupport = false;
+
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuUtilWorkerControlAttributeInitialize()
+error_code cellFiberPpuUtilWorkerControlRunFibers(vm::ptr<CellFiberPpuUtilWorkerControl> control)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlRunFibers(control=*0x%x)", control);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlRunFibers()
+error_code cellFiberPpuUtilWorkerControlInitialize(vm::ptr<CellFiberPpuUtilWorkerControl> control)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlInitialize(control=*0x%x)", control);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlInitialize()
+error_code cellFiberPpuUtilWorkerControlSetPollingMode(vm::ptr<CellFiberPpuUtilWorkerControl> control, s32 mode, s32 timeout)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlSetPollingMode(control=*0x%x, mode=%d, timeout=%d)", control, mode, timeout);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlSetPollingMode()
+error_code cellFiberPpuUtilWorkerControlJoinFiber(vm::ptr<CellFiberPpuUtilWorkerControl> control, vm::ptr<CellFiberPpu> fiber, vm::ptr<s32> exitCode)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlJoinFiber(control=*0x%x, fiber=*0x%x, exitCode=*0x%x)", control, fiber, exitCode);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlJoinFiber()
+error_code cellFiberPpuUtilWorkerControlDisconnectEventQueue()
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlDisconnectEventQueue()");
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlDisconnectEventQueue()
+error_code cellFiberPpuUtilWorkerControlSendSignal(vm::ptr<CellFiberPpu> fiber, vm::ptr<u32> numWorker)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlSendSignal(fiber=*0x%x, numWorker=*0x%x)", fiber, numWorker);
+
+	if (!fiber)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!fiber.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlSendSignal()
+error_code cellFiberPpuUtilWorkerControlConnectEventQueueToSpurs()
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlConnectEventQueueToSpurs()");
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlConnectEventQueueToSpurs()
+error_code cellFiberPpuUtilWorkerControlFinalize(vm::ptr<CellFiberPpuUtilWorkerControl> control)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlFinalize(control=*0x%x)", control);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlFinalize()
+error_code cellFiberPpuUtilWorkerControlWakeup(vm::ptr<CellFiberPpuUtilWorkerControl> control)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlWakeup(control=*0x%x)", control);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlWakeup()
+error_code cellFiberPpuUtilWorkerControlCreateFiber(vm::ptr<CellFiberPpuUtilWorkerControl> control, vm::ptr<CellFiberPpu> fiber, vm::ptr<CellFiberPpuEntry> entry, u64 arg, u32 priority, vm::ptr<void> eaStack, u32 sizeStack, vm::cptr<CellFiberPpuAttribute> attr)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlCreateFiber(control=*0x%x, fiber=*0x%x, entry=*0x%x, arg=0x%x, priority=%d, eaStack=*0x%x, sizeStack=0x%x, attr=*0x%x)", control, fiber, entry, arg, priority, eaStack, sizeStack, attr);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlCreateFiber()
+error_code cellFiberPpuUtilWorkerControlShutdown(vm::ptr<CellFiberPpuUtilWorkerControl> control)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlShutdown(control=*0x%x)", control);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlShutdown()
+error_code cellFiberPpuUtilWorkerControlCheckFlags(vm::ptr<CellFiberPpuUtilWorkerControl> control, b8 wakingUp)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
+	cellFiber.todo("cellFiberPpuUtilWorkerControlCheckFlags(control=*0x%x, wakingUp=%d)", control, wakingUp);
+
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlCheckFlags()
+error_code cellFiberPpuUtilWorkerControlInitializeWithAttribute(vm::ptr<CellFiberPpuUtilWorkerControl> control, vm::ptr<CellFiberPpuUtilWorkerControlAttribute> attr)
 {
-	UNIMPLEMENTED_FUNC(cellFiber);
-	return CELL_OK;
-}
+	cellFiber.todo("cellFiberPpuUtilWorkerControlInitializeWithAttribute(control=*0x%x, attr=*0x%x)", control, attr);
 
-s32 cellFiberPpuUtilWorkerControlInitializeWithAttribute()
-{
-	UNIMPLEMENTED_FUNC(cellFiber);
+	if (!control)
+	{
+		return CELL_FIBER_ERROR_NULL_POINTER;
+	}
+
+	if (!control.aligned())
+	{
+		return CELL_FIBER_ERROR_ALIGN;
+	}
+
 	return CELL_OK;
 }
 
