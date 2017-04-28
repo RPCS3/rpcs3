@@ -375,7 +375,7 @@ namespace
 			u32 min_index =
 				rsx::method_registers.current_draw_clause.first_count_commands.front().first;
 			u32 max_index =
-				rsx::method_registers.current_draw_clause.get_elements_count() + min_index;
+				rsx::method_registers.current_draw_clause.get_elements_count() + min_index - 1;
 
 			if (primitives_emulated) {
 				std::tie(index_count, index_info) =
@@ -397,7 +397,10 @@ namespace
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(
 				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
 
-			rsx::index_array_type index_type = rsx::method_registers.index_type();
+			rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw ?
+				rsx::index_array_type::u32 :
+				rsx::method_registers.index_type();
+
 			u32 type_size = gsl::narrow<u32>(get_index_type_size(index_type));
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();

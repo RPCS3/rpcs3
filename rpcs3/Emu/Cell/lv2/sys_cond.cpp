@@ -99,9 +99,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 	if (cond.ret)
 	{
-		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.test_state();
 	}
 
 	return CELL_OK;
@@ -140,9 +138,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 	if (cond.ret)
 	{
-		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.test_state();
 	}
 
 	return CELL_OK;
@@ -184,9 +180,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	if (cond.ret && cond.ret != (cpu_thread*)(1))
 	{
-		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.test_state();
 	}
 	else if (!cond.ret)
 	{
@@ -283,6 +277,5 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	// Restore the recursive value
 	cond->mutex->lock_count = cond.ret;
 
-	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }

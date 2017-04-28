@@ -252,7 +252,7 @@ struct fmt::cfmt_src
 	template <typename T>
 	T get(std::size_t index) const
 	{
-		return reinterpret_cast<const T&>(args[index]);
+		return *reinterpret_cast<const T*>(reinterpret_cast<const u8*>(args + index));
 	}
 
 	void skip(std::size_t extra)

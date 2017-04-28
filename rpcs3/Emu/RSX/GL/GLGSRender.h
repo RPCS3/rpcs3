@@ -9,6 +9,7 @@
 #include "define_new_memleakdetect.h"
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
+#include "../rsx_cache.h"
 
 #pragma comment(lib, "opengl32.lib")
 
@@ -16,18 +17,20 @@ struct work_item
 {
 	std::condition_variable cv;
 	std::mutex guard_mutex;
-	
+
 	u32  address_to_flush = 0;
-	bool processed = false;
-	bool result = false;
-	bool received = false;
+	gl::texture_cache::cached_texture_section *section_to_flush = nullptr;
+
+	volatile bool processed = false;
+	volatile bool result = false;
+	volatile bool received = false;
 };
 
 struct gcm_buffer_info
 {
 	u32 address = 0;
 	u32 pitch = 0;
-	
+
 	bool is_depth_surface;
 
 	rsx::surface_color_format color_format;
@@ -55,6 +58,7 @@ private:
 
 	rsx::gl::texture m_gl_textures[rsx::limits::fragment_textures_count];
 	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
+	gl::sampler_state m_gl_sampler_states[rsx::limits::fragment_textures_count];
 
 	gl::glsl::program *m_program;
 
@@ -63,9 +67,11 @@ private:
 	gl::texture_cache m_gl_texture_cache;
 
 	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
-	
+
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
-	std::unique_ptr<gl::ring_buffer> m_uniform_ring_buffer;
+	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
+	std::unique_ptr<gl::ring_buffer> m_transform_constants_buffer;
+	std::unique_ptr<gl::ring_buffer> m_scale_offset_buffer;
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
 
 	u32 m_draw_calls = 0;
@@ -76,7 +82,7 @@ private:
 
 	//Compare to see if transform matrix have changed
 	size_t m_transform_buffer_hash = 0;
-	
+
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
 
@@ -125,7 +131,9 @@ public:
 	void set_viewport();
 
 	void synchronize_buffers();
-	work_item& post_flush_request(u32 address);
+	work_item& post_flush_request(u32 address, gl::texture_cache::cached_texture_section *section);
+
+	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 
 protected:
 	void begin() override;

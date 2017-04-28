@@ -132,9 +132,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	if (cond.ret)
 	{
-		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
-		ppu.test_state();
 	}
 	else if (mode == 2)
 	{
@@ -212,13 +210,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	for (auto cpu : threads)
 	{
-		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cpu);
-	}
-
-	if (threads.size())
-	{
-		ppu.test_state();
 	}
 
 	if (mode == 1)
@@ -269,7 +261,6 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	if (cond.ret)
 	{
-		ppu.state += cpu_flag::is_waiting;
 		cond->awake(*cond.ret);
 	}
 
@@ -312,6 +303,5 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	}
 
 	// Return cause
-	ppu.test_state();
 	return not_an_error(ppu.gpr[3]);
 }

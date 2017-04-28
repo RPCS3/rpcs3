@@ -468,6 +468,9 @@ public:
 	{
 		return access();
 	}
+
+	// Allocation address
+	static u32 addr;
 };
 
 template<typename T, T Func>

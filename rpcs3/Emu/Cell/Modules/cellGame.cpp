@@ -181,9 +181,16 @@ s32 cellHddGameCheck2()
 
 s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 {
-	cellGame.todo("cellHddGameGetSizeKB(size=*0x%x)", size);
+	cellGame.warning("cellHddGameGetSizeKB(size=*0x%x)", size);
 
-	*size = 0;
+	const std::string& local_dir = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID());
+	if (!fs::is_dir(local_dir))
+	{
+		return CELL_HDDGAME_ERROR_FAILURE;
+	}
+
+	*size = (u32)(fs::get_dir_size(local_dir)/1024);
+
 	return CELL_OK;
 }
 
@@ -200,10 +207,18 @@ s32 cellHddGameExitBroken()
 
 s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 {
-	cellGame.todo("cellGameDataGetSizeKB(size=*0x%x)", size);
+	cellGame.warning("cellGameDataGetSizeKB(size=*0x%x)", size);
 
-	*size = 0;
+	const std::string& local_dir = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID());
+	if (!fs::is_dir(local_dir))
+	{
+		return CELL_GAMEDATA_ERROR_FAILURE;
+	}
+
+	*size = (u32)(fs::get_dir_size(local_dir)/1024);
+
 	return CELL_OK;
+
 }
 
 s32 cellGameDataSetSystemVer()
@@ -405,6 +420,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 {
 	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
+	//older sdk. it might not care about game type.	
+
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
@@ -414,21 +431,15 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	const std::string& dir = "/dev_hdd0/game/"s + dirName.get_ptr();
 
-	if (!fs::is_dir(vfs::get(dir)))
-	{
-		cellGame.todo("cellGameDataCheckCreate2(): should create directory '%s'", dir);
-		// TODO: create data
-		return CELL_OK;
-	}
-
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
 	vm::var<CellGameDataStatSet>  cbSet;
+	cbGet->isNewData = fs::is_dir(vfs::get(dir)) ? CELL_GAMEDATA_ISNEWDATA_NO : CELL_GAMEDATA_ISNEWDATA_YES;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
 
-	cbGet->isNewData = CELL_GAMEDATA_ISNEWDATA_NO;
+	
 	strcpy_trunc(cbGet->contentInfoPath, dir);
 	strcpy_trunc(cbGet->gameDataPath, dir + "/USRDIR");
 
@@ -448,23 +459,55 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	strcpy_trunc(cbGet->getParam.dataVersion, psf::get_string(sfo, "APP_VER", ""));
 	strcpy_trunc(cbGet->getParam.titleId, psf::get_string(sfo, "TITLE_ID", ""));
 	strcpy_trunc(cbGet->getParam.title, psf::get_string(sfo, "TITLE", ""));
-	// TODO: write lang titles
+	for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+	{
+		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
+	}
+
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
-
-	if (cbSet->setParam)
-	{
-		// TODO: write PARAM.SFO from cbSet
-		cellGame.todo("cellGameDataCheckCreate2(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam);
-	}
+	
 
 	switch ((s32)cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
-		// TODO: do not process game data
+		// TODO: do not process game data(directory)
 		cellGame.warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
+		return CELL_OK;
 
-	case CELL_GAMEDATA_CBRESULT_OK:
+		
+	case CELL_GAMEDATA_CBRESULT_OK:	
+		//game confirmed that it wants to create directory
+		if (!fs::is_dir(vfs::get(dir + "/USRDIR")) && !fs::create_path(vfs::get(dir + "/USRDIR")))
+			{
+				cellGame.error("cellGameDataCheckCreate2(): folder creation failed");
+				return CELL_GAME_ERROR_NOSPACE;	//don't know which error. picked one at random
+			}
+		if (cbSet->setParam)
+		{
+			const auto vdir = vfs::get(dir);
+
+			//older SDK does not define not settable values, hopefully it doesn't just change some values(overwrite)
+			psf::registry sfo_write =
+			{
+				{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId) },
+				{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title) },
+				{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion) },
+				{ "PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value()							}
+			};
+			//sfo_write.emplace("PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value()); // I don't care about age restrictions.
+			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+			{
+				sfo_write.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
+			}
+			if (!fs::is_dir(vdir))
+			{
+				cellGame.fatal("directory where param.sfo is to be created does not exist");
+				return CELL_GAME_ERROR_INTERNAL;
+			}
+			psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), sfo_write);
+
+		}
 		return CELL_OK;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
@@ -601,6 +644,7 @@ static const char* get_param_string_key(s32 id)
 	case CELL_GAME_PARAMID_TITLE_POLISH:             return "TITLE_16";
 	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  return "TITLE_17";
 	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         return "TITLE_18";
+	case CELL_GAME_PARAMID_TITLE_TURKISH:            return "TITLE_19";
 
 	case CELL_GAME_PARAMID_TITLE_ID:                 return "TITLE_ID";
 	case CELL_GAME_PARAMID_VERSION:                  return "VERSION";
@@ -672,9 +716,22 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 
 s32 cellGameGetSizeKB(vm::ptr<s32> size)
 {
-	cellGame.todo("cellGameGetSizeKB(size=*0x%x)", size);
+	cellGame.warning("cellGameGetSizeKB(size=*0x%x)", size);
+	const auto prm = fxm::get<content_permission>();
 
-	*size = 0;
+	if (!prm)
+	{
+		return CELL_GAME_ERROR_FAILURE;
+	}
+
+	const std::string& local_dir = prm->is_temporary? vfs::get("/dev_hdd1/game/"s + prm->dir) : vfs::get("/dev_hdd0/game/"s + prm->dir);		//should we check the temporary folder?
+	if (!fs::is_dir(local_dir))
+	{
+		return CELL_GAME_ERROR_FAILURE;
+	}
+
+	*size = (u32)(fs::get_dir_size(local_dir)/1024);
+
 	return CELL_OK;
 }
 

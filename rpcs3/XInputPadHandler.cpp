@@ -66,7 +66,7 @@ void XInputPadHandler::Init(const u32 max_connect)
 		for (u32 i = 0, max = std::min(max_connect, u32(MAX_GAMEPADS)); i != max; ++i)
 		{
 			m_pads.emplace_back(
-				CELL_PAD_STATUS_ASSIGN_CHANGES,
+				CELL_PAD_STATUS_DISCONNECTED,
 				CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE,
 				CELL_PAD_DEV_TYPE_STANDARD
@@ -126,6 +126,9 @@ void XInputPadHandler::Close()
 
 DWORD XInputPadHandler::ThreadProcedure()
 {
+	// holds internal controller state change
+	std::array<bool, MAX_GAMEPADS> last_connection_status = {};
+
 	while (active)
 	{
 		XINPUT_STATE state;
@@ -140,12 +143,19 @@ DWORD XInputPadHandler::ThreadProcedure()
 			switch (result)
 			{
 			case ERROR_DEVICE_NOT_CONNECTED:
+				if (last_connection_status[i] == true)
+					pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				last_connection_status[i] = false;
 				pad.m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				break;
 
 			case ERROR_SUCCESS:
 				++online;
+				if (last_connection_status[i] == false)
+					pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				last_connection_status[i] = true;
 				pad.m_port_status |= CELL_PAD_STATUS_CONNECTED;
+
 				for (DWORD j = 0; j != XINPUT_GAMEPAD_BUTTONS; ++j)
 				{
 					bool pressed = state.Gamepad.wButtons & (1 << j);

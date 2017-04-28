@@ -1,6 +1,8 @@
 #pragma once
 #include <rsx_decompiler.h>
+#include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm.h"
+#include "gcm_enums.h"
 
 namespace rsx
 {
@@ -27,6 +29,39 @@ namespace rsx
 		void*(*make_program)(const void *vertex_shader, const void *fragment_shader);
 		void(*remove_program)(void *ptr);
 		void(*remove_shader)(void *ptr);
+	};
+
+	struct blit_src_info
+	{
+		blit_engine::transfer_source_format format;
+		u16 offset_x;
+		u16 offset_y;
+		u16 width;
+		u16 height;
+		u16 slice_h;
+		u16 pitch;
+		void *pixels;
+
+		u32 rsx_address;
+	};
+
+	struct blit_dst_info
+	{
+		blit_engine::transfer_destination_format format;
+		u16 offset_x;
+		u16 offset_y;
+		u16 width;
+		u16 height;
+		u16 pitch;
+		u16 clip_x;
+		u16 clip_y;
+		u16 clip_width;
+		u16 clip_height;
+
+		bool swizzled;
+		void *pixels;
+
+		u32  rsx_address;
 	};
 
 	class shaders_cache
@@ -75,31 +110,14 @@ namespace rsx
 		u32 locked_address_base = 0;
 		u32 locked_address_range = 0;
 
-		u32 memory_protection = 0;
+		utils::protection protection = utils::protection::rw;
 
 		bool locked = false;
 		bool dirty = false;
 
-		bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
+		inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
 		{
-			//Check for memory area overlap. unlock page(s) if needed and add this index to array.
-			//Axis separation test
-			const u32 &block_start = base1;
-			const u32 block_end = limit1;
-
-			if (limit2 < block_start) return false;
-			if (base2 > block_end) return false;
-
-			u32 min_separation = (limit2 - base2) + (limit1 - base1);
-			u32 range_limit = (block_end > limit2) ? block_end : limit2;
-			u32 range_base = (block_start < base2) ? block_start : base2;
-
-			u32 actual_separation = (range_limit - range_base);
-
-			if (actual_separation < min_separation)
-				return true;
-
-			return false;
+			return (base1 < limit2 && base2 < limit1);
 		}
 
 	public:
@@ -117,40 +135,21 @@ namespace rsx
 			locked_address_base = (base & ~4095);
 			locked_address_range = align(base + length, 4096) - locked_address_base;
 
-			memory_protection = vm::page_readable | vm::page_writable;
+			protection = utils::protection::rw;
 
 			locked = false;
 		}
 
-		bool protect(u8 flags_set, u8 flags_clear)
+		void protect(utils::protection prot)
 		{
-			if (vm::page_protect(locked_address_base, locked_address_range, 0, flags_set, flags_clear))
-			{
-				memory_protection &= ~flags_clear;
-				memory_protection |= flags_set;
-
-				locked = memory_protection != (vm::page_readable | vm::page_writable);
-			}
-			else
-				fmt::throw_exception("failed to lock memory @ 0x%X!", locked_address_base);
-
-			return false;
+			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
+			protection = prot;
+			locked = prot != utils::protection::rw;
 		}
 
-		bool unprotect()
+		void unprotect()
 		{
-			u32 flags_set = (vm::page_readable | vm::page_writable) & ~memory_protection;
-
-			if (vm::page_protect(locked_address_base, locked_address_range, 0, flags_set, 0))
-			{
-				memory_protection = (vm::page_writable | vm::page_readable);
-				locked = false;
-				return true;
-			}
-			else
-				fmt::throw_exception("failed to unlock memory @ 0x%X!", locked_address_base);
-
-			return false;
+			return protect(utils::protection::rw);
 		}
 
 		bool overlaps(std::pair<u32, u32> range)
@@ -161,6 +160,19 @@ namespace rsx
 		bool overlaps(u32 address)
 		{
 			return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
+		}
+
+		/**
+		 * Check if range overlaps with this section.
+		 * ignore_protection_range - if true, the test should not check against the aligned protection range, instead
+		 * tests against actual range of contents in memory
+		 */
+		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range)
+		{
+			if (!ignore_protection_range)
+				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
+			else
+				return region_overlaps(cpu_address_base, cpu_address_base + cpu_address_range, range.first, range.first + range.second);
 		}
 
 		/**

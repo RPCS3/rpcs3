@@ -73,10 +73,16 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
+    <ClCompile Include="..\Utilities\bin_patch.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\cond.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp" />
+    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -132,6 +138,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_trace.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_tty.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp" />
+	<ClCompile Include="Emu\Cell\lv2\sys_ss.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp" />
     <ClCompile Include="Emu\Cell\PPUModule.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp" />
@@ -144,11 +151,13 @@
     <ClCompile Include="Emu\Cell\Modules\cellCamera.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellCelp8Enc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellCelpEnc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellCrossController.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFont.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cell_FreeType2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGame.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGameExec.cpp" />
@@ -157,12 +166,13 @@
     <ClCompile Include="Emu\Cell\Modules\cellGifDec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellHttp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellHttpUtil.cpp" />
-    <ClCompile Include="Emu\Cell\Modules\cellImejp.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellImeJp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellJpgDec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellJpgEnc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellKb.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellKey2char.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellL10n.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellLibprof.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMic.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMouse.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMsgDialog.cpp" />
@@ -184,6 +194,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellRemotePlay.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellResc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellRtc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellRtcAlarm.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellRudp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSail.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSailRec.cpp" />
@@ -207,6 +218,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUsbpspcm.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUserInfo.cpp" />
@@ -217,6 +229,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libmedi.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libsnd3.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libsynth2.cpp" />
@@ -393,12 +406,14 @@
     <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\bit_set.h" />
     <ClInclude Include="..\Utilities\cfmt.h" />
     <ClInclude Include="..\Utilities\cond.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
+    <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
@@ -528,6 +543,7 @@
     <ClInclude Include="Emu\Cell\lv2\sys_trace.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_tty.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_vm.h" />
+	<ClInclude Include="Emu\Cell\lv2\sys_ss.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
     <ClInclude Include="Emu\Cell\PPUModule.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h" />
@@ -536,6 +552,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellAudio.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAudioIn.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAudioOut.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellBgdl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCamera.h" />
     <ClInclude Include="Emu\Cell\Modules\cellDmux.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFiber.h" />
@@ -546,6 +563,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellGcmSys.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGem.h" />
     <ClInclude Include="Emu\Cell\Modules\cellGifDec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellImeJp.h" />
     <ClInclude Include="Emu\Cell\Modules\cellJpgDec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellKb.h" />
     <ClInclude Include="Emu\Cell\Modules\cellL10n.h" />
@@ -565,17 +583,20 @@
     <ClInclude Include="Emu\Cell\Modules\cellSaveData.h" />
     <ClInclude Include="Emu\Cell\Modules\cellScreenshot.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSearch.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSpudll.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSpurs.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSpursJq.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSubdisplay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSync.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSync2.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSysconf.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc2.h" />
     <ClInclude Include="Emu\Cell\Modules\cellUsbd.h" />
     <ClInclude Include="Emu\Cell\Modules\cellUserInfo.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVdec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVideoOut.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellVideoUpload.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVpost.h" />
     <ClInclude Include="Emu\Cell\Modules\cellWebBrowser.h" />
     <ClInclude Include="Emu\Cell\Modules\libmixer.h" />

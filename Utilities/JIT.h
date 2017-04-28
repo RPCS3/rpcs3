@@ -37,11 +37,8 @@ class jit_compiler final
 	// Arch
 	std::string m_cpu;
 
-	// Internal
-	void init();
-
 public:
-	jit_compiler(std::unordered_map<std::string, std::uintptr_t>);
+	jit_compiler(std::unordered_map<std::string, std::uintptr_t>, std::string _cpu);
 	~jit_compiler();
 
 	// Compile module

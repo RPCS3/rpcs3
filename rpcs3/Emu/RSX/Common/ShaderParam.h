@@ -110,6 +110,17 @@ struct ParamArray
 		return nullptr;
 	}
 
+	bool HasParamTypeless(const ParamFlag flag, const std::string& name)
+	{
+		for (u32 i = 0; i<params[flag].size(); ++i)
+		{
+			if (params[flag][i].SearchName(name))
+				return true;
+		}
+
+		return false;
+	}
+
 	bool HasParam(const ParamFlag flag, std::string type, const std::string& name)
 	{
 		ParamType* t = SearchParam(flag, type);

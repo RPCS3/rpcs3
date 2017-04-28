@@ -173,6 +173,7 @@ private:
 	void copy_render_target_to_dma_location();
 
 protected:
+	virtual void on_init_thread() override;
 	virtual void on_exit() override;
 	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;

@@ -38,6 +38,7 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	int userClip[8];" << std::endl;
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
 	OS << "	int isAlphaTested;" << std::endl;
@@ -55,7 +56,7 @@ void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
 	OS << "	float4 spec_color : COLOR1;" << std::endl;
 	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
 	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
-	OS << "	float fogc : FOG;" << std::endl;
+	OS << "	float4 fogc : FOG;" << std::endl;
 	OS << "	float4 tc9 : TEXCOORD9;" << std::endl;
 	OS << "	float4 tc0 : TEXCOORD0;" << std::endl;
 	OS << "	float4 tc1 : TEXCOORD1;" << std::endl;
@@ -66,6 +67,8 @@ void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
 	OS << "	float4 tc6 : TEXCOORD6;" << std::endl;
 	OS << "	float4 tc7 : TEXCOORD7;" << std::endl;
 	OS << "	float4 tc8 : TEXCOORD8;" << std::endl;
+	OS << "	float4 dst_userClip0 : SV_ClipDistance0;" << std::endl;
+	OS << "	float4 dst_userClip1 : SV_ClipDistance1;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -154,24 +157,29 @@ namespace
 		switch (mode)
 		{
 		case rsx::fog_mode::linear:
-			OS << "	float4 fogc = float4(fog_param1 * In.fogc + (fog_param0 - 1.), fog_param1 * In.fogc + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			OS << "	float4 fogc = float4(fog_param1 * In.fogc.x + (fog_param0 - 1.), fog_param1 * In.fogc.x + (fog_param0 - 1.), 0., 0.);\n";
+			break;
 		case rsx::fog_mode::exponential:
-			OS << "	float4 fogc = float4(11.084 * (fog_param1 * In.fogc + fog_param0 - 1.5), exp(11.084 * (fog_param1 * In.fogc + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			OS << "	float4 fogc = float4(11.084 * (fog_param1 * In.fogc.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * In.fogc.x + fog_param0 - 1.5)), 0., 0.);\n";
+			break;
 		case rsx::fog_mode::exponential2:
-			OS << "	float4 fogc = float4(4.709 * (fog_param1 * In.fogc + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * In.fogc + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
-			return;
+			OS << "	float4 fogc = float4(4.709 * (fog_param1 * In.fogc.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * In.fogc.x + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
+			break;
 		case rsx::fog_mode::linear_abs:
-			OS << "	float4 fogc = float4(fog_param1 * abs(In.fogc) + (fog_param0 - 1.), fog_param1 * abs(In.fogc) + (fog_param0 - 1.), 0., 0.);\n";
-			return;
+			OS << "	float4 fogc = float4(fog_param1 * abs(In.fogc.x) + (fog_param0 - 1.), fog_param1 * abs(In.fogc.x) + (fog_param0 - 1.), 0., 0.);\n";
+			break;
 		case rsx::fog_mode::exponential_abs:
-			OS << "	float4 fogc = float4(11.084 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5)), 0., 0.);\n";
-			return;
+			OS << "	float4 fogc = float4(11.084 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5)), 0., 0.);\n";
+			break;
 		case rsx::fog_mode::exponential2_abs:
-			OS << "	float4 fogc = float4(4.709 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
+			OS << "	float4 fogc = float4(4.709 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
+			break;
+		default:
+			OS << "	float4 fogc = float4(0., 0., 0., 0.);\n";
 			return;
 		}
+
+		OS << "	fogc.y = saturate(fogc.y);\n";
 	}
 	
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
@@ -302,13 +310,21 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	}
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
-		/**
-		 * Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-		 * but it writes depth in r1.z and not h2.z.
-		 * Maybe there's a different flag for depth ?
-		 */
-		//		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << std::endl;
-		OS << "	Out.depth = r1.z;\n";
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
+		{
+			/**
+			 * Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
+			 * but it writes depth in r1.z and not h2.z.
+			 * Maybe there's a different flag for depth ?
+			 */
+			 //		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << std::endl;
+			OS << "	Out.depth = r1.z;\n";
+		}
+		else
+		{
+			//Input not declared. Leave commented to assist in debugging the shader
+			OS << "	//Out.depth = r1.z;\n";
+		}
 	}
 	// Shaders don't always output colors (for instance if they write to depth only)
 	if (!first_output_name.empty())
@@ -335,8 +351,12 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		{
 			if (m_prog.textures_alpha_kill[index])
 			{
-				std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
-				OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				const std::string texture_name = "tex" + std::to_string(index);
+				if (m_parr.HasParamTypeless(PF_PARAM_UNIFORM, texture_name))
+				{
+					std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
+					OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
+				}
 			}
 		}
 

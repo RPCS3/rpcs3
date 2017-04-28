@@ -2,41 +2,32 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "cellBgdl.h"
+
 logs::channel cellBGDL("cellBGDL", logs::level::notice);
 
-// Return Codes
-enum
+s32 cellBGDLGetInfo(vm::cptr<char> content_id, vm::ptr<CellBGDLInfo> info, s32 num)
 {
-	CELL_BGDL_UTIL_RET_OK             = 0x00000000,
-	CELL_BGDL_UTIL_ERROR_BUSY         = 0x8002ce01,
-	CELL_BGDL_UTIL_ERROR_INTERNAL     = 0x8002ce02,
-	CELL_BGDL_UTIL_ERROR_PARAM        = 0x8002ce03,
-	CELL_BGDL_UTIL_ERROR_ACCESS_ERROR = 0x8002ce04,
-	CELL_BGDL_UTIL_ERROR_INITIALIZE   = 0x8002ce05,
-};
-
-s32 cellBGDLGetInfo()
-{
-	UNIMPLEMENTED_FUNC(cellBGDL);
-	return CELL_OK;
+	cellBGDL.todo("cellBGDLGetInfo(content_id=%s, info=*0x%x, num=%d)", content_id, info, num);
+	return 0;
 }
 
-s32 cellBGDLGetInfo2()
+s32 cellBGDLGetInfo2(vm::cptr<char> service_id, vm::ptr<CellBGDLInfo> info, s32 num)
 {
-	UNIMPLEMENTED_FUNC(cellBGDL);
-	return CELL_OK;
+	cellBGDL.todo("cellBGDLGetInfo2(service_id=%s, info=*0x%x, num=%d)", service_id, info, num);
+	return 0;
 }
 
-s32 cellBGDLSetMode()
+s32 cellBGDLSetMode(CellBGDLMode mode)
 {
-	UNIMPLEMENTED_FUNC(cellBGDL);
-	return CELL_OK;
+	cellBGDL.todo("cellBGDLSetMode(mode=%d)", (s32) mode);
+	return CELL_BGDL_UTIL_RET_OK;
 }
 
-s32 cellBGDLGetMode()
+s32 cellBGDLGetMode(vm::ptr<CellBGDLMode> mode)
 {
-	UNIMPLEMENTED_FUNC(cellBGDL);
-	return CELL_OK;
+	cellBGDL.todo("cellBGDLGetMode(mode=*0x%x)", mode);
+	return CELL_BGDL_UTIL_RET_OK;
 }
 
 DECLARE(ppu_module_manager::cellBGDL)("cellBGDLUtility", []()

@@ -1,6 +1,7 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/AutoPause.h"
+#include "Utilities/VirtualMemory.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
@@ -13,7 +14,8 @@
 
 #include "Emu/Cell/lv2/sys_prx.h"
 
-#include <unordered_set>
+#include <map>
+#include <set>
 #include <algorithm>
 
 namespace vm { using namespace ps3; }
@@ -27,11 +29,13 @@ LOG_CHANNEL(cellBGDL);
 LOG_CHANNEL(cellCamera);
 LOG_CHANNEL(cellCelp8Enc);
 LOG_CHANNEL(cellCelpEnc);
+LOG_CHANNEL(cellCrossController);
 LOG_CHANNEL(cellDaisy);
 LOG_CHANNEL(cellDmux);
 LOG_CHANNEL(cellFiber);
 LOG_CHANNEL(cellFont);
 LOG_CHANNEL(cellFontFT);
+LOG_CHANNEL(cell_FreeType2);
 LOG_CHANNEL(cellFs);
 LOG_CHANNEL(cellGame);
 LOG_CHANNEL(cellGameExec);
@@ -45,6 +49,7 @@ LOG_CHANNEL(cellJpgDec);
 LOG_CHANNEL(cellJpgEnc);
 LOG_CHANNEL(cellKey2char);
 LOG_CHANNEL(cellL10n);
+LOG_CHANNEL(cellLibprof);
 LOG_CHANNEL(cellMic);
 LOG_CHANNEL(cellMusic);
 LOG_CHANNEL(cellMusicDecode);
@@ -63,6 +68,7 @@ LOG_CHANNEL(cellRec);
 LOG_CHANNEL(cellRemotePlay);
 LOG_CHANNEL(cellResc);
 LOG_CHANNEL(cellRtc);
+LOG_CHANNEL(cellRtcAlarm);
 LOG_CHANNEL(cellRudp);
 LOG_CHANNEL(cellSail);
 LOG_CHANNEL(cellSailRec);
@@ -84,6 +90,7 @@ LOG_CHANNEL(cellSysutilAp);
 LOG_CHANNEL(cellSysutilAvc);
 LOG_CHANNEL(cellSysutilAvc2);
 LOG_CHANNEL(cellSysutilMisc);
+LOG_CHANNEL(cellSysutilNpEula);
 LOG_CHANNEL(cellUsbd);
 LOG_CHANNEL(cellUsbPspcm);
 LOG_CHANNEL(cellUserInfo);
@@ -92,6 +99,7 @@ LOG_CHANNEL(cellVideoExport);
 LOG_CHANNEL(cellVideoUpload);
 LOG_CHANNEL(cellVoice);
 LOG_CHANNEL(cellVpost);
+LOG_CHANNEL(libmedi);
 LOG_CHANNEL(libmixer);
 LOG_CHANNEL(libsnd3);
 LOG_CHANNEL(libsynth2);
@@ -108,16 +116,36 @@ LOG_CHANNEL(sys_libc);
 LOG_CHANNEL(sys_lv2dbg);
 LOG_CHANNEL(libnet);
 LOG_CHANNEL(sysPrxForUser);
+#ifdef WITH_GDB_DEBUGGER
+LOG_CHANNEL(gdbDebugServer);
+#endif
+
+enum class lib_loader_mode
+{
+	automatic,
+	manual,
+	both,
+	liblv2only
+};
+
+cfg::map_entry<lib_loader_mode> g_cfg_lib_loader(cfg::root.core, "Lib Loader", 3,
+{
+	{ "Automatically load required libraries", lib_loader_mode::automatic },
+	{ "Manually load selected libraries", lib_loader_mode::manual },
+	{ "Load automatic and manual selection", lib_loader_mode::both },
+	{ "Load liblv2.sprx only", lib_loader_mode::liblv2only },
+});
 
 cfg::bool_entry g_cfg_hook_ppu_funcs(cfg::root.core, "Hook static functions");
-cfg::bool_entry g_cfg_load_liblv2(cfg::root.core, "Load liblv2.sprx only");
-cfg::bool_entry g_cfg_load_libreq(cfg::root.core, "Load required libraries", true);
 
 cfg::set_entry g_cfg_load_libs(cfg::root.core, "Load libraries");
+
+extern cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder;
 
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
+extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
 extern void ppu_initialize(const ppu_module& info);
 extern void ppu_initialize();
 
@@ -125,52 +153,8 @@ extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
 extern u32 g_ps3_sdk_version;
 
-// Function lookup table. Not supposed to grow after emulation start.
-std::vector<ppu_function_t> g_ppu_function_cache;
-
-// Function name cache in format %s.%s (module name, function name)
+// HLE function name cache
 std::vector<std::string> g_ppu_function_names;
-
-// Function NID cache for autopause. Autopause tool should probably be rewritten.
-std::vector<u32> g_ppu_fnid_cache;
-
-extern std::string ppu_get_module_function_name(u32 index)
-{
-	if (index < g_ppu_function_names.size())
-	{
-		return g_ppu_function_names[index];
-	}
-
-	return fmt::format(".%u", index);
-}
-
-extern void ppu_execute_function(ppu_thread& ppu, u32 index)
-{
-	if (index < g_ppu_function_cache.size())
-	{
-		// If autopause occures, check_status() will hold the thread until unpaused
-		if (debug::autopause::pause_function(g_ppu_fnid_cache[index])) ppu.test_state();
-
-		if (const auto func = g_ppu_function_cache[index])
-		{
-			func(ppu);
-			LOG_TRACE(HLE, "'%s' finished, r3=0x%llx", ppu_get_module_function_name(index), ppu.gpr[3]);
-			return;
-		}
-	}
-
-	fmt::throw_exception("Function not registered (index %u)" HERE, index);
-}
-
-extern ppu_function_t ppu_get_function(u32 index)
-{
-	if (index < g_ppu_function_cache.size())
-	{
-		return g_ppu_function_cache[index];
-	}
-
-	return nullptr;
-}
 
 extern u32 ppu_generate_id(const char* name)
 {
@@ -224,8 +208,31 @@ const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 	return found != map.end() ? found->second : nullptr;
 }
 
+// Global linkage information
+struct ppu_linkage_info
+{
+	struct module
+	{
+		struct info
+		{
+			bool hle = false;
+			u32 export_addr = 0;
+			std::set<u32> imports;
+		};
+
+		// FNID -> (export; [imports...])
+		std::unordered_map<u32, info, value_hash<u32>> functions;
+		std::unordered_map<u32, info, value_hash<u32>> variables;
+
+		bool imported = false;
+	};
+
+	// Module map
+	std::unordered_map<std::string, module> modules;
+};
+
 // Initialize static modules.
-static void ppu_initialize_modules()
+static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link)
 {
 	const std::initializer_list<const ppu_static_module*> registered
 	{
@@ -238,11 +245,13 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellCamera,
 		&ppu_module_manager::cellCelp8Enc,
 		&ppu_module_manager::cellCelpEnc,
+		&ppu_module_manager::cellCrossController,
 		&ppu_module_manager::cellDaisy,
 		&ppu_module_manager::cellDmux,
 		&ppu_module_manager::cellFiber,
 		&ppu_module_manager::cellFont,
 		&ppu_module_manager::cellFontFT,
+		&ppu_module_manager::cell_FreeType2,
 		&ppu_module_manager::cellFs,
 		&ppu_module_manager::cellGame,
 		&ppu_module_manager::cellGameExec,
@@ -257,6 +266,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellJpgEnc,
 		&ppu_module_manager::cellKey2char,
 		&ppu_module_manager::cellL10n,
+		&ppu_module_manager::cellLibprof,
 		&ppu_module_manager::cellMic,
 		&ppu_module_manager::cellMusic,
 		&ppu_module_manager::cellMusicDecode,
@@ -275,6 +285,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellRemotePlay,
 		&ppu_module_manager::cellResc,
 		&ppu_module_manager::cellRtc,
+		&ppu_module_manager::cellRtcAlarm,
 		&ppu_module_manager::cellRudp,
 		&ppu_module_manager::cellSail,
 		&ppu_module_manager::cellSailRec,
@@ -296,6 +307,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellSysutilAp,
 		&ppu_module_manager::cellSysutilAvc,
 		&ppu_module_manager::cellSysutilAvc2,
+		&ppu_module_manager::cellSysutilNpEula,
 		&ppu_module_manager::cellSysutilMisc,
 		&ppu_module_manager::cellUsbd,
 		&ppu_module_manager::cellUsbPspcm,
@@ -305,6 +317,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellVideoUpload,
 		&ppu_module_manager::cellVoice,
 		&ppu_module_manager::cellVpost,
+		&ppu_module_manager::libmedi,
 		&ppu_module_manager::libmixer,
 		&ppu_module_manager::libsnd3,
 		&ppu_module_manager::libsynth2,
@@ -323,176 +336,114 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::sys_lv2dbg,
 	};
 
-	// Reinitialize function cache
-	g_ppu_function_cache = ppu_function_manager::get();
-	g_ppu_function_names.clear();
-	g_ppu_function_names.resize(g_ppu_function_cache.size());
-	g_ppu_fnid_cache.clear();
-	g_ppu_fnid_cache.resize(g_ppu_function_cache.size());
-	
+	// Initialize double-purpose fake OPD array for HLE functions
+	const auto& hle_funcs = ppu_function_manager::get();
+
+	// Allocate memory for the array (must be called after fixed allocations)
+	ppu_function_manager::addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);
+
+	// Initialize as PPU executable code
+	ppu_register_range(ppu_function_manager::addr, ::size32(hle_funcs) * 8);
+
+	// Fill the array (visible data: self address and function index)
+	for (u32 addr = ppu_function_manager::addr, index = 0; index < hle_funcs.size(); addr += 8, index++)
+	{
+		// Function address = current address, RTOC = BLR instruction for the interpreter
+		vm::ps3::write32(addr + 0, addr);
+		vm::ps3::write32(addr + 4, ppu_instructions::BLR());
+
+		// Register the HLE function directly
+		ppu_register_function_at(addr + 0, 4, hle_funcs[index]);
+		ppu_register_function_at(addr + 4, 4, nullptr);
+	}
+
+	// Set memory protection to read-only
+	vm::page_protect(ppu_function_manager::addr, ::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
+
+	// Initialize function names
+	const bool is_first = g_ppu_function_names.empty();
+
+	if (is_first)
+	{
+		g_ppu_function_names.resize(hle_funcs.size());
+		g_ppu_function_names[0] = "INVALID";
+		g_ppu_function_names[1] = "HLE RETURN";
+	}
+
+	// For HLE variable allocation
+	u32 alloc_addr = 0;
+
 	// "Use" all the modules for correct linkage
 	for (auto& module : registered)
 	{
 		LOG_TRACE(LOADER, "Registered static module: %s", module->name);
+	}
+
+	for (auto& pair : ppu_module_manager::get())
+	{
+		const auto module = pair.second;
+		auto& linkage = link->modules[module->name];
 
 		for (auto& function : module->functions)
 		{
 			LOG_TRACE(LOADER, "** 0x%08X: %s", function.first, function.second.name);
-			g_ppu_function_names.at(function.second.index) = fmt::format("%s.%s", module->name, function.second.name);
-			g_ppu_fnid_cache.at(function.second.index) = function.first;
+
+			if (is_first)
+			{
+				g_ppu_function_names[function.second.index] = fmt::format("%s.%s", module->name, function.second.name);
+			}
+
+			if ((function.second.flags & MFF_HIDDEN) == 0)
+			{
+				auto& flink = linkage.functions[function.first];
+
+				flink.hle = true;
+				flink.export_addr = ppu_function_manager::addr + 8 * function.second.index;
+			}
 		}
 
 		for (auto& variable : module->variables)
 		{
 			LOG_TRACE(LOADER, "** &0x%08X: %s (size=0x%x, align=0x%x)", variable.first, variable.second.name, variable.second.size, variable.second.align);
-			variable.second.var->set(0);
+
+			// Allocate HLE variable
+			if (variable.second.size >= 4096 || variable.second.align >= 4096)
+			{
+				variable.second.var->set(vm::alloc(variable.second.size, vm::main, std::max<u32>(variable.second.align, 4096)));
+			}
+			else
+			{
+				const u32 next = ::align(alloc_addr, variable.second.align);
+				const u32 end = next + variable.second.size;
+
+				if (!next || (end >> 12 != alloc_addr >> 12))
+				{
+					alloc_addr = vm::alloc(4096, vm::main);
+				}
+				else
+				{
+					alloc_addr = next;
+				}
+
+				variable.second.var->set(alloc_addr);
+				alloc_addr += variable.second.size;
+			}
+
+			LOG_TRACE(LOADER, "Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
+
+			// Initialize HLE variable
+			if (variable.second.init)
+			{
+				variable.second.init();
+			}
+
+			auto& vlink = linkage.variables[variable.first];
+			
+			vlink.hle = true;
+			vlink.export_addr = variable.second.var->addr();
 		}
 	}
 }
-
-// Detect import stub at specified address and inject HACK instruction with index immediate.
-static bool ppu_patch_import_stub(u32 addr, u32 index)
-{
-	const auto data = vm::_ptr<u32>(addr);
-
-	using namespace ppu_instructions;
-
-	// Check various patterns:
-
-	if (vm::check_addr(addr, 32) &&
-		(data[0] & 0xffff0000) == LI(r12, 0) &&
-		(data[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
-		(data[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
-		data[3] == STD(r2, r1, 0x28) &&
-		data[4] == LWZ(r0, r12, 0) &&
-		data[5] == LWZ(r2, r12, 4) &&
-		data[6] == MTCTR(r0) &&
-		data[7] == BCTR())
-	{
-		data[0] = STD(r2, r1, 0x28); // Save RTOC
-		data[1] = HACK(index);
-		data[2] = BLR();
-		std::fill(data + 3, data + 8, NOP());
-		return true;
-	}
-
-	if (vm::check_addr(addr, 12) &&
-		(data[0] & 0xffff0000) == LI(r0, 0) &&
-		(data[1] & 0xffff0000) == ORIS(r0, r0, 0) &&
-		(data[2] & 0xfc000003) == B(0, 0, 0))
-	{
-		const auto sub = vm::cptr<u32>::make(addr + 8 + ((s32)data[2] << 6 >> 8 << 2));
-
-		if (vm::check_addr(sub.addr(), 60) &&
-			sub[0x0] == STDU(r1, r1, -0x80) &&
-			sub[0x1] == STD(r2, r1, 0x70) &&
-			sub[0x2] == MR(r2, r0) &&
-			sub[0x3] == MFLR(r0) &&
-			sub[0x4] == STD(r0, r1, 0x90) &&
-			sub[0x5] == LWZ(r2, r2, 0) &&
-			sub[0x6] == LWZ(r0, r2, 0) &&
-			sub[0x7] == LWZ(r2, r2, 4) &&
-			sub[0x8] == MTCTR(r0) &&
-			sub[0x9] == BCTRL() &&
-			sub[0xa] == LD(r2, r1, 0x70) &&
-			sub[0xb] == ADDI(r1, r1, 0x80) &&
-			sub[0xc] == LD(r0, r1, 0x10) &&
-			sub[0xd] == MTLR(r0) &&
-			sub[0xe] == BLR())
-		{
-			data[0] = HACK(index);
-			data[1] = BLR();
-			data[2] = NOP();
-			return true;
-		}
-	}
-
-	if (vm::check_addr(addr, 64) &&
-		data[0x0] == MFLR(r0) &&
-		data[0x1] == STD(r0, r1, 0x10) &&
-		data[0x2] == STDU(r1, r1, -0x80) &&
-		data[0x3] == STD(r2, r1, 0x70) &&
-		(data[0x4] & 0xffff0000) == LI(r2, 0) &&
-		(data[0x5] & 0xffff0000) == ORIS(r2, r2, 0) &&
-		data[0x6] == LWZ(r2, r2, 0) &&
-		data[0x7] == LWZ(r0, r2, 0) &&
-		data[0x8] == LWZ(r2, r2, 4) &&
-		data[0x9] == MTCTR(r0) &&
-		data[0xa] == BCTRL() &&
-		data[0xb] == LD(r2, r1, 0x70) &&
-		data[0xc] == ADDI(r1, r1, 0x80) &&
-		data[0xd] == LD(r0, r1, 0x10) &&
-		data[0xe] == MTLR(r0) &&
-		data[0xf] == BLR())
-	{
-		data[0] = HACK(index);
-		data[1] = BLR();
-		std::fill(data + 2, data + 16, NOP());
-		return true;
-	}
-
-	if (vm::check_addr(addr, 60) &&
-		data[0x0] == MFLR(r0) &&
-		data[0x1] == STD(r0, r1, 0x10) &&
-		data[0x2] == STDU(r1, r1, -0x80) &&
-		data[0x3] == STD(r2, r1, 0x70) &&
-		(data[0x4] & 0xffff0000) == LIS(r12, 0) &&
-		(data[0x5] & 0xffff0000) == LWZ(r12, r12, 0) &&
-		data[0x6] == LWZ(r0, r12, 0) &&
-		data[0x7] == LWZ(r2, r12, 4) &&
-		data[0x8] == MTCTR(r0) &&
-		data[0x9] == BCTRL() &&
-		data[0xa] == LD(r2, r1, 0x70) &&
-		data[0xb] == ADDI(r1, r1, 0x80) &&
-		data[0xc] == LD(r0, r1, 0x10) &&
-		data[0xd] == MTLR(r0) &&
-		data[0xe] == BLR())
-	{
-		data[0] = HACK(index);
-		data[1] = BLR();
-		std::fill(data + 2, data + 15, NOP());
-		return true;
-	}
-
-	if (vm::check_addr(addr, 56) &&
-		(data[0x0] & 0xffff0000) == LI(r12, 0) &&
-		(data[0x1] & 0xffff0000) == ORIS(r12, r12, 0) &&
-		(data[0x2] & 0xffff0000) == LWZ(r12, r12, 0) &&
-		data[0x3] == STD(r2, r1, 0x28) &&
-		data[0x4] == MFLR(r0) &&
-		data[0x5] == STD(r0, r1, 0x20) &&
-		data[0x6] == LWZ(r0, r12, 0) &&
-		data[0x7] == LWZ(r2, r12, 4) &&
-		data[0x8] == MTCTR(r0) &&
-		data[0x9] == BCTRL() &&
-		data[0xa] == LD(r0, r1, 0x20) &&
-		data[0xb] == MTLR(r0) &&
-		data[0xc] == LD(r2, r1, 0x28) &&
-		data[0xd] == BLR())
-	{
-		data[0] = HACK(index);
-		data[1] = BLR();
-		std::fill(data + 2, data + 14, NOP());
-		return true;
-	}
-
-	return false;
-}
-
-// Global linkage information
-struct ppu_linkage_info
-{
-	struct module
-	{
-		using info_t = std::unordered_map<u32, std::pair<u32, std::unordered_set<u32>>>;
-
-		info_t functions;
-		info_t variables;
-	};
-	
-	// Module -> (NID -> (export; [imports...]))
-	std::unordered_map<std::string, module> modules;
-};
 
 // Link variable
 static void ppu_patch_variable_refs(u32 vref, u32 vaddr)
@@ -592,6 +543,9 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 		// Static module
 		const auto _sm = ppu_module_manager::get_module(module_name);
 
+		// Module linkage
+		auto& mlink = link->modules[module_name];
+
 		const auto fnids = +lib.nids;
 		const auto faddrs = +lib.addrs;
 
@@ -603,31 +557,46 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			LOG_NOTICE(LOADER, "**** %s export: [%s] at 0x%x", module_name, ppu_get_function_name(module_name, fnid), faddr);
 
 			// Function linkage info
-			auto& flink = link->modules[module_name].functions[fnid];
+			auto& flink = mlink.functions[fnid];
 
-			if (flink.first)
+			if (flink.export_addr && !flink.hle)
 			{
-				LOG_FATAL(LOADER, "Already linked function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
+				LOG_ERROR(LOADER, "Already linked function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
 			}
-			else
+			//else
 			{
 				// Static function
 				const auto _sf = _sm && _sm->functions.count(fnid) ? &_sm->functions.at(fnid) : nullptr;
 
 				if (_sf && (_sf->flags & MFF_FORCED_HLE))
 				{
-					// Inject HACK instruction (TODO: guess function size and analyse B instruction, or reimplement BLR flag for HACK instruction)
-					const auto code = vm::ptr<u32>::make(vm::read32(faddr));
-					code[0] = ppu_instructions::HACK(_sf->index);
-					code[1] = ppu_instructions::BLR();
+					// Inject a branch to the HLE implementation
+					const u32 _entry = vm::read32(faddr);
+					const u32 target = ppu_function_manager::addr + 8 * _sf->index;
+
+					if ((target <= _entry && _entry - target <= 0x2000000) || (target > _entry && target - _entry < 0x2000000))
+					{
+						// Use relative branch
+						vm::write32(_entry, ppu_instructions::B(target - _entry));
+					}
+					else if (target < 0x2000000)
+					{
+						// Use absolute branch if possible
+						vm::write32(_entry, ppu_instructions::B(target, true));
+					}
+					else
+					{
+						LOG_FATAL(LOADER, "Failed to patch function at 0x%x (0x%x)", _entry, target);
+					}
 				}
 				else
 				{
 					// Set exported function
-					flink.first = faddr;
+					flink.export_addr = faddr;
+					flink.hle = false;
 
 					// Fix imports
-					for (const auto addr : flink.second)
+					for (const u32 addr : flink.imports)
 					{
 						vm::write32(addr, faddr);
 						//LOG_WARNING(LOADER, "Exported function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
@@ -647,19 +616,20 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			LOG_NOTICE(LOADER, "**** %s export: &[%s] at 0x%x", module_name, ppu_get_variable_name(module_name, vnid), vaddr);
 
 			// Variable linkage info
-			auto& vlink = link->modules[module_name].variables[vnid];
+			auto& vlink = mlink.variables[vnid];
 
-			if (vlink.first)
+			if (vlink.export_addr && !vlink.hle)
 			{
-				LOG_FATAL(LOADER, "Already linked variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
+				LOG_ERROR(LOADER, "Already linked variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 			}
-			else
+			//else
 			{
 				// Set exported variable
-				vlink.first = vaddr;
+				vlink.export_addr = vaddr;
+				vlink.hle = false;
 
 				// Fix imports
-				for (const auto vref : vlink.second)
+				for (const auto vref : vlink.imports)
 				{
 					ppu_patch_variable_refs(vref, vaddr);
 					//LOG_WARNING(LOADER, "Exported variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
@@ -691,6 +661,9 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 		// Static module
 		const auto _sm = ppu_module_manager::get_module(module_name);
 
+		// Module linkage
+		auto& mlink = link->modules[module_name];
+
 		const auto fnids = +lib.nids;
 		const auto faddrs = +lib.addrs;
 
@@ -705,10 +678,18 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			auto& flink = link->modules[module_name].functions[fnid];
 
 			// Add new import
-			flink.second.emplace(faddr);
+			flink.imports.emplace(faddr);
+			mlink.imported = true;
 
 			// Link if available
-			if (flink.first) vm::write32(faddr, flink.first);
+			if (flink.export_addr)
+			{
+				vm::write32(faddr, flink.export_addr);
+			}
+			else
+			{
+				vm::write32(faddr, ppu_function_manager::addr);
+			}
 
 			//LOG_WARNING(LOADER, "Imported function '%s' in module '%s' (0x%x)", ppu_get_function_name(module_name, fnid), module_name, faddr);
 		}
@@ -726,10 +707,14 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			auto& vlink = link->modules[module_name].variables[vnid];
 
 			// Add new import
-			vlink.second.emplace(vref);
+			vlink.imports.emplace(vref);
+			mlink.imported = true;
 
 			// Link if available
-			if (vlink.first) ppu_patch_variable_refs(vref, vlink.first);
+			if (vlink.export_addr)
+			{
+				ppu_patch_variable_refs(vref, vlink.export_addr);
+			}
 
 			//LOG_WARNING(LOADER, "Imported variable '%s' in module '%s' (0x%x)", ppu_get_variable_name(module_name, vnid), module_name, vlink.first);
 		}
@@ -740,6 +725,12 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 
 std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& name)
 {
+	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm && name == "libfiber.sprx")
+	{
+		LOG_FATAL(PPU, "libfiber.sprx is not compatible with PPU LLVM Recompiler. Use PPU Interpreter.");
+		Emu.Pause();
+	}
+
 	std::vector<std::pair<u32, u32>> segments;
 	std::vector<std::pair<u32, u32>> sections;
 
@@ -924,7 +915,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		ppu_load_imports(link, lib_info->imports_start, lib_info->imports_end);
 
-		prx->funcs = ppu_analyse(segments, sections, lib_info->toc);
+		prx->funcs = ppu_analyse(segments, sections, lib_info->toc, 0);
 	}
 	else
 	{
@@ -940,8 +931,6 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 void ppu_load_exec(const ppu_exec_object& elf)
 {
-	ppu_initialize_modules();
-
 	if (g_cfg_hook_ppu_funcs)
 	{
 		LOG_TODO(LOADER, "'Hook static functions' option deactivated");
@@ -996,6 +985,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 	}
 
+	// Load section list, used by the analyser
 	for (const auto& s : elf.shdrs)
 	{
 		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
@@ -1008,6 +998,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			sections.emplace_back(std::make_pair(addr, size));
 		}
 	}
+
+	// Initialize HLE modules
+	ppu_initialize_modules(link);
 
 	// Load other programs
 	for (auto& prog : elf.progs)
@@ -1119,21 +1112,20 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Get LLE module list
 	std::set<std::string> load_libs;
 
-	if (!!g_cfg_load_liblv2 == !!g_cfg_load_libreq)
+	if (g_cfg_lib_loader.get() == lib_loader_mode::manual || g_cfg_lib_loader.get() == lib_loader_mode::both)
 	{
 		// Load required set of modules
 		load_libs = g_cfg_load_libs.get_set();
 	}
-
-	if (g_cfg_load_liblv2 && !g_cfg_load_libreq)
+	else if (g_cfg_lib_loader.get() == lib_loader_mode::liblv2only)
 	{
 		// Load only liblv2.sprx
 		load_libs.emplace("liblv2.sprx");
 	}
-	else if (g_cfg_load_libreq)
+	if (g_cfg_lib_loader.get() == lib_loader_mode::automatic || g_cfg_lib_loader.get() == lib_loader_mode::both)
 	{
 		// Load recommended set of modules: Module name -> SPRX
-		const std::unordered_multimap<std::string, std::string> sprx_map
+		std::unordered_multimap<std::string, std::string> sprx_map
 		{
 			{ "cellAdec", "libadec.sprx" }, // cellSpurs|cell_libac3dec|cellAtrac3dec|cellAtracXdec|cellCelpDec|cellDTSdec|cellM2AACdec|cellM2BCdec|cellM4AacDec|cellMP3dec|cellTRHDdec|cellWMAdec|cellDTSLBRdec|cellDDPdec|cellM4AacDec2ch|cellDTSHDdec|cellMPL1dec|cellMP3Sdec|cellM4AacDec2chmod|cellCelp8Dec|cellWMAPROdec|cellWMALSLdec|cellDTSHDCOREdec|cellAtrac3multidec
 			{ "cellAdec", "libsre.sprx" },
@@ -1144,7 +1136,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellAdec", "libcelp8dec.sprx" },
 			{ "cellAdec", "libcelpdec.sprx" },
 			{ "cellAdec", "libddpdec.sprx" },
-			{ "cellAdec", "libdtslbrdec.sprx" },
 			{ "cellAdec", "libm2bcdec.sprx" },
 			{ "cellAdec", "libm4aacdec.sprx" },
 			{ "cellAdec", "libm4aacdec2ch.sprx" },
@@ -1155,6 +1146,10 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellAtrac", "cellAdec" },
 			{ "cellAtracMulti", "libatrac3multi.sprx" },
 			{ "cellAtracMulti", "cellAdec" },
+			{ "cellCelp8Enc", "libcelp8enc.sprx" },
+			{ "cellCelp8Enc", "libsre.sprx" },
+			{ "cellCelpEnc", "libcelpenc.sprx" },
+			{ "cellCelpEnc", "libsre.sprx" },
 			{ "cellDmux", "libdmux.sprx" },
 			{ "cellDmux", "libdmuxpamf.sprx" },
 			{ "cellDmux", "libsre.sprx" },
@@ -1166,13 +1161,25 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellGifDec", "libsre.sprx" },
 			{ "cellJpgDec", "libjpgdec.sprx" },
 			{ "cellJpgDec", "libsre.sprx" },
+			{ "cellJpgEnc", "libjpgenc.sprx" },
+			{ "cellJpgEnc", "libsre.sprx" },
 			{ "cellKey2char", "libkey2char.sprx" },
 			{ "cellL10n", "libl10n.sprx" },
+			{ "cellM4hdEnc", "libm4hdenc.sprx" },
+			{ "cellM4hdEnc", "libsre.sprx" },
 			{ "cellPamf", "libpamf.sprx" },
 			{ "cellPngDec", "libpngdec.sprx" },
 			{ "cellPngDec", "libsre.sprx" },
+			{ "cellPngEnc", "libpngenc.sprx" },
+			{ "cellPngEnc", "libsre.sprx" },
 			{ "cellResc", "libresc.sprx" },
 			{ "cellRtc", "librtc.sprx" },
+			{ "cellSsl", "libssl.sprx" },
+			{ "cellSsl", "librtc.sprx" },
+			{ "cellHttp", "libhttp.sprx" },
+			{ "cellHttp", "cellSsl" },
+			{ "cellHttpUtil", "libhttp.sprx" },
+			{ "cellHttpUtil", "cellSsl" },
 			{ "cellSail", "libsail.sprx" },
 			{ "cellSail", "libsre.sprx" },
 			{ "cellSail", "libmp4.sprx" },
@@ -1195,24 +1202,46 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellSync2", "libsre.sprx" },
 			{ "cellVpost", "libvpost.sprx" },
 			{ "cellVpost", "libsre.sprx" },
+			{ "sys_fs", "libfs.sprx" },
 		};
 
+		// Expand dependencies
+		for (bool repeat = true; repeat;)
+		{
+			repeat = false;
+
+			for (auto it = sprx_map.begin(), end = sprx_map.end(); it != end; ++it)
+			{
+				auto range = sprx_map.equal_range(it->second);
+
+				if (range.first != range.second)
+				{
+					decltype(sprx_map) add;
+
+					for (; range.first != range.second; ++range.first)
+					{
+						add.emplace(it->first, range.first->second);
+					}
+
+					sprx_map.erase(it);
+					sprx_map.insert(add.begin(), add.end());
+					repeat = true;
+					break;
+				}
+			}
+		}
+
+		// TODO: recursively scan all SPRX files in /app_home/ for imports
 		for (const auto& pair : link->modules)
 		{
-			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second;)
+			if (!pair.second.imported)
 			{
-				// Dependencies (workaround for cellAdec)
-				auto range2 = sprx_map.equal_range(range.first->second);
+				continue;
+			}
 
-				if (range2.first != range2.second)
-				{
-					range = range2;
-				}
-				else
-				{
-					load_libs.emplace(range.first->second);
-					range.first++;
-				}
+			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second; ++range.first)
+			{
+				load_libs.emplace(range.first->second);
 			}
 		}
 	}
@@ -1220,6 +1249,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	if (!load_libs.empty())
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
+
+		if (!fs::is_dir(lle_dir))
+		{
+			LOG_ERROR(GENERAL, "/dev_flash/sys/external/ directory does not exist!"
+				"\nYou should install the PS3 Firmware (Menu: Tools -> Install Firmware)."
+				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
+		}
 
 		for (const auto& name : load_libs)
 		{
@@ -1245,136 +1281,14 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 			else
 			{
-				LOG_FATAL(LOADER, "Failed to load %s: %s", name, obj.get_error());
-			}
-		}
-	}
-
-	// Check unlinked functions and variables
-	for (auto& module : link->modules)
-	{
-		const auto _sm = ppu_module_manager::get_module(module.first);
-
-		if (!_sm)
-		{
-			LOG_ERROR(LOADER, "Unknown module '%s'", module.first);
-		}
-		else
-		{
-			// Allocate HLE variables (TODO)
-			for (auto& var : _sm->variables)
-			{
-				var.second.var->set(vm::alloc(var.second.size, vm::main, std::max<u32>(var.second.align, 4096)));
-				LOG_WARNING(LOADER, "Allocated variable '%s' in module '%s' at *0x%x", var.second.name, module.first, var.second.var->addr());
-			}
-
-			// Initialize HLE variables (TODO)
-			for (auto& var : _sm->variables)
-			{
-				var.second.init();
-			}
-		}
-
-		for (auto& entry : module.second.functions)
-		{
-			const u32 fnid = entry.first;
-			const u32 faddr = entry.second.first;
-
-			if (faddr == 0)
-			{
-				if (const auto _sf = _sm && _sm->functions.count(fnid) ? &_sm->functions.at(fnid) : nullptr)
-				{
-					// Static function
-					for (auto& import : entry.second.second)
-					{
-						const u32 stub = vm::read32(import);
-
-						if (!ppu_patch_import_stub(stub, _sf->index))
-						{
-							LOG_ERROR(LOADER, "Failed to inject code for function '%s' in module '%s' (0x%x)", _sf->name, module.first, stub);
-						}
-						else
-						{
-							LOG_NOTICE(LOADER, "Injected hack for function '%s' in module '%s' (*0x%x)", _sf->name, module.first, stub);
-						}
-					}
-				}
-				else
-				{
-					// TODO
-					const u32 index = ::size32(g_ppu_function_cache);
-					const std::string& fname = ppu_get_function_name(module.first, fnid);
-					g_ppu_function_cache.emplace_back();
-					g_ppu_function_names.emplace_back(fmt::format("%s.%s", module.first, fname));
-					g_ppu_fnid_cache.emplace_back(fnid);
-
-					LOG_ERROR(LOADER, "Unknown function '%s' in module '%s' (index %u)", fname, module.first, index);
-
-					for (auto& import : entry.second.second)
-					{
-						if (_sm)
-						{
-							const u32 stub = vm::read32(import);
-
-							if (!ppu_patch_import_stub(stub, index))
-							{
-								LOG_ERROR(LOADER, "Failed to inject code for function '%s' in module '%s' (0x%x)", fname, module.first, stub);
-							}
-							else
-							{
-								LOG_NOTICE(LOADER, "Injected hack for function '%s' in module '%s' (*0x%x)", fname, module.first, stub);
-							}
-						}
-
-						LOG_WARNING(LOADER, "** Not linked at *0x%x", import);
-					}
-				}
-			}
-		}
-
-		for (auto& entry : module.second.variables)
-		{
-			const u32 vnid = entry.first;
-			const u32 vaddr = entry.second.first;
-
-			if (vaddr == 0)
-			{
-				// Static variable
-				if (const auto _sv = _sm && _sm->variables.count(vnid) ? &_sm->variables.at(vnid) : nullptr)
-				{
-					LOG_NOTICE(LOADER, "Linking HLE variable '%s' in module '%s' (*0x%x):", ppu_get_variable_name(module.first, vnid), module.first, _sv->var->addr());
-
-					for (auto& ref : entry.second.second)
-					{
-						ppu_patch_variable_refs(ref, _sv->var->addr());
-						LOG_NOTICE(LOADER, "** Linked at ref=*0x%x", ref);
-					}
-				}
-				else
-				{
-					LOG_ERROR(LOADER, "Unknown variable '%s' in module '%s'", ppu_get_variable_name(module.first, vnid), module.first);
-
-					for (auto& ref : entry.second.second)
-					{
-						LOG_WARNING(LOADER, "** Not linked at ref=*0x%x", ref);
-					}
-				}
-			}
-			else
-			{
-				// Retro-link LLE variable (TODO: HLE must not be allocated/initialized in this case)
-				if (const auto _sv = _sm && _sm->variables.count(vnid) ? &_sm->variables.at(vnid) : nullptr)
-				{
-					_sv->var->set(vaddr);
-					LOG_NOTICE(LOADER, "Linked LLE variable '%s' in module '%s' -> 0x%x", ppu_get_variable_name(module.first, vnid), module.first, vaddr);
-				}
+				fmt::throw_exception("Failed to load /dev_flash/sys/external/%s: %s", name, obj.get_error());
 			}
 		}
 	}
 
 	{
 		// Analyse executable
-		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0);
+		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0, elf.header.e_entry);
 
 		ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
 
@@ -1410,7 +1324,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
 	// TODO: adjust for liblv2 loading option
-	if (!g_cfg_load_liblv2)
+	u32 entry = static_cast<u32>(elf.header.e_entry);
+
+	if (g_cfg_lib_loader.get() != lib_loader_mode::liblv2only)
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list
@@ -1418,6 +1334,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ ppu_cmd::set_args, 4 }, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 			{ ppu_cmd::hle_call, FIND_FUNC(sys_initialize_tls) },
 		});
+	}
+	else
+	{
+		// Run liblv2.sprx entry point (TODO)
+		entry = loaded_modules[0]->start.addr();
+
+		loaded_modules.clear();
 	}
 
 	// Run start functions
@@ -1440,9 +1363,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	ppu->cmd_list
 	({
 		{ ppu_cmd::set_args, 8 }, u64{args.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{0}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
-		{ ppu_cmd::set_gpr, 11 }, u64{0xabadcafe},
+		{ ppu_cmd::set_gpr, 11 }, u64{elf.header.e_entry},
 		{ ppu_cmd::set_gpr, 12 }, u64{malloc_pagesize},
-		{ ppu_cmd::lle_call, static_cast<u32>(elf.header.e_entry) },
+		{ ppu_cmd::lle_call, entry },
 	});
 
 	// Set actual memory protection (experimental)

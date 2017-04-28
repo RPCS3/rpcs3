@@ -95,6 +95,11 @@ public:
 		return info;
 	}
 
+	static const auto& get()
+	{
+		return access();
+	}
+
 	static const arm_static_module SceAppMgr;
 	static const arm_static_module SceAppUtil;
 	static const arm_static_module SceAudio;

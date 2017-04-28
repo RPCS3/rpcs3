@@ -3,34 +3,17 @@
 // http://www.gnu.org/licenses/gpl-3.0.txt
 
 #include "utils.h"
+#include <cstring>
 #include <stdio.h>
 #include <time.h>
 
 #include <memory>
 
 // Auxiliary functions (endian swap, xor and prng).
-u16 swap16(u16 i)
-{
-	return ((i & 0xFF00) >>  8) | ((i & 0xFF) << 8);
-}
 
-u32 swap32(u32 i)
+void xor_key(unsigned char *dest, const u8* src1, const u8* src2)
 {
-	return ((i & 0xFF000000) >> 24) | ((i & 0xFF0000) >>  8) | ((i & 0xFF00) <<  8) | ((i & 0xFF) << 24);
-}
-
-u64 swap64(u64 i)
-{
-	return ((i & 0x00000000000000ff) << 56) | ((i & 0x000000000000ff00) << 40) |
-		((i & 0x0000000000ff0000) << 24) | ((i & 0x00000000ff000000) <<  8) |
-		((i & 0x000000ff00000000) >>  8) | ((i & 0x0000ff0000000000) >> 24) |
-		((i & 0x00ff000000000000) >> 40) | ((i & 0xff00000000000000) >> 56);
-}
-
-void xor_key(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size)
-{
-	int i;
-	for(i = 0; i < size; i++)
+	for(int i = 0; i < 0x10; i++)
 	{
 		dest[i] = src1[i] ^ src2[i];
 	}
@@ -38,16 +21,10 @@ void xor_key(unsigned char *dest, unsigned char *src1, unsigned char *src2, int 
 
 void prng(unsigned char *dest, int size)
 {
-    unsigned char *buffer = new unsigned char[size];
 	srand((u32)time(0));
 
-	int i;
-	for(i = 0; i < size; i++)
-      buffer[i] = (unsigned char)(rand() & 0xFF);
-
-	memcpy(dest, buffer, size);
-
-	delete[] buffer;
+	for(int i = 0; i < size; i++)
+		dest[i] = (unsigned char)(rand() & 0xFF);
 }
 
 // Hex string conversion auxiliary functions.
@@ -102,19 +79,19 @@ void hex_to_bytes(unsigned char *data, const char *hex_str, unsigned int str_len
 
 bool is_hex(const char* hex_str, unsigned int str_length)
 {
-    static const char hex_chars[] = "0123456789abcdefABCDEF";
+	static const char hex_chars[] = "0123456789abcdefABCDEF";
 
-    if (hex_str == NULL)
-        return false;
+	if (hex_str == NULL)
+		return false;
 
-    unsigned int i;
-    for (i = 0; i < str_length; i++)
+	unsigned int i;
+	for (i = 0; i < str_length; i++)
 	{
 		if (strchr(hex_chars, hex_str[i]) == 0)
 			return false;
 	}
 
-    return true;
+	return true;
 }
 
 // Crypto functions (AES128-CBC, AES128-ECB, SHA1-HMAC and AES-CMAC).
@@ -147,22 +124,11 @@ void aesecb128_encrypt(unsigned char *key, unsigned char *in, unsigned char *out
 
 bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len)
 {
-	unsigned char *out = new unsigned char[key_len];
+	std::unique_ptr<u8> out(new u8[key_len]);
 
-	sha1_hmac(key, key_len, in, in_len, out);
+	sha1_hmac(key, key_len, in, in_len, out.get());
 
-	for (int i = 0; i < hash_len; i++)
-	{
-		if (out[i] != hash[i])
-		{
-			delete[] out;
-			return false;
-		}
-	}
-
-	delete[] out;
-
-	return true;
+	return std::memcmp(out.get(), hash, hash_len) == 0;
 }
 
 void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash)
@@ -172,24 +138,13 @@ void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_
 
 bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len)
 {
-	unsigned char *out = new unsigned char[key_len];
+	std::unique_ptr<u8> out(new u8[key_len]);
 
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);
-	aes_cmac(&ctx, in_len, in, out);
+	aes_cmac(&ctx, in_len, in, out.get());
 
-	for (int i = 0; i < hash_len; i++)
-	{
-		if (out[i] != hash[i])
-		{
-			delete[] out;
-			return false;
-		}
-	}
-
-	delete[] out;
-
-	return true;
+	return std::memcmp(out.get(), hash, hash_len) == 0;
 }
 
 void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash)

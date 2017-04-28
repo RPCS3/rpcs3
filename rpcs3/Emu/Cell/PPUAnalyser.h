@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <map>
 #include <set>
 
@@ -29,10 +30,11 @@ struct ppu_function
 	bs_t<ppu_attr> attr{};
 
 	u32 stack_frame = 0;
-	u32 gate_target = 0;
+	u32 trampoline = 0;
 
 	std::map<u32, u32> blocks; // Basic blocks: addr -> size
-	std::set<u32> called_from; // Set of called functions
+	std::set<u32> calls; // Set of called functions
+	std::set<u32> callers;
 };
 
 // PPU Module Information
@@ -111,7 +113,7 @@ struct ppu_pattern_matrix
 
 extern void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc);
 
-extern std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc);
+extern std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc, u32 entry);
 
 // PPU Instruction Type
 struct ppu_itype
@@ -274,7 +276,6 @@ struct ppu_itype
 		ADDI,
 		ADDIS,
 		BC,
-		HACK,
 		SC,
 		B,
 		MCRF,
@@ -691,7 +692,6 @@ struct ppu_iflag
 		ADDI       = read_ra,
 		ADDIS      = read_ra,
 		BC         = 0,
-		HACK       = 0,
 		SC         = 0,
 		B          = 0,
 		MCRF       = 0,
@@ -1093,7 +1093,6 @@ struct ppu_iname
 	NAME(ADDI)
 	NAME(ADDIS)
 	NAME(BC)
-	NAME(HACK)
 	NAME(SC)
 	NAME(B)
 	NAME(MCRF)

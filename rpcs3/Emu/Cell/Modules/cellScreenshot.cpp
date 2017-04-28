@@ -6,28 +6,28 @@
 
 logs::channel cellScreenshot("cellScreenshot", logs::level::notice);
 
-s32 cellScreenShotSetParameter() //const CellScreenShotSetParam *param
+s32 cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
-	return CELL_OK;
+	cellScreenshot.todo("cellScreenShotSetParameter(param=*0x%x)", param);
+	return CELL_SCREENSHOT_OK;
 }
 
-s32 cellScreenShotSetOverlayImage() //const char *srcDir, const char *srcFile, s32 offset_x, s32 offset_y
+s32 cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> srcFile, s32 offset_x, s32 offset_y)
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
-	return CELL_OK;
+	cellScreenshot.todo("cellScreenShotSetOverlayImage(srcDir=%s, srcFile=%s, offset_x=%d, offset_y=%d)", srcDir, srcFile, offset_x, offset_y);
+	return CELL_SCREENSHOT_OK;
 }
 
 s32 cellScreenShotEnable()
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
-	return CELL_OK;
+	cellScreenshot.todo("cellScreenShotEnable()");
+	return CELL_SCREENSHOT_OK;
 }
 
 s32 cellScreenShotDisable()
 {
-	UNIMPLEMENTED_FUNC(cellScreenshot);
-	return CELL_OK;
+	cellScreenshot.todo("cellScreenShotDisable()");
+	return CELL_SCREENSHOT_OK;
 }
 
 DECLARE(ppu_module_manager::cellScreenShot)("cellScreenShotUtility", []()

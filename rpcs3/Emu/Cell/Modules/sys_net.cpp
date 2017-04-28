@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
@@ -25,8 +25,19 @@ namespace sys_net
 {
 #ifdef _WIN32
 	using socket_t = SOCKET;
+
+	bool socket_error(const socket_t& sock)
+	{
+		return sock == SOCKET_ERROR || sock == INVALID_SOCKET;
+	}
 #else
+#define SOCKET_ERROR (-1)
 	using socket_t = int;
+
+	bool socket_error(const socket_t& sock)
+	{
+		return sock < 0;
+	}
 #endif
 }
 
@@ -90,7 +101,7 @@ struct sys_net_socket final
 	static const u32 id_step = 1;
 	static const u32 id_count = 1024;
 
-	sys_net::socket_t s = -1;
+	sys_net::socket_t s = SOCKET_ERROR;
 
 	explicit sys_net_socket(s32 socket) : s(socket)
 	{
@@ -98,7 +109,7 @@ struct sys_net_socket final
 
 	~sys_net_socket()
 	{
-		if (s != -1)
+		if (!sys_net::socket_error(s))
 #ifdef _WIN32
 			::closesocket(s);
 #else
@@ -211,6 +222,12 @@ namespace sys_net
 		libnet.warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("accept(): socket does not exist");
+			return -1;
+		}
+
 		s32 ret;
 
 		if (!addr)
@@ -250,6 +267,12 @@ namespace sys_net
 		libnet.warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("bind(): socket does not exist");
+			return -1;
+		}
+
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
@@ -270,6 +293,12 @@ namespace sys_net
 	{
 		libnet.warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("connect(): socket does not exist");
+			return -1;
+		}
 
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
@@ -395,6 +424,12 @@ namespace sys_net
 		libnet.warning("listen(s=%d, backlog=%d)", s, backlog);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("listen(): socket does not exist");
+			return -1;
+		}
+
 		s32 ret = ::listen(sock->s, backlog);
 
 		if (ret != 0)
@@ -410,6 +445,12 @@ namespace sys_net
 	{
 		libnet.warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("recv(): socket does not exist");
+			return -1;
+		}
 
 		s32 ret = ::recv(sock->s, buf.get_ptr(), len, flags);
 		
@@ -433,7 +474,13 @@ namespace sys_net
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
 
-		if (s <= 0) {
+		if (!sock || !buf || len == 0)
+		{
+			libnet.error("recvfrom(): invalid arguments buf= *0x%x, len=%d", buf, len);
+			return SYS_NET_EINVAL;
+		}
+
+		if (s < 0) {
 			libnet.error("recvfrom(): invalid socket %d", s);
 			return SYS_NET_EBADF;
 		}
@@ -461,6 +508,12 @@ namespace sys_net
 		libnet.warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("send(): socket does not exist");
+			return -1;
+		}
+
 		s32 ret = ::send(sock->s, buf.get_ptr(), len, flags);
 		
 		if (ret < 0)
@@ -483,6 +536,12 @@ namespace sys_net
 		libnet.warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("sendto(): socket does not exist");
+			return -1;
+		}
+
 		::sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
@@ -501,6 +560,12 @@ namespace sys_net
 	{
 		libnet.warning("setsockopt(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("setsockopt(): socket does not exist");
+			return -1;
+		}
 
 		if (level != SOL_SOCKET && level != IPPROTO_TCP)
 		{
@@ -564,6 +629,18 @@ namespace sys_net
 			case  OP_SO_USESIGNATURE:
 			{
 				libnet.warning("Socket option OP_SO_USESIGNATURE is unimplemented");
+				break;
+			}
+			case OP_SO_BROADCAST:
+			{
+				u32 enablebroadcast = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_BROADCAST, (char*)&enablebroadcast, sizeof(enablebroadcast));
+				break;
+			}
+			case OP_SO_REUSEADDR:
+			{
+				u32 reuseaddr = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_REUSEADDR, (char*)&reuseaddr, sizeof(reuseaddr));
 				break;
 			}
 			default:
@@ -656,6 +733,12 @@ namespace sys_net
 		libnet.warning("shutdown(s=%d, how=%d)", s, how);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
+		if (!sock)
+		{
+			libnet.error("shutdown(): non existent socket cannot be shutdown");
+			return -1;
+		}
+
 		s32 ret = ::shutdown(sock->s, how);
 
 		if (ret != 0)
@@ -692,7 +775,7 @@ namespace sys_net
 
 		socket_t sock = ::socket(family, type, protocol);
 
-		if (sock < 0)
+		if (socket_error(sock))
 		{
 			libnet.error("socket(): error %d", get_errno() = get_last_error());
 			return -1;
@@ -705,6 +788,12 @@ namespace sys_net
 	{
 		libnet.warning("socketclose(s=%d)", s);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
+
+		if (!sock)
+		{
+			libnet.error("socketclose(): socket does not exist, or was already closed");
+			return -1;
+		}
 
 #ifdef _WIN32
 		s32 ret = ::closesocket(sock->s);
@@ -810,7 +899,25 @@ namespace sys_net
 		return CELL_OK;
 	}
 
+	s32 sys_net_get_if_list()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_net_get_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
 	s32 sys_net_get_netemu_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_net_get_routing_table_af()
 	{
 		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
@@ -933,6 +1040,221 @@ namespace sys_net
 		libnet.todo("sys_net_free_thread_context(tid=%d, flags=%d)", tid, flags);
 		return CELL_OK;
 	}
+	
+	s32 _sys_net_lib_abort()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_bnet_control()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 __sys_net_lib_calloc()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_free()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_get_system_time()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_if_nametoindex()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_ioctl()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 __sys_net_lib_malloc()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_rand()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 __sys_net_lib_realloc()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_reset_libnetctl_queue()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_set_libnetctl_queue()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_thread_create()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 _sys_net_lib_thread_exit()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_thread_join()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sync_clear()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 _sys_net_lib_sync_create()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sync_destroy()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 _sys_net_lib_sync_signal()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sync_wait()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_sysctl()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sys_net_lib_usleep()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	
+	s32 sys_netset_abort()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_close()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_get_if_id()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_get_status()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_if_down()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_get_key_value()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+	s32 sys_netset_if_up()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_netset_open()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_get_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_add_name_server_with_char()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_flush_route()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_set_default_gateway()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_set_ip_and_mask()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 _sce_net_set_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 }
 
 // Define macro for namespace
@@ -976,7 +1298,10 @@ DECLARE(ppu_module_manager::libnet)("sys_net", []()
 	REG_FUNC_(sys_net_set_udpp2p_test_param);
 	REG_FUNC_(sys_net_get_lib_name_server);
 	REG_FUNC_(sys_net_if_ctl);
+	REG_FUNC_(sys_net_get_if_list);
+	REG_FUNC_(sys_net_get_name_server);
 	REG_FUNC_(sys_net_get_netemu_test_param);
+	REG_FUNC_(sys_net_get_routing_table_af);
 	REG_FUNC_(sys_net_get_sockinfo);
 	REG_FUNC_(sys_net_close_dump);
 	REG_FUNC_(sys_net_set_test_param);
@@ -996,4 +1321,47 @@ DECLARE(ppu_module_manager::libnet)("sys_net", []()
 	REG_FUNC_(_sys_net_h_errno_loc);
 	REG_FUNC_(sys_net_set_netemu_test_param);
 	REG_FUNC_(sys_net_free_thread_context);
+	
+	REG_FUNC_(_sys_net_lib_abort);
+	REG_FUNC_(_sys_net_lib_bnet_control);
+	REG_FUNC_(__sys_net_lib_calloc);
+	REG_FUNC_(_sys_net_lib_free);
+	REG_FUNC_(_sys_net_lib_get_system_time);
+	REG_FUNC_(_sys_net_lib_if_nametoindex);
+	REG_FUNC_(_sys_net_lib_ioctl);
+	REG_FUNC_(__sys_net_lib_malloc);
+	REG_FUNC_(_sys_net_lib_rand);
+	REG_FUNC_(__sys_net_lib_realloc);
+	REG_FUNC_(_sys_net_lib_reset_libnetctl_queue);
+	REG_FUNC_(_sys_net_lib_set_libnetctl_queue);
+	
+	REG_FUNC_(_sys_net_lib_thread_create);
+	REG_FUNC_(_sys_net_lib_thread_exit);
+	REG_FUNC_(_sys_net_lib_thread_join);
+
+	REG_FUNC_(_sys_net_lib_sync_clear);
+	REG_FUNC_(_sys_net_lib_sync_create);
+	REG_FUNC_(_sys_net_lib_sync_destroy);
+	REG_FUNC_(_sys_net_lib_sync_signal);
+	REG_FUNC_(_sys_net_lib_sync_wait);
+
+	REG_FUNC_(_sys_net_lib_sysctl);
+	REG_FUNC_(_sys_net_lib_usleep);
+	
+	REG_FUNC_(sys_netset_abort);
+	REG_FUNC_(sys_netset_close);
+	REG_FUNC_(sys_netset_get_if_id);
+	REG_FUNC_(sys_netset_get_key_value);
+	REG_FUNC_(sys_netset_get_status);
+	REG_FUNC_(sys_netset_if_down);
+	REG_FUNC_(sys_netset_if_up);
+	REG_FUNC_(sys_netset_open);
+
+	REG_FUNC_(_sce_net_add_name_server_with_char);
+	REG_FUNC_(_sce_net_flush_route);
+
+	REG_FUNC_(_sce_net_get_name_server);
+	REG_FUNC_(_sce_net_set_default_gateway);
+	REG_FUNC_(_sce_net_set_ip_and_mask);
+	REG_FUNC_(_sce_net_set_name_server);
 });

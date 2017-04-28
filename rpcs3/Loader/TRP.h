@@ -7,7 +7,7 @@ struct TRPHeader
 	be_t<u64> trp_file_size;
 	be_t<u32> trp_files_count;
 	be_t<u32> trp_element_size;
-	be_t<u32> trp_unknown;
+	be_t<u32> trp_dev_flag;
 	unsigned char sha1[20];
 	unsigned char padding[16];
 };

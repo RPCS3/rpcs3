@@ -15,10 +15,40 @@
 #include "ec.h"
 
 // Auxiliary functions (endian swap, xor, prng and file name).
-u16 swap16(u16 i);
-u32 swap32(u32 i);
-u64 swap64(u64 i);
-void xor_key(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size);
+inline u16 swap16(u16 i)
+{
+#if defined(__GNUG__)
+	return __builtin_bswap16(i);
+#else
+	return _byteswap_ushort(i);
+#endif
+}
+
+inline u32 swap32(u32 i)
+{
+#if defined(__GNUG__)
+	return __builtin_bswap32(i);
+#else
+	return _byteswap_ulong(i);
+#endif
+}
+
+inline u64 swap64(u64 i)
+{
+#if defined(__GNUG__)
+	return __builtin_bswap64(i);
+#else
+	return _byteswap_uint64(i);
+#endif
+}
+
+void xor_key(unsigned char *dest, const u8* src1, const u8* src2);
+inline void xor_key_sse(u8* dest, const u8* src1, const u8* src2)
+{
+	_mm_storeu_si128(&(((__m128i*)dest)[0]),
+		_mm_xor_si128(_mm_loadu_si128((__m128i*)src1), _mm_loadu_si128((__m128i*)src2)));
+}
+
 void prng(unsigned char *dest, int size);
 char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH]);
 

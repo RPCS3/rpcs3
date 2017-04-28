@@ -23,15 +23,20 @@ cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
 	{ "Auto", -1. },
 });
 
+extern cfg::bool_entry g_cfg_rsx_use_gpu_texture_scaling;
+
 namespace rsx
 {
 	rsx_state method_registers;
 	
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
-	[[noreturn]] void invalid_method(thread*, u32 _reg, u32 arg)
+	void invalid_method(thread* rsx, u32 _reg, u32 arg)
 	{
-		fmt::throw_exception("Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		//Don't throw, gather information and ignore broken/garbage commands
+		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		rsx->invalid_command_interrupt_raised = true;
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -113,9 +118,14 @@ namespace rsx
 			static const size_t attribute_index = index / increment_per_array_index;
 			static const size_t vertex_subreg = index % increment_per_array_index;
 
+			const auto vtype = vertex_data_type_from_element_type<type>::type;
+
+			if (rsx->in_begin_end)
+				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, vtype, arg);
+
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
 
-			info.type = vertex_data_type_from_element_type<type>::type;
+			info.type = vtype;
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
@@ -185,6 +195,31 @@ namespace rsx
 			}
 		};
 
+		template<u32 index>
+		struct set_vertex_data_scaled4s_m
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				LOG_ERROR(RSX, "SCALED_4S vertex data format is not properly implemented");
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
+			}
+		};
+
+		void set_array_element16(thread* rsx, u32, u32 arg)
+		{
+			if (rsx->in_begin_end)
+			{
+				rsx->append_array_element(arg & 0xFFFF);
+				rsx->append_array_element(arg >> 16);
+			}
+		}
+
+		void set_array_element32(thread* rsx, u32, u32 arg)
+		{
+			if (rsx->in_begin_end)
+				rsx->append_array_element(arg);
+		}
+
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
@@ -243,31 +278,28 @@ namespace rsx
 				return;
 			}
 
-			u32 max_vertex_count = 0;
-
-			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+			//Check if we have immediate mode vertex data in a driver-local buffer
+			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
 			{
-				auto &vertex_info = rsx::method_registers.register_vertex_info[index];
+				const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
+				const u32 push_buffer_index_count = rsxthr->get_push_buffer_index_count();
 
-				if (vertex_info.size > 0)
+				//Need to set this flag since it overrides some register contents
+				rsx::method_registers.current_draw_clause.is_immediate_draw = true;
+
+				if (push_buffer_index_count)
 				{
-					u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-					u32 element_count = vertex_info.size;
-
-					vertex_info.frequency = element_count;
-
-					if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
-					{
-						max_vertex_count = std::max<u32>(max_vertex_count, element_count);
-					}
+					rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
+					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_index_count));
+				}
+				else if (push_buffer_vertices_count)
+				{
+					rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
+					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
 				}
 			}
-
-			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none && max_vertex_count)
-			{
-				rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-				rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, max_vertex_count));
-			}
+			else
+				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
 
 			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
 			        rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
@@ -543,10 +575,46 @@ namespace rsx
 				}
 			}
 
+			if (g_cfg_rsx_use_gpu_texture_scaling && dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
+			{
+				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
+				//TODO: Figure out more instances where we can use this without problems
+
+				blit_src_info src_info;
+				blit_dst_info dst_info;
+
+				src_info.format = src_color_format;
+				src_info.width = in_w;
+				src_info.height = in_h;
+				src_info.pitch = in_pitch;
+				src_info.slice_h = slice_h;
+				src_info.offset_x = in_x;
+				src_info.offset_y = in_y;
+				src_info.pixels = pixels_src;
+				src_info.rsx_address = get_address(src_offset, src_dma);
+
+				dst_info.format = dst_color_format;
+				dst_info.width = convert_w;
+				dst_info.height = convert_h;
+				dst_info.clip_x = clip_x;
+				dst_info.clip_y = clip_y;
+				dst_info.clip_width = clip_w;
+				dst_info.clip_height = clip_h;
+				dst_info.offset_x = out_x;
+				dst_info.offset_y = out_y;
+				dst_info.pitch = out_pitch;
+				dst_info.pixels = pixels_dst;
+				dst_info.rsx_address = get_address(dst_offset, dst_dma);
+				dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
+
+				if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
+					return;
+			}
+
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
 				if (need_convert || need_clip)
-				{
+				{					
 					if (need_clip)
 					{
 						if (need_convert)
@@ -836,7 +904,7 @@ namespace rsx
 		registers[NV4097_SET_LINE_WIDTH] = 1 << 3;
 
 		// These defaults were found using After Burner Climax (which never set fog mode despite using fog input)
-		registers[NV4097_SET_FOG_MODE] = 0x2601; // rsx::fog_mode::linear;
+		registers[NV4097_SET_FOG_MODE] = CELL_GCM_FOG_MODE_LINEAR;
 		(f32&)registers[NV4097_SET_FOG_PARAMS] = 1.;
 		(f32&)registers[NV4097_SET_FOG_PARAMS + 1] = 1.;
 
@@ -1244,6 +1312,12 @@ namespace rsx
 		methods[NV3089_IMAGE_IN_OFFSET]                   = nullptr;
 		methods[NV3089_IMAGE_IN]                          = nullptr;
 
+		//Some custom GCM methods
+		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
+		
+		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
+		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
+
 		bind_array<NV4097_SET_ANISO_SPREAD, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nullptr>();
@@ -1286,6 +1360,9 @@ namespace rsx
 		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
+		bind<NV4097_ARRAY_ELEMENT16, nv4097::set_array_element16>();
+		bind<NV4097_ARRAY_ELEMENT32, nv4097::set_array_element32>();
+		bind_range<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nv4097::set_vertex_data_scaled4s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();
@@ -1333,7 +1410,7 @@ namespace rsx
 
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
-		bind<GCM_SET_USER_COMMAND, user_command>();
+		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
 
 		return true;	
 	}();

@@ -1089,10 +1089,11 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	memcpy(klicensee_key, key_v.GetKlicenseeKey(), 0x10);
 
 	// Use klicensee if available.
-	if (klicensee_key != NULL)
+	if (memcmp(klicensee_key, std::array<u8, 0x10>{0}.data(), 0x10))
+	{
 		memcpy(npdrm_key, klicensee_key, 0x10);
-
-	if (ctrl->npdrm.license == 1)  // Network license.
+	}
+	else if (ctrl->npdrm.license == 1)  // Network license.
 	{
 		LOG_ERROR(LOADER, "SELF: Can't decrypt network NPDRM!");
 		return false;
@@ -1131,7 +1132,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	return true;
 }
 
-bool SELFDecrypter::LoadMetadata()
+bool SELFDecrypter::LoadMetadata(u8* klic_key)
 {
 	aes_context aes;
 	u32 metadata_info_size = SIZE_32(meta_info);
@@ -1149,6 +1150,10 @@ bool SELFDecrypter::LoadMetadata()
 
 	// Find the right keyset from the key vault.
 	SELF_KEY keyset = key_v.FindSelfKey(app_info.self_type, sce_hdr.se_flags, app_info.version);
+
+	// Set klic if given
+	if (klic_key)
+		key_v.SetKlicenseeKey(klic_key);
 
 	// Copy the necessary parameters.
 	u8 metadata_key[0x20];
@@ -1480,7 +1485,7 @@ static bool CheckDebugSelf(fs::file& s)
 	return false;
 }
 
-extern fs::file decrypt_self(fs::file elf_or_self)
+extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
 {	
 	if (!elf_or_self) 
 	{
@@ -1506,7 +1511,7 @@ extern fs::file decrypt_self(fs::file elf_or_self)
 		}
 		
 		// Load and decrypt the SELF file metadata.
-		if (!self_dec.LoadMetadata())
+		if (!self_dec.LoadMetadata(klic_key))
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
 			return fs::file{};
@@ -1524,4 +1529,36 @@ extern fs::file decrypt_self(fs::file elf_or_self)
 	}
 
 	return elf_or_self;
+}
+
+extern bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
+{
+	if (!self)
+		return false;
+
+	self.seek(0);
+
+	if (self.size() >= 4 && self.read<u32>() == "SCE\0"_u32)
+	{
+		// Check the ELF file class (32 or 64 bit).
+		bool isElf32 = IsSelfElf32(self);
+
+		// Start the decrypter on this SELF file.
+		SELFDecrypter self_dec(self);
+
+		// Load the SELF file headers.
+		if (!self_dec.LoadHeaders(isElf32))
+		{
+			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
+			return false;
+		}
+
+		// Load and decrypt the SELF file metadata.
+		if (!self_dec.LoadMetadata(klic_key))
+		{
+			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
+			return false;
+		}
+	}
+	return true;
 }

@@ -13,7 +13,6 @@
 logs::channel cellGcmSys("cellGcmSys", logs::level::notice);
 
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
-extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
 
 const u32 tiled_pitches[] = {
 	0x00000000, 0x00000200, 0x00000300, 0x00000400,
@@ -379,13 +378,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	current_context.begin.set(g_defaultCommandBufferBegin + 4096); // 4 kb reserved at the beginning
 	current_context.end.set(g_defaultCommandBufferBegin + 32 * 1024 - 4); // 4b at the end for jump
 	current_context.current = current_context.begin;
-	current_context.callback.set(gcm_info.context_addr + 0x40);
-
-	vm::write32(gcm_info.context_addr + 0x40, gcm_info.context_addr + 0x48);
-	vm::write32(gcm_info.context_addr + 0x44, 0xabadcafe);
-	vm::write32(gcm_info.context_addr + 0x48, ppu_instructions::HACK(FIND_FUNC(cellGcmCallback)));
-	vm::write32(gcm_info.context_addr + 0x4c, ppu_instructions::BLR());
-	ppu_register_function_at(gcm_info.context_addr + 0x48, 8, BIND_FUNC(cellGcmCallback));
+	current_context.callback.set(ppu_function_manager::addr + 8 * FIND_FUNC(cellGcmCallback));
 
 	vm::_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	context->set(gcm_info.context_addr);
@@ -815,9 +808,9 @@ s32 cellGcmSetQueueHandler()
 	return CELL_OK;
 }
 
-s32 cellGcmSetSecondVHandler()
+s32 cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmSetSecondVHandler(handler=0x%x)", handler);
 	return CELL_OK;
 }
 
@@ -1033,7 +1026,7 @@ s32 cellGcmUnmapEaIoAddress(u32 ea)
 	}
 	else
 	{
-		cellGcmSys.error("cellGcmUnmapEaIoAddress(ea=0x%x): UnmapRealAddress() failed");
+		cellGcmSys.error("cellGcmUnmapEaIoAddress(ea=0x%x): UnmapRealAddress() failed", ea);
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -1057,7 +1050,7 @@ s32 cellGcmUnmapIoAddress(u32 io)
 	}
 	else
 	{
-		cellGcmSys.error("cellGcmUnmapIoAddress(io=0x%x): UnmapAddress() failed");
+		cellGcmSys.error("cellGcmUnmapIoAddress(io=0x%x): UnmapAddress() failed", io);
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -1323,12 +1316,10 @@ s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 co
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
 
-		ppu.state += cpu_flag::is_waiting;
 		ppu.test_state();
 		busy_wait();
 	}
 
-	ppu.test_state();
 	return CELL_OK;
 }
 
@@ -1444,5 +1435,5 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGpadCaptureSnapshot);
 
 	// Special
-	REG_FNID(cellGcmSys, 0x00000000, cellGcmCallback);
+	REG_FUNC(cellGcmSys, cellGcmCallback).flags = MFF_HIDDEN;
 });

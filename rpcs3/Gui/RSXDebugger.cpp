@@ -287,14 +287,14 @@ void RSXDebugger::OnChangeToolsAddr(wxCommandEvent& event)
 
 void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 {
-	if(vm::check_addr(m_addr))
+	if(vm::check_addr(m_addr, 4))
 	{
 		int items = event.ControlDown() ? m_item_count : 1;
 
 		for(int i=0; i<items; ++i)
 		{
 			u32 offset;
-			if(vm::check_addr(m_addr))
+			if(vm::check_addr(m_addr, 4))
 			{
 				u32 cmd = vm::ps3::read32(m_addr);
 				u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)

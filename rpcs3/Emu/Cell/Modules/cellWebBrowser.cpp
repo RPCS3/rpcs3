@@ -190,9 +190,10 @@ s32 cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<u32>
 	return CELL_OK;
 }
 
-s32 cellWebBrowserGetUsrdataOnGameExit()
+s32 cellWebBrowserGetUsrdataOnGameExit(vm::ptr<CellWebBrowserUsrdata> ptr)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserGetUsrdataOnGameExit(ptr=*0x%x", ptr);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserInitialize()

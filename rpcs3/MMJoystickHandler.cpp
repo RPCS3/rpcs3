@@ -54,7 +54,7 @@ void MMJoystickHandler::Init(const u32 max_connect)
 		{
 			g_mmjoystick_config.load();
 			m_pads.emplace_back(
-				CELL_PAD_STATUS_ASSIGN_CHANGES,
+				CELL_PAD_STATUS_DISCONNECTED,
 				CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE,
 				CELL_PAD_DEV_TYPE_STANDARD
@@ -114,6 +114,8 @@ void MMJoystickHandler::Close()
 
 DWORD MMJoystickHandler::ThreadProcedure()
 {
+	// holds internal controller state change
+	std::array<bool, CELL_PAD_MAX_PORT_NUM> last_connection_status = {};
 	while (active)
 	{
 		MMRESULT status;
@@ -128,11 +130,17 @@ DWORD MMJoystickHandler::ThreadProcedure()
 			switch (status)
 			{
 			case JOYERR_UNPLUGGED:
+				if (last_connection_status[i] == true)
+					pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				last_connection_status[i] = false;
 				pad.m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				break;
 
 			case JOYERR_NOERROR:
 				++online;
+				if (last_connection_status[i] == false)
+					pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				last_connection_status[i] = true;
 				pad.m_port_status |= CELL_PAD_STATUS_CONNECTED;
 				for (DWORD j = 0; j <= 12; j++)
 				{

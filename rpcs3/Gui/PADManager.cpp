@@ -8,7 +8,7 @@
 extern KeyboardPadConfig g_kbpad_config;
 
 PADManager::PADManager(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "PAD Settings")
+	: wxDialog(parent, wxID_ANY, "Keyboard Settings")
 	, m_button_id(0)
 	, m_key_pressed(false)
 {

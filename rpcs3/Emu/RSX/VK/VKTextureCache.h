@@ -143,12 +143,38 @@ namespace vk
 		//Helpers
 		VkComponentMapping get_component_map(rsx::fragment_texture &tex, u32 gcm_format)
 		{
-			return vk::get_component_mapping(gcm_format, tex.remap());
+			//Decoded remap returns 2 arrays; a redirection table and a lookup reference
+			auto decoded_remap = tex.decoded_remap();
+
+			//NOTE: Returns mapping in A-R-G-B
+			auto native_mapping = vk::get_component_mapping(gcm_format);
+			VkComponentSwizzle final_mapping[4] = {};
+
+			for (u8 channel = 0; channel < 4; ++channel)
+			{
+				switch (decoded_remap.second[channel])
+				{
+				case CELL_GCM_TEXTURE_REMAP_ONE:
+					final_mapping[channel] = VK_COMPONENT_SWIZZLE_ONE;
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ZERO:
+					final_mapping[channel] = VK_COMPONENT_SWIZZLE_ZERO;
+					break;
+				default:
+					LOG_ERROR(RSX, "Unknown remap lookup value %d", decoded_remap.second[channel]);
+				case CELL_GCM_TEXTURE_REMAP_REMAP:
+					final_mapping[channel] = native_mapping[decoded_remap.first[channel]];
+					break;
+				}
+			}
+
+			return { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 		}
 
 		VkComponentMapping get_component_map(rsx::vertex_texture &tex, u32 gcm_format)
 		{
-			return vk::get_component_mapping(gcm_format, (0 | 1 << 2 | 2 << 4 | 3 << 6));
+			auto mapping = vk::get_component_mapping(gcm_format);
+			return { mapping[1], mapping[2], mapping[3], mapping[0] };
 		}
 
 	public:
@@ -166,6 +192,12 @@ namespace vk
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
+
+			if (!texaddr || !range)
+			{
+				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, range);
+				return nullptr;
+			}
 
 			//First check if it exists as an rtt...
 			vk::image *rtt_texture = nullptr;
@@ -263,7 +295,7 @@ namespace vk
 
 			region.reset(texaddr, range);
 			region.create(tex.width(), height, depth, tex.get_exact_mipmap_count(), view, image);
-			region.protect(0, vm::page_writable);
+			region.protect(utils::protection::ro);
 			region.set_dirty(false);
 
 			texture_cache_range = region.get_min_max(texture_cache_range);

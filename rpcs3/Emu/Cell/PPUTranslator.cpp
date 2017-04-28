@@ -74,8 +74,8 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base)
 	m_base = new GlobalVariable(*module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, "__mptr");
 
 	// Thread context struct (TODO: safer member access)
-	const auto off0 = OFFSET_32(ppu_thread, state);
-	const auto off1 = OFFSET_32(ppu_thread, gpr);
+	const u32 off0 = offset32(&ppu_thread::state);
+	const u32 off1 = offset32(&ppu_thread::gpr);
 	std::vector<Type*> thread_struct;
 	thread_struct.emplace_back(ArrayType::get(GetType<char>(), off0));
 	thread_struct.emplace_back(GetType<u32>()); // state
@@ -84,6 +84,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base)
 	thread_struct.insert(thread_struct.end(), 32, GetType<f64>()); // fpr[0..31]
 	thread_struct.insert(thread_struct.end(), 32, GetType<u32[4]>()); // vr[0..31]
 	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // cr[0..31]
+	thread_struct.insert(thread_struct.end(), 2, GetType<u64>()); // lr, ctr
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
@@ -139,6 +140,7 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 	m_g_gpr[1] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 1, ".spg");
 	m_g_gpr[2] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 2, ".rtoc");
 	m_g_gpr[13] = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 13, ".tls");
+	m_g_lr = m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 128, ".glr");
 	m_gpr[1] = m_ir->CreateAlloca(GetType<u64>(), nullptr, ".sp");
 
 	// Registers used for args or results (TODO)
@@ -210,12 +212,14 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 
 	/* Initialize local variables */
 	m_ir->CreateStore(m_ir->CreateLoad(m_g_gpr[1]), m_gpr[1]); // SP
+	m_ir->CreateStore(m_ir->CreateLoad(m_g_lr), m_reg_lr); // LR
 	m_ir->CreateStore(m_ir->getFalse(), m_xer_so); // XER.SO
 	m_ir->CreateStore(m_ir->getFalse(), m_vscr_sat); // VSCR.SAT
 	m_ir->CreateStore(m_ir->getTrue(), m_vscr_nj);
 
-	// TODO: only loaded r0 and r12 (r12 is extended argument for program initialization)
+	// TODO: only loaded r0, r11, r12 (extended arguments for program initialization)
 	if (!m_g_gpr[0]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 0)), m_gpr[0]);
+	if (!m_g_gpr[11]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 11)), m_gpr[11]);
 	if (!m_g_gpr[12]) m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 3 + 12)), m_gpr[12]);
 
 	m_jtr = BasicBlock::Create(m_context, "__jtr", m_function);
@@ -244,7 +248,7 @@ Function* PPUTranslator::TranslateToIR(const ppu_function& info, be_t<u32>* bin,
 		m_ir->SetInsertPoint(m_blocks.at(block.first));
 
 		// Bloat the beginning of each block: check state
-		const auto vstate = m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1));
+		const auto vstate = m_ir->CreateLoad(m_ir->CreateConstGEP2_32(nullptr, m_thread, 0, 1), true);
 		const auto vblock = BasicBlock::Create(m_context, fmt::format("l0c_%llx", block.first), m_function);
 		const auto vcheck = BasicBlock::Create(m_context, fmt::format("lcc_%llx", block.first), m_function);
 
@@ -1772,13 +1776,8 @@ void PPUTranslator::BC(ppu_opcode_t op)
 
 	// External branch
 	UseCondition(CheckBranchProbability(op.bo), cond);
+	if (op.lk) m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 	CallFunction(target, !op.lk);
-}
-
-void PPUTranslator::HACK(ppu_opcode_t op)
-{
-	Call(GetType<void>(), "__hlecall", m_thread, m_ir->getInt32(op.opcode & 0x3ffffff));
-	UndefineVolatileRegisters();
 }
 
 void PPUTranslator::SC(ppu_opcode_t op)
@@ -1814,6 +1813,7 @@ void PPUTranslator::B(ppu_opcode_t op)
 	}
 
 	// External branch or recursive call
+	if (op.lk) m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 	CallFunction(target, !op.lk);
 }
 
@@ -1833,6 +1833,7 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 	if (op.lk)
 	{
 		// Sort of indirect call
+		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 		CallFunction(0, false, m_ir->CreateLoad(m_reg_lr));
 	}
 	else
@@ -1947,6 +1948,7 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 		}
 
 		// Indirect call
+		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 		CallFunction(0, false, m_ir->CreateLoad(m_reg_ctr));
 	}
 }
@@ -3690,7 +3692,7 @@ void PPUTranslator::FCTIW(ppu_opcode_t op)
 	//const auto sat_h = m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::pow(2, 31)));
 	//const auto converted = m_ir->CreateFPToSI(FP_SAT_OP(sat_l, b), GetType<s64>());
 	//SetFpr(op.frd, m_ir->CreateSelect(sat_h, m_ir->getInt64(0x7fffffff), converted));
-	SetFpr(op.frd, m_ir->CreateFPToSI(b, GetType<s32>()));
+	SetFpr(op.frd, Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fi", b));
@@ -3703,7 +3705,7 @@ void PPUTranslator::FCTIW(ppu_opcode_t op)
 void PPUTranslator::FCTIWZ(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, m_ir->CreateFPToSI(b, GetType<s32>()));
+	SetFpr(op.frd, Call(GetType<s32>(), "llvm.x86.sse2.cvttsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
 }
 
 void PPUTranslator::FDIV(ppu_opcode_t op)
@@ -3936,7 +3938,7 @@ void PPUTranslator::FCTID(ppu_opcode_t op)
 	//const auto sat_h = m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::pow(2, 63)));
 	//const auto converted = m_ir->CreateFPToSI(FP_SAT_OP(sat_l, b), GetType<s64>());
 	//SetFpr(op.frd, m_ir->CreateSelect(sat_h, m_ir->getInt64(0x7fffffffffffffff), converted));
-	SetFpr(op.frd, m_ir->CreateFPToSI(b, GetType<s64>()));
+	SetFpr(op.frd, Call(GetType<s64>(), "llvm.x86.sse2.cvtsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fi", b));
@@ -3949,7 +3951,7 @@ void PPUTranslator::FCTID(ppu_opcode_t op)
 void PPUTranslator::FCTIDZ(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, m_ir->CreateFPToSI(b, GetType<s64>()));
+	SetFpr(op.frd, Call(GetType<s64>(), "llvm.x86.sse2.cvttsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
 }
 
 void PPUTranslator::FCFID(ppu_opcode_t op)

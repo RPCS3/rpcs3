@@ -6,7 +6,10 @@
 
 #include <unordered_map>
 #include <algorithm>
+#include <cstring>
 #include <cerrno>
+
+using namespace std::literals::string_literals;
 
 #ifdef _WIN32
 
@@ -99,6 +102,7 @@ static fs::error to_error(DWORD e)
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/statvfs.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -151,6 +155,16 @@ namespace fs
 
 	file_base::~file_base()
 	{
+	}
+
+	stat_t file_base::stat()
+	{
+		fmt::throw_exception("fs::file::stat() not supported for %s", typeid(*this).name());
+	}
+
+	void file_base::sync()
+	{
+		// Do notning
 	}
 
 	dir_base::~dir_base()
@@ -386,6 +400,45 @@ bool fs::is_dir(const std::string& path)
 		g_tls_error = error::exist;
 		return false;
 	}
+
+	return true;
+}
+
+bool fs::statfs(const std::string& path, fs::device_stat& info)
+{
+	if (auto device = get_virtual_device(path))
+	{
+		return device->statfs(path, info);
+	}
+
+#ifdef _WIN32
+	ULARGE_INTEGER avail_free;
+	ULARGE_INTEGER total_size;
+	ULARGE_INTEGER total_free;
+
+	if (!GetDiskFreeSpaceExW(to_wchar(path).get(), &avail_free, &total_size, &total_free))
+	{
+		g_tls_error = to_error(GetLastError());
+		return false;
+	}
+
+	info.block_size = 4096; // TODO
+	info.total_size = total_size.QuadPart;
+	info.total_free = total_free.QuadPart;
+	info.avail_free = avail_free.QuadPart;
+#else
+	struct ::statvfs buf;
+	if (!::statvfs(path.c_str(), &buf) != 0)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+
+	info.block_size = buf.f_frsize;
+	info.total_size = info.block_size * buf.f_blocks;
+	info.total_free = info.block_size * buf.f_bfree;
+	info.avail_free = info.block_size * buf.f_bavail;
+#endif
 
 	return true;
 }
@@ -742,6 +795,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return info;
 		}
 
+		void sync() override
+		{
+			verify("file::sync" HERE), FlushFileBuffers(m_handle);
+		}
+
 		bool trunc(u64 length) override
 		{
 			LARGE_INTEGER old, pos;
@@ -797,7 +855,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_end ? FILE_END :
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
-			verify("file::seek" HERE), SetFilePointerEx(m_handle, pos, &pos, mode);
+			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
+			{
+				g_tls_error = to_error(GetLastError());
+				return -1;
+			}
 
 			return pos.QuadPart;
 		}
@@ -863,6 +925,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return info;
 		}
 
+		void sync() override
+		{
+			verify("file::sync" HERE), ::fsync(m_fd) == 0;
+		}
+
 		bool trunc(u64 length) override
 		{
 			if (::ftruncate(m_fd, length) != 0)
@@ -899,7 +966,12 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
-			verify("file::seek" HERE), result != -1;
+			
+			if (result == -1)
+			{
+				g_tls_error = to_error(errno);
+				return -1;
+			}
 
 			return result;
 		}
@@ -933,11 +1005,6 @@ fs::file::file(const void* ptr, std::size_t size)
 		{
 		}
 
-		fs::stat_t stat() override
-		{
-			fmt::raw_error("fs::file::memory_stream::stat(): not supported");
-		}
-
 		bool trunc(u64 length) override
 		{
 			return false;
@@ -966,11 +1033,20 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
 		{
-			return
-				whence == fs::seek_set ? m_pos = offset :
-				whence == fs::seek_cur ? m_pos = offset + m_pos :
-				whence == fs::seek_end ? m_pos = offset + m_size :
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + m_pos :
+				whence == fs::seek_end ? offset + size() :
 				(fmt::raw_error("fs::file::memory_stream::seek(): invalid whence"), 0);
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			m_pos = new_pos;
+			return m_pos;
 		}
 
 		u64 size() override
@@ -1313,6 +1389,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::inval: return "Invalid arguments";
 		case fs::error::noent: return "Not found";
 		case fs::error::exist: return "Already exists";
+		case fs::error::acces: return "Access violation";
 		}
 
 		return unknown;

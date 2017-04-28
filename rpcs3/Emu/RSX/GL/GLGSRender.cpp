@@ -276,45 +276,6 @@ void GLGSRender::begin()
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
 
-	auto set_clip_plane_control = [&](int index, rsx::user_clip_plane_op control)
-	{
-		int value = 0;
-		int location;
-
-		if (m_program->uniforms.has_location("uc_m" + std::to_string(index), &location))
-		{
-			switch (control)
-			{
-			default:
-				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)control);
-
-			case rsx::user_clip_plane_op::disable:
-				value = 0;
-				break;
-
-			case rsx::user_clip_plane_op::greater_or_equal:
-				value = 1;
-				break;
-
-			case rsx::user_clip_plane_op::less_than:
-				value = -1;
-				break;
-			}
-
-			__glcheck m_program->uniforms[location] = value;
-		}
-
-		__glcheck enable(value, GL_CLIP_DISTANCE0 + index);
-	};
-
-	load_program();
-	set_clip_plane_control(0, rsx::method_registers.clip_plane_0_enabled());
-	set_clip_plane_control(1, rsx::method_registers.clip_plane_1_enabled());
-	set_clip_plane_control(2, rsx::method_registers.clip_plane_2_enabled());
-	set_clip_plane_control(3, rsx::method_registers.clip_plane_3_enabled());
-	set_clip_plane_control(4, rsx::method_registers.clip_plane_4_enabled());
-	set_clip_plane_control(5, rsx::method_registers.clip_plane_5_enabled());
-
 	if (__glcheck enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
 	{
 		__glcheck glCullFace(cull_face(rsx::method_registers.cull_face_mode()));
@@ -322,13 +283,18 @@ void GLGSRender::begin()
 
 	__glcheck glFrontFace(front_face(rsx::method_registers.front_face_mode()));
 
-	__glcheck enable(rsx::method_registers.poly_smooth_enabled(), GL_POLYGON_SMOOTH);
-
 	//NV4097_SET_COLOR_KEY_COLOR
 	//NV4097_SET_SHADER_CONTROL
 	//NV4097_SET_ZMIN_MAX_CONTROL
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
+
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 0);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 1);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 2);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 3);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 4);
+	__glcheck enable(true, GL_CLIP_DISTANCE0 + 5);
 
 	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
@@ -369,6 +335,14 @@ void GLGSRender::end()
 		return;
 	}
 
+	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
+
+	//Load program here since it is dependent on vertex state
+	load_program();
+
+	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
+	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
+
 	if (manually_flush_ring_buffers)
 	{
 		//Use approximations to reseve space. This path is mostly for debug purposes anyway
@@ -397,6 +371,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 	//Setup textures
+	//Setting unused texture to 0 is not needed, but makes program validation happy if we choose to enforce it
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		int location;
@@ -411,6 +386,7 @@ void GLGSRender::end()
 		{
 			m_gl_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]));
 			__glcheck m_gl_texture_cache.upload_texture(i, rsx::method_registers.fragment_textures[i], m_gl_textures[i], m_rtts);
+			__glcheck m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
 		}
 	}
 
@@ -472,14 +448,15 @@ void GLGSRender::end()
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
-	m_uniform_ring_buffer->notify();
+	m_scale_offset_buffer->notify();
+	m_fragment_constants_buffer->notify();
+	m_transform_constants_buffer->notify();
 
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 
 	m_draw_calls++;
 
-	//LOG_WARNING(RSX, "Finished draw call, EID=%d", m_draw_calls);
 	synchronize_buffers();
 
 	rsx::thread::end();
@@ -506,19 +483,37 @@ void GLGSRender::on_init_thread()
 	GSRender::on_init_thread();
 
 	gl::init();
+
 	if (g_cfg_rsx_debug_output)
 		gl::enable_debugging();
+
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
+
+	auto gl_caps = gl::get_driver_caps();
+
+	if (!gl_caps.ARB_texture_buffer_supported)
+	{
+		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_texture_buffer_object is required but not supported by your GPU");
+	}
+
+	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
+	{
+		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
+	}
+
+	//Use industry standard resource alignment values as defaults
+	m_uniform_buffer_offset_align = 256;
+	m_min_texbuffer_alignment = 256;
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_uniform_buffer_offset_align);
 	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
 	m_vao.create();
 
-	const u32 texture_index_offset =
-		rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
+	const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
+
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
 		auto &tex = m_gl_attrib_buffers[index];
@@ -529,30 +524,54 @@ void GLGSRender::on_init_thread()
 		tex.bind();
 	}
 
+	if (!gl_caps.ARB_buffer_storage_supported)
+	{
+		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
+		g_cfg_rsx_gl_legacy_buffers = true;
+	}
+
 	if (g_cfg_rsx_gl_legacy_buffers)
 	{
 		LOG_WARNING(RSX, "Using legacy openGL buffers.");
 		manually_flush_ring_buffers = true;
 
 		m_attrib_ring_buffer.reset(new gl::legacy_ring_buffer());
-		m_uniform_ring_buffer.reset(new gl::legacy_ring_buffer());
+		m_transform_constants_buffer.reset(new gl::legacy_ring_buffer());
+		m_fragment_constants_buffer.reset(new gl::legacy_ring_buffer());
+		m_scale_offset_buffer.reset(new gl::legacy_ring_buffer());
 		m_index_ring_buffer.reset(new gl::legacy_ring_buffer());
 	}
 	else
 	{
 		m_attrib_ring_buffer.reset(new gl::ring_buffer());
-		m_uniform_ring_buffer.reset(new gl::ring_buffer());
+		m_transform_constants_buffer.reset(new gl::ring_buffer());
+		m_fragment_constants_buffer.reset(new gl::ring_buffer());
+		m_scale_offset_buffer.reset(new gl::ring_buffer());
 		m_index_ring_buffer.reset(new gl::ring_buffer());
 	}
 
 	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
-	m_uniform_ring_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
-	m_index_ring_buffer->create(gl::buffer::target::element_array, 16 * 0x100000);
+	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
+	m_transform_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_scale_offset_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
 	if (g_cfg_rsx_overlay)
-		m_text_printer.init();
+	{
+		if (gl_caps.ARB_shader_draw_parameters_supported)
+		{
+			m_text_printer.init();
+			m_text_printer.set_enabled(true);
+		}
+	}
+
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	{
+		m_gl_sampler_states[i].create();
+		m_gl_sampler_states[i].bind(i);
+	}
 
 	m_gl_texture_cache.initialize(this);
 }
@@ -588,9 +607,35 @@ void GLGSRender::on_exit()
 		tex.remove();
 	}
 
-	m_attrib_ring_buffer->remove();
-	m_uniform_ring_buffer->remove();
-	m_index_ring_buffer->remove();
+	for (auto &sampler : m_gl_sampler_states)
+	{
+		sampler.remove();
+	}
+
+	if (m_attrib_ring_buffer)
+	{
+		m_attrib_ring_buffer->remove();
+	}
+
+	if (m_transform_constants_buffer)
+	{
+		m_transform_constants_buffer->remove();
+	}
+
+	if (m_fragment_constants_buffer)
+	{
+		m_fragment_constants_buffer->remove();
+	}
+
+	if (m_scale_offset_buffer)
+	{
+		m_scale_offset_buffer->remove();
+	}
+
+	if (m_index_ring_buffer)
+	{
+		m_index_ring_buffer->remove();
+	}
 
 	m_text_printer.close();
 	m_gl_texture_cache.close();
@@ -615,8 +660,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if (arg & 0x1)
 	{
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
-
-		u32 clear_depth = rsx::method_registers.z_clear_value();
+		u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
 
 		glDepthMask(GL_TRUE);
 		glClearDepth(double(clear_depth) / max_depth_value);
@@ -716,91 +760,62 @@ bool GLGSRender::load_program()
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	m_program->use();
 
-
-	if (old_program == m_program && !m_transform_constants_dirty)
-	{
-		//This path is taken alot so the savings are tangible
-		struct scale_offset_layout
-		{
-			u16 clip_w, clip_h;
-			float scale_x, offset_x, scale_y, offset_y, scale_z, offset_z;
-			float fog0, fog1;
-			u32   alpha_tested;
-			float alpha_ref;
-			u32   transform_branch_bits;
-		}
-		tmp = {};
-		
-		tmp.clip_w = rsx::method_registers.surface_clip_width();
-		tmp.clip_h = rsx::method_registers.surface_clip_height();
-		tmp.scale_x = rsx::method_registers.viewport_scale_x();
-		tmp.offset_x = rsx::method_registers.viewport_offset_x();
-		tmp.scale_y = rsx::method_registers.viewport_scale_y();
-		tmp.offset_y = rsx::method_registers.viewport_offset_y();
-		tmp.scale_z = rsx::method_registers.viewport_scale_z();
-		tmp.offset_z = rsx::method_registers.viewport_offset_z();
-		tmp.fog0 = rsx::method_registers.fog_params_0();
-		tmp.fog1 = rsx::method_registers.fog_params_1();
-		tmp.alpha_tested = rsx::method_registers.alpha_test_enabled();
-		tmp.alpha_ref = rsx::method_registers.alpha_ref();
-		tmp.transform_branch_bits = rsx::method_registers.transform_branch_bits();
-
-		//TODO: Faster comparison algorithm
-		size_t old_hash = m_transform_buffer_hash;
-		m_transform_buffer_hash = 0;
-
-		u8 *data = reinterpret_cast<u8*>(&tmp);
-		for (int i = 0; i < sizeof(tmp); ++i)
-			m_transform_buffer_hash ^= std::hash<char>()(data[i]);
-
-		if (old_hash == m_transform_buffer_hash)
-			return true;
-	}
-
-	m_transform_constants_dirty = false;
-
-	u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	u32 fragment_buffer_size = fragment_constants_size + (17 * 4 * sizeof(float));
-	u32 max_buffer_sz = 512 + 8192 + align(fragment_constants_size, m_uniform_buffer_offset_align);
-
-	if (manually_flush_ring_buffers)
-		m_uniform_ring_buffer->reserve_storage_on_heap(align(max_buffer_sz, 512));
-
 	u8 *buf;
 	u32 scale_offset_offset;
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
+	const u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const u32 fragment_buffer_size = fragment_constants_size + (17 * 4 * sizeof(float));
+
+	if (manually_flush_ring_buffers)
+	{
+		m_scale_offset_buffer->reserve_storage_on_heap(512);
+		m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_buffer_size, 256));
+		if (m_transform_constants_dirty) m_transform_constants_buffer->reserve_storage_on_heap(8192);
+	}
+
 	// Scale offset
-	auto mapping = m_uniform_ring_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
+	auto mapping = m_scale_offset_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	scale_offset_offset = mapping.second;
-	fill_scale_offset_data(buf, false);
+	fill_scale_offset_data(buf, false, true);
+	fill_user_clip_data((char *)buf + 64);
 
-	// Vertex constants
-	mapping = m_uniform_ring_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
-	buf = static_cast<u8*>(mapping.first);
-	vertex_constants_offset = mapping.second;
-	fill_vertex_program_constants_data(buf);
-	*(reinterpret_cast<u32*>(buf + (468 * 4 * sizeof(float)))) = rsx::method_registers.transform_branch_bits();
+	if (m_transform_constants_dirty)
+	{
+		// Vertex constants
+		mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
+		buf = static_cast<u8*>(mapping.first);
+		vertex_constants_offset = mapping.second;
+		fill_vertex_program_constants_data(buf);
+		*(reinterpret_cast<u32*>(buf + (468 * 4 * sizeof(float)))) = rsx::method_registers.transform_branch_bits();
+	}
 
 	// Fragment constants
-	mapping = m_uniform_ring_buffer->alloc_from_heap(fragment_buffer_size, m_uniform_buffer_offset_align);
+	mapping = m_fragment_constants_buffer->alloc_from_heap(fragment_buffer_size, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	fragment_constants_offset = mapping.second;
 	if (fragment_constants_size)
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
-	
+
 	// Fragment state
 	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);
 
-	m_uniform_ring_buffer->bind_range(0, scale_offset_offset, 512);
-	m_uniform_ring_buffer->bind_range(1, vertex_constants_offset, 8192);
-	m_uniform_ring_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
+	m_scale_offset_buffer->bind_range(0, scale_offset_offset, 512);
+	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
+
+	if (m_transform_constants_dirty) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
 
 	if (manually_flush_ring_buffers)
-		m_uniform_ring_buffer->unmap();
+	{
+		m_scale_offset_buffer->unmap();
+		m_fragment_constants_buffer->unmap();
 
+		if (m_transform_constants_dirty) m_transform_constants_buffer->unmap();
+	}
+
+	m_transform_constants_dirty = false;
 	return true;
 }
 
@@ -890,13 +905,13 @@ void GLGSRender::flip(int buffer)
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);
 
-	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical());
+	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
 	if (g_cfg_rsx_overlay)
 	{
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
-		
+
 		m_text_printer.print_text(0, 0, m_frame->client_width(), m_frame->client_height(), "draw calls: " + std::to_string(m_draw_calls));
 		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), "draw call setup: " + std::to_string(m_begin_time) + "us");
 		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
@@ -946,10 +961,23 @@ void GLGSRender::do_local_task()
 
 	for (work_item& q: work_queue)
 	{
+		if (q.processed) continue;
+
 		std::unique_lock<std::mutex> lock(q.guard_mutex);
 
-		//Process this address
-		q.result = m_gl_texture_cache.flush_section(q.address_to_flush);
+		//Check if the suggested section is valid
+		if (!q.section_to_flush->is_flushed())
+		{
+			q.section_to_flush->flush();
+			q.result = true;
+		}
+		else
+		{
+			//Another thread has unlocked this memory region already
+			//Return success
+			q.result = true;
+		}
+
 		q.processed = true;
 
 		//Notify thread waiting on this
@@ -958,13 +986,14 @@ void GLGSRender::do_local_task()
 	}
 }
 
-work_item& GLGSRender::post_flush_request(u32 address)
+work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::cached_texture_section *section)
 {
 	std::lock_guard<std::mutex> lock(queue_guard);
 
 	work_queue.emplace_back();
 	work_item &result = work_queue.back();
 	result.address_to_flush = address;
+	result.section_to_flush = section;
 	return result;
 }
 
@@ -972,8 +1001,12 @@ void GLGSRender::synchronize_buffers()
 {
 	if (flush_draw_buffers)
 	{
-		//LOG_WARNING(RSX, "Flushing RTT buffers EID=%d", m_draw_calls);
 		write_buffers();
 		flush_draw_buffers = false;
 	}
+}
+
+bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
+{
+	return m_gl_texture_cache.upload_scaled_image(src, dst, interpolate, m_rtts);
 }
