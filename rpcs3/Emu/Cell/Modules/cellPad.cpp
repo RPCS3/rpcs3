@@ -250,7 +250,7 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	}
 
 	//not sure if this should officially change with capabilities/portsettings :(
-	data->len = CELL_PAD_MAX_CODES;
+	data->len = 24;
 
 	//report len 0 if nothing changed and if we havent recently cleared buffer
 	if (pad.m_buffer_cleared)
@@ -261,7 +261,9 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	{
 		data->len = 0;
 	}
-
+	data->button[0] = 0x0; // always 0
+	// bits 15-8 reserved, 7-4 = 0x7, 3-0: data->len/2;
+	data->button[1] = (0x7 << 4) | std::min(data->len / 2, 15) & 0xF;
 	//lets still send new data anyway, not sure whats expected still
 	data->button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = pad.m_digital_1;
 	data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = pad.m_digital_2;
