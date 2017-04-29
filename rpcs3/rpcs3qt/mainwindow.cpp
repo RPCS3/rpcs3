@@ -174,8 +174,10 @@ void MainWindow::InstallPkg()
 		}
 	}
 
-	QProgressDialog pdlg(tr("PKG Installer: Please Wait...unpacking"), tr("Cancel"), 0, 1000, this);
+	QProgressDialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
+	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
 	pdlg.setWindowModality(Qt::WindowModal);
+	pdlg.setFixedSize(500, pdlg.height());
 	pdlg.show();
 
 	// Synchronization variable
@@ -258,8 +260,10 @@ void MainWindow::InstallPup()
 		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == std::string::npos; }),
 		updatefilenames.end());
 
-	QProgressDialog pdlg(tr("Firmware Installer"), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	QProgressDialog pdlg(tr("Installing firmware ... please wait ..."), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
 	pdlg.setWindowModality(Qt::WindowModal);
+	pdlg.setFixedSize(500, pdlg.height());
 	pdlg.show();
 
 	// Synchronization variable
