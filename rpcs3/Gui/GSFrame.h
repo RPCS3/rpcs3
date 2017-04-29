@@ -1,27 +1,20 @@
-#ifndef GSFRAME_H
-#define GSFRAME_H
+#pragma once 
 
-#include "stdafx.h"
 #include "Emu/RSX/GSRender.h"
 
-#include <QWidget>
-#include <QWindow>
-
-class GSFrame : public QWindow, public GSFrameBase
+class GSFrame : public wxFrame, public GSFrameBase
 {
-	Q_OBJECT
 	u64 m_frames = 0;
-	QString m_render;
+	std::string m_render;
 
 public:
-	GSFrame(const QString& title, int w, int h);
-signals:
-	void RequestCommand(std::function<void()> func);
-protected:
-	virtual void paintEvent(QPaintEvent *event);
-	virtual void closeEvent(QCloseEvent *event);
+	GSFrame(const wxString& title, int w, int h);
 
-	void keyPressEvent(QKeyEvent *keyEvent);
+protected:
+	virtual void OnPaint(wxPaintEvent& event);
+	virtual void OnClose(wxCloseEvent& event);
+
+	void OnKeyDown(wxKeyEvent& event);
 	void OnFullScreen();
 
 	void close() override;
@@ -29,12 +22,6 @@ protected:
 	bool shown() override;
 	void hide() override;
 	void show() override;
-	/*void OnLeftDclick(wxMouseEvent&)
-	{
-	OnFullScreen();
-	}*/
-
-	//void SetSize(int width, int height);
 
 	void* handle() const override;
 
@@ -45,11 +32,14 @@ protected:
 	int client_width() override;
 	int client_height() override;
 
-private slots:
-	void HandleCommandRequest(std::function<void()> func);
+public:
+	void OnLeftDclick(wxMouseEvent&)
+	{
+		OnFullScreen();
+	}
+
+	//void SetSize(int width, int height);
 
 private:
-	void HandleUICommand(std::function<void()> func);
+	DECLARE_EVENT_TABLE();
 };
-
-#endif

@@ -9,7 +9,7 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/Audio/AudioThread.h"
 
-#include "Gui/mainwindow.h"
+#include "RPCS3Qt/mainwindow.h"
 
 #include <QApplication>
 

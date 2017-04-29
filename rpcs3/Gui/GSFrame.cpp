@@ -1,87 +1,77 @@
-#include "GSFrame.h"
+#include "stdafx.h"
+#include "stdafx_gui.h"
 
 #include "Utilities/Timer.h"
 #include "Emu/System.h"
+#include "rpcs3.h"
 
-#include <QKeyEvent>
-#include <QTimer>
-#include <QThread>
+#include "GSFrame.h"
 
-GSFrame::GSFrame(const QString& title, int w, int h)
-	: QWindow()
+BEGIN_EVENT_TABLE(GSFrame, wxFrame)
+	EVT_PAINT(GSFrame::OnPaint)
+	EVT_SIZE(GSFrame::OnSize)
+END_EVENT_TABLE()
+
+GSFrame::GSFrame(const wxString& title, int w, int h)
+	: wxFrame(nullptr, wxID_ANY, "GSFrame[" + title + "]")
 {
 	m_render = title;
-	// GUITODO get icon.
-	//setIcon( /*wxGetApp().m_MainFrame->GetIcon()*/);
+	SetIcon(wxGetApp().m_MainFrame->GetIcon());
 
-	resize(w, h);
-
-	// I'd love to not use blocking queued connections, but this seems to be the only way to force this code to happen.
-	// When I have it as a nonblocking connection, the UI commands won't work. I have no idea why.
-	connect(this, &GSFrame::RequestCommand, this, &GSFrame::HandleCommandRequest, Qt::BlockingQueuedConnection);
+	SetClientSize(w, h);
+	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);
+	Bind(wxEVT_CLOSE_WINDOW, &GSFrame::OnClose, this);
+	Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 
-void GSFrame::paintEvent(QPaintEvent *event)
+void GSFrame::OnPaint(wxPaintEvent& event)
 {
+	wxPaintDC(this);
 }
 
-void GSFrame::closeEvent(QCloseEvent *event)
+void GSFrame::OnClose(wxCloseEvent& event)
 {
 	Emu.Stop();
 }
 
-void GSFrame::keyPressEvent(QKeyEvent *keyEvent)
+void GSFrame::OnKeyDown(wxKeyEvent& event)
 {
-	auto l_handleKeyEvent = [this ,keyEvent]()
+	switch (event.GetKeyCode())
 	{
-		switch (keyEvent->key())
-		{
-		case Qt::Key_Return: if (keyEvent->modifiers() == Qt::AltModifier) { OnFullScreen(); return; } break;
-		case Qt::Key_Escape: if (visibility() == FullScreen) { setVisibility(Windowed); return; } break;
-		}
-	};
-	HandleUICommand(l_handleKeyEvent);
+	case WXK_RETURN: if (event.AltDown()) { OnFullScreen(); return; } break;
+	case WXK_ESCAPE: if (IsFullScreen()) { ShowFullScreen(false); return; } break;
+	}
+	event.Skip();
 }
 
 void GSFrame::OnFullScreen()
 {
-	auto l_setFullScreenVis = [=]()
-	{
-		if (visibility() == FullScreen)
-		{
-			setVisibility(Windowed);
-		}
-		else
-		{
-			setVisibility(FullScreen);
-		}
-	};
-	HandleUICommand(l_setFullScreenVis);
+	ShowFullScreen(!IsFullScreen());
 }
 
 void GSFrame::close()
 {
-	HandleUICommand([=]() {QWindow::close(); });
+	wxFrame::Close();
 }
 
 bool GSFrame::shown()
 {
-	return QWindow::isVisible();
+	return wxFrame::IsShown();
 }
 
 void GSFrame::hide()
 {
-	HandleUICommand([=]() {QWindow::hide(); });
+	wxFrame::Hide();
 }
 
 void GSFrame::show()
 {
-	HandleUICommand([=]() {QWindow::show(); });
+	wxFrame::Show();
 }
 
 void* GSFrame::handle() const
 {
-	return (HWND) this->winId();
+	return GetHandle();
 }
 
 void* GSFrame::make_context()
@@ -99,12 +89,12 @@ void GSFrame::delete_context(void* ctx)
 
 int GSFrame::client_width()
 {
-	return size().width();
+	return GetClientSize().GetWidth();
 }
 
 int GSFrame::client_height()
 {
-	return size().height();
+	return GetClientSize().GetHeight();
 }
 
 void GSFrame::flip(draw_context_t)
@@ -115,52 +105,23 @@ void GSFrame::flip(draw_context_t)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		QString title = QString::fromStdString(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
+		std::string title = fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec());
 
-		if (!m_render.isEmpty())
-		{
+		if (!m_render.empty())
 			title += " | " + m_render;
-		}
-
+			
 		if (!Emu.GetTitle().empty())
-		{
-			title += QString::fromStdString(" | " + Emu.GetTitle());
-		}
+			title += " | " + Emu.GetTitle();
 
 		if (!Emu.GetTitleID().empty())
-		{
-			title += QString::fromStdString(" | [" + Emu.GetTitleID() + ']');
-		}
+			title += " | [" + Emu.GetTitleID() + ']';
 
-		HandleUICommand([this, title = std::move(title)]() {setTitle(title); });
+		wxGetApp().CallAfter([this, title = std::move(title)]
+		{
+			SetTitle(wxString(title.c_str(), wxConvUTF8));
+		});
 
 		m_frames = 0;
 		fps_t.Start();
-	}
-}
-
-/** Magic. Please don't remove.
- * Qt doesn't like to have UI functions called from non-UI threads [really bad thing to do!!!].  However, connects, WILL handle this scenario cleanly.
- * The idea is that for any UI functions you need to call from non-UI threads, you pass the function (perhaps even a lambda) here.
- * This is equivalent to call_after.  However, I wanted to avoid using Emu callbacks for when we potentially change which thread spawns this window.
-*/
-void GSFrame::HandleCommandRequest(std::function<void()> func)
-{
-	func();
-}
-
-/** Helper method for magic.
-* Prevents having this if/else everywhere for this.
-*/
-void GSFrame::HandleUICommand(std::function<void()> func)
-{
-	// thread() returns the current thread that has the event handler for this QObject. Compare it to the current thread name to see if a special command request is needed.
-	if (QThread::currentThread() != thread())
-	{
-		emit RequestCommand(func);
-	}
-	else
-	{
-		func();
 	}
 }
