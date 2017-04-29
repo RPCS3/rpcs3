@@ -34,6 +34,13 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
+	QFile file("stylesheet.qss");
+	if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		setStyleSheet(file.readAll());
+		file.close();
+	}
+
 	CreateActions();
 	CreateMenus();
 	CreateDockWindows();
