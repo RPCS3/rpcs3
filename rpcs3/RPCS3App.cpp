@@ -37,6 +37,13 @@ RPCS3App::RPCS3App(int argc, char* argv[]) : QApplication(argc, argv)
 
 void RPCS3App::Init()
 {
+	QFile file("stylesheet.qss");
+	if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		setStyleSheet(file.readAll());
+		file.close();
+	}
+
 	// Create the main window (needed as the target for handlers)
 	RPCS3MainWin = new MainWindow(nullptr);
 
