@@ -13,7 +13,7 @@
 #include "KeyboardPadHandler.h"
 #ifdef _MSC_VER
 #include "XInputPadHandler.h"
-//#include "MMJoystickHandler.h"
+#include "MMJoystickHandler.h"
 #endif
 
 
@@ -181,7 +181,7 @@ void RPCS3App::InitializeHandlers()
 		{ "Keyboard", l_magicPadHandler },
 		#ifdef _MSC_VER
 				{ "XInput", &std::make_shared<XInputPadHandler> },
-				//{ "MMJoystick", &std::make_shared<MMJoystickHandler> },
+				{ "MMJoystick", &std::make_shared<MMJoystickHandler> },
 		#endif
 	});
 

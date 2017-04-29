@@ -86,7 +86,7 @@
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>OpenAL.lib;XAudio.lib;D3D12GSRender.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;Advapi32.lib;user32.lib;zlib.lib;shader_code.lib;..\libpng.lib;asmjit.lib;rsx_decompiler.lib;yaml-cpp.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmain.lib;shell32.lib;opengl32.lib;$(QTDIR)\lib\Qt5OpenGL.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Quick.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Qml.lib;$(QTDIR)\lib\Qt5Network.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;OpenAL.lib;XAudio.lib;D3D12GSRender.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;Advapi32.lib;user32.lib;zlib.lib;shader_code.lib;..\libpng.lib;asmjit.lib;rsx_decompiler.lib;yaml-cpp.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmain.lib;shell32.lib;opengl32.lib;$(QTDIR)\lib\Qt5OpenGL.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Quick.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Qml.lib;$(QTDIR)\lib\Qt5Network.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\3rdparty\OpenAL\libs\Win64;..\Vulkan\glslang-build\hlsl\Release;..\Vulkan\glslang-build\SPIRV\Release;..\Vulkan\glslang-build\OGLCompilersDLL\Release;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Release;..\Vulkan\Vulkan-build\loader\Release;..\Vulkan\glslang-build\glslang\Release;..\lib\$(CONFIGURATION)-$(PLATFORM);..\3rdparty\minidx12\Lib;$(QTDIR)\lib;C:\utils\my_sql\my_sql\lib;C:\utils\postgresql\pgsql\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -140,7 +140,7 @@
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>OpenAL.lib;XAudio.lib;D3D12GSRender.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;Advapi32.lib;user32.lib;zlib.lib;shader_code.lib;..\libpng.lib;asmjit.lib;rsx_decompiler.lib;yaml-cpp.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmaind.lib;shell32.lib;opengl32.lib;$(QTDIR)\lib\Qt5OpenGLd.lib;$(QTDIR)\lib\Qt5Widgetsd.lib;$(QTDIR)\lib\Qt5Quickd.lib;$(QTDIR)\lib\Qt5Guid.lib;$(QTDIR)\lib\Qt5Qmld.lib;$(QTDIR)\lib\Qt5Networkd.lib;$(QTDIR)\lib\Qt5Cored.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;OpenAL.lib;XAudio.lib;D3D12GSRender.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;Advapi32.lib;user32.lib;zlib.lib;shader_code.lib;..\libpng.lib;asmjit.lib;rsx_decompiler.lib;yaml-cpp.lib;emucore.lib;dxgi.lib;$(QTDIR)\lib\qtmaind.lib;shell32.lib;opengl32.lib;$(QTDIR)\lib\Qt5OpenGLd.lib;$(QTDIR)\lib\Qt5Widgetsd.lib;$(QTDIR)\lib\Qt5Quickd.lib;$(QTDIR)\lib\Qt5Guid.lib;$(QTDIR)\lib\Qt5Qmld.lib;$(QTDIR)\lib\Qt5Networkd.lib;$(QTDIR)\lib\Qt5Cored.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\3rdparty\OpenAL\libs\Win64;..\Vulkan\glslang-build\hlsl\Debug;..\Vulkan\glslang-build\SPIRV\Debug;..\Vulkan\glslang-build\OGLCompilersDLL\Debug;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Debug;..\Vulkan\Vulkan-build\loader\Debug;..\Vulkan\glslang-build\glslang\Debug;..\3rdparty\minidx12\Lib;..\lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;C:\utils\my_sql\my_sql\lib;C:\utils\postgresql\pgsql\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -179,6 +179,7 @@
     <ClCompile Include="BasicMouseHandler.cpp" />
     <ClCompile Include="KeyboardPadHandler.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MMJoystickHandler.cpp" />
     <ClCompile Include="QTGeneratedFiles\Debug\moc_audiotab.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -488,6 +489,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_NO_DEBUG -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_QUICK_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DNDEBUG "-I.\..\Vulkan\Vulkan-LoaderAndValidationLayers\include" "-I.\..\3rdparty\minidx12\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtQuick" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtQml" "-I$(QTDIR)\include\QtNetwork" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)\." "-I.\QTGeneratedFiles" "-I$(NOINHERIT)\."</Command>
     </CustomBuild>
+    <ClInclude Include="MMJoystickHandler.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="XInputPadHandler.h" />
     <ClInclude Include="\Gui\*.h" />

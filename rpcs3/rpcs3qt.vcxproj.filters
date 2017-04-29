@@ -210,6 +210,9 @@
     <ClCompile Include="XInputPadHandler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
+    <ClCompile Include="MMJoystickHandler.cpp">
+      <Filter>Io\XInput</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -220,6 +223,9 @@
       <Filter>Io\Basic</Filter>
     </ClInclude>
     <ClInclude Include="XInputPadHandler.h">
+      <Filter>Io\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="MMJoystickHandler.h">
       <Filter>Io\XInput</Filter>
     </ClInclude>
   </ItemGroup>
