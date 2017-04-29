@@ -17,7 +17,7 @@ GSFrame::GSFrame(const QString& title, int w, int h)
 	resize(w, h);
 
 	// I'd love to not use blocking queued connections, but this seems to be the only way to force this code to happen.
-	// When I have it as a nonblocking connection, the show command doesn't work. I have no idea why.
+	// When I have it as a nonblocking connection, the UI commands won't work. I have no idea why.
 	connect(this, &GSFrame::RequestCommand, this, &GSFrame::HandleCommandRequest, Qt::BlockingQueuedConnection);
 }
 
