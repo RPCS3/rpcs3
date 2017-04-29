@@ -176,6 +176,7 @@ void MainWindow::InstallPkg()
 
 	QProgressDialog pdlg(tr("PKG Installer: Please Wait...unpacking"), tr("Cancel"), 0, 1000, this);
 	pdlg.setWindowModality(Qt::WindowModal);
+	pdlg.show();
 
 	// Synchronization variable
 	atomic_t<double> progress(0.);
@@ -209,6 +210,7 @@ void MainWindow::InstallPkg()
 			}
 			// Update progress window
 			pdlg.setValue(static_cast<int>(progress * pdlg.maximum()));
+			QCoreApplication::processEvents();
 		}
 
 		if (progress > 0.)
@@ -258,6 +260,7 @@ void MainWindow::InstallPup()
 
 	QProgressDialog pdlg(tr("Firmware Installer"), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowModality(Qt::WindowModal);
+	pdlg.show();
 
 	// Synchronization variable
 	atomic_t<int> progress(0);
@@ -306,6 +309,7 @@ void MainWindow::InstallPup()
 			}
 			// Update progress window
 			pdlg.setValue(static_cast<int>(progress));
+			QCoreApplication::processEvents();
 		}
 
 		update_files_f.close();
