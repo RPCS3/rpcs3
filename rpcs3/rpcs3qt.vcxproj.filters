@@ -25,6 +25,12 @@
     <Filter Include="rpcs3">
       <UniqueIdentifier>{364dd441-10bc-446b-b6aa-4d7b338f30fe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io">
+      <UniqueIdentifier>{cc5a491c-6f1b-491a-8e4a-96743645fd3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\Basic">
+      <UniqueIdentifier>{750a54d9-a15b-4d9a-9938-a15e00ba62f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\Gui\*.cpp">
@@ -168,12 +174,45 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_RPCS3App.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\GSFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="BasicKeyboardHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardPadHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_BasicKeyboardHandler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_BasicKeyboardHandler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="BasicMouseHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_BasicMouseHandler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_BasicMouseHandler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_GSFrame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_GSFrame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="KeyboardPadHandler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">
@@ -226,6 +265,15 @@
     </CustomBuild>
     <CustomBuild Include="RPCS3App.h">
       <Filter>rpcs3</Filter>
+    </CustomBuild>
+    <CustomBuild Include="BasicKeyboardHandler.h">
+      <Filter>Io\Basic</Filter>
+    </CustomBuild>
+    <CustomBuild Include="BasicMouseHandler.h">
+      <Filter>Io\Basic</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Gui\GSFrame.h">
+      <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>
