@@ -91,3 +91,4 @@ rpcs3/rpcs3_*_cotire.cmake
 moc_*.cpp
 rpcs3/rpcs3qt/Debug/
 rpcs3/rpcs3qt/Release/
+rpcs3/stylesheet.qss
