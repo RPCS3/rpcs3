@@ -1,7 +1,7 @@
 #include "RPCS3App.h"
 
 #include "Emu/System.h"
-#include "Gui/GSFrame.h"
+#include "RPCS3Qt/GSFrame.h"
 
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "BasicKeyboardHandler.h"
