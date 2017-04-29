@@ -1097,7 +1097,44 @@ bool ppu_interpreter::VMSUMSHM(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VMSUMSHS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VMSUMSHS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+	const auto& c = ppu.vr[op.vc];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		s64 result = 0;
+		s32 saturated = 0;
+
+		for (uint h = 0; h < 2; h++)
+		{
+			result += a._s16[w * 2 + h] * b._s16[w * 2 + h];
+		}
+
+		result += c._s32[w];
+
+		if (result > 0x7fffffff)
+		{
+			saturated = 0x7fffffff;
+			ppu.sat = true;
+		}
+		else if (result < (s64)(s32)0x80000000)
+		{
+			saturated = 0x80000000;
+			ppu.sat = true;
+		}
+		else
+			saturated = (s32)result;
+
+		d._s32[w] = saturated;
+	}
+	return true;
+}
+
+bool ppu_interpreter_precise::VMSUMSHS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -1163,7 +1200,39 @@ bool ppu_interpreter::VMSUMUHM(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VMSUMUHS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VMSUMUHS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+	const auto& c = ppu.vr[op.vc];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		u64 result = 0;
+		u32 saturated = 0;
+
+		for (uint h = 0; h < 2; h++)
+		{
+			result += (u64)a._u16[w * 2 + h] * (u64)b._u16[w * 2 + h];
+		}
+
+		result += c._u32[w];
+
+		if (result > 0xffffffffu)
+		{
+			saturated = 0xffffffff;
+			ppu.sat = true;
+		}
+		else
+			saturated = (u32)result;
+
+		d._u32[w] = saturated;
+	}
+	return true;
+}
+
+bool ppu_interpreter_precise::VMSUMUHS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -1455,7 +1524,48 @@ bool ppu_interpreter_precise::VPKSWSS(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VPKSWUS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VPKSWUS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	//ppu.vr[op.vd].vi = _mm_packus_epi32(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
+	auto& d = ppu.vr[op.vd];
+	v128 VA = ppu.vr[op.va];
+	v128 VB = ppu.vr[op.vb];
+	for (uint h = 0; h < 4; h++)
+	{
+		s32 result = VA._s32[h];
+
+		if (result > UINT16_MAX)
+		{
+			result = UINT16_MAX;
+			ppu.sat = true;
+		}
+		else if (result < 0)
+		{
+			result = 0;
+			ppu.sat = true;
+		}
+
+		d._u16[h + 4] = result;
+
+		result = VB._s32[h];
+
+		if (result > UINT16_MAX)
+		{
+			result = UINT16_MAX;
+			ppu.sat = true;
+		}
+		else if (result < 0)
+		{
+			result = 0;
+			ppu.sat = true;
+		}
+
+		d._u16[h] = result;
+	}
+	return true;
+}
+
+bool ppu_interpreter_precise::VPKSWUS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	//ppu.vr[op.vd].vi = _mm_packus_epi32(ppu.vr[op.vb].vi, ppu.vr[op.va].vi);
 	auto& d = ppu.vr[op.vd];
@@ -1509,7 +1619,37 @@ bool ppu_interpreter::VPKUHUM(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VPKUHUS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VPKUHUS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	v128 VA = ppu.vr[op.va];
+	v128 VB = ppu.vr[op.vb];
+	for (uint b = 0; b < 8; b++)
+	{
+		u16 result = VA._u16[b];
+
+		if (result > UINT8_MAX)
+		{
+			result = UINT8_MAX;
+			ppu.sat = true;
+		}
+
+		d._u8[b + 8] = (u8)result;
+
+		result = VB._u16[b];
+
+		if (result > UINT8_MAX)
+		{
+			result = UINT8_MAX;
+			ppu.sat = true;
+		}
+
+		d._u8[b] = (u8)result;
+	}
+	return true;
+}
+
+bool ppu_interpreter_precise::VPKUHUS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	v128 VA = ppu.vr[op.va];
@@ -1552,7 +1692,37 @@ bool ppu_interpreter::VPKUWUM(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VPKUWUS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VPKUWUS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	v128 VA = ppu.vr[op.va];
+	v128 VB = ppu.vr[op.vb];
+	for (uint h = 0; h < 4; h++)
+	{
+		u32 result = VA._u32[h];
+
+		if (result > UINT16_MAX)
+		{
+			result = UINT16_MAX;
+			ppu.sat = true;
+		}
+
+		d._u16[h + 4] = result;
+
+		result = VB._u32[h];
+
+		if (result > UINT16_MAX)
+		{
+			result = UINT16_MAX;
+			ppu.sat = true;
+		}
+
+		d._u16[h] = result;
+	}
+	return true;
+}
+
+bool ppu_interpreter_precise::VPKUWUS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	v128 VA = ppu.vr[op.va];
@@ -2046,7 +2216,33 @@ bool ppu_interpreter_precise::VSUBSHS(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VSUBSWS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VSUBSWS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		s64 result = (s64)a._s32[w] - (s64)b._s32[w];
+
+		if (result < INT32_MIN)
+		{
+			d._s32[w] = (s32)INT32_MIN;
+			ppu.sat = true;
+		}
+		else if (result > INT32_MAX)
+		{
+			d._s32[w] = (s32)INT32_MAX;
+			ppu.sat = true;
+		}
+		else
+			d._s32[w] = (s32)result;
+	}
+	return true;
+}
+
+bool ppu_interpreter_precise::VSUBSWS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -2160,7 +2356,7 @@ bool ppu_interpreter::VSUBUWM(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VSUBUWS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VSUBUWS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -2181,7 +2377,28 @@ bool ppu_interpreter::VSUBUWS(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VSUMSWS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::VSUBUWS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		s64 result = (s64)a._u32[w] - (s64)b._u32[w];
+
+		if (result < 0)
+		{
+			d._u32[w] = 0;
+			ppu.sat = true;
+		}
+		else
+			d._u32[w] = (u32)result;
+	}
+	return true;
+}
+
+bool ppu_interpreter_fast::VSUMSWS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -2210,7 +2427,36 @@ bool ppu_interpreter::VSUMSWS(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VSUM2SWS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::VSUMSWS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+
+	s64 sum = b._s32[0];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		sum += a._s32[w];
+	}
+
+	d.clear();
+	if (sum > INT32_MAX)
+	{
+		d._s32[0] = (s32)INT32_MAX;
+		ppu.sat = true;
+	}
+	else if (sum < INT32_MIN)
+	{
+		d._s32[0] = (s32)INT32_MIN;
+		ppu.sat = true;
+	}
+	else
+		d._s32[0] = (s32)sum;
+	return true;
+}
+
+bool ppu_interpreter_fast::VSUM2SWS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -2238,7 +2484,35 @@ bool ppu_interpreter::VSUM2SWS(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VSUM4SBS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::VSUM2SWS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+
+	for (uint n = 0; n < 2; n++)
+	{
+		s64 sum = (s64)a._s32[n * 2] + a._s32[n * 2 + 1] + b._s32[n * 2];
+
+		if (sum > INT32_MAX)
+		{
+			d._s32[n * 2] = (s32)INT32_MAX;
+			ppu.sat = true;
+		}
+		else if (sum < INT32_MIN)
+		{
+			d._s32[n * 2] = (s32)INT32_MIN;
+			ppu.sat = true;
+		}
+		else
+			d._s32[n * 2] = (s32)sum;
+	}
+	d._s32[1] = 0;
+	d._s32[3] = 0;
+	return true;
+}
+
+bool ppu_interpreter_fast::VSUM4SBS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -2269,7 +2543,38 @@ bool ppu_interpreter::VSUM4SBS(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VSUM4SHS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::VSUM4SBS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		s64 sum = b._s32[w];
+
+		for (uint b = 0; b < 4; b++)
+		{
+			sum += a._s8[w * 4 + b];
+		}
+
+		if (sum > INT32_MAX)
+		{
+			d._s32[w] = (s32)INT32_MAX;
+			ppu.sat = true;
+		}
+		else if (sum < INT32_MIN)
+		{
+			d._s32[w] = (s32)INT32_MIN;
+			ppu.sat = true;
+		}
+		else
+			d._s32[w] = (s32)sum;
+	}
+	return true;
+}
+
+bool ppu_interpreter_fast::VSUM4SHS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
@@ -2300,7 +2605,64 @@ bool ppu_interpreter::VSUM4SHS(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VSUM4UBS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::VSUM4SHS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		s64 sum = b._s32[w];
+
+		for (uint h = 0; h < 2; h++)
+		{
+			sum += a._s16[w * 2 + h];
+		}
+
+		if (sum > INT32_MAX)
+		{
+			d._s32[w] = (s32)INT32_MAX;
+			ppu.sat = true;
+		}
+		else if (sum < INT32_MIN)
+		{
+			d._s32[w] = (s32)INT32_MIN;
+			ppu.sat = true;
+		}
+		else
+			d._s32[w] = (s32)sum;
+	}
+	return true;
+}
+
+bool ppu_interpreter_fast::VSUM4UBS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	auto& d = ppu.vr[op.vd];
+	const auto& a = ppu.vr[op.va];
+	const auto& b = ppu.vr[op.vb];
+
+	for (uint w = 0; w < 4; w++)
+	{
+		u64 sum = b._u32[w];
+
+		for (uint b = 0; b < 4; b++)
+		{
+			sum += a._u8[w * 4 + b];
+		}
+
+		if (sum > UINT32_MAX)
+		{
+			d._u32[w] = (u32)UINT32_MAX;
+			ppu.sat = true;
+		}
+		else
+			d._u32[w] = (u32)sum;
+	}
+	return true;
+}
+
+bool ppu_interpreter_precise::VSUM4UBS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
