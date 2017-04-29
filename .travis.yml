@@ -51,7 +51,7 @@ before_install:
     fi;
 
 before_script:
-  - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal
+  - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi
   - mkdir build
   - cd build
   - cmake ..
@@ -84,6 +84,7 @@ addons:
       - lib32stdc++6
       - zlib1g-dev
       - libwxgtk3.0-dev
+      - libudev-dev
   coverity_scan:
     project:
       name: $TRAVIS_REPO_SLUG
