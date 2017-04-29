@@ -11,6 +11,11 @@
 
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "KeyboardPadHandler.h"
+#ifdef _MSC_VER
+#include "XInputPadHandler.h"
+//#include "MMJoystickHandler.h"
+#endif
+
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
@@ -174,11 +179,10 @@ void RPCS3App::InitializeHandlers()
 	{
 		{ "Null", &std::make_shared<NullPadHandler> },
 		{ "Keyboard", l_magicPadHandler },
-		// TODO: Add all other pad handlerss
-		/*#ifdef _MSC_VER
+		#ifdef _MSC_VER
 				{ "XInput", &std::make_shared<XInputPadHandler> },
-				{ "MMJoystick", &std::make_shared<MMJoystickHandler> },
-		#endif*/
+				//{ "MMJoystick", &std::make_shared<MMJoystickHandler> },
+		#endif
 	});
 
 

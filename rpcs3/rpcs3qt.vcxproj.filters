@@ -31,6 +31,9 @@
     <Filter Include="Io\Basic">
       <UniqueIdentifier>{750a54d9-a15b-4d9a-9938-a15e00ba62f8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\XInput">
+      <UniqueIdentifier>{8f3a932a-5c23-4f8c-a29b-003c59840ef8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\Gui\*.cpp">
@@ -204,6 +207,9 @@
     <ClCompile Include="rpcs3qt\graphicstab.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="XInputPadHandler.cpp">
+      <Filter>Io\XInput</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -212,6 +218,9 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="KeyboardPadHandler.h">
       <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="XInputPadHandler.h">
+      <Filter>Io\XInput</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
