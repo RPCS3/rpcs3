@@ -13,6 +13,7 @@
 #include "settingsdialog.h"
 #include "padsettingsdialog.h"
 #include "AutoPauseSettingsDialog.h"
+#include "CgDisasmWindow.h"
 #include "mainwindow.h"
 
 #include <thread>
@@ -363,8 +364,7 @@ void MainWindow::SendOpenSysMenu()
 {
 	//sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 	//m_sys_menu_opened = !m_sys_menu_opened;
-	//wxCommandEvent ce;
-	//UpdateUI(ce);
+	//UpdateUI();
 }
 
 void MainWindow::Settings()
@@ -393,7 +393,11 @@ void MainWindow::SaveData() {}
 
 void MainWindow::ELFCompiler() {}
 
-void MainWindow::CgDisasm() {}
+void MainWindow::CgDisasm()
+{
+	CgDisasmWindow* cgdw = new CgDisasmWindow(this);
+	cgdw->show();
+}
 
 void MainWindow::KernelExplorer() {}
 
@@ -628,7 +632,7 @@ void MainWindow::CreateActions()
 	connect(toolsCompilerAct, &QAction::triggered, this, &MainWindow::ELFCompiler);
 
 	toolsCgDisasmAct = new QAction(tr("&Cg Disasm"), this);
-	toolsCgDisasmAct->setEnabled(false);
+	toolsCgDisasmAct->setEnabled(true);
 	connect(toolsCgDisasmAct, &QAction::triggered, this, &MainWindow::CgDisasm);
 
 	toolsKernelExplorerAct = new QAction(tr("&Kernel Explorer"), this);

@@ -259,10 +259,10 @@ void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 	boot->setFont(f);
 	QAction* configure = myMenu.addAction(tr("&Configure"));
 	myMenu.addSeparator();
-	QAction* removeGame = myMenu.addAction(tr("&Remove Game"));
+	QAction* removeGame = myMenu.addAction(tr("&Remove"));
 	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
 	myMenu.addSeparator();
-	QAction* openGameFolder = myMenu.addAction(tr("&Open Game Folder"));
+	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
 
 	// Create lambdas we need to convert the none argument triggered to have an int argument row.
@@ -279,6 +279,14 @@ void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 	connect(removeConfig, &QAction::triggered, l_removeConfig);
 	connect(openGameFolder, &QAction::triggered, l_openGameFolder);
 	connect(openConfig, &QAction::triggered, l_openConfig);
+
+	//Disable options depending on software category
+	QString category = QString::fromStdString(m_columns.m_col_category->data.at(row));
+	if (category == "HDD Game") ;
+	else if (category == "Disc Game") ;
+	else if (category == "Home") ;
+	else if (category == "Audio/Video") ;
+	else if (category == "Game Data") boot->setEnabled(false), f.setBold(false), boot->setFont(f);
 	
 	myMenu.exec(globalPos);
 }
@@ -310,8 +318,8 @@ void GameListFrame::Configure(int row)
 
 void GameListFrame::RemoveGame(int row)
 {
-	QTableWidgetItem *item = gameList->takeItem(row, 6); // 6 should be path
-	if (QMessageBox::question(this , tr("Confirm Delete"), tr("Permanently delete game files?")) == QMessageBox::Yes)
+	QTableWidgetItem *item = gameList->itemAt(row, 6); // 6 should be path
+	if (QMessageBox::question(this , tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
 	{
 		fs::remove_all(Emu.GetGameDir() + static_cast<std::string>(item->text().toUtf8()));
 	}
@@ -321,7 +329,7 @@ void GameListFrame::RemoveGame(int row)
 void GameListFrame::RemoveCustomConfiguration(int row)
 {
 
-	QTableWidgetItem *item = gameList->takeItem(row, 6); // 6 should be path
+	QTableWidgetItem *item = gameList->itemAt(row, 6); // 6 should be path
 	const std::string config_path = fs::get_config_dir() + "data/" + m_game_data[row].serial + "/config.yml";
 
 	if (fs::is_file(config_path))
