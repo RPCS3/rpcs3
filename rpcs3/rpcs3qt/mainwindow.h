@@ -11,12 +11,21 @@ class MainWindow : public QMainWindow
 {
 	Q_OBJECT
 
+	bool m_sys_menu_opened;
+
 public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
 
 signals:
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
+
+public slots:
+	void OnEmuStop();
+	void OnEmuRun();
+	void OnEmuResume();
+	void OnEmuPause();
+	void OnEmuReady();
 
 private slots:
 	void BootElf();
@@ -59,6 +68,7 @@ private:
 	void CreateMenus();
 	void CreateDockWindows();
 	void DoSettings(bool load);
+	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
 
 	QAction *bootElfAct;

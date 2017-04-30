@@ -14,6 +14,7 @@
 #include "padsettingsdialog.h"
 #include "AutoPauseSettingsDialog.h"
 #include "CgDisasmWindow.h"
+#include "MemoryStringSearcher.h"
 #include "mainwindow.h"
 
 #include <thread>
@@ -33,12 +34,13 @@
 
 #include "rpcs3_version.h"
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false)
 {
 	CreateActions();
 	CreateMenus();
 	CreateDockWindows();
 
+	setMinimumSize(200, minimumSizeHint().height());    // seems fine on win 10
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 }
 
@@ -348,6 +350,10 @@ void MainWindow::Pause()
 	{
 		Emu.Pause();
 	}
+	else if (!Emu.GetPath().empty())
+	{
+		Emu.Load();
+	}
 }
 
 void MainWindow::Stop()
@@ -355,16 +361,19 @@ void MainWindow::Stop()
 	Emu.Stop();
 }
 
+// This is ugly, but PS3 headers shall not be included there.
+extern void sysutil_send_system_cmd(u64 status, u64 param);
+
 void MainWindow::SendExit()
 {
-	//sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
+	sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 }
 
 void MainWindow::SendOpenSysMenu()
 {
-	//sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
-	//m_sys_menu_opened = !m_sys_menu_opened;
-	//UpdateUI();
+	sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
+	m_sys_menu_opened = !m_sys_menu_opened;
+	sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 }
 
 /**
@@ -417,7 +426,11 @@ void MainWindow::MemoryViewer() {}
 
 void MainWindow::RSXDebugger() {}
 
-void MainWindow::StringSearch() {}
+void MainWindow::StringSearch()
+{
+	MemoryStringSearcher* mss = new MemoryStringSearcher(this);
+	mss->show();
+}
 
 void MainWindow::DecryptSPRXLibraries()
 {
@@ -580,6 +593,57 @@ void MainWindow::OnGameListFrameClosed()
 	{
 		showGameListAct->setChecked(false);
 	}
+}
+
+void MainWindow::OnEmuRun()
+{
+	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
+	EnableMenus(true);
+}
+
+void MainWindow::OnEmuResume()
+{
+	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
+}
+
+void MainWindow::OnEmuPause()
+{
+	sysPauseAct->setText(tr("&Resume\tCtrl + E"));
+}
+
+void MainWindow::OnEmuStop()
+{
+	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
+	EnableMenus(false);
+	if (!Emu.GetPath().empty())
+	{
+		sysPauseAct->setText(tr("&Restart\tCtrl + E"));
+		sysPauseAct->setEnabled(true);
+	}
+}
+
+void MainWindow::OnEmuReady()
+{
+	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
+	EnableMenus(true);
+}
+
+void MainWindow::EnableMenus(bool enabled)
+{
+	// Emulation
+	sysPauseAct->setEnabled(enabled);
+	sysStopAct->setEnabled(enabled);
+
+	// PS3 Commands
+	sysSendOpenMenuAct->setEnabled(enabled);
+	sysSendExitAct->setEnabled(enabled);
+
+	// Tools
+	toolsCompilerAct->setEnabled(enabled);
+	toolsKernelExplorerAct->setEnabled(enabled);
+	toolsMemoryViewerAct->setEnabled(enabled);
+	toolsRsxDebuggerAct->setEnabled(enabled);
+	toolsStringSearchAct->setEnabled(enabled);
 }
 
 void MainWindow::CreateActions()

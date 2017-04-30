@@ -25,9 +25,15 @@ public:
 	/** Call this method before calling app.exec
 	*/
 	void Init();
-
+signals:
+	void OnEmulatorRun();
+	void OnEmulatorPause();
+	void OnEmulatorResume();
+	void OnEmulatorStop();
+	void OnEmulatorReady();
 private slots:
 	void ChangeStyleSheetRequest(const QString& path);
+
 private:
 	void InitializeCallbacks();
 	void InitializeHandlers();

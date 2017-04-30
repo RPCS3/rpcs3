@@ -125,8 +125,13 @@ void RPCS3App::InitializeCallbacks()
 		return std::make_unique<SaveDialogFrame>();
 	};*/
 
-	Emu.SetCallbacks(std::move(callbacks));
+	callbacks.on_run = [=]() { emit OnEmulatorRun(); };
+	callbacks.on_pause = [=]() {emit OnEmulatorPause(); };
+	callbacks.on_resume = [=]() {emit OnEmulatorResume(); };
+	callbacks.on_stop = [=]() {emit OnEmulatorStop(); };
+	callbacks.on_ready = [=]() {emit OnEmulatorReady(); };
 
+	Emu.SetCallbacks(std::move(callbacks));
 }
 
 /** 
@@ -206,6 +211,11 @@ void RPCS3App::InitializeHandlers()
 void RPCS3App::InitializeConnects()
 {
 	connect(RPCS3MainWin, &MainWindow::RequestGlobalStylesheetChange, this, &RPCS3App::ChangeStyleSheetRequest);
+	connect(this, &RPCS3App::OnEmulatorRun, RPCS3MainWin, &MainWindow::OnEmuRun);
+	connect(this, &RPCS3App::OnEmulatorStop, RPCS3MainWin, &MainWindow::OnEmuStop);
+	connect(this, &RPCS3App::OnEmulatorPause, RPCS3MainWin, &MainWindow::OnEmuPause);
+	connect(this, &RPCS3App::OnEmulatorResume, RPCS3MainWin, &MainWindow::OnEmuResume);
+	connect(this, &RPCS3App::OnEmulatorReady, RPCS3MainWin, &MainWindow::OnEmuReady);
 }
 
 /*

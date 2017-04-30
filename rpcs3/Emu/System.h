@@ -18,6 +18,11 @@ struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
 	std::function<void()> process_events;
+	std::function<void()> on_run;
+	std::function<void()> on_pause;
+	std::function<void()> on_resume;
+	std::function<void()> on_stop;
+	std::function<void()> on_ready;
 	std::function<void()> exit;
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;

@@ -15,8 +15,7 @@
 CgDisasmWindow::CgDisasmWindow(QWidget* parent): QTabWidget()
 {
 	setWindowTitle(tr("Cg Disasm"));
-
-	setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	setMinimumSize(200, 150); // seems fine on win 10
 	resize(QSize(620, 395));
 	
 	tab_disasm = new QWidget(this);

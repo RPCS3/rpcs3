@@ -56,14 +56,6 @@ extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const
 
 fs::file g_tty;
 
-namespace rpcs3
-{
-	event<void>& on_run() { static event<void> on_run; return on_run; }
-	event<void>& on_stop() { static event<void> on_stop; return on_stop; }
-	event<void>& on_pause() { static event<void> on_pause; return on_pause; }
-	event<void>& on_resume() { static event<void> on_resume; return on_resume; }
-}
-
 void Emulator::Init()
 {
 	if (!g_tty)
@@ -308,6 +300,8 @@ void Emulator::Load()
 			// PS3 executable
 			g_system = system_type::ps3;
 			m_status = Ready;
+			GetCallbacks().on_ready();
+
 			vm::ps3::init();
 
 			if (m_elf_path.empty())
@@ -325,6 +319,7 @@ void Emulator::Load()
 			// PPU PRX (experimental)
 			g_system = system_type::ps3;
 			m_status = Ready;
+			GetCallbacks().on_ready();
 			vm::ps3::init();
 			ppu_load_prx(ppu_prx, "");
 		}
@@ -333,6 +328,7 @@ void Emulator::Load()
 			// SPU executable (experimental)
 			g_system = system_type::ps3;
 			m_status = Ready;
+			GetCallbacks().on_ready();
 			vm::ps3::init();
 			spu_load_exec(spu_exec);
 		}
@@ -341,6 +337,7 @@ void Emulator::Load()
 			// ARMv7 executable
 			g_system = system_type::psv;
 			m_status = Ready;
+			GetCallbacks().on_ready();
 			vm::psv::init();
 
 			if (m_elf_path.empty())
@@ -371,6 +368,7 @@ void Emulator::Load()
 		else if (IsPaused())
 		{
 			m_status = Ready;
+			GetCallbacks().on_ready();
 		}
 	}
 	catch (const std::exception& e)
@@ -396,7 +394,8 @@ void Emulator::Run()
 		return;
 	}
 
-	rpcs3::on_run()();
+	
+	GetCallbacks().on_run();
 
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
@@ -423,7 +422,7 @@ bool Emulator::Pause()
 		return m_status.compare_and_swap_test(Ready, Paused);
 	}
 
-	rpcs3::on_pause()();
+	GetCallbacks().on_pause();
 
 	// Update pause start time
 	if (m_pause_start_time.exchange(start))
@@ -487,7 +486,7 @@ void Emulator::Resume()
 		on_select(0, *mfc);
 	}
 
-	rpcs3::on_resume()();
+	GetCallbacks().on_resume();
 }
 
 void Emulator::Stop()
@@ -499,7 +498,7 @@ void Emulator::Stop()
 
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
-	rpcs3::on_stop()();
+	GetCallbacks().on_stop();
 
 #ifdef WITH_GDB_DEBUGGER
 	//fxm for some reason doesn't call on_stop

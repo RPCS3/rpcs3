@@ -13,6 +13,9 @@ public:
 signals:
 
 public slots:
+	void OnApply();
+	void OnReset();
+	void OnStylesheetChanged();
 };
 
 #endif // MISCTAB_H

@@ -39,7 +39,7 @@ SettingsDialog::SettingsDialog(QWidget *parent, const std::string& path) : QDial
 	mainLayout->addLayout(buttonsLayout);
 	setLayout(mainLayout);
 
-	cancelButton->setFocus();
+	connect(tabWidget, &QTabWidget::currentChanged, [=]() {cancelButton->setFocus();});
 
 	setWindowTitle(tr("Settings"));
 }
