@@ -758,3 +758,16 @@ void MainWindow::keyPressEvent(QKeyEvent *keyEvent)
 	case 'R': case 'r': if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
 	}
 }
+
+/** Override the Qt close event to have the emulator stop and the application die.  May add a warning dialog in future. 
+*/
+void MainWindow::closeEvent(QCloseEvent* closeEvent)
+{
+	Q_UNUSED(closeEvent);
+
+	// Cleanly stop the emulator.
+	Emu.Stop();
+
+	// It's possible to have other windows open, like games.  So, force the application to die.
+	QApplication::quit();
+}

@@ -50,6 +50,8 @@ private slots:
 	void OnLogFrameClosed();
 	void OnGameListFrameClosed();
 
+protected:
+	void MainWindow::closeEvent(QCloseEvent *event) override;
 private:
 	void CreateActions();
 	void CreateMenus();

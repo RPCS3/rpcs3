@@ -10,7 +10,7 @@
 GSFrame::GSFrame(const QString& title, int w, int h)
 	: QWindow()
 {
-	m_render = title;
+	m_windowTitle = title;
 	// GUITODO get icon.
 	//setIcon( /*wxGetApp().m_MainFrame->GetIcon()*/);
 
@@ -23,11 +23,7 @@ GSFrame::GSFrame(const QString& title, int w, int h)
 
 void GSFrame::paintEvent(QPaintEvent *event)
 {
-}
-
-void GSFrame::closeEvent(QCloseEvent *event)
-{
-	Emu.Stop();
+	Q_UNUSED(event);
 }
 
 void GSFrame::keyPressEvent(QKeyEvent *keyEvent)
@@ -61,6 +57,7 @@ void GSFrame::OnFullScreen()
 
 void GSFrame::close()
 {
+	Emu.Stop();
 	HandleUICommand([=]() {QWindow::close(); });
 }
 
@@ -91,10 +88,12 @@ void* GSFrame::make_context()
 
 void GSFrame::set_current(draw_context_t ctx)
 {
+	Q_UNUSED(ctx);
 }
 
 void GSFrame::delete_context(void* ctx)
 {
+	Q_UNUSED(ctx);
 }
 
 int GSFrame::client_width()
@@ -117,9 +116,9 @@ void GSFrame::flip(draw_context_t)
 	{
 		QString title = QString::fromStdString(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 
-		if (!m_render.isEmpty())
+		if (!m_windowTitle.isEmpty())
 		{
-			title += " | " + m_render;
+			title += " | " + m_windowTitle;
 		}
 
 		if (!Emu.GetTitle().empty())
@@ -163,4 +162,15 @@ void GSFrame::HandleUICommand(std::function<void()> func)
 	{
 		func();
 	}
+}
+
+/** Override qt hideEvent.
+ * For some reason beyond me, hitting X hides the game window instead of closes. To remedy this, I forcefully murder it for commiting this transgression.
+ * Closing the window has a side-effect of also stopping the emulator.
+*/
+void GSFrame::hideEvent(QHideEvent* ev)
+{
+	Q_UNUSED(ev);
+
+	close();
 }
