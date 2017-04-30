@@ -102,6 +102,7 @@ static fs::error to_error(DWORD e)
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/statvfs.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -154,6 +155,16 @@ namespace fs
 
 	file_base::~file_base()
 	{
+	}
+
+	stat_t file_base::stat()
+	{
+		fmt::throw_exception("fs::file::stat() not supported for %s", typeid(*this).name());
+	}
+
+	void file_base::sync()
+	{
+		// Do notning
 	}
 
 	dir_base::~dir_base()
@@ -389,6 +400,45 @@ bool fs::is_dir(const std::string& path)
 		g_tls_error = error::exist;
 		return false;
 	}
+
+	return true;
+}
+
+bool fs::statfs(const std::string& path, fs::device_stat& info)
+{
+	if (auto device = get_virtual_device(path))
+	{
+		return device->statfs(path, info);
+	}
+
+#ifdef _WIN32
+	ULARGE_INTEGER avail_free;
+	ULARGE_INTEGER total_size;
+	ULARGE_INTEGER total_free;
+
+	if (!GetDiskFreeSpaceExW(to_wchar(path).get(), &avail_free, &total_size, &total_free))
+	{
+		g_tls_error = to_error(GetLastError());
+		return false;
+	}
+
+	info.block_size = 4096; // TODO
+	info.total_size = total_size.QuadPart;
+	info.total_free = total_free.QuadPart;
+	info.avail_free = avail_free.QuadPart;
+#else
+	struct ::statvfs buf;
+	if (!::statvfs(path.c_str(), &buf) != 0)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+
+	info.block_size = buf.f_frsize;
+	info.total_size = info.block_size * buf.f_blocks;
+	info.total_free = info.block_size * buf.f_bfree;
+	info.avail_free = info.block_size * buf.f_bavail;
+#endif
 
 	return true;
 }
@@ -745,6 +795,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return info;
 		}
 
+		void sync() override
+		{
+			verify("file::sync" HERE), FlushFileBuffers(m_handle);
+		}
+
 		bool trunc(u64 length) override
 		{
 			LARGE_INTEGER old, pos;
@@ -870,6 +925,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return info;
 		}
 
+		void sync() override
+		{
+			verify("file::sync" HERE), ::fsync(m_fd) == 0;
+		}
+
 		bool trunc(u64 length) override
 		{
 			if (::ftruncate(m_fd, length) != 0)
@@ -943,11 +1003,6 @@ fs::file::file(const void* ptr, std::size_t size)
 			: m_ptr(static_cast<const char*>(ptr))
 			, m_size(size)
 		{
-		}
-
-		fs::stat_t stat() override
-		{
-			fmt::raw_error("fs::file::memory_stream::stat(): not supported");
 		}
 
 		bool trunc(u64 length) override

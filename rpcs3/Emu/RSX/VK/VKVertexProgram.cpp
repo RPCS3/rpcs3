@@ -33,6 +33,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, set = 0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
+	OS << "	vec4 userClip[2];" << std::endl;
 	OS << "};" << std::endl;
 
 	vk::glsl::program_input in;
@@ -158,16 +159,16 @@ static const reg_info reg_table[] =
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
 	{ "fog_c", true, "dst_reg5", ".xxxx", true },
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClip[0].x", false },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClip[0].y", false },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClip[0].z", false },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
 
 	//Disable user clip planes until they are properly handled
 
-	//{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
-	//{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
-	//{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClip[0].w", false },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClip[1].x", false },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClip[1].y", false },
 
 	{ "tc0", true, "dst_reg7", "", false },
 	{ "tc1", true, "dst_reg8", "", false },

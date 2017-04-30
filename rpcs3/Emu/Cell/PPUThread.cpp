@@ -137,12 +137,12 @@ static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 	return false;
 }
 
-static std::unordered_map<u32, u32> s_ppu_toc;
+static std::unordered_map<u32, u32>* s_ppu_toc;
 
 static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Compare TOC with expected value
-	const auto found = s_ppu_toc.find(ppu.cia);
+	const auto found = s_ppu_toc->find(ppu.cia);
 
 	if (ppu.gpr[2] != found->second)
 	{
@@ -878,19 +878,29 @@ extern void ppu_initialize()
 		}
 	}
 
-	idm::select<lv2_obj, lv2_prx>([](u32, lv2_prx& prx)
+	std::vector<lv2_prx*> prx_list;
+
+	idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
+	{
+		prx_list.emplace_back(&prx);
+	});
+
+	for (auto ptr : prx_list)
 	{
 		if (!Emu.IsStopped())
 		{
-			ppu_initialize(prx);
+			ppu_initialize(*ptr);
 		}
-	});	
+	}
 }
 
 extern void ppu_initialize(const ppu_module& info)
 {
 	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm)
 	{
+		// Temporarily
+		s_ppu_toc = fxm::get_always<std::unordered_map<u32, u32>>().get();
+
 		for (const auto& func : info.funcs)
 		{
 			for (auto& block : func.blocks)
@@ -900,7 +910,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			if (g_cfg_ppu_debug && func.size && func.toc != -1)
 			{
-				s_ppu_toc.emplace(func.addr, func.toc);
+				s_ppu_toc->emplace(func.addr, func.toc);
 				ppu_ref(func.addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
 			}
 		}
