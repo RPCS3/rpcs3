@@ -434,12 +434,6 @@ CHECK_SIZE_ALIGN(f16, 2, 2);
 using f32 = float;
 using f64 = double;
 
-// Get the exponent of a float
-inline int fexpf(float x)
-{
-	return ((u32&)x >> 23) & 0xFF;
-}
-
 struct ignore
 {
 	template <typename T>

@@ -8,3 +8,9 @@ enum FPSCR_RN
 	FPSCR_RN_PINF = 2,
 	FPSCR_RN_MINF = 3,
 };
+
+// Get the exponent of a float
+inline int fexpf(float x)
+{
+	return ((u32&)x >> 23) & 0xFF;
+}
