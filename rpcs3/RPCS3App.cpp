@@ -42,21 +42,17 @@ RPCS3App::RPCS3App(int argc, char* argv[]) : QApplication(argc, argv)
 
 void RPCS3App::Init()
 {
-	QFile file("stylesheet.qss");
-	if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		setStyleSheet(file.readAll());
-		file.close();
-	}
-
-	// Create the main window (needed as the target for handlers)
+	// Create the main window
 	RPCS3MainWin = new MainWindow(nullptr);
 
 	// Create the handlers.
 	InitializeHandlers();
 
-	// Create callsbacks from the emulator, which reference the handlers.
+	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
+
+	// Create connects to propagate events throughout Gui.
+	InitializeConnects();
 
 	QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
 	RPCS3MainWin->resize(defaultSize);
@@ -69,11 +65,13 @@ void RPCS3App::Init()
 
 	RPCS3MainWin->show();
 	//m_MainFrame->DoSettings(true);
+
+	// Load default style sheet, if it exists.
+	ChangeStyleSheetRequest("stylesheet.qss");
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here.
 */
-// TODO: Implement these callbacks!
 void RPCS3App::InitializeCallbacks()
 {
 	EmuCallbacks callbacks;
@@ -131,6 +129,9 @@ void RPCS3App::InitializeCallbacks()
 
 }
 
+/** 
+* Initialize semi-global variables here that are used by the emulator code in callbacks.
+*/
 void RPCS3App::InitializeHandlers()
 {
 	cfg_gs_render = new cfg::map_entry<std::function<std::shared_ptr<GSRender>()>>(cfg::root.video, "Renderer", "OpenGL",
@@ -145,6 +146,7 @@ void RPCS3App::InitializeHandlers()
 #endif
 	});
 
+	// Should I move these declarations inside of the lambdas??
 	// Lambda to simulate the return value from making a shared pointer with constructor.
 	BasicKeyboardHandler* boardHandler = new BasicKeyboardHandler(this, this);
 	auto l_magicKeyboardHandler = [boardHandler]() {
@@ -196,4 +198,25 @@ void RPCS3App::InitializeHandlers()
 #endif
 		{ "OpenAL", &std::make_shared<OpenALThread> },
 	});
+}
+
+/*
+ * Initialize connects here. These are used to connect things between UI elements that require the intervention of RPCS3App.
+ */
+void RPCS3App::InitializeConnects()
+{
+	connect(RPCS3MainWin, &MainWindow::RequestGlobalStylesheetChange, this, &RPCS3App::ChangeStyleSheetRequest);
+}
+
+/*
+* Handle a request to change the stylesheet. May consider adding reporting of errors in future.
+*/
+void RPCS3App::ChangeStyleSheetRequest(const QString& sheetFilePath)
+{
+	QFile file(sheetFilePath);
+	if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		setStyleSheet(file.readAll());
+		file.close();
+	}
 }

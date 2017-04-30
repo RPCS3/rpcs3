@@ -367,6 +367,18 @@ void MainWindow::SendOpenSysMenu()
 	//UpdateUI();
 }
 
+/**
+ * Prompt the user for a stylesheet and propagate the request back to the main application.
+*/
+void MainWindow::OpenCustomStyleSheet()
+{
+	QString filePath = QFileDialog::getOpenFileName(nullptr, tr("Open Custom Stylesheet"), "", tr("Stylesheet (*.qss)"));
+	if (filePath.isEmpty() == false)
+	{
+		emit RequestGlobalStylesheetChange(filePath);
+	}
+}
+
 void MainWindow::Settings()
 {
 	SettingsDialog dlg(this);
@@ -538,7 +550,7 @@ void MainWindow::About()
 		"www.patreon.com/Nekotekina");
 
 	QMessageBox about(this);
-	about.setStyleSheet("QLabel{min-width: 500px;}");	// ¯\_(ツ)_/¯
+	about.setMinimumWidth(500);
 	about.setWindowTitle(tr("About RPCS3"));
 	about.setText(translatedTextAboutCaption);
 	about.setInformativeText(translatedTextAboutText);
@@ -608,6 +620,9 @@ void MainWindow::CreateActions()
 
 	confSettingsAct = new QAction(tr("&Settings"), this);
 	connect(confSettingsAct, &QAction::triggered, this, &MainWindow::Settings);
+
+	requestStylesheetAct = new QAction(tr("Change Stylesheet"), this);
+	connect(requestStylesheetAct, &QAction::triggered, this, &MainWindow::OpenCustomStyleSheet);
 
 	confPadAct = new QAction(tr("&Keyboard Settings"), this);
 	connect(confPadAct, &QAction::triggered, this, &MainWindow::PadSettings);
@@ -704,6 +719,7 @@ void MainWindow::CreateMenus()
 	sysMenu->addAction(sysSendExitAct);
 
 	QMenu *confMenu = menuBar()->addMenu(tr("&Config"));
+	confMenu->addAction(requestStylesheetAct);
 	confMenu->addAction(confSettingsAct);
 	confMenu->addAction(confPadAct);
 	confMenu->addSeparator();

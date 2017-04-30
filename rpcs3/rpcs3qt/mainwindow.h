@@ -16,6 +16,7 @@ public:
 	~MainWindow();
 
 signals:
+	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
 
 private slots:
 	void BootElf();
@@ -26,6 +27,7 @@ private slots:
 	void Stop();
 	void SendOpenSysMenu();
 	void SendExit();
+	void OpenCustomStyleSheet();
 	void Settings();
 	void PadSettings();
 	void AutoPauseSettings();
@@ -67,6 +69,7 @@ private:
 	QAction *sysStopAct;
 	QAction *sysSendOpenMenuAct;
 	QAction *sysSendExitAct;
+	QAction *requestStylesheetAct;
 	QAction *confSettingsAct;
 	QAction *confPadAct;
 	QAction *confAutopauseManagerAct;

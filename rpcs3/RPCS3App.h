@@ -25,9 +25,13 @@ public:
 	/** Call this method before calling app.exec
 	*/
 	void Init();
+
+private slots:
+	void ChangeStyleSheetRequest(const QString& path);
 private:
 	void InitializeCallbacks();
 	void InitializeHandlers();
+	void InitializeConnects();
 
 	// The mapss. Yay!
 	cfg::map_entry<std::function<std::shared_ptr<GSRender>()>>* cfg_gs_render;
