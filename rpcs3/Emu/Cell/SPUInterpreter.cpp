@@ -1380,11 +1380,6 @@ inline bool issnan(float x)
 	return std::isnan(x) && ((s32&)x) << 9 > 0;
 }
 
-inline int fexpf(float x)
-{
-	return ((u32&)x >> 23) & 0xFF;
-}
-
 inline bool isextended(float x)
 {
 	return fexpf(x) == 255;
