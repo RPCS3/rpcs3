@@ -41,13 +41,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 
 	setDockNestingEnabled(true);
 	CreateActions();
-	CreateConnects();
 	CreateMenus();
 	CreateDockWindows();
 
 	setMinimumSize(200, minimumSizeHint().height());    // seems fine on win 10
 
 	ConfigureGuiFromSettings();
+	CreateConnects();
 }
 
 MainWindow::~MainWindow()
@@ -765,6 +765,10 @@ void MainWindow::CreateConnects()
 	connect(refreshGameListAct, &QAction::triggered, this, &MainWindow::RefreshGameList);
 	connect(aboutAct, &QAction::triggered, this, &MainWindow::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
+
+	// Non-action connects
+	connect(logFrame, &LogFrame::LogLevelChanged, guiSettings, &GuiSettings::setLogLevel);
+	connect(logFrame, &LogFrame::TTYChanged, guiSettings, &GuiSettings::setTTYLogging);
 }
 
 void MainWindow::CreateMenus()
@@ -861,20 +865,6 @@ void MainWindow::ConfigureGuiFromSettings()
 		needsDefault = true;
 	}
 
-	// Handle dock widget action states.  The restore state will handle hide/show
-	// Minor hack until I add a CreateConnects/Disconnect method. I want to prevent an annoying merge with megamouse.
-	showLogAct->blockSignals(true);
-	showGameListAct->blockSignals(true);
-	showDebuggerAct->blockSignals(true);
-
-	showLogAct->setChecked(guiSettings->getLoggerVisibility());
-	showGameListAct->setChecked(guiSettings->getGameListVisibility());
-	showDebuggerAct->setChecked(guiSettings->getDebuggerVisibility());
-
-	showLogAct->blockSignals(false);
-	showGameListAct->blockSignals(false);
-	showDebuggerAct->blockSignals(false);
-
 	// By default, hide the debugger and set the window to 70% of the screen.
 	if (needsDefault)
 	{
@@ -884,6 +874,14 @@ void MainWindow::ConfigureGuiFromSettings()
 		QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
 		resize(defaultSize);
 	}
+
+	showLogAct->setChecked(guiSettings->getLoggerVisibility());
+	showGameListAct->setChecked(guiSettings->getGameListVisibility());
+	showDebuggerAct->setChecked(guiSettings->getDebuggerVisibility());
+
+	// Handle log settings
+	logFrame->SetLogLevel(guiSettings->getLogLevel());
+	logFrame->SetTTYLogging(guiSettings->getTTYLogging());
 
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 }

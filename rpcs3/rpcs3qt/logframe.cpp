@@ -133,10 +133,60 @@ LogFrame::LogFrame(QWidget *parent) : QDockWidget(tr("Log"), parent)
 	QTimer *timer = new QTimer(this);
 	connect(timer, &QTimer::timeout, this, &LogFrame::UpdateUI);
 	timer->start(10);
+}
 
-	// Update listener info
-	// TODO: Use settings file
-	s_gui_listener.enabled = logs::level::warning;
+void LogFrame::SetLogLevel(logs::level lev)
+{
+	switch (lev)
+	{
+	case logs::level::always:
+	{
+		nothingAct->trigger();
+		break;
+	}
+	case logs::level::fatal:
+	{
+		fatalAct->trigger();
+		break;
+	}
+	case logs::level::error:
+	{
+		errorAct->trigger();
+		break;
+	}
+	case logs::level::todo:
+	{
+		todoAct->trigger();
+		break;
+	}
+	case logs::level::success:
+	{
+		successAct->trigger();
+		break;
+	}
+	case logs::level::warning:
+	{
+		warningAct->trigger();
+		break;
+	}
+	case logs::level::notice:
+	{
+		noticeAct->trigger();
+		break;
+	}
+	case logs::level::trace:
+	{
+		traceAct->trigger();
+		break;
+	}
+	default:
+		warningAct->trigger();
+	}
+}
+
+void LogFrame::SetTTYLogging(bool val)
+{
+	TTYAct->setChecked(val);
 }
 
 void LogFrame::CreateAndConnectActions()
@@ -151,6 +201,7 @@ void LogFrame::CreateAndConnectActions()
 		// This sets the log level properly when the action is triggered.
 		auto l_callback = [this, logLevel]() {
 			s_gui_listener.enabled = logLevel;
+			emit LogLevelChanged(static_cast<uint>(logLevel));
 		};
 
 		connect(act, &QAction::triggered, l_callback);
@@ -171,6 +222,8 @@ void LogFrame::CreateAndConnectActions()
 	traceAct = new QAction(tr("Trace"), logLevels);
 
 	TTYAct = new QAction(tr("TTY"), this);
+	TTYAct->setCheckable(true);
+	connect(TTYAct, &QAction::triggered, this, &LogFrame::TTYChanged);
 
 	l_initAct(nothingAct, logs::level::always);
 	l_initAct(fatalAct, logs::level::fatal);
@@ -180,16 +233,7 @@ void LogFrame::CreateAndConnectActions()
 	l_initAct(warningAct, logs::level::warning);
 	l_initAct(noticeAct, logs::level::notice);
 	l_initAct(traceAct, logs::level::trace);
-
-	// I don't think the action needs to be connected as its state is checked in updateui
-	// (TODO: Make Settings)
-	TTYAct->setCheckable(true);
-	TTYAct->setChecked(true);
-
-	// Warnings are default level so check it.
-	warningAct->setChecked(true);
 }
-
 
 void LogFrame::UpdateUI()
 {

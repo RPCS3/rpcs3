@@ -44,6 +44,20 @@ void GuiSettings::setDebuggerVisibility(bool val)
 	endGroup();
 }
 
+void GuiSettings::setLogLevel(uint lev)
+{
+	beginGroup("Logger");
+	setValue("level", lev);
+	endGroup();
+}
+
+void GuiSettings::setTTYLogging(bool val)
+{
+	beginGroup("Logger");
+	setValue("TTY", val);
+	endGroup();
+}
+
 QByteArray GuiSettings::readGuiGeometry()
 {
 	return value("MainWindow/geometry", QByteArray()).toByteArray();
@@ -67,4 +81,14 @@ bool GuiSettings::getLoggerVisibility()
 bool GuiSettings::getDebuggerVisibility()
 {
 	return value("MainWindow/debuggerVisible", false).toBool();
+}
+
+logs::level GuiSettings::getLogLevel()
+{
+	return (logs::level) (value("Logger/level", QVariant((uint)(logs::level::warning))).toUInt());
+}
+
+bool GuiSettings::getTTYLogging()
+{
+	return value("Logger/TTY", true).toBool();
 }

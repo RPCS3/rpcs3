@@ -1,6 +1,8 @@
 #ifndef GUI_SETTINGS_H
 #define GUI_SETTINGS_H
 
+#include "Utilities/Log.h"
+
 #include <QSettings.h>
 
 class GuiSettings : public QSettings
@@ -16,6 +18,9 @@ public:
 	bool getGameListVisibility();
 	bool getLoggerVisibility();
 	bool getDebuggerVisibility();
+
+	logs::level getLogLevel();
+	bool getTTYLogging();
 public slots:
 	/** Call this from the main window passing in the result from calling saveGeometry*/
 	void writeGuiGeometry(const QByteArray& settings);
@@ -32,6 +37,10 @@ public slots:
 	/** Sets the visibility of the debugger. */
 	void setDebuggerVisibility(bool val);
 
+	/* I'd love to use the enum, but Qt doesn't like connecting things that aren't meta types.*/
+	void setLogLevel(uint lev);
+
+	void setTTYLogging(bool val);
 };
 
 #endif
