@@ -1020,7 +1020,7 @@ error_code sys_fs_fdatasync(u32 fd)
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
-	if (!file)
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
 		return CELL_EBADF;
 	}
@@ -1036,7 +1036,7 @@ error_code sys_fs_fsync(u32 fd)
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
-	if (!file)
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
 		return CELL_EBADF;
 	}
