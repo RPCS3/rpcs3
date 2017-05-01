@@ -28,10 +28,7 @@ protected:
 	bool shown() override;
 	void hide() override;
 	void show() override;
-	/*void OnLeftDclick(wxMouseEvent&)
-	{
-	OnFullScreen();
-	}*/
+	void mouseDoubleClickEvent(QMouseEvent* ev) override;
 
 	//void SetSize(int width, int height);
 
@@ -46,8 +43,8 @@ protected:
 
 	void hideEvent(QHideEvent* ev) override;
 private slots:
+	void HandleCursor(QWindow::Visibility visibility);
 	void HandleCommandRequest(std::function<void()> func);
-
 private:
 	void HandleUICommand(std::function<void()> func);
 };

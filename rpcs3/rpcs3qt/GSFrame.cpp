@@ -19,6 +19,9 @@ GSFrame::GSFrame(const QString& title, int w, int h)
 	// I'd love to not use blocking queued connections, but this seems to be the only way to force this code to happen.
 	// When I have it as a nonblocking connection, the UI commands won't work. I have no idea why.
 	connect(this, &GSFrame::RequestCommand, this, &GSFrame::HandleCommandRequest, Qt::BlockingQueuedConnection);
+
+	// Change cursor when in fullscreen.
+	connect(this, &QWindow::visibilityChanged, this, &GSFrame::HandleCursor);
 }
 
 void GSFrame::paintEvent(QPaintEvent *event)
@@ -135,6 +138,23 @@ void GSFrame::flip(draw_context_t)
 
 		m_frames = 0;
 		fps_t.Start();
+	}
+}
+
+void GSFrame::mouseDoubleClickEvent(QMouseEvent* ev)
+{
+	OnFullScreen();
+}
+
+void GSFrame::HandleCursor(QWindow::Visibility visibility)
+{
+	if (visibility == QWindow::Visibility::FullScreen)
+	{
+		setCursor(Qt::BlankCursor);
+	}
+	else
+	{
+		setCursor(Qt::ArrowCursor);
 	}
 }
 
