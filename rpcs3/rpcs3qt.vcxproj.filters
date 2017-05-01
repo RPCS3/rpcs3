@@ -231,6 +231,15 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_MemoryStringSearcher.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_GuiSettings.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_GuiSettings.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\GuiSettings.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -312,6 +321,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\MemoryStringSearcher.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\GuiSettings.h">
       <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>

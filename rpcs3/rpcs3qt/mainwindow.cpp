@@ -6,6 +6,7 @@
 #include <QDockWidget>
 #include <QProgressDialog>
 #include <QSizePolicy>
+#include <QDesktopWidget>
 
 #include "gamelistframe.h"
 #include "debuggerframe.h"
@@ -36,12 +37,16 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false)
 {
+	guiSettings = new GuiSettings(this);
+
+	setDockNestingEnabled(true);
 	CreateActions();
 	CreateMenus();
 	CreateDockWindows();
 
 	setMinimumSize(200, minimumSizeHint().height());    // seems fine on win 10
-	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
+
+	ConfigureGuiFromSettings();
 }
 
 MainWindow::~MainWindow()
@@ -735,18 +740,17 @@ void MainWindow::CreateActions()
 
 	showDebuggerAct = new QAction(tr("Show Debugger"), this);
 	showDebuggerAct->setCheckable(true);
-	showDebuggerAct->setChecked(false);
+	connect(showDebuggerAct, &QAction::triggered, guiSettings, &GuiSettings::setDebuggerVisibility);
 	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);
 
 	showLogAct = new QAction(tr("Show Log/TTY"), this);
 	showLogAct->setCheckable(true);
-	showLogAct->setChecked(true);
+	connect(showLogAct, &QAction::triggered, guiSettings, &GuiSettings::setLoggerVisibility);
 	connect(showLogAct, &QAction::triggered, this, &MainWindow::ToggleLogFrame);
 
 	showGameListAct = new QAction(tr("Show GameList"), this);
 	showGameListAct->setCheckable(true);
-	showGameListAct->setChecked(true);
-
+	connect(showGameListAct, &QAction::triggered, guiSettings, &GuiSettings::setGamelistVisibility);
 	connect(showGameListAct, &QAction::triggered, this, &MainWindow::ToggleGameListFrame);
 
 	hideGameIconsAct = new QAction(tr("&Hide Game Icons"), this);
@@ -819,17 +823,70 @@ void MainWindow::CreateMenus()
 void MainWindow::CreateDockWindows()
 {
 	gameListFrame = new GameListFrame(this);
+	gameListFrame->setObjectName("gamelist");
 	debuggerFrame = new DebuggerFrame(this);
+	debuggerFrame->setObjectName("debugger");
 	logFrame = new LogFrame(this);
+	logFrame->setObjectName("logger");
 
 	addDockWidget(Qt::LeftDockWidgetArea, gameListFrame);
 	addDockWidget(Qt::LeftDockWidgetArea, logFrame);
 	addDockWidget(Qt::RightDockWidgetArea, debuggerFrame);
-	debuggerFrame->hide();
 
 	connect(logFrame, &LogFrame::LogFrameClosed, this, &MainWindow::OnLogFrameClosed);
 	connect(debuggerFrame, &DebuggerFrame::DebugFrameClosed, this, &MainWindow::OnDebugFrameClosed);
 	connect(gameListFrame, &GameListFrame::GameListFrameClosed, this, &MainWindow::OnGameListFrameClosed);
+}
+
+void MainWindow::ConfigureGuiFromSettings()
+{
+	// Restore GUI state if needed. We need to if the settings are not null.
+	QByteArray geometry = guiSettings->readGuiGeometry();
+	bool needsDefault = false;
+	if (geometry.isEmpty() == false)
+	{
+		restoreGeometry(geometry);
+	}
+	else
+	{
+		needsDefault = true;
+	}
+
+	QByteArray state = guiSettings->readGuiState();
+	if (state.isEmpty() == false)
+	{
+		restoreState(state);
+	}
+	else
+	{
+		needsDefault = true;
+	}
+
+	// Handle dock widget action states.  The restore state will handle hide/show
+	// Minor hack until I add a CreateConnects/Disconnect method. I want to prevent an annoying merge with megamouse.
+	showLogAct->blockSignals(true);
+	showGameListAct->blockSignals(true);
+	showDebuggerAct->blockSignals(true);
+
+	showLogAct->setChecked(guiSettings->getLoggerVisibility());
+	showGameListAct->setChecked(guiSettings->getGameListVisibility());
+	showDebuggerAct->setChecked(guiSettings->getDebuggerVisibility());
+
+	showLogAct->blockSignals(false);
+	showGameListAct->blockSignals(false);
+	showDebuggerAct->blockSignals(false);
+
+	// By default, hide the debugger and set the window to 70% of the screen.
+	if (needsDefault)
+	{
+		// Debugger frame hidden by default.
+		debuggerFrame->hide();
+
+		QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
+		resize(defaultSize);
+	}
+
+	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *keyEvent)
@@ -852,6 +909,15 @@ void MainWindow::closeEvent(QCloseEvent* closeEvent)
 	// Cleanly stop the emulator.
 	Emu.Stop();
 
+	// Save gui settings
+	guiSettings->writeGuiGeometry(saveGeometry());
+	guiSettings->writeGuiState(saveState());
+
+	// I need the gui settings to sync, and that means having the destructor called as guiSetting's parent is mainwindow.
+	setAttribute(Qt::WA_DeleteOnClose);
+	QMainWindow::close();
+
+	
 	// It's possible to have other windows open, like games.  So, force the application to die.
 	QApplication::quit();
 }

@@ -6,6 +6,7 @@
 #include "logframe.h"
 #include "debuggerframe.h"
 #include "GameListFrame.h"
+#include "GuiSettings.h"
 
 class MainWindow : public QMainWindow
 {
@@ -67,6 +68,7 @@ private:
 	void CreateActions();
 	void CreateMenus();
 	void CreateDockWindows();
+	void ConfigureGuiFromSettings();
 	void DoSettings(bool load);
 	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
@@ -106,6 +108,7 @@ private:
 	LogFrame *logFrame;
 	DebuggerFrame *debuggerFrame;
 	GameListFrame *gameListFrame;
+	GuiSettings *guiSettings;
 };
 
 #endif // MAINWINDOW_H

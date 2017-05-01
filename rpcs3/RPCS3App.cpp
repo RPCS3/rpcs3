@@ -33,8 +33,6 @@
 #include "Emu/Audio/ALSA/ALSAThread.h"
 #endif
 
-#include <QDesktopWidget>
-
 // For now, a trivial constructor/destructor.  May add command line usage later.
 RPCS3App::RPCS3App(int argc, char* argv[]) : QApplication(argc, argv)
 {
@@ -53,9 +51,6 @@ void RPCS3App::Init()
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
-
-	QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
-	RPCS3MainWin->resize(defaultSize);
 
 	//TheApp = this;
 	setApplicationName("RPCS3");

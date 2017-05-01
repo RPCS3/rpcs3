@@ -92,3 +92,4 @@ moc_*.cpp
 rpcs3/rpcs3qt/Debug/
 rpcs3/rpcs3qt/Release/
 rpcs3/stylesheet.qss
+rpcs3/GuiSettings.ini
