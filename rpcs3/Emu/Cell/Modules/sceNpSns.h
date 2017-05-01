@@ -49,8 +49,6 @@ struct SceNpSnsFbInitParams
 	be_t<u32> poolSize;
 };
 
-typedef u32 SceNpSnsFbHandle;
-
 struct SceNpSnsFbAccessTokenParam
 {
 	be_t<u64> fb_app_id;

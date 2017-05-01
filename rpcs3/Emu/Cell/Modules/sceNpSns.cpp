@@ -58,7 +58,7 @@ error_code sceNpSnsFbTerm()
 	return CELL_OK;
 }
 
-error_code sceNpSnsFbCreateHandle(vm::ptr<SceNpSnsFbHandle> handle)
+error_code sceNpSnsFbCreateHandle(vm::ptr<u32> handle)
 {
 	sceNpSns.warning("sceNpSnsFbCreateHandle(handle=*0x%x)", handle);
 
@@ -72,7 +72,7 @@ error_code sceNpSnsFbCreateHandle(vm::ptr<SceNpSnsFbHandle> handle)
 	return CELL_OK;
 }
 
-error_code sceNpSnsFbDestroyHandle(SceNpSnsFbHandle handle)
+error_code sceNpSnsFbDestroyHandle(u32 handle)
 {
 	sceNpSns.warning("sceNpSnsFbDestroyHandle(handle=%d)", handle);
 
@@ -93,7 +93,7 @@ error_code sceNpSnsFbDestroyHandle(SceNpSnsFbHandle handle)
 	return CELL_OK;
 }
 
-error_code sceNpSnsFbAbortHandle(SceNpSnsFbHandle handle)
+error_code sceNpSnsFbAbortHandle(u32 handle)
 {
 	sceNpSns.todo("sceNpSnsFbAbortHandle(handle=%d)", handle);
 
@@ -114,7 +114,7 @@ error_code sceNpSnsFbAbortHandle(SceNpSnsFbHandle handle)
 	return CELL_OK;
 }
 
-error_code sceNpSnsFbGetAccessToken(SceNpSnsFbHandle handle, vm::cptr<SceNpSnsFbAccessTokenParam> param, vm::ptr<SceNpSnsFbAccessTokenResult> result)
+error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenParam> param, vm::ptr<SceNpSnsFbAccessTokenResult> result)
 {
 	sceNpSns.todo("sceNpSnsFbGetAccessToken(handle=%d, param=*0x%x, result=*0x%x)", handle, param, result);
 
