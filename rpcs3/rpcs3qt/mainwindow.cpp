@@ -41,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 
 	setDockNestingEnabled(true);
 	CreateActions();
+	CreateConnects();
 	CreateMenus();
 	CreateDockWindows();
 
@@ -654,117 +655,115 @@ void MainWindow::EnableMenus(bool enabled)
 void MainWindow::CreateActions()
 {
 	bootElfAct = new QAction(tr("Boot (S)ELF file"), this);
-	connect(bootElfAct, &QAction::triggered, this, &MainWindow::BootElf);
-
 	bootGameAct = new QAction(tr("Boot &Game"), this);
-	connect(bootGameAct, &QAction::triggered, this, &MainWindow::BootGame);
-
 	bootInstallPkgAct = new QAction(tr("&Install PKG"), this);
-	connect(bootInstallPkgAct, &QAction::triggered, this, &MainWindow::InstallPkg);
-
 	bootInstallPupAct = new QAction(tr("&Install Firmware"), this);
-	connect(bootInstallPupAct, &QAction::triggered, this, &MainWindow::InstallPup);
 
 	exitAct = new QAction(tr("E&xit"), this);
 	exitAct->setShortcuts(QKeySequence::Quit);
 	exitAct->setStatusTip(tr("Exit the application"));
-	connect(exitAct, &QAction::triggered, this, &QWidget::close);
 
 	sysPauseAct = new QAction(tr("&Pause"), this);
 	sysPauseAct->setEnabled(false);
-	connect(sysPauseAct, &QAction::triggered, this, &MainWindow::Pause);
 
 	sysStopAct = new QAction(tr("&Stop"), this);
 	sysStopAct->setShortcut(tr("Ctrl+S"));
 	sysStopAct->setEnabled(false);
-	connect(sysStopAct, &QAction::triggered, this, &MainWindow::Stop);
 
 	sysSendOpenMenuAct = new QAction(tr("Send &open system menu cmd"), this);
 	sysSendOpenMenuAct->setEnabled(false);
-	connect(sysSendOpenMenuAct, &QAction::triggered, this, &MainWindow::SendOpenSysMenu);
 
 	sysSendExitAct = new QAction(tr("Send &exit cmd"), this);
 	sysSendExitAct->setEnabled(false);
-	connect(sysSendExitAct, &QAction::triggered, this, &MainWindow::SendExit);
 
 	confSettingsAct = new QAction(tr("&Settings"), this);
-	connect(confSettingsAct, &QAction::triggered, this, &MainWindow::Settings);
-
 	requestStylesheetAct = new QAction(tr("Change Stylesheet"), this);
-	connect(requestStylesheetAct, &QAction::triggered, this, &MainWindow::OpenCustomStyleSheet);
-
 	confPadAct = new QAction(tr("&Keyboard Settings"), this);
-	connect(confPadAct, &QAction::triggered, this, &MainWindow::PadSettings);
 
 	confAutopauseManagerAct = new QAction(tr("&Auto Pause Settings"), this);
-	connect(confAutopauseManagerAct, &QAction::triggered, this, &MainWindow::AutoPauseSettings);
 
 	confVfsManagerAct = new QAction(tr("Virtual &File System Manager"), this);
 	confVfsManagerAct->setEnabled(false);
-	connect(confVfsManagerAct, &QAction::triggered, this, &MainWindow::VFSManager);
 
 	confVhddManagerAct = new QAction(tr("Virtual &HDD Manager"), this);
 	confVhddManagerAct->setEnabled(false);
-	connect(confVhddManagerAct, &QAction::triggered, this, &MainWindow::VHDDManager);
 
 	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
 	confSavedataManagerAct->setEnabled(false);
-	connect(confSavedataManagerAct, &QAction::triggered, this, &MainWindow::SaveData);
 
 	toolsCompilerAct = new QAction(tr("&ELF Compiler"), this);
 	toolsCompilerAct->setEnabled(false);
-	connect(toolsCompilerAct, &QAction::triggered, this, &MainWindow::ELFCompiler);
 
 	toolsCgDisasmAct = new QAction(tr("&Cg Disasm"), this);
 	toolsCgDisasmAct->setEnabled(true);
-	connect(toolsCgDisasmAct, &QAction::triggered, this, &MainWindow::CgDisasm);
 
 	toolsKernelExplorerAct = new QAction(tr("&Kernel Explorer"), this);
 	toolsKernelExplorerAct->setEnabled(false);
-	connect(toolsKernelExplorerAct, &QAction::triggered, this, &MainWindow::KernelExplorer);
 
 	toolsMemoryViewerAct = new QAction(tr("&Memory Viewer"), this);
 	toolsMemoryViewerAct->setEnabled(false);
-	connect(toolsMemoryViewerAct, &QAction::triggered, this, &MainWindow::MemoryViewer);
 
 	toolsRsxDebuggerAct = new QAction(tr("&RSX Debugger"), this);
 	toolsRsxDebuggerAct->setEnabled(false);
-	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebugger);
 
 	toolsStringSearchAct = new QAction(tr("&String Search"), this);
 	toolsStringSearchAct->setEnabled(false);
-	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
 
 	toolsDecryptSprxLibsAct = new QAction(tr("&Decrypt SPRX libraries"), this);
-	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
 
 	showDebuggerAct = new QAction(tr("Show Debugger"), this);
 	showDebuggerAct->setCheckable(true);
-	connect(showDebuggerAct, &QAction::triggered, guiSettings, &GuiSettings::setDebuggerVisibility);
-	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);
 
 	showLogAct = new QAction(tr("Show Log/TTY"), this);
 	showLogAct->setCheckable(true);
-	connect(showLogAct, &QAction::triggered, guiSettings, &GuiSettings::setLoggerVisibility);
-	connect(showLogAct, &QAction::triggered, this, &MainWindow::ToggleLogFrame);
 
 	showGameListAct = new QAction(tr("Show GameList"), this);
 	showGameListAct->setCheckable(true);
-	connect(showGameListAct, &QAction::triggered, guiSettings, &GuiSettings::setGamelistVisibility);
-	connect(showGameListAct, &QAction::triggered, this, &MainWindow::ToggleGameListFrame);
 
 	hideGameIconsAct = new QAction(tr("&Hide Game Icons"), this);
-	connect(hideGameIconsAct, &QAction::triggered, this, &MainWindow::HideGameIcons);
-
 	refreshGameListAct = new QAction(tr("&Refresh Game List"), this);
-	connect(refreshGameListAct, &QAction::triggered, this, &MainWindow::RefreshGameList);
 
 	aboutAct = new QAction(tr("&About"), this);
 	aboutAct->setStatusTip(tr("Show the application's About box"));
-	connect(aboutAct, &QAction::triggered, this, &MainWindow::About);
 
 	aboutQtAct = new QAction(tr("About &Qt"), this);
 	aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
+}
+
+void MainWindow::CreateConnects()
+{
+	connect(bootElfAct, &QAction::triggered, this, &MainWindow::BootElf);
+	connect(bootGameAct, &QAction::triggered, this, &MainWindow::BootGame);
+	connect(bootInstallPkgAct, &QAction::triggered, this, &MainWindow::InstallPkg);
+	connect(bootInstallPupAct, &QAction::triggered, this, &MainWindow::InstallPup);
+	connect(exitAct, &QAction::triggered, this, &QWidget::close);
+	connect(sysPauseAct, &QAction::triggered, this, &MainWindow::Pause);
+	connect(sysStopAct, &QAction::triggered, this, &MainWindow::Stop);
+	connect(sysSendOpenMenuAct, &QAction::triggered, this, &MainWindow::SendOpenSysMenu);
+	connect(sysSendExitAct, &QAction::triggered, this, &MainWindow::SendExit);
+	connect(confSettingsAct, &QAction::triggered, this, &MainWindow::Settings);
+	connect(requestStylesheetAct, &QAction::triggered, this, &MainWindow::OpenCustomStyleSheet);
+	connect(confPadAct, &QAction::triggered, this, &MainWindow::PadSettings);
+	connect(confAutopauseManagerAct, &QAction::triggered, this, &MainWindow::AutoPauseSettings);
+	connect(confVfsManagerAct, &QAction::triggered, this, &MainWindow::VFSManager);
+	connect(confVhddManagerAct, &QAction::triggered, this, &MainWindow::VHDDManager);
+	connect(confSavedataManagerAct, &QAction::triggered, this, &MainWindow::SaveData);
+	connect(toolsCompilerAct, &QAction::triggered, this, &MainWindow::ELFCompiler);
+	connect(toolsCgDisasmAct, &QAction::triggered, this, &MainWindow::CgDisasm);
+	connect(toolsKernelExplorerAct, &QAction::triggered, this, &MainWindow::KernelExplorer);
+	connect(toolsMemoryViewerAct, &QAction::triggered, this, &MainWindow::MemoryViewer);
+	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebugger);
+	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
+	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
+	connect(showDebuggerAct, &QAction::triggered, guiSettings, &GuiSettings::setDebuggerVisibility);
+	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);
+	connect(showLogAct, &QAction::triggered, guiSettings, &GuiSettings::setLoggerVisibility);
+	connect(showLogAct, &QAction::triggered, this, &MainWindow::ToggleLogFrame);
+	connect(showGameListAct, &QAction::triggered, guiSettings, &GuiSettings::setGamelistVisibility);
+	connect(showGameListAct, &QAction::triggered, this, &MainWindow::ToggleGameListFrame);
+	connect(hideGameIconsAct, &QAction::triggered, this, &MainWindow::HideGameIcons);
+	connect(refreshGameListAct, &QAction::triggered, this, &MainWindow::RefreshGameList);
+	connect(aboutAct, &QAction::triggered, this, &MainWindow::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
 }
 

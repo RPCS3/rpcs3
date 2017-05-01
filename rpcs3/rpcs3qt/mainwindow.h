@@ -66,6 +66,7 @@ protected:
 	void MainWindow::closeEvent(QCloseEvent *event) override;
 private:
 	void CreateActions();
+	void CreateConnects();
 	void CreateMenus();
 	void CreateDockWindows();
 	void ConfigureGuiFromSettings();
