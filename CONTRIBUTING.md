@@ -1,6 +1,6 @@
 # Getting Started
 
-Before getting started using the emulator, read the [Quickstart Guide](https://rpcs3.net/quickstart) and the [FAQ](https://rpcs3.net/FAQ). After reading those, if you need support, visit our [Forums](http://www.emunewz.net/forum/forumdisplay.php?fid=172). 
+Before getting started using the emulator, read the [Quickstart Guide](https://rpcs3.net/quickstart) and the [FAQ](https://rpcs3.net/faq). After reading those, if you need support, visit our [Forums](http://www.emunewz.net/forum/forumdisplay.php?fid=172). 
 
 # Issue Reporting
 
