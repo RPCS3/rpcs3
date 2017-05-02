@@ -13,11 +13,15 @@ public:
 	explicit CoreTab(QWidget *parent = 0);
 
 private slots:
-    void OnSearchBoxTextChanged();
+	void OnSearchBoxTextChanged();
+	void OnHookButtonToggled();
+	void OnPPUDecoderToggled();
+	void OnSPUDecoderToggled();
+	void OnLibButtonToggled();
 
 private:
-    QListWidget *lleList;
-    QLineEdit *searchBox;
+	QListWidget *lleList;
+	QLineEdit *searchBox;
 };
 
 #endif // CORETAB_H

@@ -1,6 +1,3 @@
-#include "stdafx.h"
-#include "stdafx_gui.h"
-#include "rpcs3.h"
 #include "BasicMouseHandler.h"
 
 void BasicMouseHandler::Init(const u32 max_connect)
@@ -16,42 +13,56 @@ void BasicMouseHandler::Init(const u32 max_connect)
 	m_info.product_id[0] = 0x1234;
 }
 
-BasicMouseHandler::BasicMouseHandler()
+BasicMouseHandler::BasicMouseHandler(QObject* target, QObject* parent) : QObject(parent), m_target(target)
 {
-	wxGetApp().Bind(wxEVT_LEFT_DOWN, &BasicMouseHandler::MouseButtonDown, this);
-	wxGetApp().Bind(wxEVT_RIGHT_DOWN, &BasicMouseHandler::MouseButtonDown, this);
-	wxGetApp().Bind(wxEVT_MIDDLE_DOWN, &BasicMouseHandler::MouseButtonDown, this);
-	wxGetApp().Bind(wxEVT_LEFT_UP, &BasicMouseHandler::MouseButtonUp, this);
-	wxGetApp().Bind(wxEVT_RIGHT_UP, &BasicMouseHandler::MouseButtonUp, this);
-	wxGetApp().Bind(wxEVT_MIDDLE_UP, &BasicMouseHandler::MouseButtonUp, this);
-	wxGetApp().Bind(wxEVT_MOUSEWHEEL, &BasicMouseHandler::MouseScroll, this);
-	wxGetApp().Bind(wxEVT_MOTION, &BasicMouseHandler::MouseMove, this);
+	target->installEventFilter(this);
 }
 
-void BasicMouseHandler::MouseButtonDown(wxMouseEvent& event)
+bool BasicMouseHandler::eventFilter(QObject* obj, QEvent* ev)
 {
-	if (event.LeftDown())        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 1);
-	else if (event.RightDown())  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 1);
-	else if (event.MiddleDown()) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 1);
-	event.Skip();
+	// Commenting target since I don't know how to target game window yet.
+	//if (m_target == obj)
+	{
+		switch (ev->type())
+		{
+		case QEvent::MouseButtonPress:
+			MouseButtonDown(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::MouseButtonRelease:
+			MouseButtonUp(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::MouseMove:
+			MouseMove(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::Wheel:
+			MouseScroll(static_cast<QWheelEvent*>(ev));
+			break;
+		}
+	}
+	return false;
 }
 
-void BasicMouseHandler::MouseButtonUp(wxMouseEvent& event)
+void BasicMouseHandler::MouseButtonDown(QMouseEvent* event)
 {
-	if (event.LeftUp())          MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 0);
-	else if (event.RightUp())    MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 0);
-	else if (event.MiddleUp())   MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 0);
-	event.Skip();
+	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 1);
+	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 1);
+	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 1);
 }
 
-void BasicMouseHandler::MouseScroll(wxMouseEvent& event)
+void BasicMouseHandler::MouseButtonUp(QMouseEvent* event)
 {
-	MouseHandlerBase::Scroll(event.GetWheelRotation());
-	event.Skip();
+	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, 0);
+	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, 0);
+	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, 0);
 }
 
-void BasicMouseHandler::MouseMove(wxMouseEvent& event)
+void BasicMouseHandler::MouseScroll(QWheelEvent* event)
 {
-	MouseHandlerBase::Move(event.m_x, event.m_y);
-	event.Skip();
+	// Woo lads, Qt handles multidimensional scrolls. Just gonna grab the x for now. Not sure if this works. TODO: Test
+	MouseHandlerBase::Scroll(event->angleDelta().x());
+}
+
+void BasicMouseHandler::MouseMove(QMouseEvent* event)
+{
+	MouseHandlerBase::Move(event->x(), event->y());
 }

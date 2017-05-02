@@ -1,15 +1,26 @@
-#pragma once
+#ifndef BASIC_KEYBOARD_HANDLER_H
+#define BASIC_KEYBOARD_HANDLER_H
 
+#include "stdafx.h"
 #include "Emu/Io/KeyboardHandler.h"
 
-class BasicKeyboardHandler final : public KeyboardHandlerBase, public wxWindow
+#include <QObject>
+#include <QKeyEvent>
+
+class BasicKeyboardHandler final : public QObject, public KeyboardHandlerBase
 {
+	Q_OBJECT
 public:
 	virtual void Init(const u32 max_connect) override;
 
-	BasicKeyboardHandler();
+	explicit BasicKeyboardHandler(QObject* target = nullptr, QObject* parent = nullptr);
 
-	void KeyDown(wxKeyEvent& event);
-	void KeyUp(wxKeyEvent& event);
+	bool eventFilter(QObject* obj, QEvent* ev);
+	void keyPressEvent(QKeyEvent* event);
+	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();
+private:
+	QObject* m_target;
 };
+
+#endif

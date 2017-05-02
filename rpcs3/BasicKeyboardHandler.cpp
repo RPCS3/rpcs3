@@ -1,7 +1,6 @@
-#include "stdafx.h"
-#include "stdafx_gui.h"
-#include "rpcs3.h"
 #include "BasicKeyboardHandler.h"
+
+#include <QKeyEvent>
 
 void BasicKeyboardHandler::Init(const u32 max_connect)
 {
@@ -18,70 +17,85 @@ void BasicKeyboardHandler::Init(const u32 max_connect)
 	m_info.status[0] = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }
 
-BasicKeyboardHandler::BasicKeyboardHandler()
+BasicKeyboardHandler::BasicKeyboardHandler(QObject* target, QObject* parent) : QObject(parent), m_target(target)
 {
-	wxGetApp().Bind(wxEVT_KEY_DOWN, &BasicKeyboardHandler::KeyDown, this);
-	wxGetApp().Bind(wxEVT_KEY_UP, &BasicKeyboardHandler::KeyUp, this);
+	// Adds event filter to the target to filter keyevents.
+	target->installEventFilter(this);
 }
 
-void BasicKeyboardHandler::KeyDown(wxKeyEvent& event)
+bool BasicKeyboardHandler::eventFilter(QObject* target, QEvent* ev)
 {
-	Key(event.GetKeyCode(), 1);
-	event.Skip();
+	// Commenting target since I don't know how to target game window yet.
+	//if (target == m_target)
+	{
+		if (ev->type() == QEvent::KeyPress)
+		{
+			keyPressEvent(static_cast<QKeyEvent*>(ev));
+		}
+		else if (ev->type() == QEvent::KeyRelease)
+		{
+			keyReleaseEvent(static_cast<QKeyEvent*>(ev));
+		}
+	}
+	return false;
 }
 
-void BasicKeyboardHandler::KeyUp(wxKeyEvent& event)
+void BasicKeyboardHandler::keyPressEvent(QKeyEvent* keyEvent)
 {
-	Key(event.GetKeyCode(), 0);
-	event.Skip();
+	Key(keyEvent->key(), 1);
+}
+
+void BasicKeyboardHandler::keyReleaseEvent(QKeyEvent* keyEvent)
+{
+	Key(keyEvent->key(), 0);
 }
 
 void BasicKeyboardHandler::LoadSettings()
 {
 	// Meta Keys
-	m_keyboards[0].m_buttons.emplace_back(WXK_CONTROL, CELL_KB_MKEY_L_CTRL);
-	m_keyboards[0].m_buttons.emplace_back(WXK_SHIFT, CELL_KB_MKEY_L_SHIFT);
-	m_keyboards[0].m_buttons.emplace_back(WXK_ALT, CELL_KB_MKEY_L_ALT);
-	m_keyboards[0].m_buttons.emplace_back(WXK_WINDOWS_LEFT, CELL_KB_MKEY_L_WIN);
-	m_keyboards[0].m_buttons.emplace_back(WXK_COMMAND, CELL_KB_MKEY_L_WIN);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Control, CELL_KB_MKEY_L_CTRL);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Shift, CELL_KB_MKEY_L_SHIFT);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Alt, CELL_KB_MKEY_L_ALT);
+	////m_keyboards[0].m_buttons.emplace_back(WXK_WINDOWS_LEFT, CELL_KB_MKEY_L_WIN); //TODO?
+	//// m_keyboards[0].m_buttons.emplace_back(WXK_COMMAND, CELL_KB_MKEY_L_WIN); //TODO?
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KB_MKEY_R_CTRL);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KB_MKEY_R_SHIFT);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KB_MKEY_R_ALT);
-	m_keyboards[0].m_buttons.emplace_back(WXK_WINDOWS_RIGHT, CELL_KB_MKEY_R_WIN);
+	//// m_keyboards[0].m_buttons.emplace_back(WXK_WINDOWS_RIGHT, CELL_KB_MKEY_R_WIN); //TODO?
 
 	// CELL_KB_RAWDAT
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_NO_EVENT);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_E_ROLLOVER);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_E_POSTFAIL);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_E_UNDEF);
-	m_keyboards[0].m_buttons.emplace_back(WXK_ESCAPE, CELL_KEYC_ESCAPE);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Escape, CELL_KEYC_ESCAPE);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_106_KANJI);
-	m_keyboards[0].m_buttons.emplace_back(WXK_CAPITAL, CELL_KEYC_CAPS_LOCK);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F1, CELL_KEYC_F1);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F2, CELL_KEYC_F2);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F3, CELL_KEYC_F3);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F4, CELL_KEYC_F4);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F5, CELL_KEYC_F5);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F6, CELL_KEYC_F6);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F7, CELL_KEYC_F7);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F8, CELL_KEYC_F8);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F9, CELL_KEYC_F9);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F10, CELL_KEYC_F10);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F11, CELL_KEYC_F11);
-	m_keyboards[0].m_buttons.emplace_back(WXK_F12, CELL_KEYC_F12);
-	m_keyboards[0].m_buttons.emplace_back(WXK_PRINT, CELL_KEYC_PRINTSCREEN);
-	m_keyboards[0].m_buttons.emplace_back(WXK_SCROLL, CELL_KEYC_SCROLL_LOCK);
-	m_keyboards[0].m_buttons.emplace_back(WXK_PAUSE, CELL_KEYC_PAUSE);
-	m_keyboards[0].m_buttons.emplace_back(WXK_INSERT, CELL_KEYC_INSERT);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_CapsLock, CELL_KEYC_CAPS_LOCK);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F1, CELL_KEYC_F1);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F2, CELL_KEYC_F2);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F3, CELL_KEYC_F3);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F4, CELL_KEYC_F4);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F5, CELL_KEYC_F5);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F6, CELL_KEYC_F6);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F7, CELL_KEYC_F7);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F8, CELL_KEYC_F8);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F9, CELL_KEYC_F9);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F10, CELL_KEYC_F10);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F11, CELL_KEYC_F11);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_F12, CELL_KEYC_F12);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Print, CELL_KEYC_PRINTSCREEN);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_ScrollLock, CELL_KEYC_SCROLL_LOCK);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Pause, CELL_KEYC_PAUSE);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Insert, CELL_KEYC_INSERT);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_HOME);
-	m_keyboards[0].m_buttons.emplace_back(WXK_PAGEUP, CELL_KEYC_PAGE_UP);
-	m_keyboards[0].m_buttons.emplace_back(WXK_DELETE, CELL_KEYC_DELETE);
-	m_keyboards[0].m_buttons.emplace_back(WXK_END, CELL_KEYC_END);
-	m_keyboards[0].m_buttons.emplace_back(WXK_PAGEDOWN, CELL_KEYC_PAGE_DOWN);
-	m_keyboards[0].m_buttons.emplace_back(WXK_RIGHT, CELL_KEYC_RIGHT_ARROW);
-	m_keyboards[0].m_buttons.emplace_back(WXK_LEFT, CELL_KEYC_LEFT_ARROW);
-	m_keyboards[0].m_buttons.emplace_back(WXK_DOWN, CELL_KEYC_DOWN_ARROW);
-	m_keyboards[0].m_buttons.emplace_back(WXK_UP, CELL_KEYC_UP_ARROW);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_PageUp, CELL_KEYC_PAGE_UP);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Delete, CELL_KEYC_DELETE);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_End, CELL_KEYC_END);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_PageDown, CELL_KEYC_PAGE_DOWN);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Right, CELL_KEYC_RIGHT_ARROW);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Left, CELL_KEYC_LEFT_ARROW);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Down, CELL_KEYC_DOWN_ARROW);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Up, CELL_KEYC_UP_ARROW);
 	//m_keyboards[0].m_buttons.emplace_back(WXK_NUMLOCK, CELL_KEYC_NUM_LOCK);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_APPLICATION);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_KANA);
@@ -89,23 +103,23 @@ void BasicKeyboardHandler::LoadSettings()
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_MUHENKAN);
 
 	// CELL_KB_KEYPAD
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMLOCK, CELL_KEYC_KPAD_NUMLOCK);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD_DIVIDE, CELL_KEYC_KPAD_SLASH);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD_MULTIPLY, CELL_KEYC_KPAD_ASTERISK);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD_SUBTRACT, CELL_KEYC_KPAD_MINUS);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD_ADD, CELL_KEYC_KPAD_PLUS);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD_ENTER, CELL_KEYC_KPAD_ENTER);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD1, CELL_KEYC_KPAD_1);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD2, CELL_KEYC_KPAD_2);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD3, CELL_KEYC_KPAD_3);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD4, CELL_KEYC_KPAD_4);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD5, CELL_KEYC_KPAD_5);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD6, CELL_KEYC_KPAD_6);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD7, CELL_KEYC_KPAD_7);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD8, CELL_KEYC_KPAD_8);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD9, CELL_KEYC_KPAD_9);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD0, CELL_KEYC_KPAD_0);
-	m_keyboards[0].m_buttons.emplace_back(WXK_NUMPAD_DELETE, CELL_KEYC_KPAD_PERIOD);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_NumLock, CELL_KEYC_KPAD_NUMLOCK);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_division, CELL_KEYC_KPAD_SLASH);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_multiply, CELL_KEYC_KPAD_ASTERISK);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Minus, CELL_KEYC_KPAD_MINUS);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Plus, CELL_KEYC_KPAD_PLUS);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Enter, CELL_KEYC_KPAD_ENTER);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_1, CELL_KEYC_KPAD_1);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_2, CELL_KEYC_KPAD_2);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_3, CELL_KEYC_KPAD_3);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_4, CELL_KEYC_KPAD_4);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_5, CELL_KEYC_KPAD_5);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_6, CELL_KEYC_KPAD_6);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_7, CELL_KEYC_KPAD_7);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_8, CELL_KEYC_KPAD_8);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_9, CELL_KEYC_KPAD_9);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_0, CELL_KEYC_KPAD_0);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Delete, CELL_KEYC_KPAD_PERIOD);
 
 	// ASCII Printable characters
 	m_keyboards[0].m_buttons.emplace_back('A', CELL_KEYC_A);
@@ -146,11 +160,11 @@ void BasicKeyboardHandler::LoadSettings()
 	m_keyboards[0].m_buttons.emplace_back('9', CELL_KEYC_9);
 	m_keyboards[0].m_buttons.emplace_back('0', CELL_KEYC_0);
 
-	m_keyboards[0].m_buttons.emplace_back(WXK_RETURN, CELL_KEYC_ENTER);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Return, CELL_KEYC_ENTER);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_ESC);
-	m_keyboards[0].m_buttons.emplace_back(WXK_TAB, CELL_KEYC_TAB);
-	m_keyboards[0].m_buttons.emplace_back(WXK_SPACE, CELL_KEYC_SPACE);
-	m_keyboards[0].m_buttons.emplace_back(WXK_SUBTRACT, CELL_KEYC_MINUS);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Tab, CELL_KEYC_TAB);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Space, CELL_KEYC_SPACE);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Minus, CELL_KEYC_MINUS);
 	m_keyboards[0].m_buttons.emplace_back('=', CELL_KEYC_EQUAL_101);
 	m_keyboards[0].m_buttons.emplace_back('^', CELL_KEYC_ACCENT_CIRCONFLEX_106);
 	//m_keyboards[0].m_buttons.emplace_back('(', CELL_KEYC_LEFT_BRACKET_101);

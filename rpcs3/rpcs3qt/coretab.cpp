@@ -1,11 +1,9 @@
-#ifdef QT_UI
-
 #include <QCheckBox>
 #include <QGroupBox>
 #include <QRadioButton>
+#include <QButtonGroup>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QDebug>
 
 #include "coretab.h"
 
@@ -13,12 +11,12 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
 {
 	// PPU Decoder
 	QGroupBox *ppuDecoder = new QGroupBox(tr("PPU Decoder"));
-
 	QRadioButton *ppuRadio1 = new QRadioButton(tr("Interpreter (precise)"));
+	ppuRadio1->setEnabled(false); // TODO
 	QRadioButton *ppuRadio2 = new QRadioButton(tr("Interpreter (fast)"));
 	QRadioButton *ppuRadio3 = new QRadioButton(tr("Recompiler (LLVM)"));
-
 	QVBoxLayout *ppuVbox = new QVBoxLayout;
+
 	ppuVbox->addWidget(ppuRadio1);
 	ppuVbox->addWidget(ppuRadio2);
 	ppuVbox->addWidget(ppuRadio3);
@@ -42,16 +40,29 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
 
 	// Checkboxes
 	QCheckBox *hookStFunc = new QCheckBox(tr("Hook static functions"));
-	QCheckBox *loadLiblv2 = new QCheckBox(tr("Load liblv2.sprx only"));
 
 	// Load libraries
 	QGroupBox *lle = new QGroupBox(tr("Load libraries"));
 
+	QButtonGroup *libModeBG = new QButtonGroup(this);
+	QRadioButton* automaticRB = new QRadioButton("Auto-Load required libs (recommended)", lle);
+	QRadioButton* manualRB = new QRadioButton("Manually select required libs", lle);
+	QRadioButton* automanualRB = new QRadioButton("Auto-Load + manually selected", lle);
+	QRadioButton* liblv2RB = new QRadioButton("Load liblv2.sprx only", lle);
+	libModeBG->addButton(automaticRB);
+	libModeBG->addButton(manualRB);
+	libModeBG->addButton(automanualRB);
+	libModeBG->addButton(liblv2RB);
+
 	lleList = new QListWidget;
 	searchBox = new QLineEdit;
-	connect(searchBox, &QLineEdit::textChanged, this, &CoreTab::OnSearchBoxTextChanged);
 
 	QVBoxLayout *lleVbox = new QVBoxLayout;
+	lleVbox->addWidget(automaticRB);
+	lleVbox->addWidget(manualRB);
+	lleVbox->addWidget(automanualRB);
+	lleVbox->addWidget(liblv2RB);
+	lleVbox->addSpacing(5);
 	lleVbox->addWidget(lleList);
 	lleVbox->addWidget(searchBox);
 	lle->setLayout(lleVbox);
@@ -61,23 +72,46 @@ CoreTab::CoreTab(QWidget *parent) : QWidget(parent)
 	vbox->addWidget(ppuDecoder);
 	vbox->addWidget(spuDecoder);
 	vbox->addWidget(hookStFunc);
-	vbox->addWidget(loadLiblv2);
 	vbox->addStretch();
 
 	QHBoxLayout *hbox = new QHBoxLayout;
 	hbox->addLayout(vbox);
 	hbox->addWidget(lle);
 	setLayout(hbox);
+
+	// Events
+	connect(hookStFunc, SIGNAL(buttonToggled(int)), this, SLOT(OnHookButtonToggled(int)));
+	connect(ppuDecoder, SIGNAL(buttonToggled(int)), this, SLOT(OnPPUDecoderToggled(int)));
+	connect(spuDecoder, SIGNAL(buttonToggled(int)), this, SLOT(OnSPUDecoderToggled(int)));
+	connect(libModeBG, SIGNAL(buttonToggled(int)), this, SLOT(OnLibModeToggled(int)));
+	connect(searchBox, &QLineEdit::textChanged, this, &CoreTab::OnSearchBoxTextChanged);
 }
 
 void CoreTab::OnSearchBoxTextChanged()
 {
 	if (searchBox->text().isEmpty())
-		qDebug() << "Empty!";
 
 	lleList->clear();
 
 	QString searchTerm = searchBox->text().toLower();
 }
 
-#endif // QT_UI
+void CoreTab::OnHookButtonToggled()
+{
+
+}
+
+void CoreTab::OnPPUDecoderToggled()
+{
+
+}
+
+void CoreTab::OnSPUDecoderToggled()
+{
+
+}
+
+void CoreTab::OnLibButtonToggled()
+{
+	
+}

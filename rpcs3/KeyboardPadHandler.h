@@ -3,6 +3,9 @@
 #include "Utilities/Config.h"
 #include "Emu/Io/PadHandler.h"
 
+#include <QKeyEvent>
+#include <QObject>
+
 struct KeyboardPadConfig final : cfg::node
 {
 	const std::string cfg_name = fs::get_config_dir() + "/config_kbpad.yml";
@@ -48,14 +51,18 @@ struct KeyboardPadConfig final : cfg::node
 	}
 };
 
-class KeyboardPadHandler final : public PadHandlerBase, public wxWindow
+class KeyboardPadHandler final : public QObject, public PadHandlerBase
 {
 public:
 	virtual void Init(const u32 max_connect) override;
 
-	KeyboardPadHandler();
+	KeyboardPadHandler(QObject* target, QObject* parent);
 
-	void KeyDown(wxKeyEvent& event);
-	void KeyUp(wxKeyEvent& event);
+	void keyPressEvent(QKeyEvent* event);
+	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();
+
+	bool eventFilter(QObject* obj, QEvent* ev);
+private:
+	QObject* m_target;
 };

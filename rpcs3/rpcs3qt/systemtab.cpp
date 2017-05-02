@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
@@ -51,5 +49,3 @@ SystemTab::SystemTab(QWidget *parent) : QWidget(parent)
 	hbox->addStretch();
 	setLayout(hbox);
 }
-
-#endif // QT_UI

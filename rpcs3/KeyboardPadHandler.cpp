@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include "stdafx_gui.h"
-#include "rpcs3.h"
 
 #include "KeyboardPadHandler.h"
 
@@ -14,22 +12,36 @@ void KeyboardPadHandler::Init(const u32 max_connect)
 	m_info.now_connect = std::min(m_pads.size(), (size_t)max_connect);
 }
 
-KeyboardPadHandler::KeyboardPadHandler()
+KeyboardPadHandler::KeyboardPadHandler(QObject* target, QObject* parent) : QObject(parent), m_target(target)
 {
-	wxGetApp().Bind(wxEVT_KEY_DOWN, &KeyboardPadHandler::KeyDown, this);
-	wxGetApp().Bind(wxEVT_KEY_UP, &KeyboardPadHandler::KeyUp, this);
+	target->installEventFilter(this);
 }
 
-void KeyboardPadHandler::KeyDown(wxKeyEvent& event)
+bool KeyboardPadHandler::eventFilter(QObject* target, QEvent* ev)
 {
-	Key(event.GetKeyCode(), 1);
-	event.Skip();
+	// Commenting target since I don't know how to target game window yet.
+	//if (target == m_target)
+	{
+		if (ev->type() == QEvent::KeyPress)
+		{
+			keyPressEvent(static_cast<QKeyEvent*>(ev));
+		}
+		else if (ev->type() == QEvent::KeyRelease)
+		{
+			keyReleaseEvent(static_cast<QKeyEvent*>(ev));
+		}
+	}
+	return false;
 }
 
-void KeyboardPadHandler::KeyUp(wxKeyEvent& event)
+void KeyboardPadHandler::keyPressEvent(QKeyEvent* event)
 {
-	Key(event.GetKeyCode(), 0);
-	event.Skip();
+	Key(event->key(), 1);
+}
+
+void KeyboardPadHandler::keyReleaseEvent(QKeyEvent* event)
+{
+	Key(event->key(), 0);
 }
 
 void KeyboardPadHandler::LoadSettings()

@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
@@ -15,10 +13,13 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 
 	QComboBox *audioOutBox = new QComboBox;
 	audioOutBox->addItem(tr("Null"));
+	audioOutBox->addItem(tr("OpenAL"));
 #ifdef _WIN32
 	audioOutBox->addItem(tr("XAudio2"));
 #endif // _WIN32
-	audioOutBox->addItem(tr("OpenAL"));
+#ifdef __LINUX__
+	audioOutBox->addItem(tr("ALSA"));
+#endif // __LINUX__
 
 	QVBoxLayout *audioOutVbox = new QVBoxLayout;
 	audioOutVbox->addWidget(audioOutBox);
@@ -27,12 +28,14 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 	// Checkboxes
 	QCheckBox *audioDump = new QCheckBox(tr("Dump to file"));
 	QCheckBox *conv = new QCheckBox(tr("Convert to 16 bit"));
+	QCheckBox *downmix = new QCheckBox(tr("Downmix to Stereo"));
 
 	// Main layout
 	QVBoxLayout *vbox = new QVBoxLayout;
 	vbox->addWidget(audioOut);
 	vbox->addWidget(audioDump);
 	vbox->addWidget(conv);
+	vbox->addWidget(downmix);
 	vbox->addStretch();
 
 	QHBoxLayout *hbox = new QHBoxLayout;
@@ -40,5 +43,3 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 	hbox->addStretch();
 	setLayout(hbox);
 }
-
-#endif // QT_UI

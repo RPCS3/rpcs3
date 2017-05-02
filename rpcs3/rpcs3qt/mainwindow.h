@@ -3,6 +3,10 @@
 
 #include <QMainWindow>
 
+#include "logframe.h"
+#include "debuggerframe.h"
+#include "GameListFrame.h"
+
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
@@ -17,6 +21,7 @@ private slots:
 	void BootElf();
 	void BootGame();
 	void InstallPkg();
+	void InstallPup();
 	void Pause();
 	void Stop();
 	void SendOpenSysMenu();
@@ -34,16 +39,28 @@ private slots:
 	void RSXDebugger();
 	void StringSearch();
 	void DecryptSPRXLibraries();
+	void ToggleDebugFrame(bool state);
+	void ToggleLogFrame(bool state);
+	void ToggleGameListFrame(bool state);
+	void HideGameIcons();
+	void RefreshGameList();
 	void About();
+
+	void OnDebugFrameClosed();
+	void OnLogFrameClosed();
+	void OnGameListFrameClosed();
 
 private:
 	void CreateActions();
 	void CreateMenus();
 	void CreateDockWindows();
+	void DoSettings(bool load);
+	void keyPressEvent(QKeyEvent *keyEvent);
 
 	QAction *bootElfAct;
 	QAction *bootGameAct;
-	QAction *bootInstallAct;
+	QAction *bootInstallPkgAct;
+	QAction *bootInstallPupAct;
 	QAction *sysPauseAct;
 	QAction *sysStopAct;
 	QAction *sysSendOpenMenuAct;
@@ -60,10 +77,20 @@ private:
 	QAction *toolsMemoryViewerAct;
 	QAction *toolsRsxDebuggerAct;
 	QAction *toolsStringSearchAct;
-	QAction *toolsSecryptSprxLibsAct;
+	QAction *toolsDecryptSprxLibsAct;
 	QAction *exitAct;
+	QAction *showDebuggerAct;
+	QAction *showLogAct;
+	QAction *showGameListAct;
+	QAction *hideGameIconsAct;
+	QAction *refreshGameListAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
+
+	// Dockable widget frames
+	LogFrame *logFrame;
+	DebuggerFrame *debuggerFrame;
+	GameListFrame *gameListFrame;
 };
 
 #endif // MAINWINDOW_H

@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QComboBox>
 #include <QGroupBox>
 #include <QVBoxLayout>
@@ -32,5 +30,3 @@ NetworkingTab::NetworkingTab(QWidget *parent) : QWidget(parent)
 	hbox->addStretch();
 	setLayout(hbox);
 }
-
-#endif // QT_UI

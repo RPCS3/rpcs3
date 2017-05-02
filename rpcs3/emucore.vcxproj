@@ -61,7 +61,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <PreBuildEvent>
       <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>

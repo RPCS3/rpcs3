@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QCheckBox>
 #include <QGroupBox>
 #include <QVBoxLayout>
@@ -28,5 +26,3 @@ MiscTab::MiscTab(QWidget *parent) : QWidget(parent)
 	hbox->addStretch(1);
 	setLayout(hbox);
 }
-
-#endif // QT_UI

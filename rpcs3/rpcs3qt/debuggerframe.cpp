@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include "debuggerframe.h"
 
 DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), parent)
@@ -7,4 +5,9 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 
 }
 
-#endif // QT_UI
+
+void DebuggerFrame::closeEvent(QCloseEvent *event)
+{
+	QDockWidget::closeEvent(event);
+	emit DebugFrameClosed();
+}

@@ -1,5 +1,3 @@
-#ifdef QT_UI
-
 #include <QComboBox>
 #include <QGroupBox>
 #include <QVBoxLayout>
@@ -87,4 +85,3 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	setLayout(hbox);
 }
 
-#endif // QT_UI

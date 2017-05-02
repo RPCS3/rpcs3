@@ -86,3 +86,8 @@ CMakeCache.txt
 # cotire
 rpcs3/cotire/*
 rpcs3/rpcs3_*_cotire.cmake
+
+# Qt
+moc_*.cpp
+rpcs3/rpcs3qt/Debug/
+rpcs3/rpcs3qt/Release/
