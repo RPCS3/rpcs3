@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "stdafx_gui.h"
 
 #include "Emu/Memory/Memory.h"
@@ -386,18 +386,18 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 
 namespace
 {
-	std::array<u8, 3> get_value(gsl::span<const gsl::byte> orig_buffer, rsx::surface_color_format format, size_t idx)
+	std::array<u8, 3> get_value(gsl::multi_span<const gsl::byte> orig_buffer, rsx::surface_color_format format, size_t idx)
 	{
 		switch (format)
 		{
 		case rsx::surface_color_format::b8:
 		{
-			u8 value = gsl::as_span<const u8>(orig_buffer)[idx];
+			u8 value = gsl::as_multi_span<const u8>(orig_buffer)[idx];
 			return{ value, value, value };
 		}
 		case rsx::surface_color_format::x32:
 		{
-			be_t<u32> stored_val = gsl::as_span<const be_t<u32>>(orig_buffer)[idx];
+			be_t<u32> stored_val = gsl::as_multi_span<const be_t<u32>>(orig_buffer)[idx];
 			u32 swapped_val = stored_val;
 			f32 float_val = (f32&)swapped_val;
 			u8 val = float_val * 255.f;
@@ -407,19 +407,19 @@ namespace
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
-			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			auto ptr = gsl::as_multi_span<const u8>(orig_buffer);
 			return{ ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4] };
 		}
 		case rsx::surface_color_format::a8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		{
-			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			auto ptr = gsl::as_multi_span<const u8>(orig_buffer);
 			return{ ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4] };
 		}
 		case rsx::surface_color_format::w16z16y16x16:
 		{
-			auto ptr = gsl::as_span<const u16>(orig_buffer);
+			auto ptr = gsl::as_multi_span<const u16>(orig_buffer);
 			f16 h0 = f16(ptr[4 * idx]);
 			f16 h1 = f16(ptr[4 * idx + 1]);
 			f16 h2 = f16(ptr[4 * idx + 2]);
@@ -445,7 +445,7 @@ namespace
 	 * Return a new buffer that can be passed to wxImage ctor.
 	 * The pointer seems to be freed by wxImage.
 	 */
-	u8* convert_to_wximage_buffer(rsx::surface_color_format format, gsl::span<const gsl::byte> orig_buffer, size_t width, size_t height) noexcept
+	u8* convert_to_wximage_buffer(rsx::surface_color_format format, gsl::multi_span<const gsl::byte> orig_buffer, size_t width, size_t height) noexcept
 	{
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 		for (u32 i = 0; i < width * height; i++)
@@ -492,7 +492,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 	{
 		if (width && height && !draw_call.depth_stencil[0].empty())
 		{
-			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[0];
+			gsl::multi_span<const gsl::byte> orig_buffer = draw_call.depth_stencil[0];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
 
 			if (draw_call.state.surface_depth_fmt() == rsx::surface_depth_format::z24s8)
@@ -501,7 +501,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 				{
 					for (u32 col = 0; col < width; col++)
 					{
-						u32 depth_val = gsl::as_span<const u32>(orig_buffer)[row * width + col];
+						u32 depth_val = gsl::as_multi_span<const u32>(orig_buffer)[row * width + col];
 						u8 displayed_depth_val = 255 * depth_val / 0xFFFFFF;
 						buffer[3 * col + 0 + width * row * 3] = displayed_depth_val;
 						buffer[3 * col + 1 + width * row * 3] = displayed_depth_val;
@@ -515,7 +515,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 				{
 					for (u32 col = 0; col < width; col++)
 					{
-						u16 depth_val = gsl::as_span<const u16>(orig_buffer)[row * width + col];
+						u16 depth_val = gsl::as_multi_span<const u16>(orig_buffer)[row * width + col];
 						u8 displayed_depth_val = 255 * depth_val / 0xFFFF;
 						buffer[3 * col + 0 + width * row * 3] = displayed_depth_val;
 						buffer[3 * col + 1 + width * row * 3] = displayed_depth_val;
@@ -536,14 +536,14 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 	{
 		if (width && height && !draw_call.depth_stencil[1].empty())
 		{
-			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[1];
+			gsl::multi_span<const gsl::byte> orig_buffer = draw_call.depth_stencil[1];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
 
 			for (u32 row = 0; row < height; row++)
 			{
 				for (u32 col = 0; col < width; col++)
 				{
-					u8 stencil_val = gsl::as_span<const u8>(orig_buffer)[row * width + col];
+					u8 stencil_val = gsl::as_multi_span<const u8>(orig_buffer)[row * width + col];
 					buffer[3 * col + 0 + width * row * 3] = stencil_val;
 					buffer[3 * col + 1 + width * row * 3] = stencil_val;
 					buffer[3 * col + 2 + width * row * 3] = stencil_val;
