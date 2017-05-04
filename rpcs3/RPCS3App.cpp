@@ -61,8 +61,6 @@ void RPCS3App::Init()
 	RPCS3MainWin->show();
 	//m_MainFrame->DoSettings(true);
 
-	// Load default style sheet, if it exists.
-	ChangeStyleSheetRequest("stylesheet.qss");
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here.
@@ -205,7 +203,8 @@ void RPCS3App::InitializeHandlers()
  */
 void RPCS3App::InitializeConnects()
 {
-	connect(RPCS3MainWin, &MainWindow::RequestGlobalStylesheetChange, this, &RPCS3App::ChangeStyleSheetRequest);
+	connect(RPCS3MainWin, &MainWindow::RequestGlobalStylesheetChange, this, &RPCS3App::OnChangeStyleSheetRequest);
+
 	connect(this, &RPCS3App::OnEmulatorRun, RPCS3MainWin, &MainWindow::OnEmuRun);
 	connect(this, &RPCS3App::OnEmulatorStop, RPCS3MainWin, &MainWindow::OnEmuStop);
 	connect(this, &RPCS3App::OnEmulatorPause, RPCS3MainWin, &MainWindow::OnEmuPause);
@@ -215,11 +214,16 @@ void RPCS3App::InitializeConnects()
 
 /*
 * Handle a request to change the stylesheet. May consider adding reporting of errors in future.
+* Empty string means default.
 */
-void RPCS3App::ChangeStyleSheetRequest(const QString& sheetFilePath)
+void RPCS3App::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 {
 	QFile file(sheetFilePath);
-	if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+	if (sheetFilePath == "")
+	{
+		setStyleSheet("");
+	}
+	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		setStyleSheet(file.readAll());
 		file.close();

@@ -40,13 +40,14 @@ public:
 	}
 };
 
-GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), parent)
+GameListFrame::GameListFrame(std::shared_ptr<GuiSettings> settings, QWidget *parent) : QDockWidget(tr("Game List"), parent), xGuiSettings(settings)
 {
 	CreateActions();
-	LoadSettings();
+
 	gameList = new QTableWidget(this);
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	gameList->setSelectionMode(QAbstractItemView::SingleSelection);
+	gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
 	gameList->verticalHeader()->setVisible(false);
 
 	gameList->setColumnCount(7);
@@ -68,7 +69,36 @@ GameListFrame::GameListFrame(QWidget *parent) : QDockWidget(tr("Game List"), par
 	connect(gameList, &QTableWidget::doubleClicked, this, &GameListFrame::doubleClickedSlot);
 	connect(gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &GameListFrame::OnColClicked);
 
-	m_sortColumn = 1; // sort by name by default
+	Refresh(); // Data MUST be loaded so that first settings load will reset columns to correct width w/r to data.
+	LoadSettings();
+}
+
+void GameListFrame::LoadSettings()
+{
+	QByteArray& state = xGuiSettings->GetGameListState();
+
+	for (int col = 0; col < columnActs.length(); ++col)
+	{
+		bool vis = xGuiSettings->GetGamelistColVisibility(col);
+		columnActs[col]->setChecked(vis);
+		gameList->setColumnHidden(col, !vis);
+	}
+	m_sortAscending = xGuiSettings->GetGamelistSortAsc();
+	m_sortColumn = xGuiSettings->GetGamelistSortCol();
+
+
+
+	if (state.isEmpty())
+	{ // If no settings exist, go to default.
+		gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+	}
+	else
+	{
+		gameList->horizontalHeader()->restoreState(state);
+	}
+
 	Refresh();
 }
 
@@ -80,10 +110,17 @@ GameListFrame::~GameListFrame()
 void GameListFrame::OnColClicked(int col)
 {
 	if (col == m_sortColumn)
+	{
 		m_sortAscending ^= true;
+	}
 	else
+	{
 		m_sortAscending = true;
+	}
 	m_sortColumn = col;
+
+	xGuiSettings->SetGamelistSortAsc(m_sortAscending);
+	xGuiSettings->SetGamelistSortCol(col);
 
 	// Sort entries, update columns and refresh the panel
 	Refresh();
@@ -184,12 +221,14 @@ void GameListFrame::Refresh()
 
 void GameListFrame::SaveSettings()
 {
-	m_columns.LoadSave(false, m_class_name, this);
-}
+	for (int col = 0; col < columnActs.length(); ++col)
+	{
+		xGuiSettings->SetGamelistColVisibility(col, columnActs[col]->isChecked());
+	}
+	xGuiSettings->SetGamelistSortCol(m_sortColumn);
+	xGuiSettings->SetGamelistSortAsc(m_sortAscending);
 
-void GameListFrame::LoadSettings()
-{
-	m_columns.LoadSave(true, m_class_name);
+	xGuiSettings->WriteGameListState(gameList->horizontalHeader()->saveState());
 }
 
 void GameListFrame::doubleClickedSlot(const QModelIndex& index)
@@ -213,6 +252,7 @@ void GameListFrame::CreateActions()
 
 		auto l_CallBack = [this, col](bool val) {
 			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
+			xGuiSettings->SetGamelistColVisibility(col, val);
 		};
 
 		connect(act, &QAction::triggered, l_CallBack);
@@ -226,14 +266,22 @@ void GameListFrame::CreateActions()
 	showCategoryColAct = new QAction(tr("Show Categories"), this);
 	showPathColAct = new QAction(tr("Show Paths"), this);
 
-	// The index passed is the column to toggle.
-	l_InitAct(showIconColAct, 0);
-	l_InitAct(showNameColAct, 1);
-	l_InitAct(showSerialColAct, 2);
-	l_InitAct(showFWColAct, 3);
-	l_InitAct(showAppVersionColAct, 4);
-	l_InitAct(showCategoryColAct, 5);
-	l_InitAct(showPathColAct, 6);
+	columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct };
+
+	for (int col = 0; col < columnActs.length(); ++col)
+	{
+		QAction* act = columnActs[col];
+
+		act->setCheckable(true);
+		act->setChecked(true);
+
+		auto l_CallBack = [this, col](bool val) {
+			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
+			xGuiSettings->SetGamelistColVisibility(col, val);
+		};
+
+		connect(act, &QAction::triggered, l_CallBack);
+	}
 }
 
 void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
@@ -313,7 +361,7 @@ void GameListFrame::Boot(int row)
 
 void GameListFrame::Configure(int row)
 {
-	SettingsDialog(this, "data/" + m_game_data[row].serial).exec();
+	SettingsDialog(xGuiSettings, this, "data/" + m_game_data[row].serial).exec();
 }
 
 void GameListFrame::RemoveGame(int row)
@@ -490,18 +538,6 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 	}
 }
 
-void ColumnsArr::Show(QDockWidget* list)
-{
-	//list->DeleteAllColumns();
-	//list->SetImageList(m_img_list, wxIMAGE_LIST_SMALL);
-	//std::vector<Column *> c_col = GetSortedColumnsByPos();
-	//for (u32 i = 0, c = 0; i<c_col.size(); ++i)
-	//{
-	//	if (!c_col[i]->shown) continue;
-	//	list->InsertColumn(c++, fmt::FromUTF8(c_col[i]->name), 0, c_col[i]->width);
-	//}
-}
-
 void ColumnsArr::ShowData(QTableWidget* table)
 {
 	// Hack to delete everything without removing the headers.
@@ -549,82 +585,6 @@ void ColumnsArr::ShowData(QTableWidget* table)
 		table->resizeColumnToContents(0);
 		table->setShowGrid(false);
 	}
-}
-
-void ColumnsArr::LoadSave(bool isLoad, const std::string& path, QDockWidget* list)
-{
-	if (isLoad)
-	{
-		Init();
-	}
-	//else if (list)
-	//{
-	//	for (int c = 0; c < list->model()->columnCount(); ++c)
-	//	{
-	//		Column* col = GetColumnByPos(c);
-	//		if (col)
-	//			col->width = list->getContentsMargins(c);
-	//	}
-	//}
-	//
-	//auto&& cfg = g_gui_cfg["GameViewer"];
-	//
-	//for (auto& column : m_columns)
-	//{
-	//	auto&& c_cfg = cfg[column.name];
-	//
-	//	if (isLoad)
-	//	{
-	//		std::tie(column.pos, column.width) = c_cfg.as<std::pair<u32, u32>>(std::make_pair(column.def_pos, column.def_width));
-	//
-	//		column.shown = true;
-	//	}
-	//	else //if (column.shown)
-	//	{
-	//		c_cfg = std::make_pair(column.pos, column.width);
-	//	}
-	//}
-	//
-	//if (isLoad)
-	//{
-	//	//check for errors
-	//	for (u32 c1 = 0; c1 < m_columns.size(); ++c1)
-	//	{
-	//		for (u32 c2 = c1 + 1; c2 < m_columns.size(); ++c2)
-	//		{
-	//			if (m_columns[c1].pos == m_columns[c2].pos)
-	//			{
-	//				LOG_ERROR(HLE, "Columns loaded with error!");
-	//				Init();
-	//				return;
-	//			}
-	//		}
-	//	}
-	//
-	//	for (u32 p = 0; p < m_columns.size(); ++p)
-	//	{
-	//		bool ishas = false;
-	//		for (u32 c = 0; c < m_columns.size(); ++c)
-	//		{
-	//			if (m_columns[c].pos != p)
-	//				continue;
-	//
-	//			ishas = true;
-	//			break;
-	//		}
-	//
-	//		if (!ishas)
-	//		{
-	//			LOG_ERROR(HLE, "Columns loaded with error!");
-	//			Init();
-	//			return;
-	//		}
-	//	}
-	//}
-	//else
-	//{
-	//	save_gui_cfg();
-	//}
 }
 
 void GameListFrame::closeEvent(QCloseEvent *event)

@@ -240,6 +240,15 @@
     <ClCompile Include="rpcs3qt\GuiSettings.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\GuiTab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_GuiTab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_GuiTab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\MemoryViewer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -330,6 +339,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\GuiSettings.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\GuiTab.h">
       <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>

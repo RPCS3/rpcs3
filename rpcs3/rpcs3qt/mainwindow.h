@@ -8,6 +8,8 @@
 #include "GameListFrame.h"
 #include "GuiSettings.h"
 
+#include <memory>
+
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
@@ -37,7 +39,6 @@ private slots:
 	void Stop();
 	void SendOpenSysMenu();
 	void SendExit();
-	void OpenCustomStyleSheet();
 	void Settings();
 	void PadSettings();
 	void AutoPauseSettings();
@@ -54,13 +55,14 @@ private slots:
 	void ToggleDebugFrame(bool state);
 	void ToggleLogFrame(bool state);
 	void ToggleGameListFrame(bool state);
-	void HideGameIcons();
 	void RefreshGameList();
 	void About();
 
 	void OnDebugFrameClosed();
 	void OnLogFrameClosed();
 	void OnGameListFrameClosed();
+
+	void SaveWindowState();
 
 protected:
 	void MainWindow::closeEvent(QCloseEvent *event) override;
@@ -69,7 +71,7 @@ private:
 	void CreateConnects();
 	void CreateMenus();
 	void CreateDockWindows();
-	void ConfigureGuiFromSettings();
+	void ConfigureGuiFromSettings(bool configureAll = false);
 	void DoSettings(bool load);
 	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
@@ -82,7 +84,6 @@ private:
 	QAction *sysStopAct;
 	QAction *sysSendOpenMenuAct;
 	QAction *sysSendExitAct;
-	QAction *requestStylesheetAct;
 	QAction *confSettingsAct;
 	QAction *confPadAct;
 	QAction *confAutopauseManagerAct;
@@ -100,7 +101,6 @@ private:
 	QAction *showDebuggerAct;
 	QAction *showLogAct;
 	QAction *showGameListAct;
-	QAction *hideGameIconsAct;
 	QAction *refreshGameListAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
@@ -109,7 +109,7 @@ private:
 	LogFrame *logFrame;
 	DebuggerFrame *debuggerFrame;
 	GameListFrame *gameListFrame;
-	GuiSettings *guiSettings;
+	std::shared_ptr<GuiSettings> guiSettings;
 };
 
 #endif // MAINWINDOW_H

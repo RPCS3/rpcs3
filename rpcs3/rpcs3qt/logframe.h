@@ -4,6 +4,10 @@
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
 
+#include "GuiSettings.h"
+
+#include <memory>
+
 #include <QDockWidget>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -15,17 +19,12 @@ class LogFrame : public QDockWidget
 	Q_OBJECT
 
 public:
-	explicit LogFrame(QWidget *parent = 0);
+	explicit LogFrame(std::shared_ptr<GuiSettings> guiSettings, QWidget *parent = nullptr);
 
-	/** Set log level. Used exclusively to pass in the initial settings. */
-	void SetLogLevel(logs::level lev);
-	/** Another method just for initial settings. */
-	void SetTTYLogging(bool val);
+	/** Loads from settings. Public so that mainwindow can call this easily. */
+	void LoadSettings();
 signals:
 	void LogFrameClosed();
-	/** Again, I'd love to use the actual enum type, but it can't be registered as a meta type.*/
-	void LogLevelChanged(uint lev);
-	void TTYChanged(bool newVal);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
@@ -33,6 +32,9 @@ private slots:
 	void UpdateUI();
 	void OpenLogContextMenu(const QPoint& point);
 private:
+	void SetLogLevel(logs::level lev);
+	void SetTTYLogging(bool val);
+
 	void CreateAndConnectActions();
 
 	QTabWidget *tabWidget;
@@ -54,6 +56,8 @@ private:
 	QAction* traceAct;
 
 	QAction* TTYAct;
+
+	std::shared_ptr<GuiSettings> xGuiSettings;
 };
 
 #endif // LOGFRAME_H

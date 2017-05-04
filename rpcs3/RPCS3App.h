@@ -32,7 +32,7 @@ signals:
 	void OnEmulatorStop();
 	void OnEmulatorReady();
 private slots:
-	void ChangeStyleSheetRequest(const QString& path);
+	void OnChangeStyleSheetRequest(const QString& path);
 
 private:
 	void InitializeCallbacks();

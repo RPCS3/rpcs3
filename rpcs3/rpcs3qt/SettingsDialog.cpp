@@ -7,22 +7,30 @@
 #include "audiotab.h"
 #include "inputtab.h"
 #include "misctab.h"
+#include "GuiTab.h"
 #include "networkingtab.h"
 #include "systemtab.h"
 #include "settingsdialog.h"
 
-SettingsDialog::SettingsDialog(QWidget *parent, const std::string& path) : QDialog(parent)
+SettingsDialog::SettingsDialog(std::shared_ptr<GuiSettings> xSettings, QWidget *parent, const std::string& path) : QDialog(parent)
 {
+	GuiTab* guiTab = new GuiTab(xSettings, this);
+
 	tabWidget = new QTabWidget;
 	tabWidget->addTab(new CoreTab(this), tr("Core"));
 	tabWidget->addTab(new GraphicsTab(this), tr("Graphics"));
 	tabWidget->addTab(new AudioTab(this), tr("Audio"));
 	tabWidget->addTab(new InputTab(this), tr("Input / Output"));
 	tabWidget->addTab(new MiscTab(this), tr("Misc"));
+	if (path == "")
+	{ // Don't add gui tab to game settings.
+		tabWidget->addTab(guiTab, tr("Gui"));
+	}
 	tabWidget->addTab(new NetworkingTab(this), tr("Networking"));
 	tabWidget->addTab(new SystemTab(this), tr("System"));
 
 	QPushButton *okButton = new QPushButton(tr("OK"));
+	connect(okButton, &QAbstractButton::clicked, guiTab, &GuiTab::Accept);
 	connect(okButton, &QAbstractButton::clicked, this, &QDialog::accept);
 
 	QPushButton *cancelButton = new QPushButton(tr("Cancel"));
@@ -38,6 +46,11 @@ SettingsDialog::SettingsDialog(QWidget *parent, const std::string& path) : QDial
 	mainLayout->addWidget(tabWidget);
 	mainLayout->addLayout(buttonsLayout);
 	setLayout(mainLayout);
+	
+	// Misc Connects
+	connect(guiTab, &GuiTab::GuiSettingsSyncRequest, this, &SettingsDialog::GuiSettingsSyncRequest);
+	connect(guiTab, &GuiTab::GuiSettingsSaveRequest, this, &SettingsDialog::GuiSettingsSaveRequest);
+	connect(guiTab, &GuiTab::GuiStylesheetRequest, this, &SettingsDialog::GuiStylesheetRequest);
 
 	connect(tabWidget, &QTabWidget::currentChanged, [=]() {cancelButton->setFocus();});
 

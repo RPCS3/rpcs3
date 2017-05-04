@@ -1,13 +1,17 @@
 #ifndef GAMELISTFRAME_H
 #define GAMELISTFRAME_H
 
+#include "GuiSettings.h"
+
+#include "Utilities\types.h"
+#include "Emu\GameInfo.h"
+
+#include <memory>
+
 #include <QDockWidget>
 #include <QTableWidget>
 #include <QListView>
 #include <QList>
-
-#include "Utilities\types.h"
-#include "Emu\GameInfo.h"
 
 struct Column
 {
@@ -59,11 +63,7 @@ public:
 	
 	void Update(const std::vector<GameInfo>& game_data);
 	
-	void Show(QDockWidget* list);
-	
 	void ShowData(QTableWidget* list);
-	
-	void LoadSave(bool isLoad, const std::string& path, QDockWidget* list = NULL);
 };
 
 class GameListFrame : public QDockWidget {
@@ -76,10 +76,16 @@ class GameListFrame : public QDockWidget {
 	ColumnsArr m_columns;
 
 public:
-	explicit GameListFrame(QWidget *parent = 0);
+	explicit GameListFrame(std::shared_ptr<GuiSettings> settings, QWidget *parent = nullptr);
 	~GameListFrame();
 	void Refresh();
 
+	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
+	void LoadSettings();
+
+	/** Saves settings. Public so that main frame can save this when a caching of column widths is needed for settings backup */
+	void SaveSettings();
+	
 private slots:
 	void Boot(int row);
 	void Configure(int row);
@@ -106,8 +112,6 @@ private:
 	void LoadGames();
 	void LoadPSF();
 	void ShowData();
-	void SaveSettings();
-	void LoadSettings();
 
 	// Actions regarding showing/hiding columns
 	QAction* showIconColAct;
@@ -117,6 +121,9 @@ private:
 	QAction* showAppVersionColAct;
 	QAction* showCategoryColAct;
 	QAction* showPathColAct;
+
+	QList<QAction*> columnActs;
+	std::shared_ptr<GuiSettings> xGuiSettings;
 };
 
 #endif // GAMELISTFRAME_H

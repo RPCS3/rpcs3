@@ -100,7 +100,7 @@ struct gui_listener : logs::listener
 // GUI Listener instance
 static gui_listener s_gui_listener;
 
-LogFrame::LogFrame(QWidget *parent) : QDockWidget(tr("Log"), parent)
+LogFrame::LogFrame(std::shared_ptr<GuiSettings> guiSettings, QWidget *parent) : QDockWidget(tr("Log"), parent), xGuiSettings(guiSettings)
 {
 	tabWidget = new QTabWidget;
 
@@ -201,7 +201,7 @@ void LogFrame::CreateAndConnectActions()
 		// This sets the log level properly when the action is triggered.
 		auto l_callback = [this, logLevel]() {
 			s_gui_listener.enabled = logLevel;
-			emit LogLevelChanged(static_cast<uint>(logLevel));
+			xGuiSettings->SetLogLevel(static_cast<uint>(logLevel));
 		};
 
 		connect(act, &QAction::triggered, l_callback);
@@ -223,7 +223,7 @@ void LogFrame::CreateAndConnectActions()
 
 	TTYAct = new QAction(tr("TTY"), this);
 	TTYAct->setCheckable(true);
-	connect(TTYAct, &QAction::triggered, this, &LogFrame::TTYChanged);
+	connect(TTYAct, &QAction::triggered, xGuiSettings.get(), &GuiSettings::SetTTYLogging);
 
 	l_initAct(nothingAct, logs::level::always);
 	l_initAct(fatalAct, logs::level::fatal);
@@ -233,6 +233,14 @@ void LogFrame::CreateAndConnectActions()
 	l_initAct(warningAct, logs::level::warning);
 	l_initAct(noticeAct, logs::level::notice);
 	l_initAct(traceAct, logs::level::trace);
+
+	LoadSettings();
+}
+
+void LogFrame::LoadSettings()
+{
+	SetLogLevel(xGuiSettings->GetLogLevel());
+	SetTTYLogging(xGuiSettings->GetTTYLogging());
 }
 
 void LogFrame::UpdateUI()

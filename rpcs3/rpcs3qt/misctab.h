@@ -9,13 +9,6 @@ class MiscTab : public QWidget
 
 public:
 	explicit MiscTab(QWidget *parent = 0);
-
-signals:
-
-public slots:
-	void OnApply();
-	void OnReset();
-	void OnStylesheetChanged();
 };
 
 #endif // MISCTAB_H

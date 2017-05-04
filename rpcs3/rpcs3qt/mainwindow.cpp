@@ -38,7 +38,7 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false)
 {
-	guiSettings = new GuiSettings(this);
+	guiSettings.reset(new GuiSettings());
 
 	setDockNestingEnabled(true);
 	CreateActions();
@@ -49,6 +49,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 
 	ConfigureGuiFromSettings();
 	CreateConnects();
+
+	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
+
+	QTimer::singleShot(1, [=]() {
+		// Need to have this happen fast, but not now because connects aren't created yet.
+		// So, a tricky balance in terms of time but this works.
+		emit RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
+	});
 }
 
 MainWindow::~MainWindow()
@@ -385,21 +393,12 @@ void MainWindow::SendOpenSysMenu()
 	sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 }
 
-/**
- * Prompt the user for a stylesheet and propagate the request back to the main application.
-*/
-void MainWindow::OpenCustomStyleSheet()
-{
-	QString filePath = QFileDialog::getOpenFileName(nullptr, tr("Open Custom Stylesheet"), "", tr("Stylesheet (*.qss)"));
-	if (filePath.isEmpty() == false)
-	{
-		emit RequestGlobalStylesheetChange(filePath);
-	}
-}
-
 void MainWindow::Settings()
 {
-	SettingsDialog dlg(this);
+	SettingsDialog dlg(guiSettings, this);
+	connect(&dlg, &SettingsDialog::GuiSettingsSaveRequest, this, &MainWindow::SaveWindowState);
+	connect(&dlg, &SettingsDialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
+	connect(&dlg, &SettingsDialog::GuiStylesheetRequest, this, &MainWindow::RequestGlobalStylesheetChange);
 	dlg.exec();
 }
 
@@ -537,11 +536,6 @@ void MainWindow::ToggleGameListFrame(bool state)
 	}
 }
 
-void MainWindow::HideGameIcons()
-{
-
-}
-
 void MainWindow::RefreshGameList()
 {
 	gameListFrame->Refresh();
@@ -606,6 +600,19 @@ void MainWindow::OnGameListFrameClosed()
 	{
 		showGameListAct->setChecked(false);
 	}
+}
+
+/** Needed so that when a backup occurs of window state in guisettings, the state is current. 
+* Also, so that on close, the window state is preserved.
+*/
+void MainWindow::SaveWindowState()
+{
+	// Save gui settings
+	guiSettings->WriteGuiGeometry(saveGeometry());
+	guiSettings->WriteGuiState(saveState());
+
+	// Save column settings
+	gameListFrame->SaveSettings();
 }
 
 void MainWindow::OnEmuRun()
@@ -684,7 +691,6 @@ void MainWindow::CreateActions()
 	sysSendExitAct->setEnabled(false);
 
 	confSettingsAct = new QAction(tr("&Settings"), this);
-	requestStylesheetAct = new QAction(tr("Change Stylesheet"), this);
 	confPadAct = new QAction(tr("&Keyboard Settings"), this);
 
 	confAutopauseManagerAct = new QAction(tr("&Auto Pause Settings"), this);
@@ -727,7 +733,6 @@ void MainWindow::CreateActions()
 	showGameListAct = new QAction(tr("Show GameList"), this);
 	showGameListAct->setCheckable(true);
 
-	hideGameIconsAct = new QAction(tr("&Hide Game Icons"), this);
 	refreshGameListAct = new QAction(tr("&Refresh Game List"), this);
 
 	aboutAct = new QAction(tr("&About"), this);
@@ -749,7 +754,6 @@ void MainWindow::CreateConnects()
 	connect(sysSendOpenMenuAct, &QAction::triggered, this, &MainWindow::SendOpenSysMenu);
 	connect(sysSendExitAct, &QAction::triggered, this, &MainWindow::SendExit);
 	connect(confSettingsAct, &QAction::triggered, this, &MainWindow::Settings);
-	connect(requestStylesheetAct, &QAction::triggered, this, &MainWindow::OpenCustomStyleSheet);
 	connect(confPadAct, &QAction::triggered, this, &MainWindow::PadSettings);
 	connect(confAutopauseManagerAct, &QAction::triggered, this, &MainWindow::AutoPauseSettings);
 	connect(confVfsManagerAct, &QAction::triggered, this, &MainWindow::VFSManager);
@@ -762,20 +766,12 @@ void MainWindow::CreateConnects()
 	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebugger);
 	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
 	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
-	connect(showDebuggerAct, &QAction::triggered, guiSettings, &GuiSettings::setDebuggerVisibility);
 	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);
-	connect(showLogAct, &QAction::triggered, guiSettings, &GuiSettings::setLoggerVisibility);
 	connect(showLogAct, &QAction::triggered, this, &MainWindow::ToggleLogFrame);
-	connect(showGameListAct, &QAction::triggered, guiSettings, &GuiSettings::setGamelistVisibility);
 	connect(showGameListAct, &QAction::triggered, this, &MainWindow::ToggleGameListFrame);
-	connect(hideGameIconsAct, &QAction::triggered, this, &MainWindow::HideGameIcons);
 	connect(refreshGameListAct, &QAction::triggered, this, &MainWindow::RefreshGameList);
 	connect(aboutAct, &QAction::triggered, this, &MainWindow::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
-
-	// Non-action connects
-	connect(logFrame, &LogFrame::LogLevelChanged, guiSettings, &GuiSettings::setLogLevel);
-	connect(logFrame, &LogFrame::TTYChanged, guiSettings, &GuiSettings::setTTYLogging);
 }
 
 void MainWindow::CreateMenus()
@@ -797,7 +793,6 @@ void MainWindow::CreateMenus()
 	sysMenu->addAction(sysSendExitAct);
 
 	QMenu *confMenu = menuBar()->addMenu(tr("&Config"));
-	confMenu->addAction(requestStylesheetAct);
 	confMenu->addAction(confSettingsAct);
 	confMenu->addAction(confPadAct);
 	confMenu->addSeparator();
@@ -822,7 +817,6 @@ void MainWindow::CreateMenus()
 	viewMenu->addAction(showDebuggerAct);
 	viewMenu->addSeparator();
 	viewMenu->addAction(showGameListAct);
-	viewMenu->addAction(hideGameIconsAct);
 	viewMenu->addAction(refreshGameListAct);
 
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
@@ -832,11 +826,11 @@ void MainWindow::CreateMenus()
 
 void MainWindow::CreateDockWindows()
 {
-	gameListFrame = new GameListFrame(this);
+	gameListFrame = new GameListFrame(guiSettings, this);
 	gameListFrame->setObjectName("gamelist");
 	debuggerFrame = new DebuggerFrame(this);
 	debuggerFrame->setObjectName("debugger");
-	logFrame = new LogFrame(this);
+	logFrame = new LogFrame(guiSettings, this);
 	logFrame->setObjectName("logger");
 
 	addDockWidget(Qt::LeftDockWidgetArea, gameListFrame);
@@ -848,10 +842,10 @@ void MainWindow::CreateDockWindows()
 	connect(gameListFrame, &GameListFrame::GameListFrameClosed, this, &MainWindow::OnGameListFrameClosed);
 }
 
-void MainWindow::ConfigureGuiFromSettings()
+void MainWindow::ConfigureGuiFromSettings(bool configureAll)
 {
-	// Restore GUI state if needed. We need to if the settings are not null.
-	QByteArray geometry = guiSettings->readGuiGeometry();
+	// Restore GUI state if needed. We need to if they exist.
+	QByteArray geometry = guiSettings->ReadGuiGeometry();
 	bool needsDefault = false;
 	if (geometry.isEmpty() == false)
 	{
@@ -862,35 +856,29 @@ void MainWindow::ConfigureGuiFromSettings()
 		needsDefault = true;
 	}
 
-	QByteArray state = guiSettings->readGuiState();
-	if (state.isEmpty() == false)
-	{
-		restoreState(state);
-	}
-	else
-	{
-		needsDefault = true;
-	}
+	restoreState(guiSettings->ReadGuiState());
 
-	// By default, hide the debugger and set the window to 70% of the screen.
+	// By default, set the window to 70% of the screen and the debugger frame is hidden.
 	if (needsDefault)
 	{
-		// Debugger frame hidden by default.
 		debuggerFrame->hide();
 
 		QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
 		resize(defaultSize);
 	}
 
-	showLogAct->setChecked(guiSettings->getLoggerVisibility());
-	showGameListAct->setChecked(guiSettings->getGameListVisibility());
-	showDebuggerAct->setChecked(guiSettings->getDebuggerVisibility());
+	showLogAct->setChecked(guiSettings->GetLoggerVisibility());
+	showGameListAct->setChecked(guiSettings->GetGamelistVisibility());
+	showDebuggerAct->setChecked(guiSettings->GetDebuggerVisibility());
 
-	// Handle log settings
-	logFrame->SetLogLevel(guiSettings->getLogLevel());
-	logFrame->SetTTYLogging(guiSettings->getTTYLogging());
+	if (configureAll)
+	{
+		// Handle log settings
+		logFrame->LoadSettings();
 
-	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
+		// Gamelist
+		gameListFrame->LoadSettings();
+	}
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *keyEvent)
@@ -913,9 +901,7 @@ void MainWindow::closeEvent(QCloseEvent* closeEvent)
 	// Cleanly stop the emulator.
 	Emu.Stop();
 
-	// Save gui settings
-	guiSettings->writeGuiGeometry(saveGeometry());
-	guiSettings->writeGuiState(saveState());
+	SaveWindowState();
 
 	// I need the gui settings to sync, and that means having the destructor called as guiSetting's parent is mainwindow.
 	setAttribute(Qt::WA_DeleteOnClose);
