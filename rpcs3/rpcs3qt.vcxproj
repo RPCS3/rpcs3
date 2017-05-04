@@ -320,6 +320,7 @@
     <ClCompile Include="rpcs3qt\logframe.cpp" />
     <ClCompile Include="rpcs3qt\mainwindow.cpp" />
     <ClCompile Include="rpcs3qt\MemoryStringSearcher.cpp" />
+    <ClCompile Include="rpcs3qt\MemoryViewer.cpp" />
     <ClCompile Include="rpcs3qt\misctab.cpp" />
     <ClCompile Include="rpcs3qt\networkingtab.cpp" />
     <ClCompile Include="rpcs3qt\padsettingsdialog.cpp" />
@@ -541,6 +542,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_NO_DEBUG -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_QUICK_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DNDEBUG "-I.\..\Vulkan\Vulkan-LoaderAndValidationLayers\include" "-I.\..\3rdparty\minidx12\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtQuick" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtQml" "-I$(QTDIR)\include\QtNetwork" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)\." "-I.\QTGeneratedFiles" "-I$(NOINHERIT)\."</Command>
     </CustomBuild>
+    <ClInclude Include="rpcs3qt\MemoryViewer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="XInputPadHandler.h" />
     <ClInclude Include="\Gui\*.h" />

@@ -240,6 +240,9 @@
     <ClCompile Include="rpcs3qt\GuiSettings.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\MemoryViewer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -254,6 +257,9 @@
     </ClInclude>
     <ClInclude Include="MMJoystickHandler.h">
       <Filter>Io\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\MemoryViewer.h">
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

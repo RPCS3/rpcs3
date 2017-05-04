@@ -46,7 +46,7 @@ private slots:
 	void SaveData();
 	void ELFCompiler();
 	void CgDisasm();
-	void KernelExplorer();
+	void KernelExploration();
 	void MemoryViewer();
 	void RSXDebugger();
 	void StringSearch();

@@ -16,6 +16,7 @@
 #include "AutoPauseSettingsDialog.h"
 #include "CgDisasmWindow.h"
 #include "MemoryStringSearcher.h"
+#include "MemoryViewer.h"
 #include "mainwindow.h"
 
 #include <thread>
@@ -170,7 +171,8 @@ void MainWindow::InstallPkg()
 	{
 		if (fs::is_dir(local_path))
 		{
-			if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Another installation found. Do you want to overwrite it?")) != QMessageBox::Yes)
+			if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Another installation found. Do you want to overwrite it?"),	
+				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 			{
 				LOG_ERROR(LOADER, "PKG: Cancelled installation to existing directory %s", local_path);
 				return;
@@ -210,7 +212,8 @@ void MainWindow::InstallPkg()
 			if (pdlg.wasCanceled())
 			{
 				progress -= 1.;
-				if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Remove incomplete folder?")) == QMessageBox::Yes)
+				if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Remove incomplete folder?"),
+					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 				{
 					fs::remove_all(local_path);
 					RefreshGameList();
@@ -426,9 +429,13 @@ void MainWindow::CgDisasm()
 	cgdw->show();
 }
 
-void MainWindow::KernelExplorer() {}
+void MainWindow::KernelExploration() {}
 
-void MainWindow::MemoryViewer() {}
+void MainWindow::MemoryViewer()
+{
+	MemoryViewerPanel* mvp = new MemoryViewerPanel(this);
+	mvp->show();
+}
 
 void MainWindow::RSXDebugger() {}
 
@@ -750,7 +757,7 @@ void MainWindow::CreateConnects()
 	connect(confSavedataManagerAct, &QAction::triggered, this, &MainWindow::SaveData);
 	connect(toolsCompilerAct, &QAction::triggered, this, &MainWindow::ELFCompiler);
 	connect(toolsCgDisasmAct, &QAction::triggered, this, &MainWindow::CgDisasm);
-	connect(toolsKernelExplorerAct, &QAction::triggered, this, &MainWindow::KernelExplorer);
+	connect(toolsKernelExplorerAct, &QAction::triggered, this, &MainWindow::KernelExploration);
 	connect(toolsMemoryViewerAct, &QAction::triggered, this, &MainWindow::MemoryViewer);
 	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebugger);
 	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
