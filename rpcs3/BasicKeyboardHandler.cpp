@@ -56,12 +56,11 @@ void BasicKeyboardHandler::LoadSettings()
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Control, CELL_KB_MKEY_L_CTRL);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Shift, CELL_KB_MKEY_L_SHIFT);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Alt, CELL_KB_MKEY_L_ALT);
-	////m_keyboards[0].m_buttons.emplace_back(WXK_WINDOWS_LEFT, CELL_KB_MKEY_L_WIN); //TODO?
-	//// m_keyboards[0].m_buttons.emplace_back(WXK_COMMAND, CELL_KB_MKEY_L_WIN); //TODO?
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Super_L, CELL_KB_MKEY_L_WIN);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KB_MKEY_R_CTRL);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KB_MKEY_R_SHIFT);
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KB_MKEY_R_ALT);
-	//// m_keyboards[0].m_buttons.emplace_back(WXK_WINDOWS_RIGHT, CELL_KB_MKEY_R_WIN); //TODO?
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Super_R, CELL_KB_MKEY_R_WIN);
 
 	// CELL_KB_RAWDAT
 	//m_keyboards[0].m_buttons.emplace_back(, CELL_KEYC_NO_EVENT);
