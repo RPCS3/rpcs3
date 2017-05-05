@@ -191,6 +191,36 @@ s32 console_write(vm::ptr<char> data, u32 len)
 	return CELL_OK;
 }
 
+s32 cellGamePs1Emu_61CE2BCD()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
+s32 cellSysconfPs1emu_639ABBDE()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
+s32 cellSysconfPs1emu_6A12D11F()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
+s32 cellSysconfPs1emu_83E79A23()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
+s32 cellSysconfPs1emu_EFDDAF6C()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
 s32 sys_lv2coredump_D725F320()
 {
 	fmt::raw_error(__func__);
@@ -207,6 +237,29 @@ s32 sys_crash_dump_set_user_log_area()
 	return CELL_OK;
 }
 
+s32 sys_get_bd_media_id()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
+s32 sys_get_console_id()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
+s32 sysPs2Disc_A84FD3C3()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
+
+s32 sysPs2Disc_BB7CD1AE()
+{
+	UNIMPLEMENTED_FUNC(logs::HLE);
+	return CELL_OK;
+}
 
 extern void sysPrxForUser_sys_lwmutex_init();
 extern void sysPrxForUser_sys_lwcond_init();
@@ -222,6 +275,19 @@ extern void sysPrxForUser_sys_libc_init();
 
 DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 {
+	static ppu_static_module cellGamePs1Emu("cellGamePs1Emu", []()
+	{
+		REG_FNID(cellGamePs1Emu, 0x61CE2BCD, cellGamePs1Emu_61CE2BCD);
+	});
+
+	static ppu_static_module cellSysconfPs1emu("cellSysconfPs1emu", []()
+	{
+		REG_FNID(cellSysconfPs1emu, 0x639ABBDE, cellSysconfPs1emu_639ABBDE);
+		REG_FNID(cellSysconfPs1emu, 0x6A12D11F, cellSysconfPs1emu_6A12D11F);
+		REG_FNID(cellSysconfPs1emu, 0x83E79A23, cellSysconfPs1emu_83E79A23);
+		REG_FNID(cellSysconfPs1emu, 0xEFDDAF6C, cellSysconfPs1emu_EFDDAF6C);
+	});
+
 	static ppu_static_module sys_lv2coredump("sys_lv2coredump", []()
 	{
 		REG_FNID(sys_lv2coredump, 0xD725F320, sys_lv2coredump_D725F320);
@@ -231,6 +297,22 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 	{
 		REG_FUNC(sys_crashdump, sys_crash_dump_get_user_log_area);
 		REG_FUNC(sys_crashdump, sys_crash_dump_set_user_log_area);
+	});
+
+	static ppu_static_module sysBdMediaId("sysBdMediaId", []()
+	{
+		REG_FUNC(sysBdMediaId, sys_get_bd_media_id);
+	});
+
+	static ppu_static_module sysConsoleId("sysConsoleId", []()
+	{
+		REG_FUNC(sysConsoleId, sys_get_console_id);
+	});
+
+	static ppu_static_module sysPs2Disc("sysPs2Disc", []()
+	{
+		REG_FNID(sysPs2Disc, 0xA84FD3C3, sysPs2Disc_A84FD3C3);
+		REG_FNID(sysPs2Disc, 0xBB7CD1AE, sysPs2Disc_BB7CD1AE);
 	});
 
 	sysPrxForUser_sys_lwmutex_init();

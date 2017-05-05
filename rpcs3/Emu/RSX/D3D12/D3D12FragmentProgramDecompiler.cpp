@@ -38,6 +38,7 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	float4 userClip[2];" << std::endl;
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
 	OS << "	int isAlphaTested;" << std::endl;
@@ -55,7 +56,7 @@ void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
 	OS << "	float4 spec_color : COLOR1;" << std::endl;
 	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
 	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
-	OS << "	float fogc : FOG;" << std::endl;
+	OS << "	float4 fogc : FOG;" << std::endl;
 	OS << "	float4 tc9 : TEXCOORD9;" << std::endl;
 	OS << "	float4 tc0 : TEXCOORD0;" << std::endl;
 	OS << "	float4 tc1 : TEXCOORD1;" << std::endl;
@@ -66,6 +67,8 @@ void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
 	OS << "	float4 tc6 : TEXCOORD6;" << std::endl;
 	OS << "	float4 tc7 : TEXCOORD7;" << std::endl;
 	OS << "	float4 tc8 : TEXCOORD8;" << std::endl;
+	OS << "	float4 dst_userClip0 : SV_ClipDistance0;" << std::endl;
+	OS << "	float4 dst_userClip1 : SV_ClipDistance1;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -154,22 +157,22 @@ namespace
 		switch (mode)
 		{
 		case rsx::fog_mode::linear:
-			OS << "	float4 fogc = float4(fog_param1 * In.fogc + (fog_param0 - 1.), fog_param1 * In.fogc + (fog_param0 - 1.), 0., 0.);\n";
+			OS << "	float4 fogc = float4(fog_param1 * In.fogc.x + (fog_param0 - 1.), fog_param1 * In.fogc.x + (fog_param0 - 1.), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential:
-			OS << "	float4 fogc = float4(11.084 * (fog_param1 * In.fogc + fog_param0 - 1.5), exp(11.084 * (fog_param1 * In.fogc + fog_param0 - 1.5)), 0., 0.);\n";
+			OS << "	float4 fogc = float4(11.084 * (fog_param1 * In.fogc.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * In.fogc.x + fog_param0 - 1.5)), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential2:
-			OS << "	float4 fogc = float4(4.709 * (fog_param1 * In.fogc + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * In.fogc + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
+			OS << "	float4 fogc = float4(4.709 * (fog_param1 * In.fogc.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * In.fogc.x + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::linear_abs:
-			OS << "	float4 fogc = float4(fog_param1 * abs(In.fogc) + (fog_param0 - 1.), fog_param1 * abs(In.fogc) + (fog_param0 - 1.), 0., 0.);\n";
+			OS << "	float4 fogc = float4(fog_param1 * abs(In.fogc.x) + (fog_param0 - 1.), fog_param1 * abs(In.fogc.x) + (fog_param0 - 1.), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential_abs:
-			OS << "	float4 fogc = float4(11.084 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5)), 0., 0.);\n";
+			OS << "	float4 fogc = float4(11.084 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5)), 0., 0.);\n";
 			break;
 		case rsx::fog_mode::exponential2_abs:
-			OS << "	float4 fogc = float4(4.709 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
+			OS << "	float4 fogc = float4(4.709 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5)), 2.)), 0., 0.);\n";
 			break;
 		default:
 			OS << "	float4 fogc = float4(0., 0., 0., 0.);\n";

@@ -54,8 +54,8 @@ namespace
 	{
 		u32 element_size = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
-		    get_vertex_attribute_format(info.type(), info.size()), D3D12_SRV_DIMENSION_BUFFER,
-		    get_component_mapping_from_vector_size(info.type(), info.size())};
+			get_vertex_attribute_format(info.type(), info.size()), D3D12_SRV_DIMENSION_BUFFER,
+			get_component_mapping_from_vector_size(info.type(), info.size())};
 		vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
 		vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
 		return vertex_buffer_view;
@@ -65,7 +65,7 @@ namespace
 	{
 		u32 element_size = rsx::get_vertex_type_size_on_host(type, size);
 		D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {get_vertex_attribute_format(type, size),
-		    D3D12_SRV_DIMENSION_BUFFER, get_component_mapping_from_vector_size(type, size)};
+			D3D12_SRV_DIMENSION_BUFFER, get_component_mapping_from_vector_size(type, size)};
 		vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
 		vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
 		return vertex_buffer_view;
@@ -87,8 +87,10 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	// Scale offset buffer
 	// Separate constant buffer
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 512));
-	fill_scale_offset_data(mapped_buffer);
-	fill_fragment_state_buffer((char *)mapped_buffer + 64, m_fragment_program);
+	fill_scale_offset_data(mapped_buffer, true, false);
+	fill_user_clip_data((char*)mapped_buffer + 64);
+
+	fill_fragment_state_buffer((char *)mapped_buffer + 96, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 512));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {

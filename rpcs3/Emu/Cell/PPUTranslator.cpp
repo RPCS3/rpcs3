@@ -74,8 +74,8 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base)
 	m_base = new GlobalVariable(*module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, "__mptr");
 
 	// Thread context struct (TODO: safer member access)
-	const auto off0 = OFFSET_32(ppu_thread, state);
-	const auto off1 = OFFSET_32(ppu_thread, gpr);
+	const u32 off0 = offset32(&ppu_thread::state);
+	const u32 off1 = offset32(&ppu_thread::gpr);
 	std::vector<Type*> thread_struct;
 	thread_struct.emplace_back(ArrayType::get(GetType<char>(), off0));
 	thread_struct.emplace_back(GetType<u32>()); // state

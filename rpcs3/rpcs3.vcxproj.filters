@@ -22,340 +22,211 @@
     <Filter Include="Io\MMJoystick">
       <UniqueIdentifier>{92e92511-88b9-4187-9c94-80790248d337}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Generated Files">
-      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
-      <Extensions>moc;h;cpp</Extensions>
-      <ParseFiles>true</ParseFiles>
+    <Filter Include="Io\DS4">
+      <UniqueIdentifier>{a3a0bd9d-fcf7-4440-81b7-13fdd39601ae}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Generated Files\Debug - MemLeak">
-      <UniqueIdentifier>{cb831052-cf2d-45f9-bf74-00ee07d5997b}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
-    <Filter Include="Generated Files\Release - LLVM">
-      <UniqueIdentifier>{de9072cc-a99b-4d22-960d-772c1cc01a05}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
-    <Filter Include="Generated Files\Debug">
-      <UniqueIdentifier>{5cc6aede-c958-4e3b-9a3c-e310c009ef2c}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
-    <Filter Include="Generated Files\Release">
-      <UniqueIdentifier>{1f317bcf-9521-417a-928e-98657f315e16}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
-    <Filter Include="Generated Files\Debug - LLVM">
-      <UniqueIdentifier>{0ae388cc-0a91-4545-a518-8219e1e322e8}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="rpcs3.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\MainFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\MemoryViewer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\InterpreterDisAsm.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\GameViewer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\Debugger.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\TextInputDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\RSXDebugger.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\PADManager.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\GLGSFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\GSFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\ConLogFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\AutoPauseManager.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\SaveDataUtility.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\KernelExplorer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\MsgDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\MemoryStringSearcher.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\CgDisasm.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\SaveDataDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\SettingsDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\SignInDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\FrameBase.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardPadHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="XInputPadHandler.cpp">
+      <Filter>Io\XInput</Filter>
+    </ClCompile>
+    <ClCompile Include="BasicKeyboardHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="BasicMouseHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\RegisterEditor.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\InstructionEditor.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\OskDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="MMJoystickHandler.cpp">
+      <Filter>Io\MMJoystick</Filter>
+    </ClCompile>
+    <ClCompile Include="DS4PadHandler.cpp">
+      <Filter>Io\DS4</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Utilities\MTProgressDialog.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\Debugger.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\GameViewer.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\InterpreterDisAsm.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\MainFrame.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\MemoryViewer.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\RSXDebugger.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\TextInputDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3.h">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\FrameBase.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\RegisterEditor.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\AboutDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\GLGSFrame.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\GSFrame.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\ConLogFrame.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\AutoPauseManager.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\SaveDataUtility.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\KernelExplorer.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx_gui.h">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\MsgDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\InstructionEditor.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\CgDisasm.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\SaveDataDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Gui\SettingsDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\SignInDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\MemoryStringSearcher.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\PADManager.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="XInputPadHandler.h">
+      <Filter>Io\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="KeyboardPadHandler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="BasicKeyboardHandler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="BasicMouseHandler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MMJoystickHandler.h">
+      <Filter>Io\MMJoystick</Filter>
+    </ClInclude>
+    <ClInclude Include="DS4PadHandler.h">
+      <Filter>Io\DS4</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="rpcs3.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3_.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>rpcs3</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\audiotab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\AutoPauseSettingsDialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\coretab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\debuggerframe.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\gamelistframe.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\graphicstab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\inputtab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\logframe.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\mainwindow.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\misctab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\networkingtab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\padsettingsdialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\settingsdialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\systemtab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_audiotab.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_audiotab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_audiotab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_audiotab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_audiotab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_AutoPauseSettingsDialog.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_AutoPauseSettingsDialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_AutoPauseSettingsDialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_AutoPauseSettingsDialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_AutoPauseSettingsDialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_coretab.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_coretab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_coretab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_coretab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_coretab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_debuggerframe.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_debuggerframe.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_debuggerframe.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_debuggerframe.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_debuggerframe.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_gamelistframe.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_gamelistframe.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_gamelistframe.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_gamelistframe.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_gamelistframe.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_graphicstab.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_graphicstab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_graphicstab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_graphicstab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_graphicstab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_inputtab.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_inputtab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_inputtab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_inputtab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_inputtab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_logframe.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_logframe.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_logframe.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_logframe.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_logframe.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_mainwindow.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_mainwindow.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_mainwindow.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_mainwindow.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_mainwindow.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_misctab.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_misctab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_misctab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_misctab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_misctab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_networkingtab.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_networkingtab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_networkingtab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_networkingtab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_networkingtab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_padsettingsdialog.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_padsettingsdialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_padsettingsdialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_padsettingsdialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_padsettingsdialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_settingsdialog.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_settingsdialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_settingsdialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_settingsdialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_settingsdialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - MemLeak\moc_systemtab.cpp">
-      <Filter>Generated Files\Debug - MemLeak</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release - LLVM\moc_systemtab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_systemtab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_systemtab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug - LLVM\moc_systemtab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="rpcs3.ico" />
-    <CustomBuild Include="Gui\audiotab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\AutoPauseSettingsDialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\coretab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\debuggerframe.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\gamelistframe.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\graphicstab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\inputtab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\logframe.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\mainwindow.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\misctab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\networkingtab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\padsettingsdialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\settingsdialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Gui\systemtab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
   </ItemGroup>
 </Project>

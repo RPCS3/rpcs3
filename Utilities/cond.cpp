@@ -1,6 +1,8 @@
 #include "cond.h"
 #include "sync.h"
 
+#include <limits.h>
+
 #ifndef _WIN32
 #include <thread>
 #endif

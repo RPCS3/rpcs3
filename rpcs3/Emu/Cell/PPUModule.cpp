@@ -68,6 +68,7 @@ LOG_CHANNEL(cellRec);
 LOG_CHANNEL(cellRemotePlay);
 LOG_CHANNEL(cellResc);
 LOG_CHANNEL(cellRtc);
+LOG_CHANNEL(cellRtcAlarm);
 LOG_CHANNEL(cellRudp);
 LOG_CHANNEL(cellSail);
 LOG_CHANNEL(cellSailRec);
@@ -119,9 +120,23 @@ LOG_CHANNEL(sysPrxForUser);
 LOG_CHANNEL(gdbDebugServer);
 #endif
 
+enum class lib_loader_mode
+{
+	automatic,
+	manual,
+	both,
+	liblv2only
+};
+
+cfg::map_entry<lib_loader_mode> g_cfg_lib_loader(cfg::root.core, "Lib Loader", 3,
+{
+	{ "Automatically load required libraries", lib_loader_mode::automatic },
+	{ "Manually load selected libraries", lib_loader_mode::manual },
+	{ "Load automatic and manual selection", lib_loader_mode::both },
+	{ "Load liblv2.sprx only", lib_loader_mode::liblv2only },
+});
+
 cfg::bool_entry g_cfg_hook_ppu_funcs(cfg::root.core, "Hook static functions");
-cfg::bool_entry g_cfg_load_liblv2(cfg::root.core, "Load liblv2.sprx only");
-cfg::bool_entry g_cfg_load_libreq(cfg::root.core, "Load required libraries", true);
 
 cfg::set_entry g_cfg_load_libs(cfg::root.core, "Load libraries");
 
@@ -270,6 +285,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellRemotePlay,
 		&ppu_module_manager::cellResc,
 		&ppu_module_manager::cellRtc,
+		&ppu_module_manager::cellRtcAlarm,
 		&ppu_module_manager::cellRudp,
 		&ppu_module_manager::cellSail,
 		&ppu_module_manager::cellSailRec,
@@ -361,7 +377,11 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 	for (auto& module : registered)
 	{
 		LOG_TRACE(LOADER, "Registered static module: %s", module->name);
+	}
 
+	for (auto& pair : ppu_module_manager::get())
+	{
+		const auto module = pair.second;
 		auto& linkage = link->modules[module->name];
 
 		for (auto& function : module->functions)
@@ -1092,18 +1112,17 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Get LLE module list
 	std::set<std::string> load_libs;
 
-	if (!!g_cfg_load_liblv2 == !!g_cfg_load_libreq)
+	if (g_cfg_lib_loader.get() == lib_loader_mode::manual || g_cfg_lib_loader.get() == lib_loader_mode::both)
 	{
 		// Load required set of modules
 		load_libs = g_cfg_load_libs.get_set();
 	}
-
-	if (g_cfg_load_liblv2 && !g_cfg_load_libreq)
+	else if (g_cfg_lib_loader.get() == lib_loader_mode::liblv2only)
 	{
 		// Load only liblv2.sprx
 		load_libs.emplace("liblv2.sprx");
 	}
-	else if (g_cfg_load_libreq)
+	if (g_cfg_lib_loader.get() == lib_loader_mode::automatic || g_cfg_lib_loader.get() == lib_loader_mode::both)
 	{
 		// Load recommended set of modules: Module name -> SPRX
 		std::unordered_multimap<std::string, std::string> sprx_map
@@ -1183,6 +1202,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellSync2", "libsre.sprx" },
 			{ "cellVpost", "libvpost.sprx" },
 			{ "cellVpost", "libsre.sprx" },
+			{ "sys_fs", "libfs.sprx" },
 		};
 
 		// Expand dependencies
@@ -1306,7 +1326,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// TODO: adjust for liblv2 loading option
 	u32 entry = static_cast<u32>(elf.header.e_entry);
 
-	if (!g_cfg_load_liblv2 || g_cfg_load_libreq)
+	if (g_cfg_lib_loader.get() != lib_loader_mode::liblv2only)
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list

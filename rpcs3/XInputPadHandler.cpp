@@ -23,7 +23,7 @@ namespace {
 	}
 }
 
-XInputPadHandler::XInputPadHandler() : active(false), thread(nullptr), library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr)
+XInputPadHandler::XInputPadHandler() : active(false), thread(nullptr), library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr), xinputSetState(nullptr)
 {
 }
 
@@ -45,8 +45,10 @@ void XInputPadHandler::Init(const u32 max_connect)
 			{
 				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
 			}
+			
+			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
 
-			if (xinputEnable && xinputGetState)
+			if (xinputEnable && xinputGetState && xinputSetState)
 			{
 				break;
 			}
@@ -68,7 +70,7 @@ void XInputPadHandler::Init(const u32 max_connect)
 			m_pads.emplace_back(
 				CELL_PAD_STATUS_DISCONNECTED,
 				CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
-				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE,
+				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
 				CELL_PAD_DEV_TYPE_STANDARD
 			);
 			auto & pad = m_pads.back();
@@ -96,11 +98,22 @@ void XInputPadHandler::Init(const u32 max_connect)
 			pad.m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, 0, 0);
 			pad.m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, 0, 0);
 			pad.m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, 0, 0);
+
+			pad.m_vibrateMotors.emplace_back(true, 0);
+			pad.m_vibrateMotors.emplace_back(false, 0);
 		}
 
 		active = true;
 		thread = CreateThread(NULL, 0, &XInputPadHandler::ThreadProcProxy, this, 0, NULL);
 	}
+}
+
+void XInputPadHandler::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor) {
+	if (pad > m_pads.size())
+		return;
+
+	m_pads[pad].m_vibrateMotors[0].m_value = largeMotor;
+	m_pads[pad].m_vibrateMotors[1].m_value = smallMotor ? 255 : 0;
 }
 
 void XInputPadHandler::Close()
@@ -172,12 +185,20 @@ DWORD XInputPadHandler::ThreadProcedure()
 				pad.m_sticks[1].m_value = 255 - ConvertAxis(state.Gamepad.sThumbLY);
 				pad.m_sticks[2].m_value = ConvertAxis(state.Gamepad.sThumbRX);
 				pad.m_sticks[3].m_value = 255 - ConvertAxis(state.Gamepad.sThumbRY);
+
+				XINPUT_VIBRATION vibrate;
+
+				vibrate.wLeftMotorSpeed = pad.m_vibrateMotors[0].m_value * 257;
+				vibrate.wRightMotorSpeed = pad.m_vibrateMotors[1].m_value * 257;
+
+				(*xinputSetState)(i, &vibrate);
+
 				break;
 			}
 		}
 
-		Sleep((online > 0) ? THREAD_SLEEP : THREAD_SLEEP_INACTIVE);
 		m_info.now_connect = online;
+		Sleep((online > 0) ? THREAD_SLEEP : THREAD_SLEEP_INACTIVE);
 	}
 
 	return 0;

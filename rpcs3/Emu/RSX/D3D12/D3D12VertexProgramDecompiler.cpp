@@ -31,6 +31,7 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	float4 userClip[2];" << std::endl;
 	OS << "	float fog_param0;" << std::endl;
 	OS << "	float fog_param1;" << std::endl;
 	OS << "	int isAlphaTested;" << std::endl;
@@ -93,7 +94,7 @@ void D3D12VertexProgramDecompiler::insertOutputs(std::stringstream & OS, const s
 	OS << "	float4 dst_reg2 : COLOR1;" << std::endl;
 	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
 	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
-	OS << "	float dst_reg5 : FOG;" << std::endl;
+	OS << "	float4 dst_reg5 : FOG;" << std::endl;
 	OS << "	float4 dst_reg6 : TEXCOORD9;" << std::endl;
 	OS << "	float4 dst_reg7 : TEXCOORD0;" << std::endl;
 	OS << "	float4 dst_reg8 : TEXCOORD1;" << std::endl;
@@ -104,6 +105,8 @@ void D3D12VertexProgramDecompiler::insertOutputs(std::stringstream & OS, const s
 	OS << "	float4 dst_reg13 : TEXCOORD6;" << std::endl;
 	OS << "	float4 dst_reg14 : TEXCOORD7;" << std::endl;
 	OS << "	float4 dst_reg15 : TEXCOORD8;" << std::endl;
+	OS << "	float4 dst_userClip0 : SV_ClipDistance0;" << std::endl;
+	OS << "	float4 dst_userClip1 : SV_ClipDistance1;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -238,6 +241,20 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 	if (insert_front_specular && insert_back_specular)
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", "dst_reg2"))
 			OS << "	Out.dst_reg4 = dst_reg2;\n";
+
+	// user clip
+	if ((rsx_vertex_program.output_mask & (CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2)) != 0)
+	{
+		OS << "	Out.dst_userClip0.x = dst_reg5.y * userClip[0].x;\n";
+		OS << "	Out.dst_userClip0.y = dst_reg5.z * userClip[0].y;\n";
+		OS << "	Out.dst_userClip0.z = dst_reg5.w * userClip[0].z;\n";
+	}
+	if ((rsx_vertex_program.output_mask & (CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5)) != 0)
+	{
+		OS << "	Out.dst_userClip0.w = dst_reg6.y * userClip[0].w;\n";
+		OS << "	Out.dst_userClip1.x = dst_reg6.z * userClip[1].x;\n";
+		OS << "	Out.dst_userClip1.y = dst_reg6.w * userClip[1].y;\n";
+	}
 
 	OS << "	Out.dst_reg0 = mul(Out.dst_reg0, scaleOffsetMat);" << std::endl;
 	OS << "	return Out;" << std::endl;

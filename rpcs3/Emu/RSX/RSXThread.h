@@ -309,7 +309,13 @@ namespace rsx
 		 * Vertex shader's position is to be multiplied by this matrix.
 		 * if is_d3d is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const;
+		void fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const;
+
+		/**
+		 * Fill buffer with user clip information
+		*/
+
+		void fill_user_clip_data(void *buffer) const;
 
 		/**
 		* Fill buffer with vertex program constants.
