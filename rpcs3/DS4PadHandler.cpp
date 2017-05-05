@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "stdafx_gui.h"
 #include "Emu/System.h"
 #include "DS4PadHandler.h"
 

@@ -34,6 +34,12 @@
     <Filter Include="Io\XInput">
       <UniqueIdentifier>{8f3a932a-5c23-4f8c-a29b-003c59840ef8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\DS4">
+      <UniqueIdentifier>{04f53189-8145-4a58-8fe0-3b1abebe11e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\MMJoystick">
+      <UniqueIdentifier>{0f9f8411-9536-42d8-8f46-5537fb4aae6f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\Gui\*.cpp">
@@ -210,9 +216,6 @@
     <ClCompile Include="XInputPadHandler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="MMJoystickHandler.cpp">
-      <Filter>Io\XInput</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\CgDisasmWindow.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -261,6 +264,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_MsgDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="MMJoystickHandler.cpp">
+      <Filter>Io\MMJoystick</Filter>
+    </ClCompile>
+    <ClCompile Include="DS4PadHandler.cpp">
+      <Filter>Io\DS4</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -273,11 +282,14 @@
     <ClInclude Include="XInputPadHandler.h">
       <Filter>Io\XInput</Filter>
     </ClInclude>
-    <ClInclude Include="MMJoystickHandler.h">
-      <Filter>Io\XInput</Filter>
-    </ClInclude>
     <ClInclude Include="rpcs3qt\MemoryViewer.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="MMJoystickHandler.h">
+      <Filter>Io\MMJoystick</Filter>
+    </ClInclude>
+    <ClInclude Include="DS4PadHandler.h">
+      <Filter>Io\DS4</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

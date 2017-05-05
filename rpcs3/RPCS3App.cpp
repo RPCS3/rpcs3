@@ -11,6 +11,7 @@
 
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "KeyboardPadHandler.h"
+#include "DS4PadHandler.h"
 #ifdef _MSC_VER
 #include "XInputPadHandler.h"
 #include "MMJoystickHandler.h"
@@ -179,6 +180,7 @@ void RPCS3App::InitializeHandlers()
 	{
 		{ "Null", &std::make_shared<NullPadHandler> },
 		{ "Keyboard", l_magicPadHandler },
+		{ "DualShock 4", &std::make_shared<DS4PadHandler> },
 		#ifdef _MSC_VER
 				{ "XInput", &std::make_shared<XInputPadHandler> },
 				{ "MMJoystick", &std::make_shared<MMJoystickHandler> },
