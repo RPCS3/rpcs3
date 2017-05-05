@@ -5,7 +5,6 @@
 #include <QVBoxLayout>
 #include <QDockWidget>
 #include <QProgressDialog>
-#include <QSizePolicy>
 #include <QDesktopWidget>
 
 #include "gamelistframe.h"
@@ -45,7 +44,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 	CreateMenus();
 	CreateDockWindows();
 
-	setMinimumSize(200, minimumSizeHint().height());    // seems fine on win 10
+	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 
 	ConfigureGuiFromSettings();
 	CreateConnects();
@@ -378,6 +377,12 @@ void MainWindow::Stop()
 	Emu.Stop();
 }
 
+void MainWindow::Restart()
+{
+	Emu.Stop();
+	Emu.Load();
+}
+
 // This is ugly, but PS3 headers shall not be included there.
 extern void sysutil_send_system_cmd(u64 status, u64 param);
 
@@ -618,38 +623,59 @@ void MainWindow::SaveWindowState()
 void MainWindow::OnEmuRun()
 {
 	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
+	menu_run->setText(tr("&Pause"));
 	EnableMenus(true);
 }
 
 void MainWindow::OnEmuResume()
 {
 	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
+	menu_run->setText(tr("&Pause"));
 }
 
 void MainWindow::OnEmuPause()
 {
 	sysPauseAct->setText(tr("&Resume\tCtrl + E"));
+	menu_run->setText(tr("&Resume"));
 }
 
 void MainWindow::OnEmuStop()
 {
-	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
+	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
 	EnableMenus(false);
 	if (!Emu.GetPath().empty())
 	{
 		sysPauseAct->setText(tr("&Restart\tCtrl + E"));
 		sysPauseAct->setEnabled(true);
+		menu_restart->setEnabled(true);
+	}
+	else
+	{
+		sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
 	}
 }
 
 void MainWindow::OnEmuReady()
 {
 	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
+	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
 	EnableMenus(true);
+}
+
+extern bool user_asked_for_frame_capture;
+
+void MainWindow::OnCaptureFrame()
+{
+	user_asked_for_frame_capture = true;
 }
 
 void MainWindow::EnableMenus(bool enabled)
 {
+	// Buttons
+	menu_run->setEnabled(enabled);
+	menu_stop->setEnabled(enabled);
+	menu_restart->setEnabled(enabled);
+
 	// Emulation
 	sysPauseAct->setEnabled(enabled);
 	sysStopAct->setEnabled(enabled);
@@ -772,6 +798,10 @@ void MainWindow::CreateConnects()
 	connect(refreshGameListAct, &QAction::triggered, this, &MainWindow::RefreshGameList);
 	connect(aboutAct, &QAction::triggered, this, &MainWindow::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
+	connect(menu_run, &QAbstractButton::clicked, this, &MainWindow::Pause);
+	connect(menu_stop, &QAbstractButton::clicked, this, &MainWindow::Stop);
+	connect(menu_restart, &QAbstractButton::clicked, this, &MainWindow::Restart);
+	connect(menu_capture_frame, &QAbstractButton::clicked, this, &MainWindow::OnCaptureFrame);
 }
 
 void MainWindow::CreateMenus()
@@ -822,6 +852,24 @@ void MainWindow::CreateMenus()
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
 	helpMenu->addAction(aboutQtAct);
+
+	QWidget* tools = new QWidget(this);
+	QHBoxLayout* tools_layout = new QHBoxLayout();
+	menu_run = new QPushButton(tr("Start"));
+	menu_stop = new QPushButton(tr("Stop"));
+	menu_restart = new QPushButton(tr("Restart"));
+	menu_capture_frame = new QPushButton(tr("Capture Frame"));
+	menu_run->setEnabled(false);
+	menu_stop->setEnabled(false);
+	menu_restart->setEnabled(false);
+	tools_layout->addWidget(menu_run);
+	tools_layout->addWidget(menu_stop);
+	tools_layout->addWidget(menu_restart);
+	tools_layout->addWidget(menu_capture_frame);
+	tools_layout->addSpacing(5);
+	tools_layout->setContentsMargins(0, 0, 0, 0);
+	tools->setLayout(tools_layout);
+	menuBar()->setCornerWidget(tools, Qt::TopRightCorner);
 }
 
 void MainWindow::CreateDockWindows()

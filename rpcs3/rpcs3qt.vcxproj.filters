@@ -252,6 +252,15 @@
     <ClCompile Include="rpcs3qt\MemoryViewer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\MsgDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_MsgDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_MsgDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -342,6 +351,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\GuiTab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\MsgDialog.h">
       <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>

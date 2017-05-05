@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QPushButton>
 
 #include "logframe.h"
 #include "debuggerframe.h"
@@ -16,6 +17,11 @@ class MainWindow : public QMainWindow
 
 	bool m_sys_menu_opened;
 
+	QPushButton* menu_run;
+	QPushButton* menu_stop;
+	QPushButton* menu_restart;
+	QPushButton* menu_capture_frame;
+
 public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
@@ -29,6 +35,7 @@ public slots:
 	void OnEmuResume();
 	void OnEmuPause();
 	void OnEmuReady();
+	void OnCaptureFrame();
 
 private slots:
 	void BootElf();
@@ -37,6 +44,7 @@ private slots:
 	void InstallPup();
 	void Pause();
 	void Stop();
+	void Restart();
 	void SendOpenSysMenu();
 	void SendExit();
 	void Settings();
