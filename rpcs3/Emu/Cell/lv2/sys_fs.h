@@ -310,7 +310,7 @@ struct lv2_file_c0000002 : lv2_file_op
 
 CHECK_SIZE(lv2_file_c0000002, 0x28);
 
-// sys_fs_fnctl: unknown (called before cellFsOpen, for example)
+// sys_fs_fcntl: unknown (called before cellFsOpen, for example)
 struct lv2_file_c0000006 : lv2_file_op
 {
 	be_t<u32> size; // 0x20
@@ -324,6 +324,20 @@ struct lv2_file_c0000006 : lv2_file_op
 };
 
 CHECK_SIZE(lv2_file_c0000006, 0x20);
+
+// sys_fs_fcntl: cellFsAllocateFileAreaWithoutZeroFill
+struct lv2_file_e0000017 : lv2_file_op
+{
+	be_t<u32> size; // 0x28
+	be_t<u32> _x4; // 0x10, offset
+	be_t<u32> _x8; // 0x20, offset
+	be_t<u32> _xc; // -
+	vm::ps3::bcptr<char> file_path;
+	be_t<u64> file_size;
+	be_t<u32> out_code;
+};
+
+CHECK_SIZE(lv2_file_e0000017, 0x28);
 
 // Syscalls
 

@@ -277,7 +277,7 @@ void KernelExplorer::Update()
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
 		lv2_types.back().count++;
-		m_tree->AppendItem(lv2_types.back().node, fmt::format("FD: ID = 0x%08x '%s'", id));
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("FD: ID = 0x%08x '%s'", id, fo.name.data()));
 	});
 
 	for (auto&& entry : lv2_types)

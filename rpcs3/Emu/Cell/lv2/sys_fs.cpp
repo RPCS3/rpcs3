@@ -791,7 +791,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		break;
 	}
 
-	case 0xe0000001: // Unknown
+	case 0xe0000001: // Unknown (cellFsStat)
 	{
 		break;
 	}
@@ -930,7 +930,15 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 	case 0xe0000017: // cellFsAllocateFileAreaWithoutZeroFill
 	{
-		break;
+		const auto arg = vm::static_ptr_cast<lv2_file_e0000017>(_arg);
+
+		if (_size < arg->size || arg->_x4 != 0x10 || arg->_x8 != 0x20)
+		{
+			return CELL_EINVAL;
+		}
+
+		arg->out_code = sys_fs_truncate(arg->file_path, arg->file_size);
+		return CELL_OK;
 	}
 
 	case 0xe0000018: // cellFsChangeFileSizeWithoutAllocation
