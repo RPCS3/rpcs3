@@ -7,6 +7,7 @@
 #include <QProgressDialog>
 #include <QDesktopWidget>
 
+#include "KernelExplorer.h"
 #include "gamelistframe.h"
 #include "debuggerframe.h"
 #include "logframe.h"
@@ -433,7 +434,10 @@ void MainWindow::CgDisasm()
 	cgdw->show();
 }
 
-void MainWindow::KernelExploration() {}
+void MainWindow::KernelExploration() {
+	KernelExplorer* kernelExplorer = new KernelExplorer(this);
+	kernelExplorer->show();
+}
 
 void MainWindow::MemoryViewer()
 {
