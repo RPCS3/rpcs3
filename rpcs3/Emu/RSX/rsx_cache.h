@@ -136,12 +136,13 @@ namespace rsx
 			locked_address_range = align(base + length, 4096) - locked_address_base;
 
 			protection = utils::protection::rw;
-
 			locked = false;
 		}
 
 		void protect(utils::protection prot)
 		{
+			if (prot == protection) return;
+
 			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
 			protection = prot;
 			locked = prot != utils::protection::rw;
@@ -149,7 +150,8 @@ namespace rsx
 
 		void unprotect()
 		{
-			return protect(utils::protection::rw);
+			protect(utils::protection::rw);
+			locked = false;
 		}
 
 		bool overlaps(std::pair<u32, u32> range)

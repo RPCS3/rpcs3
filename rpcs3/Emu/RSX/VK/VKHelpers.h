@@ -32,7 +32,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) do { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh", (s32)_res); } while (0)
+#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh" HERE, (s32)_res); }
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
@@ -77,6 +77,10 @@ namespace vk
 	VkFormat get_compatible_sampler_format(u32 format);
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
+
+	void enter_uninterruptible();
+	void leave_uninterruptible();
+	bool is_uninterruptible();
 
 	struct memory_type_mapping
 	{
@@ -941,7 +945,7 @@ namespace vk
 		{
 			owner = &dev;
 			VkCommandPoolCreateInfo infos = {};
-			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
 			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
@@ -969,6 +973,7 @@ namespace vk
 
 	class command_buffer
 	{
+	protected:
 		vk::command_pool *pool = nullptr;
 		VkCommandBuffer commands = nullptr;
 
@@ -991,6 +996,11 @@ namespace vk
 		void destroy()
 		{
 			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+		}
+
+		vk::command_pool& get_command_pool() const
+		{
+			return *pool;
 		}
 
 		operator VkCommandBuffer()
