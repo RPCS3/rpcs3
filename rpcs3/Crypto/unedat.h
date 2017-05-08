@@ -44,7 +44,7 @@ struct EDAT_HEADER
 // Decrypts full file, or null/empty file
 extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose);
 
-extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const std::array<u8,0x10>& custom_klic);
+extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const std::array<u8,0x10>& custom_klic, std::string* contentID);
 
 extern std::array<u8, 0x10> GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 

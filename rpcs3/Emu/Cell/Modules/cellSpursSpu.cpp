@@ -1217,7 +1217,7 @@ void spursSysServiceTraceUpdate(SPUThread& spu, SpursKernelContext* ctxt, u32 ar
 	if (((sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) != 0) || (arg3 != 0))
 	{
 		//vm::reservation_acquire(vm::base(spu.offset + 0x80), ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr(), 128);
-		auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x80 - OFFSET_32(CellSpurs, traceBuffer));
+		auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x80 - offset32(&CellSpurs::traceBuffer));
 
 		if (ctxt->traceMsgCount != 0xFF || spurs->traceBuffer.addr() == 0)
 		{
@@ -1240,7 +1240,7 @@ void spursSysServiceTraceUpdate(SPUThread& spu, SpursKernelContext* ctxt, u32 ar
 
 	if (notify)
 	{
-		auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x2D80 - OFFSET_32(CellSpurs, wklState1));
+		auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x2D80 - offset32(&CellSpurs::wklState1));
 		sys_spu_thread_send_event(spu, spurs->spuPort, 2, 0);
 	}
 }

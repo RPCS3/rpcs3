@@ -347,6 +347,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cell_FreeType2.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellFs.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -371,7 +374,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellHttpUtil.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\Modules\cellImejp.cpp">
+    <ClCompile Include="Emu\Cell\Modules\cellImeJp.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellJpgDec.cpp">
@@ -387,6 +390,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellL10n.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellLibprof.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellMic.cpp">
@@ -450,6 +456,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellRtc.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellRtcAlarm.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellRudp.cpp">
@@ -914,6 +923,9 @@
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1252,6 +1264,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellAudioOut.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellBgdl.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellCamera.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
@@ -1280,6 +1295,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellGifDec.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellImeJp.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellJpgDec.h">
@@ -1339,6 +1357,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellSearch.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSpudll.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSpurs.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
@@ -1353,6 +1374,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSync2.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSysconf.h">
+        <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSysutil.h">
       <Filter>Emu\Cell\Modules</Filter>
@@ -1370,6 +1394,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellVideoOut.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellVideoUpload.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellVpost.h">
@@ -1749,6 +1776,9 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\bin_patch.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_ss.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -221,6 +221,7 @@ namespace vk
 		case rsx::blend_factor::one_minus_dst_alpha: return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
 		case rsx::blend_factor::one_minus_constant_alpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+		case rsx::blend_factor::src_alpha_saturate: return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
 		default:
 			fmt::throw_exception("Unknown blend factor 0x%x" HERE, (u32)factor);
 		}
@@ -460,7 +461,17 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	HINSTANCE hInstance = NULL;
 	HWND hWnd = (HWND)m_frame->handle();
 
-	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();
+	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
+	
+	//Actually confirm  that the loader found at least one compatible device
+	if (gpus.size() == 0)
+	{
+		//We can't throw in Emulator::Load, so we show error and return
+		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		m_device = VK_NULL_HANDLE;
+		return;
+	}
+
 	m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
 #endif
 
@@ -543,6 +554,12 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 VKGSRender::~VKGSRender()
 {
+	if (m_device == VK_NULL_HANDLE)
+	{
+		//Initialization failed
+		return;
+	}
+
 	//Wait for queue
 	vkQueueWaitIdle(m_swap_chain->get_present_queue());
 
@@ -844,6 +861,11 @@ void VKGSRender::set_viewport()
 
 void VKGSRender::on_init_thread()
 {
+	if (m_device == VK_NULL_HANDLE)
+	{
+		fmt::throw_exception("No vulkan device was created");
+	}
+
 	GSRender::on_init_thread();
 	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
 	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
@@ -1158,33 +1180,12 @@ bool VKGSRender::load_program()
 
 	u8 *buf = (u8*)m_uniform_buffer_ring_info.map(scale_offset_offset, 256);
 
-	//TODO: Add case for this in RSXThread
 	/**
 	* NOTE: While VK's coord system resembles GLs, the clip volume is no longer symetrical in z
 	* Its like D3D without the flip in y (depending on how you build the spir-v)
 	*/
-	{
-		int clip_w = rsx::method_registers.surface_clip_width();
-		int clip_h = rsx::method_registers.surface_clip_height();
-
-		float scale_x = rsx::method_registers.viewport_scale_x() / (clip_w / 2.f);
-		float offset_x = rsx::method_registers.viewport_offset_x() - (clip_w / 2.f);
-		offset_x /= clip_w / 2.f;
-
-		float scale_y = rsx::method_registers.viewport_scale_y() / (clip_h / 2.f);
-		float offset_y = (rsx::method_registers.viewport_offset_y() - (clip_h / 2.f));
-		offset_y /= clip_h / 2.f;
-
-		float scale_z = rsx::method_registers.viewport_scale_z();
-		float offset_z = rsx::method_registers.viewport_offset_z();
-
-		float one = 1.f;
-
-		stream_vector(buf, (u32&)scale_x, 0, 0, (u32&)offset_x);
-		stream_vector((char*)buf + 16, 0, (u32&)scale_y, 0, (u32&)offset_y);
-		stream_vector((char*)buf + 32, 0, 0, (u32&)scale_z, (u32&)offset_z);
-		stream_vector((char*)buf + 48, 0, 0, 0, (u32&)one);
-	}
+	fill_scale_offset_data(buf, false, false);
+	fill_user_clip_data(buf + 64);
 
 	m_uniform_buffer_ring_info.unmap();
 

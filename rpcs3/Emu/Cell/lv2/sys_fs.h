@@ -83,6 +83,12 @@ struct CellFsStat
 
 CHECK_SIZE_ALIGN(CellFsStat, 52, 4);
 
+struct CellFsDirectoryEntry
+{
+	CellFsStat attribute;
+	CellFsDirent entry_name;
+};
+
 struct CellFsUtimbuf
 {
 	be_t<s64, 4> actime;
@@ -124,12 +130,34 @@ struct lv2_fs_object
 	// Mount Point
 	const std::add_pointer_t<lv2_fs_mount_point> mp;
 
-	lv2_fs_object(lv2_fs_mount_point* mp)
+	// File Name (max 1055)
+	const std::array<char, 0x420> name;
+
+	lv2_fs_object(lv2_fs_mount_point* mp, const char* filename)
 		: mp(mp)
+		, name(get_name(filename))
 	{
 	}
 
 	static lv2_fs_mount_point* get_mp(const char* filename);
+
+	static std::array<char, 0x420> get_name(const char* filename)
+	{
+		std::array<char, 0x420> name;
+
+		for (auto& c : name)
+		{
+			c = *filename++;
+
+			if (!c)
+			{
+				return name;
+			}
+		}
+
+		name.back() = 0;
+		return name;
+	}
 };
 
 struct lv2_file final : lv2_fs_object
@@ -138,16 +166,19 @@ struct lv2_file final : lv2_fs_object
 	const s32 mode;
 	const s32 flags;
 
+	// Stream lock
+	atomic_t<u32> lock{0};
+
 	lv2_file(const char* filename, fs::file&& file, s32 mode, s32 flags)
-		: lv2_fs_object(lv2_fs_object::get_mp(filename))
+		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
 	{
 	}
 
-	lv2_file(lv2_fs_mount_point* mp, fs::file&& file, s32 mode, s32 flags)
-		: lv2_fs_object(mp)
+	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags)
+		: lv2_fs_object(host.mp, host.name.data())
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -172,7 +203,7 @@ struct lv2_dir final : lv2_fs_object
 	const fs::dir dir;
 
 	lv2_dir(const char* filename, fs::dir&& dir)
-		: lv2_fs_object(lv2_fs_object::get_mp(filename))
+		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
 		, dir(std::move(dir))
 	{
 	}
@@ -232,15 +263,85 @@ struct lv2_file_op_09 : lv2_file_op
 	be_t<u32> arg_size; // 6th arg
 	be_t<u32> arg_ptr; // 5th arg
 
+	be_t<u32> _x34;
 	be_t<s32> out_code;
 	be_t<u32> out_fd;
 };
 
 CHECK_SIZE(lv2_file_op_09, 0x40);
 
+// sys_fs_fnctl: cellFsGetDirectoryEntries
+struct lv2_file_op_dir : lv2_file_op
+{
+	struct dir_info : lv2_file_op
+	{
+		be_t<s32> _code; // Op result
+		be_t<u32> _size; // Number of entries written
+		vm::bptrb<CellFsDirectoryEntry> ptr;
+		be_t<u32> max;
+	};
+
+	CHECK_SIZE(dir_info, 0x10);
+
+	vm::bptrb<vtable::lv2_file_op> _vtable;
+
+	be_t<u32> op;
+	be_t<u32> _x8;
+	dir_info arg;
+};
+
+CHECK_SIZE(lv2_file_op_dir, 0x1c);
+
+// sys_fs_fcntl: cellFsGetFreeSize (for dev_hdd0)
+struct lv2_file_c0000002 : lv2_file_op
+{
+	vm::bptrb<vtable::lv2_file_op> _vtable;
+
+	be_t<u32> op;
+	be_t<u32> _x8;
+	vm::ps3::bcptr<char> path;
+	be_t<u32> _x10; // 0
+	be_t<u32> _x14;
+
+	be_t<u32> out_code; // CELL_ENOSYS
+	be_t<u32> out_block_size;
+	be_t<u64> out_block_count;
+};
+
+CHECK_SIZE(lv2_file_c0000002, 0x28);
+
+// sys_fs_fcntl: unknown (called before cellFsOpen, for example)
+struct lv2_file_c0000006 : lv2_file_op
+{
+	be_t<u32> size; // 0x20
+	be_t<u32> _x4;  // 0x10
+	be_t<u32> _x8;  // 0x18
+	be_t<u32> _xc;  // 0x9
+	vm::ps3::bcptr<char> name;
+	be_t<u32> _x14; // 0
+	be_t<u32> _x18; // 0x80010003
+	be_t<u32> _x1c; // 0
+};
+
+CHECK_SIZE(lv2_file_c0000006, 0x20);
+
+// sys_fs_fcntl: cellFsAllocateFileAreaWithoutZeroFill
+struct lv2_file_e0000017 : lv2_file_op
+{
+	be_t<u32> size; // 0x28
+	be_t<u32> _x4; // 0x10, offset
+	be_t<u32> _x8; // 0x20, offset
+	be_t<u32> _xc; // -
+	vm::ps3::bcptr<char> file_path;
+	be_t<u64> file_size;
+	be_t<u32> out_code;
+};
+
+CHECK_SIZE(lv2_file_e0000017, 0x28);
+
 // Syscalls
 
-error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> arg5, u32 arg6);
+error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> buf, u32 buf_size);
 error_code sys_fs_open(vm::ps3::cptr<char> path, s32 flags, vm::ps3::ptr<u32> fd, s32 mode, vm::ps3::cptr<void> arg, u64 size);
 error_code sys_fs_read(u32 fd, vm::ps3::ptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nread);
 error_code sys_fs_write(u32 fd, vm::ps3::cptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nwrite);
@@ -256,9 +357,14 @@ error_code sys_fs_rmdir(vm::ps3::cptr<char> path);
 error_code sys_fs_unlink(vm::ps3::cptr<char> path);
 error_code sys_fs_fcntl(u32 fd, u32 op, vm::ps3::ptr<void> arg, u32 size);
 error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ps3::ptr<u64> pos);
-error_code sys_fs_fget_block_size(u32 fd, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4, vm::ps3::ptr<u64> arg5);
+error_code sys_fs_fdatasync(u32 fd);
+error_code sys_fs_fsync(u32 fd);
+error_code sys_fs_fget_block_size(u32 fd, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4, vm::ps3::ptr<s32> arg5);
 error_code sys_fs_get_block_size(vm::ps3::cptr<char> path, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4);
 error_code sys_fs_truncate(vm::ps3::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(u32 fd, u64 size);
 error_code sys_fs_chmod(vm::ps3::cptr<char> path, s32 mode);
 error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep);
+error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr);
+error_code sys_fs_lsn_lock(u32 fd);
+error_code sys_fs_lsn_unlock(u32 fd);

@@ -301,6 +301,16 @@ union alignas(16) v128
 	}
 };
 
+template <typename T, std::size_t N, std::size_t M>
+struct offset32_array<v128::masked_array_t<T, N, M>>
+{
+	template <typename Arg>
+	static inline u32 index32(const Arg& arg)
+	{
+		return SIZE_32(T) * (static_cast<u32>(arg) ^ static_cast<u32>(M));
+	}
+};
+
 inline v128 operator|(const v128& left, const v128& right)
 {
 	return v128::fromV(_mm_or_si128(left.vi, right.vi));

@@ -193,7 +193,7 @@ void KernelExplorer::Update()
 		case SYS_PRX_OBJECT:
 		{
 			auto& prx = static_cast<lv2_prx&>(obj);
-			m_tree->AppendItem(node, fmt::format("PRX: ID = 0x%08x", id));
+			m_tree->AppendItem(node, fmt::format("PRX: ID = 0x%08x '%s'", id, prx.name));
 			break;
 		}
 		case SYS_SPUPORT_OBJECT:
@@ -277,7 +277,7 @@ void KernelExplorer::Update()
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
 		lv2_types.back().count++;
-		m_tree->AppendItem(lv2_types.back().node, fmt::format("FD: ID = 0x%08x '%s'", id));
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("FD: ID = 0x%08x '%s'", id, fo.name.data()));
 	});
 
 	for (auto&& entry : lv2_types)

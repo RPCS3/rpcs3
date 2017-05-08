@@ -309,7 +309,13 @@ namespace rsx
 		 * Vertex shader's position is to be multiplied by this matrix.
 		 * if is_d3d is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const;
+		void fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const;
+
+		/**
+		 * Fill buffer with user clip information
+		*/
+
+		void fill_user_clip_data(void *buffer) const;
 
 		/**
 		* Fill buffer with vertex program constants.
@@ -347,6 +353,8 @@ namespace rsx
 		};
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+
+		virtual bool scaled_image_from_memory(blit_src_info& src_info, blit_dst_info& dst_info, bool interpolate){ return false;  }
 
 		struct raw_program get_raw_program() const;
 	public:

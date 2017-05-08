@@ -60,31 +60,31 @@ namespace vm
 		}
 
 		// Get vm pointer to a struct member
-		template<typename MT, typename T2, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2, typename = if_comparable_t<T, T2>>
 		_ptr_base<MT> ptr(MT T2::*const mptr) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) + get_offset(mptr));
+			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr));
 		}
 
 		// Get vm pointer to a struct member with array subscription
-		template<typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
 		_ptr_base<ET> ptr(MT T2::*const mptr, u32 index) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) + get_offset(mptr) + SIZE_32(ET) * index);
+			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + SIZE_32(ET) * index);
 		}
 
 		// Get vm reference to a struct member
-		template<typename MT, typename T2, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2, typename = if_comparable_t<T, T2>>
 		_ref_base<MT> ref(MT T2::*const mptr) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) + get_offset(mptr));
+			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr));
 		}
 
 		// Get vm reference to a struct member with array subscription
-		template<typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
 		_ref_base<ET> ref(MT T2::*const mptr, u32 index) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) + get_offset(mptr) + SIZE_32(ET) * index);
+			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + SIZE_32(ET) * index);
 		}
 
 		// Get vm reference

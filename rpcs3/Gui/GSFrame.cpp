@@ -17,6 +17,7 @@ GSFrame::GSFrame(const wxString& title, int w, int h)
 {
 	m_render = title;
 	SetIcon(wxGetApp().m_MainFrame->GetIcon());
+	SetCursor(wxCursor(wxImage(1, 1)));
 
 	SetClientSize(w, h);
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);

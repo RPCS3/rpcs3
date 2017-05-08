@@ -15,6 +15,7 @@ logs::channel cellAudio("cellAudio", logs::level::notice);
 
 cfg::bool_entry g_cfg_audio_dump_to_file(cfg::root.audio, "Dump to file");
 cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16 bit");
+cfg::bool_entry g_cfg_audio_downmix_to_2ch(cfg::root.audio, "Downmix to Stereo", true);
 
 void audio_config::on_init(const std::shared_ptr<void>& _this)
 {
@@ -38,17 +39,17 @@ void audio_config::on_task()
 	float buf2ch[2 * BUFFER_SIZE]{}; // intermediate buffer for 2 channels
 	float buf8ch[8 * BUFFER_SIZE]{}; // intermediate buffer for 8 channels
 
-	static const size_t out_buffer_size = 8 * BUFFER_SIZE; // output buffer for 8 channels
+	const u32 buf_sz = BUFFER_SIZE * (g_cfg_audio_convert_to_u16 ? 2 : 4) * (g_cfg_audio_downmix_to_2ch ? 2 : 8);
 
 	std::unique_ptr<float[]> out_buffer[BUFFER_NUM];
 
 	for (u32 i = 0; i < BUFFER_NUM; i++)
 	{
-		out_buffer[i].reset(new float[out_buffer_size] {});
+		out_buffer[i].reset(new float[8 * BUFFER_SIZE] {});
 	}
 
 	const auto audio = Emu.GetCallbacks().get_audio();
-	audio->Open(buf8ch, out_buffer_size * (g_cfg_audio_convert_to_u16 ? 2 : 4));
+	audio->Open(buf8ch, buf_sz);
 
 	while (fxm::check<audio_config>() && !Emu.IsStopped())
 	{
@@ -225,16 +226,20 @@ void audio_config::on_task()
 
 		if (!first_mix)
 		{
-			// copy output data (2 ch)
-			//for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
-			//{
-			//	out_buffer[out_pos][i] = buf2ch[i];
-			//}
-
-			// copy output data (8 ch)
-			for (u32 i = 0; i < (sizeof(buf8ch) / sizeof(float)); i++)
+			// Copy output data (2ch or 8ch)
+			if (g_cfg_audio_downmix_to_2ch)
 			{
-				out_buffer[out_pos][i] = buf8ch[i];
+				for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
+				{
+					out_buffer[out_pos][i] = buf2ch[i];
+				}
+			}
+			else
+			{
+				for (u32 i = 0; i < (sizeof(buf8ch) / sizeof(float)); i++)
+				{
+					out_buffer[out_pos][i] = buf8ch[i];
+				}
 			}
 		}
 
@@ -242,7 +247,7 @@ void audio_config::on_task()
 
 		if (first_mix)
 		{
-			memset(out_buffer[out_pos].get(), 0, out_buffer_size * sizeof(float));
+			std::memset(out_buffer[out_pos].get(), 0, 8 * BUFFER_SIZE * sizeof(float));
 		}
 
 		if (g_cfg_audio_convert_to_u16)
@@ -254,20 +259,21 @@ void audio_config::on_task()
 			// 2x CVTPS2DQ (converts float to s32)
 			// PACKSSDW (converts s32 to s16 with signed saturation)
 
-			u16 buf_u16[out_buffer_size];
-			for (size_t i = 0; i < out_buffer_size; i += 8)
+			__m128i buf_u16[BUFFER_SIZE];
+
+			for (size_t i = 0; i < 8 * BUFFER_SIZE; i += 8)
 			{
 				const auto scale = _mm_set1_ps(0x8000);
-				(__m128i&)(buf_u16[i]) = _mm_packs_epi32(
+				buf_u16[i / 8] = _mm_packs_epi32(
 					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i), scale)),
 					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i + 4), scale)));
 			}
 
-			audio->AddData(buf_u16, out_buffer_size * sizeof(u16));
+			audio->AddData(buf_u16, buf_sz);
 		}
 		else
 		{
-			audio->AddData(out_buffer[out_pos].get(), out_buffer_size * sizeof(float));
+			audio->AddData(out_buffer[out_pos].get(), buf_sz);
 		}
 
 		const u64 stamp2 = get_system_time();
@@ -840,7 +846,11 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 
 	if (port.channel == 2)
 	{
-		cellAudio.error("cellAudioAdd2chData(portNum=%d): port.channel = 2", portNum);
+		for (u32 i = 0; i < samples; i++)
+		{
+			dst[i * 2 + 0] += src[i * 2 + 0] * volume; // mix L ch
+			dst[i * 2 + 1] += src[i * 2 + 1] * volume; // mix R ch
+		}
 	}
 	else if (port.channel == 6)
 	{
@@ -896,9 +906,17 @@ s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	const auto dst = vm::ptr<float>::make(port.addr.addr() + s32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
 
-	if (port.channel == 2 || port.channel == 6)
+	if (port.channel == 6)
 	{
-		cellAudio.error("cellAudioAdd2chData(portNum=%d): port.channel = %d", portNum, port.channel);
+		for (u32 i = 0; i < 256; i++)
+		{
+			dst[i * 6 + 0] += src[i * 6 + 0] * volume; // mix L ch
+			dst[i * 6 + 1] += src[i * 6 + 1] * volume; // mix R ch
+			dst[i * 6 + 2] += src[i * 6 + 2] * volume; // mix center
+			dst[i * 6 + 3] += src[i * 6 + 3] * volume; // mix LFE
+			dst[i * 6 + 4] += src[i * 6 + 4] * volume; // mix rear L
+			dst[i * 6 + 5] += src[i * 6 + 5] * volume; // mix rear R
+		}
 	}
 	else if (port.channel == 8)
 	{

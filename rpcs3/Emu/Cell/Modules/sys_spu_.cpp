@@ -28,21 +28,17 @@ s32 sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, s32
 	return CELL_OK;
 }
 
-s32 sys_spu_image_import(vm::ptr<sys_spu_image_t> img, u32 src, u32 type)
+s32 sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 {
 	sysPrxForUser.warning("sys_spu_image_import(img=*0x%x, src=0x%x, type=%d)", img, src, type);
 
-	u32 entry, offset = LoadSpuImage(fs::file(vm::base(src), 0 - src), entry);
-
-	img->type = SYS_SPU_IMAGE_TYPE_USER;
-	img->entry_point = entry;
-	img->segs.set(offset); // TODO: writing actual segment info
-	img->nsegs = 1; // wrong value
+	// Load from memory (TODO)
+	img->load(fs::file{vm::base(src), 0 - src});
 
 	return CELL_OK;
 }
 
-s32 sys_spu_image_close(vm::ptr<sys_spu_image_t> img)
+s32 sys_spu_image_close(vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.warning("sys_spu_image_close(img=*0x%x)", img);
 
@@ -59,7 +55,7 @@ s32 sys_spu_image_close(vm::ptr<sys_spu_image_t> img)
 		return CELL_EINVAL;
 	}
 
-	verify(HERE), vm::dealloc(img->segs.addr(), vm::main); // Current rough implementation
+	img->free();
 	return CELL_OK;
 }
 
@@ -75,32 +71,25 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 		return CELL_ENOENT;
 	}
 
-	u32 _entry;
-	LoadSpuImage(elf_file, _entry, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
+	sys_spu_image img;
+	img.load(elf_file);
+	img.deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
+	img.free();
 
-	*entry = _entry | 1;
+	*entry = img.entry_point | 1;
 
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image_t> img)
+s32 sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
-	// TODO: use segment info
+	// Load SPU segments
+	img->deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
 
-	const auto stamp0 = get_system_time();
-
-	std::memcpy(vm::base(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), img->segs.get_ptr(), 256 * 1024);
-
-	const auto stamp1 = get_system_time();
-
+	// Use MMIO
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point | 1);
-
-	const auto stamp2 = get_system_time();
-
-	sysPrxForUser.error("memcpy() latency: %lldus", (stamp1 - stamp0));
-	sysPrxForUser.error("MMIO latency: %lldus", (stamp2 - stamp1));
 
 	return CELL_OK;
 }

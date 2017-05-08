@@ -3,6 +3,7 @@
 // http://www.gnu.org/licenses/gpl-3.0.txt
 
 #include "utils.h"
+#include <cstring>
 #include <stdio.h>
 #include <time.h>
 

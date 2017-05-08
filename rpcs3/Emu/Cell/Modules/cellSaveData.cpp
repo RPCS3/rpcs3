@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -307,6 +307,10 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 					return CELL_OK; // ???
 				}
 			}
+			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
+			{
+				return CELL_OK;
+			}
 		}
 
 		if (funcFixed)
@@ -337,6 +341,10 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			if (selected == -1)
 			{
 				save_entry.dirName = fixedSet->dirName.get_ptr();
+			}
+			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
+			{
+				return CELL_OK;
 			}
 		}
 
@@ -453,6 +461,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		if (statSet->setParam)
 		{
 			// Update PARAM.SFO
+			psf.clear();
 			psf.insert(
 			{
 				{ "ACCOUNT_ID", psf::array(16, "0000000000000000") }, // ???
@@ -517,6 +526,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
 		}
+	}
+
+	if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
+	{
+		return CELL_OK;
 	}
 
 	// Create save directory if necessary
@@ -913,9 +927,28 @@ s32 cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 maxSize
 
 s32 cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.warning("cellSavaDataGetListItem(dirName=%s, dir=*0x%x, sysFileParam=*0x%x, bind=*0x%x, sizeKB=*0x%x)", dirName, dir, sysFileParam, bind, sizeKB);
 
-	return CELL_OK;
+	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/00000001/savedata/%s/", dirName.get_ptr()));
+	std::string sfo = save_path + "param.sfo";
+
+	if (!fs::is_dir(save_path) && !fs::is_file(sfo)) 
+	{
+		cellSaveData.error("cellSaveDataGetListItem(): Savedata at %s does not exist", dirName);
+		return CELL_SAVEDATA_ERROR_NODATA;
+	}
+
+	auto psf = psf::load_object(fs::file(sfo));
+
+	if (sysFileParam) 
+	{
+		strcpy_trunc(sysFileParam->listParam, psf.at("SAVEDATA_LIST_PARAM").as_string());
+		strcpy_trunc(sysFileParam->title, psf.at("TITLE").as_string());
+		strcpy_trunc(sysFileParam->subTitle, psf.at("SUB_TITLE").as_string());
+		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
+	}
+
+	return CELL_SAVEDATA_RET_OK;
 }
 
 s32 cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
@@ -962,7 +995,7 @@ s32 cellSaveDataUserGetListItem(u32 userId, vm::cptr<char> dirName, vm::ptr<Cell
 
 void cellSysutil_SaveData_init()
 {
-	REG_VNID(cellSysutil, 0x00000000, g_savedata_context);
+	REG_VNID(cellSysutil, 0x00000000u, g_savedata_context);
 
 	// libsysutil functions:
 	REG_FUNC(cellSysutil, cellSaveDataEnableOverlay);

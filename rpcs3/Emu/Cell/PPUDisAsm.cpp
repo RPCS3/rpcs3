@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "PPUDisAsm.h"
+#include "PPUFunction.h"
 
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 
@@ -2148,7 +2149,21 @@ void PPUDisAsm::FCFID(ppu_opcode_t op)
 	DisAsm_F2_RC("fcfid", op.frd, op.frb, op.rc);
 }
 
+extern std::vector<std::string> g_ppu_function_names;
+
 void PPUDisAsm::UNK(ppu_opcode_t op)
 {
+	if (op.opcode == dump_pc && ppu_function_manager::addr)
+	{
+		// HLE function index
+		const u32 index = (dump_pc - ppu_function_manager::addr) / 8;
+
+		if (index < ppu_function_manager::get().size())
+		{
+			Write(fmt::format("Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index));
+			return;
+		}
+	}
+
 	Write(fmt::format("Unknown/Illegal opcode! (0x%08x)", op.opcode));
 }

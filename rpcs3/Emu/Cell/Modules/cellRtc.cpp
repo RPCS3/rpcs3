@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellRtc.h"
@@ -175,10 +175,22 @@ s32 cellRtcConvertLocalTimeToUtc(vm::ptr<CellRtcTick> pLocalTime, vm::ptr<CellRt
 	return CELL_OK;
 }
 
+s32 cellRtcGetCurrentSecureTick()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
 s32 cellRtcGetDosTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<u32> puiDosTime)
 {
 	cellRtc.todo("cellRtcGetDosTime(pDateTime=*0x%x, puiDosTime=*0x%x)", pDateTime, puiDosTime);
 
+	return CELL_OK;
+}
+
+s32 cellRtcGetSystemTime()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
 	return CELL_OK;
 }
 
@@ -196,6 +208,24 @@ s32 cellRtcGetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<u64> pul
 	return CELL_OK;
 }
 
+s32 cellRtcSetCurrentSecureTick()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcSetCurrentTick()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
+s32 cellRtcSetConf()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
 s32 cellRtcSetDosTime(vm::ptr<CellRtcDateTime> pDateTime, u32 uiDosTime)
 {
 	cellRtc.todo("cellRtcSetDosTime(pDateTime=*0x%x, uiDosTime=0x%x)", pDateTime, uiDosTime);
@@ -203,10 +233,22 @@ s32 cellRtcSetDosTime(vm::ptr<CellRtcDateTime> pDateTime, u32 uiDosTime)
 	return CELL_OK;
 }
 
+s32 cellRtcGetTickResolution()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
+	return CELL_OK;
+}
+
 s32 cellRtcSetTime_t(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 {
 	cellRtc.todo("cellRtcSetTime_t(pDateTime=*0x%x, iTime=0x%llx)", pDateTime, iTime);
 
+	return CELL_OK;
+}
+
+s32 cellRtcSetSystemTime()
+{
+	UNIMPLEMENTED_FUNC(cellRtc);
 	return CELL_OK;
 }
 
@@ -267,6 +309,7 @@ DECLARE(ppu_module_manager::cellRtc)("cellRtc", []()
 
 	REG_FUNC(cellRtc, cellRtcGetTick);
 	REG_FUNC(cellRtc, cellRtcSetTick);
+
 	REG_FUNC(cellRtc, cellRtcTickAddTicks);
 	REG_FUNC(cellRtc, cellRtcTickAddMicroseconds);
 	REG_FUNC(cellRtc, cellRtcTickAddSeconds);
@@ -276,14 +319,23 @@ DECLARE(ppu_module_manager::cellRtc)("cellRtc", []()
 	REG_FUNC(cellRtc, cellRtcTickAddWeeks);
 	REG_FUNC(cellRtc, cellRtcTickAddMonths);
 	REG_FUNC(cellRtc, cellRtcTickAddYears);
+
 	REG_FUNC(cellRtc, cellRtcConvertUtcToLocalTime);
 	REG_FUNC(cellRtc, cellRtcConvertLocalTimeToUtc);
 
+	REG_FUNC(cellRtc, cellRtcGetCurrentSecureTick);
 	REG_FUNC(cellRtc, cellRtcGetDosTime);
+	REG_FUNC(cellRtc, cellRtcGetTickResolution);
+	REG_FUNC(cellRtc, cellRtcGetSystemTime);
 	REG_FUNC(cellRtc, cellRtcGetTime_t);
 	REG_FUNC(cellRtc, cellRtcGetWin32FileTime);
+
+	REG_FUNC(cellRtc, cellRtcSetConf);
+	REG_FUNC(cellRtc, cellRtcSetCurrentSecureTick);
+	REG_FUNC(cellRtc, cellRtcSetCurrentTick);
 	REG_FUNC(cellRtc, cellRtcSetDosTime);
 	REG_FUNC(cellRtc, cellRtcSetTime_t);
+	REG_FUNC(cellRtc, cellRtcSetSystemTime);
 	REG_FUNC(cellRtc, cellRtcSetWin32FileTime);
 
 	REG_FUNC(cellRtc, cellRtcIsLeapYear);

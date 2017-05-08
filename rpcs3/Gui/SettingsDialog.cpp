@@ -264,14 +264,14 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 
 	// Core
 	wxStaticBoxSizer* s_round_core_lle = new wxStaticBoxSizer(wxVERTICAL, p_core, "Load libraries");
-	chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, wxLB_EXTENDED);
+	chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), {}, wxLB_EXTENDED);
 	chbox_list_core_lle->Bind(wxEVT_CHECKLISTBOX, &SettingsDialog::OnModuleListItemToggled, this);
-	wxTextCtrl* s_module_search_box = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, {});
+	s_module_search_box = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, {});
 	s_module_search_box->Bind(wxEVT_TEXT, &SettingsDialog::OnSearchBoxTextChanged, this);
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
-	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter");
+	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter (DirectX 12 Only)");
 	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Resolution");
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Aspect ratio");
 	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Frame limit");
@@ -310,8 +310,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 
 	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
-	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx only");
-	wxCheckBox* chbox_core_load_libreq = new wxCheckBox(p_core, wxID_ANY, "Load required libraries");
 	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
 	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log Shader Programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
@@ -322,8 +320,10 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
 	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug Overlay");
 	wxCheckBox* chbox_gs_gl_legacy_buffers = new wxCheckBox(p_graphics, wxID_ANY, "Use Legacy OpenGL Buffers");
+	wxCheckBox* chbox_gs_gpu_texture_scaling = new wxCheckBox(p_graphics, wxID_ANY, "Use GPU texture scaling");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
+	wxCheckBox* chbox_audio_dnmx = new wxCheckBox(p_audio, wxID_ANY, "Downmix to Stereo");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
 	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
@@ -354,10 +354,13 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 		for (const auto& prxf : fs::dir(lle_dir))
 		{
 			// List found unselected modules
-			if (!prxf.is_directory && ppu_prx_object(decrypt_self(fs::file(lle_dir + prxf.name))) == elf_error::ok && !set.count(prxf.name))
+			if (prxf.is_directory || (prxf.name.substr(std::max(size_t(3), prxf.name.length()) - 3)) != "prx")
+				continue;
+			if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) && !set.count(prxf.name))
 			{
 				lle_module_list_unselected.push_back(prxf.name);
 			}
+
 		}
 
 		sort_string_vector(lle_module_list_unselected);
@@ -381,9 +384,13 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(spu_decoder_modes), rbox_spu_decoder));
 	rbox_spu_decoder->Enable(3, false); // TODO
 
+	radiobox_pad_helper lib_loader_modes({ "Core", "Lib Loader" });
+	rbox_lib_loader = new wxRadioBox(p_core, wxID_ANY, "Library Loading Mode", wxDefaultPosition, wxSize(-1, -1), lib_loader_modes, 1);
+	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(lib_loader_modes), rbox_lib_loader));
+	rbox_lib_loader->Bind(wxEVT_COMMAND_RADIOBOX_SELECTED, &SettingsDialog::OnLibLoaderToggled, this);
+	EnableModuleList(rbox_lib_loader->GetSelection());
+
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load liblv2.sprx only" }, chbox_core_load_liblv2));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load required libraries" }, chbox_core_load_libreq));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
@@ -399,10 +406,12 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug output" }, chbox_gs_debug_output));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug overlay" }, chbox_gs_overlay));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Use Legacy OpenGL Buffers (Debug)" }, chbox_gs_gl_legacy_buffers));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Use GPU texture scaling" }, chbox_gs_gpu_texture_scaling));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Audio", "Renderer" }, cbox_audio_out));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Dump to file" }, chbox_audio_dump));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Convert to 16 bit" }, chbox_audio_conv));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Downmix to Stereo" }, chbox_audio_dnmx));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Pad" }, cbox_pad_handler));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Keyboard" }, cbox_keyboard_handler));
@@ -436,16 +445,14 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 		pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "D3D12", "Adapter" }, cbox_gs_d3d_adapter));
 	}
 	else
-#endif
 	{
 		// Removes D3D12 from Render list when the system doesn't support it
 		cbox_gs_render->Delete(cbox_gs_render->FindString("D3D12"));
 		cbox_gs_d3d_adapter->Enable(false);
 	}
-
-	// Core
-	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_core_lle->Add(s_module_search_box, wxSizerFlags().Border(wxALL, 5).Expand());
+#else
+	cbox_gs_d3d_adapter->Enable(false);
+#endif
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -470,11 +477,12 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Core
+	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 4).Expand());
+	s_round_core_lle->Add(s_module_search_box, wxSizerFlags().Border(wxALL, 4).Expand());
 	s_subpanel_core1->Add(rbox_ppu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(chbox_core_load_libreq, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core2->Add(rbox_lib_loader, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core2->Add(s_round_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(s_subpanel_core1);
 	s_subpanel_core->Add(s_subpanel_core2);
@@ -495,6 +503,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_subpanel_graphics2->Add(chbox_gs_overlay, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics2->Add(chbox_gs_gpu_texture_scaling, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_subpanel_graphics1);
 	s_subpanel_graphics->Add(s_subpanel_graphics2);
 
@@ -511,6 +520,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_subpanel_audio->Add(s_round_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_audio->Add(chbox_audio_dnmx, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Miscellaneous
 	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -583,7 +593,7 @@ void SettingsDialog::OnModuleListItemToggled(wxCommandEvent &event)
 void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
 {
 	// helper to preserve alphabetically order while inserting items
-	int item_index = 0;
+	unsigned int item_index = 0;
 
 	if (event.GetString().IsEmpty())
 	{
@@ -624,3 +634,24 @@ void SettingsDialog::OnSearchBoxTextChanged(wxCommandEvent &event)
 		}
 	}
 }
+
+void SettingsDialog::OnLibLoaderToggled(wxCommandEvent& event)
+{
+	EnableModuleList(event.GetSelection());
+}
+
+// Enables or disables the modul list interaction
+void SettingsDialog::EnableModuleList(int selection)
+{
+	if (selection == 1 || selection == 2)
+	{
+		chbox_list_core_lle->Enable();
+		s_module_search_box->Enable();
+	}
+	else
+	{
+		chbox_list_core_lle->Disable();
+		s_module_search_box->Disable();
+	}
+}
+

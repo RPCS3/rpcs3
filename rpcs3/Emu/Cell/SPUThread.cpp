@@ -48,6 +48,8 @@ cfg::map_entry<spu_decoder_type> g_cfg_spu_decoder(cfg::root.core, "SPU Decoder"
 	{ "Recompiler (LLVM)", spu_decoder_type::llvm },
 });
 
+cfg::bool_entry g_cfg_spu_debug(cfg::root.core, "SPU Debug");
+
 const spu_decoder<spu_interpreter_precise> s_spu_interpreter_precise;
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter_fast;
 
@@ -585,6 +587,8 @@ void SPUThread::process_mfc_cmd()
 
 		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 		const auto to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ffff);
+
+		vm::reservation_acquire(ch_mfc_cmd.eal, 128);
 
 		// Store unconditionally
 		// TODO: vm::check_addr

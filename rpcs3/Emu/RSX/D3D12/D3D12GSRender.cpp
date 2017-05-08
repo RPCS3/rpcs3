@@ -177,7 +177,17 @@ D3D12GSRender::D3D12GSRender()
 		}
 	}
 
-	CHECK_HRESULT(wrapD3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+	if (FAILED(wrapD3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device))))
+	{
+		LOG_ERROR(RSX, "Failed to initialize D3D device on adapter '%s', falling back to first available GPU", g_cfg_d3d12_adapter.to_string().c_str());
+		
+		//Try to create a device on the first available device
+		if (FAILED(wrapD3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device))))
+		{
+			LOG_FATAL(RSX, "Unable to create D3D12 device. Your GPU(s) may not have D3D12 support.");
+			return;
+		}
+	}
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC graphic_queue_desc = { D3D12_COMMAND_LIST_TYPE_DIRECT };
@@ -263,6 +273,12 @@ D3D12GSRender::D3D12GSRender()
 
 D3D12GSRender::~D3D12GSRender()
 {
+	if (!m_device)
+	{
+		//Initialization must have failed
+		return;
+	}
+
 	wait_for_command_queue(m_device.Get(), m_command_queue.Get());
 
 	m_texture_cache.unprotect_all();
@@ -273,6 +289,15 @@ D3D12GSRender::~D3D12GSRender()
 	m_output_scaling_pass.release();
 
 	release_d2d_structures();
+}
+
+void D3D12GSRender::on_init_thread()
+{
+	if (!m_device)
+	{
+		//Init must have failed
+		fmt::throw_exception("No D3D12 device was created");
+	}
 }
 
 void D3D12GSRender::on_exit()

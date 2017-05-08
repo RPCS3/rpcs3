@@ -621,7 +621,7 @@ namespace vm
 		size = ::align(size, 4096);
 
 		// return if addr or size is invalid
-		if (!size || size > this->size || addr < this->addr || addr + size - 1 >= this->addr + this->size - 1)
+		if (!size || size > this->size || addr < this->addr || addr + size - 1 > this->addr + this->size - 1)
 		{
 			return 0;
 		}

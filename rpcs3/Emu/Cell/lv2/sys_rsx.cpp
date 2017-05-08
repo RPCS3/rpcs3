@@ -177,7 +177,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
  */
 s32 sys_rsx_device_map(vm::ptr<u32> addr, vm::ptr<u32> a2, u32 dev_id)
 {
-	sys_rsx.todo("sys_rsx_device_map(addr=*0x%x, a2=0x%x, dev_id=0x%x)", addr, a2, dev_id);
+	sys_rsx.todo("sys_rsx_device_map(addr=*0x%x, a2=*0x%x, dev_id=0x%x)", addr, a2, dev_id);
 
 	if (dev_id > 15) {
 		// TODO: Throw RSX error

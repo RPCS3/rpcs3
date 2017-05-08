@@ -2,12 +2,6 @@
 
 #include "Emu/Cell/lv2/sys_fs.h"
 
-struct CellFsDirectoryEntry
-{
-	CellFsStat attribute;
-	CellFsDirent entry_name;
-};
-
 // CellFsRingBuffer.copy
 enum : s32
 {
