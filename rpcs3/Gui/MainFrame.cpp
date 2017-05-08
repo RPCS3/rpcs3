@@ -30,7 +30,7 @@
 #include <thread>
 
 #ifndef _WIN32
-#include "../frame_icon.xpm"
+#include "../../Data/frame_icon.xpm"
 #endif
 
 enum IDs
