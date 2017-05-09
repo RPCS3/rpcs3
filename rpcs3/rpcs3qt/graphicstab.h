@@ -1,18 +1,22 @@
 #ifndef GRAPHICSTAB_H
 #define GRAPHICSTAB_H
 
+#include "EmuSettings.h"
+
 #include <QWidget>
 
+#include <memory>
 class GraphicsTab : public QWidget
 {
 	Q_OBJECT
 
 public:
-	explicit GraphicsTab(QWidget *parent = 0);
+	explicit GraphicsTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent = 0);
 
 signals:
 
-public slots:
+private:
+	std::shared_ptr<EmuSettings> xEmuSettings;
 };
 
 #endif // GRAPHICSTAB_H

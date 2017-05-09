@@ -5,16 +5,12 @@
 
 #include "networkingtab.h"
 
-NetworkingTab::NetworkingTab(QWidget *parent) : QWidget(parent)
+NetworkingTab::NetworkingTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent) : QWidget(parent)
 {
 	// Connection status
 	QGroupBox *netStatus = new QGroupBox(tr("Connection status"));
 
-	QComboBox *netStatusBox = new QComboBox;
-	netStatusBox->addItem(tr("Disconnected"));
-	netStatusBox->addItem(tr("Connecting"));
-	netStatusBox->addItem(tr("Obtaining IP"));
-	netStatusBox->addItem(tr("IP obtained"));
+	QComboBox *netStatusBox = xEmuSettings->CreateEnhancedComboBox(EmuSettings::ConnectionStatus, this);
 
 	QVBoxLayout *netStatusVbox = new QVBoxLayout;
 	netStatusVbox->addWidget(netStatusBox);

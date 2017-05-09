@@ -14,7 +14,6 @@ class SettingsDialog : public QDialog
 
 public:
 	explicit SettingsDialog(std::shared_ptr<GuiSettings> xSettings, QWidget *parent = 0, const std::string &path = "");
-
 signals:
 	void GuiSettingsSyncRequest();
 	void GuiStylesheetRequest(const QString& path);

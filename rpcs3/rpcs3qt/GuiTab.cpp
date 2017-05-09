@@ -10,22 +10,21 @@ GuiTab::GuiTab(std::shared_ptr<GuiSettings> xSettings, QWidget *parent) : QWidge
 	// Left Widgets
 	// configs
 	QGroupBox *gb_configs = new QGroupBox(tr("Gui configs"), this);
-	QVBoxLayout *vbox_configs = new QVBoxLayout(this);
-	QHBoxLayout *hbox_configs = new QHBoxLayout(this);
+	QVBoxLayout *vbox_configs = new QVBoxLayout();
+	QHBoxLayout *hbox_configs = new QHBoxLayout();
 	combo_configs = new QComboBox(this);
 	QPushButton *pb_apply_config = new QPushButton(tr("Apply"), this);
-	// Reset Default Button
+	// control buttons
+	QGroupBox *gb_controls = new QGroupBox(tr("Gui controls"), this);
+	QVBoxLayout *vbox_controls = new QVBoxLayout();
 	QPushButton *pb_reset_default = new QPushButton(tr("Reset Gui to Default"), this);
-
-	// Backup settings
 	QPushButton *pb_backup_config = new QPushButton(tr("Save Current Configuration"), this);
-
 	QPushButton *pb_open_folder = new QPushButton(tr("Open Config/Sheet Folder"));
 
 	// Right Widgets
 	QGroupBox *gb_stylesheets = new QGroupBox(tr("Stylesheets"), this);
-	QVBoxLayout *vbox_stylesheets = new QVBoxLayout(this);
-	QHBoxLayout *hbox_stylesheets = new QHBoxLayout(this);
+	QVBoxLayout *vbox_stylesheets = new QVBoxLayout();
+	QHBoxLayout *hbox_stylesheets = new QHBoxLayout();
 	combo_stylesheets = new QComboBox(this);
 	QPushButton *pb_apply_stylesheet = new QPushButton(tr("Apply"), this);
 
@@ -37,10 +36,13 @@ GuiTab::GuiTab(std::shared_ptr<GuiSettings> xSettings, QWidget *parent) : QWidge
 	vbox_configs->addLayout(hbox_configs);
 	gb_configs->setLayout(vbox_configs);
 
+	vbox_controls->addWidget(pb_reset_default);
+	vbox_controls->addWidget(pb_backup_config);
+	vbox_controls->addWidget(pb_open_folder);
+	gb_controls->setLayout(vbox_controls);
+
 	vbox_left->addWidget(gb_configs);
-	vbox_left->addWidget(pb_reset_default);
-	vbox_left->addWidget(pb_backup_config);
-	vbox_left->addWidget(pb_open_folder);
+	vbox_left->addWidget(gb_controls);
 	vbox_left->addStretch(1);
 
 	// Right layout

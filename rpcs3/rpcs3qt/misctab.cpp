@@ -8,13 +8,13 @@
 #include "misctab.h"
 #include "mainwindow.h"
 
-MiscTab::MiscTab(QWidget *parent) : QWidget(parent)
+MiscTab::MiscTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent) : QWidget(parent)
 {
 	// Left Widgets
-	QCheckBox *exitOnStop = new QCheckBox(tr("Exit RPCS3 when process finishes"));
-	QCheckBox *alwaysStart = new QCheckBox(tr("Always start after boot"));
-	QCheckBox *apSystemcall = new QCheckBox(tr("Auto Pause at System Call"));
-	QCheckBox *apFunctioncall = new QCheckBox(tr("Auto Pause at Function Call"));
+	QCheckBox *exitOnStop = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::ExitRPCS3OnFinish, this);
+	QCheckBox *alwaysStart = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::StartOnBoot, this);
+	QCheckBox *apSystemcall = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::AutoPauseSysCall, this);
+	QCheckBox *apFunctioncall = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::AutoPauseFuncCall, this);
 
 	// Left layout
 	QVBoxLayout *vbox_left = new QVBoxLayout;

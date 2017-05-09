@@ -270,6 +270,15 @@
     <ClCompile Include="DS4PadHandler.cpp">
       <Filter>Io\DS4</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\EmuSettings.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_EmuSettings.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_EmuSettings.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\KernelExplorer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -375,6 +384,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\MsgDialog.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\EmuSettings.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\KernelExplorer.h">

@@ -1,14 +1,18 @@
 #ifndef AUDIOTAB_H
 #define AUDIOTAB_H
 
+#include "EmuSettings.h"
+
 #include <QWidget>
+
+#include <memory>
 
 class AudioTab : public QWidget
 {
 	Q_OBJECT
 
 public:
-	explicit AudioTab(QWidget *parent = 0);
+	explicit AudioTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent = 0);
 
 signals:
 

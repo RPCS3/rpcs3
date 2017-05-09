@@ -11,31 +11,44 @@
 #include "networkingtab.h"
 #include "systemtab.h"
 #include "settingsdialog.h"
+#include "EmuSettings.h"
 
-SettingsDialog::SettingsDialog(std::shared_ptr<GuiSettings> xSettings, QWidget *parent, const std::string& path) : QDialog(parent)
+SettingsDialog::SettingsDialog(std::shared_ptr<GuiSettings> xGuiSettings, QWidget *parent, const std::string& path) : QDialog(parent)
 {
-	GuiTab* guiTab = new GuiTab(xSettings, this);
+	std::shared_ptr<EmuSettings> xEmuSettings;
+	xEmuSettings.reset(new EmuSettings(path));
 
-	tabWidget = new QTabWidget;
-	tabWidget->addTab(new CoreTab(this), tr("Core"));
-	tabWidget->addTab(new GraphicsTab(this), tr("Graphics"));
-	tabWidget->addTab(new AudioTab(this), tr("Audio"));
-	tabWidget->addTab(new InputTab(this), tr("Input / Output"));
-	tabWidget->addTab(new MiscTab(this), tr("Misc"));
-	if (path == "")
-	{ // Don't add gui tab to game settings.
-		tabWidget->addTab(guiTab, tr("Gui"));
-	}
-	tabWidget->addTab(new NetworkingTab(this), tr("Networking"));
-	tabWidget->addTab(new SystemTab(this), tr("System"));
+	CoreTab* coreTab = new CoreTab(xEmuSettings, this);
 
 	QPushButton *okButton = new QPushButton(tr("OK"));
-	connect(okButton, &QAbstractButton::clicked, guiTab, &GuiTab::Accept);
-	connect(okButton, &QAbstractButton::clicked, this, &QDialog::accept);
-
 	QPushButton *cancelButton = new QPushButton(tr("Cancel"));
 	cancelButton->setDefault(true);
+
+	tabWidget = new QTabWidget;
+	tabWidget->setUsesScrollButtons(false);
+	tabWidget->addTab(coreTab, tr("Core"));
+	tabWidget->addTab(new GraphicsTab(xEmuSettings, this), tr("Graphics"));
+	tabWidget->addTab(new AudioTab(xEmuSettings, this), tr("Audio"));
+	tabWidget->addTab(new InputTab(xEmuSettings, this), tr("Input / Output"));
+	tabWidget->addTab(new MiscTab(xEmuSettings, this), tr("Misc"));
+	tabWidget->addTab(new NetworkingTab(xEmuSettings, this), tr("Networking"));
+	tabWidget->addTab(new SystemTab(xEmuSettings, this), tr("System"));
+	if (path == "")
+	{ // Don't add gui tab to game settings.
+		GuiTab* guiTab = new GuiTab(xGuiSettings, this);
+		tabWidget->addTab(guiTab, tr("Gui"));
+		connect(guiTab, &GuiTab::GuiSettingsSyncRequest, this, &SettingsDialog::GuiSettingsSyncRequest);
+		connect(guiTab, &GuiTab::GuiSettingsSaveRequest, this, &SettingsDialog::GuiSettingsSaveRequest);
+		connect(guiTab, &GuiTab::GuiStylesheetRequest, this, &SettingsDialog::GuiStylesheetRequest);
+		connect(okButton, &QAbstractButton::clicked, guiTab, &GuiTab::Accept);
+	}
+
+	// Various connects
+	connect(okButton, &QAbstractButton::clicked, coreTab, &CoreTab::SaveSelectedLibraries);
+	connect(okButton, &QAbstractButton::clicked, xEmuSettings.get(), &EmuSettings::SaveSettings);
+	connect(okButton, &QAbstractButton::clicked, this, &QDialog::accept);
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
+	connect(tabWidget, &QTabWidget::currentChanged, [=]() {cancelButton->setFocus(); });
 
 	QHBoxLayout *buttonsLayout = new QHBoxLayout;
 	buttonsLayout->addStretch();
@@ -46,13 +59,6 @@ SettingsDialog::SettingsDialog(std::shared_ptr<GuiSettings> xSettings, QWidget *
 	mainLayout->addWidget(tabWidget);
 	mainLayout->addLayout(buttonsLayout);
 	setLayout(mainLayout);
-	
-	// Misc Connects
-	connect(guiTab, &GuiTab::GuiSettingsSyncRequest, this, &SettingsDialog::GuiSettingsSyncRequest);
-	connect(guiTab, &GuiTab::GuiSettingsSaveRequest, this, &SettingsDialog::GuiSettingsSaveRequest);
-	connect(guiTab, &GuiTab::GuiStylesheetRequest, this, &SettingsDialog::GuiStylesheetRequest);
-
-	connect(tabWidget, &QTabWidget::currentChanged, [=]() {cancelButton->setFocus();});
 
 	setWindowTitle(tr("Settings"));
 }

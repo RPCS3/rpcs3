@@ -5,17 +5,12 @@
 
 #include "inputtab.h"
 
-InputTab::InputTab(QWidget *parent) : QWidget(parent)
+InputTab::InputTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent) : QWidget(parent)
 {
 	// Pad Handler
 	QGroupBox *padHandler = new QGroupBox(tr("Pad Handler"));
 
-	QComboBox *padHandlerBox = new QComboBox;
-	padHandlerBox->addItem(tr("Null"));
-	padHandlerBox->addItem(tr("Keyboard"));
-#ifdef _MSC_VER
-	padHandlerBox->addItem(tr("XInput"));
-#endif // _MSC_VER
+	QComboBox *padHandlerBox = xEmuSettings->CreateEnhancedComboBox(EmuSettings::PadHandler, this);
 
 	QVBoxLayout *padHandlerVbox = new QVBoxLayout;
 	padHandlerVbox->addWidget(padHandlerBox);
@@ -24,9 +19,7 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	// Keyboard Handler
 	QGroupBox *keyboardHandler = new QGroupBox(tr("Keyboard Handler"));
 
-	QComboBox *keyboardHandlerBox = new QComboBox;
-	keyboardHandlerBox->addItem(tr("Null"));
-	keyboardHandlerBox->addItem(tr("Basic"));
+	QComboBox *keyboardHandlerBox = xEmuSettings->CreateEnhancedComboBox(EmuSettings::KeyboardHandler, this);
 
 	QVBoxLayout *keyboardHandlerVbox = new QVBoxLayout;
 	keyboardHandlerVbox->addWidget(keyboardHandlerBox);
@@ -35,9 +28,7 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	// Mouse Handler
 	QGroupBox *mouseHandler = new QGroupBox(tr("Mouse Handler"));
 
-	QComboBox *mouseHandlerBox = new QComboBox;
-	mouseHandlerBox->addItem(tr("Null"));
-	mouseHandlerBox->addItem(tr("Basic"));
+	QComboBox *mouseHandlerBox = xEmuSettings->CreateEnhancedComboBox(EmuSettings::MouseHandler, this);
 
 	QVBoxLayout *mouseHandlerVbox = new QVBoxLayout;
 	mouseHandlerVbox->addWidget(mouseHandlerBox);
@@ -46,9 +37,7 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	// Camera
 	QGroupBox *camera = new QGroupBox(tr("Camera"));
 
-	QComboBox *cameraBox = new QComboBox;
-	cameraBox->addItem(tr("Null"));
-	cameraBox->addItem(tr("Fake"));
+	QComboBox *cameraBox = xEmuSettings->CreateEnhancedComboBox(EmuSettings::Camera, this);
 
 	QVBoxLayout *cameraVbox = new QVBoxLayout;
 	cameraVbox->addWidget(cameraBox);
@@ -57,11 +46,7 @@ InputTab::InputTab(QWidget *parent) : QWidget(parent)
 	// Camera type
 	QGroupBox *cameraType = new QGroupBox(tr("Camera type"));
 
-	QComboBox *cameraTypeBox = new QComboBox;
-	cameraTypeBox->addItem(tr("Unknown"));
-	cameraTypeBox->addItem(tr("EyeToy"));
-	cameraTypeBox->addItem(tr("PS Eye"));
-	cameraTypeBox->addItem(tr("UVC 1.1"));
+	QComboBox *cameraTypeBox = xEmuSettings->CreateEnhancedComboBox(EmuSettings::CameraType, this);
 
 	QVBoxLayout *cameraTypeVbox = new QVBoxLayout;
 	cameraTypeVbox->addWidget(cameraTypeBox);

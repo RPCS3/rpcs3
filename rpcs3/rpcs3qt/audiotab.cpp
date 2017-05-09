@@ -6,29 +6,21 @@
 
 #include "audiotab.h"
 
-AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
+AudioTab::AudioTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent) : QWidget(parent)
 {
 	// Audio Out
 	QGroupBox *audioOut = new QGroupBox(tr("Audio Out"));
 
-	QComboBox *audioOutBox = new QComboBox;
-	audioOutBox->addItem(tr("Null"));
-	audioOutBox->addItem(tr("OpenAL"));
-#ifdef _WIN32
-	audioOutBox->addItem(tr("XAudio2"));
-#endif // _WIN32
-#ifdef __LINUX__
-	audioOutBox->addItem(tr("ALSA"));
-#endif // __LINUX__
+	QComboBox *audioOutBox = xEmuSettings->CreateEnhancedComboBox(EmuSettings::AudioRenderer, this);
 
 	QVBoxLayout *audioOutVbox = new QVBoxLayout;
 	audioOutVbox->addWidget(audioOutBox);
 	audioOut->setLayout(audioOutVbox);
 
 	// Checkboxes
-	QCheckBox *audioDump = new QCheckBox(tr("Dump to file"));
-	QCheckBox *conv = new QCheckBox(tr("Convert to 16 bit"));
-	QCheckBox *downmix = new QCheckBox(tr("Downmix to Stereo"));
+	QCheckBox *audioDump = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::DumpToFile, this);
+	QCheckBox *conv = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::ConvertTo16Bit, this);
+	QCheckBox *downmix = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::DownmixStereo, this);
 
 	// Main layout
 	QVBoxLayout *vbox = new QVBoxLayout;
