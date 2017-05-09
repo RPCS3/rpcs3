@@ -62,12 +62,14 @@ extern std::string ppu_get_syscall_name(u64 code);
 
 static constexpr ppu_function_t null_func = nullptr;
 
+std::array<ppu_function_t, 1024> g_ppu_syscall_table{};
+
 // UNS = Unused
 // ROOT = Root
 // DBG = Debug
 // PM = Product Mode
 // AuthID = Authentication ID
-std::array<ppu_function_t, 1024> g_ppu_syscall_table
+const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 {
 	null_func,
 	BIND_FUNC(sys_process_getpid),                          //1   (0x001)
@@ -984,6 +986,11 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+extern void ppu_initialize_syscalls()
+{
+	g_ppu_syscall_table = s_ppu_syscall_table;
 }
 
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
