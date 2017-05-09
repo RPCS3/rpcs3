@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
-#include "Utilities/AutoPause.h"
 #include "Utilities/event.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
@@ -361,8 +360,6 @@ void Emulator::Load()
 			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
 			return;
 		}
-
-		debug::autopause::reload();
 
 		if (g_cfg_autostart && IsReady())
 		{
