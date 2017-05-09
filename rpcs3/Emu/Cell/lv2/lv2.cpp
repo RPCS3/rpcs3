@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
-#include "Utilities/AutoPause.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUFunction.h"
@@ -997,12 +996,6 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 {
 	if (code < g_ppu_syscall_table.size())
 	{
-		// If autopause occures, check_status() will hold the thread till unpaused
-		if (debug::autopause::pause_syscall(code))
-		{
-			ppu.test_state();
-		}
-
 		if (auto func = g_ppu_syscall_table[code])
 		{
 			func(ppu);

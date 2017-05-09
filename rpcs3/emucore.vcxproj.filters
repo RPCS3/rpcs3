@@ -149,9 +149,6 @@
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\AutoPause.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rXml.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1063,9 +1060,6 @@
     <ClInclude Include="Emu\RSX\GCM.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\AutoPause.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\IdManager.h">
       <Filter>Emu</Filter>
     </ClInclude>
@@ -1376,7 +1370,7 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSysconf.h">
-        <Filter>Emu\Cell\Modules</Filter>
+      <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSysutil.h">
       <Filter>Emu\Cell\Modules</Filter>
