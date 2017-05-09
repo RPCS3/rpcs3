@@ -1,3 +1,4 @@
+
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -51,6 +52,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 	CreateConnects();
 
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
+	appIcon = QIcon("rpcs3.ico");
+	if (!appIcon.isNull())
+	{
+		setWindowIcon(appIcon);
+	}
 
 	QTimer::singleShot(1, [=]() {
 		// Need to have this happen fast, but not now because connects aren't created yet.
@@ -61,6 +67,42 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::CreateThumbnailToolbar()
+{
+#ifdef _WIN32
+	icon_play.addFile("Icons/play.png");
+	icon_pause.addFile("Icons/pause.png");
+	icon_stop.addFile("Icons/stop.png");
+	icon_restart.addFile("Icons/restart.png");
+
+	thumb_bar = new QWinThumbnailToolBar(this);
+	thumb_bar->setWindow(windowHandle());
+
+	thumb_playPause = new QWinThumbnailToolButton(thumb_bar);
+	thumb_playPause->setToolTip("Start");
+	thumb_playPause->setIcon(icon_play);
+	thumb_playPause->setEnabled(false);
+
+	thumb_stop = new QWinThumbnailToolButton(thumb_bar);
+	thumb_stop->setToolTip("Stop");
+	thumb_stop->setIcon(icon_stop);
+	thumb_stop->setEnabled(false);
+
+	thumb_restart = new QWinThumbnailToolButton(thumb_bar);
+	thumb_restart->setToolTip("Restart");
+	thumb_restart->setIcon(icon_restart);
+	thumb_restart->setEnabled(false);
+
+	connect(thumb_playPause, &QWinThumbnailToolButton::clicked, this, &MainWindow::Pause);
+	connect(thumb_stop, &QWinThumbnailToolButton::clicked, this, &MainWindow::Stop);
+	connect(thumb_restart, &QWinThumbnailToolButton::clicked, this, &MainWindow::Restart);
+
+	thumb_bar->addButton(thumb_playPause);
+	thumb_bar->addButton(thumb_stop);
+	thumb_bar->addButton(thumb_restart);
+#endif
 }
 
 void MainWindow::DoSettings(bool load)
@@ -78,6 +120,54 @@ void MainWindow::DoSettings(bool load)
 	//	cfg = fmt::ToUTF8(m_aui_mgr.SavePerspective());
 	//	save_gui_cfg();
 	//}
+}
+
+// returns appIcon
+QIcon MainWindow::GetAppIcon()
+{
+	return appIcon;
+}
+
+// loads the appIcon from path and embeds it centered into an empty square icon
+void MainWindow::SetAppIconFromPath(const std::string path)
+{
+	// get Icon for the GSFrame from path. this handles presumably all possible use cases
+	QString qpath = QString::fromUtf8(path.data(), path.size());
+	std::string icon_list[] = { "/ICON0.PNG", "/PS3_GAME/ICON0.PNG" };
+	std::string path_list[] = { path, qpath.section("/", 0, -2).toUtf8().toStdString() ,qpath.section("/", 0, -3).toUtf8().toStdString() };
+	for (std::string pth : path_list)
+	{
+		for (std::string ico : icon_list)
+		{
+			ico = pth + ico;
+			if (fs::is_file(ico))
+			{
+				// load the image from path. It will most likely be a rectangle
+				QImage source = QImage(QString::fromUtf8(ico.data(), ico.size()));
+				int edgeMax = std::max(source.width(), source.height());
+				
+				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
+				QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
+				QImage dest = QImage(edgeMax, edgeMax, format);
+				dest.fill(QColor("transparent"));
+
+				// get the location to draw the source image centered within the dest image.
+				QPoint destPos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2)
+				                                                  : QPoint((source.height() - source.width()) / 2, 0);
+
+				// Paint the source into/over the dest
+				QPainter painter(&dest);
+				painter.drawImage(destPos, source);
+				painter.end();
+
+				// set Icon
+				appIcon = QIcon(QPixmap::fromImage(dest));
+				return;
+			}
+		}
+	}
+	// if nothing was found reset the icon to default
+	appIcon = QIcon("rpcs3.ico");
 }
 
 void MainWindow::BootElf()
@@ -107,8 +197,10 @@ void MainWindow::BootElf()
 
 	LOG_NOTICE(LOADER, "(S)ELF: booting...");
 
+	const std::string path = dlg.selectedFiles().first().toUtf8().toStdString();
+	SetAppIconFromPath(path);
 	Emu.Stop();
-	Emu.SetPath((std::string) dlg.selectedFiles().first().toUtf8());
+	Emu.SetPath(path);
 	Emu.Load();
 
 	if (Emu.IsReady()) LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
@@ -136,6 +228,7 @@ void MainWindow::BootGame()
 	}
 	Emu.Stop();
 	const std::string path = dlg.selectedFiles().first().toUtf8();
+	SetAppIconFromPath(path);
 
 	if (!Emu.BootGame(path))
 	{
@@ -199,6 +292,14 @@ void MainWindow::InstallPkg()
 	pdlg.setFixedSize(500, pdlg.height());
 	pdlg.show();
 
+#ifdef _WIN32
+	QWinTaskbarButton *taskbar_button = new QWinTaskbarButton();
+	taskbar_button->setWindow(windowHandle());
+	QWinTaskbarProgress *taskbar_progress = taskbar_button->progress();
+	taskbar_progress->setRange(0, 1000);
+	taskbar_progress->setVisible(true);
+#endif
+
 	// Synchronization variable
 	atomic_t<double> progress(0.);
 	{
@@ -232,12 +333,18 @@ void MainWindow::InstallPkg()
 			}
 			// Update progress window
 			pdlg.setValue(static_cast<int>(progress * pdlg.maximum()));
+#ifdef _WIN32
+			taskbar_progress->setValue(static_cast<int>(progress * taskbar_progress->maximum()));
+#endif
 			QCoreApplication::processEvents();
 		}
 
 		if (progress > 0.)
 		{
 			pdlg.setValue(pdlg.maximum());
+#ifdef _WIN32
+			taskbar_progress->setValue(taskbar_progress->maximum());
+#endif
 			std::this_thread::sleep_for(100ms);
 		}
 	}
@@ -247,6 +354,10 @@ void MainWindow::InstallPkg()
 		RefreshGameList();
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		QMessageBox::information(this, tr("Success!"), tr("Successfully installed software from package!"));
+#ifdef _WIN32
+		taskbar_progress->hide();
+		taskbar_button->~QWinTaskbarButton();
+#endif
 	}
 }
 
@@ -285,6 +396,14 @@ void MainWindow::InstallPup()
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedSize(500, pdlg.height());
 	pdlg.show();
+
+#ifdef _WIN32
+	QWinTaskbarButton *taskbar_button = new QWinTaskbarButton();
+	taskbar_button->setWindow(windowHandle());
+	QWinTaskbarProgress *taskbar_progress = taskbar_button->progress();
+	taskbar_progress->setRange(0, static_cast<int>(updatefilenames.size()));
+	taskbar_progress->setVisible(true);
+#endif
 
 	// Synchronization variable
 	atomic_t<int> progress(0);
@@ -333,6 +452,9 @@ void MainWindow::InstallPup()
 			}
 			// Update progress window
 			pdlg.setValue(static_cast<int>(progress));
+#ifdef _WIN32
+			taskbar_progress->setValue(static_cast<int>(progress));
+#endif
 			QCoreApplication::processEvents();
 		}
 
@@ -342,6 +464,9 @@ void MainWindow::InstallPup()
 		if (progress > 0)
 		{
 			pdlg.setValue(pdlg.maximum());
+#ifdef _WIN32
+			taskbar_progress->setValue(taskbar_progress->maximum());
+#endif
 			std::this_thread::sleep_for(100ms);
 		}
 	}
@@ -350,6 +475,10 @@ void MainWindow::InstallPup()
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
 		QMessageBox::information(this, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"));
+#ifdef _WIN32
+		taskbar_progress->hide();
+		taskbar_button->~QWinTaskbarButton();
+#endif
 	}
 }
 
@@ -626,6 +755,10 @@ void MainWindow::SaveWindowState()
 
 void MainWindow::OnEmuRun()
 {
+#ifdef _WIN32
+	thumb_playPause->setToolTip(tr("Pause"));
+	thumb_playPause->setIcon(icon_pause);
+#endif
 	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
 	menu_run->setText(tr("&Pause"));
 	EnableMenus(true);
@@ -633,18 +766,30 @@ void MainWindow::OnEmuRun()
 
 void MainWindow::OnEmuResume()
 {
+#ifdef _WIN32
+	thumb_playPause->setToolTip(tr("Pause"));
+	thumb_playPause->setIcon(icon_pause);
+#endif
 	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
 	menu_run->setText(tr("&Pause"));
 }
 
 void MainWindow::OnEmuPause()
 {
+#ifdef _WIN32
+	thumb_playPause->setToolTip(tr("Resume"));
+	thumb_playPause->setIcon(icon_play);
+#endif
 	sysPauseAct->setText(tr("&Resume\tCtrl + E"));
 	menu_run->setText(tr("&Resume"));
 }
 
 void MainWindow::OnEmuStop()
 {
+#ifdef _WIN32
+	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
+	thumb_playPause->setIcon(icon_play);
+#endif
 	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
 	EnableMenus(false);
 	if (!Emu.GetPath().empty())
@@ -652,6 +797,9 @@ void MainWindow::OnEmuStop()
 		sysPauseAct->setText(tr("&Restart\tCtrl + E"));
 		sysPauseAct->setEnabled(true);
 		menu_restart->setEnabled(true);
+#ifdef _WIN32
+		thumb_restart->setEnabled(true);
+#endif
 	}
 	else
 	{
@@ -661,6 +809,10 @@ void MainWindow::OnEmuStop()
 
 void MainWindow::OnEmuReady()
 {
+#ifdef _WIN32
+	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
+	thumb_playPause->setIcon(icon_play);
+#endif
 	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
 	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
 	EnableMenus(true);
@@ -675,6 +827,13 @@ void MainWindow::OnCaptureFrame()
 
 void MainWindow::EnableMenus(bool enabled)
 {
+	// Thumbnail Buttons
+#ifdef _WIN32
+	thumb_playPause->setEnabled(enabled);
+	thumb_stop->setEnabled(enabled);
+	thumb_restart->setEnabled(enabled);
+#endif
+
 	// Buttons
 	menu_run->setEnabled(enabled);
 	menu_stop->setEnabled(enabled);
@@ -892,6 +1051,7 @@ void MainWindow::CreateDockWindows()
 	connect(logFrame, &LogFrame::LogFrameClosed, this, &MainWindow::OnLogFrameClosed);
 	connect(debuggerFrame, &DebuggerFrame::DebugFrameClosed, this, &MainWindow::OnDebugFrameClosed);
 	connect(gameListFrame, &GameListFrame::GameListFrameClosed, this, &MainWindow::OnGameListFrameClosed);
+	connect(gameListFrame, &GameListFrame::RequestIconPathSet, this, &MainWindow::SetAppIconFromPath);;
 }
 
 void MainWindow::ConfigureGuiFromSettings(bool configureAll)

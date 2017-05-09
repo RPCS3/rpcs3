@@ -97,6 +97,7 @@ private slots:
 	void OnColClicked(int col);
 signals:
 	void GameListFrameClosed();
+	void RequestIconPathSet(const std::string path);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);

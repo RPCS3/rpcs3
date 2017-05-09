@@ -1,8 +1,16 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#ifdef _WIN32
+#include <QWinTaskbarProgress>
+#include <QWinTaskbarButton>
+#include <QWinTHumbnailToolbar>
+#include <QWinTHumbnailToolbutton>
+#endif
+
 #include <QMainWindow>
 #include <QPushButton>
+#include <QIcon>
 
 #include "logframe.h"
 #include "debuggerframe.h"
@@ -17,14 +25,29 @@ class MainWindow : public QMainWindow
 
 	bool m_sys_menu_opened;
 
+	QIcon appIcon;
+
 	QPushButton* menu_run;
 	QPushButton* menu_stop;
 	QPushButton* menu_restart;
 	QPushButton* menu_capture_frame;
 
+#ifdef _WIN32
+	QWinThumbnailToolBar *thumb_bar;
+	QWinThumbnailToolButton *thumb_playPause;
+	QWinThumbnailToolButton *thumb_stop;
+	QWinThumbnailToolButton *thumb_restart;
+	QIcon icon_play;
+	QIcon icon_pause;
+	QIcon icon_stop;
+	QIcon icon_restart;
+#endif
+
 public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
+	void CreateThumbnailToolbar();
+	QIcon GetAppIcon();
 
 signals:
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
@@ -73,7 +96,8 @@ private slots:
 	void SaveWindowState();
 
 protected:
-	void MainWindow::closeEvent(QCloseEvent *event) override;
+	void closeEvent(QCloseEvent *event) override;
+	void SetAppIconFromPath(const std::string path);
 private:
 	void CreateActions();
 	void CreateConnects();

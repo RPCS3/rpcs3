@@ -14,7 +14,7 @@ class GSFrame : public QWindow, public GSFrameBase
 	QString m_windowTitle;
 
 public:
-	GSFrame(const QString& title, int w, int h);
+	GSFrame(const QString& title, int w, int h, QIcon appIcon);
 signals:
 	void RequestCommand(std::function<void()> func);
 protected:

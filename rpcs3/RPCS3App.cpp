@@ -62,6 +62,9 @@ void RPCS3App::Init()
 	RPCS3MainWin->show();
 	//m_MainFrame->DoSettings(true);
 
+	// Create the thumbnail toolbar after the mainwindow is created
+	RPCS3MainWin->CreateThumbnailToolbar();
+
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here.
@@ -93,14 +96,14 @@ void RPCS3App::InitializeCallbacks()
 
 	callbacks.get_gs_render = [=] { return cfg_gs_render->get()(); };
 
-	callbacks.get_gs_frame = [](frame_type type, int w, int h) -> std::unique_ptr<GSFrameBase>
+	callbacks.get_gs_frame = [=](frame_type type, int w, int h) -> std::unique_ptr<GSFrameBase>
 	{
 		switch (type)
 		{
 		//case frame_type::OpenGL: return std::make_unique<GLGSFrame>(w, h);
-		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12", w, h);
-		case frame_type::Null: return std::make_unique<GSFrame>("Null", w, h);
-		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan", w, h);
+		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon());
+		case frame_type::Null: return std::make_unique<GSFrame>("Null", w, h, RPCS3MainWin->GetAppIcon());
+		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon());
 		}
 
 		fmt::throw_exception("Invalid frame type (0x%x)" HERE, (int)type);

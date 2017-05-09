@@ -7,12 +7,14 @@
 #include <QTimer>
 #include <QThread>
 
-GSFrame::GSFrame(const QString& title, int w, int h)
+GSFrame::GSFrame(const QString& title, int w, int h, QIcon appIcon)
 	: QWindow()
 {
 	m_windowTitle = title;
-	// GUITODO get icon.
-	//setIcon( /*wxGetApp().m_MainFrame->GetIcon()*/);
+	if (!appIcon.isNull())
+	{
+		setIcon(appIcon);
+	}
 
 	resize(w, h);
 

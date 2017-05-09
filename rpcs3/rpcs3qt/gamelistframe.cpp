@@ -235,6 +235,7 @@ void GameListFrame::doubleClickedSlot(const QModelIndex& index)
 {
 	int i = index.row();
 	const std::string& path = Emu.GetGameDir() + m_game_data[i].root;
+	emit RequestIconPathSet(path);
 
 	Emu.Stop();
 
@@ -349,6 +350,7 @@ void GameListFrame::ShowHeaderContextMenu(const QPoint& pos)
 void GameListFrame::Boot(int row)
 {
 	const std::string& path = Emu.GetGameDir() + m_game_data[row].root;
+	emit RequestIconPathSet(path);
 
 	Emu.Stop();
 
