@@ -12,6 +12,7 @@
 extern logs::channel sysPrxForUser;
 
 vm::gvar<sys_lwmutex_t> g_ppu_atexit_lwm;
+vm::gvar<vm::ptr<void()>[8]> g_ppu_atexit;
 vm::gvar<u32> g_ppu_once_mutex;
 
 static u32 s_tls_addr = 0; // TLS image address
@@ -157,8 +158,18 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 {
 	sysPrxForUser.trace("sys_ppu_thread_exit(val=0x%llx)", val);
 
-	// (call registered atexit functions)
-	// ...
+	// Call registered atexit functions
+	verify(HERE), !sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0);
+
+	for (auto ptr : *g_ppu_atexit)
+	{
+		if (ptr)
+		{
+			ptr(ppu);
+		}
+	}
+
+	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
 	
 	// Deallocate TLS
 	ppu_free_tls(vm::cast(ppu.gpr[13], HERE) - 0x7030);
@@ -171,6 +182,55 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 
 	// Call the syscall
 	return _sys_ppu_thread_exit(ppu, val);
+}
+
+error_code sys_ppu_thread_register_atexit(ppu_thread& ppu, vm::ptr<void()> func)
+{
+	sysPrxForUser.notice("sys_ppu_thread_register_atexit(ptr=*0x%x)", func);
+
+	verify(HERE), !sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0);
+
+	for (auto ptr : *g_ppu_atexit)
+	{
+		if (ptr == func)
+		{
+			verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
+			return CELL_EPERM;
+		}
+	}
+
+	for (auto& pp : *g_ppu_atexit)
+	{
+		if (pp == vm::null)
+		{
+			pp = func;
+			verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
+			return CELL_OK;
+		}
+	}
+
+	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
+	return CELL_ENOMEM;
+}
+
+error_code sys_ppu_thread_unregister_atexit(ppu_thread& ppu, vm::ptr<void()> func)
+{
+	sysPrxForUser.notice("sys_ppu_thread_unregister_atexit(ptr=*0x%x)", func);
+
+	verify(HERE), !sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0);
+
+	for (auto& pp : *g_ppu_atexit)
+	{
+		if (pp == func)
+		{
+			pp = vm::null;
+			verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
+			return CELL_OK;
+		}
+	}
+
+	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
+	return CELL_ESRCH;
 }
 
 void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()> init)
@@ -187,16 +247,6 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()
 	}
 
 	verify(HERE), !sys_mutex_unlock(ppu, *g_ppu_once_mutex);
-}
-
-s32 sys_ppu_thread_register_atexit()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 sys_ppu_thread_unregister_atexit()
-{
-	fmt::throw_exception("Unimplemented" HERE);
 }
 
 error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)
@@ -222,6 +272,7 @@ void sysPrxForUser_sys_ppu_thread_init()
 	// Private
 	REG_VNID(sysPrxForUser, 0x00000000u, g_ppu_atexit_lwm);
 	REG_VNID(sysPrxForUser, 0x00000001u, g_ppu_once_mutex);
+	REG_VNID(sysPrxForUser, 0x00000002u, g_ppu_atexit);
 
 	REG_FUNC(sysPrxForUser, sys_initialize_tls);
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_create);
