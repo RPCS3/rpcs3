@@ -1,13 +1,15 @@
 
 #include "MsgDialog.h"
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 void MsgDialogFrame::Create(const std::string& msg)
 {
 	//QWidget* parent = TheApp->m_MainWindow; // TODO
 
 	m_dialog = new QDialog();
 
-	m_text = new QLabel(QString::fromStdString(msg).toUtf8());
+	m_text = new QLabel(qstr(msg));
 
 	m_dialog->setWindowTitle(type.se_normal ? "Normal dialog" : "Error dialog");
 	m_dialog->setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -106,7 +108,7 @@ void MsgDialogFrame::CreateOsk(const std::string& msg, char16_t* osk_text)
 	osk_text_return = osk_text;
 
 	//Title
-	osk_dialog->setWindowTitle(QString::fromStdString(msg));
+	osk_dialog->setWindowTitle(qstr(msg));
 	osk_dialog->setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	//Text Input
@@ -141,8 +143,8 @@ void MsgDialogFrame::ProgressBarSetMsg(u32 index, const std::string& msg)
 {
 	if (m_dialog)
 	{
-		if (index == 0 && m_text1) m_text1->setText(QString::fromStdString(msg.c_str()).toUtf8());
-		if (index == 1 && m_text2) m_text2->setText(QString::fromStdString(msg.c_str()).toUtf8());
+		if (index == 0 && m_text1) m_text1->setText(qstr(msg));
+		if (index == 1 && m_text2) m_text2->setText(qstr(msg));
 	}
 }
 

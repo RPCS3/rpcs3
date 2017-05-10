@@ -80,7 +80,7 @@ private slots:
 	void CgDisasm();
 	void KernelExploration();
 	void MemoryViewer();
-	void RSXDebugger();
+	void RSXDebuggerFrame();
 	void StringSearch();
 	void DecryptSPRXLibraries();
 	void ToggleDebugFrame(bool state);

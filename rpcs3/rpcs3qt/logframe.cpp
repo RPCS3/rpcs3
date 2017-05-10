@@ -6,6 +6,8 @@
 #include <QMenu>
 #include <QActionGroup>
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 struct gui_listener : logs::listener
 {
 	atomic_t<logs::level> enabled{};
@@ -311,7 +313,7 @@ void LogFrame::UpdateUI()
 			}
 
 			// Print UTF-8 text.
-			text += QString::fromStdString(packet->msg);
+			text += qstr(packet->msg);
 			log->setTextColor(color);
 			// remove the new line because Qt's append adds a new line already.
 			text.chop(1);

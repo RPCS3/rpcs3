@@ -12,6 +12,8 @@
 #include <QDockWidget>
 #include <QCoreApplication>
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 CgDisasmWindow::CgDisasmWindow(QWidget* parent): QTabWidget()
 {
 	setWindowTitle(tr("Cg Disasm"));
@@ -74,6 +76,6 @@ void CgDisasmWindow::OpenCg()
 
 	CgBinaryDisasm disasm(filePath.toUtf8().toStdString());
 	disasm.BuildShaderBody();
-	m_disasm_text->setText(QString::fromStdString(disasm.GetArbShader()));
-	m_glsl_text->setText(QString::fromStdString(disasm.GetGlslShader()));
+	m_disasm_text->setText(qstr(disasm.GetArbShader()));
+	m_glsl_text->setText(qstr(disasm.GetGlslShader()));
 }

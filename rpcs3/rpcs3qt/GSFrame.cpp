@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <QThread>
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 GSFrame::GSFrame(const QString& title, int w, int h, QIcon appIcon)
 	: QWindow()
 {
@@ -119,7 +121,7 @@ void GSFrame::flip(draw_context_t)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		QString title = QString::fromStdString(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
+		QString title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 
 		if (!m_windowTitle.isEmpty())
 		{
@@ -128,12 +130,12 @@ void GSFrame::flip(draw_context_t)
 
 		if (!Emu.GetTitle().empty())
 		{
-			title += QString::fromStdString(" | " + Emu.GetTitle());
+			title += qstr(" | " + Emu.GetTitle());
 		}
 
 		if (!Emu.GetTitleID().empty())
 		{
-			title += QString::fromStdString(" | [" + Emu.GetTitleID() + ']');
+			title += qstr(" | [" + Emu.GetTitleID() + ']');
 		}
 
 		HandleUICommand([this, title = std::move(title)]() {setTitle(title); });

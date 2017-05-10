@@ -1,6 +1,8 @@
 
 #include "AutoPauseSettingsDialog.h"
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 AutoPauseSettingsDialog::AutoPauseSettingsDialog(QWidget *parent) : QDialog(parent)
 {
 	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
@@ -106,7 +108,7 @@ void AutoPauseSettingsDialog::UpdateList(void)
 		typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
 		if (m_entries[i] != 0xFFFFFFFF)
 		{	
-			callItem->setData(Qt::DisplayRole, QString::fromStdString(fmt::format("%08x", m_entries[i])));
+			callItem->setData(Qt::DisplayRole, qstr(fmt::format("%08x", m_entries[i])));
 		}
 		else
 		{
@@ -218,7 +220,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, AutoPauseSettingsD
 	m_current_converted->setWordWrap(true);
 	
 	m_id = new QLineEdit(this);
-	m_id->setText(QString::fromStdString(fmt::format("%08x", m_entry)));
+	m_id->setText(qstr(fmt::format("%08x", m_entry)));
 	m_id->setFixedWidth(100);
 	setWindowTitle("Auto Pause Setting: " + m_id->text());
 	
@@ -268,9 +270,5 @@ void AutoPauseConfigDialog::OnUpdateValue()
 	bool ok;
 	ullong value = m_id->text().toULongLong(&ok, 16);
 	const bool is_ok = ok && value <= UINT32_MAX;
-	
-	// format without QString conversions: 
-	// fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")
-	m_current_converted->setText(QString::fromStdString(fmt::format(tr("Current value: %08x (%s)").toStdString().c_str(), u32(value), 
-		is_ok ? tr("OK").toStdString().c_str() : tr("conversion failed").toStdString().c_str())));
+	m_current_converted->setText(qstr(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")));
 }

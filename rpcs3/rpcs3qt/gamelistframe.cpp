@@ -15,6 +15,7 @@
 #include <QTimer>
 
 static const std::string m_class_name = "GameViewer";
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
 // Auxiliary classes
 class sortGameData
@@ -330,7 +331,7 @@ void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 	connect(openConfig, &QAction::triggered, l_openConfig);
 
 	//Disable options depending on software category
-	QString category = QString::fromStdString(m_columns.m_col_category->data.at(row));
+	QString category = qstr(m_columns.m_col_category->data.at(row));
 	if (category == "HDD Game") ;
 	else if (category == "Disc Game") ;
 	else if (category == "Home") ;
@@ -356,7 +357,7 @@ void GameListFrame::Boot(int row)
 
 	if (!Emu.BootGame(path))
 	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + QString::fromStdString(m_game_data[row].root));
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(m_game_data[row].root));
 		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[row].root);
 	}
 }
@@ -408,7 +409,7 @@ void GameListFrame::RemoveCustomConfiguration(int row)
 static void open_dir(const std::string& spath)
 {
 	fs::create_dir(spath);
-	QString path = QString::fromStdString(spath);
+	QString path = qstr(spath);
 	QProcess* process = new QProcess();
 
 #ifdef _WIN32
@@ -523,14 +524,14 @@ void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
 		{
 			// Load image.
 			QImage* img = new QImage(80, 44, QImage::Format_RGB32);
-			bool success = img->load(QString::fromStdString(path));
+			bool success = img->load(qstr(path));
 			if (success)
 			{
 				m_img_list->append(new QImage(img->scaled(QSize(80, 44),Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation)));
 			}
 			else {
 				// IIRC a load failure means blank image which is fine to have as a placeholder.
-				QString abspath = QDir(QString::fromStdString(path)).absolutePath();
+				QString abspath = QDir(qstr(path)).absolutePath();
 				LOG_ERROR(HLE, "Count not load image from path %s", abspath.toStdString());
 				m_img_list->append(img);
 			}
@@ -579,7 +580,7 @@ void ColumnsArr::ShowData(QTableWidget* table)
 		{
 			QTableWidgetItem* curr = new QTableWidgetItem;
 			curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
-			QString text = QString::fromStdString(col->data[r]);
+			QString text = qstr(col->data[r]);
 			curr->setText(text);
 			table->setItem(r, c, curr);
 		}

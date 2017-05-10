@@ -3,6 +3,8 @@
 
 #include "MemoryViewer.h"
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 MemoryViewerPanel::MemoryViewerPanel(QWidget* parent) 
 	: QDialog(parent)
 {
@@ -35,8 +37,9 @@ MemoryViewerPanel::MemoryViewerPanel(QWidget* parent)
 	QHBoxLayout* hbox_tools_mem_addr = new QHBoxLayout();
 	t_addr = new QLineEdit(this);
 	t_addr->setPlaceholderText("00000000");
+	t_addr->setFont(mono);
 	t_addr->setMaxLength(8);
-	t_addr->setFixedWidth(55);
+	t_addr->setFixedWidth(75);
 	t_addr->setFocus();
 	hbox_tools_mem_addr->addWidget(t_addr);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
@@ -158,7 +161,7 @@ MemoryViewerPanel::MemoryViewerPanel(QWidget* parent)
 
 	//Merge Memory Panel:
 	hbox_mem_panel->setAlignment(Qt::AlignLeft);
-	hbox_mem_panel->addSpacing(15);
+	hbox_mem_panel->addSpacing(20);
 	hbox_mem_panel->addWidget(t_mem_addr);
 	hbox_mem_panel->addSpacing(10);
 	hbox_mem_panel->addWidget(t_mem_hex);
@@ -210,7 +213,7 @@ void MemoryViewerPanel::OnChangeToolsAddr()
 {
 	bool ok;
 	m_addr = t_addr->text().toULong(&ok, 16);
-	t_addr->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));
+	t_addr->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
 	ShowMemory();
 }
 
@@ -232,7 +235,7 @@ void MemoryViewerPanel::wheelEvent(QWheelEvent *event)
 	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 	m_addr -= stepSize * m_colcount * numSteps.y();
 	
-	t_addr->setText(QString::fromStdString(fmt::format("%08x", m_addr)));
+	t_addr->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
 }
 
@@ -253,7 +256,7 @@ void MemoryViewerPanel::ShowMemory()
 
 	for(u32 addr = m_addr; addr != m_addr + m_rowcount * m_colcount; addr += m_colcount)
 	{
-		t_mem_addr_str += QString::fromStdString(fmt::format("%08x", addr));
+		t_mem_addr_str += qstr(fmt::format("%08x", addr));
 		if (addr != m_addr + m_rowcount * m_colcount - m_colcount) t_mem_addr_str += "\r\n";
 	}
 
@@ -266,9 +269,9 @@ void MemoryViewerPanel::ShowMemory()
 			if (vm::check_addr(addr))
 			{
 				const u8 rmem = vm::read8(addr);
-				t_mem_hex_str += QString::fromStdString(fmt::format("%02x ", rmem));
+				t_mem_hex_str += qstr(fmt::format("%02x ", rmem));
 				const bool isPrintable = rmem >= 32 && rmem <= 126;
-				t_mem_ascii_str += QString::fromStdString(isPrintable ? std::string(1, rmem) : ".");
+				t_mem_ascii_str += qstr(isPrintable ? std::string(1, rmem) : ".");
 			}
 			else
 			{
@@ -293,71 +296,83 @@ void MemoryViewerPanel::ShowMemory()
 
 void MemoryViewerPanel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
-	QString title = QString::fromStdString(fmt::format(tr("Raw Image @ 0x%x").toStdString().c_str(), addr));
-	
-	QDialog* f_image_viewer = new QDialog(parent/*, wxMINIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN*/);
-	f_image_viewer->setWindowTitle(title);
-	f_image_viewer->setFixedSize(QSize(width, height));
-	f_image_viewer->show();
-	QPaintDevice* pd_canvas(f_image_viewer);
-
 	QImage::Format format;
 	unsigned char* originalBuffer  = (unsigned char*)vm::base(addr);
-	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 3);
+	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 4);
 	switch(mode)
 	{
 	case(0): // RGB
-		memcpy(convertedBuffer, originalBuffer, width * height * 3);
-		format = QImage::Format_RGB32;
+		for (u32 y = 0; y < height; y++) {
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3) {
+				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 3];
+				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 3];
+				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 3];
+				convertedBuffer[i + 3 + y * width * 4] = 255;
+			}
+		}
 	break;
-
+	
 	case(1): // ARGB
 		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 3, j += 4) {
-				convertedBuffer[i + 0 + y * width * 3] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 3] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 3] = originalBuffer[j + 3 + y * width * 4];
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
+				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
+				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
+				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
 			}
 		}
-		format = QImage::Format_ARGB32;
 	break;
-
+	
 	case(2): // RGBA
 		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 3, j += 4) {
-				convertedBuffer[i + 0 + y * width * 3] = originalBuffer[j + 0 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 3] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 3] = originalBuffer[j + 2 + y * width * 4];
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
+				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
+				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
+				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
 			}
 		}
-		format = QImage::Format_RGBA8888;
 	break;
-
+	
 	case(3): // ABGR
 		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 3, j += 4) {
-				convertedBuffer[i + 0 + y * width * 3] = originalBuffer[j + 3 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 3] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 3] = originalBuffer[j + 1 + y * width * 4];
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
+				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
+				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
+				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
 			}
 		}
-		format = QImage::Format_A2BGR30_Premultiplied;
 	break;
 	}
-
+	
 	// Flip vertically
 	if (flipv) {
 		for (u32 y = 0; y < height / 2; y++) {
-			for (u32 x = 0; x < width * 3; x++) {
-				const u8 t = convertedBuffer[x + y * width * 3];
-				convertedBuffer[x + y * width * 3] = convertedBuffer[x + (height - y - 1) * width * 3];
-				convertedBuffer[x + (height - y - 1) * width * 3] = t;
+			for (u32 x = 0; x < width * 4; x++) {
+				const u8 t = convertedBuffer[x + y * width * 4];
+				convertedBuffer[x + y * width * 4] = convertedBuffer[x + (height - y - 1) * width * 4];
+				convertedBuffer[x + (height - y - 1) * width * 4] = t;
 			}
 		}
 	}
 
-	QImage img(convertedBuffer, width, height, format);
-	//pd_canvas->paDrawBitmap(img, 0, 0, false);
+	QImage image = QImage(convertedBuffer, width, height, QImage::Format_ARGB32);
+	if (image.isNull()) return;
+
+	QLabel* canvas = new QLabel();
+	canvas->setFixedSize(width, height);
+	canvas->setPixmap(QPixmap::fromImage(image.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+
+	QHBoxLayout* layout = new QHBoxLayout();
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->addWidget(canvas);
+
+	QDialog* f_image_viewer = new QDialog(parent);
+	f_image_viewer->setWindowTitle(qstr(fmt::format("Raw Image @ 0x%x", addr)));
+	f_image_viewer->setFixedSize(QSize(width, height));
+	f_image_viewer->setLayout(layout);
+	f_image_viewer->show();
 }
 
 void MemoryViewerPanel::Next () { m_addr += m_colcount; ShowMemory(); }

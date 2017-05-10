@@ -18,6 +18,7 @@
 #include "CgDisasmWindow.h"
 #include "MemoryStringSearcher.h"
 #include "MemoryViewer.h"
+#include "RSXDebugger.h"
 #include "mainwindow.h"
 
 #include <thread>
@@ -574,7 +575,11 @@ void MainWindow::MemoryViewer()
 	mvp->show();
 }
 
-void MainWindow::RSXDebugger() {}
+void MainWindow::RSXDebuggerFrame()
+{
+	RSXDebugger* rsx = new RSXDebugger(this);
+	rsx->show();
+}
 
 void MainWindow::StringSearch()
 {
@@ -952,7 +957,7 @@ void MainWindow::CreateConnects()
 	connect(toolsCgDisasmAct, &QAction::triggered, this, &MainWindow::CgDisasm);
 	connect(toolsKernelExplorerAct, &QAction::triggered, this, &MainWindow::KernelExploration);
 	connect(toolsMemoryViewerAct, &QAction::triggered, this, &MainWindow::MemoryViewer);
-	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebugger);
+	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebuggerFrame);
 	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
 	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
 	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);

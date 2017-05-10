@@ -270,6 +270,21 @@
     <ClCompile Include="DS4PadHandler.cpp">
       <Filter>Io\DS4</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\InstructionEditor.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\RegisterEditor.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\RSXDebugger.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_RSXDebugger.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_RSXDebugger.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\EmuSettings.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -308,6 +323,12 @@
     </ClInclude>
     <ClInclude Include="DS4PadHandler.h">
       <Filter>Io\DS4</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\InstructionEditor.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\RegisterEditor.h">
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -384,6 +405,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\MsgDialog.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\RSXDebugger.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\EmuSettings.h">
