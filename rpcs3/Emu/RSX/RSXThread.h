@@ -192,7 +192,7 @@ namespace rsx
 		std::shared_ptr<class ppu_thread> intr_thread;
 
 		u32 ioAddress, ioSize;
-		int flip_status;
+		u32 flip_status;
 		int flip_mode;
 		int debug_level;
 		int frequency_mode;
