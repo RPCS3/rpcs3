@@ -15,6 +15,18 @@ namespace vm { using namespace ps3; }
 
 logs::channel cellFs("cellFs", logs::level::notice);
 
+error_code cellFsGetPath(u32 fd, vm::ptr<char> out_path)
+{
+	cellFs.trace("cellFsGetPath(fd=%d, out_path=*0x%x)", fd, out_path);
+
+	if (!out_path)
+	{
+		return CELL_EFAULT;
+	}
+
+	return sys_fs_test(6, 0, vm::var<u32>{fd}, sizeof(u32), out_path, 0x420);
+}
+
 error_code cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
 	cellFs.trace("cellFsOpen(path=%s, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
@@ -1036,6 +1048,7 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsGetBlockSize2);
 	REG_FUNC(sys_fs, cellFsGetDirectoryEntries);
 	REG_FUNC(sys_fs, cellFsGetFreeSize);
+	REG_FUNC(sys_fs, cellFsGetPath);
 	REG_FUNC(sys_fs, cellFsLink);
 	REG_FUNC(sys_fs, cellFsLseek).flags = MFF_PERFECT;
 	REG_FUNC(sys_fs, cellFsLsnGetCDA);
