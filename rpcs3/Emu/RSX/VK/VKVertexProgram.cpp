@@ -33,7 +33,8 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, set = 0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
-	OS << "	vec4 userClip[2];" << std::endl;
+	OS << "	ivec4 userClipEnabled[2];" << std::endl;
+	OS << "	vec4 userClipFactor[2];" << std::endl;
 	OS << "};" << std::endl;
 
 	vk::glsl::program_input in;
@@ -142,34 +143,22 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	}
 }
 
-struct reg_info
-{
-	std::string name;
-	bool need_declare;
-	std::string src_reg;
-	std::string src_reg_mask;
-	bool need_cast;
-};
-
-static const reg_info reg_table[] =
+static const vertex_reg_info reg_table[] =
 {
 	{ "gl_Position", false, "dst_reg0", "", false },
 	{ "back_diff_color", true, "dst_reg1", "", false },
 	{ "back_spec_color", true, "dst_reg2", "", false },
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
-	{ "fog_c", true, "dst_reg5", ".xxxx", true },
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClip[0].x", false },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClip[0].y", false },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClip[0].z", false },
+	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
+	//Warning: With spir-v if you declare clip distance var, you must assign a value even when its disabled! Runtime does not assign a default value
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClipFactor[0].x", false, "userClipEnabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClipFactor[0].y", false, "userClipEnabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClipFactor[0].z", false, "userClipEnabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-
-	//Disable user clip planes until they are properly handled
-
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClip[0].w", false },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClip[1].x", false },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClip[1].y", false },
-
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClipFactor[0].w", false, "userClipEnabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClipFactor[1].x", false, "userClipEnabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClipFactor[1].y", false, "userClipEnabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "tc0", true, "dst_reg7", "", false },
 	{ "tc1", true, "dst_reg8", "", false },
 	{ "tc2", true, "dst_reg9", "", false },
@@ -179,7 +168,7 @@ static const reg_info reg_table[] =
 	{ "tc6", true, "dst_reg13", "", false },
 	{ "tc7", true, "dst_reg14", "", false },
 	{ "tc8", true, "dst_reg15", "", false },
-	{ "tc9", true, "dst_reg6", "", false }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
+	{ "tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9 }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
 void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
@@ -194,6 +183,9 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
 		{
+			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
+				continue;
+
 			if (i.name == "front_diff_color")
 				insert_front_diffuse = false;
 
@@ -335,13 +327,27 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
 		{
+			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
+				continue;
+
 			if (i.name == "front_diff_color")
 				insert_front_diffuse = false;
 
 			if (i.name == "front_spec_color")
 				insert_front_specular = false;
 
-			OS << "	" << i.name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+			std::string condition = (!i.cond.empty()) ? "(" + i.cond + ") " : "";
+
+			if (condition.empty() || i.default_val.empty())
+			{
+				if (!condition.empty()) condition = "if " + condition;
+				OS << "	" << condition << i.name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+			}
+			else
+			{
+				//Insert if-else condition
+				OS << "	" << i.name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";" << std::endl;
+			}
 		}
 	}
 
