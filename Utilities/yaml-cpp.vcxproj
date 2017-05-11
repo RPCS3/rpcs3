@@ -54,6 +54,7 @@
     </ClCompile>
     <ClCompile Include="yaml-cpp\src\emitterutils.cpp">
     </ClCompile>
+    <ClCompile Include="yaml-cpp\src\exceptions.cpp" />
     <ClCompile Include="yaml-cpp\src\exp.cpp">
     </ClCompile>
     <ClCompile Include="yaml-cpp\src\memory.cpp">
