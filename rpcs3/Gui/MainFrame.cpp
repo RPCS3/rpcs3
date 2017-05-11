@@ -100,7 +100,7 @@ MainFrame::MainFrame()
 	menu_conf->Append(id_config_emu, "&Settings");
 	menu_conf->Append(id_config_pad, "&Keyboard Settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings");
+	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings")->Enable(false);
 	//menu_conf->AppendSeparator();
 	//menu_conf->Append(id_config_vfs_manager, "Virtual &File System Manager");
 	//menu_conf->Append(id_config_vhdd_manager, "Virtual &HDD Manager");

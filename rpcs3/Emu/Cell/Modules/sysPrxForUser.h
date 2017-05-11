@@ -5,12 +5,14 @@ namespace vm { using namespace ps3; }
 using spu_printf_cb_t = vm::ptr<s32(u32 arg)>;
 
 // Aux
+
 extern spu_printf_cb_t g_spu_printf_agcb;
 extern spu_printf_cb_t g_spu_printf_dgcb;
 extern spu_printf_cb_t g_spu_printf_atcb;
 extern spu_printf_cb_t g_spu_printf_dtcb;
 
 // Functions
+
 vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size);
 
 struct sys_lwmutex_t;
