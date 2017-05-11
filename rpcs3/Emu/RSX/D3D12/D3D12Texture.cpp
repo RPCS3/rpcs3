@@ -150,17 +150,19 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	ID3D12GraphicsCommandList *command_list,
 	d3d12_data_heap &texture_buffer_heap)
 {
-	ComPtr<ID3D12Resource> result;
-	CHECK_HRESULT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&get_texture_description(texture),
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(result.GetAddressOf())
-		));
+			ComPtr<ID3D12Resource> result;
+			CHECK_HRESULT(
+				m_device->CreateCommittedResource(
+					&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+					D3D12_HEAP_FLAG_NONE,
+					&get_texture_description(texture),
+					D3D12_RESOURCE_STATE_COPY_DEST,
+					nullptr,
+					IID_PPV_ARGS(result.GetAddressOf())
+				)
+			);
 
-	update_existing_texture(texture, command_list, texture_buffer_heap, result.Get());
+	update_existing_texture(texture, command_list, texture_buffer_heap, result.Get();
 	return result;
 }
 
