@@ -2,6 +2,7 @@
 
 #include "Emu/System.h"
 #include "RPCS3Qt/GSFrame.h"
+#include "RPCS3Qt/GLGSFrame.h"
 
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "BasicKeyboardHandler.h"
@@ -100,7 +101,7 @@ void RPCS3App::InitializeCallbacks()
 	{
 		switch (type)
 		{
-		//case frame_type::OpenGL: return std::make_unique<GLGSFrame>(w, h);
+		case frame_type::OpenGL: return std::make_unique<GLGSFrame>(w, h, RPCS3MainWin->GetAppIcon());
 		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon());
 		case frame_type::Null: return std::make_unique<GSFrame>("Null", w, h, RPCS3MainWin->GetAppIcon());
 		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon());

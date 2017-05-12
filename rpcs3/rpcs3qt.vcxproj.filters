@@ -303,6 +303,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_KernelExplorer.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\GLGSFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -414,6 +417,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\KernelExplorer.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\GLGSFrame.h">
       <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>
