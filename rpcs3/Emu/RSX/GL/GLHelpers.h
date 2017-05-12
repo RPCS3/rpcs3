@@ -129,6 +129,33 @@ namespace gl
 				}
 			}
 
+			//Workaround for intel drivers which have terrible capability reporting
+			std::string vendor_string = (const char*)glGetString(GL_VENDOR);
+			std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
+
+			if (vendor_string.find("intel"))
+			{
+				int version_major = 0;
+				int version_minor = 0;
+
+				glGetIntegerv(GL_MAJOR_VERSION, &version_major);
+				glGetIntegerv(GL_MINOR_VERSION, &version_minor);
+
+				//Texture buffers moved into core at GL 3.3
+				if (version_major > 3 || (version_major == 3 && version_minor >= 3))
+					ARB_texture_buffer_supported = true;
+
+				//Check for expected library entry-points for some required functions
+				if (!ARB_buffer_storage_supported && glBufferStorage && glMapBufferRange)
+					ARB_buffer_storage_supported = true;
+
+				if (!ARB_dsa_supported && glGetTextureImage && glTextureBufferRange)
+					ARB_dsa_supported = true;
+
+				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
+					EXT_dsa_supported = true;
+			}
+
 			initialized = true;
 		}
 	};
