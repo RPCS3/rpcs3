@@ -89,8 +89,7 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 512));
 	fill_scale_offset_data(mapped_buffer, true, false);
 	fill_user_clip_data((char*)mapped_buffer + 64);
-
-	fill_fragment_state_buffer((char *)mapped_buffer + 96, m_fragment_program);
+	fill_fragment_state_buffer((char *)mapped_buffer + 128, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 512));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {

@@ -38,7 +38,8 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
-	OS << "	float4 userClip[2];" << std::endl;
+	OS << "	int4 userClipEnabled[2];" << std::endl;
+	OS << "	float4 userClipFactor[2];" << std::endl;
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
 	OS << "	int isAlphaTested;" << std::endl;
