@@ -4,7 +4,7 @@
 
 #include "sceNpManager.h"
 
-logs::channel sceNpManager("sceNpManager", logs::level::notice);
+logs::channel sceNpManager("sceNpManager");
 
 s32 sceNpInit(vm::cptr<SceNpCommunicationConfig> commConf, vm::ptr<SceNpOptParam> opt)
 {

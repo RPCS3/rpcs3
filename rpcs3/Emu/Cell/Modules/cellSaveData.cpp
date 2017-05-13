@@ -10,7 +10,7 @@
 #include <mutex>
 #include <algorithm>
 
-logs::channel cellSaveData("cellSaveData", logs::level::notice);
+logs::channel cellSaveData("cellSaveData");
 
 SaveDialogBase::~SaveDialogBase()
 {

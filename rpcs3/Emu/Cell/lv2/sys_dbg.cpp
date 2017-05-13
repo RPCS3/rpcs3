@@ -8,4 +8,4 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_dbg("sys_dbg", logs::level::notice);
+logs::channel sys_dbg("sys_dbg");

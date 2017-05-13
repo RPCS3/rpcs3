@@ -4,7 +4,7 @@
 
 #include "sceUlt.h"
 
-logs::channel sceUlt("sceUlt", logs::level::notice);
+logs::channel sceUlt("sceUlt");
 
 // Functions
 

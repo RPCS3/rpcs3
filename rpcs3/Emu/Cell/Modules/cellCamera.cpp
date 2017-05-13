@@ -6,7 +6,7 @@
 
 #include "cellCamera.h"
 
-logs::channel cellCamera("cellCamera", logs::level::notice);
+logs::channel cellCamera("cellCamera");
 
 cfg::map_entry<bool> g_cfg_camera(cfg::root.io, "Camera",
 {

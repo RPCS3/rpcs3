@@ -4,7 +4,7 @@
 
 #include "sceRazorCapture.h"
 
-logs::channel sceRazorCapture("sceRazorCapture", logs::level::notice);
+logs::channel sceRazorCapture("sceRazorCapture");
 
 void sceRazorCaptureSetTrigger(u32 frameIndex, vm::cptr<char> captureFilename)
 {

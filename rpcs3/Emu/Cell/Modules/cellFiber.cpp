@@ -4,7 +4,7 @@
 
 #include "cellFiber.h"
 
-logs::channel cellFiber("cellFiber", logs::level::notice);
+logs::channel cellFiber("cellFiber");
 
 template <>
 void fmt_class_string<CellFiberError>::format(std::string& out, u64 arg)

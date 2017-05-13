@@ -5,7 +5,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_libc("sys_libc", logs::level::notice);
+logs::channel sys_libc("sys_libc");
 
 void sys_libc_memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 {

@@ -3,7 +3,7 @@
 
 #include "cellDaisy.h"
 
-logs::channel cellDaisy("cellDaisy", logs::level::notice);
+logs::channel cellDaisy("cellDaisy");
 
 using LFQueue2 = struct CellDaisyLFQueue2;
 using Lock = struct CellDaisyLock;

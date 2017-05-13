@@ -4,7 +4,7 @@
 
 #include "sceLiveArea.h"
 
-logs::channel sceLiveArea("sceLiveArea", logs::level::notice);
+logs::channel sceLiveArea("sceLiveArea");
 
 s32 sceLiveAreaResourceReplaceAll(vm::cptr<char> dirpath)
 {

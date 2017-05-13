@@ -4,7 +4,7 @@
 
 #include "sceCamera.h"
 
-logs::channel sceCamera("sceCamera", logs::level::notice);
+logs::channel sceCamera("sceCamera");
 
 s32 sceCameraOpen(s32 devnum, vm::ptr<SceCameraInfo> pInfo)
 {

@@ -4,7 +4,7 @@
 
 #include "sceCommonDialog.h"
 
-logs::channel sceCommonDialog("sceCommonDialog", logs::level::notice);
+logs::channel sceCommonDialog("sceCommonDialog");
 
 s32 sceCommonDialogUpdate(vm::cptr<SceCommonDialogUpdateParam> updateParam)
 {

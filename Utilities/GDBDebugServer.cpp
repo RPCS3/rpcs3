@@ -20,7 +20,7 @@
 extern void ppu_set_breakpoint(u32 addr);
 extern void ppu_remove_breakpoint(u32 addr);
 
-logs::channel gdbDebugServer("gdbDebugServer", logs::level::notice);
+logs::channel gdbDebugServer("gdbDebugServer");
 
 int sock_init(void)
 {

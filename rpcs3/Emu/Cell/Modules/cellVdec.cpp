@@ -20,7 +20,7 @@ extern "C"
 
 std::mutex g_mutex_avcodec_open2;
 
-logs::channel cellVdec("cellVdec", logs::level::notice);
+logs::channel cellVdec("cellVdec");
 
 vm::gvar<s32> _cell_vdec_prx_ver; // ???
 

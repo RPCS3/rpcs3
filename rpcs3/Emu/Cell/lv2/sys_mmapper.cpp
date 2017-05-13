@@ -3,7 +3,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_mmapper("sys_mmapper", logs::level::notice);
+logs::channel sys_mmapper("sys_mmapper");
 
 error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
 {

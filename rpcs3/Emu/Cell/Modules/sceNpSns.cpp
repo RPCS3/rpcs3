@@ -4,7 +4,7 @@
 
 #include "sceNpSns.h"
 
-logs::channel sceNpSns("sceNpSns", logs::level::notice);
+logs::channel sceNpSns("sceNpSns");
 
 template<>
 void fmt_class_string<sceNpSnsError>::format(std::string& out, u64 arg)

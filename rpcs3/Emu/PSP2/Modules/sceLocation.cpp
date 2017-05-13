@@ -4,7 +4,7 @@
 
 #include "sceLocation.h"
 
-logs::channel sceLocation("sceLocation", logs::level::notice);
+logs::channel sceLocation("sceLocation");
 
 s32 sceLocationOpen(vm::ptr<u8> handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {

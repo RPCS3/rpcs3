@@ -3,7 +3,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_memory("sys_memory", logs::level::notice);
+logs::channel sys_memory("sys_memory");
 
 error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {

@@ -4,7 +4,7 @@
 
 #include "sceAudio.h"
 
-logs::channel sceAudio("sceAudio", logs::level::notice);
+logs::channel sceAudio("sceAudio");
 
 s32 sceAudioOutOpenPort(s32 portType, s32 len, s32 freq, s32 param)
 {
