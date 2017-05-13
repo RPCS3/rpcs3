@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellSailRec("cellSailRec", logs::level::notice);
+logs::channel cellSailRec("cellSailRec");
 
 // Error Codes
 enum

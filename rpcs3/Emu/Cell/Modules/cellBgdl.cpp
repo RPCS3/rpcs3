@@ -4,7 +4,7 @@
 
 #include "cellBgdl.h"
 
-logs::channel cellBGDL("cellBGDL", logs::level::notice);
+logs::channel cellBGDL("cellBGDL");
 
 s32 cellBGDLGetInfo(vm::cptr<char> content_id, vm::ptr<CellBGDLInfo> info, s32 num)
 {

@@ -4,7 +4,7 @@
 
 #include "sceDbg.h"
 
-logs::channel sceDbg("sceDbg", logs::level::notice);
+logs::channel sceDbg("sceDbg");
 
 s32 sceDbgSetMinimumLogLevel(s32 minimumLogLevel)
 {

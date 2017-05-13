@@ -4,7 +4,7 @@
 
 #include "sceGxm.h"
 
-logs::channel sceGxm("sceGxm", logs::level::notice);
+logs::channel sceGxm("sceGxm");
 
 s32 sceGxmInitialize(vm::cptr<SceGxmInitializeParams> params)
 {

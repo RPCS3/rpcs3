@@ -4,7 +4,7 @@
 
 #include "scePhotoExport.h"
 
-logs::channel scePhotoExport("scePhotoExport", logs::level::notice);
+logs::channel scePhotoExport("scePhotoExport");
 
 s32 scePhotoExportFromData(
 	vm::cptr<void> photodata,

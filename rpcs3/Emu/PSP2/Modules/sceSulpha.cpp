@@ -4,7 +4,7 @@
 
 #include "sceSulpha.h"
 
-logs::channel sceSulpha("sceSulpha", logs::level::notice);
+logs::channel sceSulpha("sceSulpha");
 
 s32 sceSulphaNetworkInit()
 {

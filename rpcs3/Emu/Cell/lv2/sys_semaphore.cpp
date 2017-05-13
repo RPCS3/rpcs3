@@ -9,7 +9,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_semaphore("sys_semaphore", logs::level::notice);
+logs::channel sys_semaphore("sys_semaphore");
 
 extern u64 get_system_time();
 

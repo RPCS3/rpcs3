@@ -5,7 +5,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel cellSpudll("cellSpudll", logs::level::notice);
+logs::channel cellSpudll("cellSpudll");
 
 template<>
 void fmt_class_string<CellSpudllError>::format(std::string& out, u64 arg)

@@ -4,7 +4,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_vm("sys_vm", logs::level::notice);
+logs::channel sys_vm("sys_vm");
 
 error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {

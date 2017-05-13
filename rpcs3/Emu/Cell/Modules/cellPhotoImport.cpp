@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellPhotoImportUtil("cellPhotoImportUtil", logs::level::notice);
+logs::channel cellPhotoImportUtil("cellPhotoImportUtil");
 
 // Return Codes
 enum

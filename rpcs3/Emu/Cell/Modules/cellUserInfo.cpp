@@ -6,7 +6,7 @@
 
 #include "Utilities/StrUtil.h"
 
-logs::channel cellUserInfo("cellUserInfo", logs::level::notice);
+logs::channel cellUserInfo("cellUserInfo");
 
 template<>
 void fmt_class_string<CellUserInfoError>::format(std::string& out, u64 arg)

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellMusicDecode("cellMusicDecode", logs::level::notice);
+logs::channel cellMusicDecode("cellMusicDecode");
 
 // Return Codes
 enum

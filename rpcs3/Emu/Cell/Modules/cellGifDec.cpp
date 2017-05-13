@@ -9,7 +9,7 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellGifDec.h"
 
-logs::channel cellGifDec("cellGifDec", logs::level::notice);
+logs::channel cellGifDec("cellGifDec");
 
 // cellGifDec aliases (only for cellGifDec.cpp)
 using PPMainHandle = vm::pptr<GifDecoder>;

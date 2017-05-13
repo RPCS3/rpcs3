@@ -14,7 +14,7 @@
 
 #include "Utilities/StrUtil.h"
 
-logs::channel sceNpTrophy("sceNpTrophy", logs::level::notice);
+logs::channel sceNpTrophy("sceNpTrophy");
 
 struct trophy_context_t
 {

@@ -4,7 +4,7 @@
 
 #include "sceCodecEngine.h"
 
-logs::channel sceCodecEngine("sceCodecEngine", logs::level::notice);
+logs::channel sceCodecEngine("sceCodecEngine");
 
 s32 sceCodecEnginePmonStart()
 {

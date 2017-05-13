@@ -1,9 +1,11 @@
 ﻿#include "Log.h"
 #include "File.h"
 #include "StrFmt.h"
+#include "sema.h"
 
 #include "rpcs3_version.h"
 #include <string>
+#include <unordered_map>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -11,8 +13,13 @@
 #include <chrono>
 #endif
 
+static std::string empty_string()
+{
+	return {};
+}
+
 // Thread-specific log prefix provider
-thread_local std::string(*g_tls_log_prefix)() = nullptr;
+thread_local std::string(*g_tls_log_prefix)() = &empty_string;
 
 template<>
 void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
@@ -105,14 +112,53 @@ namespace logs
 		return timebase.get();
 	}
 
-	channel GENERAL(nullptr, level::notice);
-	channel LOADER("LDR", level::notice);
-	channel MEMORY("MEM", level::notice);
-	channel RSX("RSX", level::notice);
-	channel HLE("HLE", level::notice);
-	channel PPU("PPU", level::notice);
-	channel SPU("SPU", level::notice);
+	channel GENERAL("");
+	channel LOADER("LDR");
+	channel MEMORY("MEM");
+	channel RSX("RSX");
+	channel HLE("HLE");
+	channel PPU("PPU");
+	channel SPU("SPU");
 	channel ARMv7("ARMv7");
+
+	struct channel_info
+	{
+		channel* pointer = nullptr;
+		level enabled = level::notice;
+
+		void set_level(level value)
+		{
+			enabled = value;
+
+			if (pointer)
+			{
+				pointer->enabled = value;
+			}
+		}
+	};
+
+	// Channel registry mutex
+	semaphore<> g_mutex;
+
+	// Channel registry
+	std::unordered_map<std::string, channel_info> g_channels;
+
+	void reset()
+	{
+		semaphore_lock lock(g_mutex);
+
+		for (auto&& pair : g_channels)
+		{
+			pair.second.set_level(level::notice);
+		}
+	}
+
+	void set_level(const std::string& ch_name, level value)
+	{
+		semaphore_lock lock(g_mutex);
+
+		g_channels[ch_name].set_level(value);
+	}
 }
 
 logs::listener::~listener()
@@ -136,8 +182,34 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 	// Get timestamp
 	const u64 stamp = get_stamp();
 
-	std::string text; fmt::raw_append(text, fmt, sup, args);
-	std::string prefix(g_tls_log_prefix ? g_tls_log_prefix() : "");
+	// Register channel
+	if (ch->enabled == level::_uninit)
+	{
+		semaphore_lock lock(g_mutex);
+
+		auto& info = g_channels[ch->name];
+
+		if (info.pointer && info.pointer != ch)
+		{
+			fmt::throw_exception("logs::channel repetition: %s", ch->name);
+		}
+		else if (!info.pointer)
+		{
+			info.pointer = ch;
+			ch->enabled  = info.enabled;
+
+			// Check level again
+			if (info.enabled < sev)
+			{
+				return;
+			}
+		}
+	}
+
+	// Get text
+	std::string text;
+	fmt::raw_append(text, fmt, sup, args);
+	std::string prefix = g_tls_log_prefix();
 
 	// Get first (main) listener
 	listener* lis = get_logger();
@@ -203,7 +275,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 		text += "} ";
 	}
 	
-	if (msg.ch->name)
+	if ('\0' != *msg.ch->name)
 	{
 		text += msg.ch->name;
 		text += msg.sev == level::todo ? " TODO: " : ": ";

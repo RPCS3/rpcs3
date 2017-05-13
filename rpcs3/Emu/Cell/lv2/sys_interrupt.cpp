@@ -10,7 +10,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_interrupt("sys_interrupt", logs::level::notice);
+logs::channel sys_interrupt("sys_interrupt");
 
 void lv2_int_serv::exec()
 {

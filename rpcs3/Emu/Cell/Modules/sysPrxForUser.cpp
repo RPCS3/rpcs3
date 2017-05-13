@@ -6,7 +6,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 
-logs::channel sysPrxForUser("sysPrxForUser", logs::level::notice);
+logs::channel sysPrxForUser("sysPrxForUser");
 
 extern u64 get_system_time();
 

@@ -9,7 +9,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_rwlock("sys_rwlock", logs::level::notice);
+logs::channel sys_rwlock("sys_rwlock");
 
 extern u64 get_system_time();
 

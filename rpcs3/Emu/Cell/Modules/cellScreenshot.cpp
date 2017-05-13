@@ -4,7 +4,7 @@
 
 #include "cellScreenshot.h"
 
-logs::channel cellScreenshot("cellScreenshot", logs::level::notice);
+logs::channel cellScreenshot("cellScreenshot");
 
 s32 cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 {

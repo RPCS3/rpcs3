@@ -9,7 +9,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_mutex("sys_mutex", logs::level::notice);
+logs::channel sys_mutex("sys_mutex");
 
 extern u64 get_system_time();
 

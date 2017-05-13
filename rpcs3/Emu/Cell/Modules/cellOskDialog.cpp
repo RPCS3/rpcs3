@@ -6,7 +6,7 @@
 #include <thread>
 #include "Emu/System.h"
 
-logs::channel cellOskDialog("cellOskDialog", logs::level::notice);
+logs::channel cellOskDialog("cellOskDialog");
 
 static char16_t s_osk_text[CELL_OSKDIALOG_STRING_SIZE];
 

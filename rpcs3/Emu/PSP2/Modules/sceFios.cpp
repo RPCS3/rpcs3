@@ -4,7 +4,7 @@
 
 #include "sceFios.h"
 
-logs::channel sceFios("sceFios", logs::level::notice);
+logs::channel sceFios("sceFios");
 
 s32 sceFiosInitialize(vm::cptr<SceFiosParams> pParameters)
 {

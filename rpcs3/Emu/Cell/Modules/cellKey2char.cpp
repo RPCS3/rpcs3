@@ -3,7 +3,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel cellKey2char("cellKey2char", logs::level::notice);
+logs::channel cellKey2char("cellKey2char");
 
 // Return Codes
 enum CellKey2CharError : u32
