@@ -289,13 +289,6 @@ void GLGSRender::begin()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	__glcheck enable(true, GL_CLIP_DISTANCE0 + 0);
-	__glcheck enable(true, GL_CLIP_DISTANCE0 + 1);
-	__glcheck enable(true, GL_CLIP_DISTANCE0 + 2);
-	__glcheck enable(true, GL_CLIP_DISTANCE0 + 3);
-	__glcheck enable(true, GL_CLIP_DISTANCE0 + 4);
-	__glcheck enable(true, GL_CLIP_DISTANCE0 + 5);
-
 	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 }
@@ -572,6 +565,14 @@ void GLGSRender::on_init_thread()
 		m_gl_sampler_states[i].create();
 		m_gl_sampler_states[i].bind(i);
 	}
+
+	//Clip planes are shader controlled; enable all planes driver-side
+	glEnable(GL_CLIP_DISTANCE0 + 0);
+	glEnable(GL_CLIP_DISTANCE0 + 1);
+	glEnable(GL_CLIP_DISTANCE0 + 2);
+	glEnable(GL_CLIP_DISTANCE0 + 3);
+	glEnable(GL_CLIP_DISTANCE0 + 4);
+	glEnable(GL_CLIP_DISTANCE0 + 5);
 
 	m_gl_texture_cache.initialize(this);
 }

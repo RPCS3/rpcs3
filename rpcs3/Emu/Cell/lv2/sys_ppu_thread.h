@@ -4,7 +4,7 @@
 
 class ppu_thread;
 
-enum : u32
+enum : s32
 {
 	SYS_PPU_THREAD_ONCE_INIT = 0,
 	SYS_PPU_THREAD_DONE_INIT = 1,

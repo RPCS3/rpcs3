@@ -557,6 +557,13 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	return CELL_OK;
 }
 
+error_code sys_fs_link(vm::cptr<char> from, vm::cptr<char> to)
+{
+	sys_fs.todo("sys_fs_link(from=%s, to=%s)", from, to);
+
+	return CELL_OK;
+}
+
 error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 {
 	sys_fs.warning("sys_fs_mkdir(path=%s, mode=%#o)", path, mode);
@@ -625,6 +632,13 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 	}
 
 	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
+	return CELL_OK;
+}
+
+error_code sys_fs_access(vm::ps3::cptr<char> path, s32 mode)
+{
+	sys_fs.todo("sys_fs_access(path=%s, mode=%#o)", path, mode);
+
 	return CELL_OK;
 }
 
@@ -791,7 +805,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		break;
 	}
 
-	case 0xe0000001: // Unknown
+	case 0xe0000001: // Unknown (cellFsStat)
 	{
 		break;
 	}
@@ -930,7 +944,15 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 	case 0xe0000017: // cellFsAllocateFileAreaWithoutZeroFill
 	{
-		break;
+		const auto arg = vm::static_ptr_cast<lv2_file_e0000017>(_arg);
+
+		if (_size < arg->size || arg->_x4 != 0x10 || arg->_x8 != 0x20)
+		{
+			return CELL_EINVAL;
+		}
+
+		arg->out_code = sys_fs_truncate(arg->file_path, arg->file_size);
+		return CELL_OK;
 	}
 
 	case 0xe0000018: // cellFsChangeFileSizeWithoutAllocation
@@ -1020,7 +1042,7 @@ error_code sys_fs_fdatasync(u32 fd)
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
-	if (!file)
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
 		return CELL_EBADF;
 	}
@@ -1036,7 +1058,7 @@ error_code sys_fs_fsync(u32 fd)
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
-	if (!file)
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
 		return CELL_EBADF;
 	}
@@ -1123,9 +1145,23 @@ error_code sys_fs_ftruncate(u32 fd, u64 size)
 	return CELL_OK;
 }
 
+error_code sys_fs_symbolic_link(vm::cptr<char> target, vm::cptr<char> linkpath)
+{
+	sys_fs.todo("sys_fs_symbolic_link(target=%s, linkpath=%s)", target, linkpath);
+
+	return CELL_OK;
+}
+
 error_code sys_fs_chmod(vm::cptr<char> path, s32 mode)
 {
-	sys_fs.todo("sys_fs_chmod(path=%s, mode=%#o) -> CELL_OK", path, mode);
+	sys_fs.todo("sys_fs_chmod(path=%s, mode=%#o)", path, mode);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_chown(vm::cptr<char> path, s32 uid, s32 gid)
+{
+	sys_fs.todo("sys_fs_chown(path=%s, uid=%d, gid=%d)", path, uid, gid);
 
 	return CELL_OK;
 }
@@ -1148,6 +1184,20 @@ error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> t
 	return CELL_OK;
 }
 
+error_code sys_fs_acl_read(vm::ps3::cptr<char> path, vm::ps3::ptr<void> ptr)
+{
+	sys_fs.todo("sys_fs_acl_read(path=%s, ptr=*0x%x)", path, ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_acl_write(vm::ps3::cptr<char> path, vm::ps3::ptr<void> ptr)
+{
+	sys_fs.todo("sys_fs_acl_write(path=%s, ptr=*0x%x)", path, ptr);
+
+	return CELL_OK;
+}
+
 error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr)
 {
 	sys_fs.warning("sys_fs_lsn_get_cda_size(fd=%d, ptr=*0x%x)", fd, ptr);
@@ -1161,6 +1211,13 @@ error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr)
 
 	// TODO
 	*ptr = 0;
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_get_cda(u32 fd, vm::ps3::ptr<void> arg2, u64 arg3, vm::ps3::ptr<u64> arg4)
+{
+	sys_fs.todo("sys_fs_lsn_get_cda(fd=%d, arg2=*0x%x, arg3=0x%x, arg4=*0x%x)", fd, arg2, arg3, arg4);
+
 	return CELL_OK;
 }
 
@@ -1200,6 +1257,41 @@ error_code sys_fs_lsn_unlock(u32 fd)
 	{
 		return CELL_EPERM;
 	}
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_read(u32 fd, vm::ps3::cptr<void> ptr, u64 size)
+{
+	sys_fs.todo("sys_fs_lsn_read(fd=%d, ptr=*0x%x, size=0x%x)", fd, ptr, size);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_lsn_write(u32 fd, vm::ps3::cptr<void> ptr, u64 size)
+{
+	sys_fs.todo("sys_fs_lsn_write(fd=%d, ptr=*0x%x, size=0x%x)", fd, ptr, size);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_mapped_allocate(u32 fd, u64 size, vm::ps3::pptr<void> out_ptr)
+{
+	sys_fs.todo("sys_fs_mapped_allocate(fd=%d, arg2=0x%x, out_ptr=**0x%x)", fd, size, out_ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_mapped_free(u32 fd, vm::ps3::ptr<void> ptr)
+{
+	sys_fs.todo("sys_fs_mapped_free(fd=%d, ptr=0x%#x)", fd, ptr);
+
+	return CELL_OK;
+}
+
+error_code sys_fs_truncate2(u32 fd, u64 size)
+{
+	sys_fs.todo("sys_fs_truncate2(fd=%d, size=0x%x)", fd, size);
 
 	return CELL_OK;
 }

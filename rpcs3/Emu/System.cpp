@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
-#include "Utilities/AutoPause.h"
 #include "Utilities/event.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
@@ -41,7 +40,7 @@ cfg::string_entry g_cfg_vfs_dev_usb000(cfg::root.vfs, "/dev_usb000/", "$(Emulato
 cfg::string_entry g_cfg_vfs_dev_bdvd(cfg::root.vfs, "/dev_bdvd/"); // Not mounted
 cfg::string_entry g_cfg_vfs_app_home(cfg::root.vfs, "/app_home/"); // Not mounted
 
-cfg::bool_entry g_cfg_vfs_allow_host_root(cfg::root.vfs, "Enable /host_root/", true);
+cfg::bool_entry g_cfg_vfs_allow_host_root(cfg::root.vfs, "Enable /host_root/");
 
 std::string g_cfg_defaults;
 
@@ -361,8 +360,6 @@ void Emulator::Load()
 			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
 			return;
 		}
-
-		debug::autopause::reload();
 
 		if (g_cfg_autostart && IsReady())
 		{

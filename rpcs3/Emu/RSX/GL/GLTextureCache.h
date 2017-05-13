@@ -16,6 +16,8 @@
 #include "../../Memory/vm.h"
 #include "Utilities/Config.h"
 
+#include "../rsx_utils.h"
+
 class GLGSRender;
 
 extern cfg::bool_entry g_cfg_rsx_write_color_buffers;
@@ -111,76 +113,6 @@ namespace gl
 				}
 
 				return size;
-			}
-
-			//TODO: Move swscale routines to RSX shared
-			void scale_image_fallback(u8* dst, const u8* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples)
-			{
-				u32 dst_offset = 0;
-				u32 src_offset = 0;
-				u32 padding = dst_pitch - (src_pitch * samples);
-
-				for (u16 h = 0; h < src_height; ++h)
-				{
-					for (u16 w = 0; w < src_width; ++w)
-					{
-						for (u8 n = 0; n < samples; ++n)
-						{
-							memcpy(&dst[dst_offset], &src[src_offset], pixel_size);
-							dst_offset += pixel_size;
-						}
-
-						src_offset += pixel_size;
-					}
-
-					dst_offset += padding;
-				}
-			}
-
-			template <typename T, int N>
-			void scale_image_impl(T* dst, const T* src, u16 src_width, u16 src_height, u16 padding)
-			{
-				u32 dst_offset = 0;
-				u32 src_offset = 0;
-
-				for (u16 h = 0; h < src_height; ++h)
-				{
-					for (u16 w = 0; w < src_width; ++w)
-					{
-						for (u8 n = 0; n < N; ++n)
-						{
-							dst[dst_offset++] = src[src_offset];
-						}
-
-						//Fetch next pixel
-						src_offset++;
-					}
-
-					//Pad this row
-					dst_offset += padding;
-				}
-			}
-
-			template <int N>
-			void scale_image(void *dst, void *src, u8 pixel_size, u16 src_width, u16 src_height, u16 padding)
-			{
-				switch (pixel_size)
-				{
-				case 1:
-					scale_image_impl<u8, N>((u8*)dst, (u8*)src, current_width, current_height, padding);
-					break;
-				case 2:
-					scale_image_impl<u16, N>((u16*)dst, (u16*)src, current_width, current_height, padding);
-					break;
-				case 4:
-					scale_image_impl<u32, N>((u32*)dst, (u32*)src, current_width, current_height, padding);
-					break;
-				case 8:
-					scale_image_impl<u64, N>((u64*)dst, (u64*)src, current_width, current_height, padding);
-					break;
-				default:
-					fmt::throw_exception("unsupported rtt format 0x%X" HERE, (u32)format);
-				}
 			}
 
 			void init_buffer()
@@ -341,36 +273,11 @@ namespace gl
 				else
 				{
 					//TODO: Use compression hint from the gcm tile information
-					//Scale this image by repeating pixel data n times
-					//n = expected_pitch / real_pitch
-					//Use of fixed argument templates for performance reasons
+					//TODO: Fall back to bilinear filtering if samples > 2
 
-					const u16 pixel_size = get_pixel_size(format, type);
-					const u16 dst_width  = current_pitch / pixel_size;
-					const u16 sample_count = current_pitch / real_pitch;
-					const u16 padding = dst_width - (current_width * sample_count);
-
-					switch (sample_count)
-					{
-					case 2:
-						scale_image<2>(dst, data, pixel_size, current_width, current_height, padding);
-						break;
-					case 3:
-						scale_image<3>(dst, data, pixel_size, current_width, current_height, padding);
-						break;
-					case 4:
-						scale_image<4>(dst, data, pixel_size, current_width, current_height, padding);
-						break;
-					case 8:
-						scale_image<8>(dst, data, pixel_size, current_width, current_height, padding);
-						break;
-					case 16:
-						scale_image<16>(dst, data, pixel_size, current_width, current_height, padding);
-						break;
-					default:
-						LOG_ERROR(RSX, "Unsupported RTT scaling factor: dst_pitch=%d src_pitch=%d", current_pitch, real_pitch);
-						scale_image_fallback(dst, static_cast<u8*>(data), current_width, current_height, current_pitch, real_pitch, pixel_size, sample_count);
-					}
+					const u8 pixel_size = get_pixel_size(format, type);
+					const u8 samples = current_pitch / real_pitch;
+					rsx::scale_image_nearest(dst, const_cast<const void*>(data), current_width, current_height, current_pitch, real_pitch, pixel_size, samples);
 				}
 
 				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);

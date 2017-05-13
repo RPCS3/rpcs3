@@ -28,7 +28,7 @@ cfg::bool_entry g_cfg_rsx_vsync(cfg::root.video, "VSync");
 cfg::bool_entry g_cfg_rsx_debug_output(cfg::root.video, "Debug output");
 cfg::bool_entry g_cfg_rsx_overlay(cfg::root.video, "Debug overlay");
 cfg::bool_entry g_cfg_rsx_gl_legacy_buffers(cfg::root.video, "Use Legacy OpenGL Buffers (Debug)");
-cfg::bool_entry g_cfg_rsx_use_gpu_texture_scaling(cfg::root.video, "Use GPU texture scaling");
+cfg::bool_entry g_cfg_rsx_use_gpu_texture_scaling(cfg::root.video, "Use GPU texture scaling", true);
 
 bool user_asked_for_frame_capture = false;
 rsx::frame_capture_data frame_debug;
@@ -601,32 +601,35 @@ namespace rsx
 			rsx::method_registers.clip_plane_5_enabled(),
 		};
 
-		std::array<f32, 8> tmp{};
+		s32 clip_enabled_flags[8] = {};
+		f32 clip_distance_factors[8] = {};
+
 		for (int index = 0; index < 6; ++index)
 		{
-			f32 value = 0;
 			switch (clip_plane_control[index])
 			{
 			default:
 				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)clip_plane_control[index]);
 
 			case rsx::user_clip_plane_op::disable:
-				value = 0.f;
+				clip_enabled_flags[index] = 0;
+				clip_distance_factors[index] = 0.f;
 				break;
 
 			case rsx::user_clip_plane_op::greater_or_equal:
-				value = 1.f;
+				clip_enabled_flags[index] = 1;
+				clip_distance_factors[index] = 1.f;
 				break;
 
 			case rsx::user_clip_plane_op::less_than:
-				value = -1.f;
+				clip_enabled_flags[index] = 1;
+				clip_distance_factors[index] = -1.f;
 				break;
 			}
-
-			tmp[index] = value;
 		}
-		stream_vector_from_memory((char*)buffer, tmp.data());
-		stream_vector_from_memory((char*)buffer + 16, &tmp[4]);
+
+		memcpy(buffer, clip_enabled_flags, 32);
+		memcpy((char*)buffer + 32, clip_distance_factors, 32);
 	}
 
 	/**

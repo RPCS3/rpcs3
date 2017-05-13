@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "Utilities/Config.h"
-#include "Utilities/AutoPause.h"
 #include "Utilities/VirtualMemory.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
@@ -142,6 +141,7 @@ cfg::set_entry g_cfg_load_libs(cfg::root.core, "Load libraries");
 
 extern cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder;
 
+extern void ppu_initialize_syscalls();
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
@@ -234,6 +234,8 @@ struct ppu_linkage_info
 // Initialize static modules.
 static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link)
 {
+	ppu_initialize_syscalls();
+
 	const std::initializer_list<const ppu_static_module*> registered
 	{
 		&ppu_module_manager::cellAdec,
