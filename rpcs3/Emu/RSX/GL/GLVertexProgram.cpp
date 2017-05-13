@@ -107,10 +107,12 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 static const vertex_reg_info reg_table[] =
 {
 	{ "gl_Position", false, "dst_reg0", "", false },
-	{ "diff_color", true, "dst_reg1", "", false },
-	{ "spec_color", true, "dst_reg2", "", false },
-	{ "front_diff_color", true, "dst_reg3", "", false },
-	{ "front_spec_color", true, "dst_reg4", "", false },
+	{ "diff_color", true, "dst_reg1", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE },
+	{ "spec_color", true, "dst_reg2", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR },
+	//These are only present when back variants are specified, otherwise the default diff/spec color vars are for both front and back
+	{ "front_diff_color", true, "dst_reg3", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE },
+	{ "front_spec_color", true, "dst_reg4", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR },
+	//Fog output shares a data source register with clip planes 0-2 so only declare when specified
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	//Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
 	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClipFactor[0].x", false, "userClipEnabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
