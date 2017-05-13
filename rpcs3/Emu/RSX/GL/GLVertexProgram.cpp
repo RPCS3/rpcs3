@@ -110,8 +110,8 @@ static const vertex_reg_info reg_table[] =
 	{ "diff_color", true, "dst_reg1", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE },
 	{ "spec_color", true, "dst_reg2", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR },
 	//These are only present when back variants are specified, otherwise the default diff/spec color vars are for both front and back
-	{ "front_diff_color", true, "dst_reg3", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE },
-	{ "front_spec_color", true, "dst_reg4", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR },
+	{ "front_diff_color", true, "dst_reg3", "", false },
+	{ "front_spec_color", true, "dst_reg4", "", false },
 	//Fog output shares a data source register with clip planes 0-2 so only declare when specified
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	//Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
