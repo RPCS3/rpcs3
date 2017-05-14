@@ -17,7 +17,6 @@ void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)
 	{
 		switch (error)
 		{
-			STR_CASE(CELL_KB_OK);
 			STR_CASE(CELL_KB_ERROR_FATAL);
 			STR_CASE(CELL_KB_ERROR_INVALID_PARAMETER);
 			STR_CASE(CELL_KB_ERROR_ALREADY_INITIALIZED);
@@ -46,7 +45,7 @@ error_code cellKbInit(u32 max_connect)
 
 	handler->Init(max_connect);
 
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 error_code cellKbEnd()
@@ -56,7 +55,7 @@ error_code cellKbEnd()
 	if (!fxm::remove<KeyboardHandlerBase>())
 		return CELL_KB_ERROR_UNINITIALIZED;
 
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 error_code cellKbClearBuf(u32 port_no)
@@ -141,7 +140,7 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 		info->status[i] = current_info.status[i];
 	}
 	
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
@@ -170,7 +169,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 
 	current_data.len = 0;
 	
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 error_code cellKbSetCodeType(u32 port_no, u32 type)
@@ -184,13 +183,13 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 	
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.code_type = type;
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 {
 	sys_io.todo("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 error_code cellKbSetReadMode(u32 port_no, u32 rmode)
@@ -205,7 +204,7 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.read_mode = rmode;
 
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
@@ -222,7 +221,7 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 	config->read_mode = current_config.read_mode;
 	config->code_type = current_config.code_type;
 
-	return CELL_KB_OK;
+	return CELL_OK;
 }
 
 void cellKb_init()

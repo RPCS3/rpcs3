@@ -2,7 +2,6 @@
 
 enum CellKbError : u32
 {
-	CELL_KB_OK                               = 0,
 	CELL_KB_ERROR_FATAL                      = 0x80121001,
 	CELL_KB_ERROR_INVALID_PARAMETER          = 0x80121002,
 	CELL_KB_ERROR_ALREADY_INITIALIZED        = 0x80121003,
