@@ -160,6 +160,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGame.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGameExec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellGamePs1Emu.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGcmSys.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGem.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellGifDec.cpp" />
@@ -211,6 +212,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSync2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysconf.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysconfPs1emu.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAp.cpp" />
@@ -240,7 +242,10 @@
     <ClCompile Include="Emu\Cell\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpTus.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpUtil.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sysBdMediaId.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sysConsoleId.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sysPs2Disc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_io.cpp" />
