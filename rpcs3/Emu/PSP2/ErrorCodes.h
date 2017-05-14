@@ -1,17 +1,11 @@
 #pragma once
 
-struct SceOk
+enum SceNotAnError : s32
 {
-	enum : s32
-	{
-		__not_an_error,
+	SCE_OK = 0,
 
-		SCE_OK = 0
-	};
+	__not_an_error
 };
-
-// Temporary workaround
-constexpr auto SCE_OK = SceOk::SCE_OK;
 
 enum SceError : u32
 {
