@@ -42,7 +42,7 @@ public:
 		wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY,
 			fmt::FromUTF8(u8"\nDevelopers:\n\n¬DH\n¬AlexAltea\n¬Hykem\nOil\nNekotekina\nBigpet\n¬gopalsr83\n¬tambry\nvlj\nkd-11\njarveson\nraven02\nAniLeo\ncornytrace\nssshadow\nNuman\n"));
 		wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY,
-			fmt::FromUTF8(u8"\nContributors:\n\nBlackDaemon\nelisha464\nAishou\nkrofna\nxsacha\ndanilaml\nunknownbrackets\nZangetsu38\nlioncash\nachurch\ndarkf\nSyphurith\nBlaypeg\nSurvanium90\ngeorgemoralis\nikki84\n"));
+			fmt::FromUTF8(u8"\nContributors:\n\nBlackDaemon\nelisha464\nAishou\nkrofna\nxsacha\ndanilaml\nunknownbrackets\nZangetsu38\nlioncash\nachurch\ndarkf\nSyphurith\nBlaypeg\nSurvanium90\ngeorgemoralis\nikki84\nhcorion\n"));
 		wxStaticText* t_section3 = new wxStaticText(this, wxID_ANY,
 			fmt::FromUTF8(u8"\nSupporters:\n\nHoward Garrison\nEXPotemkin\nMarko V.\ndanhp\nJake (5315825)\nIan Reid\nTad Sherlock\nTyler Friesen\nFolzar\nPayton Williams\nRedPill Australia\nyanghong\nMohammed El-Serougi\nДима ~Ximer13~ Кулин\nJames Reed\nBaroqueSonata\n"));
 
