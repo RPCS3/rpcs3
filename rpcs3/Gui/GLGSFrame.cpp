@@ -2,7 +2,6 @@
 #include "stdafx_gui.h"
 #include "Utilities/Config.h"
 #include "GLGSFrame.h"
-#include "config.h"
 #include <wx/version.h>
 
 extern cfg::bool_entry g_cfg_rsx_debug_output;

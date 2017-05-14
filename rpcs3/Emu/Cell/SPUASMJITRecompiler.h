@@ -5,9 +5,10 @@
 namespace asmjit
 {
 	struct JitRuntime;
+	struct CodeHolder;
 	struct X86Compiler;
-	struct X86GpVar;
-	struct X86XmmVar;
+	struct X86Gp;
+	struct X86Xmm;
 	struct X86Mem;
 	struct Label;
 }
@@ -25,17 +26,18 @@ public:
 private:
 	// emitter:
 	asmjit::X86Compiler* c;
+	asmjit::CodeHolder* codeHolder;
 
 	// input:
-	asmjit::X86GpVar* cpu;
-	asmjit::X86GpVar* ls;
+	asmjit::X86Gp* cpu;
+	asmjit::X86Gp* ls;
 
 	// temporary:
-	asmjit::X86GpVar* addr;
-	asmjit::X86GpVar* qw0;
-	asmjit::X86GpVar* qw1;
-	asmjit::X86GpVar* qw2;
-	std::array<asmjit::X86XmmVar*, 6> vec;
+	asmjit::X86Gp* addr;
+	asmjit::X86Gp* qw0;
+	asmjit::X86Gp* qw1;
+	asmjit::X86Gp* qw2;
+	std::array<asmjit::X86Xmm*, 6> vec;
 
 	// labels:
 	asmjit::Label* labels; // array[0x10000]
@@ -44,10 +46,10 @@ private:
 
 	class XmmLink
 	{
-		asmjit::X86XmmVar* m_var;
+		asmjit::X86Xmm* m_var;
 
 	public:
-		XmmLink(asmjit::X86XmmVar*& xmm_var)
+		XmmLink(asmjit::X86Xmm*& xmm_var)
 			: m_var(xmm_var)
 		{
 			xmm_var = nullptr;
@@ -55,7 +57,7 @@ private:
 
 		XmmLink(XmmLink&&) = default; // MoveConstructible + delete copy constructor and copy/move operators
 
-		operator asmjit::X86XmmVar&() const
+		operator asmjit::X86Xmm&() const
 		{
 			return *m_var;
 		}
