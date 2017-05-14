@@ -1,17 +1,12 @@
 #pragma once
 
-struct CellOk
+enum CellNotAnError : s32
 {
-	enum : s32
-	{
-		__not_an_error,
+	CELL_OK     = 0,
+	CELL_CANCEL = 1,
 
-		CELL_OK = 0
-	};
+	__not_an_error
 };
-
-// Temporary workaround
-constexpr auto CELL_OK = CellOk::CELL_OK;
 
 enum CellError : u32
 {
