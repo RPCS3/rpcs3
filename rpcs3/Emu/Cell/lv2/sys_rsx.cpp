@@ -7,7 +7,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_rsx("sys_rsx", logs::level::notice);
+logs::channel sys_rsx("sys_rsx");
 
 s32 sys_rsx_device_open()
 {

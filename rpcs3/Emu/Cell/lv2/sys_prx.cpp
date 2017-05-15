@@ -14,7 +14,7 @@ namespace vm { using namespace ps3; }
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_initialize(const ppu_module&);
 
-logs::channel sys_prx("sys_prx", logs::level::notice);
+logs::channel sys_prx("sys_prx");
 
 static const std::unordered_map<std::string, int> s_prx_ignore
 {

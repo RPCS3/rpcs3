@@ -4,7 +4,7 @@
 
 #include "sceLibstdcxx.h"
 
-logs::channel sceLibstdcxx("sceLibstdcxx", logs::level::notice);
+logs::channel sceLibstdcxx("sceLibstdcxx");
 
 namespace sce_libstdcxx_func
 {

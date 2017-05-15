@@ -11,7 +11,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_fs("sys_fs", logs::level::notice);
+logs::channel sys_fs("sys_fs");
 
 struct lv2_fs_mount_point
 {

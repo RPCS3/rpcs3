@@ -3,7 +3,7 @@
 namespace vm { using namespace ps3; }
 
 // Return Codes
-enum
+enum CellSubDisplayError : u32
 {
 	CELL_SUBDISPLAY_ERROR_OUT_OF_MEMORY    = 0x80029851,
 	CELL_SUBDISPLAY_ERROR_FATAL            = 0x80029852,
@@ -60,8 +60,8 @@ struct CellSubDisplayParam
 	be_t<s32> mode;
 	be_t<s32> nGroup;
 	be_t<s32> nPeer;
-	vm::bptr<CellSubDisplayVideoParam> videoParam;
-	vm::bptr<CellSubDisplayAudioParam> audioParam;
+	CellSubDisplayVideoParam videoParam;
+	CellSubDisplayAudioParam audioParam;
 };
 
 struct CellSubDisplayPSPId

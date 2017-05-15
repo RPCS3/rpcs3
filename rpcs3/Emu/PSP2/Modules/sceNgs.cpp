@@ -4,7 +4,7 @@
 
 #include "sceNgs.h"
 
-logs::channel sceNgs("sceNgs", logs::level::notice);
+logs::channel sceNgs("sceNgs");
 
 s32 sceNgsSystemGetRequiredMemorySize(vm::cptr<SceNgsSystemInitParams> pSynthParams, vm::ptr<u32> pnSize)
 {

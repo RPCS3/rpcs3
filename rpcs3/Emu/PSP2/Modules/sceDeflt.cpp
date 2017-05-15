@@ -4,7 +4,7 @@
 
 #include "sceDeflt.h"
 
-logs::channel sceDeflt("sceDeflt", logs::level::notice);
+logs::channel sceDeflt("sceDeflt");
 
 s32 sceGzipIsValid(vm::cptr<void> pSrcGzip)
 {

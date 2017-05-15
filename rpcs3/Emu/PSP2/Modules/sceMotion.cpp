@@ -4,7 +4,7 @@
 
 #include "sceMotion.h"
 
-logs::channel sceMotion("sceMotion", logs::level::notice);
+logs::channel sceMotion("sceMotion");
 
 s32 sceMotionGetState(vm::ptr<SceMotionState> motionState)
 {

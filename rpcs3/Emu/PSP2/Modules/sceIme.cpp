@@ -4,7 +4,7 @@
 
 #include "sceIme.h"
 
-logs::channel sceIme("sceIme", logs::level::notice);
+logs::channel sceIme("sceIme");
 
 s32 sceImeOpen(vm::ptr<SceImeParam> param)
 {

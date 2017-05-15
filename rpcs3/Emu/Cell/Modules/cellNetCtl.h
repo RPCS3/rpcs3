@@ -3,7 +3,7 @@
 namespace vm { using namespace ps3; }
 
 // Error Codes
-enum
+enum CellNetCtlError : u32
 {
 	CELL_NET_CTL_ERROR_NOT_INITIALIZED         = 0x80130101,
 	CELL_NET_CTL_ERROR_NOT_TERMINATED          = 0x80130102,
@@ -40,6 +40,16 @@ enum
 	CELL_NET_CTL_ERROR_PPPOE_STATUS_NETWORK          = 0x80130413,
 	CELL_NET_CTL_ERROR_PPPOE_STATUS_TERMINATE        = 0x80130414,
 	CELL_NET_CTL_ERROR_DHCP_LEASE_TIME               = 0x80130504,
+
+	CELL_GAMEUPDATE_ERROR_NOT_INITIALIZED               = 0x8002cc01,
+	CELL_GAMEUPDATE_ERROR_ALREADY_INITIALIZED           = 0x8002cc02,
+	CELL_GAMEUPDATE_ERROR_INVALID_ADDR                  = 0x8002cc03,
+	CELL_GAMEUPDATE_ERROR_INVALID_SIZE                  = 0x8002cc04,
+	CELL_GAMEUPDATE_ERROR_INVALID_MEMORY_CONTAINER      = 0x8002cc05,
+	CELL_GAMEUPDATE_ERROR_INSUFFICIENT_MEMORY_CONTAINER = 0x8002cc06,
+	CELL_GAMEUPDATE_ERROR_BUSY                          = 0x8002cc07,
+	CELL_GAMEUPDATE_ERROR_NOT_START                     = 0x8002cc08,
+	CELL_GAMEUPDATE_ERROR_LOAD_FAILED                   = 0x8002cc09,
 };
 
 // Network connection states
@@ -292,3 +302,20 @@ static const char* InfoCodeToName(s32 code)
 	default: return "???";
 	}
 }
+
+struct CellGameUpdateResult
+{
+	be_t<s32> status; // CellGameUpdateResultStatus
+	be_t<s32> error_code;
+	char app_ver[CELL_GAME_SYSP_APP_VER_SIZE];
+	char padding[2];
+};
+
+struct CellGameUpdateParam
+{
+	be_t<u32> size;
+	be_t<u32> cid;
+};
+
+using CellGameUpdateCallback = void(s32 status, s32 error_code, vm::ptr<void> userdata);
+using CellGameUpdateCallbackEx = void(vm::ptr<CellGameUpdateResult> result, vm::ptr<void> userdata);

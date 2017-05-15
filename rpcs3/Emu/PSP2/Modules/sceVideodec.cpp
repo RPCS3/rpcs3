@@ -4,7 +4,7 @@
 
 #include "sceVideodec.h"
 
-logs::channel sceVideodec("sceVideodec", logs::level::notice);
+logs::channel sceVideodec("sceVideodec");
 
 s32 sceVideodecInitLibrary(u32 codecType, vm::cptr<SceVideodecQueryInitInfo> pInitInfo)
 {

@@ -13,7 +13,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel cellFs("cellFs", logs::level::notice);
+logs::channel cellFs("cellFs");
 
 error_code cellFsGetPath(u32 fd, vm::ptr<char> out_path)
 {

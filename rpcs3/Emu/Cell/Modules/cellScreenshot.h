@@ -1,11 +1,8 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Return Codes
 enum
 {
-	CELL_SCREENSHOT_OK = 0x0,
 	CELL_SCREENSHOT_ERROR_INTERNAL = 0x8002d101,
 	CELL_SCREENSHOT_ERROR_PARAM = 0x8002d102,
 	CELL_SCREENSHOT_ERROR_DECODE = 0x8002d103,
@@ -15,7 +12,7 @@ enum
 
 struct CellScreenShotSetParam
 {
-	vm::bcptr<char> photo_title;
-	vm::bcptr<char> game_title;
-	vm::bcptr<char> game_comment;
+	vm::ps3::bcptr<char> photo_title;
+	vm::ps3::bcptr<char> game_title;
+	vm::ps3::bcptr<char> game_comment;
 };

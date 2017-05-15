@@ -5,8 +5,6 @@ namespace vm { using namespace ps3; }
 // Return codes
 enum
 {
-	CELL_SAVEDATA_RET_OK                = 0,
-	CELL_SAVEDATA_RET_CANCEL            = 1,
 	CELL_SAVEDATA_ERROR_CBRESULT        = 0x8002b401,
 	CELL_SAVEDATA_ERROR_ACCESS_ERROR    = 0x8002b402,
 	CELL_SAVEDATA_ERROR_INTERNAL        = 0x8002b403,

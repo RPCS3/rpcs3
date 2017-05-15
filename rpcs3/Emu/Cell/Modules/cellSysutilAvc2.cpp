@@ -5,7 +5,7 @@
 #include "sceNp2.h"
 #include "cellSysutilAvc2.h"
 
-logs::channel cellSysutilAvc2("cellSysutilAvc2", logs::level::notice);
+logs::channel cellSysutilAvc2("cellSysutilAvc2");
 
 s32 cellSysutilAvc2GetPlayerInfo()
 {

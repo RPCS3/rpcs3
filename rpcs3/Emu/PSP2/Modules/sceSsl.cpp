@@ -4,7 +4,7 @@
 
 #include "sceSsl.h"
 
-logs::channel sceSsl("sceSsl", logs::level::notice);
+logs::channel sceSsl("sceSsl");
 
 s32 sceSslInit(u32 poolSize)
 {

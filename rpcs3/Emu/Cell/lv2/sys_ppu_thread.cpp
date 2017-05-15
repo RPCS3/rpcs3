@@ -10,7 +10,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_ppu_thread("sys_ppu_thread", logs::level::notice);
+logs::channel sys_ppu_thread("sys_ppu_thread");
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {

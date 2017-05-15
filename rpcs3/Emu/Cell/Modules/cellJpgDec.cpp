@@ -9,7 +9,7 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellJpgDec.h"
 
-logs::channel cellJpgDec("cellJpgDec", logs::level::notice);
+logs::channel cellJpgDec("cellJpgDec");
 
 s32 cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {

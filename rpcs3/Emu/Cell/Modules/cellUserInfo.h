@@ -2,13 +2,6 @@
 
 namespace vm { using namespace ps3; }
 
-// Return Codes
-enum
-{
-	CELL_USERINFO_RET_OK          = 0,
-	CELL_USERINFO_RET_CANCEL      = 1,
-};
-
 // Error Codes
 enum CellUserInfoError : u32
 {
@@ -66,3 +59,5 @@ struct CellUserInfoTypeSet
 	be_t<u32> type; // CellUserInfoListType
 	vm::bptr<void> reserved;
 };
+
+using CellUserInfoFinishCallback = void(s32 result, vm::ptr<CellUserInfoUserStat> selectedUser, vm::ptr<void> userdata);

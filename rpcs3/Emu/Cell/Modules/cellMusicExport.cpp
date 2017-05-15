@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellMusicExport("cellMusicExport", logs::level::notice);
+namespace vm { using namespace ps3; }
+
+logs::channel cellMusicExport("cellMusicExport");
 
 // Return Codes
 enum
 {
-	CELL_MUSIC_EXPORT_UTIL_RET_OK             = 0,
-	CELL_MUSIC_EXPORT_UTIL_RET_CANCEL         = 1,
 	CELL_MUSIC_EXPORT_UTIL_ERROR_BUSY         = 0x8002c601,
 	CELL_MUSIC_EXPORT_UTIL_ERROR_INTERNAL     = 0x8002c602,
 	CELL_MUSIC_EXPORT_UTIL_ERROR_PARAM        = 0x8002c603,

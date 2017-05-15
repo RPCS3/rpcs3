@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellPhotoImportUtil("cellPhotoImportUtil", logs::level::notice);
+namespace vm { using namespace ps3; }
+
+logs::channel cellPhotoImportUtil("cellPhotoImportUtil");
 
 // Return Codes
 enum
 {
-	CELL_PHOTO_IMPORT_RET_OK             = 0,
-	CELL_PHOTO_IMPORT_RET_CANCEL         = 1,
 	CELL_PHOTO_IMPORT_ERROR_BUSY         = 0x8002c701,
 	CELL_PHOTO_IMPORT_ERROR_INTERNAL     = 0x8002c702,
 	CELL_PHOTO_IMPORT_ERROR_PARAM        = 0x8002c703,

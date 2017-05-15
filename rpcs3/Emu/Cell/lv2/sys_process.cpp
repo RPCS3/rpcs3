@@ -24,7 +24,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_process("sys_process", logs::level::notice);
+logs::channel sys_process("sys_process");
 
 u32 g_ps3_sdk_version;
 

@@ -11,7 +11,7 @@
 
 #include <algorithm>
 
-logs::channel sceLibKernel("sceLibKernel", logs::level::notice);
+logs::channel sceLibKernel("sceLibKernel");
 
 extern u64 get_system_time();
 
