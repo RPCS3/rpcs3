@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 #include <QDockWidget>
 #include <QCoreApplication>
+#include <QFontDatabase>
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
@@ -30,6 +31,7 @@ CgDisasmWindow::CgDisasmWindow(QWidget* parent): QTabWidget()
 	m_disasm_text->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	m_disasm_text->setReadOnly(true);
 	m_disasm_text->setWordWrapMode(QTextOption::NoWrap);
+	m_disasm_text->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	layout_disasm->addWidget(m_disasm_text);
 	tab_disasm->setLayout(layout_disasm);
 	
@@ -38,6 +40,7 @@ CgDisasmWindow::CgDisasmWindow(QWidget* parent): QTabWidget()
 	m_glsl_text->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	m_glsl_text->setReadOnly(true);
 	m_glsl_text->setWordWrapMode(QTextOption::NoWrap);
+	m_glsl_text->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	layout_glsl->addWidget(m_glsl_text);
 	tab_glsl->setLayout(layout_glsl);
 

@@ -16,6 +16,32 @@
 
 GraphicsTab::GraphicsTab(std::shared_ptr<EmuSettings> xSettings, QWidget *parent) : QWidget(parent), xEmuSettings(xSettings)
 {
+	bool supportsD3D12 = false;
+	QStringList D3D12Adapters;
+
+// check for dx12 adapters
+#ifdef _MSC_VER
+	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
+	supportsD3D12 = SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory)));
+	if (supportsD3D12)
+	{
+		supportsD3D12 = false;
+		IDXGIAdapter1* pAdapter = nullptr;
+		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != dxgi_factory->EnumAdapters1(adapterIndex, &pAdapter); ++adapterIndex)
+		{
+			HMODULE D3D12Module = verify("d3d12.dll", LoadLibrary(L"d3d12.dll"));
+			PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
+			if (SUCCEEDED(wrapD3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+			{
+				DXGI_ADAPTER_DESC desc;
+				pAdapter->GetDesc(&desc);
+				D3D12Adapters.append(QString::fromWCharArray(desc.Description));
+				supportsD3D12 = true;
+			}
+		}
+	}
+#endif
+
 	// Render
 	QGroupBox *render = new QGroupBox(tr("Render"));
 
@@ -35,13 +61,24 @@ GraphicsTab::GraphicsTab(std::shared_ptr<EmuSettings> xSettings, QWidget *parent
 	res->setLayout(resVbox);
 
 	// D3D Adapter
-	QGroupBox *d3dAdapter = new QGroupBox(tr("D3D Adapter (DirectX 12 Only)"));
+	QGroupBox *d3dAdapter;
+	QComboBox *d3dAdapterBox;
+	if (supportsD3D12)
+	{
+		d3dAdapter = new QGroupBox(tr("D3D Adapter (DirectX 12 Only)"));
+		d3dAdapterBox = new QComboBox(this);
 
-	QComboBox *d3dAdapterBox = new QComboBox(this);
-
-	QVBoxLayout *d3dAdapterVbox = new QVBoxLayout();
-	d3dAdapterVbox->addWidget(d3dAdapterBox);
-	d3dAdapter->setLayout(d3dAdapterVbox);
+		QVBoxLayout *d3dAdapterVbox = new QVBoxLayout();
+		d3dAdapterVbox->addWidget(d3dAdapterBox);
+		d3dAdapter->setLayout(d3dAdapterVbox);
+		auto enableAdapter = [=](int index)
+		{
+			if (renderBox->itemText(index) == "D3D12") d3dAdapter->setEnabled(true);
+			else d3dAdapter->setEnabled(false);
+		};
+		enableAdapter(renderBox->currentIndex());
+		connect(renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), d3dAdapter, enableAdapter);
+	}
 
 	// Aspect ratio
 	QGroupBox *aspect = new QGroupBox(tr("Aspect ratio"));
@@ -77,7 +114,8 @@ GraphicsTab::GraphicsTab(std::shared_ptr<EmuSettings> xSettings, QWidget *parent
 	QVBoxLayout *vbox11 = new QVBoxLayout();
 	vbox11->addWidget(render);
 	vbox11->addWidget(res);
-	vbox11->addWidget(d3dAdapter);
+	// be careful with layout changes due to D3D12 when adding new stuff
+	if (supportsD3D12) vbox11->addWidget(d3dAdapter);
 	vbox11->addStretch();
 	QVBoxLayout *vbox12 = new QVBoxLayout();
 	vbox12->addWidget(aspect);
@@ -109,20 +147,12 @@ GraphicsTab::GraphicsTab(std::shared_ptr<EmuSettings> xSettings, QWidget *parent
 	vbox->addStretch();
 	setLayout(vbox);
 
-#ifdef _MSC_VER
-	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
-
-	if (SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory))))
+	if (supportsD3D12) // Fill D3D12 adapter combobox
 	{
-		Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
-
-		for (UINT id = 0; dxgi_factory->EnumAdapters(id, adapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; id++)
+		for (auto adapter : D3D12Adapters)
 		{
-			DXGI_ADAPTER_DESC desc;
-			adapter->GetDesc(&desc);
-			d3dAdapterBox->addItem(QString::fromWCharArray(desc.Description));
+			d3dAdapterBox->addItem(adapter);
 		}
-
 		QString adapterTxt = QString::fromStdString(xEmuSettings->GetSetting(EmuSettings::D3D12Adapter));
 		int index = d3dAdapterBox->findText(adapterTxt);
 		if (index == -1)
@@ -137,9 +167,15 @@ GraphicsTab::GraphicsTab(std::shared_ptr<EmuSettings> xSettings, QWidget *parent
 			xEmuSettings->SetSetting(EmuSettings::D3D12Adapter, text.toStdString());
 		});
 	}
-	else
-#endif
+	else // Remove D3D12 option from render combobox
 	{
-		d3dAdapter->setEnabled(false);
+		for (int i = 0; i < renderBox->count(); i++)
+		{
+			if (renderBox->itemText(i) == "D3D12")
+			{
+				renderBox->removeItem(i);
+				break;
+			}
+		}
 	}
 }

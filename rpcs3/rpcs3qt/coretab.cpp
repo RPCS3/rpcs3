@@ -69,6 +69,8 @@ CoreTab::CoreTab(std::shared_ptr<EmuSettings> settings, QWidget *parent) : QWidg
 
 	// Checkboxes
 	QCheckBox *hookStFunc = settings->CreateEnhancedCheckBox(EmuSettings::HookStaticFuncs, this);
+	QCheckBox *bindSPUThreads = settings->CreateEnhancedCheckBox(EmuSettings::BindSPUThreads, this);
+	QCheckBox *lowerSPUThrPrio = settings->CreateEnhancedCheckBox(EmuSettings::LowerSPUThreadPrio, this);
 
 	// Load libraries
 	QGroupBox *lle = new QGroupBox(tr("Load libraries"));
@@ -152,6 +154,8 @@ CoreTab::CoreTab(std::shared_ptr<EmuSettings> settings, QWidget *parent) : QWidg
 	vbox->addWidget(ppuDecoder);
 	vbox->addWidget(spuDecoder);
 	vbox->addWidget(hookStFunc);
+	vbox->addWidget(bindSPUThreads);
+	vbox->addWidget(lowerSPUThrPrio);
 	vbox->addStretch();
 
 	QHBoxLayout *hbox = new QHBoxLayout;
@@ -160,9 +164,6 @@ CoreTab::CoreTab(std::shared_ptr<EmuSettings> settings, QWidget *parent) : QWidg
 	setLayout(hbox);
 
 	// Events
-	connect(hookStFunc, SIGNAL(buttonToggled(int)), this, SLOT(OnHookButtonToggled(int)));
-	connect(ppuDecoder, SIGNAL(buttonToggled(int)), this, SLOT(OnPPUDecoderToggled(int)));
-	connect(spuDecoder, SIGNAL(buttonToggled(int)), this, SLOT(OnSPUDecoderToggled(int)));
 	connect(libModeBG, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &CoreTab::OnLibButtonClicked);
 	connect(searchBox, &QLineEdit::textChanged, this, &CoreTab::OnSearchBoxTextChanged);
 
@@ -208,21 +209,6 @@ void CoreTab::OnSearchBoxTextChanged()
 	{
 		lleList->setRowHidden(index.row(), false);
 	}
-}
-
-void CoreTab::OnHookButtonToggled()
-{
-
-}
-
-void CoreTab::OnPPUDecoderToggled()
-{
-
-}
-
-void CoreTab::OnSPUDecoderToggled()
-{
-
 }
 
 void CoreTab::OnLibButtonClicked(int ind)

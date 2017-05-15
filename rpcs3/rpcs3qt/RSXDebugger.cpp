@@ -112,44 +112,31 @@ RSXDebugger::RSXDebugger(QWidget* parent)
 	m_list_settings = l_addRSXTab(m_list_settings, tr("Settings"), 2);
 
 	//Tabs: List Columns
-	m_list_commands->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Address")));
-	m_list_commands->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Value")));
-	m_list_commands->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Command")));
-	m_list_commands->setHorizontalHeaderItem(3, new QTableWidgetItem(tr("Count")));
+	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
 	m_list_commands->setColumnWidth(0, 70);
 	m_list_commands->setColumnWidth(1, 70);
 	m_list_commands->setColumnWidth(2, 520);
 	m_list_commands->setColumnWidth(3, 60);
 
-	m_list_captured_frame->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Column")));
+	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr("Column"));
 	m_list_captured_frame->setColumnWidth(0, 720);
 
-	m_list_captured_draw_calls->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Draw calls")));
+	m_list_captured_draw_calls->setHorizontalHeaderLabels(QStringList() << tr("Draw calls"));
 	m_list_captured_draw_calls->setColumnWidth(0, 720);
 
-	m_list_flags->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Name")));
-	m_list_flags->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Value")));
+	m_list_flags->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
 	m_list_flags->setColumnWidth(0, 170);
 	m_list_flags->setColumnWidth(1, 270);
 
-	m_list_lightning->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Name")));
-	m_list_lightning->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Value")));
+	m_list_lightning->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
 	m_list_lightning->setColumnWidth(0, 170);
 	m_list_lightning->setColumnWidth(1, 270);
 
-	m_list_texture->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Index")));
-	m_list_texture->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Address")));
-	m_list_texture->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Cubemap")));
-	m_list_texture->setHorizontalHeaderItem(3, new QTableWidgetItem(tr("Dimension")));
-	m_list_texture->setHorizontalHeaderItem(4, new QTableWidgetItem(tr("Enabled")));
-	m_list_texture->setHorizontalHeaderItem(5, new QTableWidgetItem(tr("Format")));
-	m_list_texture->setHorizontalHeaderItem(6, new QTableWidgetItem(tr("Mipmap")));
-	m_list_texture->setHorizontalHeaderItem(7, new QTableWidgetItem(tr("Pitch")));
-	m_list_texture->setHorizontalHeaderItem(8, new QTableWidgetItem(tr("Size")));
+	m_list_texture->setHorizontalHeaderLabels(QStringList() << tr("Index") << tr("Address") << tr("Cubemap")
+		<< tr("Dimension") << tr("Enabled") << tr("Format") << tr("Mipmap") << tr("Pitch") << tr("Size"));
 	for (int i = 0; i<m_list_texture->columnCount(); i++) m_list_lightning->setColumnWidth(i, 80);
 
-	m_list_settings->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Name")));
-	m_list_settings->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Value")));
+	m_list_settings->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
 	m_list_settings->setColumnWidth(0, 170);
 	m_list_settings->setColumnWidth(1, 270);
 
@@ -802,11 +789,11 @@ void RSXDebugger::GetFlags()
 		return;
 	}
 
-	m_list_flags->clear();
+	m_list_flags->clearContents();
 	int i=0;
 
 #define LIST_FLAGS_ADD(name, value) \
-	m_list_flags->setItem(i, 0, name); m_list_flags->SetItem(i, 1, value ? "Enabled" : "Disabled"); i++;
+	m_list_flags->setItem(i, 0, new QTableWidgetItem(qstr(name))); m_list_flags->setItem(i, 1, new QTableWidgetItem(qstr(value ? "Enabled" : "Disabled"))); i++;
 	/*
 	LIST_FLAGS_ADD("Alpha test",         render->m_set_alpha_test);
 	LIST_FLAGS_ADD("Blend",              render->m_set_blend);
@@ -839,11 +826,11 @@ void RSXDebugger::GetLightning()
 		return;
 	}
 
-	m_list_lightning->clear();
+	m_list_lightning->clearContents();
 	int i=0;
 
 #define LIST_LIGHTNING_ADD(name, value) \
-	m_list_lightning->SetItem(i, 0, name); m_list_lightning->SetItem(i, 1, value); i++;
+	m_list_lightning->setItem(i, 0, new QTableWidgetItem(qstr(name))); m_list_lightning->setItem(i, 1, new QTableWidgetItem(qstr(value))); i++;
 
 	//LIST_LIGHTNING_ADD("Shade model", (render->m_shade_mode == 0x1D00) ? "Flat" : "Smooth");
 
@@ -858,34 +845,35 @@ void RSXDebugger::GetTexture()
 		return;
 	}
 
-	m_list_texture->clear();
+	m_list_texture->clearContents();
+	m_list_texture->setRowCount(rsx::limits::fragment_textures_count);
 
 	for(uint i=0; i<rsx::limits::fragment_textures_count; ++i)
 	{
 /*		if(render->textures[i].enabled())
 		{
-			m_list_texture->setItem(i, 0, qstr(fmt::format("%d", i));
+			m_list_texture->setItem(i, 0, new QTableWidgetItem(qstr(fmt::format("%d", i)));
 			u8 location = render->textures[i].location();
 			if(location > 1)
 			{
 				m_list_texture->setItem(i, 1,
-					qstr(fmt::format("Bad address (offset=0x%x, location=%d)", render->textures[i].offset(), location)));
+					new QTableWidgetItem(qstr(fmt::format("Bad address (offset=0x%x, location=%d)", render->textures[i].offset(), location))));
 			}
 			else
 			{
 				m_list_texture->setItem(i, 1, 
-					qstr(fmt::format("0x%x", rsx::get_address(render->textures[i].offset(), location))));
+					new QTableWidgetItem(qstr(fmt::format("0x%x", rsx::get_address(render->textures[i].offset(), location)))));
 			}
 
-			m_list_texture->setItem(i, 2, render->textures[i].cubemap() ? "True" : "False");
-			m_list_texture->setItem(i, 3, qstr(fmt::format("%dD", render->textures[i].dimension())));
-			m_list_texture->setItem(i, 4, render->textures[i].enabled() ? "True" : "False");
-			m_list_texture->setItem(i, 5, qstr(fmt::format("0x%x", render->textures[i].format())));
-			m_list_texture->setItem(i, 6, qstr(fmt::format("0x%x", render->textures[i].mipmap())));
-			m_list_texture->setItem(i, 7, qstr(fmt::format("0x%x", render->textures[i].pitch())));
-			m_list_texture->setItem(i, 8, qstr(fmt::format("%dx%d",
+			m_list_texture->setItem(i, 2, new QTableWidgetItem(render->textures[i].cubemap() ? "True" : "False"));
+			m_list_texture->setItem(i, 3, new QTableWidgetItem(qstr(fmt::format("%dD", render->textures[i].dimension()))));
+			m_list_texture->setItem(i, 4, new QTableWidgetItem(render->textures[i].enabled() ? "True" : "False"));
+			m_list_texture->setItem(i, 5, new QTableWidgetItem(qstr(fmt::format("0x%x", render->textures[i].format()))));
+			m_list_texture->setItem(i, 6, new QTableWidgetItem(qstr(fmt::format("0x%x", render->textures[i].mipmap()))));
+			m_list_texture->setItem(i, 7, new QTableWidgetItem(qstr(fmt::format("0x%x", render->textures[i].pitch()))));
+			m_list_texture->setItem(i, 8, new QTableWidgetItem(qstr(fmt::format("%dx%d",
 				render->textures[i].width(),
-				render->textures[i].height())));
+				render->textures[i].height()))));
 
 			m_list_texture->SetItemBackgroundColour(i, QColor(m_cur_texture == i ? QColor::yellow : QColor::white));
 		}*/
@@ -900,11 +888,11 @@ void RSXDebugger::GetSettings()
 		return;
 	}
 
-	m_list_settings->clear();
+	m_list_settings->clearContents();
 	int i=0;
 
 #define LIST_SETTINGS_ADD(name, value) \
-	m_list_settings->SetItem(i, 0, name); m_list_settings->setItem(i, 1, value); i++;
+	m_list_settings->setItem(i, 0, new QTableWidgetItem(qstr(name))); m_list_settings->setItem(i, 1, new QTableWidgetItem(qstr(value))); i++;
 	/*
 	LIST_SETTINGS_ADD("Alpha func", !(render->m_set_alpha_func) ? "(none)" : fmt::format("0x%x (%s)",
 		render->m_alpha_func,
@@ -1013,10 +1001,10 @@ void RSXDebugger::SetPrograms()
 	//QLabel or QTextEdit* t_fp_edit  = new QTextEdit(&d_editor, program.fp_shader);
 	//t_vp_edit->setFont(mono);
 	//t_fp_edit->setFont(mono);
-	//hbox_vp_box.Add(t_vp_edit, 1, wxEXPAND);
-	//hbox_fp_box.Add(t_fp_edit, 1, wxEXPAND);
-	//hbox_panel.Add(hbox_vp_box, 1, wxEXPAND);
-	//hbox_panel.Add(hbox_fp_box, 1, wxEXPAND);
+	//hbox_vp_box->addWidget(t_vp_edit, 1, wxEXPAND);
+	//hbox_fp_box->addWidget(t_fp_edit, 1, wxEXPAND);
+	//hbox_panel->addLayout(hbox_vp_box, 1, wxEXPAND);
+	//hbox_panel->addLayout(hbox_fp_box, 1, wxEXPAND);
 	//d_editor.setLayout(hbox_panel);
 
 	//// Show editor and open Save Dialog when closing

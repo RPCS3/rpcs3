@@ -29,6 +29,8 @@ public:
 		SPUDecoder,
 		LibLoadOptions,
 		HookStaticFuncs,
+		BindSPUThreads,
+		LowerSPUThreadPrio,
 
 		// Graphics
 		Renderer,
@@ -108,6 +110,8 @@ private:
 		{ SPUDecoder,		{ "Core", "SPU Decoder"}},
 		{ LibLoadOptions,	{ "Core", "Lib Loader"}},
 		{ HookStaticFuncs,	{ "Core", "Hook static functions"}},
+		{ BindSPUThreads,	{ "Core", "Bind SPU threads to secondary cores"}},
+		{ LowerSPUThreadPrio, { "Core", "Lower SPU thread priority"}},
 
 		// Graphics Tab
 		{ Renderer,			{ "Video", "Renderer"}},

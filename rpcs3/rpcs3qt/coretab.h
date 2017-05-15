@@ -19,9 +19,6 @@ public slots:
 	void SaveSelectedLibraries();
 private slots:
 	void OnSearchBoxTextChanged();
-	void OnHookButtonToggled();
-	void OnPPUDecoderToggled();
-	void OnSPUDecoderToggled();
 	void OnLibButtonClicked(int ind);
 
 private:

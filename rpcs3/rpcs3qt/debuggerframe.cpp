@@ -10,7 +10,7 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 
 	update = new QTimer(this);
 	connect(update, &QTimer::timeout, this, &DebuggerFrame::UpdateUI);
-	ToggleUpdateTimer();
+	EnableUpdateTimer(true);
 
 	body = new QWidget(this);
 	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
@@ -23,6 +23,8 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 	m_list = new QListWidget(this);
 	m_choice_units = new QComboBox(this);
 	m_choice_units->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+	m_choice_units->setMaxVisibleItems(30);
+	m_choice_units->setMaximumWidth(500);
 
 	QPushButton* b_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	QPushButton* b_go_to_pc = new QPushButton(tr("Go To PC"), this);
@@ -37,6 +39,7 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 	hbox_b_main->addWidget(m_btn_run);
 	hbox_b_main->addWidget(m_btn_pause);
 	hbox_b_main->addWidget(m_choice_units);
+	hbox_b_main->addStretch();
 
 	//Registers
 	m_regs = new QTextEdit(this);
@@ -70,6 +73,7 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 	connect(m_btn_pause, &QAbstractButton::clicked, this, &DebuggerFrame::DoPause);
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &DebuggerFrame::UpdateUI);
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &DebuggerFrame::OnSelectUnit);
+	connect(this, &QDockWidget::visibilityChanged, this, &DebuggerFrame::EnableUpdateTimer);
 
 	ShowAddr(CentrePc(m_pc));
 	UpdateUnitList();
@@ -553,8 +557,7 @@ void DebuggerFrame::RemoveBreakPoint(u32 pc)
 	ppu_breakpoint(pc);
 }
 
-void DebuggerFrame::ToggleUpdateTimer()
+void DebuggerFrame::EnableUpdateTimer(bool enable)
 {
-	timerIsActive ? update->stop() : update->start(1000);
-	timerIsActive = !timerIsActive;
+	enable ? update->start(50) : update->stop();
 }

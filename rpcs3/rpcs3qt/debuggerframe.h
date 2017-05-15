@@ -54,7 +54,6 @@ class DebuggerFrame : public QDockWidget
 	u32 m_last_pc = -1;
 	u32 m_last_stat = 0;
 
-	bool timerIsActive = false;
 	QTimer* update;
 
 public:
@@ -95,8 +94,8 @@ protected:
 signals:
 	void DebugFrameClosed();
 
-public slots:
-	void ToggleUpdateTimer();
+private slots:
+	void EnableUpdateTimer(bool state);
 };
 
 #endif // DEBUGGERFRAME_H
