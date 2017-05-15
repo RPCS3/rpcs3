@@ -11,7 +11,7 @@
 #include <thread>
 #include <mutex>
 
-logs::channel libmixer("libmixer", logs::level::notice);
+logs::channel libmixer("libmixer");
 
 struct SurMixerConfig
 {

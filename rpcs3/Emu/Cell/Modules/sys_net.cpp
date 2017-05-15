@@ -19,7 +19,7 @@
 
 #include <fcntl.h>
 
-logs::channel libnet("libnet", logs::level::notice);
+logs::channel libnet("libnet");
 
 namespace sys_net
 {

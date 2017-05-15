@@ -4,7 +4,7 @@
 
 #include "sceSqlite.h"
 
-logs::channel sceSqlite("sceSqlite", logs::level::notice);
+logs::channel sceSqlite("sceSqlite");
 
 #define REG_FUNC(nid, name) REG_FNID(SceSqlite, nid, name)
 

@@ -8,7 +8,7 @@
 #include "cellSpurs.h"
 #include "cellSpursJq.h"
 
-logs::channel cellSpursJq("cellSpursJq", logs::level::notice);
+logs::channel cellSpursJq("cellSpursJq");
 
 s32 cellSpursJobQueueAttributeInitialize()
 {

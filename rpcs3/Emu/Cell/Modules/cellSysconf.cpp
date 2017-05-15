@@ -3,7 +3,7 @@
 
 #include "cellSysconf.h"
 
-logs::channel cellSysconf("cellSysconf", logs::level::notice);
+logs::channel cellSysconf("cellSysconf");
 
 s32 cellSysconfAbort()
 {

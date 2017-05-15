@@ -12,7 +12,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_event("sys_event", logs::level::notice);
+logs::channel sys_event("sys_event");
 
 template<> DECLARE(ipc_manager<lv2_event_queue, u64>::g_ipc) {};
 

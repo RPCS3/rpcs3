@@ -4,7 +4,7 @@
 
 #include "sceNpScore.h"
 
-logs::channel sceNpScore("sceNpScore", logs::level::notice);
+logs::channel sceNpScore("sceNpScore");
 
 s32 sceNpScoreInit(s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {

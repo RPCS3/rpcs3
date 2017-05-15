@@ -19,7 +19,7 @@ typedef png_bytep iCCP_profile_type;
 typedef png_charp iCCP_profile_type;
 #endif
 
-logs::channel cellPngDec("cellPngDec", logs::level::notice);
+logs::channel cellPngDec("cellPngDec");
 
 // cellPngDec aliases to improve readability
 using PPHandle           = vm::pptr<PngHandle>;

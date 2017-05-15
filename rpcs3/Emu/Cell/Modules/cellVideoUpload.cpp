@@ -3,7 +3,7 @@
 
 #include "cellVideoUpload.h"
 
-logs::channel cellVideoUpload("cellVideoUpload", logs::level::notice);
+logs::channel cellVideoUpload("cellVideoUpload");
 
 s32 cellVideoUploadInitialize(vm::cptr<CellVideoUploadParam> pParam, vm::ptr<CellVideoUploadCallback> cb, vm::ptr<void> userdata)
 {

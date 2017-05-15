@@ -9,7 +9,7 @@
 
 #include <thread>
 
-logs::channel cellDmux("cellDmux", logs::level::notice);
+logs::channel cellDmux("cellDmux");
 
 /* Demuxer Thread Classes */
 

@@ -4,7 +4,7 @@
 
 #include "sceJpeg.h"
 
-logs::channel sceJpeg("sceJpeg", logs::level::notice);
+logs::channel sceJpeg("sceJpeg");
 
 s32 sceJpegInitMJpeg(s32 maxSplitDecoder)
 {

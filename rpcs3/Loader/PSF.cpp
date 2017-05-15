@@ -19,7 +19,7 @@ void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 
 namespace psf
 {
-	logs::channel log("PSF", logs::level::notice);
+	logs::channel log("PSF");
 
 	struct header_t
 	{

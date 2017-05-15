@@ -7,7 +7,7 @@
 #include "cellVideoOut.h"
 #include "cellSysutil.h"
 
-logs::channel cellAvconfExt("cellAvconfExt", logs::level::notice);
+logs::channel cellAvconfExt("cellAvconfExt");
 
 vm::gvar<f32> g_gamma; // TODO
 

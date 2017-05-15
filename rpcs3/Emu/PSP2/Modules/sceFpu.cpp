@@ -4,7 +4,7 @@
 
 #include "sceFpu.h"
 
-logs::channel sceFpu("sceFpu", logs::level::notice);
+logs::channel sceFpu("sceFpu");
 
 float sceFpuSinf(float x)
 {

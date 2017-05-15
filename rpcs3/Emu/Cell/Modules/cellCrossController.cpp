@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellCrossController("cellCrossController", logs::level::notice);
+logs::channel cellCrossController("cellCrossController");
 
 s32 cellCrossController_37E1F502() // LittleBigPlanet 2 and 3
 {

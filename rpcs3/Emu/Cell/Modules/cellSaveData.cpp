@@ -10,7 +10,7 @@
 #include <mutex>
 #include <algorithm>
 
-logs::channel cellSaveData("cellSaveData", logs::level::notice);
+logs::channel cellSaveData("cellSaveData");
 
 SaveDialogBase::~SaveDialogBase()
 {
@@ -791,14 +791,14 @@ s32 cellSaveDataDelete2(u32 container)
 {
 	cellSaveData.todo("cellSaveDataDelete2(container=0x%x)", container);
 
-	return CELL_SAVEDATA_RET_CANCEL;
+	return CELL_CANCEL;
 }
 
 s32 cellSaveDataDelete(u32 container)
 {
 	cellSaveData.todo("cellSaveDataDelete(container=0x%x)", container);
 
-	return CELL_SAVEDATA_RET_CANCEL;
+	return CELL_CANCEL;
 }
 
 s32 cellSaveDataFixedDelete(ppu_thread& ppu, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
@@ -948,7 +948,7 @@ s32 cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat>
 		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
 	}
 
-	return CELL_SAVEDATA_RET_OK;
+	return CELL_OK;
 }
 
 s32 cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)

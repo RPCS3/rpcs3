@@ -4,7 +4,7 @@
 
 #include "sceNetCtl.h"
 
-logs::channel sceNetCtl("sceNetCtl", logs::level::notice);
+logs::channel sceNetCtl("sceNetCtl");
 
 s32 sceNetCtlInit()
 {

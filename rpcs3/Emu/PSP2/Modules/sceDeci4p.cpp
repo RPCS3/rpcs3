@@ -4,7 +4,7 @@
 
 #include "sceDeci4p.h"
 
-logs::channel sceDeci4p("sceDeci4p", logs::level::notice);
+logs::channel sceDeci4p("sceDeci4p");
 
 s32 sceKernelDeci4pOpen(vm::cptr<char> protoname, u32 protonum, u32 bufsize)
 {

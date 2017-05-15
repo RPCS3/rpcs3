@@ -4,7 +4,7 @@
 
 #include "sceDisplay.h"
 
-logs::channel sceDisplay("sceDisplay", logs::level::notice);
+logs::channel sceDisplay("sceDisplay");
 
 s32 sceDisplayGetRefreshRate(vm::ptr<float> pFps)
 {

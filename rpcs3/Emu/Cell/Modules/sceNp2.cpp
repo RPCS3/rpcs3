@@ -4,7 +4,7 @@
 #include "sceNp.h"
 #include "sceNp2.h"
 
-logs::channel sceNp2("sceNp2", logs::level::notice);
+logs::channel sceNp2("sceNp2");
 
 s32 sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 {

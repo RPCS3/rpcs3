@@ -19,7 +19,7 @@ extern "C"
 
 extern std::mutex g_mutex_avcodec_open2;
 
-logs::channel cellAdec("cellAdec", logs::level::notice);
+logs::channel cellAdec("cellAdec");
 
 class AudioDecoder : public ppu_thread
 {

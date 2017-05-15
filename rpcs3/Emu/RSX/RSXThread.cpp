@@ -1165,7 +1165,7 @@ namespace rsx
 		this->ioAddress = ioAddress;
 		this->ioSize = ioSize;
 		local_mem_addr = localAddress;
-		flip_status = 0;
+		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
 		m_used_gcm_commands.clear();
 

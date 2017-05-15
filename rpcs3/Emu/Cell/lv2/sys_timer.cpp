@@ -13,7 +13,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_timer("sys_timer", logs::level::notice);
+logs::channel sys_timer("sys_timer");
 
 extern u64 get_system_time();
 

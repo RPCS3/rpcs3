@@ -4,7 +4,7 @@
 
 #include "sceVoiceQoS.h"
 
-logs::channel sceVoiceQoS("sceVoiceQoS", logs::level::notice);
+logs::channel sceVoiceQoS("sceVoiceQoS");
 
 s32 sceVoiceQoSInit()
 {

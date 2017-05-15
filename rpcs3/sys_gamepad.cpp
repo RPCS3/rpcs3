@@ -9,7 +9,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_gamepad("sys_gamepad", logs::level::notice);
+logs::channel sys_gamepad("sys_gamepad");
 
 u32 sys_gamepad_ycon_initalize(vm::ps3::ptr<uint8_t> in, vm::ps3::ptr<uint8_t> out)
 {

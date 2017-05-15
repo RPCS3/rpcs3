@@ -9,7 +9,7 @@
 #include "cellRtc.h"
 #include "sceNp.h"
 
-logs::channel sceNp("sceNp", logs::level::notice);
+logs::channel sceNp("sceNp");
 
 s32 g_psn_connection_status = SCE_NP_MANAGER_STATUS_OFFLINE;
 

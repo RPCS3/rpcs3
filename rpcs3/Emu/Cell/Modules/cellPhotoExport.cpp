@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellPhotoExport("cellPhotoExport", logs::level::notice);
+namespace vm { using namespace ps3; }
+
+logs::channel cellPhotoExport("cellPhotoExport");
 
 // Return Codes
 enum
 {
-	CELL_PHOTO_EXPORT_UTIL_RET_OK             = 0,
-	CELL_PHOTO_EXPORT_UTIL_RET_CANCEL         = 1,
 	CELL_PHOTO_EXPORT_UTIL_ERROR_BUSY         = 0x8002c201,
 	CELL_PHOTO_EXPORT_UTIL_ERROR_INTERNAL     = 0x8002c202,
 	CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM        = 0x8002c203,

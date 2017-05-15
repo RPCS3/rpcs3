@@ -428,7 +428,7 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	info.avail_free = avail_free.QuadPart;
 #else
 	struct ::statvfs buf;
-	if (!::statvfs(path.c_str(), &buf) != 0)
+	if (::statvfs(path.c_str(), &buf) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;

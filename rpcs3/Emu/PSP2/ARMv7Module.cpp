@@ -11,67 +11,6 @@
 #include "ARMv7Module.h"
 #include "Modules/sceLibKernel.h"
 
-LOG_CHANNEL(sceAppMgr);
-LOG_CHANNEL(sceAppUtil);
-LOG_CHANNEL(sceAudio);
-LOG_CHANNEL(sceAudiodec);
-LOG_CHANNEL(sceAudioenc);
-LOG_CHANNEL(sceAudioIn);
-LOG_CHANNEL(sceCamera);
-LOG_CHANNEL(sceCodecEngine);
-LOG_CHANNEL(sceCommonDialog);
-LOG_CHANNEL(sceCtrl);
-LOG_CHANNEL(sceDbg);
-LOG_CHANNEL(sceDeci4p);
-LOG_CHANNEL(sceDeflt);
-LOG_CHANNEL(sceDisplay);
-LOG_CHANNEL(sceFiber);
-LOG_CHANNEL(sceFios);
-LOG_CHANNEL(sceFpu);
-LOG_CHANNEL(sceGxm);
-LOG_CHANNEL(sceHttp);
-LOG_CHANNEL(sceIme);
-LOG_CHANNEL(sceJpeg);
-LOG_CHANNEL(sceJpegEnc);
-LOG_CHANNEL(sceLibc);
-LOG_CHANNEL(sceLibKernel);
-LOG_CHANNEL(sceLibm);
-LOG_CHANNEL(sceLibstdcxx);
-LOG_CHANNEL(sceLibXml);
-LOG_CHANNEL(sceLiveArea);
-LOG_CHANNEL(sceLocation);
-LOG_CHANNEL(sceMd5);
-LOG_CHANNEL(sceMotion);
-LOG_CHANNEL(sceMt19937);
-LOG_CHANNEL(sceNet);
-LOG_CHANNEL(sceNetCtl);
-LOG_CHANNEL(sceNgs);
-LOG_CHANNEL(sceNpBasic);
-LOG_CHANNEL(sceNpCommon);
-LOG_CHANNEL(sceNpManager);
-LOG_CHANNEL(sceNpMatching);
-LOG_CHANNEL(sceNpScore);
-LOG_CHANNEL(sceNpUtility);
-LOG_CHANNEL(scePerf);
-LOG_CHANNEL(scePgf);
-LOG_CHANNEL(scePhotoExport);
-LOG_CHANNEL(sceRazorCapture);
-LOG_CHANNEL(sceRtc);
-LOG_CHANNEL(sceSas);
-LOG_CHANNEL(sceScreenShot);
-LOG_CHANNEL(sceSfmt);
-LOG_CHANNEL(sceSha);
-LOG_CHANNEL(sceSqlite);
-LOG_CHANNEL(sceSsl);
-LOG_CHANNEL(sceSulpha);
-LOG_CHANNEL(sceSysmodule);
-LOG_CHANNEL(sceSystemGesture);
-LOG_CHANNEL(sceTouch);
-LOG_CHANNEL(sceUlt);
-LOG_CHANNEL(sceVideodec);
-LOG_CHANNEL(sceVoice);
-LOG_CHANNEL(sceVoiceQoS);
-
 extern std::string arm_get_function_name(const std::string& module, u32 fnid);
 extern std::string arm_get_variable_name(const std::string& module, u32 vnid);
 

@@ -5,7 +5,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_ss("sys_ss", logs::level::notice);
+logs::channel sys_ss("sys_ss");
 
 s32 sys_ss_get_console_id(vm::ps3::ptr<u8> buf)
 {

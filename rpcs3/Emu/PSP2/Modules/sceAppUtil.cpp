@@ -4,7 +4,7 @@
 
 #include "sceAppUtil.h"
 
-logs::channel sceAppUtil("sceAppUtil", logs::level::notice);
+logs::channel sceAppUtil("sceAppUtil");
 
 s32 sceAppUtilInit(vm::cptr<SceAppUtilInitParam> initParam, vm::ptr<SceAppUtilBootParam> bootParam)
 {

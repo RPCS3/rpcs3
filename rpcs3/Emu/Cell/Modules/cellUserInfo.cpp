@@ -6,7 +6,7 @@
 
 #include "Utilities/StrUtil.h"
 
-logs::channel cellUserInfo("cellUserInfo", logs::level::notice);
+logs::channel cellUserInfo("cellUserInfo");
 
 template<>
 void fmt_class_string<CellUserInfoError>::format(std::string& out, u64 arg)
@@ -25,7 +25,7 @@ void fmt_class_string<CellUserInfoError>::format(std::string& out, u64 arg)
 	});
 }
 
-s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
+error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
 	cellUserInfo.warning("cellUserInfoGetStat(id=%d, stat=*0x%x)", id, stat);
 
@@ -62,22 +62,21 @@ s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 	return CELL_OK;
 }
 
-s32 cellUserInfoSelectUser_ListType()
+error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType, vm::ptr<CellUserInfoFinishCallback> funcSelect, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellUserInfo);
+	cellUserInfo.todo("cellUserInfoSelectUser_ListType(listType=*0x%x, funcSelect=*0x%x, container=0x%x, userdata=*0x%x)", listType, funcSelect, container, userdata);
 	return CELL_OK;
 }
 
-s32 cellUserInfoSelectUser_SetList()
+error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, vm::ptr<CellUserInfoFinishCallback> funcSelect, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellUserInfo);
+	cellUserInfo.todo("cellUserInfoSelectUser_SetList(setList=*0x%x, funcSelect=*0x%x, container=0x%x, userdata=*0x%x)", setList, funcSelect, container, userdata);
 	return CELL_OK;
 }
 
-s32 cellUserInfoEnableOverlay()
+void cellUserInfoEnableOverlay(s32 enable)
 {
-	UNIMPLEMENTED_FUNC(cellUserInfo);
-	return CELL_OK;
+	cellUserInfo.todo("cellUserInfoEnableOverlay(enable=%d)", enable);
 }
 
 error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
