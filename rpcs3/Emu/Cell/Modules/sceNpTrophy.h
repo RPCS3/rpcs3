@@ -3,7 +3,7 @@
 namespace vm { using namespace ps3; }
 
 // Error codes
-enum
+enum SceNpTrophyError : u32
 {
 	SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED          = 0x80022901,
 	SCE_NP_TROPHY_ERROR_NOT_INITIALIZED              = 0x80022902,

@@ -22,9 +22,10 @@ struct memory_pool_t
 	std::vector<vm::ptr<void>> free_blocks;
 };
 
-s32 sys_mempool_allocate_block()
+vm::ptr<void> sys_mempool_allocate_block(sys_mempool_t mempool)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_mempool_allocate_block(mempool=%d)", mempool);
+	return vm::null;
 }
 
 s32 sys_mempool_create(vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, const u64 chunk_size, const u64 block_size, const u64 ralignment)

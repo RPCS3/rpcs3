@@ -66,3 +66,5 @@ struct CellUserInfoTypeSet
 	be_t<u32> type; // CellUserInfoListType
 	vm::bptr<void> reserved;
 };
+
+using CellUserInfoFinishCallback = void(s32 result, vm::ptr<CellUserInfoUserStat> selectedUser, vm::ptr<void> userdata);
