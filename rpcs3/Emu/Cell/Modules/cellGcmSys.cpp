@@ -623,7 +623,9 @@ void cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
 
 s32 cellGcmSetWaitFlipUnsafe()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("cellGcmSetWaitFlipUnsafe()");
+	
+	return CELL_OK;
 }
 
 void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
