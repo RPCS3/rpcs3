@@ -1,8 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
-enum
+enum CellSpudllError : u32
 {
 	CELL_SPUDLL_ERROR_INVAL        = 0x80410602,
 	CELL_SPUDLL_ERROR_STAT         = 0x8041060f,
@@ -19,8 +17,8 @@ struct CellSpudllHandleConfig
 	be_t<u32> dmaTag;
 	be_t<u32> numMaxReferred;
 	be_t<u32> numMaxDepend;
-	vm::bptr<void> unresolvedSymbolValueForFunc;
-	vm::bptr<void> unresolvedSymbolValueForObject;
-	vm::bptr<void> unresolvedSymbolValueForOther;
+	vm::ps3::bptr<void> unresolvedSymbolValueForFunc;
+	vm::ps3::bptr<void> unresolvedSymbolValueForObject;
+	vm::ps3::bptr<void> unresolvedSymbolValueForOther;
 	be_t<u32> __reserved__[9];
 };

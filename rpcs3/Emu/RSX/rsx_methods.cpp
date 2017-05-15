@@ -827,7 +827,7 @@ namespace rsx
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->gcm_current_buffer = arg;
-		rsx->flip_status = 0;
+		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
 		if (rsx->flip_handler)
 		{
