@@ -1212,7 +1212,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		ch_tag_stat.set_value(0, false);
 		ch_tag_upd = value;
 
-		if (mfc_queue.size() == 0 && (!value || ch_tag_upd.exchange(0)))
+		if (ch_tag_mask == 0)
+		{
+			// TODO
+			ch_tag_stat.set_value(0);
+		}
+		else if (mfc_queue.size() == 0 && (!value || ch_tag_upd.exchange(0)))
 		{
 			ch_tag_stat.set_value(ch_tag_mask);
 		}
