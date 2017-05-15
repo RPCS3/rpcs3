@@ -12,7 +12,7 @@ bool squeue_test_exit()
 	return Emu.IsStopped();
 }
 
-logs::channel cellPamf("cellPamf", logs::level::notice);
+logs::channel cellPamf("cellPamf");
 
 s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 {

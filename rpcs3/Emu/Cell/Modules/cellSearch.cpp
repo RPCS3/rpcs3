@@ -4,7 +4,7 @@
 
 #include "cellSearch.h"
 
-logs::channel cellSearch("cellSearch", logs::level::notice);
+logs::channel cellSearch("cellSearch");
 
 s32 cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<u32> userData)
 {

@@ -10,7 +10,7 @@
 
 #include <thread>
 
-logs::channel cellGcmSys("cellGcmSys", logs::level::notice);
+logs::channel cellGcmSys("cellGcmSys");
 
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 

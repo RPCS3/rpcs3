@@ -4,7 +4,7 @@
 
 #include "sceRtc.h"
 
-logs::channel sceRtc("sceRtc", logs::level::notice);
+logs::channel sceRtc("sceRtc");
 
 u32 sceRtcGetTickResolution()
 {

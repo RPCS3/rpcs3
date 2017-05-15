@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/PSP2/ARMv7Module.h"
 
-logs::channel sceSha("sceSha", logs::level::notice);
+logs::channel sceSha("sceSha");
 
 #define REG_FUNC(nid, name) REG_FNID(SceSha, nid, name)
 

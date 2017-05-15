@@ -3,7 +3,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel cellSysutilAp("cellSysutilAp", logs::level::notice);
+logs::channel cellSysutilAp("cellSysutilAp");
 
 // Return Codes
 enum

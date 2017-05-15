@@ -1,11 +1,8 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Return Codes
 enum
 {
-	CELL_BGDL_UTIL_RET_OK             = 0x00000000,
 	CELL_BGDL_UTIL_ERROR_BUSY         = 0x8002ce01,
 	CELL_BGDL_UTIL_ERROR_INTERNAL     = 0x8002ce02,
 	CELL_BGDL_UTIL_ERROR_PARAM        = 0x8002ce03,
@@ -33,5 +30,5 @@ struct CellBGDLInfo
 	be_t<u64> received_size;
 	be_t<u64> content_size;
 	be_t<s32> state; // CellBGDLState
-	vm::bptr<void> reserved;
+	vm::ps3::bptr<void> reserved;
 };

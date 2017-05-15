@@ -3,7 +3,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_tty("sys_tty", logs::level::notice);
+logs::channel sys_tty("sys_tty");
 
 extern fs::file g_tty;
 

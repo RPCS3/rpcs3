@@ -6,7 +6,9 @@
 #include "cellMusic.h"
 #include "cellSysutil.h"
 
-logs::channel cellMusic("cellMusic", logs::level::notice);
+namespace vm { using namespace ps3; }
+
+logs::channel cellMusic("cellMusic");
 
 struct music2_t
 {

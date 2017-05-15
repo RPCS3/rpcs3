@@ -5,7 +5,7 @@
 
 #include "cellRudp.h"
 
-logs::channel cellRudp("cellRudp", logs::level::notice);
+logs::channel cellRudp("cellRudp");
 
 struct rudp_t
 {

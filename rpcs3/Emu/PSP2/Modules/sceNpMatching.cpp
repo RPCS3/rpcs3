@@ -4,7 +4,7 @@
 
 #include "sceNpMatching.h"
 
-logs::channel sceNpMatching("sceNpMatching", logs::level::notice);
+logs::channel sceNpMatching("sceNpMatching");
 
 // Functions
 

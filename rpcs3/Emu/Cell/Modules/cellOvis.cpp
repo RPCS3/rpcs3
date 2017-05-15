@@ -4,7 +4,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel cellOvis("cellOvis", logs::level::notice);
+logs::channel cellOvis("cellOvis");
 
 // Return Codes
 enum

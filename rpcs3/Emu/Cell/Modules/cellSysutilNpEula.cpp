@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellSysutilNpEula("cellSysutilNpEula", logs::level::notice);
+logs::channel cellSysutilNpEula("cellSysutilNpEula");
 
 s32 cellSysutilNpEula_59D1629A() // Resistance 3, Uncharted 2
 {

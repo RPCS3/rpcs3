@@ -3,19 +3,22 @@
 #include "types.h"
 #include "Atomic.h"
 #include "StrFmt.h"
+#include <climits>
 
 namespace logs
 {
 	enum class level : uint
 	{
-		always, // highest level (unused, cannot be disabled)
+		always, // Highest log severity (unused, cannot be disabled)
 		fatal,
 		error,
 		todo,
 		success,
 		warning,
 		notice,
-		trace, // lowest level (usually disabled)
+		trace, // Lowest severity (usually disabled)
+
+		_uninit = UINT_MAX, // Special value for delayed initialization
 	};
 
 	struct channel;
@@ -23,7 +26,7 @@ namespace logs
 	// Message information (temporary data)
 	struct message
 	{
-		const channel* ch;
+		channel* ch;
 		level sev;
 
 		// Send log message to global logger instance
@@ -57,16 +60,16 @@ namespace logs
 		// The lowest logging level enabled for this channel (used for early filtering)
 		atomic_t<level> enabled;
 
-		// Constant initialization: name and initial log level
-		constexpr channel(const char* name, level enabled = level::trace)
+		// Constant initialization: channel name
+		constexpr channel(const char* name)
 			: name(name)
-			, enabled(enabled)
+			, enabled(level::_uninit)
 		{
 		}
 
 		// Formatting function
 		template<typename... Args>
-		SAFE_BUFFERS FORCE_INLINE void format(level sev, const char* fmt, const Args&... args) const
+		SAFE_BUFFERS FORCE_INLINE void format(level sev, const char* fmt, const Args&... args)
 		{
 			if (UNLIKELY(sev <= enabled))
 			{
@@ -76,7 +79,7 @@ namespace logs
 
 #define GEN_LOG_METHOD(_sev)\
 		template<typename... Args>\
-		SAFE_BUFFERS void _sev(const char* fmt, const Args&... args) const\
+		SAFE_BUFFERS void _sev(const char* fmt, const Args&... args)\
 		{\
 			return format<Args...>(level::_sev, fmt, args...);\
 		}
@@ -102,6 +105,12 @@ namespace logs
 	extern channel PPU;
 	extern channel SPU;
 	extern channel ARMv7;
+
+	// Log level control: set all channels to level::notice
+	void reset();
+
+	// Log level control: register channel if necessary, set channel level
+	void set_level(const std::string&, level);
 }
 
 // Legacy:

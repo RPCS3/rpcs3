@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel libmedi("libmedi", logs::level::notice);
+logs::channel libmedi("libmedi");
 
 s32 cellMediatorCloseContext()
 {

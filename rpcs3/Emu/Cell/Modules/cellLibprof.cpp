@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellLibprof("cellLibprof", logs::level::notice);
+logs::channel cellLibprof("cellLibprof");
 
 s32 cellUserTraceInit()
 {

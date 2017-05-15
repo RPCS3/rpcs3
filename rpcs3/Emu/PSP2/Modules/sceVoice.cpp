@@ -4,7 +4,7 @@
 
 #include "sceVoice.h"
 
-logs::channel sceVoice("sceVoice", logs::level::notice);
+logs::channel sceVoice("sceVoice");
 
 s32 sceVoiceInit(vm::ptr<SceVoiceInitParam> pArg, SceVoiceVersion version)
 {
