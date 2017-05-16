@@ -286,6 +286,15 @@ struct fmt::cfmt_src
 
 		return 0;
 	}
+
+	static constexpr std::size_t size_char  = 1;
+	static constexpr std::size_t size_short = 2;
+	static constexpr std::size_t size_int   = 0;
+	static constexpr std::size_t size_long  = sizeof(ulong);
+	static constexpr std::size_t size_llong = sizeof(ullong);
+	static constexpr std::size_t size_size  = sizeof(std::size_t);
+	static constexpr std::size_t size_max   = sizeof(std::uintmax_t);
+	static constexpr std::size_t size_diff  = sizeof(std::ptrdiff_t);
 };
 
 void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup, const u64* args) noexcept

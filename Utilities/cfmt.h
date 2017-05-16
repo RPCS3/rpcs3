@@ -204,11 +204,11 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		else if (fmt[0] == 'h')
 		{
 			fmt++, ctx.size++;
-			ctx.type = sizeof(char);
+			ctx.type = src.size_char;
 		}
 		else
 		{
-			ctx.type = sizeof(short);
+			ctx.type = src.size_short;
 		}
 
 		break;
@@ -223,11 +223,11 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		else if (fmt[0] == 'l')
 		{
 			fmt++, ctx.size++;
-			ctx.type = sizeof(llong);
+			ctx.type = src.size_llong;
 		}
 		else
 		{
-			ctx.type = sizeof(long);
+			ctx.type = src.size_long;
 		}
 
 		break;
@@ -241,7 +241,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		}
 		else
 		{
-			ctx.type = sizeof(std::size_t);
+			ctx.type = src.size_size;
 		}
 
 		break;
@@ -255,7 +255,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		}
 		else
 		{
-			ctx.type = sizeof(std::intmax_t);
+			ctx.type = src.size_max;
 		}
 
 		break;
@@ -269,7 +269,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		}
 		else
 		{
-			ctx.type = sizeof(std::ptrdiff_t);
+			ctx.type = src.size_diff;
 		}
 
 		break;
@@ -339,6 +339,11 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		if (!ctx.type)
 		{
 			ctx.type = (u8)src.type(ctx.args);
+
+			if (!ctx.type)
+			{
+				ctx.type = src.size_int;
+			}
 		}
 
 		// Sign-extended argument expected
@@ -396,6 +401,11 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		if (!ctx.type)
 		{
 			ctx.type = (u8)src.type(ctx.args);
+
+			if (!ctx.type)
+			{
+				ctx.type = src.size_int;
+			}
 		}
 
 		const u64 mask =
@@ -447,6 +457,11 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		if (!ctx.type)
 		{
 			ctx.type = (u8)src.type(ctx.args);
+
+			if (!ctx.type)
+			{
+				ctx.type = src.size_int;
+			}
 		}
 
 		const u64 mask =
@@ -505,6 +520,11 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		if (!ctx.type)
 		{
 			ctx.type = (u8)src.type(ctx.args);
+
+			if (!ctx.type)
+			{
+				ctx.type = src.size_int;
+			}
 		}
 
 		const u64 mask =
