@@ -2,6 +2,8 @@
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
 
+#define DEBUG_VERTEX_STREAMING 0
+
 namespace
 {
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
@@ -251,23 +253,6 @@ namespace
 		}
 	}
 
-#ifdef _DEBUG
-	template <typename U, typename T>
-	void copy_whole_attribute_array(void *raw_dst, void *raw_src, u8 attribute_size, u8 dst_stride, u32 src_stride, u32 vertex_count)
-	{
-		gsl::span<T> dst = gsl::as_span_workaround();
-		const gsl::span<gsl::byte> src = {raw_src, src_stride * vertex_count};
-
-		for (u32 vertex = 0; vertex < vertex_count; ++vertex)
-		{
-			gsl::span<const U> src = gsl::as_span<const U>(src_ptr.subspan(src_stride * vertex, attribute_size * sizeof(const U)));
-			for (u32 i = 0; i < attribute_size; ++i)
-			{
-				dst[vertex * dst_stride / sizeof(T) + i] = src[i];
-			}
-		}
-	}
-#else
 	template <typename T, typename U, int N>
 	void copy_whole_attribute_array_impl(void *raw_dst, void *raw_src, u8 dst_stride, u32 src_stride, u32 vertex_count)
 	{
@@ -289,27 +274,76 @@ namespace
 		}
 	}
 
-	template <typename U, typename T>
-	void copy_whole_attribute_array(void *raw_dst, void *raw_src, u8 attribute_size, u8 dst_stride, u32 src_stride, u32 vertex_count)
+	/*
+	 * Copies a number of src vertices, repeated over and over to fill the dst
+	 * e.g repeat 2 vertices over a range of 16 verts, so 8 reps
+	 */
+	template <typename T, typename U, int N>
+	void copy_whole_attribute_array_repeating_impl(void *raw_dst, void *raw_src, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
 	{
-		//Eliminate the inner loop by templating the inner loop counter N
-		switch (attribute_size)
+		char *src_ptr = (char *)raw_src;
+		char *dst_ptr = (char *)raw_dst;
+
+		u32 src_offset = 0;
+		u32 src_limit = src_stride * src_vertex_count;
+
+		for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 		{
-		case 1:
-			copy_whole_attribute_array_impl<U, T, 1>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
-			break;
-		case 2:
-			copy_whole_attribute_array_impl<U, T, 2>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
-			break;
-		case 3:
-			copy_whole_attribute_array_impl<U, T, 3>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
-			break;
-		case 4:
-			copy_whole_attribute_array_impl<U, T, 4>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
-			break;
+			T* typed_dst = (T*)dst_ptr;
+			U* typed_src = (U*)(src_ptr + src_offset);
+
+			for (u32 i = 0; i < N; ++i)
+			{
+				typed_dst[i] = typed_src[i];
+			}
+
+			src_offset = (src_offset + src_stride) % src_limit;
+			dst_ptr += dst_stride;
 		}
 	}
-#endif
+
+	template <typename U, typename T>
+	void copy_whole_attribute_array(void *raw_dst, void *raw_src, const u8 attribute_size, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
+	{
+		//Eliminate the inner loop by templating the inner loop counter N
+
+		if (src_vertex_count == vertex_count)
+		{
+			switch (attribute_size)
+			{
+			case 1:
+				copy_whole_attribute_array_impl<U, T, 1>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			case 2:
+				copy_whole_attribute_array_impl<U, T, 2>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			case 3:
+				copy_whole_attribute_array_impl<U, T, 3>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			case 4:
+				copy_whole_attribute_array_impl<U, T, 4>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			}
+		}
+		else
+		{
+			switch (attribute_size)
+			{
+			case 1:
+				copy_whole_attribute_array_repeating_impl<U, T, 1>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
+			case 2:
+				copy_whole_attribute_array_repeating_impl<U, T, 2>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
+			case 3:
+				copy_whole_attribute_array_repeating_impl<U, T, 3>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
+			case 4:
+				copy_whole_attribute_array_repeating_impl<U, T, 4>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
+			}
+		}
+	}
 }
 
 void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::span<const gsl::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride)
@@ -321,25 +355,30 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 	bool use_stream_with_stride = false;
 
 	//If stride is not defined, we have a packed array
-	if (attribute_src_stride == 0)
-		attribute_src_stride = src_read_stride;
+	if (attribute_src_stride == 0) attribute_src_stride = src_read_stride;
+
+	//Sometimes, we get a vertex attribute to be repeated. Just copy the supplied vertices only
+	//TODO: Stop these requests from getting here in the first place!
+	//TODO: Check if it is possible to have a repeating array with more than one attribute instance
+	const u32 real_count = src_ptr.size_bytes() / attribute_src_stride;
+	if (real_count == 1) attribute_src_stride = 0;	//Always fetch src[0]
 
 	//TODO: Determine favourable vertex threshold where vector setup costs become negligible
 	//Tests show that even with 4 vertices, using traditional bswap is significantly slower over a large number of calls
-	//Tested with atelier, discriminating based on vertex count is measurably slower
-	//NOTE: src_read_stride is guaranteed to be less than dst_stride!
-
-	if (src_read_stride > dst_stride)
-		fmt::throw_exception("src_read is greater than dst write. Impossible situation.");
 
 	const u64 src_address = (u64)src_ptr.data();
 	const bool sse_aligned = ((src_address & 15) == 0);
 	
-#ifndef _DEBUG
-	if (attribute_src_stride == dst_stride && src_read_stride == dst_stride)
-		use_stream_no_stride = true;
-	else
-		use_stream_with_stride = true;
+#if !DEBUG_VERTEX_STREAMING
+	
+	if (real_count >= count || real_count == 1)
+	{
+		if (attribute_src_stride == dst_stride && src_read_stride == dst_stride)
+			use_stream_no_stride = true;
+		else
+			use_stream_with_stride = true;
+	}
+
 #endif
 
 	switch (type)
@@ -349,8 +388,10 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 	{
 		if (use_stream_no_stride)
 			memcpy(raw_dst_span.data(), src_ptr.data(), count * dst_stride);
-		else
+		else if (use_stream_with_stride)
 			stream_data_to_memory_u8_non_continous(raw_dst_span.data(), src_ptr.data(), count, vector_element_count, dst_stride, attribute_src_stride);
+		else
+			copy_whole_attribute_array<u8, u8>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
@@ -363,7 +404,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 		else if (use_stream_with_stride)
 			stream_data_to_memory_swapped_u16_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
 		else
-			copy_whole_attribute_array<be_t<u16>, u16>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count);
+			copy_whole_attribute_array<be_t<u16>, u16>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
@@ -374,7 +415,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 		else if (use_stream_with_stride)
 			stream_data_to_memory_swapped_u32_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
 		else
-			copy_whole_attribute_array<be_t<u32>, u32>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count);
+			copy_whole_attribute_array<be_t<u32>, u32>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
