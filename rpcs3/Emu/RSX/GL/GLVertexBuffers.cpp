@@ -232,7 +232,6 @@ namespace
 			gsl::span<gsl::byte> dest_span(dst, data_size);
 
 			write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size));
-
 			prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
 
 			texture.copy_from(m_attrib_ring_info, gl_type, buffer_offset, data_size);
@@ -243,27 +242,20 @@ namespace
 			int location;
 			if (!m_program->uniforms.has_location(s_reg_table[vertex_register.index], &location))
 				return;
-			switch (vertex_register.type)
-			{
-			case rsx::vertex_base_type::f:
-			{
-				const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
-				const u32 gl_type   = to_gl_internal_type(vertex_register.type, vertex_register.attribute_size);
-				const u32 data_size = element_size;
 
-				auto& texture = m_gl_attrib_buffers[vertex_register.index];
+			const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
+			const u32 gl_type   = to_gl_internal_type(vertex_register.type, vertex_register.attribute_size);
+			const u32 data_size = element_size;
 
-				auto mapping = m_attrib_ring_info.alloc_from_heap(data_size, m_min_texbuffer_alignment);
-				u8 *dst = static_cast<u8*>(mapping.first);
+			auto& texture = m_gl_attrib_buffers[vertex_register.index];
 
-				memcpy(dst, vertex_register.data.data(), element_size);
-				texture.copy_from(m_attrib_ring_info, gl_type, mapping.second, data_size);
-				break;
-			}
-			default:
-				LOG_ERROR(RSX, "bad non array vertex data format (type=%d, size=%d)", (u32)vertex_register.type, vertex_register.attribute_size);
-				break;
-			}
+			auto mapping = m_attrib_ring_info.alloc_from_heap(data_size, m_min_texbuffer_alignment);
+			u8 *dst = static_cast<u8*>(mapping.first);
+
+			memcpy(dst, vertex_register.data.data(), element_size);
+			prepare_buffer_for_writing(dst, vertex_register.type, vertex_register.attribute_size, vertex_count);
+
+			texture.copy_from(m_attrib_ring_info, gl_type, mapping.second, data_size);
 		}
 
 		void operator()(const rsx::empty_vertex_array& vbo)
