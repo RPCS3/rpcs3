@@ -43,19 +43,6 @@ namespace
 			}
 		}
 	}
-
-
-	// This hilarious ascii art is me attempting to navigate the YAML::Node structure by reference.
-	// I *DO NOT* want to have this make a copy of a node.
-	YAML::Node* get_node(YAML::Node* node, const cfg_location& location)
-	{
-		YAML::Node* curr = node;
-		for (std::string loc : location)
-		{
-			curr = &(*curr)[loc];
-		}
-		return curr;
-	}
 }
 
 
@@ -68,15 +55,21 @@ namespace cfg_adapter
 		return begin == end ? root : get_cfg(root[*begin], begin + 1, end);
 	}
 
-	static YAML::Node get_node(YAML::Node node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
+	static YAML::Node get_node(const YAML::Node& node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
 	{
 		return begin == end ? node : get_node(node[*begin], begin + 1, end); // TODO
+	}
+
+	/** Syntactic sugar to get a setting at a given config location. */
+	static YAML::Node get_node(const YAML::Node& node, cfg_location loc)
+	{
+		return get_node(node, loc.cbegin(), loc.cend());
 	}
 };
 
 
 /** Returns possible options for values for some particular setting.*/
-static QStringList getOptions(cfg_location&& location)
+static QStringList getOptions(cfg_location location)
 {
 	QStringList values;
 	auto&& root = cfg::get_root();
@@ -191,10 +184,10 @@ QStringList EmuSettings::GetSettingOptions(SettingsType type) const
 
 std::string EmuSettings::GetSetting(SettingsType type) const
 {
-	return get_node(const_cast<YAML::Node*>(&currentSettings), SettingsLoc[type])->Scalar();
+	return cfg_adapter::get_node(currentSettings, SettingsLoc[type]).Scalar();
 }
 
 void EmuSettings::SetSetting(SettingsType type, const std::string& val)
 {
-	*get_node(&currentSettings, SettingsLoc[type]) = val;
+	cfg_adapter::get_node(currentSettings, SettingsLoc[type])= val;
 }

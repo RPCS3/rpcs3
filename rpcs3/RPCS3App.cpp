@@ -4,6 +4,9 @@
 #include "RPCS3Qt/GSFrame.h"
 #include "RPCS3Qt/GLGSFrame.h"
 
+#include "rpcs3qt/MsgDialog.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
+
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "BasicKeyboardHandler.h"
 
@@ -78,9 +81,9 @@ void RPCS3App::InitializeCallbacks()
 	{
 		quit();
 	};
-	callbacks.call_after = [](std::function<void()> func)
+	callbacks.call_after = [=](std::function<void()> func)
 	{	
-		QTimer::singleShot(1, std::move(func));
+		emit RequestCallAfter(std::move(func));
 	};
 
 	callbacks.process_events = [this]()
@@ -112,12 +115,12 @@ void RPCS3App::InitializeCallbacks()
 
 	
 	callbacks.get_audio = [=] { return cfg_audio_render->get()(); };
-	/*
-	callbacks.get_msg_dialog = []() -> std::shared_ptr<MsgDialogBase>
+	
+	callbacks.get_msg_dialog = [=]() -> std::shared_ptr<MsgDialogBase>
 	{
 		return std::make_shared<MsgDialogFrame>();
 	};
-
+	/*
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase>
 	{
 		return std::make_unique<SaveDialogFrame>();
@@ -137,6 +140,8 @@ void RPCS3App::InitializeCallbacks()
 */
 void RPCS3App::InitializeHandlers()
 {
+	ResetPads();
+
 	cfg_gs_render = new cfg::map_entry<std::function<std::shared_ptr<GSRender>()>>(cfg::root.video, "Renderer", "OpenGL",
 	{
 		{ "Null", &std::make_shared<NullGSRender> },
@@ -149,41 +154,22 @@ void RPCS3App::InitializeHandlers()
 #endif
 	});
 
-	// Should I move these declarations inside of the lambdas??
-	// Lambda to simulate the return value from making a shared pointer with constructor.
-	BasicKeyboardHandler* boardHandler = new BasicKeyboardHandler(this, this);
-	auto l_magicKeyboardHandler = [boardHandler]() {
-		return std::shared_ptr<BasicKeyboardHandler>(boardHandler);
-	};
-
 	cfg_kb_handler = new cfg::map_entry<std::function<std::shared_ptr<KeyboardHandlerBase>()>>(cfg::root.io, "Keyboard",
 	{
 		{ "Null", &std::make_shared<NullKeyboardHandler> },
-		{ "Basic", l_magicKeyboardHandler },
+		{ "Basic", [=]() {return m_basicKeyboardHandler; }},
 	});
-
-	// Lambda to simulate the return value from making a shared pointer with constructor.
-	BasicMouseHandler* mouseHandler = new BasicMouseHandler(this, this);
-	auto l_magicMouseHandler = [mouseHandler]() {
-		return std::shared_ptr<BasicMouseHandler>(mouseHandler);
-	};
 
 	cfg_mouse_handler = new cfg::map_entry<std::function<std::shared_ptr<MouseHandlerBase>()>>(cfg::root.io, "Mouse",
 	{
 		{ "Null", &std::make_shared<NullMouseHandler> },
-		{ "Basic", l_magicMouseHandler },
+		{ "Basic", [=]() {return m_basicMouseHandler; } },
 	});
-
-	// Lambda to simulate the return value from making a shared pointer with constructor.
-	KeyboardPadHandler* keyboardPadHandler = new KeyboardPadHandler(this, this);
-	auto l_magicPadHandler = [keyboardPadHandler]() {
-		return std::shared_ptr<KeyboardPadHandler>(keyboardPadHandler);
-	};
 
 	cfg_pad_handler = new cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>>(cfg::root.io, "Pad", "Keyboard",
 	{
 		{ "Null", &std::make_shared<NullPadHandler> },
-		{ "Keyboard", l_magicPadHandler },
+		{ "Keyboard", [=]() {return m_keyboardPadHandler; } },
 		{ "DualShock 4", &std::make_shared<DS4PadHandler> },
 		#ifdef _MSC_VER
 				{ "XInput", &std::make_shared<XInputPadHandler> },
@@ -211,7 +197,11 @@ void RPCS3App::InitializeConnects()
 {
 	connect(RPCS3MainWin, &MainWindow::RequestGlobalStylesheetChange, this, &RPCS3App::OnChangeStyleSheetRequest);
 
+	qRegisterMetaType <std::function<void()>>("std::function<void()>");
+	connect(this, &RPCS3App::RequestCallAfter, this, &RPCS3App::HandleCallAfter); // might need blocking, might not. Idk
+
 	connect(this, &RPCS3App::OnEmulatorRun, RPCS3MainWin, &MainWindow::OnEmuRun);
+	connect(this, &RPCS3App::OnEmulatorStop, this, &RPCS3App::ResetPads);
 	connect(this, &RPCS3App::OnEmulatorStop, RPCS3MainWin, &MainWindow::OnEmuStop);
 	connect(this, &RPCS3App::OnEmulatorPause, RPCS3MainWin, &MainWindow::OnEmuPause);
 	connect(this, &RPCS3App::OnEmulatorResume, RPCS3MainWin, &MainWindow::OnEmuResume);
@@ -234,4 +224,26 @@ void RPCS3App::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		setStyleSheet(file.readAll());
 		file.close();
 	}
+}
+
+/**
+ * Using connects avoids timers being unable to be used in a non-qt thread.  So, even if this looks stupid to just call func, it's succinct.
+*/
+void RPCS3App::HandleCallAfter(const std::function<void()>& func)
+{
+	func();
+}
+
+/**
+ * We need to make this in the main thread to receive events from the main thread.
+ * This leads to the tricky situation.  Creating it while booting leads to deadlock with a blocking connection.
+ * So, I need to make them before, but when?
+ * I opted to reset them when the Emu stops and on first init. Potentially a race condition on restart? Never encountered issues.
+ * The other tricky issue is that I don't want Init to be called twice on the same object. Reseting the pointer on emu stop should handle this as well!
+*/
+void RPCS3App::ResetPads()
+{
+	m_basicKeyboardHandler.reset(new BasicKeyboardHandler(this, this));
+	m_basicMouseHandler.reset(new BasicMouseHandler(this, this));
+	m_keyboardPadHandler.reset(new KeyboardPadHandler(this, this));
 }

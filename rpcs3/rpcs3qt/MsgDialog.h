@@ -18,42 +18,40 @@
 #include <QButtonGroup>
 #include <QLineEdit>
 
-class MsgDialogFrame : public QWidget, public MsgDialogBase
+class MsgDialogFrame : public QObject, public MsgDialogBase
 {
 	Q_OBJECT
 
-	QDialog* m_dialog;
-	QLabel* m_text;
-	QLabel* m_text1;
-	QLabel* m_text2;
-	QPushButton* m_button_ok;
-	QPushButton* m_button_yes;
-	QPushButton* m_button_no;
-	QProgressBar* m_gauge1;
-	QProgressBar* m_gauge2;
-	QFormLayout* m_layout;
-	QHBoxLayout* m_hBoxLayout1;
-	QHBoxLayout* m_hBoxLayout2;
-	QHBoxLayout* m_hBoxLayout3;
+	QDialog* m_dialog =nullptr;
+	QLabel* m_text = nullptr;
+	QLabel* m_text1 = nullptr;
+	QLabel* m_text2 = nullptr;
+	QPushButton* m_button_ok = nullptr;
+	QPushButton* m_button_yes = nullptr;
+	QPushButton* m_button_no = nullptr;
+	QProgressBar* m_gauge1 = nullptr;
+	QProgressBar* m_gauge2 = nullptr;
+	QFormLayout* m_layout = nullptr;
+	QHBoxLayout* m_hBoxLayout1 = nullptr;
+	QHBoxLayout* m_hBoxLayout2 = nullptr;
+	QHBoxLayout* m_hBoxLayout3 = nullptr;
 
 
-	QInputDialog* osk_dialog;
-	QHBoxLayout* osk_hBoxLayout;
-	QFormLayout* osk_layout;
-	QPushButton* osk_button_ok;
-	QLineEdit* osk_input;
+	QDialog* osk_dialog = nullptr;
+	QHBoxLayout* osk_hBoxLayout = nullptr;
+	QFormLayout* osk_layout = nullptr;
+	QPushButton* osk_button_ok = nullptr;
+	QLineEdit* osk_input = nullptr;
 	char16_t* osk_text_return;
 
 public:
 	MsgDialogFrame();
+	~MsgDialogFrame();
 	virtual void Create(const std::string& msg) override;
 	virtual void CreateOsk(const std::string& msg, char16_t* osk_text) override;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
-
-private:
-	void closeEvent(QCloseEvent *event);
 };
 
 #endif

@@ -20,10 +20,6 @@ GSFrame::GSFrame(const QString& title, int w, int h, QIcon appIcon)
 
 	resize(w, h);
 
-	// I'd love to not use blocking queued connections, but this seems to be the only way to force this code to happen.
-	// When I have it as a nonblocking connection, the UI commands won't work. I have no idea why.
-	connect(this, &GSFrame::RequestCommand, this, &GSFrame::HandleCommandRequest, Qt::BlockingQueuedConnection);
-
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, &GSFrame::HandleCursor);
 }
@@ -43,7 +39,7 @@ void GSFrame::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_Escape: if (visibility() == FullScreen) { setVisibility(Windowed); return; } break;
 		}
 	};
-	HandleUICommand(l_handleKeyEvent);
+	Emu.CallAfter(l_handleKeyEvent);
 }
 
 void GSFrame::OnFullScreen()
@@ -59,13 +55,13 @@ void GSFrame::OnFullScreen()
 			setVisibility(FullScreen);
 		}
 	};
-	HandleUICommand(l_setFullScreenVis);
+	Emu.CallAfter(l_setFullScreenVis);
 }
 
 void GSFrame::close()
 {
 	Emu.Stop();
-	HandleUICommand([=]() {QWindow::close(); });
+	Emu.CallAfter([=]() {QWindow::close(); });
 }
 
 bool GSFrame::shown()
@@ -75,12 +71,12 @@ bool GSFrame::shown()
 
 void GSFrame::hide()
 {
-	HandleUICommand([=]() {QWindow::hide(); });
+	Emu.CallAfter([=]() {QWindow::hide(); });
 }
 
 void GSFrame::show()
 {
-	HandleUICommand([=]() {QWindow::show(); });
+	Emu.CallAfter([=]() {QWindow::show(); });
 }
 
 void* GSFrame::handle() const
@@ -138,7 +134,7 @@ void GSFrame::flip(draw_context_t)
 			title += qstr(" | [" + Emu.GetTitleID() + ']');
 		}
 
-		HandleUICommand([this, title = std::move(title)]() {setTitle(title); });
+		Emu.CallAfter([this, title = std::move(title)]() {setTitle(title); });
 
 		m_frames = 0;
 		fps_t.Start();
@@ -159,32 +155,6 @@ void GSFrame::HandleCursor(QWindow::Visibility visibility)
 	else
 	{
 		setCursor(Qt::ArrowCursor);
-	}
-}
-
-/** Magic. Please don't remove.
- * Qt doesn't like to have UI functions called from non-UI threads [really bad thing to do!!!].  However, connects, WILL handle this scenario cleanly.
- * The idea is that for any UI functions you need to call from non-UI threads, you pass the function (perhaps even a lambda) here.
- * This is equivalent to call_after.  However, I wanted to avoid using Emu callbacks for when we potentially change which thread spawns this window.
-*/
-void GSFrame::HandleCommandRequest(std::function<void()> func)
-{
-	func();
-}
-
-/** Helper method for magic.
-* Prevents having this if/else everywhere for this.
-*/
-void GSFrame::HandleUICommand(std::function<void()> func)
-{
-	// thread() returns the current thread that has the event handler for this QObject. Compare it to the current thread name to see if a special command request is needed.
-	if (QThread::currentThread() != thread())
-	{
-		emit RequestCommand(func);
-	}
-	else
-	{
-		func();
 	}
 }
 

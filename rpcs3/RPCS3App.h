@@ -2,6 +2,11 @@
 #define RPCS3_APP_H
 
 #include "stdafx.h"
+
+#include "KeyboardPadHandler.h"
+#include "BasicKeyboardHandler.h"
+#include "BasicMouseHandler.h"
+
 #include "Utilities/Config.h"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/Io/KeyboardHandler.h"
@@ -9,6 +14,7 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/Audio/AudioThread.h"
 
+#include "rpcs3qt/MsgDialog.h"
 #include "RPCS3Qt/mainwindow.h"
 
 #include <QApplication>
@@ -31,9 +37,11 @@ signals:
 	void OnEmulatorResume();
 	void OnEmulatorStop();
 	void OnEmulatorReady();
+	void RequestCallAfter(const std::function<void()>& func);
 private slots:
 	void OnChangeStyleSheetRequest(const QString& path);
-
+	void HandleCallAfter(const std::function<void()>& func);
+	void ResetPads();
 private:
 	void InitializeCallbacks();
 	void InitializeHandlers();
@@ -45,6 +53,11 @@ private:
 	cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>>* cfg_pad_handler;
 	cfg::map_entry<std::function<std::shared_ptr<MouseHandlerBase>()>>* cfg_mouse_handler;
 	cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>>* cfg_audio_render;
+
+	// See ResetPads() for why these shared pointers exist.
+	std::shared_ptr<KeyboardPadHandler> m_keyboardPadHandler;
+	std::shared_ptr<BasicKeyboardHandler> m_basicKeyboardHandler;
+	std::shared_ptr<BasicMouseHandler> m_basicMouseHandler;
 
 	MainWindow* RPCS3MainWin;
 };

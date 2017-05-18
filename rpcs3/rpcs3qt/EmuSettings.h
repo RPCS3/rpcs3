@@ -38,10 +38,10 @@ public:
 		AspectRatio,
 		FrameLimit,
 		LogShaderPrograms,
-		WriteDepthBuffers,
+		WriteDepthBuffer,
 		WriteColorBuffers,
 		ReadColorBuffers,
-		ReadDepthBuffers,
+		ReadDepthBuffer,
 		VSync,
 		DebugOutput,
 		DebugOverlay,
@@ -94,7 +94,7 @@ public:
 	/** Returns the valid options for a given setting.*/
 	QStringList GetSettingOptions(SettingsType type) const;
 
-	/** Returns the valud of the setting type.*/
+	/** Returns the value of the setting type.*/
 	std::string GetSetting(SettingsType type) const;
 
 	/** Sets the setting type to a given value.*/
@@ -119,13 +119,13 @@ private:
 		{ AspectRatio,		{ "Video", "Aspect ratio"}},
 		{ FrameLimit,		{ "Video", "Frame limit"}},
 		{ LogShaderPrograms,{ "Video", "Log shader programs"}},
-		{ WriteDepthBuffers,{ "Video", "Write Depth Buffers"}},
+		{ WriteDepthBuffer, { "Video", "Write Depth Buffer"}},
 		{ WriteColorBuffers,{ "Video", "Write Color Buffers"}},
 		{ ReadColorBuffers, { "Video", "Read Color Buffers"}},
-		{ ReadDepthBuffers,	{ "Video", "Read Depth Buffers"}},
+		{ ReadDepthBuffer,	{ "Video", "Read Depth Buffer"}},
 		{ VSync,			{ "Video", "VSync"}},
-		{ DebugOutput,		{ "Video", "Debug Output"}},
-		{ DebugOverlay,		{ "Video", "Debug Overlay"}},
+		{ DebugOutput,		{ "Video", "Debug output"}},
+		{ DebugOverlay,		{ "Video", "Debug overlay"}},
 		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers (Debug)"}},
 		{ GPUTextureScaling,{ "Video", "Use GPU texture scaling"}},
 		{ D3D12Adapter,		{ "Video", "D3D12", "Adapter"}},

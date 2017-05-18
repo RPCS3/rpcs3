@@ -15,8 +15,6 @@ class GSFrame : public QWindow, public GSFrameBase
 
 public:
 	GSFrame(const QString& title, int w, int h, QIcon appIcon);
-signals:
-	void RequestCommand(std::function<void()> func);
 protected:
 	virtual void paintEvent(QPaintEvent *event);
 
@@ -44,9 +42,6 @@ protected:
 	void hideEvent(QHideEvent* ev) override;
 private slots:
 	void HandleCursor(QWindow::Visibility visibility);
-	void HandleCommandRequest(std::function<void()> func);
-private:
-	void HandleUICommand(std::function<void()> func);
 };
 
 #endif

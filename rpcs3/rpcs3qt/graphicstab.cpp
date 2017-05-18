@@ -101,8 +101,8 @@ GraphicsTab::GraphicsTab(std::shared_ptr<EmuSettings> xSettings, QWidget *parent
 	// Checkboxes
 	QCheckBox *dumpColor = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::WriteColorBuffers, this);
 	QCheckBox *readColor = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::ReadColorBuffers, this);
-	QCheckBox *dumpDepth = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::WriteDepthBuffers, this);
-	QCheckBox *readDepth = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::ReadDepthBuffers, this);
+	QCheckBox *dumpDepth = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::WriteDepthBuffer, this);
+	QCheckBox *readDepth = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::ReadDepthBuffer, this);
 	QCheckBox *glLegacyBuffers = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::LegacyBuffers, this);
 	QCheckBox *debugOutput = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::DebugOutput, this);
 	QCheckBox *debugOverlay = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::DebugOverlay, this);
