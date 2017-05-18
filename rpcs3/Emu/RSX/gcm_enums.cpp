@@ -655,8 +655,6 @@ rsx::surface_depth_format rsx::to_surface_depth_format(u8 in)
 	fmt::throw_exception("Unknown surface depth format 0x%x" HERE, in);
 }
 
-
-
 rsx::surface_antialiasing rsx::to_surface_antialiasing(u8 in)
 {
 	switch (in)
