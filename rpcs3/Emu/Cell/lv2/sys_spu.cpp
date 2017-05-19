@@ -348,12 +348,12 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		if (thread)
 		{
 			auto& args = group->args[thread->index];
-			//auto& img = group->imgs[thread->index];
+			auto& img = group->imgs[thread->index];
 
 			//Now deploying in sys_spu_thread_initialize
-			//img->deploy(thread->offset);
+			img->deploy(thread->offset);
 
-			//thread->pc = img->entry_point;
+			thread->pc = img->entry_point;
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
 			thread->gpr[4] = v128::from64(0, args[1]);
