@@ -67,6 +67,7 @@ public:
 		StartOnBoot,
 		AutoPauseSysCall,
 		AutoPauseFuncCall,
+		StartGameFullscreen,
 
 		// Network
 		ConnectionStatus,
@@ -148,6 +149,7 @@ private:
 		{StartOnBoot,		{ "Miscellaneous", "Always start after boot" }},
 		{AutoPauseSysCall,	{ "Miscellaneous", "Auto Pause at System Call"}},
 		{AutoPauseFuncCall,	{ "Miscellaneous", "Auto Pause at Function Call"}},
+		{StartGameFullscreen, { "Miscellaneous", "Start Games in Fullscreen Mode"}},
 
 		// Networking
 		{ConnectionStatus,	{ "Net", "Connection status"}},

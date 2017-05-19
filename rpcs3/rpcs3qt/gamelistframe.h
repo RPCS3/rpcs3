@@ -74,11 +74,13 @@ class GameListFrame : public QDockWidget {
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
+	QStringList categoryFilters;
 
 public:
 	explicit GameListFrame(std::shared_ptr<GuiSettings> settings, QWidget *parent = nullptr);
 	~GameListFrame();
 	void Refresh();
+	void ToggleCategoryFilter(QString category, bool show);
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
 	void LoadSettings();
@@ -113,6 +115,7 @@ private:
 	void LoadGames();
 	void LoadPSF();
 	void ShowData();
+	void FilterData();
 
 	// Actions regarding showing/hiding columns
 	QAction* showIconColAct;

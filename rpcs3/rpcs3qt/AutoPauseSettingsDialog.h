@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "TableItemDelegate.h"
 
 #include <QDialog>
 #include <QVBoxLayout>
@@ -17,6 +18,7 @@
 #include <QMouseEvent>
 #include <QMenu>
 #include <QLineEdit>
+#include <QFontDatabase>
 
 class AutoPauseSettingsDialog : public QDialog
 {
@@ -39,14 +41,15 @@ public:
 	void SaveEntries(void);
 
 public slots :
-	void OnRemove(int row);
+	void OnRemove();
 private slots :
 	void OnEntryConfig(int row, bool newEntry);
-	void OnAdd(int row);
+	void OnAdd();
 	void ShowContextMenu(const QPoint &pos);
 	void OnClear();
 	void OnReload();
 	void OnSave();
+	void keyPressEvent(QKeyEvent *event);
 };
 
 class AutoPauseConfigDialog : public QDialog

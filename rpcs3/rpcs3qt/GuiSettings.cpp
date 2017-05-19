@@ -49,6 +49,43 @@ void GuiSettings::Reset(bool removeMeta)
 	}
 }
 
+QStringList GuiSettings::GetGameListCategoryFilters()
+{
+	QStringList filterList;
+	if (GetCategoryHDDGameVisibility()) filterList.append("HDD Game");
+	if (GetCategoryDiscGameVisibility()) filterList.append("Disc Game");
+	if (GetCategoryHomeVisibility()) filterList.append("Home");
+	if (GetCategoryAudioVideoVisibility()) filterList.append("Audio/Video");
+	if (GetCategoryGameDataVisibility()) filterList.append("Game Data");
+	return filterList;
+}
+
+bool GuiSettings::GetCategoryHDDGameVisibility()
+{
+	return settings.value("GameList/categoryHDDGameVisible", true).toBool();
+}
+
+bool GuiSettings::GetCategoryDiscGameVisibility()
+{
+	return settings.value("GameList/categoryDiscGameVisible", true).toBool();
+}
+
+bool GuiSettings::GetCategoryHomeVisibility()
+{
+	return settings.value("GameList/categoryHomeVisible", true).toBool();
+}
+
+bool GuiSettings::GetCategoryAudioVideoVisibility()
+{
+	return settings.value("GameList/categoryAudioVideoVisible", true).toBool();
+}
+
+bool GuiSettings::GetCategoryGameDataVisibility()
+{
+	return settings.value("GameList/categoryGameDataVisible", true).toBool();
+}
+
+
 void GuiSettings::WriteGuiGeometry(const QByteArray& res)
 {
 	settings.beginGroup("MainWindow");
@@ -70,6 +107,41 @@ void GuiSettings::WriteGameListState(const QByteArray& res)
 	settings.endGroup();
 }
 
+void GuiSettings::SetCategoryHDDGameVisibility(bool val)
+{
+	settings.beginGroup("GameList");
+	settings.setValue("categoryHDDGameVisible", val);
+	settings.endGroup();
+}
+
+void GuiSettings::SetCategoryDiscGameVisibility(bool val)
+{
+	settings.beginGroup("GameList");
+	settings.setValue("categoryDiscGameVisible", val);
+	settings.endGroup();
+}
+
+void GuiSettings::SetCategoryHomeVisibility(bool val)
+{
+	settings.beginGroup("GameList");
+	settings.setValue("categoryHomeVisible", val);
+	settings.endGroup();
+}
+
+void GuiSettings::SetCategoryAudioVideoVisibility(bool val)
+{
+	settings.beginGroup("GameList");
+	settings.setValue("categoryAudioVideoVisible", val);
+	settings.endGroup();
+}
+
+void GuiSettings::SetCategoryGameDataVisibility(bool val)
+{
+	settings.beginGroup("GameList");
+	settings.setValue("categoryGameDataVisible", val);
+	settings.endGroup();
+}
+
 void GuiSettings::SetGamelistVisibility(bool val)
 {
 	settings.beginGroup("GameList");
@@ -88,6 +160,13 @@ void GuiSettings::SetDebuggerVisibility(bool val)
 {
 	settings.beginGroup("MainWindow");
 	settings.setValue("debuggerVisible", val);
+	settings.endGroup();
+}
+
+void GuiSettings::SetControlsVisibility(bool val)
+{
+	settings.beginGroup("MainWindow");
+	settings.setValue("controlsVisible", val);
 	settings.endGroup();
 }
 
@@ -169,6 +248,11 @@ bool GuiSettings::GetLoggerVisibility()
 bool GuiSettings::GetDebuggerVisibility()
 {
 	return settings.value("MainWindow/debuggerVisible", false).toBool();
+}
+
+bool GuiSettings::GetControlsVisibility()
+{
+	return settings.value("MainWindow/controlsVisible", true).toBool();
 }
 
 logs::level GuiSettings::GetLogLevel()

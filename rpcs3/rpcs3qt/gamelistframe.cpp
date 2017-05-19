@@ -5,6 +5,7 @@
 #include "Loader\PSF.h"
 #include "settingsDialog.h"
 #include "Utilities/types.h"
+#include "TableItemDelegate.h"
 
 #include <algorithm>
 #include <QMenuBar>
@@ -46,10 +47,14 @@ GameListFrame::GameListFrame(std::shared_ptr<GuiSettings> settings, QWidget *par
 	CreateActions();
 
 	gameList = new QTableWidget(this);
+	gameList->setShowGrid(false);
+	gameList->setItemDelegate(new TableItemDelegate(this));
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
 	gameList->verticalHeader()->setVisible(false);
+	gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
+	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	gameList->setColumnCount(7);
 	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
@@ -61,9 +66,6 @@ GameListFrame::GameListFrame(std::shared_ptr<GuiSettings> settings, QWidget *par
 	gameList->setHorizontalHeaderItem(6, new QTableWidgetItem(tr("Path")));
 
 	setWidget(gameList);
-
-	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
-	gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	connect(gameList, &QTableWidget::customContextMenuRequested, this, &GameListFrame::ShowContextMenu);
 	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &GameListFrame::ShowHeaderContextMenu);
@@ -87,7 +89,7 @@ void GameListFrame::LoadSettings()
 	m_sortAscending = xGuiSettings->GetGamelistSortAsc();
 	m_sortColumn = xGuiSettings->GetGamelistSortCol();
 
-
+	categoryFilters = xGuiSettings->GetGameListCategoryFilters();
 
 	if (state.isEmpty())
 	{ // If no settings exist, go to default.
@@ -211,13 +213,42 @@ void GameListFrame::ShowData()
 	m_columns.ShowData(gameList);
 }
 
+// Filter for Categories
+void GameListFrame::FilterData()
+{
+	for (int i = 0; i < gameList->rowCount(); ++i)
+	{
+		bool match = false;
+		for (auto filter : categoryFilters)
+		{
+			for (int j = 0; j < gameList->columnCount(); ++j)
+			{
+				if (gameList->horizontalHeaderItem(j)->text() == tr("Category") && gameList->item(i, j)->text().contains(filter))
+				{
+					match = true;
+					goto OutOfThis;
+				}
+			}
+		}
+		OutOfThis:
+		gameList->setRowHidden(i, !match);
+	}
+}
+
 void GameListFrame::Refresh()
 {
 	int row = gameList->currentRow();
 	LoadGames();
 	LoadPSF();
 	ShowData();
+	FilterData();
 	gameList->selectRow(row);
+}
+
+void GameListFrame::ToggleCategoryFilter(QString category, bool show)
+{
+	show ? categoryFilters.append(category) : categoryFilters.removeAll(category);
+	Refresh();
 }
 
 void GameListFrame::SaveSettings()
@@ -248,18 +279,6 @@ void GameListFrame::doubleClickedSlot(const QModelIndex& index)
 
 void GameListFrame::CreateActions()
 {
-	auto l_InitAct = [this](QAction* act, int col) {
-		act->setCheckable(true);
-		act->setChecked(true);
-
-		auto l_CallBack = [this, col](bool val) {
-			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
-			xGuiSettings->SetGamelistColVisibility(col, val);
-		};
-
-		connect(act, &QAction::triggered, l_CallBack);
-	};
-
 	showIconColAct = new QAction(tr("Show Icons"), this);
 	showNameColAct = new QAction(tr("Show Names"), this);
 	showSerialColAct = new QAction(tr("Show Serials"), this);
@@ -369,18 +388,15 @@ void GameListFrame::Configure(int row)
 
 void GameListFrame::RemoveGame(int row)
 {
-	QTableWidgetItem *item = gameList->itemAt(row, 6); // 6 should be path
 	if (QMessageBox::question(this , tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
 	{
-		fs::remove_all(Emu.GetGameDir() + static_cast<std::string>(item->text().toUtf8()));
+		fs::remove_all(Emu.GetGameDir() + m_game_data[row].root);
 	}
 	Refresh();
 }
 
 void GameListFrame::RemoveCustomConfiguration(int row)
 {
-
-	QTableWidgetItem *item = gameList->itemAt(row, 6); // 6 should be path
 	const std::string config_path = fs::get_config_dir() + "data/" + m_game_data[row].serial + "/config.yml";
 
 	if (fs::is_file(config_path))
@@ -586,7 +602,6 @@ void ColumnsArr::ShowData(QTableWidget* table)
 		}
 		table->resizeRowsToContents();
 		table->resizeColumnToContents(0);
-		table->setShowGrid(false);
 	}
 }
 

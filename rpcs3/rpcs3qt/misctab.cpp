@@ -15,6 +15,7 @@ MiscTab::MiscTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent) : Q
 	QCheckBox *alwaysStart = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::StartOnBoot, this);
 	QCheckBox *apSystemcall = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::AutoPauseSysCall, this);
 	QCheckBox *apFunctioncall = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::AutoPauseFuncCall, this);
+	QCheckBox *startGameFullscreen = xEmuSettings->CreateEnhancedCheckBox(EmuSettings::StartGameFullscreen, this);
 
 	// Left layout
 	QVBoxLayout *vbox_left = new QVBoxLayout;
@@ -22,8 +23,8 @@ MiscTab::MiscTab(std::shared_ptr<EmuSettings> xEmuSettings, QWidget *parent) : Q
 	vbox_left->addWidget(alwaysStart);
 	vbox_left->addWidget(apSystemcall);
 	vbox_left->addWidget(apFunctioncall);
+	vbox_left->addWidget(startGameFullscreen);
 	vbox_left->addStretch(1);
-
 
 	// Main Layout
 	QHBoxLayout *hbox = new QHBoxLayout;

@@ -1,5 +1,5 @@
-#ifndef PADSETTINGS_H
-#define PADSETTINGS_H
+#ifndef PADSETTINGSDIALOG_H
+#define PADSETTINGSDIALOG_H
 
 #include <QDialog>
 #include <QEvent>
@@ -114,4 +114,4 @@ public:
 	const QString GetKeyName(const u32 keyCode);
 };
 
-#endif // PADSETTINGS_H
+#endif // PADSETTINGSDIALOG_H

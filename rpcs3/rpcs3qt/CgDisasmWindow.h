@@ -1,5 +1,5 @@
-#ifndef CGDISASM_H
-#define CGDISASM_H
+#ifndef CGDISASMWINDOW_H
+#define CGDISASMWINDOW_H
 
 #include <QTextEdit>
 #include <QMainWindow>
@@ -23,4 +23,4 @@ public:
 	explicit CgDisasmWindow(QWidget *parent);
 };
 
-#endif	// CGDISASM_H
+#endif	// CGDISASMWINDOW_H

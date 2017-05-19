@@ -21,6 +21,7 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 {
 	// Left Analog Stick
 	QGroupBox *roundStickL = new QGroupBox(tr("Left Analog Stick"));
+	QVBoxLayout *roundStickLMainVBox = new QVBoxLayout;
 	QVBoxLayout *roundStickLVBox = new QVBoxLayout;
 	QHBoxLayout *roundStickLHBox1 = new QHBoxLayout;
 	QHBoxLayout *roundStickLHBox2 = new QHBoxLayout;
@@ -37,6 +38,8 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundStickLVBox->addLayout(roundStickLHBox2);
 	roundStickLVBox->addLayout(roundStickLHBox3);
 	roundStickL->setLayout(roundStickLVBox);
+	roundStickLMainVBox->addWidget(roundStickL);
+	roundStickLMainVBox->addStretch();
 	b_up_lstick->setFixedWidth(PadButtonWidth);
 	b_left_lstick->setFixedWidth(PadButtonWidth);
 	b_right_lstick->setFixedWidth(PadButtonWidth);
@@ -44,6 +47,7 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 
 	// D-Pad
 	QGroupBox *roundPadControls = new QGroupBox(tr("D-Pad"));
+	QVBoxLayout *roundPadControlsMainVBox = new QVBoxLayout;
 	QVBoxLayout *roundPadControlsVBox = new QVBoxLayout;
 	QHBoxLayout *roundPadControlsHBox1 = new QHBoxLayout;
 	QHBoxLayout *roundPadControlsHBox2 = new QHBoxLayout;
@@ -60,6 +64,8 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundPadControlsVBox->addLayout(roundPadControlsHBox2);
 	roundPadControlsVBox->addLayout(roundPadControlsHBox3);
 	roundPadControls->setLayout(roundPadControlsVBox);
+	roundPadControlsMainVBox->addWidget(roundPadControls);
+	roundPadControlsMainVBox->addStretch();
 	b_up->setFixedWidth(PadButtonWidth);
 	b_left->setFixedWidth(PadButtonWidth);
 	b_right->setFixedWidth(PadButtonWidth);
@@ -95,6 +101,7 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	QGroupBox *roundPadSystem = new QGroupBox(tr("System"));
 	QGroupBox *roundPadSelect = new QGroupBox(tr("Select"));
 	QGroupBox *roundPadStart = new QGroupBox(tr("Start"));
+	QVBoxLayout *roundPadSystemMainVbox = new QVBoxLayout;
 	QVBoxLayout *roundPadSystemVbox = new QVBoxLayout;
 	QVBoxLayout *roundPadSelectVbox = new QVBoxLayout;
 	QVBoxLayout *roundPadStartVbox = new QVBoxLayout;
@@ -107,6 +114,8 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundPadSystemVbox->addWidget(roundPadSelect);
 	roundPadSystemVbox->addWidget(roundPadStart);
 	roundPadSystem->setLayout(roundPadSystemVbox);
+	roundPadSystemMainVbox->addWidget(roundPadSystem);
+	roundPadSystemMainVbox->addStretch();
 	b_select->setFixedWidth(PadButtonWidth);
 	b_start->setFixedWidth(PadButtonWidth);
 
@@ -146,26 +155,30 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	QHBoxLayout *roundPadButtonsHBox1 = new QHBoxLayout;
 	QHBoxLayout *roundPadButtonsHBox2 = new QHBoxLayout;
 	QHBoxLayout *roundPadButtonsHBox3 = new QHBoxLayout;
-	QHBoxLayout *roundPadButtonsVBox21 = new QHBoxLayout;
-	QHBoxLayout *roundPadButtonsVBox22 = new QHBoxLayout;
-	QHBoxLayout *roundPadButtonsVBox23 = new QHBoxLayout;
-	QHBoxLayout *roundPadButtonsVBox24 = new QHBoxLayout;
+	QHBoxLayout *roundPadButtonsHBox21 = new QHBoxLayout;
+	QHBoxLayout *roundPadButtonsHBox22 = new QHBoxLayout;
+	QHBoxLayout *roundPadButtonsHBox23 = new QHBoxLayout;
+	QHBoxLayout *roundPadButtonsHBox24 = new QHBoxLayout;
 	b_triangle = new QPushButton(tr("V"));
 	b_square = new QPushButton(tr("Z"));
 	b_circle = new QPushButton(tr("C"));
 	b_cross = new QPushButton(tr("X"));
-	roundPadButtonsVBox21->addWidget(b_triangle);
-	roundPadButtonsVBox22->addWidget(b_square);
-	roundPadButtonsVBox23->addWidget(b_circle);
-	roundPadButtonsVBox24->addWidget(b_cross);
-	roundPadTriangle->setLayout(roundPadButtonsVBox21);
-	roundPadSquare->setLayout(roundPadButtonsVBox22);
-	roundPadCircle->setLayout(roundPadButtonsVBox23);
-	roundPadCross->setLayout(roundPadButtonsVBox24);
+	roundPadButtonsHBox21->addWidget(b_triangle);
+	roundPadButtonsHBox22->addWidget(b_square);
+	roundPadButtonsHBox23->addWidget(b_circle);
+	roundPadButtonsHBox24->addWidget(b_cross);
+	roundPadTriangle->setLayout(roundPadButtonsHBox21);
+	roundPadSquare->setLayout(roundPadButtonsHBox22);
+	roundPadCircle->setLayout(roundPadButtonsHBox23);
+	roundPadCross->setLayout(roundPadButtonsHBox24);
+	roundPadButtonsHBox1->addStretch();
 	roundPadButtonsHBox1->addWidget(roundPadTriangle);
+	roundPadButtonsHBox1->addStretch();
 	roundPadButtonsHBox2->addWidget(roundPadSquare);
 	roundPadButtonsHBox2->addWidget(roundPadCircle);
+	roundPadButtonsHBox3->addStretch();
 	roundPadButtonsHBox3->addWidget(roundPadCross);
+	roundPadButtonsHBox3->addStretch();
 	roundPadButtonsVBox->addLayout(roundPadButtonsHBox1);
 	roundPadButtonsVBox->addLayout(roundPadButtonsHBox2);
 	roundPadButtonsVBox->addLayout(roundPadButtonsHBox3);
@@ -177,6 +190,7 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 
 	// Right Analog Stick
 	QGroupBox *roundStickR = new QGroupBox(tr("Right Analog Stick"));
+	QVBoxLayout *roundStickRMainVBox = new QVBoxLayout;
 	QVBoxLayout *roundStickRVBox = new QVBoxLayout;
 	QHBoxLayout *roundStickRHBox1 = new QHBoxLayout;
 	QHBoxLayout *roundStickRHBox2 = new QHBoxLayout;
@@ -193,6 +207,8 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	roundStickRVBox->addLayout(roundStickRHBox2);
 	roundStickRVBox->addLayout(roundStickRHBox3);
 	roundStickR->setLayout(roundStickRVBox);
+	roundStickRMainVBox->addWidget(roundStickR);
+	roundStickRMainVBox->addStretch();
 	b_up_rstick->setFixedWidth(PadButtonWidth);
 	b_left_rstick->setFixedWidth(PadButtonWidth);
 	b_right_rstick->setFixedWidth(PadButtonWidth);
@@ -248,13 +264,13 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 
 	// Main layout
 	QHBoxLayout *hbox1 = new QHBoxLayout;
-	hbox1->addWidget(roundStickL);
-	hbox1->addWidget(roundPadControls);
+	hbox1->addLayout(roundStickLMainVBox);
+	hbox1->addLayout(roundPadControlsMainVBox);
 	hbox1->addWidget(roundPadShiftsL);
-	hbox1->addWidget(roundPadSystem);
+	hbox1->addLayout(roundPadSystemMainVbox);
 	hbox1->addWidget(roundPadShiftsR);
 	hbox1->addWidget(roundPadButtons);
-	hbox1->addWidget(roundStickR);
+	hbox1->addLayout(roundStickRMainVBox);
 
 	QHBoxLayout *hbox2 = new QHBoxLayout;
 	hbox2->addWidget(b_reset);

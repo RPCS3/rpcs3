@@ -21,6 +21,7 @@
 #include "MemoryViewer.h"
 #include "RSXDebugger.h"
 #include "mainwindow.h"
+#include "EmuSettings.h"
 
 #include <thread>
 
@@ -44,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 	guiSettings.reset(new GuiSettings());
 
 	setDockNestingEnabled(true);
+	LoadIcons(); // This needs to happen before any actions or buttons are created
 	CreateActions();
 	CreateMenus();
 	CreateDockWindows();
@@ -54,7 +56,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 	CreateConnects();
 
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
-	appIcon = QIcon("rpcs3.ico");
 	if (!appIcon.isNull())
 	{
 		setWindowIcon(appIcon);
@@ -71,14 +72,18 @@ MainWindow::~MainWindow()
 {
 }
 
+void MainWindow::LoadIcons()
+{
+	fs::is_file("Icons/play.png") ? icon_play = QIcon("Icons/play.png") : icon_play = style()->standardIcon(QStyle::SP_MediaPlay);
+	fs::is_file("Icons/pause.png") ? icon_pause = QIcon("Icons/pause.png") : icon_pause = style()->standardIcon(QStyle::SP_MediaPause);
+	fs::is_file("Icons/stop.png") ? icon_stop = QIcon("Icons/stop.png") : icon_stop = style()->standardIcon(QStyle::SP_MediaStop);
+	fs::is_file("Icons/restart.png") ? icon_restart = QIcon("Icons/restart.png") : icon_restart = style()->standardIcon(QStyle::SP_BrowserReload);
+	appIcon = QIcon("rpcs3.ico");
+}
+
 void MainWindow::CreateThumbnailToolbar()
 {
 #ifdef _WIN32
-	icon_play.addFile("Icons/play.png");
-	icon_pause.addFile("Icons/pause.png");
-	icon_stop.addFile("Icons/stop.png");
-	icon_restart.addFile("Icons/restart.png");
-
 	thumb_bar = new QWinThumbnailToolBar(this);
 	thumb_bar->setWindow(windowHandle());
 
@@ -105,23 +110,6 @@ void MainWindow::CreateThumbnailToolbar()
 	thumb_bar->addButton(thumb_stop);
 	thumb_bar->addButton(thumb_restart);
 #endif
-}
-
-void MainWindow::DoSettings(bool load)
-{
-	//auto&& cfg = g_gui_cfg[ini_name]["aui"];
-	//
-	//if (load)
-	//{
-	//	const auto& perspective = fmt::FromUTF8(cfg.Scalar());
-	//
-	//	m_aui_mgr.LoadPerspective(perspective.empty() ? m_aui_mgr.SavePerspective() : perspective);
-	//}
-	//else
-	//{
-	//	cfg = fmt::ToUTF8(m_aui_mgr.SavePerspective());
-	//	save_gui_cfg();
-	//}
 }
 
 // returns appIcon
@@ -651,43 +639,61 @@ void MainWindow::DecryptSPRXLibraries()
 
 void MainWindow::ToggleDebugFrame(bool state)
 {
-	if (state)
-	{
-		debuggerFrame->show();
-	}
-	else
-	{
-		debuggerFrame->hide();
-	}
+	state ? debuggerFrame->show() : debuggerFrame->hide();
+	guiSettings->SetDebuggerVisibility(state);
 }
 
 void MainWindow::ToggleLogFrame(bool state)
 {
-	if (state)
-	{
-		logFrame->show();
-	}
-	else
-	{
-		logFrame->hide();
-	}
+	state ? logFrame->show() : logFrame->hide();
+	guiSettings->SetLoggerVisibility(state);
 }
 
 void MainWindow::ToggleGameListFrame(bool state)
 {
-	if (state)
-	{
-		gameListFrame->show();
-	}
-	else
-	{
-		gameListFrame->hide();
-	}
+	state ? gameListFrame->show() : gameListFrame->hide();
+	guiSettings->SetGamelistVisibility(state);
+}
+
+void MainWindow::ToggleControls(bool state)
+{
+	state ? controls->show() : controls->hide();
+	guiSettings->SetControlsVisibility(state);
 }
 
 void MainWindow::RefreshGameList()
 {
 	gameListFrame->Refresh();
+}
+
+void MainWindow::ToggleHDDGameCategory(bool state)
+{
+	gameListFrame->ToggleCategoryFilter("HDD Game", state);
+	guiSettings->SetCategoryHDDGameVisibility(state);
+}
+
+void MainWindow::ToggleDiscGameCategory(bool state)
+{
+	gameListFrame->ToggleCategoryFilter("Disc Game", state);
+	guiSettings->SetCategoryDiscGameVisibility(state);
+}
+
+void MainWindow::ToggleHomeCategory(bool state)
+{
+	gameListFrame->ToggleCategoryFilter("Home", state);
+	guiSettings->SetCategoryHomeVisibility(state);
+}
+
+void MainWindow::ToggleAudioVideoCategory(bool state)
+{
+	gameListFrame->ToggleCategoryFilter("Audio/Video", state);
+	guiSettings->SetCategoryAudioVideoVisibility(state);
+}
+
+void MainWindow::ToggleGameDataCategory(bool state)
+{
+	gameListFrame->ToggleCategoryFilter("Game Data", state);
+	guiSettings->SetCategoryGameDataVisibility(state);
 }
 
 void MainWindow::About()
@@ -732,6 +738,7 @@ void MainWindow::OnDebugFrameClosed()
 	if (showDebuggerAct->isChecked())
 	{
 		showDebuggerAct->setChecked(false);
+		guiSettings->SetDebuggerVisibility(false);
 	}
 }
 
@@ -740,6 +747,7 @@ void MainWindow::OnLogFrameClosed()
 	if (showLogAct->isChecked())
 	{
 		showLogAct->setChecked(false);
+		guiSettings->SetLoggerVisibility(false);
 	}
 }
 
@@ -748,6 +756,7 @@ void MainWindow::OnGameListFrameClosed()
 	if (showGameListAct->isChecked())
 	{
 		showGameListAct->setChecked(false);
+		guiSettings->SetGamelistVisibility(false);
 	}
 }
 
@@ -770,8 +779,10 @@ void MainWindow::OnEmuRun()
 	thumb_playPause->setToolTip(tr("Pause"));
 	thumb_playPause->setIcon(icon_pause);
 #endif
-	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
+	sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	sysPauseAct->setIcon(icon_pause);
 	menu_run->setText(tr("&Pause"));
+	menu_run->setIcon(icon_pause);
 	EnableMenus(true);
 }
 
@@ -781,8 +792,10 @@ void MainWindow::OnEmuResume()
 	thumb_playPause->setToolTip(tr("Pause"));
 	thumb_playPause->setIcon(icon_pause);
 #endif
-	sysPauseAct->setText(tr("&Pause\tCtrl + P"));
+	sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	sysPauseAct->setIcon(icon_pause);
 	menu_run->setText(tr("&Pause"));
+	menu_run->setIcon(icon_pause);
 }
 
 void MainWindow::OnEmuPause()
@@ -791,8 +804,10 @@ void MainWindow::OnEmuPause()
 	thumb_playPause->setToolTip(tr("Resume"));
 	thumb_playPause->setIcon(icon_play);
 #endif
-	sysPauseAct->setText(tr("&Resume\tCtrl + E"));
+	sysPauseAct->setText(tr("&Resume\tCtrl+E"));
+	sysPauseAct->setIcon(icon_play);
 	menu_run->setText(tr("&Resume"));
+	menu_run->setIcon(icon_play);
 }
 
 void MainWindow::OnEmuStop()
@@ -802,10 +817,12 @@ void MainWindow::OnEmuStop()
 	thumb_playPause->setIcon(icon_play);
 #endif
 	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
+	menu_run->setIcon(icon_play);
 	EnableMenus(false);
 	if (!Emu.GetPath().empty())
 	{
-		sysPauseAct->setText(tr("&Restart\tCtrl + E"));
+		sysPauseAct->setText(tr("&Restart\tCtrl+E"));
+		sysPauseAct->setIcon(icon_restart);
 		sysPauseAct->setEnabled(true);
 		menu_restart->setEnabled(true);
 #ifdef _WIN32
@@ -814,7 +831,8 @@ void MainWindow::OnEmuStop()
 	}
 	else
 	{
-		sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
+		sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+		sysPauseAct->setIcon(icon_play);
 	}
 }
 
@@ -824,8 +842,10 @@ void MainWindow::OnEmuReady()
 	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
 	thumb_playPause->setIcon(icon_play);
 #endif
-	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl + E") : tr("&Resume\tCtrl + E"));
+	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+	sysPauseAct->setIcon(icon_play);
 	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
+	menu_run->setIcon(icon_play);
 	EnableMenus(true);
 }
 
@@ -879,10 +899,12 @@ void MainWindow::CreateActions()
 
 	sysPauseAct = new QAction(tr("&Pause"), this);
 	sysPauseAct->setEnabled(false);
+	sysPauseAct->setIcon(icon_pause);
 
 	sysStopAct = new QAction(tr("&Stop"), this);
 	sysStopAct->setShortcut(tr("Ctrl+S"));
 	sysStopAct->setEnabled(false);
+	sysStopAct->setIcon(icon_stop);
 
 	sysSendOpenMenuAct = new QAction(tr("Send &open system menu cmd"), this);
 	sysSendOpenMenuAct->setEnabled(false);
@@ -933,7 +955,25 @@ void MainWindow::CreateActions()
 	showGameListAct = new QAction(tr("Show GameList"), this);
 	showGameListAct->setCheckable(true);
 
+	showControlsAct = new QAction(tr("Show Controls"), this);
+	showControlsAct->setCheckable(true);
+
 	refreshGameListAct = new QAction(tr("&Refresh Game List"), this);
+
+	showCatHDDGameAct = new QAction(tr("HDD Game"), this);
+	showCatHDDGameAct->setCheckable(true);
+
+	showCatDiscGameAct = new QAction(tr("Disc Game"), this);
+	showCatDiscGameAct->setCheckable(true);
+
+	showCatHomeAct = new QAction(tr("Home"), this);
+	showCatHomeAct->setCheckable(true);
+
+	showCatAudioVideoAct = new QAction(tr("Audio/Video"), this);
+	showCatAudioVideoAct->setCheckable(true);
+
+	showCatGameDataAct = new QAction(tr("Game Data"), this);
+	showCatGameDataAct->setCheckable(true);
 
 	aboutAct = new QAction(tr("&About"), this);
 	aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -969,7 +1009,13 @@ void MainWindow::CreateConnects()
 	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);
 	connect(showLogAct, &QAction::triggered, this, &MainWindow::ToggleLogFrame);
 	connect(showGameListAct, &QAction::triggered, this, &MainWindow::ToggleGameListFrame);
+	connect(showControlsAct, &QAction::triggered, this, &MainWindow::ToggleControls);
 	connect(refreshGameListAct, &QAction::triggered, this, &MainWindow::RefreshGameList);
+	connect(showCatHDDGameAct, &QAction::triggered, this, &MainWindow::ToggleHDDGameCategory);
+	connect(showCatDiscGameAct, &QAction::triggered, this, &MainWindow::ToggleDiscGameCategory);
+	connect(showCatHomeAct, &QAction::triggered, this, &MainWindow::ToggleHomeCategory);
+	connect(showCatAudioVideoAct, &QAction::triggered, this, &MainWindow::ToggleAudioVideoCategory);
+	connect(showCatGameDataAct, &QAction::triggered, this, &MainWindow::ToggleGameDataCategory);
 	connect(aboutAct, &QAction::triggered, this, &MainWindow::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
 	connect(menu_run, &QAbstractButton::clicked, this, &MainWindow::Pause);
@@ -1019,16 +1065,23 @@ void MainWindow::CreateMenus()
 	QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
 	viewMenu->addAction(showLogAct);
 	viewMenu->addAction(showDebuggerAct);
+	viewMenu->addAction(showControlsAct);
 	viewMenu->addSeparator();
 	viewMenu->addAction(showGameListAct);
 	viewMenu->addAction(refreshGameListAct);
+
+	QMenu *categoryMenu = viewMenu->addMenu(tr("Show Categories"));
+	categoryMenu->addAction(showCatHDDGameAct);
+	categoryMenu->addAction(showCatDiscGameAct);
+	categoryMenu->addAction(showCatHomeAct);
+	categoryMenu->addAction(showCatAudioVideoAct);
+	categoryMenu->addAction(showCatGameDataAct);
 
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
 	helpMenu->addAction(aboutQtAct);
 
-	QWidget* tools = new QWidget(this);
-	QHBoxLayout* tools_layout = new QHBoxLayout();
+	QHBoxLayout* controls_layout = new QHBoxLayout();
 	menu_run = new QPushButton(tr("Start"));
 	menu_stop = new QPushButton(tr("Stop"));
 	menu_restart = new QPushButton(tr("Restart"));
@@ -1036,14 +1089,18 @@ void MainWindow::CreateMenus()
 	menu_run->setEnabled(false);
 	menu_stop->setEnabled(false);
 	menu_restart->setEnabled(false);
-	tools_layout->addWidget(menu_run);
-	tools_layout->addWidget(menu_stop);
-	tools_layout->addWidget(menu_restart);
-	tools_layout->addWidget(menu_capture_frame);
-	tools_layout->addSpacing(5);
-	tools_layout->setContentsMargins(0, 0, 0, 0);
-	tools->setLayout(tools_layout);
-	menuBar()->setCornerWidget(tools, Qt::TopRightCorner);
+	menu_run->setIcon(icon_play);
+	menu_stop->setIcon(icon_stop);
+	menu_restart->setIcon(icon_restart);
+	controls_layout->addWidget(menu_run);
+	controls_layout->addWidget(menu_stop);
+	controls_layout->addWidget(menu_restart);
+	controls_layout->addWidget(menu_capture_frame);
+	controls_layout->addSpacing(5);
+	controls_layout->setContentsMargins(0, 0, 0, 0);
+	controls = new QWidget(this);
+	controls->setLayout(controls_layout);
+	menuBar()->setCornerWidget(controls, Qt::TopRightCorner);
 }
 
 void MainWindow::CreateDockWindows()
@@ -1069,30 +1126,31 @@ void MainWindow::ConfigureGuiFromSettings(bool configureAll)
 {
 	// Restore GUI state if needed. We need to if they exist.
 	QByteArray geometry = guiSettings->ReadGuiGeometry();
-	bool needsDefault = false;
 	if (geometry.isEmpty() == false)
 	{
 		restoreGeometry(geometry);
 	}
 	else
-	{
-		needsDefault = true;
-	}
-
-	restoreState(guiSettings->ReadGuiState());
-
-	// By default, set the window to 70% of the screen and the debugger frame is hidden.
-	if (needsDefault)
-	{
+	{	// By default, set the window to 70% of the screen and the debugger frame is hidden.
 		debuggerFrame->hide();
 
 		QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
 		resize(defaultSize);
 	}
 
+	restoreState(guiSettings->ReadGuiState());
+
 	showLogAct->setChecked(guiSettings->GetLoggerVisibility());
 	showGameListAct->setChecked(guiSettings->GetGamelistVisibility());
 	showDebuggerAct->setChecked(guiSettings->GetDebuggerVisibility());
+	showControlsAct->setChecked(guiSettings->GetControlsVisibility());
+	guiSettings->GetControlsVisibility() ? controls->show() : controls->hide();
+
+	showCatHDDGameAct->setChecked(guiSettings->GetCategoryHDDGameVisibility());;
+	showCatDiscGameAct->setChecked(guiSettings->GetCategoryDiscGameVisibility());;
+	showCatHomeAct->setChecked(guiSettings->GetCategoryHomeVisibility());;
+	showCatAudioVideoAct->setChecked(guiSettings->GetCategoryAudioVideoVisibility());;
+	showCatGameDataAct->setChecked(guiSettings->GetCategoryGameDataVisibility());;
 
 	if (configureAll)
 	{

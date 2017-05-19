@@ -1,11 +1,14 @@
 #include "GSFrame.h"
 
+#include "Utilities/Config.h"
 #include "Utilities/Timer.h"
 #include "Emu/System.h"
 
 #include <QKeyEvent>
 #include <QTimer>
 #include <QThread>
+
+cfg::bool_entry g_cfg_start_fullscreen_mode(cfg::root.misc, "Start Games in Fullscreen Mode");
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
@@ -76,7 +79,13 @@ void GSFrame::hide()
 
 void GSFrame::show()
 {
-	Emu.CallAfter([=]() {QWindow::show(); });
+	Emu.CallAfter([=]() {
+		QWindow::show(); 
+		if (g_cfg_start_fullscreen_mode)
+		{
+			setVisibility(FullScreen);
+		}
+	});
 }
 
 void* GSFrame::handle() const

@@ -9,11 +9,12 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(QWidget *parent) : QDialog(pare
 
 	pauseList = new QTableWidget(this);
 	pauseList->setColumnCount(2);
-	pauseList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Call ID")));
-	pauseList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Type")));
-	pauseList->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	pauseList->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
+	//pauseList->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	pauseList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	pauseList->setContextMenuPolicy(Qt::CustomContextMenu);
+	pauseList->setItemDelegate(new TableItemDelegate(this));
+	pauseList->setShowGrid(false);
 
 	QPushButton *clearButton = new QPushButton(tr("Clear"), this);
 	QPushButton *reloadButton = new QPushButton(tr("Reload"), this);
@@ -98,7 +99,7 @@ void AutoPauseSettingsDialog::SaveEntries(void)
 
 void AutoPauseSettingsDialog::UpdateList(void)
 {
-	pauseList->clear();
+	pauseList->clearContents();
 	pauseList->setRowCount(m_entries.size());
 	for (size_t i = 0; i < m_entries.size(); ++i)
 	{
@@ -148,8 +149,8 @@ void AutoPauseSettingsDialog::ShowContextMenu(const QPoint &pos)
 		config->setEnabled(false);
 	}
 
-	connect(add, &QAction::triggered, [=]() {OnAdd(row); });
-	connect(remove, &QAction::triggered, [=]() {OnRemove(row); });
+	connect(add, &QAction::triggered, this, &AutoPauseSettingsDialog::OnAdd);
+	connect(remove, &QAction::triggered, this, &AutoPauseSettingsDialog::OnRemove);
 	connect(config, &QAction::triggered, [=]() {OnEntryConfig(row, false); });
 
 	myMenu.exec(globalPos);
@@ -163,7 +164,7 @@ void AutoPauseSettingsDialog::OnEntryConfig(int row, bool newEntry)
 	UpdateList();
 }
 
-void AutoPauseSettingsDialog::OnAdd(int row)
+void AutoPauseSettingsDialog::OnAdd()
 {
 	m_entries.emplace_back(0xFFFFFFFF);
 	UpdateList();
@@ -174,9 +175,10 @@ void AutoPauseSettingsDialog::OnAdd(int row)
 	OnEntryConfig(idx, true);
 }
 
-void AutoPauseSettingsDialog::OnRemove(int row)
+void AutoPauseSettingsDialog::OnRemove()
 {
 	QModelIndexList selection = pauseList->selectionModel()->selectedRows();
+	qSort(selection.begin(), selection.end()); // crash on unordered
 	for (int i = selection.count() - 1; i >= 0; i--)
 	{
 		m_entries.erase(m_entries.begin() + selection.at(i).row());
@@ -202,6 +204,14 @@ void AutoPauseSettingsDialog::OnReload()
 	UpdateList();
 }
 
+void AutoPauseSettingsDialog::keyPressEvent(QKeyEvent *event)
+{
+	if (event->key() == Qt::Key_Delete)
+	{
+		OnRemove();
+	}
+}
+
 AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, AutoPauseSettingsDialog* apsd, bool newEntry, u32 *entry) 
 	: QDialog(parent), m_presult(entry), b_newEntry(newEntry), apsd_parent(apsd)
 {
@@ -221,7 +231,10 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, AutoPauseSettingsD
 	
 	m_id = new QLineEdit(this);
 	m_id->setText(qstr(fmt::format("%08x", m_entry)));
-	m_id->setFixedWidth(100);
+	m_id->setPlaceholderText("ffffffff");
+	m_id->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	m_id->setMaxLength(8);
+	m_id->setFixedWidth(65);
 	setWindowTitle("Auto Pause Setting: " + m_id->text());
 	
 	connect(button_cancel, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnCancel);
@@ -260,7 +273,7 @@ void AutoPauseConfigDialog::OnCancel()
 {
 	if (b_newEntry)
 	{
-		apsd_parent->OnRemove(apsd_parent->pauseList->rowCount()-1);
+		apsd_parent->OnRemove();
 	}
 	close();
 }
@@ -270,5 +283,6 @@ void AutoPauseConfigDialog::OnUpdateValue()
 	bool ok;
 	ullong value = m_id->text().toULongLong(&ok, 16);
 	const bool is_ok = ok && value <= UINT32_MAX;
+	
 	m_current_converted->setText(qstr(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")));
 }

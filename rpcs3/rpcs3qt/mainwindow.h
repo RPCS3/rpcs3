@@ -25,7 +25,13 @@ class MainWindow : public QMainWindow
 
 	bool m_sys_menu_opened;
 
+	QWidget* controls;
+
 	QIcon appIcon;
+	QIcon icon_play;
+	QIcon icon_pause;
+	QIcon icon_stop;
+	QIcon icon_restart;
 
 	QPushButton* menu_run;
 	QPushButton* menu_stop;
@@ -37,10 +43,6 @@ class MainWindow : public QMainWindow
 	QWinThumbnailToolButton *thumb_playPause;
 	QWinThumbnailToolButton *thumb_stop;
 	QWinThumbnailToolButton *thumb_restart;
-	QIcon icon_play;
-	QIcon icon_pause;
-	QIcon icon_stop;
-	QIcon icon_restart;
 #endif
 
 public:
@@ -86,7 +88,13 @@ private slots:
 	void ToggleDebugFrame(bool state);
 	void ToggleLogFrame(bool state);
 	void ToggleGameListFrame(bool state);
+	void ToggleControls(bool state);
 	void RefreshGameList();
+	void ToggleHDDGameCategory(bool state);
+	void ToggleDiscGameCategory(bool state);
+	void ToggleHomeCategory(bool state);
+	void ToggleAudioVideoCategory(bool state);
+	void ToggleGameDataCategory(bool state);
 	void About();
 
 	void OnDebugFrameClosed();
@@ -99,12 +107,12 @@ protected:
 	void closeEvent(QCloseEvent *event) override;
 	void SetAppIconFromPath(const std::string path);
 private:
+	void LoadIcons();
 	void CreateActions();
 	void CreateConnects();
 	void CreateMenus();
 	void CreateDockWindows();
 	void ConfigureGuiFromSettings(bool configureAll = false);
-	void DoSettings(bool load);
 	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
 
@@ -133,7 +141,13 @@ private:
 	QAction *showDebuggerAct;
 	QAction *showLogAct;
 	QAction *showGameListAct;
+	QAction *showControlsAct;
 	QAction *refreshGameListAct;
+	QAction* showCatHDDGameAct;
+	QAction* showCatDiscGameAct;
+	QAction* showCatHomeAct;
+	QAction* showCatAudioVideoAct;
+	QAction* showCatGameDataAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
 

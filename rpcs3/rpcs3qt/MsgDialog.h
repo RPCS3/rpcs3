@@ -1,5 +1,5 @@
-#ifndef MSG_DIALOG_H
-#define MSG_DIALOG_H
+#ifndef MSGDIALOG_H
+#define MSGDIALOG_H
 
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
@@ -54,4 +54,4 @@ public:
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
 };
 
-#endif
+#endif // !MSGDIALOG_H
