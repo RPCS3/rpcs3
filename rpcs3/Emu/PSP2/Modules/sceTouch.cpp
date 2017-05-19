@@ -4,7 +4,7 @@
 
 #include "sceTouch.h"
 
-logs::channel sceTouch("sceTouch", logs::level::notice);
+logs::channel sceTouch("sceTouch");
 
 s32 sceTouchGetPanelInfo(u32 port, vm::ptr<SceTouchPanelInfo> pPanelInfo)
 {

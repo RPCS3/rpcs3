@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellMusicDecode("cellMusicDecode", logs::level::notice);
+namespace vm { using namespace ps3; }
+
+logs::channel cellMusicDecode("cellMusicDecode");
 
 // Return Codes
 enum
 {
-	CELL_MUSIC_DECODE_OK                      = 0,
-	CELL_MUSIC_DECODE_CANCELED                = 1,
 	CELL_MUSIC_DECODE_DECODE_FINISHED         = 0x8002C101,
 	CELL_MUSIC_DECODE_ERROR_PARAM             = 0x8002C102,
 	CELL_MUSIC_DECODE_ERROR_BUSY              = 0x8002C103,

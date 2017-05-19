@@ -42,6 +42,15 @@ struct ps3_fmt_src
 	{
 		return 0;
 	}
+
+	static constexpr std::size_t size_char  = 1;
+	static constexpr std::size_t size_short = 2;
+	static constexpr std::size_t size_int   = 4;
+	static constexpr std::size_t size_long  = 4;
+	static constexpr std::size_t size_llong = 8;
+	static constexpr std::size_t size_size  = 4;
+	static constexpr std::size_t size_max   = 8;
+	static constexpr std::size_t size_diff  = 4;
 };
 
 template <>

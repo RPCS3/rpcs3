@@ -4,7 +4,7 @@
 
 #include "sceCtrl.h"
 
-logs::channel sceCtrl("sceCtrl", logs::level::notice);
+logs::channel sceCtrl("sceCtrl");
 
 s32 sceCtrlSetSamplingMode(u32 uiMode)
 {

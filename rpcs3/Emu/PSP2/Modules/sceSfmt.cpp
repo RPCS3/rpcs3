@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/PSP2/ARMv7Module.h"
 
-logs::channel sceSfmt("sceSfmt", logs::level::notice);
+logs::channel sceSfmt("sceSfmt");
 
 #define REG_FUNC(nid, name) REG_FNID(SceSfmt, nid, name)
 

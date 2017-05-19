@@ -4,7 +4,7 @@
 
 #include "sceHttp.h"
 
-logs::channel sceHttp("sceHttp", logs::level::notice);
+logs::channel sceHttp("sceHttp");
 
 s32 sceHttpInit(u32 poolSize)
 {

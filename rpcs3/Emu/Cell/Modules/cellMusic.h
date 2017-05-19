@@ -1,12 +1,8 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Error Codes
 enum
 {
-	CELL_MUSIC_OK                       = 0,
-	CELL_MUSIC_CANCELED                 = 1,
 	CELL_MUSIC_PLAYBACK_FINISHED        = 0x8002c101,
 	CELL_MUSIC_ERROR_PARAM              = 0x8002c102,
 	CELL_MUSIC_ERROR_BUSY               = 0x8002c103,
@@ -18,8 +14,7 @@ enum
 	CELL_MUSIC_DIALOG_OPEN              = 0x8002c109,
 	CELL_MUSIC_DIALOG_CLOSE             = 0x8002c10A,
 	CELL_MUSIC_ERROR_GENERIC            = 0x8002c1FF,
-	CELL_MUSIC2_OK                      = CELL_MUSIC_OK,
-	CELL_MUSIC2_CANCELED                = CELL_MUSIC_CANCELED,
+
 	CELL_MUSIC2_PLAYBACK_FINISHED       = CELL_MUSIC_PLAYBACK_FINISHED,
 	CELL_MUSIC2_ERROR_PARAM             = CELL_MUSIC_ERROR_PARAM,
 	CELL_MUSIC2_ERROR_BUSY              = CELL_MUSIC_ERROR_BUSY,
@@ -125,8 +120,8 @@ enum
 	CELL_MUSIC_SELECTION_CONTEXT_SIZE         = 2048,
 };
 
-using CellMusicCallback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
-using CellMusic2Callback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
+using CellMusicCallback = void(u32 event, vm::ps3::ptr<void> param, vm::ps3::ptr<void> userData);
+using CellMusic2Callback = void(u32 event, vm::ps3::ptr<void> param, vm::ps3::ptr<void> userData);
 
 struct CellMusicSelectionContext
 {

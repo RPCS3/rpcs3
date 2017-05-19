@@ -3,9 +3,31 @@
 
 #include "cellSpudll.h"
 
-logs::channel cellSpudll("cellSpudll", logs::level::notice);
+namespace vm { using namespace ps3; }
 
-s32 cellSpudllGetImageSize(vm::ptr<u32> psize, vm::cptr<void> so_elf, vm::cptr<CellSpudllHandleConfig> config)
+logs::channel cellSpudll("cellSpudll");
+
+template<>
+void fmt_class_string<CellSpudllError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SPUDLL_ERROR_INVAL);
+			STR_CASE(CELL_SPUDLL_ERROR_STAT);
+			STR_CASE(CELL_SPUDLL_ERROR_ALIGN);
+			STR_CASE(CELL_SPUDLL_ERROR_NULL_POINTER);
+			STR_CASE(CELL_SPUDLL_ERROR_SRCH);
+			STR_CASE(CELL_SPUDLL_ERROR_UNDEF);
+			STR_CASE(CELL_SPUDLL_ERROR_FATAL);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellSpudllGetImageSize(vm::ptr<u32> psize, vm::cptr<void> so_elf, vm::cptr<CellSpudllHandleConfig> config)
 {
 	cellSpudll.todo("cellSpudllGetImageSize(psize=*0x%x, so_elf=*0x%x, config=*0x%x)", psize, so_elf, config);
 
@@ -19,7 +41,7 @@ s32 cellSpudllGetImageSize(vm::ptr<u32> psize, vm::cptr<void> so_elf, vm::cptr<C
 	return CELL_OK;
 }
 
-s32 cellSpudllHandleConfigSetDefaultValues(vm::ptr<CellSpudllHandleConfig> config)
+error_code cellSpudllHandleConfigSetDefaultValues(vm::ptr<CellSpudllHandleConfig> config)
 {
 	cellSpudll.trace("cellSpudllHandleConfigSetDefaultValues(config=*0x%x)", config);
 
@@ -31,6 +53,7 @@ s32 cellSpudllHandleConfigSetDefaultValues(vm::ptr<CellSpudllHandleConfig> confi
 	config->mode = 0;
 	config->dmaTag = 0;
 	config->numMaxReferred = 16;
+	config->numMaxDepend = 16;
 	config->unresolvedSymbolValueForFunc = vm::null;
 	config->unresolvedSymbolValueForObject = vm::null;
 	config->unresolvedSymbolValueForOther = vm::null;

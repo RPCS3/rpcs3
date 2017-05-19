@@ -1750,6 +1750,7 @@ void named_thread::start_thread(const std::shared_ptr<void>& _this)
 		try
 		{
 			LOG_TRACE(GENERAL, "Thread started");
+			on_spawn();
 			on_task();
 			LOG_TRACE(GENERAL, "Thread ended");
 		}

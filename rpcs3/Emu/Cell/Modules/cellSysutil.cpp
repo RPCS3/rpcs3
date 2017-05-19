@@ -11,7 +11,7 @@
 #include <mutex>
 #include <queue>
 
-logs::channel cellSysutil("cellSysutil", logs::level::notice);
+logs::channel cellSysutil("cellSysutil");
 
 struct sysutil_cb_manager
 {

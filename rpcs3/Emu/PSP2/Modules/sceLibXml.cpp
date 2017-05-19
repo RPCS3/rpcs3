@@ -4,7 +4,7 @@
 
 #include "sceLibXml.h"
 
-logs::channel sceLibXml("sceLibXml", logs::level::notice);
+logs::channel sceLibXml("sceLibXml");
 
 #define REG_FUNC(nid, name) REG_FNID(SceLibXml, nid, name)
 

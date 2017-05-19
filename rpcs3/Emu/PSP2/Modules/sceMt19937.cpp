@@ -4,7 +4,7 @@
 
 #include "sceMt19937.h"
 
-logs::channel sceMt19937("sceMt19937", logs::level::notice);
+logs::channel sceMt19937("sceMt19937");
 
 s32 sceMt19937Init(vm::ptr<SceMt19937Context> pCtx, u32 seed)
 {

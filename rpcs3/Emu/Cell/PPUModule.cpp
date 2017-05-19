@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "Utilities/Config.h"
-#include "Utilities/AutoPause.h"
 #include "Utilities/VirtualMemory.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
@@ -19,106 +18,6 @@
 #include <algorithm>
 
 namespace vm { using namespace ps3; }
-
-LOG_CHANNEL(cellAdec);
-LOG_CHANNEL(cellAtrac);
-LOG_CHANNEL(cellAtracMulti);
-LOG_CHANNEL(cellAudio);
-LOG_CHANNEL(cellAvconfExt);
-LOG_CHANNEL(cellBGDL);
-LOG_CHANNEL(cellCamera);
-LOG_CHANNEL(cellCelp8Enc);
-LOG_CHANNEL(cellCelpEnc);
-LOG_CHANNEL(cellCrossController);
-LOG_CHANNEL(cellDaisy);
-LOG_CHANNEL(cellDmux);
-LOG_CHANNEL(cellFiber);
-LOG_CHANNEL(cellFont);
-LOG_CHANNEL(cellFontFT);
-LOG_CHANNEL(cell_FreeType2);
-LOG_CHANNEL(cellFs);
-LOG_CHANNEL(cellGame);
-LOG_CHANNEL(cellGameExec);
-LOG_CHANNEL(cellGcmSys);
-LOG_CHANNEL(cellGem);
-LOG_CHANNEL(cellGifDec);
-LOG_CHANNEL(cellHttp);
-LOG_CHANNEL(cellHttpUtil);
-LOG_CHANNEL(cellImeJp);
-LOG_CHANNEL(cellJpgDec);
-LOG_CHANNEL(cellJpgEnc);
-LOG_CHANNEL(cellKey2char);
-LOG_CHANNEL(cellL10n);
-LOG_CHANNEL(cellLibprof);
-LOG_CHANNEL(cellMic);
-LOG_CHANNEL(cellMusic);
-LOG_CHANNEL(cellMusicDecode);
-LOG_CHANNEL(cellMusicExport);
-LOG_CHANNEL(cellNetCtl);
-LOG_CHANNEL(cellOskDialog);
-LOG_CHANNEL(cellOvis);
-LOG_CHANNEL(cellPamf);
-LOG_CHANNEL(cellPhotoDecode);
-LOG_CHANNEL(cellPhotoExport);
-LOG_CHANNEL(cellPhotoImportUtil);
-LOG_CHANNEL(cellPngDec);
-LOG_CHANNEL(cellPngEnc);
-LOG_CHANNEL(cellPrint);
-LOG_CHANNEL(cellRec);
-LOG_CHANNEL(cellRemotePlay);
-LOG_CHANNEL(cellResc);
-LOG_CHANNEL(cellRtc);
-LOG_CHANNEL(cellRtcAlarm);
-LOG_CHANNEL(cellRudp);
-LOG_CHANNEL(cellSail);
-LOG_CHANNEL(cellSailRec);
-LOG_CHANNEL(cellSaveData);
-LOG_CHANNEL(cellScreenshot);
-LOG_CHANNEL(cellSearch);
-LOG_CHANNEL(cellSheap);
-LOG_CHANNEL(cellSpudll);
-LOG_CHANNEL(cellSpurs);
-LOG_CHANNEL(cellSpursJq);
-LOG_CHANNEL(cellSsl);
-LOG_CHANNEL(cellSubdisplay);
-LOG_CHANNEL(cellSync);
-LOG_CHANNEL(cellSync2);
-LOG_CHANNEL(cellSysconf);
-LOG_CHANNEL(cellSysmodule);
-LOG_CHANNEL(cellSysutil);
-LOG_CHANNEL(cellSysutilAp);
-LOG_CHANNEL(cellSysutilAvc);
-LOG_CHANNEL(cellSysutilAvc2);
-LOG_CHANNEL(cellSysutilMisc);
-LOG_CHANNEL(cellSysutilNpEula);
-LOG_CHANNEL(cellUsbd);
-LOG_CHANNEL(cellUsbPspcm);
-LOG_CHANNEL(cellUserInfo);
-LOG_CHANNEL(cellVdec);
-LOG_CHANNEL(cellVideoExport);
-LOG_CHANNEL(cellVideoUpload);
-LOG_CHANNEL(cellVoice);
-LOG_CHANNEL(cellVpost);
-LOG_CHANNEL(libmedi);
-LOG_CHANNEL(libmixer);
-LOG_CHANNEL(libsnd3);
-LOG_CHANNEL(libsynth2);
-LOG_CHANNEL(sceNp);
-LOG_CHANNEL(sceNp2);
-LOG_CHANNEL(sceNpClans);
-LOG_CHANNEL(sceNpCommerce2);
-LOG_CHANNEL(sceNpSns);
-LOG_CHANNEL(sceNpTrophy);
-LOG_CHANNEL(sceNpTus);
-LOG_CHANNEL(sceNpUtil);
-LOG_CHANNEL(sys_io);
-LOG_CHANNEL(sys_libc);
-LOG_CHANNEL(sys_lv2dbg);
-LOG_CHANNEL(libnet);
-LOG_CHANNEL(sysPrxForUser);
-#ifdef WITH_GDB_DEBUGGER
-LOG_CHANNEL(gdbDebugServer);
-#endif
 
 enum class lib_loader_mode
 {
@@ -142,6 +41,7 @@ cfg::set_entry g_cfg_load_libs(cfg::root.core, "Load libraries");
 
 extern cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder;
 
+extern void ppu_initialize_syscalls();
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
@@ -234,6 +134,8 @@ struct ppu_linkage_info
 // Initialize static modules.
 static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link)
 {
+	ppu_initialize_syscalls();
+
 	const std::initializer_list<const ppu_static_module*> registered
 	{
 		&ppu_module_manager::cellAdec,

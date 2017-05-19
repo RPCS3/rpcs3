@@ -8,13 +8,80 @@
 #include "restore_new.h"
 #include <Utilities/optional.hpp>
 #include "define_new_memleakdetect.h"
-
-#define RSX_DEBUG 1
-
 #include "VKProgramBuffer.h"
 #include "../GCM.h"
+#include "../rsx_utils.h"
+#include <atomic>
 
 #pragma comment(lib, "VKstatic.1.lib")
+
+#define VK_MAX_ASYNC_CB_COUNT 64
+
+struct command_buffer_chunk: public vk::command_buffer
+{
+	VkFence submit_fence = VK_NULL_HANDLE;
+	VkDevice m_device = VK_NULL_HANDLE;
+
+	bool pending = false;
+
+	command_buffer_chunk()
+	{}
+
+	void init_fence(VkDevice dev)
+	{
+		m_device = dev;
+
+		VkFenceCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		vkCreateFence(m_device, &info, nullptr, &submit_fence);
+	}
+
+	void destroy()
+	{
+		vk::command_buffer::destroy();
+
+		if (submit_fence != VK_NULL_HANDLE)
+			vkDestroyFence(m_device, submit_fence, nullptr);
+	}
+
+	void reset()
+	{
+		if (pending)
+			poke();
+
+		if (pending)
+			wait();
+
+		vkResetCommandBuffer(commands, 0);
+	}
+
+	void poke()
+	{
+		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
+		{
+			vkResetFences(m_device, 1, &submit_fence);
+			pending = false;
+		}
+	}
+
+	void wait()
+	{
+		if (!pending)
+			return;
+
+		switch(vkGetFenceStatus(m_device, submit_fence))
+		{
+		case VK_SUCCESS:
+			break;
+		case VK_NOT_READY:
+			vkWaitForFences(m_device, 1, &submit_fence, VK_TRUE, UINT64_MAX);
+			break;
+		}
+
+		vkResetFences(m_device, 1, &submit_fence);
+		pending = false;
+	}
+};
 
 class VKGSRender : public GSRender
 {
@@ -56,12 +123,17 @@ private:
 	u32 m_current_present_image = 0xFFFF;
 	VkSemaphore m_present_semaphore = nullptr;
 
-	u32 m_current_sync_buffer_index = 0;
-	VkFence m_submit_fence = nullptr;
-
 	vk::command_pool m_command_buffer_pool;
-	vk::command_buffer m_command_buffer;
+	std::array<command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 
+	command_buffer_chunk* m_current_command_buffer = nullptr;
+	command_buffer_chunk* m_swap_command_buffer = nullptr;
+
+	u32 m_current_cb_index = 0;
+
+	std::mutex m_secondary_cb_guard;
+	vk::command_pool m_secondary_command_buffer_pool;
+	vk::command_buffer m_secondary_command_buffer;
 
 	std::array<VkRenderPass, 120> m_render_passes;
 	VkDescriptorSetLayout descriptor_layouts;
@@ -86,16 +158,33 @@ private:
 	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;
 
+	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
+	rsx::gcm_framebuffer_info m_depth_surface_info;
+
+	bool m_flush_draw_buffers = false;
+	s32  m_last_flushable_cb = -1;
+	
+	std::atomic<bool> m_flush_commands = false;
+	std::atomic<int> m_queued_threads = 0;
+
+	std::thread::id rsx_thread;
+
 public:
 	VKGSRender();
 	~VKGSRender();
 
 private:
 	void clear_surface(u32 mask);
-	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence);
+	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
 	void sync_at_semaphore_release();
 	void prepare_rtts();
+	void copy_render_targets_to_dma_location();
+
+	void flush_command_queue(bool hard_sync = false);
+	void queue_swap_request();
+	void process_swap_request();
+
 	/// returns primitive topology, is_indexed, index_count, offset in index buffer, index type
 	std::tuple<VkPrimitiveTopology, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
 public:
@@ -113,6 +202,8 @@ protected:
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
+
+	void do_local_task() override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 };

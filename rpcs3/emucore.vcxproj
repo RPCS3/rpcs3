@@ -72,7 +72,6 @@
     <ClCompile Include="..\ps3emu_api\ps3emu_api.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Utilities\AutoPause.cpp" />
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -138,7 +137,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_trace.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_tty.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp" />
-	<ClCompile Include="Emu\Cell\lv2\sys_ss.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp" />
     <ClCompile Include="Emu\Cell\PPUModule.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp" />
@@ -404,7 +403,6 @@
     <ClInclude Include="..\ps3emu_api\ps3emu_api.h" />
     <ClInclude Include="..\Utilities\Atomic.h" />
     <ClInclude Include="..\Utilities\AtomicPtr.h" />
-    <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
@@ -543,7 +541,7 @@
     <ClInclude Include="Emu\Cell\lv2\sys_trace.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_tty.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_vm.h" />
-	<ClInclude Include="Emu\Cell\lv2\sys_ss.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_ss.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
     <ClInclude Include="Emu\Cell\PPUModule.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h" />

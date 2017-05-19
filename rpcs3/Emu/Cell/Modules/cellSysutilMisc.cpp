@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellSysutilMisc("cellSysutilMisc", logs::level::notice);
+logs::channel cellSysutilMisc("cellSysutilMisc");
 
 // License areas
 enum

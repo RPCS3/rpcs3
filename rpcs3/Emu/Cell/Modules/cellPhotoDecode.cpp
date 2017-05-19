@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellPhotoDecode("cellPhotoDecode", logs::level::notice);
+namespace vm { using namespace ps3; }
+
+logs::channel cellPhotoDecode("cellPhotoDecode");
 
 // Return Codes
 enum
 {
-	CELL_PHOTO_DECODE_RET_OK             = 0,
-	CELL_PHOTO_DECODE_RET_CANCEL         = 1,
 	CELL_PHOTO_DECODE_ERROR_BUSY         = 0x8002c901,
 	CELL_PHOTO_DECODE_ERROR_INTERNAL     = 0x8002c902,
 	CELL_PHOTO_DECODE_ERROR_PARAM        = 0x8002c903,

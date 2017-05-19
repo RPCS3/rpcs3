@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
-#include "Utilities/AutoPause.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUFunction.h"
@@ -33,41 +32,18 @@
 #include "sys_gamepad.h"
 #include "sys_ss.h"
 
-LOG_CHANNEL(sys_cond);
-LOG_CHANNEL(sys_dbg);
-LOG_CHANNEL(sys_event);
-LOG_CHANNEL(sys_event_flag);
-LOG_CHANNEL(sys_fs);
-LOG_CHANNEL(sys_interrupt);
-LOG_CHANNEL(sys_lwcond);
-LOG_CHANNEL(sys_lwmutex);
-LOG_CHANNEL(sys_memory);
-LOG_CHANNEL(sys_mmapper);
-LOG_CHANNEL(sys_mutex);
-LOG_CHANNEL(sys_ppu_thread);
-LOG_CHANNEL(sys_process);
-LOG_CHANNEL(sys_prx);
-LOG_CHANNEL(sys_rsx);
-LOG_CHANNEL(sys_rwlock);
-LOG_CHANNEL(sys_semaphore);
-LOG_CHANNEL(sys_spu);
-LOG_CHANNEL(sys_time);
-LOG_CHANNEL(sys_timer);
-LOG_CHANNEL(sys_trace);
-LOG_CHANNEL(sys_tty);
-LOG_CHANNEL(sys_vm);
-LOG_CHANNEL(sys_gamepad);
-
 extern std::string ppu_get_syscall_name(u64 code);
 
 static constexpr ppu_function_t null_func = nullptr;
+
+std::array<ppu_function_t, 1024> g_ppu_syscall_table{};
 
 // UNS = Unused
 // ROOT = Root
 // DBG = Debug
 // PM = Product Mode
 // AuthID = Authentication ID
-std::array<ppu_function_t, 1024> g_ppu_syscall_table
+const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 {
 	null_func,
 	BIND_FUNC(sys_process_getpid),                          //1   (0x001)
@@ -729,32 +705,32 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	BIND_FUNC(sys_fs_closedir),                             //807 (0x327)
 	BIND_FUNC(sys_fs_stat),                                 //808 (0x328)
 	BIND_FUNC(sys_fs_fstat),                                //809 (0x329)
-	null_func,//BIND_FUNC(sys_fs_link),                     //810 (0x32A)
+	BIND_FUNC(sys_fs_link),                                 //810 (0x32A)
 	BIND_FUNC(sys_fs_mkdir),                                //811 (0x32B)
 	BIND_FUNC(sys_fs_rename),                               //812 (0x32C)
 	BIND_FUNC(sys_fs_rmdir),                                //813 (0x32D)
 	BIND_FUNC(sys_fs_unlink),                               //814 (0x32E)
 	BIND_FUNC(sys_fs_utime),                                //815 (0x32F)
-	null_func,//BIND_FUNC(sys_fs_access),                   //816 (0x330)
+	BIND_FUNC(sys_fs_access),                               //816 (0x330)
 	BIND_FUNC(sys_fs_fcntl),                                //817 (0x331)
 	BIND_FUNC(sys_fs_lseek),                                //818 (0x332)
 	BIND_FUNC(sys_fs_fdatasync),                            //819 (0x333)
 	BIND_FUNC(sys_fs_fsync),                                //820 (0x334)
 	BIND_FUNC(sys_fs_fget_block_size),                      //821 (0x335)
 	BIND_FUNC(sys_fs_get_block_size),                       //822 (0x336)
-	null_func,//BIND_FUNC(sys_fs_acl_read),                 //823 (0x337)
-	null_func,//BIND_FUNC(sys_fs_acl_write),                //824 (0x338)
+	BIND_FUNC(sys_fs_acl_read),                             //823 (0x337)
+	BIND_FUNC(sys_fs_acl_write),                            //824 (0x338)
 	BIND_FUNC(sys_fs_lsn_get_cda_size),                     //825 (0x339)
-	null_func,//BIND_FUNC(sys_fs_lsn_get_cda),              //826 (0x33A)
+	BIND_FUNC(sys_fs_lsn_get_cda),                          //826 (0x33A)
 	BIND_FUNC(sys_fs_lsn_lock),                             //827 (0x33B)
 	BIND_FUNC(sys_fs_lsn_unlock),                           //828 (0x33C)
-	null_func,//BIND_FUNC(sys_fs_lsn_read),                 //829 (0x33D)
-	null_func,//BIND_FUNC(sys_fs_lsn_write),                //830 (0x33E)
+	BIND_FUNC(sys_fs_lsn_read),                             //829 (0x33D)
+	BIND_FUNC(sys_fs_lsn_write),                            //830 (0x33E)
 	BIND_FUNC(sys_fs_truncate),                             //831 (0x33F)
 	BIND_FUNC(sys_fs_ftruncate),                            //832 (0x340)
-	null_func,//BIND_FUNC(sys_fs_symbolic_link),            //833 (0x341)
+	BIND_FUNC(sys_fs_symbolic_link),                        //833 (0x341)
 	BIND_FUNC(sys_fs_chmod),                                //834 (0x342)
-	null_func,//BIND_FUNC(sys_fs_chown),                    //835 (0x343)
+	BIND_FUNC(sys_fs_chown),                                //835 (0x343)
 	null_func,//BIND_FUNC(sys_fs_newfs),                    //836 (0x344)
 	null_func,//BIND_FUNC(sys_fs_mount),                    //837 (0x345)
 	null_func,//BIND_FUNC(sys_fs_unmount),                  //838 (0x346)
@@ -764,9 +740,9 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_fs_get_mount_info),           //842 (0x34A)
 	null_func,//BIND_FUNC(sys_fs_get_fs_info_size),         //843 (0x34B)
 	null_func,//BIND_FUNC(sys_fs_get_fs_info),              //844 (0x34C)
-	null_func,//BIND_FUNC(sys_fs_mapped_allocate),          //845 (0x34D)
-	null_func,//BIND_FUNC(sys_fs_mapped_free),              //846 (0x34E)
-	null_func,//BIND_FUNC(sys_fs_truncate2),                //847 (0x34F)
+	BIND_FUNC(sys_fs_mapped_allocate),                      //845 (0x34D)
+	BIND_FUNC(sys_fs_mapped_free),                          //846 (0x34E)
+	BIND_FUNC(sys_fs_truncate2),                            //847 (0x34F)
 	
 	null_func, null_func,                                   //849  UNS
 	null_func, null_func, null_func, null_func, null_func,  //854  UNS
@@ -782,9 +758,9 @@ std::array<ppu_function_t, 1024> g_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_...)                          //867  ROOT
 	null_func,//BIND_FUNC(sys_...)                          //868  ROOT / DBG  AUTHID
 	null_func,//BIND_FUNC(sys_...)                          //869  ROOT
-	BIND_FUNC(sys_ss_get_console_id),           //870 (0x366)
+	BIND_FUNC(sys_ss_get_console_id),                       //870 (0x366)
 	null_func,//BIND_FUNC(sys_ss_access_control_engine),    //871 (0x367)  DBG
-	BIND_FUNC(sys_ss_get_open_psid),            //872 (0x368)
+	BIND_FUNC(sys_ss_get_open_psid),                        //872 (0x368)
 	null_func,//BIND_FUNC(sys_ss_get_cache_of_product_mode), //873 (0x369)
 	null_func,//BIND_FUNC(sys_ss_get_cache_of_flash_ext_flag), //874 (0x36A)
 	null_func,//BIND_FUNC(sys_ss_get_boot_device)           //875 (0x36B)
@@ -986,16 +962,15 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 	});
 }
 
+extern void ppu_initialize_syscalls()
+{
+	g_ppu_syscall_table = s_ppu_syscall_table;
+}
+
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 {
 	if (code < g_ppu_syscall_table.size())
 	{
-		// If autopause occures, check_status() will hold the thread till unpaused
-		if (debug::autopause::pause_syscall(code))
-		{
-			ppu.test_state();
-		}
-
 		if (auto func = g_ppu_syscall_table[code])
 		{
 			func(ppu);
@@ -1041,7 +1016,7 @@ void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 
 	if (auto ppu = dynamic_cast<ppu_thread*>(&thread))
 	{
-		sys_ppu_thread.trace("sleep() - waiting (%zu)", g_pending.size());
+		LOG_TRACE(PPU, "sleep() - waiting (%zu)", g_pending.size());
 
 		auto state = ppu->state.fetch_op([&](auto& val)
 		{
@@ -1053,7 +1028,7 @@ void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 
 		if (test(state, cpu_flag::signal))
 		{
-			sys_ppu_thread.trace("sleep() failed (signaled)");
+			LOG_TRACE(PPU, "sleep() failed (signaled)");
 			return;
 		}
 
@@ -1126,14 +1101,14 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	{
 		if (i < g_ppu.size() && g_ppu[i] == &cpu)
 		{
-			sys_ppu_thread.trace("sleep() - suspended (p=%zu)", g_pending.size());
+			LOG_TRACE(PPU, "sleep() - suspended (p=%zu)", g_pending.size());
 			break;
 		}
 
 		// Use priority, also preserve FIFO order
 		if (i == g_ppu.size() || g_ppu[i]->prio > static_cast<ppu_thread&>(cpu).prio)
 		{
-			sys_ppu_thread.trace("awake(): %s", cpu.id);
+			LOG_TRACE(PPU, "awake(): %s", cpu.id);
 			g_ppu.insert(g_ppu.cbegin() + i, &static_cast<ppu_thread&>(cpu));
 
 			// Unregister timeout if necessary
@@ -1163,7 +1138,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 
 		if (!target->state.test_and_set(cpu_flag::suspend))
 		{
-			sys_ppu_thread.trace("suspend(): %s", target->id);
+			LOG_TRACE(PPU, "suspend(): %s", target->id);
 			g_pending.emplace_back(target);
 		}
 	}
@@ -1189,7 +1164,7 @@ void lv2_obj::schedule_all()
 
 			if (test(target->state, cpu_flag::suspend))
 			{
-				sys_ppu_thread.trace("schedule(): %s", target->id);
+				LOG_TRACE(PPU, "schedule(): %s", target->id);
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
 				target->start_time = 0;
 

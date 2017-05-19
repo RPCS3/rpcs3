@@ -14,7 +14,7 @@
 
 #include "Utilities/StrUtil.h"
 
-logs::channel sceNpTrophy("sceNpTrophy", logs::level::notice);
+logs::channel sceNpTrophy("sceNpTrophy");
 
 struct trophy_context_t
 {
@@ -34,22 +34,79 @@ struct trophy_handle_t
 	static const u32 id_count = 1023;
 };
 
+template<>
+void fmt_class_string<SceNpTrophyError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_NOT_INITIALIZED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_NOT_SUPPORTED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_OUT_OF_MEMORY);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT);
+		STR_CASE(SCE_NP_TROPHY_ERROR_EXCEEDS_MAX);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INSUFFICIENT);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_FORMAT);
+		STR_CASE(SCE_NP_TROPHY_ERROR_BAD_RESPONSE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_GRADE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_CONTEXT);
+		STR_CASE(SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_ABORT);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_LOCKED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_HIDDEN);
+		STR_CASE(SCE_NP_TROPHY_ERROR_CANNOT_UNLOCK_PLATINUM);
+		STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_TYPE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_HANDLE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_NP_COMM_ID);
+		STR_CASE(SCE_NP_TROPHY_ERROR_DISC_IO);
+		STR_CASE(SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNSUPPORTED_FORMAT);
+		STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_INSTALLED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_BROKEN_DATA);
+		STR_CASE(SCE_NP_TROPHY_ERROR_VERIFICATION_FAILURE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_TROPHY_ID);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_FILE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_DISC_NOT_MOUNTED);
+		STR_CASE(SCE_NP_TROPHY_ERROR_SHUTDOWN);
+		STR_CASE(SCE_NP_TROPHY_ERROR_TITLE_ICON_NOT_FOUND);
+		STR_CASE(SCE_NP_TROPHY_ERROR_TROPHY_ICON_NOT_FOUND);
+		STR_CASE(SCE_NP_TROPHY_ERROR_INSUFFICIENT_DISK_SPACE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_SAVEDATA_USER_DOES_NOT_MATCH);
+		STR_CASE(SCE_NP_TROPHY_ERROR_TROPHY_ID_DOES_NOT_EXIST);
+		STR_CASE(SCE_NP_TROPHY_ERROR_SERVICE_UNAVAILABLE);
+		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN);
+		}
+
+		return unknown;
+	});
+}
+
 // Functions
-s32 sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u64 options)
+error_code sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u64 options)
 {
 	sceNpTrophy.warning("sceNpTrophyInit(pool=*0x%x, poolSize=0x%x, containerId=0x%x, options=0x%llx)", pool, poolSize, containerId, options);
 
 	return CELL_OK;
 }
 
-s32 sceNpTrophyTerm()
+error_code sceNpTrophyTerm()
 {
 	sceNpTrophy.warning("sceNpTrophyTerm()");
 
 	return CELL_OK;
 }
 
-s32 sceNpTrophyCreateHandle(vm::ptr<u32> handle)
+error_code sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
 	sceNpTrophy.warning("sceNpTrophyCreateHandle(handle=*0x%x)", handle);
 
@@ -63,7 +120,7 @@ s32 sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 	return CELL_OK;
 }
 
-s32 sceNpTrophyDestroyHandle(u32 handle)
+error_code sceNpTrophyDestroyHandle(u32 handle)
 {
 	sceNpTrophy.warning("sceNpTrophyDestroyHandle(handle=0x%x)", handle);
 
@@ -79,7 +136,7 @@ s32 sceNpTrophyDestroyHandle(u32 handle)
 	return CELL_OK;
 }
 
-s32 sceNpTrophyAbortHandle(u32 handle)
+error_code sceNpTrophyAbortHandle(u32 handle)
 {
 	sceNpTrophy.todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
 
@@ -104,9 +161,14 @@ void deleteTerminateChar(char* myStr, char _char) {
 
 	return;
 }
-s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationSignature> commSign, u64 options)
+error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationSignature> commSign, u64 options)
 {
 	sceNpTrophy.warning("sceNpTrophyCreateContext(context=*0x%x, commId=*0x%x, commSign=*0x%x, options=0x%llx)", context, commId, commSign, options);
+
+	if (!context)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
 
 	// rough checks for further fmt::format call
 	if (commId->num > 99)
@@ -151,7 +213,7 @@ s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId
 	return CELL_OK;
 }
 
-s32 sceNpTrophyDestroyContext(u32 context)
+error_code sceNpTrophyDestroyContext(u32 context)
 {
 	sceNpTrophy.warning("sceNpTrophyDestroyContext(context=0x%x)", context);
 
@@ -167,9 +229,14 @@ s32 sceNpTrophyDestroyContext(u32 context)
 	return CELL_OK;
 }
 
-s32 sceNpTrophyRegisterContext(ppu_thread& CPU, u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, vm::ptr<u32> arg, u64 options)
+error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, vm::ptr<void> arg, u64 options)
 {
 	sceNpTrophy.error("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb=*0x%x, arg=*0x%x, options=0x%llx)", context, handle, statusCb, arg, options);
+
+	if (!statusCb)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -241,12 +308,12 @@ s32 sceNpTrophyRegisterContext(ppu_thread& CPU, u32 context, u32 handle, vm::ptr
 	ctxt->tropusr.reset(tropusr);
 
 	// TODO: Callbacks
-	if (statusCb(CPU, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
+	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
 	{
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
 
-	if (statusCb(CPU, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg) < 0)
+	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg) < 0)
 	{
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
@@ -254,9 +321,14 @@ s32 sceNpTrophyRegisterContext(ppu_thread& CPU, u32 context, u32 handle, vm::ptr
 	return CELL_OK;
 }
 
-s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
+error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
 	sceNpTrophy.todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
+
+	if (!reqspace)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -280,14 +352,28 @@ s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspa
 	return CELL_OK;
 }
 
-s32 sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 options)
+error_code sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 options)
 {
 	sceNpTrophy.todo("sceNpTrophySetSoundLevel(context=0x%x, handle=0x%x, level=%d, options=0x%llx)", context, handle, level, options);
+
+	const auto ctxt = idm::get<trophy_context_t>(context);
+
+	if (!ctxt)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+	}
+
+	const auto hndl = idm::get<trophy_handle_t>(handle);
+
+	if (!hndl)
+	{
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+	}
 
 	return CELL_OK;
 }
 
-s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetails> details, vm::ptr<SceNpTrophyGameData> data)
+error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetails> details, vm::ptr<SceNpTrophyGameData> data)
 {
 	sceNpTrophy.error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
 
@@ -369,7 +455,7 @@ s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 	return CELL_OK;
 }
 
-s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
+error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
 	sceNpTrophy.error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
 
@@ -400,7 +486,7 @@ s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 	return CELL_OK;
 }
 
-s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<u32> count)
+error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<u32> count)
 {
 	sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags=*0x%x, count=*0x%x)", context, handle, flags, count);
 
@@ -440,7 +526,7 @@ s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 	return CELL_OK;
 }
 
-s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data)
+error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data)
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyInfo(context=0x%x, handle=0x%x, trophyId=%d, details=*0x%x, data=*0x%x)", context, handle, trophyId, details, data);
 
@@ -523,13 +609,13 @@ s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceN
 
 	if (!found)
 	{
-		return SCE_NP_TROPHY_INVALID_TROPHY_ID;
+		return not_an_error(SCE_NP_TROPHY_INVALID_TROPHY_ID);
 	}
 
 	return CELL_OK;
 }
 
-s32 sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> percentage)
+error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> percentage)
 {
 	sceNpTrophy.warning("sceNpTrophyGetGameProgress(context=0x%x, handle=0x%x, percentage=*0x%x)", context, handle, percentage);
 
@@ -566,7 +652,7 @@ s32 sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> percentage)
 	return CELL_OK;
 }
 
-s32 sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer, vm::ptr<u32> size)
+error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNpTrophy.warning("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
 
@@ -608,7 +694,7 @@ s32 sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer, vm::pt
 	return CELL_OK;
 }
 
-s32 sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void> buffer, vm::ptr<u32> size)
+error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
 

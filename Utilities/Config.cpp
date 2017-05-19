@@ -5,7 +5,7 @@
 
 namespace cfg
 {
-	logs::channel cfg("CFG", logs::level::notice);
+	logs::channel cfg("CFG");
 
 	entry_base::entry_base(type _type)
 		: m_type(_type)
@@ -161,7 +161,8 @@ void cfg::encode(YAML::Emitter& out, const cfg::entry_base& rhs)
 		for (const auto& np : static_cast<const node&>(rhs).get_nodes())
 		{
 			out << YAML::Key << np.first;
-			out << YAML::Value; encode(out, *np.second);
+			out << YAML::Value;
+			encode(out, *np.second);
 		}
 
 		out << YAML::EndMap;
@@ -176,6 +177,19 @@ void cfg::encode(YAML::Emitter& out, const cfg::entry_base& rhs)
 		}
 
 		out << YAML::EndSeq;
+		return;
+	}
+	case type::log:
+	{
+		out << YAML::BeginMap;
+		for (const auto& np : static_cast<const log_entry&>(rhs).get_map())
+		{
+			if (np.second == logs::level::notice) continue;
+			out << YAML::Key << np.first;
+			out << YAML::Value << fmt::format("%s", np.second);
+		}
+
+		out << YAML::EndMap;
 		return;
 	}
 	}
@@ -199,8 +213,7 @@ void cfg::decode(const YAML::Node& data, cfg::entry_base& rhs)
 			if (!pair.first.IsScalar()) continue;
 
 			// Find the key among existing nodes
-			const auto name = pair.first.Scalar();
-			const auto found = static_cast<node&>(rhs).get_nodes().find(name);
+			const auto found = static_cast<node&>(rhs).get_nodes().find(pair.first.Scalar());
 
 			if (found != static_cast<node&>(rhs).get_nodes().cend())
 			{
@@ -223,6 +236,29 @@ void cfg::decode(const YAML::Node& data, cfg::entry_base& rhs)
 			rhs.from_list(std::move(values));
 		}
 
+		break;
+	}
+	case type::log:
+	{
+		if (data.IsScalar() || data.IsSequence())
+		{
+			return; // ???
+		}
+
+		std::map<std::string, logs::level> values;
+
+		for (const auto& pair : data)
+		{
+			if (!pair.first.IsScalar() || !pair.second.IsScalar()) continue;
+
+			u64 value;
+			if (cfg::try_to_enum_value(&value, &fmt_class_string<logs::level>::format, pair.second.Scalar()))
+			{
+				values.emplace(pair.first.Scalar(), static_cast<logs::level>(static_cast<int>(value)));
+			}
+		}
+
+		static_cast<log_entry&>(rhs).set_map(std::move(values));
 		break;
 	}
 	default:
@@ -275,6 +311,21 @@ void cfg::set_entry::from_default()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	m_set = {};
+}
+
+void cfg::log_entry::set_map(std::map<std::string, logs::level>&& map)
+{
+	logs::reset();
+
+	for (auto&& pair : (m_map = std::move(map)))
+	{
+		logs::set_level(pair.first, pair.second);
+	}
+}
+
+void cfg::log_entry::from_default()
+{
+	set_map({});
 }
 
 cfg::root_node& cfg::get_root()

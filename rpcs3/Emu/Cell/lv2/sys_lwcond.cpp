@@ -10,7 +10,7 @@
 
 namespace vm { using namespace ps3; }
 
-logs::channel sys_lwcond("sys_lwcond", logs::level::notice);
+logs::channel sys_lwcond("sys_lwcond");
 
 extern u64 get_system_time();
 

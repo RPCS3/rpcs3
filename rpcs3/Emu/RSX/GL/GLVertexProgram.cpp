@@ -34,7 +34,8 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
-	OS << "	vec4 userClip[2];" << std::endl;
+	OS << "	ivec4 userClipEnabled[2];" << std::endl;
+	OS << "	vec4 userClipFactor[2];" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -81,11 +82,6 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 			}
 		}
 	}
-
-	for (int i = 0; i <= 5; i++)
-	{
-		OS << "uniform int uc_m" + std::to_string(i) + "= 0;\n";
-	}
 }
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
@@ -108,40 +104,34 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	}
 }
 
-struct reg_info
-{
-	std::string name;
-	bool need_declare;
-	std::string src_reg;
-	std::string src_reg_mask;
-	bool need_cast;
-};
-
-static const reg_info reg_table[] =
+static const vertex_reg_info reg_table[] =
 {
 	{ "gl_Position", false, "dst_reg0", "", false },
-	{ "diff_color", true, "dst_reg1", "", false },
-	{ "spec_color", true, "dst_reg2", "", false },
+	{ "diff_color", true, "dst_reg1", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE },
+	{ "spec_color", true, "dst_reg2", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR },
+	//These are only present when back variants are specified, otherwise the default diff/spec color vars are for both front and back
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
-	{ "fog_c", true, "dst_reg5", ".xxxx", true },
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClip[0].x", false },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClip[0].y", false },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClip[0].z", false },
+	//Fog output shares a data source register with clip planes 0-2 so only declare when specified
+	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
+	//Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClipFactor[0].x", false, "userClipEnabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClipFactor[0].y", false, "userClipEnabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClipFactor[0].z", false, "userClipEnabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClip[0].w", false },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClip[1].x", false },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClip[1].y", false },
-	{ "tc0", true, "dst_reg7", "", false },
-	{ "tc1", true, "dst_reg8", "", false },
-	{ "tc2", true, "dst_reg9", "", false },
-	{ "tc3", true, "dst_reg10", "", false },
-	{ "tc4", true, "dst_reg11", "", false },
-	{ "tc5", true, "dst_reg12", "", false },
-	{ "tc6", true, "dst_reg13", "", false },
-	{ "tc7", true, "dst_reg14", "", false },
-	{ "tc8", true, "dst_reg15", "", false },
-	{ "tc9", true, "dst_reg6", "", false }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClipFactor[0].w", false, "userClipEnabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClipFactor[1].x", false, "userClipEnabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClipFactor[1].y", false, "userClipEnabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "tc0", true, "dst_reg7", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
+	{ "tc1", true, "dst_reg8", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
+	{ "tc2", true, "dst_reg9", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
+	{ "tc3", true, "dst_reg10", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX3 },
+	{ "tc4", true, "dst_reg11", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX4 },
+	{ "tc5", true, "dst_reg12", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX5 },
+	{ "tc6", true, "dst_reg13", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6 },
+	{ "tc7", true, "dst_reg14", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7 },
+	{ "tc8", true, "dst_reg15", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX8 },
+	{ "tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9 }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
@@ -159,6 +149,9 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
 		{
+			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
+				continue;
+
 			if (i.name == "front_diff_color")
 				insert_front_diffuse = false;
 
@@ -174,6 +167,15 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 				name = "back_spec_color";
 
 			OS << "out vec4 " << name << ";" << std::endl;
+		}
+		else
+		{
+			//Mesa drivers are very strict on shader-stage matching
+			//Force some outputs to be declared even if unused
+            if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
+			{
+                OS << "out vec4 " << i.name << ";" << std::endl;
+			}
 		}
 	}
 
@@ -227,7 +229,7 @@ void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rs
 	}
 
 	LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
-	
+
 	OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
 }
 
@@ -293,7 +295,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "{" << std::endl;
 
 	std::string parameters = "";
-	
+
 	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_NONE, "vec4"))
 	{
 		for (int i = 0; i < 16; ++i)
@@ -333,6 +335,9 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
 		{
+			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
+				continue;
+
 			if (i.name == "front_diff_color")
 				insert_front_diffuse = false;
 
@@ -340,6 +345,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 				insert_front_specular = false;
 
 			std::string name = i.name;
+			std::string condition = (!i.cond.empty()) ? "(" + i.cond + ") " : "";
 
 			if (front_back_diffuse && name == "diff_color")
 				name = "back_diff_color";
@@ -347,7 +353,16 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 			if (front_back_specular && name == "spec_color")
 				name = "back_spec_color";
 
-			OS << "	" << name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+			if (condition.empty() || i.default_val.empty())
+			{
+				if (!condition.empty()) condition = "if " + condition;
+				OS << "	" << condition << name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+			}
+			else
+			{
+				//Insert if-else condition
+				OS << "	" << name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";" << std::endl;
+			}
 		}
 	}
 

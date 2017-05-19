@@ -4,7 +4,7 @@
 
 #include "sceSysmodule.h"
 
-logs::channel sceSysmodule("sceSysmodule", logs::level::notice);
+logs::channel sceSysmodule("sceSysmodule");
 
 s32 sceSysmoduleLoadModule(u16 id)
 {

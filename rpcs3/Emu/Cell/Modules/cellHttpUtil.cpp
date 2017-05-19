@@ -3,7 +3,7 @@
 
 #include "cellHttpUtil.h"
 
-logs::channel cellHttpUtil("cellHttpUtil", logs::level::notice);
+logs::channel cellHttpUtil("cellHttpUtil");
 
 s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
 {

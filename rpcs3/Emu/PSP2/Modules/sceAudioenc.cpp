@@ -4,7 +4,7 @@
 
 #include "sceAudioenc.h"
 
-logs::channel sceAudioenc("sceAudioenc", logs::level::notice);
+logs::channel sceAudioenc("sceAudioenc");
 
 s32 sceAudioencInitLibrary(u32 codecType, vm::ptr<SceAudioencInitParam> pInitParam)
 {

@@ -4,6 +4,11 @@
 #include "CPUThread.h"
 #include "Emu/IdManager.h"
 #include "Utilities/GDBDebugServer.h"
+#include "Utilities/Config.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
@@ -177,4 +182,35 @@ void cpu_thread::run()
 std::string cpu_thread::dump() const
 {
 	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
+}
+
+void cpu_thread::set_native_priority(int priority)
+{
+#ifdef _WIN32
+	HANDLE _this_thread = GetCurrentThread();
+	INT native_priority = THREAD_PRIORITY_NORMAL;
+
+	switch (priority)
+	{
+	default:
+	case 0:
+		break;
+	case 1:
+		native_priority = THREAD_PRIORITY_ABOVE_NORMAL;
+		break;
+	case -1:
+		native_priority = THREAD_PRIORITY_BELOW_NORMAL;
+		break;
+	}
+
+	SetThreadPriority(_this_thread, native_priority);
+#endif // _WIN32
+}
+
+void cpu_thread::set_ideal_processor_core(int core)
+{
+#ifdef _WIN32
+	HANDLE _this_thread = GetCurrentThread();
+	SetThreadIdealProcessor(_this_thread, core);
+#endif
 }

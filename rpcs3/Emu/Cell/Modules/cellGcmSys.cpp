@@ -10,7 +10,7 @@
 
 #include <thread>
 
-logs::channel cellGcmSys("cellGcmSys", logs::level::notice);
+logs::channel cellGcmSys("cellGcmSys");
 
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 
@@ -120,10 +120,10 @@ u64 cellGcmGetTimeStamp(u32 index)
 	return vm::read64(0xC0000000 + index * 0x10);
 }
 
-s32 cellGcmGetCurrentField()
+u32 cellGcmGetCurrentField()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.todo("cellGcmGetCurrentField()");
+	return 0;
 }
 
 u32 cellGcmGetNotifyDataAddress(u32 index)
@@ -166,7 +166,7 @@ u32 cellGcmGetReport(u32 type, u32 index)
 
 u32 cellGcmGetReportDataAddress(u32 index)
 {
-	cellGcmSys.warning("cellGcmGetReportDataAddress(index=%d)",  index);
+	cellGcmSys.warning("cellGcmGetReportDataAddress(index=%d)", index);
 
 	if (index >= 2048) {
 		cellGcmSys.error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
@@ -261,9 +261,10 @@ s32 cellGcmBindTile(u8 index)
 	return CELL_OK;
 }
 
-s32 cellGcmBindZcull(u8 index)
+s32 cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
 {
-	cellGcmSys.warning("cellGcmBindZcull(index=%d)", index);
+	cellGcmSys.warning("cellGcmBindZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
+		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
 	if (index >= rsx::limits::zculls_count)
 	{
@@ -276,18 +277,16 @@ s32 cellGcmBindZcull(u8 index)
 	return CELL_OK;
 }
 
-s32 cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
+void cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
 {
 	cellGcmSys.trace("cellGcmGetConfiguration(config=*0x%x)", config);
 
 	*config = current_config;
-
-	return CELL_OK;
 }
 
-s32 cellGcmGetFlipStatus()
+u32 cellGcmGetFlipStatus()
 {
-	s32 status = fxm::get<GSRender>()->flip_status;
+	u32 status = fxm::get<GSRender>()->flip_status;
 
 	cellGcmSys.trace("cellGcmGetFlipStatus() -> %d", status);
 
@@ -404,16 +403,14 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	return CELL_OK;
 }
 
-s32 cellGcmResetFlipStatus()
+void cellGcmResetFlipStatus()
 {
 	cellGcmSys.trace("cellGcmResetFlipStatus()");
 
 	fxm::get<GSRender>()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
-
-	return CELL_OK;
 }
 
-s32 cellGcmSetDebugOutputLevel(s32 level)
+void cellGcmSetDebugOutputLevel(s32 level)
 {
 	cellGcmSys.warning("cellGcmSetDebugOutputLevel(level=%d)", level);
 
@@ -425,20 +422,19 @@ s32 cellGcmSetDebugOutputLevel(s32 level)
 		fxm::get<GSRender>()->debug_level = level;
 		break;
 
-	default: return CELL_EINVAL;
+	default:
+		break;
 	}
-
-	return CELL_OK;
 }
 
-s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height)
+s32 cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 height)
 {
-	cellGcmSys.trace("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)", id, offset, width ? pitch / width : pitch, width, height);
+	cellGcmSys.trace("cellGcmSetDisplayBuffer(id=0x%x, offset=0x%x, pitch=%d, width=%d, height=%d)", id, offset, width ? pitch / width : pitch, width, height);
 
 	if (id > 7)
 	{
-		cellGcmSys.error("cellGcmSetDisplayBuffer: CELL_EINVAL");
-		return CELL_EINVAL;
+		cellGcmSys.error("cellGcmSetDisplayBuffer: CELL_GCM_ERROR_FAILURE");
+		return CELL_GCM_ERROR_FAILURE;
 	}
 
 	const auto render = fxm::get<GSRender>();
@@ -465,7 +461,7 @@ void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 	fxm::get<GSRender>()->flip_handler = handler;
 }
 
-s32 cellGcmSetFlipMode(u32 mode)
+void cellGcmSetFlipMode(u32 mode)
 {
 	cellGcmSys.warning("cellGcmSetFlipMode(mode=%d)", mode);
 
@@ -478,22 +474,20 @@ s32 cellGcmSetFlipMode(u32 mode)
 		break;
 
 	default:
-		return CELL_EINVAL;
+		break;
 	}
-
-	return CELL_OK;
 }
 
 void cellGcmSetFlipStatus()
 {
 	cellGcmSys.warning("cellGcmSetFlipStatus()");
 
-	fxm::get<GSRender>()->flip_status = 0;
+	fxm::get<GSRender>()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 }
 
 s32 cellGcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
 {
-	cellGcmSys.trace("cellGcmSetPrepareFlip(ctx=*0x%x, id=0x%x)", ctxt, id);
+	cellGcmSys.trace("cellGcmSetPrepareFlip(ctxt=*0x%x, id=0x%x)", ctxt, id);
 
 	if (id > 7)
 	{
@@ -532,7 +526,7 @@ s32 cellGcmSetFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
 	return CELL_OK;
 }
 
-s32 cellGcmSetSecondVFrequency(u32 freq)
+void cellGcmSetSecondVFrequency(u32 freq)
 {
 	cellGcmSys.warning("cellGcmSetSecondVFrequency(level=%d)", freq);
 
@@ -552,10 +546,10 @@ s32 cellGcmSetSecondVFrequency(u32 freq)
 		render->frequency_mode = freq;
 		cellGcmSys.todo("Unimplemented display frequency: Disabled");
 		break;
-	default: cellGcmSys.error("Improper display frequency specified!"); return CELL_OK;
+	default:
+		cellGcmSys.error("Improper display frequency specified!");
+		break;
 	}
-
-	return CELL_OK;
 }
 
 s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
@@ -608,9 +602,9 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 	fxm::get<GSRender>()->user_handler = handler;
 }
 
-s32 cellGcmSetUserCommand()
+void cellGcmSetUserCommand(vm::ptr<CellGcmContextData> ctxt, u32 cause)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("cellGcmSetUserCommand(ctxt=*0x%x, cause=0x%x)", ctxt, cause);
 }
 
 void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
@@ -620,21 +614,21 @@ void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 	fxm::get<GSRender>()->vblank_handler = handler;
 }
 
-s32 cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
+void cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
 {
-	cellGcmSys.warning("cellGcmSetWaitFlip(ctx=*0x%x)", ctxt);
+	cellGcmSys.warning("cellGcmSetWaitFlip(ctxt=*0x%x)", ctxt);
 
 	// TODO: emit RSX command for "wait flip" operation
-
-	return CELL_OK;
 }
 
 s32 cellGcmSetWaitFlipUnsafe()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("cellGcmSetWaitFlipUnsafe()");
+	
+	return CELL_OK;
 }
 
-s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
+void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
 {
 	cellGcmSys.todo("cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
@@ -642,7 +636,7 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	if (index >= rsx::limits::zculls_count)
 	{
 		cellGcmSys.error("cellGcmSetZcull: CELL_GCM_ERROR_INVALID_VALUE");
-		return CELL_GCM_ERROR_INVALID_VALUE;
+		return;
 	}
 
 	const auto render = fxm::get<GSRender>();
@@ -661,7 +655,6 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	zcull.sMask = sMask;
 
 	vm::_ptr<CellGcmZcullInfo>(render->zculls_addr)[index] = zcull.pack();
-	return CELL_OK;
 }
 
 s32 cellGcmUnbindTile(u8 index)
@@ -685,8 +678,8 @@ s32 cellGcmUnbindZcull(u8 index)
 
 	if (index >= 8)
 	{
-		cellGcmSys.error("cellGcmUnbindZcull: CELL_EINVAL");
-		return CELL_EINVAL;
+		cellGcmSys.error("cellGcmUnbindZcull: CELL_GCM_ERROR_INVALID_VALUE");
+		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
 	fxm::get<GSRender>()->zculls[index].binded = false;
@@ -724,10 +717,9 @@ s32 cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 	return CELL_OK;
 }
 
-s32 cellGcmSetInvalidateTile()
+void cellGcmSetInvalidateTile(u8 index)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.todo("cellGcmSetInvalidateTile(index=%d)", index);
 }
 
 s32 cellGcmTerminate()
@@ -737,14 +729,14 @@ s32 cellGcmTerminate()
 
 s32 cellGcmDumpGraphicsError()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmDumpGraphicsError()");
 	return CELL_OK;
 }
 
-s32 cellGcmGetDisplayBufferByFlipIndex()
+s32 cellGcmGetDisplayBufferByFlipIndex(u32 qid)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.todo("cellGcmGetDisplayBufferByFlipIndex(qid=%d)", qid);
+	return -1;
 }
 
 u64 cellGcmGetLastFlipTime()
@@ -783,7 +775,7 @@ s32 cellGcmInitSystemMode(u64 mode)
 
 s32 cellGcmSetFlipImmediate(u8 id)
 {
-	cellGcmSys.todo("cellGcmSetFlipImmediate(fid=0x%x)", id);
+	cellGcmSys.todo("cellGcmSetFlipImmediate(id=0x%x)", id);
 
 	if (id > 7)
 	{
@@ -796,16 +788,14 @@ s32 cellGcmSetFlipImmediate(u8 id)
 	return CELL_OK;
 }
 
-s32 cellGcmSetGraphicsHandler()
+void cellGcmSetGraphicsHandler(vm::ptr<void(u32)> handler)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.todo("cellGcmSetGraphicsHandler(handler=*0x%x)", handler);
 }
 
-s32 cellGcmSetQueueHandler()
+void cellGcmSetQueueHandler(vm::ptr<void(u32)> handler)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.todo("cellGcmSetQueueHandler(handler=*0x%x)", handler);
 }
 
 s32 cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
@@ -814,15 +804,14 @@ s32 cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
 	return CELL_OK;
 }
 
-s32 cellGcmSetVBlankFrequency()
+void cellGcmSetVBlankFrequency(u32 freq)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
-	return CELL_OK;
+	cellGcmSys.todo("cellGcmSetVBlankFrequency(freq=%d)", freq);
 }
 
 s32 cellGcmSortRemapEaIoAddress()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmSortRemapEaIoAddress()");
 	return CELL_OK;
 }
 
@@ -914,7 +903,7 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 	}
 	else
 	{
-		cellGcmSys.error("cellGcmMapEaIoAddress: CELL_GCM_ERROR_FAILURE");
+		cellGcmSys.error("gcmMapEaIoAddress: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -1063,13 +1052,13 @@ s32 cellGcmUnreserveIoMapSize(u32 size)
 
 	if (size & 0xFFFFF)
 	{
-		cellGcmSys.error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_ALIGNMENT");
+		cellGcmSys.error("cellGcmUnreserveIoMapSize: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (size > RSXIOMem.GetReservedAmount())
 	{
-		cellGcmSys.error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.error("cellGcmUnreserveIoMapSize: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -1078,42 +1067,42 @@ s32 cellGcmUnreserveIoMapSize(u32 size)
 }
 
 //----------------------------------------------------------------------------
-// Cursor
+// Cursor Functions
 //----------------------------------------------------------------------------
 
 s32 cellGcmInitCursor()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmInitCursor()");
 	return CELL_OK;
 }
 
 s32 cellGcmSetCursorPosition(s32 x, s32 y)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmSetCursorPosition(x=%d, y=%d)", x, y);
 	return CELL_OK;
 }
 
 s32 cellGcmSetCursorDisable()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmSetCursorDisable()");
 	return CELL_OK;
 }
 
 s32 cellGcmUpdateCursor()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmUpdateCursor()");
 	return CELL_OK;
 }
 
 s32 cellGcmSetCursorEnable()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmSetCursorEnable()");
 	return CELL_OK;
 }
 
 s32 cellGcmSetCursorImageOffset(u32 offset)
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.todo("cellGcmSetCursorImageOffset(offset=0x%x)", offset);
 	return CELL_OK;
 }
 
@@ -1129,7 +1118,7 @@ void cellGcmSetDefaultCommandBuffer()
 
 s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segmentSize)
 {
-	cellGcmSys.warning("cellGcmSetDefaultCommandBufferAndSegmentWordSize(bufferSize = 0x%x, segmentSize = 0x%x)", bufferSize, segmentSize);
+	cellGcmSys.warning("cellGcmSetDefaultCommandBufferAndSegmentWordSize(bufferSize=0x%x, segmentSize=0x%x)", bufferSize, segmentSize);
 
 	const auto& put = vm::_ref<CellGcmControl>(gcm_info.control_addr).put;
 	const auto& get = vm::_ref<CellGcmControl>(gcm_info.control_addr).get;
@@ -1234,19 +1223,22 @@ s32 _cellGcmFunc38()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellGcmGpadGetStatus()
+s32 cellGcmGpadGetStatus(vm::ptr<u32> status)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("cellGcmGpadGetStatus(status=*0x%x)", status);
+	return CELL_OK;
 }
 
-s32 cellGcmGpadNotifyCaptureSurface()
+s32 cellGcmGpadNotifyCaptureSurface(vm::ptr<CellGcmSurface> surface)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("cellGcmGpadNotifyCaptureSurface(surface=*0x%x)", surface);
+	return CELL_OK;
 }
 
-s32 cellGcmGpadCaptureSnapshot()
+s32 cellGcmGpadCaptureSnapshot(u32 num)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("cellGcmGpadCaptureSnapshot(num=%d)", num);
+	return CELL_OK;
 }
 
 

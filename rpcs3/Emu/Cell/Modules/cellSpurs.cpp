@@ -15,7 +15,7 @@
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
-logs::channel cellSpurs("cellSpurs", logs::level::notice);
+logs::channel cellSpurs("cellSpurs");
 
 s32 sys_spu_image_close(vm::ptr<sys_spu_image> img);
 

@@ -4,7 +4,7 @@
 
 #include "sceSas.h"
 
-logs::channel sceSas("sceSas", logs::level::notice);
+logs::channel sceSas("sceSas");
 
 s32 sceSasGetNeededMemorySize(vm::cptr<char> config, vm::ptr<u32> outSize)
 {

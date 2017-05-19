@@ -4,7 +4,7 @@
 
 #include "sceScreenShot.h"
 
-logs::channel sceScreenShot("sceScreenShot", logs::level::notice);
+logs::channel sceScreenShot("sceScreenShot");
 
 s32 sceScreenShotSetParam(vm::cptr<SceScreenShotParam> param)
 {

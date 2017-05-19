@@ -6,7 +6,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSync.h"
 
-logs::channel cellSync("cellSync", logs::level::notice);
+logs::channel cellSync("cellSync");
 
 template<>
 void fmt_class_string<CellSyncError>::format(std::string& out, u64 arg)

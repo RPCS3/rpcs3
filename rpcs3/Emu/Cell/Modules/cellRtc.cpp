@@ -3,7 +3,7 @@
 
 #include "cellRtc.h"
 
-logs::channel cellRtc("cellRtc", logs::level::notice);
+logs::channel cellRtc("cellRtc");
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {

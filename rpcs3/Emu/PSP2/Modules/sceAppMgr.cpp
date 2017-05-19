@@ -4,7 +4,7 @@
 
 #include "sceAppMgr.h"
 
-logs::channel sceAppMgr("sceAppMgr", logs::level::notice);
+logs::channel sceAppMgr("sceAppMgr");
 
 s32 sceAppMgrReceiveEventNum(vm::ptr<s32> eventNum)
 {
