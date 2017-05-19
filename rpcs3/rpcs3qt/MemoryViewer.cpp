@@ -65,6 +65,10 @@ MemoryViewerPanel::MemoryViewerPanel(QWidget* parent)
 	b_prev->setFixedWidth(20);
 	b_next->setFixedWidth(20);
 	b_fnext->setFixedWidth(20);
+	b_fprev->setAutoDefault(false);
+	b_prev->setAutoDefault(false);
+	b_next->setAutoDefault(false);
+	b_fnext->setAutoDefault(false);
 	hbox_tools_mem_buttons->addWidget(b_fprev);
 	hbox_tools_mem_buttons->addWidget(b_prev);
 	hbox_tools_mem_buttons->addWidget(b_next);
@@ -117,6 +121,7 @@ MemoryViewerPanel::MemoryViewerPanel(QWidget* parent)
 	QGroupBox* tools_buttons = new QGroupBox(tr("Tools"));
 	QVBoxLayout* hbox_tools_buttons = new QVBoxLayout(this);
 	QPushButton* b_img = new QPushButton(tr("View\nimage"), this);
+	b_img->setAutoDefault(false);
 	hbox_tools_buttons->addWidget(b_img);
 	tools_buttons->setLayout(hbox_tools_buttons);
 

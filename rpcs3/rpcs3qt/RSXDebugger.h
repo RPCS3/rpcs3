@@ -27,6 +27,25 @@
 #include <QSignalMapper>
 #include <QPixmap>
 
+class Buffer : public QWidget
+{
+	QHBoxLayout* m_layout;
+	QImage m_scaled;
+	u32 m_id;
+	bool m_isTex;
+
+public:
+	QLabel* m_canvas;
+	QImage m_image;
+
+	Buffer(QWidget* parent, bool isTex, u32 id = 4)
+		: QWidget(parent), m_isTex(isTex), m_id(id){};
+	void showImage(QImage image = QImage());
+
+private:
+	void mouseDoubleClickEvent(QMouseEvent* event);
+};
+
 class RSXDebugger : public QDialog
 {
 	Q_OBJECT
@@ -55,17 +74,13 @@ class RSXDebugger : public QDialog
 	QTableWidget* m_list_settings;
 	QListWidget* m_list_index_buffer;
 
-	QWidget* p_buffer_colorA;
-	QWidget* p_buffer_colorB;
-	QWidget* p_buffer_colorC;
-	QWidget* p_buffer_colorD;
-	QWidget* p_buffer_depth;
-	QWidget* p_buffer_stencil;
-	QWidget* p_buffer_tex;
-
-	QImage buffer_img[4];
-	QImage depth_img;
-	QImage stencil_img;
+	Buffer* m_buffer_colorA;
+	Buffer* m_buffer_colorB;
+	Buffer* m_buffer_colorC;
+	Buffer* m_buffer_colorD;
+	Buffer* m_buffer_depth;
+	Buffer* m_buffer_stencil;
+	Buffer* m_buffer_tex;
 
 	QLabel* m_text_transform_program;
 	QLabel* m_text_shader_program;
@@ -100,7 +115,6 @@ public slots:
 	virtual void keyPressEvent(QKeyEvent* event);
 	virtual void OnChangeToolsAddr();
 	virtual void wheelEvent(QWheelEvent* event);
-	virtual void mousePressEvent(QMouseEvent* event);
 	virtual void OnClickDrawCalls();
 	virtual void GoToGet();
 	virtual void GoToPut();

@@ -13,7 +13,7 @@
 // TODO: rewrite with std::chrono or wxTimer
 #include <time.h>
 
-static const int PadButtonWidth = 50;
+static const int PadButtonWidth = 60;
 
 PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 {

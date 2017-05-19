@@ -51,6 +51,8 @@ RSXDebugger::RSXDebugger(QWidget* parent)
 	QHBoxLayout* hbox_controls_goto = new QHBoxLayout();
 	QPushButton* b_goto_get = new QPushButton(tr("Get"), this);
 	QPushButton* b_goto_put = new QPushButton(tr("Put"), this);
+	b_goto_get->setAutoDefault(false);
+	b_goto_put->setAutoDefault(false);
 	hbox_controls_goto->addWidget(b_goto_get);
 	hbox_controls_goto->addWidget(b_goto_put);
 	gb_controls_goto->setLayout(hbox_controls_goto);
@@ -63,6 +65,11 @@ RSXDebugger::RSXDebugger(QWidget* parent)
 	QPushButton* b_break_draw  = new QPushButton(tr("Draw"), this);
 	QPushButton* b_break_prim  = new QPushButton(tr("Primitive"), this);
 	QPushButton* b_break_inst  = new QPushButton(tr("Command"), this);
+	b_break_frame->setAutoDefault(false);
+	b_break_text->setAutoDefault(false);
+	b_break_draw->setAutoDefault(false);
+	b_break_prim->setAutoDefault(false);
+	b_break_inst->setAutoDefault(false);
 	hbox_controls_breaks->addWidget(b_break_frame);
 	hbox_controls_breaks->addWidget(b_break_text);
 	hbox_controls_breaks->addWidget(b_break_draw);
@@ -217,27 +224,27 @@ RSXDebugger::RSXDebugger(QWidget* parent)
 	m_text_height = 108;
 
 	//Panels for displaying the buffers
-	p_buffer_colorA  = new QWidget(p_buffers);
-	p_buffer_colorB  = new QWidget(p_buffers);
-	p_buffer_colorC  = new QWidget(p_buffers);
-	p_buffer_colorD  = new QWidget(p_buffers);
-	p_buffer_depth   = new QWidget(p_buffers);
-	p_buffer_stencil = new QWidget(p_buffers);
-	p_buffer_tex     = new QWidget(p_buffers);
-	p_buffer_colorA	->setFixedSize(QSize(m_panel_width, m_panel_height));
-	p_buffer_colorB	->setFixedSize(QSize(m_panel_width, m_panel_height));
-	p_buffer_colorC	->setFixedSize(QSize(m_panel_width, m_panel_height));
-	p_buffer_colorD	->setFixedSize(QSize(m_panel_width, m_panel_height));
-	p_buffer_depth	->setFixedSize(QSize(m_panel_width, m_panel_height));
-	p_buffer_stencil->setFixedSize(QSize(m_panel_width, m_panel_height));
-	p_buffer_tex		->setFixedSize(QSize(m_text_width, m_text_height));
-	hbox_buffers_colorA	->addWidget(p_buffer_colorA);
-	hbox_buffers_colorB	->addWidget(p_buffer_colorB);
-	hbox_buffers_colorC	->addWidget(p_buffer_colorC);
-	hbox_buffers_colorD	->addWidget(p_buffer_colorD);
-	hbox_buffers_depth	->addWidget(p_buffer_depth);
-	hbox_buffers_stencil->addWidget(p_buffer_stencil);
-	hbox_buffers_text		->addWidget(p_buffer_tex);
+	m_buffer_colorA  = new Buffer(p_buffers, false, 0);
+	m_buffer_colorB  = new Buffer(p_buffers, false, 1);
+	m_buffer_colorC  = new Buffer(p_buffers, false, 2);
+	m_buffer_colorD  = new Buffer(p_buffers, false, 3);
+	m_buffer_depth   = new Buffer(p_buffers, false);
+	m_buffer_stencil = new Buffer(p_buffers, false);
+	m_buffer_tex     = new Buffer(p_buffers, true);
+	m_buffer_colorA ->setFixedSize(QSize(m_panel_width, m_panel_height));
+	m_buffer_colorB ->setFixedSize(QSize(m_panel_width, m_panel_height));
+	m_buffer_colorC ->setFixedSize(QSize(m_panel_width, m_panel_height));
+	m_buffer_colorD ->setFixedSize(QSize(m_panel_width, m_panel_height));
+	m_buffer_depth  ->setFixedSize(QSize(m_panel_width, m_panel_height));
+	m_buffer_stencil->setFixedSize(QSize(m_panel_width, m_panel_height));
+	m_buffer_tex    ->setFixedSize(QSize(m_text_width, m_text_height));
+	hbox_buffers_colorA ->addWidget(m_buffer_colorA);
+	hbox_buffers_colorB ->addWidget(m_buffer_colorB);
+	hbox_buffers_colorC ->addWidget(m_buffer_colorC);
+	hbox_buffers_colorD ->addWidget(m_buffer_colorD);
+	hbox_buffers_depth  ->addWidget(m_buffer_depth);
+	hbox_buffers_stencil->addWidget(m_buffer_stencil);
+	hbox_buffers_text   ->addWidget(m_buffer_tex);
 	
 	//Merge and display everything
 	vbox_buffers1->addSpacing(10);
@@ -283,6 +290,7 @@ RSXDebugger::RSXDebugger(QWidget* parent)
 	//Fill the frame
 	UpdateInformation();
 	setFixedSize(sizeHint());
+	setFocusProxy(t_addr);
 };
 
 void RSXDebugger::keyPressEvent(QKeyEvent* event)
@@ -346,35 +354,36 @@ void RSXDebugger::wheelEvent(QWheelEvent* event)
 namespace
 {
 	// Opens an image in a new window with original size
-	void display_buffer(QWidget *parent, const QImage &img)
+	void display_buffer(QWidget *parent, const QImage img)
 	{
+		if (img.isNull()) return;
 		//QString title = qstr(fmt::format("Raw Image @ 0x%x", addr));
 		QLabel* canvas = new QLabel();
 		QPalette* pal_bg = new QPalette();
 		pal_bg->setColor(canvas->backgroundRole(), QColor(240, 240, 240));
 		canvas->setPalette(*pal_bg); //This fix the ugly background color under Windows
 		canvas->setPixmap(QPixmap::fromImage(img));
-		canvas->setFixedSize(img.width(),img.height());
+		canvas->setFixedSize(img.size());
 		canvas->show();
-	}
-
-	// Draws an formatted and buffered <image> scaled to <width> and <height> inside a <panel>
-	// could this be done directly to the pixmap?
-	void draw_scaled_buffer(QImage* image, u32 width, u32 height, QWidget* panel)
-	{
-		if (image->isNull()) return;
-		QImage scaled = image->scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-		QLabel* canvas = new QLabel();
-		canvas->setFixedSize(width, height);
-		canvas->setPixmap(QPixmap::fromImage(scaled));
-		QHBoxLayout* layout = new QHBoxLayout();
-		layout->setContentsMargins(0, 0, 0, 0);
-		layout->addWidget(canvas);
-		panel->setLayout(layout);
 	}
 }
 
-void RSXDebugger::mousePressEvent(QMouseEvent* event)
+// Draws a formatted and buffered <image> inside the Buffer Widget
+void Buffer::showImage(QImage image)
+{
+	if (image.isNull()) return;
+	m_image = image;
+	m_scaled = m_image.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+	m_canvas = new QLabel();
+	m_canvas->setFixedSize(size());
+	m_canvas->setPixmap(QPixmap::fromImage(m_scaled));
+	m_layout = new QHBoxLayout();
+	m_layout->setContentsMargins(0, 0, 0, 0);
+	m_layout->addWidget(m_canvas);
+	setLayout(m_layout);
+}
+
+void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 {
 	const auto render = fxm::get<GSRender>();
 	if (!render)
@@ -395,19 +404,11 @@ void RSXDebugger::mousePressEvent(QMouseEvent* event)
 		return; \
 	} \
 
-/*	if (event.GetId() == p_buffer_colorA->GetId()) SHOW_BUFFER(0);
-	if (event.GetId() == p_buffer_colorB->GetId()) SHOW_BUFFER(1);
-	if (event.GetId() == p_buffer_colorC->GetId()) SHOW_BUFFER(2);
-	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);*/
+	//if (0 <= m_id && m_id < 4) SHOW_BUFFER(m_id);
 
-// TODO Megamouse: underMouse right function? maybe other widget? 
-	if (p_buffer_colorA->underMouse()) display_buffer(this, buffer_img[0]);
-	if (p_buffer_colorB->underMouse()) display_buffer(this, buffer_img[1]);
-	if (p_buffer_colorC->underMouse()) display_buffer(this, buffer_img[2]);
-	if (p_buffer_colorD->underMouse()) display_buffer(this, buffer_img[3]);
-	if (p_buffer_depth->underMouse()) display_buffer(this, depth_img);
-	if (p_buffer_stencil->underMouse()) display_buffer(this, stencil_img);
-	if (p_buffer_tex->underMouse())
+	display_buffer(this, m_image);
+
+	if (m_isTex)
 	{
 /*		u8 location = render->textures[m_cur_texture].location();
 		if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
@@ -503,12 +504,12 @@ void RSXDebugger::OnClickDrawCalls()
 
 	const auto& draw_call = frame_debug.draw_calls[draw_id];
 
-	QWidget* p_buffers[] =
+	Buffer* buffers[] =
 	{
-		p_buffer_colorA,
-		p_buffer_colorB,
-		p_buffer_colorC,
-		p_buffer_colorD,
+		m_buffer_colorA,
+		m_buffer_colorB,
+		m_buffer_colorC,
+		m_buffer_colorD,
 	};
 
 	size_t width = draw_call.state.surface_clip_width();
@@ -519,8 +520,7 @@ void RSXDebugger::OnClickDrawCalls()
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
 			unsigned char* buffer = convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height);
-			buffer_img[i] = QImage(buffer, width, height, QImage::Format_RGB32);
-			draw_scaled_buffer(&buffer_img[i], m_panel_width, m_panel_height, p_buffers[i]);
+			buffers[i]->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
 		}
 	}
 
@@ -561,8 +561,7 @@ void RSXDebugger::OnClickDrawCalls()
 					}
 				}
 			}
-			depth_img = QImage(buffer, width, height, QImage::Format_RGB32);
-			draw_scaled_buffer(&depth_img, m_panel_width, m_panel_height, p_buffer_depth);
+			m_buffer_depth->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
 		}
 	}
 
@@ -584,8 +583,7 @@ void RSXDebugger::OnClickDrawCalls()
 					buffer[4 * col + 3 + width * row * 4] = 255;
 				}
 			}
-			stencil_img = QImage(buffer, width, height, QImage::Format_RGB32);
-			draw_scaled_buffer(&stencil_img, m_panel_width, m_panel_height, p_buffer_stencil);
+			m_buffer_stencil->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
 		}
 	}
 
@@ -741,16 +739,15 @@ void RSXDebugger::GetBuffers()
 		}
 
 		// TODO: Is there any better way to clasify the color buffers? How can we include the depth and stencil buffers?
-		QWidget* pnl;
+		Buffer* pnl;
 		switch(bufferId)
 		{
-		case 0:	 pnl = p_buffer_colorA;  break;
-		case 1:	 pnl = p_buffer_colorB;  break;
-		case 2:	 pnl = p_buffer_colorC;  break;
-		default: pnl = p_buffer_colorD;  break;
+		case 0:  pnl = m_buffer_colorA;  break;
+		case 1:  pnl = m_buffer_colorB;  break;
+		case 2:  pnl = m_buffer_colorC;  break;
+		default: pnl = m_buffer_colorD;  break;
 		}
-		QImage* image = new QImage(buffer, width, height, QImage::Format_RGB32);
-		draw_scaled_buffer(image, m_panel_width, m_panel_height, pnl);
+		pnl->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
 	}
 
 	// Draw Texture
@@ -779,7 +776,7 @@ void RSXDebugger::GetBuffers()
 	unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 	std::memcpy(buffer, vm::base(TexBuffer_addr), width * height * 3);
 
-	draw_scaled_buffer(buffer, m_text_width, m_text_height, p_buffer_tex);*/
+	m_buffer_tex->showImage(QImage(buffer, m_text_width, m_text_height, QImage::Format_RGB32));*/
 }
 
 void RSXDebugger::GetFlags()
