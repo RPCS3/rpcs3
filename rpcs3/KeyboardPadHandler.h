@@ -2,6 +2,8 @@
 
 #include "Utilities/Config.h"
 #include "Emu/Io/PadHandler.h"
+#include "stdafx.h"
+#include "Emu/System.h"
 
 #include <QKeyEvent>
 #include <QObject>
@@ -10,30 +12,30 @@ struct KeyboardPadConfig final : cfg::node
 {
 	const std::string cfg_name = fs::get_config_dir() + "/config_kbpad.yml";
 
-	cfg::int32_entry left_stick_left{ *this, "Left Analog Stick Left", static_cast<int>('A') };
-	cfg::int32_entry left_stick_down{ *this, "Left Analog Stick Down", static_cast<int>('S') };
-	cfg::int32_entry left_stick_right{ *this, "Left Analog Stick Right", static_cast<int>('D') };
-	cfg::int32_entry left_stick_up{ *this, "Left Analog Stick Up", static_cast<int>('W') };
-	cfg::int32_entry right_stick_left{ *this, "Right Analog Stick Left", 313 };
-	cfg::int32_entry right_stick_down{ *this, "Right Analog Stick Down", 367 };
-	cfg::int32_entry right_stick_right{ *this, "Right Analog Stick Right", 312 };
-	cfg::int32_entry right_stick_up{ *this, "Right Analog Stick Up", 366 };
-	cfg::int32_entry start{ *this, "Start", 13 };
-	cfg::int32_entry select{ *this, "Select", 32 };
-	cfg::int32_entry square{ *this, "Square", static_cast<int>('Z') };
-	cfg::int32_entry cross{ *this, "Cross", static_cast<int>('X') };
-	cfg::int32_entry circle{ *this, "Circle", static_cast<int>('C') };
-	cfg::int32_entry triangle{ *this, "Triangle", static_cast<int>('V') };
-	cfg::int32_entry left{ *this, "Left", 314 };
-	cfg::int32_entry down{ *this, "Down", 317 };
-	cfg::int32_entry right{ *this, "Right", 316 };
-	cfg::int32_entry up{ *this, "Up", 315 };
-	cfg::int32_entry r1{ *this, "R1", static_cast<int>('E') };
-	cfg::int32_entry r2{ *this, "R2", static_cast<int>('T') };
-	cfg::int32_entry r3{ *this, "R3", static_cast<int>('G') };
-	cfg::int32_entry l1{ *this, "L1", static_cast<int>('Q') };
-	cfg::int32_entry l2{ *this, "L2", static_cast<int>('R') };
-	cfg::int32_entry l3{ *this, "L3", static_cast<int>('F') };
+	cfg::int32_entry left_stick_left{ *this, "Left Analog Stick Left", Qt::Key_A };
+	cfg::int32_entry left_stick_down{ *this, "Left Analog Stick Down", Qt::Key_S };
+	cfg::int32_entry left_stick_right{ *this, "Left Analog Stick Right", Qt::Key_D };
+	cfg::int32_entry left_stick_up{ *this, "Left Analog Stick Up", Qt::Key_W };
+	cfg::int32_entry right_stick_left{ *this, "Right Analog Stick Left", Qt::Key_Home };
+	cfg::int32_entry right_stick_down{ *this, "Right Analog Stick Down", Qt::Key_PageDown };
+	cfg::int32_entry right_stick_right{ *this, "Right Analog Stick Right", Qt::Key_End };
+	cfg::int32_entry right_stick_up{ *this, "Right Analog Stick Up", Qt::Key_PageUp };
+	cfg::int32_entry start{ *this, "Start", Qt::Key_Return };
+	cfg::int32_entry select{ *this, "Select", Qt::Key_Space };
+	cfg::int32_entry square{ *this, "Square", Qt::Key_Z };
+	cfg::int32_entry cross{ *this, "Cross", Qt::Key_X };
+	cfg::int32_entry circle{ *this, "Circle", Qt::Key_C };
+	cfg::int32_entry triangle{ *this, "Triangle", Qt::Key_V };
+	cfg::int32_entry left{ *this, "Left", Qt::Key_Left };
+	cfg::int32_entry down{ *this, "Down", Qt::Key_Down };
+	cfg::int32_entry right{ *this, "Right", Qt::Key_Right };
+	cfg::int32_entry up{ *this, "Up", Qt::Key_Up };
+	cfg::int32_entry r1{ *this, "R1", Qt::Key_E };
+	cfg::int32_entry r2{ *this, "R2", Qt::Key_T };
+	cfg::int32_entry r3{ *this, "R3", Qt::Key_G };
+	cfg::int32_entry l1{ *this, "L1", Qt::Key_Q };
+	cfg::int32_entry l2{ *this, "L2", Qt::Key_R };
+	cfg::int32_entry l3{ *this, "L3", Qt::Key_F };
 
 	bool load()
 	{

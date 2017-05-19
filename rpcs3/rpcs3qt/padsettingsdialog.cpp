@@ -10,10 +10,12 @@
 #include "stdafx.h"
 #include "padsettingsdialog.h"
 
-// TODO: rewrite with std::chrono or wxTimer
+// TODO: rewrite with std::chrono or QTimer
 #include <time.h>
 
 static const int PadButtonWidth = 60;
+
+extern KeyboardPadConfig g_kbpad_config;
 
 PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 {
@@ -266,6 +268,9 @@ PadSettingsDialog::PadSettingsDialog(QWidget *parent) : QDialog(parent)
 	setLayout(vbox);
 
 	setWindowTitle(tr("Input Settings"));
+
+	g_kbpad_config.load();
+	UpdateLabel();
 }
 
 void PadSettingsDialog::keyPressEvent(QKeyEvent *keyEvent)
