@@ -2,20 +2,45 @@
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/Thread.h"
+#include "Utilities/CRC.h"
 #include "hidapi.h"
+#include <limits>
 
 const u32 MAX_GAMEPADS = 7;
 
 class DS4Thread final : public named_thread
 {
 private:
+	enum DS4CalibIndex
+	{
+		// gyro
+		PITCH = 0,
+		YAW,
+		ROLL,
+
+		// accel
+		X,
+		Y,
+		Z,
+		COUNT
+	};
+
+	struct DS4CalibData
+	{
+		s16 bias;
+		s32 sensNumer;
+		s32 sensDenom;
+	};
+
 	struct DS4Device
 	{
-		hid_device* hidDevice;
-		std::string path;
-		bool btCon;
-		u8 largeVibrate;
-		u8 smallVibrate;
+		hid_device* hidDevice{ nullptr };
+		std::string path{ "" };
+		bool btCon{ false };
+		std::array<DS4CalibData, DS4CalibIndex::COUNT> calibData;
+		bool newVibrateData{true};
+		u8 largeVibrate{0};
+		u8 smallVibrate{0};
 	};
 
 	const u16 DS4_VID = 0x054C;
@@ -34,6 +59,8 @@ private:
 
 	semaphore<> mutex;
 
+	CRCPP::CRC::Table<u32, 32> crcTable{ CRCPP::CRC::CRC_32() };
+
 public:
 	void on_init(const std::shared_ptr<void>&) override;
 
@@ -46,6 +73,24 @@ public:
 	DS4Thread() = default;
 
 	~DS4Thread();
+
+private:
+	bool GetCalibrationData(DS4Device* ds4Device);
+	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
+	void SendVibrateData(const DS4Device& device);
+	inline s16 ApplyCalibration(s32 rawValue, const DS4CalibData& calibData)
+	{
+		const s32 biased = rawValue - calibData.bias;
+		const s32 quot = calibData.sensNumer / calibData.sensDenom;
+		const s32 rem = calibData.sensNumer % calibData.sensDenom;
+		const s32 output = (quot * biased) + ((rem * biased) / calibData.sensDenom);
+
+		if (output > std::numeric_limits<s16>::max())
+			return std::numeric_limits<s16>::max();
+		else if (output < std::numeric_limits<s16>::min())
+			return std::numeric_limits<s16>::min();
+		else return static_cast<s16>(output);
+	}
 };
 
 class DS4PadHandler final : public PadHandlerBase
