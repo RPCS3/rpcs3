@@ -8,6 +8,7 @@
 #include <QProgressDialog>
 #include <QDesktopWidget>
 
+#include "SaveDataUtility.h"
 #include "KernelExplorer.h"
 #include "gamelistframe.h"
 #include "debuggerframe.h"
@@ -554,7 +555,11 @@ void MainWindow::VFSManager() {}
 
 void MainWindow::VHDDManager() {}
 
-void MainWindow::SaveData() {}
+void MainWindow::SaveData()
+{
+	SaveDataListDialog* sdid = new SaveDataListDialog(this, true);
+	sdid->show();
+}
 
 void MainWindow::ELFCompiler() {}
 
@@ -896,7 +901,7 @@ void MainWindow::CreateActions()
 	confVhddManagerAct->setEnabled(false);
 
 	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
-	confSavedataManagerAct->setEnabled(false);
+	confSavedataManagerAct->setEnabled(true);
 
 	toolsCompilerAct = new QAction(tr("&ELF Compiler"), this);
 	toolsCompilerAct->setEnabled(false);

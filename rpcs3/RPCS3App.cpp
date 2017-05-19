@@ -4,6 +4,9 @@
 #include "RPCS3Qt/GSFrame.h"
 #include "RPCS3Qt/GLGSFrame.h"
 
+#include "Emu/Cell/Modules/cellSaveData.h"
+#include "RPCS3Qt/SaveDataDialog.h"
+
 #include "rpcs3qt/MsgDialog.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
@@ -120,11 +123,11 @@ void RPCS3App::InitializeCallbacks()
 	{
 		return std::make_shared<MsgDialogFrame>();
 	};
-	/*
-	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase>
+
+	callbacks.get_save_dialog = [=]() -> std::unique_ptr<SaveDialogBase>
 	{
 		return std::make_unique<SaveDialogFrame>();
-	};*/
+	};
 
 	callbacks.on_run = [=]() { emit OnEmulatorRun(); };
 	callbacks.on_pause = [=]() {emit OnEmulatorPause(); };

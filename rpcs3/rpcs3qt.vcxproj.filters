@@ -472,6 +472,18 @@
     <ClCompile Include="rpcs3qt\RegisterEditor.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\SaveDataUtility.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_SaveDataUtility.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_SaveDataUtility.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\SaveDataDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -500,6 +512,9 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\RegisterEditor.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\SaveDataDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
@@ -586,6 +601,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\RSXDebugger.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\SaveDataUtility.h">
       <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>
