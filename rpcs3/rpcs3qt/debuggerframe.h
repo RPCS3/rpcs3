@@ -32,21 +32,20 @@
 #include <QTimer>
 #include <QTextEdit>
 
+class DebuggerList;
+
 class DebuggerFrame : public QDockWidget
 {
 	Q_OBJECT
 
 	QWidget* body;
-	QListWidget* m_list;
-	std::unique_ptr<CPUDisAsm> m_disasm;
-	u32 m_pc;
+	DebuggerList* m_list;
 	int pSize;
 	QFont mono;
 	QTextEdit* m_regs;
 	QPushButton* m_btn_step;
 	QPushButton* m_btn_run;
 	QPushButton* m_btn_pause;
-	u32 m_item_count;
 	QComboBox* m_choice_units;
 
 	u64 m_threads_created = 0;
@@ -57,6 +56,7 @@ class DebuggerFrame : public QDockWidget
 	QTimer* update;
 
 public:
+	std::unique_ptr<CPUDisAsm> m_disasm;
 	std::weak_ptr<cpu_thread> cpu;
 
 public:
@@ -67,25 +67,11 @@ public:
 
 	u32 GetPc() const;
 	u32 CentrePc(u32 pc) const;
-	void OnSelectUnit();
 	//void resizeEvent(QResizeEvent* event);
 	void DoUpdate();
-	void ShowAddr(u32 addr);
 	void WriteRegs();
 
 	void OnUpdate();
-	void Show_Val();
-	void Show_PC();
-	void DoRun();
-	void DoPause();
-	void DoStep();
-	void keyPressEvent(QKeyEvent* event);
-	void mouseDoubleClickEvent(QMouseEvent* event);
-
-	void wheelEvent(QWheelEvent* event);
-	bool IsBreakPoint(u32 pc);
-	void AddBreakPoint(u32 pc);
-	void RemoveBreakPoint(u32 pc);
 
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
@@ -93,9 +79,40 @@ protected:
 
 signals:
 	void DebugFrameClosed();
-
+public slots:
+	void DoStep();
 private slots:
+	void OnSelectUnit();
+	void Show_Val();
+	void Show_PC();
+	void DoRun();
+	void DoPause();
 	void EnableUpdateTimer(bool state);
+};
+
+class DebuggerList : public QListWidget
+{
+	Q_OBJECT
+
+	DebuggerFrame* m_debugFrame;
+
+public:
+	u32 m_pc;
+	u32 m_item_count;
+
+public:
+	DebuggerList(DebuggerFrame* parent);
+	void ShowAddr(u32 addr);
+
+private:
+	bool IsBreakPoint(u32 pc);
+	void AddBreakPoint(u32 pc);
+	void RemoveBreakPoint(u32 pc);
+
+protected:
+	void keyPressEvent(QKeyEvent* event);
+	void mouseDoubleClickEvent(QMouseEvent* event);
+	void wheelEvent(QWheelEvent* event);
 };
 
 #endif // DEBUGGERFRAME_H

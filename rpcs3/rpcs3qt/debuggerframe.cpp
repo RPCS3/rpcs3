@@ -4,8 +4,6 @@ inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(
 
 DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), parent)
 {
-	m_pc = 0;
-	m_item_count = 30;
 	pSize = 10;
 
 	update = new QTimer(this);
@@ -20,7 +18,7 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 	QVBoxLayout* vbox_p_main = new QVBoxLayout();
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
 
-	m_list = new QListWidget(this);
+	m_list = new DebuggerList(this);
 	m_choice_units = new QComboBox(this);
 	m_choice_units->setSizeAdjustPolicy(QComboBox::AdjustToContents);
 	m_choice_units->setMaxVisibleItems(30);
@@ -60,7 +58,7 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 	setWidget(body);
 	
 	m_list->setWindowTitle(tr("ASM"));
-	for (uint i = 0; i<m_item_count; ++i)
+	for (uint i = 0; i < m_list->m_item_count; ++i)
 	{
 		m_list->insertItem(i, new QListWidgetItem(""));
 	}
@@ -75,10 +73,9 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &DebuggerFrame::OnSelectUnit);
 	connect(this, &QDockWidget::visibilityChanged, this, &DebuggerFrame::EnableUpdateTimer);
 
-	ShowAddr(CentrePc(m_pc));
+	m_list->ShowAddr(CentrePc(m_list->m_pc));
 	UpdateUnitList();
 }
-
 
 void DebuggerFrame::closeEvent(QCloseEvent *event)
 {
@@ -271,54 +268,6 @@ void DebuggerFrame::DoUpdate()
 	WriteRegs();
 }
 
-void DebuggerFrame::ShowAddr(u32 addr)
-{
-	m_pc = addr;
-
-	const auto cpu = this->cpu.lock();
-
-	if (!cpu)
-	{
-		for (uint i = 0; i<m_item_count; ++i, m_pc += 4)
-		{
-			m_list->item(i)->setText(qstr(fmt::format("[%08x] illegal address", m_pc)));
-		}
-	}
-	else
-	{
-		const u32 cpu_offset = g_system == system_type::ps3 && cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
-		m_disasm->offset = (u8*)vm::base(cpu_offset);
-		for (uint i = 0, count = 4; i<m_item_count; ++i, m_pc += count)
-		{
-			if (!vm::check_addr(cpu_offset + m_pc, 4))
-			{
-				m_list->item(i)->setText(IsBreakPoint(m_pc) ? ">>> " : "    " + qstr(fmt::format("[%08x] illegal address", m_pc)));
-				count = 4;
-				continue;
-			}
-
-			count = m_disasm->disasm(m_disasm->dump_pc = m_pc);
-
-			m_list->item(i)->setText(IsBreakPoint(m_pc) ? ">>> " : "    " + qstr(m_disasm->last_opcode));
-
-			QColor colour;
-
-			if (test(cpu->state & cpu_state_pause) && m_pc == GetPc())
-			{
-				colour = QColor(Qt::green);
-			}
-			else
-			{
-				colour = QColor(IsBreakPoint(m_pc) ? Qt::yellow : Qt::white);
-			}
-
-			m_list->item(i)->setBackgroundColor(colour);
-		}
-	}
-
-	m_list->setLineWidth(-1);
-}
-
 void DebuggerFrame::WriteRegs()
 {
 	const auto cpu = this->cpu.lock();
@@ -414,13 +363,13 @@ void DebuggerFrame::Show_Val()
 			pc = p_pc->text().toULong(&ok, 16);
 			addr->setText(p_pc->text());
 		}
-		ShowAddr(CentrePc(pc));
+		m_list->ShowAddr(CentrePc(pc));
 	}
 }
 
 void DebuggerFrame::Show_PC()
 {
-	if (const auto cpu = this->cpu.lock()) ShowAddr(CentrePc(GetPc()));
+	if (const auto cpu = this->cpu.lock()) m_list->ShowAddr(CentrePc(GetPc()));
 }
 
 void DebuggerFrame::DoRun()
@@ -462,15 +411,92 @@ void DebuggerFrame::DoStep()
 	UpdateUI();
 }
 
-void DebuggerFrame::keyPressEvent(QKeyEvent* event)
+void DebuggerFrame::EnableUpdateTimer(bool enable)
+{
+	enable ? update->start(50) : update->stop();
+}
+
+DebuggerList::DebuggerList(DebuggerFrame* parent) : QListWidget(parent)
+{
+	m_pc = 0;
+	m_item_count = 30;
+	m_debugFrame = parent;
+};
+
+void DebuggerList::ShowAddr(u32 addr)
+{
+	m_pc = addr;
+
+	const auto cpu = m_debugFrame->cpu.lock();
+
+	if (!cpu)
+	{
+		for (uint i = 0; i<m_item_count; ++i, m_pc += 4)
+		{
+			item(i)->setText(qstr(fmt::format("[%08x] illegal address", m_pc)));
+		}
+	}
+	else
+	{
+		const u32 cpu_offset = g_system == system_type::ps3 && cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
+		m_debugFrame->m_disasm->offset = (u8*)vm::base(cpu_offset);
+		for (uint i = 0, count = 4; i<m_item_count; ++i, m_pc += count)
+		{
+			if (!vm::check_addr(cpu_offset + m_pc, 4))
+			{
+				item(i)->setText((IsBreakPoint(m_pc) ? ">>> " : "    ") + qstr(fmt::format("[%08x] illegal address", m_pc)));
+				count = 4;
+				continue;
+			}
+
+			count = m_debugFrame->m_disasm->disasm(m_debugFrame->m_disasm->dump_pc = m_pc);
+
+			item(i)->setText((IsBreakPoint(m_pc) ? ">>> " : "    ") + qstr(m_debugFrame->m_disasm->last_opcode));
+
+			QColor colour;
+			
+			if (test(cpu->state & cpu_state_pause) && m_pc == m_debugFrame->GetPc())
+			{
+				colour = QColor(Qt::green);
+			}
+			else
+			{
+				colour = QColor(IsBreakPoint(m_pc) ? Qt::yellow : Qt::white);
+			}
+			
+			item(i)->setBackgroundColor(colour);
+		}
+	}
+
+	setLineWidth(-1);
+}
+
+bool DebuggerList::IsBreakPoint(u32 pc)
+{
+	return g_breakpoints.count(pc) != 0;
+}
+
+void DebuggerList::AddBreakPoint(u32 pc)
+{
+	g_breakpoints.emplace(pc, false);
+	ppu_breakpoint(pc);
+}
+
+void DebuggerList::RemoveBreakPoint(u32 pc)
+{
+	g_breakpoints.erase(pc);
+	ppu_breakpoint(pc);
+}
+
+void DebuggerList::keyPressEvent(QKeyEvent* event)
 {
 	if (!isActiveWindow())
 	{
 		return;
 	}
 
-	const auto cpu = this->cpu.lock();
-	long i = m_list->currentRow();
+	const auto cpu = m_debugFrame->cpu.lock();
+	long i = currentRow();
 
 	if (i < 0 || !cpu)
 	{
@@ -482,7 +508,7 @@ void DebuggerFrame::keyPressEvent(QKeyEvent* event)
 
 	if (event->key() == Qt::Key_Space && QApplication::keyboardModifiers() & Qt::ControlModifier)
 	{
-		DoStep();
+		m_debugFrame->DoStep();
 		return;
 	}
 	else
@@ -495,25 +521,25 @@ void DebuggerFrame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_Down:     ShowAddr(m_pc - (m_item_count - 1) * 4); return;
 		case Qt::Key_E:
 		{
-			InstructionEditorDialog* dlg = new InstructionEditorDialog(this, pc, cpu, m_disasm.get());
+			InstructionEditorDialog* dlg = new InstructionEditorDialog(this, pc, cpu, m_debugFrame->m_disasm.get());
 			dlg->show();
-			DoUpdate();
+			m_debugFrame->DoUpdate();
 			return;
 		}
 		case Qt::Key_R:
 		{
-			RegisterEditorDialog* dlg = new RegisterEditorDialog(this, pc, cpu, m_disasm.get());
+			RegisterEditorDialog* dlg = new RegisterEditorDialog(this, pc, cpu, m_debugFrame->m_disasm.get());
 			dlg->show();
-			DoUpdate();
+			m_debugFrame->DoUpdate();
 			return;
 		}
 		}
 	}
 }
 
-void DebuggerFrame::mouseDoubleClickEvent(QMouseEvent* event)
+void DebuggerList::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	long i = m_list->currentRow();
+	long i = currentRow();
 	if (i < 0) return;
 
 	const u32 start_pc = m_pc - m_item_count * 4;
@@ -532,32 +558,10 @@ void DebuggerFrame::mouseDoubleClickEvent(QMouseEvent* event)
 	ShowAddr(start_pc);
 }
 
-void DebuggerFrame::wheelEvent(QWheelEvent* event)
+void DebuggerList::wheelEvent(QWheelEvent* event)
 {
 	QPoint numSteps = event->angleDelta() / 8 / 15;	// http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 	const int value = numSteps.y();
 
 	ShowAddr(m_pc - (event->modifiers() == Qt::ControlModifier ? m_item_count * (value + 1) : m_item_count + value) * 4);
-}
-
-bool DebuggerFrame::IsBreakPoint(u32 pc)
-{
-	return g_breakpoints.count(pc) != 0;
-}
-
-void DebuggerFrame::AddBreakPoint(u32 pc)
-{
-	g_breakpoints.emplace(pc, false);
-	ppu_breakpoint(pc);
-}
-
-void DebuggerFrame::RemoveBreakPoint(u32 pc)
-{
-	g_breakpoints.erase(pc);
-	ppu_breakpoint(pc);
-}
-
-void DebuggerFrame::EnableUpdateTimer(bool enable)
-{
-	enable ? update->start(50) : update->stop();
 }
