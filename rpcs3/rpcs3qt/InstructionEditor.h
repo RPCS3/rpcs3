@@ -20,6 +20,7 @@
 class InstructionEditorDialog : public QDialog
 {
 	u32 pc;
+	u32 cpu_offset;
 	CPUDisAsm* disasm;
 	QLineEdit* t2_instr;
 	QLabel* t3_preview;
@@ -31,6 +32,9 @@ public:
 	InstructionEditorDialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
 
 	void updatePreview();
+
+	private slots:
+	void OnOkay();
 };
 
 #endif // !INSTRUCTIONEDITOR_H

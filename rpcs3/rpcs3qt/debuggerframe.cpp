@@ -495,8 +495,8 @@ void DebuggerFrame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_Down:     ShowAddr(m_pc - (m_item_count - 1) * 4); return;
 		case Qt::Key_E:
 		{
-			InstructionEditorDialog dlg(this, pc, cpu, m_disasm.get());
-			dlg.exec();
+			InstructionEditorDialog* dlg = new InstructionEditorDialog(this, pc, cpu, m_disasm.get());
+			dlg->show();
 			DoUpdate();
 			return;
 		}
