@@ -31,6 +31,9 @@ public:
 	RegisterEditorDialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
 
 	void updateRegister();
+
+private:
+	void OnOkay(const std::shared_ptr<cpu_thread>& _cpu);
 };
 
 #endif // REGISTEREDITOR_H

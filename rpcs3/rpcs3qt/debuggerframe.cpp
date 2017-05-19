@@ -502,8 +502,8 @@ void DebuggerFrame::keyPressEvent(QKeyEvent* event)
 		}
 		case Qt::Key_R:
 		{
-			RegisterEditorDialog dlg(this, pc, cpu, m_disasm.get());
-			dlg.exec();
+			RegisterEditorDialog* dlg = new RegisterEditorDialog(this, pc, cpu, m_disasm.get());
+			dlg->show();
 			DoUpdate();
 			return;
 		}

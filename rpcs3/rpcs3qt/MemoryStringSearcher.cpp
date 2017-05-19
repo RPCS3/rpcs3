@@ -5,6 +5,7 @@ MemoryStringSearcher::MemoryStringSearcher(QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("String Searcher"));
+	setAttribute(Qt::WA_DeleteOnClose);
 	setFixedSize(QSize(545, 64));
 
 	le_addr = new QLineEdit(this);

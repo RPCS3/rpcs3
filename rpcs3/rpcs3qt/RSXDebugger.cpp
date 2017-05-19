@@ -17,6 +17,7 @@ RSXDebugger::RSXDebugger(QWidget* parent)
 	, exit(false)
 {
 	setWindowTitle(tr("RSX Debugger"));
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	//Fonts and Colors
 	pSize = 8;

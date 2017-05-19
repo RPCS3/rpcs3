@@ -569,7 +569,8 @@ void MainWindow::CgDisasm()
 	cgdw->show();
 }
 
-void MainWindow::KernelExploration() {
+void MainWindow::KernelExploration()
+{
 	KernelExplorer* kernelExplorer = new KernelExplorer(this);
 	kernelExplorer->show();
 }

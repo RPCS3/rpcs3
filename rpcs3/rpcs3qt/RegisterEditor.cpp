@@ -10,42 +10,36 @@ RegisterEditorDialog::RegisterEditorDialog(QWidget *parent, u32 _pc, const std::
 	, disasm(_disasm)
 {
 	setWindowTitle(tr("Edit registers"));
-	QHBoxLayout* hbox_panel_margin_x = new QHBoxLayout();
-	QVBoxLayout* vbox_panel_margin_y = new QVBoxLayout();
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
-	QHBoxLayout* hbox_t1_panel = new QHBoxLayout();
-	QHBoxLayout* hbox_t2_panel = new QHBoxLayout();
-	QHBoxLayout* hbox_t3_panel = new QHBoxLayout();
-	QHBoxLayout* hbox_b_panel = new QHBoxLayout();
+	QHBoxLayout* hbox_panel = new QHBoxLayout();
+	QVBoxLayout* vbox_left_panel = new QVBoxLayout();
+	QVBoxLayout* vbox_right_panel = new QVBoxLayout();
+	QHBoxLayout* hbox_button_panel = new QHBoxLayout();
 
 	QLabel* t1_text = new QLabel(tr("Register:     "), this);
 	QLabel* t2_text = new QLabel(tr("Value (Hex):"), this);
 
-	QPushButton* b_ok = new QPushButton(tr("&Ok"));
-	QPushButton* b_cancel = new QPushButton(tr("&Cancel"));
+	QPushButton* button_ok = new QPushButton(tr("&Ok"));
+	QPushButton* button_cancel = new QPushButton(tr("&Cancel"));
+	button_ok->setFixedWidth(80);
+	button_cancel->setFixedWidth(80);
 	
 	t1_register = new QComboBox(this);
 	t2_value = new QLineEdit(this);
 	t2_value->setFixedWidth(200);
 
-	hbox_t1_panel->addWidget(t1_text);
-	hbox_t1_panel->addWidget(t1_register);
+	// Layouts
+	vbox_left_panel->addWidget(t1_text);
+	vbox_left_panel->addWidget(t2_text);
 
-	hbox_t2_panel->addWidget(t2_text);
-	hbox_t2_panel->addWidget(t2_value);
+	vbox_right_panel->addWidget(t1_register);
+	vbox_right_panel->addWidget(t2_value);
 
-	hbox_b_panel->addWidget(b_ok);
-	hbox_b_panel->addWidget(b_cancel);
-
-	vbox_panel->addLayout(hbox_t1_panel);
-	vbox_panel->addLayout(hbox_t2_panel);
-	vbox_panel->addLayout(hbox_b_panel);
-
-	vbox_panel_margin_y->addLayout(vbox_panel);
-	hbox_panel_margin_x->addLayout(vbox_panel_margin_y);
-
-	connect(t1_register, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &RegisterEditorDialog::updateRegister);
+	hbox_button_panel->addWidget(button_ok);
+	hbox_button_panel->addWidget(button_cancel);
+	hbox_button_panel->setAlignment(Qt::AlignCenter);
 
 	switch (g_system)
 	{
@@ -75,87 +69,20 @@ RegisterEditorDialog::RegisterEditorDialog(QWidget *parent, u32 _pc, const std::
 		return;
 	}
 
-	setLayout(hbox_panel_margin_x);
+	// Main Layout
+	hbox_panel->addLayout(vbox_left_panel);
+	hbox_panel->addSpacing(10);
+	hbox_panel->addLayout(vbox_right_panel);
+	vbox_panel->addLayout(hbox_panel);
+	vbox_panel->addSpacing(10);
+	vbox_panel->addLayout(hbox_button_panel);
+	setLayout(vbox_panel);
+	setModal(true);
 
-	if (isModal())
-	{
-		const auto cpu = _cpu.get();
-
-		std::string reg = t1_register->itemData(t1_register->currentIndex()).toString().toUtf8().toStdString();
-		std::string value = t2_value->text().toUtf8().toStdString();
-
-		if (g_system == system_type::ps3 && cpu->id_type() == 1)
-		{
-			auto& ppu = *static_cast<ppu_thread*>(cpu);
-
-			while (value.length() < 32) value = "0" + value;
-			const auto first_brk = reg.find('[');
-			try
-			{
-				if (first_brk != -1)
-				{
-					const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-					if (reg.find("GPR") == 0 || reg.find("FPR") == 0)
-					{
-						const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-						if (reg.find("GPR") == 0) ppu.gpr[reg_index] = (u64)reg_value;
-						if (reg.find("FPR") == 0) (u64&)ppu.fpr[reg_index] = (u64)reg_value;
-						return;
-					}
-					if (reg.find("VR") == 0)
-					{
-						const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
-						const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
-						ppu.vr[reg_index]._u64[0] = (u64)reg_value0;
-						ppu.vr[reg_index]._u64[1] = (u64)reg_value1;
-						return;
-					}
-				}
-				if (reg == "LR" || reg == "CTR")
-				{
-					const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-					if (reg == "LR") ppu.lr = (u64)reg_value;
-					if (reg == "CTR") ppu.ctr = (u64)reg_value;
-					return;
-				}
-				if (reg == "CR")
-				{
-					const ullong reg_value = std::stoull(value.substr(24, 31), 0, 16);
-					if (reg == "CR") ppu.cr_unpack((u32)reg_value);
-					return;
-				}
-			}
-			catch (std::invalid_argument&) //if any of the stoull conversion fail
-			{
-			}
-		}
-		else if (g_system == system_type::ps3 && cpu->id_type() != 1)
-		{
-			auto& spu = *static_cast<SPUThread*>(cpu);
-
-			while (value.length() < 32) value = "0" + value;
-			const auto first_brk = reg.find('[');
-			try
-			{
-				if (first_brk != -1)
-				{
-					const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-					if (reg.find("GPR") == 0)
-					{
-						const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
-						const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
-						spu.gpr[reg_index]._u64[0] = (u64)reg_value0;
-						spu.gpr[reg_index]._u64[1] = (u64)reg_value1;
-						return;
-					}
-				}
-			}
-			catch (std::invalid_argument&)
-			{
-			}
-		}
-		QMessageBox::critical(this, tr("Error"), tr("This value could not be converted.\nNo changes were made."));
-	}
+	// Events
+	connect(button_ok, &QAbstractButton::pressed, this, [=](){OnOkay(_cpu); accept();});
+	connect(button_cancel, &QAbstractButton::pressed, this, &RegisterEditorDialog::reject);
+	connect(t1_register, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &RegisterEditorDialog::updateRegister);
 }
 
 void RegisterEditorDialog::updateRegister()
@@ -195,4 +122,84 @@ void RegisterEditorDialog::updateRegister()
 	}
 
 	t2_value->setText(qstr(str));
+}
+
+void RegisterEditorDialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
+{
+	const auto cpu = _cpu.get();
+
+	std::string reg = t1_register->itemData(t1_register->currentIndex()).toString().toUtf8().toStdString();
+	std::string value = t2_value->text().toUtf8().toStdString();
+
+	if (g_system == system_type::ps3 && cpu->id_type() == 1)
+	{
+		auto& ppu = *static_cast<ppu_thread*>(cpu);
+
+		while (value.length() < 32) value = "0" + value;
+		const auto first_brk = reg.find('[');
+		try
+		{
+			if (first_brk != -1)
+			{
+				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
+				if (reg.find("GPR") == 0 || reg.find("FPR") == 0)
+				{
+					const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
+					if (reg.find("GPR") == 0) ppu.gpr[reg_index] = (u64)reg_value;
+					if (reg.find("FPR") == 0) (u64&)ppu.fpr[reg_index] = (u64)reg_value;
+					return;
+				}
+				if (reg.find("VR") == 0)
+				{
+					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
+					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
+					ppu.vr[reg_index]._u64[0] = (u64)reg_value0;
+					ppu.vr[reg_index]._u64[1] = (u64)reg_value1;
+					return;
+				}
+			}
+			if (reg == "LR" || reg == "CTR")
+			{
+				const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
+				if (reg == "LR") ppu.lr = (u64)reg_value;
+				if (reg == "CTR") ppu.ctr = (u64)reg_value;
+				return;
+			}
+			if (reg == "CR")
+			{
+				const ullong reg_value = std::stoull(value.substr(24, 31), 0, 16);
+				if (reg == "CR") ppu.cr_unpack((u32)reg_value);
+				return;
+			}
+		}
+		catch (std::invalid_argument&) //if any of the stoull conversion fail
+		{
+		}
+	}
+	else if (g_system == system_type::ps3 && cpu->id_type() != 1)
+	{
+		auto& spu = *static_cast<SPUThread*>(cpu);
+
+		while (value.length() < 32) value = "0" + value;
+		const auto first_brk = reg.find('[');
+		try
+		{
+			if (first_brk != -1)
+			{
+				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
+				if (reg.find("GPR") == 0)
+				{
+					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
+					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
+					spu.gpr[reg_index]._u64[0] = (u64)reg_value0;
+					spu.gpr[reg_index]._u64[1] = (u64)reg_value1;
+					return;
+				}
+			}
+		}
+		catch (std::invalid_argument&)
+		{
+		}
+	}
+	QMessageBox::critical(this, tr("Error"), tr("This value could not be converted.\nNo changes were made."));
 }

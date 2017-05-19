@@ -9,6 +9,7 @@ MemoryViewerPanel::MemoryViewerPanel(QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Memory Viewer"));
+	setAttribute(Qt::WA_DeleteOnClose);
 	exit = false;
 	m_addr = 0;
 	m_colcount = 16;
