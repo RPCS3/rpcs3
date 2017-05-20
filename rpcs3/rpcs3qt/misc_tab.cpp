@@ -13,16 +13,12 @@ misc_tab::misc_tab(std::shared_ptr<emu_settings> xemu_settings, QWidget *parent)
 	// Left Widgets
 	QCheckBox *exitOnStop = xemu_settings->CreateEnhancedCheckBox(emu_settings::ExitRPCS3OnFinish, this);
 	QCheckBox *alwaysStart = xemu_settings->CreateEnhancedCheckBox(emu_settings::StartOnBoot, this);
-	QCheckBox *apSystemcall = xemu_settings->CreateEnhancedCheckBox(emu_settings::AutoPauseSysCall, this);
-	QCheckBox *apFunctioncall = xemu_settings->CreateEnhancedCheckBox(emu_settings::AutoPauseFuncCall, this);
 	QCheckBox *startGameFullscreen = xemu_settings->CreateEnhancedCheckBox(emu_settings::StartGameFullscreen, this);
 
 	// Left layout
 	QVBoxLayout *vbox_left = new QVBoxLayout;
 	vbox_left->addWidget(exitOnStop);
 	vbox_left->addWidget(alwaysStart);
-	vbox_left->addWidget(apSystemcall);
-	vbox_left->addWidget(apFunctioncall);
 	vbox_left->addWidget(startGameFullscreen);
 	vbox_left->addStretch(1);
 
