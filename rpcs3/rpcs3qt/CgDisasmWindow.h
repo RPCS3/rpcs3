@@ -9,7 +9,7 @@ class CgDisasmWindow : public QTabWidget
 	Q_OBJECT
 
 private slots:
-	void CgDisasmWindow::ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint &pos);
 private:
 	QTextEdit* m_disasm_text;
 	QTextEdit* m_glsl_text;

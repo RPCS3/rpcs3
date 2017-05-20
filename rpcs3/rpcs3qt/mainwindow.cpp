@@ -282,6 +282,7 @@ void MainWindow::InstallPkg()
 	}
 
 	QProgressDialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
+
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedSize(500, pdlg.height());
@@ -293,6 +294,7 @@ void MainWindow::InstallPkg()
 	QWinTaskbarProgress *taskbar_progress = taskbar_button->progress();
 	taskbar_progress->setRange(0, 1000);
 	taskbar_progress->setVisible(true);
+
 #endif
 
 	// Synchronization variable
@@ -316,6 +318,10 @@ void MainWindow::InstallPkg()
 			if (pdlg.wasCanceled())
 			{
 				progress -= 1.;
+#ifdef _WIN32
+				taskbar_progress->hide();
+				taskbar_button->~QWinTaskbarButton();
+#endif
 				if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Remove incomplete folder?"),
 					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 				{
@@ -443,6 +449,10 @@ void MainWindow::InstallPup()
 			if (pdlg.wasCanceled())
 			{
 				progress = -1;
+#ifdef _WIN32
+				taskbar_progress->hide();
+				taskbar_button->~QWinTaskbarButton();
+#endif				
 				break;
 			}
 			// Update progress window
