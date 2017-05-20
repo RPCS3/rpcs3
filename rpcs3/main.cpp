@@ -4,11 +4,11 @@
 #include <QApplication>
 #include <QDebug>
 #include <QDesktopWidget>
-#include "RPCS3App.h"
+#include "rpcs3_app.h"
 
 int main(int argc, char *argv[])
 {
-	RPCS3App app(argc, argv);
+	rpcs3_app app(argc, argv);
 	app.Init();
 	return app.exec();
 }
