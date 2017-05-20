@@ -103,7 +103,13 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	try
 	{
-		const auto val = std::stoull(value, nullptr, 0);
+		std::size_t pos;
+		const auto val = std::stoull(value, &pos, 0);
+
+		if (pos != value.size())
+		{
+			return false;
+		}
 
 		if (out) *out = val;
 		return true;
