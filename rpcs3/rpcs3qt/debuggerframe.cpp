@@ -67,8 +67,17 @@ DebuggerFrame::DebuggerFrame(QWidget *parent) : QDockWidget(tr("Debugger"), pare
 	connect(b_go_to_addr, &QAbstractButton::clicked, this, &DebuggerFrame::Show_Val);
 	connect(b_go_to_pc, &QAbstractButton::clicked, this, &DebuggerFrame::Show_PC);
 	connect(m_btn_step, &QAbstractButton::clicked, this, &DebuggerFrame::DoStep);
-	connect(m_btn_run, &QAbstractButton::clicked, this, &DebuggerFrame::DoRun);
-	connect(m_btn_pause, &QAbstractButton::clicked, this, &DebuggerFrame::DoPause);
+	connect(m_btn_run, &QAbstractButton::clicked, [=](){
+		const auto cpu = this->cpu.lock();
+		if (cpu && cpu->state.test_and_reset(cpu_flag::dbg_pause))
+			if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
+				cpu->notify();
+		UpdateUI();
+	});
+	connect(m_btn_pause, &QAbstractButton::clicked, [=](){
+		if (const auto cpu = this->cpu.lock()) cpu->state += cpu_flag::dbg_pause;
+		UpdateUI();
+	});
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &DebuggerFrame::UpdateUI);
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &DebuggerFrame::OnSelectUnit);
 	connect(this, &QDockWidget::visibilityChanged, this, &DebuggerFrame::EnableUpdateTimer);
@@ -370,29 +379,6 @@ void DebuggerFrame::Show_Val()
 void DebuggerFrame::Show_PC()
 {
 	if (const auto cpu = this->cpu.lock()) m_list->ShowAddr(CentrePc(GetPc()));
-}
-
-void DebuggerFrame::DoRun()
-{
-	const auto cpu = this->cpu.lock();
-
-	if (cpu && cpu->state.test_and_reset(cpu_flag::dbg_pause))
-	{
-		if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
-		{
-			cpu->notify();
-		}
-	}
-	UpdateUI();
-}
-
-void DebuggerFrame::DoPause()
-{
-	if (const auto cpu = this->cpu.lock())
-	{
-		cpu->state += cpu_flag::dbg_pause;
-	}
-	UpdateUI();
 }
 
 void DebuggerFrame::DoStep()

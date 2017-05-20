@@ -30,7 +30,6 @@ protected:
 	void closeEvent(QCloseEvent* event);
 private slots:
 	void UpdateUI();
-	void OpenLogContextMenu(const QPoint& point);
 private:
 	void SetLogLevel(logs::level lev);
 	void SetTTYLogging(bool val);

@@ -32,9 +32,6 @@ public:
 	InstructionEditorDialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
 
 	void updatePreview();
-
-	private slots:
-	void OnOkay();
 };
 
 #endif // !INSTRUCTIONEDITOR_H

@@ -54,7 +54,7 @@ KernelExplorer::KernelExplorer(QWidget* parent) : QDialog(parent)
 	setLayout(vbox_panel);
 
 	// Events
-	connect(button_refresh, &QAbstractButton::clicked, this, &KernelExplorer::OnRefresh);
+	connect(button_refresh, &QAbstractButton::clicked, this, &KernelExplorer::Update);
 
 	// Fill the wxTreeCtrl
 	Update();
@@ -311,9 +311,4 @@ void KernelExplorer::Update()
 	// RawSPU Threads (TODO)
 
 	root->setExpanded(true);
-}
-
-void KernelExplorer::OnRefresh()
-{
-	Update();
 }

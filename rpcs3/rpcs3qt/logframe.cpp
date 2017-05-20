@@ -129,7 +129,15 @@ LogFrame::LogFrame(std::shared_ptr<GuiSettings> guiSettings, QWidget *parent) : 
 
 	CreateAndConnectActions();
 	log->setContextMenuPolicy(Qt::CustomContextMenu);
-	connect(log, &QWidget::customContextMenuRequested, this, &LogFrame::OpenLogContextMenu);
+	connect(log, &QWidget::customContextMenuRequested, [=](const QPoint& pos){
+		QMenu* menu = log->createStandardContextMenu();
+		menu->addAction(clearAct);
+		menu->addSeparator();
+		menu->addActions({ nothingAct, fatalAct, errorAct, todoAct, successAct, warningAct, noticeAct, traceAct });
+		menu->addSeparator();
+		menu->addAction(TTYAct);
+		menu->exec(mapToGlobal(pos));
+	});
 
 	// Check for updates every ~10 ms
 	QTimer *timer = new QTimer(this);
@@ -326,18 +334,6 @@ void LogFrame::UpdateUI()
 		// Limit processing time
 		if (steady_clock::now() >= start + 7ms) break;
 	}
-}
-
-void LogFrame::OpenLogContextMenu(const QPoint& loc)
-{
-	QMenu* menu = log->createStandardContextMenu();
-	menu->addAction(clearAct);
-	menu->addSeparator();
-	menu->addActions({ nothingAct, fatalAct, errorAct, todoAct, successAct, warningAct, noticeAct, traceAct });
-
-	menu->addSeparator();
-	menu->addAction(TTYAct);
-	menu->exec(mapToGlobal(loc));
 }
 
 void LogFrame::closeEvent(QCloseEvent *event)

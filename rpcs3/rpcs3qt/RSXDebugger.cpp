@@ -280,11 +280,35 @@ RSXDebugger::RSXDebugger(QWidget* parent)
 	setLayout(hbox_panel);
 
 	//Events
-	connect(b_goto_get, &QAbstractButton::clicked, this, &RSXDebugger::GoToGet);
-	connect(b_goto_put, &QAbstractButton::clicked, this, &RSXDebugger::GoToPut);
-	connect(t_addr, &QLineEdit::returnPressed, this, &RSXDebugger::OnChangeToolsAddr);
+	connect(b_goto_get, &QAbstractButton::clicked, [=](){
+		if (const auto render = fxm::get<GSRender>()){
+			u32 realAddr;
+			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr)){
+				m_addr = realAddr;
+				UpdateInformation();
+			}
+		}
+	});
+	connect(b_goto_put, &QAbstractButton::clicked, [=](){
+		if (const auto render = fxm::get<GSRender>()){
+			u32 realAddr;
+			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr)){
+				m_addr = realAddr;
+				UpdateInformation();
+			}
+		}
+	});
+	connect(t_addr, &QLineEdit::returnPressed, [=](){
+		bool ok;
+		m_addr = t_addr->text().toULong(&ok, 16);
+		UpdateInformation();
+	});
 	connect(m_list_flags, &QTableWidget::itemClicked, this, &RSXDebugger::SetFlags);
-	connect(m_list_texture, &QTableWidget::itemClicked, this, &RSXDebugger::OnSelectTexture);
+	connect(m_list_texture, &QTableWidget::itemClicked, [=](){
+		int index = m_list_texture->currentRow();
+		if (index >= 0) m_cur_texture = index;
+		UpdateInformation();
+	});
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &RSXDebugger::OnClickDrawCalls);
 
 	//Fill the frame
@@ -302,13 +326,6 @@ void RSXDebugger::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_F5: UpdateInformation(); return;
 		}
 	}
-}
-
-void RSXDebugger::OnChangeToolsAddr()
-{
-	bool ok;
-	m_addr = t_addr->text().toULong(&ok, 16);
-	UpdateInformation();
 }
 
 void RSXDebugger::wheelEvent(QWheelEvent* event)
@@ -609,32 +626,6 @@ void RSXDebugger::OnClickDrawCalls()
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
 			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
-		}
-	}
-}
-
-void RSXDebugger::GoToGet()
-{
-	if (const auto render = fxm::get<GSRender>())
-	{
-		u32 realAddr;
-		if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
-		{
-			m_addr = realAddr;
-			UpdateInformation();
-		}
-	}
-}
-
-void RSXDebugger::GoToPut()
-{
-	if (const auto render = fxm::get<GSRender>())
-	{
-		u32 realAddr;
-		if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
-		{
-			m_addr = realAddr;
-			UpdateInformation();
 		}
 	}
 }
@@ -1017,16 +1008,6 @@ void RSXDebugger::SetPrograms()
 	//	}
 	//}
 	//UpdateInformation();
-}
-
-void RSXDebugger::OnSelectTexture()
-{
-	int index = m_list_texture->currentRow();
-
-	if(index >= 0)
-		m_cur_texture = index;
-
-	UpdateInformation();
 }
 
 const char* RSXDebugger::ParseGCMEnum(u32 value, u32 type)

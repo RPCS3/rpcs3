@@ -85,8 +85,6 @@ private slots:
 	void OnSelectUnit();
 	void Show_Val();
 	void Show_PC();
-	void DoRun();
-	void DoPause();
 	void EnableUpdateTimer(bool state);
 };
 

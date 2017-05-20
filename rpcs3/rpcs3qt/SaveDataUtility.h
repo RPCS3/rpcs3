@@ -95,7 +95,6 @@ private slots:
 	void OnEntryRemove();
 	void OnEntryInfo();
 	void ShowContextMenu(const QPoint &pos);
-	void OnColClicked(int col);
 };
 
 #endif // !SAVEDATAUTILITY_H

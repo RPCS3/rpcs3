@@ -15,9 +15,8 @@ class KernelExplorer : public QDialog
 
 public:
 	KernelExplorer(QWidget* parent);
+private slots:
 	void Update();
-
-	void OnRefresh();
 };
 
 #endif // KERNELEXPLORER_H

@@ -60,46 +60,14 @@ public slots:
 	void OnEmuResume();
 	void OnEmuPause();
 	void OnEmuReady();
-	void OnCaptureFrame();
 
 private slots:
 	void BootElf();
 	void BootGame();
 	void InstallPkg();
 	void InstallPup();
-	void Pause();
-	void Stop();
-	void Restart();
-	void SendOpenSysMenu();
-	void SendExit();
-	void Settings();
-	void PadSettings();
-	void AutoPauseSettings();
-	void VFSManager();
-	void VHDDManager();
-	void SaveData();
-	void ELFCompiler();
-	void CgDisasm();
-	void KernelExploration();
-	void MemoryViewer();
-	void RSXDebuggerFrame();
-	void StringSearch();
 	void DecryptSPRXLibraries();
-	void ToggleDebugFrame(bool state);
-	void ToggleLogFrame(bool state);
-	void ToggleGameListFrame(bool state);
-	void ToggleControls(bool state);
-	void RefreshGameList();
-	void ToggleHDDGameCategory(bool state);
-	void ToggleDiscGameCategory(bool state);
-	void ToggleHomeCategory(bool state);
-	void ToggleAudioVideoCategory(bool state);
-	void ToggleGameDataCategory(bool state);
 	void About();
-
-	void OnDebugFrameClosed();
-	void OnLogFrameClosed();
-	void OnGameListFrameClosed();
 
 	void SaveWindowState();
 
@@ -107,7 +75,6 @@ protected:
 	void closeEvent(QCloseEvent *event) override;
 	void SetAppIconFromPath(const std::string path);
 private:
-	void LoadIcons();
 	void CreateActions();
 	void CreateConnects();
 	void CreateMenus();

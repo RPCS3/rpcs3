@@ -47,17 +47,8 @@ public:
 		exit = true;
 	}
 
-	virtual void OnChangeToolsAddr();
-	virtual void OnChangeToolsBytes();
 	virtual void wheelEvent(QWheelEvent *event);
-	virtual void OnShowImage();
 
-	virtual void Next();
-	virtual void Prev();
-	virtual void fNext();
-	virtual void fPrev();
-
-	virtual void AdjustTextBoxes();
 	virtual void ShowMemory();
 	void SetPC(const uint pc) { m_addr = pc; }
 

@@ -45,7 +45,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened
 	guiSettings.reset(new GuiSettings());
 
 	setDockNestingEnabled(true);
-	LoadIcons(); // This needs to happen before any actions or buttons are created
+
+	//Load Icons: This needs to happen before any actions or buttons are created
+	fs::is_file("Icons/play.png") ? icon_play = QIcon("Icons/play.png") : icon_play = style()->standardIcon(QStyle::SP_MediaPlay);
+	fs::is_file("Icons/pause.png") ? icon_pause = QIcon("Icons/pause.png") : icon_pause = style()->standardIcon(QStyle::SP_MediaPause);
+	fs::is_file("Icons/stop.png") ? icon_stop = QIcon("Icons/stop.png") : icon_stop = style()->standardIcon(QStyle::SP_MediaStop);
+	fs::is_file("Icons/restart.png") ? icon_restart = QIcon("Icons/restart.png") : icon_restart = style()->standardIcon(QStyle::SP_BrowserReload);
+	appIcon = QIcon("rpcs3.ico");
+
 	CreateActions();
 	CreateMenus();
 	CreateDockWindows();
@@ -72,14 +79,12 @@ MainWindow::~MainWindow()
 {
 }
 
-void MainWindow::LoadIcons()
-{
-	fs::is_file("Icons/play.png") ? icon_play = QIcon("Icons/play.png") : icon_play = style()->standardIcon(QStyle::SP_MediaPlay);
-	fs::is_file("Icons/pause.png") ? icon_pause = QIcon("Icons/pause.png") : icon_pause = style()->standardIcon(QStyle::SP_MediaPause);
-	fs::is_file("Icons/stop.png") ? icon_stop = QIcon("Icons/stop.png") : icon_stop = style()->standardIcon(QStyle::SP_MediaStop);
-	fs::is_file("Icons/restart.png") ? icon_restart = QIcon("Icons/restart.png") : icon_restart = style()->standardIcon(QStyle::SP_BrowserReload);
-	appIcon = QIcon("rpcs3.ico");
-}
+auto Pause = [=]() {
+	if (Emu.IsReady()) Emu.Run();
+	else if (Emu.IsPaused()) Emu.Resume();
+	else if (Emu.IsRunning()) Emu.Pause();
+	else if (!Emu.GetPath().empty()) Emu.Load();
+};
 
 void MainWindow::CreateThumbnailToolbar()
 {
@@ -102,13 +107,13 @@ void MainWindow::CreateThumbnailToolbar()
 	thumb_restart->setIcon(icon_restart);
 	thumb_restart->setEnabled(false);
 
-	connect(thumb_playPause, &QWinThumbnailToolButton::clicked, this, &MainWindow::Pause);
-	connect(thumb_stop, &QWinThumbnailToolButton::clicked, this, &MainWindow::Stop);
-	connect(thumb_restart, &QWinThumbnailToolButton::clicked, this, &MainWindow::Restart);
-
 	thumb_bar->addButton(thumb_playPause);
 	thumb_bar->addButton(thumb_stop);
 	thumb_bar->addButton(thumb_restart);
+
+	connect(thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
+	connect(thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
 #endif
 }
 
@@ -315,7 +320,7 @@ void MainWindow::InstallPkg()
 					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 				{
 					fs::remove_all(local_path);
-					RefreshGameList();
+					gameListFrame->Refresh();
 					LOG_SUCCESS(LOADER, "PKG: removed incomplete installation in %s", local_path);
 					return;
 				}
@@ -341,7 +346,7 @@ void MainWindow::InstallPkg()
 
 	if (progress >= 1.)
 	{
-		RefreshGameList();
+		gameListFrame->Refresh();
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		QMessageBox::information(this, tr("Success!"), tr("Successfully installed software from package!"));
 #ifdef _WIN32
@@ -472,114 +477,8 @@ void MainWindow::InstallPup()
 	}
 }
 
-void MainWindow::Pause()
-{
-	if (Emu.IsReady())
-	{
-		Emu.Run();
-	}
-	else if (Emu.IsPaused())
-	{
-		Emu.Resume();
-	}
-	else if (Emu.IsRunning())
-	{
-		Emu.Pause();
-	}
-	else if (!Emu.GetPath().empty())
-	{
-		Emu.Load();
-	}
-}
-
-void MainWindow::Stop()
-{
-	Emu.Stop();
-}
-
-void MainWindow::Restart()
-{
-	Emu.Stop();
-	Emu.Load();
-}
-
 // This is ugly, but PS3 headers shall not be included there.
 extern void sysutil_send_system_cmd(u64 status, u64 param);
-
-void MainWindow::SendExit()
-{
-	sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
-}
-
-void MainWindow::SendOpenSysMenu()
-{
-	sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
-	m_sys_menu_opened = !m_sys_menu_opened;
-	sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
-}
-
-void MainWindow::Settings()
-{
-	SettingsDialog dlg(guiSettings, this);
-	connect(&dlg, &SettingsDialog::GuiSettingsSaveRequest, this, &MainWindow::SaveWindowState);
-	connect(&dlg, &SettingsDialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
-	connect(&dlg, &SettingsDialog::GuiStylesheetRequest, this, &MainWindow::RequestGlobalStylesheetChange);
-	dlg.exec();
-}
-
-void MainWindow::PadSettings()
-{
-	PadSettingsDialog dlg(this);
-	dlg.exec();
-}
-
-void MainWindow::AutoPauseSettings()
-{
-	AutoPauseSettingsDialog dlg(this);
-	dlg.exec();
-}
-
-void MainWindow::VFSManager() {}
-
-void MainWindow::VHDDManager() {}
-
-void MainWindow::SaveData()
-{
-	SaveDataListDialog* sdid = new SaveDataListDialog(this, true);
-	sdid->show();
-}
-
-void MainWindow::ELFCompiler() {}
-
-void MainWindow::CgDisasm()
-{
-	CgDisasmWindow* cgdw = new CgDisasmWindow(this);
-	cgdw->show();
-}
-
-void MainWindow::KernelExploration()
-{
-	KernelExplorer* kernelExplorer = new KernelExplorer(this);
-	kernelExplorer->show();
-}
-
-void MainWindow::MemoryViewer()
-{
-	MemoryViewerPanel* mvp = new MemoryViewerPanel(this);
-	mvp->show();
-}
-
-void MainWindow::RSXDebuggerFrame()
-{
-	RSXDebugger* rsx = new RSXDebugger(this);
-	rsx->show();
-}
-
-void MainWindow::StringSearch()
-{
-	MemoryStringSearcher* mss = new MemoryStringSearcher(this);
-	mss->show();
-}
 
 void MainWindow::DecryptSPRXLibraries()
 {
@@ -637,65 +536,6 @@ void MainWindow::DecryptSPRXLibraries()
 	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
 }
 
-void MainWindow::ToggleDebugFrame(bool state)
-{
-	state ? debuggerFrame->show() : debuggerFrame->hide();
-	guiSettings->SetDebuggerVisibility(state);
-}
-
-void MainWindow::ToggleLogFrame(bool state)
-{
-	state ? logFrame->show() : logFrame->hide();
-	guiSettings->SetLoggerVisibility(state);
-}
-
-void MainWindow::ToggleGameListFrame(bool state)
-{
-	state ? gameListFrame->show() : gameListFrame->hide();
-	guiSettings->SetGamelistVisibility(state);
-}
-
-void MainWindow::ToggleControls(bool state)
-{
-	state ? controls->show() : controls->hide();
-	guiSettings->SetControlsVisibility(state);
-}
-
-void MainWindow::RefreshGameList()
-{
-	gameListFrame->Refresh();
-}
-
-void MainWindow::ToggleHDDGameCategory(bool state)
-{
-	gameListFrame->ToggleCategoryFilter("HDD Game", state);
-	guiSettings->SetCategoryHDDGameVisibility(state);
-}
-
-void MainWindow::ToggleDiscGameCategory(bool state)
-{
-	gameListFrame->ToggleCategoryFilter("Disc Game", state);
-	guiSettings->SetCategoryDiscGameVisibility(state);
-}
-
-void MainWindow::ToggleHomeCategory(bool state)
-{
-	gameListFrame->ToggleCategoryFilter("Home", state);
-	guiSettings->SetCategoryHomeVisibility(state);
-}
-
-void MainWindow::ToggleAudioVideoCategory(bool state)
-{
-	gameListFrame->ToggleCategoryFilter("Audio/Video", state);
-	guiSettings->SetCategoryAudioVideoVisibility(state);
-}
-
-void MainWindow::ToggleGameDataCategory(bool state)
-{
-	gameListFrame->ToggleCategoryFilter("Game Data", state);
-	guiSettings->SetCategoryGameDataVisibility(state);
-}
-
 void MainWindow::About()
 {
 
@@ -731,33 +571,6 @@ void MainWindow::About()
 	about.setInformativeText(translatedTextAboutText);
 
 	about.exec();
-}
-
-void MainWindow::OnDebugFrameClosed()
-{
-	if (showDebuggerAct->isChecked())
-	{
-		showDebuggerAct->setChecked(false);
-		guiSettings->SetDebuggerVisibility(false);
-	}
-}
-
-void MainWindow::OnLogFrameClosed()
-{
-	if (showLogAct->isChecked())
-	{
-		showLogAct->setChecked(false);
-		guiSettings->SetLoggerVisibility(false);
-	}
-}
-
-void MainWindow::OnGameListFrameClosed()
-{
-	if (showGameListAct->isChecked())
-	{
-		showGameListAct->setChecked(false);
-		guiSettings->SetGamelistVisibility(false);
-	}
 }
 
 /** Needed so that when a backup occurs of window state in guisettings, the state is current. 
@@ -850,11 +663,6 @@ void MainWindow::OnEmuReady()
 }
 
 extern bool user_asked_for_frame_capture;
-
-void MainWindow::OnCaptureFrame()
-{
-	user_asked_for_frame_capture = true;
-}
 
 void MainWindow::EnableMenus(bool enabled)
 {
@@ -989,39 +797,106 @@ void MainWindow::CreateConnects()
 	connect(bootInstallPkgAct, &QAction::triggered, this, &MainWindow::InstallPkg);
 	connect(bootInstallPupAct, &QAction::triggered, this, &MainWindow::InstallPup);
 	connect(exitAct, &QAction::triggered, this, &QWidget::close);
-	connect(sysPauseAct, &QAction::triggered, this, &MainWindow::Pause);
-	connect(sysStopAct, &QAction::triggered, this, &MainWindow::Stop);
-	connect(sysSendOpenMenuAct, &QAction::triggered, this, &MainWindow::SendOpenSysMenu);
-	connect(sysSendExitAct, &QAction::triggered, this, &MainWindow::SendExit);
-	connect(confSettingsAct, &QAction::triggered, this, &MainWindow::Settings);
-	connect(confPadAct, &QAction::triggered, this, &MainWindow::PadSettings);
-	connect(confAutopauseManagerAct, &QAction::triggered, this, &MainWindow::AutoPauseSettings);
-	connect(confVfsManagerAct, &QAction::triggered, this, &MainWindow::VFSManager);
-	connect(confVhddManagerAct, &QAction::triggered, this, &MainWindow::VHDDManager);
-	connect(confSavedataManagerAct, &QAction::triggered, this, &MainWindow::SaveData);
-	connect(toolsCompilerAct, &QAction::triggered, this, &MainWindow::ELFCompiler);
-	connect(toolsCgDisasmAct, &QAction::triggered, this, &MainWindow::CgDisasm);
-	connect(toolsKernelExplorerAct, &QAction::triggered, this, &MainWindow::KernelExploration);
-	connect(toolsMemoryViewerAct, &QAction::triggered, this, &MainWindow::MemoryViewer);
-	connect(toolsRsxDebuggerAct, &QAction::triggered, this, &MainWindow::RSXDebuggerFrame);
-	connect(toolsStringSearchAct, &QAction::triggered, this, &MainWindow::StringSearch);
+	connect(sysPauseAct, &QAction::triggered, Pause);
+	connect(sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
+	connect(sysSendOpenMenuAct, &QAction::triggered, [=](){
+		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
+		m_sys_menu_opened = !m_sys_menu_opened;
+		sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
+	});
+	connect(sysSendExitAct, &QAction::triggered, [=](){
+		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
+	});
+	connect(confSettingsAct, &QAction::triggered, [=](){
+		SettingsDialog dlg(guiSettings, this);
+		connect(&dlg, &SettingsDialog::GuiSettingsSaveRequest, this, &MainWindow::SaveWindowState);
+		connect(&dlg, &SettingsDialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
+		connect(&dlg, &SettingsDialog::GuiStylesheetRequest, this, &MainWindow::RequestGlobalStylesheetChange);
+		dlg.exec();
+	});
+	connect(confPadAct, &QAction::triggered, this, [=](){
+		PadSettingsDialog dlg(this);
+		dlg.exec();
+	});
+	connect(confAutopauseManagerAct, &QAction::triggered, [=](){
+		AutoPauseSettingsDialog dlg(this);
+		dlg.exec();
+	});
+	connect(toolsCompilerAct, &QAction::triggered, []() {});
+	connect(confVfsManagerAct, &QAction::triggered, []() {});
+	connect(confVhddManagerAct, &QAction::triggered, []() {});
+	connect(confSavedataManagerAct, &QAction::triggered, [=](){
+		SaveDataListDialog* sdid = new SaveDataListDialog(this, true);
+		sdid->show();
+	});
+	connect(toolsCgDisasmAct, &QAction::triggered, [=](){
+		CgDisasmWindow* cgdw = new CgDisasmWindow(this);
+		cgdw->show();
+	});
+	connect(toolsKernelExplorerAct, &QAction::triggered, [=](){
+		KernelExplorer* kernelExplorer = new KernelExplorer(this);
+		kernelExplorer->show();
+	});
+	connect(toolsMemoryViewerAct, &QAction::triggered, [=](){
+		MemoryViewerPanel* mvp = new MemoryViewerPanel(this);
+		mvp->show();
+	});
+	connect(toolsRsxDebuggerAct, &QAction::triggered, [=](){
+		RSXDebugger* rsx = new RSXDebugger(this);
+		rsx->show();
+	});
+	connect(toolsStringSearchAct, &QAction::triggered, [=](){
+		MemoryStringSearcher* mss = new MemoryStringSearcher(this);
+		mss->show();
+	});
 	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &MainWindow::DecryptSPRXLibraries);
-	connect(showDebuggerAct, &QAction::triggered, this, &MainWindow::ToggleDebugFrame);
-	connect(showLogAct, &QAction::triggered, this, &MainWindow::ToggleLogFrame);
-	connect(showGameListAct, &QAction::triggered, this, &MainWindow::ToggleGameListFrame);
-	connect(showControlsAct, &QAction::triggered, this, &MainWindow::ToggleControls);
-	connect(refreshGameListAct, &QAction::triggered, this, &MainWindow::RefreshGameList);
-	connect(showCatHDDGameAct, &QAction::triggered, this, &MainWindow::ToggleHDDGameCategory);
-	connect(showCatDiscGameAct, &QAction::triggered, this, &MainWindow::ToggleDiscGameCategory);
-	connect(showCatHomeAct, &QAction::triggered, this, &MainWindow::ToggleHomeCategory);
-	connect(showCatAudioVideoAct, &QAction::triggered, this, &MainWindow::ToggleAudioVideoCategory);
-	connect(showCatGameDataAct, &QAction::triggered, this, &MainWindow::ToggleGameDataCategory);
+	connect(showDebuggerAct, &QAction::triggered, [=](bool checked){
+		checked ? debuggerFrame->show() : debuggerFrame->hide();
+		guiSettings->SetDebuggerVisibility(checked);
+	});
+	connect(showLogAct, &QAction::triggered, [=](bool checked){
+		checked ? logFrame->show() : logFrame->hide();
+		guiSettings->SetLoggerVisibility(checked);
+	});
+	connect(showGameListAct, &QAction::triggered, [=](bool checked){
+		checked ? gameListFrame->show() : gameListFrame->hide();
+		guiSettings->SetGamelistVisibility(checked);
+	});
+	connect(showControlsAct, &QAction::triggered, this, [=](bool checked){
+		checked ? controls->show() : controls->hide();
+		guiSettings->SetControlsVisibility(checked);
+	});
+	connect(refreshGameListAct, &QAction::triggered, [=](){
+		gameListFrame->Refresh();
+	});
+	connect(showCatHDDGameAct, &QAction::triggered, [=](bool checked){
+		gameListFrame->ToggleCategoryFilter("HDD Game", checked);
+		guiSettings->SetCategoryHDDGameVisibility(checked);
+	});
+	connect(showCatDiscGameAct, &QAction::triggered, [=](bool checked){
+		gameListFrame->ToggleCategoryFilter("Disc Game", checked);
+		guiSettings->SetCategoryDiscGameVisibility(checked);
+	});
+	connect(showCatHomeAct, &QAction::triggered, [=](bool checked){
+		gameListFrame->ToggleCategoryFilter("Home", checked);
+		guiSettings->SetCategoryHomeVisibility(checked);
+	});
+	connect(showCatAudioVideoAct, &QAction::triggered, [=](bool checked){
+		gameListFrame->ToggleCategoryFilter("Audio/Video", checked);
+		guiSettings->SetCategoryAudioVideoVisibility(checked);
+	});
+	connect(showCatGameDataAct, &QAction::triggered, [=](bool checked){
+		gameListFrame->ToggleCategoryFilter("Game Data", checked);
+		guiSettings->SetCategoryGameDataVisibility(checked);
+	});
 	connect(aboutAct, &QAction::triggered, this, &MainWindow::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
-	connect(menu_run, &QAbstractButton::clicked, this, &MainWindow::Pause);
-	connect(menu_stop, &QAbstractButton::clicked, this, &MainWindow::Stop);
-	connect(menu_restart, &QAbstractButton::clicked, this, &MainWindow::Restart);
-	connect(menu_capture_frame, &QAbstractButton::clicked, this, &MainWindow::OnCaptureFrame);
+	connect(menu_run, &QAbstractButton::clicked, Pause);
+	connect(menu_stop, &QAbstractButton::clicked, [=]() { Emu.Stop(); });
+	connect(menu_restart, &QAbstractButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(menu_capture_frame, &QAbstractButton::clicked, [=](){
+		user_asked_for_frame_capture = true;
+	});
 }
 
 void MainWindow::CreateMenus()
@@ -1116,10 +991,30 @@ void MainWindow::CreateDockWindows()
 	addDockWidget(Qt::LeftDockWidgetArea, logFrame);
 	addDockWidget(Qt::RightDockWidgetArea, debuggerFrame);
 
-	connect(logFrame, &LogFrame::LogFrameClosed, this, &MainWindow::OnLogFrameClosed);
-	connect(debuggerFrame, &DebuggerFrame::DebugFrameClosed, this, &MainWindow::OnDebugFrameClosed);
-	connect(gameListFrame, &GameListFrame::GameListFrameClosed, this, &MainWindow::OnGameListFrameClosed);
-	connect(gameListFrame, &GameListFrame::RequestIconPathSet, this, &MainWindow::SetAppIconFromPath);;
+	connect(logFrame, &LogFrame::LogFrameClosed, [=]()
+	{
+		if (showLogAct->isChecked())
+		{
+			showLogAct->setChecked(false);
+			guiSettings->SetLoggerVisibility(false);
+		}
+	});
+	connect(debuggerFrame, &DebuggerFrame::DebugFrameClosed, [=](){
+		if (showDebuggerAct->isChecked())
+		{
+			showDebuggerAct->setChecked(false);
+			guiSettings->SetDebuggerVisibility(false);
+		}
+	});
+	connect(gameListFrame, &GameListFrame::GameListFrameClosed, [=]()
+	{
+		if (showGameListAct->isChecked())
+		{
+			showGameListAct->setChecked(false);
+			guiSettings->SetGamelistVisibility(false);
+		}
+	});
+	connect(gameListFrame, &GameListFrame::RequestIconPathSet, this, &MainWindow::SetAppIconFromPath);
 }
 
 void MainWindow::ConfigureGuiFromSettings(bool configureAll)

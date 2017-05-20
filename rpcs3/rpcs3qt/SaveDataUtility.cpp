@@ -212,7 +212,12 @@ SaveDataListDialog::SaveDataListDialog(QWidget* parent, bool enable_manage)
 	connect(m_close, &QAbstractButton::clicked, this, &SaveDataListDialog::close);
 	connect(m_list, &QTableWidget::itemClicked, this, &SaveDataListDialog::OnEntryInfo);
 	connect(m_list, &QTableWidget::customContextMenuRequested, this, &SaveDataListDialog::ShowContextMenu);
-	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &SaveDataListDialog::OnColClicked);
+	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col){
+		// Sort entries, update columns and refresh the panel. Taken from gamelistframe
+		m_sortColumn = col;
+		OnSort(m_sortColumn);
+		UpdateList();
+	});
 
 	// main layout
 	QVBoxLayout* vbox_main = new QVBoxLayout();
@@ -366,14 +371,4 @@ void SaveDataListDialog::UpdateList(void)
 	m_list->setItem(1, 2, new QTableWidgetItem("This is a fake game"));
 
 	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-}
-
-//Sort List by chosen Column. Taken from gamelistframe
-void SaveDataListDialog::OnColClicked(int col)
-{
-	m_sortColumn = col;
-
-	// Sort entries, update columns and refresh the panel
-	OnSort(m_sortColumn);
-	UpdateList();
 }

@@ -113,14 +113,10 @@ private:
 
 public slots:
 	virtual void keyPressEvent(QKeyEvent* event);
-	virtual void OnChangeToolsAddr();
 	virtual void wheelEvent(QWheelEvent* event);
 	virtual void OnClickDrawCalls();
-	virtual void GoToGet();
-	virtual void GoToPut();
 	virtual void SetFlags();
 	virtual void SetPrograms();
-	virtual void OnSelectTexture();
 };
 
 #endif // !RSXDEBUGGER_H

@@ -64,22 +64,15 @@ void CgDisasmWindow::ShowContextMenu(const QPoint &pos) // this is a slot
 
 	auto l_clear = [=]() {m_disasm_text->clear(); m_glsl_text->clear();};
 	connect(clear, &QAction::triggered, l_clear);
-	connect(open, &QAction::triggered, this, &CgDisasmWindow::OpenCg);
+	connect(open, &QAction::triggered, [=] {
+		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), "", tr("Cg program objects (*.fpo;*.vpo);;"));
+		if (filePath == NULL) return;
+		
+		CgBinaryDisasm disasm(filePath.toUtf8().toStdString());
+		disasm.BuildShaderBody();
+		m_disasm_text->setText(qstr(disasm.GetArbShader()));
+		m_glsl_text->setText(qstr(disasm.GetGlslShader()));
+	});
 
 	myMenu.exec(globalPos);
-}
-
-void CgDisasmWindow::OpenCg()
-{
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), "", tr("Cg program objects (*.fpo;*.vpo);;"));
-
-	if (filePath == NULL)
-	{
-		return;
-	}
-
-	CgBinaryDisasm disasm(filePath.toUtf8().toStdString());
-	disasm.BuildShaderBody();
-	m_disasm_text->setText(qstr(disasm.GetArbShader()));
-	m_glsl_text->setText(qstr(disasm.GetGlslShader()));
 }

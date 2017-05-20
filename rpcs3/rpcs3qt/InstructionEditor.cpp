@@ -66,7 +66,15 @@ InstructionEditorDialog::InstructionEditorDialog(QWidget *parent, u32 _pc, const
 	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::pressed, this, &InstructionEditorDialog::OnOkay);
+	connect(button_ok, &QAbstractButton::pressed, [=]() {
+		bool ok;
+		ulong opcode = t2_instr->text().toULong(&ok, 16);
+		if (!ok)
+			QMessageBox::critical(this, tr("Error"), tr("This instruction could not be parsed.\nNo changes were made."));
+		else
+			vm::ps3::write32(cpu_offset + pc, (u32)opcode);
+		accept();
+	});
 	connect(button_cancel, &QAbstractButton::pressed, this, &InstructionEditorDialog::reject);
 	connect(t2_instr, &QLineEdit::textChanged, this, &InstructionEditorDialog::updatePreview);
 
@@ -92,15 +100,4 @@ void InstructionEditorDialog::updatePreview()
 	{
 		t3_preview->setText(tr("Could not parse instruction."));
 	}
-}
-
-void InstructionEditorDialog::OnOkay()
-{
-	bool ok;
-	ulong opcode = t2_instr->text().toULong(&ok, 16);
-	if (!ok)
-		QMessageBox::critical(this, tr("Error"), tr("This instruction could not be parsed.\nNo changes were made."));
-	else
-		vm::ps3::write32(cpu_offset + pc, (u32)opcode);
-	accept();
 }

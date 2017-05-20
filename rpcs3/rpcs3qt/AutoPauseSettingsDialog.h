@@ -43,12 +43,7 @@ public:
 public slots :
 	void OnRemove();
 private slots :
-	void OnEntryConfig(int row, bool newEntry);
-	void OnAdd();
 	void ShowContextMenu(const QPoint &pos);
-	void OnClear();
-	void OnReload();
-	void OnSave();
 	void keyPressEvent(QKeyEvent *event);
 };
 

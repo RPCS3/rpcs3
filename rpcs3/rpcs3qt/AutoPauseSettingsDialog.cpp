@@ -40,9 +40,12 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(QWidget *parent) : QDialog(pare
 
 	//Events
 	connect(pauseList, &QTableWidget::customContextMenuRequested, this, &AutoPauseSettingsDialog::ShowContextMenu);
-	connect(clearButton, &QAbstractButton::clicked, this, &AutoPauseSettingsDialog::OnClear);
-	connect(reloadButton, &QAbstractButton::clicked, this, &AutoPauseSettingsDialog::OnReload);
-	connect(saveButton, &QAbstractButton::clicked, this, &AutoPauseSettingsDialog::OnSave);
+	connect(clearButton, &QAbstractButton::clicked, [=](){ m_entries.clear(); UpdateList(); });
+	connect(reloadButton, &QAbstractButton::clicked, [=](){ LoadEntries(); UpdateList(); });
+	connect(saveButton, &QAbstractButton::clicked, [=](){
+		SaveEntries();
+		LOG_SUCCESS(HLE, "Auto Pause: File pause.bin was updated.");
+	});
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
 	Emu.Stop();
@@ -149,30 +152,25 @@ void AutoPauseSettingsDialog::ShowContextMenu(const QPoint &pos)
 		config->setEnabled(false);
 	}
 
-	connect(add, &QAction::triggered, this, &AutoPauseSettingsDialog::OnAdd);
+	auto OnEntryConfig = [=](int row, bool newEntry)
+	{
+		AutoPauseConfigDialog *config = new AutoPauseConfigDialog(this, this, newEntry, &m_entries[row]);
+		config->setModal(true);
+		config->exec();
+		UpdateList();
+	};
+
+	connect(add, &QAction::triggered, [=]() {
+		m_entries.emplace_back(0xFFFFFFFF);
+		UpdateList();
+		u32 idx = m_entries.size() - 1;
+		pauseList->selectRow(idx);
+		OnEntryConfig(idx, true);
+	});
 	connect(remove, &QAction::triggered, this, &AutoPauseSettingsDialog::OnRemove);
 	connect(config, &QAction::triggered, [=]() {OnEntryConfig(row, false); });
 
 	myMenu.exec(globalPos);
-}
-
-void AutoPauseSettingsDialog::OnEntryConfig(int row, bool newEntry)
-{
-	AutoPauseConfigDialog *config = new AutoPauseConfigDialog(this, this, newEntry, &m_entries[row]);
-	config->setModal(true);
-	config->exec();
-	UpdateList();
-}
-
-void AutoPauseSettingsDialog::OnAdd()
-{
-	m_entries.emplace_back(0xFFFFFFFF);
-	UpdateList();
-
-	u32 idx = m_entries.size() - 1;
-	pauseList->selectRow(idx);
-
-	OnEntryConfig(idx, true);
 }
 
 void AutoPauseSettingsDialog::OnRemove()
@@ -183,24 +181,6 @@ void AutoPauseSettingsDialog::OnRemove()
 	{
 		m_entries.erase(m_entries.begin() + selection.at(i).row());
 	}
-	UpdateList();
-}
-
-void AutoPauseSettingsDialog::OnSave()
-{
-	SaveEntries();
-	LOG_SUCCESS(HLE, "Auto Pause: File pause.bin was updated.");
-}
-
-void AutoPauseSettingsDialog::OnClear()
-{
-	m_entries.clear();
-	UpdateList();
-}
-
-void AutoPauseSettingsDialog::OnReload()
-{
-	LoadEntries();
 	UpdateList();
 }
 

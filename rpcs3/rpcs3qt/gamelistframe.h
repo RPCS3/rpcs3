@@ -43,8 +43,6 @@ struct ColumnsArr
 
 	ColumnsArr();
 
-	std::vector<Column*> GetSortedColumnsByPos();
-
 	Column* GetColumnByPos(u32 pos);
 
 public:
@@ -58,8 +56,6 @@ public:
 
 	QList<QImage*>* m_img_list;
 	std::vector<int> m_icon_indexes;
-	
-	void Init();
 	
 	void Update(const std::vector<GameInfo>& game_data);
 	
@@ -90,11 +86,7 @@ public:
 	
 private slots:
 	void Boot(int row);
-	void Configure(int row);
-	void RemoveGame(int row);
 	void RemoveCustomConfiguration(int row);
-	void OpenGameFolder(int row);
-	void OpenConfigFolder(int row);
 	
 	void OnColClicked(int col);
 signals:
@@ -109,7 +101,6 @@ private:
 	void CreateActions();
 
 	void ShowContextMenu(const QPoint &pos);
-	void ShowHeaderContextMenu(const QPoint& pos);
 	void doubleClickedSlot(const QModelIndex& index);
 
 	void LoadGames();

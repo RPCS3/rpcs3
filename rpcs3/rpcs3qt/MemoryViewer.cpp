@@ -201,35 +201,35 @@ MemoryViewerPanel::MemoryViewerPanel(QWidget* parent)
 	setLayout(vbox_panel);
 
 	//Events
-	connect(t_addr, &QLineEdit::returnPressed, this, &MemoryViewerPanel::OnChangeToolsAddr);
-	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &MemoryViewerPanel::OnChangeToolsBytes);
+	connect(t_addr, &QLineEdit::returnPressed, [=](){
+		bool ok;
+		m_addr = t_addr->text().toULong(&ok, 16);
+		t_addr->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
+		ShowMemory();
+	});
+	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](){
+		m_colcount = sb_bytes->value();
+		t_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
+		t_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
+		ShowMemory();
+	});
 
-	connect(b_prev, &QAbstractButton::clicked, this, &MemoryViewerPanel::Prev);
-	connect(b_next, &QAbstractButton::clicked, this, &MemoryViewerPanel::Next);
-	connect(b_fprev, &QAbstractButton::clicked, this, &MemoryViewerPanel::fPrev);
-	connect(b_fnext, &QAbstractButton::clicked, this, &MemoryViewerPanel::fNext);
-	connect(b_img, &QAbstractButton::clicked, this, &MemoryViewerPanel::OnShowImage);
+	connect(b_prev, &QAbstractButton::clicked, [=]() { m_addr -= m_colcount; ShowMemory(); });
+	connect(b_next, &QAbstractButton::clicked, [=]() { m_addr += m_colcount; ShowMemory(); });
+	connect(b_fprev, &QAbstractButton::clicked, [=]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_fnext, &QAbstractButton::clicked, [=]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_img, &QAbstractButton::clicked, [=]() {
+		u32 addr = m_addr;
+		int mode = cbox_img_mode->currentIndex();
+		int sizex = sb_img_size_x->value();
+		int sizey = sb_img_size_y->value();
+		ShowImage(this, m_addr, mode, sizex, sizey, false);
+	});
 	
 	//Fill the QTextEdits
 	ShowMemory();
 	setFixedSize(sizeHint());
 };
-
-void MemoryViewerPanel::OnChangeToolsAddr()
-{
-	bool ok;
-	m_addr = t_addr->text().toULong(&ok, 16);
-	t_addr->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
-	ShowMemory();
-}
-
-void MemoryViewerPanel::OnChangeToolsBytes()
-{
-	m_colcount = sb_bytes->value();
-	t_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
-	t_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
-	ShowMemory();
-}
 
 void MemoryViewerPanel::wheelEvent(QWheelEvent *event)
 {
@@ -243,15 +243,6 @@ void MemoryViewerPanel::wheelEvent(QWheelEvent *event)
 	
 	t_addr->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
-}
-
-void MemoryViewerPanel::OnShowImage()
-{
-	u32 addr = m_addr;
-	int mode = cbox_img_mode->currentIndex();
-	int sizex = sb_img_size_x->value();
-	int sizey = sb_img_size_y->value();
-	ShowImage(this, m_addr, mode, sizex, sizey, false);
 }
 
 void MemoryViewerPanel::ShowMemory()
@@ -297,7 +288,15 @@ void MemoryViewerPanel::ShowMemory()
 	t_mem_hex->setText(t_mem_hex_str);
 	t_mem_ascii->setText(t_mem_ascii_str);
 
-	AdjustTextBoxes();
+	// Adjust Text Boxes
+	textSize = fontMetrics->size(0, t_mem_addr->text());
+	t_mem_addr->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+
+	textSize = fontMetrics->size(0, t_mem_hex->text());
+	t_mem_hex->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+
+	textSize = fontMetrics->size(0, t_mem_ascii->text());
+	t_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height() + 10);
 }
 
 void MemoryViewerPanel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
@@ -379,21 +378,4 @@ void MemoryViewerPanel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width
 	f_image_viewer->setFixedSize(QSize(width, height));
 	f_image_viewer->setLayout(layout);
 	f_image_viewer->show();
-}
-
-void MemoryViewerPanel::Next () { m_addr += m_colcount; ShowMemory(); }
-void MemoryViewerPanel::Prev () { m_addr -= m_colcount; ShowMemory(); }
-void MemoryViewerPanel::fNext() { m_addr += m_rowcount * m_colcount; ShowMemory(); }
-void MemoryViewerPanel::fPrev() { m_addr -= m_rowcount * m_colcount; ShowMemory(); }
-
-void MemoryViewerPanel::AdjustTextBoxes()
-{
-	textSize = fontMetrics->size(0, t_mem_addr->text());
-	t_mem_addr->setFixedSize(textSize.width() + 10, textSize.height() + 10);
-
-	textSize = fontMetrics->size(0, t_mem_hex->text());
-	t_mem_hex->setFixedSize(textSize.width() + 10, textSize.height() + 10);
-
-	textSize = fontMetrics->size(0, t_mem_ascii->text());
-	t_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height() + 10);
 }

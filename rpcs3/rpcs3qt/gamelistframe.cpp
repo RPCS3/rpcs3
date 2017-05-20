@@ -68,7 +68,11 @@ GameListFrame::GameListFrame(std::shared_ptr<GuiSettings> settings, QWidget *par
 	setWidget(gameList);
 
 	connect(gameList, &QTableWidget::customContextMenuRequested, this, &GameListFrame::ShowContextMenu);
-	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &GameListFrame::ShowHeaderContextMenu);
+	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, [=](const QPoint& pos){
+		QMenu* configure = new QMenu(this);
+		configure->addActions({ showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct });
+		configure->exec(mapToGlobal(pos));
+	});
 	connect(gameList, &QTableWidget::doubleClicked, this, &GameListFrame::doubleClickedSlot);
 	connect(gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &GameListFrame::OnColClicked);
 
@@ -305,6 +309,23 @@ void GameListFrame::CreateActions()
 	}
 }
 
+static void open_dir(const std::string& spath)
+{
+	fs::create_dir(spath);
+	QString path = qstr(spath);
+	QProcess* process = new QProcess();
+
+#ifdef _WIN32
+	std::string command = "explorer";
+	std::replace(path.begin(), path.end(), '/', '\\');
+	process->start("explorer", QStringList() << path);
+#elif __APPLE__
+	process->start("open", QStringList() << path);
+#elif __linux__
+	process->start("xdg-open", QStringList() << path);
+#endif
+}
+
 void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 {
 	int row = gameList->indexAt(pos).row();
@@ -334,20 +355,18 @@ void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
 
-	// Create lambdas we need to convert the none argument triggered to have an int argument row.
-	auto l_boot = [=]() {Boot(row); };
-	auto l_configure = [=]() {Configure(row); };
-	auto l_removeGame = [=]() {RemoveGame(row); };
-	auto l_removeConfig = [=]() {RemoveCustomConfiguration(row); };
-	auto l_openGameFolder = [=]() {OpenGameFolder(row); };
-	auto l_openConfig = [=]() {OpenConfigFolder(row); };
-
-	connect(boot, &QAction::triggered, l_boot);
-	connect(configure, &QAction::triggered, l_configure);
-	connect(removeGame, &QAction::triggered, l_removeGame);
-	connect(removeConfig, &QAction::triggered, l_removeConfig);
-	connect(openGameFolder, &QAction::triggered, l_openGameFolder);
-	connect(openConfig, &QAction::triggered, l_openConfig);
+	connect(boot, &QAction::triggered, [=]() {Boot(row); });
+	connect(configure, &QAction::triggered, [=](){
+		SettingsDialog(xGuiSettings, this, "data/" + m_game_data[row].serial).exec();
+	});
+	connect(removeGame, &QAction::triggered, [=](){
+		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
+			fs::remove_all(Emu.GetGameDir() + m_game_data[row].root);
+		Refresh();
+	});
+	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
+	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + m_game_data[row].root); });
+	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + m_game_data[row].serial); });
 
 	//Disable options depending on software category
 	QString category = qstr(m_columns.m_col_category->data.at(row));
@@ -358,13 +377,6 @@ void GameListFrame::ShowContextMenu(const QPoint &pos) // this is a slot
 	else if (category == "Game Data") boot->setEnabled(false), f.setBold(false), boot->setFont(f);
 	
 	myMenu.exec(globalPos);
-}
-
-void GameListFrame::ShowHeaderContextMenu(const QPoint& pos)
-{
-	QMenu* configure = new QMenu(this);
-	configure->addActions({ showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct});
-	configure->exec(mapToGlobal(pos));
 }
 
 void GameListFrame::Boot(int row)
@@ -379,20 +391,6 @@ void GameListFrame::Boot(int row)
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(m_game_data[row].root));
 		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[row].root);
 	}
-}
-
-void GameListFrame::Configure(int row)
-{
-	SettingsDialog(xGuiSettings, this, "data/" + m_game_data[row].serial).exec();
-}
-
-void GameListFrame::RemoveGame(int row)
-{
-	if (QMessageBox::question(this , tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
-	{
-		fs::remove_all(Emu.GetGameDir() + m_game_data[row].root);
-	}
-	Refresh();
 }
 
 void GameListFrame::RemoveCustomConfiguration(int row)
@@ -419,74 +417,9 @@ void GameListFrame::RemoveCustomConfiguration(int row)
 		QMessageBox::warning(this, tr("Warning!"), tr("No custom configuration found!"));
 		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
 	}
-
-}
-
-static void open_dir(const std::string& spath)
-{
-	fs::create_dir(spath);
-	QString path = qstr(spath);
-	QProcess* process = new QProcess();
-
-#ifdef _WIN32
-	std::string command = "explorer";
-	std::replace(path.begin(), path.end(), '/', '\\');
-	process->start("explorer", QStringList() << path);
-#elif __APPLE__
-	process->start("open", QStringList() << path);
-#elif __linux__
-	process->start("xdg-open", QStringList() << path);
-#endif
-}
-
-void GameListFrame::OpenGameFolder(int row)
-{
-	open_dir(Emu.GetGameDir() + m_game_data[row].root);
-}
-
-void GameListFrame::OpenConfigFolder(int row)
-{
-	open_dir(fs::get_config_dir() + "data/" + m_game_data[row].serial);
 }
 
 ColumnsArr::ColumnsArr()
-{
-	Init();
-}
-
-std::vector<Column*> ColumnsArr::GetSortedColumnsByPos()
-{
-	std::vector<Column*> arr;
-	for (u32 pos = 0; pos<m_columns.size(); pos++)
-	{
-		for (u32 c = 0; c<m_columns.size(); ++c)
-		{
-			if (m_columns[c].pos != pos) continue;
-			arr.push_back(&m_columns[c]);
-		}
-	}
-
-	return arr;
-}
-
-Column* ColumnsArr::GetColumnByPos(u32 pos)
-{
-	std::vector<Column *> columns = GetSortedColumnsByPos();
-	for (u32 c = 0; c<columns.size(); ++c)
-	{
-		if (!columns[c]->shown)
-		{
-			pos++;
-			continue;
-		}
-		if (columns[c]->pos != pos) continue;
-		return columns[c];
-	}
-
-	return NULL;
-}
-
-void ColumnsArr::Init()
 {
 	m_img_list = new QList<QImage*>();
 
@@ -505,6 +438,31 @@ void ColumnsArr::Init()
 	m_col_app_ver = &m_columns[4];
 	m_col_category = &m_columns[5];
 	m_col_path = &m_columns[6];
+}
+
+Column* ColumnsArr::GetColumnByPos(u32 pos)
+{
+	std::vector<Column *> columns;
+	for (u32 pos = 0; pos<m_columns.size(); pos++)
+	{
+		for (u32 c = 0; c<m_columns.size(); ++c)
+		{
+			if (m_columns[c].pos != pos) continue;
+			columns.push_back(&m_columns[c]);
+		}
+	}
+	for (u32 c = 0; c<columns.size(); ++c)
+	{
+		if (!columns[c]->shown)
+		{
+			pos++;
+			continue;
+		}
+		if (columns[c]->pos != pos) continue;
+		return columns[c];
+	}
+
+	return NULL;
 }
 
 void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
