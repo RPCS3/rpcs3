@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Config.h"
 #include "GLGSFrame.h"
-#include "config.h"
 
 #include <QOpenGLContext>
 #include <QWindow>
