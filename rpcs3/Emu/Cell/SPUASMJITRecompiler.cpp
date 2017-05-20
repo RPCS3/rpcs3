@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -24,14 +23,12 @@
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter; // TODO: remove
 const spu_decoder<spu_recompiler> s_spu_decoder;
 
-extern cfg::bool_entry g_cfg_spu_debug;
-
 spu_recompiler::spu_recompiler()
 	: m_jit(std::make_shared<asmjit::JitRuntime>())
 {
 	LOG_SUCCESS(SPU, "SPU Recompiler (ASMJIT) created...");
 
-	if (g_cfg_spu_debug)
+	if (g_cfg.core.spu_debug)
 	{
 		fs::file log(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
 		log.write(fmt::format("SPU JIT initialization...\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str()));
@@ -63,7 +60,7 @@ void spu_recompiler::compile(spu_function_t& f)
 
 	std::string log;
 
-	if (g_cfg_spu_debug)
+	if (g_cfg.core.spu_debug)
 	{
 		fmt::append(log, "========== SPU FUNCTION 0x%05x - 0x%05x ==========\n\n", f.addr, f.addr + f.size);
 	}
@@ -77,7 +74,7 @@ void spu_recompiler::compile(spu_function_t& f)
 	X86Compiler compiler(&code);
 	this->c = &compiler;
 
-	if (g_cfg_spu_debug)
+	if (g_cfg.core.spu_debug)
 	{
 		// Set logger
 		codeHolder->setLogger(&logger);
@@ -163,7 +160,7 @@ void spu_recompiler::compile(spu_function_t& f)
 			}
 		}
 
-		if (g_cfg_spu_debug)
+		if (g_cfg.core.spu_debug)
 		{
 			// Disasm
 			dis_asm.dump_pc = m_pos;
@@ -190,7 +187,7 @@ void spu_recompiler::compile(spu_function_t& f)
 		m_pos += 4;
 	}
 
-	if (g_cfg_spu_debug)
+	if (g_cfg.core.spu_debug)
 	{
 		log += '\n';
 	}
@@ -240,7 +237,7 @@ void spu_recompiler::compile(spu_function_t& f)
 
 	f.compiled = asmjit::Internal::ptr_cast<decltype(f.compiled)>(fn);
 	
-	if (g_cfg_spu_debug)
+	if (g_cfg.core.spu_debug)
 	{
 		// Add ASMJIT logs
 		log += logger.getString();

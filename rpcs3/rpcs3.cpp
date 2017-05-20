@@ -20,6 +20,8 @@
 #include "DS4PadHandler.h"
 #ifdef _MSC_VER
 #include "XInputPadHandler.h"
+#endif
+#ifdef _WIN32
 #include "MMJoystickHandler.h"
 #endif
 
@@ -72,55 +74,6 @@ void save_gui_cfg()
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
-cfg::map_entry<std::function<std::shared_ptr<KeyboardHandlerBase>()>> g_cfg_kb_handler(cfg::root.io, "Keyboard",
-{
-	{ "Null", &std::make_shared<NullKeyboardHandler> },
-	{ "Basic", &std::make_shared<BasicKeyboardHandler> },
-});
-
-cfg::map_entry<std::function<std::shared_ptr<MouseHandlerBase>()>> g_cfg_mouse_handler(cfg::root.io, "Mouse",
-{
-	{ "Null", &std::make_shared<NullMouseHandler> },
-	{ "Basic", &std::make_shared<BasicMouseHandler> },
-});
-
-cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handler(cfg::root.io, "Pad", "Keyboard",
-{
-	{ "Null", &std::make_shared<NullPadHandler> },
-	{ "Keyboard", &std::make_shared<KeyboardPadHandler> },
-	{ "DualShock 4", &std::make_shared<DS4PadHandler> },
-#ifdef _MSC_VER
-	{ "XInput", &std::make_shared<XInputPadHandler> },
-	{ "MMJoystick", &std::make_shared<MMJoystickHandler>},
-#endif
-});
-
-cfg::map_entry<std::function<std::shared_ptr<GSRender>()>> g_cfg_gs_render(cfg::root.video, "Renderer", "OpenGL",
-{
-	{ "Null", &std::make_shared<NullGSRender> },
-	{ "OpenGL", &std::make_shared<GLGSRender> },
-#ifdef _MSC_VER
-	{ "D3D12", &std::make_shared<D3D12GSRender> },
-#endif
-#ifdef _WIN32
-	{ "Vulkan", &std::make_shared<VKGSRender> },
-#endif
-});
-
-cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render(cfg::root.audio, "Renderer", 1,
-{
-	{ "Null", &std::make_shared<NullAudioThread> },
-#ifdef _WIN32
-	{ "XAudio2", &std::make_shared<XAudio2Thread> },
-#elif __linux__
-	{ "ALSA", &std::make_shared<ALSAThread> },
-#endif
-	{ "OpenAL", &std::make_shared<OpenALThread> },
-});
-
-extern cfg::bool_entry g_cfg_autostart;
-extern cfg::bool_entry g_cfg_autoexit;
-
 bool Rpcs3App::OnInit()
 {
 	static const wxCmdLineEntryDesc desc[]
@@ -161,28 +114,93 @@ bool Rpcs3App::OnInit()
 		wxGetApp().Exit();
 	};
 
-	callbacks.get_kb_handler = []{ return g_cfg_kb_handler.get()(); };
-
-	callbacks.get_mouse_handler = []{ return g_cfg_mouse_handler.get()(); };
-
-	callbacks.get_pad_handler = []{ return g_cfg_pad_handler.get()(); };
-
-	callbacks.get_gs_frame = [](frame_type type, int w, int h) -> std::unique_ptr<GSFrameBase>
+	callbacks.get_kb_handler = []() -> std::shared_ptr<KeyboardHandlerBase>
 	{
-		switch (type)
+		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
-		case frame_type::OpenGL: return std::make_unique<GLGSFrame>(w, h);
-		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12", w, h);
-		case frame_type::Null: return std::make_unique<GSFrame>("Null", w, h);
-		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan", w, h);
+		case keyboard_handler::null: return std::make_shared<NullKeyboardHandler>();
+		case keyboard_handler::basic: return std::make_shared<BasicKeyboardHandler>();
+		default: fmt::throw_exception("Invalid keyboard handler: %s", type);
 		}
-
-		fmt::throw_exception("Invalid frame type (0x%x)" HERE, (int)type);
 	};
 
-	callbacks.get_gs_render = []{ return g_cfg_gs_render.get()(); };
+	callbacks.get_mouse_handler = []() -> std::shared_ptr<MouseHandlerBase>
+	{
+		switch (mouse_handler type = g_cfg.io.mouse)
+		{
+		case mouse_handler::null: return std::make_shared<NullMouseHandler>();
+		case mouse_handler::basic: return std::make_shared<BasicMouseHandler>();
+		default: fmt::throw_exception("Invalid mouse handler: %s", type);
+		}
+	};
 
-	callbacks.get_audio = []{ return g_cfg_audio_render.get()(); };
+	callbacks.get_pad_handler = []() -> std::shared_ptr<PadHandlerBase>
+	{
+		switch (pad_handler type = g_cfg.io.pad)
+		{
+		case pad_handler::null: return std::make_shared<NullPadHandler>();
+		case pad_handler::keyboard: return std::make_shared<KeyboardPadHandler>();
+		case pad_handler::ds4: return std::make_shared<DS4PadHandler>();
+#ifdef _MSC_VER
+		case pad_handler::xinput: return std::make_shared<XInputPadHandler>();
+#endif
+#ifdef _WIN32
+		case pad_handler::mm: return std::make_shared<MMJoystickHandler>();
+#endif
+		default: fmt::throw_exception("Invalid pad handler: %s", type);
+		}
+	};
+
+	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
+	{
+		extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
+
+		const auto size = g_video_out_resolution_map.at(g_cfg.video.resolution);
+
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null: return std::make_unique<GSFrame>("Null", size.first, size.second);
+		case video_renderer::opengl: return std::make_unique<GLGSFrame>(size.first, size.second);
+#ifdef _WIN32
+		case video_renderer::vulkan: return std::make_unique<GSFrame>("Vulkan", size.first, size.second);
+#endif
+#ifdef _MSC_VER
+		case video_renderer::dx12: return std::make_unique<GSFrame>("DirectX 12", size.first, size.second);
+#endif
+		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+	};
+
+	callbacks.get_gs_render = []() -> std::shared_ptr<GSRender>
+	{
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null: return std::make_shared<NullGSRender>();
+		case video_renderer::opengl: return std::make_shared<GLGSRender>();
+#ifdef _WIN32
+		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
+#endif
+#ifdef _MSC_VER
+		case video_renderer::dx12: return std::make_shared<D3D12GSRender>();
+#endif
+		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+	};
+
+	callbacks.get_audio = []() -> std::shared_ptr<AudioThread>
+	{
+		switch (audio_renderer type = g_cfg.audio.renderer)
+		{
+		case audio_renderer::null: return std::make_shared<NullAudioThread>();
+#ifdef _WIN32
+		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
+#elif __linux__
+		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
+#endif
+		case audio_renderer::openal: return std::make_shared<OpenALThread>();
+		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
+		}
+	};
 
 	callbacks.get_msg_dialog = []() -> std::shared_ptr<MsgDialogBase>
 	{
@@ -227,8 +245,8 @@ void Rpcs3App::OnArguments(const wxCmdLineParser& parser)
 		}
 
 		// TODO: clean implementation
-		g_cfg_autostart = true;
-		g_cfg_autoexit = true;
+		g_cfg.misc.autostart.from_string("true");
+		g_cfg.misc.autoexit.from_string("true");
 	}
 	
 	if (parser.GetParamCount() > 0)

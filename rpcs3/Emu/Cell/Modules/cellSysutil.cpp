@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -68,34 +67,43 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 	}
 }
 
-cfg::map_entry<s32> g_cfg_sys_language(cfg::root.sys, "Language",
+template <>
+void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 {
-	{ "Japanese", CELL_SYSUTIL_LANG_JAPANESE },
-	{ "English (US)", CELL_SYSUTIL_LANG_ENGLISH_US },
-	{ "French", CELL_SYSUTIL_LANG_FRENCH },
-	{ "Spanish", CELL_SYSUTIL_LANG_SPANISH },
-	{ "German", CELL_SYSUTIL_LANG_GERMAN },
-	{ "Italian", CELL_SYSUTIL_LANG_ITALIAN },
-	{ "Dutch", CELL_SYSUTIL_LANG_DUTCH },
-	{ "Portuguese (PT)", CELL_SYSUTIL_LANG_PORTUGUESE_PT },
-	{ "Russian", CELL_SYSUTIL_LANG_RUSSIAN },
-	{ "Korean", CELL_SYSUTIL_LANG_KOREAN },
-	{ "Chinese (Trad.)", CELL_SYSUTIL_LANG_CHINESE_T },
-	{ "Chinese (Simp.)", CELL_SYSUTIL_LANG_CHINESE_S },
-	{ "Finnish", CELL_SYSUTIL_LANG_FINNISH },
-	{ "Swedish", CELL_SYSUTIL_LANG_SWEDISH },
-	{ "Danish", CELL_SYSUTIL_LANG_DANISH },
-	{ "Norwegian", CELL_SYSUTIL_LANG_NORWEGIAN },
-	{ "Polish", CELL_SYSUTIL_LANG_POLISH },
-	{ "English (UK)", CELL_SYSUTIL_LANG_ENGLISH_GB },
-	{ "Portuguese (BR)", CELL_SYSUTIL_LANG_PORTUGUESE_BR },
-	{ "Turkish", CELL_SYSUTIL_LANG_TURKISH },
-});
+	format_enum(out, arg, [](CellSysutilLang value)
+	{
+		switch (value)
+		{
+		case CELL_SYSUTIL_LANG_JAPANESE: return "Japanese";
+		case CELL_SYSUTIL_LANG_ENGLISH_US: return "English (US)";
+		case CELL_SYSUTIL_LANG_FRENCH: return "French";
+		case CELL_SYSUTIL_LANG_SPANISH: return "Spanish";
+		case CELL_SYSUTIL_LANG_GERMAN: return "German";
+		case CELL_SYSUTIL_LANG_ITALIAN: return "Italian";
+		case CELL_SYSUTIL_LANG_DUTCH: return "Dutch";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return "Portuguese (PT)";
+		case CELL_SYSUTIL_LANG_RUSSIAN: return "Russian";
+		case CELL_SYSUTIL_LANG_KOREAN: return "Korean";
+		case CELL_SYSUTIL_LANG_CHINESE_T: return "Chinese (Trad.)";
+		case CELL_SYSUTIL_LANG_CHINESE_S: return "Chinese (Simp.)";
+		case CELL_SYSUTIL_LANG_FINNISH: return "Finnish";
+		case CELL_SYSUTIL_LANG_SWEDISH: return "Swedish";
+		case CELL_SYSUTIL_LANG_DANISH: return "Danish";
+		case CELL_SYSUTIL_LANG_NORWEGIAN: return "Norwegian";
+		case CELL_SYSUTIL_LANG_POLISH: return "Polish";
+		case CELL_SYSUTIL_LANG_ENGLISH_GB: return "English (UK)";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return "Portuguese (BR)";
+		case CELL_SYSUTIL_LANG_TURKISH: return "Turkish";
+		}
+
+		return unknown;
+	});
+}
 
 // For test
 enum systemparam_id_name : s32 {};
 
-template<>
+template <>
 void fmt_class_string<systemparam_id_name>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
@@ -134,7 +142,7 @@ s32 cellSysutilGetSystemParamInt(systemparam_id_name id, vm::ptr<s32> value)
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
-		*value = g_cfg_sys_language.get();
+		*value = g_cfg.sys.language;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:

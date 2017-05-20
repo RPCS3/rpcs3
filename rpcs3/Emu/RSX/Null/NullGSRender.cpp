@@ -2,7 +2,7 @@
 #include "NullGSRender.h"
 #include "Emu/System.h"
 
-NullGSRender::NullGSRender() : GSRender(frame_type::Null)
+NullGSRender::NullGSRender() : GSRender()
 {
 }
 

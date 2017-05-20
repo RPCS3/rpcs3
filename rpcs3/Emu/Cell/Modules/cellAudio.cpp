@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -12,10 +11,6 @@
 #include <thread>
 
 logs::channel cellAudio("cellAudio");
-
-cfg::bool_entry g_cfg_audio_dump_to_file(cfg::root.audio, "Dump to file");
-cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16 bit");
-cfg::bool_entry g_cfg_audio_downmix_to_2ch(cfg::root.audio, "Downmix to Stereo", true);
 
 void audio_config::on_init(const std::shared_ptr<void>& _this)
 {
@@ -34,12 +29,12 @@ void audio_config::on_init(const std::shared_ptr<void>& _this)
 
 void audio_config::on_task()
 {
-	AudioDumper m_dump(g_cfg_audio_dump_to_file ? 2 : 0); // Init AudioDumper for 2 channels if enabled
+	AudioDumper m_dump(g_cfg.audio.dump_to_file ? 2 : 0); // Init AudioDumper for 2 channels if enabled
 
 	float buf2ch[2 * BUFFER_SIZE]{}; // intermediate buffer for 2 channels
 	float buf8ch[8 * BUFFER_SIZE]{}; // intermediate buffer for 8 channels
 
-	const u32 buf_sz = BUFFER_SIZE * (g_cfg_audio_convert_to_u16 ? 2 : 4) * (g_cfg_audio_downmix_to_2ch ? 2 : 8);
+	const u32 buf_sz = BUFFER_SIZE * (g_cfg.audio.convert_to_u16 ? 2 : 4) * (g_cfg.audio.downmix_to_2ch ? 2 : 8);
 
 	std::unique_ptr<float[]> out_buffer[BUFFER_NUM];
 
@@ -227,7 +222,7 @@ void audio_config::on_task()
 		if (!first_mix)
 		{
 			// Copy output data (2ch or 8ch)
-			if (g_cfg_audio_downmix_to_2ch)
+			if (g_cfg.audio.downmix_to_2ch)
 			{
 				for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
 				{
@@ -250,7 +245,7 @@ void audio_config::on_task()
 			std::memset(out_buffer[out_pos].get(), 0, 8 * BUFFER_SIZE * sizeof(float));
 		}
 
-		if (g_cfg_audio_convert_to_u16)
+		if (g_cfg.audio.convert_to_u16)
 		{
 			// convert the data from float to u16 with clipping:
 			// 2x MULPS

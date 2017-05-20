@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUFunction.h"
@@ -1005,9 +1004,6 @@ DECLARE(lv2_obj::g_ppu);
 DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
 
-// Amount of PPU threads running simultaneously (must be 2)
-cfg::int_entry<1, 16> g_cfg_ppu_threads(cfg::root.core, "PPU Threads", 2);
-
 void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 {
 	semaphore_lock lock(g_mutex);
@@ -1132,7 +1128,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	}
 
 	// Suspend threads if necessary
-	for (std::size_t i = g_cfg_ppu_threads; i < g_ppu.size(); i++)
+	for (std::size_t i = g_cfg.core.ppu_threads; i < g_ppu.size(); i++)
 	{
 		const auto target = g_ppu[i];
 
@@ -1158,7 +1154,7 @@ void lv2_obj::schedule_all()
 	if (g_pending.empty())
 	{
 		// Wake up threads
-		for (std::size_t i = 0, x = std::min<std::size_t>(g_cfg_ppu_threads, g_ppu.size()); i < x; i++)
+		for (std::size_t i = 0, x = std::min<std::size_t>(g_cfg.core.ppu_threads, g_ppu.size()); i < x; i++)
 		{
 			const auto target = g_ppu[i];
 

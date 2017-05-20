@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
@@ -8,19 +7,37 @@
 
 logs::channel cellCamera("cellCamera");
 
-cfg::map_entry<bool> g_cfg_camera(cfg::root.io, "Camera",
+template <>
+void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 {
-	{ "Null", false },
-	{ "Fake", true },
-});
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case camera_handler::null: return "Null";
+		case camera_handler::fake: return "Fake";
+		}
 
-cfg::map_entry<CellCameraType> g_cfg_camera_type(cfg::root.io, "Camera type",
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
 {
-	{ "Unknown", CELL_CAMERA_TYPE_UNKNOWN },
-	{ "EyeToy", CELL_CAMERA_EYETOY },
-	{ "PS Eye", CELL_CAMERA_EYETOY2 },
-	{ "UVC 1.1", CELL_CAMERA_USBVIDEOCLASS },
-});
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case fake_camera_type::unknown: return "Unknown";
+		case fake_camera_type::eyetoy: return "EyeToy";
+		case fake_camera_type::eyetoy2: return "PS Eye";
+		case fake_camera_type::uvc1_1: return "UVC 1.1";
+		}
+
+		return unknown;
+	});
+}
 
 static const char* get_camera_attr_name(s32 value)
 {
@@ -95,7 +112,7 @@ s32 cellCameraInit()
 {
 	cellCamera.warning("cellCameraInit()");
 
-	if (!g_cfg_camera.get())
+	if (g_cfg.io.camera == camera_handler::null)
 	{
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
@@ -107,9 +124,9 @@ s32 cellCameraInit()
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
 	}
 
-	switch (g_cfg_camera_type.get())
+	switch (g_cfg.io.camera_type)
 	{
-	case CELL_CAMERA_EYETOY:
+	case fake_camera_type::eyetoy:
 	{
 		camera->attr[CELL_CAMERA_SATURATION] = { 164 };
 		camera->attr[CELL_CAMERA_BRIGHTNESS] = { 96 };
@@ -125,10 +142,10 @@ s32 cellCameraInit()
 		camera->attr[CELL_CAMERA_MIRRORFLAG] = { 1 };
 		camera->attr[CELL_CAMERA_422FLAG] = { 1 };
 		camera->attr[CELL_CAMERA_USBLOAD] = { 4 };
+		break;
 	}
-	break;
 
-	case CELL_CAMERA_EYETOY2:
+	case fake_camera_type::eyetoy2:
 	{
 		camera->attr[CELL_CAMERA_SATURATION] = { 64 };
 		camera->attr[CELL_CAMERA_BRIGHTNESS] = { 8 };
@@ -145,11 +162,8 @@ s32 cellCameraInit()
 		camera->attr[CELL_CAMERA_PIXELOUTLIERFILTER] = { 1 };
 		camera->attr[CELL_CAMERA_AGCLOW] = { 48 };
 		camera->attr[CELL_CAMERA_AGCHIGH] = { 64 };
+		break;
 	}
-
-	break;
-
-	default: break;
 	}
 
 	// TODO: Some other default attributes? Need to check the actual behaviour on a real PS3.
@@ -204,7 +218,14 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
 
-	*type = g_cfg_camera_type.get();
+	switch (g_cfg.io.camera_type)
+	{
+	case fake_camera_type::unknown: *type = CELL_CAMERA_TYPE_UNKNOWN; break;
+	case fake_camera_type::eyetoy:  *type = CELL_CAMERA_EYETOY; break;
+	case fake_camera_type::eyetoy2: *type = CELL_CAMERA_EYETOY2; break;
+	case fake_camera_type::uvc1_1:  *type = CELL_CAMERA_USBVIDEOCLASS; break;
+	}
+
 	return CELL_OK;
 }
 
@@ -218,7 +239,7 @@ s32 cellCameraIsAttached(s32 dev_num)
 {
 	cellCamera.warning("cellCameraIsAttached(dev_num=%d)", dev_num);
 
-	if (g_cfg_camera.get())
+	if (g_cfg.io.camera == camera_handler::fake)
 	{
 		return 1;
 	}
