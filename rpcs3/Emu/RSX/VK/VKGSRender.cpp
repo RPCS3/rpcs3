@@ -7,10 +7,6 @@
 #include "../Common/BufferUtils.h"
 #include "VKFormats.h"
 
-extern cfg::bool_entry g_cfg_rsx_overlay;
-extern cfg::bool_entry g_cfg_rsx_write_color_buffers;
-extern cfg::bool_entry g_cfg_rsx_write_depth_buffer;
-
 namespace
 {
 	u32 get_max_depth_value(rsx::surface_depth_format format)
@@ -451,7 +447,7 @@ namespace
 	}
 }
 
-VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
+VKGSRender::VKGSRender() : GSRender()
 {
 	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 
@@ -556,7 +552,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &m_present_semaphore);
 
-	if (g_cfg_rsx_overlay)
+	if (g_cfg.video.overlay)
 	{
 		size_t idx = vk::get_render_pass_location( m_swap_chain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
 		m_text_writer.reset(new vk::text_writer());
@@ -644,7 +640,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		return m_texture_cache.invalidate_address(address);
 	else
 	{
-		if (g_cfg_rsx_write_color_buffers || g_cfg_rsx_write_depth_buffer)
+		if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
 		{
 			bool flushable, synchronized;
 			std::tie(flushable, synchronized) = m_texture_cache.address_is_flushable(address);
@@ -1066,7 +1062,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 	if (!m_flush_draw_buffers)
 		return;
 
-	if (!g_cfg_rsx_write_color_buffers && !g_cfg_rsx_write_depth_buffer)
+	if (!g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
 		return;
 
 	//TODO: Make this asynchronous. Should be similar to a glFlush() but in this case its similar to glFinish
@@ -1075,7 +1071,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	vk::enter_uninterruptible();
 
-	if (g_cfg_rsx_write_color_buffers)
+	if (g_cfg.video.write_color_buffers)
 	{
 		for (u8 index = 0; index < rsx::limits::color_buffers_count; index++)
 		{
@@ -1087,7 +1083,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 		}
 	}
 
-	if (g_cfg_rsx_write_depth_buffer)
+	if (g_cfg.video.write_depth_buffer)
 	{
 		if (m_depth_surface_info.pitch)
 		{
@@ -1192,7 +1188,7 @@ void VKGSRender::process_swap_request()
 	m_sampler_to_clean.clear();
 	m_framebuffer_to_clean.clear();
 
-	if (g_cfg_rsx_overlay)
+	if (g_cfg.video.overlay)
 	{
 		m_text_writer->reset_descriptors();
 	}
@@ -1609,7 +1605,7 @@ void VKGSRender::prepare_rtts()
 			m_depth_surface_info.pitch = 0;
 	}
 
-	if (g_cfg_rsx_write_color_buffers)
+	if (g_cfg.video.write_color_buffers)
 	{
 		for (u8 index : draw_buffers)
 		{
@@ -1621,7 +1617,7 @@ void VKGSRender::prepare_rtts()
 		}
 	}
 
-	if (g_cfg_rsx_write_depth_buffer)
+	if (g_cfg.video.write_depth_buffer)
 	{
 		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
@@ -1717,7 +1713,7 @@ void VKGSRender::flip(int buffer)
 
 		std::unique_ptr<vk::framebuffer> direct_fbo;
 		std::vector<std::unique_ptr<vk::image_view>> swap_image_view;
-		if (g_cfg_rsx_overlay)
+		if (g_cfg.video.overlay)
 		{
 			//Change the image layout whilst setting up a dependency on waiting for the blit op to finish before we start writing
 			auto subres = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);

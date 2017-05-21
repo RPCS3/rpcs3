@@ -21,6 +21,8 @@
 #include "ds4_pad_handler.h"
 #ifdef _MSC_VER
 #include "xinput_pad_handler.h"
+#endif
+#ifdef _WIN32
 #include "mm_joystick_handler.h"
 #endif
 
@@ -51,8 +53,8 @@ void rpcs3_app::Init()
 	// Create the main window
 	RPCS3MainWin = new main_window(nullptr);
 
-	// Create the handlers.
-	InitializeHandlers();
+	// Reset the pads -- see the method for why this is currently needed.
+	ResetPads();
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
@@ -95,33 +97,97 @@ void rpcs3_app::InitializeCallbacks()
 		processEvents();
 	};
 
-	callbacks.get_kb_handler = [=] { return cfg_kb_handler->get()(); };
-
-	callbacks.get_mouse_handler = [=] { return cfg_mouse_handler->get()(); };
-
-	callbacks.get_pad_handler = [=] { return cfg_pad_handler->get()(); }; 
-
-	callbacks.get_gs_render = [=] { return cfg_gs_render->get()(); };
-
-	callbacks.get_gs_frame = [=](frame_type type, int w, int h) -> std::unique_ptr<GSFrameBase>
+	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
 	{
-		switch (type)
+		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
-		case frame_type::OpenGL: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon());
-		case frame_type::DX12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon());
-		case frame_type::Null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon());
-		case frame_type::Vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon());
+		case keyboard_handler::null: return std::make_shared<NullKeyboardHandler>();
+		case keyboard_handler::basic: return  m_basicKeyboardHandler;
+		default: fmt::throw_exception("Invalid keyboard handler: %s", type);
 		}
-
-		fmt::throw_exception("Invalid frame type (0x%x)" HERE, (int)type);
 	};
 
-	
-	callbacks.get_audio = [=] { return cfg_audio_render->get()(); };
-	
+	callbacks.get_mouse_handler = [=]() -> std::shared_ptr<MouseHandlerBase>
+	{
+		switch (mouse_handler type = g_cfg.io.mouse)
+		{
+		case mouse_handler::null: return std::make_shared<NullMouseHandler>();
+		case mouse_handler::basic: return m_basicMouseHandler;
+		default: fmt::throw_exception("Invalid mouse handler: %s", type);
+		}
+	};
+
+	callbacks.get_pad_handler = [this]() -> std::shared_ptr<PadHandlerBase>
+	{
+		switch (pad_handler type = g_cfg.io.pad)
+		{
+		case pad_handler::null: return std::make_shared<NullPadHandler>();
+		case pad_handler::keyboard: return m_keyboardPadHandler;
+		case pad_handler::ds4: return std::make_shared<ds4_pad_handler>();
+#ifdef _MSC_VER
+		case pad_handler::xinput: return std::make_shared<xinput_pad_handler>();
+#endif
+#ifdef _WIN32
+		case pad_handler::mm: return std::make_shared<mm_joystick_handler>();
+#endif
+		default: fmt::throw_exception("Invalid pad handler: %s", type);
+		}
+	};
+
+	callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
+	{
+		extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
+
+		const auto size = g_video_out_resolution_map.at(g_cfg.video.resolution);
+
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null: return std::make_unique<gs_frame>("Null", size.first, size.second, RPCS3MainWin->GetAppIcon());
+		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(size.first, size.second, RPCS3MainWin->GetAppIcon());
+#ifdef _WIN32
+		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", size.first, size.second, RPCS3MainWin->GetAppIcon());
+#endif
+#ifdef _MSC_VER
+		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", size.first, size.second, RPCS3MainWin->GetAppIcon());
+#endif
+		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+	};
+
+	callbacks.get_gs_render = []() -> std::shared_ptr<GSRender>
+	{
+		switch (video_renderer type = g_cfg.video.renderer)
+		{
+		case video_renderer::null: return std::make_shared<NullGSRender>();
+		case video_renderer::opengl: return std::make_shared<GLGSRender>();
+#ifdef _WIN32
+		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
+#endif
+#ifdef _MSC_VER
+		case video_renderer::dx12: return std::make_shared<D3D12GSRender>();
+#endif
+		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+	};
+
+	callbacks.get_audio = []() -> std::shared_ptr<AudioThread>
+	{
+		switch (audio_renderer type = g_cfg.audio.renderer)
+		{
+		case audio_renderer::null: return std::make_shared<NullAudioThread>();
+#ifdef _WIN32
+		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
+#elif __linux__
+		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
+#endif
+		case audio_renderer::openal: return std::make_shared<OpenALThread>();
+		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
+		}
+	};
+
 	callbacks.get_msg_dialog = [=]() -> std::shared_ptr<MsgDialogBase>
 	{
-		return std::make_shared<msg_dialog_frame>();
+		return std::make_shared<msg_dialog_frame>(RPCS3MainWin->windowHandle());
 	};
 
 	callbacks.get_save_dialog = [=]() -> std::unique_ptr<SaveDialogBase>
@@ -136,61 +202,6 @@ void rpcs3_app::InitializeCallbacks()
 	callbacks.on_ready = [=]() {emit OnEmulatorReady(); };
 
 	Emu.SetCallbacks(std::move(callbacks));
-}
-
-/** 
-* Initialize semi-global variables here that are used by the emulator code in callbacks.
-*/
-void rpcs3_app::InitializeHandlers()
-{
-	ResetPads();
-
-	cfg_gs_render = new cfg::map_entry<std::function<std::shared_ptr<GSRender>()>>(cfg::root.video, "Renderer", "OpenGL",
-	{
-		{ "Null", &std::make_shared<NullGSRender> },
-		{ "OpenGL", &std::make_shared<GLGSRender> },
-#ifdef _MSC_VER
-		{ "D3D12", &std::make_shared<D3D12GSRender> },
-#endif
-#ifdef _WIN32
-		{ "Vulkan", &std::make_shared<VKGSRender> },
-#endif
-	});
-
-	cfg_kb_handler = new cfg::map_entry<std::function<std::shared_ptr<KeyboardHandlerBase>()>>(cfg::root.io, "Keyboard",
-	{
-		{ "Null", &std::make_shared<NullKeyboardHandler> },
-		{ "Basic", [=]() {return m_basicKeyboardHandler; }},
-	});
-
-	cfg_mouse_handler = new cfg::map_entry<std::function<std::shared_ptr<MouseHandlerBase>()>>(cfg::root.io, "Mouse",
-	{
-		{ "Null", &std::make_shared<NullMouseHandler> },
-		{ "Basic", [=]() {return m_basicMouseHandler; } },
-	});
-
-	cfg_pad_handler = new cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>>(cfg::root.io, "Pad", "Keyboard",
-	{
-		{ "Null", &std::make_shared<NullPadHandler> },
-		{ "Keyboard", [=]() {return m_keyboardPadHandler; } },
-		{ "DualShock 4", &std::make_shared<ds4_pad_handler> },
-		#ifdef _MSC_VER
-				{ "XInput", &std::make_shared<xinput_pad_handler> },
-				{ "MMJoystick", &std::make_shared<mm_joystick_handler> },
-		#endif
-	});
-
-
-	cfg_audio_render = new cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>>(cfg::root.audio, "Renderer", 1,
-	{
-		{ "Null", &std::make_shared<NullAudioThread> },
-#ifdef _WIN32
-		{ "XAudio2", &std::make_shared<XAudio2Thread> },
-#elif __linux__
-		{ "ALSA", &std::make_shared<ALSAThread> },
-#endif
-		{ "OpenAL", &std::make_shared<OpenALThread> },
-	});
 }
 
 /*

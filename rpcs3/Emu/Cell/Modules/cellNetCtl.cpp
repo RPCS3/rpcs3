@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -11,7 +10,7 @@
 
 logs::channel cellNetCtl("cellNetCtl");
 
-template<>
+template <>
 void fmt_class_string<CellNetCtlError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
@@ -69,15 +68,22 @@ void fmt_class_string<CellNetCtlError>::format(std::string& out, u64 arg)
 	});
 }
 
-cfg::map_entry<s32> g_cfg_net_status(cfg::root.net, "Connection status",
+template <>
+void fmt_class_string<CellNetCtlState>::format(std::string& out, u64 arg)
 {
-	{ "Disconnected", CELL_NET_CTL_STATE_Disconnected },
-	{ "Connecting", CELL_NET_CTL_STATE_Connecting },
-	{ "Obtaining IP", CELL_NET_CTL_STATE_IPObtaining },
-	{ "IP Obtained", CELL_NET_CTL_STATE_IPObtained },
-});
+	format_enum(out, arg, [](CellNetCtlState value)
+	{
+		switch (value)
+		{
+		case CELL_NET_CTL_STATE_Disconnected: return "Disconnected";
+		case CELL_NET_CTL_STATE_Connecting: return "Connecting";
+		case CELL_NET_CTL_STATE_IPObtaining: return "Obtaining IP";
+		case CELL_NET_CTL_STATE_IPObtained: return "IP Obtained";
+		}
 
-cfg::string_entry g_cfg_net_ip_address(cfg::root.net, "IP address", "192.168.1.1");
+		return unknown;
+	});
+}
 
 error_code cellNetCtlInit()
 {
@@ -97,7 +103,7 @@ error_code cellNetCtlGetState(vm::ptr<u32> state)
 {
 	cellNetCtl.trace("cellNetCtlGetState(state=*0x%x)", state);
 
-	*state = g_cfg_net_status.get();
+	*state = g_cfg.net.net_status;
 	return CELL_OK;
 }
 
@@ -125,7 +131,7 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	}
 	else if (code == CELL_NET_CTL_INFO_LINK)
 	{
-		if (g_cfg_net_status.get() != CELL_NET_CTL_STATE_Disconnected)
+		if (g_cfg.net.net_status != CELL_NET_CTL_STATE_Disconnected)
 		{
 			info->link = CELL_NET_CTL_LINK_CONNECTED;
 		}
@@ -136,14 +142,14 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	}
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
-		if (g_cfg_net_status.get() != CELL_NET_CTL_STATE_IPObtained)
+		if (g_cfg.net.net_status != CELL_NET_CTL_STATE_IPObtained)
 		{
 			// 0.0.0.0 seems to be the default address when no ethernet cables are connected to the PS3
 			strcpy_trunc(info->ip_address, "0.0.0.0");
 		}
 		else
 		{
-			strcpy_trunc(info->ip_address, g_cfg_net_ip_address);
+			strcpy_trunc(info->ip_address, g_cfg.net.ip_address);
 		}
 	}
 	else if (code == CELL_NET_CTL_INFO_NETMASK)

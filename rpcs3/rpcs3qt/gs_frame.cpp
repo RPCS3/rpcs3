@@ -8,8 +8,6 @@
 #include <QTimer>
 #include <QThread>
 
-cfg::bool_entry g_cfg_start_fullscreen_mode(cfg::root.misc, "Start Games in Fullscreen Mode");
-
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon)
@@ -81,7 +79,7 @@ void gs_frame::show()
 {
 	Emu.CallAfter([=]() {
 		QWindow::show(); 
-		if (g_cfg_start_fullscreen_mode)
+		if (g_cfg.misc.start_fullscreen)
 		{
 			setVisibility(FullScreen);
 		}

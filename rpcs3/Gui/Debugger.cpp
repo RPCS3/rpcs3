@@ -16,7 +16,7 @@ class DbgEmuPanel : public wxPanel
 	wxButton* m_btn_stop;
 	wxButton* m_btn_restart;
 	wxButton* m_btn_capture_frame;
-	u32 m_last_status = Ready;
+	system_state m_last_status = system_state::ready;
 
 public:
 	DbgEmuPanel(wxWindow* parent) : wxPanel(parent)
@@ -54,10 +54,10 @@ public:
 		{
 			m_last_status = status;
 
-			m_btn_run->Enable(status != Stopped);
-			m_btn_stop->Enable(status != Stopped);
+			m_btn_run->Enable(status != system_state::stopped);
+			m_btn_stop->Enable(status != system_state::stopped);
 			m_btn_restart->Enable(!Emu.GetPath().empty());
-			m_btn_run->SetLabel(status == Paused ? "Resume" : status == Running ? "Pause" : "Run");
+			m_btn_run->SetLabel(status == system_state::paused ? "Resume" : status == system_state::running ? "Pause" : "Run");
 		}
 	}
 

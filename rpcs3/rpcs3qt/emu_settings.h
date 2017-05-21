@@ -65,8 +65,6 @@ public:
 		// Misc
 		ExitRPCS3OnFinish,
 		StartOnBoot,
-		AutoPauseSysCall,
-		AutoPauseFuncCall,
 		StartGameFullscreen,
 
 		// Network

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Loader/ELF.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"

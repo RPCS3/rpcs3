@@ -1,11 +1,7 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/System.h"
 
 #include "OpenALThread.h"
-
-extern cfg::bool_entry g_cfg_audio_convert_to_u16;
-extern cfg::bool_entry g_cfg_audio_downmix_to_2ch;
 
 #ifdef _MSC_VER
 #pragma comment(lib, "OpenAL32.lib")
@@ -46,13 +42,13 @@ OpenALThread::OpenALThread()
 	alcMakeContextCurrent(m_context);
 	checkForAlcError("alcMakeContextCurrent");
 
-	if (g_cfg_audio_downmix_to_2ch)
+	if (g_cfg.audio.downmix_to_2ch)
 	{
-		m_format = g_cfg_audio_convert_to_u16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32;
+		m_format = g_cfg.audio.convert_to_u16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32;
 	}
 	else
 	{
-		m_format = g_cfg_audio_convert_to_u16 ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32;
+		m_format = g_cfg.audio.convert_to_u16 ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32;
 	}
 }
 

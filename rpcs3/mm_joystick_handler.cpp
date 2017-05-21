@@ -1,6 +1,5 @@
 #include "stdafx.h"
-
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include "mm_joystick_handler.h"
 
 mm_joystick_config g_mmjoystick_config;

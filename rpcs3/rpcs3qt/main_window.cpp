@@ -59,7 +59,7 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 
-	ConfigureGuiFromSettings();
+	ConfigureGuiFromSettings(true);
 	CreateConnects();
 
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));

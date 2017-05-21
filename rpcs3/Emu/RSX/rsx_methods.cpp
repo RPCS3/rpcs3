@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Utilities/Config.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/Memory.h"
@@ -13,17 +12,24 @@
 
 #include <thread>
 
-cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
+template <>
+void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 {
-	{ "Off", 0. },
-	{ "59.94", 59.94 },
-	{ "50", 50. },
-	{ "60", 60. },
-	{ "30", 30. },
-	{ "Auto", -1. },
-});
+	format_enum(out, arg, [](frame_limit_type value)
+	{
+		switch (value)
+		{
+		case frame_limit_type::none: return "Off";
+		case frame_limit_type::_59_94: return "59.94";
+		case frame_limit_type::_50: return "50";
+		case frame_limit_type::_60: return "60";
+		case frame_limit_type::_30: return "30";
+		case frame_limit_type::_auto: return "Auto";
+		}
 
-extern cfg::bool_entry g_cfg_rsx_use_gpu_texture_scaling;
+		return unknown;
+	});
+}
 
 namespace rsx
 {
@@ -575,7 +581,7 @@ namespace rsx
 				}
 			}
 
-			if (g_cfg_rsx_use_gpu_texture_scaling && dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
+			if (g_cfg.video.use_gpu_texture_scaling && dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
@@ -811,10 +817,18 @@ namespace rsx
 			Emu.Pause();
 		}
 
-		if (double limit = g_cfg_rsx_frame_limit.get())
+		double limit = 0.;
+		switch (g_cfg.video.frame_limit)
 		{
-			if (limit < 0) limit = rsx->fps_limit; // TODO
-
+		case frame_limit_type::none: limit = 0.; break;
+		case frame_limit_type::_59_94: limit = 59.94; break;
+		case frame_limit_type::_50: limit = 50.; break;
+		case frame_limit_type::_60: limit = 60.; break;
+		case frame_limit_type::_30: limit = 30.; break;
+		case frame_limit_type::_auto: limit = rsx->fps_limit; break; // TODO
+		}
+		if (limit)
+		{
 			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
 			rsx->timer_sync.Start();
 		}

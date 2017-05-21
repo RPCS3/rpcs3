@@ -293,41 +293,48 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 {
 	m_key_pressed = true;
 
+	cfg::int32* entry = nullptr;
+
 	switch (m_button_id)
 	{
-	case id_pad_lstick_left: g_kbpad_config.left_stick_left = keyEvent->key(); break;
-	case id_pad_lstick_down: g_kbpad_config.left_stick_down = keyEvent->key(); break;
-	case id_pad_lstick_right: g_kbpad_config.left_stick_right = keyEvent->key(); break;
-	case id_pad_lstick_up: g_kbpad_config.left_stick_up = keyEvent->key(); break;
+	case id_pad_lstick_left: entry = &g_kbpad_config.left_stick_left; break;
+	case id_pad_lstick_down: entry = &g_kbpad_config.left_stick_down; break;
+	case id_pad_lstick_right: entry = &g_kbpad_config.left_stick_right; break;
+	case id_pad_lstick_up: entry = &g_kbpad_config.left_stick_up; break;
 	
-	case id_pad_left: g_kbpad_config.left = keyEvent->key(); break;
-	case id_pad_down: g_kbpad_config.down = keyEvent->key(); break;
-	case id_pad_right: g_kbpad_config.right = keyEvent->key(); break;
-	case id_pad_up: g_kbpad_config.up = keyEvent->key(); break;
+	case id_pad_left: entry = &g_kbpad_config.left; break;
+	case id_pad_down: entry = &g_kbpad_config.down; break;
+	case id_pad_right: entry = &g_kbpad_config.right; break;
+	case id_pad_up: entry = &g_kbpad_config.up; break;
 	
-	case id_pad_l1: g_kbpad_config.l1 = keyEvent->key(); break;
-	case id_pad_l2: g_kbpad_config.l2 = keyEvent->key(); break;
-	case id_pad_l3: g_kbpad_config.l3 = keyEvent->key(); break;
+	case id_pad_l1: entry = &g_kbpad_config.l1; break;
+	case id_pad_l2: entry = &g_kbpad_config.l2; break;
+	case id_pad_l3: entry = &g_kbpad_config.l3; break;
 	
-	case id_pad_start: g_kbpad_config.start = keyEvent->key(); break;
-	case id_pad_select: g_kbpad_config.select = keyEvent->key(); break;
+	case id_pad_start: entry = &g_kbpad_config.start; break;
+	case id_pad_select: entry = &g_kbpad_config.select; break;
 	
-	case id_pad_r1: g_kbpad_config.r1 = keyEvent->key(); break;
-	case id_pad_r2: g_kbpad_config.r2 = keyEvent->key(); break;
-	case id_pad_r3: g_kbpad_config.r3 = keyEvent->key(); break;
+	case id_pad_r1: entry = &g_kbpad_config.r1; break;
+	case id_pad_r2: entry = &g_kbpad_config.r2; break;
+	case id_pad_r3: entry = &g_kbpad_config.r3; break;
 	
-	case id_pad_square: g_kbpad_config.square = keyEvent->key(); break;
-	case id_pad_cross: g_kbpad_config.cross = keyEvent->key(); break;
-	case id_pad_circle: g_kbpad_config.circle = keyEvent->key(); break;
-	case id_pad_triangle: g_kbpad_config.triangle = keyEvent->key(); break;
-	
-	case id_pad_rstick_left: g_kbpad_config.right_stick_left = keyEvent->key(); break;
-	case id_pad_rstick_down: g_kbpad_config.right_stick_down = keyEvent->key(); break;
-	case id_pad_rstick_right: g_kbpad_config.right_stick_right = keyEvent->key(); break;
-	case id_pad_rstick_up: g_kbpad_config.right_stick_up = keyEvent->key(); break;
+	case id_pad_square: entry = &g_kbpad_config.square; break;
+	case id_pad_cross: entry = &g_kbpad_config.cross; break;
+	case id_pad_circle: entry = &g_kbpad_config.circle; break;
+	case id_pad_triangle: entry = &g_kbpad_config.triangle; break;
+	case id_pad_rstick_left: entry = &g_kbpad_config.right_stick_left; break;
+	case id_pad_rstick_down: entry = &g_kbpad_config.right_stick_down; break;
+	case id_pad_rstick_right: entry = &g_kbpad_config.right_stick_right; break;
+	case id_pad_rstick_up: entry = &g_kbpad_config.right_stick_up; break;
 
 	case 0: break;
 	default: LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
+	}
+
+	if (entry)
+	{
+		// TODO: do not modify config
+		entry->from_string(std::to_string(keyEvent->key()));
 	}
 
 	SwitchButtons(true);  // enable all buttons
@@ -369,40 +376,6 @@ void pad_settings_dialog::UpdateLabel()
 	b_down_rstick->setText(GetKeyName(g_kbpad_config.right_stick_down));
 	b_left_rstick->setText(GetKeyName(g_kbpad_config.right_stick_left));
 	b_right_rstick->setText(GetKeyName(g_kbpad_config.right_stick_right));
-}
-
-void pad_settings_dialog::ResetParameters()
-{
-	g_kbpad_config.left_stick_up = g_kbpad_config.left_stick_up.def;
-	g_kbpad_config.left_stick_down = g_kbpad_config.left_stick_down.def;
-	g_kbpad_config.left_stick_left = g_kbpad_config.left_stick_left.def;
-	g_kbpad_config.left_stick_right = g_kbpad_config.left_stick_right.def;
-	
-	g_kbpad_config.up = g_kbpad_config.up.def;
-	g_kbpad_config.down = g_kbpad_config.down.def;
-	g_kbpad_config.left = g_kbpad_config.left.def;
-	g_kbpad_config.right = g_kbpad_config.right.def;
-	
-	g_kbpad_config.l1 = g_kbpad_config.l1.def;
-	g_kbpad_config.l2 = g_kbpad_config.l2.def;
-	g_kbpad_config.l3 = g_kbpad_config.l3.def;
-	
-	g_kbpad_config.start = g_kbpad_config.start.def;
-	g_kbpad_config.select = g_kbpad_config.select.def;
-	
-	g_kbpad_config.r1 = g_kbpad_config.r1.def;
-	g_kbpad_config.r2 = g_kbpad_config.r2.def;
-	g_kbpad_config.r3 = g_kbpad_config.r3.def;
-	
-	g_kbpad_config.square = g_kbpad_config.square.def;
-	g_kbpad_config.cross = g_kbpad_config.cross.def;
-	g_kbpad_config.circle = g_kbpad_config.circle.def;
-	g_kbpad_config.triangle = g_kbpad_config.triangle.def;
-	
-	g_kbpad_config.right_stick_up = g_kbpad_config.right_stick_up.def;
-	g_kbpad_config.right_stick_down = g_kbpad_config.right_stick_down.def;
-	g_kbpad_config.right_stick_left = g_kbpad_config.right_stick_left.def;
-	g_kbpad_config.right_stick_right = g_kbpad_config.right_stick_right.def;
 }
 
 void pad_settings_dialog::UpdateTimerLabel(const u32 id)
@@ -573,7 +546,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	{
 		switch (id)
 		{
-		case id_reset_parameters: ResetParameters(); UpdateLabel(); break;
+		case id_reset_parameters: g_kbpad_config.from_default(); UpdateLabel(); break;
 		case id_ok: g_kbpad_config.save(); QDialog::accept(); break;
 		case id_cancel: break;
 		}

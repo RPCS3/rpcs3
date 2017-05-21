@@ -45,13 +45,15 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 	char16_t* osk_text_return;
 
 public:
-	msg_dialog_frame();
+	msg_dialog_frame(QWindow* taskbarTarget);
 	~msg_dialog_frame();
 	virtual void Create(const std::string& msg) override;
 	virtual void CreateOsk(const std::string& msg, char16_t* osk_text) override;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
+private:
+	QWindow* m_taskbarTarget;	// Window which will be targeted by custom taskbars.
 };
 
 #endif // !MSGDIALOG_H

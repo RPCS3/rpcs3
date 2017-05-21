@@ -1,11 +1,9 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "gl_gs_frame.h"
+#include "Emu/System.h"
 
 #include <QOpenGLContext>
 #include <QWindow>
-
-extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 gl_gs_frame::gl_gs_frame(int w, int h, QIcon appIcon)
 	: gs_frame("OpenGL", w, h, appIcon)
@@ -17,9 +15,10 @@ gl_gs_frame::gl_gs_frame(int w, int h, QIcon appIcon)
 	m_format.setProfile(QSurfaceFormat::CoreProfile);
 	m_format.setDepthBufferSize(16);
 	m_format.setSwapBehavior(QSurfaceFormat::SwapBehavior::DoubleBuffer);
-	if (g_cfg_rsx_debug_output)
+	if (g_cfg.video.debug_output)
+	{
 		m_format.setOption(QSurfaceFormat::FormatOption::DebugContext);
-
+	}
 	setFormat(m_format);
 }
 

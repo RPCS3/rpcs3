@@ -106,7 +106,6 @@ public:
 	explicit pad_settings_dialog(QWidget *parent = 0);
 	void keyPressEvent(QKeyEvent *keyEvent);
 	void UpdateLabel();
-	void ResetParameters();
 	void UpdateTimerLabel(const u32 id);
 	void SwitchButtons(const bool IsEnabled);
 	void RunTimer(const u32 seconds, const u32 id);

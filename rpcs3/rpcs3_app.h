@@ -44,15 +44,7 @@ private slots:
 	void ResetPads();
 private:
 	void InitializeCallbacks();
-	void InitializeHandlers();
 	void InitializeConnects();
-
-	// The mapss. Yay!
-	cfg::map_entry<std::function<std::shared_ptr<GSRender>()>>* cfg_gs_render;
-	cfg::map_entry<std::function<std::shared_ptr<KeyboardHandlerBase>()>>* cfg_kb_handler;
-	cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>>* cfg_pad_handler;
-	cfg::map_entry<std::function<std::shared_ptr<MouseHandlerBase>()>>* cfg_mouse_handler;
-	cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>>* cfg_audio_render;
 
 	// See ResetPads() for why these shared pointers exist.
 	std::shared_ptr<keyboard_pad_handler> m_keyboardPadHandler;

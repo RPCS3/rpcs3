@@ -1,19 +1,14 @@
 #pragma once
 
 #include "Utilities/types.h"
-#include "Utilities/Atomic.h"
 #include "Utilities/StrFmt.h"
 #include "Utilities/Log.h"
 
-#include <initializer_list>
-#include <exception>
 #include <utility>
 #include <string>
 #include <vector>
 #include <set>
-#include <unordered_map>
 #include <map>
-#include <mutex>
 
 namespace cfg
 {
@@ -30,36 +25,32 @@ namespace cfg
 	enum class type : uint
 	{
 		node = 0, // cfg::node type
-		boolean, // cfg::bool_entry type
-		fixed_map, // cfg::map_entry type
-		enumeration, // cfg::enum_entry type
-		integer, // cfg::int_entry type
-		string, // cfg::string_entry type
+		_bool, // cfg::_bool type
+		_enum, // cfg::_enum type
+		_int, // cfg::_int type
+		string, // cfg::string type
 		set, // cfg::set_entry type
 		log,
 	};
 
 	// Config tree entry abstract base class
-	class entry_base
+	class _base
 	{
 		const type m_type;
 
 	protected:
 		// Ownerless entry constructor
-		entry_base(type _type);
+		_base(type _type);
 
 		// Owned entry constructor
-		entry_base(type _type, class node& owner, const std::string& name);
+		_base(type _type, class node* owner, const std::string& name);
 
 	public:
 		// Disallow copy/move constructors and assignments
-		entry_base(const entry_base&) = delete;
+		_base(const _base&) = delete;
 
 		// Get type
 		type get_type() const { return m_type; }
-
-		// Access child node (must exist)
-		entry_base& operator [](const std::string& name) const; entry_base& operator [](const char* name) const;
 
 		// Reset defaults
 		virtual void from_default() = 0;
@@ -84,27 +75,27 @@ namespace cfg
 	};
 
 	// Config tree node which contains another nodes
-	class node : public entry_base
+	class node : public _base
 	{
-		std::map<std::string, entry_base*> m_nodes;
+		std::vector<std::pair<std::string, _base*>> m_nodes;
 
-		friend class entry_base;
+		friend class _base;
 
 	public:
 		// Root node constructor
 		node()
-			: entry_base(type::node)
+			: _base(type::node)
 		{
 		}
 
 		// Registered node constructor
-		node(node& owner, const std::string& name)
-			: entry_base(type::node, owner, name)
+		node(node* owner, const std::string& name)
+			: _base(type::node, owner, name)
 		{
 		}
 
 		// Get child nodes
-		const std::map<std::string, entry_base*>& get_nodes() const
+		const auto& get_nodes() const
 		{
 			return m_nodes;
 		}
@@ -119,43 +110,38 @@ namespace cfg
 		void from_default() override;
 	};
 
-	struct bool_entry final : public entry_base
+	class _bool final : public _base
 	{
-		atomic_t<bool> value;
+		bool m_value;
 
+	public:
 		const bool def;
 
-		bool_entry(node& owner, const std::string& name, bool def = false)
-			: entry_base(type::boolean, owner, name)
-			, value(def)
+		_bool(node* owner, const std::string& name, bool def = false)
+			: _base(type::_bool, owner, name)
+			, m_value(def)
 			, def(def)
 		{
 		}
 
 		explicit operator bool() const
 		{
-			return value.load();
-		}
-
-		bool_entry& operator =(bool value)
-		{
-			value = value;
-			return *this;
+			return m_value;
 		}
 
 		void from_default() override;
 
 		std::string to_string() const override
 		{
-			return value.load() ? "true" : "false";
+			return m_value ? "true" : "false";
 		}
 
 		bool from_string(const std::string& value) override
 		{
 			if (value == "false")
-				this->value = false;
+				m_value = false;
 			else if (value == "true")
-				this->value = true;
+				m_value = true;
 			else
 				return false;
 
@@ -163,116 +149,17 @@ namespace cfg
 		}
 	};
 
-	// Value node with fixed set of possible values, each maps to a value of type T.
-	template<typename T>
-	struct map_entry final : public entry_base
-	{
-		using init_type  = std::initializer_list<std::pair<std::string, T>>;
-		using map_type   = std::unordered_map<std::string, T>;
-		using list_type  = std::vector<std::string>;
-		using value_type = typename map_type::value_type;
-
-		static map_type make_map(init_type init)
-		{
-			map_type map(init.size());
-
-			for (const auto& v : init)
-			{
-				// Ensure elements are unique
-				verify(HERE), map.emplace(v.first, v.second).second;
-			}
-
-			return map;
-		}
-
-		static list_type make_list(init_type init)
-		{
-			list_type list; list.reserve(init.size());
-
-			for (const auto& v : init)
-			{
-				list.emplace_back(v.first);
-			}
-
-			return list;
-		}
-
-	public:
-		const map_type map;
-		const list_type list; // Element list sorted in original order
-		const value_type& def; // Pointer to the default value
-
-	private:
-		atomic_t<const value_type*> m_value;
-
-	public:
-		map_entry(node& owner, const std::string& name, const std::string& def, init_type init)
-			: entry_base(type::fixed_map, owner, name)
-			, map(make_map(init))
-			, list(make_list(init))
-			, def(*map.find(def))
-			, m_value(&this->def)
-		{
-		}
-
-		map_entry(node& owner, const std::string& name, std::size_t def_index, init_type init)
-			: map_entry(owner, name, (init.begin() + (def_index < init.size() ? def_index : 0))->first, init)
-		{
-		}
-
-		map_entry(node& owner, const std::string& name, init_type init)
-			: map_entry(owner, name, 0, init)
-		{
-		}
-
-		const T& get() const
-		{
-			return m_value.load()->second;
-		}
-
-		void from_default() override
-		{
-			m_value = &def;
-		}
-
-		std::string to_string() const override
-		{
-			return m_value.load()->first;
-		}
-
-		bool from_string(const std::string& value) override
-		{
-			const auto found = map.find(value);
-
-			if (found == map.end())
-			{
-				return false;
-			}
-			else
-			{
-				m_value = &*found;
-				return true;
-			}
-		}
-
-		std::vector<std::string> to_list() const override
-		{
-			return list;
-		}
-	};
-
 	// Value node with fixed set of possible values, each maps to an enum value of type T.
-	template<typename T, bool External = false>
-	class enum_entry final : public entry_base
+	template <typename T>
+	class _enum final : public _base
 	{
-		// Value or reference
-		std::conditional_t<External, atomic_t<T>&, atomic_t<T>> m_value;
+		T m_value;
 
 	public:
 		const T def;
 
-		enum_entry(node& owner, const std::string& name, std::conditional_t<External, atomic_t<T>&, T> value)
-			: entry_base(type::enumeration, owner, name)
+		_enum(node* owner, const std::string& name, T value = {})
+			: _base(type::_enum, owner, name)
 			, m_value(value)
 			, def(value)
 		{
@@ -280,13 +167,7 @@ namespace cfg
 
 		operator T() const
 		{
-			return m_value.load();
-		}
-
-		enum_entry& operator =(T value)
-		{
-			m_value = value;
-			return *this;
+			return m_value;
 		}
 
 		void from_default() override
@@ -322,21 +203,21 @@ namespace cfg
 	};
 
 	// Signed 32/64-bit integer entry with custom Min/Max range.
-	template<s64 Min, s64 Max>
-	class int_entry final : public entry_base
+	template <s64 Min, s64 Max>
+	class _int final : public _base
 	{
-		static_assert(Min < Max, "Invalid cfg::int_entry range");
+		static_assert(Min < Max, "Invalid cfg::_int range");
 
 		// Prefer 32 bit type if possible
 		using int_type = std::conditional_t<Min >= INT32_MIN && Max <= INT32_MAX, s32, s64>;
 
-		atomic_t<int_type> m_value;
+		int_type m_value;
 
 	public:
 		const int_type def;
 
-		int_entry(node& owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)))
-			: entry_base(type::integer, owner, name)
+		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)))
+			: _base(type::_int, owner, name)
 			, m_value(def)
 			, def(def)
 		{
@@ -344,18 +225,7 @@ namespace cfg
 
 		operator int_type() const
 		{
-			return m_value.load();
-		}
-
-		int_entry& operator =(int_type value)
-		{
-			if (value < Min || value > Max)
-			{
-				fmt::throw_exception("Value out of the valid range: %lld" HERE, s64{ value });
-			}
-
-			m_value = value;
-			return *this;
+			return m_value;
 		}
 
 		void from_default() override
@@ -365,7 +235,7 @@ namespace cfg
 
 		std::string to_string() const override
 		{
-			return std::to_string(m_value.load());
+			return std::to_string(m_value);
 		}
 
 		bool from_string(const std::string& value) override
@@ -382,22 +252,21 @@ namespace cfg
 	};
 
 	// Alias for 32 bit int
-	using int32_entry = int_entry<INT32_MIN, INT32_MAX>;
+	using int32 = _int<INT32_MIN, INT32_MAX>;
 
 	// Alias for 64 bit int
-	using int64_entry = int_entry<INT64_MIN, INT64_MAX>;
+	using int64 = _int<INT64_MIN, INT64_MAX>;
 
 	// Simple string entry with mutex
-	class string_entry final : public entry_base
+	class string final : public _base
 	{
-		mutable std::mutex m_mutex;
 		std::string m_value;
 
 	public:
 		const std::string def;
 
-		string_entry(node& owner, const std::string& name, const std::string& def = {})
-			: entry_base(type::string, owner, name)
+		string(node* owner, const std::string& name, const std::string& def = {})
+			: _base(type::string, owner, name)
 			, m_value(def)
 			, def(def)
 		{
@@ -405,25 +274,16 @@ namespace cfg
 
 		operator std::string() const
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
 			return m_value;
 		}
 
-		std::string get() const
+		const std::string& get() const
 		{
-			return *this;
-		}
-
-		string_entry& operator =(const std::string& value)
-		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			m_value = value;
-			return *this;
+			return m_value;
 		}
 
 		std::size_t size() const
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
 			return m_value.size();
 		}
 
@@ -431,41 +291,35 @@ namespace cfg
 
 		std::string to_string() const override
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
 			return m_value;
 		}
 
 		bool from_string(const std::string& value) override
 		{
-			*this = value;
+			m_value = value;
 			return true;
 		}
 	};
 
 	// Simple set entry with mutex (TODO: template for various types)
-	class set_entry final : public entry_base
+	class set_entry final : public _base
 	{
-		mutable std::mutex m_mutex;
-
 		std::set<std::string> m_set;
 
 	public:
 		// Default value is empty list in current implementation
-		set_entry(node& owner, const std::string& name)
-			: entry_base(type::set, owner, name)
+		set_entry(node* owner, const std::string& name)
+			: _base(type::set, owner, name)
 		{
 		}
 
 		std::set<std::string> get_set() const
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-
 			return m_set;
 		}
 
 		void set_set(std::set<std::string>&& set)
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
 			m_set = std::move(set);
 		}
 
@@ -473,27 +327,24 @@ namespace cfg
 
 		std::vector<std::string> to_list() const override
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-
 			return{ m_set.begin(), m_set.end() };
 		}
 
 		bool from_list(std::vector<std::string>&& list) override
 		{
-			std::lock_guard<std::mutex> lock(m_mutex);
 			m_set = { std::make_move_iterator(list.begin()), std::make_move_iterator(list.end()) };
 
 			return true;
 		}
 	};
 
-	class log_entry final : public entry_base
+	class log_entry final : public _base
 	{
 		std::map<std::string, logs::level> m_map;
 
 	public:
-		log_entry(node& owner, const std::string& name)
-			: entry_base(type::log, owner, name)
+		log_entry(node* owner, const std::string& name)
+			: _base(type::log, owner, name)
 		{
 		}
 
@@ -506,25 +357,4 @@ namespace cfg
 
 		void from_default() override;
 	};
-
-	// Root type with some predefined nodes. Don't change it, this is not mandatory for adding nodes.
-	struct root_node : node
-	{
-		node core  {*this, "Core"};
-		node vfs   {*this, "VFS"};
-		node video {*this, "Video"};
-		node audio {*this, "Audio"};
-		node io    {*this, "Input/Output"};
-		node sys   {*this, "System"};
-		node net   {*this, "Net"};
-		node misc  {*this, "Miscellaneous"};
-
-		log_entry log{*this, "Log"};
-	};
-
-	// Get global configuration root instance
-	extern root_node& get_root();
-
-	// Global configuration root instance (cached reference)
-	static root_node& root = get_root();
 }
