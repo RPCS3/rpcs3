@@ -23,10 +23,10 @@ build_script:
  - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 install:
- - appveyor DownloadFile "https://dl.dropboxusercontent.com/s/c1by0uulee6g8th/wxWidgets.7z?dl=0" -FileName wxWidgets.7z
- - appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
- - appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRa21fbDQteTN1dGs" -FileName vulkan.7z
- - appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B6v_qtb9hkicQ2hHa2dRbF83cE0" -FileName zlib.7z
+ - if not exist wxWidgets.7z appveyor DownloadFile "https://dl.dropboxusercontent.com/s/c1by0uulee6g8th/wxWidgets.7z?dl=0" -FileName wxWidgets.7z
+ - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
+ - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRa21fbDQteTN1dGs" -FileName vulkan.7z
+ - if not exist zlib.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B6v_qtb9hkicQ2hHa2dRbF83cE0" -FileName zlib.7z
  - set WXWIN=C:\rpcs3\wxWidgets
  - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL
  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
@@ -36,3 +36,9 @@ artifacts:
  - path: bin
    name: 'rpcs3-v0.0.2-$(Date)-$(COMMIT_SHA)_win64'
    type: zip
+
+cache:
+ - wxWidgets.7z
+ - llvmlibs.7z
+ - vulkan.7z
+ - zlib.7z
