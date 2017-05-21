@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-#include "Utilities/Config.h"
+#include "Emu/System.h"
 #include "GLGSFrame.h"
 #include <wx/version.h>
-
-extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 GLGSFrame::GLGSFrame(int w, int h)
 	: GSFrame("OpenGL", w, h)
@@ -19,7 +17,7 @@ GLGSFrame::GLGSFrame(int w, int h)
 		WX_GL_MINOR_VERSION, 3,
 		WX_GL_CORE_PROFILE,
 #if !defined(CMAKE_BUILD)
-		g_cfg_rsx_debug_output ? WX_GL_DEBUG : 0,
+		g_cfg.video.debug_output ? WX_GL_DEBUG : 0,
 #endif
 #endif
 		0

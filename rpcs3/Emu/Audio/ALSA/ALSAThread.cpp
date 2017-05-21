@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Utilities/GSL.h"
 #include "Emu/System.h"
 
@@ -9,10 +8,7 @@
 
 #include <alsa/asoundlib.h>
 
-extern cfg::bool_entry g_cfg_audio_convert_to_u16;
-extern cfg::bool_entry g_cfg_audio_downmix_to_2ch;
-
-thread_local static snd_pcm_t* s_tls_handle{nullptr};
+static thread_local snd_pcm_t* s_tls_handle{nullptr};
 
 static void error(int err, const char* reason)
 {
@@ -54,13 +50,13 @@ ALSAThread::ALSAThread()
 	if (!check(snd_pcm_hw_params_set_access(s_tls_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED), "snd_pcm_hw_params_set_access"))
 		return;
 
-	if (!check(snd_pcm_hw_params_set_format(s_tls_handle, hw_params, g_cfg_audio_convert_to_u16 ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_FLOAT_LE), "snd_pcm_hw_params_set_format"))
+	if (!check(snd_pcm_hw_params_set_format(s_tls_handle, hw_params, g_cfg.audio.convert_to_u16 ? SND_PCM_FORMAT_S16_LE : SND_PCM_FORMAT_FLOAT_LE), "snd_pcm_hw_params_set_format"))
 		return;
 
 	if (!check(snd_pcm_hw_params_set_rate(s_tls_handle, hw_params, 48000, 0), "snd_pcm_hw_params_set_rate_near"))
 		return;
 
-	if (!check(snd_pcm_hw_params_set_channels(s_tls_handle, hw_params, g_cfg_audio_downmix_to_2ch ? 2 : 8), "snd_pcm_hw_params_set_channels"))
+	if (!check(snd_pcm_hw_params_set_channels(s_tls_handle, hw_params, g_cfg.audio.downmix_to_2ch ? 2 : 8), "snd_pcm_hw_params_set_channels"))
 		return;
 
 	if (!check(snd_pcm_hw_params_set_buffer_size(s_tls_handle, hw_params, 8 * 256), "snd_pcm_hw_params_set_buffer_size"))
@@ -106,8 +102,8 @@ void ALSAThread::Open(const void* src, int size)
 
 void ALSAThread::AddData(const void* src, int size)
 {
-	size /= g_cfg_audio_convert_to_u16 ? 2 : 4;
-	size /= g_cfg_audio_downmix_to_2ch ? 2 : 8;
+	size /= g_cfg.audio.convert_to_u16 ? 2 : 4;
+	size /= g_cfg.audio.downmix_to_2ch ? 2 : 8;
 
 	int res;
 

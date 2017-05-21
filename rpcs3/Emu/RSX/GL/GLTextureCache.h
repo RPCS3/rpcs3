@@ -14,14 +14,10 @@
 #include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
 #include "../../Memory/vm.h"
-#include "Utilities/Config.h"
 
 #include "../rsx_utils.h"
 
 class GLGSRender;
-
-extern cfg::bool_entry g_cfg_rsx_write_color_buffers;
-extern cfg::bool_entry g_cfg_rsx_write_depth_buffer;
 
 namespace gl
 {

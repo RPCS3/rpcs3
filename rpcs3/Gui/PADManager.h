@@ -89,7 +89,6 @@ public:
 	void OnKeyUp(wxKeyEvent &keyEvent);
 	void OnButtonClicked(wxCommandEvent &event);
 	void UpdateLabel();
-	void ResetParameters();
 	void UpdateTimerLabel(const u32 id);
 	void SwitchButtons(const bool IsEnabled);
 	const wxString GetKeyName(const u32 keyCode);

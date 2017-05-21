@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Utilities/event.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
@@ -27,20 +26,9 @@
 
 #include "Utilities/GDBDebugServer.h"
 
+cfg_root g_cfg;
+
 system_type g_system;
-
-cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot", true);
-cfg::bool_entry g_cfg_autoexit(cfg::root.misc, "Exit RPCS3 when process finishes");
-
-cfg::string_entry g_cfg_vfs_emulator_dir(cfg::root.vfs, "$(EmulatorDir)"); // Default (empty): taken from fs::get_config_dir()
-cfg::string_entry g_cfg_vfs_dev_hdd0(cfg::root.vfs, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/");
-cfg::string_entry g_cfg_vfs_dev_hdd1(cfg::root.vfs, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/");
-cfg::string_entry g_cfg_vfs_dev_flash(cfg::root.vfs, "/dev_flash/", "$(EmulatorDir)dev_flash/");
-cfg::string_entry g_cfg_vfs_dev_usb000(cfg::root.vfs, "/dev_usb000/", "$(EmulatorDir)dev_usb000/");
-cfg::string_entry g_cfg_vfs_dev_bdvd(cfg::root.vfs, "/dev_bdvd/"); // Not mounted
-cfg::string_entry g_cfg_vfs_app_home(cfg::root.vfs, "/app_home/"); // Not mounted
-
-cfg::bool_entry g_cfg_vfs_allow_host_root(cfg::root.vfs, "Enable /host_root/");
 
 std::string g_cfg_defaults;
 
@@ -54,6 +42,136 @@ extern void arm_load_exec(const arm_exec_object&);
 extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 
 fs::file g_tty;
+
+template <>
+void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](keyboard_handler value)
+	{
+		switch (value)
+		{
+		case keyboard_handler::null: return "Null";
+		case keyboard_handler::basic: return "Basic";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](mouse_handler value)
+	{
+		switch (value)
+		{
+		case mouse_handler::null: return "Null";
+		case mouse_handler::basic: return "Basic";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](pad_handler value)
+	{
+		switch (value)
+		{
+		case pad_handler::null: return "Null";
+		case pad_handler::keyboard: return "Keyboard";
+		case pad_handler::ds4: return "DualShock 4";
+#ifdef _MSC_VER
+		case pad_handler::xinput: return "XInput";
+#endif
+#ifdef _WIN32
+		case pad_handler::mm: return "MMJoystick";
+#endif
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<video_renderer>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](video_renderer value)
+	{
+		switch (value)
+		{
+		case video_renderer::null: return "Null";
+		case video_renderer::opengl: return "OpenGL";
+#ifdef _WIN32
+		case video_renderer::vulkan: return "Vulkan";
+#endif
+#ifdef _MSC_VER
+		case video_renderer::dx12: return "D3D12";
+#endif
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_renderer value)
+	{
+		switch (value)
+		{
+		case audio_renderer::null: return "Null";
+#ifdef _WIN32
+		case audio_renderer::xaudio: return "XAudio2";
+#elif __linux__
+		case audio_renderer::alsa: return "ALSA";
+#endif
+		case audio_renderer::openal: return "OpenAL";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<video_resolution>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](video_resolution value)
+	{
+		switch (value)
+		{
+		case video_resolution::_1080: return "1920x1080";
+		case video_resolution::_720: return "1280x720";
+		case video_resolution::_480: return "720x480";
+		case video_resolution::_576: return "720x576";
+		case video_resolution::_1600x1080: return "1600x1080";
+		case video_resolution::_1440x1080: return "1440x1080";
+		case video_resolution::_1280x1080: return "1280x1080";
+		case video_resolution::_960x1080: return "960x1080";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](video_aspect value)
+	{
+		switch (value)
+		{
+		case video_aspect::_auto: return "Auto";
+		case video_aspect::_4_3: return "4:3";
+		case video_aspect::_16_9: return "16:9";
+		}
+
+		return unknown;
+	});
+}
 
 namespace rpcs3
 {
@@ -74,18 +192,18 @@ void Emulator::Init()
 	fxm::init();
 
 	// Reset defaults, cache them
-	cfg::root.from_default();
-	g_cfg_defaults = cfg::root.to_string();
+	g_cfg.from_default();
+	g_cfg_defaults = g_cfg.to_string();
 
 	// Reload global configuration
-	cfg::root.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
 
 	// Create directories
-	const std::string emu_dir_ = g_cfg_vfs_emulator_dir;
+	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
 	const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-	const std::string dev_hdd0 = fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir);
-	const std::string dev_hdd1 = fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir);
-	const std::string dev_usb = fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd0 = fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
+	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
 	fs::create_path(dev_hdd0);
 	fs::create_dir(dev_hdd0 + "game/");
@@ -151,18 +269,18 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 std::string Emulator::GetGameDir()
 {
-	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
+	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
 	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
-	return fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
 }
 
 std::string Emulator::GetLibDir()
 {
-	const std::string& emu_dir_ = g_cfg_vfs_emulator_dir;
+	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
 	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
-	return fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
+	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
 void Emulator::Load()
@@ -204,40 +322,40 @@ void Emulator::Load()
 		if (fs::file cfg_file{m_cache_path + "/config.yml"})
 		{
 			LOG_NOTICE(LOADER, "Applying custom config: %s/config.yml", m_cache_path);
-			cfg::root.from_string(cfg_file.to_string());
+			g_cfg.from_string(cfg_file.to_string());
 		}
 
 		// Load custom config-1
 		if (fs::file cfg_file{fs::get_config_dir() + "data/" + m_title_id + "/config.yml"})
 		{
 			LOG_NOTICE(LOADER, "Applying custom config: data/%s/config.yml", m_title_id);
-			cfg::root.from_string(cfg_file.to_string());
+			g_cfg.from_string(cfg_file.to_string());
 		}
 
 		// Load custom config-2
 		if (fs::file cfg_file{m_path + ".yml"})
 		{
 			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
-			cfg::root.from_string(cfg_file.to_string());
+			g_cfg.from_string(cfg_file.to_string());
 		}
 
-		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", cfg::root.to_string());
+		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
 
 		// Load patches from different locations
 		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
 		fxm::check_unlocked<patch_engine>()->append(m_cache_path + "/patch.yml");
 
 		// Mount all devices
-		const std::string emu_dir_ = g_cfg_vfs_emulator_dir;
+		const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
 		const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-		const std::string home_dir = g_cfg_vfs_app_home;
-		std::string bdvd_dir = g_cfg_vfs_dev_bdvd;
+		const std::string home_dir = g_cfg.vfs.app_home;
+		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
-		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg_vfs_dev_hdd0, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg_vfs_dev_hdd1, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_flash", fmt::replace_all(g_cfg_vfs_dev_flash, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_usb", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_usb000", fmt::replace_all(g_cfg_vfs_dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
 
 		// Mount /dev_bdvd/ if necessary
@@ -256,7 +374,7 @@ void Emulator::Load()
 		}
 
 		// Mount /host_root/ if necessary
-		if (g_cfg_vfs_allow_host_root)
+		if (g_cfg.vfs.host_root)
 		{
 			vfs::mount("host_root", {});
 		}
@@ -306,7 +424,7 @@ void Emulator::Load()
 		{
 			// PS3 executable
 			g_system = system_type::ps3;
-			m_status = Ready;
+			m_state = system_state::ready;
 			vm::ps3::init();
 
 			if (m_elf_path.empty())
@@ -323,7 +441,7 @@ void Emulator::Load()
 		{
 			// PPU PRX (experimental)
 			g_system = system_type::ps3;
-			m_status = Ready;
+			m_state = system_state::ready;
 			vm::ps3::init();
 			ppu_load_prx(ppu_prx, "");
 		}
@@ -331,7 +449,7 @@ void Emulator::Load()
 		{
 			// SPU executable (experimental)
 			g_system = system_type::ps3;
-			m_status = Ready;
+			m_state = system_state::ready;
 			vm::ps3::init();
 			spu_load_exec(spu_exec);
 		}
@@ -339,7 +457,7 @@ void Emulator::Load()
 		{
 			// ARMv7 executable
 			g_system = system_type::psv;
-			m_status = Ready;
+			m_state = system_state::ready;
 			vm::psv::init();
 
 			if (m_elf_path.empty())
@@ -361,13 +479,13 @@ void Emulator::Load()
 			return;
 		}
 
-		if (g_cfg_autostart && IsReady())
+		if (g_cfg.misc.autostart && IsReady())
 		{
 			Run();
 		}
 		else if (IsPaused())
 		{
-			m_status = Ready;
+			m_state = system_state::ready;
 		}
 	}
 	catch (const std::exception& e)
@@ -397,7 +515,7 @@ void Emulator::Run()
 
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
-	m_status = Running;
+	m_state = system_state::running;
 
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
@@ -415,9 +533,9 @@ bool Emulator::Pause()
 	const u64 start = get_system_time();
 
 	// Try to pause
-	if (!m_status.compare_and_swap_test(Running, Paused))
+	if (!m_state.compare_and_swap_test(system_state::running, system_state::paused))
 	{
-		return m_status.compare_and_swap_test(Ready, Paused);
+		return m_state.compare_and_swap_test(system_state::ready, system_state::paused);
 	}
 
 	rpcs3::on_pause()();
@@ -458,7 +576,7 @@ void Emulator::Resume()
 	}
 
 	// Try to resume
-	if (!m_status.compare_and_swap_test(Paused, Running))
+	if (!m_state.compare_and_swap_test(system_state::paused, system_state::running))
 	{
 		return;
 	}
@@ -489,7 +607,7 @@ void Emulator::Resume()
 
 void Emulator::Stop()
 {
-	if (m_status.exchange(Stopped) == Stopped)
+	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
 		return;
 	}
@@ -542,7 +660,7 @@ void Emulator::Stop()
 	RSXIOMem.Clear();
 	vm::close();
 
-	if (g_cfg_autoexit)
+	if (g_cfg.misc.autoexit)
 	{
 		GetCallbacks().exit();
 	}

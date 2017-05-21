@@ -1,7 +1,6 @@
 #ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
-#include "Utilities/Config.h"
 #include "D3D12PipelineState.h"
 #include "D3D12GSRender.h"
 #include "D3D12Formats.h"
@@ -9,8 +8,6 @@
 #include "../rsx_utils.h"
 
 #define TO_STRING(x) #x
-
-extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 extern pD3DCompile wrapD3DCompile;
 
@@ -20,7 +17,7 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 	HRESULT hr;
 	ComPtr<ID3DBlob> errorBlob;
 	UINT compileFlags;
-	if (g_cfg_rsx_debug_output)
+	if (g_cfg.video.debug_output)
 		compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 	else
 		compileFlags = 0;
