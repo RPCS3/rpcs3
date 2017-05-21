@@ -122,7 +122,9 @@ namespace
 		//Count vertices to copy
 		const bool is_128_aligned = !((dst_stride | src_stride) & 15);
 		
-		const u32 min_block_size = std::min(src_stride, dst_stride);
+		u32 min_block_size = std::min(src_stride, dst_stride);
+		if (min_block_size == 0) min_block_size = dst_stride;
+
 		const u32 remainder = is_128_aligned? 0:  (16 - min_block_size) / min_block_size;
 		const u32 iterations = is_128_aligned? vertex_count: vertex_count - remainder;
 
@@ -163,7 +165,9 @@ namespace
 
 		const bool is_128_aligned = !((dst_stride | src_stride) & 15);
 
-		const u32 min_block_size = std::min(src_stride, dst_stride);
+		u32 min_block_size = std::min(src_stride, dst_stride);
+		if (min_block_size == 0) min_block_size = dst_stride;
+
 		const u32 remainder = is_128_aligned ? 0 : (16 - min_block_size) / min_block_size;
 		const u32 iterations = is_128_aligned ? vertex_count : vertex_count - remainder;
 
