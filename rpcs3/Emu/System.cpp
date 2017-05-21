@@ -44,21 +44,6 @@ extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const
 fs::file g_tty;
 
 template <>
-void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](keyboard_handler value)
-	{
-		switch (value)
-		{
-		case keyboard_handler::null: return "Null";
-		case keyboard_handler::basic: return "Basic";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](mouse_handler value)
@@ -117,26 +102,6 @@ void fmt_class_string<video_renderer>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](audio_renderer value)
-	{
-		switch (value)
-		{
-		case audio_renderer::null: return "Null";
-#ifdef _WIN32
-		case audio_renderer::xaudio: return "XAudio2";
-#elif __linux__
-		case audio_renderer::alsa: return "ALSA";
-#endif
-		case audio_renderer::openal: return "OpenAL";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<video_resolution>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](video_resolution value)
@@ -173,6 +138,41 @@ void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
 	});
 }
 
+
+template <>
+void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](keyboard_handler value)
+	{
+		switch (value)
+		{
+		case keyboard_handler::null: return "Null";
+		case keyboard_handler::basic: return "Basic";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_renderer value)
+	{
+		switch (value)
+		{
+		case audio_renderer::null: return "Null";
+#ifdef _WIN32
+		case audio_renderer::xaudio: return "XAudio2";
+#elif __linux__
+		case audio_renderer::alsa: return "ALSA";
+#endif
+		case audio_renderer::openal: return "OpenAL";
+		}
+
+		return unknown;
+	});
+}
 
 void Emulator::Init()
 {

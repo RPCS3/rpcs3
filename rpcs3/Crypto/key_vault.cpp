@@ -748,12 +748,13 @@ SELF_KEY KeyVault::FindSelfKey(u32 type, u16 revision, u64 version)
 
 void KeyVault::SetKlicenseeKey(u8 *key)
 {
-	memcpy(klicensee_key, key, 0x10);
+	klicensee_key = std::make_unique<u8[]>(0x10);
+	memcpy(klicensee_key.get(), key, 0x10);
 }
 
 u8 *KeyVault::GetKlicenseeKey()
 {
-	return klicensee_key;
+	return klicensee_key.get();
 }
 
 void rap_to_rif(unsigned char* rap, unsigned char* rif)

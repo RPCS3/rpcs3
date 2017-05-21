@@ -409,6 +409,7 @@
     <ClInclude Include="..\Utilities\bit_set.h" />
     <ClInclude Include="..\Utilities\cfmt.h" />
     <ClInclude Include="..\Utilities\cond.h" />
+    <ClInclude Include="..\Utilities\CRC.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\GDBDebugServer.h" />
