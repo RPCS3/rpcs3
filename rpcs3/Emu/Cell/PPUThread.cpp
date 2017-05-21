@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/VirtualMemory.h"
 #include "Crypto/sha1.h"
@@ -659,7 +659,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	{
 		const auto _this = static_cast<ppu_thread*>(get_current_cpu_thread());
 
-		return fmt::format("%s [0x%08x]", _this->get_name(), _this->cia);
+		return fmt::format("%s [0x%08x LR:0x%x]", _this->get_name(), _this->cia, _this->lr);
 	};
 
 	auto at_ret = gsl::finally([&]()
