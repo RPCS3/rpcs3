@@ -2,6 +2,8 @@
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
 
+#define DEBUG_VERTEX_STREAMING 0
+
 namespace
 {
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
@@ -32,15 +34,317 @@ namespace
 		return{ X, Y, Z, 1 };
 	}
 
-	template <typename U, typename T>
-	void copy_whole_attribute_array(gsl::span<T> dst, gsl::span<const gsl::byte> src_ptr, u8 attribute_size, u8 dst_stride, u32 src_stride, u32 vertex_count)
+	inline void stream_data_to_memory_swapped_u32(void *dst, const void *src, u32 vertex_count, u8 stride)
 	{
+		const __m128i mask = _mm_set_epi8(
+			0xC, 0xD, 0xE, 0xF,
+			0x8, 0x9, 0xA, 0xB, 
+			0x4, 0x5, 0x6, 0x7, 
+			0x0, 0x1, 0x2, 0x3);
+
+		__m128i* dst_ptr = (__m128i*)dst;
+		__m128i* src_ptr = (__m128i*)src;
+
+		const u32 dword_count = (vertex_count * (stride >> 2));
+		const u32 iterations = dword_count >> 2;
+		const u32 remaining = dword_count % 4;
+		
+		for (u32 i = 0; i < iterations; ++i)
+		{
+			u32 *src_words = (u32*)src_ptr;
+			u32 *dst_words = (u32*)dst_ptr;
+			const __m128i &vector = _mm_loadu_si128(src_ptr);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_stream_si128(dst_ptr, shuffled_vector);
+
+			src_ptr++;
+			dst_ptr++;
+		}
+
+		if (remaining)
+		{
+			u32 *src_ptr2 = (u32 *)src_ptr;
+			u32 *dst_ptr2 = (u32 *)dst_ptr;
+
+			for (u32 i = 0; i < remaining; ++i)
+				dst_ptr2[i] = se_storage<u32>::swap(src_ptr2[i]);
+		}
+	}
+
+	inline void stream_data_to_memory_swapped_u16(void *dst, const void *src, u32 vertex_count, u8 stride)
+	{
+		const __m128i mask = _mm_set_epi8(
+			0xE, 0xF, 0xC, 0xD,
+			0xA, 0xB, 0x8, 0x9,
+			0x6, 0x7, 0x4, 0x5,
+			0x2, 0x3, 0x0, 0x1);
+
+		__m128i* dst_ptr = (__m128i*)dst;
+		__m128i* src_ptr = (__m128i*)src;
+
+		const u32 word_count = (vertex_count * (stride >> 1));
+		const u32 iterations = word_count >> 3;
+		const u32 remaining = word_count % 8;
+
+		for (u32 i = 0; i < iterations; ++i)
+		{
+			u32 *src_words = (u32*)src_ptr;
+			u32 *dst_words = (u32*)dst_ptr;
+			const __m128i &vector = _mm_loadu_si128(src_ptr);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_stream_si128(dst_ptr, shuffled_vector);
+
+			src_ptr++;
+			dst_ptr++;
+		}
+
+		if (remaining)
+		{
+			u16 *src_ptr2 = (u16 *)src_ptr;
+			u16 *dst_ptr2 = (u16 *)dst_ptr;
+
+			for (u32 i = 0; i < remaining; ++i)
+				dst_ptr2[i] = se_storage<u16>::swap(src_ptr2[i]);
+		}
+	}
+
+	inline void stream_data_to_memory_swapped_u32_non_continuous(void *dst, const void *src, u32 vertex_count, u8 dst_stride, u8 src_stride)
+	{
+		const __m128i mask = _mm_set_epi8(
+			0xC, 0xD, 0xE, 0xF,
+			0x8, 0x9, 0xA, 0xB,
+			0x4, 0x5, 0x6, 0x7,
+			0x0, 0x1, 0x2, 0x3);
+
+		char *src_ptr = (char *)src;
+		char *dst_ptr = (char *)dst;
+
+		//Count vertices to copy
+		const bool is_128_aligned = !((dst_stride | src_stride) & 15);
+		
+		u32 min_block_size = std::min(src_stride, dst_stride);
+		if (min_block_size == 0) min_block_size = dst_stride;
+
+		const u32 remainder = is_128_aligned? 0:  (16 - min_block_size) / min_block_size;
+		const u32 iterations = is_128_aligned? vertex_count: vertex_count - remainder;
+
+		for (u32 i = 0; i < iterations; ++i)
+		{
+			const __m128i &vector = _mm_loadu_si128((__m128i*)src_ptr);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
+
+			src_ptr += src_stride;
+			dst_ptr += dst_stride;
+		}
+
+		if (remainder)
+		{
+			const u8 attribute_sz = min_block_size >> 2;
+			for (u32 n = 0; n < remainder; ++n)
+			{
+				for (u32 v= 0; v < attribute_sz; ++v)
+					((u32*)dst_ptr)[v] = ((be_t<u32>*)src_ptr)[v];
+
+				src_ptr += src_stride;
+				dst_ptr += dst_stride;
+			}
+		}
+	}
+
+	inline void stream_data_to_memory_swapped_u16_non_continuous(void *dst, const void *src, u32 vertex_count, u8 dst_stride, u8 src_stride)
+	{
+		const __m128i mask = _mm_set_epi8(
+			0xE, 0xF, 0xC, 0xD,
+			0xA, 0xB, 0x8, 0x9,
+			0x6, 0x7, 0x4, 0x5,
+			0x2, 0x3, 0x0, 0x1);
+
+		char *src_ptr = (char *)src;
+		char *dst_ptr = (char *)dst;
+
+		const bool is_128_aligned = !((dst_stride | src_stride) & 15);
+
+		u32 min_block_size = std::min(src_stride, dst_stride);
+		if (min_block_size == 0) min_block_size = dst_stride;
+
+		const u32 remainder = is_128_aligned ? 0 : (16 - min_block_size) / min_block_size;
+		const u32 iterations = is_128_aligned ? vertex_count : vertex_count - remainder;
+
+		for (u32 i = 0; i < iterations; ++i)
+		{
+			const __m128i &vector = _mm_loadu_si128((__m128i*)src_ptr);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
+
+			src_ptr += src_stride;
+			dst_ptr += dst_stride;
+		}
+
+		if (remainder)
+		{
+			const u8 attribute_sz = min_block_size >> 1;
+			for (u32 n = 0; n < remainder; ++n)
+			{
+				for (u32 v = 0; v < attribute_sz; ++v)
+					((u16*)dst_ptr)[v] = ((be_t<u16>*)src_ptr)[v];
+
+				src_ptr += src_stride;
+				dst_ptr += dst_stride;
+			}
+		}
+	}
+
+	inline void stream_data_to_memory_u8_non_continous(void *dst, const void *src, u32 vertex_count, u8 attribute_size, u8 dst_stride, u8 src_stride)
+	{
+		char *src_ptr = (char *)src;
+		char *dst_ptr = (char *)dst;
+
+		switch (attribute_size)
+		{
+			case 4:
+			{
+				//Read one dword every iteration
+				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
+				{
+					*(u32*)dst_ptr = *(u32*)src_ptr;
+
+					dst_ptr += dst_stride;
+					src_ptr += src_stride;
+				}
+
+				break;
+			}
+			case 3:
+			{
+				//Read one word and one byte
+				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
+				{
+					*(u16*)dst_ptr = *(u16*)src_ptr;
+					dst_ptr[2] = src_ptr[2];
+
+					dst_ptr += dst_stride;
+					src_ptr += src_stride;
+				}
+
+				break;
+			}
+			case 2:
+			{
+				//Copy u16 blocks
+				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
+				{
+					*(u32*)dst_ptr = *(u32*)src_ptr;
+
+					dst_ptr += dst_stride;
+					src_ptr += src_stride;
+				}
+
+				break;
+			}
+			case 1:
+			{
+				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
+				{
+					dst_ptr[0] = src_ptr[0];
+
+					dst_ptr += dst_stride;
+					src_ptr += src_stride;
+				}
+
+				break;
+			}
+		}
+	}
+
+	template <typename T, typename U, int N>
+	void copy_whole_attribute_array_impl(void *raw_dst, void *raw_src, u8 dst_stride, u32 src_stride, u32 vertex_count)
+	{
+		char *src_ptr = (char *)raw_src;
+		char *dst_ptr = (char *)raw_dst;
+
 		for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 		{
-			gsl::span<const U> src = gsl::as_span<const U>(src_ptr.subspan(src_stride * vertex, attribute_size * sizeof(const U)));
-			for (u32 i = 0; i < attribute_size; ++i)
+			T* typed_dst = (T*)dst_ptr;
+			U* typed_src = (U*)src_ptr;
+
+			for (u32 i = 0; i < N; ++i)
 			{
-				dst[vertex * dst_stride / sizeof(T) + i] = src[i];
+				typed_dst[i] = typed_src[i];
+			}
+
+			src_ptr += src_stride;
+			dst_ptr += dst_stride;
+		}
+	}
+
+	/*
+	 * Copies a number of src vertices, repeated over and over to fill the dst
+	 * e.g repeat 2 vertices over a range of 16 verts, so 8 reps
+	 */
+	template <typename T, typename U, int N>
+	void copy_whole_attribute_array_repeating_impl(void *raw_dst, void *raw_src, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
+	{
+		char *src_ptr = (char *)raw_src;
+		char *dst_ptr = (char *)raw_dst;
+
+		u32 src_offset = 0;
+		u32 src_limit = src_stride * src_vertex_count;
+
+		for (u32 vertex = 0; vertex < vertex_count; ++vertex)
+		{
+			T* typed_dst = (T*)dst_ptr;
+			U* typed_src = (U*)(src_ptr + src_offset);
+
+			for (u32 i = 0; i < N; ++i)
+			{
+				typed_dst[i] = typed_src[i];
+			}
+
+			src_offset = (src_offset + src_stride) % src_limit;
+			dst_ptr += dst_stride;
+		}
+	}
+
+	template <typename U, typename T>
+	void copy_whole_attribute_array(void *raw_dst, void *raw_src, const u8 attribute_size, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
+	{
+		//Eliminate the inner loop by templating the inner loop counter N
+
+		if (src_vertex_count == vertex_count)
+		{
+			switch (attribute_size)
+			{
+			case 1:
+				copy_whole_attribute_array_impl<U, T, 1>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			case 2:
+				copy_whole_attribute_array_impl<U, T, 2>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			case 3:
+				copy_whole_attribute_array_impl<U, T, 3>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			case 4:
+				copy_whole_attribute_array_impl<U, T, 4>(raw_dst, raw_src, dst_stride, src_stride, vertex_count);
+				break;
+			}
+		}
+		else
+		{
+			switch (attribute_size)
+			{
+			case 1:
+				copy_whole_attribute_array_repeating_impl<U, T, 1>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
+			case 2:
+				copy_whole_attribute_array_repeating_impl<U, T, 2>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
+			case 3:
+				copy_whole_attribute_array_repeating_impl<U, T, 3>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
+			case 4:
+				copy_whole_attribute_array_repeating_impl<U, T, 4>(raw_dst, raw_src, dst_stride, src_stride, vertex_count, src_vertex_count);
+				break;
 			}
 		}
 	}
@@ -49,28 +353,74 @@ namespace
 void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::span<const gsl::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride)
 {
 	verify(HERE), (vector_element_count > 0);
+	const u32 src_read_stride = rsx::get_vertex_type_size_on_host(type, vector_element_count);
+
+	bool use_stream_no_stride = false;
+	bool use_stream_with_stride = false;
+
+	//If stride is not defined, we have a packed array
+	if (attribute_src_stride == 0) attribute_src_stride = src_read_stride;
+
+	//Sometimes, we get a vertex attribute to be repeated. Just copy the supplied vertices only
+	//TODO: Stop these requests from getting here in the first place!
+	//TODO: Check if it is possible to have a repeating array with more than one attribute instance
+	const u32 real_count = src_ptr.size_bytes() / attribute_src_stride;
+	if (real_count == 1) attribute_src_stride = 0;	//Always fetch src[0]
+
+	//TODO: Determine favourable vertex threshold where vector setup costs become negligible
+	//Tests show that even with 4 vertices, using traditional bswap is significantly slower over a large number of calls
+
+	const u64 src_address = (u64)src_ptr.data();
+	const bool sse_aligned = ((src_address & 15) == 0);
+	
+#if !DEBUG_VERTEX_STREAMING
+	
+	if (real_count >= count || real_count == 1)
+	{
+		if (attribute_src_stride == dst_stride && src_read_stride == dst_stride)
+			use_stream_no_stride = true;
+		else
+			use_stream_with_stride = true;
+	}
+
+#endif
 
 	switch (type)
 	{
 	case rsx::vertex_base_type::ub:
 	case rsx::vertex_base_type::ub256:
 	{
-		gsl::span<u8> dst_span = as_span_workaround<u8>(raw_dst_span);
-		copy_whole_attribute_array<u8>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, count);
+		if (use_stream_no_stride)
+			memcpy(raw_dst_span.data(), src_ptr.data(), count * dst_stride);
+		else if (use_stream_with_stride)
+			stream_data_to_memory_u8_non_continous(raw_dst_span.data(), src_ptr.data(), count, vector_element_count, dst_stride, attribute_src_stride);
+		else
+			copy_whole_attribute_array<u8, u8>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+
 		return;
 	}
 	case rsx::vertex_base_type::s1:
 	case rsx::vertex_base_type::sf:
 	case rsx::vertex_base_type::s32k:
 	{
-		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
-		copy_whole_attribute_array<be_t<u16>>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, count);
+		if (use_stream_no_stride && sse_aligned)
+			stream_data_to_memory_swapped_u16(raw_dst_span.data(), src_ptr.data(), count, attribute_src_stride);
+		else if (use_stream_with_stride)
+			stream_data_to_memory_swapped_u16_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
+		else
+			copy_whole_attribute_array<be_t<u16>, u16>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+
 		return;
 	}
 	case rsx::vertex_base_type::f:
 	{
-		gsl::span<u32> dst_span = as_span_workaround<u32>(raw_dst_span);
-		copy_whole_attribute_array<be_t<u32>>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, count);
+		if (use_stream_no_stride && sse_aligned)
+			stream_data_to_memory_swapped_u32(raw_dst_span.data(), src_ptr.data(), count, attribute_src_stride);
+		else if (use_stream_with_stride)
+			stream_data_to_memory_swapped_u32_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
+		else
+			copy_whole_attribute_array<be_t<u32>, u32>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+
 		return;
 	}
 	case rsx::vertex_base_type::cmp:
