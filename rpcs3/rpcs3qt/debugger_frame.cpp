@@ -527,23 +527,26 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	long i = currentRow();
-	if (i < 0) return;
-
-	const u32 start_pc = m_pc - m_item_count * 4;
-	const u32 pc = start_pc + i * 4;
-	//ConLog.Write("pc=0x%llx", pc);
-
-	if (IsBreakPoint(pc))
+	if (event->button() == Qt::LeftButton)
 	{
-		RemoveBreakPoint(pc);
-	}
-	else
-	{
-		AddBreakPoint(pc);
-	}
+		long i = currentRow();
+		if (i < 0) return;
 
-	ShowAddr(start_pc);
+		const u32 start_pc = m_pc - m_item_count * 4;
+		const u32 pc = start_pc + i * 4;
+		//ConLog.Write("pc=0x%llx", pc);
+
+		if (IsBreakPoint(pc))
+		{
+			RemoveBreakPoint(pc);
+		}
+		else
+		{
+			AddBreakPoint(pc);
+		}
+
+		ShowAddr(start_pc);
+	}
 }
 
 void debugger_list::wheelEvent(QWheelEvent* event)

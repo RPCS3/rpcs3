@@ -403,17 +403,19 @@ void Buffer::showImage(QImage image)
 
 void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	const auto render = fxm::get<GSRender>();
-	if (!render)
+	if (event->button() == Qt::LeftButton)
 	{
-		return;
-	}
+		const auto render = fxm::get<GSRender>();
+		if (!render)
+		{
+			return;
+		}
 
-	const auto buffers = render->gcm_buffers;
-	if(!buffers)
-		return;
+		const auto buffers = render->gcm_buffers;
+		if (!buffers)
+			return;
 
-	// TODO: Is there any better way to choose the color buffers
+		// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
 		u32 addr = render->local_mem_addr + buffers[id].offset; \
@@ -424,20 +426,21 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 
 	//if (0 <= m_id && m_id < 4) SHOW_BUFFER(m_id);
 
-	display_buffer(this, m_image);
+		display_buffer(this, m_image);
 
-	if (m_isTex)
-	{
-/*		u8 location = render->textures[m_cur_texture].location();
-		if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
-			&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
-			memory_viewer_panel::ShowImage(this,
-				rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
-				render->textures[m_cur_texture].width(),
-				render->textures[m_cur_texture].height(), false);*/
-	}
+		if (m_isTex)
+		{
+			/*		u8 location = render->textures[m_cur_texture].location();
+					if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
+						&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
+						memory_viewer_panel::ShowImage(this,
+							rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
+							render->textures[m_cur_texture].width(),
+							render->textures[m_cur_texture].height(), false);*/
+		}
 
 #undef SHOW_BUFFER
+	}
 }
 
 namespace
