@@ -173,7 +173,10 @@ msg_dialog_frame::msg_dialog_frame(QWindow* taskbarTarget) : m_taskbarTarget(tas
 
 msg_dialog_frame::~msg_dialog_frame() {
 #ifdef _WIN32
-	m_tb_progress->hide();
+	if (m_tb_progress)
+	{
+		m_tb_progress->hide();
+	}
 	if (m_tb_button)
 	{
 		m_tb_button->deleteLater();
