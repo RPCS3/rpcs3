@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 enum SELF_KEY_TYPE {
 	KEY_LV0 = 1,
@@ -11,7 +12,7 @@ enum SELF_KEY_TYPE {
 	KEY_ISO,
 	KEY_LDR,
 	KEY_UNK7,
-    KEY_NPDRM
+	KEY_NPDRM
 };
 
 struct SELF_KEY {
@@ -159,7 +160,7 @@ class KeyVault
 	std::vector<SELF_KEY> sk_LDR_arr;
 	std::vector<SELF_KEY> sk_UNK7_arr;
 	std::vector<SELF_KEY> sk_NPDRM_arr;
-	u8 klicensee_key[0x10] = {};
+	std::unique_ptr<u8[]> klicensee_key;
 
 public:
 	KeyVault();

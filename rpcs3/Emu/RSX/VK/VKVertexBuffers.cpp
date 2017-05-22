@@ -260,19 +260,20 @@ namespace
 		void operator()(const rsx::vertex_array_buffer& vertex_array)
 		{
 			// Fill vertex_array
-			u32 element_size =
-				rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
+			u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
 			u32 real_element_size = vk::get_suitable_vk_size(vertex_array.type, vertex_array.attribute_size);
 
 			u32 upload_size = real_element_size * vertex_count;
-			bool requires_expansion = vk::requires_component_expansion(vertex_array.type, vertex_array.attribute_size);
 
 			VkDeviceSize offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(upload_size);
 			void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, upload_size);
-			vk::prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
+			
 			gsl::span<gsl::byte> dest_span(static_cast<gsl::byte*>(dst), upload_size);
-
 			write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, real_element_size);
+
+			//Padding the vertex buffer should be done after the writes have been done
+			//write_vertex_data function may 'dirty' unused sections of the buffer as optimization
+			vk::prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
 
 			m_attrib_ring_info.unmap();
 			const VkFormat format = vk::get_suitable_vk_format(vertex_array.type, vertex_array.attribute_size);
@@ -283,44 +284,34 @@ namespace
 
 		void operator()(const rsx::vertex_array_register& vertex_register)
 		{
-			switch (vertex_register.type)
+			size_t data_size = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
+			const VkFormat format = vk::get_suitable_vk_format(vertex_register.type, vertex_register.attribute_size);
+
+			u32 offset_in_attrib_buffer = 0;
+
+			if (vk::requires_component_expansion(vertex_register.type, vertex_register.attribute_size))
 			{
-			case rsx::vertex_base_type::f:
+				const u32 num_stored_verts = static_cast<u32>(
+					data_size / (sizeof(float) * vertex_register.attribute_size));
+				const u32 real_element_size = vk::get_suitable_vk_size(vertex_register.type, vertex_register.attribute_size);
+
+				data_size = real_element_size * num_stored_verts;
+				offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
+				void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
+
+				vk::expand_array_components<float, 3, 4, 1>(reinterpret_cast<const float*>(vertex_register.data.data()), dst, num_stored_verts);
+				m_attrib_ring_info.unmap();
+			}
+			else
 			{
-				size_t data_size = rsx::get_vertex_type_size_on_host(
-					vertex_register.type, vertex_register.attribute_size);
-				const VkFormat format = vk::get_suitable_vk_format(vertex_register.type, vertex_register.attribute_size);
-
-				u32 offset_in_attrib_buffer = 0;
-
-				if (vk::requires_component_expansion(vertex_register.type, vertex_register.attribute_size))
-				{
-					const u32 num_stored_verts = static_cast<u32>(
-						data_size / (sizeof(float) * vertex_register.attribute_size));
-					const u32 real_element_size = vk::get_suitable_vk_size(vertex_register.type, vertex_register.attribute_size);
-
-					data_size = real_element_size * num_stored_verts;
-					offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
-					void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
-
-					vk::expand_array_components<float, 3, 4, 1>(reinterpret_cast<const float*>(vertex_register.data.data()), dst, num_stored_verts);
-					m_attrib_ring_info.unmap();
-				}
-				else
-				{
-					offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
-					void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
-					memcpy(dst, vertex_register.data.data(), data_size);
-					m_attrib_ring_info.unmap();
-				}
-
-				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
-				m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vertex_register.index], descriptor_sets);
-				break;
+				offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
+				void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, data_size);
+				memcpy(dst, vertex_register.data.data(), data_size);
+				m_attrib_ring_info.unmap();
 			}
-			default:
-				fmt::throw_exception("Unknown base type %d" HERE, (u32)vertex_register.type);
-			}
+
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
+			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vertex_register.index], descriptor_sets);
 		}
 
 		void operator()(const rsx::empty_vertex_array& vbo)

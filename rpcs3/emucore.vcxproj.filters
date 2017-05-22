@@ -1774,5 +1774,8 @@
     <ClInclude Include="Emu\Cell\lv2\sys_ss.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\CRC.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
