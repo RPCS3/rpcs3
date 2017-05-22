@@ -38,7 +38,7 @@ artifacts:
    type: zip
 
 cache:
- - wxWidgets.7z
- - llvmlibs.7z
- - vulkan.7z
- - zlib.7z
+ - wxWidgets.7z -> appveyor.yml
+ - llvmlibs.7z -> appveyor.yml
+ - vulkan.7z -> appveyor.yml
+ - zlib.7z -> appveyor.yml
