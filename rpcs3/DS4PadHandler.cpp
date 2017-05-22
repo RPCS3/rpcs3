@@ -8,9 +8,18 @@
 
 namespace
 {
-	const u32 THREAD_TIMEOUT = 1000;
-	const u32 THREAD_SLEEP = 1; //ds4 has new data every ~4ms, 
-	const u32 THREAD_SLEEP_INACTIVE = 100;
+	const auto THREAD_SLEEP = 1ms; //ds4 has new data every ~4ms, 
+	const auto THREAD_SLEEP_INACTIVE = 100ms;
+
+	const u32 DS4_ACC_RES_PER_G = 8192;
+	const u32 DS4_GYRO_RES_PER_DEG_S = 16; // technically this could be 1024, but keeping it at 16 keeps us within 16 bits of precision
+	const u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
+	const u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
+	const u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
+	const u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
+	const u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
+	const u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
+	const u32 DS4_INPUT_REPORT_GYRO_X_OFFSET = 13;
 
 	inline u16 Clamp0To255(f32 input)
 	{
@@ -102,6 +111,16 @@ namespace
 
 		return std::tuple<u16, u16>(Clamp0To255((outX + 1) * 127.f), Clamp0To255(((outY * -1) + 1) * 127.f));
 	}*/
+
+	inline s16 GetS16LEData(const u8* buf)
+	{
+		return (s16)(((u16)buf[0] << 0) + ((u16)buf[1] << 8));
+	}
+
+	inline u32 GetU32LEData(const u8* buf)
+	{
+		return (u32)(((u32)buf[0] << 0) + ((u32)buf[1] << 8) + ((u32)buf[2] << 16) + ((u32)buf[3] << 24));
+	}
 }
 
 DS4PadHandler::~DS4PadHandler()
@@ -376,12 +395,13 @@ void DS4PadHandler::ProcessData()
 			pad.m_buttons[12 + i - 4].m_value = pressed ? 255 : 0;
 		}
 
+		// these values come already calibrated from our DS4Thread,
+		// all we need to do is convert to ds3 range
+
 		// accel
-		// todo: scaling and double check these
-		// *i think* this is the constant for getting accel into absolute 'g' format...also need to flip them
-		f32 accelX = (((s16)((u16)(buf[20] << 8) | buf[21])) / 8315.f) * -1;
-		f32 accelY = (((s16)((u16)(buf[22] << 8) | buf[23])) / 8315.f) * -1;
-		f32 accelZ = (((s16)((u16)(buf[24] << 8) | buf[25])) / 8315.f) * -1;
+		f32 accelX = (((s16)((u16)(buf[20] << 8) | buf[19])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
+		f32 accelY = (((s16)((u16)(buf[22] << 8) | buf[21])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
+		f32 accelZ = (((s16)((u16)(buf[24] << 8) | buf[23])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
 
 		// now just use formula from ds3
 		accelX = accelX * 113 + 512;
@@ -392,12 +412,15 @@ void DS4PadHandler::ProcessData()
 		pad.m_sensors[1].m_value = Clamp0To1023(accelY);
 		pad.m_sensors[2].m_value = Clamp0To1023(accelZ);
 		
-		// todo: scaling check
-		// gyroX looks to be yaw, which is what we need
-		const int gyroX = (((s16)((u16)(buf[16] << 8) | buf[17])) / 128) * -1;
-		//const int gyroY = ((u16)(buf[14] << 8) | buf[15]) / 256;
-		//const int gyroZ = ((u16)(buf[18] << 8) | buf[19]) / 256;
-		pad.m_sensors[3].m_value = Clamp0To1023(gyroX + 512);
+		// gyroX is yaw, which is all that we need
+		f32 gyroX = (((s16)((u16)(buf[16] << 8) | buf[15])) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S)) * -1;
+		//const int gyroY = ((u16)(buf[14] << 8) | buf[13]) / 256;
+		//const int gyroZ = ((u16)(buf[18] << 8) | buf[17]) / 256;
+
+		// convert to ds3
+		gyroX = gyroX * (123.f / 90.f) + 512;
+
+		pad.m_sensors[3].m_value = Clamp0To1023(gyroX);
 
 		i++;
 	}
@@ -428,8 +451,10 @@ void DS4Thread::SetRumbleData(u32 port, u8 largeVibrate, u8 smallVibrate)
 	{
 		if (i == port)
 		{
+			controller.second.newVibrateData = controller.second.largeVibrate != largeVibrate || controller.second.smallVibrate != smallVibrate;
 			controller.second.largeVibrate = largeVibrate;
 			controller.second.smallVibrate = smallVibrate;
+			break;
 		}
 		++i;
 	}
@@ -461,6 +486,127 @@ std::array<std::array<u8, 64>, MAX_GAMEPADS> DS4Thread::GetControllerData()
 	return rtnData;
 }
 
+bool DS4Thread::GetCalibrationData(DS4Device* ds4Dev)
+{
+	std::array<u8, 64> buf;
+	if (ds4Dev->btCon)
+	{
+		for (int tries = 0; tries < 3; ++tries) {
+			buf[0] = 0x05;
+			if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE) <= 0)
+				return false;
+
+			const u8 btHdr = 0xA3;
+			const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_FEATURE_REPORT_0x05_SIZE - 4), crcTable, crcHdr);
+			const u32 crcReported = GetU32LEData(&buf[DS4_FEATURE_REPORT_0x05_SIZE - 4]);
+			if (crcCalc != crcReported)
+				LOG_WARNING(HLE, "[DS4] Calibration CRC check failed! Will retry up to 3 times. Received 0x%x, Expected 0x%x", crcReported, crcCalc);
+			else break;
+			if (tries == 2)
+				return false;
+		}
+	}
+	else
+	{
+		buf[0] = 0x02;
+		if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE) <= 0)
+			return false;
+	}
+
+	ds4Dev->calibData[DS4CalibIndex::PITCH].bias = GetS16LEData(&buf[1]);
+	ds4Dev->calibData[DS4CalibIndex::YAW].bias = GetS16LEData(&buf[3]);
+	ds4Dev->calibData[DS4CalibIndex::ROLL].bias = GetS16LEData(&buf[5]);
+
+	s16 pitchPlus, pitchNeg, rollPlus, rollNeg, yawPlus, yawNeg;
+	if (ds4Dev->btCon)
+	{
+		pitchPlus = GetS16LEData(&buf[7]);
+		yawPlus   = GetS16LEData(&buf[9]);
+		rollPlus  = GetS16LEData(&buf[11]);
+		pitchNeg  = GetS16LEData(&buf[13]);
+		yawNeg    = GetS16LEData(&buf[15]);
+		rollNeg   = GetS16LEData(&buf[17]);
+	}
+	else
+	{
+		pitchPlus = GetS16LEData(&buf[7]);
+		pitchNeg  = GetS16LEData(&buf[9]);
+		yawPlus   = GetS16LEData(&buf[11]);
+		yawNeg    = GetS16LEData(&buf[13]);
+		rollPlus  = GetS16LEData(&buf[15]);
+		rollNeg   = GetS16LEData(&buf[17]);
+	}
+
+	const s32 gyroSpeedScale = GetS16LEData(&buf[19]) + GetS16LEData(&buf[21]);
+
+	ds4Dev->calibData[DS4CalibIndex::PITCH].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calibData[DS4CalibIndex::PITCH].sensDenom = pitchPlus - pitchNeg;
+
+	ds4Dev->calibData[DS4CalibIndex::YAW].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calibData[DS4CalibIndex::YAW].sensDenom = yawPlus - yawNeg;
+
+	ds4Dev->calibData[DS4CalibIndex::ROLL].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calibData[DS4CalibIndex::ROLL].sensDenom = rollPlus - rollNeg;
+
+	const s16 accelXPlus = GetS16LEData(&buf[23]);
+	const s16 accelXNeg  = GetS16LEData(&buf[25]);
+	const s16 accelYPlus = GetS16LEData(&buf[27]);
+	const s16 accelYNeg  = GetS16LEData(&buf[29]);
+	const s16 accelZPlus = GetS16LEData(&buf[31]);
+	const s16 accelZNeg  = GetS16LEData(&buf[33]);
+
+	const s32 accelXRange = accelXPlus - accelXNeg;
+	ds4Dev->calibData[DS4CalibIndex::X].bias = accelXPlus - accelXRange / 2;
+	ds4Dev->calibData[DS4CalibIndex::X].sensNumer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calibData[DS4CalibIndex::X].sensDenom = accelXRange;
+
+	const s32 accelYRange = accelYPlus - accelYNeg;
+	ds4Dev->calibData[DS4CalibIndex::Y].bias = accelYPlus - accelYRange / 2;
+	ds4Dev->calibData[DS4CalibIndex::Y].sensNumer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calibData[DS4CalibIndex::Y].sensDenom = accelYRange;
+
+	const s32 accelZRange = accelZPlus - accelZNeg;
+	ds4Dev->calibData[DS4CalibIndex::Z].bias = accelZPlus - accelZRange / 2;
+	ds4Dev->calibData[DS4CalibIndex::Z].sensNumer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calibData[DS4CalibIndex::Z].sensDenom = accelZRange;
+
+	return true;
+}
+
+void DS4Thread::CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo)
+{
+	std::string serial = "";
+	DS4Device ds4Dev;
+	ds4Dev.hidDevice = hidDevice;
+	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
+	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
+	std::array<u8, 64> buf{};
+	buf[0] = 0x81;
+	if (hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE) > 0)
+	{
+		serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
+	}
+	else
+	{
+		ds4Dev.btCon = true;
+		std::wstring wSerial(hidDevInfo->serial_number);
+		serial = std::string(wSerial.begin(), wSerial.end());
+	}
+
+	if (!GetCalibrationData(&ds4Dev))
+	{
+		LOG_ERROR(HLE, "[DS4] Failed getting calibration data, ignoring controller!");
+		hid_close(hidDevice);
+		return;
+	}
+
+	ds4Dev.path = hidDevInfo->path;
+
+	hid_set_nonblocking(hidDevice, 1);
+	controllers.emplace(serial, ds4Dev);
+}
+
 void DS4Thread::on_init(const std::shared_ptr<void>& _this)
 {
 	const int res = hid_init();
@@ -479,29 +625,8 @@ void DS4Thread::on_init(const std::shared_ptr<void>& _this)
 
 			hid_device* dev = hid_open_path(devInfo->path);
 			if (dev)
-			{
-				hid_set_nonblocking(dev, 1);
-				// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
-				// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
-				std::array<u8, 7> buf{};
-				buf[0] = 0x81;
-				if (hid_get_feature_report(dev, buf.data(), buf.size()) > 0)
-				{	
-					std::string serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
-					controllers.emplace(serial, DS4Device{ dev, devInfo->path, false });
-				}
-				else
-				{
-					// this kicks bt into sending the correct data
-					std::array<u8, 64> buf{};
-					buf[0] = 0x2;
-					hid_get_feature_report(dev, buf.data(), buf.size());
+				CheckAddDevice(dev, devInfo);
 
-					std::wstring wSerial(devInfo->serial_number);
-					std::string serialNum = std::string(wSerial.begin(), wSerial.end());
-					controllers.emplace(serialNum, DS4Device{ dev, devInfo->path, true});
-				}
-			}
 			devInfo = devInfo->next;
 		}
 	}
@@ -524,6 +649,46 @@ DS4Thread::~DS4Thread()
 	hid_exit();
 }
 
+void DS4Thread::SendVibrateData(const DS4Device& device)
+{
+	std::array<u8, 78> outputBuf{0};
+	// write rumble state
+	if (device.btCon)
+	{
+		outputBuf[0] = 0x11;
+		outputBuf[1] = 0xC4;
+		outputBuf[3] = 0x07;
+		outputBuf[6] = device.smallVibrate;
+		outputBuf[7] = device.largeVibrate;
+		outputBuf[8] = 0x00; // red
+		outputBuf[9] = 0x00; // green
+		outputBuf[10] = 0xff; // blue
+
+		const u8 btHdr = 0xA2;
+		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+		const u32 crcCalc = CRCPP::CRC::Calculate(outputBuf.data(), (DS4_OUTPUT_REPORT_0x11_SIZE - 4), crcTable, crcHdr);
+
+		outputBuf[74] = (crcCalc >> 0) & 0xFF;
+		outputBuf[75] = (crcCalc >> 8) & 0xFF;
+		outputBuf[76] = (crcCalc >> 16) & 0xFF;
+		outputBuf[77] = (crcCalc >> 24) & 0xFF;
+
+		hid_write_control(device.hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x11_SIZE);
+	}
+	else
+	{
+		outputBuf[0] = 0x05;
+		outputBuf[1] = 0x07;
+		outputBuf[4] = device.smallVibrate;
+		outputBuf[5] = device.largeVibrate;
+		outputBuf[6] = 0x00; // red
+		outputBuf[7] = 0x00; // green
+		outputBuf[8] = 0xff; // blue
+
+		hid_write(device.hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x05_SIZE);
+	}
+}
+
 void DS4Thread::on_task()
 {
 	while (!Emu.IsStopped())
@@ -537,9 +702,8 @@ void DS4Thread::on_task()
 		u32 online = 0;
 		u32 i = 0;
 
-		std::array<u8, 64> buf{};
-		std::array<u8, 67> btBuf{};
-		std::array<u8, 78> outputBuf{0};
+		std::array<u8, 78> buf{};
+
 
 		for (auto & controller : controllers)
 		{
@@ -547,14 +711,14 @@ void DS4Thread::on_task()
 
 			if (controller.second.hidDevice == nullptr)
 			{
-				// try to connect
+				// try to reconnect
 				hid_device* dev = hid_open_path(controller.second.path.c_str());
 				if (dev)
 				{
 					hid_set_nonblocking(dev, 1);
 					if (controller.second.btCon)
 					{
-						// this kicks bt into sending the correct data
+						// We already have calibration data, but we still need this to kick BT into sending correct 0x11 reports
 						std::array<u8, 64> buf{};
 						buf[0] = 0x2;
 						hid_get_feature_report(dev, buf.data(), buf.size());
@@ -570,81 +734,59 @@ void DS4Thread::on_task()
 
 			online++;
 
-			if (controller.second.btCon)
+			const int res = hid_read(controller.second.hidDevice, buf.data(), controller.second.btCon ? 78 : 64);
+			if (res == -1)
 			{
-				const int res = hid_read(controller.second.hidDevice, btBuf.data(), btBuf.size());
-				if (res == -1)
-				{
-					// looks like controller disconnected or read error, deal with it on next loop
-					hid_close(controller.second.hidDevice);
-					controller.second.hidDevice = nullptr;
+				// looks like controller disconnected or read error, deal with it on next loop
+				hid_close(controller.second.hidDevice);
+				controller.second.hidDevice = nullptr;
+				continue;
+			}
+
+			// no data? keep going
+			if (res == 0)
+				continue;
+
+			int offset = 0;
+			// check report and set offset
+			if (controller.second.btCon && buf[0] == 0x11 && res == 78)
+			{
+				offset = 2;
+
+				const u8 btHdr = 0xA1;
+				const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+				const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_INPUT_REPORT_0x11_SIZE - 4), crcTable, crcHdr);
+				const u32 crcReported = GetU32LEData(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
+				if (crcCalc != crcReported) {
+					LOG_WARNING(HLE, "[DS4] Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
 					continue;
 				}
 
-				// no data? keep going
-				if (res == 0)
-					continue;
-
-				// not the report we want
-				if (btBuf[0] != 0x11)
-					continue;
-
-				if (res != 67)
-					fmt::throw_exception("unexpected ds4 bt packet size");
-
-				// shave off first two bytes that are bluetooth specific
-				memcpy(padData[i].data(), &btBuf[2], 64);
 			}
+			else if (!controller.second.btCon && buf[0] == 0x01 && res == 64)
+				offset = 0;
 			else
+				continue;
+
+			int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
+			for (int i = 0; i < DS4CalibIndex::COUNT; ++i)
 			{
-				const int res = hid_read(controller.second.hidDevice, buf.data(), buf.size());
-				if (res == -1 || (res != 0 && res != 64))
-				{
-					// looks like controller disconnected or read error, deal with it on next loop
-					hid_close(controller.second.hidDevice);
-					controller.second.hidDevice = nullptr;
-					continue;
-				}
-
-				// no data? keep going
-				if (res == 0)
-					continue;
-
-				memcpy(padData[i].data(), buf.data(), 64);
+				const s16 rawValue = GetS16LEData(&buf[calibOffset]);
+				const s16 calValue = ApplyCalibration(rawValue, controller.second.calibData[i]);
+				buf[calibOffset++] = ((u16)calValue >> 0) & 0xFF;
+				buf[calibOffset++] = ((u16)calValue >> 8) & 0xFF;
 			}
 
-			outputBuf.fill(0);
+			memcpy(padData[i].data(), &buf[offset], 64);
 
-			// write rumble state
-			if (controller.second.btCon)
+			if (controller.second.newVibrateData)
 			{
-				outputBuf[0] = 0x11;
-				outputBuf[1] = 0x80;
-				outputBuf[3] = 0xff;
-				outputBuf[6] = controller.second.smallVibrate;
-				outputBuf[7] = controller.second.largeVibrate;
-				outputBuf[8] = 0x00; // red
-				outputBuf[9] = 0x00; // green
-				outputBuf[10] = 0xff; // blue
-
-				hid_write_control(controller.second.hidDevice, outputBuf.data(), 78);
+				SendVibrateData(controller.second);
+				controller.second.newVibrateData = false;
 			}
-			else
-			{
-				outputBuf[0] = 0x05;
-				outputBuf[1] = 0xff;
-				outputBuf[4] = controller.second.smallVibrate;
-				outputBuf[5] = controller.second.largeVibrate;
-				outputBuf[6] = 0x00; // red
-				outputBuf[7] = 0x00; // green
-				outputBuf[8] = 0xff; // blue
-
-				hid_write(controller.second.hidDevice, outputBuf.data(), 64);
-			}
-
 
 			i++;
 		}
-		std::this_thread::sleep_for((online > 0) ? 1ms : 100ms);
+		std::this_thread::sleep_for((online > 0) ? THREAD_SLEEP : THREAD_SLEEP_INACTIVE);
 	}
 }

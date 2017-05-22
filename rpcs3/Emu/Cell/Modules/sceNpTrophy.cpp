@@ -347,7 +347,8 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 	// TODO: This is not accurate. It's just an approximation of the real value
 	//       The real value can be obtained in TRP.cpp:
 	//		 m_headers.trp_file_size - sizeof(m_headers) - (m_headers.trp_files_count * m_headers.trp_element_size);
-	*reqspace = ctxt->trp_stream.size();
+	//*reqspace = ctxt->trp_stream.size();
+	*reqspace = 0; // Since we currently just say the trophys are installed, there's no required disk space
 
 	return CELL_OK;
 }

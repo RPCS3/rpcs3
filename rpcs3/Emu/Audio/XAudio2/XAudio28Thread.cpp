@@ -2,14 +2,10 @@
 
 #include "Utilities/Log.h"
 #include "Utilities/StrFmt.h"
-#include "Utilities/Config.h"
 #include "Emu/System.h"
 
 #include "XAudio2Thread.h"
 #include "3rdparty/minidx12/Include/xaudio2.h"
-
-extern cfg::bool_entry g_cfg_audio_convert_to_u16;
-extern cfg::bool_entry g_cfg_audio_downmix_to_2ch;
 
 static thread_local HMODULE s_tls_xaudio2_lib{};
 static thread_local IXAudio2* s_tls_xaudio2_instance{};
@@ -40,7 +36,7 @@ void XAudio2Thread::xa28_init(void* lib)
 		return;
 	}
 
-	hr = s_tls_xaudio2_instance->CreateMasteringVoice(&s_tls_master_voice, g_cfg_audio_downmix_to_2ch ? 2 : 8, 48000);
+	hr = s_tls_xaudio2_instance->CreateMasteringVoice(&s_tls_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000);
 	if (FAILED(hr))
 	{
 		LOG_ERROR(GENERAL, "XAudio2Thread : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
@@ -107,11 +103,11 @@ void XAudio2Thread::xa28_open()
 {
 	HRESULT hr;
 
-	WORD sample_size = g_cfg_audio_convert_to_u16 ? sizeof(u16) : sizeof(float);
-	WORD channels = g_cfg_audio_downmix_to_2ch ? 2 : 8;
+	WORD sample_size = g_cfg.audio.convert_to_u16 ? sizeof(u16) : sizeof(float);
+	WORD channels = g_cfg.audio.downmix_to_2ch ? 2 : 8;
 
 	WAVEFORMATEX waveformatex;
-	waveformatex.wFormatTag = g_cfg_audio_convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
+	waveformatex.wFormatTag = g_cfg.audio.convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
 	waveformatex.nChannels = channels;
 	waveformatex.nSamplesPerSec = 48000;
 	waveformatex.nAvgBytesPerSec = 48000 * (DWORD)channels * (DWORD)sample_size;
@@ -127,7 +123,7 @@ void XAudio2Thread::xa28_open()
 		return;
 	}
 
-	s_tls_source_voice->SetVolume(g_cfg_audio_downmix_to_2ch ? 1.0 : 4.0);
+	s_tls_source_voice->SetVolume(g_cfg.audio.downmix_to_2ch ? 1.0 : 4.0);
 }
 
 void XAudio2Thread::xa28_add(const void* src, int size)

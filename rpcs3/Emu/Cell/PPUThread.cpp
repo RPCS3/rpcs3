@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Utilities/VirtualMemory.h"
 #include "Crypto/sha1.h"
 #include "Emu/Memory/Memory.h"
@@ -82,18 +81,21 @@ void fmt_class_string<join_status>::format(std::string& out, u64 arg)
 	});
 }
 
-cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder", 1,
+template <>
+void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 {
-	{ "Interpreter (precise)", ppu_decoder_type::precise },
-	{ "Interpreter (fast)", ppu_decoder_type::fast },
-	{ "Recompiler (LLVM)", ppu_decoder_type::llvm },
-});
+	format_enum(out, arg, [](ppu_decoder_type type)
+	{
+		switch (type)
+		{
+		case ppu_decoder_type::precise: return "Interpreter (precise)";
+		case ppu_decoder_type::fast: return "Interpreter (fast)";
+		case ppu_decoder_type::llvm: return "Recompiler (LLVM)";
+		}
 
-cfg::bool_entry g_cfg_ppu_debug(cfg::root.core, "PPU Debug");
-
-cfg::bool_entry g_cfg_llvm_logs(cfg::root.core, "Save LLVM logs");
-
-cfg::string_entry g_cfg_llvm_cpu(cfg::root.core, "Use LLVM CPU");
+		return unknown;
+	});
+}
 
 const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
@@ -113,8 +115,8 @@ static u32 ppu_cache(u32 addr)
 {
 	// Select opcode table
 	const auto& table = *(
-		g_cfg_ppu_decoder.get() == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
-		g_cfg_ppu_decoder.get() == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
+		g_cfg.core.ppu_decoder == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
+		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
 		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
 
 	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
@@ -122,14 +124,14 @@ static u32 ppu_cache(u32 addr)
 
 static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		fmt::throw_exception("Unregistered PPU function");
 	}
 
 	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
 
-	if (g_cfg_ppu_debug)
+	if (g_cfg.core.ppu_debug)
 	{
 		LOG_ERROR(PPU, "Unregistered instruction: 0x%08x", op.opcode);
 	}
@@ -196,7 +198,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 
 	if (!size)
 	{
-		if (g_cfg_ppu_debug)
+		if (g_cfg.core.ppu_debug)
 		{
 			LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
 		}
@@ -204,7 +206,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 		return;	
 	}
 
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return;
 	}
@@ -249,7 +251,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 // Set or remove breakpoint
 extern void ppu_breakpoint(u32 addr)
 {
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return;
 	}
@@ -292,7 +294,7 @@ void ppu_thread::on_init(const std::shared_ptr<void>& _this)
 //sets breakpoint, does nothing if there is a breakpoint there already
 extern void ppu_set_breakpoint(u32 addr)
 {
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return;
 	}
@@ -308,7 +310,7 @@ extern void ppu_set_breakpoint(u32 addr)
 //removes breakpoint, does nothing if there is no breakpoint at location
 extern void ppu_remove_breakpoint(u32 addr)
 {
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return;
 	}
@@ -369,7 +371,7 @@ std::string ppu_thread::dump() const
 	fmt::append(ret, "XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
 	fmt::append(ret, "VSCR = [SAT=%u | NJ=%u]\n", sat, nj);
 	fmt::append(ret, "FPSCR = [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
-	fmt::append(ret, "\nCall stack:\n=========\n0x%08x (0x0) called\n", g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm ? 0 : cia);
+	fmt::append(ret, "\nCall stack:\n=========\n0x%08x (0x0) called\n", g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ? 0 : cia);
 
 	// Determine stack range
 	u32 stack_ptr = static_cast<u32>(gpr[1]);
@@ -470,7 +472,7 @@ void ppu_thread::cpu_task()
 
 void ppu_thread::exec_task()
 {
-	if (g_cfg_ppu_decoder.get() == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>(ppu_ref(cia)))(*this);
 		return;
@@ -912,7 +914,7 @@ extern void ppu_initialize()
 
 extern void ppu_initialize(const ppu_module& info)
 {
-	if (g_cfg_ppu_decoder.get() != ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
 		// Temporarily
 		s_ppu_toc = fxm::get_always<std::unordered_map<u32, u32>>().get();
@@ -924,7 +926,7 @@ extern void ppu_initialize(const ppu_module& info)
 				ppu_register_function_at(block.first, block.second, nullptr);
 			}
 
-			if (g_cfg_ppu_debug && func.size && func.toc != -1)
+			if (g_cfg.core.ppu_debug && func.size && func.toc != -1)
 			{
 				s_ppu_toc->emplace(func.addr, func.toc);
 				ppu_ref(func.addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
@@ -1009,7 +1011,7 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 
-		const auto jit = fxm::make<jit_compiler>(std::move(link_table), g_cfg_llvm_cpu.get());
+		const auto jit = fxm::make<jit_compiler>(std::move(link_table), g_cfg.core.llvm_cpu);
 
 		LOG_SUCCESS(PPU, "LLVM: JIT initialized (%s)", jit->cpu());
 	}
@@ -1210,7 +1212,7 @@ extern void ppu_initialize(const ppu_module& info)
 	std::string result;
 	raw_string_ostream out(result);
 
-	if (g_cfg_llvm_logs)
+	if (g_cfg.core.llvm_logs)
 	{
 		out << *module; // print IR
 		fs::file(Emu.GetCachePath() + obj_name + ".log", fs::rewrite).write(out.str());

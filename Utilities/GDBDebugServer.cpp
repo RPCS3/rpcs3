@@ -3,7 +3,6 @@
 
 #include "GDBDebugServer.h"
 #include "Log.h"
-#include "Config.h"
 #include <algorithm>
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -65,8 +64,6 @@ bool check_errno_again() {
 #endif
 }
 
-cfg::int_entry<1, 65535> g_cfg_gdb_server_port(cfg::root.misc, "Port", 2345);
-
 std::string u32_to_hex(u32 i) {
 	return fmt::format("%" HEX_U32, i);
 }
@@ -119,7 +116,7 @@ void GDBDebugServer::start_server()
 
 	sockaddr_in server_saddr;
 	server_saddr.sin_family = AF_INET;
-	int port = g_cfg_gdb_server_port;
+	int port = g_cfg.misc.gdb_server_port;
 	server_saddr.sin_port = htons(port);
 	server_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
 

@@ -7,7 +7,7 @@ namespace cfg
 {
 	logs::channel cfg("CFG");
 
-	entry_base::entry_base(type _type)
+	_base::_base(type _type)
 		: m_type(_type)
 	{
 		if (_type != type::node)
@@ -16,51 +16,36 @@ namespace cfg
 		}
 	}
 
-	entry_base::entry_base(type _type, node& owner, const std::string& name)
+	_base::_base(type _type, node* owner, const std::string& name)
 		: m_type(_type)
 	{
-		if (!owner.m_nodes.emplace(name, this).second)
+		for (const auto& pair : owner->m_nodes)
 		{
-			fmt::throw_exception<std::logic_error>("Node already exists: %s" HERE, name);
-		}
-	}
-
-	entry_base& entry_base::operator[](const std::string& name) const
-	{
-		if (m_type == type::node)
-		{
-			return *static_cast<const node&>(*this).m_nodes.at(name);
+			if (pair.first == name)
+			{
+				fmt::throw_exception<std::logic_error>("Node already exists: %s" HERE, name);
+			}
 		}
 
-		fmt::throw_exception<std::logic_error>("Invalid node type" HERE);
+		owner->m_nodes.emplace_back(name, this);
 	}
 
-	entry_base& entry_base::operator[](const char* name) const
-	{
-		if (m_type == type::node)
-		{
-			return *static_cast<const node&>(*this).m_nodes.at(name);
-		}
-
-		fmt::throw_exception<std::logic_error>("Invalid node type" HERE);
-	}
-
-	bool entry_base::from_string(const std::string&)
+	bool _base::from_string(const std::string&)
 	{
 		fmt::throw_exception<std::logic_error>("from_string() purecall" HERE);
 	}
 
-	bool entry_base::from_list(std::vector<std::string>&&)
+	bool _base::from_list(std::vector<std::string>&&)
 	{
 		fmt::throw_exception<std::logic_error>("from_list() purecall" HERE);
 	}
 
 	// Emit YAML
-	static void encode(YAML::Emitter& out, const class entry_base& rhs);
+	static void encode(YAML::Emitter& out, const class _base& rhs);
 
 	// Incrementally load config entries from YAML::Node.
 	// The config value is preserved if the corresponding YAML node doesn't exist.
-	static void decode(const YAML::Node& data, class entry_base& rhs);
+	static void decode(const YAML::Node& data, class _base& rhs);
 }
 
 bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
@@ -118,7 +103,13 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	try
 	{
-		const auto val = std::stoull(value, nullptr, 0);
+		std::size_t pos;
+		const auto val = std::stoull(value, &pos, 0);
+
+		if (pos != value.size())
+		{
+			return false;
+		}
 
 		if (out) *out = val;
 		return true;
@@ -151,7 +142,7 @@ std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::
 	return result;
 }
 
-void cfg::encode(YAML::Emitter& out, const cfg::entry_base& rhs)
+void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 {
 	switch (rhs.get_type())
 	{
@@ -197,7 +188,7 @@ void cfg::encode(YAML::Emitter& out, const cfg::entry_base& rhs)
 	out << rhs.to_string();
 }
 
-void cfg::decode(const YAML::Node& data, cfg::entry_base& rhs)
+void cfg::decode(const YAML::Node& data, cfg::_base& rhs)
 {
 	switch (rhs.get_type())
 	{
@@ -213,15 +204,12 @@ void cfg::decode(const YAML::Node& data, cfg::entry_base& rhs)
 			if (!pair.first.IsScalar()) continue;
 
 			// Find the key among existing nodes
-			const auto found = static_cast<node&>(rhs).get_nodes().find(pair.first.Scalar());
-
-			if (found != static_cast<node&>(rhs).get_nodes().cend())
+			for (const auto& _pair : static_cast<node&>(rhs).get_nodes())
 			{
-				decode(pair.second, *found->second);
-			}
-			else
-			{
-				// ???
+				if (_pair.first == pair.first.Scalar())
+				{
+					decode(pair.second, *_pair.second);
+				}
 			}
 		}
 
@@ -297,19 +285,18 @@ void cfg::node::from_default()
 	}
 }
 
-void cfg::bool_entry::from_default()
+void cfg::_bool::from_default()
 {
-	value = def;
+	m_value = def;
 }
 
-void cfg::string_entry::from_default()
+void cfg::string::from_default()
 {
-	*this = def;
+	m_value = def;
 }
 
 void cfg::set_entry::from_default()
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
 	m_set = {};
 }
 
@@ -326,11 +313,4 @@ void cfg::log_entry::set_map(std::map<std::string, logs::level>&& map)
 void cfg::log_entry::from_default()
 {
 	set_map({});
-}
-
-cfg::root_node& cfg::get_root()
-{
-	// Magic static
-	static root_node root;
-	return root;
 }
