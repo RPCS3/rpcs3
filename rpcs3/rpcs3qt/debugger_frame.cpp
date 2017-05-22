@@ -207,12 +207,14 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
+	if (m_choice_units->count() < 1) return;
+
 	m_disasm.reset();
 
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu_thread* data = (cpu_thread *)m_choice_units->currentData().value<void *>();
-		return m_list->item(data == &cpu);
+		return data == &cpu;
 	};
 
 	if (auto ppu = idm::select<ppu_thread>(on_select))
