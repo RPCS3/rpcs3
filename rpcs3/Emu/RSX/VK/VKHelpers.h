@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "Utilities/Config.h"
+#include "Emu/System.h"
 #include "VulkanAPI.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
@@ -22,8 +22,6 @@
 #define SCALE_OFFSET_BIND_SLOT 0
 #define TEXTURES_FIRST_BIND_SLOT 19
 #define VERTEX_TEXTURES_FIRST_BIND_SLOT 35 //19+16
-
-extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 namespace rsx
 {
@@ -184,7 +182,7 @@ namespace vk
 
 			std::vector<const char *> layers;
 
-			if (g_cfg_rsx_debug_output)
+			if (g_cfg.video.debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
 			VkDeviceCreateInfo device = {};
@@ -1090,7 +1088,7 @@ namespace vk
 
 			std::vector<const char *> layers;
 
-			if (g_cfg_rsx_debug_output)
+			if (g_cfg.video.debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
 			VkInstanceCreateInfo instance_info = {};

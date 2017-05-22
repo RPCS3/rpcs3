@@ -1,12 +1,7 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "../rsx_methods.h"
 #include "GLGSRender.h"
-
-extern cfg::bool_entry g_cfg_rsx_write_color_buffers;
-extern cfg::bool_entry g_cfg_rsx_write_depth_buffer;
-extern cfg::bool_entry g_cfg_rsx_read_color_buffers;
-extern cfg::bool_entry g_cfg_rsx_read_depth_buffer;
+#include "Emu/System.h"
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
@@ -274,7 +269,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	}
 
 	//Mark buffer regions as NO_ACCESS on Cell visible side
-	if (g_cfg_rsx_write_color_buffers)
+	if (g_cfg.video.write_color_buffers)
 	{
 		auto color_format = rsx::internals::surface_color_format_to_gl(surface_format);
 
@@ -288,7 +283,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 		}
 	}
 
-	if (g_cfg_rsx_write_depth_buffer)
+	if (g_cfg.video.write_depth_buffer)
 	{
 		if (depth_surface_info.address && depth_surface_info.pitch)
 		{
@@ -330,7 +325,7 @@ void GLGSRender::read_buffers()
 
 	glDisable(GL_STENCIL_TEST);
 
-	if (g_cfg_rsx_read_color_buffers)
+	if (g_cfg.video.read_color_buffers)
 	{
 		auto color_format = rsx::internals::surface_color_format_to_gl(rsx::method_registers.surface_color());
 
@@ -405,7 +400,7 @@ void GLGSRender::read_buffers()
 		}
 	}
 
-	if (g_cfg_rsx_read_depth_buffer)
+	if (g_cfg.video.read_depth_buffer)
 	{
 		//TODO: use pitch
 		u32 pitch = depth_surface_info.pitch;
@@ -459,7 +454,7 @@ void GLGSRender::write_buffers()
 	if (!draw_fbo)
 		return;
 
-	if (g_cfg_rsx_write_color_buffers)
+	if (g_cfg.video.write_color_buffers)
 	{
 		auto write_color_buffers = [&](int index, int count)
 		{
@@ -481,7 +476,7 @@ void GLGSRender::write_buffers()
 		write_color_buffers(0, 4);
 	}
 
-	if (g_cfg_rsx_write_depth_buffer)
+	if (g_cfg.video.write_depth_buffer)
 	{
 		//TODO: use pitch
 		if (depth_surface_info.pitch == 0) return;

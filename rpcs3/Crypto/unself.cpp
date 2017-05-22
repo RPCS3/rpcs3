@@ -5,6 +5,7 @@
 #include "unself.h"
 #include "Emu/VFS.h"
 
+#include <algorithm>
 // TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
 #include <zlib.h>
 
@@ -1085,9 +1086,6 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 		return true;
 	}
 
-	u8 klicensee_key[0x10];
-	memcpy(klicensee_key, key_v.GetKlicenseeKey(), 0x10);
-
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
 		LOG_ERROR(LOADER, "SELF: Can't decrypt network NPDRM!");
@@ -1105,8 +1103,8 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	else if (ctrl->npdrm.license == 3)  // Free license.
 	{
 		// Use klicensee if available.
-		if (memcmp(klicensee_key, std::array<u8, 0x10>{0}.data(), 0x10))
-			memcpy(npdrm_key, klicensee_key, 0x10);
+		if (key_v.GetKlicenseeKey() != nullptr)
+			memcpy(npdrm_key, key_v.GetKlicenseeKey(), 0x10);
 		else 
 			memcpy(npdrm_key, NP_KLIC_FREE, 0x10);
 	}
@@ -1559,4 +1557,11 @@ extern bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 		}
 	}
 	return true;
+}
+
+std::array<u8, 0x10> get_default_self_klic()
+{
+	std::array<u8, 0x10> key;
+	std::copy(std::begin(NP_KLIC_FREE), std::end(NP_KLIC_FREE), std::begin(key));
+	return key;
 }

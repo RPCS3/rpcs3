@@ -75,9 +75,25 @@ struct cfg_adapter
 	{
 	}
 
-	static cfg::entry_base& get_cfg(cfg::entry_base& root, cfg_location::const_iterator begin, cfg_location::const_iterator end)
+	static cfg::_base& get_cfg(cfg::_base& root, const std::string& name)
 	{
-		return begin == end ? root : get_cfg(root[*begin], begin + 1, end);
+		if (root.get_type() == cfg::type::node)
+		{
+			for (const auto& pair : static_cast<cfg::node&>(root).get_nodes())
+			{
+				if (pair.first == name)
+				{
+					return *pair.second;
+				}
+			}
+		}
+
+		fmt::throw_exception("Node not found: %s", name);
+	}
+
+	static cfg::_base& get_cfg(cfg::_base& root, cfg_location::const_iterator begin, cfg_location::const_iterator end)
+	{
+		return begin == end ? root : get_cfg(get_cfg(root, *begin), begin + 1, end);
 	}
 
 	static YAML::Node get_node(YAML::Node node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
@@ -85,9 +101,9 @@ struct cfg_adapter
 		return begin == end ? node : get_node(node[*begin], begin + 1, end); // TODO
 	}
 
-	cfg::entry_base& get_cfg() const
+	cfg::_base& get_cfg() const
 	{
-		return get_cfg(cfg::root, location.cbegin(), location.cend());
+		return get_cfg(g_cfg, location.cbegin(), location.cend());
 	}
 
 	YAML::Node get_node(YAML::Node root) const
@@ -106,7 +122,7 @@ struct radiobox_pad_helper
 	radiobox_pad_helper(cfg_location&& _loc)
 		: location(std::move(_loc))
 	{
-		for (const auto& v : cfg_adapter::get_cfg(cfg::root, location.cbegin(), location.cend()).to_list())
+		for (const auto& v : cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).to_list())
 		{
 			values.Add(fmt::FromUTF8(v));
 		}

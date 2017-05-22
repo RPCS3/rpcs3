@@ -1,15 +1,11 @@
 #include "stdafx.h"
-#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "GLGSRender.h"
 #include "GLVertexProgram.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
 #include "../rsx_utils.h"
-
-extern cfg::bool_entry g_cfg_rsx_debug_output;
-extern cfg::bool_entry g_cfg_rsx_overlay;
-extern cfg::bool_entry g_cfg_rsx_gl_legacy_buffers;
 
 #define DUMP_VERTEX_DATA 0
 
@@ -26,7 +22,7 @@ namespace
 	}
 }
 
-GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
+GLGSRender::GLGSRender() : GSRender()
 {
 	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 }
@@ -413,7 +409,7 @@ void GLGSRender::end()
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
-	if (g_cfg_rsx_debug_output)
+	if (g_cfg.video.debug_output)
 	{
 		m_program->validate();
 	}
@@ -477,7 +473,7 @@ void GLGSRender::on_init_thread()
 
 	gl::init();
 
-	if (g_cfg_rsx_debug_output)
+	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
@@ -505,6 +501,10 @@ void GLGSRender::on_init_thread()
 	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
 	m_vao.create();
 
+	//Set min alignment to 16-bytes for SSE optimizations with aligned addresses to work
+	m_min_texbuffer_alignment = std::max(m_min_texbuffer_alignment, 16);
+	m_uniform_buffer_offset_align = std::max(m_uniform_buffer_offset_align, 16);
+
 	const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
@@ -520,10 +520,11 @@ void GLGSRender::on_init_thread()
 	if (!gl_caps.ARB_buffer_storage_supported)
 	{
 		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
-		g_cfg_rsx_gl_legacy_buffers = true;
+		// TODO: do not modify config options
+		g_cfg.video.gl_legacy_buffers.from_string("true");
 	}
 
-	if (g_cfg_rsx_gl_legacy_buffers)
+	if (g_cfg.video.gl_legacy_buffers)
 	{
 		LOG_WARNING(RSX, "Using legacy openGL buffers.");
 		manually_flush_ring_buffers = true;
@@ -551,7 +552,7 @@ void GLGSRender::on_init_thread()
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
-	if (g_cfg_rsx_overlay)
+	if (g_cfg.video.overlay)
 	{
 		if (gl_caps.ARB_shader_draw_parameters_supported)
 		{
@@ -908,7 +909,7 @@ void GLGSRender::flip(int buffer)
 
 	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
-	if (g_cfg_rsx_overlay)
+	if (g_cfg.video.overlay)
 	{
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());

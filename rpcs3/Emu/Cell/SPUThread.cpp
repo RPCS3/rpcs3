@@ -1,5 +1,4 @@
-﻿#include "stdafx.h"
-#include "Utilities/Config.h"
+#include "stdafx.h"
 #include "Utilities/lockless.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -34,30 +33,27 @@ extern u64 get_timebased_time();
 
 extern thread_local u64 g_tls_fault_spu;
 
-enum class spu_decoder_type
-{
-	precise,
-	fast,
-	asmjit,
-	llvm,
-};
-
-cfg::map_entry<spu_decoder_type> g_cfg_spu_decoder(cfg::root.core, "SPU Decoder", 2,
-{
-	{ "Interpreter (precise)", spu_decoder_type::precise },
-	{ "Interpreter (fast)", spu_decoder_type::fast },
-	{ "Recompiler (ASMJIT)", spu_decoder_type::asmjit },
-	{ "Recompiler (LLVM)", spu_decoder_type::llvm },
-});
-
-cfg::bool_entry g_cfg_spu_debug(cfg::root.core, "SPU Debug");
-cfg::bool_entry g_cfg_core_bind_spu_cores(cfg::root.core, "Bind SPU threads to secondary cores");
-cfg::bool_entry g_cfg_core_lower_spu_priority(cfg::root.core, "Lower SPU thread priority");
-
 const spu_decoder<spu_interpreter_precise> s_spu_interpreter_precise;
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter_fast;
 
 std::atomic<u64> g_num_spu_threads = { 0ull };
+
+template <>
+void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_decoder_type type)
+	{
+		switch (type)
+		{
+		case spu_decoder_type::precise: return "Interpreter (precise)";
+		case spu_decoder_type::fast: return "Interpreter (fast)";
+		case spu_decoder_type::asmjit: return "Recompiler (ASMJIT)";
+		case spu_decoder_type::llvm: return "Recompiler (LLVM)";
+		}
+
+		return unknown;
+	});
+}
 
 void spu_int_ctrl_t::set(u64 ints)
 {
@@ -142,7 +138,7 @@ spu_imm_table_t::spu_imm_table_t()
 
 void SPUThread::on_spawn()
 {
-	if (g_cfg_core_bind_spu_cores)
+	if (g_cfg.core.bind_spu_cores)
 	{
 		//Get next secondary core number
 		auto core_count = std::thread::hardware_concurrency();
@@ -155,7 +151,7 @@ void SPUThread::on_spawn()
 		}
 	}
 
-	if (g_cfg_core_lower_spu_priority)
+	if (g_cfg.core.lower_spu_priority)
 	{
 		set_native_priority(-1);
 	}
@@ -239,7 +235,7 @@ void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
 	
-	if (g_cfg_spu_decoder.get() == spu_decoder_type::asmjit)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
 		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
 		return spu_recompiler_base::enter(*this);
@@ -254,8 +250,8 @@ void SPUThread::cpu_task()
 
 	// Select opcode table
 	const auto& table = *(
-		g_cfg_spu_decoder.get() == spu_decoder_type::precise ? &s_spu_interpreter_precise.get_table() :
-		g_cfg_spu_decoder.get() == spu_decoder_type::fast ? &s_spu_interpreter_fast.get_table() :
+		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &s_spu_interpreter_precise.get_table() :
+		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &s_spu_interpreter_fast.get_table() :
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS base address

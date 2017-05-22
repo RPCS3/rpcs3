@@ -53,7 +53,7 @@ enum CellNetCtlError : u32
 };
 
 // Network connection states
-enum
+enum CellNetCtlState : s32
 {
 	CELL_NET_CTL_STATE_Disconnected = 0,
 	CELL_NET_CTL_STATE_Connecting   = 1,
