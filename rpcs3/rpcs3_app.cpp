@@ -37,7 +37,6 @@
 #ifdef _WIN32
 #include "Emu/RSX/VK/VKGSRender.h"
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
-//#include <wx/msw/wrapwin.h>
 #endif
 #ifdef __linux__
 #include "Emu/Audio/ALSA/ALSAThread.h"
@@ -50,6 +49,8 @@ rpcs3_app::rpcs3_app(int argc, char* argv[]) : QApplication(argc, argv)
 
 void rpcs3_app::Init()
 {
+	Emu.Init();
+
 	// Create the main window
 	RPCS3MainWin = new main_window(nullptr);
 
@@ -62,18 +63,11 @@ void rpcs3_app::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
-	//TheApp = this;
 	setApplicationName("RPCS3");
-	//wxInitAllImageHandlers();
-
-	Emu.Init();
-
 	RPCS3MainWin->show();
-	//m_MainFrame->DoSettings(true);
 
 	// Create the thumbnail toolbar after the main_window is created
 	RPCS3MainWin->CreateThumbnailToolbar();
-
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here.
@@ -212,7 +206,7 @@ void rpcs3_app::InitializeConnects()
 	connect(RPCS3MainWin, &main_window::RequestGlobalStylesheetChange, this, &rpcs3_app::OnChangeStyleSheetRequest);
 
 	qRegisterMetaType <std::function<void()>>("std::function<void()>");
-	connect(this, &rpcs3_app::RequestCallAfter, this, &rpcs3_app::HandleCallAfter); // might need blocking, might not. Idk
+	connect(this, &rpcs3_app::RequestCallAfter, this, &rpcs3_app::HandleCallAfter);
 
 	connect(this, &rpcs3_app::OnEmulatorRun, RPCS3MainWin, &main_window::OnEmuRun);
 	connect(this, &rpcs3_app::OnEmulatorStop, this, &rpcs3_app::ResetPads);
