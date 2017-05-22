@@ -80,6 +80,27 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 }
 
+void FragmentProgramDecompiler::AddFlowOp(std::string code)
+{
+	//Flow operations can only consider conditionals and have no dst
+
+	if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
+	{
+		AddCode(code + ";");
+		return;
+	}
+	else if (!src0.exec_if_gr && !src0.exec_if_lt && !src0.exec_if_eq)
+	{
+		AddCode("//" + code + ";");
+		return;
+	}
+
+	//We have a conditional expression
+	std::string cond = GetRawCond();
+
+	AddCode("if (any(" + cond + ")) " + code + ";");
+}
+
 void FragmentProgramDecompiler::AddCode(const std::string& code)
 {
 	main.append(m_code_level, '\t') += Format(code) + "\n";
@@ -228,17 +249,8 @@ std::string FragmentProgramDecompiler::Format(const std::string& code)
 	return fmt::replace_all(code, repl_list);
 }
 
-std::string FragmentProgramDecompiler::GetCond()
+std::string FragmentProgramDecompiler::GetRawCond()
 {
-	if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
-	{
-		return "true";
-	}
-	else if (!src0.exec_if_gr && !src0.exec_if_lt && !src0.exec_if_eq)
-	{
-		return "false";
-	}
-
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
 
 	std::string swizzle, cond;
@@ -261,7 +273,21 @@ std::string FragmentProgramDecompiler::GetCond()
 	else //if(src0.exec_if_eq)
 		cond = compareFunction(COMPARE::FUNCTION_SEQ, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
 
-	return "any(" + cond + ")";
+	return cond;
+}
+
+std::string FragmentProgramDecompiler::GetCond()
+{
+	if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
+	{
+		return "true";
+	}
+	else if (!src0.exec_if_gr && !src0.exec_if_lt && !src0.exec_if_eq)
+	{
+		return "false";
+	}
+
+	return "any(" + GetRawCond() + ")";
 }
 
 void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
@@ -279,26 +305,7 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 	}
 
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle, cond;
-	swizzle += f[src0.cond_swizzle_x];
-	swizzle += f[src0.cond_swizzle_y];
-	swizzle += f[src0.cond_swizzle_z];
-	swizzle += f[src0.cond_swizzle_w];
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	if (src0.exec_if_gr && src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SGE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
-	else if (src0.exec_if_lt && src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SLE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
-	else if (src0.exec_if_gr && src0.exec_if_lt)
-		cond = compareFunction(COMPARE::FUNCTION_SNE, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
-	else if (src0.exec_if_gr)
-		cond = compareFunction(COMPARE::FUNCTION_SGT, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
-	else if (src0.exec_if_lt)
-		cond = compareFunction(COMPARE::FUNCTION_SLT, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
-	else //if(src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SEQ, AddCond() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	std::string cond = GetRawCond();
 
 	ShaderVariable dst_var(dst);
 	dst_var.symplify();
@@ -641,7 +648,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		{
 			switch (opcode)
 			{
-			case RSX_FP_OPCODE_BRK: SetDst("break"); break;
+			case RSX_FP_OPCODE_BRK: AddFlowOp("break"); break;
 			case RSX_FP_OPCODE_CAL: LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL"); break;
 			case RSX_FP_OPCODE_FENCT: forced_unit = FORCE_SCT; break;
 			case RSX_FP_OPCODE_FENCB: forced_unit = FORCE_SCB; break;
@@ -685,7 +692,7 @@ std::string FragmentProgramDecompiler::Decompile()
 					m_code_level++;
 				}
 				break;
-			case RSX_FP_OPCODE_RET: SetDst("return"); break;
+			case RSX_FP_OPCODE_RET: AddFlowOp("return"); break;
 
 			default:
 				return false;
@@ -697,7 +704,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		switch (opcode)
 		{
 		case RSX_FP_OPCODE_NOP: break;
-		case RSX_FP_OPCODE_KIL: SetDst("discard", false); break;
+		case RSX_FP_OPCODE_KIL: AddFlowOp("discard"); break;
 
 		default:
 			int prev_force_unit = forced_unit;

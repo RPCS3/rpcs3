@@ -664,9 +664,12 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 				//Just stall and get what we have at this point
 				if (std::this_thread::get_id() != rsx_thread)
 				{
-					//TODO: Guard this when the renderer is flushing the command queue, might deadlock otherwise
-					m_flush_commands = true;
-					m_queued_threads++;
+					{
+						std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
+
+						m_flush_commands = true;
+						m_queued_threads++;
+					}
 
 					//This is awful!
 					while (m_flush_commands) _mm_pause();
@@ -1200,6 +1203,8 @@ void VKGSRender::do_local_task()
 {
 	if (m_flush_commands)
 	{
+		std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
+
 		//TODO: Determine if a hard sync is necessary
 		//Pipeline barriers later may do a better job synchronizing than wholly stalling the pipeline
 		flush_command_queue();
