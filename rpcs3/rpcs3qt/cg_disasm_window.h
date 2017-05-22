@@ -11,6 +11,7 @@ class cg_disasm_window : public QTabWidget
 private slots:
 	void ShowContextMenu(const QPoint &pos);
 private:
+	QString m_path_last;
 	QTextEdit* m_disasm_text;
 	QTextEdit* m_glsl_text;
 	QWidget* tab_disasm;

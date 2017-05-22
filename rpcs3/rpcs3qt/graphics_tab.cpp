@@ -71,10 +71,9 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, QWidget *par
 		QVBoxLayout *d3dAdapterVbox = new QVBoxLayout();
 		d3dAdapterVbox->addWidget(d3dAdapterBox);
 		d3dAdapter->setLayout(d3dAdapterVbox);
-		auto enableAdapter = [=](int index)
-		{
-			if (renderBox->itemText(index) == "D3D12") d3dAdapter->setEnabled(true);
-			else d3dAdapter->setEnabled(false);
+
+		auto enableAdapter = [=](int index){
+			d3dAdapter->setEnabled(renderBox->itemText(index) == "D3D12");
 		};
 		enableAdapter(renderBox->currentIndex());
 		connect(renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), d3dAdapter, enableAdapter);
@@ -157,15 +156,16 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, QWidget *par
 		int index = d3dAdapterBox->findText(adapterTxt);
 		if (index == -1)
 		{
-			LOG_WARNING(GENERAL, "Can't find the selected D3D adapter in dialog");
+			index = 0;
+			LOG_WARNING(GENERAL, "Current D3D adapter not available: resetting to default!");
 		}
-		else
-		{
-			d3dAdapterBox->setCurrentIndex(index);
-		}
-		connect(d3dAdapterBox, &QComboBox::currentTextChanged, [=](QString text) {
+		d3dAdapterBox->setCurrentIndex(index);
+
+		auto setD3D12 = [=](QString text){
 			xemu_settings->SetSetting(emu_settings::D3D12Adapter, text.toStdString());
-		});
+		};
+		setD3D12(d3dAdapterBox->currentText()); // Init
+		connect(d3dAdapterBox, &QComboBox::currentTextChanged, setD3D12);
 	}
 	else // Remove D3D12 option from render combobox
 	{

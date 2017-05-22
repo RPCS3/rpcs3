@@ -18,10 +18,21 @@
 #include <QButtonGroup>
 #include <QLineEdit>
 
+#ifdef _WIN32
+#include <QWinTaskbarProgress>
+#include <QWinTaskbarButton>
+#include <QWinTHumbnailToolbar>
+#include <QWinTHumbnailToolbutton>
+#endif
+
 class msg_dialog_frame : public QObject, public MsgDialogBase
 {
 	Q_OBJECT
 
+#ifdef _WIN32
+	QWinTaskbarButton* m_tb_button = nullptr;
+	QWinTaskbarProgress* m_tb_progress = nullptr;
+#endif
 	QDialog* m_dialog =nullptr;
 	QLabel* m_text = nullptr;
 	QLabel* m_text1 = nullptr;
@@ -36,13 +47,14 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 	QHBoxLayout* m_hBoxLayout2 = nullptr;
 	QHBoxLayout* m_hBoxLayout3 = nullptr;
 
-
 	QDialog* osk_dialog = nullptr;
 	QHBoxLayout* osk_hBoxLayout = nullptr;
 	QFormLayout* osk_layout = nullptr;
 	QPushButton* osk_button_ok = nullptr;
 	QLineEdit* osk_input = nullptr;
 	char16_t* osk_text_return;
+
+	const int m_gauge_max = 100;
 
 public:
 	msg_dialog_frame(QWindow* taskbarTarget);

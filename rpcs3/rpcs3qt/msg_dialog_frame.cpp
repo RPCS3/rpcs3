@@ -1,7 +1,6 @@
 
 #include "msg_dialog_frame.h"
 
-
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
 void msg_dialog_frame::Create(const std::string& msg)
@@ -28,7 +27,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 	if (type.progress_bar_count >= 2)
 	{
 		m_gauge2 = new QProgressBar(m_dialog);
-		m_gauge2->setMaximum(100);
+		m_gauge2->setRange(0, m_gauge_max);
 		m_gauge2->setFixedWidth(300);
 		m_text2 = new QLabel("", m_dialog);
 	}
@@ -36,7 +35,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 	if (type.progress_bar_count >= 1)
 	{
 		m_gauge1 = new QProgressBar(m_dialog);
-		m_gauge1->setMaximum(100);
+		m_gauge1->setRange(0, m_gauge_max);
 		m_gauge1->setFixedWidth(300);
 		m_text1 = new QLabel("", m_dialog);
 	}
@@ -48,7 +47,14 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_hBoxLayout1->addWidget(m_text1);
 		m_layout->addRow(m_hBoxLayout1);
 		m_layout->addRow(m_gauge1);
-		m_gauge1->setValue(0);
+
+#ifdef _WIN32
+		m_tb_button = new QWinTaskbarButton();
+		m_tb_button->setWindow(m_taskbarTarget);
+		m_tb_progress = m_tb_button->progress();
+		m_tb_progress->setRange(0, m_gauge_max);
+		m_tb_progress->setVisible(true);
+#endif
 	}
 
 	if (m_gauge2)
@@ -58,7 +64,6 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_hBoxLayout2->addWidget(m_text2);
 		m_layout->addRow(m_hBoxLayout2);
 		m_layout->addRow(m_gauge2);
-		m_gauge2->setValue(0);
 	}
 
 	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO)
@@ -82,8 +87,8 @@ void msg_dialog_frame::Create(const std::string& msg)
 		{
 			m_button_yes->setFocus();
 		}
-		connect(m_button_yes, &QAbstractButton::clicked, m_dialog, [=] {on_close(CELL_MSGDIALOG_BUTTON_YES); m_dialog->accept();});
-		connect(m_button_no, &QAbstractButton::clicked, m_dialog, [=] {on_close(CELL_MSGDIALOG_BUTTON_NO); m_dialog->accept();});
+		connect(m_button_yes, &QAbstractButton::clicked, [=] {on_close(CELL_MSGDIALOG_BUTTON_YES); m_dialog->accept(); });
+		connect(m_button_no, &QAbstractButton::clicked, [=] {on_close(CELL_MSGDIALOG_BUTTON_NO); m_dialog->accept(); });
 	}
 
 	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK)
@@ -102,11 +107,12 @@ void msg_dialog_frame::Create(const std::string& msg)
 		{
 			m_button_ok->setFocus();
 		}
+		connect(m_button_ok, &QAbstractButton::clicked, [=] { on_close(CELL_MSGDIALOG_BUTTON_OK); m_dialog->accept(); });
 	}
 
 	m_dialog->setLayout(m_layout);
 
-	connect(m_dialog, &QDialog::rejected, m_dialog, [=] {if (!type.disable_cancel) { on_close(CELL_MSGDIALOG_BUTTON_ESCAPE); }});
+	connect(m_dialog, &QDialog::rejected, [=] {if (!type.disable_cancel) { on_close(CELL_MSGDIALOG_BUTTON_ESCAPE); }});
 
 	//Fix size
 	m_dialog->setFixedSize(m_dialog->sizeHint());
@@ -150,18 +156,13 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 	osk_dialog->setLayout(osk_layout);
 
 	//Events
-	auto textEntered = [=] {
+	connect(osk_input, &QLineEdit::textChanged, [=] {
 		std::memcpy(osk_text_return, reinterpret_cast<const char16_t*>(osk_input->text().constData()), osk_input->text().size() * 2);
 		on_osk_input_entered();
-	};
-	auto dialogAccepted = [=] {
-		on_close(CELL_MSGDIALOG_BUTTON_OK);
-		osk_dialog->accept();
-	};
-	connect(osk_input, &QLineEdit::textChanged, osk_dialog, textEntered);
-	connect(osk_input, &QLineEdit::returnPressed, osk_dialog, dialogAccepted);
-	connect(osk_button_ok, &QAbstractButton::clicked, osk_dialog, dialogAccepted);
-	connect(osk_dialog, &QDialog::rejected, osk_dialog, [=]{if (!type.disable_cancel){on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);}});
+	});
+	connect(osk_input, &QLineEdit::returnPressed, [=] { on_close(CELL_MSGDIALOG_BUTTON_OK); osk_dialog->accept(); });
+	connect(osk_button_ok, &QAbstractButton::clicked, [=] { on_close(CELL_MSGDIALOG_BUTTON_OK); osk_dialog->accept(); });
+	connect(osk_dialog, &QDialog::rejected, [=] {if (!type.disable_cancel) { on_close(CELL_MSGDIALOG_BUTTON_ESCAPE); }});
 
 	//Fix size
 	osk_dialog->setFixedSize(osk_dialog->sizeHint());
@@ -171,6 +172,13 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 msg_dialog_frame::msg_dialog_frame(QWindow* taskbarTarget) : m_taskbarTarget(taskbarTarget) {}
 
 msg_dialog_frame::~msg_dialog_frame() {
+#ifdef _WIN32
+	m_tb_progress->hide();
+	if (m_tb_button)
+	{
+		m_tb_button->deleteLater();
+	}
+#endif
 	if (m_dialog)
 	{
 		m_dialog->deleteLater();
@@ -188,10 +196,17 @@ void msg_dialog_frame::ProgressBarSetMsg(u32 index, const std::string& msg)
 
 void msg_dialog_frame::ProgressBarReset(u32 index)
 {
-	if (m_dialog)
+	if (index == 0 && m_gauge1)
 	{
-		if (index == 0 && m_gauge1) m_gauge1->setValue(0);
-		if (index == 1 && m_gauge2) m_gauge2->setValue(0);
+		m_gauge1->reset();
+#ifdef _WIN32
+		m_tb_progress->reset();
+#endif
+	}
+
+	if (index == 1 && m_gauge2)
+	{
+		m_gauge2->reset();
 	}
 }
 
@@ -199,7 +214,17 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 {
 	if (m_dialog)
 	{
-		if (index == 0 && m_gauge1) m_gauge1->setValue(m_gauge1->value() + delta);
-		if (index == 1 && m_gauge2) m_gauge2->setValue(m_gauge2->value() + delta);
+		if (index == 0 && m_gauge1)
+		{
+			m_gauge1->setValue(m_gauge1->value() + delta);
+#ifdef _WIN32
+			m_tb_progress->setValue(m_tb_progress->value() + delta);
+#endif
+		}
+
+		if (index == 1 && m_gauge2)
+		{
+			m_gauge2->setValue(m_gauge2->value() + delta);
+		}
 	}
 }

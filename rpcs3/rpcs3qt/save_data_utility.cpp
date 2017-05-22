@@ -11,7 +11,7 @@ save_data_info_dialog::save_data_info_dialog(QWidget* parent, const save_data_in
 
 	// Table
 	m_list = new QTableWidget(this);
-	//m_list->setItemDelegate(new ListItemDelegate()); // to get rid of item selection rectangles include "ListItemDelegate.h"
+	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
 	//m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setColumnCount(2);
@@ -180,7 +180,7 @@ save_data_list_dialog::save_data_list_dialog(QWidget* parent, bool enable_manage
 
 	// Table
 	m_list = new QTableWidget(this);
-	//m_list->setItemDelegate(new ListItemDelegate()); // to get rid of item selection rectangles include "ListItemDelegate.h"
+	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
 	//m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);

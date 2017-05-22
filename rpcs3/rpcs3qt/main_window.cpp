@@ -175,16 +175,16 @@ void main_window::BootElf()
 		stopped = true;
 	}
 
-	QFileDialog dlg(this, tr("Select (S)ELF To Boot"), "", tr("(S)ELF files (*BOOT.BIN *.elf *.self);;"
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), m_path_last_ELF, tr(
+		"(S)ELF files (*BOOT.BIN *.elf *.self);;"
 		"ELF files (BOOT.BIN *.elf);;"
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
-		"All files (*.*)"));
-	dlg.setAcceptMode(QFileDialog::AcceptOpen);
-	dlg.setFileMode(QFileDialog::ExistingFile);
+		"All files (*.*)"), 
+		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
-	if (dlg.exec() == QDialog::Rejected)
+	if (filePath == NULL)
 	{
 		if (stopped) Emu.Resume();
 		return;
@@ -192,7 +192,12 @@ void main_window::BootElf()
 
 	LOG_NOTICE(LOADER, "(S)ELF: booting...");
 
-	const std::string path = dlg.selectedFiles().first().toUtf8().toStdString();
+	// If we resolved the filepath earlier we would end up setting the last opened dir to the unwanted
+	// game folder in case of having e.g. a Game Folder with collected links to elf files.
+	// Don't set last path earlier in case of cancelled dialog
+	m_path_last_ELF = filePath;
+	const std::string path = QFileInfo(filePath).canonicalFilePath().toUtf8().toStdString();
+
 	SetAppIconFromPath(path);
 	Emu.Stop();
 	Emu.SetPath(path);
@@ -211,18 +216,16 @@ void main_window::BootGame()
 		stopped = true;
 	}
 
-	QFileDialog dlg(this, tr("Select Game Folder"));
-	dlg.setAcceptMode(QFileDialog::AcceptOpen);
-	dlg.setFileMode(QFileDialog::Directory);
-	dlg.setOptions(QFileDialog::ShowDirsOnly);
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), m_path_last_Game, QFileDialog::ShowDirsOnly);
 
-	if (dlg.exec() == QDialog::Rejected)
+	if (dirPath == NULL)
 	{
 		if (stopped) Emu.Resume();
 		return;
 	}
 	Emu.Stop();
-	const std::string path = dlg.selectedFiles().first().toUtf8();
+	m_path_last_Game = QFileInfo(dirPath).path();
+	const std::string path = dirPath.toUtf8().toStdString();
 	SetAppIconFromPath(path);
 
 	if (!Emu.BootGame(path))
@@ -233,7 +236,7 @@ void main_window::BootGame()
 
 void main_window::InstallPkg()
 {
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), "", tr("PKG files (*.pkg);;All files (*.*)"));
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), m_path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
 
 	if (filePath == NULL)
 	{
@@ -241,9 +244,9 @@ void main_window::InstallPkg()
 	}
 	Emu.Stop();
 
-	const std::string fileName = filePath.section("/", -1, -1).toUtf8();
-
-	const std::string path = filePath.toUtf8();
+	m_path_last_PKG = QFileInfo(filePath).path();
+	const std::string fileName = QFileInfo(filePath).fileName().toUtf8().toStdString();
+	const std::string path = filePath.toUtf8().toStdString();
 
 	// Open PKG file
 	fs::file pkg_f(path);
@@ -364,7 +367,7 @@ void main_window::InstallPkg()
 
 void main_window::InstallPup()
 {
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), "", tr("PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP"));
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), m_path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP"));
 
 	if (filePath == NULL)
 	{
@@ -373,7 +376,8 @@ void main_window::InstallPup()
 
 	Emu.Stop();
 
-	const std::string path = filePath.toUtf8();
+	m_path_last_PUP = QFileInfo(filePath).path();
+	const std::string path = filePath.toUtf8().toStdString();
 
 	fs::file pup_f(path);
 	pup_object pup(pup_f);
@@ -492,18 +496,16 @@ extern void sysutil_send_system_cmd(u64 status, u64 param);
 
 void main_window::DecryptSPRXLibraries()
 {
-	QFileDialog sprxdlg(this, tr("Select SPRX files"), "", tr("SPRX files (*.sprx)"));
-	sprxdlg.setAcceptMode(QFileDialog::AcceptOpen);
-	sprxdlg.setFileMode(QFileDialog::ExistingFiles);
+	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select SPRX files"), m_path_last_SPRX, tr("SPRX files (*.sprx)"));
 
-	if (sprxdlg.exec() == QDialog::Rejected)
+	if (modules.isEmpty())
 	{
 		return;
 	}
 
 	Emu.Stop();
 
-	QStringList modules = sprxdlg.selectedFiles();
+	m_path_last_SPRX = QFileInfo(modules.first()).path();
 
 	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
 
