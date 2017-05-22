@@ -150,7 +150,10 @@ void gs_frame::flip(draw_context_t)
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	OnFullScreen();
+	if (ev->button() == Qt::LeftButton)
+	{
+		OnFullScreen();
+	}
 }
 
 void gs_frame::HandleCursor(QWindow::Visibility visibility)
