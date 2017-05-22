@@ -39,6 +39,9 @@ private:
 	QComboBox *combo_configs;
 	QComboBox *combo_stylesheets;
 
+	QString m_startingStylesheet;
+	QString m_startingConfig;
+
 	std::shared_ptr<gui_settings> xgui_settings;
 };
 

@@ -72,8 +72,15 @@ gui_tab::gui_tab(std::shared_ptr<gui_settings> xSettings, QWidget *parent) : QWi
 
 void gui_tab::Accept()
 {
-	OnApplyConfig();
-	OnApplyStylesheet();
+	// Only attempt to load a config if changes occurred.
+	if (m_startingConfig != xgui_settings->GetCurrentConfig())
+	{
+		OnApplyConfig();
+	}
+	if (m_startingStylesheet != xgui_settings->GetCurrentStylesheet())
+	{
+		OnApplyStylesheet();
+	}
 }
 
 void gui_tab::AddConfigs()
@@ -91,6 +98,7 @@ void gui_tab::AddConfigs()
 	}
 
 	QString currentSelection = "CurrentSettings";
+	m_startingConfig = currentSelection;
 
 	int index = combo_configs->findText(currentSelection);
 	if (index != -1)
@@ -118,6 +126,8 @@ void gui_tab::AddStylesheets()
 	}
 
 	QString currentSelection = xgui_settings->GetCurrentStylesheet();
+	m_startingStylesheet = currentSelection;
+
 	int index = combo_stylesheets->findText(currentSelection);
 	if (index != -1)
 	{
