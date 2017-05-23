@@ -14,6 +14,8 @@
 
 #include "graphics_tab.h"
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, QWidget *parent) : QWidget(parent), xemu_settings(xSettings)
 {
 	bool supportsD3D12 = false;
@@ -152,7 +154,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, QWidget *par
 		{
 			d3dAdapterBox->addItem(adapter);
 		}
-		QString adapterTxt = QString::fromStdString(xemu_settings->GetSetting(emu_settings::D3D12Adapter));
+		QString adapterTxt = qstr(xemu_settings->GetSetting(emu_settings::D3D12Adapter));
 		int index = d3dAdapterBox->findText(adapterTxt);
 		if (index == -1)
 		{
@@ -162,7 +164,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, QWidget *par
 		d3dAdapterBox->setCurrentIndex(index);
 
 		auto setD3D12 = [=](QString text){
-			xemu_settings->SetSetting(emu_settings::D3D12Adapter, text.toStdString());
+			xemu_settings->SetSetting(emu_settings::D3D12Adapter, text.toUtf8().toStdString());
 		};
 		setD3D12(d3dAdapterBox->currentText()); // Init
 		connect(d3dAdapterBox, &QComboBox::currentTextChanged, setD3D12);
