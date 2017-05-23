@@ -283,7 +283,7 @@ static void open_dir(const std::string& spath)
 	std::replace(command.begin(), command.end(), '/', '\\');
 #elif __APPLE__
 	std::string command = "open " + spath;
-#elif __linux__
+#else
 	std::string command = "xdg-open " + spath;
 #endif
 	wxExecute(fmt::FromUTF8(command));
