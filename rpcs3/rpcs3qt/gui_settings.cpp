@@ -1,21 +1,24 @@
 #include "gui_settings.h"
 
+#include <QCoreApplication>
 #include <QDir>
 
-#ifdef _MSC_VER
-const QString m_cgui_settingsPath = "../bin/GuiConfigs/";
-#else
-const QString m_cgui_settingsPath = "GuiConfigs/";
-#endif
 
-gui_settings::gui_settings(QObject* parent) : QObject(parent), settings(m_cgui_settingsPath + "CurrentSettings.ini", QSettings::Format::IniFormat, parent),
-	settingsDir(QDir::currentPath() + "/" + m_cgui_settingsPath)
+gui_settings::gui_settings(QObject* parent) : QObject(parent), settings(ComputeSettingsDir() + "CurrentSettings.ini", QSettings::Format::IniFormat, parent),
+	settingsDir(ComputeSettingsDir())
 {
 }
 
 gui_settings::~gui_settings()
 {
 	settings.sync();
+}
+
+QString gui_settings::ComputeSettingsDir()
+{
+	QString path = QDir(QDir::currentPath()).relativeFilePath(QCoreApplication::applicationDirPath());
+	path += "/GuiConfigs/";
+	return path;
 }
 
 void gui_settings::ChangeToConfig(const QString& name)
@@ -304,7 +307,7 @@ QStringList gui_settings::GetConfigEntries()
 
 void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 {	
-	QSettings target(m_cgui_settingsPath + friendlyName + ".ini", QSettings::Format::IniFormat);
+	QSettings target(ComputeSettingsDir() + friendlyName + ".ini", QSettings::Format::IniFormat);
 	QStringList keys = settings.allKeys();
 	for (QStringList::iterator i = keys.begin(); i != keys.end(); i++)
 	{

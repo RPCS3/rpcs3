@@ -104,6 +104,7 @@ public slots:
 
 	void SetStyleSheet(const QString& friendlyName);
 private:
+	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& destination);
 
 	QSettings settings;
