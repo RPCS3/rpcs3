@@ -42,6 +42,7 @@
 #include "rpcs3_version.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false)
 {
@@ -132,7 +133,7 @@ void main_window::SetAppIconFromPath(const std::string path)
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
 	QString qpath = QString::fromUtf8(path.data(), path.size());
 	std::string icon_list[] = { "/ICON0.PNG", "/PS3_GAME/ICON0.PNG" };
-	std::string path_list[] = { path, qpath.section("/", 0, -2).toUtf8().toStdString() ,qpath.section("/", 0, -3).toUtf8().toStdString() };
+	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)) ,sstr(qpath.section("/", 0, -3)) };
 	for (std::string pth : path_list)
 	{
 		for (std::string ico : icon_list)
@@ -199,7 +200,7 @@ void main_window::BootElf()
 	// game folder in case of having e.g. a Game Folder with collected links to elf files.
 	// Don't set last path earlier in case of cancelled dialog
 	m_path_last_ELF = filePath;
-	const std::string path = QFileInfo(filePath).canonicalFilePath().toUtf8().toStdString();
+	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
 	SetAppIconFromPath(path);
 	Emu.Stop();
@@ -228,7 +229,7 @@ void main_window::BootGame()
 	}
 	Emu.Stop();
 	m_path_last_Game = QFileInfo(dirPath).path();
-	const std::string path = dirPath.toUtf8().toStdString();
+	const std::string path = sstr(dirPath);
 	SetAppIconFromPath(path);
 
 	if (!Emu.BootGame(path))
@@ -248,8 +249,8 @@ void main_window::InstallPkg()
 	Emu.Stop();
 
 	m_path_last_PKG = QFileInfo(filePath).path();
-	const std::string fileName = QFileInfo(filePath).fileName().toUtf8().toStdString();
-	const std::string path = filePath.toUtf8().toStdString();
+	const std::string fileName = sstr(QFileInfo(filePath).fileName());
+	const std::string path = sstr(filePath);
 
 	// Open PKG file
 	fs::file pkg_f(path);
@@ -380,7 +381,7 @@ void main_window::InstallPup()
 	Emu.Stop();
 
 	m_path_last_PUP = QFileInfo(filePath).path();
-	const std::string path = filePath.toUtf8().toStdString();
+	const std::string path = sstr(filePath);
 
 	fs::file pup_f(path);
 	pup_object pup(pup_f);
@@ -514,7 +515,7 @@ void main_window::DecryptSPRXLibraries()
 
 	for (QString& module : modules)
 	{
-		std::string prx_path = module.toUtf8().data();
+		std::string prx_path = sstr(module);
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);
 
 		fs::file elf_file(prx_path);

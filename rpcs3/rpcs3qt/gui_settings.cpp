@@ -4,7 +4,7 @@
 #include <QDir>
 
 
-gui_settings::gui_settings(QObject* parent) : QObject(parent), settings(ComputeSettingsDir() + "CurrentSettings.ini", QSettings::Format::IniFormat, parent),
+gui_settings::gui_settings(QObject* parent) : QObject(parent), settings(ComputeSettingsDir() + tr("CurrentSettings") + ".ini", QSettings::Format::IniFormat, parent),
 	settingsDir(ComputeSettingsDir())
 {
 }
@@ -23,7 +23,7 @@ QString gui_settings::ComputeSettingsDir()
 
 void gui_settings::ChangeToConfig(const QString& name)
 {
-	if (name != "CurrentSettings")
+	if (name != tr("CurrentSettings"))
 	{ // don't try to change to yourself.
 		Reset(false);
 
@@ -321,12 +321,12 @@ void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 
 QString gui_settings::GetCurrentConfig()
 {
-	return settings.value("Meta/currentConfig", QString("CurrentSettings")).toString();
+	return settings.value("Meta/currentConfig", tr("CurrentSettings")).toString();
 }
 
 QString gui_settings::GetCurrentStylesheet()
 {
-	return settings.value("Meta/currentStylesheet", QString(tr("default"))).toString();
+	return settings.value("Meta/currentStylesheet", tr("default")).toString();
 }
 
 QStringList gui_settings::GetStylesheetEntries()

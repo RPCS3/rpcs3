@@ -15,6 +15,9 @@
 
 #include <unordered_set>
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+
 core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QWidget(parent), xemu_settings(settings)
 {
 	// PPU Decoder
@@ -25,7 +28,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 		std::string selectedPPU = settings->GetSetting(emu_settings::PPUDecoder);
 		for (QString settingType : settings->GetSettingOptions(emu_settings::PPUDecoder))
 		{
-			std::string curr = settingType.toStdString();
+			std::string curr = sstr(settingType);
 			QRadioButton* butt = new QRadioButton(tr(curr.c_str()), this);
 			if (curr == "Interpreter (precise)")
 			{
@@ -33,7 +36,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 			}
 			butt->setCheckable(true);
 			ppuVbox->addWidget(butt);
-			if (settingType.toStdString() == selectedPPU)
+			if (curr == selectedPPU)
 			{
 				butt->setChecked(true);
 			}
@@ -50,7 +53,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 		std::string selectedSPU = settings->GetSetting(emu_settings::SPUDecoder);
 		for (QString settingType : settings->GetSettingOptions(emu_settings::SPUDecoder))
 		{
-			std::string curr = settingType.toStdString();
+			std::string curr = sstr(settingType);
 			QRadioButton* butt = new QRadioButton(tr(curr.c_str()), this);
 			if (curr == "Recompiler (LLVM)")
 			{
@@ -58,7 +61,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 			}
 			butt->setCheckable(true);
 			spuVbox->addWidget(butt);
-			if (settingType.toStdString() == selectedSPU)
+			if (curr == selectedSPU)
 			{
 				butt->setChecked(true);
 			}
@@ -82,7 +85,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 		std::string selectedLib = settings->GetSetting(emu_settings::LibLoadOptions);
 		for (QString settingType : settings->GetSettingOptions(emu_settings::LibLoadOptions))
 		{
-			std::string curr = settingType.toStdString();
+			std::string curr = sstr(settingType);
 			QRadioButton* butt = new QRadioButton(tr(curr.c_str()), lle);
 			butt->setCheckable(true);
 			libModeBG->addButton(butt);
@@ -110,7 +113,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 
 	for (auto lib : loadedLibs)
 	{
-		QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(lib), lleList);
+		QListWidgetItem* item = new QListWidgetItem(qstr(lib), lleList);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
 		item->setCheckState(Qt::Checked); // AND initialize check state
 		lleList->addItem(item);
@@ -136,7 +139,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 
 	for (auto lib : lle_module_list_unselected)
 	{
-		QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(lib), lleList);
+		QListWidgetItem* item = new QListWidgetItem(qstr(lib), lleList);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
 		item->setCheckState(Qt::Unchecked); // AND initialize check state
 		lleList->addItem(item);
@@ -163,14 +166,80 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 	hbox->addWidget(lle);
 	setLayout(hbox);
 
+	auto l_OnLibButtonClicked = [=](int ind)
+	{
+		if (ind == -3 || ind == -4)
+		{
+			shouldSaveLibs = true;
+			searchBox->setEnabled(true);
+			lleList->setEnabled(true);
+		}
+		else
+		{
+			shouldSaveLibs = false;
+			searchBox->setEnabled(false);
+			lleList->setEnabled(false);
+		}
+	};
+
+	auto l_OnSearchBoxTextChanged = [=](QString text)
+	{
+		QString searchTerm = text.toLower();
+		QList<QListWidgetItem*> checked_Libs;
+		QList<QListWidgetItem*> unchecked_Libs;
+
+		// create sublists. we need clones to preserve checkstates
+		for (int i = 0; i < lleList->count(); ++i)
+		{
+			if (lleList->item(i)->checkState() == Qt::Checked)
+			{
+				checked_Libs.append(lleList->item(i)->clone());
+			}
+			else
+			{
+				unchecked_Libs.append(lleList->item(i)->clone());
+			}
+		}
+
+		// sort sublists
+		auto qLessThan = [](QListWidgetItem *i1, QListWidgetItem *i2) { return i1->text() < i2->text(); };
+		qSort(checked_Libs.begin(), checked_Libs.end(), qLessThan);
+		qSort(unchecked_Libs.begin(), unchecked_Libs.end(), qLessThan);
+
+		// refill library list
+		lleList->clear();
+
+		for (auto lib : checked_Libs)
+		{
+			lleList->addItem(lib);
+		}
+		for (auto lib : unchecked_Libs)
+		{
+			lleList->addItem(lib);
+		}
+
+		// only show items filtered for search text
+		for (int i = 0; i < lleList->count(); i++)
+		{
+			if (lleList->item(i)->text().contains(searchTerm))
+			{
+				lleList->setRowHidden(i, false);
+			}
+			else
+			{
+				lleList->setRowHidden(i, true);
+			}
+		}
+	};
+
 	// Events
-	connect(libModeBG, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &core_tab::OnLibButtonClicked);
-	connect(searchBox, &QLineEdit::textChanged, this, &core_tab::OnSearchBoxTextChanged);
+	connect(libModeBG, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), l_OnLibButtonClicked);
+	connect(searchBox, &QLineEdit::textChanged, l_OnSearchBoxTextChanged);
 
 	int buttid = libModeBG->checkedId();
 	if (buttid != -1)
 	{
-		OnLibButtonClicked(buttid);
+		l_OnLibButtonClicked(buttid);
 	}
 }
 
@@ -184,45 +253,12 @@ void core_tab::SaveSelectedLibraries()
 			auto item = lleList->item(i);
 			if (item->checkState() != Qt::CheckState::Unchecked)
 			{
-				std::string lib = item->text().toStdString();
+				std::string lib = sstr(item->text());
 				selectedlle.emplace(lib);
 			}
 		}
 
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
-	}
-}
-
-void core_tab::OnSearchBoxTextChanged()
-{
-	QString searchTerm = searchBox->text().toLower();
-	auto model = lleList->model();
-	auto items = model->match(model->index(0, 0), Qt::DisplayRole, QVariant::fromValue(searchTerm), -1, Qt::MatchContains);
-
-	for (int i = 0; i < lleList->count(); ++i)
-	{
-		lleList->setRowHidden(i, true);
-	}
-
-	for (auto index : items)
-	{
-		lleList->setRowHidden(index.row(), false);
-	}
-}
-
-void core_tab::OnLibButtonClicked(int ind)
-{
-	if (ind == -3 || ind == -4)
-	{
-		shouldSaveLibs = true;
-		searchBox->setEnabled(true);
-		lleList->setEnabled(true);
-	}
-	else
-	{
-		shouldSaveLibs = false;
-		searchBox->setEnabled(false);
-		lleList->setEnabled(false);
 	}
 }

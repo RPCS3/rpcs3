@@ -17,9 +17,6 @@ public:
 	explicit core_tab(std::shared_ptr<emu_settings> xSettings, QWidget *parent = 0);
 public slots:
 	void SaveSelectedLibraries();
-private slots:
-	void OnSearchBoxTextChanged();
-	void OnLibButtonClicked(int ind);
 
 private:
 	bool shouldSaveLibs = false;

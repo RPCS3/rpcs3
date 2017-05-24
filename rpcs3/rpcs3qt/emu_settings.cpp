@@ -7,6 +7,8 @@
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 // Emit sorted YAML
 namespace
@@ -159,7 +161,7 @@ QComboBox* emu_settings::CreateEnhancedComboBox(SettingsType type, QWidget* pare
 	}
 
 	connect(box, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
-		SetSetting(type, box->itemData(index).toString().toStdString());
+		SetSetting(type, sstr(box->itemData(index)));
 	});
 
 	return box;

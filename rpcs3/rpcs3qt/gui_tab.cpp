@@ -97,7 +97,7 @@ void gui_tab::AddConfigs()
 		}
 	}
 
-	QString currentSelection = "CurrentSettings";
+	QString currentSelection = tr("CurrentSettings");
 	m_startingConfig = currentSelection;
 
 	int index = combo_configs->findText(currentSelection);

@@ -13,11 +13,22 @@
 #include "settings_dialog.h"
 #include "emu_settings.h"
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, QWidget *parent, const std::string& path) : QDialog(parent)
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, QWidget *parent, GameInfo* game) : QDialog(parent)
 {
 	std::shared_ptr<emu_settings> xemu_settings;
-	xemu_settings.reset(new emu_settings(path));
-
+	if (game)
+	{
+		xemu_settings.reset(new emu_settings("data/" + game->serial));
+		setWindowTitle(tr("Settings: [") + qstr(game->serial) + "] " + qstr(game->name));
+	}
+	else
+	{
+		xemu_settings.reset(new emu_settings(""));
+		setWindowTitle(tr("Settings"));
+	}
+	
 	core_tab* coreTab = new core_tab(xemu_settings, this);
 
 	QPushButton *okButton = new QPushButton(tr("OK"));
@@ -33,8 +44,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, QW
 	tabWidget->addTab(new misc_tab(xemu_settings, this), tr("Misc"));
 	tabWidget->addTab(new networking_tab(xemu_settings, this), tr("Networking"));
 	tabWidget->addTab(new system_tab(xemu_settings, this), tr("System"));
-	if (path == "")
-	{ // Don't add gui tab to game settings.
+	
+	if (!game)
+	{	// Don't add gui tab to game settings.
 		gui_tab* guiTab = new gui_tab(xgui_settings, this);
 		tabWidget->addTab(guiTab, tr("Gui"));
 		connect(guiTab, &gui_tab::GuiSettingsSyncRequest, this, &settings_dialog::GuiSettingsSyncRequest);
@@ -59,6 +71,4 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, QW
 	mainLayout->addWidget(tabWidget);
 	mainLayout->addLayout(buttonsLayout);
 	setLayout(mainLayout);
-
-	setWindowTitle(tr("Settings"));
 }

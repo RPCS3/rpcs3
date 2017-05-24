@@ -14,6 +14,7 @@
 #include "Emu/RSX/CgBinaryProgram.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 cg_disasm_window::cg_disasm_window(QWidget* parent): QTabWidget()
 {
@@ -69,7 +70,7 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos) // this is a slot
 		if (filePath == NULL) return;
 		m_path_last = QFileInfo(filePath).path();
 		
-		CgBinaryDisasm disasm(filePath.toUtf8().toStdString());
+		CgBinaryDisasm disasm(sstr(filePath));
 		disasm.BuildShaderBody();
 		m_disasm_text->setText(qstr(disasm.GetArbShader()));
 		m_glsl_text->setText(qstr(disasm.GetGlslShader()));

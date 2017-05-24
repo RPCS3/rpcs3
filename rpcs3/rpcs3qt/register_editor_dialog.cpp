@@ -2,6 +2,8 @@
 #include "register_editor_dialog.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: QDialog(parent)
@@ -89,7 +91,7 @@ void register_editor_dialog::updateRegister()
 {
 	const auto cpu = this->cpu.lock();
 
-	std::string reg = t1_register->itemData(t1_register->currentIndex()).toString().toUtf8().toStdString();
+	std::string reg = sstr(t1_register->itemData(t1_register->currentIndex()));
 	std::string str;
 
 	if (g_system == system_type::ps3 && cpu->id_type() == 1)
@@ -128,8 +130,8 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 {
 	const auto cpu = _cpu.get();
 
-	std::string reg = t1_register->itemData(t1_register->currentIndex()).toString().toUtf8().toStdString();
-	std::string value = t2_value->text().toUtf8().toStdString();
+	std::string reg = sstr(t1_register->itemData(t1_register->currentIndex()));
+	std::string value = sstr(t2_value->text());
 
 	if (g_system == system_type::ps3 && cpu->id_type() == 1)
 	{

@@ -1,22 +1,27 @@
 #include "game_list_frame.h"
-#include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "Loader/PSF.h"
+
 #include "settings_dialog.h"
-#include "Utilities/types.h"
 #include "table_item_delegate.h"
 
+#include "Emu\Memory\Memory.h"
+#include "Emu\System.h"
+#include "Loader\PSF.h"
+#include "Utilities/types.h"
+
 #include <algorithm>
-#include <QMenuBar>
-#include <QProcess>
-#include <QMessageBox>
+#include <memory>
+
 #include <QDir>
 #include <QHeaderView>
+#include <QListView>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QProcess>
 #include <QTimer>
 
 static const std::string m_class_name = "GameViewer";
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 // Auxiliary classes
 class sortGameData
@@ -180,27 +185,27 @@ void game_list_frame::LoadPSF()
 
 		if (game.category == "HG")
 		{
-			game.category = "HDD Game";
+			game.category = sstr(category::hdd_Game);
 			game.icon_path = dir + "/ICON0.PNG";
 		}
 		else if (game.category == "DG")
 		{
-			game.category = "Disc Game";
+			game.category = sstr(category::disc_Game);
 			game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
 		}
 		else if (game.category == "HM")
 		{
-			game.category = "Home";
+			game.category = sstr(category::home);
 			game.icon_path = dir + "/ICON0.PNG";
 		}
 		else if (game.category == "AV")
 		{
-			game.category = "Audio/Video";
+			game.category = sstr(category::audio_Video);
 			game.icon_path = dir + "/ICON0.PNG";
 		}
 		else if (game.category == "GD")
 		{
-			game.category = "Game Data";
+			game.category = sstr(category::game_Data);
 			game.icon_path = dir + "/ICON0.PNG";
 		}
 
@@ -275,17 +280,44 @@ void game_list_frame::SaveSettings()
 	xgui_settings->WriteGameListState(gameList->horizontalHeader()->saveState());
 }
 
+static void open_dir(const std::string& spath)
+{
+	fs::create_dir(spath);
+	QString path = qstr(spath);
+	QProcess* process = new QProcess();
+
+#ifdef _WIN32
+	std::string command = "explorer";
+	std::replace(path.begin(), path.end(), '/', '\\');
+	process->start("explorer", QStringList() << path);
+#elif __APPLE__
+	process->start("open", QStringList() << path);
+#elif __linux__
+	process->start("xdg-open", QStringList() << path);
+#endif
+}
+
 void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 {
 	int i = index.row();
-	const std::string& path = Emu.GetGameDir() + m_game_data[i].root;
-	emit RequestIconPathSet(path);
+	QString category = qstr(m_game_data[i].category);
 
-	Emu.Stop();
-
-	if (!Emu.BootGame(path))
+	// Boot these categories
+	if (category == category::hdd_Game || category == category::disc_Game || category == category::audio_Video)
 	{
-		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[i].root);
+		const std::string& path = Emu.GetGameDir() + m_game_data[i].root;
+		emit RequestIconPathSet(path);
+
+		Emu.Stop();
+
+		if (!Emu.BootGame(path))
+		{
+			LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[i].root);
+		}
+	}
+	else
+	{
+		open_dir(Emu.GetGameDir() + m_game_data[i].root);
 	}
 }
 
@@ -315,23 +347,6 @@ void game_list_frame::CreateActions()
 
 		connect(act, &QAction::triggered, l_CallBack);
 	}
-}
-
-static void open_dir(const std::string& spath)
-{
-	fs::create_dir(spath);
-	QString path = qstr(spath);
-	QProcess* process = new QProcess();
-
-#ifdef _WIN32
-	std::string command = "explorer";
-	std::replace(path.begin(), path.end(), '/', '\\');
-	process->start("explorer", QStringList() << path);
-#elif __APPLE__
-	process->start("open", QStringList() << path);
-#elif __linux__
-	process->start("xdg-open", QStringList() << path);
-#endif
 }
 
 void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
@@ -365,7 +380,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
 
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=](){
-		settings_dialog(xgui_settings, this, "data/" + m_game_data[row].serial).exec();
+		settings_dialog(xgui_settings, this, &m_game_data[row]).exec();
 	});
 	connect(removeGame, &QAction::triggered, [=](){
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
@@ -377,12 +392,25 @@ void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + m_game_data[row].serial); });
 
 	//Disable options depending on software category
-	QString category = qstr(m_columns.m_col_category->data.at(row));
-	if (category == "HDD Game") ;
-	else if (category == "Disc Game") ;
-	else if (category == "Home") ;
-	else if (category == "Audio/Video") ;
-	else if (category == "Game Data") boot->setEnabled(false), f.setBold(false), boot->setFont(f);
+	QString category = qstr(m_game_data[row].category);
+
+	if (category == category::disc_Game)
+	{
+		removeGame->setEnabled(false);
+	}
+	else if (category == category::audio_Video)
+	{
+		configure->setEnabled(false);
+		removeConfig->setEnabled(false);
+		openConfig->setEnabled(false);
+	}
+	else if (category == category::home || category == category::game_Data)
+	{
+		boot->setEnabled(false), f.setBold(false), boot->setFont(f);
+		configure->setEnabled(false);
+		removeConfig->setEnabled(false);
+		openConfig->setEnabled(false);
+	}
 	
 	myMenu.exec(globalPos);
 }
@@ -514,7 +542,7 @@ void columns_arr::Update(const std::vector<GameInfo>& game_data)
 			else {
 				// IIRC a load failure means blank image which is fine to have as a placeholder.
 				QString abspath = QDir(qstr(path)).absolutePath();
-				LOG_ERROR(HLE, "Count not load image from path %s", abspath.toStdString());
+				LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
 				m_img_list->append(img);
 			}
 		}

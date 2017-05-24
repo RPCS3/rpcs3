@@ -3,6 +3,8 @@
 
 #include "gui_settings.h"
 
+#include "Emu\GameInfo.h"
+
 #include <QDialog>
 #include <QTabWidget>
 
@@ -13,7 +15,7 @@ class settings_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit settings_dialog(std::shared_ptr<gui_settings> xSettings, QWidget *parent = 0, const std::string &path = "");
+	explicit settings_dialog(std::shared_ptr<gui_settings> xSettings, QWidget *parent = 0, GameInfo *game = nullptr);
 signals:
 	void GuiSettingsSyncRequest();
 	void GuiStylesheetRequest(const QString& path);

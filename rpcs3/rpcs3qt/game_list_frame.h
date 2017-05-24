@@ -1,17 +1,14 @@
 #ifndef GAMELISTFRAME_H
 #define GAMELISTFRAME_H
 
+#include "stdafx.h"
+#include "Emu\GameInfo.h"
+
 #include "gui_settings.h"
 
-#include "Utilities/types.h"
-#include "Emu/GameInfo.h"
-
-#include <memory>
-
 #include <QDockWidget>
-#include <QTableWidget>
-#include <QListView>
 #include <QList>
+#include <QTableWidget>
 
 struct Column
 {
@@ -61,6 +58,15 @@ public:
 	
 	void ShowData(QTableWidget* list);
 };
+
+namespace category
+{
+	const QString hdd_Game    = QObject::tr("HDD Game");
+	const QString disc_Game   = QObject::tr("Disc Game");
+	const QString home        = QObject::tr("Home");
+	const QString audio_Video = QObject::tr("Audio/Video");
+	const QString game_Data   = QObject::tr("Game Data");
+}
 
 class game_list_frame : public QDockWidget {
 	Q_OBJECT

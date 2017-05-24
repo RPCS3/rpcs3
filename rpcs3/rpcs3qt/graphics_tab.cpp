@@ -15,6 +15,7 @@
 #include "graphics_tab.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, QWidget *parent) : QWidget(parent), xemu_settings(xSettings)
 {
@@ -164,7 +165,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, QWidget *par
 		d3dAdapterBox->setCurrentIndex(index);
 
 		auto setD3D12 = [=](QString text){
-			xemu_settings->SetSetting(emu_settings::D3D12Adapter, text.toUtf8().toStdString());
+			xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(text));
 		};
 		setD3D12(d3dAdapterBox->currentText()); // Init
 		connect(d3dAdapterBox, &QComboBox::currentTextChanged, setD3D12);
