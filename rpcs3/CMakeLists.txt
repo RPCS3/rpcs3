@@ -162,7 +162,7 @@ else()
 	add_definitions(-DLLVM_AVAILABLE)
 	
 	#Use static linking for windows binary but always dynamic on *nix
-	if (WIN32 OR MSVC)
+	if (WIN32)
 		if (CMAKE_BUILD_TYPE STREQUAL "Release")
 			llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler)
 		else()
