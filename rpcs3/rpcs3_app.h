@@ -14,8 +14,8 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/Audio/AudioThread.h"
 
-#include "rpcs3qt/msg_dialog_Frame.h"
-#include "RPCS3Qt/main_window.h"
+#include "rpcs3qt/msg_dialog_frame.h"
+#include "rpcs3qt/main_window.h"
 
 #include <QApplication>
 
@@ -27,7 +27,7 @@ class rpcs3_app : public QApplication
 {
 	Q_OBJECT
 public:
-	rpcs3_app(int argc, char* argv[]);
+	rpcs3_app(int& argc, char** argv);
 	/** Call this method before calling app.exec
 	*/
 	void Init();

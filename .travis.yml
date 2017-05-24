@@ -83,7 +83,7 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
-      - libwxgtk3.0-dev
+      - qtbase5-dev
       - libudev-dev
   coverity_scan:
     project:

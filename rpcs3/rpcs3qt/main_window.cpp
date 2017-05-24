@@ -26,17 +26,17 @@
 #include <thread>
 
 #include "stdafx.h"
-#include "Emu\System.h"
-#include "Emu\Memory\Memory.h"
+#include "Emu/System.h"
+#include "Emu/Memory/Memory.h"
 
-#include "Crypto\unpkg.h"
-#include "Crypto\unself.h"
+#include "Crypto/unpkg.h"
+#include "Crypto/unself.h"
 
-#include "Loader\PUP.h"
-#include "Loader\TAR.h"
+#include "Loader/PUP.h"
+#include "Loader/TAR.h"
 
-#include "Utilities\Thread.h"
-#include "Utilities\StrUtil.h"
+#include "Utilities/Thread.h"
+#include "Utilities/StrUtil.h"
 
 #include "rpcs3_version.h"
 
@@ -511,7 +511,7 @@ void main_window::DecryptSPRXLibraries()
 
 	for (QString& module : modules)
 	{
-		std::string prx_path = module.toUtf8();
+		std::string prx_path = module.toUtf8().data();
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);
 
 		fs::file elf_file(prx_path);

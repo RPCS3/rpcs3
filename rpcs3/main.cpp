@@ -6,7 +6,7 @@
 #include <QDesktopWidget>
 #include "rpcs3_app.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char** argv)
 {
 	rpcs3_app app(argc, argv);
 	app.Init();

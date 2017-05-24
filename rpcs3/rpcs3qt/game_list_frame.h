@@ -3,8 +3,8 @@
 
 #include "gui_settings.h"
 
-#include "Utilities\types.h"
-#include "Emu\GameInfo.h"
+#include "Utilities/types.h"
+#include "Emu/GameInfo.h"
 
 #include <memory>
 

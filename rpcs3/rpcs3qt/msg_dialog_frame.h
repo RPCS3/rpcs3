@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
-#include "Emu/Cell/Modules/cellmsgdialog.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/lv2/sys_time.h"

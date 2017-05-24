@@ -2,10 +2,19 @@ cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
 set(RES_FILES "")
+
+# Qt section
+find_package(Qt5 REQUIRED COMPONENTS Widgets)
+set(RPCS3_QT_LIBS Qt5::Widgets)
+set(CMAKE_AUTOMOC ON)
+if (Qt5_POSITION_INDEPENDENT_CODE)
+    SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+include_directories(${Qt5Widgets_INCLUDE_DIRS})
+
 include(cotire)
 
 project(rpcs3)
-
 # Generate git-version.h at build time.
 add_custom_target(GitVersion ALL
 	DEPENDS something_that_never_exists)
@@ -15,6 +24,7 @@ add_custom_command(OUTPUT something_that_never_exists
 
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
+
 
 
 if(WIN32)
@@ -29,7 +39,6 @@ if(WIN32)
 endif()
 
 if(NOT MSVC)
-	add_definitions(-DwxGUI)
 	if($ENV{CI})
 		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O1") # fix for travis gcc OoM crash. Might be fixed with the move to containers.
 	endif()
@@ -72,8 +81,6 @@ if(NOT WIN32)
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 endif()
 
-set(wxWidgets_USE_STATIC ON)
-find_package(wxWidgets COMPONENTS core base net aui gl xml REQUIRED)
 if(NOT MSVC)
 	if(APPLE)
 		find_path(GLEW_INCLUDE_DIR GL/glew.h
@@ -94,7 +101,6 @@ find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 find_package(LLVM 4.0 CONFIG)
 
-include("${wxWidgets_USE_FILE}")
 
 if(APPLE)
 	set(PLATFORM_ARCH "macosx/x86_64")
@@ -126,7 +132,6 @@ endif()
 
 include_directories(
 ${GLEW_INCLUDE_DIR}
-${wxWidgets_INCLUDE_DIRS}
 ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
@@ -176,6 +181,7 @@ link_directories(
 "${RPCS3_SRC_DIR}/../Vulkan"
 )
 
+
 if(NOT USE_SYSTEM_FFMPEG)
 	if(MSVC OR NOT WIN32)
 		link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
@@ -207,6 +213,15 @@ if(NOT WIN32)
 	endforeach(TMP_PATH)
 endif()
 
+# The Gui folder contains wxWidgets stuff, which we no longer want.
+foreach (TMP_PATH ${RPCS3_SRC})
+    set (EXCLUDE_DIR "/Gui/")
+    string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
+    if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+        list (REMOVE_ITEM RPCS3_SRC ${TMP_PATH})
+    endif ()
+endforeach(TMP_PATH)
+
 add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES})
 
 
@@ -221,9 +236,9 @@ if(WIN32)
 	else()
 		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib)
 	endif()
-	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
-	target_link_libraries(rpcs3  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} hidapi-hidraw udev)
+	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} hidapi-hidraw udev)
 	target_link_libraries(rpcs3  -ldl ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
 	if (USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
@@ -245,3 +260,4 @@ target_link_libraries(rpcs3 rsx_decompiler shader_code)
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 cotire(rpcs3)
+target_link_libraries(rpcs3 stdc++ ${RPCS3_QT_LIBS})

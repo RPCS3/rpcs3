@@ -286,7 +286,7 @@ void log_frame::UpdateUI()
 
 	while (const u64 size = std::min<u64>(buf.size(), tty_file.size() - tty_file.pos()))
 	{
-		QString& text = get_utf8(tty_file, size);
+		QString text = get_utf8(tty_file, size);
 
 		// Hackily used the state of the check..  be better if I actually stored this value.
 		if (TTYAct->isChecked())

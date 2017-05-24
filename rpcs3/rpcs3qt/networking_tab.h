@@ -5,7 +5,7 @@
 
 #include <QWidget>
 
-#include <Memory>
+#include <memory>
 
 class networking_tab : public QWidget
 {

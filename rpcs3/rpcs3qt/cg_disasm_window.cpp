@@ -2,7 +2,6 @@
 
 #include "cg_disasm_window.h"
 #include "Emu/System.h"
-#include "Emu/RSX/CgBinaryProgram.h"
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -12,6 +11,7 @@
 #include <QDockWidget>
 #include <QCoreApplication>
 #include <QFontDatabase>
+#include "Emu/RSX/CgBinaryProgram.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 

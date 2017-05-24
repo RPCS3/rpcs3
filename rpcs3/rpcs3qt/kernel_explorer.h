@@ -5,7 +5,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QTreeWidget>
-#include <QHeaderview>
+#include <QHeaderView>
 
 class kernel_explorer : public QDialog
 {

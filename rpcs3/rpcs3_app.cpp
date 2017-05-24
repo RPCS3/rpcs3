@@ -1,14 +1,14 @@
 #include "rpcs3_app.h"
 
 #include "Emu/System.h"
-#include "RPCS3Qt/gs_frame.h"
-#include "RPCS3Qt/gl_gs_frame.h"
+#include "rpcs3qt/gs_frame.h"
+#include "rpcs3qt/gl_gs_frame.h"
 
 #include "Emu/Cell/Modules/cellSaveData.h"
-#include "RPCS3Qt/save_data_dialog.h"
+#include "rpcs3qt/save_data_dialog.h"
 
-#include "rpcs3qt/msg_dialog_Frame.h"
-#include "Emu/Cell/Modules/CellMsgDialog.h"
+#include "rpcs3qt/msg_dialog_frame.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "basic_keyboard_handler.h"
@@ -43,7 +43,7 @@
 #endif
 
 // For now, a trivial constructor/destructor.  May add command line usage later.
-rpcs3_app::rpcs3_app(int argc, char* argv[]) : QApplication(argc, argv)
+rpcs3_app::rpcs3_app(int& argc, char** argv) : QApplication(argc, argv)
 {
 }
 

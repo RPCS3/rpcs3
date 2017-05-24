@@ -88,7 +88,12 @@ void gs_frame::show()
 
 void* gs_frame::handle() const
 {
-	return (HWND) this->winId();
+#ifdef __linux__ 
+    return (void *)this->winId();
+#elif _WIN32
+    return (HWND) this->winId();
+#endif
+	
 }
 
 void* gs_frame::make_context()

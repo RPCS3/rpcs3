@@ -1,8 +1,8 @@
 #include "game_list_frame.h"
 #include "stdafx.h"
-#include "Emu\Memory\Memory.h"
-#include "Emu\System.h"
-#include "Loader\PSF.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Loader/PSF.h"
 #include "settings_dialog.h"
 #include "Utilities/types.h"
 #include "table_item_delegate.h"
@@ -82,7 +82,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, QWidget
 
 void game_list_frame::LoadSettings()
 {
-	QByteArray& state = xgui_settings->GetGameListState();
+	QByteArray state = xgui_settings->GetGameListState();
 
 	for (int col = 0; col < columnActs.length(); ++col)
 	{
@@ -251,7 +251,15 @@ void game_list_frame::Refresh()
 
 void game_list_frame::ToggleCategoryFilter(QString category, bool show)
 {
-	show ? categoryFilters.append(category) : categoryFilters.removeAll(category);
+	//show ? categoryFilters.append(category) : categoryFilters.removeAll(category);
+    if (show)
+    {
+        categoryFilters.append(category);
+    }
+    else
+    {
+        categoryFilters.removeAll(category);
+    }
 	Refresh();
 }
 
