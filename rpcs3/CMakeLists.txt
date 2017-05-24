@@ -169,7 +169,7 @@ else()
 			llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
 		endif()
 	else()
-		set(LLVM_LIBS LLVM-4.0.so)
+		set(LLVM_LIBS LLVM)
 	endif()
 
 	if (NOT MSVC)
