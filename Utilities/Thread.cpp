@@ -1558,7 +1558,7 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 #endif
 
 	// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize
-	ctrl->m_thread = thread;
+	ctrl->m_thread = (uintptr_t)thread;
 }
 
 void thread_ctrl::initialize()
@@ -1747,7 +1747,7 @@ thread_ctrl::~thread_ctrl()
 #ifdef _WIN32
 		CloseHandle((HANDLE)m_thread.raw());
 #else
-		pthread_detach(m_thread.raw());
+		pthread_detach((pthread_t)m_thread.raw());
 #endif
 	}
 }
