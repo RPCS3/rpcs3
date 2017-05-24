@@ -106,7 +106,7 @@ endif()
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
 	set(ADDITIONAL_LIBS "rt" "X11" "asound")
-elseif(UNIX OR NOT MSVC)
+elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
 	set(ADDITIONAL_LIBS "iconv")
