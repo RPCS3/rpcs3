@@ -7,6 +7,7 @@
 #include <QDockWidget>
 #include <QProgressDialog>
 #include <QDesktopWidget>
+#include <QDesktopServices>
 
 #include "save_data_utility.h"
 #include "kernel_explorer.h"
@@ -39,6 +40,8 @@
 #include "Utilities/StrUtil.h"
 
 #include "rpcs3_version.h"
+
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
 main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false)
 {
@@ -550,39 +553,92 @@ void main_window::DecryptSPRXLibraries()
 
 void main_window::About()
 {
+	QDialog* about = new QDialog(this);
 
-	QString translatedTextAboutCaption;
-	translatedTextAboutCaption = tr(
+	QPushButton* gitHub = new QPushButton(tr("GitHub"), about);
+	QPushButton* website = new QPushButton(tr("Website"), about);
+	QPushButton* forum = new QPushButton(tr("Forum"), about);
+	QPushButton* patreon = new QPushButton(tr("Patreon"), about);
+	QPushButton* close = new QPushButton(tr("Close"), about);
+	close->setDefault(true);
+
+	QLabel* icon = new QLabel(this);
+	icon->setPixmap(appIcon.pixmap(96, 96));
+
+	QLabel* caption = new QLabel(tr(
 		"<h1>RPCS3</h1>"
 		"A PlayStation 3 emulator and debugger.<br>"
-		"RPCS3 Version: %1").arg(QString::fromStdString(rpcs3::version.to_string())
-		);
-	QString translatedTextAboutText;
-	translatedTextAboutText = tr(
-		"<br><p><b>Developers:</b> Developers: ¬DH, ¬AlexAltea, ¬Hykem, Oil, Nekotekina, Bigpet, ¬gopalsr83, ¬tambry, "
-		"vlj, kd-11, jarveson, raven02, AniLeo, cornytrace, ssshadow, Numan</p>"
-		"<p><b>Contributors:</b> BlackDaemon, elisha464, Aishou, krofna, xsacha, danilaml, unknownbrackets, Zangetsu38, "
-		"lioncashachurch, darkf, Syphurith, Blaypeg, Survanium90, georgemoralis, ikki84, Megamouse, flash-fire</p>"
-		"<p><b>Supporters:</b> Howard Garrison, EXPotemkin, Marko V., danhp, Jake (5315825), Ian Reid, Tad Sherlock, Tyler Friesen, "
-		"Folzar, Payton Williams, RedPill Australia, yanghong</p>"
-		"<br><p>Please see "
-		"<a href=\"https://%1/\">GitHub</a>, "
-		"<a href=\"https://%2/\">Website</a>, "
-		"<a href=\"http://%3/\">Forum</a> or "
-		"<a href=\"https://%4/\">Patreon</a>"
-		" for more information.</p>"
-	).arg("github.com/RPCS3",
-		"rpcs3.net",
-		"www.emunewz.net/forum/forumdisplay.php?fid=172",
-		"www.patreon.com/Nekotekina");
+		"RPCS3 Version: %1").arg(qstr(rpcs3::version.to_string())
+		));
+	QLabel* developers = new QLabel(
+		"<p><b>Developers:</b><br>¬DH<br>¬AlexAltea<br>¬Hykem<br>Oil<br>Nekotekina<br>Bigpet<br>¬gopalsr83<br>¬tambry<br>"
+		"vlj<br>kd-11<br>jarveson<br>raven02<br>AniLeo<br>cornytrace<br>ssshadow<br>Numan</p>"
+	);
+	QLabel* contributors = new QLabel(
+		"<p><b>Contributors:</b><br>BlackDaemon<br>elisha464<br>Aishou<br>krofna<br>xsacha<br>danilaml<br>unknownbrackets<br>Zangetsu38<br>"
+		"lioncash<br>achurch<br>darkf<br>Syphurith<br>Blaypeg<br>Survanium90<br>georgemoralis<br>ikki84<br>hcorion<br>Megamouse<br>flash-fire</p>"
+	);
+	QLabel* supporters = new QLabel(
+		"<p><b>Supporters:</b><br>Howard Garrison<br>EXPotemkin<br>Marko V.<br>danhp<br>Jake (5315825)<br>Ian Reid<br>Tad Sherlock<br>Tyler Friesen<br>"
+		"Folzar<br>Payton Williams<br>RedPill Australia<br>yanghong<br>Mohammed El-Serougi<br>Дима ~Ximer13~ Кулин<br>James Reed<br>BaroqueSonata</p>"
+	);
+	icon->setAlignment(Qt::AlignLeft);
+	caption->setAlignment(Qt::AlignLeft);
+	developers->setAlignment(Qt::AlignTop);
+	contributors->setAlignment(Qt::AlignTop);
+	supporters->setAlignment(Qt::AlignTop);
 
-	QMessageBox about(this);
-	about.setMinimumWidth(500);
-	about.setWindowTitle(tr("About RPCS3"));
-	about.setText(translatedTextAboutCaption);
-	about.setInformativeText(translatedTextAboutText);
+	// Caption Layout
+	QVBoxLayout* caption_layout = new QVBoxLayout();
+	caption_layout->setAlignment(Qt::AlignLeft);
+	caption_layout->addSpacing(15);
+	caption_layout->addWidget(caption);
 
-	about.exec();
+	// Header Section
+	QHBoxLayout* header_layout = new QHBoxLayout();
+	header_layout->setAlignment(Qt::AlignCenter);
+	header_layout->addLayout(caption_layout);
+	header_layout->addStretch();
+	header_layout->addWidget(icon);
+	header_layout->addStretch();
+
+	// Names Section
+	QHBoxLayout* text_layout = new QHBoxLayout();
+	text_layout->setAlignment(Qt::AlignTop);
+	text_layout->addWidget(developers);
+	text_layout->addWidget(contributors);
+	text_layout->addWidget(supporters);
+
+	// Button Section
+	QHBoxLayout* button_layout = new QHBoxLayout();
+	button_layout->addWidget(gitHub);
+	button_layout->addWidget(website);
+	button_layout->addWidget(forum);
+	button_layout->addWidget(patreon);
+	button_layout->addStretch();
+	button_layout->addWidget(close);
+
+	// Main Layout
+	QVBoxLayout* layout = new QVBoxLayout();
+	layout->addLayout(header_layout);
+	layout->addLayout(text_layout);
+	layout->addSpacing(20);
+	layout->addLayout(button_layout);
+
+	// Events
+	connect(gitHub, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });
+	connect(website, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.rpcs3.net")); });
+	connect(forum, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("http://www.emunewz.net/forum/forumdisplay.php?fid=172")); });
+	connect(patreon, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina")); });
+	connect(close, &QAbstractButton::clicked, about, &QWidget::close);
+
+	// Create About Dialog
+	about->setWindowTitle(tr("About RPCS3"));
+	about->setWindowFlags(about->windowFlags() & ~Qt::WindowContextHelpButtonHint);
+	about->setMinimumWidth(500);
+	about->setLayout(layout);
+	about->setFixedSize(about->sizeHint());
+	about->exec();
 }
 
 /** Needed so that when a backup occurs of window state in guisettings, the state is current. 
