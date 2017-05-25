@@ -256,15 +256,7 @@ void game_list_frame::Refresh()
 
 void game_list_frame::ToggleCategoryFilter(QString category, bool show)
 {
-	//show ? categoryFilters.append(category) : categoryFilters.removeAll(category);
-    if (show)
-    {
-        categoryFilters.append(category);
-    }
-    else
-    {
-        categoryFilters.removeAll(category);
-    }
+	show ? categoryFilters.append(category) : categoryFilters.removeAll(category);
 	Refresh();
 }
 
@@ -530,10 +522,10 @@ void columns_arr::Update(const std::vector<GameInfo>& game_data)
 	// load icons
 	for (const auto& path : m_col_icon->data)
 	{
+		QImage* img = new QImage(80, 44, QImage::Format_ARGB32);
 		if (!path.empty())
 		{
 			// Load image.
-			QImage* img = new QImage(80, 44, QImage::Format_RGB32);
 			bool success = img->load(qstr(path));
 			if (success)
 			{
@@ -543,8 +535,15 @@ void columns_arr::Update(const std::vector<GameInfo>& game_data)
 				// IIRC a load failure means blank image which is fine to have as a placeholder.
 				QString abspath = QDir(qstr(path)).absolutePath();
 				LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
+				img->fill(QColor(0, 0, 0, 0));
 				m_img_list->append(img);
 			}
+		}
+		else
+		{
+			LOG_ERROR(HLE, "Count not load image from empty path");
+			img->fill(QColor(0, 0, 0, 0));
+			m_img_list->append(img);
 		}
 		m_icon_indexes.push_back(c);
 		c++;

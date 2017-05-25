@@ -67,10 +67,7 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	CreateConnects();
 
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
-	if (!appIcon.isNull())
-	{
-		setWindowIcon(appIcon);
-	}
+	!appIcon.isNull() ? setWindowIcon(appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
 	QTimer::singleShot(1, [=]() {
 		// Need to have this happen fast, but not now because connects aren't created yet.
