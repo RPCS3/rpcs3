@@ -50,6 +50,11 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\Gui\*.cpp">
@@ -490,6 +495,9 @@
     <ClCompile Include="rpcs3qt\register_editor_dialog.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\qrc_resources.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -614,6 +622,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
       <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="resources.qrc">
+      <Filter>Resource Files</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

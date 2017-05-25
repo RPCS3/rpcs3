@@ -51,11 +51,11 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	setDockNestingEnabled(true);
 
 	//Load Icons: This needs to happen before any actions or buttons are created
-	fs::is_file("Icons/play.png") ? icon_play = QIcon("Icons/play.png") : icon_play = style()->standardIcon(QStyle::SP_MediaPlay);
-	fs::is_file("Icons/pause.png") ? icon_pause = QIcon("Icons/pause.png") : icon_pause = style()->standardIcon(QStyle::SP_MediaPause);
-	fs::is_file("Icons/stop.png") ? icon_stop = QIcon("Icons/stop.png") : icon_stop = style()->standardIcon(QStyle::SP_MediaStop);
-	fs::is_file("Icons/restart.png") ? icon_restart = QIcon("Icons/restart.png") : icon_restart = style()->standardIcon(QStyle::SP_BrowserReload);
-	appIcon = QIcon("rpcs3.ico");
+	icon_play = QIcon(":/Icons/play.png");
+	icon_pause = QIcon(":/Icons/pause.png");
+	icon_stop = QIcon(":/Icons/stop.png");
+	icon_restart = QIcon(":/Icons/restart.png");
+	appIcon = QIcon(":/rpcs3.ico");
 
 	CreateActions();
 	CreateMenus();
@@ -164,7 +164,7 @@ void main_window::SetAppIconFromPath(const std::string path)
 		}
 	}
 	// if nothing was found reset the icon to default
-	appIcon = QIcon("rpcs3.ico");
+	appIcon = QIcon(":/rpcs3.ico");
 }
 
 void main_window::BootElf()
