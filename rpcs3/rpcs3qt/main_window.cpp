@@ -80,7 +80,8 @@ main_window::~main_window()
 {
 }
 
-auto Pause = [=]() {
+auto Pause = []()
+{
 	if (Emu.IsReady()) Emu.Run();
 	else if (Emu.IsPaused()) Emu.Resume();
 	else if (Emu.IsRunning()) Emu.Pause();

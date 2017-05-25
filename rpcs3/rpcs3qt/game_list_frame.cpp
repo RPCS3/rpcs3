@@ -3,9 +3,9 @@
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
 
-#include "Emu\Memory\Memory.h"
-#include "Emu\System.h"
-#include "Loader\PSF.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Loader/PSF.h"
 #include "Utilities/types.h"
 
 #include <algorithm>
@@ -256,7 +256,7 @@ void game_list_frame::Refresh()
 
 void game_list_frame::ToggleCategoryFilter(QString category, bool show)
 {
-	show ? categoryFilters.append(category) : categoryFilters.removeAll(category);
+	if (show) { categoryFilters.append(category); } else { categoryFilters.removeAll(category); }
 	Refresh();
 }
 

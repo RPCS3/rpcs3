@@ -3,7 +3,7 @@
 
 #include "gui_settings.h"
 
-#include "Emu\GameInfo.h"
+#include "Emu/GameInfo.h"
 
 #include <QDialog>
 #include <QTabWidget>

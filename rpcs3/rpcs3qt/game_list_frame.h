@@ -2,7 +2,7 @@
 #define GAMELISTFRAME_H
 
 #include "stdafx.h"
-#include "Emu\GameInfo.h"
+#include "Emu/GameInfo.h"
 
 #include "gui_settings.h"
 
