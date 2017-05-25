@@ -60,3 +60,19 @@ else()
 	add_subdirectory(3rdparty/hidapi/libusb)
 	#list(APPEND LIBS hidapi-libusb)
 endif()
+
+# Linux installation
+
+if(CMAKE_SYSTEM_NAME MATCHES "Linux|FreeBSD|OpenBSD")
+# Install the application icon and menu item
+install(FILES rpcs3/rpcs3.svg
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
+install(FILES rpcs3/rpcs3.png
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
+install(FILES rpcs3/rpcs3.desktop
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+# Install the binary
+install(FILES "${PROJECT_BINARY_DIR}/bin/rpcs3"
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+        PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE) # i.e. 755
+endif()

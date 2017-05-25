@@ -44,6 +44,7 @@ class FragmentProgramDecompiler
 	std::string AddCond();
 	std::string AddConst();
 	std::string AddTex();
+	void AddFlowOp(std::string code);
 	std::string Format(const std::string& code);
 
 	//Technically a temporary workaround until we know what type3 is
@@ -58,6 +59,7 @@ class FragmentProgramDecompiler
 	std::string NoOverflow(const std::string& code);
 
 	void AddCodeCond(const std::string& dst, const std::string& src);
+	std::string GetRawCond();
 	std::string GetCond();
 	template<typename T> std::string GetSRC(T src);
 	std::string BuildCode();
