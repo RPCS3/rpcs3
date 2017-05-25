@@ -320,6 +320,14 @@ struct cfg_root : cfg::node
 
 		} d3d12{this};
 
+		struct node_vk : cfg::node
+		{
+			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
+
+			cfg::string adapter{this, "Adapter"};
+
+		} vk{this};
+
 	} video{this};
 
 	struct node_audio : cfg::node
