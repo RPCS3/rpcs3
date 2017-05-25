@@ -470,7 +470,23 @@ VKGSRender::VKGSRender() : GSRender()
 		return;
 	}
 
-	m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
+	bool gpu_found = false;
+	std::string adapter_name = g_cfg.video.vk.adapter;
+	for (auto &gpu : gpus)
+	{
+		if (gpu.name() == adapter_name)
+		{
+			m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpu);
+			gpu_found = true;
+			break;
+		}
+	}
+
+	if (!gpu_found || adapter_name.empty())
+	{
+		m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
+	}
+
 #endif
 
 	m_device = (vk::render_device *)(&m_swap_chain->get_device());

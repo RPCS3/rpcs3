@@ -13,6 +13,10 @@
 #include <dxgi1_4.h>
 #endif
 
+#ifdef _WIN32
+#include "Emu/RSX/VK/VKHelpers.h"
+#endif
+
 #include "SettingsDialog.h"
 
 #include <set>
@@ -288,6 +292,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
 	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter (DirectX 12 Only)");
+	wxStaticBoxSizer* s_round_gs_vk_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Vulkan Adapter");
 	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Resolution");
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Aspect ratio");
 	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Frame limit");
@@ -313,6 +318,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	wxRadioBox* rbox_spu_decoder;
 	wxComboBox* cbox_gs_render = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_d3d_adapter = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
+	wxComboBox* cbox_gs_vk_adapter = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_resolution = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_aspect = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_frame_limit = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
@@ -474,9 +480,34 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	cbox_gs_d3d_adapter->Enable(false);
 #endif
 
+#ifdef _WIN32
+	vk::context device_enum_context;
+	device_enum_context.createInstance("RPCS3");
+	device_enum_context.makeCurrentInstance(1);
+	std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
+	device_enum_context.close();
+	if (gpus.size() > 0)
+	{
+		for (auto& gpu : gpus)
+		{
+			cbox_gs_vk_adapter->Append(gpu.name());
+		}
+		pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{"Video", "Vulkan", "Adapter"}, cbox_gs_vk_adapter));
+	}
+	else
+	{
+		// Removes Vulkan from Render list when the system doesn't support it
+		cbox_gs_render->Delete(cbox_gs_render->FindString("Vulkan"));
+		cbox_gs_vk_adapter->Enable(false);
+	}
+#else
+	cbox_gs_vk_adapter->Enable(false);
+#endif
+
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_d3d_adapter->Add(cbox_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_gs_vk_adapter->Add(cbox_gs_vk_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_aspect->Add(cbox_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_frame_limit->Add(cbox_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -520,7 +551,7 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_subpanel_graphics1->Add(chbox_gs_gl_legacy_buffers, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(s_round_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics2->AddSpacer(68);
+	s_subpanel_graphics2->Add(s_round_gs_vk_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(chbox_gs_debug_output, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(chbox_gs_overlay, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
