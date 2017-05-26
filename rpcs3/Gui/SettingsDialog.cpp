@@ -481,25 +481,39 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 #endif
 
 #ifdef _WIN32
+	//TODO: This is very slow. Only init once
+	bool vulkan_supported = false;
+
 	vk::context device_enum_context;
-	device_enum_context.createInstance("RPCS3");
-	device_enum_context.makeCurrentInstance(1);
-	std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
-	device_enum_context.close();
-	if (gpus.size() > 0)
+	u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
+	
+	if (instance_handle > 0)
 	{
-		for (auto& gpu : gpus)
+		device_enum_context.makeCurrentInstance(instance_handle);
+		std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
+		
+		if (gpus.size() > 0)
 		{
-			cbox_gs_vk_adapter->Append(gpu.name());
+			//A device with vulkan support found. Init data
+			vulkan_supported = true;
+
+			for (auto& gpu : gpus)
+			{
+				cbox_gs_vk_adapter->Append(gpu.name());
+			}
+
+			pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Vulkan", "Adapter" }, cbox_gs_vk_adapter));
 		}
-		pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{"Video", "Vulkan", "Adapter"}, cbox_gs_vk_adapter));
 	}
-	else
+	
+	if (!vulkan_supported)
 	{
 		// Removes Vulkan from Render list when the system doesn't support it
 		cbox_gs_render->Delete(cbox_gs_render->FindString("Vulkan"));
 		cbox_gs_vk_adapter->Enable(false);
 	}
+
+	device_enum_context.close();
 #else
 	cbox_gs_vk_adapter->Enable(false);
 #endif
