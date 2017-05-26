@@ -67,6 +67,13 @@ struct CellPadPeriphInfo
 	be_t<u32> pclass_profile[CELL_PAD_MAX_PORT_NUM];
 };
 
+struct CellPadPeriphData
+{
+	be_t<u32> pclass_type;
+	be_t<u32> pclass_profile;
+	CellPadData cellpad_data;
+};
+
 struct CellCapabilityInfo
 {
 	be_t<u32> info[CELL_PAD_MAX_CAPABILITY_INFO];
