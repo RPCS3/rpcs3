@@ -585,9 +585,9 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		}
 		return false;
-	case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16(uint($0.x))"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
+	case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16(uint($0.x)).xyxy"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(uint($0.x))"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-	case RSX_FP_OPCODE_UP16: SetDst("unpackHalf2x16(uint($0.x))"); return true;
+	case RSX_FP_OPCODE_UP16: SetDst("unpackHalf2x16(uint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(uint($0.x)) * 255.)"); return true;
 	case RSX_FP_OPCODE_UPG: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPG"); return true;
 	}
