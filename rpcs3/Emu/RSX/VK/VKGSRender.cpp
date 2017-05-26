@@ -451,9 +451,19 @@ VKGSRender::VKGSRender() : GSRender()
 {
 	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 
-	m_thread_context.createInstance("RPCS3");
-	m_thread_context.makeCurrentInstance(1);
-	m_thread_context.enable_debugging();
+	u32 instance_handle = m_thread_context.createInstance("RPCS3");
+
+	if (instance_handle > 0)
+	{
+		m_thread_context.makeCurrentInstance(instance_handle);
+		m_thread_context.enable_debugging();
+	}
+	else
+	{
+		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		m_device = VK_NULL_HANDLE;
+		return;
+	}
 
 #ifdef _WIN32
 	HINSTANCE hInstance = NULL;
@@ -462,10 +472,11 @@ VKGSRender::VKGSRender() : GSRender()
 	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
 	
 	//Actually confirm  that the loader found at least one compatible device
+	//This should not happen unless something is wrong with the driver setup on the target system
 	if (gpus.size() == 0)
 	{
 		//We can't throw in Emulator::Load, so we show error and return
-		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		LOG_FATAL(RSX, "No compatible GPU devices found");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}

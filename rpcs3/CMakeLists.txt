@@ -264,8 +264,10 @@ if(WIN32)
 	endif()
 	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
+
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} hidapi-hidraw udev)
-	target_link_libraries(rpcs3  -ldl -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3  -ldl -latomic ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+
 	if (USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
 		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswresample.so libswscale.so)
