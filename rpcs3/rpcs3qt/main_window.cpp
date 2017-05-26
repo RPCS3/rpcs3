@@ -41,7 +41,6 @@
 
 #include "rpcs3_version.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false)
@@ -49,6 +48,9 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	guiSettings.reset(new gui_settings());
 
 	setDockNestingEnabled(true);
+
+	// Get Render Adapters
+	m_Render_Creator = Render_Creator();
 
 	//Load Icons: This needs to happen before any actions or buttons are created
 	icon_play = QIcon(":/Icons/play.png");
@@ -865,7 +867,7 @@ void main_window::CreateConnects()
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 	connect(confSettingsAct, &QAction::triggered, [=](){
-		settings_dialog dlg(guiSettings, this);
+		settings_dialog dlg(guiSettings, m_Render_Creator, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
@@ -1031,7 +1033,7 @@ void main_window::CreateMenus()
 
 void main_window::CreateDockWindows()
 {
-	gameListFrame = new game_list_frame(guiSettings, this);
+	gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, this);
 	gameListFrame->setObjectName("gamelist");
 	debuggerFrame = new debugger_frame(this);
 	debuggerFrame->setObjectName("debugger");

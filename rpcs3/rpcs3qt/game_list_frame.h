@@ -5,6 +5,7 @@
 #include "Emu/GameInfo.h"
 
 #include "gui_settings.h"
+#include "emu_settings.h"
 
 #include <QDockWidget>
 #include <QList>
@@ -38,7 +39,7 @@ struct columns_arr
 {
 	std::vector<Column> m_columns;
 
-	columns_arr();
+	columns_arr(QSize icon_Size);
 
 	Column* GetColumnByPos(u32 pos);
 
@@ -51,6 +52,7 @@ public:
 	Column* m_col_category;
 	Column* m_col_path;
 
+	QSize m_Icon_Size;
 	QList<QImage*>* m_img_list;
 	std::vector<int> m_icon_indexes;
 	
@@ -75,11 +77,13 @@ class game_list_frame : public QDockWidget {
 	bool m_sortAscending;
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
-	columns_arr m_columns;
+	QSize m_Icon_Size = QSize(80, 44);
+	columns_arr m_columns = columns_arr(m_Icon_Size);
 	QStringList categoryFilters;
+	Render_Creator m_Render_Creator;
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent = nullptr);
 	~game_list_frame();
 	void Refresh();
 	void ToggleCategoryFilter(QString category, bool show);

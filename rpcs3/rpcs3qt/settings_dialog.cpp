@@ -13,9 +13,7 @@
 #include "settings_dialog.h"
 #include "emu_settings.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
-
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, QWidget *parent, GameInfo* game) : QDialog(parent)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, Render_Creator r_Creator, QWidget *parent, GameInfo* game) : QDialog(parent)
 {
 	std::shared_ptr<emu_settings> xemu_settings;
 	if (game)
@@ -38,7 +36,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, QW
 	tabWidget = new QTabWidget;
 	tabWidget->setUsesScrollButtons(false);
 	tabWidget->addTab(coreTab, tr("Core"));
-	tabWidget->addTab(new graphics_tab(xemu_settings, this), tr("Graphics"));
+	tabWidget->addTab(new graphics_tab(xemu_settings, r_Creator, this), tr("Graphics"));
 	tabWidget->addTab(new audio_tab(xemu_settings, this), tr("Audio"));
 	tabWidget->addTab(new input_tab(xemu_settings, this), tr("Input / Output"));
 	tabWidget->addTab(new misc_tab(xemu_settings, this), tr("Misc"));

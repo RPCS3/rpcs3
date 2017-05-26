@@ -20,7 +20,6 @@
 #include <QTimer>
 
 static const std::string m_class_name = "GameViewer";
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 // Auxiliary classes
@@ -47,7 +46,8 @@ public:
 	}
 };
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, QWidget *parent) : QDockWidget(tr("Game List"), parent), xgui_settings(settings)
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent) 
+	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
 	CreateActions();
 
@@ -57,6 +57,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, QWidget
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
+	gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
+	gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	gameList->verticalHeader()->setVisible(false);
 	gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -372,7 +374,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
 
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=](){
-		settings_dialog(xgui_settings, this, &m_game_data[row]).exec();
+		settings_dialog(xgui_settings, m_Render_Creator, this, &m_game_data[row]).exec();
 	});
 	connect(removeGame, &QAction::triggered, [=](){
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
@@ -447,7 +449,7 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	}
 }
 
-columns_arr::columns_arr()
+columns_arr::columns_arr(QSize icon_Size) : m_Icon_Size(icon_Size)
 {
 	m_img_list = new QList<QImage*>();
 
@@ -522,14 +524,14 @@ void columns_arr::Update(const std::vector<GameInfo>& game_data)
 	// load icons
 	for (const auto& path : m_col_icon->data)
 	{
-		QImage* img = new QImage(80, 44, QImage::Format_ARGB32);
+		QImage* img = new QImage(m_Icon_Size, QImage::Format_ARGB32);
 		if (!path.empty())
 		{
 			// Load image.
 			bool success = img->load(qstr(path));
 			if (success)
 			{
-				m_img_list->append(new QImage(img->scaled(QSize(80, 44),Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation)));
+				m_img_list->append(new QImage(img->scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation)));
 			}
 			else {
 				// IIRC a load failure means blank image which is fine to have as a placeholder.
@@ -582,7 +584,7 @@ void columns_arr::ShowData(QTableWidget* table)
 		if (numRows != table->rowCount())
 		{
 			table->setRowCount(numRows);
-			LOG_WARNING(HLE, "Warning. Columns are of different size: number of icons ", m_img_list->length(), " number wanted: ", numRows);
+			LOG_WARNING(HLE, "Warning. Columns are of different size: number of icons %d number wanted: %d", m_img_list->length(), numRows);
 		}
 
 		for (int r = 0; r<col->data.size(); ++r)

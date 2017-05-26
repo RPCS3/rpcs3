@@ -25,6 +25,8 @@ class main_window : public QMainWindow
 
 	bool m_sys_menu_opened;
 
+	Render_Creator m_Render_Creator;
+
 	QWidget* controls;
 
 	QIcon appIcon;
@@ -49,6 +51,10 @@ class main_window : public QMainWindow
 	QWinThumbnailToolButton *thumb_playPause;
 	QWinThumbnailToolButton *thumb_stop;
 	QWinThumbnailToolButton *thumb_restart;
+	QStringList m_vulkan_adapters;
+#endif
+#ifdef _MSC_VER
+	QStringList m_d3d12_adapters;
 #endif
 
 public:

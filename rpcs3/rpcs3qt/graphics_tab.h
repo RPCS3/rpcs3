@@ -6,17 +6,21 @@
 #include <QWidget>
 
 #include <memory>
+
 class graphics_tab : public QWidget
 {
 	Q_OBJECT
 
 public:
-	explicit graphics_tab(std::shared_ptr<emu_settings> xemu_settings, QWidget *parent = 0);
+	explicit graphics_tab(std::shared_ptr<emu_settings> xemu_settings, Render_Creator r_Creator, QWidget *parent = 0);
 
 signals:
 
 private:
 	std::shared_ptr<emu_settings> xemu_settings;
+	QString m_oldRender = "";
+	bool m_isD3D12 = false;
+	bool m_isVulkan = false;
 };
 
 #endif // GRAPHICSTAB_H
