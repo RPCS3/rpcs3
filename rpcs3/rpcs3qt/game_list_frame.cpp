@@ -321,7 +321,7 @@ void game_list_frame::CreateActions()
 	showNameColAct = new QAction(tr("Show Names"), this);
 	showSerialColAct = new QAction(tr("Show Serials"), this);
 	showFWColAct = new QAction(tr("Show FWs"), this);
-	showAppVersionColAct = new QAction(tr("Show App Verions"), this);
+	showAppVersionColAct = new QAction(tr("Show App Versions"), this);
 	showCategoryColAct = new QAction(tr("Show Categories"), this);
 	showPathColAct = new QAction(tr("Show Paths"), this);
 

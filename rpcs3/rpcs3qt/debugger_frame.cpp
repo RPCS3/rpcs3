@@ -24,15 +24,16 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_choice_units->setMaxVisibleItems(30);
 	m_choice_units->setMaximumWidth(500);
 
-	QPushButton* b_go_to_addr = new QPushButton(tr("Go To Address"), this);
-	QPushButton* b_go_to_pc = new QPushButton(tr("Go To PC"), this);
-
+	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
+	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
 	m_btn_run = new QPushButton(tr("Run"), this);
 	m_btn_pause = new QPushButton(tr("Pause"), this);
 
-	hbox_b_main->addWidget(b_go_to_addr);
-	hbox_b_main->addWidget(b_go_to_pc);
+	EnableButtons(Emu.IsRunning() || Emu.IsPaused());
+
+	hbox_b_main->addWidget(m_go_to_addr);
+	hbox_b_main->addWidget(m_go_to_pc);
 	hbox_b_main->addWidget(m_btn_step);
 	hbox_b_main->addWidget(m_btn_run);
 	hbox_b_main->addWidget(m_btn_pause);
@@ -64,8 +65,8 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	}
 	m_list->setSizeAdjustPolicy(QListWidget::AdjustToContents);
 
-	connect(b_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::Show_Val);
-	connect(b_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::Show_PC);
+	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::Show_Val);
+	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::Show_PC);
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_run, &QAbstractButton::clicked, [=](){
 		const auto cpu = this->cpu.lock();
@@ -404,6 +405,15 @@ void debugger_frame::EnableUpdateTimer(bool enable)
 	enable ? update->start(50) : update->stop();
 }
 
+void debugger_frame::EnableButtons(bool enable)
+{
+	m_go_to_addr->setEnabled(enable);
+	m_go_to_pc->setEnabled(enable);
+	m_btn_step->setEnabled(enable);
+	m_btn_run->setEnabled(enable);
+	m_btn_pause->setEnabled(enable);
+}
+
 debugger_list::debugger_list(debugger_frame* parent) : QListWidget(parent)
 {
 	m_pc = 0;
@@ -527,7 +537,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton)
+	if (event->button() == Qt::LeftButton && (Emu.IsRunning() || Emu.IsPaused()))
 	{
 		long i = currentRow();
 		if (i < 0) return;

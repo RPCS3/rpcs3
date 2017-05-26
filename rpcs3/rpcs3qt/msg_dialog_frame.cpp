@@ -11,7 +11,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		delete m_dialog;
 	}
 
-	m_dialog = new QDialog();
+	m_dialog = new custom_dialog(type.disable_cancel);
 
 	m_text = new QLabel(qstr(msg));
 
@@ -29,6 +29,11 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_gauge2 = new QProgressBar(m_dialog);
 		m_gauge2->setRange(0, m_gauge_max);
 		m_gauge2->setFixedWidth(300);
+		m_gauge2->setAlignment(Qt::AlignCenter);
+		m_hBoxLayoutG2 = new QHBoxLayout;
+		m_hBoxLayoutG2->addStretch();
+		m_hBoxLayoutG2->addWidget(m_gauge2);
+		m_hBoxLayoutG2->addStretch();
 		m_text2 = new QLabel("", m_dialog);
 	}
 
@@ -37,6 +42,11 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_gauge1 = new QProgressBar(m_dialog);
 		m_gauge1->setRange(0, m_gauge_max);
 		m_gauge1->setFixedWidth(300);
+		m_gauge1->setAlignment(Qt::AlignCenter);
+		m_hBoxLayoutG1 = new QHBoxLayout;
+		m_hBoxLayoutG1->addStretch();
+		m_hBoxLayoutG1->addWidget(m_gauge1);
+		m_hBoxLayoutG1->addStretch();
 		m_text1 = new QLabel("", m_dialog);
 	}
 
@@ -46,7 +56,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_hBoxLayout1->setAlignment(Qt::AlignCenter);
 		m_hBoxLayout1->addWidget(m_text1);
 		m_layout->addRow(m_hBoxLayout1);
-		m_layout->addRow(m_gauge1);
+		m_layout->addRow(m_hBoxLayoutG1);
 
 #ifdef _WIN32
 		m_tb_button = new QWinTaskbarButton();
@@ -63,7 +73,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_hBoxLayout2->setAlignment(Qt::AlignCenter);
 		m_hBoxLayout2->addWidget(m_text2);
 		m_layout->addRow(m_hBoxLayout2);
-		m_layout->addRow(m_gauge2);
+		m_layout->addRow(m_hBoxLayoutG2);
 	}
 
 	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO)
@@ -127,7 +137,7 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 		delete osk_dialog;
 	}
 
-	osk_dialog = new QDialog();
+	osk_dialog = new custom_dialog(type.disable_cancel);
 	osk_dialog->setModal(true);
 	osk_text_return = osk_text;
 

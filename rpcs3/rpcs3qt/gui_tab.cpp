@@ -9,15 +9,15 @@ gui_tab::gui_tab(std::shared_ptr<gui_settings> xSettings, QWidget *parent) : QWi
 {
 	// Left Widgets
 	// configs
-	QGroupBox *gb_configs = new QGroupBox(tr("Gui configs"), this);
+	QGroupBox *gb_configs = new QGroupBox(tr("GUI Configs"), this);
 	QVBoxLayout *vbox_configs = new QVBoxLayout();
 	QHBoxLayout *hbox_configs = new QHBoxLayout();
 	combo_configs = new QComboBox(this);
 	QPushButton *pb_apply_config = new QPushButton(tr("Apply"), this);
 	// control buttons
-	QGroupBox *gb_controls = new QGroupBox(tr("Gui controls"), this);
+	QGroupBox *gb_controls = new QGroupBox(tr("GUI Controls"), this);
 	QVBoxLayout *vbox_controls = new QVBoxLayout();
-	QPushButton *pb_reset_default = new QPushButton(tr("Reset Gui to Default"), this);
+	QPushButton *pb_reset_default = new QPushButton(tr("Reset GUI to Default"), this);
 	QPushButton *pb_backup_config = new QPushButton(tr("Save Current Configuration"), this);
 	QPushButton *pb_open_folder = new QPushButton(tr("Open Config/Sheet Folder"));
 
@@ -141,7 +141,7 @@ void gui_tab::AddStylesheets()
 
 void gui_tab::OnResetDefault()
 {
-	if (QMessageBox::question(this, tr("Reset Gui to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"), 
+	if (QMessageBox::question(this, tr("Reset GUI to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"), 
 		QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 	{
 		xgui_settings->Reset(true);

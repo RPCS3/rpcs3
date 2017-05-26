@@ -43,6 +43,8 @@ class debugger_frame : public QDockWidget
 	int pSize;
 	QFont mono;
 	QTextEdit* m_regs;
+	QPushButton* m_go_to_addr;
+	QPushButton* m_go_to_pc;
 	QPushButton* m_btn_step;
 	QPushButton* m_btn_run;
 	QPushButton* m_btn_pause;
@@ -70,6 +72,7 @@ public:
 	//void resizeEvent(QResizeEvent* event);
 	void DoUpdate();
 	void WriteRegs();
+	void EnableButtons(bool enable);
 
 	void OnUpdate();
 

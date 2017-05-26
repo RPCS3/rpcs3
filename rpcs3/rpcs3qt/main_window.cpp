@@ -657,6 +657,7 @@ void main_window::SaveWindowState()
 
 void main_window::OnEmuRun()
 {
+	debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
 	thumb_playPause->setToolTip(tr("Pause"));
 	thumb_playPause->setIcon(icon_pause);
@@ -694,6 +695,7 @@ void main_window::OnEmuPause()
 
 void main_window::OnEmuStop()
 {
+	debuggerFrame->EnableButtons(false);
 #ifdef _WIN32
 	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
 	thumb_playPause->setIcon(icon_play);
@@ -792,9 +794,10 @@ void main_window::CreateActions()
 	confPadAct = new QAction(tr("&Keyboard Settings"), this);
 
 	confAutopauseManagerAct = new QAction(tr("&Auto Pause Settings"), this);
+	confAutopauseManagerAct->setEnabled(false);
 
 	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
-	confSavedataManagerAct->setEnabled(true);
+	confSavedataManagerAct->setEnabled(false);
 
 	toolsCgDisasmAct = new QAction(tr("&Cg Disasm"), this);
 	toolsCgDisasmAct->setEnabled(true);
@@ -811,7 +814,7 @@ void main_window::CreateActions()
 	toolsStringSearchAct = new QAction(tr("&String Search"), this);
 	toolsStringSearchAct->setEnabled(false);
 
-	toolsDecryptSprxLibsAct = new QAction(tr("&Decrypt SPRX libraries"), this);
+	toolsDecryptSprxLibsAct = new QAction(tr("SPRX &Decryption"), this);
 
 	showDebuggerAct = new QAction(tr("Show Debugger"), this);
 	showDebuggerAct->setCheckable(true);
@@ -987,7 +990,6 @@ void main_window::CreateMenus()
 	toolsMenu->addAction(toolsmemory_viewerAct);
 	toolsMenu->addAction(toolsRsxDebuggerAct);
 	toolsMenu->addAction(toolsStringSearchAct);
-	toolsMenu->addSeparator();
 	toolsMenu->addAction(toolsDecryptSprxLibsAct);
 
 	QMenu *viewMenu = menuBar()->addMenu(tr("&View"));

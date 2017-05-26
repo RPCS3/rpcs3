@@ -29,10 +29,6 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 		{
 			std::string curr = sstr(settingType);
 			QRadioButton* butt = new QRadioButton(tr(curr.c_str()), this);
-			if (curr == "Interpreter (precise)")
-			{
-				butt->setEnabled(false);
-			}
 			butt->setCheckable(true);
 			ppuVbox->addWidget(butt);
 			if (curr == selectedPPU)

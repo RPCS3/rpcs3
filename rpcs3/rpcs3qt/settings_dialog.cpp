@@ -46,7 +46,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xgui_settings, Re
 	if (!game)
 	{	// Don't add gui tab to game settings.
 		gui_tab* guiTab = new gui_tab(xgui_settings, this);
-		tabWidget->addTab(guiTab, tr("Gui"));
+		tabWidget->addTab(guiTab, tr("GUI"));
 		connect(guiTab, &gui_tab::GuiSettingsSyncRequest, this, &settings_dialog::GuiSettingsSyncRequest);
 		connect(guiTab, &gui_tab::GuiSettingsSaveRequest, this, &settings_dialog::GuiSettingsSaveRequest);
 		connect(guiTab, &gui_tab::GuiStylesheetRequest, this, &settings_dialog::GuiStylesheetRequest);
