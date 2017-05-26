@@ -266,7 +266,7 @@ if(WIN32)
 else()
 
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} hidapi-hidraw udev)
-	target_link_libraries(rpcs3  -ldl -latomic ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3  -ldl -latomic -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
 
 	if (USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
