@@ -648,7 +648,10 @@ std::string FragmentProgramDecompiler::Decompile()
 		{
 			switch (opcode)
 			{
-			case RSX_FP_OPCODE_BRK: AddFlowOp("break"); break;
+			case RSX_FP_OPCODE_BRK:
+				if (m_loop_count) AddFlowOp("break");
+				else LOG_ERROR(RSX, "BRK opcode found outside of a loop");
+				break;
 			case RSX_FP_OPCODE_CAL: LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL"); break;
 			case RSX_FP_OPCODE_FENCT: forced_unit = FORCE_SCT; break;
 			case RSX_FP_OPCODE_FENCB: forced_unit = FORCE_SCB; break;
@@ -663,7 +666,7 @@ std::string FragmentProgramDecompiler::Decompile()
 			case RSX_FP_OPCODE_LOOP:
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 				{
-					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
+					AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
 						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
 				}
 				else
@@ -679,7 +682,7 @@ std::string FragmentProgramDecompiler::Decompile()
 			case RSX_FP_OPCODE_REP:
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 				{
-					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
+					AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
 						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
 				}
 				else
