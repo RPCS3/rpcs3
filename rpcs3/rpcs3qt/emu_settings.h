@@ -29,7 +29,7 @@ inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(
 struct Render_Creator
 {
 	bool supportsD3D12 = false;
-	bool supportsVulkan = true;
+	bool supportsVulkan = false;
 	QStringList D3D12Adapters;
 	QStringList vulkanAdapters;
 	QString render_Vulkan = QObject::tr("Vulkan");
@@ -42,20 +42,25 @@ struct Render_Creator
 #ifdef _MSC_VER
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
 		supportsD3D12 = SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory)));
+
 		if (supportsD3D12)
 		{
 			supportsD3D12 = false;
 			IDXGIAdapter1* pAdapter = nullptr;
+
 			for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != dxgi_factory->EnumAdapters1(adapterIndex, &pAdapter); ++adapterIndex)
 			{
 				HMODULE D3D12Module = verify("d3d12.dll", LoadLibrary(L"d3d12.dll"));
 				PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
+
 				if (SUCCEEDED(wrapD3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
 				{
+					//A device with D3D12 support found. Init data
+					supportsD3D12 = true;
+
 					DXGI_ADAPTER_DESC desc;
 					pAdapter->GetDesc(&desc);
 					D3D12Adapters.append(QString::fromWCharArray(desc.Description));
-					supportsD3D12 = true;
 				}
 			}
 		}
@@ -64,22 +69,26 @@ struct Render_Creator
 		// check for vulkan adapters
 #ifdef _WIN32
 		vk::context device_enum_context;
-		device_enum_context.createInstance("RPCS3");
-		device_enum_context.makeCurrentInstance(1);
-		std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
-		device_enum_context.close();
-		if (gpus.size() > 0)
+		u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
+
+		if (instance_handle > 0)
 		{
-			for (auto& gpu : gpus)
+			device_enum_context.makeCurrentInstance(instance_handle);
+			std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
+
+			if (gpus.size() > 0)
 			{
-				vulkanAdapters.append(qstr(gpu.name()));
+				//A device with vulkan support found. Init data
+				supportsVulkan = true;
+
+				for (auto& gpu : gpus)
+				{
+					vulkanAdapters.append(qstr(gpu.name()));
+				}
 			}
 		}
-		else
-		{
-			supportsVulkan = false;
-		}
 #endif
+
 	}
 };
 
