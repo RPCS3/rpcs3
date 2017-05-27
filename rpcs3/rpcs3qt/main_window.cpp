@@ -97,17 +97,17 @@ void main_window::CreateThumbnailToolbar()
 	thumb_bar->setWindow(windowHandle());
 
 	thumb_playPause = new QWinThumbnailToolButton(thumb_bar);
-	thumb_playPause->setToolTip("Start");
+	thumb_playPause->setToolTip(tr("Start"));
 	thumb_playPause->setIcon(icon_play);
 	thumb_playPause->setEnabled(false);
 
 	thumb_stop = new QWinThumbnailToolButton(thumb_bar);
-	thumb_stop->setToolTip("Stop");
+	thumb_stop->setToolTip(tr("Stop"));
 	thumb_stop->setIcon(icon_stop);
 	thumb_stop->setEnabled(false);
 
 	thumb_restart = new QWinThumbnailToolButton(thumb_bar);
-	thumb_restart->setToolTip("Restart");
+	thumb_restart->setToolTip(tr("Restart"));
 	thumb_restart->setIcon(icon_restart);
 	thumb_restart->setEnabled(false);
 
@@ -830,20 +830,23 @@ void main_window::CreateActions()
 
 	refreshGameListAct = new QAction(tr("&Refresh Game List"), this);
 
-	showCatHDDGameAct = new QAction(tr("HDD Game"), this);
+	showCatHDDGameAct = new QAction(category::hdd_Game, this);
 	showCatHDDGameAct->setCheckable(true);
 
-	showCatDiscGameAct = new QAction(tr("Disc Game"), this);
+	showCatDiscGameAct = new QAction(category::disc_Game, this);
 	showCatDiscGameAct->setCheckable(true);
 
-	showCatHomeAct = new QAction(tr("Home"), this);
+	showCatHomeAct = new QAction(category::home, this);
 	showCatHomeAct->setCheckable(true);
 
-	showCatAudioVideoAct = new QAction(tr("Audio/Video"), this);
+	showCatAudioVideoAct = new QAction(category::audio_Video, this);
 	showCatAudioVideoAct->setCheckable(true);
 
-	showCatGameDataAct = new QAction(tr("Game Data"), this);
+	showCatGameDataAct = new QAction(category::game_Data, this);
 	showCatGameDataAct->setCheckable(true);
+
+	showCatUnknownAct = new QAction(category::unknown, this);
+	showCatUnknownAct->setCheckable(true);
 
 	aboutAct = new QAction(tr("&About"), this);
 	aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -929,24 +932,28 @@ void main_window::CreateConnects()
 		gameListFrame->Refresh();
 	});
 	connect(showCatHDDGameAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter("HDD Game", checked);
-		guiSettings->SetCategoryHDDGameVisibility(checked);
+		gameListFrame->ToggleCategoryFilter(category::hdd_Game, checked);
+		guiSettings->SetCategoryVisibility(category::hdd_Game, checked);
 	});
 	connect(showCatDiscGameAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter("Disc Game", checked);
-		guiSettings->SetCategoryDiscGameVisibility(checked);
+		gameListFrame->ToggleCategoryFilter(category::disc_Game, checked);
+		guiSettings->SetCategoryVisibility(category::disc_Game, checked);
 	});
 	connect(showCatHomeAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter("Home", checked);
-		guiSettings->SetCategoryHomeVisibility(checked);
+		gameListFrame->ToggleCategoryFilter(category::home, checked);
+		guiSettings->SetCategoryVisibility(category::home, checked);
 	});
 	connect(showCatAudioVideoAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter("Audio/Video", checked);
-		guiSettings->SetCategoryAudioVideoVisibility(checked);
+		gameListFrame->ToggleCategoryFilter(category::audio_Video, checked);
+		guiSettings->SetCategoryVisibility(category::audio_Video, checked);
 	});
 	connect(showCatGameDataAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter("Game Data", checked);
-		guiSettings->SetCategoryGameDataVisibility(checked);
+		gameListFrame->ToggleCategoryFilter(category::game_Data, checked);
+		guiSettings->SetCategoryVisibility(category::game_Data, checked);
+	});
+	connect(showCatUnknownAct, &QAction::triggered, [=](bool checked) {
+		gameListFrame->ToggleCategoryFilter(category::unknown, checked);
+		guiSettings->SetCategoryVisibility(category::unknown, checked);
 	});
 	connect(aboutAct, &QAction::triggered, this, &main_window::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
@@ -1006,6 +1013,7 @@ void main_window::CreateMenus()
 	categoryMenu->addAction(showCatHomeAct);
 	categoryMenu->addAction(showCatAudioVideoAct);
 	categoryMenu->addAction(showCatGameDataAct);
+	categoryMenu->addAction(showCatUnknownAct);
 
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
@@ -1096,11 +1104,12 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	showControlsAct->setChecked(guiSettings->GetControlsVisibility());
 	guiSettings->GetControlsVisibility() ? controls->show() : controls->hide();
 
-	showCatHDDGameAct->setChecked(guiSettings->GetCategoryHDDGameVisibility());;
-	showCatDiscGameAct->setChecked(guiSettings->GetCategoryDiscGameVisibility());;
-	showCatHomeAct->setChecked(guiSettings->GetCategoryHomeVisibility());;
-	showCatAudioVideoAct->setChecked(guiSettings->GetCategoryAudioVideoVisibility());;
-	showCatGameDataAct->setChecked(guiSettings->GetCategoryGameDataVisibility());;
+	showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(category::hdd_Game));
+	showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(category::disc_Game));
+	showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(category::home));
+	showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(category::audio_Video));
+	showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(category::game_Data));
+	showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(category::unknown));
 
 	if (configureAll)
 	{

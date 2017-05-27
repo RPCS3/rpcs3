@@ -30,11 +30,7 @@ public:
 	bool GetLoggerVisibility();
 	bool GetDebuggerVisibility();
 	bool GetControlsVisibility();
-	bool GetCategoryHDDGameVisibility();
-	bool GetCategoryDiscGameVisibility();
-	bool GetCategoryHomeVisibility();
-	bool GetCategoryAudioVideoVisibility();
-	bool GetCategoryGameDataVisibility();
+	bool GetCategoryVisibility(QString cat);
 	
 	logs::level GetLogLevel();
 	bool GetTTYLogging();
@@ -60,20 +56,8 @@ public slots:
 	/** Call this in gamelist's destructor to save the state of the column sizes.*/
 	void WriteGameListState(const QByteArray& settings);
 
-	/** Sets the visibility of the HDD Game category. */
-	void SetCategoryHDDGameVisibility(bool val);
-
-	/** Sets the visibility of the Disc Game category. */
-	void SetCategoryDiscGameVisibility(bool val);
-
-	/** Sets the visibility of the Home category. */
-	void SetCategoryHomeVisibility(bool val);
-
-	/** Sets the visibility of the Audio/Video category. */
-	void SetCategoryAudioVideoVisibility(bool val);
-
-	/** Sets the visibility of the Game Data category. */
-	void SetCategoryGameDataVisibility(bool val);
+	/** Sets the visibility of the chosen category. */
+	void SetCategoryVisibility(QString cat, bool val);
 
 	/** Sets the visibility of the gamelist. */
 	void SetGamelistVisibility(bool val);

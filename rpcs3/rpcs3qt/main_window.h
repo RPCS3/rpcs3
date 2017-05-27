@@ -124,6 +124,7 @@ private:
 	QAction* showCatHomeAct;
 	QAction* showCatAudioVideoAct;
 	QAction* showCatGameDataAct;
+	QAction* showCatUnknownAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
 

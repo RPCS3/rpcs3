@@ -101,7 +101,7 @@ void game_list_frame::LoadSettings()
 	m_sortAscending = xgui_settings->GetGamelistSortAsc();
 	m_sortColumn = xgui_settings->GetGamelistSortCol();
 
-	categoryFilters = xgui_settings->GetGameListCategoryFilters();
+	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
 	if (state.isEmpty())
 	{ // If no settings exist, go to default.
@@ -211,6 +211,10 @@ void game_list_frame::LoadPSF()
 			game.category = sstr(category::game_Data);
 			game.icon_path = dir + "/ICON0.PNG";
 		}
+		else if (game.category == "unknown")
+		{
+			game.category = sstr(category::unknown);
+		}
 
 		m_game_data.push_back(game);
 	}
@@ -231,7 +235,7 @@ void game_list_frame::FilterData()
 	for (int i = 0; i < gameList->rowCount(); ++i)
 	{
 		bool match = false;
-		for (auto filter : categoryFilters)
+		for (auto filter : m_categoryFilters)
 		{
 			for (int j = 0; j < gameList->columnCount(); ++j)
 			{
@@ -259,7 +263,7 @@ void game_list_frame::Refresh()
 
 void game_list_frame::ToggleCategoryFilter(QString category, bool show)
 {
-	if (show) { categoryFilters.append(category); } else { categoryFilters.removeAll(category); }
+	if (show) { m_categoryFilters.append(category); } else { m_categoryFilters.removeAll(category); }
 	Refresh();
 }
 

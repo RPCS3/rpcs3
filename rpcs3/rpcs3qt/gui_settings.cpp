@@ -1,5 +1,7 @@
 #include "gui_settings.h"
 
+#include "game_list_frame.h"
+
 #include <QCoreApplication>
 #include <QDir>
 
@@ -55,39 +57,44 @@ void gui_settings::Reset(bool removeMeta)
 QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;
-	if (GetCategoryHDDGameVisibility()) filterList.append("HDD Game");
-	if (GetCategoryDiscGameVisibility()) filterList.append("Disc Game");
-	if (GetCategoryHomeVisibility()) filterList.append("Home");
-	if (GetCategoryAudioVideoVisibility()) filterList.append("Audio/Video");
-	if (GetCategoryGameDataVisibility()) filterList.append("Game Data");
+	if (GetCategoryVisibility(category::hdd_Game)) filterList.append(category::hdd_Game);
+	if (GetCategoryVisibility(category::disc_Game)) filterList.append(category::disc_Game);
+	if (GetCategoryVisibility(category::home)) filterList.append(category::home);
+	if (GetCategoryVisibility(category::audio_Video)) filterList.append(category::audio_Video);
+	if (GetCategoryVisibility(category::game_Data)) filterList.append(category::game_Data);
+	if (GetCategoryVisibility(category::unknown)) filterList.append(category::unknown);
 	return filterList;
 }
 
-bool gui_settings::GetCategoryHDDGameVisibility()
+bool gui_settings::GetCategoryVisibility(QString cat)
 {
-	return settings.value("GameList/categoryHDDGameVisible", true).toBool();
+	QString value = "";
+
+	if (cat == category::hdd_Game) value = "GameList/categoryHDDGameVisible";
+	else if (cat == category::disc_Game) value = "GameList/categoryDiscGameVisible";
+	else if (cat == category::home) value = "GameList/categoryHomeVisible";
+	else if (cat == category::audio_Video) value = "GameList/categoryAudioVideoVisible";
+	else if (cat == category::game_Data) value = "GameList/categoryGameDataVisible";
+	else if (cat == category::unknown) value = "GameList/categoryUnknownVisible";
+
+	return settings.value(value, true).toBool();
 }
 
-bool gui_settings::GetCategoryDiscGameVisibility()
+void gui_settings::SetCategoryVisibility(QString cat, bool val)
 {
-	return settings.value("GameList/categoryDiscGameVisible", true).toBool();
-}
+	QString value = "";
 
-bool gui_settings::GetCategoryHomeVisibility()
-{
-	return settings.value("GameList/categoryHomeVisible", true).toBool();
-}
+	if (cat == category::hdd_Game) value = "categoryHDDGameVisible";
+	else if (cat == category::disc_Game) value = "categoryDiscGameVisible";
+	else if (cat == category::home) value = "categoryHomeVisible";
+	else if (cat == category::audio_Video) value = "categoryAudioVideoVisible";
+	else if (cat == category::game_Data) value = "categoryGameDataVisible";
+	else if (cat == category::unknown) value = "categoryUnknownVisible";
 
-bool gui_settings::GetCategoryAudioVideoVisibility()
-{
-	return settings.value("GameList/categoryAudioVideoVisible", true).toBool();
+	settings.beginGroup("GameList");
+	settings.setValue(value, val);
+	settings.endGroup();
 }
-
-bool gui_settings::GetCategoryGameDataVisibility()
-{
-	return settings.value("GameList/categoryGameDataVisible", true).toBool();
-}
-
 
 void gui_settings::WriteGuiGeometry(const QByteArray& res)
 {
@@ -107,41 +114,6 @@ void gui_settings::WriteGameListState(const QByteArray& res)
 {
 	settings.beginGroup("GameList");
 	settings.setValue("state", res);
-	settings.endGroup();
-}
-
-void gui_settings::SetCategoryHDDGameVisibility(bool val)
-{
-	settings.beginGroup("GameList");
-	settings.setValue("categoryHDDGameVisible", val);
-	settings.endGroup();
-}
-
-void gui_settings::SetCategoryDiscGameVisibility(bool val)
-{
-	settings.beginGroup("GameList");
-	settings.setValue("categoryDiscGameVisible", val);
-	settings.endGroup();
-}
-
-void gui_settings::SetCategoryHomeVisibility(bool val)
-{
-	settings.beginGroup("GameList");
-	settings.setValue("categoryHomeVisible", val);
-	settings.endGroup();
-}
-
-void gui_settings::SetCategoryAudioVideoVisibility(bool val)
-{
-	settings.beginGroup("GameList");
-	settings.setValue("categoryAudioVideoVisible", val);
-	settings.endGroup();
-}
-
-void gui_settings::SetCategoryGameDataVisibility(bool val)
-{
-	settings.beginGroup("GameList");
-	settings.setValue("categoryGameDataVisible", val);
 	settings.endGroup();
 }
 

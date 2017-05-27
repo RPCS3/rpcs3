@@ -68,6 +68,7 @@ namespace category
 	const QString home        = QObject::tr("Home");
 	const QString audio_Video = QObject::tr("Audio/Video");
 	const QString game_Data   = QObject::tr("Game Data");
+	const QString unknown     = QObject::tr("Unknown");
 }
 
 class game_list_frame : public QDockWidget {
@@ -79,7 +80,7 @@ class game_list_frame : public QDockWidget {
 	std::vector<GameInfo> m_game_data;
 	QSize m_Icon_Size = QSize(80, 44);
 	columns_arr m_columns = columns_arr(m_Icon_Size);
-	QStringList categoryFilters;
+	QStringList m_categoryFilters;
 	Render_Creator m_Render_Creator;
 
 public:
