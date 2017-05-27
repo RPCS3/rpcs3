@@ -5,6 +5,67 @@
 
 #include <QSettings>
 #include <QDir>
+#include <QVariant>
+
+typedef struct GUI_SAVE
+{
+	QString key;
+	QString name;
+	QVariant def;
+
+	GUI_SAVE() {
+		key = "";
+		name = "";
+		def = QVariant();
+	};
+	GUI_SAVE(const QString& k, const QString& n, const QVariant& d) {
+		key = k;
+		name = n;
+		def = d;
+	};
+};
+
+namespace GUI
+{
+	const QString main_window = "main_window";
+	const QString game_list   = "GameList";
+	const QString logger      = "Logger";
+	const QString meta        = "Meta";
+
+	const GUI_SAVE ib_pkg_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPKG", true );
+	const GUI_SAVE ib_pup_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPUP", true );
+
+	const GUI_SAVE fd_install_pkg  = GUI_SAVE( main_window, "lastExplorePathPKG",  "" );
+	const GUI_SAVE fd_install_pup  = GUI_SAVE( main_window, "lastExplorePathPUP",  "" );
+	const GUI_SAVE fd_boot_elf     = GUI_SAVE( main_window, "lastExplorePathELF",  "" );
+	const GUI_SAVE fd_boot_game    = GUI_SAVE( main_window, "lastExplorePathGAME", "" );
+	const GUI_SAVE fd_decrypt_sprx = GUI_SAVE( main_window, "lastExplorePathSPRX", "" );
+
+	const GUI_SAVE mw_debugger    = GUI_SAVE( main_window, "debuggerVisible", false );
+	const GUI_SAVE mw_logger      = GUI_SAVE( main_window, "loggerVisible",   true );
+	const GUI_SAVE mw_gamelist    = GUI_SAVE( main_window, "gamelistVisible", true );
+	const GUI_SAVE mw_controls    = GUI_SAVE( main_window, "controlsVisible", true );
+	const GUI_SAVE mw_geometry    = GUI_SAVE( main_window, "geometry",        QByteArray() );
+	const GUI_SAVE mw_windowState = GUI_SAVE( main_window, "windowState",     QByteArray() );
+
+	const GUI_SAVE cat_hdd_game    = GUI_SAVE( game_list, "categoryVisibleHDDGame",    true );
+	const GUI_SAVE cat_disc_game   = GUI_SAVE( game_list, "categoryVisibleDiscGame",   true );
+	const GUI_SAVE cat_home        = GUI_SAVE( game_list, "categoryVisibleHome",       true );
+	const GUI_SAVE cat_audio_video = GUI_SAVE( game_list, "categoryVisibleAudioVideo", true );
+	const GUI_SAVE cat_game_data   = GUI_SAVE( game_list, "categoryVisibleGameData",   true );
+	const GUI_SAVE cat_unknown     = GUI_SAVE( game_list, "categoryVisibleUnknown",    true );
+	const GUI_SAVE cat_other       = GUI_SAVE( game_list, "categoryVisibleOther",      true );
+
+	const GUI_SAVE gl_sortAsc = GUI_SAVE( game_list, "sortAsc", true );
+	const GUI_SAVE gl_sortCol = GUI_SAVE( game_list, "sortCol", 1 );
+	const GUI_SAVE gl_state   = GUI_SAVE( game_list, "state",   QByteArray() );
+
+	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
+	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::warning) );
+
+	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
+	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
+}
 
 /** Class for GUI settings..
 */
@@ -23,70 +84,31 @@ public:
 	/** Changes the settings file to the destination preset*/
 	void ChangeToConfig(const QString& destination);
 
-
-	QByteArray ReadGuiGeometry();
-	QByteArray ReadGuiState();
-	bool GetGamelistVisibility();
-	bool GetLoggerVisibility();
-	bool GetDebuggerVisibility();
-	bool GetControlsVisibility();
 	bool GetCategoryVisibility(QString cat);
-	
+	QVariant GetValue(const GUI_SAVE& entry);
+
+	void ShowInfoBox(const GUI_SAVE& entry, const QString& title, const QString& text, QWidget* parent = 0);
+
 	logs::level GetLogLevel();
-	bool GetTTYLogging();
 	bool GetGamelistColVisibility(int col);
-	int GetGamelistSortCol();
-	bool GetGamelistSortAsc();
-	QByteArray GetGameListState();
 	QStringList GetConfigEntries();
-	QString GetCurrentConfig();
-	QString GetCurrentStylesheet();
 	QString GetCurrentStylesheetPath();
 	QStringList GetStylesheetEntries();
 	QStringList GetGameListCategoryFilters();
+
 public slots:
 	void Reset(bool removeMeta = false);
 
-	/** Call this from the main window passing in the result from calling saveGeometry*/
-	void WriteGuiGeometry(const QByteArray& settings);
-
-	/** Call this from main window passing in the results from saveState*/
-	void WriteGuiState(const QByteArray& settings);
-
-	/** Call this in gamelist's destructor to save the state of the column sizes.*/
-	void WriteGameListState(const QByteArray& settings);
+	/** Write value to entry */
+	void SetValue(const GUI_SAVE& entry, const QVariant& value);
 
 	/** Sets the visibility of the chosen category. */
-	void SetCategoryVisibility(QString cat, bool val);
-
-	/** Sets the visibility of the gamelist. */
-	void SetGamelistVisibility(bool val);
-
-	/** Sets the visibility of the logger. */
-	void SetLoggerVisibility(bool val);
-
-	/** Sets the visibility of the debugger. */
-	void SetDebuggerVisibility(bool val);
-
-	/** Sets the visibility of the controls cornerWidget. */
-	void SetControlsVisibility(bool val);
-
-	/* I'd love to use the enum, but Qt doesn't like connecting things that aren't meta types.*/
-	void SetLogLevel(uint lev);
-
-	void SetTTYLogging(bool val);
+	void SetCategoryVisibility(const QString& cat, const bool& val);
 
 	void SetGamelistColVisibility(int col, bool val);
 
-	void SetGamelistSortCol(int col);
-
-	void SetGamelistSortAsc(bool val);
-
 	void SaveCurrentConfig(const QString& friendlyName);
-	
-	void SetCurrentConfig(const QString& friendlyName);
 
-	void SetStyleSheet(const QString& friendlyName);
 private:
 	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& destination);

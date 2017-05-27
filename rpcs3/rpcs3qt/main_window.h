@@ -40,12 +40,6 @@ class main_window : public QMainWindow
 	QPushButton* menu_restart;
 	QPushButton* menu_capture_frame;
 
-	QString m_path_last_PKG = "";
-	QString m_path_last_PUP = "";
-	QString m_path_last_ELF = "";
-	QString m_path_last_Game = "";
-	QString m_path_last_SPRX = "";
-
 #ifdef _WIN32
 	QWinThumbnailToolBar *thumb_bar;
 	QWinThumbnailToolButton *thumb_playPause;

@@ -50,8 +50,6 @@ public:
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent) 
 	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
-	CreateActions();
-
 	gameList = new QTableWidget(this);
 	gameList->setShowGrid(false);
 	gameList->setItemDelegate(new table_item_delegate(this));
@@ -75,8 +73,20 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 
 	setWidget(gameList);
 
+	// Actions
+	showIconColAct = new QAction(tr("Show Icons"), this);
+	showNameColAct = new QAction(tr("Show Names"), this);
+	showSerialColAct = new QAction(tr("Show Serials"), this);
+	showFWColAct = new QAction(tr("Show FWs"), this);
+	showAppVersionColAct = new QAction(tr("Show App Versions"), this);
+	showCategoryColAct = new QAction(tr("Show Categories"), this);
+	showPathColAct = new QAction(tr("Show Paths"), this);
+
+	columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct };
+
+	// Events
 	connect(gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, [=](const QPoint& pos){
+	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, [=](const QPoint& pos) {
 		QMenu* configure = new QMenu(this);
 		configure->addActions({ showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct });
 		configure->exec(mapToGlobal(pos));
@@ -84,22 +94,47 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	connect(gameList, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 	connect(gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
 
+	for (int col = 0; col < columnActs.count(); ++col)
+	{
+		columnActs[col]->setCheckable(true);
+
+		auto l_CallBack = [this, col](bool val) {
+			if (!val) // be sure to have at least one column left so you can call the context menu at all time
+			{
+				int c = 0;
+				for (int i = 0; i < columnActs.count(); ++i)
+				{
+					if (xgui_settings->GetGamelistColVisibility(i)) { if (++c > 1) { break; } }
+				}
+				if (c < 2)
+				{
+					columnActs[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
+					return;
+				}
+			}
+			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
+			xgui_settings->SetGamelistColVisibility(col, val);
+		};
+		connect(columnActs[col], &QAction::triggered, l_CallBack);
+	}
+
+	// Init
 	Refresh(); // Data MUST be loaded so that first settings load will reset columns to correct width w/r to data.
 	LoadSettings();
 }
 
 void game_list_frame::LoadSettings()
 {
-	QByteArray state = xgui_settings->GetGameListState();
+	QByteArray state = xgui_settings->GetValue(GUI::gl_state).toByteArray();
 
-	for (int col = 0; col < columnActs.length(); ++col)
+	for (int col = 0; col < columnActs.count(); ++col)
 	{
 		bool vis = xgui_settings->GetGamelistColVisibility(col);
 		columnActs[col]->setChecked(vis);
 		gameList->setColumnHidden(col, !vis);
 	}
-	m_sortAscending = xgui_settings->GetGamelistSortAsc();
-	m_sortColumn = xgui_settings->GetGamelistSortCol();
+	m_sortAscending = xgui_settings->GetValue(GUI::gl_sortAsc).toBool();
+	m_sortColumn = xgui_settings->GetValue(GUI::gl_sortCol).toInt();
 
 	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
@@ -134,8 +169,8 @@ void game_list_frame::OnColClicked(int col)
 	}
 	m_sortColumn = col;
 
-	xgui_settings->SetGamelistSortAsc(m_sortAscending);
-	xgui_settings->SetGamelistSortCol(col);
+	xgui_settings->SetValue(GUI::gl_sortAsc, m_sortAscending);
+	xgui_settings->SetValue(GUI::gl_sortCol, col);
 
 	// Sort entries, update columns and refresh the panel
 	Refresh();
@@ -269,14 +304,14 @@ void game_list_frame::ToggleCategoryFilter(QString category, bool show)
 
 void game_list_frame::SaveSettings()
 {
-	for (int col = 0; col < columnActs.length(); ++col)
+	for (int col = 0; col < columnActs.count(); ++col)
 	{
 		xgui_settings->SetGamelistColVisibility(col, columnActs[col]->isChecked());
 	}
-	xgui_settings->SetGamelistSortCol(m_sortColumn);
-	xgui_settings->SetGamelistSortAsc(m_sortAscending);
+	xgui_settings->SetValue(GUI::gl_sortCol, m_sortColumn);
+	xgui_settings->SetValue(GUI::gl_sortAsc, m_sortAscending);
 
-	xgui_settings->WriteGameListState(gameList->horizontalHeader()->saveState());
+	xgui_settings->SetValue(GUI::gl_state, gameList->horizontalHeader()->saveState());
 }
 
 static void open_dir(const std::string& spath)
@@ -317,34 +352,6 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	else
 	{
 		open_dir(Emu.GetGameDir() + m_game_data[i].root);
-	}
-}
-
-void game_list_frame::CreateActions()
-{
-	showIconColAct = new QAction(tr("Show Icons"), this);
-	showNameColAct = new QAction(tr("Show Names"), this);
-	showSerialColAct = new QAction(tr("Show Serials"), this);
-	showFWColAct = new QAction(tr("Show FWs"), this);
-	showAppVersionColAct = new QAction(tr("Show App Versions"), this);
-	showCategoryColAct = new QAction(tr("Show Categories"), this);
-	showPathColAct = new QAction(tr("Show Paths"), this);
-
-	columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct };
-
-	for (int col = 0; col < columnActs.length(); ++col)
-	{
-		QAction* act = columnActs[col];
-
-		act->setCheckable(true);
-		act->setChecked(true);
-
-		auto l_CallBack = [this, col](bool val) {
-			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
-			xgui_settings->SetGamelistColVisibility(col, val);
-		};
-
-		connect(act, &QAction::triggered, l_CallBack);
 	}
 }
 

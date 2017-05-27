@@ -73,11 +73,11 @@ gui_tab::gui_tab(std::shared_ptr<gui_settings> xSettings, QWidget *parent) : QWi
 void gui_tab::Accept()
 {
 	// Only attempt to load a config if changes occurred.
-	if (m_startingConfig != xgui_settings->GetCurrentConfig())
+	if (m_startingConfig != xgui_settings->GetValue(GUI::m_currentConfig).toString())
 	{
 		OnApplyConfig();
 	}
-	if (m_startingStylesheet != xgui_settings->GetCurrentStylesheet())
+	if (m_startingStylesheet != xgui_settings->GetValue(GUI::m_currentStylesheet).toString())
 	{
 		OnApplyStylesheet();
 	}
@@ -125,7 +125,7 @@ void gui_tab::AddStylesheets()
 		}
 	}
 
-	QString currentSelection = xgui_settings->GetCurrentStylesheet();
+	QString currentSelection = xgui_settings->GetValue(GUI::m_currentStylesheet).toString();
 	m_startingStylesheet = currentSelection;
 
 	int index = combo_stylesheets->findText(currentSelection);
@@ -190,13 +190,13 @@ void gui_tab::OnBackupCurrentConfig()
 void gui_tab::OnApplyConfig()
 {
 	QString name = combo_configs->currentText();
-	xgui_settings->SetCurrentConfig(name);
+	xgui_settings->SetValue(GUI::m_currentConfig, name);
 	xgui_settings->ChangeToConfig(name);
 	emit GuiSettingsSyncRequest();
 }
 
 void gui_tab::OnApplyStylesheet()
 {
-	xgui_settings->SetStyleSheet(combo_stylesheets->currentText());
+	xgui_settings->SetValue(GUI::m_currentStylesheet, combo_stylesheets->currentText());
 	emit GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }

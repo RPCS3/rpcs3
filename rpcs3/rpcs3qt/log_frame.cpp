@@ -211,7 +211,7 @@ void log_frame::CreateAndConnectActions()
 		// This sets the log level properly when the action is triggered.
 		auto l_callback = [this, logLevel]() {
 			s_gui_listener.enabled = logLevel;
-			xgui_settings->SetLogLevel(static_cast<uint>(logLevel));
+			xgui_settings->SetValue(GUI::l_level, static_cast<uint>(logLevel));
 		};
 
 		connect(act, &QAction::triggered, l_callback);
@@ -233,7 +233,9 @@ void log_frame::CreateAndConnectActions()
 
 	TTYAct = new QAction(tr("TTY"), this);
 	TTYAct->setCheckable(true);
-	connect(TTYAct, &QAction::triggered, xgui_settings.get(), &gui_settings::SetTTYLogging);
+	connect(TTYAct, &QAction::triggered, xgui_settings.get(), [=](bool checked){
+		xgui_settings->SetValue(GUI::l_tty, checked);
+	});
 
 	l_initAct(nothingAct, logs::level::always);
 	l_initAct(fatalAct, logs::level::fatal);
@@ -250,7 +252,7 @@ void log_frame::CreateAndConnectActions()
 void log_frame::LoadSettings()
 {
 	SetLogLevel(xgui_settings->GetLogLevel());
-	SetTTYLogging(xgui_settings->GetTTYLogging());
+	SetTTYLogging(xgui_settings->GetValue(GUI::l_tty).toBool());
 }
 
 void log_frame::UpdateUI()

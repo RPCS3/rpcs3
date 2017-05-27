@@ -179,7 +179,8 @@ void main_window::BootElf()
 		stopped = true;
 	}
 
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), m_path_last_ELF, tr(
+	QString path_last_ELF = guiSettings->GetValue(GUI::fd_boot_elf).toString();
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_last_ELF, tr(
 		"(S)ELF files (*BOOT.BIN *.elf *.self);;"
 		"ELF files (BOOT.BIN *.elf);;"
 		"SELF files (EBOOT.BIN *.self);;"
@@ -199,7 +200,7 @@ void main_window::BootElf()
 	// If we resolved the filepath earlier we would end up setting the last opened dir to the unwanted
 	// game folder in case of having e.g. a Game Folder with collected links to elf files.
 	// Don't set last path earlier in case of cancelled dialog
-	m_path_last_ELF = filePath;
+	guiSettings->SetValue(GUI::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
 	SetAppIconFromPath(path);
@@ -220,7 +221,8 @@ void main_window::BootGame()
 		stopped = true;
 	}
 
-	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), m_path_last_Game, QFileDialog::ShowDirsOnly);
+	QString path_last_Game = guiSettings->GetValue(GUI::fd_boot_game).toString();
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_Game, QFileDialog::ShowDirsOnly);
 
 	if (dirPath == NULL)
 	{
@@ -228,7 +230,7 @@ void main_window::BootGame()
 		return;
 	}
 	Emu.Stop();
-	m_path_last_Game = QFileInfo(dirPath).path();
+	guiSettings->SetValue(GUI::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
 	SetAppIconFromPath(path);
 
@@ -240,7 +242,8 @@ void main_window::BootGame()
 
 void main_window::InstallPkg()
 {
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), m_path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	QString path_last_PKG = guiSettings->GetValue(GUI::fd_install_pkg).toString();
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
 
 	if (filePath == NULL)
 	{
@@ -248,7 +251,7 @@ void main_window::InstallPkg()
 	}
 	Emu.Stop();
 
-	m_path_last_PKG = QFileInfo(filePath).path();
+	guiSettings->SetValue(GUI::fd_install_pkg, QFileInfo(filePath).path());
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
@@ -361,7 +364,8 @@ void main_window::InstallPkg()
 	{
 		gameListFrame->Refresh();
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
-		QMessageBox::information(this, tr("Success!"), tr("Successfully installed software from package!"));
+		guiSettings->ShowInfoBox(GUI::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
+
 #ifdef _WIN32
 		taskbar_progress->hide();
 		taskbar_button->~QWinTaskbarButton();
@@ -371,7 +375,8 @@ void main_window::InstallPkg()
 
 void main_window::InstallPup()
 {
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), m_path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP"));
+	QString path_last_PUP = guiSettings->GetValue(GUI::fd_install_pup).toString();
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)|PS3UPDAT.PUP"));
 
 	if (filePath == NULL)
 	{
@@ -380,7 +385,7 @@ void main_window::InstallPup()
 
 	Emu.Stop();
 
-	m_path_last_PUP = QFileInfo(filePath).path();
+	guiSettings->SetValue(GUI::fd_install_pup, QFileInfo(filePath).path());
 	const std::string path = sstr(filePath);
 
 	fs::file pup_f(path);
@@ -487,7 +492,8 @@ void main_window::InstallPup()
 	if (progress > 0)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
-		QMessageBox::information(this, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"));
+		guiSettings->ShowInfoBox(GUI::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
+
 #ifdef _WIN32
 		taskbar_progress->hide();
 		taskbar_button->~QWinTaskbarButton();
@@ -500,7 +506,8 @@ extern void sysutil_send_system_cmd(u64 status, u64 param);
 
 void main_window::DecryptSPRXLibraries()
 {
-	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select SPRX files"), m_path_last_SPRX, tr("SPRX files (*.sprx)"));
+	QString path_last_SPRX = guiSettings->GetValue(GUI::fd_decrypt_sprx).toString();
+	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select SPRX files"), path_last_SPRX, tr("SPRX files (*.sprx)"));
 
 	if (modules.isEmpty())
 	{
@@ -509,7 +516,7 @@ void main_window::DecryptSPRXLibraries()
 
 	Emu.Stop();
 
-	m_path_last_SPRX = QFileInfo(modules.first()).path();
+	guiSettings->SetValue(GUI::fd_decrypt_sprx, QFileInfo(modules.first()).path());
 
 	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
 
@@ -648,8 +655,8 @@ void main_window::About()
 void main_window::SaveWindowState()
 {
 	// Save gui settings
-	guiSettings->WriteGuiGeometry(saveGeometry());
-	guiSettings->WriteGuiState(saveState());
+	guiSettings->SetValue(GUI::mw_geometry, saveGeometry());
+	guiSettings->SetValue(GUI::mw_windowState, saveState());
 
 	// Save column settings
 	gameListFrame->SaveSettings();
@@ -914,19 +921,19 @@ void main_window::CreateConnects()
 	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
 	connect(showDebuggerAct, &QAction::triggered, [=](bool checked){
 		checked ? debuggerFrame->show() : debuggerFrame->hide();
-		guiSettings->SetDebuggerVisibility(checked);
+		guiSettings->SetValue(GUI::mw_debugger, checked);
 	});
 	connect(showLogAct, &QAction::triggered, [=](bool checked){
 		checked ? logFrame->show() : logFrame->hide();
-		guiSettings->SetLoggerVisibility(checked);
+		guiSettings->SetValue(GUI::mw_logger, checked);
 	});
 	connect(showGameListAct, &QAction::triggered, [=](bool checked){
 		checked ? gameListFrame->show() : gameListFrame->hide();
-		guiSettings->SetGamelistVisibility(checked);
+		guiSettings->SetValue(GUI::mw_gamelist, checked);
 	});
 	connect(showControlsAct, &QAction::triggered, this, [=](bool checked){
 		checked ? controls->show() : controls->hide();
-		guiSettings->SetControlsVisibility(checked);
+		guiSettings->SetValue(GUI::mw_controls, checked);
 	});
 	connect(refreshGameListAct, &QAction::triggered, [=](){
 		gameListFrame->Refresh();
@@ -1059,14 +1066,14 @@ void main_window::CreateDockWindows()
 		if (showLogAct->isChecked())
 		{
 			showLogAct->setChecked(false);
-			guiSettings->SetLoggerVisibility(false);
+			guiSettings->SetValue(GUI::mw_logger, false);
 		}
 	});
 	connect(debuggerFrame, &debugger_frame::DebugFrameClosed, [=](){
 		if (showDebuggerAct->isChecked())
 		{
 			showDebuggerAct->setChecked(false);
-			guiSettings->SetDebuggerVisibility(false);
+			guiSettings->SetValue(GUI::mw_debugger, false);
 		}
 	});
 	connect(gameListFrame, &game_list_frame::game_list_frameClosed, [=]()
@@ -1074,7 +1081,7 @@ void main_window::CreateDockWindows()
 		if (showGameListAct->isChecked())
 		{
 			showGameListAct->setChecked(false);
-			guiSettings->SetGamelistVisibility(false);
+			guiSettings->SetValue(GUI::mw_gamelist, false);
 		}
 	});
 	connect(gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
@@ -1083,7 +1090,7 @@ void main_window::CreateDockWindows()
 void main_window::ConfigureGuiFromSettings(bool configureAll)
 {
 	// Restore GUI state if needed. We need to if they exist.
-	QByteArray geometry = guiSettings->ReadGuiGeometry();
+	QByteArray geometry = guiSettings->GetValue(GUI::mw_geometry).toByteArray();
 	if (geometry.isEmpty() == false)
 	{
 		restoreGeometry(geometry);
@@ -1096,13 +1103,13 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 		resize(defaultSize);
 	}
 
-	restoreState(guiSettings->ReadGuiState());
+	restoreState(guiSettings->GetValue(GUI::mw_windowState).toByteArray());
 
-	showLogAct->setChecked(guiSettings->GetLoggerVisibility());
-	showGameListAct->setChecked(guiSettings->GetGamelistVisibility());
-	showDebuggerAct->setChecked(guiSettings->GetDebuggerVisibility());
-	showControlsAct->setChecked(guiSettings->GetControlsVisibility());
-	guiSettings->GetControlsVisibility() ? controls->show() : controls->hide();
+	showLogAct->setChecked(guiSettings->GetValue(GUI::mw_logger).toBool());
+	showGameListAct->setChecked(guiSettings->GetValue(GUI::mw_gamelist).toBool());
+	showDebuggerAct->setChecked(guiSettings->GetValue(GUI::mw_debugger).toBool());
+	showControlsAct->setChecked(guiSettings->GetValue(GUI::mw_controls).toBool());
+	guiSettings->GetValue(GUI::mw_controls).toBool() ? controls->show() : controls->hide();
 
 	showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(category::hdd_Game));
 	showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(category::disc_Game));

@@ -109,8 +109,6 @@ protected:
 private:
 	QTableWidget *gameList;
 
-	void CreateActions();
-
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(const QModelIndex& index);
 
