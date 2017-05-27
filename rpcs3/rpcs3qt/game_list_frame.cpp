@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <memory>
 
+#include <QDesktopServices>
 #include <QDir>
 #include <QHeaderView>
 #include <QListView>
@@ -371,6 +372,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
 	myMenu.addSeparator();
 	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
+	myMenu.addSeparator();
+	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
 
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=](){
@@ -384,6 +387,11 @@ void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + m_game_data[row].root); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + m_game_data[row].serial); });
+	connect(checkCompat, &QAction::triggered, [=]() {
+		QString serial = qstr(m_game_data[row].serial);
+		QString link = "https://rpcs3.net/compatibility?g=" + serial;
+		QDesktopServices::openUrl(QUrl(link));
+	});
 
 	//Disable options depending on software category
 	QString category = qstr(m_game_data[row].category);
@@ -397,6 +405,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
 		configure->setEnabled(false);
 		removeConfig->setEnabled(false);
 		openConfig->setEnabled(false);
+		checkCompat->setEnabled(false);
 	}
 	else if (category == category::home || category == category::game_Data)
 	{
@@ -404,6 +413,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos) // this is a slot
 		configure->setEnabled(false);
 		removeConfig->setEnabled(false);
 		openConfig->setEnabled(false);
+		checkCompat->setEnabled(false);
 	}
 	
 	myMenu.exec(globalPos);
