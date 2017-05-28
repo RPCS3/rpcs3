@@ -45,18 +45,8 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 	QPushButton* m_button_no = nullptr;
 	QProgressBar* m_gauge1 = nullptr;
 	QProgressBar* m_gauge2 = nullptr;
-	QFormLayout* m_layout = nullptr;
-	QHBoxLayout* m_hBoxLayout1 = nullptr;
-	QHBoxLayout* m_hBoxLayout2 = nullptr;
-	QHBoxLayout* m_hBoxLayout3 = nullptr;
-	QHBoxLayout* m_hBoxLayoutG1 = nullptr;
-	QHBoxLayout* m_hBoxLayoutG2 = nullptr;
 
 	custom_dialog* osk_dialog = nullptr;
-	QHBoxLayout* osk_hBoxLayout = nullptr;
-	QFormLayout* osk_layout = nullptr;
-	QPushButton* osk_button_ok = nullptr;
-	QLineEdit* osk_input = nullptr;
 	char16_t* osk_text_return;
 
 	const int m_gauge_max = 100;
