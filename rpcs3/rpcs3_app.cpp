@@ -1,5 +1,8 @@
 #include "rpcs3_app.h"
 
+#include "rpcs3qt/welcome_dialog.h"
+#include "rpcs3qt/gui_settings.h"
+
 #include "Emu/System.h"
 #include "rpcs3qt/gs_frame.h"
 #include "rpcs3qt/gl_gs_frame.h"
@@ -68,6 +71,14 @@ void rpcs3_app::Init()
 
 	// Create the thumbnail toolbar after the main_window is created
 	RPCS3MainWin->CreateThumbnailToolbar();
+
+	// Slightly inneficient to make a gui_settings instance right here.
+	// But, I don't really feel like adding this as a dependency injection into RPCS3MainWin.
+	if (gui_settings().GetValue(GUI::ib_show_welcome).toBool())
+	{
+		welcome_dialog* welcome = new welcome_dialog();
+		welcome->exec();
+	}
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here.

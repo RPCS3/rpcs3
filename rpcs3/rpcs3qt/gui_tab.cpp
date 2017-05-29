@@ -4,6 +4,7 @@
 #include <QInputDialog>
 #include <QAction>
 #include <QDesktopServices>
+#include <QCheckBox>
 
 gui_tab::gui_tab(std::shared_ptr<gui_settings> xSettings, QWidget *parent) : QWidget(parent), xgui_settings(xSettings)
 {
@@ -19,7 +20,9 @@ gui_tab::gui_tab(std::shared_ptr<gui_settings> xSettings, QWidget *parent) : QWi
 	QVBoxLayout *vbox_controls = new QVBoxLayout();
 	QPushButton *pb_reset_default = new QPushButton(tr("Reset GUI to Default"), this);
 	QPushButton *pb_backup_config = new QPushButton(tr("Save Current Configuration"), this);
-	QPushButton *pb_open_folder = new QPushButton(tr("Open Config/Sheet Folder"));
+	QPushButton *pb_open_folder = new QPushButton(tr("Open Config/Sheet Folder"), this);
+	QCheckBox *cb_show_welcome = new QCheckBox(tr("Show Welcome Screen"), this);
+	cb_show_welcome->setChecked(xSettings->GetValue(GUI::ib_show_welcome).toBool());
 
 	// Right Widgets
 	QGroupBox *gb_stylesheets = new QGroupBox(tr("Stylesheets"), this);
@@ -36,6 +39,7 @@ gui_tab::gui_tab(std::shared_ptr<gui_settings> xSettings, QWidget *parent) : QWi
 	vbox_configs->addLayout(hbox_configs);
 	gb_configs->setLayout(vbox_configs);
 
+	vbox_controls->addWidget(cb_show_welcome);
 	vbox_controls->addWidget(pb_reset_default);
 	vbox_controls->addWidget(pb_backup_config);
 	vbox_controls->addWidget(pb_open_folder);
@@ -66,6 +70,8 @@ gui_tab::gui_tab(std::shared_ptr<gui_settings> xSettings, QWidget *parent) : QWi
 	connect(pb_apply_config, &QAbstractButton::clicked, this, &gui_tab::OnApplyConfig);
 	connect(pb_apply_stylesheet, &QAbstractButton::clicked, this, &gui_tab::OnApplyStylesheet);
 	connect(pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
+	connect(cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xSettings->SetValue(GUI::ib_show_welcome, val); });
+
 	AddConfigs();
 	AddStylesheets();
 }

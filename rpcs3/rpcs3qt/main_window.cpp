@@ -576,7 +576,7 @@ void main_window::About()
 	QLabel* caption = new QLabel(tr(
 		"<h1>RPCS3</h1>"
 		"A PlayStation 3 emulator and debugger.<br>"
-		"RPCS3 Version: %1").arg(qstr(rpcs3::version.to_string())
+		"RPCS3 Version: %1 do").arg(qstr(rpcs3::version.to_string())
 		));
 	QLabel* developers = new QLabel(
 		"<p><b>Developers:</b><br>¬DH<br>¬AlexAltea<br>¬Hykem<br>Oil<br>Nekotekina<br>Bigpet<br>¬gopalsr83<br>¬tambry<br>"

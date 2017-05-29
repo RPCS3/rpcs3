@@ -146,6 +146,7 @@ public:
 		ExitRPCS3OnFinish,
 		StartOnBoot,
 		StartGameFullscreen,
+		ShowWelcomeScreen,
 
 		// Network
 		ConnectionStatus,
@@ -227,6 +228,7 @@ private:
 		{ExitRPCS3OnFinish,	{ "Miscellaneous", "Exit RPCS3 when process finishes" }},
 		{StartOnBoot,		{ "Miscellaneous", "Always start after boot" }},
 		{StartGameFullscreen, { "Miscellaneous", "Start Games in Fullscreen Mode"}},
+		{ShowWelcomeScreen, { "Miscellaneous", "Show Welcome Screen"}},
 
 		// Networking
 		{ConnectionStatus,	{ "Net", "Connection status"}},

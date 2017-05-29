@@ -34,6 +34,7 @@ namespace GUI
 
 	const GUI_SAVE ib_pkg_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPKG", true );
 	const GUI_SAVE ib_pup_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPUP", true );
+	const GUI_SAVE ib_show_welcome = GUI_SAVE(main_window, "infoBoxEnabledWelcome", true);
 
 	const GUI_SAVE fd_install_pkg  = GUI_SAVE( main_window, "lastExplorePathPKG",  "" );
 	const GUI_SAVE fd_install_pup  = GUI_SAVE( main_window, "lastExplorePathPUP",  "" );
