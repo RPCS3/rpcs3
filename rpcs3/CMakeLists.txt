@@ -155,16 +155,13 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 "${RPCS3_SRC_DIR}/../Vulkan/Vulkan-LoaderAndValidationLayers/include"
 "${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/"
 "${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
 # Includes 3rdparty stuff that isn't included yet
 "${RPCS3_SRC_DIR}/../3rdparty/GL"
 "${RPCS3_SRC_DIR}/../3rdparty/stblib"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 "${RPCS3_SRC_DIR}/../3rdparty/cereal/include"
 )
 if(WIN32)
@@ -217,20 +214,33 @@ GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/*.cpp"
 "${RPCS3_SRC_DIR}/../Utilities/*.cpp"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler/*.cpp"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code/*.cpp"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/GenericCodeGen/*.cpp"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/MachineIndependent/*.cpp"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/OSDependent/Unix/*.cpp"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/OGLCompilersDLL/*.cpp"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/hlsl/*.cpp"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/SPIRV/*.cpp"
 )
 
-if(NOT WIN32)
-	set (EXCLUDE_DIR "/RSX/VK/")
-	foreach (TMP_PATH ${RPCS3_SRC})
-		string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
-		if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+#File exclusion section
+
+#Ignore vulkan if not on windows or linux
+if(NOT WIN32 AND NOT "${CMAKE_SYSTEM}" MATCHES "Linux")
+	set (EXCLUDE_FILES "/RSX/VK/")
+endif()
+
+#Do not compile the Qt moc files, they are compiled when generating automoc
+set (EXCLUDE_FILES ${EXLUDE_FILES} "moc_")
+
+foreach (TMP_PATH ${RPCS3_SRC})
+	foreach (EXCLUDE_PATH ${EXCLUDE_FILES})
+		string (FIND ${TMP_PATH} ${EXCLUDE_PATH} EXCLUDE_FILE_FOUND)
+		if (NOT ${EXCLUDE_FILE_FOUND} EQUAL -1)
 			list (REMOVE_ITEM RPCS3_SRC ${TMP_PATH})
 		endif ()
-	endforeach(TMP_PATH)
-endif()
+	endforeach(EXCLUDE_PATH)
+endforeach(TMP_PATH)
 
 # The Gui folder contains wxWidgets stuff, which we no longer want.
 foreach (TMP_PATH ${RPCS3_SRC})
@@ -261,10 +271,8 @@ if(WIN32)
 	endif()
 	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
-
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} hidapi-hidraw udev)
-	target_link_libraries(rpcs3  -ldl -latomic -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
-
+	target_link_libraries(rpcs3  -ldl -latomic -lpthread -lvulkan ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
 	if (USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
 		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswresample.so libswscale.so)
@@ -280,8 +288,6 @@ endif()
 if(LLVM_FOUND)
 	target_link_libraries(rpcs3  ${LLVM_LIBS})
 endif()
-
-target_link_libraries(rpcs3 rsx_decompiler shader_code)
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 cotire(rpcs3)

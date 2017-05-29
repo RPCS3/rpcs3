@@ -449,10 +449,11 @@ namespace
 
 VKGSRender::VKGSRender() : GSRender()
 {
-	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
+	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 
+	printf("Starting vulkan renderer\n");
 	u32 instance_handle = m_thread_context.createInstance("RPCS3");
-
+	printf("Instance created, handle=%u\n", instance_handle);
 	if (instance_handle > 0)
 	{
 		m_thread_context.makeCurrentInstance(instance_handle);
@@ -497,6 +498,48 @@ VKGSRender::VKGSRender() : GSRender()
 	{
 		m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
 	}
+	
+#elif __linux__
+
+	Window window = (Window)m_frame->handle();
+	Display *display = XOpenDisplay(0);
+
+	printf("Entering enumeration logic...\n");
+
+	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
+	
+	//Actually confirm  that the loader found at least one compatible device
+	//This should not happen unless something is wrong with the driver setup on the target system
+	if (gpus.size() == 0)
+	{
+		//We can't throw in Emulator::Load, so we show error and return
+		LOG_FATAL(RSX, "No compatible GPU devices found");
+		m_device = VK_NULL_HANDLE;
+		return;
+	}
+
+	printf("Post-enumerate devices, window=%llx, display=0x%p\n", window, display);	
+	XFlush(display);
+
+	bool gpu_found = false;
+	std::string adapter_name = g_cfg.video.vk.adapter;
+	for (auto &gpu : gpus)
+	{
+		if (gpu.name() == adapter_name)
+		{
+			m_swap_chain = m_thread_context.createSwapChain(display, window, gpu);
+			gpu_found = true;
+			break;
+		}
+	}
+
+	if (!gpu_found || adapter_name.empty())
+	{
+		m_swap_chain = m_thread_context.createSwapChain(display, window, gpus[0]);
+	}
+	
+	printf("Swapchain creation completed\n");
+	m_display_handle = display;
 
 #endif
 
@@ -659,6 +702,11 @@ VKGSRender::~VKGSRender()
 	m_thread_context.close();
 
 	delete m_swap_chain;
+	
+#ifdef __linux__
+	if (m_display_handle)
+		XCloseDisplay(m_display_handle);
+#endif
 }
 
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)

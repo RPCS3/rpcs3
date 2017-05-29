@@ -46,7 +46,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
 add_subdirectory( Vulkan )
 add_subdirectory( rpcs3 )
-add_subdirectory( rsx_program_decompiler )
 
 include_directories(3rdparty/hidapi/hidapi)
 if(APPLE)
