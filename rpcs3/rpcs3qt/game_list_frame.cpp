@@ -50,6 +50,13 @@ public:
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent) 
 	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
+	int size = m_gui_settings->GetValue(GUI::gl_iconSize).toInt();
+	m_Icon_Size = QSize(80, 44);
+	if (size == 2) m_Icon_Size = QSize(320, 176);
+	else if (size == 1) m_Icon_Size = QSize(160, 88);
+
+	m_columns = columns_arr(m_Icon_Size);
+
 	gameList = new QTableWidget(this);
 	gameList->setShowGrid(false);
 	gameList->setItemDelegate(new table_item_delegate(this));
@@ -468,6 +475,15 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 		QMessageBox::warning(this, tr("Warning!"), tr("No custom configuration found!"));
 		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
 	}
+}
+
+void game_list_frame::ResizeIcons(QSize size)
+{
+	m_columns.m_Icon_Size = size;
+	m_Icon_Size = size;
+	gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
+	gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
+	Refresh();
 }
 
 columns_arr::columns_arr(QSize icon_Size) : m_Icon_Size(icon_Size)

@@ -855,6 +855,21 @@ void main_window::CreateActions()
 	showCatUnknownAct = new QAction(category::unknown, this);
 	showCatUnknownAct->setCheckable(true);
 
+	setIconSizeSmallAct = new QAction(tr("Small"), this);
+	setIconSizeSmallAct->setCheckable(true);
+
+	setIconSizeMediumAct = new QAction(tr("Medium"), this);
+	setIconSizeMediumAct->setCheckable(true);
+
+	setIconSizeBigAct = new QAction(tr("Big"), this);
+	setIconSizeBigAct->setCheckable(true);
+
+	iconSizeActGroup = new QActionGroup(this);
+	iconSizeActGroup->addAction(setIconSizeSmallAct);
+	iconSizeActGroup->addAction(setIconSizeMediumAct);
+	iconSizeActGroup->addAction(setIconSizeBigAct);
+	setIconSizeSmallAct->setChecked(true);
+
 	aboutAct = new QAction(tr("&About"), this);
 	aboutAct->setStatusTip(tr("Show the application's About box"));
 
@@ -970,6 +985,18 @@ void main_window::CreateConnects()
 	connect(menu_capture_frame, &QAbstractButton::clicked, [=](){
 		user_asked_for_frame_capture = true;
 	});
+	connect(iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
+	{
+		QSize size;
+		int i;
+
+		if (act == setIconSizeBigAct) size = QSize(320, 176), i = 2;
+		else if (act == setIconSizeMediumAct) size = QSize(160, 88), i = 1;
+		else size = QSize(80, 44), i = 0;
+
+		guiSettings->SetValue(GUI::gl_iconSize, i);
+		gameListFrame->ResizeIcons(size);
+	});
 }
 
 void main_window::CreateMenus()
@@ -1021,6 +1048,11 @@ void main_window::CreateMenus()
 	categoryMenu->addAction(showCatAudioVideoAct);
 	categoryMenu->addAction(showCatGameDataAct);
 	categoryMenu->addAction(showCatUnknownAct);
+
+	QMenu *iconSizeMenu = viewMenu->addMenu(tr("Icon Size"));
+	iconSizeMenu->addAction(setIconSizeSmallAct);
+	iconSizeMenu->addAction(setIconSizeMediumAct);
+	iconSizeMenu->addAction(setIconSizeBigAct);
 
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
@@ -1117,6 +1149,11 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(category::audio_Video));
 	showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(category::game_Data));
 	showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(category::unknown));
+
+	int size = guiSettings->GetValue(GUI::gl_iconSize).toInt();
+	if (size == 2) setIconSizeBigAct->setChecked(true);
+	else if (size == 1) setIconSizeMediumAct->setChecked(true);
+	else setIconSizeSmallAct->setChecked(true);
 
 	if (configureAll)
 	{

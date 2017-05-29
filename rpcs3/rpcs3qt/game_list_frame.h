@@ -39,6 +39,7 @@ struct columns_arr
 {
 	std::vector<Column> m_columns;
 
+	columns_arr(){};
 	columns_arr(QSize icon_Size);
 
 	Column* GetColumnByPos(u32 pos);
@@ -78,8 +79,9 @@ class game_list_frame : public QDockWidget {
 	bool m_sortAscending;
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
-	QSize m_Icon_Size = QSize(80, 44);
-	columns_arr m_columns = columns_arr(m_Icon_Size);
+	gui_settings* m_gui_settings = new gui_settings(this);
+	QSize m_Icon_Size;
+	columns_arr m_columns;
 	QStringList m_categoryFilters;
 	Render_Creator m_Render_Creator;
 
@@ -94,7 +96,11 @@ public:
 
 	/** Saves settings. Public so that main frame can save this when a caching of column widths is needed for settings backup */
 	void SaveSettings();
-	
+
+public slots:
+	/** Resize Gamelist Icons to size */
+	void ResizeIcons(QSize size);
+
 private slots:
 	void Boot(int row);
 	void RemoveCustomConfiguration(int row);

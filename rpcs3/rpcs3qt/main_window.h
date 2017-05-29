@@ -89,6 +89,8 @@ private:
 	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
 
+	QActionGroup* iconSizeActGroup;
+
 	QAction *bootElfAct;
 	QAction *bootGameAct;
 	QAction *bootInstallPkgAct;
@@ -119,6 +121,9 @@ private:
 	QAction* showCatAudioVideoAct;
 	QAction* showCatGameDataAct;
 	QAction* showCatUnknownAct;
+	QAction* setIconSizeSmallAct;
+	QAction* setIconSizeMediumAct;
+	QAction* setIconSizeBigAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
 

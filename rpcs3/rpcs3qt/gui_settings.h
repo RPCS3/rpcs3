@@ -57,9 +57,10 @@ namespace GUI
 	const GUI_SAVE cat_unknown     = GUI_SAVE( game_list, "categoryVisibleUnknown",    true );
 	const GUI_SAVE cat_other       = GUI_SAVE( game_list, "categoryVisibleOther",      true );
 
-	const GUI_SAVE gl_sortAsc = GUI_SAVE( game_list, "sortAsc", true );
-	const GUI_SAVE gl_sortCol = GUI_SAVE( game_list, "sortCol", 1 );
-	const GUI_SAVE gl_state   = GUI_SAVE( game_list, "state",   QByteArray() );
+	const GUI_SAVE gl_sortAsc  = GUI_SAVE( game_list, "sortAsc",   true );
+	const GUI_SAVE gl_sortCol  = GUI_SAVE( game_list, "sortCol",   1 );
+	const GUI_SAVE gl_state    = GUI_SAVE( game_list, "state",     QByteArray() );
+	const GUI_SAVE gl_iconSize = GUI_SAVE( game_list, "iconSizeX", 0 );
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::warning) );
