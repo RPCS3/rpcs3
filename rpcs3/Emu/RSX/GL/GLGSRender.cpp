@@ -24,7 +24,8 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
+	//TODO
+	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 }
 
 u32 GLGSRender::enable(u32 condition, u32 cap)

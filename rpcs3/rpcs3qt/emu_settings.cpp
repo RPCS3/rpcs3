@@ -4,6 +4,18 @@
 #include "Emu/System.h"
 #include "Utilities/Config.h"
 
+#ifdef _MSC_VER
+#include <Windows.h>
+#undef GetHwnd
+#include <d3d12.h>
+#include <wrl/client.h>
+#include <dxgi1_4.h>
+#endif
+
+#if defined(_WIN32) || defined(__linux__)
+#include "Emu/RSX/VK/VKHelpers.h"
+#endif
+
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
@@ -101,6 +113,58 @@ static QStringList getOptions(cfg_location location)
 		values.append(qstr(v));
 	}
 	return values;
+}
+
+Render_Creator::Render_Creator()
+{
+	// check for dx12 adapters
+#ifdef _MSC_VER
+	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
+	supportsD3D12 = SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory)));
+
+	if (supportsD3D12)
+	{
+		supportsD3D12 = false;
+		IDXGIAdapter1* pAdapter = nullptr;
+
+		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != dxgi_factory->EnumAdapters1(adapterIndex, &pAdapter); ++adapterIndex)
+		{
+			HMODULE D3D12Module = verify("d3d12.dll", LoadLibrary(L"d3d12.dll"));
+			PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
+
+			if (SUCCEEDED(wrapD3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+			{
+				//A device with D3D12 support found. Init data
+				supportsD3D12 = true;
+
+				DXGI_ADAPTER_DESC desc;
+				pAdapter->GetDesc(&desc);
+				D3D12Adapters.append(QString::fromWCharArray(desc.Description));
+			}
+		}
+	}
+#endif
+
+	// check for vulkan adapters
+	vk::context device_enum_context;
+	u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
+
+	if (instance_handle > 0)
+	{
+		device_enum_context.makeCurrentInstance(instance_handle);
+		std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
+
+		if (gpus.size() > 0)
+		{
+			//A device with vulkan support found. Init data
+			supportsVulkan = true;
+
+			for (auto& gpu : gpus)
+			{
+				vulkanAdapters.append(qstr(gpu.name()));
+			}
+		}
+	}
 }
 
 emu_settings::emu_settings(const std::string& path) : QObject()

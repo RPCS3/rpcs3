@@ -28,18 +28,6 @@ extern rsx::frame_capture_data frame_debug;
 
 namespace rsx
 {
-	namespace old_shaders_cache
-	{
-		enum class shader_language
-		{
-			glsl,
-			hlsl,
-		};
-	}
-}
-
-namespace rsx
-{
 	namespace limits
 	{
 		enum
@@ -51,54 +39,6 @@ namespace rsx
 			tiles_count = 15,
 			zculls_count = 8,
 			color_buffers_count = 4
-		};
-	}
-
-	namespace old_shaders_cache
-	{
-		struct decompiled_shader
-		{
-			std::string code;
-		};
-
-		struct finalized_shader
-		{
-			u64 ucode_hash;
-			std::string code;
-		};
-
-		template<typename Type, typename KeyType = u64, typename Hasher = std::hash<KeyType>>
-		struct cache
-		{
-		private:
-			std::unordered_map<KeyType, Type, Hasher> m_entries;
-
-		public:
-			const Type* find(u64 key) const
-			{
-				auto found = m_entries.find(key);
-
-				if (found == m_entries.end())
-					return nullptr;
-
-				return &found->second;
-			}
-
-			void insert(KeyType key, const Type &shader)
-			{
-				m_entries.insert({ key, shader });
-			}
-		};
-
-		struct shaders_cache
-		{
-			cache<decompiled_shader> decompiled_fragment_shaders;
-			cache<decompiled_shader> decompiled_vertex_shaders;
-			cache<finalized_shader> finailized_fragment_shaders;
-			cache<finalized_shader> finailized_vertex_shaders;
-
-			void load(const std::string &path, shader_language lang);
-			void load(shader_language lang);
 		};
 	}
 
@@ -172,9 +112,6 @@ namespace rsx
 		std::vector<u32> element_push_buffer;
 
 	public:
-		old_shaders_cache::shaders_cache shaders_cache;
-		rsx::programs_cache programs_cache;
-
 		CellGcmControl* ctrl = nullptr;
 
 		Timer timer_sync;
@@ -356,7 +293,6 @@ namespace rsx
 
 		virtual bool scaled_image_from_memory(blit_src_info& src_info, blit_dst_info& dst_info, bool interpolate){ return false;  }
 
-		struct raw_program get_raw_program() const;
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);

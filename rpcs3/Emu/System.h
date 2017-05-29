@@ -74,9 +74,7 @@ enum class video_renderer
 {
 	null,
 	opengl,
-#ifdef _WIN32
 	vulkan,
-#endif
 #ifdef _MSC_VER
 	dx12,
 #endif
