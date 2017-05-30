@@ -576,7 +576,7 @@ void main_window::About()
 	QLabel* caption = new QLabel(tr(
 		"<h1>RPCS3</h1>"
 		"A PlayStation 3 emulator and debugger.<br>"
-		"RPCS3 Version: %1 do").arg(qstr(rpcs3::version.to_string())
+		"RPCS3 Version: %1").arg(qstr(rpcs3::version.to_string())
 		));
 	QLabel* developers = new QLabel(
 		"<p><b>Developers:</b><br>¬DH<br>¬AlexAltea<br>¬Hykem<br>Oil<br>Nekotekina<br>Bigpet<br>¬gopalsr83<br>¬tambry<br>"
@@ -829,7 +829,7 @@ void main_window::CreateActions()
 	showLogAct = new QAction(tr("Show Log/TTY"), this);
 	showLogAct->setCheckable(true);
 
-	showGameListAct = new QAction(tr("Show GameList"), this);
+	showGameListAct = new QAction(tr("Show Game List"), this);
 	showGameListAct->setCheckable(true);
 
 	showControlsAct = new QAction(tr("Show Controls"), this);
@@ -861,13 +861,13 @@ void main_window::CreateActions()
 	setIconSizeMediumAct = new QAction(tr("Medium"), this);
 	setIconSizeMediumAct->setCheckable(true);
 
-	setIconSizeBigAct = new QAction(tr("Big"), this);
-	setIconSizeBigAct->setCheckable(true);
+	setIconSizeLargeAct = new QAction(tr("Large"), this);
+	setIconSizeLargeAct->setCheckable(true);
 
 	iconSizeActGroup = new QActionGroup(this);
 	iconSizeActGroup->addAction(setIconSizeSmallAct);
 	iconSizeActGroup->addAction(setIconSizeMediumAct);
-	iconSizeActGroup->addAction(setIconSizeBigAct);
+	iconSizeActGroup->addAction(setIconSizeLargeAct);
 	setIconSizeSmallAct->setChecked(true);
 
 	aboutAct = new QAction(tr("&About"), this);
@@ -987,15 +987,14 @@ void main_window::CreateConnects()
 	});
 	connect(iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
-		QSize size;
-		int i;
+		QString key;
 
-		if (act == setIconSizeBigAct) size = QSize(320, 176), i = 2;
-		else if (act == setIconSizeMediumAct) size = QSize(160, 88), i = 1;
-		else size = QSize(80, 44), i = 0;
+		if (act == setIconSizeLargeAct) key = GUI::gl_icon_key_large;
+		else if (act == setIconSizeMediumAct) key = GUI::gl_icon_key_medium;
+		else key = GUI::gl_icon_key_small;
 
-		guiSettings->SetValue(GUI::gl_iconSize, i);
-		gameListFrame->ResizeIcons(size);
+		guiSettings->SetValue(GUI::gl_iconSize, key);
+		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(key));
 	});
 }
 
@@ -1052,7 +1051,7 @@ void main_window::CreateMenus()
 	QMenu *iconSizeMenu = viewMenu->addMenu(tr("Icon Size"));
 	iconSizeMenu->addAction(setIconSizeSmallAct);
 	iconSizeMenu->addAction(setIconSizeMediumAct);
-	iconSizeMenu->addAction(setIconSizeBigAct);
+	iconSizeMenu->addAction(setIconSizeLargeAct);
 
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
@@ -1150,9 +1149,9 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(category::game_Data));
 	showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(category::unknown));
 
-	int size = guiSettings->GetValue(GUI::gl_iconSize).toInt();
-	if (size == 2) setIconSizeBigAct->setChecked(true);
-	else if (size == 1) setIconSizeMediumAct->setChecked(true);
+	QString key = guiSettings->GetValue(GUI::gl_iconSize).toString();
+	if (key == GUI::gl_icon_key_large) setIconSizeLargeAct->setChecked(true);
+	else if (key == GUI::gl_icon_key_medium) setIconSizeMediumAct->setChecked(true);
 	else setIconSizeSmallAct->setChecked(true);
 
 	if (configureAll)

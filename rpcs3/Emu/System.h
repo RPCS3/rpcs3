@@ -375,9 +375,10 @@ struct cfg_root : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
 		
-		cfg::_bool autostart{this, "Always start after boot", true};
+		cfg::_bool autostart{this, "Automatically start games after boot", true};
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
-		cfg::_bool start_fullscreen{ this, "Start Games in Fullscreen Mode" };
+		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
+		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};

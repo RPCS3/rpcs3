@@ -146,6 +146,7 @@ public:
 		ExitRPCS3OnFinish,
 		StartOnBoot,
 		StartGameFullscreen,
+		ShowFPSInTitle,
 		ShowWelcomeScreen,
 
 		// Network
@@ -226,8 +227,9 @@ private:
 
 		// Misc
 		{ExitRPCS3OnFinish,	{ "Miscellaneous", "Exit RPCS3 when process finishes" }},
-		{StartOnBoot,		{ "Miscellaneous", "Always start after boot" }},
-		{StartGameFullscreen, { "Miscellaneous", "Start Games in Fullscreen Mode"}},
+		{StartOnBoot,		{ "Miscellaneous", "Automatically start games after boot" }},
+		{StartGameFullscreen, { "Miscellaneous", "Start games in fullscreen mode"}},
+		{ShowFPSInTitle, { "Miscellaneous", "Show FPS counter in window title"}},
 		{ShowWelcomeScreen, { "Miscellaneous", "Show Welcome Screen"}},
 
 		// Networking

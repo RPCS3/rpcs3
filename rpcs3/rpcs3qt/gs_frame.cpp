@@ -14,10 +14,13 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon)
 	: QWindow()
 {
 	m_windowTitle = title;
+
 	if (!appIcon.isNull())
 	{
 		setIcon(appIcon);
 	}
+
+	g_cfg.misc.show_fps_in_title ? m_show_fps = true : m_show_fps = false;
 
 	resize(w, h);
 
@@ -123,33 +126,50 @@ int gs_frame::client_height()
 
 void gs_frame::flip(draw_context_t)
 {
-	++m_frames;
+	QString title;
 
-	static Timer fps_t;
-
-	if (fps_t.GetElapsedTimeInSec() >= 0.5)
+	if (!m_windowTitle.isEmpty())
 	{
-		QString title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
+		title += m_windowTitle;
+	}
 
-		if (!m_windowTitle.isEmpty())
+	if (!Emu.GetTitle().empty())
+	{
+		title += qstr(" | " + Emu.GetTitle());
+	}
+
+	if (!Emu.GetTitleID().empty())
+	{
+		title += qstr(" | [" + Emu.GetTitleID() + ']');
+	}
+
+	if (m_show_fps)
+	{
+		++m_frames;
+
+		static Timer fps_t;
+
+		if (fps_t.GetElapsedTimeInSec() >= 0.5)
 		{
-			title += " | " + m_windowTitle;
-		}
+			QString fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 
-		if (!Emu.GetTitle().empty())
+			if (!title.isEmpty())
+			{
+				fps_title += " | " + title;
+			}
+
+			Emu.CallAfter([this, title = std::move(fps_title)]() {setTitle(title); });
+
+			m_frames = 0;
+			fps_t.Start();
+		}
+	}
+	else
+	{
+		if (this->title() != title)
 		{
-			title += qstr(" | " + Emu.GetTitle());
+			Emu.CallAfter([this, title = std::move(title)]() {setTitle(title); });
 		}
-
-		if (!Emu.GetTitleID().empty())
-		{
-			title += qstr(" | [" + Emu.GetTitleID() + ']');
-		}
-
-		Emu.CallAfter([this, title = std::move(title)]() {setTitle(title); });
-
-		m_frames = 0;
-		fps_t.Start();
 	}
 }
 

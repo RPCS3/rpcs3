@@ -106,7 +106,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 				if (idx == -1)
 				{
 					idx = 0;
-					LOG_WARNING(GENERAL, "Current %s adapter not available: resetting to default!", sstr(r_D3D12));
+					LOG_WARNING(RSX, "Current %s adapter not available: resetting to default!", sstr(r_D3D12));
 				}
 				graphicsAdapterBox->setCurrentIndex(idx);
 			}
@@ -126,7 +126,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 				if (idx == -1)
 				{
 					idx = 0;
-					LOG_WARNING(GENERAL, "Current %s adapter not available: resetting to default!", sstr(r_Vulkan));
+					LOG_WARNING(RSX, "Current %s adapter not available: resetting to default!", sstr(r_Vulkan));
 				}
 				graphicsAdapterBox->setCurrentIndex(idx);
 			}

@@ -12,6 +12,7 @@ class gs_frame : public QWindow, public GSFrameBase
 	Q_OBJECT
 	u64 m_frames = 0;
 	QString m_windowTitle;
+	bool m_show_fps;
 
 public:
 	gs_frame(const QString& title, int w, int h, QIcon appIcon);

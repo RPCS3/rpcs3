@@ -50,10 +50,7 @@ public:
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent) 
 	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
-	int size = m_gui_settings->GetValue(GUI::gl_iconSize).toInt();
-	m_Icon_Size = QSize(80, 44);
-	if (size == 2) m_Icon_Size = QSize(320, 176);
-	else if (size == 1) m_Icon_Size = QSize(160, 88);
+	m_Icon_Size = GUI::gl_icon_size.at(m_gui_settings->GetValue(GUI::gl_iconSize).toString());
 
 	m_columns = columns_arr(m_Icon_Size);
 

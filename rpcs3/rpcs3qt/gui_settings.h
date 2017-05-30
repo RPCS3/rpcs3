@@ -6,6 +6,7 @@
 #include <QSettings>
 #include <QDir>
 #include <QVariant>
+#include <QSize>
 
 typedef struct GUI_SAVE
 {
@@ -25,8 +26,20 @@ typedef struct GUI_SAVE
 	};
 };
 
+typedef std::map<const QString, const QSize> icon_size;
+
 namespace GUI
 {
+	const QString gl_icon_key_small  = "small";
+	const QString gl_icon_key_medium = "medium";
+	const QString gl_icon_key_large  = "large";
+
+	const icon_size gl_icon_size = {
+		{ gl_icon_key_small,  QSize(80, 44) },
+		{ gl_icon_key_medium, QSize(160, 88) },
+		{ gl_icon_key_large,  QSize(320, 176) }
+	};
+
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
@@ -57,13 +70,13 @@ namespace GUI
 	const GUI_SAVE cat_unknown     = GUI_SAVE( game_list, "categoryVisibleUnknown",    true );
 	const GUI_SAVE cat_other       = GUI_SAVE( game_list, "categoryVisibleOther",      true );
 
-	const GUI_SAVE gl_sortAsc  = GUI_SAVE( game_list, "sortAsc",   true );
-	const GUI_SAVE gl_sortCol  = GUI_SAVE( game_list, "sortCol",   1 );
-	const GUI_SAVE gl_state    = GUI_SAVE( game_list, "state",     QByteArray() );
-	const GUI_SAVE gl_iconSize = GUI_SAVE( game_list, "iconSizeX", 0 );
+	const GUI_SAVE gl_sortAsc  = GUI_SAVE( game_list, "sortAsc",  true );
+	const GUI_SAVE gl_sortCol  = GUI_SAVE( game_list, "sortCol",  1 );
+	const GUI_SAVE gl_state    = GUI_SAVE( game_list, "state",    QByteArray() );
+	const GUI_SAVE gl_iconSize = GUI_SAVE( game_list, "iconSize", gl_icon_key_small);
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
-	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::warning) );
+	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );
 
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));

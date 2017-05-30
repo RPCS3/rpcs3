@@ -123,7 +123,7 @@ private:
 	QAction* showCatUnknownAct;
 	QAction* setIconSizeSmallAct;
 	QAction* setIconSizeMediumAct;
-	QAction* setIconSizeBigAct;
+	QAction* setIconSizeLargeAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
 
