@@ -287,6 +287,8 @@ s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
+	std::memset(info.get_ptr(), 0, sizeof(CellPadPeriphInfo));
+
 	info->max_connect = rinfo.max_connect;
 	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
@@ -394,6 +396,8 @@ s32 cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
+	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo));
+
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = rinfo.max_connect;
 	info->now_connect = rinfo.now_connect;
@@ -423,6 +427,8 @@ s32 cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo2));
 
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = rinfo.max_connect;
