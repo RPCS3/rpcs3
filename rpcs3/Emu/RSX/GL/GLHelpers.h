@@ -133,7 +133,7 @@ namespace gl
 			std::string vendor_string = (const char*)glGetString(GL_VENDOR);
 			std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
 
-			if (vendor_string.find("intel"))
+			if (vendor_string.find("intel") != std::string::npos)
 			{
 				int version_major = 0;
 				int version_minor = 0;
