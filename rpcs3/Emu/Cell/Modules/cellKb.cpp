@@ -35,15 +35,12 @@ error_code cellKbInit(u32 max_connect)
 {
 	sys_io.warning("cellKbInit(max_connect=%d)", max_connect);
 
-	if (max_connect > 7)
-		return CELL_KB_ERROR_INVALID_PARAMETER;
-
 	const auto handler = fxm::import<KeyboardHandlerBase>(Emu.GetCallbacks().get_kb_handler);
 
 	if (!handler)
 		return CELL_KB_ERROR_ALREADY_INITIALIZED;
 
-	handler->Init(max_connect);
+	handler->Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
 }
