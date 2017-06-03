@@ -429,7 +429,13 @@ void Emulator::Load()
 
 			if (m_elf_path.empty())
 			{
-				m_elf_path = "/host_root/" + m_path;
+				//m_elf_path = "/host_root/" + m_path;
+
+				const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+				m_elf_path = m_path;
+				m_elf_path.replace(0, emu_dir.length() - 1, "");
+
 				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
 
@@ -462,13 +468,7 @@ void Emulator::Load()
 
 			if (m_elf_path.empty())
 			{
-				//m_elf_path = "/host_root/" + m_path;
-
-				const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-
-				m_elf_path = m_path;
-				m_elf_path.replace(0, emu_dir.length() - 1, "");
-
+				m_elf_path = "host_root:" + m_path;
 				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
 
