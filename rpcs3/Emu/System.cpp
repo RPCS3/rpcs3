@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/event.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
@@ -462,7 +462,13 @@ void Emulator::Load()
 
 			if (m_elf_path.empty())
 			{
-				m_elf_path = "host_root:" + m_path;
+				//m_elf_path = "/host_root/" + m_path;
+
+				const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+				m_elf_path = m_path;
+				m_elf_path.replace(0, emu_dir.length() - 1, "");
+
 				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
 
