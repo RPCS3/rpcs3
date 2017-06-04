@@ -39,8 +39,28 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	{
 		switch (keyEvent->key())
 		{
-		case Qt::Key_Return: if (keyEvent->modifiers() == Qt::AltModifier) { OnFullScreen(); return; } break;
-		case Qt::Key_Escape: if (visibility() == FullScreen) { setVisibility(Windowed); return; } break;
+		case Qt::Key_Return:
+			if (keyEvent->modifiers() == Qt::AltModifier) { OnFullScreen(); return; }
+			break;
+		case Qt::Key_Escape:
+			if (visibility() == FullScreen) { setVisibility(Windowed); return; }
+			break;
+		case Qt::Key_P:
+			if (keyEvent->modifiers() == Qt::ControlModifier && Emu.IsRunning()) { Emu.Pause(); return; }
+			break;
+		case Qt::Key_S:
+			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
+			break;
+		case Qt::Key_R:
+			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetPath().empty())) { Emu.Stop(); Emu.Load(); return; }
+			break;
+		case Qt::Key_E:
+			if (keyEvent->modifiers() == Qt::ControlModifier)
+			{
+				if (Emu.IsReady()) { Emu.Run(); return; }
+				else if (Emu.IsPaused()) { Emu.Resume(); return; }
+			}
+			break;
 		}
 	};
 	Emu.CallAfter(l_handleKeyEvent);

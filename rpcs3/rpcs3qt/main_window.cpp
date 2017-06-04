@@ -787,7 +787,6 @@ void main_window::CreateActions()
 	sysPauseAct->setIcon(icon_pause);
 
 	sysStopAct = new QAction(tr("&Stop"), this);
-	sysStopAct->setShortcut(tr("Ctrl+S"));
 	sysStopAct->setEnabled(false);
 	sysStopAct->setIcon(icon_stop);
 
@@ -1166,12 +1165,15 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
 {
-	switch (keyEvent->key())
+	if (keyEvent->modifiers() == Qt::ControlModifier)
 	{
-	case 'E': case 'e': if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
-	case 'P': case 'p': if (Emu.IsRunning()) Emu.Pause(); return;
-	case 'S': case 's': if (!Emu.IsStopped()) Emu.Stop(); return;
-	case 'R': case 'r': if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
+		switch (keyEvent->key())
+		{
+		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
+		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
+		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
+		case Qt::Key_R: if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
+		}
 	}
 }
 
