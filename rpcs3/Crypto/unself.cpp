@@ -6,7 +6,6 @@
 #include "Emu/VFS.h"
 
 #include <algorithm>
-// TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
 #include <zlib.h>
 
 inline u8 Read8(const fs::file& f)

@@ -38,6 +38,11 @@ before_install:
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     fi;
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      sudo add-apt-repository ppa:beineri/opt-qt59-trusty -y;
+      sudo apt-get update;
+      sudo apt-get install qt59base -y;
+    fi;
   # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   # Install updated libglew-dev since the version provided by trusty is outdated
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
@@ -52,6 +57,7 @@ before_install:
 
 before_script:
   - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi
+  - source /opt/qt59/bin/qt59-env.sh
   - mkdir build
   - cd build
   - cmake ..
@@ -83,7 +89,8 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
-      - libwxgtk3.0-dev
+      # We need to install qt 5.8 manually because the version trusty provides is too old.
+      #- qtbase5-dev
       - libudev-dev
   coverity_scan:
     project:
