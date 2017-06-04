@@ -51,8 +51,8 @@ before_install:
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew1.13_1.13.0-2_amd64.deb;
       sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb;
     else
-       brew update; brew update;
-       brew install ccache glew llvm40;
+      brew update; brew update;
+      brew install ccache glew llvm40;
     fi;
 
 before_script:
@@ -60,10 +60,10 @@ before_script:
   - source /opt/qt59/bin/qt59-env.sh
   - mkdir build
   - cd build
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+  - make -j 3
   - # AppImage generation
   - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-      make -j 3
       make DESTDIR=appdir install ; find appdir/
       find ../bin
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" 
@@ -81,7 +81,7 @@ script:
   #- echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
   # And to ensure the versions of toolchain
   - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
-  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 3; fi
+  #- if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 3; fi
 
 addons:
   apt:
