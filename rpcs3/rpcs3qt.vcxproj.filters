@@ -57,7 +57,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="\Gui\*.cpp">
+    <ClCompile Include="\rpcs3qt\*.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
@@ -563,10 +563,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="\Gui\*.h">
+    <ClInclude Include="\rpcs3qt\*.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h" />
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
       <Filter>Gui</Filter>
     </ClInclude>
@@ -689,6 +688,9 @@
     <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
       <Filter>Gui</Filter>
     </CustomBuild>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
     <CustomBuild Include="resources.qrc">
       <Filter>Resource Files</Filter>
     </CustomBuild>
@@ -704,5 +706,11 @@
     <CustomBuild Include="rpcs3qt\vfs_dialog_tab.h">
       <Filter>Gui</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="rpcs3.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
 </Project>
