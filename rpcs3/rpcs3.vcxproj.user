@@ -3,24 +3,34 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)bin\</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=$(QTDIR)\bin%3bC:\Qt\5.8\msvc2015_64\bin%3b$(PATH)</LocalDebuggerEnvironment>
+    <QTDIR>C:\Qt\5.8\msvc2015_64</QTDIR>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)bin\</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=$(QTDIR)\bin%3bC:\Qt\5.8\msvc2015_64\bin%3b$(PATH)</LocalDebuggerEnvironment>
+    <QTDIR>C:\Qt\5.8\msvc2015_64</QTDIR>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)bin\</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=$(QTDIR)\bin%3bC:\Qt\5.8\msvc2015_64\bin%3b$(PATH)</LocalDebuggerEnvironment>
+    <QTDIR>C:\Qt\5.8\msvc2015_64</QTDIR>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)bin\</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommandArguments>1&gt; stdout.log 2&gt; stderr.log</LocalDebuggerCommandArguments>
+    <LocalDebuggerEnvironment>PATH=$(QTDIR)\bin%3bC:\Qt\5.8\msvc2015_64\bin%3b$(PATH)</LocalDebuggerEnvironment>
+    <QTDIR>C:\Qt\5.8\msvc2015_64</QTDIR>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)bin\</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommandArguments>1&gt; stdout.log 2&gt; stderr.log</LocalDebuggerCommandArguments>
+    <LocalDebuggerEnvironment>PATH=$(QTDIR)\bin%3bC:\Qt\5.8\msvc2015_64\bin%3b$(PATH)</LocalDebuggerEnvironment>
+    <QTDIR>C:\Qt\5.8\msvc2015_64</QTDIR>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)bin\</LocalDebuggerWorkingDirectory>
