@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{e6368de7-d738-46b5-8b82-70f30669820b}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{6f7288e4-0fcd-47aa-832c-472e3e5e52d2}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\rsx\decompiler\glsl\common_decompiler.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\rsx\decompiler\glsl\fragment_program.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\rsx\decompiler\glsl\vertex_program.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\rsx\decompiler\glsl\common_decompiler.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\rsx\decompiler\glsl\fragment_program.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\rsx\decompiler\glsl\vertex_program.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

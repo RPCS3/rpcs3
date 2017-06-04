@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{613648a6-1a54-4ea7-b3a0-bcabac8d385a}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{635276dc-d87d-4cbf-8b0d-b8baddaaaedc}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\vfs\dir_base.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\file.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\file_base.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\local_dir.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\local_file.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\stream.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\stream_memory.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\vfs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\device.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\device_local_file.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\vfs\dir.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\vfs\dir_base.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\vfs\file_base.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\local_file.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\stream.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\stream_memory.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\vfs.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\device.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\device_local_file.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\dir.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\file.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vfs\local_dir.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

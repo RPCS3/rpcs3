@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{1daf3cd4-7154-46fd-af62-54452198ea9a}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{8e8bc8e8-d9aa-4945-b7ae-6306f2e03b20}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\vm\vm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\vm\memory.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\vm\memory_block.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vm\vm_ptr.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vm\vm_ref.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vm\vm_var.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\vm\vm.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

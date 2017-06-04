@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{9e596af7-46a4-481e-96bc-2c2b0491b789}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{3611c3d5-f25f-4ed7-99bf-b23d729240a4}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\cell\ppu\llvm_recompiler\program_compiler.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\cell\ppu\llvm_recompiler\recompiler.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\cell\ppu\llvm_recompiler\recompiler.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\cell\ppu\llvm_recompiler\tests.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\cell\ppu\llvm_recompiler\core.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\cell\ppu\llvm_recompiler\program_compiler.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,530 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{d23cada3-c51a-4f8d-a24e-14ac44bc3d53}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{7e6378c2-aa2b-4731-b6cd-dbd4b98093ee}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\hle\sys_libc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_lv2dbg.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_lwcond_.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_lwmutex_.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_mempool.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_mmapper_.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_net.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_ppu_thread_.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_prx_.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_spinlock.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_spu_.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sysPrxForUser.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellAdec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellAtrac.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellAtracMulti.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellAudio.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellAudioOut.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellAvconfExt.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellBgdl.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellCamera.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellCelp8Enc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellCelpEnc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellDaisy.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellDmux.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellFiber.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellFont.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellFontFT.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellFs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellGame.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellGameExec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellGcmSys.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellGem.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellGifDec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellHttp.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellHttpUtil.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellImejp.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellJpgDec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellJpgEnc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellKb.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellKey2char.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellL10n.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellMic.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellMouse.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellMsgDialog.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellMusic.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellMusicDecode.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellMusicExport.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellNetCtl.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellOskDialog.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellOvis.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPad.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPamf.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPhotoDecode.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPhotoExport.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPhotoImport.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPngDec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPngEnc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellPrint.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellRec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellRemotePlay.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellResc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellRtc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellRudp.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSail.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSailRec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSaveData.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellScreenshot.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSearch.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSheap.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSpudll.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSpurs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSpursJq.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSpursSpu.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSsl.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellStorage.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSubdisplay.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSync.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSync2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSysconf.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSysmodule.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSysutil.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilAp.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilAvc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilAvc2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilMisc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellUsbd.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellUsbpspcm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellUserInfo.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellVdec.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellVideoExport.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellVideoOut.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellVideoUpload.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellVoice.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellVpost.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\cellWebBrowser.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\libmixer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\libsnd3.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\libsynth2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNp.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNp2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNpClans.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNpCommerce2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNpSns.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNpTrophy.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNpTus.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sceNpUtil.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_game.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_heap.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\hle\sys_io.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\hle\cellSpursJq.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSubdisplay.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSync.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSync2.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSysutil.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSysutilAvc2.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellUsbd.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellUserInfo.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellVdec.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellVideoOut.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellVpost.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellWebBrowser.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\libmixer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\libsnd3.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\libsynth2.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNp.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNp2.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNpClans.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNpCommerce2.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNpSns.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNpTrophy.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNpTus.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sceNpUtil.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sys_lv2dbg.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sys_net.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\sysPrxForUser.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellAdec.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellAtrac.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellAtracMulti.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellAudio.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellAudioIn.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellAudioOut.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellCamera.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellDmux.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellFiber.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellFont.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellFontFT.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellFs.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellGame.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellGcmSys.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellGem.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellGifDec.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellJpgDec.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellKb.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellL10n.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellMic.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellMouse.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellMsgDialog.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellMusic.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellNetCtl.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellPad.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellPamf.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellPng.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellPngDec.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellResc.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellRtc.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellRudp.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSail.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSaveData.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellScreenshot.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSearch.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\hle\cellSpurs.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

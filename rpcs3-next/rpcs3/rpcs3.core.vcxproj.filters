@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{4cc67ffa-48e1-42b0-994c-a1d7a868210a}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{d8d4731e-e8e1-456d-8f9e-2b7be4ed3b38}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\core\auto_pause.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\event.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\events.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\id_manager.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\log.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\state.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\thread.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="internal\rpcs3\core\git-version-gen.cmd" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\core\config.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\event.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\events.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\game_info.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\id_manager.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\log.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\state.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\thread.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\timer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\auto_pause.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

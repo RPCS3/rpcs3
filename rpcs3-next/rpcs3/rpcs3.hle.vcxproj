@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\hle\cellAdec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellAtrac.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellAtracMulti.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellAudio.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellAudioOut.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellAvconfExt.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellBgdl.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellCamera.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellCelp8Enc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellCelpEnc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellDaisy.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellDmux.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellFiber.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellFont.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellFontFT.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellFs.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellGame.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellGameExec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellGcmSys.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellGem.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellGifDec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellHttp.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellHttpUtil.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellImejp.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellJpgDec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellJpgEnc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellKb.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellKey2char.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellL10n.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellMic.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellMouse.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellMsgDialog.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellMusic.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellMusicDecode.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellMusicExport.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellNetCtl.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellOskDialog.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellOvis.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPad.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPamf.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPhotoDecode.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPhotoExport.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPhotoImport.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPngDec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPngEnc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellPrint.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellRec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellRemotePlay.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellResc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellRtc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellRudp.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSail.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSailRec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSaveData.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellScreenshot.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSearch.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSheap.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSpudll.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSpurs.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSpursJq.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSpursSpu.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSsl.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellStorage.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSubdisplay.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSync.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSync2.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSysconf.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSysmodule.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSysutil.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilAp.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilAvc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilAvc2.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellSysutilMisc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellUsbd.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellUsbpspcm.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellUserInfo.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellVdec.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellVideoExport.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellVideoOut.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellVideoUpload.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellVoice.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellVpost.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\cellWebBrowser.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\libmixer.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\libsnd3.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\libsynth2.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNp.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNp2.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNpClans.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNpCommerce2.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNpSns.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNpTrophy.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNpTus.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sceNpUtil.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sysPrxForUser.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_game.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_heap.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_io.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_libc.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_lv2dbg.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_lwcond_.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_lwmutex_.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_mempool.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_mmapper_.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_net.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_ppu_thread_.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_prx_.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_spinlock.cpp" />
+    <ClCompile Include="internal\rpcs3\hle\sys_spu_.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\hle\cellAdec.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellAtrac.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellAtracMulti.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellAudio.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellAudioIn.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellAudioOut.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellCamera.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellDmux.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellFiber.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellFont.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellFontFT.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellFs.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellGame.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellGcmSys.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellGem.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellGifDec.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellJpgDec.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellKb.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellL10n.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellMic.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellMouse.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellMsgDialog.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellMusic.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellNetCtl.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellPad.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellPamf.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellPng.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellPngDec.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellResc.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellRtc.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellRudp.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSail.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSaveData.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellScreenshot.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSearch.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSpurs.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSpursJq.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSubdisplay.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSync.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSync2.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSysutil.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellSysutilAvc2.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellUsbd.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellUserInfo.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellVdec.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellVideoOut.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellVpost.h" />
+    <ClInclude Include="external\include\rpcs3\hle\cellWebBrowser.h" />
+    <ClInclude Include="external\include\rpcs3\hle\libmixer.h" />
+    <ClInclude Include="external\include\rpcs3\hle\libsnd3.h" />
+    <ClInclude Include="external\include\rpcs3\hle\libsynth2.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNp.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNp2.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNpClans.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNpCommerce2.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNpSns.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNpTrophy.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNpTus.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sceNpUtil.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sysPrxForUser.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sys_lv2dbg.h" />
+    <ClInclude Include="external\include\rpcs3\hle\sys_net.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{f16b3f0d-357a-4cf2-879d-eddee7832648}</ProjectGuid>
+    <Keyword>Clang</Keyword>
+    <RootNamespace>rpcs3_hle</RootNamespace>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140_clang_3_7</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140_clang_3_7</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140_Clang_3_7</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140_Clang_3_7</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/hle/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/hle/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/hle/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/hle/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <ExceptionHandling>Enabled</ExceptionHandling>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
