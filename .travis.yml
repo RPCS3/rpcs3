@@ -6,7 +6,7 @@ os:
   - linux
   #- osx
 
-osx_image: xcode6.4
+# osx_image: xcode6.4
 
 compiler:
   - clang
@@ -50,9 +50,9 @@ before_install:
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew-dev_1.13.0-2_amd64.deb;
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew1.13_1.13.0-2_amd64.deb;
       sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb;
-    else
-      brew update; brew update;
-      brew install ccache glew wxwidgets llvm40;
+  # else
+  #   brew update; brew update;
+  #   brew install ccache glew llvm40;
     fi;
 
 before_script:
@@ -60,7 +60,21 @@ before_script:
   - source /opt/qt59/bin/qt59-env.sh
   - mkdir build
   - cd build
-  - cmake ..
+  - # AppImage generation
+  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+      cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+      make -j 3
+      make DESTDIR=appdir install ; find appdir/
+      find ../bin
+      wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" 
+      chmod a+x linuxdeployqt*.AppImage
+      unset QTDIR; unset QT_PLUGIN_PATH ; unset LD_LIBRARY_PATH
+      ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
+      ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -appimage
+      find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq
+      zip -r9 rpcs3.zip ./RPCS3*.AppImage; 
+      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}_linux64 --upload-file rpcs3.zip; 
+   fi;
 
 script:
   # Add a command to show all the variables. May be useful for debugging Travis.
@@ -101,16 +115,6 @@ addons:
     branch_pattern: coverity_scan
 
 after_success:
-  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then zip -r9 rpcs3.zip bin; curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}-${CC} --upload-file rpcs3.zip; fi
-
-deploy:
-  provider: releases
-  file: rpcs3.zip
-  skip_cleanup: true
-  on:
-    branch: master
-    repo: RPCS3/rpcs3
-    tags: true
-  api-key:
-    secure: BXyNziNYFLqLtY6Q58BDEUpRJr81HUtHpxf2Sr646bDcbG0Rf2rb2utqHZJ1Om926WdH7RqHuoVti4dr2X1lh4nHMkLD7MrIrfIkNN5T9aZdk19uw9IyMtz/cXon7/wqVo24tVqtBI0UghFxKii/GTDJEvRKgfpPp1e1vKSNGa4=
+  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then 
+      coveralls --extension .c --extension .cpp --extension .h; 
+    fi
