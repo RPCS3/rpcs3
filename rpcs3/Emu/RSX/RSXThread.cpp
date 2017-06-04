@@ -474,7 +474,7 @@ namespace rsx
 				ctrl->get = get;
 				continue;
 			}
-			if (cmd == 0) //nop
+			if ((((cmd & RSX_METHOD_INCREMENT_CMD_MASK) == RSX_METHOD_INCREMENT_CMD) || ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) && count == 0) || cmd == 0) //nop
 			{
 				ctrl->get = get + 4;
 				continue;
