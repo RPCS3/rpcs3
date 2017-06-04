@@ -73,7 +73,7 @@ before_script:
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -appimage
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq
       zip -r9 rpcs3.zip ./RPCS3*.AppImage; 
-      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}_linux64 --upload-file rpcs3.zip; 
+      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}-${CC}_linux64 --upload-file rpcs3.zip; 
    fi;
 
 script:
