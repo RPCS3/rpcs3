@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/event.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
@@ -212,6 +212,10 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
+
+	//Ensures /dev_hdd0/ is mounted for sprx decryption outside program execution
+	vfs::mount("dev_hdd0", dev_hdd0);
+
   
 #ifdef WITH_GDB_DEBUGGER
 	fxm::make<GDBDebugServer>();
