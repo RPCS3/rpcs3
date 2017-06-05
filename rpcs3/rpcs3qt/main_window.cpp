@@ -571,7 +571,7 @@ void main_window::About()
 	close->setDefault(true);
 
 	QLabel* icon = new QLabel(this);
-	icon->setPixmap(appIcon.pixmap(96, 96));
+	icon->setPixmap(QIcon(":/rpcs3.ico").pixmap(96, 96));
 
 	QLabel* caption = new QLabel(tr(
 		"<h1>RPCS3</h1>"
