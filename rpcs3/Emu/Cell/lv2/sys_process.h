@@ -15,6 +15,9 @@ enum : u32
 	SYS_SPUIMAGE_OBJECT              = 0x22,
 	SYS_PRX_OBJECT                   = 0x23,
 	SYS_SPUPORT_OBJECT               = 0x24,
+	SYS_SERVICE_LISTENER_OBJECT      = 0x41,  // base system config handle
+	SYS_SERVICE_LISTENER_OBJECT      = 0x42,  // a system config service listener
+	SYS_SERVICE_OBJECT               = 0x43,  // a system config service
 	SYS_LWMUTEX_OBJECT               = 0x95,
 	SYS_TIMER_OBJECT                 = 0x11,
 	SYS_SEMAPHORE_OBJECT             = 0x96,
