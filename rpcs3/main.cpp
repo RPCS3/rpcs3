@@ -8,6 +8,10 @@
 
 int main(int argc, char** argv)
 {
+#ifdef Q_OS_WIN
+	SetProcessDPIAware();
+#endif
+
 	rpcs3_app app(argc, argv);
 	app.Init();
 	return app.exec();
