@@ -578,18 +578,18 @@ void main_window::About()
 		"A PlayStation 3 emulator and debugger.<br>"
 		"RPCS3 Version: %1").arg(qstr(rpcs3::version.to_string())
 		));
-	QLabel* developers = new QLabel(
+	QLabel* developers = new QLabel(tr(
 		"<p><b>Developers:</b><br>¬DH<br>¬AlexAltea<br>¬Hykem<br>Oil<br>Nekotekina<br>Bigpet<br>¬gopalsr83<br>¬tambry<br>"
 		"vlj<br>kd-11<br>jarveson<br>raven02<br>AniLeo<br>cornytrace<br>ssshadow<br>Numan</p>"
-	);
-	QLabel* contributors = new QLabel(
+	));
+	QLabel* contributors = new QLabel(tr(
 		"<p><b>Contributors:</b><br>BlackDaemon<br>elisha464<br>Aishou<br>krofna<br>xsacha<br>danilaml<br>unknownbrackets<br>Zangetsu38<br>"
 		"lioncash<br>achurch<br>darkf<br>Syphurith<br>Blaypeg<br>Survanium90<br>georgemoralis<br>ikki84<br>hcorion<br>Megamouse<br>flash-fire</p>"
-	);
-	QLabel* supporters = new QLabel(
+	));
+	QLabel* supporters = new QLabel(tr(
 		"<p><b>Supporters:</b><br>Howard Garrison<br>EXPotemkin<br>Marko V.<br>danhp<br>Jake (5315825)<br>Ian Reid<br>Tad Sherlock<br>Tyler Friesen<br>"
 		"Folzar<br>Payton Williams<br>RedPill Australia<br>yanghong<br>Mohammed El-Serougi<br>Дима ~Ximer13~ Кулин<br>James Reed<br>BaroqueSonata</p>"
-	);
+	));
 	icon->setAlignment(Qt::AlignLeft);
 	caption->setAlignment(Qt::AlignLeft);
 	developers->setAlignment(Qt::AlignTop);
