@@ -112,16 +112,7 @@ emu_settings::emu_settings(const std::string& path) : QObject()
 
 	// Incrementally load config.yml
 	config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
-
-	if (config.size() == 0 && !path.empty()) // First time
-	{
-		config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-		currentSettings += YAML::Load(config.to_string());
-	}
-	else
-	{
-		currentSettings += YAML::Load(config.to_string());
-	}
+	currentSettings += YAML::Load(config.to_string());
 }
 
 emu_settings::~emu_settings()
