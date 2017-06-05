@@ -570,14 +570,14 @@ void columns_arr::Update(const std::vector<GameInfo>& game_data)
 			else {
 				// IIRC a load failure means blank image which is fine to have as a placeholder.
 				QString abspath = QDir(qstr(path)).absolutePath();
-				LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
+				LOG_ERROR(HLE, "Could not load game icon image from path %s", sstr(abspath));
 				img->fill(QColor(0, 0, 0, 0));
 				m_img_list->append(img);
 			}
 		}
 		else
 		{
-			LOG_ERROR(HLE, "Count not load image from empty path");
+			LOG_ERROR(HLE, "Could not load game icon image from empty path");
 			img->fill(QColor(0, 0, 0, 0));
 			m_img_list->append(img);
 		}
