@@ -145,6 +145,7 @@ Render_Creator::Render_Creator()
 	}
 #endif
 
+#if defined(WIN32) || defined(__linux__)
 	// check for vulkan adapters
 	vk::context device_enum_context;
 	u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
@@ -165,6 +166,7 @@ Render_Creator::Render_Creator()
 			}
 		}
 	}
+#endif
 }
 
 emu_settings::emu_settings(const std::string& path) : QObject()
