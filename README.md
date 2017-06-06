@@ -31,7 +31,7 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ### Linux
 * [Qt 5.8+](https://www.qt.io/download-open-source/)
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
-* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git`
+* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake llvm qt5-base`
 
 ### Mac OSX 
