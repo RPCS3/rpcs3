@@ -136,12 +136,20 @@ void gs_frame::delete_context(void* ctx)
 
 int gs_frame::client_width()
 {
+#ifdef _WIN32
 	return size().width();
+#else
+	return size().width() * devicePixelRatio();
+#endif
 }
 
 int gs_frame::client_height()
 {
+#ifdef _WIN32
 	return size().height();
+#else
+	return size().height() * devicePixelRatio();
+#endif
 }
 
 void gs_frame::flip(draw_context_t)
