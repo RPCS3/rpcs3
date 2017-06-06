@@ -49,9 +49,9 @@ before_install:
       pip install --user cpp-coveralls requests[security];
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew-dev_1.13.0-2_amd64.deb;
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew1.13_1.13.0-2_amd64.deb;
-      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.8.0+dfsg1-0ubuntu1_amd64.deb;
-      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.8.0+dfsg1-0ubuntu1_amd64.deb;
-      sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb libvulkan1_1.0.8.0+dfsg1-0ubuntu1_amd64.deb libvulkan-dev_1.0.8.0+dfsg1-0ubuntu1_amd64.deb;
+      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.21.0+dfsg1-1~16.04.1_amd64.deb;
+      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.21.0+dfsg1-1~16.04.1_amd64.deb;
+      sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb libvulkan1_1.0.21.0+dfsg1-1~16.04.1_amd64.deb libvulkan-dev_1.0.21.0+dfsg1-1~16.04.1_amd64.deb;
     else
       brew update; brew update;
       brew install ccache glew llvm40;
