@@ -451,9 +451,8 @@ VKGSRender::VKGSRender() : GSRender()
 {
 	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 
-	printf("Starting vulkan renderer\n");
 	u32 instance_handle = m_thread_context.createInstance("RPCS3");
-	printf("Instance created, handle=%u\n", instance_handle);
+	
 	if (instance_handle > 0)
 	{
 		m_thread_context.makeCurrentInstance(instance_handle);
@@ -504,8 +503,6 @@ VKGSRender::VKGSRender() : GSRender()
 	Window window = (Window)m_frame->handle();
 	Display *display = XOpenDisplay(0);
 
-	printf("Entering enumeration logic...\n");
-
 	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
 	
 	//Actually confirm  that the loader found at least one compatible device
@@ -518,7 +515,6 @@ VKGSRender::VKGSRender() : GSRender()
 		return;
 	}
 
-	printf("Post-enumerate devices, window=%llx, display=0x%p\n", window, display);	
 	XFlush(display);
 
 	bool gpu_found = false;
@@ -538,7 +534,6 @@ VKGSRender::VKGSRender() : GSRender()
 		m_swap_chain = m_thread_context.createSwapChain(display, window, gpus[0]);
 	}
 	
-	printf("Swapchain creation completed\n");
 	m_display_handle = display;
 
 #endif
