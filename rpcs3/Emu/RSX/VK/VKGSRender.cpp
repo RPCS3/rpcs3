@@ -635,8 +635,8 @@ VKGSRender::~VKGSRender()
 
 	m_current_command_buffer->reset();
 
-	//Wait for queue
-	vkQueueWaitIdle(m_swap_chain->get_present_queue());
+	//Wait for device to finish up with resources
+	vkDeviceWaitIdle(*m_device);
 
 	//Sync objects
 	if (m_present_semaphore)
@@ -1047,6 +1047,26 @@ void VKGSRender::clear_surface(u32 mask)
 	u16 scissor_w = rsx::method_registers.scissor_width();
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
+
+	const u32 fb_width = m_framebuffer_to_clean.back()->width();
+	const u32 fb_height = m_framebuffer_to_clean.back()->height();
+
+	//clip region
+	//TODO: Move clipping logic to shared code. Its used in other places as well
+	if (scissor_x >= fb_width)
+		scissor_x = 0;
+
+	if (scissor_y >= fb_height)
+		scissor_y = 0;
+
+	const u32 scissor_limit_x = scissor_x + scissor_w;
+	const u32 scissor_limit_y = scissor_y + scissor_h;
+
+	if (scissor_limit_x > fb_width)
+		scissor_w = fb_width - scissor_x;
+
+	if (scissor_limit_y > fb_height)
+		scissor_h = fb_height - scissor_y;
 
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
@@ -1821,6 +1841,7 @@ void VKGSRender::flip(int buffer)
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
 		}
 
+		m_framebuffer_to_clean.push_back(std::move(direct_fbo));
 		queue_swap_request();
 	}
 	else
