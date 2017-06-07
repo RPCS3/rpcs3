@@ -92,6 +92,7 @@ private:
 	QAction* CreateRecentAction(const QString path, const QString name, const uint sc_idx);
 	void BootRecentAction(const QAction* act);
 	void AddRecentAction(const QString path, QString name);
+	bool InvalidRecentAction(const QAction* act);
 
 	QStringList m_rg_names;
 	QStringList m_rg_paths;
