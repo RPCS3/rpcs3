@@ -796,7 +796,7 @@ void main_window::BootRecentAction(const QAction* act)
 	const QString pth = act->data().toString();
 
 	// path is invalid: remove action from list return
-	if (!QFileInfo(pth).isFile())
+	if (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile())
 	{
 		if (m_rg_paths.contains(pth))
 		{
@@ -850,7 +850,7 @@ void main_window::BootRecentAction(const QAction* act)
 QAction* main_window::CreateRecentAction(const QString& path, const QString& name, const uint& sc_idx)
 {
 	// if path is not valid remove from list
-	if (!QFileInfo(path).isFile())
+	if (!QFileInfo(path).isDir() && !QFileInfo(path).isFile())
 	{
 		if (m_rg_paths.contains(path))
 		{
