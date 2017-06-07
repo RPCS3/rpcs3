@@ -777,9 +777,16 @@ void main_window::EnableMenus(bool enabled)
 	toolsStringSearchAct->setEnabled(enabled);
 }
 
-bool main_window::InvalidRecentAction(const QAction* act)
+void main_window::BootRecentAction(const QAction* act)
 {
+	if (Emu.IsRunning())
+	{
+		return;
+	}
+
 	const QString pth = act->data().toString();
+
+	// path is invalid: remove action from list return
 	if (!QFileInfo(pth).isFile())
 	{
 		if (m_rg_paths.contains(pth))
@@ -798,9 +805,9 @@ bool main_window::InvalidRecentAction(const QAction* act)
 
 			guiSettings->SetValue(GUI::rg_paths, m_rg_paths);
 			guiSettings->SetValue(GUI::rg_names, m_rg_names);
-	
+
 			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(pth));
-	
+
 			// refill menu with actions
 			for (uint i = 0; i < m_recentGameActs.count(); i++)
 			{
@@ -808,37 +815,30 @@ bool main_window::InvalidRecentAction(const QAction* act)
 				m_recentGameActs[i]->setToolTip(m_rg_names[i]);
 				m_bootRecentMenu->addAction(m_recentGameActs[i]);
 			}
-	
-			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
-	
-			return true;
-		}
-		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", sstr(pth));
-	}
-	return false;
-}
 
-void main_window::BootRecentAction(const QAction* act)
-{
-	if (Emu.IsRunning() || InvalidRecentAction(act))
-	{
+			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
+
+			return;
+		}
+
+		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", sstr(pth));
+
 		return;
 	}
 
-	const std::string pth = sstr(act->data().toString());
-	SetAppIconFromPath(pth);
+	SetAppIconFromPath(sstr(pth));
 
 	Emu.Stop();
 
-	if (!Emu.BootGame(pth, true))
+	if (!Emu.BootGame(sstr(pth), true))
 	{
-		LOG_ERROR(LOADER, "Failed to boot %s", pth);
+		LOG_ERROR(LOADER, "Failed to boot %s", sstr(pth));
 	}
 
 	AddRecentAction(act->data().toString(), act->toolTip());
 };
 
-QAction* main_window::CreateRecentAction(const QString path, const QString name, const uint sc_idx)
+QAction* main_window::CreateRecentAction(const QString& path, const QString& name, const uint& sc_idx)
 {
 	// if path is not valid remove from list
 	if (!QFileInfo(path).isFile())
