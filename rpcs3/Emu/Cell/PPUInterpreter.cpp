@@ -2754,7 +2754,7 @@ bool ppu_interpreter::TDI(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		LOG_ERROR(PPU, "Trap!" HERE);
 	}
 
 	return true;
@@ -2771,7 +2771,7 @@ bool ppu_interpreter::TWI(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		LOG_ERROR(PPU, "Trap!" HERE);
 	}
 
 	return true;
@@ -3112,7 +3112,7 @@ bool ppu_interpreter::TW(ppu_thread& ppu, ppu_opcode_t op)
 		((u32)a < (u32)b && (op.bo & 0x2)) ||
 		((u32)a >(u32)b && (op.bo & 0x1)))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		LOG_ERROR(PPU, "Trap!" HERE);
 	}
 
 	return true;
@@ -3329,7 +3329,7 @@ bool ppu_interpreter::TD(ppu_thread& ppu, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		LOG_ERROR(PPU, "Trap!" HERE);
 	}
 
 	return true;
