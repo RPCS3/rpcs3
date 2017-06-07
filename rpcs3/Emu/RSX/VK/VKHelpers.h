@@ -189,6 +189,16 @@ namespace vk
 			if (g_cfg.video.debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
+			//Enable hardware features manually
+			//Currently we require:
+			//1. Anisotropic sampling
+			//2. DXT support
+			VkPhysicalDeviceFeatures available_features;
+			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
+
+			available_features.samplerAnisotropy = VK_TRUE;
+			available_features.textureCompressionBC = VK_TRUE;
+
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			device.pNext = NULL;
@@ -198,7 +208,7 @@ namespace vk
 			device.ppEnabledLayerNames = layers.data();
 			device.enabledExtensionCount = 1;
 			device.ppEnabledExtensionNames = requested_extensions;
-			device.pEnabledFeatures = nullptr;
+			device.pEnabledFeatures = &available_features;
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
 		}
