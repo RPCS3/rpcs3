@@ -11,3 +11,4 @@ struct CellSsOpenPSID
 
 s32 sys_ss_get_console_id(vm::ps3::ptr<u8> buf);
 s32 sys_ss_get_open_psid(vm::ps3::ptr<CellSsOpenPSID> ptr);
+s32 sys_ss_get_open_psid(vm::_ptr_base<CellSsOpenPSID, unsigned int>);
