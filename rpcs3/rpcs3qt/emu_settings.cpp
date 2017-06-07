@@ -105,14 +105,22 @@ static QStringList getOptions(cfg_location location)
 
 emu_settings::emu_settings(const std::string& path) : QObject()
 {
-	currentSettings = YAML::Load(g_cfg_defaults);
-
 	// Create config path if necessary
 	fs::create_path(fs::get_config_dir() + path);
 
-	// Incrementally load config.yml
-	config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
+	// Load default config
+	currentSettings = YAML::Load(g_cfg_defaults);
+
+	// Add global config
+	config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
 	currentSettings += YAML::Load(config.to_string());
+
+	// Add game config
+	if (!path.empty())
+	{
+		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
+		currentSettings += YAML::Load(config.to_string());
+	}
 }
 
 emu_settings::~emu_settings()
