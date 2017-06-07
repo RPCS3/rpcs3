@@ -352,6 +352,8 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		{
 			LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[i].root);
 		}
+
+		emit RequestAddRecentGame(qstr(path), qstr("[" + m_game_data[i].serial + "] " + m_game_data[i].name));
 	}
 	else
 	{
@@ -446,6 +448,8 @@ void game_list_frame::Boot(int row)
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(m_game_data[row].root));
 		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[row].root);
 	}
+
+	emit RequestAddRecentGame(qstr(path), qstr("[" + m_game_data[row].serial + "] " + m_game_data[row].name));
 }
 
 void game_list_frame::RemoveCustomConfiguration(int row)

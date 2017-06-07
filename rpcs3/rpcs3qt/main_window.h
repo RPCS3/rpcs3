@@ -89,10 +89,21 @@ private:
 	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
 
+	QAction* CreateRecentAction(const QString path, const QString name, const uint sc_idx);
+	void BootRecentAction(const QAction* act);
+	void AddRecentAction(const QString path, QString name);
+
+	QStringList m_rg_names;
+	QStringList m_rg_paths;
+	QMenu* m_bootRecentMenu;
+	QList<QAction*> m_recentGameActs;
+
 	QActionGroup* iconSizeActGroup;
 
 	QAction *bootElfAct;
 	QAction *bootGameAct;
+	QAction *clearRecentAct;
+	QAction *freezeRecentAct;
 	QAction *bootInstallPkgAct;
 	QAction *bootInstallPupAct;
 	QAction *sysPauseAct;
