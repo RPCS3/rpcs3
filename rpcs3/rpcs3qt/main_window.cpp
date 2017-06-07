@@ -731,6 +731,15 @@ void main_window::OnEmuStop()
 		sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 		sysPauseAct->setIcon(icon_play);
 	}
+
+	// Enable Recent Games
+	for (auto act : m_bootRecentMenu->actions())
+	{
+		if (act != freezeRecentAct && act != clearRecentAct)
+		{
+			act->setEnabled(true);
+		}
+	}
 }
 
 void main_window::OnEmuReady()
@@ -939,6 +948,15 @@ void main_window::AddRecentAction(const QString path, QString name)
 
 	guiSettings->SetValue(GUI::rg_names, m_rg_names);
 	guiSettings->SetValue(GUI::rg_paths, m_rg_paths);
+
+	// Disable Recent Games
+	for (auto act : m_bootRecentMenu->actions())
+	{
+		if (act != freezeRecentAct && act != clearRecentAct)
+		{
+			act->setEnabled(false);
+		}
+	}
 }
 
 void main_window::CreateActions()
@@ -1056,6 +1074,7 @@ void main_window::CreateConnects()
 	connect(bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(bootGameAct, &QAction::triggered, this, &main_window::BootGame);
 	connect(clearRecentAct, &QAction::triggered, [this](){
+		if (freezeRecentAct->isChecked()) { return; }
 		m_rg_names.clear();
 		m_rg_paths.clear();
 		for (auto act : m_recentGameActs)
