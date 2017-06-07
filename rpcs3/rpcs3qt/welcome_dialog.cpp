@@ -35,7 +35,7 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent)
 	QIcon rpcs3_icon = QIcon(":/rpcs3.ico");
 	QLabel* icon = new QLabel(this);
 	icon->setPixmap(rpcs3_icon.pixmap(120, 120));
-	icon->setAlignment(Qt::AlignLeft);
+	icon->setAlignment(Qt::AlignRight);
 
 	QLabel* header_1 = new QLabel(tr(
 		"<h1>Welcome to RPCS3</h1>"
@@ -45,14 +45,14 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent)
 	header_font.setPointSize(12);
 
 	header_1->setFont(header_font);
-	header_1->setFixedWidth(400);
+	header_1->setFixedWidth(header_1->sizeHint().width());
 	header_1->setWordWrap(true);
 
 	QLabel* header_2 = new QLabel(tr(
 		"<h2>An open-source PlayStation 3 emulator for Windows and Linux funded with <a href =\"https://www.patreon.com/Nekotekina\">Patreon</a>!</h2>"
 	));
 
-	header_2->setFixedWidth(400);
+	header_2->setFixedWidth(header_1->sizeHint().width() * 1.2);
 	header_2->setWordWrap(true);
 
 	QLabel* caption = new QLabel(tr(
@@ -68,7 +68,7 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent)
 	caption_font.setWeight(QFont::Medium);
 
 	caption->setFont(caption_font);
-	caption->setFixedWidth(550);
+	caption->setFixedWidth(caption->sizeHint().width());
 	caption->setWordWrap(true);
 	caption->setOpenExternalLinks(true);
 	caption->setAlignment(Qt::AlignLeft);
@@ -95,7 +95,7 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent)
 	top_layout->setAlignment(Qt::AlignCenter);
 	top_layout->addStretch();
 	top_layout->addWidget(icon);
-	top_layout->addStretch();
+	top_layout->addSpacing(icon->sizeHint().width() / 10);
 	top_layout->addLayout(header_layout);
 	top_layout->addStretch();
 
@@ -114,16 +114,16 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent)
 
 	// Main Layout
 	QVBoxLayout* layout = new QVBoxLayout();
-	top_layout->addStretch();
 	layout->addLayout(top_layout);
+	layout->addSpacing(25);
 	layout->addLayout(bottom_layout);
 	layout->addSpacing(25);
 	layout->addLayout(button_layout);
-
-	setFixedSize(600, 350);
 
 	setWindowIcon(rpcs3_icon);
 	setWindowTitle(tr("Welcome to RPCS3"));
 	setWindowFlags(Qt::WindowTitleHint);
 	setLayout(layout);
+
+	setFixedSize(sizeHint());
 }

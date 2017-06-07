@@ -577,25 +577,25 @@ void main_window::About()
 	close->setDefault(true);
 
 	QLabel* icon = new QLabel(this);
-	icon->setPixmap(appIcon.pixmap(96, 96));
+	icon->setPixmap(QIcon(":/rpcs3.ico").pixmap(96, 96));
 
 	QLabel* caption = new QLabel(tr(
 		"<h1>RPCS3</h1>"
 		"A PlayStation 3 emulator and debugger.<br>"
 		"RPCS3 Version: %1").arg(qstr(rpcs3::version.to_string())
 		));
-	QLabel* developers = new QLabel(
+	QLabel* developers = new QLabel(tr(
 		"<p><b>Developers:</b><br>¬DH<br>¬AlexAltea<br>¬Hykem<br>Oil<br>Nekotekina<br>Bigpet<br>¬gopalsr83<br>¬tambry<br>"
 		"vlj<br>kd-11<br>jarveson<br>raven02<br>AniLeo<br>cornytrace<br>ssshadow<br>Numan</p>"
-	);
-	QLabel* contributors = new QLabel(
+	));
+	QLabel* contributors = new QLabel(tr(
 		"<p><b>Contributors:</b><br>BlackDaemon<br>elisha464<br>Aishou<br>krofna<br>xsacha<br>danilaml<br>unknownbrackets<br>Zangetsu38<br>"
 		"lioncash<br>achurch<br>darkf<br>Syphurith<br>Blaypeg<br>Survanium90<br>georgemoralis<br>ikki84<br>hcorion<br>Megamouse<br>flash-fire</p>"
-	);
-	QLabel* supporters = new QLabel(
+	));
+	QLabel* supporters = new QLabel(tr(
 		"<p><b>Supporters:</b><br>Howard Garrison<br>EXPotemkin<br>Marko V.<br>danhp<br>Jake (5315825)<br>Ian Reid<br>Tad Sherlock<br>Tyler Friesen<br>"
 		"Folzar<br>Payton Williams<br>RedPill Australia<br>yanghong<br>Mohammed El-Serougi<br>Дима ~Ximer13~ Кулин<br>James Reed<br>BaroqueSonata</p>"
-	);
+	));
 	icon->setAlignment(Qt::AlignLeft);
 	caption->setAlignment(Qt::AlignLeft);
 	developers->setAlignment(Qt::AlignTop);
@@ -979,7 +979,6 @@ void main_window::CreateActions()
 	sysPauseAct->setIcon(icon_pause);
 
 	sysStopAct = new QAction(tr("&Stop"), this);
-	sysStopAct->setShortcut(tr("Ctrl+S"));
 	sysStopAct->setEnabled(false);
 	sysStopAct->setIcon(icon_stop);
 
@@ -1403,12 +1402,15 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
 {
-	switch (keyEvent->key())
+	if (keyEvent->modifiers() == Qt::ControlModifier)
 	{
-	case 'E': case 'e': if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
-	case 'P': case 'p': if (Emu.IsRunning()) Emu.Pause(); return;
-	case 'S': case 's': if (!Emu.IsStopped()) Emu.Stop(); return;
-	case 'R': case 'r': if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
+		switch (keyEvent->key())
+		{
+		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
+		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
+		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
+		case Qt::Key_R: if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
+		}
 	}
 }
 
