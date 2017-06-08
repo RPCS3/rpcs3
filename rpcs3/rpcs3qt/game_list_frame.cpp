@@ -19,6 +19,7 @@
 #include <QMessageBox>
 #include <QProcess>
 #include <QTimer>
+#include <QUrl>
 
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
