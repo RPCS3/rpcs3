@@ -203,15 +203,15 @@ void main_window::BootElf()
 	guiSettings->SetValue(GUI::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
+	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
+
 	SetAppIconFromPath(path);
 	Emu.Stop();
 	Emu.SetPath(path);
 	Emu.Load();
 
 	if (Emu.IsReady()) LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
-
-	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
 }
 
 void main_window::BootGame()
@@ -237,13 +237,13 @@ void main_window::BootGame()
 	const std::string path = sstr(dirPath);
 	SetAppIconFromPath(path);
 
+	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
+
 	if (!Emu.BootGame(path))
 	{
 		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
 	}
-
-	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
 }
 
 void main_window::InstallPkg()
@@ -680,6 +680,15 @@ void main_window::OnEmuRun()
 	menu_run->setText(tr("&Pause"));
 	menu_run->setIcon(icon_pause);
 	EnableMenus(true);
+
+	// Disable Recent Games
+	for (auto act : m_bootRecentMenu->actions())
+	{
+		if (act != freezeRecentAct && act != clearRecentAct)
+		{
+			act->setEnabled(false);
+		}
+	}
 }
 
 void main_window::OnEmuResume()
@@ -839,12 +848,12 @@ void main_window::BootRecentAction(const QAction* act)
 
 	Emu.Stop();
 
+	AddRecentAction(act->property("path").toString(), act->property("shown_name").toString());
+
 	if (!Emu.BootGame(sstr(pth), true))
 	{
 		LOG_ERROR(LOADER, "Failed to boot %s", sstr(pth));
 	}
-
-	AddRecentAction(act->data().toString(), act->toolTip());
 };
 
 QAction* main_window::CreateRecentAction(const QString& path, const QString& name, const uint& sc_idx)
@@ -933,10 +942,13 @@ void main_window::AddRecentAction(const QString path, QString name)
 		LOG_ERROR(LOADER, "Recent games pathlist and namelist have different count");
 	}
 
-	// add new action at the beginning
-	m_rg_names.prepend(name);
-	m_rg_paths.prepend(path);
-	m_recentGameActs.prepend(act);
+	if (m_rg_paths.count() < 9)
+	{
+		// add new action at the beginning
+		m_rg_names.prepend(name);
+		m_rg_paths.prepend(path);
+		m_recentGameActs.prepend(act);
+	}
 	
 	// refill menu with actions
 	for (uint i = 0; i < m_recentGameActs.count(); i++)
@@ -948,15 +960,6 @@ void main_window::AddRecentAction(const QString path, QString name)
 
 	guiSettings->SetValue(GUI::rg_names, m_rg_names);
 	guiSettings->SetValue(GUI::rg_paths, m_rg_paths);
-
-	// Disable Recent Games
-	for (auto act : m_bootRecentMenu->actions())
-	{
-		if (act != freezeRecentAct && act != clearRecentAct)
-		{
-			act->setEnabled(false);
-		}
-	}
 }
 
 void main_window::CreateActions()
