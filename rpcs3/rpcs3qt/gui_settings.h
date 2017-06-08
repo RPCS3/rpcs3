@@ -27,6 +27,8 @@ typedef struct GUI_SAVE
 };
 
 typedef std::map<const QString, const QSize> icon_size;
+typedef QPair<QString, QString> q_string_pair;
+typedef QList<q_string_pair> q_pair_list;
 
 namespace GUI
 {
@@ -45,9 +47,8 @@ namespace GUI
 	const QString logger      = "Logger";
 	const QString meta        = "Meta";
 
-	const GUI_SAVE rg_freeze = GUI_SAVE(main_window, "recentGamesFrozen", false);
-	const GUI_SAVE rg_names  = GUI_SAVE(main_window, "recentGamesNames", QStringList());
-	const GUI_SAVE rg_paths  = GUI_SAVE(main_window, "recentGamesPaths", QStringList());
+	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
+	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
 
 	const GUI_SAVE ib_pkg_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPKG", true );
 	const GUI_SAVE ib_pup_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPUP", true );
@@ -105,6 +106,8 @@ public:
 
 	bool GetCategoryVisibility(QString cat);
 	QVariant GetValue(const GUI_SAVE& entry);
+	QVariant List2Var(const q_pair_list& list);
+	q_pair_list Var2List(const QVariant &var);
 
 	void ShowInfoBox(const GUI_SAVE& entry, const QString& title, const QString& text, QWidget* parent = 0);
 

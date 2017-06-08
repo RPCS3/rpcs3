@@ -89,12 +89,11 @@ private:
 	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
 
-	QAction* CreateRecentAction(const QString& path, const QString& name, const uint& sc_idx);
+	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
-	void AddRecentAction(const QString path, QString name);
+	void AddRecentAction(const q_string_pair& entry);
 
-	QStringList m_rg_names;
-	QStringList m_rg_paths;
+	q_pair_list m_rg_entries;
 	QMenu* m_bootRecentMenu;
 	QList<QAction*> m_recentGameActs;
 
