@@ -35,7 +35,9 @@ struct gui_listener : logs::listener
 		read = new packet;
 		last = new packet;
 		read->next = last.load();
-		last->msg = fmt::format("RPCS3 v%s\n", rpcs3::version.to_string());
+		//last->msg = fmt::format("RPCS3 v%s\n", rpcs3::version.to_string());
+
+		last->msg = "RSPC";
 
 		// Self-registration
 		logs::listener::add(this);

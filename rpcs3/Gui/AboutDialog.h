@@ -32,7 +32,7 @@ public:
 		t_descr->SetForegroundColour(wxColor(255, 255, 255));
 		t_descr->SetPosition(wxPoint(12, 50));
 
-		wxStaticText* t_version = new wxStaticText(this, wxID_ANY, "RPCS3 Version: " + rpcs3::version.to_string());
+		wxStaticText* t_version = new wxStaticText(this, wxID_ANY, "RPCS3 Version: " + rpcs3::version().to_string());
 		t_version->SetBackgroundColour(wxColor(100, 100, 100));
 		t_version->SetForegroundColour(wxColor(200, 200, 200));
 		t_version->SetPosition(wxPoint(12, 66));

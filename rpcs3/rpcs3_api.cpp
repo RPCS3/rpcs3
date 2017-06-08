@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "ps3emu_api_enums.h"
 #include "ps3emu_api_structs.h"
 #include "rpcs3_version.h"
@@ -65,7 +65,7 @@ UTILS_DLL_C_EXPORT ps3emu_api_error_code ps3emu_api_get_version_string(char *des
 		dest_buffer_size = ps3emu_api_max_version_length;
 	}
 
-	const std::string version_string = rpcs3::version.to_string();
+	const std::string version_string = rpcs3::version().to_string();
 
 	if (dest_buffer_size > version_string.length())
 	{
@@ -89,7 +89,7 @@ UTILS_DLL_C_EXPORT ps3emu_api_error_code ps3emu_api_get_version_number(int *vers
 		return ps3emu_api_bad_argument;
 	}
 
-	*version_number = rpcs3::version.to_hex();
+	*version_number = rpcs3::version().to_hex();
 	return ps3emu_api_ok;
 }
 

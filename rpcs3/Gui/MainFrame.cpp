@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "stdafx_gui.h"
 #include "rpcs3.h"
 #include "MainFrame.h"
@@ -74,7 +74,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-	SetLabel("RPCS3 v" + rpcs3::version.to_string());
+	SetLabel("RPCS3 v" + rpcs3::version().to_string());
 
 	wxMenuBar* menubar = new wxMenuBar();
 

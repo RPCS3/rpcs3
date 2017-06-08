@@ -1,9 +1,10 @@
-﻿#include "Log.h"
+﻿#include "rpcs3_version.h"
+#include "Log.h"
 #include "File.h"
 #include "StrFmt.h"
 #include "sema.h"
 
-#include "rpcs3_version.h"
+
 #include <string>
 #include <unordered_map>
 
@@ -64,7 +65,7 @@ namespace logs
 			: file_writer(name)
 			, listener()
 		{
-			const std::string& start = fmt::format("\xEF\xBB\xBF" "RPCS3 v%s\n", rpcs3::version.to_string());
+			const std::string& start = fmt::format("\xEF\xBB\xBF" "RPCS3 v%s\n", rpcs3::version().to_string());
 			file_writer::log(start.data(), start.size());
 		}
 
