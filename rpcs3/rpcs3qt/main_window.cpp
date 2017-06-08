@@ -131,7 +131,7 @@ QIcon main_window::GetAppIcon()
 void main_window::SetAppIconFromPath(const std::string path)
 {
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
-	QString qpath = QString::fromUtf8(path.data(), path.size());
+	QString qpath = qstr(path);
 	std::string icon_list[] = { "/ICON0.PNG", "/PS3_GAME/ICON0.PNG" };
 	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)) ,sstr(qpath.section("/", 0, -3)) };
 	for (std::string pth : path_list)
@@ -142,7 +142,7 @@ void main_window::SetAppIconFromPath(const std::string path)
 			if (fs::is_file(ico))
 			{
 				// load the image from path. It will most likely be a rectangle
-				QImage source = QImage(QString::fromUtf8(ico.data(), ico.size()));
+				QImage source = QImage(qstr(ico));
 				int edgeMax = std::max(source.width(), source.height());
 				
 				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
@@ -203,6 +203,9 @@ void main_window::BootElf()
 	guiSettings->SetValue(GUI::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
+	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
+
 	SetAppIconFromPath(path);
 	Emu.Stop();
 	Emu.SetPath(path);
@@ -233,6 +236,9 @@ void main_window::BootGame()
 	guiSettings->SetValue(GUI::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
 	SetAppIconFromPath(path);
+
+	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
 
 	if (!Emu.BootGame(path))
 	{
@@ -674,6 +680,15 @@ void main_window::OnEmuRun()
 	menu_run->setText(tr("&Pause"));
 	menu_run->setIcon(icon_pause);
 	EnableMenus(true);
+
+	// Disable Recent Games
+	for (auto act : m_bootRecentMenu->actions())
+	{
+		if (act != freezeRecentAct && act != clearRecentAct)
+		{
+			act->setEnabled(false);
+		}
+	}
 }
 
 void main_window::OnEmuResume()
@@ -725,6 +740,15 @@ void main_window::OnEmuStop()
 		sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 		sysPauseAct->setIcon(icon_play);
 	}
+
+	// Enable Recent Games
+	for (auto act : m_bootRecentMenu->actions())
+	{
+		if (act != freezeRecentAct && act != clearRecentAct)
+		{
+			act->setEnabled(true);
+		}
+	}
 }
 
 void main_window::OnEmuReady()
@@ -771,12 +795,183 @@ void main_window::EnableMenus(bool enabled)
 	toolsStringSearchAct->setEnabled(enabled);
 }
 
+void main_window::BootRecentAction(const QAction* act)
+{
+	if (Emu.IsRunning())
+	{
+		return;
+	}
+
+	const QString pth = act->data().toString();
+
+	// path is invalid: remove action from list return
+	if (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile())
+	{
+		if (m_rg_paths.contains(pth))
+		{
+			// clear menu of actions
+			for (auto act : m_recentGameActs)
+			{
+				m_bootRecentMenu->removeAction(act);
+			}
+
+			// remove action from list
+			int idx = m_rg_paths.indexOf(pth);
+			m_rg_names.removeAt(idx);
+			m_rg_paths.removeAt(idx);
+			m_recentGameActs.removeAt(idx);
+
+			guiSettings->SetValue(GUI::rg_paths, m_rg_paths);
+			guiSettings->SetValue(GUI::rg_names, m_rg_names);
+
+			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(pth));
+
+			// refill menu with actions
+			for (uint i = 0; i < m_recentGameActs.count(); i++)
+			{
+				m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
+				m_recentGameActs[i]->setToolTip(m_rg_names[i]);
+				m_bootRecentMenu->addAction(m_recentGameActs[i]);
+			}
+
+			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
+
+			return;
+		}
+
+		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", sstr(pth));
+
+		return;
+	}
+
+	SetAppIconFromPath(sstr(pth));
+
+	Emu.Stop();
+
+	AddRecentAction(act->property("path").toString(), act->property("shown_name").toString());
+
+	if (!Emu.BootGame(sstr(pth), true))
+	{
+		LOG_ERROR(LOADER, "Failed to boot %s", sstr(pth));
+	}
+};
+
+QAction* main_window::CreateRecentAction(const QString& path, const QString& name, const uint& sc_idx)
+{
+	// if path is not valid remove from list
+	if (!QFileInfo(path).isDir() && !QFileInfo(path).isFile())
+	{
+		if (m_rg_paths.contains(path))
+		{
+			int idx = m_rg_paths.indexOf(path);
+			m_rg_names.removeAt(idx);
+			m_rg_paths.removeAt(idx);
+
+			guiSettings->SetValue(GUI::rg_names, m_rg_names);
+			guiSettings->SetValue(GUI::rg_paths, m_rg_paths);
+
+			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(path));
+		}
+		return nullptr;
+	}
+
+	// if name is a path get filename
+	QString shown_name = name;
+	if (QFileInfo(name).isFile())
+	{
+		shown_name = name.section('/', -1);
+	}
+
+	// create new action
+	QAction* act = new QAction(shown_name, this);
+	act->setData(path);
+	act->setToolTip(name);
+	act->setShortcut(tr("Ctrl+%1").arg(sc_idx));
+	
+	// truncate if too long
+	if (shown_name.length() > 60)
+	{
+		act->setText(shown_name.left(27) + "(....)" + shown_name.right(27));
+	}
+
+	// connect boot
+	connect(act, &QAction::triggered, [=]() {BootRecentAction(act); });
+
+	return act;
+};
+
+void main_window::AddRecentAction(const QString path, QString name)
+{
+	// don't change list on freeze
+	if (freezeRecentAct->isChecked())
+	{
+		return;
+	}
+
+	// create new action, return if not valid
+	QAction* act = CreateRecentAction(path, name, 1);
+	if (!act)
+	{
+		return;
+	}
+
+	// clear menu of actions
+	for (auto act : m_recentGameActs)
+	{
+		m_bootRecentMenu->removeAction(act);
+	}
+
+	// if path already exists, remove it in order to get it to beginning
+	if (m_rg_paths.contains(path))
+	{
+		int idx = m_rg_paths.indexOf(path);
+		m_rg_names.removeAt(idx);
+		m_rg_paths.removeAt(idx);
+		m_recentGameActs.removeAt(idx);
+	}
+
+	// remove oldest action at the end if needed
+	if (m_rg_names.count() == 9 && m_rg_paths.count() == 9)
+	{
+		m_rg_names.removeLast();
+		m_rg_paths.removeLast();
+		m_recentGameActs.removeLast();
+	}
+	else if (m_rg_names.count() != m_rg_paths.count())
+	{
+		LOG_ERROR(LOADER, "Recent games pathlist and namelist have different count");
+	}
+
+	if (m_rg_paths.count() < 9)
+	{
+		// add new action at the beginning
+		m_rg_names.prepend(name);
+		m_rg_paths.prepend(path);
+		m_recentGameActs.prepend(act);
+	}
+	
+	// refill menu with actions
+	for (uint i = 0; i < m_recentGameActs.count(); i++)
+	{
+		m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i+1));
+		m_recentGameActs[i]->setToolTip(m_rg_names[i]);
+		m_bootRecentMenu->addAction(m_recentGameActs[i]);
+	}
+
+	guiSettings->SetValue(GUI::rg_names, m_rg_names);
+	guiSettings->SetValue(GUI::rg_paths, m_rg_paths);
+}
+
 void main_window::CreateActions()
 {
 	bootElfAct = new QAction(tr("Boot (S)ELF file"), this);
 	bootGameAct = new QAction(tr("Boot &Game"), this);
 	bootInstallPkgAct = new QAction(tr("&Install PKG"), this);
 	bootInstallPupAct = new QAction(tr("&Install Firmware"), this);
+
+	clearRecentAct = new QAction(tr("&Clear List"), this);
+	freezeRecentAct = new QAction(tr("&Freeze List"), this);
+	freezeRecentAct->setCheckable(true);
 
 	exitAct = new QAction(tr("E&xit"), this);
 	exitAct->setShortcuts(QKeySequence::Quit);
@@ -880,6 +1075,21 @@ void main_window::CreateConnects()
 {
 	connect(bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(clearRecentAct, &QAction::triggered, [this](){
+		if (freezeRecentAct->isChecked()) { return; }
+		m_rg_names.clear();
+		m_rg_paths.clear();
+		for (auto act : m_recentGameActs)
+		{
+			m_bootRecentMenu->removeAction(act);
+		}
+		m_recentGameActs.clear();
+		guiSettings->SetValue(GUI::rg_paths, QStringList());
+		guiSettings->SetValue(GUI::rg_names, QStringList());
+	});
+	connect(freezeRecentAct, &QAction::triggered, [=](bool checked) {
+		guiSettings->SetValue(GUI::rg_freeze, checked);
+	});
 	connect(bootInstallPkgAct, &QAction::triggered, this, &main_window::InstallPkg);
 	connect(bootInstallPupAct, &QAction::triggered, this, &main_window::InstallPup);
 	connect(exitAct, &QAction::triggered, this, &QWidget::close);
@@ -1002,6 +1212,13 @@ void main_window::CreateMenus()
 	QMenu *bootMenu = menuBar()->addMenu(tr("&Boot"));
 	bootMenu->addAction(bootElfAct);
 	bootMenu->addAction(bootGameAct);
+
+	m_bootRecentMenu = bootMenu->addMenu(tr("Boot Recent"));
+	m_bootRecentMenu->setToolTipsVisible(true);
+	m_bootRecentMenu->addAction(clearRecentAct);
+	m_bootRecentMenu->addAction(freezeRecentAct);
+	m_bootRecentMenu->addSeparator();
+
 	bootMenu->addSeparator();
 	bootMenu->addAction(bootInstallPkgAct);
 	bootMenu->addAction(bootInstallPupAct);
@@ -1115,6 +1332,7 @@ void main_window::CreateDockWindows()
 		}
 	});
 	connect(gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
+	connect(gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configureAll)
@@ -1134,6 +1352,28 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	}
 
 	restoreState(guiSettings->GetValue(GUI::mw_windowState).toByteArray());
+
+	freezeRecentAct->setChecked(guiSettings->GetValue(GUI::rg_freeze).toBool());
+	m_rg_names = guiSettings->GetValue(GUI::rg_names).toStringList();
+	m_rg_paths = guiSettings->GetValue(GUI::rg_paths).toStringList();
+
+	// Fill the recent games menu
+	for (uint i = 0; i < m_rg_paths.count(); i++)
+	{
+		// create new action
+		QAction* act = CreateRecentAction(m_rg_paths[i], m_rg_names[i], i + 1);
+
+		// add action to menu
+		if (act)
+		{
+			m_recentGameActs.append(act);
+			m_bootRecentMenu->addAction(act);
+		}
+		else
+		{
+			i--; // list count is now an entry shorter so we have to repeat the same index in order to load all other entries
+		}
+	}
 
 	showLogAct->setChecked(guiSettings->GetValue(GUI::mw_logger).toBool());
 	showGameListAct->setChecked(guiSettings->GetValue(GUI::mw_gamelist).toBool());
