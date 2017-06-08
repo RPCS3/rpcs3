@@ -61,6 +61,23 @@ QVariant gui_settings::GetValue(const GUI_SAVE& entry)
 	return settings.value(entry.key + "/" + entry.name, entry.def);
 }
 
+QVariant gui_settings::List2Var(const q_pair_list& list)
+{
+	QByteArray ba;
+	QDataStream stream(&ba, QIODevice::WriteOnly);
+	stream << list;
+	return QVariant(ba);
+}
+
+q_pair_list gui_settings::Var2List(const QVariant& var)
+{
+	q_pair_list list;
+	QByteArray ba = var.toByteArray();
+	QDataStream stream(&ba, QIODevice::ReadOnly);
+	stream >> list;
+	return list;
+}
+
 void gui_settings::SetValue(const GUI_SAVE& entry, const QVariant& value)
 {
 	settings.beginGroup(entry.key);
