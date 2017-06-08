@@ -203,15 +203,20 @@ void main_window::BootElf()
 	guiSettings->SetValue(GUI::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
-	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
-
 	SetAppIconFromPath(path);
 	Emu.Stop();
-	Emu.SetPath(path);
-	Emu.Load();
 
-	if (Emu.IsReady()) LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
+	if (!Emu.BootGame(path, true))
+	{
+		LOG_ERROR(GENERAL, "PS3 executable not found at path (%s)", path);
+	}
+	else
+	{
+		LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
+
+		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+		AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
+	}
 }
 
 void main_window::BootGame()
@@ -237,12 +242,16 @@ void main_window::BootGame()
 	const std::string path = sstr(dirPath);
 	SetAppIconFromPath(path);
 
-	const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-	AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
-
 	if (!Emu.BootGame(path))
 	{
 		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
+	}
+	else
+	{
+		LOG_SUCCESS(LOADER, "Boot Game: boot done.");
+
+		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+		AddRecentAction(qstr(path), qstr(serial + Emu.GetTitle()));
 	}
 }
 
@@ -680,15 +689,6 @@ void main_window::OnEmuRun()
 	menu_run->setText(tr("&Pause"));
 	menu_run->setIcon(icon_pause);
 	EnableMenus(true);
-
-	// Disable Recent Games
-	for (auto act : m_bootRecentMenu->actions())
-	{
-		if (act != freezeRecentAct && act != clearRecentAct)
-		{
-			act->setEnabled(false);
-		}
-	}
 }
 
 void main_window::OnEmuResume()
@@ -739,15 +739,6 @@ void main_window::OnEmuStop()
 	{
 		sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 		sysPauseAct->setIcon(icon_play);
-	}
-
-	// Enable Recent Games
-	for (auto act : m_bootRecentMenu->actions())
-	{
-		if (act != freezeRecentAct && act != clearRecentAct)
-		{
-			act->setEnabled(true);
-		}
 	}
 }
 
@@ -805,7 +796,7 @@ void main_window::BootRecentAction(const QAction* act)
 	const QString pth = act->data().toString();
 
 	// path is invalid: remove action from list return
-	if (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile())
+	if (m_rg_paths.contains(pth) && m_rg_names.at(m_rg_paths.indexOf(pth)).isEmpty() || !QFileInfo(pth).isDir() && !QFileInfo(pth).isFile())
 	{
 		if (m_rg_paths.contains(pth))
 		{
@@ -859,7 +850,7 @@ void main_window::BootRecentAction(const QAction* act)
 QAction* main_window::CreateRecentAction(const QString& path, const QString& name, const uint& sc_idx)
 {
 	// if path is not valid remove from list
-	if (!QFileInfo(path).isDir() && !QFileInfo(path).isFile())
+	if (name.isEmpty() || !QFileInfo(path).isDir() && !QFileInfo(path).isFile())
 	{
 		if (m_rg_paths.contains(path))
 		{
@@ -1075,6 +1066,17 @@ void main_window::CreateConnects()
 {
 	connect(bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(m_bootRecentMenu, &QMenu::aboutToShow, [=]() {
+		// Enable/Disable Recent Games List
+		const bool stopped = Emu.IsStopped();
+		for (auto act : m_bootRecentMenu->actions())
+		{
+			if (act != freezeRecentAct && act != clearRecentAct)
+			{
+				act->setEnabled(stopped);
+			}
+		}
+	});
 	connect(clearRecentAct, &QAction::triggered, [this](){
 		if (freezeRecentAct->isChecked()) { return; }
 		m_rg_names.clear();
