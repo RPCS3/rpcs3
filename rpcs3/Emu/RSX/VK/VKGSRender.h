@@ -11,6 +11,7 @@
 #include "VKProgramBuffer.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
+#include <thread>
 #include <atomic>
 
 #pragma comment(lib, "VKstatic.1.lib")
@@ -165,10 +166,14 @@ private:
 	s32  m_last_flushable_cb = -1;
 	
 	std::mutex m_flush_queue_mutex;
-	std::atomic<bool> m_flush_commands = false;
+	std::atomic<bool> m_flush_commands = { false };
 	std::atomic<int> m_queued_threads = { 0 };
 
 	std::thread::id rsx_thread;
+	
+#ifdef __linux__
+	Display *m_display_handle = nullptr;
+#endif
 
 public:
 	VKGSRender();

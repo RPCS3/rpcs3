@@ -95,7 +95,7 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

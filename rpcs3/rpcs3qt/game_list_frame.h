@@ -109,6 +109,7 @@ private slots:
 signals:
 	void game_list_frameClosed();
 	void RequestIconPathSet(const std::string path);
+	void RequestAddRecentGame(const QString path, const QString name);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);

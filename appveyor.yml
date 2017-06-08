@@ -12,7 +12,7 @@ configuration:
 
 before_build:
  - ps: $env:Date="$(git show -s --date=short --format='%ad')"
- - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp rsx_program_decompiler 3rdparty/cereal 3rdparty/zlib 3rdparty/hidapi
+ - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp 3rdparty/cereal 3rdparty/zlib 3rdparty/hidapi
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - 7z x vulkan.7z -aos -oC:\rpcs3\Vulkan > null
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
@@ -23,7 +23,7 @@ build_script:
 
 install:
  - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
- - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRa21fbDQteTN1dGs" -FileName vulkan.7z
+ - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRaHYxV3VOS2d0a0U" -FileName vulkan.7z
  - if not exist zlib.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B-HVE3xvheVFX05lRFdnZlh5aUU" -FileName zlib.7z
  - set QTDIR=C:\Qt\5.8\msvc2015_64
  - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL

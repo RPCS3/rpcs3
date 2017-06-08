@@ -13,10 +13,7 @@
 #include <dxgi1_4.h>
 #endif
 
-#ifdef _WIN32
 #include "Emu/RSX/VK/VKHelpers.h"
-#endif
-
 #include "SettingsDialog.h"
 
 #include <set>
@@ -480,7 +477,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	cbox_gs_d3d_adapter->Enable(false);
 #endif
 
-#ifdef _WIN32
 	//TODO: This is very slow. Only init once
 	bool vulkan_supported = false;
 
@@ -514,9 +510,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	}
 
 	device_enum_context.close();
-#else
-	cbox_gs_vk_adapter->Enable(false);
-#endif
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
