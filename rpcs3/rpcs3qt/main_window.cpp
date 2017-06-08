@@ -786,18 +786,6 @@ void main_window::EnableMenus(bool enabled)
 	toolsStringSearchAct->setEnabled(enabled);
 }
 
-auto ListIndex = [=](const q_pair_list& list, const QString& path)
-{
-	for (int i = 0; i < list.count(); i++)
-	{
-		if (list.at(i).first == path)
-		{
-			return i;
-		}
-	}
-	return -1;
-};
-
 void main_window::BootRecentAction(const QAction* act)
 {
 	if (Emu.IsRunning())
@@ -809,11 +797,15 @@ void main_window::BootRecentAction(const QAction* act)
 	QString nam;
 	bool containsPath = false;
 
-	int idx = ListIndex(m_rg_entries, pth);
-	if (idx >= 0)
+	int idx = -1;
+	for (int i = 0; i < m_rg_entries.count(); i++)
 	{
-		containsPath = true;
-		nam = m_rg_entries.at(idx).second;
+		if (m_rg_entries.at(i).first == pth)
+		{
+			idx = i;
+			containsPath = true;
+			nam = m_rg_entries.at(idx).second;
+		}
 	}
 
 	// path is invalid: remove action from list return
