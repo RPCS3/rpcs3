@@ -210,6 +210,10 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	}
 
+	//Deploy the image and set snr_config
+	img->deploy(group->threads[spu_num]->offset);
+	group->threads[spu_num]->snr_config = 0;
+
 	return CELL_OK;
 }
 
@@ -345,7 +349,8 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->index];
 			auto& img = group->imgs[thread->index];
 
-			img->deploy(thread->offset);
+			//Now deploying in sys_spu_thread_initialize
+			//img->deploy(thread->offset);
 
 			thread->pc = img->entry_point;
 			thread->cpu_init();
