@@ -449,10 +449,10 @@ namespace
 
 VKGSRender::VKGSRender() : GSRender()
 {
-	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
+	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 
 	u32 instance_handle = m_thread_context.createInstance("RPCS3");
-
+	
 	if (instance_handle > 0)
 	{
 		m_thread_context.makeCurrentInstance(instance_handle);
@@ -497,6 +497,44 @@ VKGSRender::VKGSRender() : GSRender()
 	{
 		m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
 	}
+	
+#elif __linux__
+
+	Window window = (Window)m_frame->handle();
+	Display *display = XOpenDisplay(0);
+
+	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
+	
+	//Actually confirm  that the loader found at least one compatible device
+	//This should not happen unless something is wrong with the driver setup on the target system
+	if (gpus.size() == 0)
+	{
+		//We can't throw in Emulator::Load, so we show error and return
+		LOG_FATAL(RSX, "No compatible GPU devices found");
+		m_device = VK_NULL_HANDLE;
+		return;
+	}
+
+	XFlush(display);
+
+	bool gpu_found = false;
+	std::string adapter_name = g_cfg.video.vk.adapter;
+	for (auto &gpu : gpus)
+	{
+		if (gpu.name() == adapter_name)
+		{
+			m_swap_chain = m_thread_context.createSwapChain(display, window, gpu);
+			gpu_found = true;
+			break;
+		}
+	}
+
+	if (!gpu_found || adapter_name.empty())
+	{
+		m_swap_chain = m_thread_context.createSwapChain(display, window, gpus[0]);
+	}
+	
+	m_display_handle = display;
 
 #endif
 
@@ -597,8 +635,8 @@ VKGSRender::~VKGSRender()
 
 	m_current_command_buffer->reset();
 
-	//Wait for queue
-	vkQueueWaitIdle(m_swap_chain->get_present_queue());
+	//Wait for device to finish up with resources
+	vkDeviceWaitIdle(*m_device);
 
 	//Sync objects
 	if (m_present_semaphore)
@@ -659,6 +697,11 @@ VKGSRender::~VKGSRender()
 	m_thread_context.close();
 
 	delete m_swap_chain;
+	
+#ifdef __linux__
+	if (m_display_handle)
+		XCloseDisplay(m_display_handle);
+#endif
 }
 
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)
@@ -1004,6 +1047,26 @@ void VKGSRender::clear_surface(u32 mask)
 	u16 scissor_w = rsx::method_registers.scissor_width();
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
+
+	const u32 fb_width = m_framebuffer_to_clean.back()->width();
+	const u32 fb_height = m_framebuffer_to_clean.back()->height();
+
+	//clip region
+	//TODO: Move clipping logic to shared code. Its used in other places as well
+	if (scissor_x >= fb_width)
+		scissor_x = 0;
+
+	if (scissor_y >= fb_height)
+		scissor_y = 0;
+
+	const u32 scissor_limit_x = scissor_x + scissor_w;
+	const u32 scissor_limit_y = scissor_y + scissor_h;
+
+	if (scissor_limit_x > fb_width)
+		scissor_w = fb_width - scissor_x;
+
+	if (scissor_limit_y > fb_height)
+		scissor_h = fb_height - scissor_y;
 
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
@@ -1778,6 +1841,7 @@ void VKGSRender::flip(int buffer)
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
 		}
 
+		m_framebuffer_to_clean.push_back(std::move(direct_fbo));
 		queue_swap_request();
 	}
 	else

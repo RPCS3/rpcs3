@@ -37,8 +37,8 @@
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
-#ifdef _WIN32
 #include "Emu/RSX/VK/VKGSRender.h"
+#ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #endif
 #ifdef __linux__
@@ -149,9 +149,7 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null: return std::make_unique<gs_frame>("Null", size.first, size.second, RPCS3MainWin->GetAppIcon());
 		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(size.first, size.second, RPCS3MainWin->GetAppIcon());
-#ifdef _WIN32
 		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", size.first, size.second, RPCS3MainWin->GetAppIcon());
-#endif
 #ifdef _MSC_VER
 		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", size.first, size.second, RPCS3MainWin->GetAppIcon());
 #endif
@@ -165,9 +163,7 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null: return std::make_shared<NullGSRender>();
 		case video_renderer::opengl: return std::make_shared<GLGSRender>();
-#ifdef _WIN32
 		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
-#endif
 #ifdef _MSC_VER
 		case video_renderer::dx12: return std::make_shared<D3D12GSRender>();
 #endif

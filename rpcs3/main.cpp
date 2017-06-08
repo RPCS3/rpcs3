@@ -5,6 +5,9 @@
 #include <QDebug>
 #include <QDesktopWidget>
 #include "rpcs3_app.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 int main(int argc, char** argv)
 {
