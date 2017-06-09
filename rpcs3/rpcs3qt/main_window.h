@@ -98,6 +98,8 @@ private:
 	QList<QAction*> m_recentGameActs;
 
 	QActionGroup* iconSizeActGroup;
+	QActionGroup* listModeActGroup;
+	QActionGroup* columnVisibleActGroup;
 
 	QAction *bootElfAct;
 	QAction *bootGameAct;
@@ -134,6 +136,8 @@ private:
 	QAction* setIconSizeSmallAct;
 	QAction* setIconSizeMediumAct;
 	QAction* setIconSizeLargeAct;
+	QAction* setlistModeListAct;
+	QAction* setlistModeGridAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
 

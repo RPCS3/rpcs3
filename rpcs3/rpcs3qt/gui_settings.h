@@ -79,6 +79,9 @@ namespace GUI
 	const GUI_SAVE gl_sortCol  = GUI_SAVE( game_list, "sortCol",  1 );
 	const GUI_SAVE gl_state    = GUI_SAVE( game_list, "state",    QByteArray() );
 	const GUI_SAVE gl_iconSize = GUI_SAVE( game_list, "iconSize", gl_icon_key_small);
+	const GUI_SAVE gl_listMode = GUI_SAVE( game_list, "listMode", true);
+	const GUI_SAVE gl_textFactor = GUI_SAVE(game_list, "textFactor", (qreal) 2.0 );
+	const GUI_SAVE gl_marginFactor = GUI_SAVE(game_list, "marginFactor", (qreal) 0.1 );
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );

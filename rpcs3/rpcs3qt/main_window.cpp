@@ -351,7 +351,7 @@ void main_window::InstallPkg()
 					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 				{
 					fs::remove_all(local_path);
-					gameListFrame->Refresh();
+					gameListFrame->Refresh(true);
 					LOG_SUCCESS(LOADER, "PKG: removed incomplete installation in %s", local_path);
 					return;
 				}
@@ -377,7 +377,7 @@ void main_window::InstallPkg()
 
 	if (progress >= 1.)
 	{
-		gameListFrame->Refresh();
+		gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(GUI::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
 
@@ -1047,6 +1047,15 @@ void main_window::CreateActions()
 	showCatUnknownAct = new QAction(category::unknown, this);
 	showCatUnknownAct->setCheckable(true);
 
+	columnVisibleActGroup = new QActionGroup(this); 
+	columnVisibleActGroup->addAction(showCatHDDGameAct);
+	columnVisibleActGroup->addAction(showCatDiscGameAct);
+	columnVisibleActGroup->addAction(showCatHomeAct);
+	columnVisibleActGroup->addAction(showCatAudioVideoAct);
+	columnVisibleActGroup->addAction(showCatGameDataAct);
+	columnVisibleActGroup->addAction(showCatUnknownAct);
+	columnVisibleActGroup->setExclusive(false);
+
 	setIconSizeSmallAct = new QAction(tr("Small"), this);
 	setIconSizeSmallAct->setCheckable(true);
 
@@ -1061,6 +1070,17 @@ void main_window::CreateActions()
 	iconSizeActGroup->addAction(setIconSizeMediumAct);
 	iconSizeActGroup->addAction(setIconSizeLargeAct);
 	setIconSizeSmallAct->setChecked(true);
+
+	setlistModeListAct = new QAction(tr("List"), this);
+	setlistModeListAct->setCheckable(true);
+
+	setlistModeGridAct = new QAction(tr("Grid"), this);
+	setlistModeGridAct->setCheckable(true);
+
+	listModeActGroup = new QActionGroup(this);
+	listModeActGroup->addAction(setlistModeListAct);
+	listModeActGroup->addAction(setlistModeGridAct);
+	setlistModeListAct->setChecked(true);
 
 	aboutAct = new QAction(tr("&About"), this);
 	aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -1167,7 +1187,7 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(GUI::mw_controls, checked);
 	});
 	connect(refreshGameListAct, &QAction::triggered, [=](){
-		gameListFrame->Refresh();
+		gameListFrame->Refresh(true);
 	});
 	connect(showCatHDDGameAct, &QAction::triggered, [=](bool checked){
 		gameListFrame->ToggleCategoryFilter(category::hdd_Game, checked);
@@ -1211,6 +1231,17 @@ void main_window::CreateConnects()
 
 		guiSettings->SetValue(GUI::gl_iconSize, key);
 		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(key));
+	});
+	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
+	{
+		bool isList;
+
+		if (act == setlistModeListAct) isList = true;
+		else isList = false;
+
+		guiSettings->SetValue(GUI::gl_listMode, isList);
+		gameListFrame->SetListMode(isList);
+		columnVisibleActGroup->setEnabled(isList);
 	});
 }
 
@@ -1264,17 +1295,13 @@ void main_window::CreateMenus()
 	viewMenu->addAction(refreshGameListAct);
 
 	QMenu *categoryMenu = viewMenu->addMenu(tr("Show Categories"));
-	categoryMenu->addAction(showCatHDDGameAct);
-	categoryMenu->addAction(showCatDiscGameAct);
-	categoryMenu->addAction(showCatHomeAct);
-	categoryMenu->addAction(showCatAudioVideoAct);
-	categoryMenu->addAction(showCatGameDataAct);
-	categoryMenu->addAction(showCatUnknownAct);
+	categoryMenu->addActions(columnVisibleActGroup->actions());
 
 	QMenu *iconSizeMenu = viewMenu->addMenu(tr("Icon Size"));
-	iconSizeMenu->addAction(setIconSizeSmallAct);
-	iconSizeMenu->addAction(setIconSizeMediumAct);
-	iconSizeMenu->addAction(setIconSizeLargeAct);
+	iconSizeMenu->addActions(iconSizeActGroup->actions());
+
+	QMenu *listModeMenu = viewMenu->addMenu(tr("Game List Mode"));
+	listModeMenu->addActions(listModeActGroup->actions());
 
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
@@ -1398,6 +1425,13 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	if (key == GUI::gl_icon_key_large) setIconSizeLargeAct->setChecked(true);
 	else if (key == GUI::gl_icon_key_medium) setIconSizeMediumAct->setChecked(true);
 	else setIconSizeSmallAct->setChecked(true);
+
+
+	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();
+	if (isListMode) setlistModeListAct->setChecked(true);
+	else setlistModeGridAct->setChecked(true);
+	columnVisibleActGroup->setEnabled(isListMode);
+
 
 	if (configureAll)
 	{
