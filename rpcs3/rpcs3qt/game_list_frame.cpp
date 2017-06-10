@@ -177,7 +177,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	}
 
 	// Init
-	Refresh(true); // Data MUST be loaded so that first settings load will reset columns to correct width w/r to data.
 	LoadSettings();
 }
 
@@ -237,92 +236,6 @@ void game_list_frame::OnColClicked(int col)
 	gameList->sortByColumn(m_sortColumn, m_colSortOrder);
 }
 
-
-void game_list_frame::LoadGames()
-{
-	m_games.clear();
-
-	for (const auto& entry : fs::dir(Emu.GetGameDir()))
-	{
-		if (entry.is_directory)
-		{
-			m_games.push_back(entry.name);
-		}
-	}
-}
-
-void game_list_frame::LoadPSF()
-{
-	m_game_data.clear();
-
-	const std::string& game_path = Emu.GetGameDir();
-
-	for (u32 i = 0; i < m_games.size(); ++i)
-	{
-		const std::string& dir = game_path + m_games[i];
-		const std::string& sfb = dir + "/PS3_DISC.SFB";
-		const std::string& sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
-
-		const fs::file sfo_file(sfo);
-		if (!sfo_file)
-		{
-			continue;
-		}
-
-		const auto& psf = psf::load_object(sfo_file);
-
-		GameInfo game;
-		game.root = m_games[i];
-		game.serial = psf::get_string(psf, "TITLE_ID", "");
-		game.name = psf::get_string(psf, "TITLE", "unknown");
-		game.app_ver = psf::get_string(psf, "APP_VER", "unknown");
-		game.category = psf::get_string(psf, "CATEGORY", "unknown");
-		game.fw = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
-		game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
-		game.resolution = psf::get_integer(psf, "RESOLUTION");
-		game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
-
-		if (game.category == "HG")
-		{
-			game.category = sstr(category::hdd_Game);
-			game.icon_path = dir + "/ICON0.PNG";
-		}
-		else if (game.category == "DG")
-		{
-			game.category = sstr(category::disc_Game);
-			game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
-		}
-		else if (game.category == "HM")
-		{
-			game.category = sstr(category::home);
-			game.icon_path = dir + "/ICON0.PNG";
-		}
-		else if (game.category == "AV")
-		{
-			game.category = sstr(category::audio_Video);
-			game.icon_path = dir + "/ICON0.PNG";
-		}
-		else if (game.category == "GD")
-		{
-			game.category = sstr(category::game_Data);
-			game.icon_path = dir + "/ICON0.PNG";
-		}
-		else if (game.category == "unknown")
-		{
-			game.category = sstr(category::unknown);
-		}
-
-		m_game_data.push_back({ game, *GetImage(game.icon_path, m_Icon_Size) });
-	}
-
-	auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
-		return game1.info.name < game2.info.name;
-	};
-
-	// Sort by name at the very least.
-	std::sort(m_game_data.begin(), m_game_data.end(), op);
-}
-
 // Filter for Categories
 void game_list_frame::FilterData()
 {
@@ -349,9 +262,84 @@ void game_list_frame::Refresh(bool fromDrive)
 {
 	if (fromDrive)
 	{
-		LoadGames();
-		LoadPSF();
+		// Load PSF
+
+		m_game_data.clear();
+
+		const std::string& game_path = Emu.GetGameDir();
+
+		for (const auto& entry : fs::dir(Emu.GetGameDir()))
+		{
+			if (!entry.is_directory)
+			{
+				continue;
+			}
+
+			const std::string& dir = game_path + entry.name;
+			const std::string& sfb = dir + "/PS3_DISC.SFB";
+			const std::string& sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
+
+			const fs::file sfo_file(sfo);
+			if (!sfo_file)
+			{
+				continue;
+			}
+
+			const auto& psf = psf::load_object(sfo_file);
+
+			GameInfo game;
+			game.root         = entry.name;
+			game.serial       = psf::get_string(psf, "TITLE_ID", "");
+			game.name         = psf::get_string(psf, "TITLE", "unknown");
+			game.app_ver      = psf::get_string(psf, "APP_VER", "unknown");
+			game.category     = psf::get_string(psf, "CATEGORY", "unknown");
+			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
+			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
+			game.resolution   = psf::get_integer(psf, "RESOLUTION");
+			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
+
+			if (game.category == "HG")
+			{
+				game.category = sstr(category::hdd_Game);
+				game.icon_path = dir + "/ICON0.PNG";
+			}
+			else if (game.category == "DG")
+			{
+				game.category = sstr(category::disc_Game);
+				game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
+			}
+			else if (game.category == "HM")
+			{
+				game.category = sstr(category::home);
+				game.icon_path = dir + "/ICON0.PNG";
+			}
+			else if (game.category == "AV")
+			{
+				game.category = sstr(category::audio_Video);
+				game.icon_path = dir + "/ICON0.PNG";
+			}
+			else if (game.category == "GD")
+			{
+				game.category = sstr(category::game_Data);
+				game.icon_path = dir + "/ICON0.PNG";
+			}
+			else if (game.category == "unknown")
+			{
+				game.category = sstr(category::unknown);
+			}
+
+			m_game_data.push_back({ game, *GetImage(game.icon_path, m_Icon_Size) });
+		}
+
+		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
+			return game1.info.name < game2.info.name;
+		};
+
+		// Sort by name at the very least.
+		std::sort(m_game_data.begin(), m_game_data.end(), op);
 	}
+
+	// Fill Game List / Game Grid
 
 	if (m_isListLayout)
 	{

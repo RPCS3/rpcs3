@@ -76,8 +76,6 @@ protected:
 	void resizeEvent(QResizeEvent *event);
 private:
 	game_list_grid* MakeGrid(uint maxCols, const QSize& image_size);
-	void LoadGames();
-	void LoadPSF();
 	void FilterData();
 
 	void PopulateGameList();
@@ -112,7 +110,6 @@ private:
 	Qt::SortOrder m_colSortOrder;
 	bool m_isListLayout = true;
 	bool m_showToolBar = true;
-	std::vector<std::string> m_games;
 	std::vector<GUI_GameInfo> m_game_data;
 	QSize m_Icon_Size;
 	QString m_Icon_Size_Str;
