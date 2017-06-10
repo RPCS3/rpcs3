@@ -749,6 +749,10 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 	}
 
 	// Edge cases!
+	if (entries == 0)
+	{ // For whatever reason, 0%x is division by zero.  Absolute nonsense by definition of modulus.  But, I'll acquiesce.
+		return grid;
+	}
 	if (maxCols == 0)
 	{
 		maxCols = 1;
@@ -758,7 +762,7 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 		maxCols = entries;
 	}
 
-	int needsExtraRow = entries % maxCols != 0;
+	int needsExtraRow = (entries % maxCols) != 0;
 	int maxRows = needsExtraRow + entries / maxCols;
 	grid->setRowCount(maxRows);
 	grid->setColumnCount(maxCols);
