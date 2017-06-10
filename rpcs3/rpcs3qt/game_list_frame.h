@@ -33,6 +33,7 @@ typedef struct GUI_GameInfo
 {
 	GameInfo info;
 	QImage icon;
+	QPixmap pxmap;
 };
 
 class game_list_frame : public QDockWidget {
@@ -79,7 +80,6 @@ private:
 	void FilterData();
 
 	void PopulateGameList();
-	QImage* GetImage(const std::string& path, const QSize& size);
 	bool SearchMatchesGameName(const std::string& gameName);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.

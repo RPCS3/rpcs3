@@ -49,10 +49,8 @@ void game_list_grid::setIconSize(const QSize& size)
 	}
 }
 
-void game_list_grid::addItem(const QImage* img, const QString& name, const int& idx, const int& row, const int& col)
+void game_list_grid::addItem(const QPixmap& img, const QString& name, const int& idx, const int& row, const int& col)
 {
-	QImage raw_img = QImage(*img);
-	
 	// define size of expanded image, which is raw image size + margins
 	QSize exp_size;
 	if (m_text_enabled)
@@ -73,7 +71,7 @@ void game_list_grid::addItem(const QImage* img, const QString& name, const int& 
 
 	// place raw image inside expanded image
 	QPainter painter(&exp_img);
-	painter.drawImage(offset, raw_img);
+	painter.drawPixmap(offset, img);
 	painter.end();
 
 	// create item with expanded image, title and position

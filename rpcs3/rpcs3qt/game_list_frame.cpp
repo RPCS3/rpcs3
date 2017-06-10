@@ -328,7 +328,25 @@ void game_list_frame::Refresh(bool fromDrive)
 				game.category = sstr(category::unknown);
 			}
 
-			m_game_data.push_back({ game, *GetImage(game.icon_path, m_Icon_Size) });
+			// Load Image
+			QImage img;
+			QPixmap pxmap;
+
+			if (!game.icon_path.empty() && img.load(qstr(game.icon_path)))
+			{
+				QImage scaled = img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
+				pxmap = QPixmap::fromImage(scaled);
+			}
+			else
+			{
+				img = QImage(m_Icon_Size, QImage::Format_ARGB32);
+				QString abspath = QDir(qstr(game.icon_path)).absolutePath();
+				LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
+				img.fill(QColor(0, 0, 0, 0));
+				pxmap = QPixmap::fromImage(img);
+			}
+
+			m_game_data.push_back({ game, img, pxmap });
 		}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
@@ -512,8 +530,11 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(removeGame, &QAction::triggered, [=]() {
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
+		{
 			fs::remove_all(Emu.GetGameDir() + m_game_data[row].info.root);
-		Refresh(true);
+			m_game_data.erase(m_game_data.begin() + row);
+			Refresh(false);
+		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + m_game_data[row].info.root); });
@@ -604,7 +625,12 @@ void game_list_frame::ResizeIcons(const QSize& size, const int& idx)
 
 	m_Icon_Size = size;
 
-	Refresh(true);
+	for (size_t i = 0; i < m_game_data.size(); i++)
+	{
+		m_game_data[i].pxmap = QPixmap::fromImage(m_game_data[i].icon.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	}
+
+	Refresh(false);
 }
 
 void game_list_frame::SetListMode(const bool& isList)
@@ -615,7 +641,7 @@ void game_list_frame::SetListMode(const bool& isList)
 
 	xgui_settings->SetValue(GUI::gl_listMode, isList);
 
-	Refresh(true);
+	Refresh(false);
 
 	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid.get());
 }
@@ -674,7 +700,7 @@ void game_list_frame::PopulateGameList()
 		// Icon
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
-		iconItem->setData(Qt::DecorationRole, QPixmap::fromImage(game.icon));
+		iconItem->setData(Qt::DecorationRole, game.pxmap);
 		gameList->setItem(row, 0, iconItem);
 
 		gameList->setItem(row, 1, l_GetItem(game.info.name));
@@ -693,28 +719,6 @@ void game_list_frame::PopulateGameList()
 		row++;
 	}
 }
-
-QImage* game_list_frame::GetImage(const std::string& path, const QSize& size)
-{
-	// Icon
-	QImage* img = new QImage();
-
-	if (!path.empty() && img->load(qstr(path)))
-	{
-		QImage* scaled = new QImage(img->scaled(size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-		delete img; // no leaks
-		img = scaled;
-	}
-	else
-	{
-		img = new QImage(m_Icon_Size, QImage::Format_ARGB32);
-		QString abspath = QDir(qstr(path)).absolutePath();
-		LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
-		img->fill(QColor(0, 0, 0, 0));
-	}
-	return img;
-}
-
 
 game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 {
@@ -778,7 +782,7 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 
 		if (category == category::hdd_Game || category == category::disc_Game)
 		{
-			grid->addItem(&m_game_data[i].icon, qstr(m_game_data[i].info.name), i, r, c);
+			grid->addItem(m_game_data[i].pxmap, qstr(m_game_data[i].info.name), i, r, c);
 
 			if (++c >= maxCols)
 			{
