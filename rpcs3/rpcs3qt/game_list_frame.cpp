@@ -62,7 +62,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
 	connect(m_Search_Bar, &QLineEdit::textChanged, [this]() {
-		Refresh(false);
+		Refresh();
 	});
 
 	m_Slider_Mode = new QSlider(Qt::Horizontal, m_Tool_Bar);
@@ -395,7 +395,7 @@ void game_list_frame::Refresh(bool fromDrive)
 void game_list_frame::ToggleCategoryFilter(QString category, bool show)
 {
 	if (show) { m_categoryFilters.append(category); } else { m_categoryFilters.removeAll(category); }
-	Refresh(false);
+	Refresh();
 }
 
 void game_list_frame::SaveSettings()
@@ -533,7 +533,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 		{
 			fs::remove_all(Emu.GetGameDir() + m_game_data[row].info.root);
 			m_game_data.erase(m_game_data.begin() + row);
-			Refresh(false);
+			Refresh();
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
@@ -630,7 +630,7 @@ void game_list_frame::ResizeIcons(const QSize& size, const int& idx)
 		m_game_data[i].pxmap = QPixmap::fromImage(m_game_data[i].icon.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
-	Refresh(false);
+	Refresh();
 }
 
 void game_list_frame::SetListMode(const bool& isList)
@@ -641,7 +641,7 @@ void game_list_frame::SetListMode(const bool& isList)
 
 	xgui_settings->SetValue(GUI::gl_listMode, isList);
 
-	Refresh(false);
+	Refresh();
 
 	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid.get());
 }
@@ -663,7 +663,7 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 {
 	if (!m_isListLayout)
 	{
-		Refresh(false);
+		Refresh();
 	}
 	QDockWidget::resizeEvent(event);
 }

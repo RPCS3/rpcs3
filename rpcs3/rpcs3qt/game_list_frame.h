@@ -42,7 +42,7 @@ class game_list_frame : public QDockWidget {
 public:
 	explicit game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent = nullptr);
 	~game_list_frame();
-	void Refresh(const bool fromDrive);
+	void Refresh(const bool fromDrive = false);
 	void ToggleCategoryFilter(QString category, bool show);
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
