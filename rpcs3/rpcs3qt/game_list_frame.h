@@ -14,6 +14,7 @@
 #include <QMainWindow>
 #include <QToolBar>
 #include <QLineEdit>
+#include <QStackedWidget>
 
 #include <memory>
 
@@ -84,6 +85,7 @@ private:
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
+	QStackedWidget* m_Central_Widget;
 	QToolBar* m_Tool_Bar;
 	QLineEdit* m_Search_Bar;
 	QSlider* m_Slider_Size;

@@ -20,7 +20,7 @@ class game_list_grid : public QTableWidget
 	bool m_text_enabled = true;
 
 public:
-	explicit game_list_grid(const QSize& icon_size, const qreal& margin_factor, const qreal& text_factor, const bool& showText, QWidget* parent = 0);
+	explicit game_list_grid(const QSize& icon_size, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
 	~game_list_grid();
 
 	void enableText(const bool& enabled);

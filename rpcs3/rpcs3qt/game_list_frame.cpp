@@ -88,9 +88,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	setWidget(m_Game_Dock);
 
 	bool showText = (m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny);
-	m_xgrid.reset(new game_list_grid(m_Icon_Size, m_Margin_Factor, m_Text_Factor, showText, m_Game_Dock));
+	m_xgrid.reset(new game_list_grid(m_Icon_Size, m_Margin_Factor, m_Text_Factor, showText));
 
-	gameList = new QTableWidget(m_Game_Dock);
+	gameList = new QTableWidget();
 	gameList->setShowGrid(false);
 	gameList->setItemDelegate(new table_item_delegate(this));
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -115,18 +115,12 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 
 	gameList->setColumnHidden(7, true); // Comment this if your sorting ever for whatever reason messes up.
 
-	if (m_isListLayout)
-	{
-		m_xgrid.get()->hide();
-		gameList->show();
-		m_Game_Dock->setCentralWidget(gameList);
-	}
-	else
-	{
-		gameList->hide();
-		m_xgrid.get()->show();
-		m_Game_Dock->setCentralWidget(m_xgrid.get());
-	}
+	m_Central_Widget = new QStackedWidget(this);
+	m_Central_Widget->addWidget(gameList);
+	m_Central_Widget->addWidget(m_xgrid.get());
+	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid.get());
+
+	m_Game_Dock->setCentralWidget(m_Central_Widget);
 
 	// Actions
 	showIconColAct = new QAction(tr("Show Icons"), this);
@@ -370,6 +364,8 @@ void game_list_frame::Refresh(bool fromDrive)
 		gameList->selectRow(row);
 		gameList->sortByColumn(m_sortColumn, m_colSortOrder);
 		gameList->setColumnHidden(7, true);
+		gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
+		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 		gameList->resizeRowsToContents();
 		gameList->resizeColumnToContents(0);
 	}
@@ -387,7 +383,8 @@ void game_list_frame::Refresh(bool fromDrive)
 		m_xgrid.reset(MakeGrid(m_games_per_row, m_Icon_Size));
 		connect(m_xgrid.get(), &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid.get(), &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-		m_Game_Dock->setCentralWidget(m_xgrid.get());
+		m_Central_Widget->addWidget(m_xgrid.get());
+		m_Central_Widget->setCurrentWidget(m_xgrid.get());
 	}
 }
 
@@ -621,15 +618,6 @@ void game_list_frame::ResizeIcons(const QSize& size, const int& idx)
 
 	m_Icon_Size = size;
 
-	if (m_isListLayout)
-	{
-		gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
-		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
-	}
-	else
-	{
-		m_xgrid->setIconSize(m_Icon_Size);
-	}
 	Refresh(true);
 }
 
@@ -643,20 +631,7 @@ void game_list_frame::SetListMode(const bool& isList)
 
 	Refresh(true);
 
-	if (m_isListLayout)
-	{
-		m_xgrid.get()->hide();
-		gameList->show();
-		gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
-		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
-		m_Game_Dock->setCentralWidget(gameList);
-	}
-	else
-	{
-		gameList->hide();
-		m_xgrid.get()->show();
-		m_Game_Dock->setCentralWidget(m_xgrid.get());
-	}
+	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid.get());
 }
 
 void game_list_frame::SetToolBarVisible(const bool& showToolBar)
@@ -760,11 +735,11 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 
 	if (m_Icon_Size_Str == GUI::gl_icon_key_medium)
 	{
-		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor * 2, showText, m_Game_Dock);
+		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor * 2, showText);
 	}
 	else
 	{
-		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor, showText, m_Game_Dock);
+		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor, showText);
 	}
 
 	// Get number of things that'll be in grid.
