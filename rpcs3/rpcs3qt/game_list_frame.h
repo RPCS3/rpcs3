@@ -68,7 +68,7 @@ protected:
 	void closeEvent(QCloseEvent* event);
 	void resizeEvent(QResizeEvent *event);
 private:
-	game_list_grid* MakeGrid(uint maxCols, const QSize& image_size, bool fromDrive);
+	game_list_grid* MakeGrid(uint maxCols, const QSize& image_size);
 	void LoadGames();
 	void LoadPSF();
 	void FilterData();

@@ -1056,6 +1056,9 @@ void main_window::CreateActions()
 	columnVisibleActGroup->addAction(showCatUnknownAct);
 	columnVisibleActGroup->setExclusive(false);
 
+	setIconSizeTinyAct = new QAction(tr("Tiny"), this);
+	setIconSizeTinyAct->setCheckable(true);
+
 	setIconSizeSmallAct = new QAction(tr("Small"), this);
 	setIconSizeSmallAct->setCheckable(true);
 
@@ -1066,6 +1069,7 @@ void main_window::CreateActions()
 	setIconSizeLargeAct->setCheckable(true);
 
 	iconSizeActGroup = new QActionGroup(this);
+	iconSizeActGroup->addAction(setIconSizeTinyAct);
 	iconSizeActGroup->addAction(setIconSizeSmallAct);
 	iconSizeActGroup->addAction(setIconSizeMediumAct);
 	iconSizeActGroup->addAction(setIconSizeLargeAct);
@@ -1227,7 +1231,8 @@ void main_window::CreateConnects()
 
 		if (act == setIconSizeLargeAct) key = GUI::gl_icon_key_large;
 		else if (act == setIconSizeMediumAct) key = GUI::gl_icon_key_medium;
-		else key = GUI::gl_icon_key_small;
+		else if (act == setIconSizeSmallAct) key = GUI::gl_icon_key_small;
+		else key = GUI::gl_icon_key_tiny;
 
 		guiSettings->SetValue(GUI::gl_iconSize, key);
 		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(key));
@@ -1424,7 +1429,8 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	QString key = guiSettings->GetValue(GUI::gl_iconSize).toString();
 	if (key == GUI::gl_icon_key_large) setIconSizeLargeAct->setChecked(true);
 	else if (key == GUI::gl_icon_key_medium) setIconSizeMediumAct->setChecked(true);
-	else setIconSizeSmallAct->setChecked(true);
+	else if (key == GUI::gl_icon_key_small) setIconSizeSmallAct->setChecked(true);
+	else setIconSizeTinyAct->setChecked(true);
 
 
 	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();

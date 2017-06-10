@@ -44,6 +44,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	gameList->setItemDelegate(new table_item_delegate(this));
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	gameList->setSelectionMode(QAbstractItemView::SingleSelection);
+	gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
 	gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
@@ -316,15 +317,14 @@ void game_list_frame::Refresh(bool fromDrive)
 	{
 		if (m_Icon_Size.width() > 0 && m_Icon_Size.height() > 0)
 		{
-			// substract some number from width to get smoother rearrange. there may be another way, but I'm too tired to search
-			m_games_per_row = (width() - 20) / (m_Icon_Size.width() + m_Icon_Size.width() * m_xgrid.get()->getMarginFactor() * 2);
+			m_games_per_row = width() / (m_Icon_Size.width() + m_Icon_Size.width() * m_xgrid.get()->getMarginFactor() * 2);
 		}
 		else
 		{
 			m_games_per_row = 0;
 		}
 
-		m_xgrid.reset(MakeGrid(m_games_per_row, m_Icon_Size, fromDrive));
+		m_xgrid.reset(MakeGrid(m_games_per_row, m_Icon_Size));
 		connect(m_xgrid.get(), &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid.get(), &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 		setWidget(m_xgrid.get());
@@ -599,6 +599,7 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 	{
 		Refresh(false);
 	}
+	QDockWidget::resizeEvent(event);
 }
 
 /**
@@ -672,7 +673,7 @@ QImage* game_list_frame::GetImage(const std::string& path, const QSize& size)
 }
 
 
-game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size, bool fromDrive)
+game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 {
 	uint r = 0;
 	uint c = 0;
@@ -712,7 +713,7 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size,
 	int maxRows = needsExtraRow + entries / maxCols;
 	grid->setRowCount(maxRows);
 	grid->setColumnCount(maxCols);
-	grid->enableText(m_Icon_Size_Str != GUI::gl_icon_key_small);
+	grid->enableText(m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny);
 
 	for (uint i = 0; i < m_game_data.size(); i++)
 	{

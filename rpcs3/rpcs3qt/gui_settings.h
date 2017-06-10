@@ -32,11 +32,13 @@ typedef QList<q_string_pair> q_pair_list;
 
 namespace GUI
 {
+	const QString gl_icon_key_tiny   = "tiny";
 	const QString gl_icon_key_small  = "small";
 	const QString gl_icon_key_medium = "medium";
 	const QString gl_icon_key_large  = "large";
 
 	const icon_size gl_icon_size = {
+		{ gl_icon_key_tiny,   QSize(40, 22) },
 		{ gl_icon_key_small,  QSize(80, 44) },
 		{ gl_icon_key_medium, QSize(160, 88) },
 		{ gl_icon_key_large,  QSize(320, 176) }

@@ -20,6 +20,8 @@ game_list_grid::game_list_grid(const QSize& icon_size, const qreal& margin_facto
 	setItemDelegate(grid_item_delegate);
 	setSelectionBehavior(QAbstractItemView::SelectItems);
 	setSelectionMode(QAbstractItemView::SingleSelection);
+	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	verticalHeader()->setVisible(false);
 	horizontalHeader()->setVisible(false);
