@@ -37,9 +37,16 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	xgui_settings->SetValue(GUI::gl_marginFactor, m_Margin_Factor);
 	xgui_settings->SetValue(GUI::gl_textFactor, m_Text_Factor);
 
-	m_xgrid.reset(new game_list_grid(m_Icon_Size, m_Margin_Factor, m_Text_Factor));
+	m_Game_Dock = new QMainWindow(this);
+	m_Game_Dock->setWindowFlags(Qt::Widget);
+	m_Game_Toolbar = new QToolBar(m_Game_Dock);
+	m_Game_Toolbar->setMovable(false);
+	m_Game_Dock->addToolBar(m_Game_Toolbar);
+	setWidget(m_Game_Dock);
 
-	gameList = new QTableWidget();
+	m_xgrid.reset(new game_list_grid(m_Icon_Size, m_Margin_Factor, m_Text_Factor, m_Game_Dock));
+
+	gameList = new QTableWidget(m_Game_Dock);
 	gameList->setShowGrid(false);
 	gameList->setItemDelegate(new table_item_delegate(this));
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -66,11 +73,15 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 
 	if (m_isListLayout)
 	{
-		setWidget(gameList);
+		m_xgrid.get()->hide();
+		gameList->show();
+		m_Game_Dock->setCentralWidget(gameList);
 	}
 	else
 	{
-		setWidget(m_xgrid.get());
+		gameList->hide();
+		m_xgrid.get()->show();
+		m_Game_Dock->setCentralWidget(m_xgrid.get());
 	}
 
 	// Actions
@@ -327,7 +338,7 @@ void game_list_frame::Refresh(bool fromDrive)
 		m_xgrid.reset(MakeGrid(m_games_per_row, m_Icon_Size));
 		connect(m_xgrid.get(), &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid.get(), &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-		setWidget(m_xgrid.get());
+		m_Game_Dock->setCentralWidget(m_xgrid.get());
 	}
 }
 
@@ -575,13 +586,17 @@ void game_list_frame::SetListMode(bool isList)
 
 	if (m_isListLayout)
 	{
-		setWidget(gameList);
+		m_xgrid.get()->hide();
+		gameList->show();
 		gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
+		m_Game_Dock->setCentralWidget(gameList);
 	}
 	else
 	{
-		setWidget(m_xgrid.get());
+		gameList->hide();
+		m_xgrid.get()->show();
+		m_Game_Dock->setCentralWidget(m_xgrid.get());
 	}
 
 	Refresh(true);
@@ -682,11 +697,11 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 
 	if (m_Icon_Size_Str == GUI::gl_icon_key_medium)
 	{
-		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor * 2);
+		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor * 2, m_Game_Dock);
 	}
 	else
 	{
-		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor);
+		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor, m_Game_Dock);
 	}
 
 	// Get number of things that'll be in grid.

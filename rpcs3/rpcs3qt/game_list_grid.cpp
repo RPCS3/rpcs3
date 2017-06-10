@@ -3,8 +3,8 @@
 
 #include <QHeaderView>
 
-game_list_grid::game_list_grid(const QSize& icon_size, const qreal& margin_factor, const qreal& text_factor)
-	: QTableWidget(), m_icon_size(icon_size), m_margin_factor(margin_factor), m_text_factor(text_factor)
+game_list_grid::game_list_grid(const QSize& icon_size, const qreal& margin_factor, const qreal& text_factor, QWidget* parent)
+	: QTableWidget(parent), m_icon_size(icon_size), m_margin_factor(margin_factor), m_text_factor(text_factor)
 {
 	QSize item_size;
 	if (m_text_enabled)

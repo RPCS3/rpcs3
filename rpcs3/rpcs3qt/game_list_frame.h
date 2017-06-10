@@ -11,6 +11,8 @@
 #include <QDockWidget>
 #include <QList>
 #include <QTableWidget>
+#include <QMainWindow>
+#include <QToolBar>
 
 #include <memory>
 
@@ -77,6 +79,8 @@ private:
 	QImage* GetImage(const std::string& path, const QSize& size);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
+	QMainWindow* m_Game_Dock;
+	QToolBar* m_Game_Toolbar;
 	QTableWidget *gameList;
 	std::unique_ptr<game_list_grid> m_xgrid;
 
