@@ -1252,12 +1252,7 @@ void main_window::CreateConnects()
 	});
 	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
-		bool isList;
-
-		if (act == setlistModeListAct) isList = true;
-		else isList = false;
-
-		guiSettings->SetValue(GUI::gl_listMode, isList);
+		bool isList = act == setlistModeListAct;
 		gameListFrame->SetListMode(isList);
 		columnVisibleActGroup->setEnabled(isList);
 	});

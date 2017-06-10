@@ -639,6 +639,8 @@ void game_list_frame::SetListMode(const bool& isList)
 
 	m_Slider_Mode->setSliderPosition(isList ? 0 : 1);
 
+	xgui_settings->SetValue(GUI::gl_listMode, isList);
+
 	Refresh(true);
 
 	if (m_isListLayout)
@@ -661,6 +663,7 @@ void game_list_frame::SetToolBarVisible(const bool& showToolBar)
 {
 	m_showToolBar = showToolBar;
 	m_Tool_Bar->setVisible(showToolBar);
+	xgui_settings->SetValue(GUI::gl_toolBarVisible, showToolBar);
 }
 
 void game_list_frame::closeEvent(QCloseEvent *event)

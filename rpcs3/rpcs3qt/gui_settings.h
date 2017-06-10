@@ -85,7 +85,7 @@ namespace GUI
 	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       gl_icon_key_small );
 	const GUI_SAVE gl_listMode       = GUI_SAVE( game_list, "listMode",       true );
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
-	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.1 );
+	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.09 );
 	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", true );
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
