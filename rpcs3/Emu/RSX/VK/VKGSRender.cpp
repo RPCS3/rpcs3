@@ -583,15 +583,14 @@ VKGSRender::VKGSRender() : GSRender()
 
 	}
 
-
-#define RING_BUFFER_SIZE 16 * 1024 * DESCRIPTOR_MAX_DRAW_CALLS
-
-	m_uniform_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
-	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
-	m_texture_upload_buffer_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000);
+	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000);
+	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000);
+	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
+	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
 
@@ -777,8 +776,12 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	//Ease resource pressure if the number of draw calls becomes too high
-	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS)
+	//Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
+	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS ||
+		m_attrib_ring_info.is_critical() ||
+		m_texture_upload_buffer_ring_info.is_critical() ||
+		m_uniform_buffer_ring_info.is_critical() ||
+		m_index_buffer_ring_info.is_critical())
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
@@ -787,10 +790,10 @@ void VKGSRender::begin()
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, descriptor_pool, 0));
 		m_used_descriptors = 0;
 
-		m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
-		m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
-		m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
-		m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
+		m_uniform_buffer_ring_info.reset_allocation_stats();
+		m_index_buffer_ring_info.reset_allocation_stats();
+		m_attrib_ring_info.reset_allocation_stats();
+		m_texture_upload_buffer_ring_info.reset_allocation_stats();
 
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
@@ -1010,9 +1013,6 @@ void VKGSRender::on_init_thread()
 	}
 
 	GSRender::on_init_thread();
-	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
-
 	rsx_thread = std::this_thread::get_id();
 }
 
@@ -1052,22 +1052,7 @@ void VKGSRender::clear_surface(u32 mask)
 	const u32 fb_height = m_framebuffer_to_clean.back()->height();
 
 	//clip region
-	//TODO: Move clipping logic to shared code. Its used in other places as well
-	if (scissor_x >= fb_width)
-		scissor_x = 0;
-
-	if (scissor_y >= fb_height)
-		scissor_y = 0;
-
-	const u32 scissor_limit_x = scissor_x + scissor_w;
-	const u32 scissor_limit_y = scissor_y + scissor_h;
-
-	if (scissor_limit_x > fb_width)
-		scissor_w = fb_width - scissor_x;
-
-	if (scissor_limit_y > fb_height)
-		scissor_h = fb_height - scissor_y;
-
+	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
 	auto targets = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
@@ -1920,10 +1905,10 @@ void VKGSRender::flip(int buffer)
 	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
 	m_flip_time = std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
 
-	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
-	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
-	m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
-	m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
+	m_uniform_buffer_ring_info.reset_allocation_stats();
+	m_index_buffer_ring_info.reset_allocation_stats();
+	m_attrib_ring_info.reset_allocation_stats();
+	m_texture_upload_buffer_ring_info.reset_allocation_stats();
 
 	//Resource destruction is handled within the real swap handler
 

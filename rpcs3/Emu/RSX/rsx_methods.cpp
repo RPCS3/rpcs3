@@ -429,14 +429,29 @@ namespace rsx
 			const f32 in_x = method_registers.blit_engine_in_x();
 			const f32 in_y = method_registers.blit_engine_in_y();
 
-			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
-			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+			//Clipping
+			//Validate that clipping rect will fit onto both src and dst regions
+			u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
+			u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
 
-            // if the clip'd region will end up outside of the source area, we ignore the given clip x/y and just use 0
-            // see: Spyro - BLES00382 intro, psgl sdk samples
-            const u16 clip_x = method_registers.blit_engine_clip_x() > (in_x + in_w - clip_w) ? 0 : method_registers.blit_engine_clip_x();
-            const u16 clip_y = method_registers.blit_engine_clip_y() > (in_y + in_h - clip_h) ? 0 : method_registers.blit_engine_clip_y();
+            u16 clip_x = method_registers.blit_engine_clip_x();
+            u16 clip_y = method_registers.blit_engine_clip_y();
 
+			if (clip_w == 0)
+			{
+				clip_x = 0;
+				clip_w = out_w;
+			}
+
+			if (clip_h == 0)
+			{
+				clip_y = 0;
+				clip_h = out_h;
+			}
+
+			//Fit onto dst
+			if (clip_x && (out_x + clip_x + clip_w) > out_w) clip_x = 0;
+			if (clip_y && (out_y + clip_y + clip_h) > out_h) clip_y = 0;
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 
