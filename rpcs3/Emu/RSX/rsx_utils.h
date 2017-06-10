@@ -151,4 +151,59 @@ namespace rsx
 	void fill_viewport_matrix(void *buffer, bool transpose);
 
 	std::array<float, 4> get_constant_blend_colors();
+
+	/**
+	 * Clips a rect so that it never falls outside the parent region
+	 * attempt_fit: allows resizing of the requested region. If false, failure to fit will result in the child rect being pinned to (0, 0)
+	 */
+	template <typename T>
+	std::tuple<T, T, T, T> clip_region(T parent_width, T parent_height, T clip_x, T clip_y, T clip_width, T clip_height, bool attempt_fit)
+	{
+		T x = clip_x;
+		T y = clip_y;
+		T width = clip_width;
+		T height = clip_height;
+
+		if ((clip_x + clip_width) > parent_width)
+		{
+			if (clip_x >= parent_width)
+			{
+				if (clip_width < parent_width)
+					width = clip_width;
+				else
+					width = parent_width;
+
+				x = (T)0;
+			}
+			else
+			{
+				if (attempt_fit)
+					width = parent_width - clip_x;
+				else
+					width = std::min(clip_width, parent_width);
+			}
+		}
+
+		if ((clip_y + clip_height) > parent_height)
+		{
+			if (clip_y >= parent_height)
+			{
+				if (clip_height < parent_height)
+					height = clip_height;
+				else
+					height = parent_height;
+
+				y = (T)0;
+			}
+			else
+			{
+				if (attempt_fit)
+					height = parent_height - clip_y;
+				else
+					height = std::min(clip_height, parent_height);
+			}
+		}
+
+		return std::make_tuple(x, y, width, height);
+	}
 }
