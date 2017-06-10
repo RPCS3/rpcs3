@@ -20,6 +20,7 @@
 #include <QProcess>
 #include <QTimer>
 #include <QUrl>
+#include <QLabel>
 
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
@@ -29,22 +30,65 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 {
 	m_isListLayout = xgui_settings->GetValue(GUI::gl_listMode).toBool();
 	m_Icon_Size_Str = xgui_settings->GetValue(GUI::gl_iconSize).toString();
-	m_Icon_Size = GUI::gl_icon_size.at(m_Icon_Size_Str);
 	m_Margin_Factor = xgui_settings->GetValue(GUI::gl_marginFactor).toReal();
 	m_Text_Factor = xgui_settings->GetValue(GUI::gl_textFactor).toReal();
+	m_showToolBar = xgui_settings->GetValue(GUI::gl_toolBarVisible).toBool();
+
+	// get icon size from list
+	int icon_size_index = 0;
+	for (int i = 0; i < GUI::gl_icon_size.count(); i++)
+	{
+		if (GUI::gl_icon_size.at(i).first == m_Icon_Size_Str)
+		{
+			m_Icon_Size = GUI::gl_icon_size.at(i).second;
+			icon_size_index = i;
+			break;
+		}
+	}
 
 	// Save factors for first setup
 	xgui_settings->SetValue(GUI::gl_marginFactor, m_Margin_Factor);
 	xgui_settings->SetValue(GUI::gl_textFactor, m_Text_Factor);
+	xgui_settings->SetValue(GUI::gl_toolBarVisible, m_showToolBar);
 
 	m_Game_Dock = new QMainWindow(this);
 	m_Game_Dock->setWindowFlags(Qt::Widget);
-	m_Game_Toolbar = new QToolBar(m_Game_Dock);
-	m_Game_Toolbar->setMovable(false);
-	m_Game_Dock->addToolBar(m_Game_Toolbar);
+
+	// Set up toolbar
+	m_Tool_Bar = new QToolBar(m_Game_Dock);
+	m_Tool_Bar->setMovable(false);
+	m_Tool_Bar->setVisible(m_showToolBar);
+
+	m_Search_Bar = new QLineEdit(m_Tool_Bar);
+	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
+	m_Search_Bar->setEnabled(false); // delete this on implementation
+
+	m_Slider_Mode = new QSlider(Qt::Horizontal, m_Tool_Bar);
+	m_Slider_Mode->setRange(0, 1);
+	m_Slider_Mode->setSliderPosition(m_isListLayout ? 0 : 1);
+	m_Slider_Mode->setFixedWidth(30);
+
+	m_Slider_Size = new QSlider(Qt::Horizontal , m_Tool_Bar);
+	m_Slider_Size->setRange(0, GUI::gl_icon_size.size() - 1);
+	m_Slider_Size->setSliderPosition(icon_size_index);
+	m_Slider_Size->setFixedWidth(100);
+
+	m_Tool_Bar->addWidget(m_Search_Bar);
+	m_Tool_Bar->addWidget(new QLabel("       "));
+	m_Tool_Bar->addSeparator();
+	m_Tool_Bar->addWidget(new QLabel(tr("       List  ")));
+	m_Tool_Bar->addWidget(m_Slider_Mode);
+	m_Tool_Bar->addWidget(new QLabel(tr("  Grid       ")));
+	m_Tool_Bar->addSeparator();
+	m_Tool_Bar->addWidget(new QLabel(tr("       Tiny  "))); // Can this be any easier?
+	m_Tool_Bar->addWidget(m_Slider_Size);
+	m_Tool_Bar->addWidget(new QLabel(tr("  Large       ")));
+
+	m_Game_Dock->addToolBar(m_Tool_Bar);
 	setWidget(m_Game_Dock);
 
-	m_xgrid.reset(new game_list_grid(m_Icon_Size, m_Margin_Factor, m_Text_Factor, m_Game_Dock));
+	bool showText = (m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny);
+	m_xgrid.reset(new game_list_grid(m_Icon_Size, m_Margin_Factor, m_Text_Factor, showText, m_Game_Dock));
 
 	gameList = new QTableWidget(m_Game_Dock);
 	gameList->setShowGrid(false);
@@ -107,6 +151,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 
 	connect(m_xgrid.get(), &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 	connect(m_xgrid.get(), &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
+
+	connect(m_Slider_Size, &QSlider::valueChanged, [=](int value) { emit RequestIconSizeActSet(value); });
+	connect(m_Slider_Mode, &QSlider::valueChanged, [=](int value) { emit RequestListModeActSet(value); });
 
 	for (int col = 0; col < columnActs.count(); ++col)
 	{
@@ -323,6 +370,8 @@ void game_list_frame::Refresh(bool fromDrive)
 		gameList->selectRow(row);
 		gameList->sortByColumn(m_sortColumn, m_colSortOrder);
 		gameList->setColumnHidden(7, true);
+		gameList->resizeRowsToContents();
+		gameList->resizeColumnToContents(0);
 	}
 	else
 	{
@@ -563,8 +612,13 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	}
 }
 
-void game_list_frame::ResizeIcons(QSize size)
+void game_list_frame::ResizeIcons(const QSize& size, const int& idx)
 {
+	m_Slider_Size->setSliderPosition(idx);
+	m_Icon_Size_Str = GUI::gl_icon_size.at(idx).first;
+
+	xgui_settings->SetValue(GUI::gl_iconSize, m_Icon_Size_Str);
+
 	m_Icon_Size = size;
 
 	if (m_isListLayout)
@@ -574,15 +628,18 @@ void game_list_frame::ResizeIcons(QSize size)
 	}
 	else
 	{
-		m_Icon_Size_Str = xgui_settings->GetValue(GUI::gl_iconSize).toString();
 		m_xgrid->setIconSize(m_Icon_Size);
 	}
 	Refresh(true);
 }
 
-void game_list_frame::SetListMode(bool isList)
+void game_list_frame::SetListMode(const bool& isList)
 {
 	m_isListLayout = isList;
+
+	m_Slider_Mode->setSliderPosition(isList ? 0 : 1);
+
+	Refresh(true);
 
 	if (m_isListLayout)
 	{
@@ -598,8 +655,12 @@ void game_list_frame::SetListMode(bool isList)
 		m_xgrid.get()->show();
 		m_Game_Dock->setCentralWidget(m_xgrid.get());
 	}
+}
 
-	Refresh(true);
+void game_list_frame::SetToolBarVisible(const bool& showToolBar)
+{
+	m_showToolBar = showToolBar;
+	m_Tool_Bar->setVisible(showToolBar);
 }
 
 void game_list_frame::closeEvent(QCloseEvent *event)
@@ -661,9 +722,6 @@ void game_list_frame::PopulateUI()
 
 		row++;
 	}
-
-	gameList->resizeRowsToContents();
-	gameList->resizeColumnToContents(0);
 }
 
 QImage* game_list_frame::GetImage(const std::string& path, const QSize& size)
@@ -695,13 +753,15 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 
 	game_list_grid* grid;
 
+	bool showText = m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny;
+
 	if (m_Icon_Size_Str == GUI::gl_icon_key_medium)
 	{
-		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor * 2, m_Game_Dock);
+		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor * 2, showText, m_Game_Dock);
 	}
 	else
 	{
-		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor, m_Game_Dock);
+		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor, showText, m_Game_Dock);
 	}
 
 	// Get number of things that'll be in grid.
@@ -728,7 +788,6 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 	int maxRows = needsExtraRow + entries / maxCols;
 	grid->setRowCount(maxRows);
 	grid->setColumnCount(maxCols);
-	grid->enableText(m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny);
 
 	for (uint i = 0; i < m_game_data.size(); i++)
 	{

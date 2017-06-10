@@ -1027,6 +1027,9 @@ void main_window::CreateActions()
 	showControlsAct = new QAction(tr("Show Controls"), this);
 	showControlsAct->setCheckable(true);
 
+	showGameListToolBarAct = new QAction(tr("Show Tool Bar"), this);
+	showGameListToolBarAct->setCheckable(true);
+
 	refreshGameListAct = new QAction(tr("&Refresh Game List"), this);
 
 	showCatHDDGameAct = new QAction(category::hdd_Game, this);
@@ -1190,32 +1193,26 @@ void main_window::CreateConnects()
 		checked ? controls->show() : controls->hide();
 		guiSettings->SetValue(GUI::mw_controls, checked);
 	});
+	connect(showGameListToolBarAct, &QAction::triggered, this, [=](bool checked){
+		gameListFrame->SetToolBarVisible(checked);
+	});
 	connect(refreshGameListAct, &QAction::triggered, [=](){
 		gameListFrame->Refresh(true);
 	});
-	connect(showCatHDDGameAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::hdd_Game, checked);
-		guiSettings->SetCategoryVisibility(category::hdd_Game, checked);
-	});
-	connect(showCatDiscGameAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::disc_Game, checked);
-		guiSettings->SetCategoryVisibility(category::disc_Game, checked);
-	});
-	connect(showCatHomeAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::home, checked);
-		guiSettings->SetCategoryVisibility(category::home, checked);
-	});
-	connect(showCatAudioVideoAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::audio_Video, checked);
-		guiSettings->SetCategoryVisibility(category::audio_Video, checked);
-	});
-	connect(showCatGameDataAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::game_Data, checked);
-		guiSettings->SetCategoryVisibility(category::game_Data, checked);
-	});
-	connect(showCatUnknownAct, &QAction::triggered, [=](bool checked) {
-		gameListFrame->ToggleCategoryFilter(category::unknown, checked);
-		guiSettings->SetCategoryVisibility(category::unknown, checked);
+	connect(columnVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
+	{
+		QString cat;
+		const bool& checked = act->isChecked();
+
+		if      (act == showCatHDDGameAct)    cat = category::hdd_Game;
+		else if (act == showCatDiscGameAct)   cat = category::disc_Game;
+		else if (act == showCatHomeAct)       cat = category::home;
+		else if (act == showCatAudioVideoAct) cat = category::audio_Video;
+		else if (act == showCatGameDataAct)   cat = category::game_Data;
+		else if (act == showCatUnknownAct)    cat = category::unknown;
+
+		gameListFrame->ToggleCategoryFilter(cat, checked);
+		guiSettings->SetCategoryVisibility(cat, checked);
 	});
 	connect(aboutAct, &QAction::triggered, this, &main_window::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
@@ -1235,7 +1232,23 @@ void main_window::CreateConnects()
 		else key = GUI::gl_icon_key_tiny;
 
 		guiSettings->SetValue(GUI::gl_iconSize, key);
-		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(key));
+
+		for (int i = 0; i < GUI::gl_icon_size.count(); i++)
+		{
+			if (GUI::gl_icon_size.at(i).first == key)
+			{
+				gameListFrame->ResizeIcons(GUI::gl_icon_size.at(i).second, i);
+				break;
+			}
+		}
+	});
+	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
+	{
+		iconSizeActGroup->actions().at(idx)->trigger();
+	});
+	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const int& idx)
+	{
+		listModeActGroup->actions().at(idx)->trigger();
 	});
 	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
@@ -1297,6 +1310,7 @@ void main_window::CreateMenus()
 	viewMenu->addAction(showControlsAct);
 	viewMenu->addSeparator();
 	viewMenu->addAction(showGameListAct);
+	viewMenu->addAction(showGameListToolBarAct);
 	viewMenu->addAction(refreshGameListAct);
 
 	QMenu *categoryMenu = viewMenu->addMenu(tr("Show Categories"));
@@ -1417,6 +1431,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	showGameListAct->setChecked(guiSettings->GetValue(GUI::mw_gamelist).toBool());
 	showDebuggerAct->setChecked(guiSettings->GetValue(GUI::mw_debugger).toBool());
 	showControlsAct->setChecked(guiSettings->GetValue(GUI::mw_controls).toBool());
+	showGameListToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
 	guiSettings->GetValue(GUI::mw_controls).toBool() ? controls->show() : controls->hide();
 
 	showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(category::hdd_Game));

@@ -13,6 +13,7 @@
 #include <QTableWidget>
 #include <QMainWindow>
 #include <QToolBar>
+#include <QLineEdit>
 
 #include <memory>
 
@@ -50,8 +51,9 @@ public:
 
 public slots:
 	/** Resize Gamelist Icons to size */
-	void ResizeIcons(QSize size);
-	void SetListMode(bool isList);
+	void ResizeIcons(const QSize& size, const int& idx);
+	void SetListMode(const bool& isList);
+	void SetToolBarVisible(const bool& showToolBar);
 
 private slots:
 	void Boot(int row);
@@ -65,6 +67,8 @@ signals:
 	void game_list_frameClosed();
 	void RequestIconPathSet(const std::string path);
 	void RequestAddRecentGame(const q_string_pair& entry);
+	void RequestIconSizeActSet(const int& idx);
+	void RequestListModeActSet(const int& idx);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
@@ -80,7 +84,10 @@ private:
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
-	QToolBar* m_Game_Toolbar;
+	QToolBar* m_Tool_Bar;
+	QLineEdit* m_Search_Bar;
+	QSlider* m_Slider_Size;
+	QSlider* m_Slider_Mode;
 	QTableWidget *gameList;
 	std::unique_ptr<game_list_grid> m_xgrid;
 
@@ -101,6 +108,7 @@ private:
 	int m_sortColumn;
 	Qt::SortOrder m_colSortOrder;
 	bool m_isListLayout = true;
+	bool m_showToolBar = true;
 	std::vector<std::string> m_games;
 	std::vector<GUI_GameInfo> m_game_data;
 	QSize m_Icon_Size;

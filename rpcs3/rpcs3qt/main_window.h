@@ -127,6 +127,7 @@ private:
 	QAction *showGameListAct;
 	QAction *showControlsAct;
 	QAction *refreshGameListAct;
+	QAction *showGameListToolBarAct;
 	QAction* showCatHDDGameAct;
 	QAction* showCatDiscGameAct;
 	QAction* showCatHomeAct;
