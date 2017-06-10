@@ -61,7 +61,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
-	m_Search_Bar->setEnabled(false); // delete this on implementation
+	connect(m_Search_Bar, &QLineEdit::textChanged, [this]() {
+		Refresh(false);
+	});
 
 	m_Slider_Mode = new QSlider(Qt::Horizontal, m_Tool_Bar);
 	m_Slider_Mode->setRange(0, 1);
@@ -355,11 +357,7 @@ void game_list_frame::Refresh(bool fromDrive)
 	{
 		int row = gameList->currentRow();
 
-		if (fromDrive)
-		{
-			PopulateUI();
-		}
-
+		PopulateGameList();
 		FilterData();
 		gameList->selectRow(row);
 		gameList->sortByColumn(m_sortColumn, m_colSortOrder);
@@ -659,7 +657,7 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 /**
  Cleans and readds entries to table widget in UI.
 */
-void game_list_frame::PopulateUI()
+void game_list_frame::PopulateGameList()
 {
 	// Hack to delete everything without removing the headers.
 	gameList->setRowCount(0);
@@ -678,6 +676,12 @@ void game_list_frame::PopulateUI()
 	int row = 0;
 	for (GUI_GameInfo game : m_game_data)
 	{
+		if (SearchMatchesGameName(game.info.name) == false)
+		{
+			// We aren't showing this entry. Decrement row count to avoid empty entries at end.
+			gameList->setRowCount(gameList->rowCount() - 1);
+			continue;
+		}
 
 		// Icon
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
@@ -742,12 +746,16 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 		grid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor, showText);
 	}
 
-	// Get number of things that'll be in grid.
+	// Get number of things that'll be in grid and precompute grid size.
 	int entries = 0;
 	for (GUI_GameInfo game : m_game_data)
 	{
 		if (qstr(game.info.category) == category::disc_Game || qstr(game.info.category) == category::hdd_Game)
 		{
+			if (SearchMatchesGameName(game.info.name) == false)
+			{
+				continue;
+			}
 			++entries;
 		}
 	}
@@ -769,6 +777,11 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 
 	for (uint i = 0; i < m_game_data.size(); i++)
 	{
+		if (SearchMatchesGameName(m_game_data[i].info.name) == false)
+		{
+			continue;
+		}
+
 		QString category = qstr(m_game_data[i].info.category);
 
 		if (category == category::hdd_Game || category == category::disc_Game)
@@ -798,4 +811,17 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 	grid->resizeRowsToContents();
 
 	return grid;
+}
+
+/**
+* Returns false if the game should be hidden because it doesn't match search term in toolbar.
+*/
+bool game_list_frame::SearchMatchesGameName(const std::string& gameName)
+{
+	if (m_Search_Bar->text() != "")
+	{
+		QString searchText = m_Search_Bar->text().toLower();
+		return qstr(gameName).toLower().contains(searchText);
+	}
+	return true;
 }
