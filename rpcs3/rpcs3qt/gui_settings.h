@@ -28,19 +28,15 @@ typedef struct GUI_SAVE
 
 typedef std::map<const QString, const QSize> icon_size;
 typedef QPair<QString, QString> q_string_pair;
-typedef QPair<QString, QSize> q_size_pair;
 typedef QList<q_string_pair> q_pair_list;
-typedef QList<q_size_pair> q_size_list;
 
 namespace GUI
 {
-	const QString gl_icon_key_tiny   = "tiny";
 	const QString gl_icon_key_small  = "small";
 	const QString gl_icon_key_medium = "medium";
 	const QString gl_icon_key_large  = "large";
 
-	const q_size_list gl_icon_size = {
-		{ gl_icon_key_tiny,   QSize(40, 22) },
+	const icon_size gl_icon_size = {
 		{ gl_icon_key_small,  QSize(80, 44) },
 		{ gl_icon_key_medium, QSize(160, 88) },
 		{ gl_icon_key_large,  QSize(320, 176) }
@@ -54,9 +50,9 @@ namespace GUI
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
 
-	const GUI_SAVE ib_pkg_success  = GUI_SAVE( main_window, "infoBoxEnabledInstallPKG", true );
-	const GUI_SAVE ib_pup_success  = GUI_SAVE( main_window, "infoBoxEnabledInstallPUP", true );
-	const GUI_SAVE ib_show_welcome = GUI_SAVE( main_window, "infoBoxEnabledWelcome",    true );
+	const GUI_SAVE ib_pkg_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPKG", true );
+	const GUI_SAVE ib_pup_success = GUI_SAVE( main_window, "infoBoxEnabledInstallPUP", true );
+	const GUI_SAVE ib_show_welcome = GUI_SAVE(main_window, "infoBoxEnabledWelcome", true);
 
 	const GUI_SAVE fd_install_pkg  = GUI_SAVE( main_window, "lastExplorePathPKG",  "" );
 	const GUI_SAVE fd_install_pup  = GUI_SAVE( main_window, "lastExplorePathPUP",  "" );
@@ -79,14 +75,10 @@ namespace GUI
 	const GUI_SAVE cat_unknown     = GUI_SAVE( game_list, "categoryVisibleUnknown",    true );
 	const GUI_SAVE cat_other       = GUI_SAVE( game_list, "categoryVisibleOther",      true );
 
-	const GUI_SAVE gl_sortAsc        = GUI_SAVE( game_list, "sortAsc",        true );
-	const GUI_SAVE gl_sortCol        = GUI_SAVE( game_list, "sortCol",        1 );
-	const GUI_SAVE gl_state          = GUI_SAVE( game_list, "state",          QByteArray() );
-	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       gl_icon_key_small );
-	const GUI_SAVE gl_listMode       = GUI_SAVE( game_list, "listMode",       true );
-	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
-	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.09 );
-	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", true );
+	const GUI_SAVE gl_sortAsc  = GUI_SAVE( game_list, "sortAsc",  true );
+	const GUI_SAVE gl_sortCol  = GUI_SAVE( game_list, "sortCol",  1 );
+	const GUI_SAVE gl_state    = GUI_SAVE( game_list, "state",    QByteArray() );
+	const GUI_SAVE gl_iconSize = GUI_SAVE( game_list, "iconSize", gl_icon_key_small);
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );

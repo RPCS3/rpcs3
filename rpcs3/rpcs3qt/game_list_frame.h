@@ -4,18 +4,63 @@
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
 
-#include "game_list_grid.h"
 #include "gui_settings.h"
 #include "emu_settings.h"
 
 #include <QDockWidget>
 #include <QList>
 #include <QTableWidget>
-#include <QMainWindow>
-#include <QToolBar>
-#include <QLineEdit>
 
-#include <memory>
+struct Column
+{
+	u32 pos;
+	u32 width;
+	bool shown;
+	std::vector<std::string> data;
+
+	const std::string name;
+	const u32 def_pos;
+	const u32 def_width;
+
+	Column(const u32 _def_pos, const u32 _def_width, const std::string& _name)
+		: def_pos(_def_pos)
+		, def_width(_def_width)
+		, pos(_def_pos)
+		, width(_def_width)
+		, shown(true)
+		, name(_name)
+	{
+		data.clear();
+	}
+
+};
+
+struct columns_arr
+{
+	std::vector<Column> m_columns;
+
+	columns_arr(){};
+	columns_arr(QSize icon_Size);
+
+	Column* GetColumnByPos(u32 pos);
+
+public:
+	Column* m_col_icon;
+	Column* m_col_name;
+	Column* m_col_serial;
+	Column* m_col_fw;
+	Column* m_col_app_ver;
+	Column* m_col_category;
+	Column* m_col_path;
+
+	QSize m_Icon_Size;
+	QList<QImage*>* m_img_list;
+	std::vector<int> m_icon_indexes;
+	
+	void Update(const std::vector<GameInfo>& game_data);
+	
+	void ShowData(QTableWidget* list);
+};
 
 namespace category
 {
@@ -27,20 +72,23 @@ namespace category
 	const QString unknown     = QObject::tr("Unknown");
 }
 
-/* Having the icons associated with the game info simplifies logic internally */
-typedef struct GUI_GameInfo
-{
-	GameInfo info;
-	QImage icon;
-};
-
 class game_list_frame : public QDockWidget {
 	Q_OBJECT
+
+	int m_sortColumn;
+	bool m_sortAscending;
+	std::vector<std::string> m_games;
+	std::vector<GameInfo> m_game_data;
+	gui_settings* m_gui_settings = new gui_settings(this);
+	QSize m_Icon_Size;
+	columns_arr m_columns;
+	QStringList m_categoryFilters;
+	Render_Creator m_Render_Creator;
 
 public:
 	explicit game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent = nullptr);
 	~game_list_frame();
-	void Refresh(const bool fromDrive);
+	void Refresh();
 	void ToggleCategoryFilter(QString category, bool show);
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
@@ -51,45 +99,30 @@ public:
 
 public slots:
 	/** Resize Gamelist Icons to size */
-	void ResizeIcons(const QSize& size, const int& idx);
-	void SetListMode(const bool& isList);
-	void SetToolBarVisible(const bool& showToolBar);
+	void ResizeIcons(QSize size);
 
 private slots:
 	void Boot(int row);
 	void RemoveCustomConfiguration(int row);
+	
 	void OnColClicked(int col);
-
-	void ShowContextMenu(const QPoint &pos);
-	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
-	void doubleClickedSlot(const QModelIndex& index);
 signals:
 	void game_list_frameClosed();
 	void RequestIconPathSet(const std::string path);
 	void RequestAddRecentGame(const q_string_pair& entry);
-	void RequestIconSizeActSet(const int& idx);
-	void RequestListModeActSet(const int& idx);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
-	void resizeEvent(QResizeEvent *event);
 private:
-	game_list_grid* MakeGrid(uint maxCols, const QSize& image_size);
+	QTableWidget *gameList;
+
+	void ShowContextMenu(const QPoint &pos);
+	void doubleClickedSlot(const QModelIndex& index);
+
 	void LoadGames();
 	void LoadPSF();
+	void ShowData();
 	void FilterData();
-
-	void PopulateUI();
-	QImage* GetImage(const std::string& path, const QSize& size);
-
-	// Which widget we are displaying depends on if we are in grid or list mode.
-	QMainWindow* m_Game_Dock;
-	QToolBar* m_Tool_Bar;
-	QLineEdit* m_Search_Bar;
-	QSlider* m_Slider_Size;
-	QSlider* m_Slider_Mode;
-	QTableWidget *gameList;
-	std::unique_ptr<game_list_grid> m_xgrid;
 
 	// Actions regarding showing/hiding columns
 	QAction* showIconColAct;
@@ -101,24 +134,7 @@ private:
 	QAction* showPathColAct;
 
 	QList<QAction*> columnActs;
-
-	// TODO: Reorganize this into a sensible order for private variables.
 	std::shared_ptr<gui_settings> xgui_settings;
-
-	int m_sortColumn;
-	Qt::SortOrder m_colSortOrder;
-	bool m_isListLayout = true;
-	bool m_showToolBar = true;
-	std::vector<std::string> m_games;
-	std::vector<GUI_GameInfo> m_game_data;
-	QSize m_Icon_Size;
-	QString m_Icon_Size_Str;
-	qreal m_Margin_Factor;
-	qreal m_Text_Factor;
-	QStringList m_categoryFilters;
-	Render_Creator m_Render_Creator;
-
-	uint m_games_per_row = 0;
 };
 
 #endif // GAMELISTFRAME_H

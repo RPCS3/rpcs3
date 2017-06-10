@@ -513,24 +513,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_welcome_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\game_list_grid.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_list_grid.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_grid.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_grid.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_list_grid.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\Gui\*.h">
@@ -565,9 +547,6 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\register_editor_dialog.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
@@ -663,9 +642,6 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\welcome_dialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\game_list_grid.h">
       <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>
