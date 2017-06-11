@@ -117,13 +117,15 @@ namespace vk
 		OS << "	return result;\n";
 		OS << "}\n\n";
 
+		//NOTE: After testing with GOW, the w component is either the original depth or wraps around to the x component
+		//Since component.r == depth_value with some precision loss, just use the precise depth value for now (further testing needed)
 		OS << "vec4 decodeLinearDepth(float depth_value)\n";
 		OS << "{\n";
 		OS << "	uint value = uint(depth_value * 16777215);\n";
 		OS << "	uint b = (value & 0xff);\n";
 		OS << "	uint g = (value >> 8) & 0xff;\n";
 		OS << "	uint r = (value >> 16) & 0xff;\n";
-		OS << "	return vec4(float(r)/255., float(g)/255., float(b)/255., 1.);\n";
+		OS << "	return vec4(float(r)/255., float(g)/255., float(b)/255., depth_value);\n";
 		OS << "}\n\n";
 
 		OS << "vec4 texture2DReconstruct(sampler2D tex, vec2 coord)\n";

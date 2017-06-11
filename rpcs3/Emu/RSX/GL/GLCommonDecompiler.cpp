@@ -121,6 +121,8 @@ void insert_glsl_legacy_function(std::ostream& OS)
 	OS << "}\n\n";
 
 	//NOTE: We lose precision if we just store depth value into 8-bit textures i.e (depth, 0, 0)
+	//NOTE2: After testing with GOW, the w component is either the original depth or wraps around to the x component
+	//Since component.r == depth_value with some precision loss, just use the precise depth value for now (further testing needed)
 	OS << "vec4 texture2DReconstruct(sampler2D tex, vec2 coord)\n";
 	OS << "{\n";
 	OS << "	float depth_value = texture(tex, coord.xy).r;\n";
@@ -128,6 +130,6 @@ void insert_glsl_legacy_function(std::ostream& OS)
 	OS << "	uint b = (value & 0xff);\n";
 	OS << "	uint g = (value >> 8) & 0xff;\n";
 	OS << "	uint r = (value >> 16) & 0xff;\n";
-	OS << "	return vec4(float(r)/255., float(g)/255., float(b)/255., 1.);\n";
+	OS << "	return vec4(float(r)/255., float(g)/255., float(b)/255., depth_value);\n";
 	OS << "}\n\n";
 }
