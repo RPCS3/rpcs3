@@ -65,9 +65,9 @@ namespace gl
 
 		render_target() {}
 
-		void set_cleared()
+		void set_cleared(bool clear=true)
 		{
-			is_cleared = true;
+			is_cleared = clear;
 		}
 
 		bool cleared() const
@@ -227,7 +227,8 @@ struct gl_render_target_traits
 
 	static void prepare_rtt_for_drawing(void *, gl::render_target*) {}
 	static void prepare_rtt_for_sampling(void *, gl::render_target*) {}
-	static void prepare_ds_for_drawing(void *, gl::render_target*) {}
+	
+	static void prepare_ds_for_drawing(void *, gl::render_target *ds, bool surface_changed) { if (surface_changed) ds->set_cleared(false); }
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
 	static
@@ -238,7 +239,7 @@ struct gl_render_target_traits
 	}
 
 	static
-		bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
+	bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
 	{
 		// TODO: check format
 		return rtt->width() == width && rtt->height() == height;

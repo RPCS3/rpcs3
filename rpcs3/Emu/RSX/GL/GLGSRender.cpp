@@ -349,11 +349,17 @@ void GLGSRender::end()
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && !ds->cleared())
 	{
+		//Temporarily disable pixel tests
+		glDisable(GL_SCISSOR_TEST);
 		glDepthMask(GL_TRUE);
-		glClearDepth(1.f);
+		
+		glClearDepth(1.0);
+		glClearStencil(0);
 
-		glClear(GL_DEPTH_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		
 		glDepthMask(rsx::method_registers.depth_write_enabled());
+		glEnable(GL_SCISSOR_TEST);
 
 		ds->set_cleared();
 	}
