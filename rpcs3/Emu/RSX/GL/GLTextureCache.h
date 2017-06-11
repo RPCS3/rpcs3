@@ -1187,7 +1187,7 @@ namespace gl
 			//NOTE: It is possible that the check is simpler (if (clip_x >= clip_width))
 			//Needs verification
 			if ((dst.offset_x + dst.clip_x + dst.clip_width) > max_dst_width) dst.clip_x = 0;
-			if ((dst.offset_y + dst.clip_y + dst.clip_width) > max_dst_height) dst.clip_y = 0;
+			if ((dst.offset_y + dst.clip_y + dst.clip_height) > max_dst_height) dst.clip_y = 0;
 
 			if (dst.clip_x || dst.clip_y)
 			{
