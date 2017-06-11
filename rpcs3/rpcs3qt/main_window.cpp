@@ -1211,6 +1211,7 @@ void main_window::CreateConnects()
 		else if (act == showCatGameDataAct)   cat = category::game_Data;
 		else if (act == showCatUnknownAct)    cat = category::unknown;
 
+		gameListFrame->SetCatActIcon(columnVisibleActGroup->actions().indexOf(act), checked);
 		gameListFrame->ToggleCategoryFilter(cat, checked);
 		guiSettings->SetCategoryVisibility(cat, checked);
 	});
@@ -1246,9 +1247,13 @@ void main_window::CreateConnects()
 	{
 		iconSizeActGroup->actions().at(idx)->trigger();
 	});
-	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const int& idx)
+	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
-		listModeActGroup->actions().at(idx)->trigger();
+		isList ? setlistModeListAct->trigger() : setlistModeGridAct->trigger();
+	});
+	connect(gameListFrame, &game_list_frame::RequestCatActSet, [=](const int& id)
+	{
+		columnVisibleActGroup->actions().at(id)->trigger();
 	});
 	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{

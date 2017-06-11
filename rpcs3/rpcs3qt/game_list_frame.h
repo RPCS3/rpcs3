@@ -36,6 +36,12 @@ typedef struct GUI_GameInfo
 	QPixmap pxmap;
 };
 
+typedef struct Tool_Bar_Button
+{
+	QAction* action;
+	q_icon_pair icons;
+};
+
 class game_list_frame : public QDockWidget {
 	Q_OBJECT
 
@@ -56,6 +62,7 @@ public slots:
 	void ResizeIcons(const QSize& size, const int& idx);
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);
+	void SetCatActIcon(const int& id, const bool& active);
 
 private slots:
 	void Boot(int row);
@@ -70,7 +77,8 @@ signals:
 	void RequestIconPathSet(const std::string path);
 	void RequestAddRecentGame(const q_string_pair& entry);
 	void RequestIconSizeActSet(const int& idx);
-	void RequestListModeActSet(const int& idx);
+	void RequestListModeActSet(const bool& isList);
+	void RequestCatActSet(const int& id);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
@@ -88,9 +96,19 @@ private:
 	QToolBar* m_Tool_Bar;
 	QLineEdit* m_Search_Bar;
 	QSlider* m_Slider_Size;
-	QSlider* m_Slider_Mode;
 	QTableWidget *gameList;
 	std::unique_ptr<game_list_grid> m_xgrid;
+
+	// Tool Bar Icons
+	q_icon_pair m_icons_cat_HDD;
+	q_icon_pair m_icons_cat_Disc;
+	q_icon_pair m_icons_cat_Home;
+	q_icon_pair m_icons_cat_GameData;
+	q_icon_pair m_icons_cat_AudioVideo;
+	q_icon_pair m_icons_cat_unknown;
+
+	q_icon_pair m_icons_mode_list;
+	q_icon_pair m_icons_mode_grid;
 
 	// Actions regarding showing/hiding columns
 	QAction* showIconColAct;
@@ -102,6 +120,24 @@ private:
 	QAction* showPathColAct;
 
 	QList<QAction*> columnActs;
+
+	// Actions regarding showing/hiding categories
+	Tool_Bar_Button m_catActHDD;
+	Tool_Bar_Button m_catActDisc;
+	Tool_Bar_Button m_catActHome;
+	Tool_Bar_Button m_catActGameData;
+	Tool_Bar_Button m_catActAudioVideo;
+	Tool_Bar_Button m_catActUnknown;
+
+	QList<Tool_Bar_Button> m_categoryButtons;
+
+	QActionGroup* m_categoryActs;
+
+	// Actions regarding switching list modes
+	Tool_Bar_Button m_modeActList;
+	Tool_Bar_Button m_modeActGrid;
+
+	QActionGroup* m_modeActs;
 
 	// TODO: Reorganize this into a sensible order for private variables.
 	std::shared_ptr<gui_settings> xgui_settings;

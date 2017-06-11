@@ -29,6 +29,7 @@ typedef struct GUI_SAVE
 typedef std::map<const QString, const QSize> icon_size;
 typedef QPair<QString, QString> q_string_pair;
 typedef QPair<QString, QSize> q_size_pair;
+typedef QPair<QIcon, QIcon> q_icon_pair;
 typedef QList<q_string_pair> q_pair_list;
 typedef QList<q_size_pair> q_size_list;
 
