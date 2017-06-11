@@ -756,7 +756,7 @@ void game_list_frame::PopulateGameList()
 	int row = 0;
 	for (GUI_GameInfo game : m_game_data)
 	{
-		if (SearchMatchesGameName(game.info.name) == false)
+		if (SearchMatchesApp(game.info.name, game.info.serial) == false)
 		{
 			// We aren't showing this entry. Decrement row count to avoid empty entries at end.
 			gameList->setRowCount(gameList->rowCount() - 1);
@@ -810,7 +810,7 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 	{
 		if (qstr(game.info.category) == category::disc_Game || qstr(game.info.category) == category::hdd_Game)
 		{
-			if (SearchMatchesGameName(game.info.name) == false)
+			if (SearchMatchesApp(game.info.name, game.info.serial) == false)
 			{
 				continue;
 			}
@@ -839,7 +839,7 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 
 	for (uint i = 0; i < m_game_data.size(); i++)
 	{
-		if (SearchMatchesGameName(m_game_data[i].info.name) == false)
+		if (SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial) == false)
 		{
 			continue;
 		}
@@ -878,12 +878,12 @@ game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
 /**
 * Returns false if the game should be hidden because it doesn't match search term in toolbar.
 */
-bool game_list_frame::SearchMatchesGameName(const std::string& gameName)
+bool game_list_frame::SearchMatchesApp(const std::string& name, const std::string& serial)
 {
 	if (m_Search_Bar->text() != "")
 	{
 		QString searchText = m_Search_Bar->text().toLower();
-		return qstr(gameName).toLower().contains(searchText);
+		return qstr(name).toLower().contains(searchText) || qstr(serial).toLower().contains(searchText);
 	}
 	return true;
 }

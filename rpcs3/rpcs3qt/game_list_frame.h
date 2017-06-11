@@ -89,7 +89,7 @@ private:
 	void FilterData();
 
 	void PopulateGameList();
-	bool SearchMatchesGameName(const std::string& gameName);
+	bool SearchMatchesApp(const std::string& name, const std::string& serial);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
