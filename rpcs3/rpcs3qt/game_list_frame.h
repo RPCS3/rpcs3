@@ -39,7 +39,8 @@ typedef struct GUI_GameInfo
 typedef struct Tool_Bar_Button
 {
 	QAction* action;
-	q_icon_pair icons;
+	QIcon colored;
+	QIcon gray;
 };
 
 class game_list_frame : public QDockWidget {
@@ -62,7 +63,7 @@ public slots:
 	void ResizeIcons(const QSize& size, const int& idx);
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);
-	void SetCatActIcon(const int& id, const bool& active);
+	void SetCategoryActIcon(const int& id, const bool& active);
 
 private slots:
 	void Boot(int row);
@@ -78,7 +79,7 @@ signals:
 	void RequestAddRecentGame(const q_string_pair& entry);
 	void RequestIconSizeActSet(const int& idx);
 	void RequestListModeActSet(const bool& isList);
-	void RequestCatActSet(const int& id);
+	void RequestCategoryActSet(const int& id);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
@@ -98,17 +99,6 @@ private:
 	QSlider* m_Slider_Size;
 	QTableWidget *gameList;
 	std::unique_ptr<game_list_grid> m_xgrid;
-
-	// Tool Bar Icons
-	q_icon_pair m_icons_cat_HDD;
-	q_icon_pair m_icons_cat_Disc;
-	q_icon_pair m_icons_cat_Home;
-	q_icon_pair m_icons_cat_GameData;
-	q_icon_pair m_icons_cat_AudioVideo;
-	q_icon_pair m_icons_cat_unknown;
-
-	q_icon_pair m_icons_mode_list;
-	q_icon_pair m_icons_mode_grid;
 
 	// Actions regarding showing/hiding columns
 	QAction* showIconColAct;

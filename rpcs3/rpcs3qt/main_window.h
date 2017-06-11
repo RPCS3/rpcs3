@@ -99,7 +99,7 @@ private:
 
 	QActionGroup* iconSizeActGroup;
 	QActionGroup* listModeActGroup;
-	QActionGroup* columnVisibleActGroup;
+	QActionGroup* categoryVisibleActGroup;
 
 	QAction *bootElfAct;
 	QAction *bootGameAct;

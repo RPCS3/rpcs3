@@ -1050,14 +1050,14 @@ void main_window::CreateActions()
 	showCatUnknownAct = new QAction(category::unknown, this);
 	showCatUnknownAct->setCheckable(true);
 
-	columnVisibleActGroup = new QActionGroup(this); 
-	columnVisibleActGroup->addAction(showCatHDDGameAct);
-	columnVisibleActGroup->addAction(showCatDiscGameAct);
-	columnVisibleActGroup->addAction(showCatHomeAct);
-	columnVisibleActGroup->addAction(showCatAudioVideoAct);
-	columnVisibleActGroup->addAction(showCatGameDataAct);
-	columnVisibleActGroup->addAction(showCatUnknownAct);
-	columnVisibleActGroup->setExclusive(false);
+	categoryVisibleActGroup = new QActionGroup(this); 
+	categoryVisibleActGroup->addAction(showCatHDDGameAct);
+	categoryVisibleActGroup->addAction(showCatDiscGameAct);
+	categoryVisibleActGroup->addAction(showCatHomeAct);
+	categoryVisibleActGroup->addAction(showCatAudioVideoAct);
+	categoryVisibleActGroup->addAction(showCatGameDataAct);
+	categoryVisibleActGroup->addAction(showCatUnknownAct);
+	categoryVisibleActGroup->setExclusive(false);
 
 	setIconSizeTinyAct = new QAction(tr("Tiny"), this);
 	setIconSizeTinyAct->setCheckable(true);
@@ -1199,7 +1199,7 @@ void main_window::CreateConnects()
 	connect(refreshGameListAct, &QAction::triggered, [=](){
 		gameListFrame->Refresh(true);
 	});
-	connect(columnVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
+	connect(categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		QString cat;
 		const bool& checked = act->isChecked();
@@ -1211,7 +1211,7 @@ void main_window::CreateConnects()
 		else if (act == showCatGameDataAct)   cat = category::game_Data;
 		else if (act == showCatUnknownAct)    cat = category::unknown;
 
-		gameListFrame->SetCatActIcon(columnVisibleActGroup->actions().indexOf(act), checked);
+		gameListFrame->SetCategoryActIcon(categoryVisibleActGroup->actions().indexOf(act), checked);
 		gameListFrame->ToggleCategoryFilter(cat, checked);
 		guiSettings->SetCategoryVisibility(cat, checked);
 	});
@@ -1251,15 +1251,15 @@ void main_window::CreateConnects()
 	{
 		isList ? setlistModeListAct->trigger() : setlistModeGridAct->trigger();
 	});
-	connect(gameListFrame, &game_list_frame::RequestCatActSet, [=](const int& id)
+	connect(gameListFrame, &game_list_frame::RequestCategoryActSet, [=](const int& id)
 	{
-		columnVisibleActGroup->actions().at(id)->trigger();
+		categoryVisibleActGroup->actions().at(id)->trigger();
 	});
 	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		bool isList = act == setlistModeListAct;
 		gameListFrame->SetListMode(isList);
-		columnVisibleActGroup->setEnabled(isList);
+		categoryVisibleActGroup->setEnabled(isList);
 	});
 }
 
@@ -1314,7 +1314,7 @@ void main_window::CreateMenus()
 	viewMenu->addAction(refreshGameListAct);
 
 	QMenu *categoryMenu = viewMenu->addMenu(tr("Show Categories"));
-	categoryMenu->addActions(columnVisibleActGroup->actions());
+	categoryMenu->addActions(categoryVisibleActGroup->actions());
 
 	QMenu *iconSizeMenu = viewMenu->addMenu(tr("Icon Size"));
 	iconSizeMenu->addActions(iconSizeActGroup->actions());
@@ -1451,7 +1451,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();
 	if (isListMode) setlistModeListAct->setChecked(true);
 	else setlistModeGridAct->setChecked(true);
-	columnVisibleActGroup->setEnabled(isListMode);
+	categoryVisibleActGroup->setEnabled(isListMode);
 
 
 	if (configureAll)
