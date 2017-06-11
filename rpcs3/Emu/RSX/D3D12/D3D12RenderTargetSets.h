@@ -18,6 +18,9 @@ struct render_target_traits
 	using command_list_type = gsl::not_null<ID3D12GraphicsCommandList*>;
 	using download_buffer_object = std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE>; // heap offset, size, last_put_pos, fence, handle
 
+	//TODO: Move this somewhere else
+	bool depth_is_dirty = false;
+
 	static
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
@@ -97,10 +100,12 @@ struct render_target_traits
 	static
 	void prepare_ds_for_drawing(
 		gsl::not_null<ID3D12GraphicsCommandList*> command_list,
-		ID3D12Resource* ds)
+		ID3D12Resource* ds, bool surface_changed)
 	{
 		// set the resource as depth write
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(ds, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+		//TODO: Clear this surface if the depth address changed (Requires a partial rewrite)
 	}
 
 	static

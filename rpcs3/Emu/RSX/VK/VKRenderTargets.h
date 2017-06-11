@@ -128,10 +128,23 @@ namespace rsx
 			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static void prepare_ds_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
+		static void prepare_ds_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface, bool surface_changed)
 		{
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+			if (!surface_changed)
+				change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+			else
+			{
+				change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, range);
+				
+				//Clear the surface before drawing on it
+				VkClearDepthStencilValue clear_depth = {};
+				clear_depth.depth = 1.f;
+				clear_depth.stencil = 0;
+
+				vkCmdClearDepthStencilImage(*pcmd, surface->value, VK_IMAGE_LAYOUT_GENERAL, &clear_depth, 1, &range);
+				change_image_layout(*pcmd, surface->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+			}
 		}
 
 		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)

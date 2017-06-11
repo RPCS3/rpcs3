@@ -115,6 +115,7 @@ namespace rsx
 			command_list_type command_list,
 			u32 address,
 			surface_depth_format depth_format, size_t width, size_t height,
+			u32 previous_address,
 			Args&&... extra_params)
 		{
 			auto It = m_depth_stencil_storage.find(address);
@@ -123,7 +124,7 @@ namespace rsx
 				surface_storage_type &ds = It->second;
 				if (Traits::ds_has_format_width_height(ds, depth_format, width, height))
 				{
-					Traits::prepare_ds_for_drawing(command_list, Traits::get(ds));
+					Traits::prepare_ds_for_drawing(command_list, Traits::get(ds), address != previous_address);
 					return Traits::get(ds);
 				}
 				invalidated_resources.push_back(std::move(ds));
@@ -173,11 +174,15 @@ namespace rsx
 			// Same for depth buffer
 			if (std::get<1>(m_bound_depth_stencil) != nullptr)
 				Traits::prepare_ds_for_sampling(command_list, std::get<1>(m_bound_depth_stencil));
+			
+			const u32 old_zeta_address = std::get<0>(m_bound_depth_stencil);
 			m_bound_depth_stencil = std::make_tuple(0, nullptr);
+			
 			if (!address_z)
 				return;
+
 			m_bound_depth_stencil = std::make_tuple(address_z,
-				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, std::forward<Args>(extra_params)...));
+				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, old_zeta_address, std::forward<Args>(extra_params)...));
 		}
 
 		/**
