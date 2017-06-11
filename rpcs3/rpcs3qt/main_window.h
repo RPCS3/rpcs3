@@ -98,6 +98,8 @@ private:
 	QList<QAction*> m_recentGameActs;
 
 	QActionGroup* iconSizeActGroup;
+	QActionGroup* listModeActGroup;
+	QActionGroup* categoryVisibleActGroup;
 
 	QAction *bootElfAct;
 	QAction *bootGameAct;
@@ -125,15 +127,19 @@ private:
 	QAction *showGameListAct;
 	QAction *showControlsAct;
 	QAction *refreshGameListAct;
+	QAction *showGameListToolBarAct;
 	QAction* showCatHDDGameAct;
 	QAction* showCatDiscGameAct;
 	QAction* showCatHomeAct;
 	QAction* showCatAudioVideoAct;
 	QAction* showCatGameDataAct;
 	QAction* showCatUnknownAct;
+	QAction* setIconSizeTinyAct;
 	QAction* setIconSizeSmallAct;
 	QAction* setIconSizeMediumAct;
 	QAction* setIconSizeLargeAct;
+	QAction* setlistModeListAct;
+	QAction* setlistModeGridAct;
 	QAction *aboutAct;
 	QAction *aboutQtAct;
 

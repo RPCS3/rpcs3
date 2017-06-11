@@ -351,7 +351,7 @@ void main_window::InstallPkg()
 					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 				{
 					fs::remove_all(local_path);
-					gameListFrame->Refresh();
+					gameListFrame->Refresh(true);
 					LOG_SUCCESS(LOADER, "PKG: removed incomplete installation in %s", local_path);
 					return;
 				}
@@ -377,7 +377,7 @@ void main_window::InstallPkg()
 
 	if (progress >= 1.)
 	{
-		gameListFrame->Refresh();
+		gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(GUI::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
 
@@ -1027,6 +1027,9 @@ void main_window::CreateActions()
 	showControlsAct = new QAction(tr("Show Controls"), this);
 	showControlsAct->setCheckable(true);
 
+	showGameListToolBarAct = new QAction(tr("Show Tool Bar"), this);
+	showGameListToolBarAct->setCheckable(true);
+
 	refreshGameListAct = new QAction(tr("&Refresh Game List"), this);
 
 	showCatHDDGameAct = new QAction(category::hdd_Game, this);
@@ -1047,6 +1050,18 @@ void main_window::CreateActions()
 	showCatUnknownAct = new QAction(category::unknown, this);
 	showCatUnknownAct->setCheckable(true);
 
+	categoryVisibleActGroup = new QActionGroup(this); 
+	categoryVisibleActGroup->addAction(showCatHDDGameAct);
+	categoryVisibleActGroup->addAction(showCatDiscGameAct);
+	categoryVisibleActGroup->addAction(showCatHomeAct);
+	categoryVisibleActGroup->addAction(showCatAudioVideoAct);
+	categoryVisibleActGroup->addAction(showCatGameDataAct);
+	categoryVisibleActGroup->addAction(showCatUnknownAct);
+	categoryVisibleActGroup->setExclusive(false);
+
+	setIconSizeTinyAct = new QAction(tr("Tiny"), this);
+	setIconSizeTinyAct->setCheckable(true);
+
 	setIconSizeSmallAct = new QAction(tr("Small"), this);
 	setIconSizeSmallAct->setCheckable(true);
 
@@ -1057,10 +1072,22 @@ void main_window::CreateActions()
 	setIconSizeLargeAct->setCheckable(true);
 
 	iconSizeActGroup = new QActionGroup(this);
+	iconSizeActGroup->addAction(setIconSizeTinyAct);
 	iconSizeActGroup->addAction(setIconSizeSmallAct);
 	iconSizeActGroup->addAction(setIconSizeMediumAct);
 	iconSizeActGroup->addAction(setIconSizeLargeAct);
 	setIconSizeSmallAct->setChecked(true);
+
+	setlistModeListAct = new QAction(tr("List"), this);
+	setlistModeListAct->setCheckable(true);
+
+	setlistModeGridAct = new QAction(tr("Grid"), this);
+	setlistModeGridAct->setCheckable(true);
+
+	listModeActGroup = new QActionGroup(this);
+	listModeActGroup->addAction(setlistModeListAct);
+	listModeActGroup->addAction(setlistModeGridAct);
+	setlistModeListAct->setChecked(true);
 
 	aboutAct = new QAction(tr("&About"), this);
 	aboutAct->setStatusTip(tr("Show the application's About box"));
@@ -1166,32 +1193,27 @@ void main_window::CreateConnects()
 		checked ? controls->show() : controls->hide();
 		guiSettings->SetValue(GUI::mw_controls, checked);
 	});
+	connect(showGameListToolBarAct, &QAction::triggered, this, [=](bool checked){
+		gameListFrame->SetToolBarVisible(checked);
+	});
 	connect(refreshGameListAct, &QAction::triggered, [=](){
-		gameListFrame->Refresh();
+		gameListFrame->Refresh(true);
 	});
-	connect(showCatHDDGameAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::hdd_Game, checked);
-		guiSettings->SetCategoryVisibility(category::hdd_Game, checked);
-	});
-	connect(showCatDiscGameAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::disc_Game, checked);
-		guiSettings->SetCategoryVisibility(category::disc_Game, checked);
-	});
-	connect(showCatHomeAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::home, checked);
-		guiSettings->SetCategoryVisibility(category::home, checked);
-	});
-	connect(showCatAudioVideoAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::audio_Video, checked);
-		guiSettings->SetCategoryVisibility(category::audio_Video, checked);
-	});
-	connect(showCatGameDataAct, &QAction::triggered, [=](bool checked){
-		gameListFrame->ToggleCategoryFilter(category::game_Data, checked);
-		guiSettings->SetCategoryVisibility(category::game_Data, checked);
-	});
-	connect(showCatUnknownAct, &QAction::triggered, [=](bool checked) {
-		gameListFrame->ToggleCategoryFilter(category::unknown, checked);
-		guiSettings->SetCategoryVisibility(category::unknown, checked);
+	connect(categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
+	{
+		QString cat;
+		const bool& checked = act->isChecked();
+
+		if      (act == showCatHDDGameAct)    cat = category::hdd_Game;
+		else if (act == showCatDiscGameAct)   cat = category::disc_Game;
+		else if (act == showCatHomeAct)       cat = category::home;
+		else if (act == showCatAudioVideoAct) cat = category::audio_Video;
+		else if (act == showCatGameDataAct)   cat = category::game_Data;
+		else if (act == showCatUnknownAct)    cat = category::unknown;
+
+		gameListFrame->SetCategoryActIcon(categoryVisibleActGroup->actions().indexOf(act), checked);
+		gameListFrame->ToggleCategoryFilter(cat, checked);
+		guiSettings->SetCategoryVisibility(cat, checked);
 	});
 	connect(aboutAct, &QAction::triggered, this, &main_window::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
@@ -1207,10 +1229,37 @@ void main_window::CreateConnects()
 
 		if (act == setIconSizeLargeAct) key = GUI::gl_icon_key_large;
 		else if (act == setIconSizeMediumAct) key = GUI::gl_icon_key_medium;
-		else key = GUI::gl_icon_key_small;
+		else if (act == setIconSizeSmallAct) key = GUI::gl_icon_key_small;
+		else key = GUI::gl_icon_key_tiny;
 
 		guiSettings->SetValue(GUI::gl_iconSize, key);
-		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(key));
+
+		for (int i = 0; i < GUI::gl_icon_size.count(); i++)
+		{
+			if (GUI::gl_icon_size.at(i).first == key)
+			{
+				gameListFrame->ResizeIcons(GUI::gl_icon_size.at(i).second, i);
+				break;
+			}
+		}
+	});
+	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
+	{
+		iconSizeActGroup->actions().at(idx)->trigger();
+	});
+	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
+	{
+		isList ? setlistModeListAct->trigger() : setlistModeGridAct->trigger();
+	});
+	connect(gameListFrame, &game_list_frame::RequestCategoryActSet, [=](const int& id)
+	{
+		categoryVisibleActGroup->actions().at(id)->trigger();
+	});
+	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
+	{
+		bool isList = act == setlistModeListAct;
+		gameListFrame->SetListMode(isList);
+		categoryVisibleActGroup->setEnabled(isList);
 	});
 }
 
@@ -1261,20 +1310,17 @@ void main_window::CreateMenus()
 	viewMenu->addAction(showControlsAct);
 	viewMenu->addSeparator();
 	viewMenu->addAction(showGameListAct);
+	viewMenu->addAction(showGameListToolBarAct);
 	viewMenu->addAction(refreshGameListAct);
 
 	QMenu *categoryMenu = viewMenu->addMenu(tr("Show Categories"));
-	categoryMenu->addAction(showCatHDDGameAct);
-	categoryMenu->addAction(showCatDiscGameAct);
-	categoryMenu->addAction(showCatHomeAct);
-	categoryMenu->addAction(showCatAudioVideoAct);
-	categoryMenu->addAction(showCatGameDataAct);
-	categoryMenu->addAction(showCatUnknownAct);
+	categoryMenu->addActions(categoryVisibleActGroup->actions());
 
 	QMenu *iconSizeMenu = viewMenu->addMenu(tr("Icon Size"));
-	iconSizeMenu->addAction(setIconSizeSmallAct);
-	iconSizeMenu->addAction(setIconSizeMediumAct);
-	iconSizeMenu->addAction(setIconSizeLargeAct);
+	iconSizeMenu->addActions(iconSizeActGroup->actions());
+
+	QMenu *listModeMenu = viewMenu->addMenu(tr("Game List Mode"));
+	listModeMenu->addActions(listModeActGroup->actions());
 
 	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
 	helpMenu->addAction(aboutAct);
@@ -1385,6 +1431,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	showGameListAct->setChecked(guiSettings->GetValue(GUI::mw_gamelist).toBool());
 	showDebuggerAct->setChecked(guiSettings->GetValue(GUI::mw_debugger).toBool());
 	showControlsAct->setChecked(guiSettings->GetValue(GUI::mw_controls).toBool());
+	showGameListToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
 	guiSettings->GetValue(GUI::mw_controls).toBool() ? controls->show() : controls->hide();
 
 	showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(category::hdd_Game));
@@ -1397,7 +1444,15 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	QString key = guiSettings->GetValue(GUI::gl_iconSize).toString();
 	if (key == GUI::gl_icon_key_large) setIconSizeLargeAct->setChecked(true);
 	else if (key == GUI::gl_icon_key_medium) setIconSizeMediumAct->setChecked(true);
-	else setIconSizeSmallAct->setChecked(true);
+	else if (key == GUI::gl_icon_key_small) setIconSizeSmallAct->setChecked(true);
+	else setIconSizeTinyAct->setChecked(true);
+
+
+	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();
+	if (isListMode) setlistModeListAct->setChecked(true);
+	else setlistModeGridAct->setChecked(true);
+	categoryVisibleActGroup->setEnabled(isListMode);
+
 
 	if (configureAll)
 	{
