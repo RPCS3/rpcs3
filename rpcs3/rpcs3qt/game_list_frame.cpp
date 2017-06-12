@@ -156,7 +156,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 
-	gameList->setColumnCount(8);
+	gameList->setColumnCount(7);
 	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
 	gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
 	gameList->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Serial")));
@@ -164,9 +164,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	gameList->setHorizontalHeaderItem(4, new QTableWidgetItem(tr("App version")));
 	gameList->setHorizontalHeaderItem(5, new QTableWidgetItem(tr("Category")));
 	gameList->setHorizontalHeaderItem(6, new QTableWidgetItem(tr("Path")));
-	gameList->setHorizontalHeaderItem(7, new QTableWidgetItem(tr("Missingno"))); // Holds index which points back to original array
-
-	gameList->setColumnHidden(7, true); // Comment this if your sorting ever for whatever reason messes up.
 
 	m_Central_Widget = new QStackedWidget(this);
 	m_Central_Widget->addWidget(gameList);
@@ -427,7 +424,6 @@ void game_list_frame::Refresh(bool fromDrive)
 		FilterData();
 		gameList->selectRow(row);
 		gameList->sortByColumn(m_sortColumn, m_colSortOrder);
-		gameList->setColumnHidden(7, true);
 		gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 		gameList->resizeRowsToContents();
@@ -493,7 +489,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 
 	if (m_isListLayout)
 	{
-		i = gameList->item(index.row(), 7)->text().toInt();
+		i = gameList->item(index.row(), 0)->data(Qt::UserRole).toInt();
 	}
 	else
 	{
@@ -533,9 +529,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	if (m_isListLayout)
 	{
 		int row = gameList->indexAt(pos).row();
-		QTableWidgetItem* item = gameList->item(row, 7);
+		QTableWidgetItem* item = gameList->item(row, 0);
 		if (item == nullptr) return;  // null happens if you are double clicking in dockwidget area on nothing.
-		index = item->text().toInt();
+		index = item->data(Qt::UserRole).toInt();
 	}
 	else
 	{
@@ -768,6 +764,7 @@ void game_list_frame::PopulateGameList()
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
 		iconItem->setData(Qt::DecorationRole, game.pxmap);
+		iconItem->setData(Qt::UserRole, row);
 		gameList->setItem(row, 0, iconItem);
 
 		gameList->setItem(row, 1, l_GetItem(game.info.name));
@@ -776,12 +773,6 @@ void game_list_frame::PopulateGameList()
 		gameList->setItem(row, 4, l_GetItem(game.info.app_ver));
 		gameList->setItem(row, 5, l_GetItem(game.info.category));
 		gameList->setItem(row, 6, l_GetItem(game.info.root));
-
-		// A certain magical index which points back to the original game index. 
-		// Essentially, this column makes the tablewidget's row into a map, accomplishing what columns did but much simpler.
-		QTableWidgetItem* index = new QTableWidgetItem;
-		index->setText(QString::number(row));
-		gameList->setItem(row, 7, index);
 
 		row++;
 	}
