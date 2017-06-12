@@ -55,7 +55,7 @@ void vfs_dialog_tab::SaveSettings()
 
 	m_gui_settings->SetValue(m_info.listLocation, allDirs);
 	m_info.cfg_node->from_string(sstr(selectedConfigLabel->text()));
-	m_emu_settings->SetSetting(emu_settings::dev_hdd0Location, sstr(selectedConfigLabel->text()));
+	m_emu_settings->SetSetting(m_info.settingLoc, sstr(selectedConfigLabel->text()));
 	m_emu_settings->SaveSettings();
 }
 
