@@ -205,7 +205,6 @@ void GLGSRender::begin()
 	if (__glcheck enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
 		__glcheck glDepthFunc(comparison_op(rsx::method_registers.depth_func()));
-		__glcheck glDepthMask(rsx::method_registers.depth_write_enabled());
 	}
 
 	if (glDepthBoundsEXT && (__glcheck enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
