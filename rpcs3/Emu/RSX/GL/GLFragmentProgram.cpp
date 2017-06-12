@@ -107,6 +107,9 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
+			if ((m_prog.shadow_textures & (1 << index)) > 0)
+				samplerType = "sampler2DShadow";
+
 			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
 		}
 	}

@@ -125,6 +125,8 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			if (m_prog.unnormalized_coords & (1 << index))
 				samplerType = "sampler2DRect";
+			else if (m_prog.shadow_textures & (1 << index))
+				samplerType = "sampler2DShadow";
 
 			vk::glsl::program_input in;
 			in.location = location;

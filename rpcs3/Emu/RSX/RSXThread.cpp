@@ -946,7 +946,7 @@ namespace rsx
 		result.pixel_center_mode = rsx::method_registers.shader_window_pixel();
 		result.height = rsx::method_registers.shader_window_height();
 		result.redirected_textures = 0;
-
+		result.shadow_textures = 0;
 
 		std::array<texture_dimension_extended, 16> texture_dimensions;
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -989,9 +989,11 @@ namespace rsx
 					{
 						u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 						if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
-						{
 							result.redirected_textures |= (1 << i);
-						}
+						else if (format == CELL_GCM_TEXTURE_DEPTH16 || format == CELL_GCM_TEXTURE_DEPTH24_D8)
+							result.shadow_textures |= (1 << i);
+						else
+							LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
 					}
 				}
 			}

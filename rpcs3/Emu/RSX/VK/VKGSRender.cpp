@@ -32,15 +32,15 @@ namespace
 
 namespace vk
 {
-	VkCompareOp get_compare_func(rsx::comparison_function op)
+	VkCompareOp get_compare_func(rsx::comparison_function op, bool reverse_direction = false)
 	{
 		switch (op)
 		{
 		case rsx::comparison_function::never: return VK_COMPARE_OP_NEVER;
-		case rsx::comparison_function::greater: return VK_COMPARE_OP_GREATER;
-		case rsx::comparison_function::less: return VK_COMPARE_OP_LESS;
-		case rsx::comparison_function::less_or_equal: return VK_COMPARE_OP_LESS_OR_EQUAL;
-		case rsx::comparison_function::greater_or_equal: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+		case rsx::comparison_function::greater: return reverse_direction ? VK_COMPARE_OP_LESS: VK_COMPARE_OP_GREATER;
+		case rsx::comparison_function::less: return reverse_direction ? VK_COMPARE_OP_GREATER: VK_COMPARE_OP_LESS;
+		case rsx::comparison_function::less_or_equal: return reverse_direction ? VK_COMPARE_OP_GREATER_OR_EQUAL: VK_COMPARE_OP_LESS_OR_EQUAL;
+		case rsx::comparison_function::greater_or_equal: return reverse_direction ? VK_COMPARE_OP_LESS_OR_EQUAL: VK_COMPARE_OP_GREATER_OR_EQUAL;
 		case rsx::comparison_function::equal: return VK_COMPARE_OP_EQUAL;
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
@@ -863,6 +863,11 @@ void VKGSRender::end()
 				continue;
 			}
 
+			const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+
+			VkBool32 is_depth_texture = (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8);
+			VkCompareOp depth_compare = is_depth_texture? vk::get_compare_func((rsx::comparison_function)rsx::method_registers.fragment_textures[i].zfunc(), true): VK_COMPARE_OP_NEVER;
+
 			VkFilter min_filter;
 			VkSamplerMipmapMode mip_mode;
 			float min_lod = 0.f, max_lod = 0.f;
@@ -886,8 +891,8 @@ void VKGSRender::end()
 				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
 				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
 				lod_bias, vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), min_lod, max_lod,
-				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color())
-				));
+				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color()),
+				is_depth_texture, depth_compare));
 
 			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 		}
