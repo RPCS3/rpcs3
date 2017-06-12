@@ -58,9 +58,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	m_Tool_Bar = new QToolBar(m_Game_Dock);
 	m_Tool_Bar->setMovable(false);
 	m_Tool_Bar->setVisible(m_showToolBar);
+	m_Tool_Bar->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	// ToolBar Actions
-	m_catActHDD = { new QAction(""), QIcon(":/Icons/harddisk_blue.png"), QIcon(":/Icons/harddisk_gray.png") };
+	m_catActHDD = { new QAction(""), QIcon(":/Icons/hdd_blue.png"), QIcon(":/Icons/hdd_gray.png") };
 	m_catActHDD.action->setIcon(xgui_settings->GetValue(GUI::cat_hdd_game).toBool() ? m_catActHDD.colored : m_catActHDD.gray);
 	m_catActHDD.action->setToolTip(tr("Show HDD Category"));
 
@@ -76,11 +77,11 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	m_catActAudioVideo.action->setIcon(xgui_settings->GetValue(GUI::cat_audio_video).toBool() ? m_catActAudioVideo.colored : m_catActAudioVideo.gray);
 	m_catActAudioVideo.action->setToolTip(tr("Show Audio/Video Category"));
 
-	m_catActGameData = { new QAction(""), QIcon(":/Icons/copy_blue.png"), QIcon(":/Icons/copy_gray.png") };
+	m_catActGameData = { new QAction(""), QIcon(":/Icons/data_blue.png"), QIcon(":/Icons/data_gray.png") };
 	m_catActGameData.action->setIcon(xgui_settings->GetValue(GUI::cat_game_data).toBool() ? m_catActGameData.colored : m_catActGameData.gray);
 	m_catActGameData.action->setToolTip(tr("Show GameData Category"));
 
-	m_catActUnknown = { new QAction(""), QIcon(":/Icons/info_blue.png"), QIcon(":/Icons/info_gray.png") };
+	m_catActUnknown = { new QAction(""), QIcon(":/Icons/unknown_blue.png"), QIcon(":/Icons/unknown_gray.png") };
 	m_catActUnknown.action->setIcon(xgui_settings->GetValue(GUI::cat_unknown).toBool() ? m_catActUnknown.colored : m_catActUnknown.gray);
 	m_catActUnknown.action->setToolTip(tr("Show Unknown Category"));
 
