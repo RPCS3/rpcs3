@@ -81,7 +81,7 @@ std::string getFunctionImpl(FUNCTION f)
 	case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
 		return "textureLod($t, $0.xy, 0)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-		return "texture2DReconstruct($t, $0.xy)";
+		return "texture2DReconstruct($t, $0.xy * $t_coord_scale)";
 	}
 }
 
@@ -123,9 +123,9 @@ void insert_glsl_legacy_function(std::ostream& OS)
 	//NOTE: We lose precision if we just store depth value into 8-bit textures i.e (depth, 0, 0)
 	//NOTE2: After testing with GOW, the w component is either the original depth or wraps around to the x component
 	//Since component.r == depth_value with some precision loss, just use the precise depth value for now (further testing needed)
-	OS << "highp vec4 texture2DReconstruct(sampler2D tex, vec2 coord)\n";
+	OS << "vec4 texture2DReconstruct(sampler2D tex, vec2 coord)\n";
 	OS << "{\n";
-	OS << "	highp float depth_value = texture(tex, coord.xy).r;\n";
+	OS << "	float depth_value = texture(tex, coord.xy).r;\n";
 	OS << "	uint value = uint(depth_value * 16777215);\n";
 	OS << "	uint b = (value & 0xff);\n";
 	OS << "	uint g = (value >> 8) & 0xff;\n";
