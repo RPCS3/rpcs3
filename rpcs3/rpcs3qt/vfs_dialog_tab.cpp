@@ -75,6 +75,7 @@ void vfs_dialog_tab::AddNewDirectory()
 	{
 		if (dir.endsWith("/") == false) dir += '/';
 		new QListWidgetItem(dir, dirList);
+		selectedConfigLabel->setText(dir);
 	}
 }
 

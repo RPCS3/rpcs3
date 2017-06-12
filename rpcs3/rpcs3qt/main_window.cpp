@@ -1158,6 +1158,7 @@ void main_window::CreateConnects()
 	connect(confVFSDialogAct, &QAction::triggered, [=]() {
 		vfs_dialog dlg(this);
 		dlg.exec();
+		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
 	connect(confSavedataManagerAct, &QAction::triggered, [=](){
 		save_data_list_dialog* sdid = new save_data_list_dialog(this, true);
