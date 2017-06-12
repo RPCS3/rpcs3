@@ -34,6 +34,7 @@ typedef struct GUI_GameInfo
 	GameInfo info;
 	QImage icon;
 	QPixmap pxmap;
+	std::string dir;
 };
 
 typedef struct Tool_Bar_Button

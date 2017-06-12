@@ -326,87 +326,97 @@ void game_list_frame::Refresh(bool fromDrive)
 		m_game_data.clear();
 
 		const std::string& game_path = Emu.GetGameDir();
+		const std::string& disc_path = Emu.GetDiscDir();
 
-		for (const auto& entry : fs::dir(Emu.GetGameDir()))
+		for (auto path : { game_path, disc_path })
 		{
-			if (!entry.is_directory)
+			for (const auto& entry : fs::dir(path))
 			{
-				continue;
-			}
+				if (!entry.is_directory)
+				{
+					continue;
+				}
 
-			const std::string& dir = game_path + entry.name;
-			const std::string& sfb = dir + "/PS3_DISC.SFB";
-			const std::string& sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
+				const std::string& dir = path + entry.name;
+				std::string& sfo = dir + "/PARAM.SFO";
 
-			const fs::file sfo_file(sfo);
-			if (!sfo_file)
-			{
-				continue;
-			}
+				const bool& is_disc_path = path == disc_path && fs::is_file(dir + "/PS3_DISC.SFB");
 
-			const auto& psf = psf::load_object(sfo_file);
+				if (is_disc_path)
+				{
+					sfo = dir + "/PS3_GAME/PARAM.SFO";
+				}
 
-			GameInfo game;
-			game.root         = entry.name;
-			game.serial       = psf::get_string(psf, "TITLE_ID", "");
-			game.name         = psf::get_string(psf, "TITLE", "unknown");
-			game.app_ver      = psf::get_string(psf, "APP_VER", "unknown");
-			game.category     = psf::get_string(psf, "CATEGORY", "unknown");
-			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
-			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
-			game.resolution   = psf::get_integer(psf, "RESOLUTION");
-			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
+				const fs::file sfo_file(sfo);
+				if (!sfo_file)
+				{
+					continue;
+				}
 
-			if (game.category == "HG")
-			{
-				game.category = sstr(category::hdd_Game);
-				game.icon_path = dir + "/ICON0.PNG";
-			}
-			else if (game.category == "DG")
-			{
-				game.category = sstr(category::disc_Game);
-				game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
-			}
-			else if (game.category == "HM")
-			{
-				game.category = sstr(category::home);
-				game.icon_path = dir + "/ICON0.PNG";
-			}
-			else if (game.category == "AV")
-			{
-				game.category = sstr(category::audio_Video);
-				game.icon_path = dir + "/ICON0.PNG";
-			}
-			else if (game.category == "GD")
-			{
-				game.category = sstr(category::game_Data);
-				game.icon_path = dir + "/ICON0.PNG";
-			}
-			else if (game.category == "unknown")
-			{
-				game.category = sstr(category::unknown);
-			}
+				const auto& psf = psf::load_object(sfo_file);
 
-			// Load Image
-			QImage img;
-			QPixmap pxmap;
+				GameInfo game;
+				game.root = entry.name;
+				game.serial = psf::get_string(psf, "TITLE_ID", "");
+				game.name = psf::get_string(psf, "TITLE", "unknown");
+				game.app_ver = psf::get_string(psf, "APP_VER", "unknown");
+				game.category = psf::get_string(psf, "CATEGORY", "unknown");
+				game.fw = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
+				game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
+				game.resolution = psf::get_integer(psf, "RESOLUTION");
+				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
 
-			if (!game.icon_path.empty() && img.load(qstr(game.icon_path)))
-			{
-				QImage scaled = img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-				pxmap = QPixmap::fromImage(scaled);
-			}
-			else
-			{
-				img = QImage(m_Icon_Size, QImage::Format_ARGB32);
-				QString abspath = QDir(qstr(game.icon_path)).absolutePath();
-				LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
-				img.fill(QColor(0, 0, 0, 0));
-				pxmap = QPixmap::fromImage(img);
-			}
+				if (game.category == "HG")
+				{
+					game.category = sstr(category::hdd_Game);
+					game.icon_path = dir + "/ICON0.PNG";
+				}
+				else if (is_disc_path && game.category == "DG")
+				{
+					game.category = sstr(category::disc_Game);
+					game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
+				}
+				else if (game.category == "HM")
+				{
+					game.category = sstr(category::home);
+					game.icon_path = dir + "/ICON0.PNG";
+				}
+				else if (game.category == "AV")
+				{
+					game.category = sstr(category::audio_Video);
+					game.icon_path = dir + "/ICON0.PNG";
+				}
+				else if (game.category == "GD")
+				{
+					game.category = sstr(category::game_Data);
+					game.icon_path = dir + "/ICON0.PNG";
+				}
+				else if (game.category == "unknown")
+				{
+					game.category = sstr(category::unknown);
+				}
 
-			m_game_data.push_back({ game, img, pxmap });
-		}
+				// Load Image
+				QImage img;
+				QPixmap pxmap;
+
+				if (!game.icon_path.empty() && img.load(qstr(game.icon_path)))
+				{
+					QImage scaled = img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
+					pxmap = QPixmap::fromImage(scaled);
+				}
+				else
+				{
+					img = QImage(m_Icon_Size, QImage::Format_ARGB32);
+					QString abspath = QDir(qstr(game.icon_path)).absolutePath();
+					LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
+					img.fill(QColor(0, 0, 0, 0));
+					pxmap = QPixmap::fromImage(img);
+				}
+
+				m_game_data.push_back({ game, img, pxmap, is_disc_path ? disc_path : game_path });
+			}
+		}		
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
 			return game1.info.name < game2.info.name;
@@ -500,11 +510,12 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	}
 
 	QString category = qstr(m_game_data[i].info.category);
-	
+	std::string game_dir	= m_game_data[i].dir;
+
 	// Boot these categories
 	if (category == category::hdd_Game || category == category::disc_Game || category == category::audio_Video)
 	{
-		const std::string& path = Emu.GetGameDir() + m_game_data[i].info.root;
+		const std::string& path = game_dir + m_game_data[i].info.root;
 		emit RequestIconPathSet(path);
 	
 		Emu.Stop();
@@ -521,7 +532,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	}
 	else
 	{
-		open_dir(Emu.GetGameDir() + m_game_data[i].info.root);
+		open_dir(game_dir + m_game_data[i].info.root);
 	}
 }
 
@@ -590,13 +601,13 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	connect(removeGame, &QAction::triggered, [=]() {
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
 		{
-			fs::remove_all(Emu.GetGameDir() + m_game_data[row].info.root);
+			fs::remove_all(m_game_data[row].dir + m_game_data[row].info.root);
 			m_game_data.erase(m_game_data.begin() + row);
 			Refresh();
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
-	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + m_game_data[row].info.root); });
+	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(m_game_data[row].dir + m_game_data[row].info.root); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + m_game_data[row].info.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
 		QString serial = qstr(m_game_data[row].info.serial);
@@ -632,7 +643,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 void game_list_frame::Boot(int row)
 {
-	const std::string& path = Emu.GetGameDir() + m_game_data[row].info.root;
+	const std::string& path = m_game_data[row].dir + m_game_data[row].info.root;
 	emit RequestIconPathSet(path);
 
 	Emu.Stop();

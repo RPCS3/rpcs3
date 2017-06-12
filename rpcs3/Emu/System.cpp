@@ -197,6 +197,7 @@ void Emulator::Init()
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
 	fs::create_path(dev_hdd0);
+	fs::create_dir(dev_hdd0 + "disc/");
 	fs::create_dir(dev_hdd0 + "game/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
@@ -256,6 +257,14 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	}
 
 	return false;
+}
+
+std::string Emulator::GetDiscDir()
+{
+	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir) + "disc/";
 }
 
 std::string Emulator::GetGameDir()
