@@ -50,7 +50,7 @@ namespace GUI
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
 	const QString meta        = "Meta";
-	const QString fs          = "FileSytem";
+	const QString fs          = "FileSystem";
 
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));

@@ -30,7 +30,7 @@ public:
 	void AddNewDirectory();
 	void Reset();
 private:
-	QString EmuAbsGameDir();
+	QString EmuGameDir();
 
 	vfs_settings_info m_info;
 	gui_settings* m_gui_settings;

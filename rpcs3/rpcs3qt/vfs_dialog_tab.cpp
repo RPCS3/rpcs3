@@ -15,9 +15,9 @@ m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
 	QStringList alldirs = m_gui_settings->GetValue(m_info.listLocation).toStringList();
 
 	// We must show the currently selected config.
-	if (alldirs.contains(EmuAbsGameDir()) == false)
+	if (alldirs.contains(EmuGameDir()) == false)
 	{
-		new QListWidgetItem(EmuAbsGameDir(), dirList);
+		new QListWidgetItem(EmuGameDir(), dirList);
 	}
 	for (QString dir : alldirs)
 	{
@@ -28,7 +28,7 @@ m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
 	QHBoxLayout* selectedConfigLayout = new QHBoxLayout;
 	QLabel* selectedMessage = new QLabel(m_info.name + " directory:");
 	selectedConfigLabel = new QLabel();
-	selectedConfigLabel->setText(EmuAbsGameDir());
+	selectedConfigLabel->setText(EmuGameDir());
 	selectedConfigLayout->addWidget(selectedMessage);
 	selectedConfigLayout->addWidget(selectedConfigLabel);
 	selectedConfigLayout->addStretch();
@@ -63,9 +63,9 @@ void vfs_dialog_tab::Reset()
 {
 	dirList->clear();
 	m_info.cfg_node->from_default();
-	selectedConfigLabel->setText(EmuAbsGameDir());
-	dirList->addItem(new QListWidgetItem(EmuAbsGameDir()));
-	m_gui_settings->SetValue(m_info.listLocation, QStringList(EmuAbsGameDir()));
+	selectedConfigLabel->setText(EmuGameDir());
+	dirList->addItem(new QListWidgetItem(EmuGameDir()));
+	m_gui_settings->SetValue(m_info.listLocation, QStringList(EmuGameDir()));
 }
 
 void vfs_dialog_tab::AddNewDirectory()
@@ -79,7 +79,7 @@ void vfs_dialog_tab::AddNewDirectory()
 	}
 }
 
-QString vfs_dialog_tab::EmuAbsGameDir()
+QString vfs_dialog_tab::EmuGameDir()
 {
 	return qstr(m_info.cfg_node->to_string());
 }
