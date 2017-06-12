@@ -74,9 +74,7 @@ enum class video_renderer
 {
 	null,
 	opengl,
-#ifdef _WIN32
 	vulkan,
-#endif
 #ifdef _MSC_VER
 	dx12,
 #endif
@@ -146,6 +144,11 @@ struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
 	std::function<void()> process_events;
+	std::function<void()> on_run;
+	std::function<void()> on_pause;
+	std::function<void()> on_resume;
+	std::function<void()> on_stop;
+	std::function<void()> on_ready;
 	std::function<void()> exit;
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
@@ -370,8 +373,10 @@ struct cfg_root : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
 		
-		cfg::_bool autostart{this, "Always start after boot", true};
+		cfg::_bool autostart{this, "Automatically start games after boot", true};
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
+		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
+		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};

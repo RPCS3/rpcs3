@@ -61,7 +61,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <PreBuildEvent>
       <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
@@ -280,7 +280,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
-    <ClCompile Include="Emu\RSX\rsx_cache.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">
@@ -696,21 +695,6 @@
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
-    <IncludePath>..\rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-    <IncludePath>..\rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>..\rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-    <IncludePath>..\rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
-  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

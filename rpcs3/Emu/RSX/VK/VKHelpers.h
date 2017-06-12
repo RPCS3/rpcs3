@@ -8,6 +8,10 @@
 #include <memory>
 #include <unordered_map>
 
+#ifdef __linux__
+#include <X11/Xlib.h>
+#endif
+
 #include "Emu/System.h"
 #include "VulkanAPI.h"
 #include "../GCM.h"
@@ -185,6 +189,16 @@ namespace vk
 			if (g_cfg.video.debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
+			//Enable hardware features manually
+			//Currently we require:
+			//1. Anisotropic sampling
+			//2. DXT support
+			VkPhysicalDeviceFeatures available_features;
+			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
+
+			available_features.samplerAnisotropy = VK_TRUE;
+			available_features.textureCompressionBC = VK_TRUE;
+
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			device.pNext = NULL;
@@ -194,7 +208,7 @@ namespace vk
 			device.ppEnabledLayerNames = layers.data();
 			device.enabledExtensionCount = 1;
 			device.ppEnabledExtensionNames = requested_extensions;
-			device.pEnabledFeatures = nullptr;
+			device.pEnabledFeatures = &available_features;
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
 		}
@@ -799,15 +813,9 @@ namespace vk
 		void init_swapchain(u32 width, u32 height)
 		{
 			VkSwapchainKHR old_swapchain = m_vk_swapchain;
-
-			uint32_t num_modes;
 			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
-			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &num_modes, NULL));
-
-			std::vector<VkPresentModeKHR> present_mode_descriptors(num_modes);
-			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &num_modes, present_mode_descriptors.data()));
-
-			VkSurfaceCapabilitiesKHR surface_descriptors;
+			
+			VkSurfaceCapabilitiesKHR surface_descriptors = {};
 			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
 
 			VkExtent2D swapchainExtent;
@@ -1019,11 +1027,16 @@ namespace vk
 		PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = nullptr;
 		VkDebugReportCallbackEXT m_debugger = nullptr;
 
+		bool loader_exists = false;
+
 	public:
 
 		context()
 		{
 			m_instance = nullptr;
+
+			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
+			loader_exists = (vkCreateInstance != nullptr);
 		}
 
 		~context()
@@ -1053,6 +1066,8 @@ namespace vk
 		
 		void enable_debugging()
 		{
+			if (!g_cfg.video.debug_output) return;
+			 
 			PFN_vkDebugReportCallbackEXT callback = vk::dbgFunc;
 
 			createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT");
@@ -1066,8 +1081,10 @@ namespace vk
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
 
-		uint32_t createInstance(const char *app_name)
+		uint32_t createInstance(const char *app_name, bool fast = false)
 		{
+			if (!loader_exists) return 0;
+
 			//Initialize a vulkan instance
 			VkApplicationInfo app = {};
 
@@ -1082,13 +1099,17 @@ namespace vk
 			const char *requested_extensions[] =
 			{
 				"VK_KHR_surface",
+#ifdef _WIN32
 				"VK_KHR_win32_surface",
+#else
+				"VK_KHR_xlib_surface",
+#endif
 				"VK_EXT_debug_report",
 			};
 
 			std::vector<const char *> layers;
 
-			if (g_cfg.video.debug_output)
+			if (!fast && g_cfg.video.debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
 			VkInstanceCreateInfo instance_info = {};
@@ -1096,11 +1117,12 @@ namespace vk
 			instance_info.pApplicationInfo = &app;
 			instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
 			instance_info.ppEnabledLayerNames = layers.data();
-			instance_info.enabledExtensionCount = 3;
-			instance_info.ppEnabledExtensionNames = requested_extensions;
+			instance_info.enabledExtensionCount = fast? 0: 3;
+			instance_info.ppEnabledExtensionNames = fast? nullptr: requested_extensions;
 
 			VkInstance instance;
-			CHECK_RESULT(vkCreateInstance(&instance_info, nullptr, &instance));
+			if (vkCreateInstance(&instance_info, nullptr, &instance) != VK_SUCCESS)
+				return 0;
 
 			m_vk_instances.push_back(instance);
 			return (u32)m_vk_instances.size();
@@ -1137,6 +1159,9 @@ namespace vk
 
 		std::vector<physical_device>& enumerateDevices()
 		{
+			if (!loader_exists)
+				return gpus;
+
 			uint32_t num_gpus;
 			CHECK_RESULT(vkEnumeratePhysicalDevices(m_instance, &num_gpus, nullptr));
 
@@ -1155,6 +1180,7 @@ namespace vk
 		}
 
 #ifdef _WIN32
+		
 		vk::swap_chain* createSwapChain(HINSTANCE hInstance, HWND hWnd, vk::physical_device &dev)
 		{
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
@@ -1164,6 +1190,18 @@ namespace vk
 
 			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
+#elif __linux__
+		
+		vk::swap_chain* createSwapChain(Display *display, Window window, vk::physical_device &dev)
+		{
+			VkXlibSurfaceCreateInfoKHR createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+			createInfo.dpy = display;
+			createInfo.window = window;
+			
+			VkSurfaceKHR surface;
+			CHECK_RESULT(vkCreateXlibSurfaceKHR(m_instance, &createInfo, nullptr, &surface));
+#endif
 
 			uint32_t device_queues = dev.get_queue_count();
 			std::vector<VkBool32> supportsPresent(device_queues);
@@ -1240,8 +1278,6 @@ namespace vk
 
 			return new swap_chain(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space);
 		}
-#endif	//if _WIN32
-
 	};
 
 	class descriptor_pool

@@ -205,7 +205,7 @@ namespace vk
 		template<typename T>
 		void do_memory_transfer(void *pixels_dst, const void *pixels_src)
 		{
-			if (sizeof T == 1)
+			if (sizeof(T) == 1)
 				memcpy(pixels_dst, pixels_src, cpu_address_range);
 			else
 			{

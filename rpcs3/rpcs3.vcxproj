@@ -93,7 +93,7 @@
       </Message>
     </PreBuildEvent>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\rsx_program_decompiler\rsx_decompiler;..\wxWidgets\include\msvc;..\wxWidgets\include;..\3rdparty\XAudio2_7;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\wxWidgets\include\msvc;..\wxWidgets\include;..\3rdparty\XAudio2_7;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">..\Vulkan\glslang-build\hlsl\Debug;..\Vulkan\glslang-build\SPIRV\Debug;..\Vulkan\glslang-build\OGLCompilersDLL\Debug;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Debug;..\Vulkan\Vulkan-build\loader\Debug;..\Vulkan\glslang-build\glslang\Debug;..\3rdparty\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -107,7 +107,7 @@
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;HLSL.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <BaseAddress>0x10000</BaseAddress>

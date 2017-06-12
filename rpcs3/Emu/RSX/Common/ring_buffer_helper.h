@@ -43,6 +43,9 @@ struct data_heap
 
 	size_t m_size;
 	size_t m_put_pos; // Start of free space
+	size_t m_min_guard_size; //If an allocation touches the guard region, reset the heap to avoid going over budget
+	size_t m_current_allocated_size;
+	size_t m_largest_allocated_pool;
 public:
 	data_heap() = default;
 	~data_heap() = default;
@@ -51,11 +54,16 @@ public:
 
 	size_t m_get_pos; // End of free space
 
-	void init(size_t heap_size)
+	void init(size_t heap_size, size_t min_guard_size=0x10000)
 	{
 		m_size = heap_size;
 		m_put_pos = 0;
 		m_get_pos = heap_size - 1;
+
+		//allocation stats
+		m_min_guard_size = min_guard_size;
+		m_current_allocated_size = 0;
+		m_largest_allocated_pool = 0;
 	}
 
 	template<int Alignement>
@@ -64,6 +72,11 @@ public:
 		if (!can_alloc<Alignement>(size)) fmt::throw_exception("Working buffer not big enough" HERE);
 		size_t alloc_size = align(size, Alignement);
 		size_t aligned_put_pos = align(m_put_pos, Alignement);
+
+		const size_t block_length = (aligned_put_pos - m_put_pos) + alloc_size;
+		m_current_allocated_size += block_length;
+		m_largest_allocated_pool = std::max(m_largest_allocated_pool, block_length);
+
 		if (aligned_put_pos + alloc_size < m_size)
 		{
 			m_put_pos = aligned_put_pos + alloc_size;
@@ -82,5 +95,18 @@ public:
 	size_t get_current_put_pos_minus_one() const
 	{
 		return (m_put_pos - 1 > 0) ? m_put_pos - 1 : m_size - 1;
+	}
+	
+	bool is_critical()
+	{
+		const size_t guard_length = std::max(m_min_guard_size, m_largest_allocated_pool);
+		return (m_current_allocated_size + guard_length) > m_size;
+	}
+
+	void reset_allocation_stats()
+	{
+		m_current_allocated_size = 0;
+		m_largest_allocated_pool = 0;
+		m_get_pos = get_current_put_pos_minus_one();
 	}
 };

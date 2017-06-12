@@ -1,0 +1,25 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Icons/pause.png</file>
+        <file>Icons/play.png</file>
+        <file>Icons/restart.png</file>
+        <file>Icons/stop.png</file>
+        <file>rpcs3.ico</file>
+        <file>Icons/copy_blue.png</file>
+        <file>Icons/disc_blue.png</file>
+        <file>Icons/grid_blue.png</file>
+        <file>Icons/harddisk_blue.png</file>
+        <file>Icons/home_blue.png</file>
+        <file>Icons/info_blue.png</file>
+        <file>Icons/list_blue.png</file>
+        <file>Icons/media_blue.png</file>
+        <file>Icons/copy_gray.png</file>
+        <file>Icons/disc_gray.png</file>
+        <file>Icons/grid_gray.png</file>
+        <file>Icons/harddisk_gray.png</file>
+        <file>Icons/home_gray.png</file>
+        <file>Icons/info_gray.png</file>
+        <file>Icons/list_gray.png</file>
+        <file>Icons/media_gray.png</file>
+    </qresource>
+</RCC>

@@ -44,21 +44,6 @@ extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const
 fs::file g_tty;
 
 template <>
-void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](keyboard_handler value)
-	{
-		switch (value)
-		{
-		case keyboard_handler::null: return "Null";
-		case keyboard_handler::basic: return "Basic";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](mouse_handler value)
@@ -104,32 +89,10 @@ void fmt_class_string<video_renderer>::format(std::string& out, u64 arg)
 		{
 		case video_renderer::null: return "Null";
 		case video_renderer::opengl: return "OpenGL";
-#ifdef _WIN32
 		case video_renderer::vulkan: return "Vulkan";
-#endif
 #ifdef _MSC_VER
 		case video_renderer::dx12: return "D3D12";
 #endif
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](audio_renderer value)
-	{
-		switch (value)
-		{
-		case audio_renderer::null: return "Null";
-#ifdef _WIN32
-		case audio_renderer::xaudio: return "XAudio2";
-#elif __linux__
-		case audio_renderer::alsa: return "ALSA";
-#endif
-		case audio_renderer::openal: return "OpenAL";
 		}
 
 		return unknown;
@@ -173,12 +136,40 @@ void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
 	});
 }
 
-namespace rpcs3
+
+template <>
+void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
 {
-	event<void>& on_run() { static event<void> on_run; return on_run; }
-	event<void>& on_stop() { static event<void> on_stop; return on_stop; }
-	event<void>& on_pause() { static event<void> on_pause; return on_pause; }
-	event<void>& on_resume() { static event<void> on_resume; return on_resume; }
+	format_enum(out, arg, [](keyboard_handler value)
+	{
+		switch (value)
+		{
+		case keyboard_handler::null: return "Null";
+		case keyboard_handler::basic: return "Basic";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_renderer value)
+	{
+		switch (value)
+		{
+		case audio_renderer::null: return "Null";
+#ifdef _WIN32
+		case audio_renderer::xaudio: return "XAudio2";
+#elif __linux__
+		case audio_renderer::alsa: return "ALSA";
+#endif
+		case audio_renderer::openal: return "OpenAL";
+		}
+
+		return unknown;
+	});
 }
 
 void Emulator::Init()
@@ -425,11 +416,35 @@ void Emulator::Load()
 			// PS3 executable
 			g_system = system_type::ps3;
 			m_state = system_state::ready;
+			GetCallbacks().on_ready();
+
 			vm::ps3::init();
 
 			if (m_elf_path.empty())
 			{
-				m_elf_path = "/host_root/" + m_path;
+				if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
+				{
+					//Disc games are on /dev_bdvd/
+					size_t pos = m_path.rfind("PS3_GAME");
+					m_elf_path = "/dev_bdvd/" + m_path.substr(pos);
+				}
+				else if (GetTitleID().substr(0, 2) == "NP")
+				{
+					//PSN Games are on /dev_hdd0/
+					size_t pos = m_path.rfind(GetTitleID());
+					if (pos == std::string::npos)
+					{
+						LOG_ERROR(LOADER, "Title ID isn't present in the path(%s)", m_path);
+						return;
+					}
+					m_elf_path = "/dev_hdd0/game/" + m_path.substr(pos);
+				}
+				else
+				{
+					//For homebrew
+					m_elf_path = "/host_root/" + m_path;
+				}
+
 				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
 
@@ -442,6 +457,7 @@ void Emulator::Load()
 			// PPU PRX (experimental)
 			g_system = system_type::ps3;
 			m_state = system_state::ready;
+			GetCallbacks().on_ready();
 			vm::ps3::init();
 			ppu_load_prx(ppu_prx, "");
 		}
@@ -450,6 +466,7 @@ void Emulator::Load()
 			// SPU executable (experimental)
 			g_system = system_type::ps3;
 			m_state = system_state::ready;
+			GetCallbacks().on_ready();
 			vm::ps3::init();
 			spu_load_exec(spu_exec);
 		}
@@ -458,6 +475,7 @@ void Emulator::Load()
 			// ARMv7 executable
 			g_system = system_type::psv;
 			m_state = system_state::ready;
+			GetCallbacks().on_ready();
 			vm::psv::init();
 
 			if (m_elf_path.empty())
@@ -486,6 +504,7 @@ void Emulator::Load()
 		else if (IsPaused())
 		{
 			m_state = system_state::ready;
+			GetCallbacks().on_ready();
 		}
 	}
 	catch (const std::exception& e)
@@ -511,7 +530,8 @@ void Emulator::Run()
 		return;
 	}
 
-	rpcs3::on_run()();
+	
+	GetCallbacks().on_run();
 
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
@@ -538,7 +558,7 @@ bool Emulator::Pause()
 		return m_state.compare_and_swap_test(system_state::ready, system_state::paused);
 	}
 
-	rpcs3::on_pause()();
+	GetCallbacks().on_pause();
 
 	// Update pause start time
 	if (m_pause_start_time.exchange(start))
@@ -602,7 +622,7 @@ void Emulator::Resume()
 		on_select(0, *mfc);
 	}
 
-	rpcs3::on_resume()();
+	GetCallbacks().on_resume();
 }
 
 void Emulator::Stop()
@@ -614,7 +634,7 @@ void Emulator::Stop()
 
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
-	rpcs3::on_stop()();
+	GetCallbacks().on_stop();
 
 #ifdef WITH_GDB_DEBUGGER
 	//fxm for some reason doesn't call on_stop

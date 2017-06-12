@@ -1,0 +1,672 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;moc;h;def;odl;idl;res;</Extensions>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;moc;h;def;odl;idl;res;</Extensions>
+    </Filter>
+    <Filter Include="Gui">
+      <UniqueIdentifier>{c7e705d0-5c35-4008-8a5f-690b35623ab9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Generated Files\Debug">
+      <UniqueIdentifier>{f3356193-d7b3-4328-b5e2-7ab9e8ef9f3d}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Release">
+      <UniqueIdentifier>{46da41cb-0929-4bca-bf2c-30599aa91923}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="rpcs3">
+      <UniqueIdentifier>{364dd441-10bc-446b-b6aa-4d7b338f30fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io">
+      <UniqueIdentifier>{cc5a491c-6f1b-491a-8e4a-96743645fd3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\Basic">
+      <UniqueIdentifier>{750a54d9-a15b-4d9a-9938-a15e00ba62f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\XInput">
+      <UniqueIdentifier>{8f3a932a-5c23-4f8c-a29b-003c59840ef8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\DS4">
+      <UniqueIdentifier>{04f53189-8145-4a58-8fe0-3b1abebe11e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\MMJoystick">
+      <UniqueIdentifier>{0f9f8411-9536-42d8-8f46-5537fb4aae6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Generated Files\Release - LLVM">
+      <UniqueIdentifier>{9dcc13d5-0080-4338-baad-070a544b63b6}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\Debug - LLVM">
+      <UniqueIdentifier>{ed43eb83-3470-4fec-9340-91385acd5d19}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="\Gui\*.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_audio_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_audio_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_audio_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_audio_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\audio_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\auto_pause_settings_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_auto_pause_settings_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_auto_pause_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_auto_pause_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_auto_pause_settings_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_cg_disasm_window.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_cg_disasm_window.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_cg_disasm_window.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_cg_disasm_window.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\cg_disasm_window.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_core_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_core_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_core_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_core_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\core_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_debugger_frame.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_debugger_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_debugger_frame.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\debugger_frame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_emu_settings.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_emu_settings.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_emu_settings.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_emu_settings.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\emu_settings.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_list_frame.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_list_frame.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_frame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gl_gs_frame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_graphics_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_graphics_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_graphics_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_graphics_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\graphics_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gs_frame.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_gs_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_gs_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gs_frame.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gs_frame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gui_settings.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_gui_settings.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_gui_settings.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gui_settings.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gui_settings.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gui_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_gui_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_gui_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gui_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gui_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_input_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_input_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_input_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_input_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\input_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_kernel_explorer.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_kernel_explorer.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_kernel_explorer.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_kernel_explorer.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\kernel_explorer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_log_frame.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_log_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_log_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_log_frame.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\log_frame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_main_window.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_main_window.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_main_window.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_main_window.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\main_window.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_memory_string_searcher.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_memory_string_searcher.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_memory_string_searcher.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_memory_string_searcher.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\memory_string_searcher.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_misc_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_misc_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_misc_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_misc_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\misc_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_networking_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_networking_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_networking_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_networking_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\networking_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pad_settings_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_pad_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pad_settings_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\pad_settings_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rsx_debugger.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_rsx_debugger.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_rsx_debugger.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rsx_debugger.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\rsx_debugger.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\save_data_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\save_data_utility.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_data_utility.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_utility.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_utility.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_data_utility.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_settings_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_settings_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\settings_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\system_tab.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_system_tab.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_system_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_system_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_system_tab.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="basic_keyboard_handler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_basic_keyboard_handler.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_basic_keyboard_handler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_basic_keyboard_handler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_basic_keyboard_handler.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_basic_mouse_handler.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_basic_mouse_handler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_basic_mouse_handler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_basic_mouse_handler.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="basic_mouse_handler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="keyboard_pad_handler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="ds4_pad_handler.cpp">
+      <Filter>Io\DS4</Filter>
+    </ClCompile>
+    <ClCompile Include="mm_joystick_handler.cpp">
+      <Filter>Io\MMJoystick</Filter>
+    </ClCompile>
+    <ClCompile Include="xinput_pad_handler.cpp">
+      <Filter>Io\XInput</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3_app.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rpcs3_app.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_rpcs3_app.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_rpcs3_app.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rpcs3_app.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\instruction_editor_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\memory_viewer_panel.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_msg_dialog_frame.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_msg_dialog_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_msg_dialog_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_msg_dialog_frame.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\register_editor_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\qrc_resources.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\welcome_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_welcome_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_welcome_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_welcome_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_welcome_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_grid.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_list_grid.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_grid.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_grid.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_list_grid.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="\Gui\*.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="rpcs3qt\gl_gs_frame.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\save_data_dialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\table_item_delegate.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="keyboard_pad_handler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="ds4_pad_handler.h">
+      <Filter>Io\DS4</Filter>
+    </ClInclude>
+    <ClInclude Include="mm_joystick_handler.h">
+      <Filter>Io\MMJoystick</Filter>
+    </ClInclude>
+    <ClInclude Include="xinput_pad_handler.h">
+      <Filter>Io\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\instruction_editor_dialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\memory_viewer_panel.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\register_editor_dialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="debug\moc_predefs.h.cbt">
+      <Filter>Generated Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="release\moc_predefs.h.cbt">
+      <Filter>Generated Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\audio_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\auto_pause_settings_dialog.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\cg_disasm_window.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\core_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\debugger_frame.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\emu_settings.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_frame.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\graphics_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\gs_frame.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\gui_settings.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\gui_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\input_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\kernel_explorer.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\log_frame.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\main_window.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\memory_string_searcher.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\misc_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\networking_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pad_settings_dialog.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\rsx_debugger.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\save_data_utility.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\settings_dialog.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\system_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="basic_keyboard_handler.h">
+      <Filter>Io\Basic</Filter>
+    </CustomBuild>
+    <CustomBuild Include="basic_mouse_handler.h">
+      <Filter>Io\Basic</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3_app.h">
+      <Filter>rpcs3</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="resources.qrc">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\welcome_dialog.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_grid.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

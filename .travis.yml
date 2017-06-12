@@ -6,7 +6,7 @@ os:
   - linux
   #- osx
 
-osx_image: xcode6.4
+# osx_image: xcode6.4
 
 compiler:
   - clang
@@ -38,30 +38,52 @@ before_install:
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     fi;
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      sudo add-apt-repository ppa:beineri/opt-qt59-trusty -y;
+      sudo apt-get update;
+      sudo apt-get install qt59base -y;
+    fi;
   # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   # Install updated libglew-dev since the version provided by trusty is outdated
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       pip install --user cpp-coveralls requests[security];
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew-dev_1.13.0-2_amd64.deb;
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew1.13_1.13.0-2_amd64.deb;
-      sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb;
+      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.21.0+dfsg1-1~16.04.1_amd64.deb;
+      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.21.0+dfsg1-1~16.04.1_amd64.deb;
+      sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb libvulkan1_1.0.21.0+dfsg1-1~16.04.1_amd64.deb libvulkan-dev_1.0.21.0+dfsg1-1~16.04.1_amd64.deb;
     else
       brew update; brew update;
-      brew install ccache glew wxwidgets llvm40;
+      brew install ccache glew llvm40;
     fi;
 
 before_script:
-  - git submodule update --init rsx_program_decompiler asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi
+  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+  - source /opt/qt59/bin/qt59-env.sh
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+  - make -j 3
+  - # AppImage generation
+  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+      make DESTDIR=appdir install ; find appdir/ ;
+      find ../bin ;
+      wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ; 
+      chmod a+x linuxdeployqt*.AppImage ;
+      unset QTDIR; unset QT_PLUGIN_PATH ; unset LD_LIBRARY_PATH ;
+      ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
+      ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -appimage ;
+      find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
+      zip -r9 rpcs3.zip ./RPCS3*.AppImage; 
+      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}-${CC}_linux64 --upload-file rpcs3.zip; 
+   fi;
 
 script:
   # Add a command to show all the variables. May be useful for debugging Travis.
   #- echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
   # And to ensure the versions of toolchain
   - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
-  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 3; fi
+  #- if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 3; fi
 
 addons:
   apt:
@@ -74,6 +96,8 @@ addons:
       - libopenal-dev
       - freeglut3-dev
       #- libglew-dev
+      #- libvulkan1
+      #- libvulkan-dev
       - libc6-dev
       - llvm-4.0
       - llvm-4.0-dev
@@ -83,7 +107,8 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
-      - libwxgtk3.0-dev
+      # We need to install qt 5.8 manually because the version trusty provides is too old.
+      #- qtbase5-dev
       - libudev-dev
   coverity_scan:
     project:
@@ -95,15 +120,3 @@ addons:
 
 after_success:
   - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then zip -r9 rpcs3.zip bin; curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}-${CC} --upload-file rpcs3.zip; fi
-
-deploy:
-  provider: releases
-  file: rpcs3.zip
-  skip_cleanup: true
-  on:
-    branch: master
-    repo: RPCS3/rpcs3
-    tags: true
-  api-key:
-    secure: BXyNziNYFLqLtY6Q58BDEUpRJr81HUtHpxf2Sr646bDcbG0Rf2rb2utqHZJ1Om926WdH7RqHuoVti4dr2X1lh4nHMkLD7MrIrfIkNN5T9aZdk19uw9IyMtz/cXon7/wqVo24tVqtBI0UghFxKii/GTDJEvRKgfpPp1e1vKSNGa4=

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 
 # uncomment next line if you want to build with GDB stub
 # add_definitions(-DWITH_GDB_DEBUGGER)
-
+set(CMAKE_CXX_STANDARD 14)
 set(ASMJIT_STATIC TRUE)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -46,7 +46,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
 add_subdirectory( Vulkan )
 add_subdirectory( rpcs3 )
-add_subdirectory( rsx_program_decompiler )
 
 include_directories(3rdparty/hidapi/hidapi)
 if(APPLE)

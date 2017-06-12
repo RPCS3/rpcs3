@@ -1,7 +1,3 @@
-[submodule "wxWidgets"]
-	path = wxWidgets
-	url = https://github.com/wxWidgets/wxWidgets
-	ignore = dirty
 [submodule "rpcs3-ffmpeg"]
 	path = 3rdparty/ffmpeg
 	url = https://github.com/hrydgard/ppsspp-ffmpeg
@@ -41,6 +37,9 @@
 [submodule "rsx-debugger"]
 	path = rsx-debugger
 	url = https://github.com/RPCS3/rsx-debugger.git
+[submodule "3rdparty/zlib"]
+	path = 3rdparty/zlib
+	url = https://github.com/madler/zlib
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi
 	url = https://github.com/RPCS3/hidapi

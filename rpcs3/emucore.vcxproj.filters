@@ -863,9 +863,6 @@
     <ClCompile Include="Emu\PSP2\Modules\sceVoiceQoS.cpp">
       <Filter>Emu\PSP2\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\rsx_cache.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>

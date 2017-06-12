@@ -69,45 +69,6 @@ s32 cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
-{
-	sys_io.trace("cellPadPeriphGetInfo(info=*0x%x)", info);
-
-	const auto handler = fxm::get<PadHandlerBase>();
-
-	if (!handler)
-		return CELL_PAD_ERROR_UNINITIALIZED;
-
-	const PadInfo& rinfo = handler->GetInfo();
-
-	info->max_connect = rinfo.max_connect;
-	info->now_connect = rinfo.now_connect;
-	info->system_info = rinfo.system_info;
-
-	std::vector<Pad>& pads = handler->GetPads();
-
-	// TODO: Support other types of controllers
-	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
-	{
-		if (i >= pads.size())
-			break;
-
-		info->port_status[i] = pads[i].m_port_status;
-		info->port_setting[i] = pads[i].m_port_setting;
-		info->device_capability[i] = pads[i].m_device_capability;
-		info->device_type[i] = pads[i].m_device_type;
-		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
-		info->pclass_profile[i] = 0x0;
-	}
-
-	return CELL_OK;
-}
-
-s32 cellPadPeriphGetData()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
 s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	sys_io.trace("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
@@ -315,6 +276,63 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	return CELL_OK;
 }
 
+s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
+{
+	sys_io.trace("cellPadPeriphGetInfo(info=*0x%x)", info);
+
+	const auto handler = fxm::get<PadHandlerBase>();
+
+	if (!handler)
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	const PadInfo& rinfo = handler->GetInfo();
+
+	std::memset(info.get_ptr(), 0, sizeof(CellPadPeriphInfo));
+
+	info->max_connect = rinfo.max_connect;
+	info->now_connect = rinfo.now_connect;
+	info->system_info = rinfo.system_info;
+
+	std::vector<Pad>& pads = handler->GetPads();
+
+	// TODO: Support other types of controllers
+	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
+	{
+		if (i >= pads.size())
+			break;
+
+		info->port_status[i] = pads[i].m_port_status;
+		info->port_setting[i] = pads[i].m_port_setting;
+		info->device_capability[i] = pads[i].m_device_capability;
+		info->device_type[i] = pads[i].m_device_type;
+		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
+		info->pclass_profile[i] = 0x0;
+	}
+
+	return CELL_OK;
+}
+
+s32 cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
+{
+	sys_io.trace("cellPadPeriphGetData(port_no=%d, data=*0x%x)", port_no, data);
+	const auto handler = fxm::get<PadHandlerBase>();
+
+	if (!handler)
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	const PadInfo& rinfo = handler->GetInfo();
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
+
+	// todo: support for 'unique' controllers, which goes in offsets 24+ in padData
+	data->pclass_type = CELL_PAD_PCLASS_TYPE_STANDARD;
+	data->pclass_profile = 0x0;
+	return cellPadGetData(port_no, vm::get_addr(&data->cellpad_data));
+}
+
 s32 cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	fmt::throw_exception("Unimplemented" HERE);
@@ -378,6 +396,8 @@ s32 cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
+	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo));
+
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = rinfo.max_connect;
 	info->now_connect = rinfo.now_connect;
@@ -407,6 +427,8 @@ s32 cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo2));
 
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = rinfo.max_connect;

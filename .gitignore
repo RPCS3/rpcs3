@@ -86,3 +86,8 @@ CMakeCache.txt
 # cotire
 rpcs3/cotire/*
 rpcs3/rpcs3_*_cotire.cmake
+
+# Qt
+moc_*.cpp
+qrc_resources.cpp
+rpcs3_automoc.cpp

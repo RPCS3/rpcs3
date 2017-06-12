@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\Utilities\yaml-cpp\include;..\wxWidgets\src\zlib;..\3rdparty\ffmpeg\WindowsInclude;..\3rdparty\cereal\include;..\3rdparty\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\minidx12\Include;..\3rdparty\GSL\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\hidapi\hidapi</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\Utilities\yaml-cpp\include;..\3rdparty\ffmpeg\WindowsInclude;..\3rdparty\cereal\include;..\3rdparty\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\minidx12\Include;..\3rdparty\GSL\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\hidapi\hidapi</IncludePath>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>

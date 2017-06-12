@@ -449,11 +449,21 @@ namespace
 
 VKGSRender::VKGSRender() : GSRender()
 {
-	shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
+	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
 
-	m_thread_context.createInstance("RPCS3");
-	m_thread_context.makeCurrentInstance(1);
-	m_thread_context.enable_debugging();
+	u32 instance_handle = m_thread_context.createInstance("RPCS3");
+	
+	if (instance_handle > 0)
+	{
+		m_thread_context.makeCurrentInstance(instance_handle);
+		m_thread_context.enable_debugging();
+	}
+	else
+	{
+		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		m_device = VK_NULL_HANDLE;
+		return;
+	}
 
 #ifdef _WIN32
 	HINSTANCE hInstance = NULL;
@@ -462,10 +472,11 @@ VKGSRender::VKGSRender() : GSRender()
 	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
 	
 	//Actually confirm  that the loader found at least one compatible device
+	//This should not happen unless something is wrong with the driver setup on the target system
 	if (gpus.size() == 0)
 	{
 		//We can't throw in Emulator::Load, so we show error and return
-		LOG_FATAL(RSX, "Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		LOG_FATAL(RSX, "No compatible GPU devices found");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}
@@ -486,6 +497,44 @@ VKGSRender::VKGSRender() : GSRender()
 	{
 		m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
 	}
+	
+#elif __linux__
+
+	Window window = (Window)m_frame->handle();
+	Display *display = XOpenDisplay(0);
+
+	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
+	
+	//Actually confirm  that the loader found at least one compatible device
+	//This should not happen unless something is wrong with the driver setup on the target system
+	if (gpus.size() == 0)
+	{
+		//We can't throw in Emulator::Load, so we show error and return
+		LOG_FATAL(RSX, "No compatible GPU devices found");
+		m_device = VK_NULL_HANDLE;
+		return;
+	}
+
+	XFlush(display);
+
+	bool gpu_found = false;
+	std::string adapter_name = g_cfg.video.vk.adapter;
+	for (auto &gpu : gpus)
+	{
+		if (gpu.name() == adapter_name)
+		{
+			m_swap_chain = m_thread_context.createSwapChain(display, window, gpu);
+			gpu_found = true;
+			break;
+		}
+	}
+
+	if (!gpu_found || adapter_name.empty())
+	{
+		m_swap_chain = m_thread_context.createSwapChain(display, window, gpus[0]);
+	}
+	
+	m_display_handle = display;
 
 #endif
 
@@ -534,15 +583,14 @@ VKGSRender::VKGSRender() : GSRender()
 
 	}
 
-
-#define RING_BUFFER_SIZE 16 * 1024 * DESCRIPTOR_MAX_DRAW_CALLS
-
-	m_uniform_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
-	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
-	m_texture_upload_buffer_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000);
+	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000);
+	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000);
+	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
+	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
 
@@ -586,8 +634,8 @@ VKGSRender::~VKGSRender()
 
 	m_current_command_buffer->reset();
 
-	//Wait for queue
-	vkQueueWaitIdle(m_swap_chain->get_present_queue());
+	//Wait for device to finish up with resources
+	vkDeviceWaitIdle(*m_device);
 
 	//Sync objects
 	if (m_present_semaphore)
@@ -648,6 +696,11 @@ VKGSRender::~VKGSRender()
 	m_thread_context.close();
 
 	delete m_swap_chain;
+	
+#ifdef __linux__
+	if (m_display_handle)
+		XCloseDisplay(m_display_handle);
+#endif
 }
 
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)
@@ -723,8 +776,12 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	//Ease resource pressure if the number of draw calls becomes too high
-	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS)
+	//Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
+	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS ||
+		m_attrib_ring_info.is_critical() ||
+		m_texture_upload_buffer_ring_info.is_critical() ||
+		m_uniform_buffer_ring_info.is_critical() ||
+		m_index_buffer_ring_info.is_critical())
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
@@ -733,10 +790,10 @@ void VKGSRender::begin()
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, descriptor_pool, 0));
 		m_used_descriptors = 0;
 
-		m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
-		m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
-		m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
-		m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
+		m_uniform_buffer_ring_info.reset_allocation_stats();
+		m_index_buffer_ring_info.reset_allocation_stats();
+		m_attrib_ring_info.reset_allocation_stats();
+		m_texture_upload_buffer_ring_info.reset_allocation_stats();
 
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
@@ -956,9 +1013,6 @@ void VKGSRender::on_init_thread()
 	}
 
 	GSRender::on_init_thread();
-	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
-
 	rsx_thread = std::this_thread::get_id();
 }
 
@@ -994,6 +1048,11 @@ void VKGSRender::clear_surface(u32 mask)
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
 
+	const u32 fb_width = m_framebuffer_to_clean.back()->width();
+	const u32 fb_height = m_framebuffer_to_clean.back()->height();
+
+	//clip region
+	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
 	auto targets = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
@@ -1767,6 +1826,7 @@ void VKGSRender::flip(int buffer)
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
 		}
 
+		m_framebuffer_to_clean.push_back(std::move(direct_fbo));
 		queue_swap_request();
 	}
 	else
@@ -1845,10 +1905,10 @@ void VKGSRender::flip(int buffer)
 	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
 	m_flip_time = std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
 
-	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
-	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
-	m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
-	m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
+	m_uniform_buffer_ring_info.reset_allocation_stats();
+	m_index_buffer_ring_info.reset_allocation_stats();
+	m_attrib_ring_info.reset_allocation_stats();
+	m_texture_upload_buffer_ring_info.reset_allocation_stats();
 
 	//Resource destruction is handled within the real swap handler
 
