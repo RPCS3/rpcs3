@@ -162,14 +162,14 @@ namespace gl
 			}
 
 			glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, min_filter);
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_LOD_BIAS, 0.);
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_LOD, 0);
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_LOD, 0);
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_LOD_BIAS, 0.f);
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_MIN_LOD, -1000.f);
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_MAX_LOD, 1000.f);
 		}
 		else
 		{
 			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_LOD_BIAS, tex.bias());
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_LOD_BIAS, tex.bias());
 			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 		}
