@@ -592,7 +592,8 @@ namespace vk
 
 		sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 			bool unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
-			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color)
+			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
+			VkBool32 depth_compare = false, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
 			: m_device(dev)
 		{
 			VkSamplerCreateInfo info = {};
@@ -601,7 +602,7 @@ namespace vk
 			info.addressModeV = clamp_v;
 			info.addressModeW = clamp_w;
 			info.anisotropyEnable = VK_TRUE;
-			info.compareEnable = VK_FALSE;
+			info.compareEnable = depth_compare;
 			info.unnormalizedCoordinates = unnormalized_coordinates;
 			info.mipLodBias = mipLodBias;
 			info.maxAnisotropy = max_anisotropy;
@@ -610,7 +611,7 @@ namespace vk
 			info.magFilter = mag_filter;
 			info.minFilter = min_filter;
 			info.mipmapMode = mipmap_mode;
-			info.compareOp = VK_COMPARE_OP_NEVER;
+			info.compareOp = depth_compare_mode;
 			info.borderColor = border_color;
 
 			CHECK_RESULT(vkCreateSampler(m_device, &info, nullptr, &value));
