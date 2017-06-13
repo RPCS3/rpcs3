@@ -49,9 +49,6 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 
 	setDockNestingEnabled(true);
 
-	// Get Render Adapters
-	m_Render_Creator = Render_Creator();
-
 	//Load Icons: This needs to happen before any actions or buttons are created
 	icon_play = QIcon(":/Icons/play.png");
 	icon_pause = QIcon(":/Icons/pause.png");
