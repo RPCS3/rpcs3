@@ -5,7 +5,7 @@ set(RES_FILES "")
 set(CMAKE_CXX_STANDARD 14)
 
 # Qt section
-find_package(Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt5 5.8 COMPONENTS Widgets)
 if (WIN32)
     find_package(Qt5WinExtras REQUIRED)
     set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras)
@@ -13,6 +13,35 @@ if (WIN32)
 else()
     set(RPCS3_QT_LIBS Qt5::Widgets)
     include_directories(${Qt5Widgets_INCLUDE_DIRS})
+endif()
+
+# Let's make sure we have Qt before we continue
+if (NOT Qt5Widgets_FOUND)
+	if (Qt5Widgets_VERSION VERSION_LESS 5.8.0)
+		message("Minimum supported Qt5 version is 5.8! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
+		if ("${CMAKE_SYSTEM}" MATCHES "Linux")
+			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.\n
+					If you're on Ubuntu or Linux Mint, there is a PPA you can use to install an up-to-date qt5 version.\n
+					  https://launchpad.net/~beineri/+archive/ubuntu/opt-qt59-Xenial\n
+					just make sure to run \n
+					  source /opt/qt59/bin/qt59-env.sh\n
+					before re-running cmake")
+        elseif(WIN32)
+			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
+		else()
+			message(FATAL_ERROR "Look online for instructions on installing an up-to-date Qt5 on ${CMAKE_SYSTEM}.")
+		endif()
+        
+    endif()
+    
+    message("CMake was unable to find Qt5!")
+    if (WIN32)
+		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.8\\msvc2017_64\\)")
+	elseif("${CMAKE_SYSTEM}" MATCHES "Linux")
+		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
+	else()
+		message(FATAL_ERROR "You need to have Qt5 installed, look online for instructions on installing Qt5 on ${CMAKE_SYSTEM}.")
+	endif()
 endif()
 
 set(CMAKE_AUTORCC ON)
