@@ -783,8 +783,8 @@ namespace gl
 	{
 	protected:
 
-		u32 m_data_loc = 0;
-		u32 m_limit = 0;
+		GLsizeiptr m_data_loc = 0;
+		GLsizeiptr m_limit = 0;
 		void *m_memory_mapping = nullptr;
 
 		fence m_fence;
@@ -818,7 +818,7 @@ namespace gl
 
 		virtual std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment)
 		{
-			u32 offset = m_data_loc;
+			u32 offset = (u32)m_data_loc;
 			if (m_data_loc) offset = align(offset, alignment);
 
 			if ((offset + alloc_size) > m_limit)
@@ -873,8 +873,8 @@ namespace gl
 
 	class legacy_ring_buffer : public ring_buffer
 	{
-		u32 m_mapped_bytes = 0;
-		u32 m_mapping_offset = 0;
+		u64 m_mapped_bytes = 0;
+		u64 m_mapping_offset = 0;
 
 	public:
 
