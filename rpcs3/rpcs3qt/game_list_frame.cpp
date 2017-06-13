@@ -428,6 +428,7 @@ void game_list_frame::Refresh(bool fromDrive)
 		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 		gameList->resizeRowsToContents();
 		gameList->resizeColumnToContents(0);
+		gameList->scrollTo(gameList->currentIndex());
 	}
 	else
 	{
@@ -445,6 +446,7 @@ void game_list_frame::Refresh(bool fromDrive)
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 		m_Central_Widget->addWidget(m_xgrid);
 		m_Central_Widget->setCurrentWidget(m_xgrid);
+		m_xgrid->scrollTo(m_xgrid->currentIndex());
 	}
 }
 
@@ -892,16 +894,18 @@ bool game_list_frame::SearchMatchesApp(const std::string& name, const std::strin
 
 std::string game_list_frame::CurrentSelectionIconPath()
 {
+	std::string selection = "";
+
 	if (m_oldLayoutIsList && gameList->currentRow() >= 0)
 	{
-		return m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
+		selection = m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
 	}
 	else if (!m_oldLayoutIsList && m_xgrid->currentItem() != nullptr)
 	{
-		return m_game_data.at(m_xgrid->currentItem()->data(Qt::UserRole).toInt()).info.icon_path;
+		selection = m_game_data.at(m_xgrid->currentItem()->data(Qt::UserRole).toInt()).info.icon_path;
 	}
-	else
-	{
-		return "";
-	}
+
+	m_oldLayoutIsList = m_isListLayout;
+
+	return selection;
 }
