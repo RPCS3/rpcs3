@@ -85,11 +85,13 @@ protected:
 	void closeEvent(QCloseEvent* event);
 	void resizeEvent(QResizeEvent *event);
 private:
-	game_list_grid* MakeGrid(uint maxCols, const QSize& image_size);
+	void PopulateGameGrid(uint maxCols, const QSize& image_size);
 	void FilterData();
 
-	int PopulateGameList(const std::string& selected);
+	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
+
+	std::string CurrentSelectionIconPath();
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
@@ -98,7 +100,7 @@ private:
 	QLineEdit* m_Search_Bar;
 	QSlider* m_Slider_Size;
 	QTableWidget *gameList;
-	std::unique_ptr<game_list_grid> m_xgrid;
+	game_list_grid* m_xgrid;
 
 	// Actions regarding showing/hiding columns
 	QAction* showIconColAct;
@@ -135,6 +137,7 @@ private:
 	int m_sortColumn;
 	Qt::SortOrder m_colSortOrder;
 	bool m_isListLayout = true;
+	bool m_oldLayoutIsList = true;
 	bool m_showToolBar = true;
 	std::vector<GUI_GameInfo> m_game_data;
 	QSize m_Icon_Size;
