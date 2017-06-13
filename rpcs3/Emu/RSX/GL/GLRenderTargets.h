@@ -215,7 +215,7 @@ struct gl_render_target_traits
 		__glcheck result->pixel_pack_settings().aligment(1);
 		__glcheck result->pixel_unpack_settings().aligment(1);
 
-		u16 native_pitch = width * 2;
+		u16 native_pitch = (u16)width * 2;
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 			native_pitch *= 2;
 
@@ -228,8 +228,11 @@ struct gl_render_target_traits
 	static void prepare_rtt_for_drawing(void *, gl::render_target*) {}
 	static void prepare_rtt_for_sampling(void *, gl::render_target*) {}
 	
-	static void prepare_ds_for_drawing(void *, gl::render_target *ds, bool surface_changed) { if (surface_changed) ds->set_cleared(false); }
+	static void prepare_ds_for_drawing(void *, gl::render_target *ds) {}
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
+
+	static void invalidate_rtt_surface_contents(void *, gl::render_target *ds) {}
+	static void invalidate_depth_surface_contents(void *, gl::render_target *ds) { ds->set_cleared(false);  }
 
 	static
 	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format surface_color_format, size_t width, size_t height)

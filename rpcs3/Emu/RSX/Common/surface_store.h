@@ -115,7 +115,6 @@ namespace rsx
 			command_list_type command_list,
 			u32 address,
 			surface_depth_format depth_format, size_t width, size_t height,
-			u32 previous_address,
 			Args&&... extra_params)
 		{
 			auto It = m_depth_stencil_storage.find(address);
@@ -124,7 +123,7 @@ namespace rsx
 				surface_storage_type &ds = It->second;
 				if (Traits::ds_has_format_width_height(ds, depth_format, width, height))
 				{
-					Traits::prepare_ds_for_drawing(command_list, Traits::get(ds), address != previous_address);
+					Traits::prepare_ds_for_drawing(command_list, Traits::get(ds));
 					return Traits::get(ds);
 				}
 				invalidated_resources.push_back(std::move(ds));
@@ -175,14 +174,13 @@ namespace rsx
 			if (std::get<1>(m_bound_depth_stencil) != nullptr)
 				Traits::prepare_ds_for_sampling(command_list, std::get<1>(m_bound_depth_stencil));
 			
-			const u32 old_zeta_address = std::get<0>(m_bound_depth_stencil);
 			m_bound_depth_stencil = std::make_tuple(0, nullptr);
 			
 			if (!address_z)
 				return;
 
 			m_bound_depth_stencil = std::make_tuple(address_z,
-				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, old_zeta_address, std::forward<Args>(extra_params)...));
+				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, std::forward<Args>(extra_params)...));
 		}
 
 		/**
@@ -346,6 +344,19 @@ namespace rsx
 			copy_pitched_src_to_dst(dest, gsl::as_span<const u8>(stencil_buffer_raw_src), align(width, 256), width, height);
 			Traits::unmap_downloaded_buffer(stencil_data, std::forward<Args&&>(args)...);
 			return result;
+		}
+
+		/**
+		 * Invalidates cached surface data and marks surface contents as deleteable
+		 * Called at the end of a frame (workaround, need to find the proper invalidate command)
+		 */
+		void invalidate_surface_cache_data(command_list_type command_list)
+		{
+			for (auto &rtt : m_render_targets_storage)
+				Traits::invalidate_rtt_surface_contents(command_list, Traits::get(std::get<1>(rtt)));
+
+			for (auto &ds : m_depth_stencil_storage)
+				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)));
 		}
 	};
 }
