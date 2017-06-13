@@ -1163,7 +1163,9 @@ namespace vk
 				return gpus;
 
 			uint32_t num_gpus;
-			CHECK_RESULT(vkEnumeratePhysicalDevices(m_instance, &num_gpus, nullptr));
+			// This may fail on unsupported drivers, so just assume no devices
+			if (vkEnumeratePhysicalDevices(m_instance, &num_gpus, nullptr) != VK_SUCCESS)
+				return gpus;
 
 			if (gpus.size() != num_gpus)
 			{
