@@ -663,15 +663,32 @@ namespace gl
 			/**
 			 * Check for sampleable rtts from previous render passes
 			 */
-			gl::texture *texptr = nullptr;
+			gl::render_target *texptr = nullptr;
 			if (texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
+				for (auto tex : m_rtts.m_bound_render_targets)
+				{
+					if (std::get<0>(tex) == texaddr)
+					{
+						LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+						create_temporary_subresource(texptr->id(), (GLenum)texptr->get_compatible_internal_format(), 0, 0, texptr->width(), texptr->height());
+						return;
+					}
+				}
+
 				texptr->bind();
 				return;
 			}
 
 			if (texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
+				if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
+				{
+					LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
+					create_temporary_subresource(texptr->id(), (GLenum)texptr->get_compatible_internal_format(), 0, 0, texptr->width(), texptr->height());
+					return;
+				}
+
 				texptr->bind();
 				return;
 			}

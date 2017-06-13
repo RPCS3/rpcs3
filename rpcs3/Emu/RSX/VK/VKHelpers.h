@@ -56,6 +56,7 @@ namespace vk
 	class swap_chain_image;
 	class physical_device;
 	class command_buffer;
+	struct image;
 
 	vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -73,6 +74,7 @@ namespace vk
 	void destroy_global_resources();
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
+	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect);
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect);
 
@@ -358,7 +360,8 @@ namespace vk
 	struct image
 	{
 		VkImage value;
-		VkComponentMapping native_layout = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
+		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
+		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkImageCreateInfo info = {};
 		std::shared_ptr<vk::memory_block> memory;
 
@@ -415,6 +418,21 @@ namespace vk
 
 		image(const image&) = delete;
 		image(image&&) = delete;
+
+		u32 width() const
+		{
+			return info.extent.width;
+		}
+
+		u32 height() const
+		{
+			return info.extent.height;
+		}
+
+		u32 depth() const
+		{
+			return info.extent.depth;
+		}
 
 	private:
 		VkDevice m_device;

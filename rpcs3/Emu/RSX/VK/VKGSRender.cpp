@@ -123,10 +123,10 @@ namespace vk
 		case VK_FORMAT_R32G32B32A32_SFLOAT:
 			color_format_idx = 3;
 			break;
-		case VK_FORMAT_R8_UINT:
+		case VK_FORMAT_R8_UNORM:
 			color_format_idx = 4;
 			break;
-		case VK_FORMAT_R8G8_UINT:
+		case VK_FORMAT_R8G8_UNORM:
 			color_format_idx = 5;
 			break;
 		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
@@ -359,7 +359,7 @@ namespace
 		std::array<VkRenderPass, 120> result = {};
 
 		const std::array<VkFormat, 3> depth_format_list = { VK_FORMAT_UNDEFINED, VK_FORMAT_D16_UNORM, gpu_format_support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT };
-		const std::array<VkFormat, 8> color_format_list = { VK_FORMAT_R5G6B5_UNORM_PACK16, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8_UINT, VK_FORMAT_R8G8_UINT, VK_FORMAT_A1R5G5B5_UNORM_PACK16, VK_FORMAT_R32_SFLOAT };
+		const std::array<VkFormat, 8> color_format_list = { VK_FORMAT_R5G6B5_UNORM_PACK16, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8_UNORM, VK_FORMAT_R8G8_UNORM, VK_FORMAT_A1R5G5B5_UNORM_PACK16, VK_FORMAT_R32_SFLOAT };
 
 
 		for (const VkFormat &color_format : color_format_list)
@@ -1265,6 +1265,7 @@ void VKGSRender::process_swap_request()
 	//m_texture_cache.merge_dirty_textures(m_rtts.invalidated_resources);
 	
 	m_rtts.invalidated_resources.clear();
+	m_rtts.invalidate_surface_cache_data(&*m_current_command_buffer);
 	m_texture_cache.flush();
 
 	m_buffer_view_to_clean.clear();
