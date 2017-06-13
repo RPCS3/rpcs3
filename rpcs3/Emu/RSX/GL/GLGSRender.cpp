@@ -943,6 +943,7 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_rtts.invalidated_resources.clear();
+	m_rtts.invalidate_surface_cache_data(nullptr);
 }
 
 
