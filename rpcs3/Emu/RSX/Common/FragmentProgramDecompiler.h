@@ -88,7 +88,11 @@ class FragmentProgramDecompiler
 	bool handle_tex_srb(u32 opcode);
 protected:
 	const RSXFragmentProgram &m_prog;
-	u32 m_ctrl;
+	u32 m_ctrl = 0;
+	
+	u32 m_2d_sampled_textures = 0;        //Mask of textures sampled as texture2D (conflicts with samplerShadow fetch)
+	u32 m_shadow_sampled_textures = 0;    //Mask of textures sampled as boolean shadow comparisons
+	
 	/** returns the type name of float vectors.
 	 */
 	virtual std::string getFloatTypeName(size_t elementCount) = 0;

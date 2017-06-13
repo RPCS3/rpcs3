@@ -521,6 +521,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA));
 			else
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE));
@@ -541,6 +542,8 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
+			if (m_prog.shadow_textures & (1 << dst.tex_num))
+				m_shadow_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ));
@@ -558,6 +561,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD));
@@ -576,6 +580,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD));

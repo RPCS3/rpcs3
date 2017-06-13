@@ -107,8 +107,18 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
-			if ((m_prog.shadow_textures & (1 << index)) > 0)
-				samplerType = "sampler2DShadow";
+			const auto mask = (1 << index);
+
+			if (m_prog.shadow_textures & mask)
+			{
+				if (m_shadow_sampled_textures & mask)
+				{
+					if (m_2d_sampled_textures & mask)
+						LOG_ERROR(RSX, "Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+					else
+						samplerType = "sampler2DShadow";
+				}
+			}
 
 			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
 		}

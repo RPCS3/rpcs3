@@ -123,10 +123,22 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
-			if (m_prog.unnormalized_coords & (1 << index))
+			const auto mask = (1 << index);
+
+			if (m_prog.unnormalized_coords & mask)
+			{
 				samplerType = "sampler2DRect";
-			else if (m_prog.shadow_textures & (1 << index))
-				samplerType = "sampler2DShadow";
+			}
+			else if (m_prog.shadow_textures & mask)
+			{
+				if (m_shadow_sampled_textures & mask)
+				{
+					if (m_2d_sampled_textures & mask)
+						LOG_ERROR(RSX, "Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+					else
+						samplerType = "sampler2DShadow";
+				}
+			}
 
 			vk::glsl::program_input in;
 			in.location = location;
