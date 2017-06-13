@@ -88,7 +88,7 @@ private:
 	game_list_grid* MakeGrid(uint maxCols, const QSize& image_size);
 	void FilterData();
 
-	void PopulateGameList();
+	int PopulateGameList(const std::string& selected);
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.

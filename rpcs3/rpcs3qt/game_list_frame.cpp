@@ -418,9 +418,7 @@ void game_list_frame::Refresh(bool fromDrive)
 
 	if (m_isListLayout)
 	{
-		int row = gameList->currentRow();
-
-		PopulateGameList();
+		int row = PopulateGameList(gameList->currentRow() >= 0 ? m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path : "");
 		FilterData();
 		gameList->selectRow(row);
 		gameList->sortByColumn(m_sortColumn, m_colSortOrder);
@@ -734,8 +732,10 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 /**
  Cleans and readds entries to table widget in UI.
 */
-void game_list_frame::PopulateGameList()
+int game_list_frame::PopulateGameList(const std::string& selected)
 {
+	int result = -1;
+
 	// Hack to delete everything without removing the headers.
 	gameList->setRowCount(0);
 
@@ -745,8 +745,7 @@ void game_list_frame::PopulateGameList()
 	{
 		QTableWidgetItem* curr = new QTableWidgetItem;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
-		QString qtext = qstr(text);
-		curr->setText(qtext);
+		curr->setText(qstr(text));
 		return curr;
 	};
 
@@ -774,8 +773,12 @@ void game_list_frame::PopulateGameList()
 		gameList->setItem(row, 5, l_GetItem(game.info.category));
 		gameList->setItem(row, 6, l_GetItem(game.info.root));
 
+		if (selected == game.info.icon_path) result = row;
+
 		row++;
 	}
+
+	return result;
 }
 
 game_list_grid* game_list_frame::MakeGrid(uint maxCols, const QSize& image_size)
