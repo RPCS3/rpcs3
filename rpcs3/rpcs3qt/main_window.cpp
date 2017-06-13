@@ -195,13 +195,6 @@ void main_window::BootElf()
 		return;
 	}
 
-	if (filePath.contains("/dev_hdd0/game/") && filePath.contains("/PS3_GAME/USRDIR/"))
-	{
-		if (stopped) Emu.Resume();
-		LOG_ERROR(LOADER, "You are not supposed to boot disc games from dev_hdd0/game/");
-		return;
-	}
-
 	LOG_NOTICE(LOADER, "(S)ELF: booting...");
 
 	// If we resolved the filepath earlier we would end up setting the last opened dir to the unwanted
@@ -242,31 +235,6 @@ void main_window::BootGame()
 	if (dirPath == NULL)
 	{
 		if (stopped) Emu.Resume();
-		return;
-	}
-
-	static const QString boot_list[] =
-	{
-		dirPath + "/PS3_GAME/USRDIR/EBOOT.BIN",
-		dirPath + "/USRDIR/EBOOT.BIN",
-		dirPath + "/EBOOT.BIN",
-		dirPath + "/eboot.bin",
-	};
-
-	bool isDiscGame = false;
-
-	for (auto elf : boot_list)
-	{
-		if (elf.contains("/PS3_GAME/USRDIR/") && QFileInfo(elf).isFile())
-		{
-			isDiscGame = true;
-		}
-	}
-
-	if (dirPath.contains("/dev_hdd0/game/") && isDiscGame)
-	{
-		if (stopped) Emu.Resume();
-		LOG_ERROR(LOADER, "You are not supposed to boot disc games from dev_hdd0/game/");
 		return;
 	}
 

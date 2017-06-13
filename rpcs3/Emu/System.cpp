@@ -219,10 +219,22 @@ void Emulator::Init()
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
 
-void Emulator::SetPath(const std::string& path, const std::string& elf_path)
+bool Emulator::SetPath(const std::string& path, const std::string& elf_path)
 {
+	std::string str = path;
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+
+	if (str.find("/dev_hdd0/game/") != std::string::npos && str.find("/ps3_game/usrdir/") != std::string::npos ||
+		str.find("\\dev_hdd0\\game\\") != std::string::npos && str.find("\\ps3_game\\usrdir\\") != std::string::npos)
+	{
+		LOG_ERROR(LOADER, "You are not supposed to boot disc games from dev_hdd0/game/");
+		return false;
+	}
+
 	m_path = path;
 	m_elf_path = elf_path;
+
+	return true;
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct)
@@ -237,7 +249,11 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 	if (direct && fs::is_file(path))
 	{
-		SetPath(path);
+		if (!SetPath(path))
+		{
+			return false;
+		}
+
 		Load();
 
 		return true;
@@ -249,7 +265,11 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 		if (fs::is_file(elf))
 		{
-			SetPath(elf);
+			if (!SetPath(elf))
+			{
+				return false;
+			}
+
 			Load();
 
 			return true;

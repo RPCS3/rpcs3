@@ -338,7 +338,7 @@ void game_list_frame::Refresh(bool fromDrive)
 				}
 
 				const std::string& dir = path + entry.name;
-				std::string& sfo = dir + "/PARAM.SFO";
+				std::string sfo = dir + "/PARAM.SFO";
 
 				const bool& is_disc_path = path == disc_path && fs::is_file(dir + "/PS3_DISC.SFB");
 
@@ -516,13 +516,6 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	if (category == category::hdd_Game || category == category::disc_Game || category == category::audio_Video)
 	{
 		const std::string& path = game_dir + m_game_data[i].info.root;
-
-		if (qstr(path).contains("/dev_hdd0/game/") && fs::is_file(path + "/PS3_GAME/USRDIR/EBOOT.BIN") && fs::is_file(path + "/PS3_DISC.SFB"))
-		{
-			LOG_ERROR(LOADER, "You are not supposed to boot disc games from dev_hdd0/game/");
-			return;
-		}
-
 		emit RequestIconPathSet(path);
 	
 		Emu.Stop();
@@ -651,13 +644,6 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 void game_list_frame::Boot(int row)
 {
 	const std::string& path = m_game_data[row].dir + m_game_data[row].info.root;
-
-	if (qstr(path).contains("/dev_hdd0/game/") && fs::is_file(path + "/PS3_GAME/USRDIR/EBOOT.BIN") && fs::is_file(path + "/PS3_DISC.SFB"))
-	{
-		LOG_ERROR(LOADER, "You are not supposed to boot disc games from dev_hdd0/game/");
-		return;
-	}
-
 	emit RequestIconPathSet(path);
 
 	Emu.Stop();

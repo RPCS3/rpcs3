@@ -32,9 +32,16 @@ int main(int argc, char** argv)
 
 	if (parser.positionalArguments().length() > 0)
 	{
-		Emu.SetPath(sstr(parser.positionalArguments().at(0)));
-		Emu.Load();
-		Emu.Run();
+		if (Emu.SetPath(sstr(parser.positionalArguments().at(0))))
+		{
+			Emu.Load();
+			Emu.Run();
+		}
+		else
+		{
+			fprintf(stderr, "%s\n", qPrintable(QCoreApplication::translate("main", "Error: You are not supposed to boot disc games from dev_hdd0/game/")));
+			parser.showHelp(1);
+		}
 	}
 
 	return app.exec();
