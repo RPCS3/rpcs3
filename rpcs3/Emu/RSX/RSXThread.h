@@ -244,9 +244,9 @@ namespace rsx
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
 		 * Vertex shader's position is to be multiplied by this matrix.
-		 * if is_d3d is set, the matrix is modified to use d3d convention.
+		 * if flip_y is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const;
+		void fill_scale_offset_data(void *buffer, bool flip_y) const;
 
 		/**
 		 * Fill buffer with user clip information

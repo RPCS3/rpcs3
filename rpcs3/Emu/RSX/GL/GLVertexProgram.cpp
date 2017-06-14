@@ -375,6 +375,20 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 			OS << "	front_spec_color = dst_reg2;\n";
 
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
+
+	//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:
+	//ln = (clip * 2) - 1 to fully utilize the 0-1 range of the depth buffer
+	//RSX matrices passed already map to the [0, 1] range but mapping to classic OGL requires that we undo this step
+	//This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).
+	//However, ClipControl only made it to opengl core in ver 4.5 though, so this is a workaround.
+	
+	//NOTE: It is completely valid for games to use very large w values, causing the post-multiplied z to be in the hundreds
+	//It is therefore critical that this step is done post-transform and the result re-scaled by w
+	//SEE Naruto: UNS
+	
+	OS << "	float ndc_z = gl_Position.z / gl_Position.w;" << std::endl;
+	OS << "	ndc_z = (ndc_z * 2.) - 1.;" << std::endl;
+	OS << "	gl_Position.z = ndc_z * gl_Position.w;" << std::endl;
 	OS << "}" << std::endl;
 }
 

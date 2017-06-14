@@ -787,7 +787,7 @@ bool GLGSRender::load_program()
 	auto mapping = m_scale_offset_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	scale_offset_offset = mapping.second;
-	fill_scale_offset_data(buf, false, true);
+	fill_scale_offset_data(buf, false);
 	fill_user_clip_data((char *)buf + 64);
 
 	if (m_transform_constants_dirty)
