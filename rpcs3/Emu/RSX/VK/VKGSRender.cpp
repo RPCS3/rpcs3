@@ -1434,6 +1434,9 @@ bool VKGSRender::load_program()
 
 		if (rsx::method_registers.two_sided_stencil_test_enabled())
 		{
+			properties.ds.back.writeMask = rsx::method_registers.back_stencil_mask();
+			properties.ds.back.compareMask = rsx::method_registers.back_stencil_func_mask();
+			properties.ds.back.reference = rsx::method_registers.back_stencil_func_ref();
 			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail());
 			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
 			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
