@@ -147,14 +147,14 @@ namespace rsx
 		{
 			VkImageLayout old_layout = ds->current_layout;
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, ds->attachment_aspect_flag);
-			change_image_layout(*pcmd, ds, VK_IMAGE_LAYOUT_GENERAL, range);
+			change_image_layout(*pcmd, ds, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
 
 			//Clear the surface before drawing on it
 			VkClearDepthStencilValue clear_depth = {};
 			clear_depth.depth = 1.f;
 			clear_depth.stencil = 255;
 
-			vkCmdClearDepthStencilImage(*pcmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear_depth, 1, &range);
+			vkCmdClearDepthStencilImage(*pcmd, ds->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &range);
 			change_image_layout(*pcmd, ds, old_layout, range);
 		}
 
