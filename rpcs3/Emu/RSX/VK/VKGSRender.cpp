@@ -6,6 +6,7 @@
 #include "../rsx_utils.h"
 #include "../Common/BufferUtils.h"
 #include "VKFormats.h"
+#include "VKCommonDecompiler.h"
 
 namespace
 {
@@ -1019,11 +1020,14 @@ void VKGSRender::on_init_thread()
 
 	GSRender::on_init_thread();
 	rsx_thread = std::this_thread::get_id();
+
+	vk::initialize_compiler_context();
 }
 
 void VKGSRender::on_exit()
 {
 	m_texture_cache.destroy();
+	vk::finalize_compiler_context();
 
 	return GSRender::on_exit();
 }

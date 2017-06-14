@@ -17,4 +17,7 @@ namespace vk
 
 	const varying_register_t& get_varying_register(const std::string& name);
 	bool compile_glsl_to_spv(std::string& shader, glsl::program_domain domain, std::vector<u32> &spv);
+
+	void initialize_compiler_context();
+	void finalize_compiler_context();
 }
