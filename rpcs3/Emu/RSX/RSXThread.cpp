@@ -506,7 +506,7 @@ namespace rsx
 		return "rsx::thread";
 	}
 
-	void thread::fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const
+	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
 	{
 		int clip_w = rsx::method_registers.surface_clip_width();
 		int clip_h = rsx::method_registers.surface_clip_height();
@@ -523,20 +523,6 @@ namespace rsx
 
 		float scale_z = rsx::method_registers.viewport_scale_z();
 		float offset_z = rsx::method_registers.viewport_offset_z();
-		
-		if (symmetrical_z)
-		{
-			//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:
-			//ln = (clip * 2) - 1 to fully utilize the 0-1 range of the depth buffer
-			//RSX matrices passed already map to the [0, 1] range but mapping to classic OGL
-			//Requires that we undo this step
-			//This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).
-			//However, ClipControl only made it to opengl core in ver 4.5 though, so this is a workaround.
-
-			offset_z -= 1.f;
-			scale_z *= 2.f;
-		}
-
 		float one = 1.f;
 
 		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);

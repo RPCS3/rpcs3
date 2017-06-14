@@ -1492,7 +1492,7 @@ bool VKGSRender::load_program()
 	* NOTE: While VK's coord system resembles GLs, the clip volume is no longer symetrical in z
 	* Its like D3D without the flip in y (depending on how you build the spir-v)
 	*/
-	fill_scale_offset_data(buf, false, false);
+	fill_scale_offset_data(buf, false);
 	fill_user_clip_data(buf + 64);
 
 	m_uniform_buffer_ring_info.unmap();
