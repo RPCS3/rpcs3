@@ -186,51 +186,70 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 		OS << "out vec4 front_spec_color;" << std::endl;
 }
 
-void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+namespace
 {
-	for (const auto &real_input : inputs)
+	std::string expand_to_vec4(std::string value, u8 vector_size)
 	{
-		if (real_input.location != PI.location)
-			continue;
-
-		std::string vecType = "	vec4 ";
-		if (real_input.int_type)
-			vecType = "	ivec4 ";
-
-		std::string scale = "";
-		if (real_input.flags & GL_VP_SINT_MASK)
+		switch (vector_size)
 		{
-			if (real_input.flags & GL_VP_ATTRIB_S16_INT)
-				scale = " / 32767.";
-			else
-				scale = " / 2147483647.";
+		case 2:
+			return "vec4(" + value + ", " + value + ", 1., 1.)";
+		case 3:
+			return "vec4(" + value + ", " + value + ", " + value + ", 1.)";
+		case 1:
+		case 4:
+			//Expand not required
+			//In case its one component, read is swizzled as .xxxx (GOW1 loading screen)
+			return value;
 		}
+	}
 
-		if (!real_input.is_array)
+	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+	{
+		for (const auto &real_input : inputs)
 		{
-			OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";" << std::endl;
-			return;
-		}
+			if (real_input.location != PI.location)
+				continue;
 
-		if (real_input.frequency > 1)
-		{
-			if (real_input.is_modulo)
+			std::string vecType = "	vec4 ";
+			if (real_input.int_type)
+				vecType = "	ivec4 ";
+
+			std::string scale = "";
+			if (real_input.flags & GL_VP_SINT_MASK)
 			{
-				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";" << std::endl;
+				if (real_input.flags & GL_VP_ATTRIB_S16_INT)
+					scale = " / " + expand_to_vec4("32767.", real_input.size);
+				else
+					scale = " / " + expand_to_vec4("2147483647.", real_input.size);
+			}
+
+			if (!real_input.is_array)
+			{
+				OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";" << std::endl;
 				return;
 			}
 
-			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";" << std::endl;
+			if (real_input.frequency > 1)
+			{
+				if (real_input.is_modulo)
+				{
+					OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";" << std::endl;
+					return;
+				}
+
+				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";" << std::endl;
+				return;
+			}
+
+			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";" << std::endl;
 			return;
 		}
 
-		OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";" << std::endl;
-		return;
+		LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
+
+		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
 	}
-
-	LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
-
-	OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
 }
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
