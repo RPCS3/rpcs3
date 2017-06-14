@@ -257,6 +257,8 @@ namespace vk
 
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range)
 	{
+		if (image->current_layout == new_layout) return;
+
 		change_image_layout(cmd, image->value, image->current_layout, new_layout, range);
 		image->current_layout = new_layout;
 	}
