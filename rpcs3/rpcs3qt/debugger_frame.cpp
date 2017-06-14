@@ -1,5 +1,9 @@
 #include "debugger_frame.h"
 
+#include <QSplitter>
+#include <QApplication>
+#include <QFontDatabase>
+
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
 debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), parent)
@@ -48,9 +52,12 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_list->setFont(mono);
 	m_regs->setFont(mono);
 
+	QSplitter* splitter = new QSplitter(this);
+	splitter->addWidget(m_list);
+	splitter->addWidget(m_regs);
+
 	QHBoxLayout* hbox_w_list = new QHBoxLayout();
-	hbox_w_list->addWidget(m_list);
-	hbox_w_list->addWidget(m_regs);
+	hbox_w_list->addWidget(splitter);
 
 	vbox_p_main->addLayout(hbox_b_main);
 	vbox_p_main->addLayout(hbox_w_list);
@@ -198,17 +205,25 @@ void debugger_frame::UpdateUnitList()
 		m_choice_units->addItem(qstr(cpu.get_name()), var_cpu);
 	};
 
-	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
-	idm::select<RawSPUThread>(on_select);
-	idm::select<SPUThread>(on_select);
+	{
+		const QSignalBlocker blocker(m_choice_units);
+
+		idm::select<ppu_thread>(on_select);
+		idm::select<ARMv7Thread>(on_select);
+		idm::select<RawSPUThread>(on_select);
+		idm::select<SPUThread>(on_select);
+	}
+
+	OnSelectUnit();
 
 	m_choice_units->update();
 }
 
 void debugger_frame::OnSelectUnit()
 {
-	if (m_choice_units->count() < 1) return;
+	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
+
+	m_current_choice = m_choice_units->currentText();
 
 	m_disasm.reset();
 
@@ -241,38 +256,6 @@ void debugger_frame::OnSelectUnit()
 
 	DoUpdate();
 }
-
-//void debugger_frame::resizeEvent(QResizeEvent* event)
-//{
-//	if (0)
-//	{
-//		if (!m_list->rowCount())
-//		{
-//			m_list->InsertItem(m_list->rowCount(), "");
-//		}
-//
-//		int size = 0;
-//		m_list->clear();
-//		int item = 0;
-//		while (size < m_list->GetSize().GetHeight())
-//		{
-//			item = m_list->rowCount();
-//			m_list->InsertItem(item, "");
-//			QRect rect;
-//			m_list->GetItemRect(item, rect);
-//
-//			size = rect.GetBottom();
-//		}
-//
-//		if (item)
-//		{
-//			m_list->removeRow(--item);
-//		}
-//
-//		m_item_count = item;
-//		ShowAddr(m_pc);
-//	}
-//}
 
 void debugger_frame::DoUpdate()
 {
@@ -360,7 +343,9 @@ void debugger_frame::Show_Val()
 
 	connect(p_pc, &QLineEdit::textChanged, l_changeLabel);
 	connect(button_ok, &QAbstractButton::clicked, diag, &QDialog::accept);
-	connect(button_cancel, &QAbstractButton::clicked, diag, &QDialog::reject);;
+	connect(button_cancel, &QAbstractButton::clicked, diag, &QDialog::reject);
+
+	diag->move(mapFromGlobal(QCursor::pos()) + QPoint(0, diag->sizeHint().height()));
 
 	if (diag->exec() == QDialog::Accepted)
 	{
@@ -565,4 +550,29 @@ void debugger_list::wheelEvent(QWheelEvent* event)
 	const int value = numSteps.y();
 
 	ShowAddr(m_pc - (event->modifiers() == Qt::ControlModifier ? m_item_count * (value + 1) : m_item_count + value) * 4);
+}
+
+void debugger_list::resizeEvent(QResizeEvent* event)
+{
+	if (count() < 1 || visualItemRect(item(0)).height() < 1)
+	{
+		return;
+	}
+
+	m_item_count = (rect().height() - frameWidth()*2) / visualItemRect(item(0)).height();
+
+	clear();
+
+	for (u32 i = 0; i < m_item_count; ++i)
+	{
+		insertItem(i, new QListWidgetItem(""));
+	}
+
+	if (horizontalScrollBar())
+	{
+		m_item_count--;
+		delete item(m_item_count);
+	}
+
+	ShowAddr(m_pc - m_item_count * 4);
 }
