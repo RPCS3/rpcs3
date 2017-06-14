@@ -6,6 +6,8 @@
 
 namespace vk
 {
+	static TBuiltInResource g_default_config;
+
 	std::string getFloatTypeNameImpl(size_t elementCount)
 	{
 		switch (elementCount)
@@ -273,20 +275,16 @@ namespace vk
 	{
 		EShLanguage lang = (domain == glsl::glsl_fragment_program) ? EShLangFragment : EShLangVertex;
 
-		glslang::InitializeProcess();
 		glslang::TProgram program;
 		glslang::TShader shader_object(lang);
 		
 		bool success = false;
 		const char *shader_text = shader.data();
-		
-		TBuiltInResource rsc;
-		init_default_resources(rsc);
 
 		shader_object.setStrings(&shader_text, 1);
 
 		EShMessages msg = (EShMessages)(EShMsgVulkanRules | EShMsgSpvRules);
-		if (shader_object.parse(&rsc, 400, EProfile::ECoreProfile, false, true, msg))
+		if (shader_object.parse(&g_default_config, 400, EProfile::ECoreProfile, false, true, msg))
 		{
 			program.addShader(&shader_object);
 			success = program.link(EShMsgVulkanRules);
@@ -302,7 +300,17 @@ namespace vk
 			LOG_ERROR(RSX, "%s", shader_object.getInfoDebugLog());
 		}
 
-		glslang::FinalizeProcess();
 		return success;
+	}
+
+	void initialize_compiler_context()
+	{
+		glslang::InitializeProcess();
+		init_default_resources(g_default_config);
+	}
+
+	void finalize_compiler_context()
+	{
+		glslang::FinalizeProcess();
 	}
 }
