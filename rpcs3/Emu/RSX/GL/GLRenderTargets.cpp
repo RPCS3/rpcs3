@@ -190,7 +190,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 				const u16 native_pitch = std::get<1>(m_rtts.m_bound_render_targets[i])->get_native_pitch();
 				if (native_pitch > pitchs[i])
 				{
-					LOG_WARNING(RSX, "Bad color surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
+					LOG_TRACE(RSX, "Bad color surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
 						clip_horizontal, (u32)surface_format, pitchs[i], native_pitch);
 
 					//Will not transfer this surface between cell and rsx due to misalignment
@@ -220,7 +220,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 			const u16 native_pitch = std::get<1>(m_rtts.m_bound_depth_stencil)->get_native_pitch();
 			if (native_pitch > depth_surface_pitch)
 			{
-				LOG_WARNING(RSX, "Bad depth surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
+				LOG_TRACE(RSX, "Bad depth surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
 					clip_horizontal, (u32)depth_format, depth_surface_pitch, native_pitch);
 
 				//Will not transfer this surface between cell and rsx due to misalignment
