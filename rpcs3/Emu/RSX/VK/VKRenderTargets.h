@@ -103,7 +103,7 @@ namespace rsx
 			VkClearDepthStencilValue clear_depth = {};
 
 			clear_depth.depth = 1.f;
-			clear_depth.stencil = 0;
+			clear_depth.stencil = 255;
 
 			vkCmdClearDepthStencilImage(*cmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear_depth, 1, &range);
 			change_image_layout(*cmd, ds.get(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
@@ -152,7 +152,7 @@ namespace rsx
 			//Clear the surface before drawing on it
 			VkClearDepthStencilValue clear_depth = {};
 			clear_depth.depth = 1.f;
-			clear_depth.stencil = 0;
+			clear_depth.stencil = 255;
 
 			vkCmdClearDepthStencilImage(*pcmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear_depth, 1, &range);
 			change_image_layout(*pcmd, ds, old_layout, range);

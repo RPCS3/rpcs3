@@ -236,7 +236,8 @@ void GLGSRender::begin()
 		__glcheck glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
 			stencil_op(rsx::method_registers.stencil_op_zpass()));
 
-		if (rsx::method_registers.two_sided_stencil_test_enabled()) {
+		if (rsx::method_registers.two_sided_stencil_test_enabled())
+		{
 			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
 			__glcheck glStencilFuncSeparate(GL_BACK, comparison_op(rsx::method_registers.back_stencil_func()),
 				rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
@@ -353,7 +354,7 @@ void GLGSRender::end()
 		glDepthMask(GL_TRUE);
 		
 		glClearDepth(1.0);
-		glClearStencil(0);
+		glClearStencil(255);
 
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		
