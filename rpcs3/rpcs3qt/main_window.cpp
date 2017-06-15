@@ -741,6 +741,7 @@ void main_window::OnEmuStop()
 
 void main_window::OnEmuReady()
 {
+	debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
 	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
 	thumb_playPause->setIcon(icon_play);

@@ -34,7 +34,7 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_btn_run = new QPushButton(tr("Run"), this);
 	m_btn_pause = new QPushButton(tr("Pause"), this);
 
-	EnableButtons(Emu.IsRunning() || Emu.IsPaused());
+	EnableButtons(!Emu.IsStopped());
 
 	hbox_b_main->addWidget(m_go_to_addr);
 	hbox_b_main->addWidget(m_go_to_pc);
@@ -525,7 +525,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton && (Emu.IsRunning() || Emu.IsPaused()))
+	if (event->button() == Qt::LeftButton && !Emu.IsStopped())
 	{
 		long i = currentRow();
 		if (i < 0) return;
@@ -538,7 +538,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 		{
 			RemoveBreakPoint(pc);
 		}
-		else
+		else if (vm::check_addr(pc))
 		{
 			AddBreakPoint(pc);
 		}
