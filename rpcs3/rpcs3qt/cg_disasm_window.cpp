@@ -1,8 +1,6 @@
 #include "stdafx.h"
 
 #include "cg_disasm_window.h"
-#include "Emu/System.h"
-#include "Emu/RSX/CgBinaryProgram.h"
 
 #include <QSplitter>
 #include <QMenu>
@@ -14,6 +12,8 @@
 #include <QDockWidget>
 #include <QCoreApplication>
 #include <QFontDatabase>
+
+#include "Emu/RSX/CgBinaryProgram.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
