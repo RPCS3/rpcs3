@@ -50,6 +50,7 @@ namespace GUI
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
 	const QString meta        = "Meta";
+	const QString fs          = "FileSystem";
 
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
@@ -87,6 +88,11 @@ namespace GUI
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
 	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.09 );
 	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", true );
+
+	const GUI_SAVE fs_dev_hdd0_list = GUI_SAVE(fs, "dev_hdd0_list", QStringList());
+	const GUI_SAVE fs_dev_hdd1_list = GUI_SAVE(fs, "dev_hdd1_list", QStringList());
+	const GUI_SAVE fs_dev_flash_list = GUI_SAVE(fs, "dev_flash_list", QStringList());
+	const GUI_SAVE fs_dev_usb000_list = GUI_SAVE(fs, "dev_usb000_list", QStringList());
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );

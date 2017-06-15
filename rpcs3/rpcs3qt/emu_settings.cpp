@@ -278,5 +278,5 @@ std::string emu_settings::GetSetting(SettingsType type) const
 
 void emu_settings::SetSetting(SettingsType type, const std::string& val)
 {
-	cfg_adapter::get_node(currentSettings, SettingsLoc[type])= val;
+	cfg_adapter::get_node(currentSettings, SettingsLoc[type]) = val;
 }
