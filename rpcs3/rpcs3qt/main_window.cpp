@@ -1154,7 +1154,7 @@ void main_window::CreateConnects()
 		sdid->show();
 	});
 	connect(toolsCgDisasmAct, &QAction::triggered, [=](){
-		cg_disasm_window* cgdw = new cg_disasm_window(this);
+		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings, this);
 		cgdw->show();
 	});
 	connect(toolskernel_explorerAct, &QAction::triggered, [=](){

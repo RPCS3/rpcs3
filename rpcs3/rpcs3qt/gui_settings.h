@@ -63,6 +63,7 @@ namespace GUI
 	const GUI_SAVE fd_boot_elf     = GUI_SAVE( main_window, "lastExplorePathELF",  "" );
 	const GUI_SAVE fd_boot_game    = GUI_SAVE( main_window, "lastExplorePathGAME", "" );
 	const GUI_SAVE fd_decrypt_sprx = GUI_SAVE( main_window, "lastExplorePathSPRX", "" );
+	const GUI_SAVE fd_cg_disasm    = GUI_SAVE( main_window, "lastExplorePathCGD",  "" );
 
 	const GUI_SAVE mw_debugger    = GUI_SAVE( main_window, "debuggerVisible", false );
 	const GUI_SAVE mw_logger      = GUI_SAVE( main_window, "loggerVisible",   true );
