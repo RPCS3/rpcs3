@@ -538,9 +538,14 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 		{
 			RemoveBreakPoint(pc);
 		}
-		else if (vm::check_addr(pc))
+		else
 		{
-			AddBreakPoint(pc);
+			const auto cpu = m_debugFrame->cpu.lock();
+
+			if (g_system == system_type::ps3 && cpu->id_type() == 1 && vm::check_addr(pc))
+			{
+				AddBreakPoint(pc);
+			}
 		}
 
 		ShowAddr(start_pc);
