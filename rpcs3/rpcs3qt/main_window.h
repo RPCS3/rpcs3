@@ -114,6 +114,7 @@ private:
 	QAction *confSettingsAct;
 	QAction *confPadAct;
 	QAction *confAutopauseManagerAct;
+	QAction *confVFSDialogAct;
 	QAction *confSavedataManagerAct;
 	QAction *toolsCgDisasmAct;
 	QAction *toolskernel_explorerAct;
