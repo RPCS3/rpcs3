@@ -29,6 +29,11 @@ matrix:
   exclude:
     - os: osx
       compiler: gcc
+  include:
+    - os: linux
+      compiler: gcc
+      env: WITHOUT_LLVM="yes"
+  
 
 git:
   submodules: false
@@ -62,7 +67,11 @@ before_script:
   - source /opt/qt59/bin/qt59-env.sh
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+  - if [ -z "$WITHOUT_LLVM" ]; then
+      cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
+    else
+      cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DWITHOUT_LLVM=ON;
+    fi;
   - make -j 3
   - # AppImage generation
   - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
