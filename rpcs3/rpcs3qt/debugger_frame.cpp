@@ -197,12 +197,15 @@ void debugger_frame::UpdateUnitList()
 		return;
 	}
 
+	QVariant old_cpu = m_choice_units->currentData();
+
 	m_choice_units->clear();
 
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		QVariant var_cpu = qVariantFromValue((void *)&cpu);
 		m_choice_units->addItem(qstr(cpu.get_name()), var_cpu);
+		if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
 	};
 
 	{
@@ -345,7 +348,7 @@ void debugger_frame::Show_Val()
 	connect(button_ok, &QAbstractButton::clicked, diag, &QDialog::accept);
 	connect(button_cancel, &QAbstractButton::clicked, diag, &QDialog::reject);
 
-	diag->move(mapFromGlobal(QCursor::pos()) + QPoint(0, diag->sizeHint().height()));
+	diag->move(QCursor::pos());
 
 	if (diag->exec() == QDialog::Accepted)
 	{

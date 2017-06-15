@@ -2,6 +2,9 @@
 
 #include "cg_disasm_window.h"
 #include "Emu/System.h"
+#include "Emu/RSX/CgBinaryProgram.h"
+
+#include <QSplitter>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -11,40 +14,35 @@
 #include <QDockWidget>
 #include <QCoreApplication>
 #include <QFontDatabase>
-#include "Emu/RSX/CgBinaryProgram.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-cg_disasm_window::cg_disasm_window(QWidget* parent): QTabWidget()
+cg_disasm_window::cg_disasm_window(QWidget* parent): QWidget()
 {
 	setWindowTitle(tr("Cg Disasm"));
 	setAttribute(Qt::WA_DeleteOnClose);
-	setMinimumSize(200, 150); // seems fine on win 10
+	setMinimumSize(QSize(200, 150)); // seems fine on win 10
 	resize(QSize(620, 395));
 	
-	tab_disasm = new QWidget(this);
-	tab_glsl = new QWidget(this);
-	addTab(tab_disasm, "ASM");
-	addTab(tab_glsl, "GLSL");
-	
-	QVBoxLayout* layout_disasm = new QVBoxLayout();
-	m_disasm_text = new QTextEdit();
-	m_disasm_text->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	m_disasm_text = new QTextEdit(this);
 	m_disasm_text->setReadOnly(true);
 	m_disasm_text->setWordWrapMode(QTextOption::NoWrap);
 	m_disasm_text->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	layout_disasm->addWidget(m_disasm_text);
-	tab_disasm->setLayout(layout_disasm);
 	
-	QVBoxLayout* layout_glsl = new QVBoxLayout();
-	m_glsl_text = new QTextEdit();
-	m_glsl_text->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	m_glsl_text = new QTextEdit(this);
 	m_glsl_text->setReadOnly(true);
 	m_glsl_text->setWordWrapMode(QTextOption::NoWrap);
 	m_glsl_text->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	layout_glsl->addWidget(m_glsl_text);
-	tab_glsl->setLayout(layout_glsl);
+
+	QSplitter* splitter = new QSplitter();
+	splitter->addWidget(m_disasm_text);
+	splitter->addWidget(m_glsl_text);
+
+	QHBoxLayout* layout = new QHBoxLayout();
+	layout->addWidget(splitter);
+
+	setLayout(layout);
 
 	m_disasm_text->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_glsl_text->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -52,10 +50,9 @@ cg_disasm_window::cg_disasm_window(QWidget* parent): QTabWidget()
 	connect(m_glsl_text, &QWidget::customContextMenuRequested, this, &cg_disasm_window::ShowContextMenu);
 }
 
-void cg_disasm_window::ShowContextMenu(const QPoint &pos) // this is a slot
+void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 {
 	QMenu myMenu;
-	QPoint globalPos = mapToGlobal(pos);
 	QAction* clear = new QAction(tr("&Clear"));
 	QAction* open = new QAction(tr("Open &Cg binary program"));
 
@@ -76,5 +73,5 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos) // this is a slot
 		m_glsl_text->setText(qstr(disasm.GetGlslShader()));
 	});
 
-	myMenu.exec(globalPos);
+	myMenu.exec(QCursor::pos());
 }
