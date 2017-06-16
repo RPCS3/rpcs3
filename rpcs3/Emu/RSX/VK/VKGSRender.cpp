@@ -633,7 +633,11 @@ VKGSRender::~VKGSRender()
 		return;
 	}
 
-	m_current_command_buffer->reset();
+	//Close recording and wait for all to finish
+	CHECK_RESULT(vkEndCommandBuffer(*m_current_command_buffer));
+
+	for (auto &cb : m_primary_cb_list)
+		if (cb.pending) cb.wait();
 
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
