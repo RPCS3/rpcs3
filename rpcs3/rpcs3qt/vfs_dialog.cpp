@@ -50,6 +50,10 @@ vfs_dialog::vfs_dialog(QWidget* parent) : QDialog(parent),
 	});
 	QPushButton* okay = new QPushButton(tr("Okay"));
 	connect(okay, &QAbstractButton::pressed, [this]() {
+		for (int i = 0; i < tabs->count(); ++i)
+		{
+			static_cast<vfs_dialog_tab*>(tabs->widget(i))->SaveSettings();
+		}
 		accept();
 	});
 
@@ -66,12 +70,4 @@ vfs_dialog::vfs_dialog(QWidget* parent) : QDialog(parent),
 
 	setLayout(vbox);
 	setWindowTitle("Virtual File System");
-}
-
-vfs_dialog::~vfs_dialog()
-{
-	for (int i = 0; i < tabs->count(); ++i)
-	{
-		static_cast<vfs_dialog_tab*>(tabs->widget(i))->SaveSettings();
-	}
 }
