@@ -1366,6 +1366,7 @@ namespace rsx
 		bind_array<NV4097_SET_TEXTURE_OFFSET, 1, 8 * 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
+		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
