@@ -9,6 +9,7 @@
 #include <QDesktopWidget>
 #include <QDesktopServices>
 
+#include "vfs_dialog.h"
 #include "save_data_utility.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
@@ -48,9 +49,6 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	guiSettings.reset(new gui_settings());
 
 	setDockNestingEnabled(true);
-
-	// Get Render Adapters
-	m_Render_Creator = Render_Creator();
 
 	//Load Icons: This needs to happen before any actions or buttons are created
 	icon_play = QIcon(":/Icons/play.png");
@@ -995,6 +993,8 @@ void main_window::CreateActions()
 	confAutopauseManagerAct = new QAction(tr("&Auto Pause Settings"), this);
 	confAutopauseManagerAct->setEnabled(false);
 
+	confVFSDialogAct = new QAction(tr("Virtual File System"), this);
+
 	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
 	confSavedataManagerAct->setEnabled(false);
 
@@ -1152,6 +1152,11 @@ void main_window::CreateConnects()
 		auto_pause_settings_dialog dlg(this);
 		dlg.exec();
 	});
+	connect(confVFSDialogAct, &QAction::triggered, [=]() {
+		vfs_dialog dlg(this);
+		dlg.exec();
+		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
+	});
 	connect(confSavedataManagerAct, &QAction::triggered, [=](){
 		save_data_list_dialog* sdid = new save_data_list_dialog(this, true);
 		sdid->show();
@@ -1293,6 +1298,7 @@ void main_window::CreateMenus()
 	confMenu->addAction(confPadAct);
 	confMenu->addSeparator();
 	confMenu->addAction(confAutopauseManagerAct);
+	confMenu->addAction(confVFSDialogAct);
 	confMenu->addSeparator();
 	confMenu->addAction(confSavedataManagerAct);
 

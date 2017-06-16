@@ -90,6 +90,12 @@ public:
 		// Language
 		Language,
 		EnableHostRoot,
+
+		// Virtual File System
+		dev_hdd0Location,
+		dev_hdd1Location,
+		dev_flashLocation,
+		dev_usb000Location,
 	};
 
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml 
@@ -173,6 +179,12 @@ private:
 		// System
 		{Language,			{ "System", "Language"}},
 		{EnableHostRoot,	{ "VFS", "Enable /host_root/"}},
+
+		// Virtual File System
+		{ dev_hdd0Location, { "VFS", "/dev_hdd0/" }},
+		{ dev_hdd1Location, { "VFS", "/dev_hdd1/" }},
+		{ dev_flashLocation, { "VFS", "/dev_flash/"}},
+		{ dev_usb000Location, { "VFS", "/dev_usb000/"}},
 
 	};
 

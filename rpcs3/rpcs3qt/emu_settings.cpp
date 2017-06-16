@@ -119,27 +119,30 @@ Render_Creator::Render_Creator()
 {
 	// check for dx12 adapters
 #ifdef _MSC_VER
-	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
-	supportsD3D12 = SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory)));
+	HMODULE D3D12Module = LoadLibrary(L"d3d12.dll");
 
-	if (supportsD3D12)
+	if (D3D12Module != NULL)
 	{
-		supportsD3D12 = false;
-		IDXGIAdapter1* pAdapter = nullptr;
-
-		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != dxgi_factory->EnumAdapters1(adapterIndex, &pAdapter); ++adapterIndex)
+		Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
+		Microsoft::WRL::ComPtr<IDXGIFactory1> dxgi_factory;
+		if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory))))
 		{
-			HMODULE D3D12Module = verify("d3d12.dll", LoadLibrary(L"d3d12.dll"));
 			PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
-
-			if (SUCCEEDED(wrapD3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+			if (wrapD3D12CreateDevice != nullptr)
 			{
-				//A device with D3D12 support found. Init data
-				supportsD3D12 = true;
+				for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != dxgi_factory->EnumAdapters1(adapterIndex, pAdapter.ReleaseAndGetAddressOf()); ++adapterIndex)
+				{
+					if (SUCCEEDED(wrapD3D12CreateDevice(pAdapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+					{
+						//A device with D3D12 support found. Init data
+						supportsD3D12 = true;
 
-				DXGI_ADAPTER_DESC desc;
-				pAdapter->GetDesc(&desc);
-				D3D12Adapters.append(QString::fromWCharArray(desc.Description));
+						DXGI_ADAPTER_DESC desc;
+						if (SUCCEEDED(pAdapter->GetDesc(&desc)))
+							D3D12Adapters.append(QString::fromWCharArray(desc.Description));
+					}
+				}
+				
 			}
 		}
 	}
@@ -275,5 +278,5 @@ std::string emu_settings::GetSetting(SettingsType type) const
 
 void emu_settings::SetSetting(SettingsType type, const std::string& val)
 {
-	cfg_adapter::get_node(currentSettings, SettingsLoc[type])= val;
+	cfg_adapter::get_node(currentSettings, SettingsLoc[type]) = val;
 }
