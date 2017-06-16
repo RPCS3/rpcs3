@@ -35,6 +35,13 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 			{
 				butt->setChecked(true);
 			}
+#ifndef LLVM_AVAILABLE
+			if (curr == "Recompiler (LLVM)")
+			{
+				butt->setEnabled(false);
+				butt->setToolTip(tr("This version of RPCS3 wasn't compiled with LLVM support."));
+			}
+#endif
 			connect(butt, &QAbstractButton::pressed, [=]() {settings->SetSetting(emu_settings::PPUDecoder, curr); });
 		}
 	}

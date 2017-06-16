@@ -94,6 +94,11 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 			// D3D Adapter
 			if (m_isD3D12)
 			{
+				// Reset other adapters to old config
+				if (supportsVulkan)
+				{
+					xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
+				}
 				// Fill combobox
 				graphicsAdapterBox->clear();
 				for (auto adapter : D3D12Adapters)
@@ -101,19 +106,31 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 					graphicsAdapterBox->addItem(adapter);
 				}
 				// Reset Adapter to old config
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
 				int idx = graphicsAdapterBox->findText(old_D3D12);
 				if (idx == -1)
 				{
 					idx = 0;
-					LOG_WARNING(RSX, "Current %s adapter not available: resetting to default!", sstr(r_D3D12));
+					if (old_D3D12.isEmpty())
+					{
+						LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_D3D12));
+					}
+					else
+					{
+						LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_D3D12));
+					}
 				}
 				graphicsAdapterBox->setCurrentIndex(idx);
+				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(graphicsAdapterBox->currentText()));
 			}
 
 			// Vulkan Adapter
 			else if (m_isVulkan)
 			{
+				// Reset other adapters to old config
+				if (supportsD3D12)
+				{
+					xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
+				}
 				// Fill combobox
 				graphicsAdapterBox->clear();
 				for (auto adapter : vulkanAdapters)
@@ -121,14 +138,21 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 					graphicsAdapterBox->addItem(adapter);
 				}
 				// Reset Adapter to old config
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
 				int idx = graphicsAdapterBox->findText(old_Vulkan);
 				if (idx == -1)
 				{
 					idx = 0;
-					LOG_WARNING(RSX, "Current %s adapter not available: resetting to default!", sstr(r_Vulkan));
+					if (old_Vulkan.isEmpty())
+					{
+						LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_Vulkan));
+					}
+					else
+					{
+						LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_Vulkan));
+					}
 				}
 				graphicsAdapterBox->setCurrentIndex(idx);
+				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(graphicsAdapterBox->currentText()));
 			}
 
 			// Other Adapter
