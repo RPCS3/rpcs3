@@ -673,8 +673,9 @@ namespace rsx
 		}
 		u32 first = std::get<0>(draw_indexed_clause.front());
 		u32 count = std::get<0>(draw_indexed_clause.back()) + std::get<1>(draw_indexed_clause.back()) - first;
+
 		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
-		return{ ptr, count * type_size };
+		return{ ptr + first * type_size, count * type_size };
 	}
 
 	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
