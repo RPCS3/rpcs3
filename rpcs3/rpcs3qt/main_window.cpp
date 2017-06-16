@@ -742,6 +742,7 @@ void main_window::OnEmuStop()
 
 void main_window::OnEmuReady()
 {
+	debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
 	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
 	thumb_playPause->setIcon(icon_play);
@@ -1162,7 +1163,7 @@ void main_window::CreateConnects()
 		sdid->show();
 	});
 	connect(toolsCgDisasmAct, &QAction::triggered, [=](){
-		cg_disasm_window* cgdw = new cg_disasm_window(this);
+		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings, this);
 		cgdw->show();
 	});
 	connect(toolskernel_explorerAct, &QAction::triggered, [=](){

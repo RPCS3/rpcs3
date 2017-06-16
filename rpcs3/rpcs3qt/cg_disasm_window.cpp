@@ -1,7 +1,8 @@
 #include "stdafx.h"
 
 #include "cg_disasm_window.h"
-#include "Emu/System.h"
+
+#include <QSplitter>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -11,51 +12,53 @@
 #include <QDockWidget>
 #include <QCoreApplication>
 #include <QFontDatabase>
+#include <QMimeData>
+
 #include "Emu/RSX/CgBinaryProgram.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-cg_disasm_window::cg_disasm_window(QWidget* parent): QTabWidget()
+cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings, QWidget* parent): QWidget(), xgui_settings(xSettings)
 {
 	setWindowTitle(tr("Cg Disasm"));
 	setAttribute(Qt::WA_DeleteOnClose);
-	setMinimumSize(200, 150); // seems fine on win 10
+	setAcceptDrops(true);
+	setMinimumSize(QSize(200, 150)); // seems fine on win 10
 	resize(QSize(620, 395));
+
+	m_path_last = xgui_settings->GetValue(GUI::fd_cg_disasm).toString();
 	
-	tab_disasm = new QWidget(this);
-	tab_glsl = new QWidget(this);
-	addTab(tab_disasm, "ASM");
-	addTab(tab_glsl, "GLSL");
-	
-	QVBoxLayout* layout_disasm = new QVBoxLayout();
-	m_disasm_text = new QTextEdit();
-	m_disasm_text->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	m_disasm_text = new QTextEdit(this);
 	m_disasm_text->setReadOnly(true);
 	m_disasm_text->setWordWrapMode(QTextOption::NoWrap);
 	m_disasm_text->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	layout_disasm->addWidget(m_disasm_text);
-	tab_disasm->setLayout(layout_disasm);
 	
-	QVBoxLayout* layout_glsl = new QVBoxLayout();
-	m_glsl_text = new QTextEdit();
-	m_glsl_text->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	m_glsl_text = new QTextEdit(this);
 	m_glsl_text->setReadOnly(true);
 	m_glsl_text->setWordWrapMode(QTextOption::NoWrap);
 	m_glsl_text->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	layout_glsl->addWidget(m_glsl_text);
-	tab_glsl->setLayout(layout_glsl);
+
+	QSplitter* splitter = new QSplitter();
+	splitter->addWidget(m_disasm_text);
+	splitter->addWidget(m_glsl_text);
+
+	QHBoxLayout* layout = new QHBoxLayout();
+	layout->addWidget(splitter);
+
+	setLayout(layout);
 
 	m_disasm_text->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_glsl_text->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(m_disasm_text, &QWidget::customContextMenuRequested, this, &cg_disasm_window::ShowContextMenu);
 	connect(m_glsl_text, &QWidget::customContextMenuRequested, this, &cg_disasm_window::ShowContextMenu);
+
+	ShowDisasm();
 }
 
-void cg_disasm_window::ShowContextMenu(const QPoint &pos) // this is a slot
+void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 {
 	QMenu myMenu;
-	QPoint globalPos = mapToGlobal(pos);
 	QAction* clear = new QAction(tr("&Clear"));
 	QAction* open = new QAction(tr("Open &Cg binary program"));
 
@@ -70,11 +73,73 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos) // this is a slot
 		if (filePath == NULL) return;
 		m_path_last = QFileInfo(filePath).path();
 		
-		CgBinaryDisasm disasm(sstr(filePath));
+		ShowDisasm();
+	});
+
+	myMenu.exec(QCursor::pos());
+}
+
+void cg_disasm_window::ShowDisasm()
+{
+	if (QFileInfo(m_path_last).isFile())
+	{
+		CgBinaryDisasm disasm(sstr(m_path_last));
 		disasm.BuildShaderBody();
 		m_disasm_text->setText(qstr(disasm.GetArbShader()));
 		m_glsl_text->setText(qstr(disasm.GetGlslShader()));
-	});
+	}
+	else if (!m_path_last.isEmpty())
+	{
+		LOG_ERROR(LOADER, "CgDisasm: Failed to open %s", sstr(m_path_last));
+	}
+}
 
-	myMenu.exec(globalPos);
+bool cg_disasm_window::IsValidFile(const QMimeData& md, bool save)
+{
+	for (auto url : md.urls())
+	{
+		for (QString suff : {"fpo", "vpo"})
+		{
+			if (QFileInfo(url.fileName()).suffix().toLower() == suff)
+			{
+				if (save)
+				{
+					m_path_last = url.toLocalFile();
+					xgui_settings->SetValue(GUI::fd_cg_disasm, m_path_last);
+				}
+
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+void cg_disasm_window::dropEvent(QDropEvent* ev)
+{
+	if (IsValidFile(*ev->mimeData(), true))
+	{
+		ShowDisasm();
+	}
+}
+
+void cg_disasm_window::dragEnterEvent(QDragEnterEvent* ev)
+{
+	if (IsValidFile(*ev->mimeData()))
+	{
+		ev->accept();
+	}
+}
+
+void cg_disasm_window::dragMoveEvent(QDragMoveEvent* ev)
+{
+	if (IsValidFile(*ev->mimeData()))
+	{
+		ev->accept();
+	}
+}
+
+void cg_disasm_window::dragLeaveEvent(QDragLeaveEvent* ev)
+{
+	ev->accept();
 }
