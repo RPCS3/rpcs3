@@ -128,7 +128,7 @@ core_tab::core_tab(std::shared_ptr<emu_settings> settings, QWidget *parent) : QW
 	for (const auto& prxf : fs::dir(lle_dir))
 	{
 		// List found unselected modules
-		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 3)) != "prx")
+		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 4)) != "sprx")
 			continue;
 		if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) && !set.count(prxf.name))
 		{
