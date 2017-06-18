@@ -281,7 +281,7 @@ namespace vk
 	{
 	private:
 		std::vector<cached_texture_section> m_cache;
-		std::pair<u64, u64> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
+		std::pair<u32, u32> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
 		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
 		std::vector<std::unique_ptr<vk::image>> m_dirty_textures;
 
@@ -390,7 +390,7 @@ namespace vk
 			return { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 		}
 
-		VkComponentMapping get_component_map(rsx::vertex_texture &tex, u32 gcm_format)
+		VkComponentMapping get_component_map(rsx::vertex_texture&, u32 gcm_format)
 		{
 			auto mapping = vk::get_component_mapping(gcm_format);
 			return { mapping[1], mapping[2], mapping[3], mapping[0] };

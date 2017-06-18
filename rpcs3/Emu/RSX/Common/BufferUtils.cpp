@@ -364,7 +364,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 	//Sometimes, we get a vertex attribute to be repeated. Just copy the supplied vertices only
 	//TODO: Stop these requests from getting here in the first place!
 	//TODO: Check if it is possible to have a repeating array with more than one attribute instance
-	const u32 real_count = src_ptr.size_bytes() / attribute_src_stride;
+	const u32 real_count = (u32)src_ptr.size_bytes() / attribute_src_stride;
 	if (real_count == 1) attribute_src_stride = 0;	//Always fetch src[0]
 
 	//TODO: Determine favourable vertex threshold where vector setup costs become negligible

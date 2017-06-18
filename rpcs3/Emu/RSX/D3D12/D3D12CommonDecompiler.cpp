@@ -106,7 +106,7 @@ std::string compareFunctionImp(COMPARE f, const std::string &Op0, const std::str
 	}
 }
 
-void insert_d3d12_legacy_function(std::ostream& OS)
+void insert_d3d12_legacy_function(std::ostream& OS, bool is_fragment_program)
 {
 	OS << "float4 lit_legacy(float4 val)";
 	OS << "{\n";
@@ -120,6 +120,9 @@ void insert_d3d12_legacy_function(std::ostream& OS)
 	OS << "	result.z = clamped_val.x > 0.0 ? exp(clamped_val.w * log(max(clamped_val.y, 1.E-10))) : 0.0;\n";
 	OS << "	return result;\n";
 	OS << "}\n\n";
+
+	if (!is_fragment_program)
+		return;
 
 	OS << "uint packSnorm2x16(float2 val)";
 	OS << "{\n";

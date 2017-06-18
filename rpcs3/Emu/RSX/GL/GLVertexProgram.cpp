@@ -136,11 +136,11 @@ static const vertex_reg_info reg_table[] =
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
 
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
 	bool front_back_specular = (insert_back_specular && insert_front_specular);
@@ -196,6 +196,8 @@ namespace
 			return "vec4(" + value + ", " + value + ", 1., 1.)";
 		case 3:
 			return "vec4(" + value + ", " + value + ", " + value + ", 1.)";
+		default:
+			LOG_ERROR(RSX, "invalid vector size %d" HERE, vector_size);
 		case 1:
 		case 4:
 			//Expand not required
@@ -254,7 +256,7 @@ namespace
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS);
+	insert_glsl_legacy_function(OS, gl::glsl::glsl_vertex_program);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -341,11 +343,11 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << std::endl << "	vs_main(" << parameters << ");" << std::endl << std::endl;
 
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
 
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
 	bool front_back_specular = (insert_back_specular && insert_front_specular);

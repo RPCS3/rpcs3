@@ -175,7 +175,7 @@ namespace gl
 		}
 
 		glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
-		glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_ANISOTROPY_EXT, ::gl::max_aniso(tex.max_aniso()));
+		glSamplerParameterf(samplerHandle,  GL_TEXTURE_MAX_ANISOTROPY_EXT, ::gl::max_aniso(tex.max_aniso()));
 
 		const u32 texture_format = tex.format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
 		if (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8)

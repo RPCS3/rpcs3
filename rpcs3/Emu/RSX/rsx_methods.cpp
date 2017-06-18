@@ -609,8 +609,8 @@ namespace rsx
 				src_info.height = in_h;
 				src_info.pitch = in_pitch;
 				src_info.slice_h = slice_h;
-				src_info.offset_x = in_x;
-				src_info.offset_y = in_y;
+				src_info.offset_x = (u16)in_x;
+				src_info.offset_y = (u16)in_y;
 				src_info.pixels = pixels_src;
 				src_info.rsx_address = get_address(src_offset, src_dma);
 

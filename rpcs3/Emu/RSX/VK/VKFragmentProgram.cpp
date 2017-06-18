@@ -229,12 +229,14 @@ namespace vk
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", " + coord_name + ".xyz)";
 		}
+
+		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
 	}
 }
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	vk::insert_glsl_legacy_function(OS);
+	vk::insert_glsl_legacy_function(OS, vk::glsl::program_domain::glsl_fragment_program);
 
 	const std::set<std::string> output_values =
 	{

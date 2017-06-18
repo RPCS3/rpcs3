@@ -183,17 +183,17 @@ namespace rsx
 			return false;
 		}
 
-		static download_buffer_object issue_download_command(surface_type, surface_color_format color_format, size_t width, size_t, ...)
+		static download_buffer_object issue_download_command(surface_type, surface_color_format, size_t /*width*/, size_t /*height*/, ...)
 		{
 			return nullptr;
 		}
 
-		static download_buffer_object issue_depth_download_command(surface_type, surface_depth_format depth_format, size_t width, size_t height, ...)
+		static download_buffer_object issue_depth_download_command(surface_type, surface_depth_format, size_t /*width*/, size_t /*height*/, ...)
 		{
 			return nullptr;
 		}
 
-		static download_buffer_object issue_stencil_download_command(surface_type, surface_depth_format depth_format, size_t width, size_t height, ...)
+		static download_buffer_object issue_stencil_download_command(surface_type, surface_depth_format, size_t /*width*/, size_t /*height*/, ...)
 		{
 			return nullptr;
 		}

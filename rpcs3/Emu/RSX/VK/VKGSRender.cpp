@@ -926,7 +926,7 @@ void VKGSRender::end()
 				*m_device,
 				VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 				!!(rsx::method_registers.vertex_textures[i].format() & CELL_GCM_TEXTURE_UN),
-				0, 1.f, rsx::method_registers.vertex_textures[i].min_lod(), rsx::method_registers.vertex_textures[i].max_lod(),
+				0.f, 1.f, (f32)rsx::method_registers.vertex_textures[i].min_lod(), (f32)rsx::method_registers.vertex_textures[i].max_lod(),
 				VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, vk::get_border_color(rsx::method_registers.vertex_textures[i].border_color())
 				));
 
@@ -1138,7 +1138,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdClearAttachments(*m_current_command_buffer, clear_descriptors.size(), clear_descriptors.data(), clear_regions.size(), clear_regions.data());
+	vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), (u32)clear_regions.size(), clear_regions.data());
 
 	vkCmdEndRenderPass(*m_current_command_buffer);
 }

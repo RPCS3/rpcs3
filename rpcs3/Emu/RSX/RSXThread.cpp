@@ -304,7 +304,7 @@ namespace rsx
 
 	u32 thread::get_push_buffer_index_count() const
 	{
-		return element_push_buffer.size();
+		return (u32)element_push_buffer.size();
 	}
 
 	void thread::end()
@@ -822,13 +822,9 @@ namespace rsx
 			case rsx::vertex_base_type::s32k:
 			case rsx::vertex_base_type::ub256:
 				return true;
-			case rsx::vertex_base_type::f:
-			case rsx::vertex_base_type::cmp:
-			case rsx::vertex_base_type::sf:
-			case rsx::vertex_base_type::s1:
-			case rsx::vertex_base_type::ub:
-				return false;
 			}
+
+			return false;
 		}
 	}
 
