@@ -21,5 +21,7 @@
         <file>Icons/media_gray.png</file>
         <file>Icons/unknown_blue.png</file>
         <file>Icons/unknown_gray.png</file>
+        <file>Icons/other_blue.png</file>
+        <file>Icons/other_gray.png</file>
     </qresource>
 </RCC>
