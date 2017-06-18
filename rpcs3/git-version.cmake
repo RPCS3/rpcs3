@@ -3,7 +3,7 @@ set(GIT_VERSION "unknown")
 set(GIT_VERSION_UPDATE "1")
 
 find_package(Git)
-if(GIT_FOUND)
+if(GIT_FOUND AND EXISTS "${SOURCE_DIR}/../.git/")
 	execute_process(COMMAND ${GIT_EXECUTABLE} rev-list HEAD --count
 		WORKING_DIRECTORY ${SOURCE_DIR}
 		RESULT_VARIABLE exit_code
