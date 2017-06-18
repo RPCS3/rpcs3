@@ -501,7 +501,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	QString category = qstr(m_game_data[i].info.category);
 	
 	// Boot these categories
-	if (category == category::hdd_Game || category == category::disc_Game || category == category::audio_Video)
+	if (category != category::game_Data)
 	{
 		const std::string& path = Emu.GetGameDir() + m_game_data[i].info.root;
 		emit RequestIconPathSet(path);
@@ -610,14 +610,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	{
 		removeGame->setEnabled(false);
 	}
-	else if (category == category::audio_Video)
-	{
-		configure->setEnabled(false);
-		removeConfig->setEnabled(false);
-		openConfig->setEnabled(false);
-		checkCompat->setEnabled(false);
-	}
-	else if (category == category::home || category == category::game_Data)
+	else if (category == category::game_Data)
 	{
 		boot->setEnabled(false), f.setBold(false), boot->setFont(f);
 		configure->setEnabled(false);
