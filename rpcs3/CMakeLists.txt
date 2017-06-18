@@ -20,12 +20,13 @@ if (NOT Qt5Widgets_FOUND)
 	if (Qt5Widgets_VERSION VERSION_LESS 5.8.0)
 		message("Minimum supported Qt5 version is 5.8! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
 		if ("${CMAKE_SYSTEM}" MATCHES "Linux")
-			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.\n
-					If you're on Ubuntu or Linux Mint, there is a PPA you can use to install an up-to-date qt5 version.\n
-					  https://launchpad.net/~beineri/+archive/ubuntu/opt-qt59-Xenial\n
-					just make sure to run \n
-					  source /opt/qt59/bin/qt59-env.sh\n
-					before re-running cmake")
+			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
+If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt59-xenial
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt59-trusty
+just make sure to run
+    source /opt/qt59/bin/qt59-env.sh
+before re-running cmake")
         elseif(WIN32)
 			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
 		else()
