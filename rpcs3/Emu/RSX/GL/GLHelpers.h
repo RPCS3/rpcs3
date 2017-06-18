@@ -1137,6 +1137,7 @@ namespace gl
 			uint_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
 			uint_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV,
 			uint_24_8 = GL_UNSIGNED_INT_24_8,
+			float32z_s8int = GL_DEPTH32F_STENCIL8,
 
 			sbyte = GL_BYTE,
 			sshort = GL_SHORT,
@@ -1189,6 +1190,7 @@ namespace gl
 			depth16 = GL_DEPTH_COMPONENT16,
 			depth_stencil = GL_DEPTH_STENCIL,
 			depth24_stencil8 = GL_DEPTH24_STENCIL8,
+			depth32f_stencil8 = GL_DEPTH32F_STENCIL8,
 
 			compressed_rgb_s3tc_dxt1 = GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
 			compressed_rgba_s3tc_dxt1 = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,

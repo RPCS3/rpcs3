@@ -63,6 +63,8 @@ public:
 		GPUTextureScaling,
 		D3D12Adapter,
 		VulkanAdapter,
+		ForceHighpZ,
+		AutoInvalidateCache,
 
 		// Audio
 		AudioRenderer,
@@ -150,6 +152,8 @@ private:
 		{ DebugOverlay,		{ "Video", "Debug overlay"}},
 		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers (Debug)"}},
 		{ GPUTextureScaling,{ "Video", "Use GPU texture scaling"}},
+		{ ForceHighpZ,      { "Video", "Force High Precision Z buffer"}},
+		{ AutoInvalidateCache, {"Video", "Invalidate Cache Every Frame"}},
 		{ D3D12Adapter,		{ "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,		{ "Video", "Vulkan", "Adapter"}},
 

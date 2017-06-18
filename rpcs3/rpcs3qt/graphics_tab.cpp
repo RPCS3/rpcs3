@@ -235,6 +235,8 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	QCheckBox *logProg = xemu_settings->CreateEnhancedCheckBox(emu_settings::LogShaderPrograms, this);
 	QCheckBox *vsync = xemu_settings->CreateEnhancedCheckBox(emu_settings::VSync, this);
 	QCheckBox *gpuTextureScaling = xemu_settings->CreateEnhancedCheckBox(emu_settings::GPUTextureScaling, this);
+	QCheckBox *forceHighpZ = xemu_settings->CreateEnhancedCheckBox(emu_settings::ForceHighpZ, this);
+	QCheckBox *autoInvalidateCache = xemu_settings->CreateEnhancedCheckBox(emu_settings::AutoInvalidateCache, this);
 
 	// Combobox Part
 	QHBoxLayout *hbox1 = new QHBoxLayout();
@@ -262,12 +264,14 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	vbox21->addWidget(dumpDepth);
 	vbox21->addWidget(readDepth);
 	vbox21->addWidget(glLegacyBuffers);
+	vbox21->addWidget(autoInvalidateCache);
 	QVBoxLayout *vbox22 = new QVBoxLayout();
 	vbox22->addWidget(debugOutput);
 	vbox22->addWidget(debugOverlay);
 	vbox22->addWidget(logProg);
 	vbox22->addWidget(vsync);
 	vbox22->addWidget(gpuTextureScaling);
+	vbox22->addWidget(forceHighpZ);
 	hbox2->addLayout(vbox21);
 	hbox2->addLayout(vbox22);
 
