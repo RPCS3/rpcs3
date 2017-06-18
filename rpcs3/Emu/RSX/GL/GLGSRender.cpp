@@ -944,7 +944,9 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_rtts.invalidated_resources.clear();
-	m_rtts.invalidate_surface_cache_data(nullptr);
+
+	if (g_cfg.video.invalidate_surface_cache_every_frame)
+		m_rtts.invalidate_surface_cache_data(nullptr);
 }
 
 

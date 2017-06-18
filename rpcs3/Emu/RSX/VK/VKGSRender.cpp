@@ -1273,8 +1273,10 @@ void VKGSRender::process_swap_request()
 	//m_texture_cache.merge_dirty_textures(m_rtts.invalidated_resources);
 	
 	m_rtts.invalidated_resources.clear();
-	m_rtts.invalidate_surface_cache_data(&*m_current_command_buffer);
 	m_texture_cache.flush();
+
+	if (g_cfg.video.invalidate_surface_cache_every_frame)
+		m_rtts.invalidate_surface_cache_data(&*m_current_command_buffer);
 
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();

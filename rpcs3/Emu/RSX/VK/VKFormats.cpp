@@ -21,6 +21,10 @@ gpu_formats_support get_optimal_tiling_supported_formats(VkPhysicalDevice physic
 		&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
 
+	//Hide d24_s8 if force high precision z buffer is enabled
+	if (g_cfg.video.force_high_precision_z_buffer && result.d32_sfloat_s8)
+		result.d24_unorm_s8 = false;
+
 	return result;
 }
 
