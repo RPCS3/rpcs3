@@ -19,16 +19,12 @@
 #include "instruction_editor_dialog.h"
 #include "register_editor_dialog.h"
 
-#include <QApplication>
 #include <QDockWidget>
 #include <QListWidget>
 #include <QPushButton>
-#include <QLineEdit>
 #include <QComboBox>
 #include <QKeyEvent>
 #include <QWheelEvent>
-#include <QInputDialog>
-#include <QFontDatabase>
 #include <QTimer>
 #include <QTextEdit>
 
@@ -49,6 +45,7 @@ class debugger_frame : public QDockWidget
 	QPushButton* m_btn_run;
 	QPushButton* m_btn_pause;
 	QComboBox* m_choice_units;
+	QString m_current_choice;
 
 	u64 m_threads_created = 0;
 	u64 m_threads_deleted = 0;
@@ -69,7 +66,6 @@ public:
 
 	u32 GetPc() const;
 	u32 CentrePc(u32 pc) const;
-	//void resizeEvent(QResizeEvent* event);
 	void DoUpdate();
 	void WriteRegs();
 	void EnableButtons(bool enable);
@@ -114,6 +110,7 @@ protected:
 	void keyPressEvent(QKeyEvent* event);
 	void mouseDoubleClickEvent(QMouseEvent* event);
 	void wheelEvent(QWheelEvent* event);
+	void resizeEvent(QResizeEvent* event);
 };
 
 #endif // DEBUGGERFRAME_H
