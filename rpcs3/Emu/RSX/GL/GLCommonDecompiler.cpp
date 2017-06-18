@@ -105,7 +105,7 @@ std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::st
 	fmt::throw_exception("Unknown compare function" HERE);
 }
 
-void insert_glsl_legacy_function(std::ostream& OS)
+void insert_glsl_legacy_function(std::ostream& OS, gl::glsl::program_domain domain)
 {
 	OS << "vec4 lit_legacy(vec4 val)";
 	OS << "{\n";
@@ -119,6 +119,9 @@ void insert_glsl_legacy_function(std::ostream& OS)
 	OS << "	result.z = clamped_val.x > 0.0 ? exp(clamped_val.w * log(max(clamped_val.y, 1.E-10))) : 0.0;\n";
 	OS << "	return result;\n";
 	OS << "}\n\n";
+
+	if (domain != gl::glsl::program_domain::glsl_fragment_program)
+		return;
 
 	//NOTE: We lose precision if we just store depth value into 8-bit textures i.e (depth, 0, 0)
 	//NOTE2: After testing with GOW, the w component is either the original depth or wraps around to the x component

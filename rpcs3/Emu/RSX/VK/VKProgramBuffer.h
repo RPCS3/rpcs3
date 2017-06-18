@@ -74,14 +74,14 @@ struct VKTraits
 	using pipeline_properties = vk::pipeline_props;
 
 	static
-	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t ID)
+	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t /*ID*/)
 	{
 		fragmentProgramData.Decompile(RSXFP);
 		fragmentProgramData.Compile();
 	}
 
 	static
-	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t ID)
+	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t /*ID*/)
 	{
 		vertexProgramData.Decompile(RSXVP);
 		vertexProgramData.Compile();

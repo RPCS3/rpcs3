@@ -287,7 +287,7 @@ namespace
 			size_t data_size = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
 			const VkFormat format = vk::get_suitable_vk_format(vertex_register.type, vertex_register.attribute_size);
 
-			u32 offset_in_attrib_buffer = 0;
+			size_t offset_in_attrib_buffer = 0;
 
 			if (vk::requires_component_expansion(vertex_register.type, vertex_register.attribute_size))
 			{
@@ -316,7 +316,7 @@ namespace
 
 		void operator()(const rsx::empty_vertex_array& vbo)
 		{
-			u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(32);
+			size_t offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(32);
 			void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, 32);
 			memset(dst, 0, 32);
 			m_attrib_ring_info.unmap();
@@ -494,7 +494,7 @@ namespace
 				const VkFormat format =
 					vk::get_suitable_vk_format(vertex_info.type(), vertex_info.size());
 
-				u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
+				size_t offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
 				u8* src = reinterpret_cast<u8*>(
 					rsx::method_registers.current_draw_clause.inline_vertex_array.data());
 				u8* dst =

@@ -104,7 +104,7 @@ namespace vk
 		fmt::throw_exception("Unknown compare function" HERE);
 	}
 
-	void insert_glsl_legacy_function(std::ostream& OS)
+	void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain)
 	{
 		OS << "vec4 lit_legacy(vec4 val)";
 		OS << "{\n";
@@ -118,6 +118,9 @@ namespace vk
 		OS << "	result.z = clamped_val.x > 0. ? exp(clamped_val.w * log(max(clamped_val.y, 1.E-10))) : 0.;\n";
 		OS << "	return result;\n";
 		OS << "}\n\n";
+
+		if (domain == glsl::program_domain::glsl_vertex_program)
+			return;
 
 		//NOTE: After testing with GOW, the w component is either the original depth or wraps around to the x component
 		//Since component.r == depth_value with some precision loss, just use the precise depth value for now (further testing needed)

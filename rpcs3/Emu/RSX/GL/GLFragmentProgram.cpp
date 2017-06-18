@@ -214,12 +214,14 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", (" + coord_name + ".xyz * " + tex_name + "_coord_scale))";
 		}
+
+		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
 	}
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS);
+	insert_glsl_legacy_function(OS, gl::glsl::glsl_fragment_program);
 
 	const std::set<std::string> output_values =
 	{

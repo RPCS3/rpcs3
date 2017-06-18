@@ -783,8 +783,8 @@ namespace gl
 	{
 	protected:
 
-		GLsizeiptr m_data_loc = 0;
-		GLsizeiptr m_limit = 0;
+		u32 m_data_loc = 0;
+		u32 m_limit = 0;
 		void *m_memory_mapping = nullptr;
 
 		fence m_fence;
@@ -807,7 +807,7 @@ namespace gl
 
 			verify(HERE), m_memory_mapping != nullptr;
 			m_data_loc = 0;
-			m_limit = size;
+			m_limit = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -818,7 +818,7 @@ namespace gl
 
 		virtual std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment)
 		{
-			u32 offset = (u32)m_data_loc;
+			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, alignment);
 
 			if ((offset + alloc_size) > m_limit)
@@ -854,7 +854,7 @@ namespace gl
 			m_id = 0;
 		}
 
-		virtual void reserve_storage_on_heap(u32 alloc_size) {}
+		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
 
 		virtual void unmap() {}
 
@@ -873,8 +873,8 @@ namespace gl
 
 	class legacy_ring_buffer : public ring_buffer
 	{
-		u64 m_mapped_bytes = 0;
-		u64 m_mapping_offset = 0;
+		u32 m_mapped_bytes = 0;
+		u32 m_mapping_offset = 0;
 
 	public:
 
@@ -888,7 +888,7 @@ namespace gl
 
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
-			m_limit = size;
+			m_limit = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -1990,6 +1990,12 @@ namespace gl
 
 	namespace glsl
 	{
+		enum program_domain
+		{
+			glsl_vertex_program = 0,
+			glsl_fragment_program = 1
+		};
+
 		class compilation_exception : public exception
 		{
 		public:

@@ -774,7 +774,7 @@ bool GLGSRender::load_program()
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
-	const u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	const u32 fragment_buffer_size = fragment_constants_size + (17 * 4 * sizeof(float));
 
 	if (manually_flush_ring_buffers)
