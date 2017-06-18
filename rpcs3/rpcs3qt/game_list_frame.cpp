@@ -614,12 +614,16 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	{
 		removeGame->setEnabled(false);
 	}
-	else if (category::non_disc_games.contains(qstr(m_game_data[row].info.category)))
+	else if (!m_game_data[row].bootable)
 	{
 		boot->setEnabled(false), f.setBold(false), boot->setFont(f);
 		configure->setEnabled(false);
 		removeConfig->setEnabled(false);
 		openConfig->setEnabled(false);
+		checkCompat->setEnabled(false);
+	}
+	else if (category != category::hdd_Game)
+	{
 		checkCompat->setEnabled(false);
 	}
 
