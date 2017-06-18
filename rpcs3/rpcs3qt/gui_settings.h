@@ -26,7 +26,7 @@ typedef struct GUI_SAVE
 	};
 };
 
-typedef std::map<const QString, const QSize> icon_size;
+typedef std::map<std::string, const QString> q_from_char;
 typedef QPair<QString, QString> q_string_pair;
 typedef QPair<QString, QSize> q_size_pair;
 typedef QList<q_string_pair> q_pair_list;
@@ -119,7 +119,7 @@ public:
 	/** Changes the settings file to the destination preset*/
 	void ChangeToConfig(const QString& destination);
 
-	bool GetCategoryVisibility(QString cat);
+	bool GetCategoryVisibility(int cat);
 	QVariant GetValue(const GUI_SAVE& entry);
 	QVariant List2Var(const q_pair_list& list);
 	q_pair_list Var2List(const QVariant &var);
@@ -140,7 +140,7 @@ public slots:
 	void SetValue(const GUI_SAVE& entry, const QVariant& value);
 
 	/** Sets the visibility of the chosen category. */
-	void SetCategoryVisibility(const QString& cat, const bool& val);
+	void SetCategoryVisibility(int cat, const bool& val);
 
 	void SetGamelistColVisibility(int col, bool val);
 

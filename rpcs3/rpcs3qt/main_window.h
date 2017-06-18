@@ -135,6 +135,7 @@ private:
 	QAction* showCatAudioVideoAct;
 	QAction* showCatGameDataAct;
 	QAction* showCatUnknownAct;
+	QAction* showCatOtherAct;
 	QAction* setIconSizeTinyAct;
 	QAction* setIconSizeSmallAct;
 	QAction* setIconSizeMediumAct;

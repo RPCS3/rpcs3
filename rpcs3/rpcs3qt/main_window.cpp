@@ -1039,17 +1039,20 @@ void main_window::CreateActions()
 	showCatDiscGameAct = new QAction(category::disc_Game, this);
 	showCatDiscGameAct->setCheckable(true);
 
-	showCatHomeAct = new QAction(category::home, this);
+	showCatHomeAct = new QAction(tr("Home"), this);
 	showCatHomeAct->setCheckable(true);
 
-	showCatAudioVideoAct = new QAction(category::audio_Video, this);
+	showCatAudioVideoAct = new QAction(tr("Audio/Video"), this);
 	showCatAudioVideoAct->setCheckable(true);
 
-	showCatGameDataAct = new QAction(category::game_Data, this);
+	showCatGameDataAct = new QAction(tr("GameData"), this);
 	showCatGameDataAct->setCheckable(true);
 
 	showCatUnknownAct = new QAction(category::unknown, this);
 	showCatUnknownAct->setCheckable(true);
+
+	showCatOtherAct = new QAction(category::other, this);
+	showCatOtherAct->setCheckable(true);
 
 	categoryVisibleActGroup = new QActionGroup(this); 
 	categoryVisibleActGroup->addAction(showCatHDDGameAct);
@@ -1058,6 +1061,7 @@ void main_window::CreateActions()
 	categoryVisibleActGroup->addAction(showCatAudioVideoAct);
 	categoryVisibleActGroup->addAction(showCatGameDataAct);
 	categoryVisibleActGroup->addAction(showCatUnknownAct);
+	categoryVisibleActGroup->addAction(showCatOtherAct);
 	categoryVisibleActGroup->setExclusive(false);
 
 	setIconSizeTinyAct = new QAction(tr("Tiny"), this);
@@ -1207,19 +1211,22 @@ void main_window::CreateConnects()
 	});
 	connect(categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
-		QString cat;
+		QStringList categories;
+		int id;
 		const bool& checked = act->isChecked();
 
-		if      (act == showCatHDDGameAct)    cat = category::hdd_Game;
-		else if (act == showCatDiscGameAct)   cat = category::disc_Game;
-		else if (act == showCatHomeAct)       cat = category::home;
-		else if (act == showCatAudioVideoAct) cat = category::audio_Video;
-		else if (act == showCatGameDataAct)   cat = category::game_Data;
-		else if (act == showCatUnknownAct)    cat = category::unknown;
+		if      (act == showCatHDDGameAct)    categories += category::non_disc_games, id = Category::Non_Disc_Game;
+		else if (act == showCatDiscGameAct)   categories += category::disc_Game, id = Category::Disc_Game;
+		else if (act == showCatHomeAct)       categories += category::home, id = Category::Home;
+		else if (act == showCatAudioVideoAct) categories += category::media, id = Category::Media;
+		else if (act == showCatGameDataAct)   categories += category::data, id = Category::Data;
+		else if (act == showCatUnknownAct)    categories += category::unknown, id = Category::Unknown_Cat;
+		else if (act == showCatOtherAct)      categories += category::others, id = Category::Others;
+		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
 
 		gameListFrame->SetCategoryActIcon(categoryVisibleActGroup->actions().indexOf(act), checked);
-		gameListFrame->ToggleCategoryFilter(cat, checked);
-		guiSettings->SetCategoryVisibility(cat, checked);
+		gameListFrame->ToggleCategoryFilter(categories, checked);
+		guiSettings->SetCategoryVisibility(id, checked);
 	});
 	connect(aboutAct, &QAction::triggered, this, &main_window::About);
 	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
@@ -1441,12 +1448,13 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	showGameListToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
 	guiSettings->GetValue(GUI::mw_controls).toBool() ? controls->show() : controls->hide();
 
-	showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(category::hdd_Game));
-	showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(category::disc_Game));
-	showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(category::home));
-	showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(category::audio_Video));
-	showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(category::game_Data));
-	showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(category::unknown));
+	showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
+	showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
+	showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(Category::Home));
+	showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(Category::Media));
+	showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(Category::Data));
+	showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
+	showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
 	QString key = guiSettings->GetValue(GUI::gl_iconSize).toString();
 	if (key == GUI::gl_icon_key_large) setIconSizeLargeAct->setChecked(true);
