@@ -118,6 +118,8 @@ struct lv2_prx final : lv2_obj, ppu_module
 
 	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> start = vm::null;
 	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> stop = vm::null;
+	vm::ps3::ptr<s32(u64 callback, u64 argc, vm::ps3::ptr<void, u64> argv)> prologue = vm::null;
+	vm::ps3::ptr<s32(u64 callback, u64 argc, vm::ps3::ptr<void, u64> argv)> epilogue = vm::null;
 	vm::ps3::ptr<s32()> exit = vm::null;
 };
 

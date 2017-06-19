@@ -1081,7 +1081,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	// If not, the data has no NPDRM layer.
 	if (!ctrl)
 	{
-		LOG_WARNING(LOADER, "SELF: No NPDRM control info found!");
+		LOG_NOTICE(LOADER, "SELF: No NPDRM control info found!");
 		return true;
 	}
 
