@@ -285,13 +285,14 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 		}
 
 		// restore owner and recursive value
-		const auto old = lwmutex->vars.owner.exchange(tid);
+		lwmutex->vars.owner.store(tid);
 		lwmutex->recursive_count = recursive_value;
 
-		if (old == lwmutex_free || old == lwmutex_dead)
+		/* Commented out as this check doesnt exist in liblv2, and sometimes it doesn't pass (Just Cause 2)
+		if (old != lwmutex_reserved)
 		{
 			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
-		}
+		}*/
 
 		return res;
 	}

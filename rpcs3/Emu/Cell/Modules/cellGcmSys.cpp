@@ -595,7 +595,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	if (offset & 0xffff || size & 0xffff || pitch & 0xf)
+	if (offset & 0xffff || size & 0xffff || pitch & 0xff)
 	{
 		cellGcmSys.error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
@@ -603,7 +603,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 
 	if (location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
 	{
-		cellGcmSys.error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_ALIGNMENT");
+		cellGcmSys.error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_ENUM");
 		return CELL_GCM_ERROR_INVALID_ENUM;
 	}
 
@@ -1171,7 +1171,7 @@ s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segment
 	const auto& put = vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr).put;
 	const auto& get = vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr).get;
 
-	if (put != 0x1000 || get != 0x1000 || bufferSize < segmentSize * 2)
+	if (put != 0x1000 || get != 0x1000 || bufferSize < segmentSize * 2 || segmentSize * 2 < segmentSize)
 	{
 		return CELL_GCM_ERROR_FAILURE;
 	}
@@ -1220,7 +1220,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	if (offset & 0xffff || size & 0xffff || pitch & 0xf)
+	if (offset & 0xffff || size & 0xffff || pitch & 0xff)
 	{
 		cellGcmSys.error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
