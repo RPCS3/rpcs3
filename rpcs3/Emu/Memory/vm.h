@@ -16,6 +16,7 @@ namespace vm
 	{
 		main,
 		user_space,
+        rsx_context,
 		video,
 		stack,
 		
