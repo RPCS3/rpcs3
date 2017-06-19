@@ -32,8 +32,7 @@ s32 sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 {
 	sysPrxForUser.warning("sys_spu_image_import(img=*0x%x, src=0x%x, type=%d)", img, src, type);
 
-	// Load from memory (TODO)
-	img->load(fs::file{vm::base(src), 0 - src});
+	img->load_from_memory(src, type);
 
 	return CELL_OK;
 }
