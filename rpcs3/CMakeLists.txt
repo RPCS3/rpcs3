@@ -327,3 +327,16 @@ target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 
 cotire(rpcs3)
+
+# Unix installation
+if(UNIX AND NOT APPLE)
+	# Install the binary
+	install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+	# Install the application icon and menu item
+	install(FILES rpcs3.svg
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
+	install(FILES rpcs3.png
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
+	install(FILES rpcs3.desktop
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+endif()
