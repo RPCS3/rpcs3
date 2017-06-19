@@ -487,7 +487,7 @@ void GLGSRender::on_init_thread()
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
 
-	auto gl_caps = gl::get_driver_caps();
+	auto& gl_caps = gl::get_driver_caps();
 
 	if (!gl_caps.ARB_texture_buffer_supported)
 	{
@@ -497,6 +497,11 @@ void GLGSRender::on_init_thread()
 	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
 	{
 		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
+	}
+
+	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)
+	{
+		LOG_WARNING(RSX, "High precision Z buffer requested but your GPU does not support GL_ARB_depth_buffer_float. Option ignored.");
 	}
 
 	//Use industry standard resource alignment values as defaults

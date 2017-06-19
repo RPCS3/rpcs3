@@ -959,6 +959,22 @@ void VKGSRender::end()
 	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets, 0, nullptr);
 
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+	{
+		if (ds->dirty)
+		{
+			//Clear this surface before drawing on it
+			VkClearValue depth_clear_value;
+			depth_clear_value.depthStencil.depth = 1.f;
+			depth_clear_value.depthStencil.stencil = 255;
+
+			VkClearRect clear_rect = { 0, 0, m_framebuffer_to_clean.back()->width(), m_framebuffer_to_clean.back()->height(), 0, 1 };
+			VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
+			vkCmdClearAttachments(*m_current_command_buffer, 1, &clear_desc, 1, &clear_rect);
+			ds->dirty = false;
+		}
+	}
+
 	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<2>(upload_info);
 
 	if (!index_info)
@@ -1141,6 +1157,12 @@ void VKGSRender::clear_surface(u32 mask)
 	vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), (u32)clear_regions.size(), clear_regions.data());
 
 	vkCmdEndRenderPass(*m_current_command_buffer);
+
+	if (mask & 0x3)
+	{
+		if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
+			std::get<1>(m_rtts.m_bound_depth_stencil)->dirty = false;
+	}
 }
 
 void VKGSRender::sync_at_semaphore_release()

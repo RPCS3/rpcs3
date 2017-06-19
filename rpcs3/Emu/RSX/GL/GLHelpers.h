@@ -78,11 +78,12 @@ namespace gl
 		bool ARB_buffer_storage_supported = false;
 		bool ARB_texture_buffer_supported = false;
 		bool ARB_shader_draw_parameters_supported = false;
+		bool ARB_depth_buffer_float_supported = false;
 		bool initialized = false;
 
 		void initialize()
 		{
-			int find_count = 5;
+			int find_count = 6;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -125,6 +126,13 @@ namespace gl
 				{
 					ARB_texture_buffer_supported = true;
 					find_count --;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_depth_buffer_float")
+				{
+					ARB_depth_buffer_float_supported = true;
+					find_count--;
 					continue;
 				}
 			}
@@ -1137,7 +1145,7 @@ namespace gl
 			uint_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
 			uint_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV,
 			uint_24_8 = GL_UNSIGNED_INT_24_8,
-			float32z_s8int = GL_DEPTH32F_STENCIL8,
+			float32_uint8 = GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
 
 			sbyte = GL_BYTE,
 			sshort = GL_SHORT,

@@ -57,8 +57,8 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 	default:
 		LOG_ERROR(RSX, "Surface depth buffer: Unsupported surface depth format (0x%x)", (u32)depth_format);
 	case rsx::surface_depth_format::z24s8:
-		if (g_cfg.video.force_high_precision_z_buffer)
-			return{ ::gl::texture::type::float32z_s8int, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
+		if (g_cfg.video.force_high_precision_z_buffer && ::gl::get_driver_caps().ARB_depth_buffer_float_supported)
+			return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
 	}

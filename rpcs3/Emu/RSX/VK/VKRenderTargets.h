@@ -11,6 +11,7 @@ namespace vk
 {
 	struct render_target : public image
 	{
+		bool dirty = false;
 		u16 native_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -143,19 +144,9 @@ namespace rsx
 
 		static void invalidate_rtt_surface_contents(vk::command_buffer*, vk::render_target*) {}
 		
-		static void invalidate_depth_surface_contents(vk::command_buffer* pcmd, vk::render_target *ds)
+		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds)
 		{
-			VkImageLayout old_layout = ds->current_layout;
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, ds->attachment_aspect_flag);
-			change_image_layout(*pcmd, ds, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-
-			//Clear the surface before drawing on it
-			VkClearDepthStencilValue clear_depth = {};
-			clear_depth.depth = 1.f;
-			clear_depth.stencil = 255;
-
-			vkCmdClearDepthStencilImage(*pcmd, ds->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &range);
-			change_image_layout(*pcmd, ds, old_layout, range);
+			ds->dirty = true;
 		}
 
 		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height)
