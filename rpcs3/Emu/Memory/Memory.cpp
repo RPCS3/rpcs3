@@ -55,13 +55,13 @@ bool VirtualMemoryBlock::Map(u32 realaddr, u32 size, u32 addr)
 		return false;
 	}
 
-	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
+	/*for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 	{
 		if (addr >= m_mapped_memory[i].addr && addr + size - 1 <= m_mapped_memory[i].addr + m_mapped_memory[i].size - 1)
 		{
 			return false;
 		}
-	}
+	}*/
 
 	m_mapped_memory.emplace_back(addr, realaddr, size);
 	return true;

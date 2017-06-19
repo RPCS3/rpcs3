@@ -880,7 +880,7 @@ s32 _spurs::stop_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	if (sys_event_port_send(ppu, spurs->eventPort, 0, 1, 0) != CELL_OK)
+	if (sys_event_port_send(spurs->eventPort, 0, 1, 0) != CELL_OK)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -2794,7 +2794,7 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 		// Signal the PPU thread to be woken up
 		eventFlag->pendingRecvTaskEvents[ppuWaitSlot] = ppuEvents;
 
-		CHECK_SUCCESS(sys_event_port_send(ppu, eventFlag->eventPortId, 0, 0, 0));
+		CHECK_SUCCESS(sys_event_port_send(eventFlag->eventPortId, 0, 0, 0));
 	}
 
 	if (pendingRecv)

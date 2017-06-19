@@ -1,13 +1,74 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-
+#include "Emu/Cell/PPUModule.h"
+#include "Emu/RSX/GSRender.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_rsx.h"
+#include "sys_event.h"
 
 namespace vm { using namespace ps3; }
 
 logs::channel sys_rsx("sys_rsx");
+
+struct RsxDriverInfo {
+    be_t<u32> version_driver;
+    be_t<u32> version_gpu;
+    be_t<u32> memory_size;
+    be_t<u32> hardware_channel;
+    be_t<u32> nvcore_frequency;
+    be_t<u32> memory_frequency;
+    u8 unk[0x10A8];
+    struct Head {
+        be_t<u32> flip;
+        be_t<u32> unk[4];
+        be_t<f32> unk1;
+        be_t<u32> unk2[5];
+        be_t<u32> unk3;
+        be_t<u32> unk4[4];
+    } head[8];
+    be_t<u32> handlers;
+    be_t<u32> unk1;
+    be_t<u32> unk2;
+    be_t<u32> unk3;
+    be_t<u32> handler_queue;
+};
+
+struct RsxDmaControl {
+    u8 resv[0x40];
+    be_t<u32> put;
+    be_t<u32> get;
+    be_t<u32> ref;
+    be_t<u32> unk[2];
+    be_t<u32> unk1;
+};
+
+struct RsxSemaphore {
+    be_t<u64> val;
+    be_t<u64> pad;
+    be_t<u64> timestamp;
+};
+
+struct RsxNotify {
+    be_t<u64> timestamp;
+    be_t<u64> zero;
+};
+
+struct RsxReport {
+    be_t<u64> timestamp;
+    be_t<u32> val;
+    be_t<u32> pad;
+};
+
+struct RsxReports {
+    RsxSemaphore semaphore[0x100];
+    RsxNotify notify[64];
+    RsxReport report[2048];
+};
+
+be_t<u32> g_rsx_event_port;
+u32 g_driverInfo;
 
 s32 sys_rsx_device_open()
 {
@@ -37,6 +98,9 @@ s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 
 {
 	sys_rsx.todo("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
+    *mem_handle = 1;
+    *mem_addr = vm::falloc(0xC0000000, size, vm::video);
+
 	return CELL_OK;
 }
 
@@ -60,10 +124,62 @@ s32 sys_rsx_memory_free(u32 mem_handle)
  * @param mem_ctx (IN): mem_ctx given by sys_rsx_memory_allocate
  * @param system_mode (IN):
  */
-s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u32> lpar_dma_control, vm::ptr<u32> lpar_driver_info, vm::ptr<u32> lpar_reports, u64 mem_ctx, u64 system_mode)
+s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode)
 {
-	sys_rsx.todo("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
-		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
+    sys_rsx.todo("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
+        context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
+
+    vm::falloc(0x40000000, 0x10000000, vm::rsx_context);
+
+    *context_id = 0x55555555;
+
+    *lpar_dma_control = 0x40100000;
+    *lpar_driver_info = 0x40200000;
+    *lpar_reports = 0x40300000;
+
+    auto &driverInfo = vm::_ref<RsxDriverInfo>(*lpar_driver_info);
+    driverInfo.version_driver = 0x211;
+    driverInfo.version_gpu = 0x5c;
+    driverInfo.memory_size = 0xFE00000;
+    driverInfo.nvcore_frequency = 500000000;
+    driverInfo.memory_frequency = 650000000;
+
+    g_driverInfo = *lpar_driver_info;
+
+    auto &dmaControl = vm::_ref<RsxDmaControl>(*lpar_dma_control);
+    dmaControl.get = 0;
+    dmaControl.put = 0;
+
+    if (false/*system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB*/)
+        RSXIOMem.SetRange(0, 0x20000000 /*512MB*/);
+    else
+        RSXIOMem.SetRange(0, 0x10000000 /*256MB*/);
+
+    sys_event_queue_attribute_t attr;
+    attr.protocol = SYS_SYNC_PRIORITY;
+    attr.type = SYS_PPU_QUEUE;
+    auto queueId = vm::make_var<u32>(0);
+    sys_event_queue_create(queueId, vm::make_var(attr), 0, 0x20);
+    driverInfo.handler_queue = queueId->value();
+
+    sys_event_port_create(queueId, SYS_EVENT_PORT_LOCAL, 0);
+    sys_event_port_connect_local(queueId->value(), driverInfo.handler_queue);
+
+    g_rsx_event_port = queueId->value();
+
+    const auto render = fxm::get<GSRender>();
+    render->ctrl = vm::_ptr<CellGcmControl>(*lpar_dma_control);
+    //render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
+    //render->intr_thread->run();
+    //render->ctxt_addr = 0;
+    render->gcm_buffers.set(vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main));
+    render->zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
+    render->tiles_addr = vm::alloc(sizeof(CellGcmTileInfo) * 15, vm::main);
+    render->gcm_buffers_count = 7;
+    render->gcm_current_buffer = 0;
+    render->main_mem_addr = 0;
+    render->label_addr = *lpar_reports;
+    render->init(0x30100000, 0x200000, *lpar_dma_control, 0xC0000000);
 
 	return CELL_OK;
 }
@@ -90,8 +206,10 @@ s32 sys_rsx_context_free(u32 context_id)
 s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 {
 	sys_rsx.todo("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
-
-	return CELL_OK;
+    if (RSXIOMem.Map(ea, size, io))
+	    return CELL_OK;
+    LOG_ERROR(RSX, "rsx_iomap failed");
+    return CELL_EINVAL;
 }
 
 /*
@@ -101,11 +219,13 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
  * @param io_addr (IN): IO address. E.g. 0x00600000 (Start page 6)
  * @param size (IN): Size to unmap in byte. E.g. 0x00200000
  */
-s32 sys_rsx_context_iounmap(u32 context_id, u32 a2, u32 io_addr, u32 size)
+s32 sys_rsx_context_iounmap(u32 context_id, u32 io_addr, u32 a3, u32 size)
 {
-	sys_rsx.todo("sys_rsx_context_iounmap(context_id=0x%x, a2=0x%x, io_addr=0x%x, size=0x%x)", context_id, a2, io_addr, size);
-
-	return CELL_OK;
+	sys_rsx.todo("sys_rsx_context_iounmap(context_id=0x%x, io_addr=0x%x, a3=0x%x, size=0x%x)", context_id, io_addr, a3, size);
+    if (RSXIOMem.UnmapAddress(io_addr, size))
+	    return CELL_OK;
+    LOG_ERROR(RSX, "rsx_iounmap failed");
+    return CELL_EINVAL;
 }
 
 /*
@@ -120,32 +240,63 @@ s32 sys_rsx_context_iounmap(u32 context_id, u32 a2, u32 io_addr, u32 size)
 s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
 	sys_rsx.todo("sys_rsx_context_attribute(context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
-
+    const auto render = fxm::get<GSRender>();
+    auto &driverInfo = vm::_ref<RsxDriverInfo>(g_driverInfo);
 	switch(package_id)
 	{
 	case 0x001: // FIFO
+        render->ctrl->get = a3;
+        render->ctrl->put = a4;
 		break;
 	
 	case 0x100: // Display mode set
-		break;
-
-	case 0x101: // Display sync
+    case 0x101: // Display sync
 		break;
 
 	case 0x102: // Display flip
+        driverInfo.head[a3].flip |= 0x80000000;
+        if (a3 == 0)
+            sys_event_port_send(g_rsx_event_port, 0, (1 << 3), 0);
+        if (a3 == 1)
+            sys_event_port_send(g_rsx_event_port, 0, (1 << 4), 0);
 		break;
 
-	case 0x103: // ?
+	case 0x103: // Display Queue
+        driverInfo.head[a3].flip |= 0x40000000 | (1 << a4);
+        if (a3 == 0)
+            sys_event_port_send(g_rsx_event_port, 0, (1 << 5), 0);
+        if (a3 == 1)
+            sys_event_port_send(g_rsx_event_port, 0, (1 << 6), 0);
 		break;
 
 	case 0x104: // Display buffer
-		break;
+    {
+        u8 id = a3 & 0xFF;
+        u32 width = (a4 >> 32) & 0xFFFFFFFF;
+        u32 height = a4 & 0xFFFFFFFF;
+        u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
+        u32 offset = a5 & 0xFFFFFFFF;
+        if (id > 7)
+            return -17;
+        render->gcm_buffers[id].width = width;
+        render->gcm_buffers[id].height = height;
+        render->gcm_buffers[id].pitch = pitch;
+        render->gcm_buffers[id].offset = offset;
+    }
+	break;
 
 	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
 
 	case 0x10a: // ?
+        if (a3 > 7)
+            return -17;
+        driverInfo.head[a3].flip &= a4;
+        driverInfo.head[a3].flip |= a5;
 		break;
+
+    case 0x10D: // ?
+        break;
 
 	case 0x300: // Tiles
 		break;
@@ -162,6 +313,9 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	case 0x602: // Framebuffer blit sync
 		break;
 
+    case 0x603: // Framebuffer close
+        break;
+
 	default:
 		return CELL_EINVAL;
 	}
@@ -175,19 +329,19 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
  * @param a2 (OUT): Unused?
  * @param dev_id (IN): An immediate value and always 8. (cellGcmInitPerfMon uses 11, 10, 9, 7, 12 successively).
  */
-s32 sys_rsx_device_map(vm::ptr<u32> addr, vm::ptr<u32> a2, u32 dev_id)
+s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
 {
 	sys_rsx.todo("sys_rsx_device_map(addr=*0x%x, a2=*0x%x, dev_id=0x%x)", addr, a2, dev_id);
 
-	if (dev_id > 15) {
-		// TODO: Throw RSX error
-		return CELL_EINVAL;
+    if (dev_id != 8) {
+		// TODO: lv1 related 
+        fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
-	if (dev_id == 0 || dev_id > 8) {
-		// TODO: lv1 related so we may ignore it.
-		// if (something) { return CELL_EPERM; }
-	}
+    // a2 seems to not be referenced in cellGcmSys
+    *a2 = 0;
+
+    *addr = 0x40000000;
 
 	return CELL_OK;
 }
