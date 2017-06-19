@@ -142,6 +142,8 @@ namespace rsx
 		u32 gcm_current_buffer;
 		u32 ctxt_addr;
 		u32 label_addr;
+        u32 nv406e_semaphore_addr;
+        u32 nv4097_semaphore_index;
 
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];

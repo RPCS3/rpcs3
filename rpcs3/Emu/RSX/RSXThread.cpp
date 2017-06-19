@@ -57,8 +57,9 @@ namespace rsx
 				//}
 			}
 
-			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT:
-				return 0x100000 + offset; // TODO: Properly implement
+			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
+                return 0x40300000 + offset;
+				//return 0x100000 + offset; // TODO: Properly implement
 
 			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 				return 0x800 + offset;	// TODO: Properly implement
@@ -71,13 +72,16 @@ namespace rsx
 
 			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
 			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-				return 0x100 + offset; // TODO: Properly implement
+                return 0x40100000 + offset;
+				//return 0x100 + offset; // TODO: Properly implement
 
 			case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_RW (offset=0x%x, location=0x%x)" HERE, offset, location);
+                return 0x40000000 + offset;
+				//fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_RW (offset=0x%x, location=0x%x)" HERE, offset, location);
 
 			case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_R (offset=0x%x, location=0x%x)" HERE, offset, location);
+                return 0x40000000 + offset;
+				//fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_R (offset=0x%x, location=0x%x)" HERE, offset, location);
 
 			default:
 				fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
@@ -500,7 +504,7 @@ namespace rsx
 				u32 reg = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? first_cmd : first_cmd + i;
 				u32 value = args[i];
 
-				//LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+				//LOG_WARNING(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 
 				method_registers.decode(reg, value);
 

@@ -7,10 +7,20 @@
 
 struct CellGcmControl
 {
-	atomic_be_t<u32> put;
-	atomic_be_t<u32> get;
-	atomic_be_t<u32> ref;
+    u8 resv[0x40];
+    atomic_be_t<u32> put;
+    atomic_be_t<u32> get;
+    atomic_be_t<u32> ref;
+    be_t<u32> unk[2];
+    be_t<u32> unk1;
 };
+
+/*struct CellGcmControl
+{
+    atomic_be_t<u32> put;
+    atomic_be_t<u32> get;
+    atomic_be_t<u32> ref;
+};*/
 
 struct CellGcmConfig
 {
