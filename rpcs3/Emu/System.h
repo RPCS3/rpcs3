@@ -203,7 +203,7 @@ public:
 	}
 
 	void Init();
-	bool SetPath(const std::string& path, const std::string& elf_path = {});
+	void SetPath(const std::string& path, const std::string& elf_path = {});
 
 	const std::string& GetPath() const
 	{
@@ -236,7 +236,7 @@ public:
 	static std::string GetGameDir();
 	static std::string GetLibDir();
 
-	void Load();
+	bool Load();
 	void Run();
 	bool Pause();
 	void Resume();

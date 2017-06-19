@@ -32,14 +32,17 @@ int main(int argc, char** argv)
 
 	if (parser.positionalArguments().length() > 0)
 	{
-		if (Emu.SetPath(sstr(parser.positionalArguments().at(0))))
+		std::string path = sstr(parser.positionalArguments().at(0));
+		std::replace(path.begin(), path.end(), '\\', '/');
+		Emu.SetPath(path);
+
+		if (Emu.Load())
 		{
-			Emu.Load();
 			Emu.Run();
 		}
 		else
 		{
-			fprintf(stderr, "%s\n", qPrintable(QCoreApplication::translate("main", "Error: You are not supposed to boot disc games from dev_hdd0/game/")));
+			fprintf(stderr, "%s\n", qPrintable(QCoreApplication::translate("main", "Error: Could not load game")));
 			parser.showHelp(1);
 		}
 	}

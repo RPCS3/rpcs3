@@ -219,22 +219,10 @@ void Emulator::Init()
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
 
-bool Emulator::SetPath(const std::string& path, const std::string& elf_path)
+void Emulator::SetPath(const std::string& path, const std::string& elf_path)
 {
-	std::string str = path;
-	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-
-	if (str.find("/dev_hdd0/game/") != std::string::npos && str.find("/ps3_game/usrdir/") != std::string::npos ||
-		str.find("\\dev_hdd0\\game\\") != std::string::npos && str.find("\\ps3_game\\usrdir\\") != std::string::npos)
-	{
-		LOG_ERROR(LOADER, "You are not supposed to boot disc games from dev_hdd0/game/");
-		return false;
-	}
-
 	m_path = path;
 	m_elf_path = elf_path;
-
-	return true;
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct)
@@ -249,11 +237,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 	if (direct && fs::is_file(path))
 	{
-		if (!SetPath(path))
-		{
-			return false;
-		}
-
+		SetPath(path);
 		Load();
 
 		return true;
@@ -265,11 +249,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 		if (fs::is_file(elf))
 		{
-			if (!SetPath(elf))
-			{
-				return false;
-			}
-
+			SetPath(elf);
 			Load();
 
 			return true;
@@ -303,7 +283,7 @@ std::string Emulator::GetLibDir()
 	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
-void Emulator::Load()
+bool Emulator::Load()
 {
 	Stop();
 
@@ -317,7 +297,7 @@ void Emulator::Load()
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
-			return;
+			return false;
 		}
 
 		LOG_NOTICE(LOADER, "Path: %s", m_path);
@@ -330,6 +310,27 @@ void Emulator::Load()
 		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
 		m_title = psf::get_string(_psf, "TITLE", m_path);
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
+
+		if (psf::get_string(_psf, "CATEGORY", "unknown") == "DG")
+		{
+			size_t pos = elf_dir.rfind("PS3_GAME");
+			std::string temp = elf_dir.substr(0, pos);
+
+			const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+			const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+			if (!((pos != std::string::npos) && fs::is_file(temp + "/PS3_DISC.SFB")))
+			{
+				LOG_ERROR(LOADER, "Failed to boot disc game!");
+				return false;
+			}
+			else if (elf_dir.find(emu_dir) != std::string::npos && elf_dir.find(GetDiscDir()) == std::string::npos)
+			{
+				LOG_ERROR(LOADER, "Disc games are not allowed anywhere inside dev_hdd0/ other than dev_hdd0/disc/");
+				return false;
+				//fs::rename(x, y);
+			}
+		}
 
 		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
@@ -438,7 +439,7 @@ void Emulator::Load()
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", m_path);
-			return;
+			return false;
 		}
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -464,7 +465,7 @@ void Emulator::Load()
 					if (pos == std::string::npos)
 					{
 						LOG_ERROR(LOADER, "Title ID isn't present in the path(%s)", m_path);
-						return;
+						return false;
 					}
 					m_elf_path = "/dev_hdd0/game/" + m_path.substr(pos);
 				}
@@ -523,7 +524,7 @@ void Emulator::Load()
 			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
 			LOG_WARNING(LOADER, "** spu_exec -> %s", spu_exec.get_error());
 			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
-			return;
+			return false;
 		}
 
 		if (g_cfg.misc.autostart && IsReady())
@@ -535,6 +536,7 @@ void Emulator::Load()
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 		}
+		return true;
 	}
 	catch (const std::exception& e)
 	{
