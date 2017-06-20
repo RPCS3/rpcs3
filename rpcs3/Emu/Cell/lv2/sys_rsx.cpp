@@ -13,27 +13,46 @@ namespace vm { using namespace ps3; }
 logs::channel sys_rsx("sys_rsx");
 
 struct RsxDriverInfo {
-    be_t<u32> version_driver;
-    be_t<u32> version_gpu;
-    be_t<u32> memory_size;
-    be_t<u32> hardware_channel;
-    be_t<u32> nvcore_frequency;
-    be_t<u32> memory_frequency;
-    u8 unk[0x10A8];
+    be_t<u32> version_driver;     // 0x0
+    be_t<u32> version_gpu;        // 0x4
+    be_t<u32> memory_size;        // 0x8
+    be_t<u32> hardware_channel;   // 0xC
+    be_t<u32> nvcore_frequency;   // 0x10
+    be_t<u32> memory_frequency;   // 0x14
+    be_t<u32> unk1[4];            // 0x18 - 0x24
+    be_t<u32> unk2;               // 0x28 -- pgraph stuff
+    be_t<u32> reportsNotifyOffset;// 0x2C offset to notify memory
+    be_t<u32> reportsOffset;      // 0x30 offset to reports memory
+    be_t<u32> reportsReportOffset;// 0x34 offset to reports in reports memory
+    be_t<u32> unk3[6];            // 0x38-0x54
+    be_t<u32> systemModeFlags;    // 0x54
+    u8 unk4[0x105C];              // 0x10B0
     struct Head {
-        be_t<u32> flip;
-        be_t<u32> unk[4];
-        be_t<f32> unk1;
-        be_t<u32> unk2[5];
-        be_t<u32> unk3;
-        be_t<u32> unk4[4];
-    } head[8];
-    be_t<u32> handlers;
-    be_t<u32> unk1;
-    be_t<u32> unk2;
-    be_t<u32> unk3;
-    be_t<u32> handler_queue;
+        be_t<u64> unk;             // 0x0
+        be_t<u64> lastFlip;        // 0x8 last flip time
+        be_t<u32> flipFlags;       // 0x10 flags to handle flip/queue
+        be_t<u32> unk1;            // 0x14
+        be_t<u64> unk2[2];         // 0x18 - 0x20
+        be_t<u64> lastSecondVTime; // 0x28 last time for second vhandler freq
+        be_t<u64> vBlankCount;     // 0x30 
+        be_t<u64> unk3;
+    } head[8]; // size = 0x40
+    be_t<u32> unk5;          // 0x12B0
+    be_t<u32> unk6;          // 0x12B4
+    be_t<u32> unk7;          // 0x12B8
+    be_t<u32> unk8;          // 0x12BC
+    be_t<u32> handlers;      // 0x12C0 -- flags showing which handlers are set
+    be_t<u32> unk9;          // 0x12C4
+    be_t<u32> unk10;         // 0x12C8
+    be_t<u32> userCmdParam;  // 0x12CC
+    be_t<u32> handler_queue; // 0x12D0
+    be_t<u32> unk11;         // 0x12D4
+    // todo: theres more to this 
 };
+template <size_t S> class Sizer { };
+Sizer<sizeof(RsxDriverInfo)> foo;
+static_assert(sizeof(RsxDriverInfo) == 0x12D8, "rsxSizeTest");
+static_assert(sizeof(RsxDriverInfo::Head) == 0x40, "rsxHeadSizeTest");
 
 struct RsxDmaControl {
     u8 resv[0x40];
@@ -45,8 +64,8 @@ struct RsxDmaControl {
 };
 
 struct RsxSemaphore {
-    be_t<u64> val;
-    be_t<u64> pad;
+    be_t<u32> val;
+    be_t<u32> pad;
     be_t<u64> timestamp;
 };
 
@@ -67,8 +86,8 @@ struct RsxReports {
     RsxReport report[2048];
 };
 
-be_t<u32> g_rsx_event_port;
-u32 g_driverInfo;
+be_t<u32> g_rsx_event_port{ 0 };
+u32 g_driverInfo{ 0 };
 
 s32 sys_rsx_device_open()
 {
@@ -138,11 +157,18 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
     *lpar_reports = 0x40300000;
 
     auto &driverInfo = vm::_ref<RsxDriverInfo>(*lpar_driver_info);
+
+    std::memset(&driverInfo, 0, sizeof(RsxDriverInfo));
+
     driverInfo.version_driver = 0x211;
     driverInfo.version_gpu = 0x5c;
     driverInfo.memory_size = 0xFE00000;
     driverInfo.nvcore_frequency = 500000000;
     driverInfo.memory_frequency = 650000000;
+    driverInfo.reportsNotifyOffset = 0x1000;
+    driverInfo.reportsOffset = 0;
+    driverInfo.reportsReportOffset = 0x1400;
+    driverInfo.systemModeFlags = system_mode;
 
     g_driverInfo = *lpar_driver_info;
 
@@ -240,6 +266,12 @@ s32 sys_rsx_context_iounmap(u32 context_id, u32 io_addr, u32 a3, u32 size)
 s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
 	sys_rsx.todo("sys_rsx_context_attribute(context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
+
+    // hle/lle protection
+    if (g_driverInfo == 0)
+        return CELL_OK;
+    // todo: these event ports probly 'shouldnt' be here as i think its supposed to be interrupts that are sent from rsx somewhere in lv1
+
     const auto render = fxm::get<GSRender>();
     auto &driverInfo = vm::_ref<RsxDriverInfo>(g_driverInfo);
 	switch(package_id)
@@ -250,11 +282,19 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		break;
 	
 	case 0x100: // Display mode set
+        break;
     case 0x101: // Display sync
+        // todo: this is wrong and should be 'second' vblank handler and freq
+        // although gcmSys seems just hardcoded at 1, so w/e
+        driverInfo.head[1].vBlankCount++;
+        driverInfo.head[1].lastSecondVTime = get_system_time();
+        sys_event_port_send(g_rsx_event_port, 0, (1 << 1), 0);
+        sys_event_port_send(g_rsx_event_port, 0, (1 << 11), 0); // second vhandler
 		break;
 
 	case 0x102: // Display flip
-        driverInfo.head[a3].flip |= 0x80000000;
+        driverInfo.head[a3].flipFlags |= 0x80000000;
+        driverInfo.head[a3].lastFlip = get_system_time(); // should rsxthread set this?
         if (a3 == 0)
             sys_event_port_send(g_rsx_event_port, 0, (1 << 3), 0);
         if (a3 == 1)
@@ -262,13 +302,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		break;
 
 	case 0x103: // Display Queue
-        driverInfo.head[a3].flip |= 0x40000000 | (1 << a4);
+        driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
         if (a3 == 0)
             sys_event_port_send(g_rsx_event_port, 0, (1 << 5), 0);
         if (a3 == 1)
             sys_event_port_send(g_rsx_event_port, 0, (1 << 6), 0);
 		break;
-
 	case 0x104: // Display buffer
     {
         u8 id = a3 & 0xFF;
@@ -284,18 +323,24 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
         render->gcm_buffers[id].offset = offset;
     }
 	break;
+    case 0x105: // destroy buffer?
+        break;
 
 	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
-
-	case 0x10a: // ?
+    case 0x108: // ? set interrupt freq?
+        break;
+	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
+    {
         if (a3 > 7)
             return -17;
-        driverInfo.head[a3].flip &= a4;
-        driverInfo.head[a3].flip |= a5;
-		break;
+        u32 flipStatus = driverInfo.head[a3].flipFlags;
+        flipStatus = (flipStatus & a4) | a5;
+        driverInfo.head[a3].flipFlags = flipStatus;
+    }
+	break;
 
-    case 0x10D: // ?
+    case 0x10D: // Called by cellGcmInitCursor
         break;
 
 	case 0x300: // Tiles
@@ -303,7 +348,8 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	case 0x301: // Depth-buffer (Z-cull)
 		break;
-
+    case 0x302: // something with zcull
+        break;
 	case 0x600: // Framebuffer setup
 		break;
 
@@ -316,6 +362,13 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
     case 0x603: // Framebuffer close
         break;
 
+    case 0xFEF: // hack: user command
+        // 'custom' invalid package id for now 
+        // as i think we need custom lv1 interrupts to handle this accurately
+        // this also should probly be set by rsxthread
+        driverInfo.userCmdParam = a4;
+        sys_event_port_send(g_rsx_event_port, 0, (1 << 7), 0);
+        break;
 	default:
 		return CELL_EINVAL;
 	}
@@ -357,9 +410,9 @@ s32 sys_rsx_device_unmap(u32 dev_id)
 	return CELL_OK;
 }
 
-s32 sys_rsx_attribute(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5)
+s32 sys_rsx_attribute(u32 packageId, u32 a2, u32 a3, u32 a4, u32 a5)
 {
-	sys_rsx.todo("sys_rsx_attribute(a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", a1, a2, a3, a4, a5);
+	sys_rsx.todo("sys_rsx_attribute(packageId=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", packageId, a2, a3, a4, a5);
 
 	return CELL_OK;
 }
