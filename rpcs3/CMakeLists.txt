@@ -284,6 +284,8 @@ else()
     add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
 endif()
 
+add_dependencies(rpcs3 GitVersion)
+
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
