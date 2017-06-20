@@ -389,6 +389,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 655: return "sys_rsxaudio_close_connection";
 	case 656: return "sys_rsxaudio_prepare_process";
 	case 657: return "sys_rsxaudio_start_process";
+	case 658: return "sys_rsxaudio_stop_process";
 	case 666: return "sys_rsx_device_open";
 	case 667: return "sys_rsx_device_close";
 	case 668: return "sys_rsx_memory_allocate";

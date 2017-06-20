@@ -173,6 +173,7 @@ extern void sysPrxForUser_sys_mempool_init();
 extern void sysPrxForUser_sys_spu_init();
 extern void sysPrxForUser_sys_game_init();
 extern void sysPrxForUser_sys_libc_init();
+extern void sysPrxForUser_sys_rsxaudio_init();
 
 DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 {
@@ -227,6 +228,7 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 	sysPrxForUser_sys_spu_init();
 	sysPrxForUser_sys_game_init();
 	sysPrxForUser_sys_libc_init();
+	sysPrxForUser_sys_rsxaudio_init();
 
 	REG_VAR(sysPrxForUser, sys_prx_version); // 0x7df066cf
 
