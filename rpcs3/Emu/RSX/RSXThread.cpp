@@ -5,6 +5,7 @@
 #include "RSXThread.h"
 
 #include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 #include "Common/BufferUtils.h"
 #include "rsx_methods.h"
@@ -390,7 +391,7 @@ namespace rsx
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
-
+                    sys_rsx_context_attribute(0x55555555, 0x101, 0, 0, 0, 0);
 					if (vblank_handler)
 					{
 						intr_thread->cmd_list

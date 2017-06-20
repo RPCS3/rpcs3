@@ -13,8 +13,6 @@
 
 #include <thread>
 
-#include <Windows.h>
-
 template <>
 void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 {
@@ -114,22 +112,6 @@ namespace rsx
         RsxReport report[2048];
     };
 
-    u64 ptimer_gettime() {
-        static struct PerformanceFreqHolder {
-            u64 value;
-            PerformanceFreqHolder() {
-                LARGE_INTEGER freq;
-                QueryPerformanceFrequency(&freq);
-                value = freq.QuadPart;
-            }
-        } freq;
-
-        LARGE_INTEGER cycle;
-        QueryPerformanceCounter(&cycle);
-        const u64 sec = cycle.QuadPart / freq.value;
-        return sec * 1000000000 + (cycle.QuadPart % freq.value) * 1000000000 / freq.value;
-    }
-
 	namespace nv4097
 	{
 		void clear(thread* rsx, u32 _reg, u32 arg)
@@ -167,7 +149,7 @@ namespace rsx
             auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
             sema.semaphore[index].val = arg;
             sema.semaphore[index].pad = 0;
-            sema.semaphore[index].timestamp = ptimer_gettime();
+            sema.semaphore[index].timestamp = get_system_time();
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -188,7 +170,7 @@ namespace rsx
             auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
             sema.semaphore[index].val = val;
             sema.semaphore[index].pad = 0;
-            sema.semaphore[index].timestamp = ptimer_gettime();
+            sema.semaphore[index].timestamp = get_system_time();
 
 		}
 
@@ -964,6 +946,7 @@ namespace rsx
 
 	void user_command(thread* rsx, u32, u32 arg)
 	{
+        sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
 		if (rsx->user_handler)
 		{
 			rsx->intr_thread->cmd_list
@@ -979,6 +962,8 @@ namespace rsx
 
     namespace gcm
     {
+        // not entirely sure which one should actually do the flip, or if these should be handled seperately,
+        // so for now lets flip in queue and just let the driver deal with it
         template<u32 index>
         struct driver_flip
         {
@@ -1566,12 +1551,13 @@ namespace rsx
 		//NV0039
 		bind<NV0039_BUFFER_NOTIFY, nv0039::buffer_notify>();
 
-		// custom methods
-		bind<GCM_FLIP_COMMAND, flip_command>();
+		// lv1 hypervisor
 		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
-
         bind_range<GCM_FLIP_HEAD, 1, 2, gcm::driver_flip>();
         bind_range<GCM_DRIVER_QUEUE, 1, 8, gcm::queue_flip>();
+
+        // custom 
+        bind<GCM_FLIP_COMMAND, flip_command>();
 
 		return true;	
 	}();
