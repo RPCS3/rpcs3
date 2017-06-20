@@ -414,7 +414,7 @@ error_code sys_event_port_disconnect(u32 eport_id)
 	return CELL_OK;
 }
 
-error_code sys_event_port_send(ppu_thread& ppu, u32 eport_id, u64 data1, u64 data2, u64 data3)
+error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
