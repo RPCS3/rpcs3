@@ -59,7 +59,7 @@ namespace rsx
 			}
 
 			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
-                return 0x40300000 + offset;
+                return 0x40301400 + offset; // not sure if this should be 0x40300000 or offset to the actual reports, lets try reports for now
 				//return 0x100000 + offset; // TODO: Properly implement
 
 			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
@@ -73,7 +73,7 @@ namespace rsx
 
 			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
 			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-                return 0x40100000 + offset;
+                return 0x40300000 + offset; // this offset also doesnt seem like its right, but it works for now so w/e
 				//return 0x100 + offset; // TODO: Properly implement
 
 			case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
