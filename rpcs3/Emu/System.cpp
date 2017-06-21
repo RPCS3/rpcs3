@@ -291,6 +291,51 @@ bool Emulator::Load()
 	{
 		Init();
 
+		const std::string elf_dir = fs::get_parent_dir(m_path);
+		fs::file sfov(elf_dir + "/sce_sys/param.sfo");
+		fs::file sfo1(elf_dir + "/../PARAM.SFO");
+
+		// Load PARAM.SFO (TODO)
+		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
+		m_title = psf::get_string(_psf, "TITLE", m_path);
+		m_title_id = psf::get_string(_psf, "TITLE_ID");
+
+		sfov.close();
+		sfo1.close();
+
+		if (psf::get_string(_psf, "CATEGORY", "unknown") == "DG")
+		{
+			size_t pos = elf_dir.rfind("PS3_GAME");
+			const std::string game_dir = elf_dir.substr(0, pos - 1);
+
+			const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+			const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+			if (pos == std::string::npos || !fs::is_file(game_dir + "/PS3_DISC.SFB"))
+			{
+				LOG_ERROR(LOADER, "Failed to boot disc game. Missing PS3_GAME folder or PS3_DISC.SFB file.");
+				return false;
+			}
+			else if (elf_dir.find(emu_dir) != std::string::npos && elf_dir.find(GetDiscDir()) == std::string::npos)
+			{
+				const std::string dest_dir = GetDiscDir() + game_dir.substr(game_dir.find_last_of('/') + 1);
+				const std::string elf_path = m_path.substr(m_path.rfind("PS3_GAME") - 1);
+
+				if (fs::rename(game_dir, dest_dir))
+				{
+					LOG_SUCCESS(LOADER, "Disc game folder renamed to %s", dest_dir);
+
+					SetPath(dest_dir + elf_path);
+					return Load();
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "Disc game folder rename error: %s to %s", game_dir, dest_dir);
+					return false;
+				}
+			}
+		}
+
 		// Open SELF or ELF
 		fs::file elf_file(m_path);
 
@@ -301,37 +346,6 @@ bool Emulator::Load()
 		}
 
 		LOG_NOTICE(LOADER, "Path: %s", m_path);
-
-		const std::string elf_dir = fs::get_parent_dir(m_path);
-		const fs::file sfov(elf_dir + "/sce_sys/param.sfo");
-		const fs::file sfo1(elf_dir + "/../PARAM.SFO");
-
-		// Load PARAM.SFO (TODO)
-		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
-		m_title = psf::get_string(_psf, "TITLE", m_path);
-		m_title_id = psf::get_string(_psf, "TITLE_ID");
-
-		if (psf::get_string(_psf, "CATEGORY", "unknown") == "DG")
-		{
-			size_t pos = elf_dir.rfind("PS3_GAME");
-			std::string temp = elf_dir.substr(0, pos);
-
-			const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
-			const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-
-			if (!((pos != std::string::npos) && fs::is_file(temp + "/PS3_DISC.SFB")))
-			{
-				LOG_ERROR(LOADER, "Failed to boot disc game!");
-				return false;
-			}
-			else if (elf_dir.find(emu_dir) != std::string::npos && elf_dir.find(GetDiscDir()) == std::string::npos)
-			{
-				LOG_ERROR(LOADER, "Disc games are not allowed anywhere inside dev_hdd0/ other than dev_hdd0/disc/");
-				return false;
-				//fs::rename(x, y);
-			}
-		}
-
 		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 
