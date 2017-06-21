@@ -405,7 +405,7 @@ void game_list_frame::Refresh(bool fromDrive)
 			{
 				img = QImage(m_Icon_Size, QImage::Format_ARGB32);
 				QString abspath = QDir(qstr(game.icon_path)).absolutePath();
-				LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
+				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(abspath));
 				img.fill(QColor(0, 0, 0, 0));
 				pxmap = QPixmap::fromImage(img);
 			}
