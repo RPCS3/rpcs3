@@ -149,7 +149,7 @@ namespace rsx
             auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
             sema.semaphore[index].val = arg;
             sema.semaphore[index].pad = 0;
-            sema.semaphore[index].timestamp = get_system_time();
+            sema.semaphore[index].timestamp = rsx->timestamp();
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -170,7 +170,7 @@ namespace rsx
             auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
             sema.semaphore[index].val = val;
             sema.semaphore[index].pad = 0;
-            sema.semaphore[index].timestamp = get_system_time();
+            sema.semaphore[index].timestamp = rsx->timestamp();
 
 		}
 
@@ -381,10 +381,10 @@ namespace rsx
 
 			switch (report_dma)
 			{
-			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_LOCATION_LOCAL; break;
-			case blit_engine::context_dma::report_location_main:
-			case blit_engine::context_dma::memory_host_buffer: 
-				location = CELL_GCM_LOCATION_MAIN; break;
+			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL; break;
+            case blit_engine::context_dma::report_location_main: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN; break;
+            case blit_engine::context_dma::memory_host_buffer: location = CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER; break;
+				//location = CELL_GCM_LOCATION_MAIN; break;
 			default:
 				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", (u8)report_dma);
 				return;
@@ -411,7 +411,7 @@ namespace rsx
 				break;
 			}
 
-			//result->padding = 0;
+			result->padding = 0;
 		}
 
 		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
