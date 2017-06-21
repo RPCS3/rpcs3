@@ -1166,6 +1166,28 @@ error_code sys_fs_chown(vm::cptr<char> path, s32 uid, s32 gid)
 	return CELL_OK;
 }
 
+error_code sys_fs_disk_free(vm::ps3::cptr<char> path, vm::ptr<u32> sizelow, vm::ptr<u32> sizehigh)
+{
+	sys_fs.warning("sys_fs_disk_free(path=%s sizelow=*0x%x sizehigh=*0x%x)", path, sizelow, sizehigh);
+
+	fs::device_stat info;
+	if (!fs::statfs(vfs::get(path.get_ptr()), info))
+	{
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent: return CELL_ENOENT;
+		default: sys_fs.error("sys_fs_disk_free(): unknown error %s", error);
+		}
+
+		return CELL_EIO;  // ???
+	}
+
+	*sizehigh = (u32)(info.avail_free >> 32);
+	*sizelow = (u32)(info.avail_free & 0xFFFFFFFF);
+
+	return CELL_OK;
+}
+
 error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep)
 {
 	sys_fs.warning("sys_fs_utime(path=%s, timep=*0x%x)", path, timep);
