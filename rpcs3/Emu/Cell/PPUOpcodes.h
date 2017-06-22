@@ -579,6 +579,20 @@ namespace ppu_instructions
 
 		enum
 		{
+			f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11,
+			f12, f13, f14, f15, F16, f17, f18, f19, f20, f21,
+			f22, f23, f24, f25, f26, f27, f28, f29, f30, f31,
+		};
+
+		enum
+		{
+			v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11,
+			v12, v13, v14, v15, v16, v17, v18, v19, v20, v21,
+			v22, v23, v24, v25, v26, v27, v28, v29, v30, v31,
+		};
+
+		enum
+		{
 			cr0, cr1, cr2, cr3, cr4, cr5, cr6, cr7,
 		};
 	}
@@ -605,6 +619,11 @@ namespace ppu_instructions
 	inline u32 CMPI(u32 bf, u32 l, u32 ra, u32 ui) { ppu_opcode_t op{ 0xbu << 26 }; op.crfd = bf; op.l10 = l; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 CMPLI(u32 bf, u32 l, u32 ra, u32 ui) { ppu_opcode_t op{ 0xau << 26 }; op.crfd = bf; op.l10 = l; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc = false) { ppu_opcode_t op{ 30 << 26 }; op.ra = ra; op.rs = rs; op.sh64 = sh; op.mbe64 = mb; op.rc = rc; return op.opcode; }
+	inline u32 RLDICR(u32 ra, u32 rs, u32 sh, u32 mb, bool rc = false) { return RLDICL(ra, rs, sh, mb, rc) | 1 << 2; }
+	inline u32 STFD(u32 frs, u32 ra, s32 si) { ppu_opcode_t op{ 54u << 26 }; op.frs = frs; op.ra = ra; op.simm16 = si; return op.opcode; }
+	inline u32 STVX(u32 vs, u32 ra, u32 rb) { ppu_opcode_t op{ 31 << 26 | 231 << 1 }; op.vs = vs; op.ra = ra; op.rb = rb; return op.opcode; }
+	inline u32 LFD(u32 frd, u32 ra, s32 si) { ppu_opcode_t op{ 50u << 26 }; op.frd = frd; op.ra = ra; op.simm16 = si; return op.opcode; }
+	inline u32 LVX(u32 vd, u32 ra, u32 rb) { ppu_opcode_t op{ 31 << 26 | 103 << 1 }; op.vd = vd; op.ra = ra; op.rb = rb; return op.opcode; }
 
 	namespace implicts
 	{
@@ -640,6 +659,7 @@ namespace ppu_instructions
 		inline u32 EXTRDI(u32 x, u32 y, u32 n, u32 b) { return RLDICL(x, y, b + n, 64 - b, false); }
 		inline u32 SRDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 64 - n, n, false); }
 		inline u32 CLRLDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 0, n, false); }
+		inline u32 CLRRDI(u32 x, u32 y, u32 n) { return RLDICR(x, y, 0, 63 - n, false); }
 
 		inline u32 TRAP() { return 0x7FE00008; } // tw 31,r0,r0
 	}
