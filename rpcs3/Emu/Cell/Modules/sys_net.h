@@ -9,6 +9,9 @@ namespace vm { using namespace ps3; }
 
 namespace sys_net
 {
+	
+// It turns out SOL_SOCKET is equal to 1 on Linux, but 0xffff on Windows, and it appears the PS3 uses 0xffff, like Windows
+#define PS3_SOL_SOCKET 0xffff
 	// Error codes
 	enum
 	{
