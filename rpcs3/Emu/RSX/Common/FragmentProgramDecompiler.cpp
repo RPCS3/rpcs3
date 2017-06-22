@@ -224,6 +224,18 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 	return code;
 }
 
+bool FragmentProgramDecompiler::DstExpectsSca()
+{
+	int writes = 0;
+	
+	if (dst.mask_x) writes++;
+	if (dst.mask_y) writes++;
+	if (dst.mask_z) writes++;
+	if (dst.mask_w) writes++;
+
+	return (writes == 1);
+}
+
 std::string FragmentProgramDecompiler::Format(const std::string& code)
 {
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
@@ -542,7 +554,8 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
-			if (m_prog.shadow_textures & (1 << dst.tex_num))
+			//Note shadow comparison only returns a true/false result!
+			if (DstExpectsSca() && (m_prog.shadow_textures & (1 << dst.tex_num)))
 				m_shadow_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
