@@ -40,6 +40,7 @@ option(VULKAN_PREBUILT "" OFF)
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/bin")
 
 add_subdirectory( Vulkan )
 add_subdirectory( rpcs3 )
@@ -55,20 +56,4 @@ elseif(MSVC)
 else()
 	add_subdirectory(3rdparty/hidapi/libusb)
 	#list(APPEND LIBS hidapi-libusb)
-endif()
-
-# Linux installation
-
-if(UNIX AND NOT APPLE)
-# Install the application icon and menu item
-install(FILES rpcs3/rpcs3.svg
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
-install(FILES rpcs3/rpcs3.png
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
-install(FILES rpcs3/rpcs3.desktop
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
-# Install the binary
-install(FILES "${PROJECT_BINARY_DIR}/bin/rpcs3"
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-        PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE) # i.e. 755
 endif()

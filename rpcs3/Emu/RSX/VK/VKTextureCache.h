@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
+#include "Emu/System.h"
 #include "../Common/TextureUtils.h"
 #include "../rsx_utils.h"
 
@@ -128,8 +129,7 @@ namespace vk
 			return (protection == utils::protection::rw && uploaded_image_view.get() == nullptr && managed_texture.get() == nullptr);
 		}
 
-		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue,
-				bool manage_cb_lifetime = false, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		void copy_texture(vk::command_buffer& cmd, u32 heap_index, VkQueue submit_queue, bool manage_cb_lifetime = false)
 		{
 			if (m_device == nullptr)
 			{
@@ -172,9 +172,10 @@ namespace vk
 
 			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			
-			change_image_layout(cmd, vram_texture->value, layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+			VkImageLayout layout = vram_texture->current_layout;
+			change_image_layout(cmd, vram_texture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
 			vkCmdCopyImageToBuffer(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &copyRegion);
-			change_image_layout(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, layout, subresource_range);
+			change_image_layout(cmd, vram_texture, layout, subresource_range);
 
 			if (manage_cb_lifetime)
 			{
@@ -227,7 +228,7 @@ namespace vk
 			if (!synchronized)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
-				copy_texture(cmd, heap_index, submit_queue, true, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				copy_texture(cmd, heap_index, submit_queue, true);
 			}
 
 			protect(utils::protection::rw);
@@ -281,7 +282,7 @@ namespace vk
 	{
 	private:
 		std::vector<cached_texture_section> m_cache;
-		std::pair<u64, u64> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
+		std::pair<u32, u32> texture_cache_range = std::make_pair(0xFFFFFFFF, 0);
 		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
 		std::vector<std::unique_ptr<vk::image>> m_dirty_textures;
 
@@ -297,7 +298,7 @@ namespace vk
 						return tex;
 					else
 					{
-						LOG_ERROR(RSX, "Cached object for address 0x%X was found, but it does not match stored parameters.");
+						LOG_ERROR(RSX, "Cached object for address 0x%X was found, but it does not match stored parameters.", rsx_address);
 						LOG_ERROR(RSX, "%d x %d vs %d x %d", width, height, tex.get_width(), tex.get_height());
 					}
 				}
@@ -390,10 +391,61 @@ namespace vk
 			return { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 		}
 
-		VkComponentMapping get_component_map(rsx::vertex_texture &tex, u32 gcm_format)
+		VkComponentMapping get_component_map(rsx::vertex_texture&, u32 gcm_format)
 		{
 			auto mapping = vk::get_component_mapping(gcm_format);
 			return { mapping[1], mapping[2], mapping[3], mapping[0] };
+		}
+
+		vk::image_view* create_temporary_subresource(vk::command_buffer& cmd, vk::image* source, u32 x, u32 y, u32 w, u32 h, const vk::memory_type_mapping &memory_type_mapping)
+		{
+			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			switch (source->info.format)
+			{
+			case VK_FORMAT_D16_UNORM:
+				aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+				aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			}
+
+			VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
+
+			std::unique_ptr<vk::image> image;
+			std::unique_ptr<vk::image_view> view;
+
+			image.reset(new vk::image(*vk::get_current_renderer(), memory_type_mapping.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				source->info.imageType,
+				source->info.format,
+				source->width(), source->height(), source->depth(), 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, source->info.flags));
+
+			VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
+			view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_2D, source->info.format, source->native_component_map, view_range));
+
+			VkImageLayout old_src_layout = source->current_layout;
+
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_GENERAL, subresource_range);
+			vk::change_image_layout(cmd, source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+
+			VkImageCopy copy_rgn;
+			copy_rgn.srcOffset = { (s32)x, (s32)y, 0 };
+			copy_rgn.dstOffset = { (s32)x, (s32)y, 0 };
+			copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
+			copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+			copy_rgn.extent = { w, h, 1 };
+
+			vkCmdCopyImage(cmd, source->value, source->current_layout, image->value, image->current_layout, 1, &copy_rgn);
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+			vk::change_image_layout(cmd, source, old_src_layout, subresource_range);
+
+			m_dirty_textures.push_back(std::move(image));
+			m_temporary_image_view.push_back(std::move(view));
+
+			return m_temporary_image_view.back().get();
 		}
 
 	public:
@@ -422,16 +474,37 @@ namespace vk
 			vk::image *rtt_texture = nullptr;
 			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
+				if (g_cfg.video.strict_rendering_mode)
+				{
+					for (const auto& tex : m_rtts.m_bound_render_targets)
+					{
+						if (std::get<0>(tex) == texaddr)
+						{
+							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+							return create_temporary_subresource(cmd, rtt_texture, 0, 0, rtt_texture->width(), rtt_texture->height(), memory_type_mapping);
+						}
+					}
+				}
+
 				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
-					rtt_texture->native_layout,
+					rtt_texture->native_component_map,
 					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT)));
 				return m_temporary_image_view.back().get();
 			}
 
 			if (rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
+				if (g_cfg.video.strict_rendering_mode)
+				{
+					if (std::get<0>(m_rtts.m_bound_depth_stencil) == texaddr)
+					{
+						LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
+						return create_temporary_subresource(cmd, rtt_texture, 0, 0, rtt_texture->width(), rtt_texture->height(), memory_type_mapping);
+					}
+				}
+
 				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
-					rtt_texture->native_layout,
+					rtt_texture->native_component_map,
 					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT)));
 				return m_temporary_image_view.back().get();
 			}
@@ -501,7 +574,7 @@ namespace vk
 				vk_format,
 				tex.width(), height, depth, tex.get_exact_mipmap_count(), layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0);
-			change_image_layout(cmd, image->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 
 			vk::image_view *view = new vk::image_view(*vk::get_current_renderer(), image->value, image_view_type, vk_format,
 				mapping,
@@ -513,7 +586,7 @@ namespace vk
 			copy_mipmaped_image_using_buffer(cmd, image->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), tex.get_exact_mipmap_count(),
 				upload_heap, upload_buffer);
 
-			change_image_layout(cmd, image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 
 			vk::leave_uninterruptible();
 

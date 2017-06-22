@@ -196,12 +196,14 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return " " + tex_name + " (" + sampler_name + ", " + coord_name + ".xyz) ";
 		}
+
+		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
 	}
 }
 
 void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
-	insert_d3d12_legacy_function(OS);
+	insert_d3d12_legacy_function(OS, true);
 
 	const std::set<std::string> output_value =
 	{

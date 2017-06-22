@@ -106,7 +106,7 @@ endif()
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
 	set(ADDITIONAL_LIBS "rt" "X11" "asound")
-elseif(UNIX OR NOT MSVC)
+elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
 	set(ADDITIONAL_LIBS "iconv")
@@ -284,6 +284,8 @@ else()
     add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
 endif()
 
+add_dependencies(rpcs3 GitVersion)
+
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
@@ -293,8 +295,13 @@ if(WIN32)
 	endif()
 	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
-	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} hidapi-hidraw udev)
-	target_link_libraries(rpcs3 -ldl -lpthread -lvulkan ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
+	if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+		target_link_libraries(rpcs3 hidapi-hidraw udev vulkan)
+	else()
+		target_link_libraries(rpcs3 hidapi-libusb usb)
+	endif()
+	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
 	if (USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
 		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswresample.so libswscale.so)
@@ -322,3 +329,16 @@ target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 
 cotire(rpcs3)
+
+# Unix installation
+if(UNIX AND NOT APPLE)
+	# Install the binary
+	install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+	# Install the application icon and menu item
+	install(FILES rpcs3.svg
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
+	install(FILES rpcs3.png
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
+	install(FILES rpcs3.desktop
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+endif()

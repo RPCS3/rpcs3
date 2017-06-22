@@ -6,6 +6,7 @@
 #include "../rsx_utils.h"
 #include "../Common/BufferUtils.h"
 #include "VKFormats.h"
+#include "VKCommonDecompiler.h"
 
 namespace
 {
@@ -32,15 +33,15 @@ namespace
 
 namespace vk
 {
-	VkCompareOp get_compare_func(rsx::comparison_function op)
+	VkCompareOp get_compare_func(rsx::comparison_function op, bool reverse_direction = false)
 	{
 		switch (op)
 		{
 		case rsx::comparison_function::never: return VK_COMPARE_OP_NEVER;
-		case rsx::comparison_function::greater: return VK_COMPARE_OP_GREATER;
-		case rsx::comparison_function::less: return VK_COMPARE_OP_LESS;
-		case rsx::comparison_function::less_or_equal: return VK_COMPARE_OP_LESS_OR_EQUAL;
-		case rsx::comparison_function::greater_or_equal: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+		case rsx::comparison_function::greater: return reverse_direction ? VK_COMPARE_OP_LESS: VK_COMPARE_OP_GREATER;
+		case rsx::comparison_function::less: return reverse_direction ? VK_COMPARE_OP_GREATER: VK_COMPARE_OP_LESS;
+		case rsx::comparison_function::less_or_equal: return reverse_direction ? VK_COMPARE_OP_GREATER_OR_EQUAL: VK_COMPARE_OP_LESS_OR_EQUAL;
+		case rsx::comparison_function::greater_or_equal: return reverse_direction ? VK_COMPARE_OP_LESS_OR_EQUAL: VK_COMPARE_OP_GREATER_OR_EQUAL;
 		case rsx::comparison_function::equal: return VK_COMPARE_OP_EQUAL;
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
@@ -123,10 +124,10 @@ namespace vk
 		case VK_FORMAT_R32G32B32A32_SFLOAT:
 			color_format_idx = 3;
 			break;
-		case VK_FORMAT_R8_UINT:
+		case VK_FORMAT_R8_UNORM:
 			color_format_idx = 4;
 			break;
-		case VK_FORMAT_R8G8_UINT:
+		case VK_FORMAT_R8G8_UNORM:
 			color_format_idx = 5;
 			break;
 		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
@@ -359,7 +360,7 @@ namespace
 		std::array<VkRenderPass, 120> result = {};
 
 		const std::array<VkFormat, 3> depth_format_list = { VK_FORMAT_UNDEFINED, VK_FORMAT_D16_UNORM, gpu_format_support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT };
-		const std::array<VkFormat, 8> color_format_list = { VK_FORMAT_R5G6B5_UNORM_PACK16, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8_UINT, VK_FORMAT_R8G8_UINT, VK_FORMAT_A1R5G5B5_UNORM_PACK16, VK_FORMAT_R32_SFLOAT };
+		const std::array<VkFormat, 8> color_format_list = { VK_FORMAT_R5G6B5_UNORM_PACK16, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8_UNORM, VK_FORMAT_R8G8_UNORM, VK_FORMAT_A1R5G5B5_UNORM_PACK16, VK_FORMAT_R32_SFLOAT };
 
 
 		for (const VkFormat &color_format : color_format_list)
@@ -616,6 +617,8 @@ VKGSRender::VKGSRender() : GSRender()
 
 	vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &m_present_semaphore);
 
+	vk::initialize_compiler_context();
+
 	if (g_cfg.video.overlay)
 	{
 		size_t idx = vk::get_render_pass_location( m_swap_chain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
@@ -632,7 +635,11 @@ VKGSRender::~VKGSRender()
 		return;
 	}
 
-	m_current_command_buffer->reset();
+	//Close recording and wait for all to finish
+	CHECK_RESULT(vkEndCommandBuffer(*m_current_command_buffer));
+
+	for (auto &cb : m_primary_cb_list)
+		if (cb.pending) cb.wait();
 
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
@@ -644,7 +651,11 @@ VKGSRender::~VKGSRender()
 		m_present_semaphore = nullptr;
 	}
 
+	//Texture cache
+	m_texture_cache.destroy();
+
 	//Shaders
+	vk::finalize_compiler_context();
 	m_prog_buffer.clear();
 
 	//Global resources
@@ -863,6 +874,11 @@ void VKGSRender::end()
 				continue;
 			}
 
+			const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+
+			VkBool32 is_depth_texture = (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8);
+			VkCompareOp depth_compare = is_depth_texture? vk::get_compare_func((rsx::comparison_function)rsx::method_registers.fragment_textures[i].zfunc(), true): VK_COMPARE_OP_NEVER;
+
 			VkFilter min_filter;
 			VkSamplerMipmapMode mip_mode;
 			float min_lod = 0.f, max_lod = 0.f;
@@ -886,8 +902,8 @@ void VKGSRender::end()
 				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
 				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
 				lod_bias, vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso()), min_lod, max_lod,
-				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color())
-				));
+				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color()),
+				is_depth_texture, depth_compare));
 
 			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 		}
@@ -916,7 +932,7 @@ void VKGSRender::end()
 				*m_device,
 				VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 				!!(rsx::method_registers.vertex_textures[i].format() & CELL_GCM_TEXTURE_UN),
-				0, 1.f, rsx::method_registers.vertex_textures[i].min_lod(), rsx::method_registers.vertex_textures[i].max_lod(),
+				0.f, 1.f, (f32)rsx::method_registers.vertex_textures[i].min_lod(), (f32)rsx::method_registers.vertex_textures[i].max_lod(),
 				VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, vk::get_border_color(rsx::method_registers.vertex_textures[i].border_color())
 				));
 
@@ -948,6 +964,22 @@ void VKGSRender::end()
 	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets, 0, nullptr);
+
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+	{
+		if (ds->dirty)
+		{
+			//Clear this surface before drawing on it
+			VkClearValue depth_clear_value;
+			depth_clear_value.depthStencil.depth = 1.f;
+			depth_clear_value.depthStencil.stencil = 255;
+
+			VkClearRect clear_rect = { 0, 0, m_framebuffer_to_clean.back()->width(), m_framebuffer_to_clean.back()->height(), 0, 1 };
+			VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
+			vkCmdClearAttachments(*m_current_command_buffer, 1, &clear_desc, 1, &clear_rect);
+			ds->dirty = false;
+		}
+	}
 
 	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<2>(upload_info);
 
@@ -1018,8 +1050,6 @@ void VKGSRender::on_init_thread()
 
 void VKGSRender::on_exit()
 {
-	m_texture_cache.destroy();
-
 	return GSRender::on_exit();
 }
 
@@ -1125,9 +1155,15 @@ void VKGSRender::clear_surface(u32 mask)
 
 	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdClearAttachments(*m_current_command_buffer, clear_descriptors.size(), clear_descriptors.data(), clear_regions.size(), clear_regions.data());
+	vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), (u32)clear_regions.size(), clear_regions.data());
 
 	vkCmdEndRenderPass(*m_current_command_buffer);
+
+	if (mask & 0x3)
+	{
+		if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
+			std::get<1>(m_rtts.m_bound_depth_stencil)->dirty = false;
+	}
 }
 
 void VKGSRender::sync_at_semaphore_release()
@@ -1261,6 +1297,9 @@ void VKGSRender::process_swap_request()
 	
 	m_rtts.invalidated_resources.clear();
 	m_texture_cache.flush();
+
+	if (g_cfg.video.invalidate_surface_cache_every_frame)
+		m_rtts.invalidate_surface_cache_data(&*m_current_command_buffer);
 
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();
@@ -1428,6 +1467,9 @@ bool VKGSRender::load_program()
 
 		if (rsx::method_registers.two_sided_stencil_test_enabled())
 		{
+			properties.ds.back.writeMask = rsx::method_registers.back_stencil_mask();
+			properties.ds.back.compareMask = rsx::method_registers.back_stencil_func_mask();
+			properties.ds.back.reference = rsx::method_registers.back_stencil_func_ref();
 			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail());
 			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
 			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
@@ -1486,7 +1528,7 @@ bool VKGSRender::load_program()
 	* NOTE: While VK's coord system resembles GLs, the clip volume is no longer symetrical in z
 	* Its like D3D without the flip in y (depending on how you build the spir-v)
 	*/
-	fill_scale_offset_data(buf, false, false);
+	fill_scale_offset_data(buf, false);
 	fill_user_clip_data(buf + 64);
 
 	m_uniform_buffer_ring_info.unmap();

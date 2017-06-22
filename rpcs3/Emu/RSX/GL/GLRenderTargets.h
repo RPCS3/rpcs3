@@ -65,9 +65,9 @@ namespace gl
 
 		render_target() {}
 
-		void set_cleared()
+		void set_cleared(bool clear=true)
 		{
-			is_cleared = true;
+			is_cleared = clear;
 		}
 
 		bool cleared() const
@@ -160,7 +160,7 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
-		u32 address,
+		u32 /*address*/,
 		rsx::surface_color_format surface_color_format,
 		size_t width,
 		size_t height
@@ -172,7 +172,7 @@ struct gl_render_target_traits
 		auto internal_fmt = rsx::internals::sized_internal_format(surface_color_format);
 
 		result->recreate(gl::texture::target::texture2D);
-		result->set_native_pitch(width * format.channel_count * format.channel_size);
+		result->set_native_pitch((u16)width * format.channel_count * format.channel_size);
 		result->set_compatible_format(internal_fmt);
 
 		__glcheck result->config()
@@ -192,7 +192,7 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
-			u32 address,
+			u32 /*address*/,
 		rsx::surface_depth_format surface_depth_format,
 			size_t width,
 			size_t height
@@ -215,7 +215,7 @@ struct gl_render_target_traits
 		__glcheck result->pixel_pack_settings().aligment(1);
 		__glcheck result->pixel_unpack_settings().aligment(1);
 
-		u16 native_pitch = width * 2;
+		u16 native_pitch = (u16)width * 2;
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 			native_pitch *= 2;
 
@@ -227,18 +227,22 @@ struct gl_render_target_traits
 
 	static void prepare_rtt_for_drawing(void *, gl::render_target*) {}
 	static void prepare_rtt_for_sampling(void *, gl::render_target*) {}
+	
 	static void prepare_ds_for_drawing(void *, gl::render_target*) {}
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
+	static void invalidate_rtt_surface_contents(void *, gl::render_target*) {}
+	static void invalidate_depth_surface_contents(void *, gl::render_target *ds) { ds->set_cleared(false);  }
+
 	static
-	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format surface_color_format, size_t width, size_t height)
+	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format, size_t width, size_t height)
 	{
 		// TODO: check format
 		return rtt->width() == width && rtt->height() == height;
 	}
 
 	static
-		bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
+	bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format, size_t width, size_t height)
 	{
 		// TODO: check format
 		return rtt->width() == width && rtt->height() == height;
@@ -264,7 +268,7 @@ struct gl_render_target_traits
 		return result;
 	}
 
-	static std::vector<u8> issue_stencil_download_command(gl::render_target* depth_stencil_buffer, size_t width, size_t height)
+	static std::vector<u8> issue_stencil_download_command(gl::render_target*, size_t width, size_t height)
 	{
 		std::vector<u8> result(width * height * 4);
 		return result;
@@ -353,7 +357,7 @@ private:
 		return false;
 	}
 
-	bool fits(gl::render_target *src, std::pair<u16, u16> &dims, u16 x_offset, u16 y_offset, u16 width, u16 height) const
+	bool fits(gl::render_target*, std::pair<u16, u16> &dims, u16 x_offset, u16 y_offset, u16 width, u16 height) const
 	{
 		if ((x_offset + width) > dims.first) return false;
 		if ((y_offset + height) > dims.second) return false;
@@ -365,7 +369,6 @@ public:
 	surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit =false, bool crop=false)
 	{
 		gl::render_target *surface = nullptr;
-		bool is_subslice = false;
 		u16  x_offset = 0;
 		u16  y_offset = 0;
 
@@ -384,7 +387,7 @@ public:
 				if (scale_to_fit)
 				{
 					f32  pitch_scaling = (f32)requested_pitch / surface->get_native_pitch();
-					requested_width /= pitch_scaling;
+					requested_width = (u16)((f32)requested_width / pitch_scaling);
 				}
 
 				if (fits(surface, dims, x_offset, y_offset, requested_width, requested_height))
@@ -424,7 +427,7 @@ public:
 				if (scale_to_fit)
 				{
 					f32  pitch_scaling = (f32)requested_pitch / surface->get_native_pitch();
-					requested_width /= pitch_scaling;
+					requested_width = (u16)((f32)requested_width / pitch_scaling);
 				}
 
 				if (fits(surface, dims, x_offset, y_offset, requested_width, requested_height))

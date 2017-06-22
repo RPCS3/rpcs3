@@ -78,11 +78,14 @@ namespace gl
 		bool ARB_buffer_storage_supported = false;
 		bool ARB_texture_buffer_supported = false;
 		bool ARB_shader_draw_parameters_supported = false;
+		bool ARB_depth_buffer_float_supported = false;
+		bool ARB_texture_barrier_supported = false;
+		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
 
 		void initialize()
 		{
-			int find_count = 5;
+			int find_count = 8;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -125,6 +128,27 @@ namespace gl
 				{
 					ARB_texture_buffer_supported = true;
 					find_count --;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_depth_buffer_float")
+				{
+					ARB_depth_buffer_float_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_texture_barrier")
+				{
+					ARB_texture_barrier_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (ext_name == "GL_NV_texture_barrier")
+				{
+					NV_texture_barrier_supported = true;
+					find_count--;
 					continue;
 				}
 			}
@@ -807,7 +831,7 @@ namespace gl
 
 			verify(HERE), m_memory_mapping != nullptr;
 			m_data_loc = 0;
-			m_limit = size;
+			m_limit = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -854,7 +878,7 @@ namespace gl
 			m_id = 0;
 		}
 
-		virtual void reserve_storage_on_heap(u32 alloc_size) {}
+		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
 
 		virtual void unmap() {}
 
@@ -888,7 +912,7 @@ namespace gl
 
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
-			m_limit = size;
+			m_limit = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -1137,6 +1161,7 @@ namespace gl
 			uint_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
 			uint_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV,
 			uint_24_8 = GL_UNSIGNED_INT_24_8,
+			float32_uint8 = GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
 
 			sbyte = GL_BYTE,
 			sshort = GL_SHORT,
@@ -1189,6 +1214,7 @@ namespace gl
 			depth16 = GL_DEPTH_COMPONENT16,
 			depth_stencil = GL_DEPTH_STENCIL,
 			depth24_stencil8 = GL_DEPTH24_STENCIL8,
+			depth32f_stencil8 = GL_DEPTH32F_STENCIL8,
 
 			compressed_rgb_s3tc_dxt1 = GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
 			compressed_rgba_s3tc_dxt1 = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
@@ -1990,6 +2016,12 @@ namespace gl
 
 	namespace glsl
 	{
+		enum program_domain
+		{
+			glsl_vertex_program = 0,
+			glsl_fragment_program = 1
+		};
+
 		class compilation_exception : public exception
 		{
 		public:

@@ -203,9 +203,10 @@ s32 cellMsgDialogOpenErrorCode(ppu_thread& ppu, u32 errorCode, vm::ptr<CellMsgDi
 	return cellMsgDialogOpen2(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(error), callback, userData, extParam);
 }
 
-s32 cellMsgDialogOpenSimulViewWarning()
+s32 cellMsgDialogOpenSimulViewWarning(vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellMsgDialogOpenSimulViewWarning(callback=*0x%x, userData=*0x%x, extParam=*0x%x)", callback, userData, extParam);
+	return CELL_OK;
 }
 
 s32 cellMsgDialogClose(f32 delay)

@@ -31,7 +31,7 @@ protected:
 
 	const RSXVertexProgram &rsx_vertex_program;
 public:
-	GLVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray& parr)
+	GLVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray&)
 		: VertexProgramDecompiler(prog)
 		, m_shader(shader)
 		, rsx_vertex_program(prog)
