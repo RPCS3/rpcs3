@@ -253,6 +253,7 @@
     <ClCompile Include="Emu\Cell\Modules\sys_net.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_ppu_thread_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_prx_.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_rsxaudio_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_spinlock.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_spu_.cpp" />
     <ClCompile Include="Emu\Cell\PPUDisAsm.cpp" />

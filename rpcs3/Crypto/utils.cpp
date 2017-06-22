@@ -52,28 +52,22 @@ u64 hex_to_u64(const char* hex_str)
 	return result;
 }
 
-void hex_to_bytes(unsigned char *data, const char *hex_str, unsigned int str_length)
+void hex_to_bytes(unsigned char* data, const char* hex_str, unsigned int str_length)
 {
-	u32 strn_length = (str_length > 0) ? str_length : (u32) strlen(hex_str);
+	u32 strn_length = (str_length > 0) ? str_length : (u32)std::strlen(hex_str);
 	u32 data_length = strn_length / 2;
 	char tmp_buf[3] = {0, 0, 0};
 
 	// Don't convert if the string length is odd.
-	if (!(strn_length % 2))
+	if ((strn_length % 2) == 0)
 	{
-		auto out = std::make_unique<u8[]>(strn_length * sizeof(u8));
-		u8 *pos = out.get();
-
-		while (strn_length--)
+		while (data_length--)
 		{
 			tmp_buf[0] = *hex_str++;
 			tmp_buf[1] = *hex_str++;
 
-			*pos++ = (u8)(hex_to_u64(tmp_buf) & 0xFF);
+			*data++ = (u8)(hex_to_u64(tmp_buf) & 0xFF);
 		}
-
-		// Copy back to our array.
-		memcpy(data, out.get(), data_length);
 	}
 }
 
