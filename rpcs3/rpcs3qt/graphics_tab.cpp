@@ -237,6 +237,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	QCheckBox *gpuTextureScaling = xemu_settings->CreateEnhancedCheckBox(emu_settings::GPUTextureScaling, this);
 	QCheckBox *forceHighpZ = xemu_settings->CreateEnhancedCheckBox(emu_settings::ForceHighpZ, this);
 	QCheckBox *autoInvalidateCache = xemu_settings->CreateEnhancedCheckBox(emu_settings::AutoInvalidateCache, this);
+	QCheckBox *scrictModeRendering = xemu_settings->CreateEnhancedCheckBox(emu_settings::StrictRenderingMode, this);
 
 	// Combobox Part
 	QHBoxLayout *hbox1 = new QHBoxLayout();
@@ -257,28 +258,47 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	hbox1->addLayout(vbox12);
 
 	// Checkbox Part
-	QHBoxLayout *hbox2 = new QHBoxLayout();
+	QGroupBox *mainOptions = new QGroupBox(tr("Main Options"));
+	QHBoxLayout *hbox2 = new QHBoxLayout();	//main options
 	QVBoxLayout *vbox21 = new QVBoxLayout();
 	vbox21->addWidget(dumpColor);
 	vbox21->addWidget(readColor);
 	vbox21->addWidget(dumpDepth);
 	vbox21->addWidget(readDepth);
-	vbox21->addWidget(glLegacyBuffers);
-	vbox21->addWidget(autoInvalidateCache);
 	QVBoxLayout *vbox22 = new QVBoxLayout();
-	vbox22->addWidget(debugOutput);
-	vbox22->addWidget(debugOverlay);
-	vbox22->addWidget(logProg);
 	vbox22->addWidget(vsync);
+	vbox22->addWidget(autoInvalidateCache);
 	vbox22->addWidget(gpuTextureScaling);
-	vbox22->addWidget(forceHighpZ);
+	vbox22->addSpacing(20);
+
 	hbox2->addLayout(vbox21);
 	hbox2->addLayout(vbox22);
+
+	QGroupBox *debugOptions = new QGroupBox(tr("Debugging Options"));
+	QHBoxLayout *hbox3 = new QHBoxLayout();
+	QBoxLayout *vbox31 = new QVBoxLayout();
+	vbox31->addWidget(glLegacyBuffers);
+	vbox31->addWidget(scrictModeRendering);
+	vbox31->addWidget(forceHighpZ);
+	QVBoxLayout *vbox32 = new QVBoxLayout();
+	vbox32->addWidget(debugOutput);
+	vbox32->addWidget(debugOverlay);
+	vbox32->addWidget(logProg);
+
+	hbox3->addLayout(vbox31);
+	hbox3->addLayout(vbox32);
+
+	mainOptions->setLayout(hbox2);
+	debugOptions->setLayout(hbox3);
+
+	QVBoxLayout *options_container = new QVBoxLayout();
+	options_container->addWidget(mainOptions);
+	options_container->addWidget(debugOptions);
 
 	QVBoxLayout *vbox = new QVBoxLayout();
 	vbox->addLayout(hbox1);
 	vbox->addSpacing(10);
-	vbox->addLayout(hbox2);
+	vbox->addLayout(options_container);
 	vbox->addStretch();
 	setLayout(vbox);
 	

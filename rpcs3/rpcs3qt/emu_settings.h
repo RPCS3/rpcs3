@@ -65,6 +65,7 @@ public:
 		VulkanAdapter,
 		ForceHighpZ,
 		AutoInvalidateCache,
+		StrictRenderingMode,
 
 		// Audio
 		AudioRenderer,
@@ -150,12 +151,13 @@ private:
 		{ VSync,			{ "Video", "VSync"}},
 		{ DebugOutput,		{ "Video", "Debug output"}},
 		{ DebugOverlay,		{ "Video", "Debug overlay"}},
-		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers (Debug)"}},
+		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers"}},
 		{ GPUTextureScaling,{ "Video", "Use GPU texture scaling"}},
 		{ ForceHighpZ,      { "Video", "Force High Precision Z buffer"}},
-		{ AutoInvalidateCache, {"Video", "Invalidate Cache Every Frame"}},
-		{ D3D12Adapter,		{ "Video", "D3D12", "Adapter"}},
-		{ VulkanAdapter,		{ "Video", "Vulkan", "Adapter"}},
+		{ AutoInvalidateCache, { "Video", "Invalidate Cache Every Frame"}},
+		{ StrictRenderingMode, { "Video", "Strict Rendering Mode"}},
+		{ D3D12Adapter,        { "Video", "D3D12", "Adapter"}},
+		{ VulkanAdapter,       { "Video", "Vulkan", "Adapter"}},
 
 		// Audio
 		{ AudioRenderer,	{ "Audio", "Renderer"}},
