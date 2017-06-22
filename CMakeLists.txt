@@ -40,6 +40,7 @@ option(VULKAN_PREBUILT "" OFF)
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/bin")
 
 add_subdirectory( Vulkan )
 add_subdirectory( rpcs3 )
