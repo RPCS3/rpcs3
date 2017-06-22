@@ -46,7 +46,7 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       sudo add-apt-repository ppa:beineri/opt-qt59-trusty -y;
       sudo apt-get update;
-      sudo apt-get install qt59base -y;
+      sudo apt-get install qt59base -y --allow-unauthenticated;
     fi;
   # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   # Install updated libglew-dev since the version provided by trusty is outdated
