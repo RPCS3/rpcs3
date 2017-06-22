@@ -174,14 +174,8 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 	// Deallocate TLS
 	ppu_free_tls(vm::cast(ppu.gpr[13], HERE) - 0x7030);
 
-	if (ppu.gpr[3] == val)
-	{
-		// Change sys_ppu_thread_exit code to the syscall code (hack)
-		ppu.gpr[11] = 41;
-	}
-
 	// Call the syscall
-	return _sys_ppu_thread_exit(ppu, val);
+	_sys_ppu_thread_exit(ppu, val);
 }
 
 error_code sys_ppu_thread_register_atexit(ppu_thread& ppu, vm::ptr<void()> func)
