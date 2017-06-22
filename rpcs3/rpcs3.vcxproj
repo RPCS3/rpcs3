@@ -166,9 +166,6 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        xcopy "$(QTDIR)\bin\Qt5Core.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Gui.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Widgets.dll" "$(OutDir)" /d
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -220,9 +217,6 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        xcopy "$(QTDIR)\bin\Qt5Core.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Gui.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Widgets.dll" "$(OutDir)" /d
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -274,11 +268,7 @@
       <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;QT_UI;QT_OPENGL_LIB;QT_WIDGETS_LIB;QT_QUICK_LIB;QT_GUI_LIB;QT_QML_LIB;QT_NETWORK_LIB;QT_CORE_LIB;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>
-        xcopy "$(QTDIR)\bin\Qt5Cored.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Guid.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Widgetsd.dll" "$(OutDir)" /d
-      </Command>
+      <Command>xcopy "$(QTDIR)\plugins\platforms\qwindowsd.dll" $(OUTDIR)\platforms\ /d</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>
@@ -329,11 +319,7 @@
       <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;QT_UI;QT_OPENGL_LIB;QT_WIDGETS_LIB;QT_QUICK_LIB;QT_GUI_LIB;QT_QML_LIB;QT_NETWORK_LIB;QT_CORE_LIB;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>
-        xcopy "$(QTDIR)\bin\Qt5Cored.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Guid.dll" "$(OutDir)" /d
-        xcopy "$(QTDIR)\bin\Qt5Widgetsd.dll" "$(OutDir)" /d
-      </Command>
+      <Command>xcopy "$(QTDIR)\plugins\platforms\qwindowsd.dll" $(OUTDIR)\platforms\ /d</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>
