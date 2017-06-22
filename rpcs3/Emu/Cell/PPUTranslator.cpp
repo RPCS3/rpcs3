@@ -1710,7 +1710,6 @@ void PPUTranslator::SUBFIC(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(imm, a);
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULE(result, imm));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", m_ir->CreateNot(a), imm, m_ir->getTrue()));
 }
 
 void PPUTranslator::CMPLI(ppu_opcode_t op)
@@ -1730,7 +1729,6 @@ void PPUTranslator::ADDIC(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, imm);
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, imm));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, imm, m_ir->getFalse()));
 	if (op.main & 1) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
@@ -2285,7 +2283,6 @@ void PPUTranslator::SUBFC(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(b, a);
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULE(result, b));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", m_ir->CreateNot(a), b, m_ir->getTrue()));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__subfc_get_ov", a, b));
 }
@@ -2297,7 +2294,6 @@ void PPUTranslator::ADDC(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, b);
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, b));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, b, m_ir->getFalse()));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__addc_get_ov", a, b));
 }
@@ -2487,7 +2483,7 @@ void PPUTranslator::MULHW(ppu_opcode_t op)
 {
 	const auto a = SExt(GetGpr(op.ra, 32));
 	const auto b = SExt(GetGpr(op.rb, 32));
-	SetGpr(op.rd, m_ir->CreateLShr(m_ir->CreateMul(a, b), 32));
+	SetGpr(op.rd, m_ir->CreateAShr(m_ir->CreateMul(a, b), 32));
 	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
 }
 
@@ -2545,10 +2541,11 @@ void PPUTranslator::SUBFE(ppu_opcode_t op)
 	const auto a = m_ir->CreateNot(GetGpr(op.ra));
 	const auto b = GetGpr(op.rb);
 	const auto c = GetCarry();
-	const auto result = m_ir->CreateAdd(m_ir->CreateAdd(a, b), ZExt(c, GetType<u64>()));
-	SetGpr(op.rd, result);
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, b, c)); // TODO
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	const auto r1 = m_ir->CreateAdd(a, b);
+	const auto r2 = m_ir->CreateAdd(r1, ZExt(c, GetType<u64>()));
+	SetGpr(op.rd, r2);
+	SetCarry(m_ir->CreateOr(m_ir->CreateICmpULT(r1, a), m_ir->CreateICmpULT(r2, r1)));
+	if (op.rc) SetCrFieldSignedCmp(0, r2, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__subfe_get_ov", a, b, c));
 }
 
@@ -2557,10 +2554,11 @@ void PPUTranslator::ADDE(ppu_opcode_t op)
 	const auto a = GetGpr(op.ra);
 	const auto b = GetGpr(op.rb);
 	const auto c = GetCarry();
-	const auto result = m_ir->CreateAdd(m_ir->CreateAdd(a, b), ZExt(c, GetType<u64>()));
-	SetGpr(op.rd, result);
-	SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, b, c)); // TODO
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	const auto r1 = m_ir->CreateAdd(a, b);
+	const auto r2 = m_ir->CreateAdd(r1, ZExt(c, GetType<u64>()));
+	SetGpr(op.rd, r2);
+	SetCarry(m_ir->CreateOr(m_ir->CreateICmpULT(r1, a), m_ir->CreateICmpULT(r2, r1)));
+	if (op.rc) SetCrFieldSignedCmp(0, r2, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__adde_get_ov", a, b, c));
 }
 
@@ -2645,7 +2643,6 @@ void PPUTranslator::ADDZE(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, a));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, m_ir->getInt64(0), c));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__addze_get_ov", a, c));
 }
@@ -2657,7 +2654,6 @@ void PPUTranslator::SUBFZE(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, a));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, m_ir->getInt64(0), c));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__subfze_get_ov", a, c));
 }
@@ -2687,7 +2683,6 @@ void PPUTranslator::SUBFME(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(a, ZExt(m_ir->CreateNot(c), GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateOr(c, IsNotZero(a)));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, m_ir->getInt64(-1), c));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__subfme_get_ov", a, c));
 }
@@ -2709,7 +2704,6 @@ void PPUTranslator::ADDME(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(a, ZExt(m_ir->CreateNot(c), GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateOr(c, IsNotZero(a)));
-	//SetCarry(Call(GetType<bool>(), m_pure_attr, "__adde_get_ca", a, m_ir->getInt64(-1), c));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__addme_get_ov", a, c));
 }
@@ -2907,7 +2901,7 @@ void PPUTranslator::DIVDU(ppu_opcode_t op)
 	const auto b = GetGpr(op.rb);
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(-1), b));
-	SetGpr(op.rd, result);
+	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
@@ -2917,7 +2911,8 @@ void PPUTranslator::DIVWU(ppu_opcode_t op)
 	const auto a = GetGpr(op.ra, 32);
 	const auto b = GetGpr(op.rb, 32);
 	const auto o = IsZero(b);
-	SetGpr(op.rd, m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(0xffffffff), b)));
+	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(0xffffffff), b));
+	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
 	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
 	if (op.oe) SetOverflow(o);
 }
@@ -2967,7 +2962,7 @@ void PPUTranslator::DIVD(ppu_opcode_t op)
 	const auto b = GetGpr(op.rb);
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt64(1ull << 63)), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(1ull << 63), b));
-	SetGpr(op.rd, result);
+	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
@@ -2977,7 +2972,8 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 	const auto a = GetGpr(op.ra, 32);
 	const auto b = GetGpr(op.rb, 32);
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(1 << 31)), IsOnes(b)));
-	SetGpr(op.rd, m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(1 << 31), b)));
+	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(1 << 31), b));
+	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
 	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
 	if (op.oe) SetOverflow(o);
 }
@@ -3032,7 +3028,43 @@ void PPUTranslator::LVRX(ppu_opcode_t op)
 
 void PPUTranslator::LSWI(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__lswi", m_ir->getInt32(op.rd), m_ir->getInt32(op.rb), op.ra ? GetGpr(op.ra) : m_ir->getInt64(0));
+	Value* addr = op.ra ? GetGpr(op.ra) : m_ir->getInt64(0);
+	u32 index = op.rb ? op.rb : 32;
+	u32 reg = op.rd;
+
+	while (index)
+	{
+		if (index > 3)
+		{
+			SetGpr(reg, ReadMemory(addr, GetType<u32>()));
+			index -= 4;
+
+			if (index)
+			{
+				addr = m_ir->CreateAdd(addr, m_ir->getInt64(4));
+			}
+		}
+		else
+		{
+			Value* buf = nullptr;
+			u32 i = 3;
+
+			while (index)
+			{
+				const auto byte = m_ir->CreateShl(ZExt(ReadMemory(addr, GetType<u8>()), GetType<u32>()), i * 8);
+
+				buf = buf ? m_ir->CreateOr(buf, byte) : byte;
+
+				if (--index)
+				{
+					addr = m_ir->CreateAdd(addr, m_ir->getInt64(1));
+				}
+			}
+
+			SetGpr(reg, buf);
+		}
+		reg = (reg + 1) % 32;
+	}
 }
 
 void PPUTranslator::LFSUX(ppu_opcode_t op)
@@ -3098,7 +3130,39 @@ void PPUTranslator::STFSUX(ppu_opcode_t op)
 
 void PPUTranslator::STSWI(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__stswi", m_ir->getInt32(op.rd), m_ir->getInt32(op.rb), op.ra ? GetGpr(op.ra) : m_ir->getInt64(0));
+	Value* addr = op.ra ? GetGpr(op.ra) : m_ir->getInt64(0);
+	u32 index = op.rb ? op.rb : 32;
+	u32 reg = op.rd;
+
+	while (index)
+	{
+		if (index > 3)
+		{
+			WriteMemory(GetGpr(reg, 32), addr);
+			index -= 4;
+
+			if (index)
+			{
+				addr = m_ir->CreateAdd(addr, m_ir->getInt64(4));
+			}
+		}
+		else
+		{
+			Value* buf = GetGpr(reg, 32);
+
+			while (index)
+			{
+				WriteMemory(m_ir->CreateLShr(buf, 24), addr);
+
+				if (--index)
+				{
+					buf = m_ir->CreateShl(buf, 8);
+					addr = m_ir->CreateAdd(addr, m_ir->getInt64(1));
+				}
+			}
+		}
+		reg = (reg + 1) % 32;
+	}
 }
 
 void PPUTranslator::STFDX(ppu_opcode_t op)
