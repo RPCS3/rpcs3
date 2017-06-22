@@ -145,7 +145,7 @@ namespace rsx
             //const u32 addr = get_address(method_registers.semaphore_offset_4097(), rsx->nv4097_semaphore_index);
             //vm::ps3::write32(addr, arg);
             const u32 index = method_registers.semaphore_offset_4097() >> 4;
-            LOG_ERROR(RSX, "readrelease: 0x%x, 0x%x, addr:0x%x", arg, index, rsx->label_addr);
+            //LOG_ERROR(RSX, "readrelease: 0x%x, 0x%x, addr:0x%x", arg, index, rsx->label_addr);
             auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
             sema.semaphore[index].val = arg;
             sema.semaphore[index].pad = 0;
@@ -166,7 +166,7 @@ namespace rsx
             //vm::ps3::write32(addr, (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
             const u32 index = method_registers.semaphore_offset_4097() >> 4;
             u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-            LOG_ERROR(RSX, "wriuterelease: 0x%x, 0x%x, addr:0x%x", val, index, rsx->label_addr);
+            //LOG_ERROR(RSX, "wriuterelease: 0x%x, 0x%x, addr:0x%x", val, index, rsx->label_addr);
             auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
             sema.semaphore[index].val = val;
             sema.semaphore[index].pad = 0;
@@ -1328,6 +1328,7 @@ namespace rsx
 		methods[NV4097_SET_TEXTURE_BORDER_COLOR]          = nullptr;
 		methods[NV4097_SET_VERTEX_DATA4F_M]               = nullptr;
 		methods[NV4097_SET_COLOR_KEY_COLOR]               = nullptr;
+        methods[0x1d04 >> 2]                              = nullptr;
 		methods[NV4097_SET_SHADER_CONTROL]                = nullptr;
 		methods[NV4097_SET_INDEXED_CONSTANT_READ_LIMITS]  = nullptr;
 		methods[NV4097_SET_SEMAPHORE_OFFSET]              = nullptr;
