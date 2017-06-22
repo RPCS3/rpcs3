@@ -17,6 +17,9 @@ enum class ppu_attr : u32
 	uses_r0,
 	entry_point,
 	complex_stack,
+	special,
+	//call_use_context,
+	//call_trace,
 
 	__bitset_enum_max
 };
@@ -35,6 +38,7 @@ struct ppu_function
 	std::map<u32, u32> blocks; // Basic blocks: addr -> size
 	std::set<u32> calls; // Set of called functions
 	std::set<u32> callers;
+	std::string name; // Function name
 };
 
 // PPU Module Information

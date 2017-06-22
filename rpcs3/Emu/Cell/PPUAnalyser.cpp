@@ -324,6 +324,205 @@ namespace ppu_patterns
 		abort1,
 		abort2,
 	};
+
+	const ppu_pattern get_context[]
+	{
+		ADDI(r3, r3, 0xf),
+		CLRRDI(r3, r3, 4),
+		STD(r1, r3, 0),
+		STD(r2, r3, 8),
+		STD(r14, r3, 0x18),
+		STD(r15, r3, 0x20),
+		STD(r16, r3, 0x28),
+		STD(r17, r3, 0x30),
+		STD(r18, r3, 0x38),
+		STD(r19, r3, 0x40),
+		STD(r20, r3, 0x48),
+		STD(r21, r3, 0x50),
+		STD(r22, r3, 0x58),
+		STD(r23, r3, 0x60),
+		STD(r24, r3, 0x68),
+		STD(r25, r3, 0x70),
+		STD(r26, r3, 0x78),
+		STD(r27, r3, 0x80),
+		STD(r28, r3, 0x88),
+		STD(r29, r3, 0x90),
+		STD(r30, r3, 0x98),
+		STD(r31, r3, 0xa0),
+		MFLR(r0),
+		STD(r0, r3, 0xa8),
+		0x7c000026, // mfcr r0
+		STD(r0, r3, 0xb0),
+		STFD(f14, r3, 0xb8),
+		STFD(f15, r3, 0xc0),
+		STFD(F16, r3, 0xc8),
+		STFD(f17, r3, 0xd0),
+		STFD(f18, r3, 0xd8),
+		STFD(f19, r3, 0xe0),
+		STFD(f20, r3, 0xe8),
+		STFD(f21, r3, 0xf0),
+		STFD(f22, r3, 0xf8),
+		STFD(f23, r3, 0x100),
+		STFD(f24, r3, 0x108),
+		STFD(f25, r3, 0x110),
+		STFD(f26, r3, 0x118),
+		STFD(f27, r3, 0x120),
+		STFD(f28, r3, 0x128),
+		STFD(f29, r3, 0x130),
+		STFD(f30, r3, 0x138),
+		STFD(f31, r3, 0x140),
+		0x7c0042A6, // mfspr r0, vrsave
+		STD(r0, r3, 0x148),
+		ADDI(r4, r3, 0x150),
+		ADDI(r5, r3, 0x160),
+		ADDI(r6, r3, 0x170),
+		ADDI(r7, r3, 0x180),
+		STVX(v20, r0, r4),
+		STVX(v21, r0, r5),
+		STVX(v22, r0, r6),
+		STVX(v23, r0, r7),
+		ADDI(r4, r4, 0x40),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		STVX(v24, r0, r4),
+		STVX(v25, r0, r5),
+		STVX(v26, r0, r6),
+		STVX(v27, r0, r7),
+		ADDI(r4, r4, 0x40),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		STVX(v28, r0, r4),
+		STVX(v29, r0, r5),
+		STVX(v30, r0, r6),
+		STVX(v31, r0, r7),
+		LI(r3, 0),
+		BLR(),
+	};
+
+	const ppu_pattern set_context[]
+	{
+		ADDI(r3, r3, 0xf),
+		CLRRDI(r3, r3, 4),
+		LD(r1, r3, 0),
+		LD(r2, r3, 8),
+		LD(r14, r3, 0x18),
+		LD(r15, r3, 0x20),
+		LD(r16, r3, 0x28),
+		LD(r17, r3, 0x30),
+		LD(r18, r3, 0x38),
+		LD(r19, r3, 0x40),
+		LD(r20, r3, 0x48),
+		LD(r21, r3, 0x50),
+		LD(r22, r3, 0x58),
+		LD(r23, r3, 0x60),
+		LD(r24, r3, 0x68),
+		LD(r25, r3, 0x70),
+		LD(r26, r3, 0x78),
+		LD(r27, r3, 0x80),
+		LD(r28, r3, 0x88),
+		LD(r29, r3, 0x90),
+		LD(r30, r3, 0x98),
+		LD(r31, r3, 0xa0),
+		LD(r0, r3, 0xa8),
+		MTLR(r0),
+		LD(r0, r3, 0xb0),
+		0x7c101120, // mtocrf 1, r0
+		0x7c102120, // mtocrf 2, r0
+		0x7c104120, // mtocrf 4, r0
+		0x7c108120, // mtocrf 8, r0
+		0x7c110120, // mtocrf 0x10, r0
+		0x7c120120, // mtocrf 0x20, r0
+		0x7c140120, // mtocrf 0x40, r0
+		0x7c180120, // mtocrf 0x80, r0
+		LFD(f14, r3, 0xb8),
+		LFD(f15, r3, 0xc0),
+		LFD(F16, r3, 0xc8),
+		LFD(f17, r3, 0xd0),
+		LFD(f18, r3, 0xd8),
+		LFD(f19, r3, 0xe0),
+		LFD(f20, r3, 0xe8),
+		LFD(f21, r3, 0xf0),
+		LFD(f22, r3, 0xf8),
+		LFD(f23, r3, 0x100),
+		LFD(f24, r3, 0x108),
+		LFD(f25, r3, 0x110),
+		LFD(f26, r3, 0x118),
+		LFD(f27, r3, 0x120),
+		LFD(f28, r3, 0x128),
+		LFD(f29, r3, 0x130),
+		LFD(f30, r3, 0x138),
+		LFD(f31, r3, 0x140),
+		LD(r0, r3, 0x148),
+		0x7c0043A6, //mtspr vrsave, r0
+		ADDI(r5, r3, 0x150),
+		ADDI(r6, r3, 0x160),
+		ADDI(r7, r3, 0x170),
+		ADDI(r8, r3, 0x180),
+		LVX(v20, r0, r5),
+		LVX(v21, r0, r6),
+		LVX(v22, r0, r7),
+		LVX(v23, r0, r8),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		ADDI(r8, r8, 0x40),
+		LVX(v24, r0, r5),
+		LVX(v25, r0, r6),
+		LVX(v26, r0, r7),
+		LVX(v27, r0, r8),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		ADDI(r8, r8, 0x40),
+		LVX(v28, r0, r5),
+		LVX(v29, r0, r6),
+		LVX(v30, r0, r7),
+		LVX(v31, r0, r8),
+		LI(r3, 0),
+		0x7c041810, // subfc r0, r4, r3
+		0x7c640194, // addze r3, r4
+		BLR(),
+	};
+
+	const ppu_pattern x26c[]
+	{
+		LI(r9, 0),
+		STD(r9, r6, 0),
+		MR(r1, r6),
+		STDU(r1, r1, -0x70),
+		STD(r9, r1, 0),
+		CLRLDI(r7, r3, 32),
+		LWZ(r0, r7, 0),
+		MTCTR(r0),
+		LWZ(r2, r7, 4),
+		MR(r3, r4),
+		MR(r4, r5),
+		BCTRL(),
+	};
+
+	const ppu_pattern x2a0[]
+	{
+		MR(r8, r1),
+		0x7d212850, // subf r9, r1, r5
+		0x7c21496a, // stdux r1, r1, r9
+		MFLR(r0),
+		STD(r0, r8, 0x10),
+		STD(r2, r1, 0x28),
+		CLRLDI(r7, r3, 32),
+		LWZ(r0, r7, 0),
+		MTCTR(r0),
+		LWZ(r2, r7, 4),
+		MR(r3, r4),
+		BCTRL(),
+		LD(r2, r1, 0x28),
+		LD(r9, r1, 0x0),
+		LD(r0, r9, 0x10),
+		MTLR(r0),
+		MR(r1, r9),
+		BLR(),
+	};
 }
 
 std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc, u32 entry)
@@ -374,6 +573,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		func_queue.emplace_back(func);
 		func.addr = addr;
 		func.toc = toc;
+		func.name = fmt::format("__0x%x", func.addr);
 		LOG_TRACE(PPU, "Function 0x%x added (toc=0x%x)", addr, toc);
 		return func;
 	};
@@ -1009,7 +1209,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 							}
 
 							func.attr += ppu_attr::no_size;
-							add_block(iaddr);
+							add_block(jt_addr);
 							block_queue.clear();
 						}
 						else
@@ -1028,6 +1228,20 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 						add_block(_ptr.addr());
 					}
 
+					block.second = _ptr.addr() - block.first;
+					break;
+				}
+				else if (type == ppu_itype::SC)
+				{
+					add_block(_ptr.addr());
+					block.second = _ptr.addr() - block.first;
+					break;
+				}
+				else if (type == ppu_itype::STDU && test(func.attr, ppu_attr::no_size) && (op.opcode == *_ptr || *_ptr == ppu_instructions::BLR()))
+				{
+					// Hack
+					LOG_SUCCESS(PPU, "[0x%x] Instruction repetition: 0x%08x", iaddr, op.opcode);
+					add_block(_ptr.addr());
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
@@ -1228,7 +1442,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	for (auto&& pair : funcs)
 	{
 		auto& func = pair.second;
-		LOG_TRACE(PPU, "Function __0x%x (size=0x%x, toc=0x%x, attr %#x)", func.addr, func.size, func.toc, func.attr);
+		LOG_TRACE(PPU, "Function %s (size=0x%x, toc=0x%x, attr %#x)", func.name, func.size, func.toc, func.attr);
 		result.emplace_back(std::move(func));
 	}
 
