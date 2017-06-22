@@ -428,16 +428,9 @@ void Emulator::Load()
 					size_t pos = m_path.rfind("PS3_GAME");
 					m_elf_path = "/dev_bdvd/" + m_path.substr(pos);
 				}
-				else if (GetTitleID().substr(0, 2) == "NP")
+				else if (m_path.find(vfs::get("/dev_hdd0/game/")) != -1)
 				{
-					//PSN Games are on /dev_hdd0/
-					size_t pos = m_path.rfind(GetTitleID());
-					if (pos == std::string::npos)
-					{
-						LOG_ERROR(LOADER, "Title ID isn't present in the path(%s)", m_path);
-						return;
-					}
-					m_elf_path = "/dev_hdd0/game/" + m_path.substr(pos);
+					m_elf_path = "/dev_hdd0/game/" + m_path.substr(vfs::get("/dev_hdd0/game/").size());
 				}
 				else
 				{
