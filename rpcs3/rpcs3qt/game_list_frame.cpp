@@ -480,7 +480,7 @@ static void open_dir(const std::string& spath)
 	process->start("explorer", QStringList() << path);
 #elif __APPLE__
 	process->start("open", QStringList() << path);
-#elif __linux__
+#else
 	process->start("xdg-open", QStringList() << path);
 #endif
 }
