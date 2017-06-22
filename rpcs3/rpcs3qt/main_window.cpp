@@ -1424,6 +1424,12 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	freezeRecentAct->setChecked(guiSettings->GetValue(GUI::rg_freeze).toBool());
 	m_rg_entries = guiSettings->Var2List(guiSettings->GetValue(GUI::rg_entries));
 
+	// clear recent games menu of actions
+	for (auto act : m_recentGameActs)
+	{
+		m_bootRecentMenu->removeAction(act);
+	}
+	m_recentGameActs.clear();
 	// Fill the recent games menu
 	for (uint i = 0; i < m_rg_entries.count(); i++)
 	{
