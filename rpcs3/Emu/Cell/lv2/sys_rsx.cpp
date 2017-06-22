@@ -89,6 +89,11 @@ struct RsxReports {
 be_t<u32> g_rsx_event_port{ 0 };
 u32 g_driverInfo{ 0 };
 
+// this timestamp is a complete guess, it seems 'roughly' right for now so im just leaving it 
+u64 rsxTimeStamp() {
+    return (get_system_time() / 1000000 * 0x5F5E100);
+}
+
 s32 sys_rsx_device_open()
 {
 	sys_rsx.todo("sys_rsx_device_open()");
@@ -163,8 +168,8 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
     driverInfo.version_driver = 0x211;
     driverInfo.version_gpu = 0x5c;
     driverInfo.memory_size = 0xFE00000;
-    driverInfo.nvcore_frequency = 500000000;
-    driverInfo.memory_frequency = 650000000;
+    driverInfo.nvcore_frequency = 500000000; // 0x1DCD6500
+    driverInfo.memory_frequency = 650000000; // 0x26BE3680
     driverInfo.reportsNotifyOffset = 0x1000;
     driverInfo.reportsOffset = 0;
     driverInfo.reportsReportOffset = 0x1400;
@@ -265,6 +270,7 @@ s32 sys_rsx_context_iounmap(u32 context_id, u32 io_addr, u32 a3, u32 size)
  */
 s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
+    if (package_id != 0x101)
 	sys_rsx.todo("sys_rsx_context_attribute(context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
 
     // hle/lle protection
@@ -287,14 +293,14 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
         // todo: this is wrong and should be 'second' vblank handler and freq
         // although gcmSys seems just hardcoded at 1, so w/e
         driverInfo.head[1].vBlankCount++;
-        driverInfo.head[1].lastSecondVTime = get_system_time();
+        driverInfo.head[1].lastSecondVTime = rsxTimeStamp();
         sys_event_port_send(g_rsx_event_port, 0, (1 << 1), 0);
         sys_event_port_send(g_rsx_event_port, 0, (1 << 11), 0); // second vhandler
 		break;
 
 	case 0x102: // Display flip
         driverInfo.head[a3].flipFlags |= 0x80000000;
-        driverInfo.head[a3].lastFlip = get_system_time(); // should rsxthread set this?
+        driverInfo.head[a3].lastFlip = rsxTimeStamp(); // should rsxthread set this?
         if (a3 == 0)
             sys_event_port_send(g_rsx_event_port, 0, (1 << 3), 0);
         if (a3 == 1)
