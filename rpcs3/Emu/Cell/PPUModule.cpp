@@ -348,26 +348,26 @@ static void ppu_patch_variable_refs(u32 vref, u32 vaddr)
 	{
 		be_t<u32> type;
 		be_t<u32> addr;
-		be_t<u32> unk0;
+		be_t<u32> addend; // Note: Treating it as addend seems to be correct for now, but still unknown if theres more in this variable
 	};
 
 	for (auto ref = vm::ptr<vref_t>::make(vref); ref->type; ref++)
 	{
-		if (ref->unk0) LOG_ERROR(LOADER, "**** VREF(%u): Unknown values (0x%x, 0x%x)", ref->type, ref->addr, ref->unk0);
+		if (ref->addend) LOG_WARNING(LOADER, "**** VREF(%u): Addend value(0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
 
 		// OPs are probably similar to relocations
 		switch (u32 type = ref->type)
 		{
 		case 0x1:
 		{
-			const u32 value = vm::_ref<u32>(ref->addr) = vaddr;
+			const u32 value = vm::_ref<u32>(ref->addr) = vaddr + ref->addend;
 			LOG_WARNING(LOADER, "**** VREF(1): 0x%x <- 0x%x", ref->addr, value);
 			break;
 		}
 
 		case 0x4:
 		case 0x6:
-		default: LOG_ERROR(LOADER, "**** VREF(%u): Unknown/Illegal type (0x%x, 0x%x)", ref->type, ref->addr, ref->unk0);
+		default: LOG_ERROR(LOADER, "**** VREF(%u): Unknown/Illegal type (0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
 		}
 	}
 }
@@ -723,52 +723,66 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 				switch (const u32 type = rel.type)
 				{
-				case 1:
+				case 1: // R_PPC64_ADDR32
 				{
 					const u32 value = vm::_ref<u32>(raddr) = static_cast<u32>(rdata);
 					LOG_TRACE(LOADER, "**** RELOCATION(1): 0x%x <- 0x%08x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
-				case 4:
+				case 4: //R_PPC64_ADDR16_LO
 				{
 					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata);
 					LOG_TRACE(LOADER, "**** RELOCATION(4): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
-				case 5:
+				case 5: //R_PPC64_ADDR16_HI
 				{
 					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata >> 16);
 					LOG_TRACE(LOADER, "**** RELOCATION(5): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
-				case 6:
+				case 6: //R_PPC64_ADDR16_HA
 				{
 					const u16 value = vm::_ref<u16>(raddr) = static_cast<u16>(rdata >> 16) + (rdata & 0x8000 ? 1 : 0);
 					LOG_TRACE(LOADER, "**** RELOCATION(6): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
-				case 10:
+				case 10: //R_PPC64_REL24
 				{
 					const u32 value = vm::_ref<ppu_bf_t<be_t<u32>, 6, 24>>(raddr) = static_cast<u32>(rdata - raddr) >> 2;
 					LOG_WARNING(LOADER, "**** RELOCATION(10): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
-				case 44:
+				case 11: //R_PPC64_REL14
 				{
-					const u64 value = vm::_ref<u64>(raddr) = rdata - raddr;
-					LOG_TRACE(LOADER, "**** RELOCATION(44): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
+					const u32 value = vm::_ref<ppu_bf_t<be_t<u32>, 16, 14>>(raddr) = static_cast<u32>(rdata - raddr) >> 2;
+					LOG_WARNING(LOADER, "**** RELOCATION(11): 0x%x <- 0x%06x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
-				case 57:
+				case 38: //R_PPC64_ADDR64
+				{
+					const u64 value = vm::_ref<u64>(raddr) = rdata;
+					LOG_TRACE(LOADER, "**** RELOCATION(38): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
+					break;
+				}
+
+				case 44: //R_PPC64_REL64
+				{
+					const u64 value = vm::_ref<u64>(raddr) = rdata - raddr;
+                    LOG_TRACE(LOADER, "**** RELOCATION(44): 0x%x <- 0x%016llx (0x%llx)", raddr, value, rdata);
+					break;
+				}
+
+				case 57: //R_PPC64_ADDR16_LO_DS
 				{
 					const u16 value = vm::_ref<ppu_bf_t<be_t<u16>, 0, 14>>(raddr) = static_cast<u16>(rdata) >> 2;
-					LOG_WARNING(LOADER, "**** RELOCATION(57): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
+					LOG_TRACE(LOADER, "**** RELOCATION(57): 0x%x <- 0x%04x (0x%llx)", raddr, value, rdata);
 					break;
 				}
 
@@ -821,6 +835,8 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	prx->start.set(prx->specials[0xbc9a0086]);
 	prx->stop.set(prx->specials[0xab779874]);
 	prx->exit.set(prx->specials[0x3ab9a95e]);
+	prx->prologue.set(prx->specials[0x0D10FD3F]);
+	prx->epilogue.set(prx->specials[0x330F7005]);
 	prx->name = name;
 	return prx;
 }

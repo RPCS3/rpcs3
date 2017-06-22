@@ -5,8 +5,31 @@
 
 logs::channel cellHttp("cellHttp");
 
+s32 cellHttpAuthCacheExport()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
 
 s32 cellHttpAuthCacheFlush()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpAuthCacheGetEntryMax()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpAuthCacheImport()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpAuthCacheSetEntryMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
@@ -638,7 +661,11 @@ s32 cellHttpClientSetSslIdDestroyCallback()
 
 DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 {
+	REG_FUNC(cellHttp, cellHttpAuthCacheExport);
 	REG_FUNC(cellHttp, cellHttpAuthCacheFlush);
+	REG_FUNC(cellHttp, cellHttpAuthCacheGetEntryMax);
+	REG_FUNC(cellHttp, cellHttpAuthCacheImport);
+	REG_FUNC(cellHttp, cellHttpAuthCacheSetEntryMax);
 	REG_FUNC(cellHttp, cellHttpInit);
 	REG_FUNC(cellHttp, cellHttpEnd);
 	REG_FUNC(cellHttp, cellHttpsInit);
