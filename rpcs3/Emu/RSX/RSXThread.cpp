@@ -63,7 +63,19 @@ namespace rsx
 				//return 0x100000 + offset; // TODO: Properly implement
 
 			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
-				return 0x800 + offset;	// TODO: Properly implement
+            {
+                if (u32 result = RSXIOMem.RealAddr(0x0e000000 + offset))
+                {
+                    return result;
+                }
+
+                fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+
+                //if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
+                //{
+                //	_mm_mfence(); // probably doesn't have any effect on current implementation
+                //}
+            }
 
 			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
 				return 0x40 + offset; // TODO: Properly implement
@@ -388,6 +400,9 @@ namespace rsx
 			// TODO: exit condition
 			while (!Emu.IsStopped())
 			{
+                if (!Emu.IsRunning())
+                    std::this_thread::sleep_for(10ms);
+
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
