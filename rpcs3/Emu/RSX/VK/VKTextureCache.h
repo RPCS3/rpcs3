@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
+#include "Emu/System.h"
 #include "../Common/TextureUtils.h"
 #include "../rsx_utils.h"
 
@@ -473,12 +474,15 @@ namespace vk
 			vk::image *rtt_texture = nullptr;
 			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
-				for (auto tex : m_rtts.m_bound_render_targets)
+				if (g_cfg.video.strict_rendering_mode)
 				{
-					if (std::get<0>(tex) == texaddr)
+					for (const auto& tex : m_rtts.m_bound_render_targets)
 					{
-						LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-						return create_temporary_subresource(cmd, rtt_texture, 0, 0, rtt_texture->width(), rtt_texture->height(), memory_type_mapping);
+						if (std::get<0>(tex) == texaddr)
+						{
+							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+							return create_temporary_subresource(cmd, rtt_texture, 0, 0, rtt_texture->width(), rtt_texture->height(), memory_type_mapping);
+						}
 					}
 				}
 
@@ -490,10 +494,13 @@ namespace vk
 
 			if (rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
-				if (std::get<0>(m_rtts.m_bound_depth_stencil) == texaddr)
+				if (g_cfg.video.strict_rendering_mode)
 				{
-					LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
-					return create_temporary_subresource(cmd, rtt_texture, 0, 0, rtt_texture->width(), rtt_texture->height(), memory_type_mapping);
+					if (std::get<0>(m_rtts.m_bound_depth_stencil) == texaddr)
+					{
+						LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
+						return create_temporary_subresource(cmd, rtt_texture, 0, 0, rtt_texture->width(), rtt_texture->height(), memory_type_mapping);
+					}
 				}
 
 				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,

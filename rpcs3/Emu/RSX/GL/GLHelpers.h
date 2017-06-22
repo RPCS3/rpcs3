@@ -79,11 +79,13 @@ namespace gl
 		bool ARB_texture_buffer_supported = false;
 		bool ARB_shader_draw_parameters_supported = false;
 		bool ARB_depth_buffer_float_supported = false;
+		bool ARB_texture_barrier_supported = false;
+		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
 
 		void initialize()
 		{
-			int find_count = 6;
+			int find_count = 8;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -132,6 +134,20 @@ namespace gl
 				if (ext_name == "GL_ARB_depth_buffer_float")
 				{
 					ARB_depth_buffer_float_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_texture_barrier")
+				{
+					ARB_texture_barrier_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (ext_name == "GL_NV_texture_barrier")
+				{
+					NV_texture_barrier_supported = true;
 					find_count--;
 					continue;
 				}
