@@ -38,6 +38,9 @@ private:
 	QTabWidget *tabWidget;
 	QTextEdit *log;
 	QTextEdit *tty;
+	QString m_old_text;
+	ullong m_log_counter;
+	bool m_stack_log;
 
 	fs::file tty_file;
 
@@ -52,6 +55,8 @@ private:
 	QAction* warningAct;
 	QAction* noticeAct;
 	QAction* traceAct;
+
+	QAction* stackAct;
 
 	QAction* TTYAct;
 
