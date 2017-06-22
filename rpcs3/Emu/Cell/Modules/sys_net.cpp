@@ -16,7 +16,6 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
-
 #include <fcntl.h>
 
 logs::channel libnet("libnet");
@@ -567,7 +566,7 @@ namespace sys_net
 			return -1;
 		}
 
-		if (level != SOL_SOCKET && level != IPPROTO_TCP)
+		if (level != PS3_SOL_SOCKET && level != IPPROTO_TCP)
 		{
 			fmt::throw_exception("Invalid socket option level!" HERE);
 		}
@@ -575,7 +574,7 @@ namespace sys_net
 		s32 ret;
 
 #ifdef _WIN32
-		if (level == SOL_SOCKET)
+		if (level == PS3_SOL_SOCKET)
 		{
 			switch (optname)
 			{
@@ -623,12 +622,14 @@ namespace sys_net
 			}
 			case  OP_SO_USECRYPTO:
 			{
-				libnet.warning("Socket option OP_SO_USECRYPTO is unimplemented");
+				libnet.todo("Socket option OP_SO_USECRYPTO is unimplemented");
+				ret = CELL_OK;
 				break;
 			}
 			case  OP_SO_USESIGNATURE:
 			{
-				libnet.warning("Socket option OP_SO_USESIGNATURE is unimplemented");
+				libnet.todo("Socket option OP_SO_USESIGNATURE is unimplemented");
+				ret = CELL_OK;
 				break;
 			}
 			case OP_SO_BROADCAST:
@@ -669,7 +670,7 @@ namespace sys_net
 			}
 		}
 #else
-		if (level == SOL_SOCKET)
+		if (level == PS3_SOL_SOCKET)
 		{
 			switch (optname)
 			{
@@ -688,6 +689,24 @@ namespace sys_net
 
 				// Re-set the flags
 				ret = fcntl(sock->s, F_SETFL, flags);
+				break;
+			}
+			case OP_SO_RCVBUF:
+			{
+				u32 recvbuff = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVBUF, (const char*)&recvbuff, sizeof(recvbuff));
+				break;
+			}
+			case  OP_SO_USECRYPTO:
+			{
+				libnet.warning("Socket option OP_SO_USECRYPTO is unimplemented");
+				ret = CELL_OK;
+				break;
+			}
+			case  OP_SO_USESIGNATURE:
+			{
+				libnet.warning("Socket option OP_SO_USESIGNATURE is unimplemented");
+				ret = CELL_OK;
 				break;
 			}
 
@@ -821,8 +840,8 @@ namespace sys_net
 
 	s32 socketselect(s32 nfds, vm::ptr<fd_set> readfds, vm::ptr<fd_set> writefds, vm::ptr<fd_set> exceptfds, vm::ptr<timeval> timeout)
 	{
-		libnet.warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, timeout);
-
+		libnet.warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout.tv_sec=%d, timeout.tv_usec=%d)", 
+					   nfds, readfds, writefds, exceptfds, timeout->tv_sec, timeout->tv_usec);
 		::timeval _timeout;
 
 		if (timeout)
@@ -830,8 +849,12 @@ namespace sys_net
 			_timeout.tv_sec = timeout->tv_sec;
 			_timeout.tv_usec = timeout->tv_usec;
 		}
-
-		//libnet.error("timeval: %d . %d", _timeout.tv_sec, _timeout.tv_usec);
+		
+		if (_timeout.tv_usec >= 1000000)
+		{
+			_timeout.tv_sec = _timeout.tv_sec ? _timeout.tv_sec - 1 : _timeout.tv_sec + 1;
+			_timeout.tv_usec = 0;
+		}
 
 		::fd_set _readfds;
 		::fd_set _writefds;
