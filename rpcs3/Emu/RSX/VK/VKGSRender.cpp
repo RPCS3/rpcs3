@@ -617,6 +617,8 @@ VKGSRender::VKGSRender() : GSRender()
 
 	vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &m_present_semaphore);
 
+	vk::initialize_compiler_context();
+
 	if (g_cfg.video.overlay)
 	{
 		size_t idx = vk::get_render_pass_location( m_swap_chain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
@@ -649,7 +651,11 @@ VKGSRender::~VKGSRender()
 		m_present_semaphore = nullptr;
 	}
 
+	//Texture cache
+	m_texture_cache.destroy();
+
 	//Shaders
+	vk::finalize_compiler_context();
 	m_prog_buffer.clear();
 
 	//Global resources
@@ -1040,15 +1046,10 @@ void VKGSRender::on_init_thread()
 
 	GSRender::on_init_thread();
 	rsx_thread = std::this_thread::get_id();
-
-	vk::initialize_compiler_context();
 }
 
 void VKGSRender::on_exit()
 {
-	m_texture_cache.destroy();
-	vk::finalize_compiler_context();
-
 	return GSRender::on_exit();
 }
 
