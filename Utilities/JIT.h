@@ -28,27 +28,30 @@ class jit_compiler final
 	// Execution instance
 	std::unique_ptr<llvm::ExecutionEngine> m_engine;
 
-	// Compiled functions
-	std::unordered_map<std::string, std::uintptr_t> m_map;
-
 	// Linkage cache
-	std::unordered_map<std::string, std::uintptr_t> m_link;
+	std::unordered_map<std::string, u64> m_link;
+
+	// Compiled functions
+	std::unordered_map<std::string, u64> m_map;
 
 	// Arch
 	std::string m_cpu;
 
 public:
-	jit_compiler(std::unordered_map<std::string, std::uintptr_t>, std::string _cpu);
+	jit_compiler(std::unordered_map<std::string, u64>, std::string _cpu);
 	~jit_compiler();
 
-	// Compile module
-	void make(std::unique_ptr<llvm::Module>, std::string);
+	// Add module
+	void add(std::unique_ptr<llvm::Module> module, const std::string& path);
 
-	// Load object
-	void load(std::unique_ptr<llvm::Module>, std::unique_ptr<llvm::object::ObjectFile>);
+	// Finalize
+	void fin(const std::string& path);
+
+	// Add functions directly (name -> code)
+	void add(std::unordered_map<std::string, std::string>);
 
 	// Get compiled function address
-	std::uintptr_t get(const std::string& name) const
+	u64 get(const std::string& name) const
 	{
 		const auto found = m_map.find(name);
 		
@@ -57,7 +60,7 @@ public:
 			return found->second;
 		}
 
-		return 0;
+		return m_engine->getFunctionAddress(name);
 	}
 
 	// Get CPU info

@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <set>
 #include <array>
+#include <deque>
 
 #include "types.h"
 #include "StrFmt.h"
@@ -20,6 +21,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/ExecutionEngine/ObjectCache.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -50,11 +52,13 @@ static void* const s_memory = []() -> void*
 	return utils::memory_reserve(s_memory_size);
 }();
 
+static void* s_next;
+
 // Code section
 static u8* s_code_addr;
-static u64 s_code_size;
 
 #ifdef _WIN32
+static std::deque<std::vector<RUNTIME_FUNCTION>> s_unwater;
 static std::vector<std::vector<RUNTIME_FUNCTION>> s_unwind; // .pdata
 #endif
 
@@ -67,9 +71,9 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 
 	MemoryManager(std::unordered_map<std::string, std::uintptr_t>& table)
 		: m_link(table)
-		, m_next(s_memory)
 		, m_tramps(nullptr)
 	{
+		s_next = s_memory;
 	}
 
 	[[noreturn]] static void null()
@@ -77,7 +81,7 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 		fmt::throw_exception("Null function" HERE);
 	}
 
-	virtual u64 getSymbolAddress(const std::string& name) override
+	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
 		auto& addr = m_link[name];
 
@@ -92,7 +96,6 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			}
 			else
 			{
-				// It's fine if some function is never called, for example.
 				LOG_ERROR(GENERAL, "LLVM: Linkage failed: %s", name);
 				addr = (u64)null;
 			}
@@ -104,9 +107,9 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			// Allocate memory for trampolines
 			if (!m_tramps)
 			{
-				m_tramps = reinterpret_cast<decltype(m_tramps)>(m_next);
-				utils::memory_commit(m_next, 4096, utils::protection::wx);
-				m_next = (u8*)((u64)m_next + 4096);
+				m_tramps = reinterpret_cast<decltype(m_tramps)>(s_next);
+				utils::memory_commit(s_next, 4096, utils::protection::wx);
+				s_next = (u8*)((u64)s_next + 4096);
 			}
 
 			// Create a trampoline
@@ -129,13 +132,13 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			}
 		}
 
-		return addr;
+		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
 	virtual u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
 		// Simple allocation
-		const u64 next = ::align((u64)m_next + size, 4096);
+		const u64 next = ::align((u64)s_next + size, 4096);
 
 		if (next > (u64)s_memory + s_memory_size)
 		{
@@ -143,18 +146,17 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			return nullptr;
 		}
 
-		utils::memory_commit(m_next, size, utils::protection::wx);
-		s_code_addr = (u8*)m_next;
-		s_code_size = size;
+		utils::memory_commit(s_next, size, utils::protection::wx);
+		s_code_addr = (u8*)s_next;
 
-		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), m_next, size, align);
-		return (u8*)std::exchange(m_next, (void*)next);
+		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), s_next, size, align);
+		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
 	virtual u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
 		// Simple allocation
-		const u64 next = ::align((u64)m_next + size, 4096);
+		const u64 next = ::align((u64)s_next + size, 4096);
 
 		if (next > (u64)s_memory + s_memory_size)
 		{
@@ -167,10 +169,10 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 			LOG_ERROR(GENERAL, "LLVM: Writeable data section not supported!");
 		}
 
-		utils::memory_commit(m_next, size);
+		utils::memory_commit(s_next, size);
 
-		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), m_next, size, align, is_ro ? "ro" : "rw");
-		return (u8*)std::exchange(m_next, (void*)next);
+		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), s_next, size, align, is_ro ? "ro" : "rw");
+		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
 	virtual bool finalizeMemory(std::string* = nullptr) override
@@ -191,23 +193,25 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 	{
 #ifdef _WIN32
 		// Use s_memory as a BASE, compute the difference
-		const u64 code_diff = (u64)s_code_addr - (u64)s_memory;
 		const u64 unwind_diff = (u64)addr - (u64)s_memory;
 
 		// Fix RUNTIME_FUNCTION records (.pdata section)
-		auto& pdata = s_unwind.back();
+		auto pdata = std::move(s_unwater.front());
+		s_unwater.pop_front();
 
 		for (auto& rf : pdata)
 		{
-			rf.BeginAddress += static_cast<DWORD>(code_diff);
-			rf.EndAddress   += static_cast<DWORD>(code_diff);
-			rf.UnwindData   += static_cast<DWORD>(unwind_diff);
+			rf.UnwindData += static_cast<DWORD>(unwind_diff);
 		}
 
 		// Register .xdata UNWIND_INFO structs
 		if (!RtlAddFunctionTable(pdata.data(), (DWORD)pdata.size(), (u64)s_memory))
 		{
 			LOG_ERROR(GENERAL, "RtlAddFunctionTable() failed! Error %u", GetLastError());
+		}
+		else
+		{
+			s_unwind.emplace_back(std::move(pdata));
 		}
 #endif
 
@@ -239,24 +243,13 @@ struct MemoryManager final : llvm::RTDyldMemoryManager
 
 		utils::memory_decommit(s_memory, s_memory_size);
 	}
-
-private:
-	void* m_next;
 };
 
 // Helper class
 struct EventListener final : llvm::JITEventListener
 {
-	std::string path;
-
 	virtual void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
 	{
-		if (!path.empty())
-		{
-			const llvm::StringRef elf = obj.getData();
-			fs::file(path, fs::rewrite).write(elf.data(), elf.size());
-		}
-
 #ifdef _WIN32
 		for (auto it = obj.section_begin(), end = obj.section_end(); it != end; ++it)
 		{
@@ -282,7 +275,17 @@ struct EventListener final : llvm::JITEventListener
 					}
 				}
 
-				s_unwind.emplace_back(std::move(rfs));
+				// Use s_memory as a BASE, compute the difference
+				const u64 code_diff = (u64)s_code_addr - (u64)s_memory;
+
+				// Fix RUNTIME_FUNCTION records (.pdata section)
+				for (auto& rf : rfs)
+				{
+					rf.BeginAddress += static_cast<DWORD>(code_diff);
+					rf.EndAddress   += static_cast<DWORD>(code_diff);
+				}
+
+				s_unwater.emplace_back(std::move(rfs));
 			}
 		}
 #endif
@@ -290,6 +293,46 @@ struct EventListener final : llvm::JITEventListener
 };
 
 static EventListener s_listener;
+
+// Helper class
+class ObjectCache final : public llvm::ObjectCache
+{
+	const std::string& m_path;
+
+public:
+	ObjectCache(const std::string& path)
+		: m_path(path)
+	{
+	}
+
+	~ObjectCache() override = default;
+
+	void notifyObjectCompiled(const llvm::Module* module, llvm::MemoryBufferRef obj) override
+	{
+		std::string name = m_path;
+		name.append(module->getName());
+		fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
+		LOG_SUCCESS(GENERAL, "LLVM: Created module: %s", module->getName().data());
+	}
+
+	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* module) override
+	{
+		std::string name = m_path;
+		name.append(module->getName());
+
+		if (fs::file cached{name, fs::read})
+		{
+			auto buf = llvm::MemoryBuffer::getNewUninitMemBuffer(cached.size());
+			cached.read(const_cast<char*>(buf->getBufferStart()), buf->getBufferSize());
+			LOG_SUCCESS(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
+			return buf;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+};
 
 jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_linkage_info, std::string _cpu)
 	: m_link(std::move(init_linkage_info))
@@ -321,56 +364,52 @@ jit_compiler::jit_compiler(std::unordered_map<std::string, std::uintptr_t> init_
 	}
 
 	m_engine->RegisterJITEventListener(&s_listener);
+
+	LOG_SUCCESS(GENERAL, "LLVM: JIT initialized (%s)", m_cpu);
 }
 
-void jit_compiler::load(std::unique_ptr<llvm::Module> module, std::unique_ptr<llvm::object::ObjectFile> object)
+void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& path)
 {
-	s_listener.path.clear();
+	ObjectCache cache{path};
+	m_engine->setObjectCache(&cache);
 
-	auto* module_ptr = module.get();
-
+	const auto ptr = module.get();
 	m_engine->addModule(std::move(module));
-	m_engine->addObjectFile(std::move(object));
-	m_engine->finalizeObject();
+	m_engine->generateCodeForModule(ptr);
+	m_engine->setObjectCache(nullptr);
 
-	m_map.clear();
-
-	for (auto& func : module_ptr->functions())
+	for (auto& func : ptr->functions())
 	{
-		const std::string& name = func.getName();
-
-		if (!m_link.count(name))
-		{
-			// Register compiled function
-			m_map[name] = m_engine->getFunctionAddress(name);
-		}
-	}
-}
-
-void jit_compiler::make(std::unique_ptr<llvm::Module> module, std::string path)
-{
-	s_listener.path = std::move(path);
-
-	auto* module_ptr = module.get();
-
-	m_engine->addModule(std::move(module));
-	m_engine->finalizeObject();
-
-	m_map.clear();
-
-	for (auto& func : module_ptr->functions())
-	{
-		if (!func.empty())
-		{
-			const std::string& name = func.getName();
-
-			// Register compiled function
-			m_map[name] = m_engine->getFunctionAddress(name);
-		}
-
 		// Delete IR to lower memory consumption
 		func.deleteBody();
 	}
+}
+
+void jit_compiler::fin(const std::string& path)
+{
+	m_engine->finalizeObject();
+}
+
+void jit_compiler::add(std::unordered_map<std::string, std::string> data)
+{
+	std::size_t size = 0;
+
+	for (auto&& pair : data)
+	{
+		size += ::align(pair.second.size(), 16);
+	}
+
+	utils::memory_commit(s_next, size, utils::protection::wx);
+	std::memset(s_next, 0xc3, ::align(size, 4096));
+
+	for (auto&& pair : data)
+	{
+		std::memcpy(s_next, pair.second.data(), pair.second.size());
+		m_link.emplace(pair.first, (u64)s_next);
+		s_next = (void*)::align((u64)s_next + pair.second.size(), 16);
+	}
+
+	s_next = (void*)::align((u64)s_next, 4096);
 }
 
 jit_compiler::~jit_compiler()

@@ -119,35 +119,17 @@ class PPUTranslator final //: public CPUTranslator
 	// Attributes for function calls which are "pure" and may be optimized away if their results are unused
 	const llvm::AttributeSet m_pure_attr;
 
-	// Available functions: types (not set or nullptr for untyped)
-	std::unordered_map<u64, llvm::FunctionType*> m_func_types;
-
-	// Available functions
-	std::unordered_map<u64, llvm::Function*> m_func_list;
-
-	// LLVM IR builder
+	// IR builder
 	llvm::IRBuilder<>* m_ir;
 
 	// LLVM function
 	llvm::Function* m_function;
 
-	// LLVM function type (may be null)
-	llvm::FunctionType* m_function_type;
-
 	// Function range
 	u64 m_start_addr, m_end_addr, m_current_addr;
 
-	// Basic blocks for current function
-	std::unordered_map<u64, llvm::BasicBlock*> m_blocks;
-
-	// JT resolver block
-	llvm::BasicBlock* m_jtr;
-
 	llvm::MDNode* m_md_unlikely;
 	llvm::MDNode* m_md_likely;
-
-	// Current binary data
-	be_t<u32>* m_bin{};
 
 	/* Variables */
 
@@ -161,62 +143,65 @@ class PPUTranslator final //: public CPUTranslator
 	// Callable functions
 	llvm::Value* m_call;
 
+	// Main block
+	llvm::BasicBlock* m_body;
+	llvm::BasicBlock* m_entry;
+
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 
-	llvm::Value* m_globals[96]{};
-	llvm::Value** const m_g_gpr = m_globals + 0;
-	llvm::Value** const m_g_fpr = m_globals + 32;
-	llvm::Value** const m_g_vr = m_globals + 64;
-
-	llvm::Value* m_locals[96]{};
+	llvm::Value* m_globals[169];
+	llvm::Value* m_locals[169];
 	llvm::Value** const m_gpr = m_locals + 0;
 	llvm::Value** const m_fpr = m_locals + 32;
 	llvm::Value** const m_vr = m_locals + 64;
+	llvm::Value** const m_cr = m_locals + 96;
+	llvm::Value** const m_fc = m_locals + 128;
 
-	llvm::Value* m_cr[32]{};
-	llvm::Value* m_g_lr;
-	llvm::Value* m_reg_lr;
-	llvm::Value* m_reg_ctr; // CTR register (counter)
-	llvm::Value* m_reg_vrsave;
-	llvm::Value* m_xer_so; // XER.SO bit, summary overflow
-	llvm::Value* m_xer_ov; // XER.OV bit, overflow flag
-	llvm::Value* m_xer_ca; // XER.CA bit, carry flag
-	llvm::Value* m_xer_count;
-	llvm::Value* m_vscr_nj; // VSCR.NJ bit, non-Java mode
-	llvm::Value* m_vscr_sat; // VSCR.SAT bit, sticky saturation flag
+	std::array<bool, 169> m_writes;
+	std::array<bool, 169> m_reads;
 
-	llvm::Value* m_fpscr[32]{};
-	llvm::Value* m_fpscr_fx; // bit 32 (first)
-	llvm::Value* m_fpscr_ox; // bit 35 (4th)
-	llvm::Value* m_fpscr_ux;
-	llvm::Value* m_fpscr_zx;
-	llvm::Value* m_fpscr_xx;
-	llvm::Value* m_fpscr_vxsnan;
-	llvm::Value* m_fpscr_vxisi;
-	llvm::Value* m_fpscr_vxidi;
-	llvm::Value* m_fpscr_vxzdz;
-	llvm::Value* m_fpscr_vximz;
-	llvm::Value* m_fpscr_vxvc;
-	llvm::Value* m_fpscr_fr;
-	llvm::Value* m_fpscr_fi;
-	llvm::Value* m_fpscr_c;
-	llvm::Value* m_fpscr_lt;
-	llvm::Value* m_fpscr_gt;
-	llvm::Value* m_fpscr_eq;
-	llvm::Value* m_fpscr_un;
-	llvm::Value* m_fpscr_reserved;
-	llvm::Value* m_fpscr_vxsoft;
-	llvm::Value* m_fpscr_vxsqrt;
-	llvm::Value* m_fpscr_vxcvi;
-	llvm::Value* m_fpscr_ve;
-	llvm::Value* m_fpscr_oe;
-	llvm::Value* m_fpscr_ue;
-	llvm::Value* m_fpscr_ze;
-	llvm::Value* m_fpscr_xe;
-	llvm::Value* m_fpscr_ni;
-	llvm::Value* m_fpscr_rnh; // RN high bit
-	llvm::Value* m_fpscr_rnl; // RN low bit
+#define DEF_VALUE(loc, glb, pos)\
+	llvm::Value*& loc = m_locals[pos];\
+	llvm::Value*& glb = m_globals[pos];
+
+	DEF_VALUE(m_lr, m_g_lr, 160);
+	DEF_VALUE(m_ctr, m_g_ctr, 161); // CTR register (counter)
+	DEF_VALUE(m_vrsave, m_g_vrsave, 162);
+	DEF_VALUE(m_so, m_g_so, 163); // XER.SO bit, summary overflow
+	DEF_VALUE(m_ov, m_g_ov, 164); // XER.OV bit, overflow flag
+	DEF_VALUE(m_ca, m_g_ca, 165); // XER.CA bit, carry flag
+	DEF_VALUE(m_cnt, m_g_cnt, 166);
+	DEF_VALUE(m_nj, m_g_nj, 167); // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_sat, m_g_sat, 168); // VSCR.SAT bit, sticky saturation flag
+
+#undef DEF_VALUE
+
+	template <typename T>
+	void RegInit(llvm::Value*& local)
+	{
+		if (!local)
+		{
+			local = new llvm::AllocaInst(GetType<T>(), nullptr, sizeof(T));
+			m_entry->getInstList().push_back(llvm::cast<llvm::Instruction>(local));
+		}
+	}
+
+	template <typename T>
+	llvm::Value* RegLoad(llvm::Value*& local)
+	{
+		RegInit<T>(local);
+		m_reads.at(&local - m_locals) = true;
+		return m_ir->CreateLoad(local);
+	}
+
+	template <typename T>
+	void RegStore(llvm::Value* value, llvm::Value*& local)
+	{
+		RegInit<T>(local);
+		m_writes.at(&local - m_locals) = true;
+		m_ir->CreateStore(value, local);
+	}
 
 public:
 
@@ -233,10 +218,10 @@ public:
 	llvm::Value* RotateLeft(llvm::Value* arg, llvm::Value* n);
 
 	// Emit function call
-	void CallFunction(u64 target, bool tail, llvm::Value* indirect = nullptr);
+	void CallFunction(u64 target, llvm::Value* indirect = nullptr);
 
-	// Set some registers to undef (after function call)
-	void UndefineVolatileRegisters();
+	// Write global registers
+	void FlushRegisters();
 
 	// Load gpr
 	llvm::Value* GetGpr(u32 r, u32 num_bits = 64);
@@ -339,6 +324,9 @@ public:
 	// Set CR field based on unsigned comparison
 	void SetCrFieldUnsignedCmp(u32 n, llvm::Value* a, llvm::Value* b);
 
+	// Set CR field from FPSCR CC fieds
+	void SetCrFieldFPCC(u32 n);
+
 	// Set FPSCR CC fields provided, optionally updating CR1
 	void SetFPCC(llvm::Value* lt, llvm::Value* gt, llvm::Value* eq, llvm::Value* un, bool set_cr = false);
 
@@ -376,7 +364,7 @@ public:
 	llvm::Value* CheckTrapCondition(u32 to, llvm::Value* left, llvm::Value* right);
 
 	// Emit trap
-	llvm::Value* Trap(u64 addr);
+	void Trap(u64 addr);
 
 	// Get condition for branch instructions
 	llvm::Value* CheckBranchCondition(u32 bo, u32 bi);
@@ -440,11 +428,8 @@ public:
 	// Get thread context struct type
 	llvm::Type* GetContextType();
 
-	// Add function
-	void AddFunction(u64 addr, llvm::Function* func, llvm::FunctionType* type = nullptr);
-
 	// Parses PPU opcodes and translate them into LLVM IR
-	llvm::Function* TranslateToIR(const ppu_function& info, be_t<u32>* bin, void(*custom)(PPUTranslator*) = nullptr);
+	llvm::Function* Translate(const ppu_function& info);
 
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);
