@@ -65,7 +65,7 @@ struct gui_listener : logs::listener
 				_new->msg += "} ";
 			}
 
-			if (msg.ch->name)
+			if ('\0' != *msg.ch->name)
 			{
 				_new->msg += msg.ch->name;
 				_new->msg += msg.sev == logs::level::todo ? " TODO: " : ": ";
