@@ -156,11 +156,11 @@ private:
 	u32 m_client_height = 0;
 
 	u32 m_draw_calls = 0;
-	u32 m_setup_time = 0;
-	u32 m_vertex_upload_time = 0;
-	u32 m_textures_upload_time = 0;
-	u32 m_draw_time = 0;
-	u32 m_flip_time = 0;
+	s64 m_setup_time = 0;
+	s64 m_vertex_upload_time = 0;
+	s64 m_textures_upload_time = 0;
+	s64 m_draw_time = 0;
+	s64 m_flip_time = 0;
 
 	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;

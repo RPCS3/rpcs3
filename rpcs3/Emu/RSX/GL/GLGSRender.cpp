@@ -205,7 +205,6 @@ void GLGSRender::begin()
 	if (__glcheck enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
 		__glcheck glDepthFunc(comparison_op(rsx::method_registers.depth_func()));
-		__glcheck glDepthMask(rsx::method_registers.depth_write_enabled());
 	}
 
 	if (glDepthBoundsEXT && (__glcheck enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
@@ -237,7 +236,8 @@ void GLGSRender::begin()
 		__glcheck glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
 			stencil_op(rsx::method_registers.stencil_op_zpass()));
 
-		if (rsx::method_registers.two_sided_stencil_test_enabled()) {
+		if (rsx::method_registers.two_sided_stencil_test_enabled())
+		{
 			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
 			__glcheck glStencilFuncSeparate(GL_BACK, comparison_op(rsx::method_registers.back_stencil_func()),
 				rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
@@ -349,11 +349,17 @@ void GLGSRender::end()
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && !ds->cleared())
 	{
+		//Temporarily disable pixel tests
+		glDisable(GL_SCISSOR_TEST);
 		glDepthMask(GL_TRUE);
-		glClearDepth(1.f);
+		
+		glClearDepth(1.0);
+		glClearStencil(255);
 
-		glClear(GL_DEPTH_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		
 		glDepthMask(rsx::method_registers.depth_write_enabled());
+		glEnable(GL_SCISSOR_TEST);
 
 		ds->set_cleared();
 	}
@@ -481,7 +487,7 @@ void GLGSRender::on_init_thread()
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
 
-	auto gl_caps = gl::get_driver_caps();
+	auto& gl_caps = gl::get_driver_caps();
 
 	if (!gl_caps.ARB_texture_buffer_supported)
 	{
@@ -491,6 +497,16 @@ void GLGSRender::on_init_thread()
 	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
 	{
 		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
+	}
+
+	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)
+	{
+		LOG_WARNING(RSX, "High precision Z buffer requested but your GPU does not support GL_ARB_depth_buffer_float. Option ignored.");
+	}
+
+	if (!gl_caps.ARB_texture_barrier_supported && !gl_caps.NV_texture_barrier_supported && !g_cfg.video.strict_rendering_mode)
+	{
+		LOG_WARNING(RSX, "Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
 	}
 
 	//Use industry standard resource alignment values as defaults
@@ -768,7 +784,7 @@ bool GLGSRender::load_program()
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
-	const u32 fragment_constants_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	const u32 fragment_buffer_size = fragment_constants_size + (17 * 4 * sizeof(float));
 
 	if (manually_flush_ring_buffers)
@@ -782,7 +798,7 @@ bool GLGSRender::load_program()
 	auto mapping = m_scale_offset_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
 	scale_offset_offset = mapping.second;
-	fill_scale_offset_data(buf, false, true);
+	fill_scale_offset_data(buf, false);
 	fill_user_clip_data((char *)buf + 64);
 
 	if (m_transform_constants_dirty)
@@ -938,6 +954,9 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_rtts.invalidated_resources.clear();
+
+	if (g_cfg.video.invalidate_surface_cache_every_frame)
+		m_rtts.invalidate_surface_cache_data(nullptr);
 }
 
 

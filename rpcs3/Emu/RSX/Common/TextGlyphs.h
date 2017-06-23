@@ -167,7 +167,7 @@ private:
 			std::string glyph_data = character.substr(7);
 
 			glyph this_glyph;
-			this_glyph.character = strtol(index.c_str(), nullptr, 16);
+			this_glyph.character = (u8)strtol(index.c_str(), nullptr, 16);
 			this_glyph.plot.reserve(16);
 
 			if (glyph_data.length() == 32)

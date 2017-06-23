@@ -59,6 +59,7 @@ rpcs3/git-version.h
 *.vspx
 *.psess
 *.VC.*
+*.vcxproj.user
 
 # Copyrighted files
 /bin/data/

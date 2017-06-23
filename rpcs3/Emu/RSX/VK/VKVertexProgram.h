@@ -25,7 +25,7 @@ protected:
 
 	const RSXVertexProgram &rsx_vertex_program;
 public:
-	VKVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray& parr, class VKVertexProgram &dst)
+	VKVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray&, class VKVertexProgram &dst)
 		: VertexProgramDecompiler(prog)
 		, m_shader(shader)
 		, rsx_vertex_program(prog)

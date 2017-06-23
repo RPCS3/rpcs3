@@ -52,10 +52,10 @@ private:
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
 
 	u32 m_draw_calls = 0;
-	u32 m_begin_time = 0;
-	u32 m_draw_time = 0;
-	u32 m_vertex_upload_time = 0;
-	u32 m_textures_upload_time = 0;
+	s64 m_begin_time = 0;
+	s64 m_draw_time = 0;
+	s64 m_vertex_upload_time = 0;
+	s64 m_textures_upload_time = 0;
 
 	//Compare to see if transform matrix have changed
 	size_t m_transform_buffer_hash = 0;

@@ -106,7 +106,7 @@ std::string compareFunctionImp(COMPARE f, const std::string &Op0, const std::str
 	}
 }
 
-void insert_d3d12_legacy_function(std::ostream& OS)
+void insert_d3d12_legacy_function(std::ostream& OS, bool is_fragment_program)
 {
 	OS << "float4 lit_legacy(float4 val)";
 	OS << "{\n";
@@ -120,6 +120,9 @@ void insert_d3d12_legacy_function(std::ostream& OS)
 	OS << "	result.z = clamped_val.x > 0.0 ? exp(clamped_val.w * log(max(clamped_val.y, 1.E-10))) : 0.0;\n";
 	OS << "	return result;\n";
 	OS << "}\n\n";
+
+	if (!is_fragment_program)
+		return;
 
 	OS << "uint packSnorm2x16(float2 val)";
 	OS << "{\n";
@@ -185,13 +188,16 @@ void insert_d3d12_legacy_function(std::ostream& OS)
 	OS << "	return unpackSnorm2x16(val) * 6.1E+5;\n";
 	OS << "}\n\n";
 
+	//NOTE: After testing with GOW, the w component is either the original depth or wraps around to the x component
+	//Since component.r == depth_value with some precision loss, just use the precise depth value for now (further testing needed)
+	//TODO: This function does not work as intended on DX12
 	OS << "float4 texture2DReconstruct(float depth_value)\n";
 	OS << "{\n";
 	OS << "	uint value = round(depth_value * 16777215);\n";
 	OS << "	uint b = (value & 0xff);\n";
 	OS << "	uint g = (value >> 8) & 0xff;\n";
 	OS << "	uint r = (value >> 16) & 0xff;\n";
-	OS << "	return float4(r/255., g/255., b/255., 1.);\n";
+	OS << "	return float4(r/255., g/255., b/255., depth_value);\n";
 	OS << "}\n\n";
 }
 #endif

@@ -307,8 +307,11 @@ struct cfg_root : cfg::node
 		cfg::_bool vsync{this, "VSync"};
 		cfg::_bool debug_output{this, "Debug output"};
 		cfg::_bool overlay{this, "Debug overlay"};
-		cfg::_bool gl_legacy_buffers{this, "Use Legacy OpenGL Buffers (Debug)"};
+		cfg::_bool gl_legacy_buffers{this, "Use Legacy OpenGL Buffers"};
 		cfg::_bool use_gpu_texture_scaling{this, "Use GPU texture scaling", true};
+		cfg::_bool force_high_precision_z_buffer{this, "Force High Precision Z buffer"};
+		cfg::_bool invalidate_surface_cache_every_frame{this, "Invalidate Cache Every Frame", true};
+		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
 
 		struct node_d3d12 : cfg::node
 		{

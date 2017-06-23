@@ -224,6 +224,18 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 	return code;
 }
 
+bool FragmentProgramDecompiler::DstExpectsSca()
+{
+	int writes = 0;
+	
+	if (dst.mask_x) writes++;
+	if (dst.mask_y) writes++;
+	if (dst.mask_z) writes++;
+	if (dst.mask_w) writes++;
+
+	return (writes == 1);
+}
+
 std::string FragmentProgramDecompiler::Format(const std::string& code)
 {
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
@@ -521,6 +533,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA));
 			else
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE));
@@ -541,6 +554,9 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
+			//Note shadow comparison only returns a true/false result!
+			if (DstExpectsSca() && (m_prog.shadow_textures & (1 << dst.tex_num)))
+				m_shadow_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ));
@@ -558,6 +574,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD));
@@ -576,6 +593,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD));

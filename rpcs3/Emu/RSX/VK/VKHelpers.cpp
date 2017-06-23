@@ -255,6 +255,14 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
+	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range)
+	{
+		if (image->current_layout == new_layout) return;
+
+		change_image_layout(cmd, image->value, image->current_layout, new_layout, range);
+		image->current_layout = new_layout;
+	}
+
 	void enter_uninterruptible()
 	{
 		g_cb_no_interrupt_flag = true;

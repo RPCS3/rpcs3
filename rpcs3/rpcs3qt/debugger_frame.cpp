@@ -88,6 +88,9 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	});
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &debugger_frame::UpdateUI);
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &debugger_frame::OnSelectUnit);
+	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), m_list, [=](int index) {
+		m_list->m_noThreadSelected = m_choice_units->itemText(index) == NoThread ? true : false;
+	});
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);
 
 	m_list->ShowAddr(CentrePc(m_list->m_pc));
@@ -200,6 +203,7 @@ void debugger_frame::UpdateUnitList()
 	QVariant old_cpu = m_choice_units->currentData();
 
 	m_choice_units->clear();
+	m_choice_units->addItem(NoThread);
 
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
@@ -224,7 +228,7 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
+	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText() || m_choice_units->currentText() == NoThread) return;
 
 	m_current_choice = m_choice_units->currentText();
 
@@ -525,7 +529,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton && !Emu.IsStopped())
+	if (event->button() == Qt::LeftButton && !Emu.IsStopped() && !m_noThreadSelected)
 	{
 		long i = currentRow();
 		if (i < 0) return;
