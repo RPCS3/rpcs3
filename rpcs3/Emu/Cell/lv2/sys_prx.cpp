@@ -54,7 +54,7 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libsysutil_np_eula.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_np_installer.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_np_sns.sprx", 0 },
-	{ "/dev_flash/sys/external/libsysutil_np_trophy.sprx", 0 },
+	//{ "/dev_flash/sys/external/libsysutil_np_trophy.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_np_tus.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_np_util.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_np2.sprx", 0 },
