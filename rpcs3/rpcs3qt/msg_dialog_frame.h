@@ -85,6 +85,10 @@ private:
 		{
 			event->ignore();
 		}
+		else
+		{
+			QDialog::keyPressEvent(event);
+		}
 	}
 	void closeEvent(QCloseEvent* event)
 	{
@@ -92,6 +96,10 @@ private:
 		if (m_disable_cancel && event->spontaneous())
 		{
 			event->ignore();
+		}
+		else
+		{
+			QDialog::closeEvent(event);
 		}
 	}
 };
