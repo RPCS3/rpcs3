@@ -400,9 +400,6 @@ namespace rsx
 			// TODO: exit condition
 			while (!Emu.IsStopped())
 			{
-                if (!Emu.IsRunning())
-                    std::this_thread::sleep_for(10ms);
-
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
@@ -421,6 +418,8 @@ namespace rsx
 
 					continue;
 				}
+                while (Emu.IsPaused())
+                    std::this_thread::sleep_for(10ms);
 
 				std::this_thread::sleep_for(1ms); // hack
 			}
