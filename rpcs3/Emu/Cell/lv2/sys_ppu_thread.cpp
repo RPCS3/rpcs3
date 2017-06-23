@@ -55,12 +55,6 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 	// Remove suspend state (TODO)
 	ppu.state -= cpu_flag::suspend;
-
-	// Throw if this syscall was not called directly by the SC instruction (hack)
-	if (ppu.lr == 0 || ppu.gpr[11] != 41)
-	{
-		throw cpu_flag::exit;
-	}
 }
 
 void sys_ppu_thread_yield(ppu_thread& ppu)
