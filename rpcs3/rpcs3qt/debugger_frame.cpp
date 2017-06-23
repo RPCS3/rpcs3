@@ -229,7 +229,7 @@ void debugger_frame::OnSelectUnit()
 	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
 
 	m_current_choice = m_choice_units->currentText();
-	m_noThreadSelected = m_choice_units->itemText(m_choice_units->currentIndex()) == NoThread ? true : false;
+	m_noThreadSelected = m_current_choice == NoThread ? true : false;
 	m_list->m_noThreadSelected = m_noThreadSelected;
 
 	m_disasm.reset();
