@@ -1272,10 +1272,12 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 	}
+#endif
 }
 
 static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name)
 {
+#ifdef LLVM_AVAILABLE
 	using namespace llvm;
 
 	// Create LLVM module
