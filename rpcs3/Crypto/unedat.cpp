@@ -802,7 +802,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 		}
 	}
 
-    *contentID = std::string(reinterpret_cast<const char*>(NPD.content_id));
+	*contentID = std::string(reinterpret_cast<const char*>(NPD.content_id));
 	return true;
 }
 

@@ -112,11 +112,10 @@ void gs_frame::show()
 void* gs_frame::handle() const
 {
 #ifdef _WIN32
-    return (HWND) this->winId();
+	return (HWND) this->winId();
 #else
-    return (void *)this->winId();
+	return (void *)this->winId();
 #endif
-	
 }
 
 void* gs_frame::make_context()

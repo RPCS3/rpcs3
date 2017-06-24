@@ -145,7 +145,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent)
 	b_shift_r2->setFixedWidth(PadButtonWidth);
 	b_shift_r3->setFixedWidth(PadButtonWidth);
 
-    // Action buttons
+	// Action buttons
 	QGroupBox *roundpad_buttons = new QGroupBox(tr("Buttons"));
 	QGroupBox *roundPadSquare = new QGroupBox(tr("Square"));
 	QGroupBox *roundPadCross = new QGroupBox(tr("Cross"));
