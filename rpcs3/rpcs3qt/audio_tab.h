@@ -1,5 +1,4 @@
-#ifndef AUDIOTAB_H
-#define AUDIOTAB_H
+#pragma once
 
 #include "emu_settings.h"
 
@@ -13,10 +12,4 @@ class audio_tab : public QWidget
 
 public:
 	explicit audio_tab(std::shared_ptr<emu_settings> xemu_settings, QWidget *parent = 0);
-
-signals:
-
-public slots:
 };
-
-#endif // AUDIOTAB_H

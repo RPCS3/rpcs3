@@ -72,7 +72,7 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	QTimer::singleShot(1, [=]() {
 		// Need to have this happen fast, but not now because connects aren't created yet.
 		// So, a tricky balance in terms of time but this works.
-		emit RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
+		RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
 	});
 }
 
@@ -601,7 +601,8 @@ void main_window::About()
 	));
 	QLabel* supporters = new QLabel(tr(
 		"<p><b>Supporters:</b><br>Howard Garrison<br>EXPotemkin<br>Marko V.<br>danhp<br>Jake (5315825)<br>Ian Reid<br>Tad Sherlock<br>Tyler Friesen<br>"
-		"Folzar<br>Payton Williams<br>RedPill Australia<br>yanghong<br>Mohammed El-Serougi<br>Дима ~Ximer13~ Кулин<br>James Reed<br>BaroqueSonata</p>"
+		"Folzar<br>Payton Williams<br>RedPill Australia<br>yanghong<br>Mohammed El-Serougi<br>Дима ~Ximer13~ Кулин<br>James Reed<br>BaroqueSonata<br>"
+		"Bonzay0<br>Henrijs Kons<br>Davide Balbi<br>Lena Stöffler</p>"
 	));
 	icon->setAlignment(Qt::AlignLeft);
 	caption->setAlignment(Qt::AlignLeft);

@@ -165,7 +165,7 @@ s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemSt
 {
 	cellGem.todo("cellGemGetState(gem_num=%d, flag=0x%x, time=0x%llx, gem_state=*0x%x)", gem_num, flag, time_parameter, gem_state);
 	const auto gem = fxm::get<gem_t>();
-   
+
 	if (!gem)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 

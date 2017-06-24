@@ -1,5 +1,4 @@
-#ifndef GUITAB_H
-#define GUITAB_H
+#pragma once
 
 #include "gui_settings.h"
 
@@ -21,13 +20,13 @@ class gui_tab : public QWidget
 public:
 	explicit gui_tab(std::shared_ptr<gui_settings> guiSettings, QWidget *parent = 0);
 
-public slots:
+public Q_SLOTS:
 	void Accept();
-signals:
+Q_SIGNALS:
 	void GuiSettingsSyncRequest();
 	void GuiSettingsSaveRequest();
 	void GuiStylesheetRequest(const QString& path);
-private slots:
+private Q_SLOTS:
 	void OnResetDefault();
 	void OnBackupCurrentConfig();
 	void OnApplyConfig();
@@ -44,5 +43,3 @@ private:
 
 	std::shared_ptr<gui_settings> xgui_settings;
 };
-
-#endif // GUITAB_H

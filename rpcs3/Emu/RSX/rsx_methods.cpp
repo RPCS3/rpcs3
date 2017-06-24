@@ -434,8 +434,8 @@ namespace rsx
 			u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
 			u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
 
-            u16 clip_x = method_registers.blit_engine_clip_x();
-            u16 clip_y = method_registers.blit_engine_clip_y();
+			u16 clip_x = method_registers.blit_engine_clip_x();
+			u16 clip_y = method_registers.blit_engine_clip_y();
 
 			if (clip_w == 0)
 			{

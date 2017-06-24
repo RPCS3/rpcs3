@@ -1,5 +1,4 @@
-#ifndef GAME_LIST_GRID_H
-#define GAME_LIST_GRID_H
+#pragma once
 
 #include "game_list_grid_delegate.h"
 
@@ -32,5 +31,3 @@ public:
 private:
 	game_list_grid_delegate* grid_item_delegate; 
 };
-
-#endif

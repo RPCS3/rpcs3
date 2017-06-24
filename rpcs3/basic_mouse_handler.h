@@ -1,5 +1,4 @@
-#ifndef BASIC_MOUSE_HANDLER_H
-#define BASIC_MOUSE_HANDLER_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Io/MouseHandler.h"
@@ -24,5 +23,3 @@ public:
 private:
 	QObject* m_target;
 };
-
-#endif

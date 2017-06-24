@@ -261,7 +261,6 @@ static add_flags_result_t<u64> add64_flags(u64 a, u64 b, bool c)
 
 extern u64 get_timebased_time();
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
-extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr);
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr);
@@ -2875,7 +2874,7 @@ bool ppu_interpreter::SC(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	ppu_execute_syscall(ppu, ppu.gpr[11]);
-	return true;
+	return false;
 }
 
 bool ppu_interpreter::B(ppu_thread& ppu, ppu_opcode_t op)

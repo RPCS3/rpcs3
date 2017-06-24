@@ -1,5 +1,4 @@
-#ifndef LOGFRAME_H
-#define LOGFRAME_H
+#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -23,12 +22,12 @@ public:
 
 	/** Loads from settings. Public so that main_window can call this easily. */
 	void LoadSettings();
-signals:
+Q_SIGNALS:
 	void log_frameClosed();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
-private slots:
+private Q_SLOTS:
 	void UpdateUI();
 private:
 	void SetLogLevel(logs::level lev);
@@ -58,5 +57,3 @@ private:
 
 	std::shared_ptr<gui_settings> xgui_settings;
 };
-
-#endif // LOGFRAME_H

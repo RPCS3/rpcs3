@@ -97,10 +97,9 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 void debugger_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	emit DebugFrameClosed();
+	DebugFrameClosed();
 }
 
-//static const int show_lines = 30;
 #include <map>
 
 std::map<u32, bool> g_breakpoints;
@@ -133,6 +132,8 @@ u32 debugger_frame::CentrePc(u32 pc) const
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
+
+	if (m_noThreadSelected) return;
 
 	const auto cpu = this->cpu.lock();
 
@@ -200,6 +201,7 @@ void debugger_frame::UpdateUnitList()
 	QVariant old_cpu = m_choice_units->currentData();
 
 	m_choice_units->clear();
+	m_choice_units->addItem(NoThread);
 
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
@@ -227,34 +229,40 @@ void debugger_frame::OnSelectUnit()
 	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
 
 	m_current_choice = m_choice_units->currentText();
+	m_noThreadSelected = m_current_choice == NoThread;
+	m_list->m_noThreadSelected = m_noThreadSelected;
 
 	m_disasm.reset();
+	cpu.reset();
 
-	const auto on_select = [&](u32, cpu_thread& cpu)
+	if (!m_noThreadSelected)
 	{
-		cpu_thread* data = (cpu_thread *)m_choice_units->currentData().value<void *>();
-		return data == &cpu;
-	};
+		const auto on_select = [&](u32, cpu_thread& cpu)
+		{
+			cpu_thread* data = (cpu_thread *)m_choice_units->currentData().value<void *>();
+			return data == &cpu;
+		};
 
-	if (auto ppu = idm::select<ppu_thread>(on_select))
-	{
-		m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = ppu.ptr;
-	}
-	else if (auto spu1 = idm::select<SPUThread>(on_select))
-	{
-		m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = spu1.ptr;
-	}
-	else if (auto rspu = idm::select<RawSPUThread>(on_select))
-	{
-		m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = rspu.ptr;
-	}
-	else if (auto arm = idm::select<ARMv7Thread>(on_select))
-	{
-		m_disasm = std::make_unique<ARMv7DisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = arm.ptr;
+		if (auto ppu = idm::select<ppu_thread>(on_select))
+		{
+			m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = ppu.ptr;
+		}
+		else if (auto spu1 = idm::select<SPUThread>(on_select))
+		{
+			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = spu1.ptr;
+		}
+		else if (auto rspu = idm::select<RawSPUThread>(on_select))
+		{
+			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = rspu.ptr;
+		}
+		else if (auto arm = idm::select<ARMv7Thread>(on_select))
+		{
+			m_disasm = std::make_unique<ARMv7DisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = arm.ptr;
+		}
 	}
 
 	DoUpdate();
@@ -369,7 +377,7 @@ void debugger_frame::Show_Val()
 
 void debugger_frame::Show_PC()
 {
-	if (const auto cpu = this->cpu.lock()) m_list->ShowAddr(CentrePc(GetPc()));
+	m_list->ShowAddr(CentrePc(GetPc()));
 }
 
 void debugger_frame::DoStep()
@@ -525,7 +533,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton && !Emu.IsStopped())
+	if (event->button() == Qt::LeftButton && !Emu.IsStopped() && !m_noThreadSelected)
 	{
 		long i = currentRow();
 		if (i < 0) return;

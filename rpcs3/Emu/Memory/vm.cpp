@@ -348,7 +348,8 @@ namespace vm
 			}
 		}
 
-		void* real_addr = vm::base(addr);
+		void* real_addr = g_base_addr + addr;
+		void* exec_addr = g_exec_addr + addr;
 
 #ifdef _WIN32
 		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
@@ -455,7 +456,8 @@ namespace vm
 			}
 		}
 
-		void* real_addr = vm::base(addr);
+		void* real_addr = g_base_addr + addr;
+		void* exec_addr = g_exec_addr + addr;
 
 #ifdef _WIN32
 		verify(__func__), ::VirtualFree(real_addr, size, MEM_DECOMMIT);

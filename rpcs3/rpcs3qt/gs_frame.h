@@ -1,5 +1,4 @@
-#ifndef GSFRAME_H
-#define GSFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/RSX/GSRender.h"
@@ -41,8 +40,6 @@ protected:
 	int client_height() override;
 
 	void hideEvent(QHideEvent* ev) override;
-private slots:
+private Q_SLOTS:
 	void HandleCursor(QWindow::Visibility visibility);
 };
-
-#endif

@@ -1819,6 +1819,37 @@ void thread_ctrl::test()
 	}
 }
 
+void thread_ctrl::set_native_priority(int priority)
+{
+#ifdef _WIN32
+	HANDLE _this_thread = GetCurrentThread();
+	INT native_priority = THREAD_PRIORITY_NORMAL;
+
+	switch (priority)
+	{
+	default:
+	case 0:
+		break;
+	case 1:
+		native_priority = THREAD_PRIORITY_ABOVE_NORMAL;
+		break;
+	case -1:
+		native_priority = THREAD_PRIORITY_BELOW_NORMAL;
+		break;
+	}
+
+	SetThreadPriority(_this_thread, native_priority);
+#endif
+}
+
+void thread_ctrl::set_ideal_processor_core(int core)
+{
+#ifdef _WIN32
+	HANDLE _this_thread = GetCurrentThread();
+	SetThreadIdealProcessor(_this_thread, core);
+#endif
+}
+
 
 named_thread::named_thread()
 {

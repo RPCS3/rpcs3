@@ -1,5 +1,4 @@
-#ifndef REGISTEREDITOR_H
-#define REGISTEREDITOR_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/System.h"
@@ -35,5 +34,3 @@ public:
 private:
 	void OnOkay(const std::shared_ptr<cpu_thread>& _cpu);
 };
-
-#endif // REGISTEREDITOR_H

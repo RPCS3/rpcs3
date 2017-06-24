@@ -126,8 +126,8 @@ s32 cellHttpUtilBuildRequestLine(vm::cptr<CellHttpRequestLine> req, vm::ptr<char
 
 	// TODO
 
-    const std::string& result = fmt::format("%s %s %s/%d.%d\r\n", req->method, req->path, req->protocol, req->majorVersion, req->minorVersion);
-    std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	const std::string& result = fmt::format("%s %s %s/%d.%d\r\n", req->method, req->path, req->protocol, req->majorVersion, req->minorVersion);
+	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
 
 	return CELL_OK;
 }
@@ -142,8 +142,8 @@ s32 cellHttpUtilBuildHeader(vm::cptr<CellHttpHeader> header, vm::ptr<char> buf, 
 
 	// TODO
 
-    const std::string& result = fmt::format("%s: %s\r\n", header->name, header->value);
-    std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	const std::string& result = fmt::format("%s: %s\r\n", header->name, header->value);
+	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
 
 	return CELL_OK;
 }
@@ -154,8 +154,8 @@ s32 cellHttpUtilBuildUri(vm::cptr<CellHttpUri> uri, vm::ptr<char> buf, u32 len, 
 
 	// TODO
 
-    const std::string& result = fmt::format("%s://%s:%s@%s:%d/%s", uri->scheme, uri->username, uri->password, uri->hostname, uri->port, uri->path);
-    std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	const std::string& result = fmt::format("%s://%s:%s@%s:%d/%s", uri->scheme, uri->username, uri->password, uri->hostname, uri->port, uri->path);
+	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
 
 	return CELL_OK;
 }

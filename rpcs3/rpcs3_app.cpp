@@ -95,7 +95,7 @@ void rpcs3_app::InitializeCallbacks()
 	};
 	callbacks.call_after = [=](std::function<void()> func)
 	{	
-		emit RequestCallAfter(std::move(func));
+		RequestCallAfter(std::move(func));
 	};
 
 	callbacks.process_events = [this]()
@@ -200,11 +200,11 @@ void rpcs3_app::InitializeCallbacks()
 		return std::make_unique<save_data_dialog>();
 	};
 
-	callbacks.on_run = [=]() { emit OnEmulatorRun(); };
-	callbacks.on_pause = [=]() {emit OnEmulatorPause(); };
-	callbacks.on_resume = [=]() {emit OnEmulatorResume(); };
-	callbacks.on_stop = [=]() {emit OnEmulatorStop(); };
-	callbacks.on_ready = [=]() {emit OnEmulatorReady(); };
+	callbacks.on_run = [=]() { OnEmulatorRun(); };
+	callbacks.on_pause = [=]() { OnEmulatorPause(); };
+	callbacks.on_resume = [=]() { OnEmulatorResume(); };
+	callbacks.on_stop = [=]() { OnEmulatorStop(); };
+	callbacks.on_ready = [=]() { OnEmulatorReady(); };
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

@@ -1,5 +1,4 @@
-#ifndef DEBUGGERFRAME_H
-#define DEBUGGERFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
@@ -46,6 +45,7 @@ class debugger_frame : public QDockWidget
 	QPushButton* m_btn_pause;
 	QComboBox* m_choice_units;
 	QString m_current_choice;
+	bool m_noThreadSelected = true;
 
 	u64 m_threads_created = 0;
 	u64 m_threads_deleted = 0;
@@ -53,6 +53,8 @@ class debugger_frame : public QDockWidget
 	u32 m_last_stat = 0;
 
 	QTimer* update;
+
+	const QString NoThread = "No Thread";
 
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
@@ -76,11 +78,11 @@ protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
 
-signals:
+Q_SIGNALS:
 	void DebugFrameClosed();
-public slots:
+public Q_SLOTS:
 	void DoStep();
-private slots:
+private Q_SLOTS:
 	void OnSelectUnit();
 	void Show_Val();
 	void Show_PC();
@@ -96,6 +98,7 @@ class debugger_list : public QListWidget
 public:
 	u32 m_pc;
 	u32 m_item_count;
+	bool m_noThreadSelected;
 
 public:
 	debugger_list(debugger_frame* parent);
@@ -112,5 +115,3 @@ protected:
 	void wheelEvent(QWheelEvent* event);
 	void resizeEvent(QResizeEvent* event);
 };
-
-#endif // DEBUGGERFRAME_H

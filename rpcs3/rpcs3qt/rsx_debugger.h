@@ -1,5 +1,4 @@
-#ifndef RSXDEBUGGER_H
-#define RSXDEBUGGER_H
+#pragma once
 
 #include "stdafx.h"
 
@@ -112,12 +111,10 @@ public:
 private:
 	QSignalMapper *signalMapper;
 
-public slots:
+public Q_SLOTS:
 	virtual void keyPressEvent(QKeyEvent* event);
 	virtual void wheelEvent(QWheelEvent* event);
 	virtual void OnClickDrawCalls();
 	virtual void SetFlags();
 	virtual void SetPrograms();
 };
-
-#endif // !RSXDEBUGGER_H

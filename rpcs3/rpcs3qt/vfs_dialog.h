@@ -1,5 +1,4 @@
-#ifndef VFS_DIALOG_H
-#define VFS_DIALOG_H
+#pragma once
 
 #include "gui_settings.h"
 #include "emu_settings.h"
@@ -19,6 +18,3 @@ private:
 
 	QTabWidget* tabs;
 };
-
-
-#endif

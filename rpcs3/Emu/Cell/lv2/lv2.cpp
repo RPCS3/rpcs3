@@ -979,6 +979,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 		{
 			LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(code));
 			ppu.gpr[3] = 0;
+			ppu.cia += 4;
 		}
 
 		return;
