@@ -97,7 +97,7 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 void debugger_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	emit DebugFrameClosed();
+	DebugFrameClosed();
 }
 
 #include <map>

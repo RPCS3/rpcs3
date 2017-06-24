@@ -152,8 +152,8 @@ void gui_tab::OnResetDefault()
 	{
 		xgui_settings->Reset(true);
 		xgui_settings->ChangeToConfig(tr("default"));
-		emit GuiStylesheetRequest(tr("default"));
-		emit GuiSettingsSyncRequest();
+		GuiStylesheetRequest(tr("default"));
+		GuiSettingsSyncRequest();
 		AddConfigs();
 		AddStylesheets();
 	}
@@ -185,7 +185,7 @@ void gui_tab::OnBackupCurrentConfig()
 			QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 			continue;
 		}
-		emit GuiSettingsSaveRequest();
+		GuiSettingsSaveRequest();
 		xgui_settings->SaveCurrentConfig(friendlyName);
 		combo_configs->addItem(friendlyName);
 		combo_configs->setCurrentIndex(combo_configs->findText(friendlyName));
@@ -198,11 +198,11 @@ void gui_tab::OnApplyConfig()
 	QString name = combo_configs->currentText();
 	xgui_settings->SetValue(GUI::m_currentConfig, name);
 	xgui_settings->ChangeToConfig(name);
-	emit GuiSettingsSyncRequest();
+	GuiSettingsSyncRequest();
 }
 
 void gui_tab::OnApplyStylesheet()
 {
 	xgui_settings->SetValue(GUI::m_currentStylesheet, combo_stylesheets->currentText());
-	emit GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
+	GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }

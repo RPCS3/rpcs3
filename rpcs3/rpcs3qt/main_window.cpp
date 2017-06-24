@@ -72,7 +72,7 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	QTimer::singleShot(1, [=]() {
 		// Need to have this happen fast, but not now because connects aren't created yet.
 		// So, a tricky balance in terms of time but this works.
-		emit RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
+		RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
 	});
 }
 

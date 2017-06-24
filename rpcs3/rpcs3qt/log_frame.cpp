@@ -341,5 +341,5 @@ void log_frame::UpdateUI()
 void log_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	emit log_frameClosed();
+	log_frameClosed();
 }
