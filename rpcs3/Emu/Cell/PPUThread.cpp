@@ -49,6 +49,7 @@
 #include "Modules/cellMsgDialog.h"
 #endif
 
+#include <thread>
 #include <cfenv>
 #include "Utilities/GSL.h"
 
@@ -102,7 +103,7 @@ const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
-static void ppu_initialize2(const ppu_module& info);
+static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 
 // Get pointer to executable cache
@@ -1059,11 +1060,8 @@ extern void ppu_initialize(const ppu_module& info)
 		return;
 	}
 
-#ifdef LLVM_AVAILABLE
-	using namespace llvm;
-
-	// Initialize JIT compiler
-	if (!fxm::check<jit_compiler>())
+	// Link table
+	static const std::unordered_map<std::string, u64> s_link_table = []()
 	{
 		std::unordered_map<std::string, u64> link_table
 		{
@@ -1098,15 +1096,32 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 
-		fxm::make<jit_compiler>(std::move(link_table), g_cfg.core.llvm_cpu);
+		return link_table;
+	}();
+
+#ifdef LLVM_AVAILABLE
+	// Initialize compiler
+	jit_compiler jit(s_link_table, g_cfg.core.llvm_cpu);
+
+	// Compiler mutex
+	semaphore<> jmutex;
+
+	// Initialize semaphore with the max number of threads
+	semaphore<INT32_MAX> jcores(std::thread::hardware_concurrency());
+
+	if (!jcores.get())
+	{
+		// Min value 1
+		jcores.post();
 	}
-#endif
+
+	// Worker threads
+	std::vector<std::thread> jthreads;
 
 	// Split module into fragments <= 1 MiB
 	std::size_t fpos = 0;
 
 	ppu_module part;
-	part.funcs.reserve(65536);
 
 	while (fpos < info.funcs.size())
 	{
@@ -1115,12 +1130,13 @@ extern void ppu_initialize(const ppu_module& info)
 		std::size_t bsize = 0;
 
 		part.funcs.clear();
+		part.funcs.reserve(16000);
 
 		while (fpos < info.funcs.size())
 		{
 			auto& func = info.funcs[fpos];
 
-			if (bsize + func.size > 1024 * 1024 && bsize)
+			if (bsize + func.size > 256 * 1024 && bsize)
 			{
 				break;
 			}
@@ -1158,13 +1174,90 @@ extern void ppu_initialize(const ppu_module& info)
 			part.name.append("+0");
 		}
 
-		ppu_initialize2(part);
+		// Compute module hash
+		std::string obj_name;
+		{
+			sha1_context ctx;
+			u8 output[20];
+			sha1_starts(&ctx);
+
+			for (const auto& func : part.funcs)
+			{
+				if (func.size == 0)
+				{
+					continue;
+				}
+
+				const be_t<u32> addr = func.addr;
+				const be_t<u32> size = func.size;
+				sha1_update(&ctx, reinterpret_cast<const u8*>(&addr), sizeof(addr));
+				sha1_update(&ctx, reinterpret_cast<const u8*>(&size), sizeof(size));
+
+				for (const auto& block : func.blocks)
+				{
+					if (block.second == 0)
+					{
+						continue;
+					}
+
+					sha1_update(&ctx, vm::ps3::_ptr<const u8>(block.first), block.second);
+				}
+
+				sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
+			}
+
+			sha1_finish(&ctx, output);
+
+			// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
+			fmt::append(obj_name, "v1%s-%016X-%s.obj", part.name, reinterpret_cast<be_t<u64>&>(output), jit.cpu());
+		}
+
+		if (Emu.IsStopped())
+		{
+			break;
+		}
+
+		// Check object file
+		if (fs::is_file(Emu.GetCachePath() + obj_name))
+		{
+			semaphore_lock lock(jmutex);
+			ppu_initialize2(jit, part, Emu.GetCachePath(), obj_name);
+			continue;
+		}
+
+		// Create worker thread for compilation
+		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part)]()
+		{
+			// Set low priority
+			thread_ctrl::set_native_priority(-1);
+			
+			// Allocate "core"
+			{
+				semaphore_lock jlock(jcores);
+
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
+				// Use another JIT instance
+				jit_compiler jit2({}, g_cfg.core.llvm_cpu);
+				ppu_initialize2(jit2, part, Emu.GetCachePath(), obj_name);
+			}
+
+			// Proceed with original JIT instance		
+			semaphore_lock lock(jmutex);
+			ppu_initialize2(jit, part, Emu.GetCachePath(), obj_name);
+		});
 	}
 
-#ifdef LLVM_AVAILABLE
-	const auto jit = fxm::check_unlocked<jit_compiler>();
+	// Join worker threads
+	for (auto& thread : jthreads)
+	{
+		thread.join();
+	}
 
-	jit->fin(Emu.GetCachePath());
+	jit.fin();
 
 	// Get and install function addresses
 	for (const auto& func : info.funcs)
@@ -1175,74 +1268,27 @@ extern void ppu_initialize(const ppu_module& info)
 		{
 			if (block.second)
 			{
-				ppu_ref(block.first) = ::narrow<u32>(jit->get(fmt::format("__0x%x", block.first)));
+				ppu_ref(block.first) = ::narrow<u32>(jit.get(fmt::format("__0x%x", block.first)));
 			}
 		}
 	}
-#endif
 }
 
-static void ppu_initialize2(const ppu_module& module_part)
+static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name)
 {
-	if (Emu.IsStopped())
-	{
-		return;
-	}
-
-	// Compute module hash
-	std::string obj_name;
-	{
-		sha1_context ctx;
-		u8 output[20];
-		sha1_starts(&ctx);
-
-		for (const auto& func : module_part.funcs)
-		{
-			if (func.size == 0)
-			{
-				continue;
-			}
-
-			const be_t<u32> addr = func.addr;
-			const be_t<u32> size = func.size;
-			sha1_update(&ctx, reinterpret_cast<const u8*>(&addr), sizeof(addr));
-			sha1_update(&ctx, reinterpret_cast<const u8*>(&size), sizeof(size));
-
-			for (const auto& block : func.blocks)
-			{
-				if (block.second == 0)
-				{
-					continue;
-				}
-
-				sha1_update(&ctx, vm::ps3::_ptr<const u8>(block.first), block.second);
-			}
-
-			sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
-		}
-		
-		sha1_finish(&ctx, output);
-
-		// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
-		fmt::append(obj_name, "b1%s-%016X.obj", module_part.name, reinterpret_cast<be_t<u64>&>(output));
-	}
-
-#ifdef LLVM_AVAILABLE
 	using namespace llvm;
 
-	const auto jit = fxm::get<jit_compiler>();
-
 	// Create LLVM module
-	std::unique_ptr<Module> module = std::make_unique<Module>(obj_name, g_llvm_ctx);
+	std::unique_ptr<Module> module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 	
 	// Initialize translator
-	std::unique_ptr<PPUTranslator> translator = std::make_unique<PPUTranslator>(g_llvm_ctx, module.get(), 0);
+	std::unique_ptr<PPUTranslator> translator = std::make_unique<PPUTranslator>(jit.get_context(), module.get(), 0);
 
 	// Define some types
-	const auto _void = Type::getVoidTy(g_llvm_ctx);
+	const auto _void = Type::getVoidTy(jit.get_context());
 	const auto _func = FunctionType::get(_void, {translator->GetContextType()->getPointerTo()}, false);
 
 	// Initialize function list
@@ -1258,7 +1304,7 @@ static void ppu_initialize2(const ppu_module& module_part)
 	std::shared_ptr<MsgDialogBase> dlg;
 
 	// Check cached file
-	if (!fs::is_file(Emu.GetCachePath() + obj_name))
+	if (!fs::is_file(cache_path + obj_name))
 	{
 		legacy::FunctionPassManager pm(module.get());
 
@@ -1404,7 +1450,7 @@ static void ppu_initialize2(const ppu_module& module_part)
 		if (g_cfg.core.llvm_logs)
 		{
 			out << *module; // print IR
-			fs::file(Emu.GetCachePath() + obj_name + ".log", fs::rewrite).write(out.str());
+			fs::file(cache_path + obj_name + ".log", fs::rewrite).write(out.str());
 			result.clear();
 		}
 
@@ -1418,11 +1464,7 @@ static void ppu_initialize2(const ppu_module& module_part)
 		LOG_NOTICE(PPU, "LLVM: %zu functions generated", module->getFunctionList().size());
 	}
 
-	// Access JIT compiler
-	if (const auto jit = fxm::check_unlocked<jit_compiler>())
-	{
-		// Load or compile module
-		jit->add(std::move(module), Emu.GetCachePath());
-	}
-#endif
+	// Load or compile module
+	jit.add(std::move(module), cache_path);
+#endif // LLVM_AVAILABLE
 }

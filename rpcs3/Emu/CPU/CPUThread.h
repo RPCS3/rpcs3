@@ -65,10 +65,6 @@ public:
 
 	// Callback for cpu_flag::suspend
 	virtual void cpu_sleep() {}
-
-	//native scheduler tweaks
-	void set_native_priority(int priority);
-	void set_ideal_processor_core(int core);
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept

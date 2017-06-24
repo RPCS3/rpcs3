@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "types.h"
+#include "mutex.h"
 
 #include "restore_new.h"
 #ifdef _MSC_VER
@@ -20,48 +21,45 @@
 #endif
 #include "define_new_memleakdetect.h"
 
-extern llvm::LLVMContext g_llvm_ctx;
-
 // Temporary compiler interface
 class jit_compiler final
 {
+	// Local LLVM context
+	llvm::LLVMContext m_context;
+
+	// JIT Event Listener
+	std::unique_ptr<struct EventListener> m_jit_el;
+
 	// Execution instance
 	std::unique_ptr<llvm::ExecutionEngine> m_engine;
 
-	// Linkage cache
+	// Link table
 	std::unordered_map<std::string, u64> m_link;
-
-	// Compiled functions
-	std::unordered_map<std::string, u64> m_map;
 
 	// Arch
 	std::string m_cpu;
 
 public:
-	jit_compiler(std::unordered_map<std::string, u64>, std::string _cpu);
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu);
 	~jit_compiler();
+
+	// Get LLVM context
+	auto& get_context()
+	{
+		return m_context;
+	}
 
 	// Add module
 	void add(std::unique_ptr<llvm::Module> module, const std::string& path);
 
 	// Finalize
-	void fin(const std::string& path);
-
-	// Add functions directly (name -> code)
-	void add(std::unordered_map<std::string, std::string>);
+	void fin();
 
 	// Get compiled function address
-	u64 get(const std::string& name) const
-	{
-		const auto found = m_map.find(name);
-		
-		if (found != m_map.end())
-		{
-			return found->second;
-		}
+	u64 get(const std::string& name);
 
-		return m_engine->getFunctionAddress(name);
-	}
+	// Add functions directly to the memory manager (name -> code)
+	static std::unordered_map<std::string, u64> add(std::unordered_map<std::string, std::string>);
 
 	// Get CPU info
 	const std::string& cpu() const

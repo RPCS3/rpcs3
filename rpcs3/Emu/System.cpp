@@ -681,6 +681,11 @@ void Emulator::Stop()
 	{
 		Init();
 	}
+
+#ifdef LLVM_AVAILABLE
+	extern void jit_finalize();
+	jit_finalize();
+#endif
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg)

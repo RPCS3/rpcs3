@@ -230,6 +230,9 @@ public:
 
 		thread_ctrl::start(out, std::forward<F>(func));
 	}
+
+	static void set_native_priority(int priority);
+	static void set_ideal_processor_core(int core);
 };
 
 class named_thread
