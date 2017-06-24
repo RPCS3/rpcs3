@@ -51,7 +51,6 @@ void msg_dialog_frame::Create(const std::string& msg)
 
 #ifdef _WIN32
 		m_tb_button = new QWinTaskbarButton();
-		m_tb_button->setWindow(m_taskbarTarget);
 		m_tb_progress = m_tb_button->progress();
 		m_tb_progress->setRange(0, m_gauge_max);
 		m_tb_progress->setVisible(true);
@@ -114,6 +113,11 @@ void msg_dialog_frame::Create(const std::string& msg)
 	//Fix size
 	m_dialog->setFixedSize(m_dialog->sizeHint());
 	m_dialog->show();
+
+#ifdef _WIN32
+	// if we do this before, the QWinTaskbarProgress won't show
+	if (m_tb_button) m_tb_button->setWindow(m_dialog->windowHandle());
+#endif
 }
 
 void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
