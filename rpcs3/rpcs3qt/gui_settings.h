@@ -1,5 +1,4 @@
-#ifndef GUI_SETTINGS_H
-#define GUI_SETTINGS_H
+#pragma once
 
 #include "Utilities/Log.h"
 
@@ -133,7 +132,7 @@ public:
 	QStringList GetStylesheetEntries();
 	QStringList GetGameListCategoryFilters();
 
-public slots:
+public Q_SLOTS:
 	void Reset(bool removeMeta = false);
 
 	/** Write value to entry */
@@ -153,5 +152,3 @@ private:
 	QSettings settings;
 	QDir settingsDir;
 };
-
-#endif

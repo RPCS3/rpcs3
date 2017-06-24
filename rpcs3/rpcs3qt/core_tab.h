@@ -1,5 +1,4 @@
-#ifndef CORETAB_H
-#define CORETAB_H
+#pragma once
 
 #include "emu_settings.h"
 
@@ -15,7 +14,7 @@ class core_tab : public QWidget
 
 public:
 	explicit core_tab(std::shared_ptr<emu_settings> xSettings, QWidget *parent = 0);
-public slots:
+public Q_SLOTS:
 	void SaveSelectedLibraries();
 
 private:
@@ -25,5 +24,3 @@ private:
 
 	std::shared_ptr<emu_settings> xemu_settings;
 };
-
-#endif // CORETAB_H

@@ -1,5 +1,4 @@
-#ifndef MSGDIALOG_H
-#define MSGDIALOG_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
@@ -103,5 +102,3 @@ private:
 		}
 	}
 };
-
-#endif // !MSGDIALOG_H

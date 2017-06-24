@@ -1,5 +1,4 @@
-#ifndef GAMELISTFRAME_H
-#define GAMELISTFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
@@ -58,14 +57,14 @@ public:
 	/** Saves settings. Public so that main frame can save this when a caching of column widths is needed for settings backup */
 	void SaveSettings();
 
-public slots:
+public Q_SLOTS:
 	/** Resize Gamelist Icons to size */
 	void ResizeIcons(const QSize& size, const int& idx);
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);
 	void SetCategoryActIcon(const int& id, const bool& active);
 
-private slots:
+private Q_SLOTS:
 	void Boot(int row);
 	void RemoveCustomConfiguration(int row);
 	void OnColClicked(int col);
@@ -73,7 +72,7 @@ private slots:
 	void ShowContextMenu(const QPoint &pos);
 	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
 	void doubleClickedSlot(const QModelIndex& index);
-signals:
+Q_SIGNALS:
 	void game_list_frameClosed();
 	void RequestIconPathSet(const std::string path);
 	void RequestAddRecentGame(const q_string_pair& entry);
@@ -149,5 +148,3 @@ private:
 
 	uint m_games_per_row = 0;
 };
-
-#endif // GAMELISTFRAME_H

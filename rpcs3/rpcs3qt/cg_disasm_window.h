@@ -1,5 +1,4 @@
-#ifndef CGDISASMWINDOW_H
-#define CGDISASMWINDOW_H
+#pragma once
 
 #include <QTextEdit>
 #include <QDropEvent>
@@ -11,7 +10,7 @@ class cg_disasm_window : public QWidget
 {
 	Q_OBJECT
 
-private slots:
+private Q_SLOTS:
 	void ShowContextMenu(const QPoint &pos);
 	void ShowDisasm();
 	bool IsValidFile(const QMimeData& md, bool save = false);
@@ -35,5 +34,3 @@ protected:
 	void dragMoveEvent(QDragMoveEvent* ev);
 	void dragLeaveEvent(QDragLeaveEvent* ev);
 };
-
-#endif	// CGDISASMWINDOW_H

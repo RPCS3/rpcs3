@@ -1,5 +1,4 @@
-#ifndef INPUTTAB_H
-#define INPUTTAB_H
+#pragma once
 
 #include "emu_settings.h"
 
@@ -13,10 +12,4 @@ class input_tab : public QWidget
 
 public:
 	explicit input_tab(std::shared_ptr<emu_settings> xemu_settings, QWidget *parent = 0);
-
-signals:
-
-public slots:
 };
-
-#endif // INPUTTAB_H

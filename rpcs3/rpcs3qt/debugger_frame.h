@@ -1,5 +1,4 @@
-#ifndef DEBUGGERFRAME_H
-#define DEBUGGERFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
@@ -79,11 +78,11 @@ protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
 
-signals:
+Q_SIGNALS:
 	void DebugFrameClosed();
-public slots:
+public Q_SLOTS:
 	void DoStep();
-private slots:
+private Q_SLOTS:
 	void OnSelectUnit();
 	void Show_Val();
 	void Show_PC();
@@ -116,5 +115,3 @@ protected:
 	void wheelEvent(QWheelEvent* event);
 	void resizeEvent(QResizeEvent* event);
 };
-
-#endif // DEBUGGERFRAME_H

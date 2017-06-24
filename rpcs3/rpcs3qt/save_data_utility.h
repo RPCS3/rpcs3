@@ -1,5 +1,4 @@
-#ifndef SAVEDATAUTILITY_H
-#define SAVEDATAUTILITY_H
+#pragma once
 
 #include <QDialog>
 #include <QHBoxLayout>
@@ -52,7 +51,7 @@ class save_data_manage_dialog :public QDialog
 	QComboBox* m_sort_options;
 	unsigned int* m_sort_type;
 
-private slots:
+private Q_SLOTS:
 	void OnInfo();
 	void OnCopy();
 	void OnDelete();
@@ -88,7 +87,7 @@ private:
 	QAction* infoAct;
 
 	void OnSort(int id);
-private slots:
+private Q_SLOTS:
 	void OnSelect();
 	void OnManage();
 	void OnEntryCopy();
@@ -96,5 +95,3 @@ private slots:
 	void OnEntryInfo();
 	void ShowContextMenu(const QPoint &pos);
 };
-
-#endif // !SAVEDATAUTILITY_H

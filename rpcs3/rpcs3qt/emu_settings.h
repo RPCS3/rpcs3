@@ -1,5 +1,4 @@
-#ifndef EMU_SETTINGS_H
-#define EMU_SETTINGS_H
+#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -124,7 +123,7 @@ public:
 
 	/** Sets the setting type to a given value.*/
 	void SetSetting(SettingsType type, const std::string& val);
-public slots:
+public Q_SLOTS:
 /** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
@@ -197,5 +196,3 @@ private:
 	YAML::Node currentSettings; // The current settings as a YAML node.
 	fs::file config; //! File to read/write the config settings.
 };
-
-#endif

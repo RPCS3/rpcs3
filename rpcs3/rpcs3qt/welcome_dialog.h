@@ -1,5 +1,4 @@
-#ifndef WELCOME_DIALOG_H
-#define WELCOME_DIALOG_H
+#pragma once
 
 #include <QDialog>
 #include <QKeyEvent>
@@ -12,5 +11,3 @@ class welcome_dialog : public QDialog
 public:
 	explicit welcome_dialog(QWidget* parent = nullptr);
 };
-
-#endif
