@@ -360,46 +360,46 @@ void game_list_frame::Refresh(bool fromDrive)
 
 				const auto& psf = psf::load_object(sfo_file);
 
-        GameInfo game;
-			  game.root = entry.name;
-			  game.serial = psf::get_string(psf, "TITLE_ID", "");
-			  game.name = psf::get_string(psf, "TITLE", "unknown");
-			  game.app_ver = psf::get_string(psf, "APP_VER", "unknown");
-			  game.category = psf::get_string(psf, "CATEGORY", "unknown");
-			  game.fw = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
-			  game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
-			  game.resolution = psf::get_integer(psf, "RESOLUTION");
-			  game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
+				GameInfo game;
+				game.root = entry.name;
+				game.serial = psf::get_string(psf, "TITLE_ID", "");
+				game.name = psf::get_string(psf, "TITLE", "unknown");
+				game.app_ver = psf::get_string(psf, "APP_VER", "unknown");
+				game.category = psf::get_string(psf, "CATEGORY", "unknown");
+				game.fw = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
+				game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
+				game.resolution = psf::get_integer(psf, "RESOLUTION");
+				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
 
-			  bool bootable = false;
-			  auto cat = category::cat_boot.find(game.category);
-			  if (cat != category::cat_boot.end())
-			  {
-			  	if (game.category == "DG")
-			  	{
-			  		game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
-			  	}
-			  	else
-			  	{
-			  		game.icon_path = dir + "/ICON0.PNG";
-			  	}
+				bool bootable = false;
+				auto cat = category::cat_boot.find(game.category);
+				if (cat != category::cat_boot.end())
+				{
+					if (game.category == "DG")
+					{
+						game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
+					}
+					else
+					{
+						game.icon_path = dir + "/ICON0.PNG";
+					}
 
-			  	game.category = sstr(cat->second);
-			  	bootable = true;
-			  }
-			  else if ((cat = category::cat_data.find(game.category)) != category::cat_data.end())
-			  {
-			  	game.icon_path = dir + "/ICON0.PNG";
-			  	game.category = sstr(cat->second);
-			  }
-			  else if (game.category == "unknown")
-			  {
-			  	game.category = sstr(category::unknown);
-			  }
-			  else
-			  {
-			  	game.category = sstr(category::other);
-			  }
+					game.category = sstr(cat->second);
+					bootable = true;
+				}
+				else if ((cat = category::cat_data.find(game.category)) != category::cat_data.end())
+				{
+					game.icon_path = dir + "/ICON0.PNG";
+					game.category = sstr(cat->second);
+				}
+				else if (game.category == "unknown")
+				{
+					game.category = sstr(category::unknown);
+				}
+				else
+				{
+					game.category = sstr(category::other);
+				}
 
 				// Load Image
 				QImage img;
@@ -513,17 +513,15 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	{
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
-  
-	std::string game_dir	= m_game_data[i].dir;
 
 	// enable boot for bootable categories only
 	if (m_game_data[i].bootable)
 	{
-		const std::string& path = game_dir + m_game_data[i].info.root;
+		const std::string& path = m_game_data[i].dir + m_game_data[i].info.root;
 		RequestIconPathSet(path);
-	
+
 		Emu.Stop();
-	
+
 		if (!Emu.BootGame(path))
 		{
 			LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[i].info.root);
@@ -536,7 +534,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	}
 	else
 	{
-		open_dir(game_dir + m_game_data[i].info.root);
+		open_dir(m_game_data[i].dir + m_game_data[i].info.root);
 	}
 }
 

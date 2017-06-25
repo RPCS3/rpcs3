@@ -108,7 +108,7 @@ typedef struct GUI_GameInfo
 	GameInfo info;
 	QImage icon;
 	QPixmap pxmap;
-  bool bootable;
+	bool bootable;
 	std::string dir;
 };
 
