@@ -266,6 +266,7 @@ struct cfg_root : cfg::node
 		cfg::_bool bind_spu_cores{this, "Bind SPU threads to secondary cores"};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
+		cfg::_int<32, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::automatic};
 		cfg::_bool hook_functions{this, "Hook static functions"};
