@@ -7,8 +7,6 @@
 #include "../Utilities/Log.h"
 #include <algorithm>
 
-extern std::string ppu_get_syscall_name(u64 code);
-
 using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
@@ -1647,7 +1645,7 @@ void PPUTranslator::SC(ppu_opcode_t op)
 		if (index < 1024)
 		{
 			// Call the syscall directly
-			Call(GetType<void>(), ppu_get_syscall_name(index), m_thread);
+			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
 			m_ir->CreateRetVoid();
 			return;
 		}

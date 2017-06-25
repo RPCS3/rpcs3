@@ -763,7 +763,6 @@ const ppu_decoder<ppu_itype> s_ppu_itype;
 
 extern u64 get_timebased_time();
 extern ppu_function_t ppu_get_syscall(u64 code);
-extern std::string ppu_get_syscall_name(u64 code);
 
 extern __m128 sse_exp2_ps(__m128 A);
 extern __m128 sse_log2_ps(__m128 A);
@@ -957,7 +956,7 @@ extern void ppu_initialize(const ppu_module& info)
 		{
 			if (auto sc = ppu_get_syscall(index))
 			{
-				link_table.emplace(ppu_get_syscall_name(index), (u64)sc);
+				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), (u64)sc);
 			}
 		}
 

@@ -18,6 +18,11 @@ enum class ppu_cmd : u32
 	sleep,
 };
 
+// Formatting helper
+enum class ppu_syscall_code : u64
+{
+};
+
 class ppu_thread : public cpu_thread
 {
 public:

@@ -33,9 +33,15 @@
 
 extern std::string ppu_get_syscall_name(u64 code);
 
+template <>
+void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
+{
+	out += ppu_get_syscall_name(arg);
+}
+
 static bool null_func(ppu_thread& ppu)
 {
-	LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(ppu.gpr[11]));
+	LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_syscall_code(ppu.gpr[11]));
 	ppu.gpr[3] = 0;
 	ppu.cia += 4;
 	return false;
@@ -979,7 +985,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 		if (auto func = g_ppu_syscall_table[code])
 		{
 			func(ppu);
-			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_get_syscall_name(code), code, ppu.gpr[3]);
+			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
 			return;
 		}
 	}
