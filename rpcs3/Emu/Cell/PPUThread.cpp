@@ -1205,7 +1205,7 @@ extern void ppu_initialize(const ppu_module& info)
 			sha1_finish(&ctx, output);
 
 			// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
-			fmt::append(obj_name, "v1%s-%016X-%s.obj", part.name, reinterpret_cast<be_t<u64>&>(output), jit.cpu());
+			fmt::append(obj_name, "v2%s-%016X-%s.obj", part.name, reinterpret_cast<be_t<u64>&>(output), jit.cpu());
 		}
 
 		if (Emu.IsStopped())
@@ -1352,7 +1352,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 		Emu.CallAfter([=]()
 		{
-			dlg->Create("Compiling PPU module " + obj_name + "\nPlease wait...");
+			dlg->Create("Compiling PPU module:\n" + obj_name + "\nPlease wait...");
 		});
 
 		// Translate functions

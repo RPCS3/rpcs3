@@ -150,59 +150,30 @@ class PPUTranslator final //: public CPUTranslator
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 
-	llvm::Value* m_globals[169];
-	llvm::Value* m_locals[169];
-	llvm::Value** const m_gpr = m_locals + 0;
-	llvm::Value** const m_fpr = m_locals + 32;
-	llvm::Value** const m_vr = m_locals + 64;
-	llvm::Value** const m_cr = m_locals + 96;
-	llvm::Value** const m_fc = m_locals + 128;
-
-	std::array<bool, 169> m_writes;
-	std::array<bool, 169> m_reads;
+	llvm::Value* m_globals[173];
+	llvm::Value* m_locals[173];
+	llvm::Value** const m_gpr = m_locals + 3;
+	llvm::Value** const m_fpr = m_locals + 35;
+	llvm::Value** const m_vr = m_locals + 67;
+	llvm::Value** const m_cr = m_locals + 99;
+	llvm::Value** const m_fc = m_locals + 131; // FPSCR bits (used partially)
 
 #define DEF_VALUE(loc, glb, pos)\
 	llvm::Value*& loc = m_locals[pos];\
 	llvm::Value*& glb = m_globals[pos];
 
-	DEF_VALUE(m_lr, m_g_lr, 160);
-	DEF_VALUE(m_ctr, m_g_ctr, 161); // CTR register (counter)
-	DEF_VALUE(m_vrsave, m_g_vrsave, 162);
-	DEF_VALUE(m_so, m_g_so, 163); // XER.SO bit, summary overflow
-	DEF_VALUE(m_ov, m_g_ov, 164); // XER.OV bit, overflow flag
-	DEF_VALUE(m_ca, m_g_ca, 165); // XER.CA bit, carry flag
-	DEF_VALUE(m_cnt, m_g_cnt, 166);
-	DEF_VALUE(m_nj, m_g_nj, 167); // VSCR.NJ bit, non-Java mode
-	DEF_VALUE(m_sat, m_g_sat, 168); // VSCR.SAT bit, sticky saturation flag
+	DEF_VALUE(m_lr, m_g_lr, 163); // LR, Link Register
+	DEF_VALUE(m_ctr, m_g_ctr, 164); // CTR, Counter Register
+	DEF_VALUE(m_vrsave, m_g_vrsave, 165);
+	DEF_VALUE(m_cia, m_g_cia, 166);
+	DEF_VALUE(m_so, m_g_so, 167); // XER.SO bit, summary overflow
+	DEF_VALUE(m_ov, m_g_ov, 168); // XER.OV bit, overflow flag
+	DEF_VALUE(m_ca, m_g_ca, 169); // XER.CA bit, carry flag
+	DEF_VALUE(m_cnt, m_g_cnt, 170); // XER.CNT
+	DEF_VALUE(m_sat, m_g_sat, 171); // VSCR.SAT bit, sticky saturation flag
+	DEF_VALUE(m_nj, m_g_nj, 172); // VSCR.NJ bit, non-Java mode
 
 #undef DEF_VALUE
-
-	template <typename T>
-	void RegInit(llvm::Value*& local)
-	{
-		if (!local)
-		{
-			local = new llvm::AllocaInst(GetType<T>(), nullptr, sizeof(T));
-			m_entry->getInstList().push_back(llvm::cast<llvm::Instruction>(local));
-		}
-	}
-
-	template <typename T>
-	llvm::Value* RegLoad(llvm::Value*& local)
-	{
-		RegInit<T>(local);
-		m_reads.at(&local - m_locals) = true;
-		return m_ir->CreateLoad(local);
-	}
-
-	template <typename T>
-	void RegStore(llvm::Value* value, llvm::Value*& local)
-	{
-		RegInit<T>(local);
-		m_writes.at(&local - m_locals) = true;
-		m_ir->CreateStore(value, local);
-	}
-
 public:
 
 	// Change integer size for integer or integer vector type (by 2^degree)
@@ -219,6 +190,15 @@ public:
 
 	// Emit function call
 	void CallFunction(u64 target, llvm::Value* indirect = nullptr);
+
+	// Initialize global for writing
+	llvm::Value* RegInit(llvm::Value*& local);
+
+	// Load last register value
+	llvm::Value* RegLoad(llvm::Value*& local);
+
+	// Store register value locally
+	void RegStore(llvm::Value* value, llvm::Value*& local);
 
 	// Write global registers
 	void FlushRegisters();
