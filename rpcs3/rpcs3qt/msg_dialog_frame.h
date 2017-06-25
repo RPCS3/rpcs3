@@ -71,6 +71,8 @@ public:
 	explicit custom_dialog(bool disableCancel, QWidget* parent = 0)
 		: QDialog(parent), m_disable_cancel(disableCancel)
 	{
+		setWindowIcon(QIcon(":/rpcs3.ico"));
+
 		if (m_disable_cancel)
 		{
 			setWindowFlags(windowFlags() & ~Qt::WindowCloseButtonHint);
