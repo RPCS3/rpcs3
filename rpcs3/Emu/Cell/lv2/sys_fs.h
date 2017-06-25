@@ -368,6 +368,7 @@ error_code sys_fs_ftruncate(u32 fd, u64 size);
 error_code sys_fs_symbolic_link(vm::ps3::cptr<char> target, vm::ps3::cptr<char> linkpath);
 error_code sys_fs_chmod(vm::ps3::cptr<char> path, s32 mode);
 error_code sys_fs_chown(vm::ps3::cptr<char> path, s32 uid, s32 gid);
+error_code sys_fs_disk_free(vm::ps3::cptr<char> path, vm::ps3::ptr<u64> total_free, vm::ps3::ptr<u64> avail_free);
 error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep);
 error_code sys_fs_acl_read(vm::ps3::cptr<char> path, vm::ps3::ptr<void>);
 error_code sys_fs_acl_write(vm::ps3::cptr<char> path, vm::ps3::ptr<void>);
