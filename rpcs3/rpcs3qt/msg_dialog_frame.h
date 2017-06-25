@@ -1,5 +1,4 @@
-#ifndef MSGDIALOG_H
-#define MSGDIALOG_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
@@ -85,6 +84,10 @@ private:
 		{
 			event->ignore();
 		}
+		else
+		{
+			QDialog::keyPressEvent(event);
+		}
 	}
 	void closeEvent(QCloseEvent* event)
 	{
@@ -93,7 +96,9 @@ private:
 		{
 			event->ignore();
 		}
+		else
+		{
+			QDialog::closeEvent(event);
+		}
 	}
 };
-
-#endif // !MSGDIALOG_H

@@ -1,5 +1,4 @@
-#ifndef DEBUGGERFRAME_H
-#define DEBUGGERFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
@@ -19,16 +18,12 @@
 #include "instruction_editor_dialog.h"
 #include "register_editor_dialog.h"
 
-#include <QApplication>
 #include <QDockWidget>
 #include <QListWidget>
 #include <QPushButton>
-#include <QLineEdit>
 #include <QComboBox>
 #include <QKeyEvent>
 #include <QWheelEvent>
-#include <QInputDialog>
-#include <QFontDatabase>
 #include <QTimer>
 #include <QTextEdit>
 
@@ -49,6 +44,8 @@ class debugger_frame : public QDockWidget
 	QPushButton* m_btn_run;
 	QPushButton* m_btn_pause;
 	QComboBox* m_choice_units;
+	QString m_current_choice;
+	bool m_noThreadSelected = true;
 
 	u64 m_threads_created = 0;
 	u64 m_threads_deleted = 0;
@@ -56,6 +53,8 @@ class debugger_frame : public QDockWidget
 	u32 m_last_stat = 0;
 
 	QTimer* update;
+
+	const QString NoThread = "No Thread";
 
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
@@ -69,7 +68,6 @@ public:
 
 	u32 GetPc() const;
 	u32 CentrePc(u32 pc) const;
-	//void resizeEvent(QResizeEvent* event);
 	void DoUpdate();
 	void WriteRegs();
 	void EnableButtons(bool enable);
@@ -80,11 +78,11 @@ protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
 
-signals:
+Q_SIGNALS:
 	void DebugFrameClosed();
-public slots:
+public Q_SLOTS:
 	void DoStep();
-private slots:
+private Q_SLOTS:
 	void OnSelectUnit();
 	void Show_Val();
 	void Show_PC();
@@ -100,6 +98,7 @@ class debugger_list : public QListWidget
 public:
 	u32 m_pc;
 	u32 m_item_count;
+	bool m_noThreadSelected;
 
 public:
 	debugger_list(debugger_frame* parent);
@@ -114,6 +113,5 @@ protected:
 	void keyPressEvent(QKeyEvent* event);
 	void mouseDoubleClickEvent(QMouseEvent* event);
 	void wheelEvent(QWheelEvent* event);
+	void resizeEvent(QResizeEvent* event);
 };
-
-#endif // DEBUGGERFRAME_H

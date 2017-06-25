@@ -1,5 +1,4 @@
-#ifndef EMU_SETTINGS_H
-#define EMU_SETTINGS_H
+#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -63,6 +62,9 @@ public:
 		GPUTextureScaling,
 		D3D12Adapter,
 		VulkanAdapter,
+		ForceHighpZ,
+		AutoInvalidateCache,
+		StrictRenderingMode,
 
 		// Audio
 		AudioRenderer,
@@ -90,6 +92,12 @@ public:
 		// Language
 		Language,
 		EnableHostRoot,
+
+		// Virtual File System
+		dev_hdd0Location,
+		dev_hdd1Location,
+		dev_flashLocation,
+		dev_usb000Location,
 	};
 
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml 
@@ -115,7 +123,7 @@ public:
 
 	/** Sets the setting type to a given value.*/
 	void SetSetting(SettingsType type, const std::string& val);
-public slots:
+public Q_SLOTS:
 /** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
@@ -142,10 +150,13 @@ private:
 		{ VSync,			{ "Video", "VSync"}},
 		{ DebugOutput,		{ "Video", "Debug output"}},
 		{ DebugOverlay,		{ "Video", "Debug overlay"}},
-		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers (Debug)"}},
+		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers"}},
 		{ GPUTextureScaling,{ "Video", "Use GPU texture scaling"}},
-		{ D3D12Adapter,		{ "Video", "D3D12", "Adapter"}},
-		{ VulkanAdapter,		{ "Video", "Vulkan", "Adapter"}},
+		{ ForceHighpZ,      { "Video", "Force High Precision Z buffer"}},
+		{ AutoInvalidateCache, { "Video", "Invalidate Cache Every Frame"}},
+		{ StrictRenderingMode, { "Video", "Strict Rendering Mode"}},
+		{ D3D12Adapter,        { "Video", "D3D12", "Adapter"}},
+		{ VulkanAdapter,       { "Video", "Vulkan", "Adapter"}},
 
 		// Audio
 		{ AudioRenderer,	{ "Audio", "Renderer"}},
@@ -174,10 +185,14 @@ private:
 		{Language,			{ "System", "Language"}},
 		{EnableHostRoot,	{ "VFS", "Enable /host_root/"}},
 
+		// Virtual File System
+		{ dev_hdd0Location, { "VFS", "/dev_hdd0/" }},
+		{ dev_hdd1Location, { "VFS", "/dev_hdd1/" }},
+		{ dev_flashLocation, { "VFS", "/dev_flash/"}},
+		{ dev_usb000Location, { "VFS", "/dev_usb000/"}},
+
 	};
 
 	YAML::Node currentSettings; // The current settings as a YAML node.
 	fs::file config; //! File to read/write the config settings.
 };
-
-#endif

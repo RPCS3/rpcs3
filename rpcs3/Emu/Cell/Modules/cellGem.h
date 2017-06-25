@@ -96,10 +96,10 @@ struct CellGemAttribute
 struct CellGemCameraState
 {
 	be_t<s32> exposure;
-	float exposure_time;
-	float gain;
-	float pitch_angle;
-	float pitch_angle_estimate;
+	be_t<f32> exposure_time;
+	be_t<f32> gain;
+	be_t<f32> pitch_angle;
+	be_t<f32> pitch_angle_estimate;
 };
 
 struct CellGemExtPortData
@@ -116,14 +116,14 @@ struct CellGemExtPortData
 
 struct CellGemImageState
 {
-	//system_time_t frame_timestamp; // TODO: Figure what to use for them
-	//system_time_t timestamp;
-	float u;
-	float v;
-	float r;
-	float projectionx;
-	float projectiony;
-	float distance;
+	be_t<u64> frame_timestamp;
+	be_t<u64> timestamp;
+	be_t<f32> u;
+	be_t<f32> v;
+	be_t<f32> r;
+	be_t<f32> projectionx;
+	be_t<f32> projectiony;
+	be_t<f32> distance;
 	u8 visible;
 	u8 r_valid;
 };
@@ -136,15 +136,15 @@ struct CellGemPadData
 
 struct CellGemInertialState
 {
-	//vec_float4 accelerometer; // TODO: Figure what to use as replacement for vec_float4
-	//vec_float4 gyro;
-	//vec_float4 accelerometer_bias;
-	//vec_float4 gyro_bias;
+	be_t<f32> accelerometer[4];
+	be_t<f32> gyro[4];
+	be_t<f32> accelerometer_bias[4];
+	be_t<f32> gyro_bias[4];
 	CellGemPadData pad;
 	CellGemExtPortData ext;
-	//system_time_t timestamp;
+	be_t<u64> timestamp;
 	be_t<s32> counter;
-	float temperature;
+	be_t<f32> temperature;
 };
 
 struct CellGemInfo
@@ -157,20 +157,20 @@ struct CellGemInfo
 
 struct CellGemState
 {
-	//vec_float4 pos;
-	//vec_float4 vel;
-	//vec_float4 accel;
-	//vec_float4 quat;
-	//vec_float4 angvel;
-	//vec_float4 angaccel;
-	//vec_float4 handle_pos;
-	//vec_float4 handle_vel;
-	//vec_float4 handle_accel;
+	be_t<f32> pos[4];
+	be_t<f32> vel[4];
+	be_t<f32> accel[4];
+	be_t<f32> quat[4];
+	be_t<f32> angvel[4];
+	be_t<f32> angaccel[4];
+	be_t<f32> handle_pos[4];
+	be_t<f32> handle_vel[4];
+	be_t<f32> handle_accel[4];
 	CellGemPadData pad;
 	CellGemExtPortData ext;
-	//system_time_t timestamp;
-	float temperature;
-	float camera_pitch_angle;
+	be_t<u64> timestamp;
+	be_t<f32> temperature;
+	be_t<f32> camera_pitch_angle;
 	be_t<u32> tracking_flags;
 };
 
@@ -179,10 +179,10 @@ struct CellGemVideoConvertAttribute
 	be_t<s32> version;
 	be_t<s32> output_format;
 	be_t<s32> conversion_flags;
-	float gain;
-	float red_gain;
-	float green_gain;
-	float blue_gain;
+	be_t<f32> gain;
+	be_t<f32> red_gain;
+	be_t<f32> green_gain;
+	be_t<f32> blue_gain;
 	be_t<u32> buffer_memory;
 	be_t<u32> video_data_out;
 	u8 alpha;

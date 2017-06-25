@@ -170,7 +170,7 @@ namespace
 
 void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 {
-	insert_d3d12_legacy_function(OS);
+	insert_d3d12_legacy_function(OS, false);
 
 	OS << "PixelInput main(uint vertex_id : SV_VertexID)" << std::endl;
 	OS << "{" << std::endl;
@@ -203,11 +203,11 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 {
 	OS << "	PixelInput Out = (PixelInput)0;" << std::endl;
 
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
 
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	// Declare inside main function
 	for (auto &i : reg_table)

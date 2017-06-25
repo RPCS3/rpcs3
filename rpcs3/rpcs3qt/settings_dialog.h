@@ -1,5 +1,4 @@
-#ifndef SETTINGSDIALOG_H
-#define SETTINGSDIALOG_H
+#pragma once
 
 #include "gui_settings.h"
 #include "emu_settings.h"
@@ -17,12 +16,10 @@ class settings_dialog : public QDialog
 
 public:
 	explicit settings_dialog(std::shared_ptr<gui_settings> xSettings, Render_Creator r_Creator, QWidget *parent = 0, GameInfo *game = nullptr);
-signals:
+Q_SIGNALS:
 	void GuiSettingsSyncRequest();
 	void GuiStylesheetRequest(const QString& path);
 	void GuiSettingsSaveRequest();
 private:
 	QTabWidget *tabWidget;
 };
-
-#endif // SETTINGSDIALOG_H

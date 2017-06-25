@@ -65,7 +65,7 @@ struct gui_listener : logs::listener
 				_new->msg += "} ";
 			}
 
-			if (msg.ch->name)
+			if ('\0' != *msg.ch->name)
 			{
 				_new->msg += msg.ch->name;
 				_new->msg += msg.sev == logs::level::todo ? " TODO: " : ": ";
@@ -341,5 +341,5 @@ void log_frame::UpdateUI()
 void log_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	emit log_frameClosed();
+	log_frameClosed();
 }

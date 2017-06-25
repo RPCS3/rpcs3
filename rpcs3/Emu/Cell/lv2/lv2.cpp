@@ -610,7 +610,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_rsxaudio_close_connection)    //655 (0x28F)
 	null_func,//BIND_FUNC(sys_rsxaudio_prepare_process)     //656 (0x290)
 	null_func,//BIND_FUNC(sys_rsxaudio_start_process)       //657 (0x291)
-	null_func,//BIND_FUNC(sys_rsxaudio_)                    //658 (0x292)
+	null_func,//BIND_FUNC(sys_rsxaudio_stop_process)        //658 (0x292)
 	null_func,//BIND_FUNC(sys_rsxaudio_)                    //659 (0x293)
 
 	null_func, null_func, null_func, null_func, null_func,  //664  UNS
@@ -979,6 +979,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 		{
 			LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(code));
 			ppu.gpr[3] = 0;
+			ppu.cia += 4;
 		}
 
 		return;

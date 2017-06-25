@@ -107,6 +107,19 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
+			const auto mask = (1 << index);
+
+			if (m_prog.shadow_textures & mask)
+			{
+				if (m_shadow_sampled_textures & mask)
+				{
+					if (m_2d_sampled_textures & mask)
+						LOG_ERROR(RSX, "Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+					else
+						samplerType = "sampler2DShadow";
+				}
+			}
+
 			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
 		}
 	}
@@ -201,12 +214,14 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", (" + coord_name + ".xyz * " + tex_name + "_coord_scale))";
 		}
+
+		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
 	}
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS);
+	insert_glsl_legacy_function(OS, gl::glsl::glsl_fragment_program);
 
 	const std::set<std::string> output_values =
 	{

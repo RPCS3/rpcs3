@@ -5,21 +5,23 @@
         <file>Icons/restart.png</file>
         <file>Icons/stop.png</file>
         <file>rpcs3.ico</file>
-        <file>Icons/copy_blue.png</file>
+        <file>Icons/data_blue.png</file>
+        <file>Icons/data_gray.png</file>
         <file>Icons/disc_blue.png</file>
-        <file>Icons/grid_blue.png</file>
-        <file>Icons/harddisk_blue.png</file>
-        <file>Icons/home_blue.png</file>
-        <file>Icons/info_blue.png</file>
-        <file>Icons/list_blue.png</file>
-        <file>Icons/media_blue.png</file>
-        <file>Icons/copy_gray.png</file>
         <file>Icons/disc_gray.png</file>
+        <file>Icons/grid_blue.png</file>
         <file>Icons/grid_gray.png</file>
-        <file>Icons/harddisk_gray.png</file>
+        <file>Icons/hdd_blue.png</file>
+        <file>Icons/hdd_gray.png</file>
+        <file>Icons/home_blue.png</file>
         <file>Icons/home_gray.png</file>
-        <file>Icons/info_gray.png</file>
+        <file>Icons/list_blue.png</file>
         <file>Icons/list_gray.png</file>
+        <file>Icons/media_blue.png</file>
         <file>Icons/media_gray.png</file>
+        <file>Icons/unknown_blue.png</file>
+        <file>Icons/unknown_gray.png</file>
+        <file>Icons/other_blue.png</file>
+        <file>Icons/other_gray.png</file>
     </qresource>
 </RCC>

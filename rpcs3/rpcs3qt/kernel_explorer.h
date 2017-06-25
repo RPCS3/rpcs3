@@ -1,5 +1,4 @@
-#ifndef KERNELEXPLORER_H
-#define KERNELEXPLORER_H
+#pragma once
 
 #include <QDialog>
 #include <QVBoxLayout>
@@ -15,8 +14,6 @@ class kernel_explorer : public QDialog
 
 public:
 	kernel_explorer(QWidget* parent);
-private slots:
+private Q_SLOTS:
 	void Update();
 };
-
-#endif // KERNELEXPLORER_H

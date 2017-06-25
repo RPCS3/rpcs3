@@ -197,10 +197,10 @@ namespace rsx
 
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
-		virtual bool do_method(u32 cmd, u32 value) { return false; }
+		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
-		virtual bool on_access_violation(u32 address, bool is_writing) { return false; }
+		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
@@ -244,9 +244,9 @@ namespace rsx
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
 		 * Vertex shader's position is to be multiplied by this matrix.
-		 * if is_d3d is set, the matrix is modified to use d3d convention.
+		 * if flip_y is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const;
+		void fill_scale_offset_data(void *buffer, bool flip_y) const;
 
 		/**
 		 * Fill buffer with user clip information
@@ -291,7 +291,7 @@ namespace rsx
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
 
-		virtual bool scaled_image_from_memory(blit_src_info& src_info, blit_dst_info& dst_info, bool interpolate){ return false;  }
+		virtual bool scaled_image_from_memory(blit_src_info& /*src_info*/, blit_dst_info& /*dst_info*/, bool /*interpolate*/){ return false;  }
 
 	public:
 		void reset();

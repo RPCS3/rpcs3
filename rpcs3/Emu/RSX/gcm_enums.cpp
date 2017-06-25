@@ -689,17 +689,6 @@ rsx::surface_color_format rsx::to_surface_color_format(u8 in)
 	fmt::throw_exception("Unknown surface color format 0x%x" HERE, in);
 }
 
-enum
-{
-	CELL_GCM_INVERT = 0x150A,
-	CELL_GCM_KEEP = 0x1E00,
-	CELL_GCM_REPLACE = 0x1E01,
-	CELL_GCM_INCR = 0x1E02,
-	CELL_GCM_DECR = 0x1E03,
-	CELL_GCM_INCR_WRAP = 0x8507,
-	CELL_GCM_DECR_WRAP = 0x8508,
-};
-
 rsx::stencil_op rsx::to_stencil_op(u16 in)
 {
 	switch (in)

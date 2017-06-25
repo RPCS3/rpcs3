@@ -1,5 +1,4 @@
-#ifndef GAMELISTFRAME_H
-#define GAMELISTFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
@@ -18,14 +17,89 @@
 
 #include <memory>
 
-namespace category
+enum Category
 {
-	const QString hdd_Game    = QObject::tr("HDD Game");
-	const QString disc_Game   = QObject::tr("Disc Game");
-	const QString home        = QObject::tr("Home");
-	const QString audio_Video = QObject::tr("Audio/Video");
-	const QString game_Data   = QObject::tr("Game Data");
-	const QString unknown     = QObject::tr("Unknown");
+	Disc_Game,
+	Non_Disc_Game,
+	Home,
+	Media,
+	Data,
+	Unknown_Cat,
+	Others,
+};
+
+namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
+{
+	// PS3 bootable
+	const QString app_Music = QObject::tr("App Music");
+	const QString app_Photo = QObject::tr("App Photo");
+	const QString app_TV    = QObject::tr("App TV");
+	const QString app_Video = QObject::tr("App Video");
+	const QString bc_Video  = QObject::tr("Broadcast Video");
+	const QString disc_Game = QObject::tr("Disc Game");
+	const QString hdd_Game  = QObject::tr("HDD Game");
+	const QString home      = QObject::tr("Home");
+	const QString network   = QObject::tr("Network");
+	const QString store_FE  = QObject::tr("Store");
+	const QString web_TV    = QObject::tr("Web TV");
+
+	// PS2 bootable
+	const QString ps2_game = QObject::tr("PS2 Classics");
+	const QString ps2_inst = QObject::tr("PS2 Game");
+
+	// PS1 bootable
+	const QString ps1_game = QObject::tr("PS1 Classics");
+
+	// PSP bootable
+	const QString psp_game = QObject::tr("PSP Game");
+	const QString psp_mini = QObject::tr("PSP Minis");
+	const QString psp_rema = QObject::tr("PSP Remasters");
+
+	// Data
+	const QString ps3_Data = QObject::tr("PS3 Game Data");
+	const QString ps2_Data = QObject::tr("PS2 Emulator Data");
+
+	// Save
+	const QString ps3_Save = QObject::tr("PS3 Save Data");
+	const QString psp_Save = QObject::tr("PSP Minis Save Data");
+
+	// others
+	const QString trophy  = QObject::tr("Trophy");
+	const QString unknown = QObject::tr("Unknown");
+	const QString other   = QObject::tr("Other");
+
+	const q_from_char cat_boot =
+	{
+		{ "AM",app_Music }, // media
+		{ "AP",app_Photo }, // media
+		{ "AT",app_TV },    // media
+		{ "AV",app_Video }, // media
+		{ "BV",bc_Video },  // media
+		{ "DG",disc_Game }, // disc_Game
+		{ "HG",hdd_Game },  // non_disc_games
+		{ "HM",home },      // home
+		{ "CB",network },   // other
+		{ "SF",store_FE },  // other
+		{ "WT",web_TV },    // media
+		{ "2P",ps2_game },  // non_disc_games
+		{ "2G",ps2_inst },  // non_disc_games
+		{ "1P",ps1_game },  // non_disc_games
+		{ "PP",psp_game },  // non_disc_games
+		{ "MN",psp_mini },  // non_disc_games
+		{ "PE",psp_rema }   // non_disc_games
+	};
+	const q_from_char cat_data =
+	{
+		{ "GD",ps3_Data }, // data
+		{ "2D",ps2_Data }, // data
+		{ "SD",ps3_Save }, // data
+		{ "MS",psp_Save }  // data
+	};
+
+	const QStringList non_disc_games = { hdd_Game, ps2_game, ps2_inst, ps1_game, psp_game, psp_mini, psp_rema };
+	const QStringList media = { app_Photo, app_Video, bc_Video, app_Music, app_TV, web_TV };
+	const QStringList data = { ps3_Data, ps2_Data, ps3_Save, psp_Save };
+	const QStringList others = { network, store_FE, trophy, other };
 }
 
 /* Having the icons associated with the game info simplifies logic internally */
@@ -34,6 +108,7 @@ typedef struct GUI_GameInfo
 	GameInfo info;
 	QImage icon;
 	QPixmap pxmap;
+  bool bootable;
 	std::string dir;
 };
 
@@ -51,7 +126,7 @@ public:
 	explicit game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent = nullptr);
 	~game_list_frame();
 	void Refresh(const bool fromDrive = false);
-	void ToggleCategoryFilter(QString category, bool show);
+	void ToggleCategoryFilter(const QStringList& categories, bool show);
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
 	void LoadSettings();
@@ -59,14 +134,14 @@ public:
 	/** Saves settings. Public so that main frame can save this when a caching of column widths is needed for settings backup */
 	void SaveSettings();
 
-public slots:
+public Q_SLOTS:
 	/** Resize Gamelist Icons to size */
 	void ResizeIcons(const QSize& size, const int& idx);
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);
 	void SetCategoryActIcon(const int& id, const bool& active);
 
-private slots:
+private Q_SLOTS:
 	void Boot(int row);
 	void RemoveCustomConfiguration(int row);
 	void OnColClicked(int col);
@@ -74,7 +149,7 @@ private slots:
 	void ShowContextMenu(const QPoint &pos);
 	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
 	void doubleClickedSlot(const QModelIndex& index);
-signals:
+Q_SIGNALS:
 	void game_list_frameClosed();
 	void RequestIconPathSet(const std::string path);
 	void RequestAddRecentGame(const q_string_pair& entry);
@@ -86,11 +161,13 @@ protected:
 	void closeEvent(QCloseEvent* event);
 	void resizeEvent(QResizeEvent *event);
 private:
-	game_list_grid* MakeGrid(uint maxCols, const QSize& image_size);
+	void PopulateGameGrid(uint maxCols, const QSize& image_size);
 	void FilterData();
 
-	void PopulateGameList();
+	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
+
+	std::string CurrentSelectionIconPath();
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
@@ -99,7 +176,7 @@ private:
 	QLineEdit* m_Search_Bar;
 	QSlider* m_Slider_Size;
 	QTableWidget *gameList;
-	std::unique_ptr<game_list_grid> m_xgrid;
+	game_list_grid* m_xgrid;
 
 	// Actions regarding showing/hiding columns
 	QAction* showIconColAct;
@@ -119,6 +196,7 @@ private:
 	Tool_Bar_Button m_catActGameData;
 	Tool_Bar_Button m_catActAudioVideo;
 	Tool_Bar_Button m_catActUnknown;
+	Tool_Bar_Button m_catActOther;
 
 	QList<Tool_Bar_Button> m_categoryButtons;
 
@@ -136,6 +214,7 @@ private:
 	int m_sortColumn;
 	Qt::SortOrder m_colSortOrder;
 	bool m_isListLayout = true;
+	bool m_oldLayoutIsList = true;
 	bool m_showToolBar = true;
 	std::vector<GUI_GameInfo> m_game_data;
 	QSize m_Icon_Size;
@@ -147,5 +226,3 @@ private:
 
 	uint m_games_per_row = 0;
 };
-
-#endif // GAMELISTFRAME_H

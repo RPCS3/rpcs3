@@ -1,5 +1,4 @@
-#ifndef MEMORYSTRINGSEARCHER_H
-#define MEMORYSTRINGSEARCHER_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
@@ -22,8 +21,6 @@ class memory_string_searcher : public QDialog
 public:
 	memory_string_searcher(QWidget* parent);
 
-private slots:
+private Q_SLOTS:
 	void OnSearch();
 };
-
-#endif // MEMORYSTRINGSEARCHER_H

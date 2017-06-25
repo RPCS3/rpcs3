@@ -1,5 +1,4 @@
-#ifndef MISCTAB_H
-#define MISCTAB_H
+#pragma once
 
 #include "emu_settings.h"
 
@@ -14,5 +13,3 @@ class misc_tab : public QWidget
 public:
 	explicit misc_tab(std::shared_ptr<emu_settings> xemu_settings, QWidget *parent = 0);
 };
-
-#endif // MISCTAB_H

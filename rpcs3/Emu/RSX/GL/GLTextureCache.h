@@ -11,10 +11,10 @@
 #include <condition_variable>
 #include <chrono>
 
+#include "Emu/System.h"
 #include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
 #include "../../Memory/vm.h"
-
 #include "../rsx_utils.h"
 
 class GLGSRender;
@@ -452,7 +452,7 @@ namespace gl
 		GLGSRender *m_renderer;
 		std::thread::id m_renderer_thread;
 
-		cached_texture_section *find_texture_from_dimensions(u64 texaddr, u32 w, u32 h)
+		cached_texture_section *find_texture_from_dimensions(u32 texaddr, u32 w, u32 h)
 		{
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
@@ -663,15 +663,60 @@ namespace gl
 			/**
 			 * Check for sampleable rtts from previous render passes
 			 */
-			gl::texture *texptr = nullptr;
+			gl::render_target *texptr = nullptr;
 			if (texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
+				for (const auto& tex : m_rtts.m_bound_render_targets)
+				{
+					if (std::get<0>(tex) == texaddr)
+					{
+						if (g_cfg.video.strict_rendering_mode)
+						{
+							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+							create_temporary_subresource(texptr->id(), (GLenum)texptr->get_compatible_internal_format(), 0, 0, texptr->width(), texptr->height());
+							return;
+						}
+						else
+						{
+							//issue a texture barrier to ensure previous writes are visible
+							auto &caps = gl::get_driver_caps();
+
+							if (caps.ARB_texture_barrier_supported)
+								glTextureBarrier();
+							else if (caps.NV_texture_barrier_supported)
+								glTextureBarrierNV();
+
+							break;
+						}
+					}
+				}
+
 				texptr->bind();
 				return;
 			}
 
 			if (texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
+				if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
+				{
+					if (g_cfg.video.strict_rendering_mode)
+					{
+						LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
+						create_temporary_subresource(texptr->id(), (GLenum)texptr->get_compatible_internal_format(), 0, 0, texptr->width(), texptr->height());
+						return;
+					}
+					else
+					{
+						//issue a texture barrier to ensure previous writes are visible
+						auto &caps = gl::get_driver_caps();
+
+						if (caps.ARB_texture_barrier_supported)
+							glTextureBarrier();
+						else if (caps.NV_texture_barrier_supported)
+							glTextureBarrierNV();
+					}
+				}
+
 				texptr->bind();
 				return;
 			}
@@ -684,7 +729,7 @@ namespace gl
 			 */
 
 			const f32 internal_scale = (f32)tex_pitch / native_pitch;
-			const u32 internal_width = tex_width * internal_scale;
+			const u32 internal_width = (const u32)(tex_width * internal_scale);
 
 			const surface_subresource rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
 			if (rsc.surface)
@@ -802,7 +847,7 @@ namespace gl
 
 			std::lock_guard<std::mutex> lock(m_section_mutex);
 
-			cached_texture_section &cached = create_texture(gl_texture.id(), texaddr, get_texture_size(tex), tex_width, tex_height);
+			cached_texture_section &cached = create_texture(gl_texture.id(), texaddr, (const u32)get_texture_size(tex), tex_width, tex_height);
 			cached.protect(utils::protection::ro);
 			cached.set_dirty(false);
 
@@ -1030,8 +1075,8 @@ namespace gl
 
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
-			const u16 src_w = clip_dimensions.width / scale_x;
-			const u16 src_h = clip_dimensions.height / scale_y;
+			const u16 src_w = (const u16)((f32)clip_dimensions.width / scale_x);
+			const u16 src_h = (const u16)((f32)clip_dimensions.height / scale_y);
 
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
@@ -1167,8 +1212,8 @@ namespace gl
 				{
 					f32 subres_scaling_x = (f32)src.pitch / src_subres.surface->get_native_pitch();
 					
-					dst_area.x2 = (src_subres.w * scale_x * subres_scaling_x);
-					dst_area.y2 = (src_subres.h * scale_y);
+					dst_area.x2 = (int)(src_subres.w * scale_x * subres_scaling_x);
+					dst_area.y2 = (int)(src_subres.h * scale_y);
 				}
 
 				src_area.x2 = src_subres.w;				
@@ -1192,8 +1237,8 @@ namespace gl
 			if (dst.clip_x || dst.clip_y)
 			{
 				//Reproject clip offsets onto source
-				const u16 scaled_clip_offset_x = dst.clip_x / scale_x;
-				const u16 scaled_clip_offset_y = dst.clip_y / scale_y;
+				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / scale_x);
+				const u16 scaled_clip_offset_y = (const u16)((f32)dst.clip_y / scale_y);
 
 				src_area.x1 += scaled_clip_offset_x;
 				src_area.x2 += scaled_clip_offset_x;

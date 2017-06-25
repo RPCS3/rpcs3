@@ -29,6 +29,11 @@ matrix:
   exclude:
     - os: osx
       compiler: gcc
+  include:
+    - os: linux
+      compiler: gcc
+      env: WITHOUT_LLVM="yes"
+  
 
 git:
   submodules: false
@@ -41,7 +46,7 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       sudo add-apt-repository ppa:beineri/opt-qt59-trusty -y;
       sudo apt-get update;
-      sudo apt-get install qt59base -y;
+      sudo apt-get install qt59base -y --allow-unauthenticated;
     fi;
   # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   # Install updated libglew-dev since the version provided by trusty is outdated
@@ -62,15 +67,20 @@ before_script:
   - source /opt/qt59/bin/qt59-env.sh
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+  - if [ -z "$WITHOUT_LLVM" ]; then
+      cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
+    else
+      cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DWITHOUT_LLVM=ON;
+    fi;
   - make -j 3
   - # AppImage generation
   - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+      export LD_LIBRARY_PATH=/opt/qt59/lib/:$LD_LIBRARY_PATH ;
       make DESTDIR=appdir install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ; 
       chmod a+x linuxdeployqt*.AppImage ;
-      unset QTDIR; unset QT_PLUGIN_PATH ; unset LD_LIBRARY_PATH ;
+      unset QTDIR; unset QT_PLUGIN_PATH ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -appimage ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;

@@ -15,6 +15,8 @@ int main(int argc, char** argv)
 {
 #ifdef _WIN32
 	SetProcessDPIAware();
+	WSADATA wsa_data;
+	WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #else
 	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");
 #endif

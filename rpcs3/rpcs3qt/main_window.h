@@ -1,5 +1,4 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #ifdef _WIN32
 #include <QWinTaskbarProgress>
@@ -57,17 +56,17 @@ public:
 	void CreateThumbnailToolbar();
 	QIcon GetAppIcon();
 
-signals:
+Q_SIGNALS:
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
 
-public slots:
+public Q_SLOTS:
 	void OnEmuStop();
 	void OnEmuRun();
 	void OnEmuResume();
 	void OnEmuPause();
 	void OnEmuReady();
 
-private slots:
+private Q_SLOTS:
 	void BootElf();
 	void BootGame();
 	void InstallPkg();
@@ -114,6 +113,7 @@ private:
 	QAction *confSettingsAct;
 	QAction *confPadAct;
 	QAction *confAutopauseManagerAct;
+	QAction *confVFSDialogAct;
 	QAction *confSavedataManagerAct;
 	QAction *toolsCgDisasmAct;
 	QAction *toolskernel_explorerAct;
@@ -134,6 +134,7 @@ private:
 	QAction* showCatAudioVideoAct;
 	QAction* showCatGameDataAct;
 	QAction* showCatUnknownAct;
+	QAction* showCatOtherAct;
 	QAction* setIconSizeTinyAct;
 	QAction* setIconSizeSmallAct;
 	QAction* setIconSizeMediumAct;
@@ -149,5 +150,3 @@ private:
 	game_list_frame *gameListFrame;
 	std::shared_ptr<gui_settings> guiSettings;
 };
-
-#endif // MAINWINDOW_H

@@ -157,6 +157,5 @@ struct CellOskDialogImeDictionaryInfo
 };
 
 using cellOskDialogConfirmWordFilterCallback = int(vm::ptr<u16> pConfirmString, s32 wordLength);
-using cellOskDialogHardwareKeyboardEventHookCallback = class b8(
-    vm::ptr<CellOskDialogKeyMessage> keyMessage, vm::ptr<u32> action, vm::ptr<void> pActionInfo);
+using cellOskDialogHardwareKeyboardEventHookCallback = class b8(vm::ptr<CellOskDialogKeyMessage> keyMessage, vm::ptr<u32> action, vm::ptr<void> pActionInfo);
 using cellOskDialogForceFinishCallback = class b8();

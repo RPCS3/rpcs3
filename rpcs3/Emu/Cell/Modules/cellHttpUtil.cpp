@@ -3,11 +3,92 @@
 
 #include "cellHttpUtil.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <winhttp.h>
+#include <codecvt>
+#pragma comment(lib, "Winhttp.lib")
+#endif
+
 logs::channel cellHttpUtil("cellHttpUtil");
 
 s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
 {
+
+#ifdef _WIN32
+
+	URL_COMPONENTS stUrlComp;
+
+	ZeroMemory(&stUrlComp, sizeof(URL_COMPONENTS));
+	stUrlComp.dwStructSize = sizeof(URL_COMPONENTS);
+
+	wchar_t lpszScheme[MAX_PATH] = { 0 };
+	wchar_t lpszHostName[MAX_PATH] = { 0 };
+	wchar_t lpszPath[MAX_PATH] = { 0 };
+	wchar_t lpszUserName[MAX_PATH] = { 0 };
+	wchar_t lpszPassword[MAX_PATH] = { 0 };
+
+	stUrlComp.lpszScheme = lpszScheme;
+	stUrlComp.dwSchemeLength = MAX_PATH;
+
+	stUrlComp.lpszHostName = lpszHostName;
+	stUrlComp.dwHostNameLength = MAX_PATH;
+
+	stUrlComp.lpszUrlPath = lpszPath;
+	stUrlComp.dwUrlPathLength = MAX_PATH;
+
+	stUrlComp.lpszUserName = lpszUserName;
+	stUrlComp.dwUserNameLength = MAX_PATH;
+
+	stUrlComp.lpszPassword = lpszPassword;
+	stUrlComp.dwPasswordLength = MAX_PATH;
+
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+	LPCWSTR stupidTypeUrlString = converter.from_bytes(str.get_ptr()).c_str();
+	if (!::WinHttpCrackUrl(stupidTypeUrlString, (DWORD)(LONG_PTR)wcslen(stupidTypeUrlString), ICU_ESCAPE, &stUrlComp))
+	{
+		cellHttpUtil.error("Error %u in WinHttpCrackUrl.\n", GetLastError());
+	}
+	else
+	{
+
+		std::string scheme = converter.to_bytes(lpszScheme);
+		std::string host = converter.to_bytes(lpszHostName);
+		std::string path = converter.to_bytes(lpszPath);
+		std::string username = converter.to_bytes(lpszUserName);
+		std::string password = converter.to_bytes(lpszPassword);
+
+		u32 schemeOffset = 0;
+		u32 hostOffset = scheme.length() + 1;
+		u32 pathOffset = hostOffset + host.length() + 1;
+		u32 usernameOffset = pathOffset + path.length() + 1;
+		u32 passwordOffset = usernameOffset + username.length() + 1;
+		u32 totalSize = passwordOffset + password.length() + 1;
+
+		//called twice, first to setup pool, then to populate.
+		if (!uri) {
+			*required = totalSize;
+			return CELL_OK;
+		} else {
+			std::strncpy((char*)vm::base(pool.addr() + schemeOffset), (char*)scheme.c_str(), scheme.length() + 1);
+			std::strncpy((char*)vm::base(pool.addr() + hostOffset), (char*)host.c_str(), host.length() + 1);
+			std::strncpy((char*)vm::base(pool.addr() + pathOffset), (char*)path.c_str(), path.length() + 1);
+			std::strncpy((char*)vm::base(pool.addr() + usernameOffset), (char*)username.c_str(), username.length() + 1);
+			std::strncpy((char*)vm::base(pool.addr() + passwordOffset), (char*)password.c_str(), password.length() + 1);
+
+			uri->scheme.set(pool.addr() + schemeOffset);
+			uri->hostname.set(pool.addr() + hostOffset);
+			uri->path.set(pool.addr() + pathOffset);
+			uri->username.set(pool.addr() + usernameOffset);
+			uri->password.set(pool.addr() + passwordOffset);
+			uri->port = stUrlComp.nPort;
+		}
+	}
+
+#else
 	cellHttpUtil.todo("cellHttpUtilParseUri(uri=*0x%x, str=%s, pool=*0x%x, size=%d, required=*0x%x)", uri, str, pool, size, required);
+#endif
 	return CELL_OK;
 }
 
@@ -45,8 +126,8 @@ s32 cellHttpUtilBuildRequestLine(vm::cptr<CellHttpRequestLine> req, vm::ptr<char
 
 	// TODO
 
-    const std::string& result = fmt::format("%s %s %s/%d.%d\r\n", req->method, req->path, req->protocol, req->majorVersion, req->minorVersion);
-    std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	const std::string& result = fmt::format("%s %s %s/%d.%d\r\n", req->method, req->path, req->protocol, req->majorVersion, req->minorVersion);
+	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
 
 	return CELL_OK;
 }
@@ -61,8 +142,8 @@ s32 cellHttpUtilBuildHeader(vm::cptr<CellHttpHeader> header, vm::ptr<char> buf, 
 
 	// TODO
 
-    const std::string& result = fmt::format("%s: %s\r\n", header->name, header->value);
-    std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	const std::string& result = fmt::format("%s: %s\r\n", header->name, header->value);
+	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
 
 	return CELL_OK;
 }
@@ -73,8 +154,8 @@ s32 cellHttpUtilBuildUri(vm::cptr<CellHttpUri> uri, vm::ptr<char> buf, u32 len, 
 
 	// TODO
 
-    const std::string& result = fmt::format("%s://%s:%s@%s:%d/%s", uri->scheme, uri->username, uri->password, uri->hostname, uri->port, uri->path);
-    std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	const std::string& result = fmt::format("%s://%s:%s@%s:%d/%s", uri->scheme, uri->username, uri->password, uri->hostname, uri->port, uri->path);
+	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
 
 	return CELL_OK;
 }

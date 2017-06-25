@@ -1,3 +1,8 @@
+#if defined(__FreeBSD__)
+#include <sys/select.h>
+#undef fds_bits
+#endif
+
 #pragma once
 
 namespace vm { using namespace ps3; }

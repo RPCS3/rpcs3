@@ -478,7 +478,7 @@ std::array<std::array<u8, 64>, MAX_GAMEPADS> ds4_thread::GetControllerData()
 
 	int i = 0;
 	semaphore_lock lock(mutex);
-   
+
 	for (const auto & data : padData)
 		rtnData[i++] = data;
 

@@ -119,6 +119,9 @@ void D3D12GSRender::load_program()
 				case D3D12_BLEND_INV_BLEND_FACTOR:
 					return D3D12_BLEND_ZERO;
 				}
+
+				LOG_ERROR(RSX, "No suitable conversion defined for blend factor 0x%X" HERE, (u32)in);
+				return in;
 			};
 
 			d3d_sfactor_rgb = flatten_d3d12_factor(d3d_sfactor_rgb);

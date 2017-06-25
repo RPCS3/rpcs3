@@ -173,11 +173,11 @@ static const vertex_reg_info reg_table[] =
 
 void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
 
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	for (auto &i : reg_table)
 	{
@@ -241,7 +241,7 @@ namespace vk
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	vk::insert_glsl_legacy_function(OS);
+	vk::insert_glsl_legacy_function(OS, vk::glsl::program_domain::glsl_vertex_program);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -317,11 +317,11 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << std::endl << "	vs_main(" << parameters << ");" << std::endl << std::endl;
 
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
 
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	for (auto &i : reg_table)
 	{

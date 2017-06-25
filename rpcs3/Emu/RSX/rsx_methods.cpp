@@ -434,8 +434,8 @@ namespace rsx
 			u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
 			u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
 
-            u16 clip_x = method_registers.blit_engine_clip_x();
-            u16 clip_y = method_registers.blit_engine_clip_y();
+			u16 clip_x = method_registers.blit_engine_clip_x();
+			u16 clip_y = method_registers.blit_engine_clip_y();
 
 			if (clip_w == 0)
 			{
@@ -609,8 +609,8 @@ namespace rsx
 				src_info.height = in_h;
 				src_info.pitch = in_pitch;
 				src_info.slice_h = slice_h;
-				src_info.offset_x = in_x;
-				src_info.offset_y = in_y;
+				src_info.offset_x = (u16)in_x;
+				src_info.offset_y = (u16)in_y;
 				src_info.pixels = pixels_src;
 				src_info.rsx_address = get_address(src_offset, src_dma);
 
@@ -908,17 +908,17 @@ namespace rsx
 		registers[NV4097_SET_STENCIL_FUNC] = CELL_GCM_ALWAYS;
 		registers[NV4097_SET_STENCIL_FUNC_REF] = 0x00;
 		registers[NV4097_SET_STENCIL_FUNC_MASK] = 0xff;
-		//registers[NV4097_SET_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
-		//registers[NV4097_SET_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
-		//registers[NV4097_SET_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
+		registers[NV4097_SET_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
 
 		registers[NV4097_SET_BACK_STENCIL_MASK] = 0xff;
 		registers[NV4097_SET_BACK_STENCIL_FUNC] = CELL_GCM_ALWAYS;
 		registers[NV4097_SET_BACK_STENCIL_FUNC_REF] = 0x00;
 		registers[NV4097_SET_BACK_STENCIL_FUNC_MASK] = 0xff;
-		//registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
-		//registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
-		//registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
+		registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
 
 		//registers[NV4097_SET_SHADE_MODE] = CELL_GCM_SMOOTH;
 
@@ -950,7 +950,8 @@ namespace rsx
 		registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] = (4096 << 16) | 0;
 		registers[NV4097_SET_CLEAR_RECT_VERTICAL] = (4096 << 16) | 0;
 
-		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
+		// Stencil bits init to 00 - Tested with NPEB90184 (never sets the depth_stencil clear values but uses stencil test)
+		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffff00;
 
 		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
 		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
@@ -1365,6 +1366,7 @@ namespace rsx
 		bind_array<NV4097_SET_TEXTURE_OFFSET, 1, 8 * 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
+		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();

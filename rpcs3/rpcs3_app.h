@@ -1,5 +1,4 @@
-#ifndef RPCS3_APP_H
-#define RPCS3_APP_H
+#pragma once
 
 #include "stdafx.h"
 
@@ -31,14 +30,14 @@ public:
 	/** Call this method before calling app.exec
 	*/
 	void Init();
-signals:
+Q_SIGNALS:
 	void OnEmulatorRun();
 	void OnEmulatorPause();
 	void OnEmulatorResume();
 	void OnEmulatorStop();
 	void OnEmulatorReady();
 	void RequestCallAfter(const std::function<void()>& func);
-private slots:
+private Q_SLOTS:
 	void OnChangeStyleSheetRequest(const QString& path);
 	void HandleCallAfter(const std::function<void()>& func);
 	void ResetPads();
@@ -53,4 +52,3 @@ private:
 
 	main_window* RPCS3MainWin;
 };
-#endif

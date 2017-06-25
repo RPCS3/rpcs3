@@ -222,6 +222,7 @@ struct RSXFragmentProgram
 	u32 ctrl;
 	u16 unnormalized_coords;
 	u16 redirected_textures;
+	u16 shadow_textures;
 	rsx::comparison_function alpha_func;
 	bool front_back_color_enabled : 1;
 	bool back_color_diffuse_output : 1;

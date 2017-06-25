@@ -33,7 +33,11 @@ void* gl_gs_frame::make_context()
 
 void gl_gs_frame::set_current(draw_context_t ctx)
 {
-	((QOpenGLContext*)ctx.get())->makeCurrent(this);
+	if (!((QOpenGLContext*)ctx.get())->makeCurrent(this))
+	{
+		create();
+		((QOpenGLContext*)ctx.get())->makeCurrent(this);
+	}
 }
 
 void gl_gs_frame::delete_context(void* ctx)

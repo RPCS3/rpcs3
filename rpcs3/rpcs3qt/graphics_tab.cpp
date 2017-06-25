@@ -94,6 +94,11 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 			// D3D Adapter
 			if (m_isD3D12)
 			{
+				// Reset other adapters to old config
+				if (supportsVulkan)
+				{
+					xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
+				}
 				// Fill combobox
 				graphicsAdapterBox->clear();
 				for (auto adapter : D3D12Adapters)
@@ -101,19 +106,31 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 					graphicsAdapterBox->addItem(adapter);
 				}
 				// Reset Adapter to old config
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
 				int idx = graphicsAdapterBox->findText(old_D3D12);
 				if (idx == -1)
 				{
 					idx = 0;
-					LOG_WARNING(RSX, "Current %s adapter not available: resetting to default!", sstr(r_D3D12));
+					if (old_D3D12.isEmpty())
+					{
+						LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_D3D12));
+					}
+					else
+					{
+						LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_D3D12));
+					}
 				}
 				graphicsAdapterBox->setCurrentIndex(idx);
+				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(graphicsAdapterBox->currentText()));
 			}
 
 			// Vulkan Adapter
 			else if (m_isVulkan)
 			{
+				// Reset other adapters to old config
+				if (supportsD3D12)
+				{
+					xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
+				}
 				// Fill combobox
 				graphicsAdapterBox->clear();
 				for (auto adapter : vulkanAdapters)
@@ -121,14 +138,21 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 					graphicsAdapterBox->addItem(adapter);
 				}
 				// Reset Adapter to old config
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
 				int idx = graphicsAdapterBox->findText(old_Vulkan);
 				if (idx == -1)
 				{
 					idx = 0;
-					LOG_WARNING(RSX, "Current %s adapter not available: resetting to default!", sstr(r_Vulkan));
+					if (old_Vulkan.isEmpty())
+					{
+						LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_Vulkan));
+					}
+					else
+					{
+						LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_Vulkan));
+					}
 				}
 				graphicsAdapterBox->setCurrentIndex(idx);
+				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(graphicsAdapterBox->currentText()));
 			}
 
 			// Other Adapter
@@ -211,6 +235,9 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	QCheckBox *logProg = xemu_settings->CreateEnhancedCheckBox(emu_settings::LogShaderPrograms, this);
 	QCheckBox *vsync = xemu_settings->CreateEnhancedCheckBox(emu_settings::VSync, this);
 	QCheckBox *gpuTextureScaling = xemu_settings->CreateEnhancedCheckBox(emu_settings::GPUTextureScaling, this);
+	QCheckBox *forceHighpZ = xemu_settings->CreateEnhancedCheckBox(emu_settings::ForceHighpZ, this);
+	QCheckBox *autoInvalidateCache = xemu_settings->CreateEnhancedCheckBox(emu_settings::AutoInvalidateCache, this);
+	QCheckBox *scrictModeRendering = xemu_settings->CreateEnhancedCheckBox(emu_settings::StrictRenderingMode, this);
 
 	// Combobox Part
 	QHBoxLayout *hbox1 = new QHBoxLayout();
@@ -231,26 +258,47 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	hbox1->addLayout(vbox12);
 
 	// Checkbox Part
-	QHBoxLayout *hbox2 = new QHBoxLayout();
+	QGroupBox *mainOptions = new QGroupBox(tr("Main Options"));
+	QHBoxLayout *hbox2 = new QHBoxLayout();	//main options
 	QVBoxLayout *vbox21 = new QVBoxLayout();
 	vbox21->addWidget(dumpColor);
 	vbox21->addWidget(readColor);
 	vbox21->addWidget(dumpDepth);
 	vbox21->addWidget(readDepth);
-	vbox21->addWidget(glLegacyBuffers);
 	QVBoxLayout *vbox22 = new QVBoxLayout();
-	vbox22->addWidget(debugOutput);
-	vbox22->addWidget(debugOverlay);
-	vbox22->addWidget(logProg);
 	vbox22->addWidget(vsync);
+	vbox22->addWidget(autoInvalidateCache);
 	vbox22->addWidget(gpuTextureScaling);
+	vbox22->addSpacing(20);
+
 	hbox2->addLayout(vbox21);
 	hbox2->addLayout(vbox22);
+
+	QGroupBox *debugOptions = new QGroupBox(tr("Debugging Options"));
+	QHBoxLayout *hbox3 = new QHBoxLayout();
+	QBoxLayout *vbox31 = new QVBoxLayout();
+	vbox31->addWidget(glLegacyBuffers);
+	vbox31->addWidget(scrictModeRendering);
+	vbox31->addWidget(forceHighpZ);
+	QVBoxLayout *vbox32 = new QVBoxLayout();
+	vbox32->addWidget(debugOutput);
+	vbox32->addWidget(debugOverlay);
+	vbox32->addWidget(logProg);
+
+	hbox3->addLayout(vbox31);
+	hbox3->addLayout(vbox32);
+
+	mainOptions->setLayout(hbox2);
+	debugOptions->setLayout(hbox3);
+
+	QVBoxLayout *options_container = new QVBoxLayout();
+	options_container->addWidget(mainOptions);
+	options_container->addWidget(debugOptions);
 
 	QVBoxLayout *vbox = new QVBoxLayout();
 	vbox->addLayout(hbox1);
 	vbox->addSpacing(10);
-	vbox->addLayout(hbox2);
+	vbox->addLayout(options_container);
 	vbox->addStretch();
 	setLayout(vbox);
 	

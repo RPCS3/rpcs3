@@ -88,48 +88,67 @@ void gui_settings::SetValue(const GUI_SAVE& entry, const QVariant& value)
 QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;
-	if (GetCategoryVisibility(category::hdd_Game)) filterList.append(category::hdd_Game);
-	if (GetCategoryVisibility(category::disc_Game)) filterList.append(category::disc_Game);
-	if (GetCategoryVisibility(category::home)) filterList.append(category::home);
-	if (GetCategoryVisibility(category::audio_Video)) filterList.append(category::audio_Video);
-	if (GetCategoryVisibility(category::game_Data)) filterList.append(category::game_Data);
-	if (GetCategoryVisibility(category::unknown)) filterList.append(category::unknown);
+	if (GetCategoryVisibility(Category::Non_Disc_Game)) filterList.append(category::non_disc_games);
+	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::disc_Game);
+	if (GetCategoryVisibility(Category::Home)) filterList.append(category::home);
+	if (GetCategoryVisibility(Category::Media)) filterList.append(category::media);
+	if (GetCategoryVisibility(Category::Data)) filterList.append(category::data);
+	if (GetCategoryVisibility(Category::Unknown_Cat)) filterList.append(category::unknown);
+	if (GetCategoryVisibility(Category::Others)) filterList.append(category::others);
 	return filterList;
 }
 
-bool gui_settings::GetCategoryVisibility(QString cat)
+bool gui_settings::GetCategoryVisibility(int cat)
 {
 	GUI_SAVE value;
 
-	if (cat == category::hdd_Game) value = GUI::cat_hdd_game;
-	else if (cat == category::disc_Game) value = GUI::cat_disc_game;
-	else if (cat == category::home) value = GUI::cat_home;
-	else if (cat == category::audio_Video) value = GUI::cat_audio_video;
-	else if (cat == category::game_Data) value = GUI::cat_game_data;
-	else if (cat == category::unknown) value = GUI::cat_unknown;
-	else
+	switch (cat)
 	{
-		value = GUI::cat_other;
-		LOG_WARNING(GENERAL, "Category %s is unknown. Entry %s was loaded", sstr(cat), sstr(value.name));
+	case Category::Non_Disc_Game:
+		value = GUI::cat_hdd_game; break;
+	case Category::Disc_Game:
+		value = GUI::cat_disc_game; break;
+	case Category::Home:
+		value = GUI::cat_home; break;
+	case Category::Media:
+		value = GUI::cat_audio_video; break;
+	case Category::Data:
+		value = GUI::cat_game_data; break;
+	case Category::Unknown_Cat:
+		value = GUI::cat_unknown; break;
+	case Category::Others:
+		value = GUI::cat_other; break;
+	default:
+		LOG_WARNING(GENERAL, "GetCategoryVisibility: wrong cat <%d>", cat);
+		break;
 	}
 
 	return GetValue(value).toBool();
 }
 
-void gui_settings::SetCategoryVisibility(const QString& cat, const bool& val)
+void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 {
 	GUI_SAVE value;
 
-	if (cat == category::hdd_Game) value = GUI::cat_hdd_game;
-	else if (cat == category::disc_Game) value = GUI::cat_disc_game;
-	else if (cat == category::home) value = GUI::cat_home;
-	else if (cat == category::audio_Video) value = GUI::cat_audio_video;
-	else if (cat == category::game_Data) value = GUI::cat_game_data;
-	else if (cat == category::unknown) value = GUI::cat_unknown;
-	else
+	switch (cat)
 	{
-		value = GUI::cat_other;
-		LOG_WARNING(GENERAL, "Category %s is unknown. Entry %s has been set to %d", sstr(cat), sstr(value.name), val);
+	case Category::Non_Disc_Game:
+		value = GUI::cat_hdd_game; break;
+	case Category::Disc_Game:
+		value = GUI::cat_disc_game; break;
+	case Category::Home:
+		value = GUI::cat_home; break;
+	case Category::Media:
+		value = GUI::cat_audio_video; break;
+	case Category::Data:
+		value = GUI::cat_game_data; break;
+	case Category::Unknown_Cat:
+		value = GUI::cat_unknown; break;
+	case Category::Others:
+		value = GUI::cat_other; break;
+	default:
+		LOG_WARNING(GENERAL, "SetCategoryVisibility: wrong cat <%d>", cat);
+		break;
 	}
 
 	SetValue(value, val);

@@ -136,11 +136,11 @@ static const vertex_reg_info reg_table[] =
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
 
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
 	bool front_back_specular = (insert_back_specular && insert_front_specular);
@@ -186,56 +186,77 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 		OS << "out vec4 front_spec_color;" << std::endl;
 }
 
-void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+namespace
 {
-	for (const auto &real_input : inputs)
+	std::string expand_to_vec4(std::string value, u8 vector_size)
 	{
-		if (real_input.location != PI.location)
-			continue;
-
-		std::string vecType = "	vec4 ";
-		if (real_input.int_type)
-			vecType = "	ivec4 ";
-
-		std::string scale = "";
-		if (real_input.flags & GL_VP_SINT_MASK)
+		switch (vector_size)
 		{
-			if (real_input.flags & GL_VP_ATTRIB_S16_INT)
-				scale = " / 32767.";
-			else
-				scale = " / 2147483647.";
+		case 2:
+			return "vec4(" + value + ", " + value + ", 1., 1.)";
+		case 3:
+			return "vec4(" + value + ", " + value + ", " + value + ", 1.)";
+		default:
+			LOG_ERROR(RSX, "invalid vector size %d" HERE, vector_size);
+		case 1:
+		case 4:
+			//Expand not required
+			//In case its one component, read is swizzled as .xxxx (GOW1 loading screen)
+			return value;
 		}
+	}
 
-		if (!real_input.is_array)
+	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+	{
+		for (const auto &real_input : inputs)
 		{
-			OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";" << std::endl;
-			return;
-		}
+			if (real_input.location != PI.location)
+				continue;
 
-		if (real_input.frequency > 1)
-		{
-			if (real_input.is_modulo)
+			std::string vecType = "	vec4 ";
+			if (real_input.int_type)
+				vecType = "	ivec4 ";
+
+			std::string scale = "";
+			if (real_input.flags & GL_VP_SINT_MASK)
 			{
-				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";" << std::endl;
+				if (real_input.flags & GL_VP_ATTRIB_S16_INT)
+					scale = " / " + expand_to_vec4("32767.", real_input.size);
+				else
+					scale = " / " + expand_to_vec4("2147483647.", real_input.size);
+			}
+
+			if (!real_input.is_array)
+			{
+				OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";" << std::endl;
 				return;
 			}
 
-			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";" << std::endl;
+			if (real_input.frequency > 1)
+			{
+				if (real_input.is_modulo)
+				{
+					OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";" << std::endl;
+					return;
+				}
+
+				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";" << std::endl;
+				return;
+			}
+
+			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";" << std::endl;
 			return;
 		}
 
-		OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";" << std::endl;
-		return;
+		LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
+
+		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
 	}
-
-	LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
-
-	OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
 }
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS);
+	insert_glsl_legacy_function(OS, gl::glsl::glsl_vertex_program);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -322,11 +343,11 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << std::endl << "	vs_main(" << parameters << ");" << std::endl << std::endl;
 
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
 
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
 	bool front_back_specular = (insert_back_specular && insert_front_specular);
@@ -375,6 +396,20 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 			OS << "	front_spec_color = dst_reg2;\n";
 
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
+
+	//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:
+	//ln = (clip * 2) - 1 to fully utilize the 0-1 range of the depth buffer
+	//RSX matrices passed already map to the [0, 1] range but mapping to classic OGL requires that we undo this step
+	//This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).
+	//However, ClipControl only made it to opengl core in ver 4.5 though, so this is a workaround.
+	
+	//NOTE: It is completely valid for games to use very large w values, causing the post-multiplied z to be in the hundreds
+	//It is therefore critical that this step is done post-transform and the result re-scaled by w
+	//SEE Naruto: UNS
+	
+	OS << "	float ndc_z = gl_Position.z / gl_Position.w;" << std::endl;
+	OS << "	ndc_z = (ndc_z * 2.) - 1.;" << std::endl;
+	OS << "	gl_Position.z = ndc_z * gl_Position.w;" << std::endl;
 	OS << "}" << std::endl;
 }
 

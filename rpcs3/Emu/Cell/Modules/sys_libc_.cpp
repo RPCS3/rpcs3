@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/cfmt.h"
+#include <string.h>
+#include <ctype.h>
 
 namespace vm { using namespace ps3; }
 
@@ -9,6 +11,7 @@ extern logs::channel sysPrxForUser;
 extern fs::file g_tty;
 
 // cfmt implementation (TODO)
+
 struct ps3_fmt_src
 {
 	ppu_thread* ctx;
@@ -177,14 +180,28 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 	return dest;
 }
 
-s32 _sys_strncasecmp()
+s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, s32 n)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.trace("_sys_strncasecmp(str1=%s, str2=%s, n=%d)", str1, str2, n);
+	
+	for (u32 i = 0; i < n; i++)
+	{
+		const int ch1 = tolower(str1[i]), ch2 = tolower(str2[i]);
+		if (ch1 < ch2)
+			return -1;
+		if (ch1 > ch2)
+			return 1;
+		if (ch1 == '\0')
+			break;
+	}
+	return 0;
 }
 
-s32 _sys_strrchr()
+vm::ptr<char> _sys_strrchr(vm::cptr<char> str, s32 character)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.trace("_sys_strrchr(str=%s, character=%c)", str, (char)character);
+	
+	return vm::ptr<char>::make(vm::get_addr(strrchr(str.get_ptr(), character)));
 }
 
 s32 _sys_tolower()

@@ -304,7 +304,7 @@ namespace rsx
 
 	u32 thread::get_push_buffer_index_count() const
 	{
-		return element_push_buffer.size();
+		return (u32)element_push_buffer.size();
 	}
 
 	void thread::end()
@@ -506,7 +506,7 @@ namespace rsx
 		return "rsx::thread";
 	}
 
-	void thread::fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const
+	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
 	{
 		int clip_w = rsx::method_registers.surface_clip_width();
 		int clip_h = rsx::method_registers.surface_clip_height();
@@ -523,8 +523,6 @@ namespace rsx
 
 		float scale_z = rsx::method_registers.viewport_scale_z();
 		float offset_z = rsx::method_registers.viewport_offset_z();
-		if (symmetrical_z) offset_z -= .5;
-
 		float one = 1.f;
 
 		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);
@@ -675,8 +673,9 @@ namespace rsx
 		}
 		u32 first = std::get<0>(draw_indexed_clause.front());
 		u32 count = std::get<0>(draw_indexed_clause.back()) + std::get<1>(draw_indexed_clause.back()) - first;
+
 		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
-		return{ ptr, count * type_size };
+		return{ ptr + first * type_size, count * type_size };
 	}
 
 	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
@@ -823,13 +822,9 @@ namespace rsx
 			case rsx::vertex_base_type::s32k:
 			case rsx::vertex_base_type::ub256:
 				return true;
-			case rsx::vertex_base_type::f:
-			case rsx::vertex_base_type::cmp:
-			case rsx::vertex_base_type::sf:
-			case rsx::vertex_base_type::s1:
-			case rsx::vertex_base_type::ub:
-				return false;
 			}
+
+			return false;
 		}
 	}
 
@@ -946,7 +941,7 @@ namespace rsx
 		result.pixel_center_mode = rsx::method_registers.shader_window_pixel();
 		result.height = rsx::method_registers.shader_window_height();
 		result.redirected_textures = 0;
-
+		result.shadow_textures = 0;
 
 		std::array<texture_dimension_extended, 16> texture_dimensions;
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -989,9 +984,11 @@ namespace rsx
 					{
 						u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 						if (format == CELL_GCM_TEXTURE_A8R8G8B8 || format == CELL_GCM_TEXTURE_D8R8G8B8)
-						{
 							result.redirected_textures |= (1 << i);
-						}
+						else if (format == CELL_GCM_TEXTURE_DEPTH16 || format == CELL_GCM_TEXTURE_DEPTH24_D8)
+							result.shadow_textures |= (1 << i);
+						else
+							LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
 					}
 				}
 			}

@@ -37,7 +37,9 @@
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
+#if defined(_WIN32) || defined(__linux__)
 #include "Emu/RSX/VK/VKGSRender.h"
+#endif
 #ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #endif
@@ -93,7 +95,7 @@ void rpcs3_app::InitializeCallbacks()
 	};
 	callbacks.call_after = [=](std::function<void()> func)
 	{	
-		emit RequestCallAfter(std::move(func));
+		RequestCallAfter(std::move(func));
 	};
 
 	callbacks.process_events = [this]()
@@ -163,7 +165,9 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null: return std::make_shared<NullGSRender>();
 		case video_renderer::opengl: return std::make_shared<GLGSRender>();
+#if defined(_WIN32) || defined(__linux__)
 		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
+#endif
 #ifdef _MSC_VER
 		case video_renderer::dx12: return std::make_shared<D3D12GSRender>();
 #endif
@@ -196,11 +200,11 @@ void rpcs3_app::InitializeCallbacks()
 		return std::make_unique<save_data_dialog>();
 	};
 
-	callbacks.on_run = [=]() { emit OnEmulatorRun(); };
-	callbacks.on_pause = [=]() {emit OnEmulatorPause(); };
-	callbacks.on_resume = [=]() {emit OnEmulatorResume(); };
-	callbacks.on_stop = [=]() {emit OnEmulatorStop(); };
-	callbacks.on_ready = [=]() {emit OnEmulatorReady(); };
+	callbacks.on_run = [=]() { OnEmulatorRun(); };
+	callbacks.on_pause = [=]() { OnEmulatorPause(); };
+	callbacks.on_resume = [=]() { OnEmulatorResume(); };
+	callbacks.on_stop = [=]() { OnEmulatorStop(); };
+	callbacks.on_ready = [=]() { OnEmulatorReady(); };
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

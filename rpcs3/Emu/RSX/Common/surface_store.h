@@ -173,9 +173,12 @@ namespace rsx
 			// Same for depth buffer
 			if (std::get<1>(m_bound_depth_stencil) != nullptr)
 				Traits::prepare_ds_for_sampling(command_list, std::get<1>(m_bound_depth_stencil));
+			
 			m_bound_depth_stencil = std::make_tuple(0, nullptr);
+			
 			if (!address_z)
 				return;
+
 			m_bound_depth_stencil = std::make_tuple(address_z,
 				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, std::forward<Args>(extra_params)...));
 		}
@@ -341,6 +344,19 @@ namespace rsx
 			copy_pitched_src_to_dst(dest, gsl::as_span<const u8>(stencil_buffer_raw_src), align(width, 256), width, height);
 			Traits::unmap_downloaded_buffer(stencil_data, std::forward<Args&&>(args)...);
 			return result;
+		}
+
+		/**
+		 * Invalidates cached surface data and marks surface contents as deleteable
+		 * Called at the end of a frame (workaround, need to find the proper invalidate command)
+		 */
+		void invalidate_surface_cache_data(command_list_type command_list)
+		{
+			for (auto &rtt : m_render_targets_storage)
+				Traits::invalidate_rtt_surface_contents(command_list, Traits::get(std::get<1>(rtt)));
+
+			for (auto &ds : m_depth_stencil_storage)
+				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)));
 		}
 	};
 }

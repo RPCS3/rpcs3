@@ -1,5 +1,4 @@
-#ifndef TABLEITEMDELEGATE_H
-#define TABLEITEMDELEGATE_H
+#pragma once
 
 #include <QItemDelegate>
 
@@ -10,5 +9,3 @@ public:
 	explicit table_item_delegate(QObject *parent = 0) {}
 	virtual void drawFocus(QPainter * /*painter*/, const QStyleOptionViewItem & /*option*/, const QRect & /*rect*/) const {}
 };
-
-#endif // !TABLEITEMDELEGATE_H

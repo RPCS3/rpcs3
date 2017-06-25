@@ -3591,7 +3591,7 @@ s32 _cellSpursSendSignal(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-    be_t<v128> _0(v128::from32(0));
+	be_t<v128> _0(v128::from32(0));
 	bool disabled = taskset->enabled.value()._bit[taskId];
 	auto invalid  = (taskset->ready & taskset->pending_ready) != _0 || (taskset->running & taskset->waiting) != _0 || disabled ||
 					((taskset->running | taskset->ready | taskset->pending_ready | taskset->waiting | taskset->signalled) & ~taskset->enabled) != _0;

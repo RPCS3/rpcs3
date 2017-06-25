@@ -1081,7 +1081,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	// If not, the data has no NPDRM layer.
 	if (!ctrl)
 	{
-		LOG_WARNING(LOADER, "SELF: No NPDRM control info found!");
+		LOG_NOTICE(LOADER, "SELF: No NPDRM control info found!");
 		return true;
 	}
 
@@ -1333,9 +1333,6 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 				// Decompress if necessary.
 				if (meta_shdr[i].compressed == 2)
 				{
-					/// Removed all wxWidget dependent code. Replaced with zlib functions.
-					/// Also changed local mallocs to unique_ptrs.
-
 					// Store the length in writeable memory space.
 					std::unique_ptr<uLongf> decomp_buf_length(new uLongf);
 					memcpy(decomp_buf_length.get(), &phdr64_arr[meta_shdr[i].program_idx].p_filesz, sizeof(uLongf));

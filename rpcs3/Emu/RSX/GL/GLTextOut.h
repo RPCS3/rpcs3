@@ -66,14 +66,14 @@ namespace gl
 			m_program.make();
 		}
 
-		void load_program(float scale_x, float scale_y, float *offsets, int nb_offsets, color4f color)
+		void load_program(float scale_x, float scale_y, float *offsets, size_t nb_offsets, color4f color)
 		{
 			float scale[] = { scale_x, scale_y };
 
 			m_program.use();
 
 			m_program.uniforms["draw_color"] = color;
-			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), nb_offsets, offsets);
+			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), (GLsizei)nb_offsets, offsets);
 			glProgramUniform2fv(m_program.id(), m_program.uniforms["scale"].location(), 1, scale);
 		}
 
@@ -91,7 +91,7 @@ namespace gl
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 
-			const u32 buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			m_text_buffer.data(buffer_size, points.data());
 			m_offsets = glyph_source.get_glyph_offsets();
@@ -184,7 +184,7 @@ namespace gl
 
 			m_vao.bind();
 
-			glMultiDrawArrays(GL_POINTS, offsets.data(), counts.data(), counts.size());
+			glMultiDrawArrays(GL_POINTS, (const GLint*)offsets.data(), (const GLsizei*)counts.data(), (GLsizei)counts.size());
 			glBindVertexArray(old_vao);
 		}
 
