@@ -5,6 +5,7 @@
 #include "PPUInterpreter.h"
 
 #include "../Utilities/Log.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -2123,9 +2124,24 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 			return;
 		}
 	}
-	else
+	else if (std::none_of(m_cr + 0, m_cr + 32, [](auto* p) { return p; }))
 	{
-		// MFCR
+		// MFCR (optimized)
+		Value* ln0 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(nullptr, m_thread, 99), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
+		Value* ln1 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(nullptr, m_thread, 115), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
+
+		ln0 = m_ir->CreateLoad(ln0);
+		ln1 = m_ir->CreateLoad(ln1);
+		if (!m_is_be)
+		{
+			ln0 = Shuffle(ln0, nullptr, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
+			ln1 = Shuffle(ln1, nullptr, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
+		}
+
+		const auto m0 = Call(GetType<u32>(), m_pure_attr, "llvm.x86.sse2.pmovmskb.128", m_ir->CreateShl(ln0, 7));
+		const auto m1 = Call(GetType<u32>(), m_pure_attr, "llvm.x86.sse2.pmovmskb.128", m_ir->CreateShl(ln1, 7));
+		SetGpr(op.rd, m_ir->CreateOr(m_ir->CreateShl(m0, 16), m1));
+		return;
 	}
 
 	Value* result{};
