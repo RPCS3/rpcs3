@@ -161,16 +161,28 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	gameList->verticalHeader()->setVisible(false);
 	gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
+	gameList->horizontalHeader()->setHighlightSections(false);
+	gameList->horizontalHeader()->setSortIndicatorShown(true);
+	gameList->horizontalHeader()->setStretchLastSection(true);
+	gameList->horizontalHeader()->setDefaultSectionSize(150);
 	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
+	gameList->setAlternatingRowColors(true);
+	gameList->setStyleSheet("alternate-background-color: rgb(242, 242, 242);");
 
 	gameList->setColumnCount(7);
 	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
 	gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
 	gameList->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Serial")));
-	gameList->setHorizontalHeaderItem(3, new QTableWidgetItem(tr("FW")));
-	gameList->setHorizontalHeaderItem(4, new QTableWidgetItem(tr("App version")));
+	gameList->setHorizontalHeaderItem(3, new QTableWidgetItem(tr("Firmware")));
+	gameList->setHorizontalHeaderItem(4, new QTableWidgetItem(tr("Version")));
 	gameList->setHorizontalHeaderItem(5, new QTableWidgetItem(tr("Category")));
 	gameList->setHorizontalHeaderItem(6, new QTableWidgetItem(tr("Path")));
+
+	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);	
+	for (int i = 0; i < gameList->horizontalHeader()->count(); i++)
+	{
+		gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
+	}
 
 	m_Central_Widget = new QStackedWidget(this);
 	m_Central_Widget->addWidget(gameList);
@@ -183,8 +195,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	showIconColAct = new QAction(tr("Show Icons"), this);
 	showNameColAct = new QAction(tr("Show Names"), this);
 	showSerialColAct = new QAction(tr("Show Serials"), this);
-	showFWColAct = new QAction(tr("Show FWs"), this);
-	showAppVersionColAct = new QAction(tr("Show App Versions"), this);
+	showFWColAct = new QAction(tr("Show Firmwares"), this);
+	showAppVersionColAct = new QAction(tr("Show Versions"), this);
 	showCategoryColAct = new QAction(tr("Show Categories"), this);
 	showPathColAct = new QAction(tr("Show Paths"), this);
 
@@ -263,9 +275,12 @@ void game_list_frame::LoadSettings()
 
 	if (state.isEmpty())
 	{ // If no settings exist, go to default.
-		gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+		if (gameList->rowCount() > 0)
+		{
+			gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+			gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+			gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+		}
 	}
 	else
 	{
@@ -308,17 +323,13 @@ void game_list_frame::FilterData()
 		bool match = false;
 		for (auto filter : m_categoryFilters)
 		{
-			for (int j = 0; j < gameList->columnCount(); ++j)
+			if (qstr(m_game_data[i].info.category).contains(filter))
 			{
-				if (gameList->horizontalHeaderItem(j)->text() == tr("Category") && gameList->item(i, j)->text().contains(filter))
-				{
-					match = true;
-					goto OutOfThis;
-				}
+				match = true;
+				break;
 			}
 		}
-		OutOfThis:
-		gameList->setRowHidden(i, !match);
+		gameList->setRowHidden(i, !match || !SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial));
 	}
 }
 
@@ -398,7 +409,11 @@ void game_list_frame::Refresh(bool fromDrive)
 
 			if (!game.icon_path.empty() && img.load(qstr(game.icon_path)))
 			{
-				QImage scaled = img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
+				QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
+				scaled.fill(QColor(209, 209, 209, 255));
+				QPainter painter(&scaled);
+				painter.drawImage(QPoint(0,0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+				painter.end();
 				pxmap = QPixmap::fromImage(scaled);
 			}
 			else
@@ -686,7 +701,12 @@ void game_list_frame::ResizeIcons(const QSize& size, const int& idx)
 
 	for (size_t i = 0; i < m_game_data.size(); i++)
 	{
-		m_game_data[i].pxmap = QPixmap::fromImage(m_game_data[i].icon.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
+		scaled.fill(QColor(209, 209, 209, 255));
+		QPainter painter(&scaled);
+		painter.drawImage(QPoint(0, 0), m_game_data[i].icon.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		painter.end();
+		m_game_data[i].pxmap = QPixmap::fromImage(scaled);
 	}
 
 	Refresh();
@@ -760,13 +780,6 @@ int game_list_frame::PopulateGameList()
 	int row = 0;
 	for (GUI_GameInfo game : m_game_data)
 	{
-		if (SearchMatchesApp(game.info.name, game.info.serial) == false)
-		{
-			// We aren't showing this entry. Decrement row count to avoid empty entries at end.
-			gameList->setRowCount(gameList->rowCount() - 1);
-			continue;
-		}
-
 		// Icon
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
