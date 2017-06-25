@@ -33,7 +33,13 @@
 
 extern std::string ppu_get_syscall_name(u64 code);
 
-static constexpr ppu_function_t null_func = nullptr;
+static bool null_func(ppu_thread& ppu)
+{
+	LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(ppu.gpr[11]));
+	ppu.gpr[3] = 0;
+	ppu.cia += 4;
+	return false;
+}
 
 std::array<ppu_function_t, 1024> g_ppu_syscall_table{};
 
@@ -974,15 +980,8 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 		{
 			func(ppu);
 			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_get_syscall_name(code), code, ppu.gpr[3]);
+			return;
 		}
-		else
-		{
-			LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(code));
-			ppu.gpr[3] = 0;
-			ppu.cia += 4;
-		}
-
-		return;
 	}
 
 	fmt::throw_exception("Invalid syscall number (%llu)", code);

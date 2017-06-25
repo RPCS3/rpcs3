@@ -7,6 +7,8 @@
 #include "../Utilities/Log.h"
 #include <algorithm>
 
+extern std::string ppu_get_syscall_name(u64 code);
+
 using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
@@ -1636,6 +1638,21 @@ void PPUTranslator::SC(ppu_opcode_t op)
 	const auto num = GetGpr(11);
 	RegStore(m_ir->getInt32(m_current_addr), m_cia);
 	FlushRegisters();
+
+	if (!op.lev && isa<ConstantInt>(num))
+	{
+		// Try to determine syscall using the constant value from r11
+		const u64 index = cast<ConstantInt>(num)->getZExtValue();
+
+		if (index < 1024)
+		{
+			// Call the syscall directly
+			Call(GetType<void>(), ppu_get_syscall_name(index), m_thread);
+			m_ir->CreateRetVoid();
+			return;
+		}
+	}
+
 	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
 	m_ir->CreateRetVoid();
 }
