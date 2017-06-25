@@ -65,29 +65,33 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	// ToolBar Actions
 	m_catActHDD = { new QAction(""), QIcon(":/Icons/hdd_blue.png"), QIcon(":/Icons/hdd_gray.png") };
 	m_catActHDD.action->setIcon(xgui_settings->GetValue(GUI::cat_hdd_game).toBool() ? m_catActHDD.colored : m_catActHDD.gray);
-	m_catActHDD.action->setToolTip(tr("Show HDD Category"));
+	m_catActHDD.action->setToolTip(tr("Show HDD Categories"));
 
 	m_catActDisc = { new QAction(""), QIcon(":/Icons/disc_blue.png"), QIcon(":/Icons/disc_gray.png") };
 	m_catActDisc.action->setIcon(xgui_settings->GetValue(GUI::cat_disc_game).toBool() ? m_catActDisc.colored : m_catActDisc.gray);
-	m_catActDisc.action->setToolTip(tr("Show Disc Category"));
+	m_catActDisc.action->setToolTip(tr("Show Disc Categories"));
 
 	m_catActHome = { new QAction(""), QIcon(":/Icons/home_blue.png"), QIcon(":/Icons/home_gray.png") };
 	m_catActHome.action->setIcon(xgui_settings->GetValue(GUI::cat_home).toBool() ? m_catActHome.colored : m_catActHome.gray);
-	m_catActHome.action->setToolTip(tr("Show Home Category"));
+	m_catActHome.action->setToolTip(tr("Show Home Categories"));
 
 	m_catActAudioVideo = { new QAction(""), QIcon(":/Icons/media_blue.png"), QIcon(":/Icons/media_gray.png") };
 	m_catActAudioVideo.action->setIcon(xgui_settings->GetValue(GUI::cat_audio_video).toBool() ? m_catActAudioVideo.colored : m_catActAudioVideo.gray);
-	m_catActAudioVideo.action->setToolTip(tr("Show Audio/Video Category"));
+	m_catActAudioVideo.action->setToolTip(tr("Show Audio/Video Categories"));
 
 	m_catActGameData = { new QAction(""), QIcon(":/Icons/data_blue.png"), QIcon(":/Icons/data_gray.png") };
 	m_catActGameData.action->setIcon(xgui_settings->GetValue(GUI::cat_game_data).toBool() ? m_catActGameData.colored : m_catActGameData.gray);
-	m_catActGameData.action->setToolTip(tr("Show GameData Category"));
+	m_catActGameData.action->setToolTip(tr("Show GameData Categories"));
 
 	m_catActUnknown = { new QAction(""), QIcon(":/Icons/unknown_blue.png"), QIcon(":/Icons/unknown_gray.png") };
 	m_catActUnknown.action->setIcon(xgui_settings->GetValue(GUI::cat_unknown).toBool() ? m_catActUnknown.colored : m_catActUnknown.gray);
-	m_catActUnknown.action->setToolTip(tr("Show Unknown Category"));
+	m_catActUnknown.action->setToolTip(tr("Show Unknown Categories"));
 
-	m_categoryButtons = { m_catActHDD , m_catActDisc, m_catActHome, m_catActAudioVideo, m_catActGameData, m_catActUnknown };
+	m_catActOther = { new QAction(""), QIcon(":/Icons/other_blue.png"), QIcon(":/Icons/other_gray.png") };
+	m_catActOther.action->setIcon(xgui_settings->GetValue(GUI::cat_other).toBool() ? m_catActOther.colored : m_catActOther.gray);
+	m_catActOther.action->setToolTip(tr("Show Other Categories"));
+
+	m_categoryButtons = { m_catActHDD , m_catActDisc, m_catActHome, m_catActAudioVideo, m_catActGameData, m_catActUnknown, m_catActOther };
 
 	m_categoryActs = new QActionGroup(m_Tool_Bar);
 	m_categoryActs->addAction(m_catActHDD.action);
@@ -96,6 +100,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	m_categoryActs->addAction(m_catActAudioVideo.action);
 	m_categoryActs->addAction(m_catActGameData.action);
 	m_categoryActs->addAction(m_catActUnknown.action);
+	m_categoryActs->addAction(m_catActOther.action);
 	m_categoryActs->setEnabled(m_isListLayout);
 
 	m_modeActList = { new QAction(""), QIcon(":/Icons/list_blue.png"), QIcon(":/Icons/list_gray.png") };
@@ -357,34 +362,34 @@ void game_list_frame::Refresh(bool fromDrive)
 			game.resolution   = psf::get_integer(psf, "RESOLUTION");
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
 
-			if (game.category == "HG")
+			bool bootable = false;
+			auto cat = category::cat_boot.find(game.category);
+			if (cat != category::cat_boot.end())
 			{
-				game.category = sstr(category::hdd_Game);
-				game.icon_path = dir + "/ICON0.PNG";
+				if (game.category == "DG")
+				{
+					game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
+				}
+				else
+				{
+					game.icon_path = dir + "/ICON0.PNG";
+				}
+			
+				game.category = sstr(cat->second);
+				bootable = true;
 			}
-			else if (game.category == "DG")
+			else if ((cat = category::cat_data.find(game.category)) != category::cat_data.end())
 			{
-				game.category = sstr(category::disc_Game);
-				game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
-			}
-			else if (game.category == "HM")
-			{
-				game.category = sstr(category::home);
 				game.icon_path = dir + "/ICON0.PNG";
-			}
-			else if (game.category == "AV")
-			{
-				game.category = sstr(category::audio_Video);
-				game.icon_path = dir + "/ICON0.PNG";
-			}
-			else if (game.category == "GD")
-			{
-				game.category = sstr(category::game_Data);
-				game.icon_path = dir + "/ICON0.PNG";
+				game.category = sstr(cat->second);
 			}
 			else if (game.category == "unknown")
 			{
 				game.category = sstr(category::unknown);
+			}
+			else
+			{
+				game.category = sstr(category::other);
 			}
 
 			// Load Image
@@ -400,12 +405,12 @@ void game_list_frame::Refresh(bool fromDrive)
 			{
 				img = QImage(m_Icon_Size, QImage::Format_ARGB32);
 				QString abspath = QDir(qstr(game.icon_path)).absolutePath();
-				LOG_ERROR(HLE, "Count not load image from path %s", sstr(abspath));
+				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(abspath));
 				img.fill(QColor(0, 0, 0, 0));
 				pxmap = QPixmap::fromImage(img);
 			}
 
-			m_game_data.push_back({ game, img, pxmap });
+			m_game_data.push_back({ game, img, pxmap, bootable });
 		}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
@@ -450,9 +455,10 @@ void game_list_frame::Refresh(bool fromDrive)
 	}
 }
 
-void game_list_frame::ToggleCategoryFilter(QString category, bool show)
+void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool show)
 {
-	if (show) { m_categoryFilters.append(category); } else { m_categoryFilters.removeAll(category); }
+	if (show) { m_categoryFilters.append(categories); }
+	else { for (auto cat : categories) m_categoryFilters.removeAll(cat); }
 	Refresh();
 }
 
@@ -497,11 +503,9 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	{
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
-
-	QString category = qstr(m_game_data[i].info.category);
 	
-	// Boot these categories
-	if (category == category::hdd_Game || category == category::disc_Game || category == category::audio_Video)
+	// enable boot for bootable categories only
+	if (m_game_data[i].bootable)
 	{
 		const std::string& path = Emu.GetGameDir() + m_game_data[i].info.root;
 		RequestIconPathSet(path);
@@ -610,19 +614,16 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	{
 		removeGame->setEnabled(false);
 	}
-	else if (category == category::audio_Video)
-	{
-		configure->setEnabled(false);
-		removeConfig->setEnabled(false);
-		openConfig->setEnabled(false);
-		checkCompat->setEnabled(false);
-	}
-	else if (category == category::home || category == category::game_Data)
+	else if (!m_game_data[row].bootable)
 	{
 		boot->setEnabled(false), f.setBold(false), boot->setFont(f);
 		configure->setEnabled(false);
 		removeConfig->setEnabled(false);
 		openConfig->setEnabled(false);
+		checkCompat->setEnabled(false);
+	}
+	else if (category != category::hdd_Game)
+	{
 		checkCompat->setEnabled(false);
 	}
 
