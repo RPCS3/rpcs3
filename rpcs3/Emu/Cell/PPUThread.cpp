@@ -1182,19 +1182,19 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		legacy::FunctionPassManager pm(module.get());
 
 		// Basic optimizations
-		pm.add(createCFGSimplificationPass());
-		pm.add(createPromoteMemoryToRegisterPass());
+		//pm.add(createCFGSimplificationPass());
+		//pm.add(createPromoteMemoryToRegisterPass());
 		pm.add(createEarlyCSEPass());
 		pm.add(createTailCallEliminationPass());
-		pm.add(createReassociatePass());
-		pm.add(createInstructionCombiningPass());
+		//pm.add(createInstructionCombiningPass());
 		//pm.add(createBasicAAWrapperPass());
 		//pm.add(new MemoryDependenceAnalysis());
 		pm.add(createLICMPass());
 		pm.add(createLoopInstSimplifyPass());
-		pm.add(createNewGVNPass());
+		//pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
 		pm.add(createSCCPPass());
+		pm.add(createReassociatePass());
 		pm.add(createInstructionCombiningPass());
 		pm.add(createInstructionSimplifierPass());
 		pm.add(createAggressiveDCEPass());
@@ -1251,10 +1251,10 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		legacy::PassManager mpm;
 
 		// Remove unused functions, structs, global variables, etc
-		mpm.add(createStripDeadPrototypesPass());
+		//mpm.add(createStripDeadPrototypesPass());
 		//mpm.add(createFunctionInliningPass());
-		mpm.add(createDeadInstEliminationPass());
-		mpm.run(*module);
+		//mpm.add(createDeadInstEliminationPass());
+		//mpm.run(*module);
 
 		// Update dialog
 		Emu.CallAfter([=]()
