@@ -75,6 +75,11 @@ private:
 
 	bool flush_draw_buffers = false;
 
+	bool m_last_draw_indexed;
+	GLenum m_last_ib_type;
+	size_t m_last_index_offset;
+	u32 m_last_vertex_count;
+
 public:
 	gl::fbo draw_fbo;
 

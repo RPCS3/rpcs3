@@ -212,7 +212,7 @@ void GLGSRender::begin()
 		__glcheck glDepthBoundsEXT(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
-	__glcheck glDepthRange(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
+	//__glcheck glDepthRange(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
 	__glcheck enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
 	if (__glcheck enable(rsx::method_registers.blend_enabled(), GL_BLEND))
@@ -373,8 +373,13 @@ void GLGSRender::end()
 		int location;
 		if (!rsx::method_registers.fragment_textures[i].enabled())
 		{
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, 0);
+			if (m_textures_dirty[i])
+			{
+				glActiveTexture(GL_TEXTURE0 + i);
+				glBindTexture(GL_TEXTURE_2D, 0);
+
+				m_textures_dirty[i] = false;
+			}
 			continue;
 		}
 
@@ -392,12 +397,12 @@ void GLGSRender::end()
 		int texture_index = i + rsx::limits::fragment_textures_count;
 		int location;
 
-		if (!rsx::method_registers.vertex_textures[i].enabled())
+/*		if (!rsx::method_registers.vertex_textures[i].enabled())
 		{
 			glActiveTexture(GL_TEXTURE0 + texture_index);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			continue;
-		}
+		} */
 
 		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &location))
 		{
@@ -409,10 +414,20 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
-	u32 vertex_draw_count;
+	u32 vertex_draw_count = m_last_vertex_count;
 	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
-	std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
-	m_vao.bind();
+	bool skip_upload = false;
+
+	if (!is_probable_instanced_draw())
+	{
+		std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
+		m_last_vertex_count = vertex_draw_count;
+	}
+	else
+	{
+		//LOG_ERROR(RSX, "No work is needed for this draw call! Muhahahahahahaha");
+		skip_upload = true;
+	}
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
@@ -427,19 +442,28 @@ void GLGSRender::end()
 		m_index_ring_buffer->unmap();
 	}
 
-	if (indexed_draw_info)
+	if (indexed_draw_info || (skip_upload && m_last_draw_indexed == true))
 	{
 		if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 		{
-			GLenum index_type = std::get<0>(indexed_draw_info.value());
+			GLenum index_type = (skip_upload)? m_last_ib_type: std::get<0>(indexed_draw_info.value());
 			__glcheck glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}
 
-		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, std::get<0>(indexed_draw_info.value()), (GLvoid *)(std::ptrdiff_t)std::get<1>(indexed_draw_info.value()));
+		m_last_draw_indexed = true;
+
+		if (!skip_upload)
+		{
+			m_last_ib_type = std::get<0>(indexed_draw_info.value());
+			m_last_index_offset = std::get<1>(indexed_draw_info.value());
+		}
+
+		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, m_last_ib_type, (GLvoid *)(std::ptrdiff_t)m_last_index_offset);
 	}
 	else
 	{
 		draw_fbo.draw_arrays(rsx::method_registers.current_draw_clause.primitive, vertex_draw_count);
+		m_last_draw_indexed = false;
 	}
 
 	m_attrib_ring_buffer->notify();
