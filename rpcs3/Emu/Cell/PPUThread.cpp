@@ -476,7 +476,7 @@ void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
-		while (!test(state, cpu_flag::ret + cpu_flag::exit + cpu_flag::stop))
+		while (!test(state, cpu_flag::ret + cpu_flag::exit + cpu_flag::stop + cpu_flag::dbg_global_stop))
 		{
 			reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>(ppu_ref(cia)))(*this);
 		}
@@ -1165,13 +1165,9 @@ extern void ppu_initialize(const ppu_module& info)
 			part.name += info.name;
 		}
 
-		if (fstart)
+		if (fstart || fpos < info.funcs.size())
 		{
 			fmt::append(part.name, "+%06X", info.funcs.at(fstart).addr);
-		}
-		else if (fpos < info.funcs.size())
-		{
-			part.name.append("+0");
 		}
 
 		// Compute module hash
@@ -1245,6 +1241,11 @@ extern void ppu_initialize(const ppu_module& info)
 				ppu_initialize2(jit2, part, Emu.GetCachePath(), obj_name);
 			}
 
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+
 			// Proceed with original JIT instance		
 			semaphore_lock lock(jmutex);
 			ppu_initialize2(jit, part, Emu.GetCachePath(), obj_name);
@@ -1255,6 +1256,11 @@ extern void ppu_initialize(const ppu_module& info)
 	for (auto& thread : jthreads)
 	{
 		thread.join();
+	}
+
+	if (Emu.IsStopped())
+	{
+		return;
 	}
 
 	jit.fin();
