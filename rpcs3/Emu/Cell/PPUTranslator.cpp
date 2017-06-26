@@ -64,11 +64,11 @@ const ppu_decoder<PPUTranslator> s_ppu_decoder;
 	GetGpr(op.ra),\
 	GetGpr(op.rb)))
 
-PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, u64 base)
+PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info)
 	: m_context(context)
 	, m_module(module)
-	, m_base_addr(base)
 	, m_is_be(false)
+	, m_info(info)
 	, m_pure_attr(AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {
 	// Memory base

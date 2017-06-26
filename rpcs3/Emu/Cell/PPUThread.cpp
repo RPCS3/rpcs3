@@ -876,15 +876,15 @@ static bool adde_carry(u64 a, u64 b, bool c)
 
 extern void ppu_initialize()
 {
-	const auto _funcs = fxm::withdraw<std::vector<ppu_function>>();
+	const auto _main = fxm::withdraw<ppu_module>();
 
-	if (!_funcs)
+	if (!_main)
 	{
 		return;
 	}
 
 	// Initialize main module
-	ppu_initialize({"", std::move(*_funcs)});
+	ppu_initialize(*_main);
 
 	std::vector<lv2_prx*> prx_list;
 
@@ -985,7 +985,8 @@ extern void ppu_initialize(const ppu_module& info)
 	// Split module into fragments <= 1 MiB
 	std::size_t fpos = 0;
 
-	ppu_module part;
+	// Copy module information
+	ppu_module part = info;
 
 	while (fpos < info.funcs.size())
 	{
@@ -1157,11 +1158,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 	
 	// Initialize translator
-	std::unique_ptr<PPUTranslator> translator = std::make_unique<PPUTranslator>(jit.get_context(), module.get(), 0);
+	PPUTranslator translator(jit.get_context(), module.get(), module_part);
 
 	// Define some types
 	const auto _void = Type::getVoidTy(jit.get_context());
-	const auto _func = FunctionType::get(_void, {translator->GetContextType()->getPointerTo()}, false);
+	const auto _func = FunctionType::get(_void, {translator.GetContextType()->getPointerTo()}, false);
 
 	// Initialize function list
 	for (const auto& func : module_part.funcs)
@@ -1240,7 +1241,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				});
 
 				// Translate
-				const auto func = translator->Translate(module_part.funcs[fi]);
+				const auto func = translator.Translate(module_part.funcs[fi]);
 
 				// Run optimization passes
 				pm.run(*func);

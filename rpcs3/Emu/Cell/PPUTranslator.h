@@ -110,11 +110,11 @@ class PPUTranslator final //: public CPUTranslator
 	// Module to which all generated code is output to
 	llvm::Module* const m_module;
 
-	// Base address (TODO)
-	const u64 m_base_addr;
-
 	// Endianness, affects vector element numbering (TODO)
 	const bool m_is_be;
+
+	// PPU Module
+	const ppu_module& m_info;
 
 	// Attributes for function calls which are "pure" and may be optimized away if their results are unused
 	const llvm::AttributeSet m_pure_attr;
@@ -402,7 +402,7 @@ public:
 	// Handle compilation errors
 	void CompilationError(const std::string& error);
 
-	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, u64 base);
+	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, const ppu_module& info);
 	~PPUTranslator();
 
 	// Get thread context struct type

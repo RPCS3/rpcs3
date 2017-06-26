@@ -1224,13 +1224,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	{
-		// Analyse executable
-		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0, elf.header.e_entry);
+		// Analyse executable (TODO)
+		ppu_module _main;
+		_main.funcs = ppu_analyse(segments, sections, 0, elf.header.e_entry);
 
-		ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
+		// Validate analyser results (not required)
+		ppu_validate(vfs::get(Emu.GetPath()), _main.funcs, 0);
 
-		// Share function list
-		fxm::make<std::vector<ppu_function>>(std::move(main_funcs));
+		// Set for delayed initialization in ppu_initialize()
+		fxm::make<ppu_module>(std::move(_main));
 	}
 
 	// Set SDK version

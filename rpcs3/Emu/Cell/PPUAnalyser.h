@@ -41,11 +41,33 @@ struct ppu_function
 	std::string name; // Function name
 };
 
+// PPU Relocation Information
+struct ppu_reloc
+{
+	u32 type;
+	u32 off;
+	u32 ptr;
+	u8 index_value;
+	u8 index_addr;
+};
+
+// PPU Segment Information
+struct ppu_segment
+{
+	u32 addr;
+	u32 size;
+	u32 type;
+	u32 flags;
+};
+
 // PPU Module Information
 struct ppu_module
 {
 	std::string name;
+	std::vector<ppu_reloc> rels;
+	std::vector<ppu_segment> segs;
 	std::vector<ppu_function> funcs;
+	std::vector<ppu_segment> sections;
 };
 
 // Aux
