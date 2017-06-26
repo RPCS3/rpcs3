@@ -240,7 +240,7 @@ namespace
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
 		write_index_array_for_non_indexed_non_native_primitive_to_buffer(
-			reinterpret_cast<char*>(buf), clause.primitive, 0, vertex_count);
+			reinterpret_cast<char*>(buf), clause.primitive, vertex_count);
 
 		m_index_buffer_ring_info.unmap();
 		return std::make_tuple(
