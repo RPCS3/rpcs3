@@ -349,6 +349,12 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 				OS << "	" << i.name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";" << std::endl;
 			}
 		}
+		else if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
+		{
+			//An output was declared but nothing was written to it
+			//Set it to all ones (Atelier Escha)
+			OS << "	" << i.name << " = vec4(1.);" << std::endl;
+		}
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
