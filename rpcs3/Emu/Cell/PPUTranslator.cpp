@@ -257,12 +257,15 @@ void PPUTranslator::FlushRegisters()
 {
 	for (auto& local : m_locals)
 	{
-		const uint index = ::narrow<uint>(&local - m_locals);
+		const uint index = static_cast<uint>(&local - m_locals);
 
 		if (local && m_globals[index])
 		{
 			// Store value if necessary
 			m_ir->CreateStore(local, m_globals[index]);
+
+			// Don't need to store again
+			m_globals[index] = nullptr;
 		}
 	}
 }
@@ -1609,17 +1612,13 @@ void PPUTranslator::ADDIS(ppu_opcode_t op)
 
 void PPUTranslator::BC(ppu_opcode_t op)
 {
-	if (op.lk)
-	{
-		RegInit(m_lr);
-	}
-
 	const u64 target = (op.aa ? 0 : m_current_addr) + op.bt14;
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
 
 	if (op.lk)
 	{
+		RegInit(m_lr);
 		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 	}
 
@@ -1687,6 +1686,7 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 
 	if (op.lk)
 	{
+		RegInit(m_lr);
 		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 	}
 
@@ -1744,17 +1744,13 @@ void PPUTranslator::CROR(ppu_opcode_t op)
 
 void PPUTranslator::BCCTR(ppu_opcode_t op)
 {
-	if (op.lk)
-	{
-		RegInit(m_lr);
-	}
-
 	const auto target = RegLoad(m_ctr);
 
 	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
 
 	if (op.lk)
 	{
+		RegInit(m_lr);
 		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
 	}
 
