@@ -1448,10 +1448,10 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 		}
 	}
 
-	showLogAct->setChecked(guiSettings->GetValue(GUI::mw_logger).toBool());
-	showGameListAct->setChecked(guiSettings->GetValue(GUI::mw_gamelist).toBool());
-	showDebuggerAct->setChecked(guiSettings->GetValue(GUI::mw_debugger).toBool());
-	showControlsAct->setChecked(guiSettings->GetValue(GUI::mw_controls).toBool());
+	showLogAct->setChecked(logFrame->isVisible() || guiSettings->GetValue(GUI::mw_logger).toBool());
+	showGameListAct->setChecked(gameListFrame->isVisible() || guiSettings->GetValue(GUI::mw_gamelist).toBool());
+	showDebuggerAct->setChecked(debuggerFrame->isVisible() || guiSettings->GetValue(GUI::mw_debugger).toBool());
+	showControlsAct->setChecked(controls->isVisible() || guiSettings->GetValue(GUI::mw_controls).toBool());
 	showGameListToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
 	guiSettings->GetValue(GUI::mw_controls).toBool() ? controls->show() : controls->hide();
 
