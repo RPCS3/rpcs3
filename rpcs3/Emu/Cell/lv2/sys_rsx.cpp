@@ -32,10 +32,12 @@ struct RsxDriverInfo {
         be_t<u64> lastFlip;        // 0x8 last flip time
         be_t<u32> flipFlags;       // 0x10 flags to handle flip/queue
         be_t<u32> unk1;            // 0x14
-        be_t<u64> unk2[2];         // 0x18 - 0x20
+        be_t<u32> bufferId;        // 0x18
+        be_t<u32> unk2;            // 0x1C
+        be_t<u64> unk3;            // 0x20
         be_t<u64> lastSecondVTime; // 0x28 last time for second vhandler freq
         be_t<u64> vBlankCount;     // 0x30 
-        be_t<u64> unk3;
+        be_t<u64> unk4;
     } head[8]; // size = 0x40
     be_t<u32> unk5;          // 0x12B0
     be_t<u32> unk6;          // 0x12B4
@@ -301,6 +303,8 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	case 0x102: // Display flip
         driverInfo.head[a3].flipFlags |= 0x80000000;
         driverInfo.head[a3].lastFlip = rsxTimeStamp(); // should rsxthread set this?
+        // lets give this a shot for giving bufferid back to gcm
+        driverInfo.head[a3].bufferId = a4 & 0xFF;
         if (a3 == 0)
             sys_event_port_send(g_rsx_event_port, 0, (1 << 3), 0);
         if (a3 == 1)
