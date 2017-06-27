@@ -36,7 +36,8 @@ namespace vk
 			if (length > cpu_address_range)
 				release_dma_resources();
 
-			rsx::buffered_section::reset(base, length);
+			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_one_page;
+			rsx::buffered_section::reset(base, length, policy);
 		}
 
 		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 native_pitch = 0, bool managed=true)
