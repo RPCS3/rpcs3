@@ -122,17 +122,19 @@ namespace gl
 
 				glGenBuffers(1, &pbo_id);
 
+				const u32 buffer_size = align(cpu_address_range, 4096);
 				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-				glBufferStorage(GL_PIXEL_PACK_BUFFER, locked_address_range, nullptr, GL_MAP_READ_BIT);
+				glBufferStorage(GL_PIXEL_PACK_BUFFER, buffer_size, nullptr, GL_MAP_READ_BIT);
 
-				pbo_size = locked_address_range;
+				pbo_size = buffer_size;
 			}
 
 		public:
 
 			void reset(const u32 base, const u32 size, const bool flushable)
 			{
-				rsx::buffered_section::reset(base, size);
+				rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_one_page;
+				rsx::buffered_section::reset(base, size, policy);
 	
 				if (flushable)
 					init_buffer();
