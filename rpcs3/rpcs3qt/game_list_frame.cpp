@@ -169,7 +169,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	gameList->setAlternatingRowColors(true);
 	gameList->setStyleSheet("alternate-background-color: rgb(242, 242, 242);");
 
-	gameList->setColumnCount(7);
+	gameList->setColumnCount(10);
 	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
 	gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
 	gameList->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Serial")));
@@ -177,6 +177,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	gameList->setHorizontalHeaderItem(4, new QTableWidgetItem(tr("Version")));
 	gameList->setHorizontalHeaderItem(5, new QTableWidgetItem(tr("Category")));
 	gameList->setHorizontalHeaderItem(6, new QTableWidgetItem(tr("Path")));
+	gameList->setHorizontalHeaderItem(7, new QTableWidgetItem(tr("Supported Resolutions")));
+	gameList->setHorizontalHeaderItem(8, new QTableWidgetItem(tr("Sound Formats")));
+	gameList->setHorizontalHeaderItem(9, new QTableWidgetItem(tr("Parental Level")));
 
 	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);	
 	for (int i = 0; i < gameList->horizontalHeader()->count(); i++)
@@ -199,14 +202,18 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	showAppVersionColAct = new QAction(tr("Show Versions"), this);
 	showCategoryColAct = new QAction(tr("Show Categories"), this);
 	showPathColAct = new QAction(tr("Show Paths"), this);
+	showResolutionColAct = new QAction(tr("Show Supported Resolutions"), this);
+	showSoundFormatColAct = new QAction(tr("Show Sound Formats"), this);
+	showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
 
-	columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct };
+	columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
+		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct };
 
 	// Events
 	connect(gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, [=](const QPoint& pos) {
 		QMenu* configure = new QMenu(this);
-		configure->addActions({ showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct });
+		configure->addActions(columnActs);
 		configure->exec(mapToGlobal(pos));
 	});
 	connect(gameList, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
@@ -321,9 +328,10 @@ void game_list_frame::FilterData()
 	for (int i = 0; i < gameList->rowCount(); ++i)
 	{
 		bool match = false;
-		for (auto filter : m_categoryFilters)
+		const QString category = qstr(m_game_data[i].info.category);
+		for (const auto& filter : m_categoryFilters)
 		{
-			if (qstr(m_game_data[i].info.category).contains(filter))
+			if (category.contains(filter))
 			{
 				match = true;
 				break;
@@ -365,10 +373,10 @@ void game_list_frame::Refresh(bool fromDrive)
 			GameInfo game;
 			game.root         = entry.name;
 			game.serial       = psf::get_string(psf, "TITLE_ID", "");
-			game.name         = psf::get_string(psf, "TITLE", "unknown");
-			game.app_ver      = psf::get_string(psf, "APP_VER", "unknown");
-			game.category     = psf::get_string(psf, "CATEGORY", "unknown");
-			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
+			game.name         = psf::get_string(psf, "TITLE", sstr(category::unknown));
+			game.app_ver      = psf::get_string(psf, "APP_VER", sstr(category::unknown));
+			game.category     = psf::get_string(psf, "CATEGORY", sstr(category::unknown));
+			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", sstr(category::unknown));
 			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
 			game.resolution   = psf::get_integer(psf, "RESOLUTION");
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
@@ -394,12 +402,13 @@ void game_list_frame::Refresh(bool fromDrive)
 				game.icon_path = dir + "/ICON0.PNG";
 				game.category = sstr(cat->second);
 			}
-			else if (game.category == "unknown")
+			else if (game.category == sstr(category::unknown))
 			{
-				game.category = sstr(category::unknown);
+				game.icon_path = dir + "/ICON0.PNG";
 			}
 			else
 			{
+				game.icon_path = dir + "/ICON0.PNG";
 				game.category = sstr(category::other);
 			}
 
@@ -473,7 +482,7 @@ void game_list_frame::Refresh(bool fromDrive)
 void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool show)
 {
 	if (show) { m_categoryFilters.append(categories); }
-	else { for (auto cat : categories) m_categoryFilters.removeAll(cat); }
+	else { for (const auto& cat : categories) m_categoryFilters.removeAll(cat); }
 	Refresh();
 }
 
@@ -778,7 +787,7 @@ int game_list_frame::PopulateGameList()
 	};
 
 	int row = 0;
-	for (GUI_GameInfo game : m_game_data)
+	for (const GUI_GameInfo& game : m_game_data)
 	{
 		// Icon
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
@@ -793,6 +802,9 @@ int game_list_frame::PopulateGameList()
 		gameList->setItem(row, 4, l_GetItem(game.info.app_ver));
 		gameList->setItem(row, 5, l_GetItem(game.info.category));
 		gameList->setItem(row, 6, l_GetItem(game.info.root));
+		gameList->setItem(row, 7, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
+		gameList->setItem(row, 8, l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
+		gameList->setItem(row, 9, l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level)));
 
 		if (selected_item == game.info.icon_path) result = row;
 
@@ -824,7 +836,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size)
 
 	// Get number of things that'll be in grid and precompute grid size.
 	int entries = 0;
-	for (GUI_GameInfo game : m_game_data)
+	for (const GUI_GameInfo& game : m_game_data)
 	{
 		if (qstr(game.info.category) == category::disc_Game || qstr(game.info.category) == category::hdd_Game)
 		{
@@ -922,4 +934,34 @@ std::string game_list_frame::CurrentSelectionIconPath()
 	m_oldLayoutIsList = m_isListLayout;
 
 	return selection;
+}
+
+std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined)
+{
+	QStringList string;
+
+	if (combined)
+	{
+		for (const auto& item : map)
+		{
+			if (key & item.first)
+			{
+				string << item.second;
+			}
+		}
+	}
+	else
+	{
+		if (map.find(key) != map.end())
+		{
+			string << map.at(key);
+		}
+	}
+
+	if (string.isEmpty())
+	{
+		string << tr("Unknown");
+	}
+
+	return sstr(string.join(", "));
 }
