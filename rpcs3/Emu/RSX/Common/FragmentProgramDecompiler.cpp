@@ -553,10 +553,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ));
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
 			//Note shadow comparison only returns a true/false result!
 			if (DstExpectsSca() && (m_prog.shadow_textures & (1 << dst.tex_num)))
+			{
 				m_shadow_sampled_textures |= (1 << dst.tex_num);
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ), false);	//No swizzle mask on shadow lookup
+			}
+			else
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ));
