@@ -146,19 +146,19 @@ namespace
 	// return vertex count if primitive type is not native (empty array otherwise)
 	std::tuple<u32, u32> get_index_array_for_emulated_non_indexed_draw(const std::vector<std::pair<u32, u32>> &first_count_commands, rsx::primitive_type primitive_mode, gl::ring_buffer &dst)
 	{
+		//This is an emulated buffer, so our indices only range from 0->original_vertex_array_length
+		u32 vertex_count = 0;
 		u32 element_count = 0;
 		verify(HERE), !gl::is_primitive_native(primitive_mode);
 
 		for (const auto &pair : first_count_commands)
+		{
 			element_count += (u32)get_index_count(primitive_mode, pair.second);
+			vertex_count += pair.second;
+		}
 
 		auto mapping = dst.alloc_from_heap(element_count * sizeof(u16), 256);
 		char *mapped_buffer = (char *)mapping.first;
-
-		//This is an emulated buffer, so our indices only range from 0->original_vertex_array_length
-		u32 vertex_count = 0;
-		for (auto &first_count : first_count_commands)
-			vertex_count += first_count.second;
 
 		write_index_array_for_non_indexed_non_native_primitive_to_buffer(mapped_buffer, primitive_mode, vertex_count);
 		return std::make_tuple(element_count, mapping.second);
