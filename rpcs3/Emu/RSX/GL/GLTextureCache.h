@@ -781,10 +781,23 @@ namespace gl
 							LOG_WARNING(RSX, "Surface blit from a compressed texture");
 						}
 
-						if (!rsc.is_bound)
+						if (!rsc.is_bound || !g_cfg.video.strict_rendering_mode)
 						{
 							if (rsc.w == tex_width && rsc.h == tex_height)
+							{
+								if (rsc.is_bound)
+								{
+									LOG_WARNING(RSX, "Sampling from a currently bound render target @ 0x%x", texaddr);
+
+									auto &caps = gl::get_driver_caps();
+									if (caps.ARB_texture_barrier_supported)
+										glTextureBarrier();
+									else if (caps.NV_texture_barrier_supported)
+										glTextureBarrierNV();
+								}
+
 								rsc.surface->bind();
+							}
 							else
 								bound_index = create_temporary_subresource(rsc.surface->id(), (GLenum)rsc.surface->get_compatible_internal_format(), rsc.x, rsc.y, rsc.w, rsc.h);
 						}
