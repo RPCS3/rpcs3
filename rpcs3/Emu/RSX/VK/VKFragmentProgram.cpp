@@ -91,18 +91,12 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	//We always bind the first usable image to index 0, even if surface type is surface_type::b
-	//If only surface 1 is being written to, redirect to output 0
-
-	if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[1].second) && !m_parr.HasParam(PF_PARAM_NONE, "vec4", table[0].second))
-		OS << "layout(location=0) out vec4 " << table[1].first << ";" << std::endl;
-	else
+	//NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
+	u8 output_index = 0;
+	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
-		{
-			if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-				OS << "layout(location=" << i << ") " << "out vec4 " << table[i].first << ";" << std::endl;
-		}
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";" << std::endl;
 	}
 }
 
