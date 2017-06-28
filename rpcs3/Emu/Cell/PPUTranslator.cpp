@@ -2347,16 +2347,45 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 		// MTCRF
 	}
 
-	const auto value = GetGpr(op.rs);
+	static u8 s_table[64]
+	{
+		0, 0, 0, 0,
+		0, 0, 0, 1,
+		0, 0, 1, 0,
+		0, 0, 1, 1,
+		0, 1, 0, 0,
+		0, 1, 0, 1,
+		0, 1, 1, 0,
+		0, 1, 1, 1,
+		1, 0, 0, 0,
+		1, 0, 0, 1,
+		1, 0, 1, 0,
+		1, 0, 1, 1,
+		1, 1, 0, 0,
+		1, 1, 0, 1,
+		1, 1, 1, 0,
+		1, 1, 1, 1,
+	};
+
+	if (!m_mtocr_table)
+	{
+		m_mtocr_table = new GlobalVariable(*m_module, ArrayType::get(GetType<u8>(), 64), true, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, s_table));
+	}
+
+	const auto value = GetGpr(op.rs, 32);
 
 	for (u32 i = 0; i < 8; i++)
 	{
 		if (op.crm & (128 >> i))
 		{
-			for (u32 bit = i * 4; bit < i * 4 + 4; bit++)
-			{
-				SetCrb(bit, Trunc(m_ir->CreateLShr(value, 31 - bit), GetType<bool>()));
-			}
+			// Discard pending values
+			std::fill_n(m_cr + i * 4, 4, nullptr);
+			std::fill_n(m_g_cr + i * 4, 4, nullptr);
+
+			const auto index = m_ir->CreateAnd(m_ir->CreateLShr(value, 28 - i * 4), 15);
+			const auto src = m_ir->CreateGEP(m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
+			const auto dst = m_ir->CreateBitCast(m_ir->CreateStructGEP(nullptr, m_thread, m_cr - m_locals + i * 4), GetType<u8*>());
+			Call(GetType<void>(), "llvm.memcpy.p0i8.p0i8.i32", dst, src, m_ir->getInt32(4), m_ir->getInt32(4), m_ir->getFalse());
 		}
 	}
 }

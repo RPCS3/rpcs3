@@ -3420,6 +3420,26 @@ bool ppu_interpreter::ADDE(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 {
+	static u8 s_table[16][4]
+	{
+		{0, 0, 0, 0},
+		{0, 0, 0, 1},
+		{0, 0, 1, 0},
+		{0, 0, 1, 1},
+		{0, 1, 0, 0},
+		{0, 1, 0, 1},
+		{0, 1, 1, 0},
+		{0, 1, 1, 1},
+		{1, 0, 0, 0},
+		{1, 0, 0, 1},
+		{1, 0, 1, 0},
+		{1, 0, 1, 1},
+		{1, 1, 0, 0},
+		{1, 1, 0, 1},
+		{1, 1, 1, 0},
+		{1, 1, 1, 1},
+	};
+
 	const u64 s = ppu.gpr[op.rs];
 
 	if (op.l11)
@@ -3428,11 +3448,8 @@ bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 
 		const u32 n = cntlz32(op.crm) & 7;
 		const u32 p = n * 4;
-		const u64 v = s >> (p ^ 0x1c);
-		ppu.cr[p + 0] = (v & 8) != 0;
-		ppu.cr[p + 1] = (v & 4) != 0;
-		ppu.cr[p + 2] = (v & 2) != 0;
-		ppu.cr[p + 3] = (v & 1) != 0;
+		const u64 v = (s >> (p ^ 0x1c)) & 0xf;
+		*(u32*)(u8*)(ppu.cr + p) = *(u32*)(s_table + v);
 	}
 	else
 	{
@@ -3440,15 +3457,11 @@ bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 
 		for (u32 i = 0; i < 8; i++)
 		{
-			const u32 p = i * 4;
-			const u64 v = s >> (p ^ 0x1c);
-
 			if (op.crm & (128 >> i))
 			{
-				ppu.cr[p + 0] = (v & 8) != 0;
-				ppu.cr[p + 1] = (v & 4) != 0;
-				ppu.cr[p + 2] = (v & 2) != 0;
-				ppu.cr[p + 3] = (v & 1) != 0;
+				const u32 p = i * 4;
+				const u64 v = (s >> (p ^ 0x1c)) & 0xf;
+				*(u32*)(u8*)(ppu.cr + p) = *(u32*)(s_table + v);
 			}
 		}
 	}
