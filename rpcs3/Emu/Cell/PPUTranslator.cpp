@@ -85,7 +85,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 	// Create tail call to the check function
 	m_ir->SetInsertPoint(vcheck);
-	Call(GetType<void>(), "__check", m_thread, m_ir->getInt64(m_start_addr));
+	Call(GetType<void>(), "__check", m_thread, m_ir->getInt64(m_start_addr))->setTailCallKind(llvm::CallInst::TCK_Tail);
 	m_ir->CreateRetVoid();
 	m_ir->SetInsertPoint(m_body);
 
@@ -143,6 +143,8 @@ Value* PPUTranslator::RotateLeft(Value* arg, Value* n)
 
 void PPUTranslator::CallFunction(u64 target, Value* indirect)
 {
+	const auto type = FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false);
+
 	if (!indirect)
 	{
 		if (target < 0x10000 || target >= -0x10000)
@@ -151,16 +153,17 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 			return;
 		}
 
-		m_ir->CreateCall(m_module->getOrInsertFunction(fmt::format("__0x%llx", target), FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false)), {m_thread});
+		indirect = m_module->getOrInsertFunction(fmt::format("__0x%llx", target), type);
 	}
 	else
 	{
 		const auto addr = indirect ? indirect : (Value*)m_ir->getInt64(target);
 		const auto pos = m_ir->CreateLShr(addr, 2, "", true);
 		const auto ptr = m_ir->CreateGEP(m_ir->CreateLoad(m_call), {m_ir->getInt64(0), pos});
-		m_ir->CreateCall(m_ir->CreateIntToPtr(m_ir->CreateLoad(ptr), FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false)->getPointerTo()), {m_thread});
+		indirect = m_ir->CreateIntToPtr(m_ir->CreateLoad(ptr), type->getPointerTo());
 	}
 
+	m_ir->CreateCall(indirect, {m_thread})->setTailCallKind(llvm::CallInst::TCK_Tail);
 	m_ir->CreateRetVoid();
 }
 
@@ -1591,13 +1594,13 @@ void PPUTranslator::SC(ppu_opcode_t op)
 		if (index < 1024)
 		{
 			// Call the syscall directly
-			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
+			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
 			m_ir->CreateRetVoid();
 			return;
 		}
 	}
 
-	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
+	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num)->setTailCallKind(llvm::CallInst::TCK_Tail);
 	m_ir->CreateRetVoid();
 }
 
@@ -3797,7 +3800,7 @@ void PPUTranslator::FCFID(ppu_opcode_t op)
 void PPUTranslator::UNK(ppu_opcode_t op)
 {
 	FlushRegisters();
-	Call(GetType<void>(), "__error", m_thread, m_ir->getInt64(m_current_addr), m_ir->getInt32(op.opcode));
+	Call(GetType<void>(), "__error", m_thread, m_ir->getInt64(m_current_addr), m_ir->getInt32(op.opcode))->setTailCallKind(llvm::CallInst::TCK_Tail);
 	m_ir->CreateRetVoid();
 }
 
@@ -4060,7 +4063,7 @@ Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 
 void PPUTranslator::Trap(u64 addr)
 {
-	Call(GetType<void>(), "__trap", m_thread, m_ir->getInt64(m_current_addr));
+	Call(GetType<void>(), "__trap", m_thread, m_ir->getInt64(m_current_addr))->setTailCallKind(llvm::CallInst::TCK_Tail);
 	m_ir->CreateRetVoid();
 }
 

@@ -386,7 +386,7 @@ public:
 
 	// Call a function with attribute list
 	template<typename... Args>
-	llvm::Value* Call(llvm::Type* ret, llvm::AttributeSet attr, llvm::StringRef name, Args... args)
+	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeSet attr, llvm::StringRef name, Args... args)
 	{
 		// Call the function
 		return m_ir->CreateCall(m_module->getOrInsertFunction(name, llvm::FunctionType::get(ret, {args->getType()...}, false), attr), {args...});
@@ -394,7 +394,7 @@ public:
 
 	// Call a function
 	template<typename... Args>
-	llvm::Value* Call(llvm::Type* ret, llvm::StringRef name, Args... args)
+	llvm::CallInst* Call(llvm::Type* ret, llvm::StringRef name, Args... args)
 	{
 		return Call(ret, llvm::AttributeSet{}, name, args...);
 	}
