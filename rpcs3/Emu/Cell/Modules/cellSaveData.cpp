@@ -293,8 +293,19 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 			}
 
-			// Display Save Data List
-			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, listSet);
+			// Display Save Data List but do so asynchronously in the GUI thread.  For, qTimers only work using main UI thread.
+			atomic_t<bool> dlg_result(false);
+
+			Emu.CallAfter([&]()
+			{
+				selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, listSet);
+				dlg_result = true;
+			});
+
+			while (!dlg_result)
+			{
+				thread_ctrl::wait_for(1000);
+			}
 
 			if (selected == -1)
 			{

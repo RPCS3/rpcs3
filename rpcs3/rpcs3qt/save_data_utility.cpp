@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "save_data_utility.h"
 
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+
 //Cause i can not decide what struct to be used to fill those. Just use no real data now.
 //Currently variable info isn't used. it supposed to be a container for the information passed by other.
-save_data_info_dialog::save_data_info_dialog(QWidget* parent, const save_data_information& info)
+save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& info, QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Save Data Information"));
@@ -71,7 +73,7 @@ void save_data_info_dialog::UpdateData()
 //This dialog represents the Menu of Save Data Utility - which pop up after when you roll to a save and press triangle.
 //I've ever thought of make it a right-click menu or a show-hide panel of the main dialog.
 //Well only when those function calls related get implemented we can tell what this GUI should be, seriously.
-save_data_manage_dialog::save_data_manage_dialog(QWidget* parent, unsigned int* sort_type, save_data_entry& save)
+save_data_manage_dialog::save_data_manage_dialog(unsigned int* sort_type, SaveDataEntry& save, QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Save Data Pop-up Menu"));
@@ -144,8 +146,8 @@ save_data_manage_dialog::save_data_manage_dialog(QWidget* parent, unsigned int* 
 void save_data_manage_dialog::OnInfo()
 {
 	LOG_WARNING(HLE, "Stub - save_data_utility: save_data_manage_dialog: OnInfo called.");
-	save_data_information info;	//It should get a real one for information.. finally
-	save_data_info_dialog* infoDialog = new save_data_info_dialog(this, info);
+	SaveDataEntry info;	//It should get a real one for information.. finally
+	save_data_info_dialog* infoDialog = new save_data_info_dialog(info, this);
 	infoDialog->setModal(true);
 	infoDialog->show();
 }
@@ -169,8 +171,8 @@ void save_data_manage_dialog::OnApplySort()
 
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
-save_data_list_dialog::save_data_list_dialog(QWidget* parent, bool enable_manage)
-	: QDialog(parent)
+save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, bool enable_manage, QWidget* parent)
+	: QDialog(parent), m_save_entries(entries)
 {
 	setWindowTitle(tr("Save Data Utility"));
 	setMinimumSize(QSize(400, 400));
@@ -181,11 +183,12 @@ save_data_list_dialog::save_data_list_dialog(QWidget* parent, bool enable_manage
 	// Table
 	m_list = new QTableWidget(this);
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
-	//m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
+	m_list->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_list->setColumnCount(3);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Game ID") << tr("Save ID") << tr("Detail"));
+	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID"));
 
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
@@ -196,6 +199,7 @@ save_data_list_dialog::save_data_list_dialog(QWidget* parent, bool enable_manage
 	{
 		QPushButton *m_select = new QPushButton(tr("&Select"), this);
 		connect(m_select, &QAbstractButton::clicked, this, &save_data_list_dialog::OnSelect);
+		connect(m_select, &QAbstractButton::clicked, this, &save_data_list_dialog::close);
 		hbox_action->addWidget(m_select);
 		setWindowTitle(tr("Save Data Chooser"));
 	}
@@ -229,6 +233,7 @@ save_data_list_dialog::save_data_list_dialog(QWidget* parent, bool enable_manage
 
 	LoadEntries();
 	UpdateList();
+
 }
 //After you pick a menu item from the sort sub-menu
 void save_data_list_dialog::OnSort(int id)
@@ -280,8 +285,8 @@ void save_data_list_dialog::OnEntryInfo()
 	if (idx != -1)
 	{
 		LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnEntryInfo called.");
-		save_data_information info;	//Only a stub now.
-		save_data_info_dialog* infoDialog = new save_data_info_dialog(this, info);
+		SaveDataEntry info;	//Only a stub now.
+		save_data_info_dialog* infoDialog = new save_data_info_dialog(info, this);
 		infoDialog->setModal(true);
 		infoDialog->show();
 	}
@@ -293,22 +298,19 @@ void save_data_list_dialog::OnManage()
 	if (idx != -1)
 	{
 		LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnManage called.");
-		save_data_entry save;	//Only a stub now.
-		save_data_manage_dialog* manageDialog = new save_data_manage_dialog(this, &m_sort_type, save);
+		SaveDataEntry save;	//Only a stub now.
+		save_data_manage_dialog* manageDialog = new save_data_manage_dialog(&m_sort_type, save, this);
 		manageDialog->setModal(true);
 		manageDialog->show();
 	}
 }
-//When you press that select button in the Chooser mode.
+
+/** When you press that select button in the Chooser mode, set the selected entry to the current row*/
 void save_data_list_dialog::OnSelect()
 {
-	int idx = m_list->currentRow();
-	if (idx != -1)
-	{
-		LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnSelect called.");
-		setModal(false);
-	}
+	m_selectedEntry = m_list->currentRow();
 }
+
 //Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_data_list_dialog::ShowContextMenu(const QPoint &pos)
 {
@@ -351,24 +353,33 @@ void save_data_list_dialog::ShowContextMenu(const QPoint &pos)
 
 	menu->exec(globalPos);
 }
+
 //This is intended to load the save data list from a way. However that is not certain for a stub. Does nothing now.
 void save_data_list_dialog::LoadEntries(void)
 {
 
 }
-//Setup some static items just for display.
+
 void save_data_list_dialog::UpdateList(void)
 {
 	m_list->clearContents();
-	m_list->setRowCount(2); // set this to number of entries
-
-	m_list->setItem(0, 0, new QTableWidgetItem("TEST00000"));
-	m_list->setItem(0, 1, new QTableWidgetItem("00"));
-	m_list->setItem(0, 2, new QTableWidgetItem("Final battle"));
-
-	m_list->setItem(1, 0, new QTableWidgetItem("XXXX99876"));
-	m_list->setItem(1, 1, new QTableWidgetItem("30"));
-	m_list->setItem(1, 2, new QTableWidgetItem("This is a fake game"));
+	int numRows = m_save_entries.size();
+	m_list->setRowCount(m_save_entries.size());
 
 	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+	int row = 0;
+	for (SaveDataEntry entry: m_save_entries)
+	{ 
+		m_list->setItem(row, 0, new QTableWidgetItem(qstr(entry.title)));
+		m_list->setItem(row, 1, new QTableWidgetItem(qstr(entry.subtitle)));
+		m_list->setItem(row, 2, new QTableWidgetItem(qstr(entry.dirName)));
+
+		++row;
+	}
+}
+
+void save_data_list_dialog::AddEntry(int row, const SaveDataEntry& entry)
+{
+	m_list->setItem(row, 0, new QTableWidgetItem(qstr(entry.title)));
 }

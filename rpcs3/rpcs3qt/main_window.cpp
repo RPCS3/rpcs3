@@ -996,9 +996,8 @@ void main_window::CreateActions()
 	confAutopauseManagerAct->setEnabled(false);
 
 	confVFSDialogAct = new QAction(tr("Virtual File System"), this);
-
+	
 	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
-	confSavedataManagerAct->setEnabled(false);
 
 	toolsCgDisasmAct = new QAction(tr("&Cg Disasm"), this);
 	toolsCgDisasmAct->setEnabled(true);
@@ -1164,7 +1163,7 @@ void main_window::CreateConnects()
 		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
 	connect(confSavedataManagerAct, &QAction::triggered, [=](){
-		save_data_list_dialog* sdid = new save_data_list_dialog(this, true);
+		save_data_list_dialog* sdid = new save_data_list_dialog({}, true, this);
 		sdid->show();
 	});
 	connect(toolsCgDisasmAct, &QAction::triggered, [=](){
