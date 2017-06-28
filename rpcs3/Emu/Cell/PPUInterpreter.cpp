@@ -1721,7 +1721,7 @@ bool ppu_interpreter_precise::VPKUWUS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VREFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_rcp_ps(ppu.vr[op.vb].vf);
+	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), ppu.vr[op.vb].vf);
 	return true;
 }
 
@@ -1814,7 +1814,7 @@ bool ppu_interpreter::VRLW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VRSQRTEFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_rsqrt_ps(ppu.vr[op.vb].vf);
+	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), _mm_sqrt_ps(ppu.vr[op.vb].vf));
 	return true;
 }
 
