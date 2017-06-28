@@ -1229,7 +1229,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				return;
 			}
 
-			if (module_part.funcs[fi].size && !test(module_part.funcs[fi].attr & ppu_attr::special))
+			if (module_part.funcs[fi].size)
 			{
 				// Update dialog		
 				Emu.CallAfter([=, max = module_part.funcs.size()]()

@@ -5,28 +5,7 @@
 
 #include <cmath>
 
-inline u64 dup32(const u32 x) { return x | static_cast<u64>(x) << 32; }
-
-#if defined(__GNUG__)
-inline u64 UMULH64(u64 a, u64 b)
-{
-	u64 result;
-	__asm__("mulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
-	return result;
-}
-
-inline s64 MULH64(s64 a, s64 b)
-{
-	s64 result;
-	__asm__("imulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
-	return result;
-}
-#endif
-
-#if defined(_MSC_VER)
-#define UMULH64 __umulh
-#define MULH64 __mulh
-#endif
+inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
 
 // Write values to CR field
 inline void ppu_cr_set(ppu_thread& ppu, u32 field, bool le, bool gt, bool eq, bool so)
@@ -3145,7 +3124,7 @@ bool ppu_interpreter::SUBFC(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MULHDU(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.rd] = UMULH64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
+	ppu.gpr[op.rd] = umulh64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
@@ -3343,7 +3322,7 @@ bool ppu_interpreter::LVEWX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MULHD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.rd] = MULH64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
+	ppu.gpr[op.rd] = mulh64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
@@ -3579,7 +3558,7 @@ bool ppu_interpreter::MULLD(ppu_thread& ppu, ppu_opcode_t op)
 	ppu.gpr[op.rd] = (s64)(RA * RB);
 	if (UNLIKELY(op.oe))
 	{
-		const s64 high = MULH64(RA, RB);
+		const s64 high = mulh64(RA, RB);
 		ppu_ov_set(ppu, high != s64(ppu.gpr[op.rd]) >> 63);
 	}
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);

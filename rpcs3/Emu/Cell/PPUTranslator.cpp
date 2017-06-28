@@ -11,59 +11,6 @@ using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
 
-/* Interpreter Call Macro (unused) */
-
-#define VEC3OP(name) SetVr(op.vd, Call(GetType<u32[4]>(), "__vec3op",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	GetVr(op.va, VrType::vi32),\
-	GetVr(op.vb, VrType::vi32),\
-	GetVr(op.vc, VrType::vi32)))
-
-#define VEC2OP(name) SetVr(op.vd, Call(GetType<u32[4]>(), "__vec3op",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	GetVr(op.va, VrType::vi32),\
-	GetVr(op.vb, VrType::vi32),\
-	GetUndef<u32[4]>()))
-
-#define VECIOP(name) SetVr(op.vd, Call(GetType<u32[4]>(), "__veciop",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	m_ir->getInt32(op.opcode),\
-	GetVr(op.vb, VrType::vi32)))
-
-#define FPOP(name) SetFpr(op.frd, Call(GetType<f64>(), "__fpop",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	GetFpr(op.fra),\
-	GetFpr(op.frb),\
-	GetFpr(op.frc)))
-
-#define AIMMOP(name) SetGpr(op.ra, Call(GetType<u64>(), "__aimmop",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	m_ir->getInt32(op.opcode),\
-	GetGpr(op.rs)))
-
-#define AIMMBOP(name) SetGpr(op.ra, Call(GetType<u64>(), "__aimmbop",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	m_ir->getInt32(op.opcode),\
-	GetGpr(op.rs),\
-	GetGpr(op.rb)))
-
-#define AAIMMOP(name) SetGpr(op.ra, Call(GetType<u64>(), "__aaimmop",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	m_ir->getInt32(op.opcode),\
-	GetGpr(op.rs),\
-	GetGpr(op.ra)))
-
-#define IMMAOP(name) SetGpr(op.rd, Call(GetType<u64>(), "__immaop",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	m_ir->getInt32(op.opcode),\
-	GetGpr(op.ra)))
-
-#define IMMABOP(name) SetGpr(op.rd, Call(GetType<u64>(), "__immabop",\
-	m_ir->getInt64((u64)&ppu_interpreter_fast::name),\
-	m_ir->getInt32(op.opcode),\
-	GetGpr(op.ra),\
-	GetGpr(op.rb)))
-
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info)
 	: m_context(context)
 	, m_module(module)
