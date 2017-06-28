@@ -5,8 +5,8 @@ inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(
 
 //Cause i can not decide what struct to be used to fill those. Just use no real data now.
 //Currently variable info isn't used. it supposed to be a container for the information passed by other.
-save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& info, QWidget* parent)
-	: QDialog(parent)
+save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
+	: QDialog(parent), m_entry(save)
 {
 	setWindowTitle(tr("Save Data Information"));
 	setMinimumSize(QSize(400, 300));
@@ -40,24 +40,24 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& info, QWidget*
 
 	UpdateData();
 }
+
 //This is intended to write the information of save data to QTableView.
-//However been not able to decide which data struct i should use, i use static content for this to make it stub.
 void save_data_info_dialog::UpdateData()
 {
 	m_list->clearContents();
 	m_list->setRowCount(6); // set this to nr of members in struct
 
 	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
-	m_list->setItem(0, 1, new QTableWidgetItem("00000000 (None)"));
+	m_list->setItem(0, 1, new QTableWidgetItem("00000001 (Default)"));
 
-	m_list->setItem(1, 0, new QTableWidgetItem(tr("Game Title")));
-	m_list->setItem(1, 1, new QTableWidgetItem("Happy with rpcs3 (free)"));
+	m_list->setItem(1, 0, new QTableWidgetItem(tr("Title")));
+	m_list->setItem(1, 1, new QTableWidgetItem(qstr(m_entry.title)));
 
 	m_list->setItem(2, 0, new QTableWidgetItem(tr("Subtitle")));
-	m_list->setItem(2, 1, new QTableWidgetItem("You devs are great"));
+	m_list->setItem(2, 1, new QTableWidgetItem(qstr(m_entry.subtitle)));
 
 	m_list->setItem(3, 0, new QTableWidgetItem(tr("Detail")));
-	m_list->setItem(3, 1, new QTableWidgetItem("Stub it first"));
+	m_list->setItem(3, 1, new QTableWidgetItem(qstr(m_entry.details)));
 
 	m_list->setItem(4, 0, new QTableWidgetItem(tr("Copyable")));
 	m_list->setItem(4, 1, new QTableWidgetItem("1 (Not allowed)"));
@@ -68,13 +68,14 @@ void save_data_info_dialog::UpdateData()
 	//But i'm getting bored for assign it one by one.
 
 	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
 
 //This dialog represents the Menu of Save Data Utility - which pop up after when you roll to a save and press triangle.
 //I've ever thought of make it a right-click menu or a show-hide panel of the main dialog.
 //Well only when those function calls related get implemented we can tell what this GUI should be, seriously.
 save_data_manage_dialog::save_data_manage_dialog(unsigned int* sort_type, SaveDataEntry& save, QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent), m_entry(save)
 {
 	setWindowTitle(tr("Save Data Pop-up Menu"));
 	setMinimumSize(QSize(400, 110));
@@ -84,8 +85,8 @@ save_data_manage_dialog::save_data_manage_dialog(unsigned int* sort_type, SaveDa
 	m_sort_options->setEditable(false);
 	//You might change this - of corse we should know what to been set - maybe after functions related been implemented.
 	m_sort_options->addItem(tr("User Id"));
-	m_sort_options->addItem(tr("Game Title"));
-	m_sort_options->addItem(tr("Game Subtitle"));
+	m_sort_options->addItem(tr("Title"));
+	m_sort_options->addItem(tr("Subtitle"));
 	m_sort_options->addItem(tr("Play Time"));
 	m_sort_options->addItem(tr("Data Size"));
 	m_sort_options->addItem(tr("Last Modified"));
@@ -284,9 +285,7 @@ void save_data_list_dialog::OnEntryInfo()
 	int idx = m_list->currentRow();
 	if (idx != -1)
 	{
-		LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnEntryInfo called.");
-		SaveDataEntry info;	//Only a stub now.
-		save_data_info_dialog* infoDialog = new save_data_info_dialog(info, this);
+		save_data_info_dialog* infoDialog = new save_data_info_dialog(m_save_entries[idx], this);
 		infoDialog->setModal(true);
 		infoDialog->show();
 	}
@@ -297,9 +296,7 @@ void save_data_list_dialog::OnManage()
 	int idx = m_list->currentRow();
 	if (idx != -1)
 	{
-		LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnManage called.");
-		SaveDataEntry save;	//Only a stub now.
-		save_data_manage_dialog* manageDialog = new save_data_manage_dialog(&m_sort_type, save, this);
+		save_data_manage_dialog* manageDialog = new save_data_manage_dialog(&m_sort_type, m_save_entries[idx], this);
 		manageDialog->setModal(true);
 		manageDialog->show();
 	}
@@ -377,9 +374,4 @@ void save_data_list_dialog::UpdateList(void)
 
 		++row;
 	}
-}
-
-void save_data_list_dialog::AddEntry(int row, const SaveDataEntry& entry)
-{
-	m_list->setItem(row, 0, new QTableWidgetItem(qstr(entry.title)));
 }

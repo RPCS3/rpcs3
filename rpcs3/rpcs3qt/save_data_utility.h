@@ -31,10 +31,11 @@ class save_data_info_dialog :public QDialog
 	Q_OBJECT
 
 public:
-	explicit save_data_info_dialog(const SaveDataEntry& info, QWidget* parent = nullptr);
+	explicit save_data_info_dialog(const SaveDataEntry& save, QWidget* parent = nullptr);
 private:
 	void UpdateData();
 
+	SaveDataEntry m_entry;
 	QTableWidget* m_list;
 };
 
@@ -52,6 +53,8 @@ private Q_SLOTS:
 	void OnDelete();
 	void OnApplySort();
 private:
+	SaveDataEntry m_entry;
+
 	QComboBox* m_sort_options;
 	unsigned int* m_sort_type;
 };
@@ -74,8 +77,6 @@ private Q_SLOTS:
 	void OnEntryInfo();
 	void ShowContextMenu(const QPoint &pos);
 private:
-	void AddEntry(int row, const SaveDataEntry& data);
-
 	void LoadEntries(void);
 	void UpdateList(void);
 	void OnSort(int id);
