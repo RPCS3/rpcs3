@@ -1110,8 +1110,6 @@ void PPUTranslator::VPKUWUS(ppu_opcode_t op)
 void PPUTranslator::VREFP(ppu_opcode_t op)
 {
 	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), GetVr(op.vb, VrType::vf));
-	FastMathFlags x; x.setAllowReciprocal();
-	cast<Instruction>(result)->setFastMathFlags(x);
 	SetVr(op.vd, result);
 }
 
@@ -1156,8 +1154,6 @@ void PPUTranslator::VRLW(ppu_opcode_t op)
 void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 {
 	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), Call(GetType<f32[4]>(), "llvm.sqrt.v4f32", GetVr(op.vb, VrType::vf)));
-	FastMathFlags x; x.setAllowReciprocal();
-	cast<Instruction>(result)->setFastMathFlags(x);
 	SetVr(op.vd, result);
 }
 
@@ -3314,8 +3310,6 @@ void PPUTranslator::FRES(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb, 32);
 	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), b);
-	FastMathFlags x; x.setAllowReciprocal();
-	cast<Instruction>(result)->setFastMathFlags(x);
 	SetFpr(op.frd, result);
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
@@ -3635,8 +3629,6 @@ void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb, 32);
 	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), Call(GetType<f32>(), "llvm.sqrt.f32", b));
-	FastMathFlags x; x.setAllowReciprocal();
-	cast<Instruction>(result)->setFastMathFlags(x);
 	SetFpr(op.frd, result);
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
