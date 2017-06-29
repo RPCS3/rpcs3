@@ -157,10 +157,10 @@ s32 save_data_list_dialog::GetSelection()
 {
 	int res = result();
 	if (res == QDialog::Accepted)
-	{ // -1 means we return cell_ok.  Means nothing was selected. (Shouldn't happen now)
-		if (res == -1)
-		{
-			return res;
+	{
+		if (m_selectedEntry == -1)
+		{ // Save new entry
+			return -1;
 		}
 		return m_list->item(m_selectedEntry, 0)->data(Qt::UserRole).toInt();
 	}
