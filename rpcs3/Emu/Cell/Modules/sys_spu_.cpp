@@ -8,6 +8,8 @@
 #include "Loader/ELF.h"
 #include "sysPrxForUser.h"
 
+#include "Loader/ELF.h"
+
 extern logs::channel sysPrxForUser;
 
 extern u64 get_system_time();
@@ -385,9 +387,30 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
 
-	if (!elf_file)
+	if (elf_file)
 	{
-		sysPrxForUser.error("sys_raw_spu_load() error: %s not found!", path);
+		return CELL_ENOENT;
+	}
+
+	u64 file_size = elf_file.size();
+	if (!file_size)
+	{
+		return CELL_ENOENT;
+	}
+	else if (file_size > UINT_MAX)
+	{
+		return CELL_ENOMEM;
+	}
+
+	u32 elf_addr = vm::alloc((u32)file_size, vm::main);
+	if (!elf_addr)
+	{
+		return CELL_ENOMEM;
+	}
+
+	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
+	if (!bytes_read)
+	{
 		return CELL_ENOENT;
 	}
 

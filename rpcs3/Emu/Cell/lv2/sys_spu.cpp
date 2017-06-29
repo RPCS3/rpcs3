@@ -19,14 +19,12 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_spu("sys_spu");
 
-void sys_spu_image::load_from_memory(u32 data_addr, u32 type)
+void sys_spu_image::load(u32 data_addr, u32 type)
 {
 	auto stream = fs::file{ vm::base(data_addr), size_t(-1) };
 	if (type == SYS_SPU_IMAGE_PROTECT)
 	{
-		// TODO Add SYS_SPU_IMAGE_PROTECT
-		this->load(stream);
-		return;
+		LOG_TODO(SPU, "TODO Loading SYS_SPU_IMAGE_PROTECT SPU as SYS_SPU_IMAGE_DIRECT");
 	}
 
 	const spu_exec_object obj{ stream };
@@ -39,7 +37,7 @@ void sys_spu_image::load_from_memory(u32 data_addr, u32 type)
 	int number_segs = obj.progs.size();
 	for (const auto& prog : obj.progs)
 	{
-		if (prog.p_memsz != prog.p_filesz)
+		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY && prog.p_memsz != prog.p_filesz)
 		{
 			number_segs++;
 		}
@@ -275,14 +273,35 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 
 	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
-	// TODO shouldn't load SCE files
-	if (!elf_file)
+	if (elf_file)
 	{
 		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
 		return CELL_ENOENT;
 	}
 
-	img->load(elf_file);
+	u64 file_size = elf_file.size();
+	if (!file_size)
+	{
+		return CELL_ENOENT;
+	}
+	else if (file_size > UINT_MAX)
+	{
+		return CELL_ENOMEM;
+	}
+
+	u32 elf_addr = vm::alloc((u32)file_size, vm::main);
+	if (!elf_addr)
+	{
+		return CELL_ENOMEM;
+	}
+
+	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
+	if (!bytes_read)
+	{
+		return CELL_ENOENT;
+	}
+
+	img->load(elf_addr, SYS_SPU_IMAGE_DIRECT);
 
 	return CELL_OK;
 }
