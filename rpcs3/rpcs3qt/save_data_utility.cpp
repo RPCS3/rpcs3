@@ -14,7 +14,7 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	// Table
 	m_list = new QTableWidget(this);
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
-	//m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
+	m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setColumnCount(2);
 	m_list->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Detail"));
@@ -45,8 +45,9 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 void save_data_info_dialog::UpdateData()
 {
 	m_list->clearContents();
-	m_list->setRowCount(6); // set this to nr of members in struct
+	m_list->setRowCount(4); // set this to nr of members in struct
 
+	//Maybe there should be more details of save data.
 	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
 	m_list->setItem(0, 1, new QTableWidgetItem("00000001 (Default)"));
 
@@ -59,127 +60,17 @@ void save_data_info_dialog::UpdateData()
 	m_list->setItem(3, 0, new QTableWidgetItem(tr("Detail")));
 	m_list->setItem(3, 1, new QTableWidgetItem(qstr(m_entry.details)));
 
-	m_list->setItem(4, 0, new QTableWidgetItem(tr("Copyable")));
-	m_list->setItem(4, 1, new QTableWidgetItem("1 (Not allowed)"));
-
-	m_list->setItem(5, 0, new QTableWidgetItem(tr("Play Time")));
-	m_list->setItem(5, 1, new QTableWidgetItem("00:00:00"));
-	//Maybe there should be more details of save data.
-	//But i'm getting bored for assign it one by one.
-
 	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
 
-//This dialog represents the Menu of Save Data Utility - which pop up after when you roll to a save and press triangle.
-//I've ever thought of make it a right-click menu or a show-hide panel of the main dialog.
-//Well only when those function calls related get implemented we can tell what this GUI should be, seriously.
-save_data_manage_dialog::save_data_manage_dialog(unsigned int* sort_type, SaveDataEntry& save, QWidget* parent)
-	: QDialog(parent), m_entry(save)
-{
-	setWindowTitle(tr("Save Data Pop-up Menu"));
-	setMinimumSize(QSize(400, 110));
-
-	// "Sort By" ComboBox
-	m_sort_options = new QComboBox(this);
-	m_sort_options->setEditable(false);
-	//You might change this - of corse we should know what to been set - maybe after functions related been implemented.
-	m_sort_options->addItem(tr("User Id"));
-	m_sort_options->addItem(tr("Title"));
-	m_sort_options->addItem(tr("Subtitle"));
-	m_sort_options->addItem(tr("Play Time"));
-	m_sort_options->addItem(tr("Data Size"));
-	m_sort_options->addItem(tr("Last Modified"));
-	m_sort_options->addItem(tr("Created Time"));
-	m_sort_options->addItem(tr("Accessed Time"));
-	m_sort_options->addItem(tr("Modified Time"));
-	m_sort_options->addItem(tr("Modify Time"));
-
-	m_sort_type = sort_type;
-	if (m_sort_type != nullptr)
-	{
-		//Check sort type and set it to combo box
-		if (*m_sort_type >= m_sort_options->count())
-		{
-			*m_sort_type = 0;
-		}
-	}
-	m_sort_options->setCurrentIndex(*m_sort_type);
-	
-	// Buttons
-	QPushButton* pb_sort_action = new QPushButton(tr("&Apply"), this);
-	QPushButton* pb_copy = new QPushButton(tr("&Copy"), this);
-	QPushButton* pb_delete = new QPushButton(tr("&Delete"), this);
-	QPushButton* pb_info = new QPushButton(tr("&Info"), this);
-	QPushButton* pb_close = new QPushButton(tr("&Close"), this);
-
-	// Sort Layout
-	QHBoxLayout* hbox_sort = new QHBoxLayout();
-	hbox_sort->setAlignment(Qt::AlignCenter);
-	hbox_sort->addWidget(new QLabel(tr("Sort By"), this));
-	hbox_sort->addWidget(m_sort_options);
-	hbox_sort->addWidget(pb_sort_action);
-	
-	// Button Layout
-	QHBoxLayout* hbox_actions = new QHBoxLayout();
-	hbox_actions->setAlignment(Qt::AlignCenter);
-	hbox_actions->addWidget(pb_copy);
-	hbox_actions->addWidget(pb_delete);
-	hbox_actions->addWidget(pb_info);
-	hbox_actions->addWidget(pb_close);
-
-	// Main Layout
-	QVBoxLayout* vbox_manage = new QVBoxLayout();
-	vbox_manage->setAlignment(Qt::AlignCenter);
-	vbox_manage->addLayout(hbox_sort);
-	vbox_manage->addLayout(hbox_actions);
-	setLayout(vbox_manage);
-
-	// Events
-	connect(pb_sort_action, &QAbstractButton::clicked, this, &save_data_manage_dialog::OnApplySort);
-	connect(pb_copy, &QAbstractButton::clicked, this, &save_data_manage_dialog::OnCopy);
-	connect(pb_delete, &QAbstractButton::clicked, this, &save_data_manage_dialog::OnDelete);
-	connect(pb_info, &QAbstractButton::clicked, this, &save_data_manage_dialog::OnInfo);
-	connect(pb_close, &QAbstractButton::clicked, this, &save_data_manage_dialog::close);
-}
-//Display information about the current selected save data.
-//If selected is "New Save Data" or other invalid, this dialog would be initialized with "Info" disabled or not visible.
-void save_data_manage_dialog::OnInfo()
-{
-	LOG_WARNING(HLE, "Stub - save_data_utility: save_data_manage_dialog: OnInfo called.");
-	SaveDataEntry info;	//It should get a real one for information.. finally
-	save_data_info_dialog* infoDialog = new save_data_info_dialog(info, this);
-	infoDialog->setModal(true);
-	infoDialog->show();
-}
-//Copy selected save data to another. Might need a dialog but i just leave it as this. Or Modal Dialog.
-void save_data_manage_dialog::OnCopy()
-{
-	LOG_WARNING(HLE, "Stub - save_data_utility: save_data_manage_dialog: OnCopy called.");
-}
-//Delete selected save data, need confirm. just a stub now.
-void save_data_manage_dialog::OnDelete()
-{
-	LOG_WARNING(HLE, "Stub - save_data_utility: save_data_manage_dialog: OnDelete called.");
-}
-//This should return the sort setting of the save data list. Also not implemented really.
-void save_data_manage_dialog::OnApplySort()
-{	
-	*m_sort_type = m_sort_options->currentIndex();
-	LOG_WARNING(HLE, "Stub - save_data_utility: save_data_manage_dialog: OnApplySort called. NAME=%s",
-		m_sort_options->itemText(m_sort_options->currentIndex()).toStdString().c_str());
-}
-
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
-save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, bool enable_manage, QWidget* parent)
-	: QDialog(parent), m_save_entries(entries)
+save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
+	: QDialog(parent), m_save_entries(entries), m_selectedEntry(-1), selectedEntryLabel(nullptr)
 {
 	setWindowTitle(tr("Save Data Utility"));
 	setMinimumSize(QSize(400, 400));
-
-	QLabel* l_description = new QLabel(tr("This is only a stub for now. This doesn't work yet due to related functions not being implemented."), this);
-	l_description->setWordWrap(400);
 
 	// Table
 	m_list = new QTableWidget(this);
@@ -193,59 +84,96 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
-	QPushButton *m_close = new QPushButton(tr("&Close"), this);
+	QPushButton *push_cancel = new QPushButton(tr("&Cancel"), this);
+	QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
+	connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
+	hbox_action->addWidget(push_select);
+	setWindowTitle(tr("Save Data Chooser"));
 
-	//If do not need manage, hide it, like just a save data picker.
-	if (!enable_manage)
+	selectedEntryLabel = new QLabel(this);
+	UpdateSelectionLabel();
+
+	if (is_saving)
 	{
-		QPushButton *m_select = new QPushButton(tr("&Select"), this);
-		connect(m_select, &QAbstractButton::clicked, this, &save_data_list_dialog::OnSelect);
-		connect(m_select, &QAbstractButton::clicked, this, &save_data_list_dialog::close);
-		hbox_action->addWidget(m_select);
-		setWindowTitle(tr("Save Data Chooser"));
-	}
-	else {
-		QPushButton *m_manage = new QPushButton(tr("&Manage"), this);
-		connect(m_manage, &QAbstractButton::clicked, this, &save_data_list_dialog::OnManage);
-		hbox_action->addWidget(m_manage);
+		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
+		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]() {
+			m_selectedEntry = -1; // Set the return properly.
+			accept();
+		});
+		hbox_action->addWidget(saveNewEntry);
 	}
 
 	hbox_action->addStretch();
-	hbox_action->addWidget(m_close);
+	hbox_action->addWidget(push_cancel);
 
 	// events
-	connect(m_close, &QAbstractButton::clicked, this, &save_data_list_dialog::close);
-	connect(m_list, &QTableWidget::itemClicked, this, &save_data_list_dialog::OnEntryInfo);
-	connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_data_list_dialog::ShowContextMenu);
+	connect(push_cancel, &QAbstractButton::clicked, this, &save_data_list_dialog::close);
+	connect(m_list, &QTableWidget::itemDoubleClicked, this, &save_data_list_dialog::OnEntryInfo);
+	connect(m_list, &QTableWidget::currentCellChanged, this, [&](int cr, int cc, int pr, int pc) {
+		m_selectedEntry = cr;
+		UpdateSelectionLabel();
+	});
+
+	// TODO: Unstub functions inside of this context menu so it makes sense to show this menu
+	//connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_data_list_dialog::ShowContextMenu);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col){
-		// Sort entries, update columns and refresh the panel. Taken from game_list_frame
-		m_sortColumn = col;
-		OnSort(m_sortColumn);
-		UpdateList();
+		OnSort(col);
 	});
 
 	// main layout
 	QVBoxLayout* vbox_main = new QVBoxLayout();
 	vbox_main->setAlignment(Qt::AlignCenter);
-	vbox_main->addWidget(l_description);
 	vbox_main->addWidget(m_list);
+	if (selectedEntryLabel != nullptr)
+	{
+		vbox_main->addWidget(selectedEntryLabel);
+	}
 	vbox_main->addLayout(hbox_action);
 	setLayout(vbox_main);
 
 	LoadEntries();
 	UpdateList();
 
+	m_list->setCurrentCell(focusedEntry, 0);
 }
-//After you pick a menu item from the sort sub-menu
-void save_data_list_dialog::OnSort(int id)
+
+void save_data_list_dialog::UpdateSelectionLabel()
 {
-	int idx = id;
-	LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnSort called. Type Value:%d", idx);
+	if (selectedEntryLabel != nullptr)
+	{
+		if (m_list->currentRow() == -1)
+		{
+			selectedEntryLabel->setText(tr("Currently Selected: None"));
+		}
+		else
+		{
+			int entry = m_list->item(m_list->currentRow(), 0)->data(Qt::UserRole).toInt();
+			selectedEntryLabel->setText(tr("Currently Selected: ") + qstr(m_save_entries[entry].dirName));
+		}
+	}
+}
+
+s32 save_data_list_dialog::GetSelection()
+{
+	int res = result();
+	if (res == QDialog::Accepted)
+	{ // -1 means we return cell_ok.  Means nothing was selected. (Shouldn't happen now)
+		if (res == -1)
+		{
+			return res;
+		}
+		return m_list->item(m_selectedEntry, 0)->data(Qt::UserRole).toInt();
+	}
+
+	// Cancel is pressed. May promote to enum or figure out proper cellsavedata code to use later.
+	return -2;
+}
+
+void save_data_list_dialog::OnSort(int idx)
+{
 	if ((idx < m_sort_type_count) && (idx >= 0))
 	{
-		m_sort_type = idx;
-
-		if (m_sort_type == m_sortColumn)
+		if (idx == m_sortColumn)
 		{
 			m_sortAscending ^= true;
 		}
@@ -253,10 +181,12 @@ void save_data_list_dialog::OnSort(int id)
 		{
 			m_sortAscending = true;
 		}
-		// someSort(m_sort_type, m_sortAscending)
-		// look at game_list_frame sortGameData for reference
+		Qt::SortOrder colSortOrder = m_sortAscending ? Qt::AscendingOrder : Qt::DescendingOrder;
+		m_list->sortByColumn(m_sortColumn, colSortOrder);
+		m_sortColumn = idx;
 	}
 }
+
 //Copy a existing save, need to get more arguments. maybe a new dialog.
 void save_data_list_dialog::OnEntryCopy()
 {
@@ -268,6 +198,7 @@ void save_data_list_dialog::OnEntryCopy()
 		UpdateList();
 	}
 }
+
 //Remove a save file, need to be confirmed.
 void save_data_list_dialog::OnEntryRemove()
 {
@@ -279,6 +210,7 @@ void save_data_list_dialog::OnEntryRemove()
 		UpdateList();
 	}
 }
+
 //Display info dialog directly.
 void save_data_list_dialog::OnEntryInfo()
 {
@@ -290,23 +222,6 @@ void save_data_list_dialog::OnEntryInfo()
 		infoDialog->show();
 	}
 }
-//Display info dialog directly.
-void save_data_list_dialog::OnManage()
-{
-	int idx = m_list->currentRow();
-	if (idx != -1)
-	{
-		save_data_manage_dialog* manageDialog = new save_data_manage_dialog(&m_sort_type, m_save_entries[idx], this);
-		manageDialog->setModal(true);
-		manageDialog->show();
-	}
-}
-
-/** When you press that select button in the Chooser mode, set the selected entry to the current row*/
-void save_data_list_dialog::OnSelect()
-{
-	m_selectedEntry = m_list->currentRow();
-}
 
 //Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_data_list_dialog::ShowContextMenu(const QPoint &pos)
@@ -315,7 +230,7 @@ void save_data_list_dialog::ShowContextMenu(const QPoint &pos)
 	QMenu* menu = new QMenu();
 	int idx = m_list->currentRow();
 
-	userIDAct = new QAction(tr("UserID"), this);
+	saveIDAct = new QAction(tr("SaveID"), this);
 	titleAct = new QAction(tr("Title"), this);
 	subtitleAct = new QAction(tr("Subtitle"), this);
 	copyAct = new QAction(tr("&Copy"), this);
@@ -324,10 +239,9 @@ void save_data_list_dialog::ShowContextMenu(const QPoint &pos)
 
 	//This is also a stub for the sort setting. Ids is set according to their sort-type integer.
 	m_sort_options = new QMenu(tr("&Sort"));
-	m_sort_options->addAction(userIDAct);
 	m_sort_options->addAction(titleAct);
 	m_sort_options->addAction(subtitleAct);
-	m_sort_type_count = 3; // set this !!!
+	m_sort_options->addAction(saveIDAct);
 
 	menu->addMenu(m_sort_options);
 	menu->addSeparator();
@@ -344,9 +258,9 @@ void save_data_list_dialog::ShowContextMenu(const QPoint &pos)
 	connect(removeAct, &QAction::triggered, this, &save_data_list_dialog::OnEntryRemove);
 	connect(infoAct, &QAction::triggered, this, &save_data_list_dialog::OnEntryInfo);
 
-	connect(userIDAct, &QAction::triggered, this, [=] {OnSort(0); });
-	connect(titleAct, &QAction::triggered, this, [=] {OnSort(1); });
-	connect(subtitleAct, &QAction::triggered, this, [=] {OnSort(2); });
+	connect(titleAct, &QAction::triggered, this, [=] {OnSort(0); });
+	connect(subtitleAct, &QAction::triggered, this, [=] {OnSort(1); });
+	connect(saveIDAct, &QAction::triggered, this, [=] {OnSort(2); });
 
 	menu->exec(globalPos);
 }
@@ -360,15 +274,16 @@ void save_data_list_dialog::LoadEntries(void)
 void save_data_list_dialog::UpdateList(void)
 {
 	m_list->clearContents();
-	int numRows = m_save_entries.size();
 	m_list->setRowCount(m_save_entries.size());
-
 	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 	int row = 0;
 	for (SaveDataEntry entry: m_save_entries)
 	{ 
-		m_list->setItem(row, 0, new QTableWidgetItem(qstr(entry.title)));
+		QTableWidgetItem* item = new QTableWidgetItem(qstr(entry.title));
+		item->setData(Qt::UserRole, row); // For sorting to work properly
+		m_list->setItem(row, 0, item);
 		m_list->setItem(row, 1, new QTableWidgetItem(qstr(entry.subtitle)));
 		m_list->setItem(row, 2, new QTableWidgetItem(qstr(entry.dirName)));
 
