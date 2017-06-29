@@ -134,14 +134,14 @@ class PPUTranslator final //: public CPUTranslator
 	/* Variables */
 
 	// Memory base
-	llvm::Value* m_base;
+	llvm::GlobalVariable* m_base;
 	llvm::Value* m_base_loaded;
 
 	// Thread context
 	llvm::Value* m_thread;
 
 	// Callable functions
-	llvm::Value* m_call;
+	llvm::GlobalVariable* m_call;
 
 	// Main block
 	llvm::BasicBlock* m_body;

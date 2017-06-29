@@ -982,6 +982,9 @@ extern void ppu_initialize(const ppu_module& info)
 	// Worker threads
 	std::vector<std::thread> jthreads;
 
+	// Global variables (pointers) to initialize
+	std::vector<std::pair<std::string, void*>> globals;
+
 	// Split module into fragments <= 1 MiB
 	std::size_t fpos = 0;
 
@@ -1078,6 +1081,9 @@ extern void ppu_initialize(const ppu_module& info)
 			break;
 		}
 
+		globals.emplace_back(fmt::format("__mptr%x", part.funcs[0].addr), vm::g_base_addr);
+		globals.emplace_back(fmt::format("__cptr%x", part.funcs[0].addr), vm::g_exec_addr);
+
 		// Check object file
 		if (fs::is_file(Emu.GetCachePath() + obj_name))
 		{
@@ -1141,6 +1147,15 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				ppu_ref(block.first) = ::narrow<u32>(jit.get(fmt::format("__0x%x", block.first)));
 			}
+		}
+	}
+
+	// Initialize global variables
+	for (auto& var : globals)
+	{
+		if (u64 addr = jit.get(var.first))
+		{
+			*reinterpret_cast<void**>(addr) = var.second;
 		}
 	}
 #endif
@@ -1277,6 +1292,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			out.flush();
 			LOG_ERROR(PPU, "LLVM: Verification failed for %s:\n%s", obj_name, result);
+			Emu.CallAfter([]{ Emu.Stop(); });
 			return;
 		}
 
