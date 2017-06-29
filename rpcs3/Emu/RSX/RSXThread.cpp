@@ -1228,4 +1228,17 @@ namespace rsx
 
 		return (m_vertex_streaming_task.remaining_packets == 0 && m_vertex_streaming_task.ready_threads == 0);
 	}
+
+	void thread::flip(int buffer)
+	{
+		if (g_cfg.video.frame_skip_enabled)
+		{
+			m_skip_frame_ctr++;
+
+			if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
+				m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+
+			skip_frame = (m_skip_frame_ctr < 0);
+		}
+	}
 }

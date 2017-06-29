@@ -317,6 +317,10 @@ struct cfg_root : cfg::node
 		cfg::_bool batch_instanced_geometry{this, "Batch Instanced Geometry", false};
 		cfg::_int<1, 16> vertex_upload_threads{ this, "Vertex Upload Threads", 1 };
 
+		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip"};
+		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consequtive Frames Drawn", 1};
+		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consequtive Frames Skept", 1};
+
 		struct node_d3d12 : cfg::node
 		{
 			node_d3d12(cfg::node* _this) : cfg::node(_this, "D3D12") {}
