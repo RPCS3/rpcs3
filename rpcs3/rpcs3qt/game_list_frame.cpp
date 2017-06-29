@@ -255,30 +255,14 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
 			xgui_settings->SetGamelistColVisibility(col, val);
 		};
-		columnActs[col]->setChecked(xgui_settings->GetGamelistColVisibility(col));
+
 		connect(columnActs[col], &QAction::triggered, l_CallBack);
 	}
-
-	// Init
-	LoadSettings();
 }
 
 void game_list_frame::LoadSettings()
 {
 	QByteArray state = xgui_settings->GetValue(GUI::gl_state).toByteArray();
-
-	for (int col = 0; col < columnActs.count(); ++col)
-	{
-		bool vis = xgui_settings->GetGamelistColVisibility(col);
-		columnActs[col]->setChecked(vis);
-		gameList->setColumnHidden(col, !vis);
-	}
-	bool sortAsc = Qt::SortOrder(xgui_settings->GetValue(GUI::gl_sortAsc).toBool());
-	m_colSortOrder = sortAsc ? Qt::AscendingOrder : Qt::DescendingOrder;
-
-	m_sortColumn = xgui_settings->GetValue(GUI::gl_sortCol).toInt();
-
-	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
 	if (state.isEmpty())
 	{ // If no settings exist, go to default.
@@ -293,6 +277,22 @@ void game_list_frame::LoadSettings()
 	{
 		gameList->horizontalHeader()->restoreState(state);
 	}
+
+	for (int col = 0; col < columnActs.count(); ++col)
+	{
+		bool vis = xgui_settings->GetGamelistColVisibility(col);
+		columnActs[col]->setChecked(vis);
+		gameList->setColumnHidden(col, !vis);
+	}
+
+	gameList->horizontalHeader()->restoreState(gameList->horizontalHeader()->saveState());
+	gameList->horizontalHeader()->stretchLastSection();
+
+	m_colSortOrder = xgui_settings->GetValue(GUI::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
+
+	m_sortColumn = xgui_settings->GetValue(GUI::gl_sortCol).toInt();
+
+	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
 	Refresh(true);
 }
