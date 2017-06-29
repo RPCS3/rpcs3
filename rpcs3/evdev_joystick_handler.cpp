@@ -1,4 +1,4 @@
-#ifdef __linux__
+#ifdef HAVE_LIBEVDEV
 
 #include "evdev_joystick_handler.h"
 #include "Utilities/Thread.h"

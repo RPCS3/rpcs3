@@ -68,7 +68,7 @@ enum class pad_handler
 #ifdef _WIN32
 	mm,
 #endif
-#ifdef __linux__
+#ifdef HAVE_LIBEVDEV
 	evdev,
 #endif
 };
