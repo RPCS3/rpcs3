@@ -97,6 +97,12 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	// Process blocks
 	const auto block = std::make_pair(info.addr, info.size);
 	{
+		// Optimize BLR (prefetch LR)
+		if (vm::ps3::read32(vm::cast(block.first + block.second - 4)) == ppu_instructions::BLR())
+		{
+			RegLoad(m_lr);
+		}
+
 		// Process the instructions
 		for (m_current_addr = block.first; m_current_addr < block.first + block.second; m_current_addr += 4)
 		{
@@ -149,6 +155,7 @@ Value* PPUTranslator::RotateLeft(Value* arg, Value* n)
 void PPUTranslator::CallFunction(u64 target, Value* indirect)
 {
 	const auto type = FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false);
+	const auto block = m_ir->GetInsertBlock();
 
 	if (!indirect)
 	{
@@ -162,12 +169,21 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 	}
 	else
 	{
-		const auto addr = indirect ? indirect : (Value*)m_ir->getInt64(target);
-		const auto pos = m_ir->CreateLShr(addr, 2, "", true);
+		// Try to optimize
+		if (auto inst = dyn_cast_or_null<Instruction>(indirect))
+		{
+			if (auto next = inst->getNextNode())
+			{
+				m_ir->SetInsertPoint(next);
+			}
+		}
+
+		const auto pos = m_ir->CreateLShr(indirect, 2, "", true);
 		const auto ptr = m_ir->CreateGEP(m_ir->CreateLoad(m_call), {m_ir->getInt64(0), pos});
 		indirect = m_ir->CreateIntToPtr(m_ir->CreateLoad(ptr), type->getPointerTo());
 	}
 
+	m_ir->SetInsertPoint(block);
 	m_ir->CreateCall(indirect, {m_thread})->setTailCallKind(llvm::CallInst::TCK_Tail);
 	m_ir->CreateRetVoid();
 }
@@ -176,11 +192,13 @@ Value* PPUTranslator::RegInit(Value*& local)
 {
 	const auto index = ::narrow<uint>(&local - m_locals);
 
-	if (!m_globals[index])
+	if (auto old = cast_or_null<Instruction>(m_globals[index]))
 	{
-		// Initialize global, will be written in FlushRegisters
-		m_globals[index] = m_ir->CreateStructGEP(nullptr, m_thread, index);
+		old->eraseFromParent();
 	}
+
+	// (Re)Initialize global, will be written in FlushRegisters
+	m_globals[index] = m_ir->CreateStructGEP(nullptr, m_thread, index);
 
 	return m_globals[index];
 }
@@ -210,19 +228,30 @@ void PPUTranslator::RegStore(llvm::Value* value, llvm::Value*& local)
 
 void PPUTranslator::FlushRegisters()
 {
+	const auto block = m_ir->GetInsertBlock();
+
 	for (auto& local : m_locals)
 	{
 		const uint index = static_cast<uint>(&local - m_locals);
 
+		// Store value if necessary
 		if (local && m_globals[index])
 		{
-			// Store value if necessary
-			m_ir->CreateStore(local, m_globals[index]);
+			if (auto next = cast<Instruction>(m_globals[index])->getNextNode())
+			{
+				m_ir->SetInsertPoint(next);
+			}
+			else
+			{
+				m_ir->SetInsertPoint(block);
+			}
 
-			// Don't need to store again
+			m_ir->CreateStore(local, m_globals[index]);
 			m_globals[index] = nullptr;
 		}
 	}
+
+	m_ir->SetInsertPoint(block);
 }
 
 Value* PPUTranslator::Solid(Value* value)
@@ -1569,8 +1598,7 @@ void PPUTranslator::BC(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		RegInit(m_lr);
-		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
+		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
 	}
 
 	CallFunction(target);
@@ -1629,16 +1657,13 @@ void PPUTranslator::MCRF(ppu_opcode_t op)
 
 void PPUTranslator::BCLR(ppu_opcode_t op)
 {
-	RegInit(m_lr);
-
 	const auto target = RegLoad(m_lr);
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
 
 	if (op.lk)
 	{
-		RegInit(m_lr);
-		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
+		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
 	}
 
 	CallFunction(0, target);
@@ -1701,8 +1726,7 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		RegInit(m_lr);
-		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_g_lr);
+		m_ir->CreateStore(m_ir->getInt64(m_current_addr + 4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
 	}
 
 	CallFunction(0, target);
