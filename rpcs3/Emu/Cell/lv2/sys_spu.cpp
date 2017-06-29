@@ -18,14 +18,12 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_spu("sys_spu");
 
-void sys_spu_image::load_from_memory(u32 data_addr, u32 type)
+void sys_spu_image::load(u32 data_addr, u32 type)
 {
 	auto stream = fs::file{ vm::base(data_addr), size_t(-1) };
 	if (type == SYS_SPU_IMAGE_PROTECT)
 	{
-		// TODO Add SYS_SPU_IMAGE_PROTECT
-		this->load(stream);
-		return;
+		LOG_TODO(SPU, "TODO Loading SYS_SPU_IMAGE_PROTECT SPU as SYS_SPU_IMAGE_DIRECT");
 	}
 
 	const spu_exec_object obj{ stream };
@@ -38,7 +36,7 @@ void sys_spu_image::load_from_memory(u32 data_addr, u32 type)
 	int number_segs = obj.progs.size();
 	for (const auto& prog : obj.progs)
 	{
-		if (prog.p_memsz != prog.p_filesz)
+		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY && prog.p_memsz != prog.p_filesz)
 		{
 			number_segs++;
 		}
@@ -124,72 +122,6 @@ void sys_spu_image::load_from_memory(u32 data_addr, u32 type)
 	{
 		// Alternative patch
 		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + data_addr);
-	}
-}
-
-void sys_spu_image::load(const fs::file& stream)
-{
-	//TODO Check if some of the corrections from load_from_memory apply here, too
-	const spu_exec_object obj{ stream };
-
-	if (obj != elf_error::ok)
-	{
-		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
-	}
-
-	this->type = SYS_SPU_IMAGE_TYPE_KERNEL;
-	this->entry_point = obj.header.e_entry;
-	this->segs.set(vm::alloc(65 * 4096, vm::main));
-	this->nsegs = 0;
-
-	const u32 addr = this->segs.addr() + 4096;
-	LOG_NOTICE(SPU, "* SPU Image: base address=0x%x", addr);
-
-	for (const auto& shdr : obj.shdrs)
-	{
-		LOG_NOTICE(SPU, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", shdr.sh_type, shdr.sh_addr, shdr.sh_size, shdr.sh_flags);
-	}
-
-	for (const auto& prog : obj.progs)
-	{
-		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
-
-		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY)
-		{
-			auto& seg = segs[nsegs++];
-			seg.type = prog.p_type;
-			seg.ls = prog.p_vaddr;
-			seg.addr = addr + prog.p_vaddr;
-			seg.size = std::min(prog.p_filesz, prog.p_memsz);
-
-			if ((prog.p_vaddr + seg.size) > 64 * 0x1000)
-			{
-				LOG_FATAL(SPU, "** Initial allocation not big enough for segment, will probably crash");
-			}
-
-			std::memcpy(vm::base(seg.addr), prog.bin.data(), seg.size);
-
-			if (prog.p_memsz > prog.p_filesz)
-			{
-				auto& zero = segs[nsegs++];
-				zero.type = SYS_SPU_SEGMENT_TYPE_FILL;
-				zero.ls = prog.p_vaddr + prog.p_filesz;
-				zero.addr = 0;
-				zero.size = prog.p_memsz - seg.size;
-			}
-		}
-		else if (prog.p_type == SYS_SPU_SEGMENT_TYPE_INFO)
-		{
-			auto& seg = segs[nsegs++];
-			seg.type = SYS_SPU_SEGMENT_TYPE_INFO;
-			seg.ls = prog.p_vaddr;
-			seg.addr = 0;
-			seg.size = prog.p_filesz;
-		}
-		else
-		{
-			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
-		}
 	}
 }
 
@@ -279,16 +211,36 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
 
-	// TODO shouldn't load SCE files
-	if (!elf_file)
+	if (elf_file)
 	{
-		sys_spu.error("sys_spu_image_open() error: %s not found!", path);
 		return CELL_ENOENT;
 	}
 
-	img->load(elf_file);
+	u64 file_size = elf_file.size();
+	if (!file_size)
+	{
+		return CELL_ENOENT;
+	}
+	else if (file_size > UINT_MAX)
+	{
+		return CELL_ENOMEM;
+	}
+
+	u32 elf_addr = vm::alloc((u32)file_size, vm::main);
+	if (!elf_addr)
+	{
+		return CELL_ENOMEM;
+	}
+
+	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
+	if (!bytes_read)
+	{
+		return CELL_ENOENT;
+	}
+
+	img->load(elf_addr, SYS_SPU_IMAGE_DIRECT);
 
 	return CELL_OK;
 }

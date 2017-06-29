@@ -1123,7 +1123,7 @@ s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segment
 	const auto& put = vm::_ref<CellGcmControl>(gcm_info.control_addr).put;
 	const auto& get = vm::_ref<CellGcmControl>(gcm_info.control_addr).get;
 
-	if (put != 0x1000 || get != 0x1000 || bufferSize < segmentSize * 2 || segmentSize * 2 < segmentSize)
+	if (put != 0x1000 || get != 0x1000 || bufferSize < segmentSize * 2 || segmentSize >= 0x80000000)
 	{
 		return CELL_GCM_ERROR_FAILURE;
 	}
