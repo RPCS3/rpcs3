@@ -282,22 +282,26 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 	u64 file_size = elf_file.size();
 	if (!file_size)
 	{
+		sys_spu.error("sys_spu_image_open: Given file is 0 sized");
 		return CELL_ENOENT;
 	}
 	else if (file_size > UINT_MAX)
 	{
+		sys_spu.error("sys_spu_image_open: File size too large");
 		return CELL_ENOMEM;
 	}
 
 	u32 elf_addr = vm::alloc((u32)file_size, vm::main);
 	if (!elf_addr)
 	{
+		sys_spu.error("sys_spu_image_open: Failed allocating elf");
 		return CELL_ENOMEM;
 	}
 
 	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
 	if (!bytes_read)
 	{
+		sys_spu.error("sys_spu_image_open: Failed reading ELF into memory");
 		return CELL_ENOENT;
 	}
 
