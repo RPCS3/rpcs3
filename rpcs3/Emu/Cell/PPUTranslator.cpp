@@ -80,6 +80,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 	m_thread = &*m_function->getArgumentList().begin();
 	m_base_loaded = m_ir->CreateLoad(m_base);
+
 	m_body = BasicBlock::Create(m_context, "__body", m_function);
 
 	// Check status register in the entry block
@@ -2016,13 +2017,22 @@ void PPUTranslator::CMP(ppu_opcode_t op)
 
 void PPUTranslator::TW(ppu_opcode_t op)
 {
-	UseCondition(m_md_unlikely, CheckTrapCondition(op.bo, GetGpr(op.ra, 32), GetGpr(op.rb, 32)));
+	if (op.opcode != ppu_instructions::TRAP())
+	{
+		UseCondition(m_md_unlikely, CheckTrapCondition(op.bo, GetGpr(op.ra, 32), GetGpr(op.rb, 32)));
+	}
+	else
+	{
+		FlushRegisters();
+	}
+
 	Trap(m_current_addr);
 }
 
 void PPUTranslator::LVSL(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsl", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsl", addr));
 }
 
 void PPUTranslator::LVEBX(ppu_opcode_t op)
@@ -2176,7 +2186,8 @@ void PPUTranslator::CMPL(ppu_opcode_t op)
 
 void PPUTranslator::LVSR(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsr", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsr", addr));
 }
 
 void PPUTranslator::LVEHX(ppu_opcode_t op)
@@ -2780,7 +2791,8 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 
 void PPUTranslator::LVLX(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<u8[16]>(), "__lvlx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	SetVr(op.vd, Call(GetType<u8[16]>(), "__lvlx", addr));
 }
 
 void PPUTranslator::LDBRX(ppu_opcode_t op)
@@ -2790,7 +2802,8 @@ void PPUTranslator::LDBRX(ppu_opcode_t op)
 
 void PPUTranslator::LSWX(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__lswx", m_ir->getInt32(op.rd), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
+	CompilationError("Unsupported instruction LSWX. Please report.");
+	Call(GetType<void>(), "__lswx_not_supported", m_ir->getInt32(op.rd), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
 }
 
 void PPUTranslator::LWBRX(ppu_opcode_t op)
@@ -2823,7 +2836,8 @@ void PPUTranslator::SRD(ppu_opcode_t op)
 
 void PPUTranslator::LVRX(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<u8[16]>(), "__lvrx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	SetVr(op.vd, Call(GetType<u8[16]>(), "__lvrx", addr));
 }
 
 void PPUTranslator::LSWI(ppu_opcode_t op)
@@ -2903,7 +2917,8 @@ void PPUTranslator::STDBRX(ppu_opcode_t op)
 
 void PPUTranslator::STSWX(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__stswx", m_ir->getInt32(op.rs), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
+	CompilationError("Unsupported instruction STSWX. Please report.");
+	Call(GetType<void>(), "__stswx_not_supported", m_ir->getInt32(op.rs), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
 }
 
 void PPUTranslator::STWBRX(ppu_opcode_t op)
@@ -3181,7 +3196,6 @@ void PPUTranslator::STHU(ppu_opcode_t op)
 
 void PPUTranslator::LMW(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__trace", m_ir->getInt64(m_current_addr));
 	for (u32 i = 0; i < 32 - op.rd; i++)
 	{
 		SetGpr(i + op.rd, ReadMemory(op.ra ? m_ir->CreateAdd(m_ir->getInt64(op.simm16 + i * 4), GetGpr(op.ra)) : m_ir->getInt64(op.simm16 + i * 4), GetType<u32>()));
@@ -3190,7 +3204,6 @@ void PPUTranslator::LMW(ppu_opcode_t op)
 
 void PPUTranslator::STMW(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__trace", m_ir->getInt64(m_current_addr));
 	for (u32 i = 0; i < 32 - op.rs; i++)
 	{
 		WriteMemory(op.ra ? m_ir->CreateAdd(m_ir->getInt64(op.simm16 + i * 4), GetGpr(op.ra)) : m_ir->getInt64(op.simm16 + i * 4), GetGpr(i + op.rs, 32));
