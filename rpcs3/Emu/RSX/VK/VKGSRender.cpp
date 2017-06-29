@@ -795,6 +795,9 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
+	if (skip_frame)
+		return;
+
 	//Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
 	if (m_used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS ||
 		m_attrib_ring_info.is_critical() ||
@@ -895,6 +898,12 @@ void VKGSRender::close_render_pass()
 
 void VKGSRender::end()
 {
+	if (skip_frame)
+	{
+		rsx::thread::end();
+		return;
+	}
+
 	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
 
 	const bool is_instanced = is_probable_instanced_draw() && m_last_descriptor_set != VK_NULL_HANDLE && m_program != nullptr;
@@ -1159,6 +1168,8 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
+	if (skip_frame) return;
+
 	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
 	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 
@@ -1870,6 +1881,24 @@ void VKGSRender::prepare_rtts()
 
 void VKGSRender::flip(int buffer)
 {
+	if (skip_frame)
+	{
+		m_frame->flip(m_context);
+		rsx::thread::flip(buffer);
+
+		if (!skip_frame)
+		{
+			m_draw_calls = 0;
+			m_instanced_draws = 0;
+			m_draw_time = 0;
+			m_setup_time = 0;
+			m_vertex_upload_time = 0;
+			m_textures_upload_time = 0;
+		}
+
+		return;
+	}
+
 	bool resize_screen = false;
 
 	if (m_client_height != m_frame->client_height() ||
@@ -2062,7 +2091,13 @@ void VKGSRender::flip(int buffer)
 	m_attrib_ring_info.reset_allocation_stats();
 	m_texture_upload_buffer_ring_info.reset_allocation_stats();
 
-	//Resource destruction is handled within the real swap handler
+	//NOTE:Resource destruction is handled within the real swap handler
+
+	m_frame->flip(m_context);
+	rsx::thread::flip(buffer);
+
+	//Do not reset perf counters if we are skipping the next frame
+	if (skip_frame) return;
 
 	m_draw_calls = 0;
 	m_instanced_draws = 0;
@@ -2070,5 +2105,4 @@ void VKGSRender::flip(int buffer)
 	m_setup_time = 0;
 	m_vertex_upload_time = 0;
 	m_textures_upload_time = 0;
-	m_frame->flip(m_context);
 }

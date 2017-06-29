@@ -151,6 +151,10 @@ namespace rsx
 		bool m_textures_dirty[16];
 		bool m_vertex_attribs_changed;
 		bool m_index_buffer_changed;
+
+	protected:
+		s32 m_skip_frame_ctr = 0;
+		bool skip_frame = false;
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
