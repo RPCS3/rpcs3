@@ -70,9 +70,14 @@ namespace rsx
 			//TODO: dma
 			//while (vm::ps3::read32(rsx->label_addr + method_registers.semaphore_offset_406e()) != arg)
             const u32 addr = get_address(method_registers.semaphore_offset_406e(), rsx->nv406e_semaphore_addr);
+            //todo: make me atomic
             while (vm::ps3::read32(addr) != arg)
 			{
-                break;
+                //if (rsx->nv406e_semaphore_addr == CELL_GCM_CONTEXT_DMA_DEVICE_R || rsx->nv406e_semaphore_addr == CELL_GCM_CONTEXT_DMA_DEVICE_RW)
+                // todo: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
+                if (addr == 0x40000030)
+                    break;
+
 				if (Emu.IsStopped())
 					break;
 
@@ -925,7 +930,7 @@ namespace rsx
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
-		rsx->reset();
+		//rsx->reset(); // moved to 'actual' rsx flip command
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->gcm_current_buffer = arg;
@@ -969,6 +974,7 @@ namespace rsx
         {
             static void impl(thread* rsx, u32 _reg, u32 arg)
             {
+                rsx->reset(); // fixes kh, so lets leave it here and see what happens
                 sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
             }
         };
