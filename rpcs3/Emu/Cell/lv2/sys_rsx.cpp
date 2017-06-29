@@ -26,21 +26,21 @@ struct RsxDriverInfo {
     be_t<u32> reportsReportOffset;// 0x34 offset to reports in reports memory
     be_t<u32> unk3[6];            // 0x38-0x54
     be_t<u32> systemModeFlags;    // 0x54
-    u8 unk4[0x105C];              // 0x10B0
+    u8 unk4[0x1064];              // 0x10B8
     struct Head {
-        be_t<u64> unk;             // 0x0
-        be_t<u64> lastFlip;        // 0x8 last flip time
-        be_t<u32> flipFlags;       // 0x10 flags to handle flip/queue
-        be_t<u32> unk1;            // 0x14
-        be_t<u32> bufferId;        // 0x18
-        be_t<u32> unk2;            // 0x1C
-        be_t<u64> unk3;            // 0x20
-        be_t<u64> lastSecondVTime; // 0x28 last time for second vhandler freq
-        be_t<u64> vBlankCount;     // 0x30 
-        be_t<u64> unk4;
-    } head[8]; // size = 0x40
-    be_t<u32> unk5;          // 0x12B0
-    be_t<u32> unk6;          // 0x12B4
+        be_t<u64> lastFlip;        // 0x0 last flip time
+        be_t<u32> flipFlags;       // 0x8 flags to handle flip/queue
+        be_t<u32> unk1;            // 0xC
+        be_t<u32> flipBufferId;    // 0x10
+        be_t<u32> queuedBufferId;  // 0x14 todo: this is definately not this variable but its 'unused' so im using it for queueId to pass to flip handler
+        be_t<u32> unk3;            // 0x18
+        be_t<u32> unk6;            // 0x18 possible low bits of time stamp?  used in getlastVBlankTime
+        be_t<u64> lastSecondVTime; // 0x20 last time for second vhandler freq
+        be_t<u64> unk4;            // 0x28 
+        be_t<u64> vBlankCount;     // 0x30
+        be_t<u32> unk;             // 0x38 possible u32, 'flip field', top/bottom for interlaced
+        be_t<u32> unk5;            // 0x3C possible high bits of time stamp? used in getlastVBlankTime
+    } head[8]; // size = 0x40, 0x200
     be_t<u32> unk7;          // 0x12B8
     be_t<u32> unk8;          // 0x12BC
     be_t<u32> handlers;      // 0x12C0 -- flags showing which handlers are set
@@ -49,11 +49,18 @@ struct RsxDriverInfo {
     be_t<u32> userCmdParam;  // 0x12CC
     be_t<u32> handler_queue; // 0x12D0
     be_t<u32> unk11;         // 0x12D4
+    be_t<u32> unk12;         // 0x12D8
+    be_t<u32> unk13;         // 0x12DC
+    be_t<u32> unk14;         // 0x12E0
+    be_t<u32> unk15;         // 0x12E4
+    be_t<u32> unk16;         // 0x12E8
+    be_t<u32> unk17;         // 0x12F0 
+    be_t<u32> lastError;     // 0x12F4 error param for cellGcmSetGraphicsHandler
     // todo: theres more to this 
 };
 template <size_t S> class Sizer { };
 Sizer<sizeof(RsxDriverInfo)> foo;
-static_assert(sizeof(RsxDriverInfo) == 0x12D8, "rsxSizeTest");
+static_assert(sizeof(RsxDriverInfo) == 0x12F8, "rsxSizeTest");
 static_assert(sizeof(RsxDriverInfo::Head) == 0x40, "rsxHeadSizeTest");
 
 struct RsxDmaControl {
@@ -163,6 +170,25 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
     *lpar_driver_info = 0x40200000;
     *lpar_reports = 0x40300000;
 
+    auto &reports = vm::_ref<RsxReports>(*lpar_reports);
+    std::memset(&reports, 0, sizeof(RsxReports));
+
+    for (int i = 0; i < 64; ++i)
+        reports.notify[i].timestamp = (u64)-1;
+
+    for (int i = 0; i < 256; ++i) {
+        reports.semaphore[i].val = 0x1337C0D3;
+        reports.semaphore[i].pad = 0x1337BABE;
+        reports.semaphore[i].timestamp = (u64)-1; // technically different but should be fine
+    }
+
+    for (int i = 0; i < 2048; ++i)
+        reports.report[i].timestamp = (u64)-1;
+
+    auto &sysReports = vm::_ref<RsxSemaphore>(0x40000030);
+    // slight hack for testing....
+    sysReports.val = 1;
+
     auto &driverInfo = vm::_ref<RsxDriverInfo>(*lpar_driver_info);
 
     std::memset(&driverInfo, 0, sizeof(RsxDriverInfo));
@@ -176,12 +202,14 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
     driverInfo.reportsOffset = 0;
     driverInfo.reportsReportOffset = 0x1400;
     driverInfo.systemModeFlags = system_mode;
+    driverInfo.hardware_channel = 1; // * i think* this 1 for games, 0 for vsh
 
     g_driverInfo = *lpar_driver_info;
 
     auto &dmaControl = vm::_ref<RsxDmaControl>(*lpar_dma_control);
     dmaControl.get = 0;
     dmaControl.put = 0;
+    dmaControl.ref = 0xFFFFFFFF;
 
     if (false/*system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB*/)
         RSXIOMem.SetRange(0, 0x20000000 /*512MB*/);
@@ -205,10 +233,9 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
     //render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
     //render->intr_thread->run();
     //render->ctxt_addr = 0;
-    render->gcm_buffers.set(vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main));
+    render->gcm_buffers.set((vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main)));
     render->zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
-    render->tiles_addr = vm::alloc(sizeof(CellGcmTileInfo) * 15, vm::main);
-    render->gcm_buffers_count = 7;
+    render->gcm_buffers_count = 0;
     render->gcm_current_buffer = 0;
     render->main_mem_addr = 0;
     render->label_addr = *lpar_reports;
@@ -304,7 +331,9 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
         driverInfo.head[a3].flipFlags |= 0x80000000;
         driverInfo.head[a3].lastFlip = rsxTimeStamp(); // should rsxthread set this?
         // lets give this a shot for giving bufferid back to gcm
-        driverInfo.head[a3].bufferId = a4 & 0xFF;
+        driverInfo.head[a3].flipBufferId = driverInfo.head[a3].queuedBufferId;
+        // seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
+        vm::_ref<u32>(0x40300010) = 0;
         if (a3 == 0)
             sys_event_port_send(g_rsx_event_port, 0, (1 << 3), 0);
         if (a3 == 1)
@@ -312,6 +341,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		break;
 
 	case 0x103: // Display Queue
+        driverInfo.head[a3].queuedBufferId = a4;
         driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
         if (a3 == 0)
             sys_event_port_send(g_rsx_event_port, 0, (1 << 5), 0);
@@ -331,6 +361,9 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
         render->gcm_buffers[id].height = height;
         render->gcm_buffers[id].pitch = pitch;
         render->gcm_buffers[id].offset = offset;
+
+        if (id + 1 > render->gcm_buffers_count)
+            render->gcm_buffers_count = id + 1;
     }
 	break;
     case 0x105: // destroy buffer?
@@ -354,7 +387,26 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
         break;
 
 	case 0x300: // Tiles
-		break;
+    {
+        //a4 high bits = ret.tile = (location + 1) | (bank << 4) | ((offset / 0x10000) << 16) | (location << 31);
+        //a4 low bits = ret.limit = ((offset + size - 1) / 0x10000) << 16 | (location << 31);
+        //a5 high bits = ret.pitch = (pitch / 0x100) << 8;
+        //a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
+
+        auto& tile = render->tiles[a3];
+        tile.location = ((a4 >> 32) & 0xF) - 1;
+        tile.offset = ((((a4 >> 32) & 0xFFFFFFFF) >> 16) * 0x10000);
+        tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset; // size is wrong, 
+        tile.pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
+        tile.comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
+        tile.base = (a5 & 0xFFFFFFFF) & 0x7FF;
+        tile.bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
+        tile.binded = a5 != 0;
+
+        sys_rsx.error("package 0x300 tile, index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d",
+            a3, tile.location, tile.offset, tile.size, tile.pitch, tile.comp, tile.base, tile.bank);
+    }
+	break;
 
 	case 0x301: // Depth-buffer (Z-cull)
 		break;
