@@ -14,7 +14,6 @@ namespace
 ComPtr<ID3D11Device> g_d3d11_device;
 ComPtr<ID3D11DeviceContext> g_d3d11_device_context;
 ComPtr<ID3D11On12Device> g_d3d11on12_device;
-ComPtr<ID3D12Device> g_d3d12_device;
 ComPtr<IDWriteFactory> g_dwrite_factory;
 ComPtr<ID2D1Factory3> g_d2d_factory;
 ComPtr<ID2D1Device2> g_d2d_device;
@@ -136,7 +135,6 @@ void D3D12GSRender::release_d2d_structures()
 	g_d3d11_device.Reset();
 	g_d3d11_device_context.Reset();
 	g_d3d11on12_device.Reset();
-	g_d3d12_device.Reset();
 	g_dwrite_factory.Reset();
 	g_d2d_factory.Reset();
 	g_d2d_device.Reset();

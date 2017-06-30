@@ -112,6 +112,7 @@ struct ppu_linkage_info
 			bool hle = false;
 			u32 export_addr = 0;
 			std::set<u32> imports;
+			std::set<u32> weak_imports;
 		};
 
 		// FNID -> (export; [imports...])
@@ -341,33 +342,57 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 	}
 }
 
-// Link variable
-static void ppu_patch_variable_refs(u32 vref, u32 vaddr)
+// Link variables/weak imports, looks to be literally the same as vrefs
+// Don't use bool flag in VREFs, originally it didn't have it
+static void ppu_patch_refs(u32 fref, u32 faddr)
 {
-	struct vref_t
+	struct ref_t
 	{
 		be_t<u32> type;
 		be_t<u32> addr;
 		be_t<u32> addend; // Note: Treating it as addend seems to be correct for now, but still unknown if theres more in this variable
 	};
 
-	for (auto ref = vm::ptr<vref_t>::make(vref); ref->type; ref++)
+	for (auto ref = vm::ptr<ref_t>::make(fref); ref->type; ref++)
 	{
-		if (ref->addend) LOG_WARNING(LOADER, "**** VREF(%u): Addend value(0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
+		if (ref->addend) LOG_WARNING(LOADER, "**** REF(%u): Addend value(0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
+
+		const auto ref_import = vm::ptr<u32>::make(faddr + ref->addend);
+
+		const auto addr = faddr + ref->addend;
 
 		// OPs are probably similar to relocations
 		switch (u32 type = ref->type)
 		{
 		case 0x1:
 		{
-			const u32 value = vm::_ref<u32>(ref->addr) = vaddr + ref->addend;
-			LOG_WARNING(LOADER, "**** VREF(1): 0x%x <- 0x%x", ref->addr, value);
+			const u32 value = vm::_ref<u32>(ref->addr) = addr;
+			LOG_TRACE(LOADER, "**** REF(1): 0x%x <- 0x%x", ref->addr, value);
 			break;
 		}
 
 		case 0x4:
+		{
+			const u16 value = vm::_ref<u16>(ref->addr) = static_cast<u16>(addr);
+			LOG_TRACE(LOADER, "**** REF(4): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
+			break;
+		}
+
 		case 0x6:
-		default: LOG_ERROR(LOADER, "**** VREF(%u): Unknown/Illegal type (0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
+		{
+			const u16 value = vm::_ref<u16>(ref->addr) = static_cast<u16>(addr >> 16) + (addr & 0x8000 ? 1 : 0);
+			LOG_TRACE(LOADER, "**** REF(6): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
+			break;
+		}
+
+		case 57:
+		{
+			const u16 value = vm::_ref<ppu_bf_t<be_t<u16>, 0, 14>>(ref->addr) = static_cast<u16>(addr) >> 2;
+			LOG_TRACE(LOADER, "**** REF(57): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
+			break;
+		}
+
+		default: LOG_ERROR(LOADER, "**** REF(%u): Unknown/Illegal type (0x%x, 0x%x)", ref->type, ref->addr, ref->addend);
 		}
 	}
 }
@@ -497,6 +522,11 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 						vm::write32(addr, faddr);
 						//LOG_WARNING(LOADER, "Exported function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
 					}
+
+					for (const u32 weak_import_addr : flink.weak_imports)
+					{
+						ppu_patch_refs(weak_import_addr, faddr);
+					}
 				}
 			}
 		}
@@ -527,7 +557,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 				// Fix imports
 				for (const auto vref : vlink.imports)
 				{
-					ppu_patch_variable_refs(vref, vaddr);
+					ppu_patch_refs(vref, vaddr);
 					//LOG_WARNING(LOADER, "Exported variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 				}
 			}
@@ -587,6 +617,13 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 				vm::write32(faddr, ppu_function_manager::addr);
 			}
 
+			//weak imports, possibly
+			if (((lib.attributes & 0x2000) == 0x2000) && fnids[i + lib.num_func] != 0)	//0x2000 seems to be correct flag
+			{
+				flink.weak_imports.emplace(fnids[i + lib.num_func]);
+				ppu_patch_refs(fnids[i + lib.num_func], flink.export_addr);
+			}
+
 			//LOG_WARNING(LOADER, "Imported function '%s' in module '%s' (0x%x)", ppu_get_function_name(module_name, fnid), module_name, faddr);
 		}
 
@@ -609,7 +646,7 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			// Link if available
 			if (vlink.export_addr)
 			{
-				ppu_patch_variable_refs(vref, vlink.export_addr);
+				ppu_patch_refs(vref, vlink.export_addr);
 			}
 
 			//LOG_WARNING(LOADER, "Imported variable '%s' in module '%s' (0x%x)", ppu_get_variable_name(module_name, vnid), module_name, vlink.first);
@@ -1194,13 +1231,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	{
-		// Analyse executable
-		std::vector<ppu_function> main_funcs = ppu_analyse(segments, sections, 0, elf.header.e_entry);
+		// Analyse executable (TODO)
+		ppu_module _main;
+		_main.funcs = ppu_analyse(segments, sections, 0, elf.header.e_entry);
 
-		ppu_validate(vfs::get(Emu.GetPath()), main_funcs, 0);
+		// Validate analyser results (not required)
+		ppu_validate(vfs::get(Emu.GetPath()), _main.funcs, 0);
 
-		// Share function list
-		fxm::make<std::vector<ppu_function>>(std::move(main_funcs));
+		// Set for delayed initialization in ppu_initialize()
+		fxm::make<ppu_module>(std::move(_main));
 	}
 
 	// Set SDK version

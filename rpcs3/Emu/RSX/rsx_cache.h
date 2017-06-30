@@ -38,14 +38,21 @@ namespace rsx
 		u32  rsx_address;
 	};
 
+	enum protection_policy
+	{
+		protect_policy_one_page,	//Only guard one page, preferrably one where this section 'wholly' fits
+		protect_policy_full_range	//Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
+	};
+
 	class buffered_section
 	{
+	private:
+		u32 locked_address_base = 0;
+		u32 locked_address_range = 0;
+
 	protected:
 		u32 cpu_address_base = 0;
 		u32 cpu_address_range = 0;
-
-		u32 locked_address_base = 0;
-		u32 locked_address_range = 0;
 
 		utils::protection protection = utils::protection::rw;
 
@@ -62,7 +69,7 @@ namespace rsx
 		buffered_section() {}
 		~buffered_section() {}
 
-		void reset(u32 base, u32 length)
+		void reset(u32 base, u32 length, protection_policy protect_policy= protect_policy_full_range)
 		{
 			verify(HERE), locked == false;
 
@@ -70,7 +77,24 @@ namespace rsx
 			cpu_address_range = length;
 
 			locked_address_base = (base & ~4095);
-			locked_address_range = align(base + length, 4096) - locked_address_base;
+
+			if (protect_policy == protect_policy_one_page)
+			{
+				locked_address_range = 4096;
+				if (locked_address_base < base)
+				{
+					//Try the next page if we can
+					//TODO: If an object spans a boundary without filling either side, guard the larger page occupancy
+					const u32 next_page = locked_address_base + 4096;
+					if ((base + length) >= (next_page + 4096))
+					{
+						//The object spans the entire page. Guard this instead
+						locked_address_base = next_page;
+					}
+				}
+			}
+			else
+				locked_address_range = align(base + length, 4096) - locked_address_base;
 
 			protection = utils::protection::rw;
 			locked = false;

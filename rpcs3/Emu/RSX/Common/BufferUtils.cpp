@@ -648,7 +648,7 @@ u32 get_index_type_size(rsx::index_array_type type)
 	fmt::throw_exception("Wrong index type" HERE);
 }
 
-void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned first, unsigned count)
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
 {
 	unsigned short *typedDst = (unsigned short *)(dst);
 	switch (draw_mode)

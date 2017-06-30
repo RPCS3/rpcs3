@@ -375,6 +375,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, std::uintptr_t>
 
 	if (m_link.empty())
 	{
+		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
 			.setErrorStr(&result)
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
@@ -384,6 +385,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, std::uintptr_t>
 	}
 	else
 	{
+		// Primary JIT
 		auto mem = std::make_unique<MemoryManager>(m_link);
 		m_jit_el = std::make_unique<EventListener>(*mem);
 
@@ -433,9 +435,9 @@ void jit_compiler::fin()
 	m_engine->finalizeObject();
 }
 
-u64 jit_compiler::get(const std::string & name)
+u64 jit_compiler::get(const std::string& name)
 {
-	return m_engine->getFunctionAddress(name);
+	return m_engine->getGlobalValueAddress(name);
 }
 
 std::unordered_map<std::string, u64> jit_compiler::add(std::unordered_map<std::string, std::string> data)

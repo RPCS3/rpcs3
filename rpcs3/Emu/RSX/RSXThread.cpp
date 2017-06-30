@@ -273,7 +273,7 @@ namespace rsx
 
 	void thread::begin()
 	{
-		rsx::method_registers.current_draw_clause.inline_vertex_array.clear();
+		rsx::method_registers.current_draw_clause.inline_vertex_array.resize(0);
 		in_begin_end = true;
 	}
 
@@ -865,6 +865,7 @@ namespace rsx
 		RSXVertexProgram result = {};
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		result.data.reserve((512 - transform_program_start) * 4);
+		result.rsx_vertex_inputs.reserve(rsx::limits::vertex_count);
 
 		for (int i = transform_program_start; i < 512; ++i)
 		{
@@ -881,7 +882,7 @@ namespace rsx
 
 		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
-		result.rsx_vertex_inputs.clear();
+
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			bool enabled = !!(input_mask & (1 << index));

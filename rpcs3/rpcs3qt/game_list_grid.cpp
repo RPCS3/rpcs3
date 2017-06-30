@@ -69,8 +69,13 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 	QImage exp_img = QImage(exp_size, QImage::Format_ARGB32);
 	exp_img.fill(Qt::transparent);
 
+	// create background for image
+	QImage bg_img = QImage(img.size(), QImage::Format_ARGB32);
+	bg_img.fill(QColor(209, 209, 209, 255));
+
 	// place raw image inside expanded image
 	QPainter painter(&exp_img);
+	painter.drawImage(offset, bg_img);
 	painter.drawPixmap(offset, img);
 	painter.end();
 

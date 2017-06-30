@@ -174,7 +174,9 @@ void gui_settings::ShowInfoBox(const GUI_SAVE& entry, const QString& title, cons
 
 void gui_settings::SetGamelistColVisibility(int col, bool val)
 {
-	SetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", true), val);
+	// hide sound format and parental level
+	bool show = col != 8 && col != 9;
+	SetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", show), val);
 }
 
 void gui_settings::SaveCurrentConfig(const QString& friendlyName)
@@ -190,7 +192,9 @@ logs::level gui_settings::GetLogLevel()
 
 bool gui_settings::GetGamelistColVisibility(int col)
 {
-	return GetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", true)).toBool();
+	// hide sound format and parental level
+	bool show = col != 8 && col != 9;
+	return GetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", show)).toBool();
 }
 
 QStringList gui_settings::GetConfigEntries()
