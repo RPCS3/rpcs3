@@ -169,10 +169,17 @@ class game_list_frame : public QDockWidget {
 	Q_OBJECT
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent = nullptr);
 	~game_list_frame();
+
+	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
 	void Refresh(const bool fromDrive = false);
+
+	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);
+
+	/** Returns the tool bar visibility. Public so that main frame can check the menu action accordingly */
+	bool GetToolBarVisible();
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
 	void LoadSettings();
@@ -180,12 +187,14 @@ public:
 	/** Saves settings. Public so that main frame can save this when a caching of column widths is needed for settings backup */
 	void SaveSettings();
 
-public Q_SLOTS:
 	/** Resize Gamelist Icons to size */
-	void ResizeIcons(const QSize& size, const int& idx);
+	void ResizeIcons(const QString& sizeStr, const QSize& size, const int& index);
+
+public Q_SLOTS:
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);
 	void SetCategoryActIcon(const int& id, const bool& active);
+	void SetSearchText(const QString& text);
 
 private Q_SLOTS:
 	void Boot(int row);
@@ -272,6 +281,7 @@ private:
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
 	QStringList m_categoryFilters;
+	QString m_searchText;
 	Render_Creator m_Render_Creator;
 
 	uint m_games_per_row = 0;
