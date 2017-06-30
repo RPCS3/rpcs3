@@ -352,11 +352,11 @@ void game_list_frame::Refresh(bool fromDrive)
 		const std::string& game_path = Emu.GetGameDir();
 		const std::string& disc_path = Emu.GetDiscDir();
 
-		for (auto path : { game_path, disc_path })
+		for (const auto& path : { game_path, disc_path })
 		{
 			for (const auto& entry : fs::dir(path))
 			{
-				if (!entry.is_directory)
+				if (!entry.is_directory || entry.name == "." || entry.name == ".." || entry.name == "TEST12345")
 				{
 					continue;
 				}
@@ -364,16 +364,35 @@ void game_list_frame::Refresh(bool fromDrive)
 				const std::string& dir = path + entry.name;
 				std::string sfo = dir + "/PARAM.SFO";
 
-				const bool& is_disc_path = path == disc_path && fs::is_file(dir + "/PS3_DISC.SFB");
-
-				if (is_disc_path)
+				if (path == disc_path)
 				{
 					sfo = dir + "/PS3_GAME/PARAM.SFO";
+					if (!fs::is_file(sfo) || !fs::is_file(dir + "/PS3_DISC.SFB"))
+					{
+						LOG_ERROR(GENERAL, "Failed to load dev_hdd0/disc/%s because it's NOT a disc game. Move it to dev_hdd0/game", entry.name);
+						continue;
+					}
+				}
+				else
+				{
+					if (!fs::is_file(sfo))
+					{
+						if (fs::is_file(dir + "/PS3_DISC.SFB"))
+						{
+							LOG_ERROR(GENERAL, "Failed to load dev_hdd0/game/%s because it's a disc game. Move it to dev_hdd0/disc", entry.name);
+						}
+						else
+						{
+							LOG_ERROR(GENERAL, "Failed to load PARAM.SFO in dev_hdd0/game/%s", entry.name);
+						}
+						continue;
+					}
 				}
 
 				const fs::file sfo_file(sfo);
 				if (!sfo_file)
 				{
+					LOG_ERROR(GENERAL, "Failed to load existing PARAM.SFO in %s", entry.name);
 					continue;
 				}
 
@@ -443,7 +462,7 @@ void game_list_frame::Refresh(bool fromDrive)
 					pxmap = QPixmap::fromImage(img);
 				}
 
-				m_game_data.push_back({ game, img, pxmap, bootable, is_disc_path ? disc_path : game_path });
+				m_game_data.push_back({ game, img, pxmap, bootable, path });
 			}
 		}
 
