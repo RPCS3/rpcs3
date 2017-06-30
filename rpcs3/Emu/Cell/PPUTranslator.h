@@ -116,6 +116,9 @@ class PPUTranslator final //: public CPUTranslator
 	// PPU Module
 	const ppu_module& m_info;
 
+	// Relevant relocations
+	std::map<u64, const ppu_reloc*> m_relocs;
+
 	// Attributes for function calls which are "pure" and may be optimized away if their results are unused
 	const llvm::AttributeSet m_pure_attr;
 
@@ -125,13 +128,22 @@ class PPUTranslator final //: public CPUTranslator
 	// LLVM function
 	llvm::Function* m_function;
 
-	// Function range
-	u64 m_start_addr, m_end_addr, m_current_addr;
-
 	llvm::MDNode* m_md_unlikely;
 	llvm::MDNode* m_md_likely;
 
+	// Current position-independent address
+	u64 m_addr = 0;
+
+	// Relocation info
+	const ppu_segment* m_reloc = nullptr;
+
+	// Set by instruction code after processing the relocation
+	const ppu_reloc* m_rel = nullptr;
+
 	/* Variables */
+
+	// Segments
+	std::vector<llvm::GlobalVariable*> m_segs;
 
 	// Memory base
 	llvm::GlobalVariable* m_base;
@@ -178,6 +190,9 @@ class PPUTranslator final //: public CPUTranslator
 
 #undef DEF_VALUE
 public:
+
+	// Get current instruction address
+	llvm::Value* GetAddr(u64 _add = 0);
 
 	// Change integer size for integer or integer vector type (by 2^degree)
 	llvm::Type* ScaleType(llvm::Type*, s32 pow2 = 0);
@@ -346,8 +361,8 @@ public:
 	// Check condition for trap instructions
 	llvm::Value* CheckTrapCondition(u32 to, llvm::Value* left, llvm::Value* right);
 
-	// Emit trap
-	void Trap(u64 addr);
+	// Emit trap for current address
+	void Trap();
 
 	// Get condition for branch instructions
 	llvm::Value* CheckBranchCondition(u32 bo, u32 bi);

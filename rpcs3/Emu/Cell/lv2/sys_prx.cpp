@@ -109,7 +109,7 @@ error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_mod
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = ppu_load_prx(obj, path.substr(path.find_last_of('/') + 1));
+	const auto prx = ppu_load_prx(obj, vfs::get(path));
 
 	if (!prx)
 	{
