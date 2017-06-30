@@ -213,7 +213,7 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 
 	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
 
-	if (elf_file)
+	if (!elf_file)
 	{
 		sys_spu.error("sys_spu_image_open: Failed creating given file");
 		return CELL_ENOENT;
