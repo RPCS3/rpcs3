@@ -39,7 +39,7 @@ std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, 
 /**
  * Write index data needed to emulate non indexed non native primitive mode.
  */
-void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned first, unsigned count);
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count);
 
 /**
  * Stream a 128 bits vector to dst.

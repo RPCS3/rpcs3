@@ -66,6 +66,12 @@ public:
 	{
 		return m_cpu;
 	}
+
+	// Check JIT purpose
+	bool is_primary() const
+	{
+		return !m_link.empty();
+	}
 };
 
 #endif

@@ -23,9 +23,6 @@ void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
 		case ppu_attr::known_size: return "known_size";
 		case ppu_attr::no_return: return "no_return";
 		case ppu_attr::no_size: return "no_size";
-		case ppu_attr::uses_r0: return "uses_r0";
-		case ppu_attr::entry_point: return "entry_point";
-		case ppu_attr::complex_stack: return "complex_stack";
 		case ppu_attr::__bitset_enum_max: break;
 		}
 
@@ -1035,15 +1032,6 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				func.attr += ppu_attr::no_return;
 				func.attr += ppu_attr::known_size;
 				func.size = len;
-			}
-
-			if (ptr + 3 <= fend &&
-				(ptr[0] & 0xffff0000) == LI(r0, 0) &&
-				(ptr[1] & 0xffff0000) == ORIS(r0, r0, 0) &&
-				(ptr[2] & 0xfc000003) == B({}, {}, {}))
-			{
-				// Import stub with r0 usage
-				func.attr += ppu_attr::uses_r0;
 			}
 
 			// TODO: detect no_return, scribe more TODOs

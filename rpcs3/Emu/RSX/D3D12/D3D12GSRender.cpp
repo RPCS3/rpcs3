@@ -21,6 +21,8 @@ PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
 PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
 pD3DCompile wrapD3DCompile;
 
+ID3D12Device* g_d3d12_device = nullptr;
+
 #define VERTEX_BUFFERS_SLOT 0
 #define FRAGMENT_CONSTANT_BUFFERS_SLOT 1
 #define VERTEX_CONSTANT_BUFFERS_SLOT 2
@@ -180,6 +182,8 @@ D3D12GSRender::D3D12GSRender()
 			return;
 		}
 	}
+
+	g_d3d12_device = m_device.Get();
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC graphic_queue_desc = { D3D12_COMMAND_LIST_TYPE_DIRECT };

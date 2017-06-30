@@ -899,6 +899,7 @@ namespace gl
 	{
 		u32 m_mapped_bytes = 0;
 		u32 m_mapping_offset = 0;
+		u32 m_alignment_offset = 0;
 
 	public:
 
@@ -928,16 +929,33 @@ namespace gl
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, 256);
 
-			if ((offset + alloc_size) > m_limit)
+			const u32 block_size = align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
+
+			if ((offset + block_size) > m_limit)
 			{
 				buffer::data(m_limit, nullptr);
 				m_data_loc = 0;
 			}
 
 			glBindBuffer((GLenum)m_target, m_id);
-			m_memory_mapping = glMapBufferRange((GLenum)m_target, m_data_loc, align(alloc_size, 256), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
-			m_mapped_bytes = align(alloc_size, 256);
+			m_memory_mapping = glMapBufferRange((GLenum)m_target, m_data_loc, block_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+			m_mapped_bytes = block_size;
 			m_mapping_offset = m_data_loc;
+			m_alignment_offset = 0;
+
+			//When using debugging tools, the mapped base might not be aligned as expected
+			const u64 mapped_address_base = (u64)m_memory_mapping;
+			if (mapped_address_base & 0xF)
+			{
+				//Unaligned result was returned. We have to modify the base address a bit
+				//We lose some memory here, but the 16 byte overallocation above makes up for it
+				const u64 new_base = (mapped_address_base & ~0xF) + 16;
+				const u64 diff_bytes = new_base - mapped_address_base;
+
+				m_memory_mapping = (void *)new_base;
+				m_mapped_bytes -= ::narrow<u32>(diff_bytes);
+				m_alignment_offset = ::narrow<u32>(diff_bytes);
+			}
 
 			verify(HERE), m_mapped_bytes >= alloc_size;
 		}
@@ -948,7 +966,7 @@ namespace gl
 			if (m_data_loc) offset = align(offset, alignment);
 
 			u32 padding = (offset - m_data_loc);
-			u32 real_size = padding + alloc_size;
+			u32 real_size = align(padding + alloc_size, alignment);	//Ensures we leave the loc pointer aligned after we exit
 
 			if (real_size > m_mapped_bytes)
 			{
@@ -961,14 +979,14 @@ namespace gl
 				if (m_data_loc) offset = align(offset, alignment);
 
 				padding = (offset - m_data_loc);
-				real_size = padding + alloc_size;
+				real_size = align(padding + alloc_size, alignment);
 			}
 
-			m_data_loc = offset + alloc_size;
+			m_data_loc = offset + real_size;
 			m_mapped_bytes -= real_size;
 
 			u32 local_offset = (offset - m_mapping_offset);
-			return std::make_pair(((char*)m_memory_mapping) + local_offset, offset);
+			return std::make_pair(((char*)m_memory_mapping) + local_offset, offset + m_alignment_offset);
 		}
 
 		void remove() override
