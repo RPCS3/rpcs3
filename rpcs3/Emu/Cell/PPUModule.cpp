@@ -344,7 +344,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 
 // Link variables/weak imports, looks to be literally the same as vrefs
 // Don't use bool flag in VREFs, originally it didn't have it
-static void ppu_patch_refs(u32 fref, u32 faddr, bool f_import)
+static void ppu_patch_refs(u32 fref, u32 faddr)
 {
 	struct ref_t
 	{
@@ -359,7 +359,7 @@ static void ppu_patch_refs(u32 fref, u32 faddr, bool f_import)
 
 		const auto ref_import = vm::ptr<u32>::make(faddr + ref->addend);
 
-		const auto addr = (f_import ? static_cast<u32>(*ref_import) : faddr + ref->addend);
+		const auto addr = faddr + ref->addend;
 
 		// OPs are probably similar to relocations
 		switch (u32 type = ref->type)
@@ -367,7 +367,7 @@ static void ppu_patch_refs(u32 fref, u32 faddr, bool f_import)
 		case 0x1:
 		{
 			const u32 value = vm::_ref<u32>(ref->addr) = addr;
-			LOG_WARNING(LOADER, "**** REF(1): 0x%x <- 0x%x", ref->addr, value);
+			LOG_TRACE(LOADER, "**** REF(1): 0x%x <- 0x%x", ref->addr, value);
 			break;
 		}
 
@@ -382,6 +382,13 @@ static void ppu_patch_refs(u32 fref, u32 faddr, bool f_import)
 		{
 			const u16 value = vm::_ref<u16>(ref->addr) = static_cast<u16>(addr >> 16) + (addr & 0x8000 ? 1 : 0);
 			LOG_TRACE(LOADER, "**** REF(6): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
+			break;
+		}
+
+		case 57:
+		{
+			const u16 value = vm::_ref<ppu_bf_t<be_t<u16>, 0, 14>>(ref->addr) = static_cast<u16>(addr) >> 2;
+			LOG_TRACE(LOADER, "**** REF(57): 0x%x <- 0x%04x (0x%llx)", ref->addr, value, faddr);
 			break;
 		}
 
@@ -518,7 +525,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 
 					for (const u32 weak_import_addr : flink.weak_imports)
 					{
-						ppu_patch_refs(weak_import_addr, faddr, false);
+						ppu_patch_refs(weak_import_addr, faddr);
 					}
 				}
 			}
@@ -550,7 +557,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 				// Fix imports
 				for (const auto vref : vlink.imports)
 				{
-					ppu_patch_refs(vref, vaddr, false);
+					ppu_patch_refs(vref, vaddr);
 					//LOG_WARNING(LOADER, "Exported variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 				}
 			}
@@ -614,7 +621,7 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			if (((lib.attributes & 0x2000) == 0x2000) && fnids[i + lib.num_func] != 0)	//0x2000 seems to be correct flag
 			{
 				flink.weak_imports.emplace(fnids[i + lib.num_func]);
-				ppu_patch_refs(fnids[i + lib.num_func], faddr, true);
+				ppu_patch_refs(fnids[i + lib.num_func], flink.export_addr);
 			}
 
 			//LOG_WARNING(LOADER, "Imported function '%s' in module '%s' (0x%x)", ppu_get_function_name(module_name, fnid), module_name, faddr);
@@ -639,7 +646,7 @@ static void ppu_load_imports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			// Link if available
 			if (vlink.export_addr)
 			{
-				ppu_patch_refs(vref, vlink.export_addr, false);
+				ppu_patch_refs(vref, vlink.export_addr);
 			}
 
 			//LOG_WARNING(LOADER, "Imported variable '%s' in module '%s' (0x%x)", ppu_get_variable_name(module_name, vnid), module_name, vlink.first);
