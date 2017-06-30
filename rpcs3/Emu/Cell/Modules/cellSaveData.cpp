@@ -323,7 +323,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			// Cancel selected in UI
 			else if (selected == -2)
 			{
-				return CELL_OK;
+				return CELL_CANCEL;
 			}
 
 			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
