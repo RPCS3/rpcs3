@@ -38,11 +38,9 @@ struct ppu_function
 // PPU Relocation Information
 struct ppu_reloc
 {
+	u32 addr;
 	u32 type;
-	u32 off;
-	u32 ptr;
-	u8 index_value;
-	u8 index_addr;
+	u64 data;
 };
 
 // PPU Segment Information
@@ -58,10 +56,14 @@ struct ppu_segment
 struct ppu_module
 {
 	std::string name;
-	std::vector<ppu_reloc> rels;
+	std::string path;
+	std::vector<ppu_reloc> relocs;
 	std::vector<ppu_segment> segs;
+	std::vector<ppu_segment> secs;
 	std::vector<ppu_function> funcs;
-	std::vector<ppu_segment> sections;
+
+	void analyse(u32 lib_toc, u32 entry);
+	void validate(u32 reloc);
 };
 
 // Aux
@@ -130,10 +132,6 @@ struct ppu_pattern_matrix
 		return ptr + count;
 	}
 };
-
-extern void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc);
-
-extern std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc, u32 entry);
 
 // PPU Instruction Type
 struct ppu_itype
