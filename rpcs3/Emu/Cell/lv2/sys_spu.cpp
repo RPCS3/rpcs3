@@ -273,7 +273,7 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 
 	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
-	if (elf_file)
+	if (!elf_file)
 	{
 		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
 		return CELL_ENOENT;
