@@ -15,6 +15,8 @@ namespace vk
 		u16 native_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 
+		render_target *old_contents = nullptr; //Data occupying the memory location that this surface is replacing
+
 		render_target(vk::render_device &dev,
 			uint32_t memory_type_index,
 			uint32_t access_flags,
@@ -43,7 +45,12 @@ namespace rsx
 		using command_list_type = vk::command_buffer*;
 		using download_buffer_object = void*;
 
-		static std::unique_ptr<vk::render_target> create_new_surface(u32, surface_color_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &, const vk::memory_type_mapping &mem_mapping)
+		static std::unique_ptr<vk::render_target> create_new_surface(
+			u32 /*address*/,
+			surface_color_format format,
+			size_t width, size_t height,
+			vk::render_target* old_surface,
+			vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &, const vk::memory_type_mapping &mem_mapping)
 		{
 			auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
@@ -74,10 +81,22 @@ namespace rsx
 
 			rtt->native_component_map = fmt.second;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
+
+			if (old_surface != nullptr && old_surface->info.format == requested_format)
+			{
+				rtt->old_contents = old_surface;
+				rtt->dirty = true;
+			}
+
 			return rtt;
 		}
 
-		static std::unique_ptr<vk::render_target> create_new_surface(u32, surface_depth_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
+		static std::unique_ptr<vk::render_target> create_new_surface(
+			u32 /* address */,
+			surface_depth_format format,
+			size_t width, size_t height,
+			vk::render_target* old_surface,
+			vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
 		{
 			VkFormat requested_format = vk::get_compatible_depth_surface_format(support, format);
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -114,6 +133,12 @@ namespace rsx
 				ds->native_pitch *= 2;
 
 			ds->attachment_aspect_flag = range.aspectMask;
+
+			if (old_surface != nullptr && old_surface->info.format == requested_format)
+			{
+				ds->old_contents = old_surface;
+				ds->dirty = true;
+			}
 
 			return ds;
 		}

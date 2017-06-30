@@ -349,6 +349,21 @@ void GLGSRender::end()
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
+	auto copy_rtt_contents = [](gl::render_target *surface)
+	{
+		//Copy data from old contents onto this one
+		//1. Clip a rectangular region defning the data
+		//2. Perform a GPU blit
+		u16 parent_w = surface->old_contents->width();
+		u16 parent_h = surface->old_contents->height();
+		u16 copy_w, copy_h;
+
+		std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+		glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
+		surface->set_cleared();
+		surface->old_contents = nullptr;
+	};
+
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && !ds->cleared())
 	{
@@ -360,11 +375,31 @@ void GLGSRender::end()
 		glClearStencil(255);
 
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		
+
+		if (g_cfg.video.strict_rendering_mode)
+		{
+			//Copy previous data if any
+			if (ds->old_contents != nullptr)
+				copy_rtt_contents(ds);
+		}
+
 		glDepthMask(rsx::method_registers.depth_write_enabled());
 		glEnable(GL_SCISSOR_TEST);
 
 		ds->set_cleared();
+	}
+
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (std::get<0>(rtt) != 0)
+			{
+				auto surface = std::get<1>(rtt);
+				if (!surface->cleared() && surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
 	}
 
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
@@ -710,7 +745,10 @@ void GLGSRender::clear_surface(u32 arg)
 
 		gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		if (ds && !ds->cleared())
+		{
 			ds->set_cleared();
+			ds->old_contents = nullptr;
+		}
 	}
 
 	if (surface_depth_format == rsx::surface_depth_format::z24s8 && (arg & 0x2))
@@ -734,6 +772,15 @@ void GLGSRender::clear_surface(u32 arg)
 		glClearColor(clear_r / 255.f, clear_g / 255.f, clear_b / 255.f, clear_a / 255.f);
 
 		mask |= GLenum(gl::buffers::color);
+
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (std::get<0>(rtt) != 0)
+			{
+				std::get<1>(rtt)->set_cleared(true);
+				std::get<1>(rtt)->old_contents = nullptr;
+			}
+		}
 	}
 
 	glClear(mask);
@@ -904,13 +951,10 @@ void GLGSRender::flip(int buffer)
 		__glcheck m_flip_fbo.color = *render_target_texture;
 		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
 	}
-	else if (draw_fbo)
-	{
-		//HACK! it's here, because textures cache isn't implemented correctly!
-		flip_fbo = &draw_fbo;
-	}
 	else
 	{
+		LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
+
 		if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
 		{
 			m_flip_tex_color.recreate(gl::texture::target::texture2D);
