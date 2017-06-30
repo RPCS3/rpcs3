@@ -211,7 +211,7 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
 
 	if (!elf_file)
 	{
