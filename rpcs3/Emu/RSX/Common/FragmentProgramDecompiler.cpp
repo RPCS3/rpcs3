@@ -449,7 +449,7 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
 	// Note: It's higly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
-	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0") + ")"); return true;
+	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0.x") + ").xxxx"); return true;
 	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
 	// It is not know what happens if 0 is negative.
 	case RSX_FP_OPCODE_RSQ: SetDst("(1. / sqrt(" + NotZeroPositive("$0.x") + ").xxxx)"); return true;
@@ -734,11 +734,14 @@ std::string FragmentProgramDecompiler::Decompile()
 		default:
 			int prev_force_unit = forced_unit;
 
+			//Some instructions do not respect forced unit
+			//Tested with Tales of Vesperia
+			if (SIP()) break;
+			if (handle_tex_srb(opcode)) break;
+
 			if (forced_unit == FORCE_NONE)
 			{
-				if (SIP()) break;
 				if (handle_sct(opcode)) break;
-				if (handle_tex_srb(opcode)) break;
 				if (handle_scb(opcode)) break;
 			}
 			else if (forced_unit == FORCE_SCT)
