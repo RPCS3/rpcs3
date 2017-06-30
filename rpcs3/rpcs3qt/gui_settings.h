@@ -96,6 +96,7 @@ namespace GUI
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );
+	const GUI_SAVE l_stack = GUI_SAVE( logger, "stack", false );
 
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
