@@ -107,11 +107,11 @@ public:
 	emu_settings(const std::string& path);
 	~emu_settings();
 
-	/** Returns a combo box of that setting type that is bound to the parent. */
-	QComboBox* CreateEnhancedComboBox(SettingsType type, QWidget* parent = nullptr);
+	/** Connects a combo box with the target settings type*/
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type);
 
-	/** Returns a check button that is connected to the target settings type, bound to the life of parent*/
-	QCheckBox* CreateEnhancedCheckBox(SettingsType target, QWidget* parent = nullptr);
+	/** Connects a check box with the target settings type*/
+	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
