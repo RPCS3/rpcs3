@@ -102,6 +102,53 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	const QStringList others = { network, store_FE, trophy, other };
 }
 
+namespace parental
+{
+	// These values are partly generalized. They can vary between country and category
+	// Normally only values 1,2,3,5,7 and 9 are used
+	const std::map<u32, QString> level
+	{
+		{ 1,  QObject::tr("0+") },
+		{ 2,  QObject::tr("3+") },
+		{ 3,  QObject::tr("7+") },
+		{ 4,  QObject::tr("10+") },
+		{ 5,  QObject::tr("12+") },
+		{ 6,  QObject::tr("15+") },
+		{ 7,  QObject::tr("16+") },
+		{ 8,  QObject::tr("17+") },
+		{ 9,  QObject::tr("18+") },
+		{ 10, QObject::tr("Level 10") },
+		{ 11, QObject::tr("Level 11") }
+	};
+}
+
+namespace resolution
+{
+	// there might be different values for other categories
+	const std::map<u32, QString> mode
+	{
+		{ 1 << 0, QObject::tr("480p") },
+		{ 1 << 1, QObject::tr("576p") },
+		{ 1 << 2, QObject::tr("720p") },
+		{ 1 << 3, QObject::tr("1080p") },
+		{ 1 << 4, QObject::tr("480p 16:9") },
+		{ 1 << 5, QObject::tr("576p 16:9") },
+	};
+}
+
+namespace sound
+{
+	const std::map<u32, QString> format
+	{
+		{ 1 << 0, QObject::tr("LPCM 2.0") },
+		//{ 1 << 1, QObject::tr("LPCM ???") },
+		{ 1 << 2, QObject::tr("LPCM 5.1") },
+		{ 1 << 4, QObject::tr("LPCM 7.1") },
+		{ 1 << 8, QObject::tr("Dolby Digital 5.1") },
+		{ 1 << 9, QObject::tr("DTS 5.1") },
+	};
+}
+
 /* Having the icons associated with the game info simplifies logic internally */
 typedef struct GUI_GameInfo
 {
@@ -167,6 +214,7 @@ private:
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
 
 	std::string CurrentSelectionIconPath();
+	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
@@ -185,6 +233,9 @@ private:
 	QAction* showAppVersionColAct;
 	QAction* showCategoryColAct;
 	QAction* showPathColAct;
+	QAction* showResolutionColAct;
+	QAction* showSoundFormatColAct;
+	QAction* showParentalLevelColAct;
 
 	QList<QAction*> columnActs;
 
