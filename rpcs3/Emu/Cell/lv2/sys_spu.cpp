@@ -298,6 +298,7 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 		return CELL_ENOMEM;
 	}
 
+	elf_file.seek(0);
 	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
 	if (!bytes_read)
 	{
