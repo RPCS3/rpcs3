@@ -62,6 +62,7 @@ namespace gl
 		texture::internal_format compatible_internal_format = texture::internal_format::rgba8;
 
 	public:
+		render_target *old_contents = nullptr;
 
 		render_target() {}
 
@@ -163,7 +164,8 @@ struct gl_render_target_traits
 		u32 /*address*/,
 		rsx::surface_color_format surface_color_format,
 		size_t width,
-		size_t height
+		size_t height,
+		gl::render_target* old_surface
 	)
 	{
 		std::unique_ptr<gl::render_target> result(new gl::render_target());
@@ -187,6 +189,9 @@ struct gl_render_target_traits
 		__glcheck result->pixel_pack_settings().swap_bytes(format.swap_bytes).aligment(1);
 		__glcheck result->pixel_unpack_settings().swap_bytes(format.swap_bytes).aligment(1);
 
+		if (old_surface != nullptr && old_surface->get_compatible_internal_format() == internal_fmt)
+			result->old_contents = old_surface;
+
 		return result;
 	}
 
@@ -195,7 +200,8 @@ struct gl_render_target_traits
 			u32 /*address*/,
 		rsx::surface_depth_format surface_depth_format,
 			size_t width,
-			size_t height
+			size_t height,
+			gl::render_target* old_surface
 		)
 	{
 		std::unique_ptr<gl::render_target> result(new gl::render_target());
@@ -222,6 +228,9 @@ struct gl_render_target_traits
 		result->set_native_pitch(native_pitch);
 		result->set_compatible_format(format.internal_format);
 
+		if (old_surface != nullptr && old_surface->get_compatible_internal_format() == format.internal_format)
+			result->old_contents = old_surface;
+
 		return result;
 	}
 
@@ -235,10 +244,10 @@ struct gl_render_target_traits
 	static void invalidate_depth_surface_contents(void *, gl::render_target *ds) { ds->set_cleared(false);  }
 
 	static
-	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format, size_t width, size_t height)
+	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format format, size_t width, size_t height)
 	{
-		// TODO: check format
-		return rtt->width() == width && rtt->height() == height;
+		auto internal_fmt = rsx::internals::sized_internal_format(format);
+		return rtt->get_compatible_internal_format() == internal_fmt && rtt->width() == width && rtt->height() == height;
 	}
 
 	static

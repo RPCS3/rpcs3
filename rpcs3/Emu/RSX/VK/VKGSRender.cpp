@@ -955,7 +955,58 @@ void VKGSRender::end()
 		return;
 	}
 
-	close_render_pass();	//Texture upload stuff conflicts active RPs	
+	close_render_pass();	//Texture upload stuff conflicts active RPs
+
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		auto copy_rtt_contents = [&](vk::render_target* surface)
+		{
+			const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
+
+			const u16 parent_w = surface->old_contents->width();
+			const u16 parent_h = surface->old_contents->height();
+			u16 copy_w, copy_h;
+
+			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+
+			VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
+			VkImageLayout old_layout = surface->current_layout;
+
+			vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+			vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+
+			VkImageCopy copy_rgn;
+			copy_rgn.srcOffset = { 0, 0, 0 };
+			copy_rgn.dstOffset = { 0, 0, 0 };
+			copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
+			copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+			copy_rgn.extent = { copy_w, copy_h, 1 };
+
+			vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
+			vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
+
+			surface->dirty = false;
+			surface->old_contents = nullptr;
+		};
+
+		//Prepare surfaces if needed
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (std::get<0>(rtt) != 0)
+			{
+				auto surface = std::get<1>(rtt);
+
+				if (surface->dirty && surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
+
+		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+		{
+			if (ds->dirty && ds->old_contents != nullptr)
+				copy_rtt_contents(ds);
+		}
+	}
 
 	std::chrono::time_point<steady_clock> vertex_start0 = steady_clock::now();
 	auto upload_info = upload_vertex_data();
@@ -1072,6 +1123,7 @@ void VKGSRender::end()
 			VkClearRect clear_rect = { 0, 0, m_framebuffer_to_clean.back()->width(), m_framebuffer_to_clean.back()->height(), 0, 1 };
 			VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
 			vkCmdClearAttachments(*m_current_command_buffer, 1, &clear_desc, 1, &clear_rect);
+
 			ds->dirty = false;
 		}
 	}
@@ -1245,6 +1297,15 @@ void VKGSRender::clear_surface(u32 mask)
 			clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, (uint32_t)index, color_clear_values });
 			clear_regions.push_back(region);
 		}
+
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (std::get<0>(rtt) != 0)
+			{
+				std::get<1>(rtt)->dirty = false;
+				std::get<1>(rtt)->old_contents = nullptr;
+			}
+		}
 	}
 
 	if (mask & 0x3)
@@ -1259,7 +1320,10 @@ void VKGSRender::clear_surface(u32 mask)
 	if (mask & 0x3)
 	{
 		if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
+		{
 			std::get<1>(m_rtts.m_bound_depth_stencil)->dirty = false;
+			std::get<1>(m_rtts.m_bound_depth_stencil)->old_contents = nullptr;
+		}
 	}
 }
 
@@ -1918,8 +1982,6 @@ void VKGSRender::flip(int buffer)
 		u32 buffer_width = gcm_buffers[buffer].width;
 		u32 buffer_height = gcm_buffers[buffer].height;
 		u32 buffer_pitch = gcm_buffers[buffer].pitch;
-
-		rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 
