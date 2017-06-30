@@ -982,6 +982,9 @@ extern void ppu_initialize(const ppu_module& info)
 	// Worker threads
 	std::vector<std::thread> jthreads;
 
+	// Global variables (pointers) to initialize
+	std::vector<std::pair<std::string, void*>> globals;
+
 	// Split module into fragments <= 1 MiB
 	std::size_t fpos = 0;
 
@@ -1078,6 +1081,9 @@ extern void ppu_initialize(const ppu_module& info)
 			break;
 		}
 
+		globals.emplace_back(fmt::format("__mptr%x", part.funcs[0].addr), vm::g_base_addr);
+		globals.emplace_back(fmt::format("__cptr%x", part.funcs[0].addr), vm::g_exec_addr);
+
 		// Check object file
 		if (fs::is_file(Emu.GetCachePath() + obj_name))
 		{
@@ -1143,6 +1149,15 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 	}
+
+	// Initialize global variables
+	for (auto& var : globals)
+	{
+		if (u64 addr = jit.get(var.first))
+		{
+			*reinterpret_cast<void**>(addr) = var.second;
+		}
+	}
 #endif
 }
 
@@ -1185,20 +1200,20 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createCFGSimplificationPass());
 		//pm.add(createPromoteMemoryToRegisterPass());
 		pm.add(createEarlyCSEPass());
-		pm.add(createTailCallEliminationPass());
+		//pm.add(createTailCallEliminationPass());
 		//pm.add(createInstructionCombiningPass());
 		//pm.add(createBasicAAWrapperPass());
 		//pm.add(new MemoryDependenceAnalysis());
-		pm.add(createLICMPass());
-		pm.add(createLoopInstSimplifyPass());
+		//pm.add(createLICMPass());
+		//pm.add(createLoopInstSimplifyPass());
 		//pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
-		pm.add(createSCCPPass());
-		pm.add(createReassociatePass());
-		pm.add(createInstructionCombiningPass());
-		pm.add(createInstructionSimplifierPass());
-		pm.add(createAggressiveDCEPass());
-		pm.add(createCFGSimplificationPass());
+		//pm.add(createSCCPPass());
+		//pm.add(createReassociatePass());
+		//pm.add(createInstructionCombiningPass());
+		//pm.add(createInstructionSimplifierPass());
+		//pm.add(createAggressiveDCEPass());
+		//pm.add(createCFGSimplificationPass());
 		//pm.add(createLintPass()); // Check
 
 		// Initialize message dialog
@@ -1229,7 +1244,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				return;
 			}
 
-			if (module_part.funcs[fi].size && !test(module_part.funcs[fi].attr & ppu_attr::special))
+			if (module_part.funcs[fi].size)
 			{
 				// Update dialog		
 				Emu.CallAfter([=, max = module_part.funcs.size()]()
@@ -1277,6 +1292,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			out.flush();
 			LOG_ERROR(PPU, "LLVM: Verification failed for %s:\n%s", obj_name, result);
+			Emu.CallAfter([]{ Emu.Stop(); });
 			return;
 		}
 

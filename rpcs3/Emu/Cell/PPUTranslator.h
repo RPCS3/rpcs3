@@ -134,14 +134,14 @@ class PPUTranslator final //: public CPUTranslator
 	/* Variables */
 
 	// Memory base
-	llvm::Value* m_base;
+	llvm::GlobalVariable* m_base;
 	llvm::Value* m_base_loaded;
 
 	// Thread context
 	llvm::Value* m_thread;
 
 	// Callable functions
-	llvm::Value* m_call;
+	llvm::GlobalVariable* m_call;
 
 	// Main block
 	llvm::BasicBlock* m_body;
@@ -150,7 +150,10 @@ class PPUTranslator final //: public CPUTranslator
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 
+	llvm::Value* m_mtocr_table{};
+
 	llvm::Value* m_globals[173];
+	llvm::Value** const m_g_cr = m_globals + 99;
 	llvm::Value* m_locals[173];
 	llvm::Value** const m_gpr = m_locals + 3;
 	llvm::Value** const m_fpr = m_locals + 35;
@@ -386,7 +389,7 @@ public:
 
 	// Call a function with attribute list
 	template<typename... Args>
-	llvm::Value* Call(llvm::Type* ret, llvm::AttributeSet attr, llvm::StringRef name, Args... args)
+	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeSet attr, llvm::StringRef name, Args... args)
 	{
 		// Call the function
 		return m_ir->CreateCall(m_module->getOrInsertFunction(name, llvm::FunctionType::get(ret, {args->getType()...}, false), attr), {args...});
@@ -394,7 +397,7 @@ public:
 
 	// Call a function
 	template<typename... Args>
-	llvm::Value* Call(llvm::Type* ret, llvm::StringRef name, Args... args)
+	llvm::CallInst* Call(llvm::Type* ret, llvm::StringRef name, Args... args)
 	{
 		return Call(ret, llvm::AttributeSet{}, name, args...);
 	}
