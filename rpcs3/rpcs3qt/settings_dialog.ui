@@ -1,0 +1,1518 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>settings_dialog</class>
+ <widget class="QDialog" name="settings_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>516</width>
+    <height>586</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>516</width>
+    <height>586</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>516</width>
+    <height>586</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Settings</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../resources.qrc">
+    <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
+  </property>
+  <widget class="QTabWidget" name="tabWidget">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>496</width>
+     <height>531</height>
+    </rect>
+   </property>
+   <property name="currentIndex">
+    <number>0</number>
+   </property>
+   <widget class="QWidget" name="coreTab">
+    <attribute name="title">
+     <string>CPU</string>
+    </attribute>
+    <widget class="QGroupBox" name="ppu">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>221</width>
+       <height>91</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>PPU Decoder</string>
+     </property>
+     <widget class="QRadioButton" name="ppu_fast">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Interpreter (Fast)</string>
+      </property>
+      <attribute name="buttonGroup">
+       <string notr="true">ppuBG</string>
+      </attribute>
+     </widget>
+     <widget class="QRadioButton" name="ppu_llvm">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Recompiler (LLVM)</string>
+      </property>
+      <attribute name="buttonGroup">
+       <string notr="true">ppuBG</string>
+      </attribute>
+     </widget>
+     <widget class="QRadioButton" name="ppu_precise">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Interpreter (Precise)</string>
+      </property>
+      <attribute name="buttonGroup">
+       <string notr="true">ppuBG</string>
+      </attribute>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="spu">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>110</y>
+       <width>221</width>
+       <height>111</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>SPU Decoder</string>
+     </property>
+     <widget class="QRadioButton" name="spu_fast">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Interpreter (Fast)</string>
+      </property>
+      <attribute name="buttonGroup">
+       <string notr="true">spuBG</string>
+      </attribute>
+     </widget>
+     <widget class="QRadioButton" name="spu_asmjit">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Recompiler (ASMJIT)</string>
+      </property>
+      <attribute name="buttonGroup">
+       <string notr="true">spuBG</string>
+      </attribute>
+     </widget>
+     <widget class="QRadioButton" name="spu_precise">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Interpreter (Precise)</string>
+      </property>
+      <attribute name="buttonGroup">
+       <string notr="true">spuBG</string>
+      </attribute>
+     </widget>
+     <widget class="QRadioButton" name="spu_llvm">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>171</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Recompiler (LLVM)</string>
+      </property>
+      <attribute name="buttonGroup">
+       <string notr="true">spuBG</string>
+      </attribute>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="checkboxes">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>230</y>
+       <width>221</width>
+       <height>151</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Additional Settings</string>
+     </property>
+     <widget class="QCheckBox" name="hookStFunc">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>201</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Hook Static Functions</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="bindSPUThreads">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>201</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Bind SPU threads to secondary cores</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="lowerSPUThrPrio">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>201</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Lower SPU thread priority</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_28">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>130</y>
+       <width>241</width>
+       <height>191</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Firmware Libraries</string>
+     </property>
+     <widget class="QListWidget" name="lleList">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>221</width>
+        <height>161</height>
+       </rect>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::ExtendedSelection</enum>
+      </property>
+      <property name="viewMode">
+       <enum>QListView::ListMode</enum>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="lib_settings">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>10</y>
+       <width>241</width>
+       <height>111</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Firmware Settings</string>
+     </property>
+     <widget class="QRadioButton" name="lib_manu">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>191</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Manually load selected libraries</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="lib_both">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>191</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Load automatic and manual libraries</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="lib_auto">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>191</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Automatically load required libraries</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="lib_lv2">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>191</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Load liblv2.sprx only</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_40">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>330</y>
+       <width>241</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Search Libraries</string>
+     </property>
+     <widget class="QLineEdit" name="searchBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>221</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_41">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>471</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Description</string>
+     </property>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Configure CPU settings.</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::PlainText</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_9">
+    <attribute name="title">
+     <string>GPU</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_26">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Renderer</string>
+     </property>
+     <widget class="QComboBox" name="renderBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_29">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Resolution</string>
+     </property>
+     <widget class="QComboBox" name="resBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_42">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Graphics Device</string>
+     </property>
+     <widget class="QComboBox" name="graphicsAdapterBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_43">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>70</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Enhancements</string>
+     </property>
+     <widget class="QPushButton" name="pushButton_3">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Advanced Settings</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_44">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>130</y>
+       <width>111</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Aspect Ratio</string>
+     </property>
+     <widget class="QComboBox" name="aspectBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>91</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_45">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>130</y>
+       <width>111</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Framelimit</string>
+     </property>
+     <widget class="QComboBox" name="frameLimitBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>91</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_46">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>190</y>
+       <width>231</width>
+       <height>191</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Additional Settings</string>
+     </property>
+     <widget class="QCheckBox" name="dumpDepth">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Write Depth Buffers</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="readDepth">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Read Depth Buffers</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="readColor">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Read Color Buffers</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="dumpColor">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Write Color Buffers</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="vsync">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>140</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Use Vertical Sync</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="autoInvalidateCache">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>100</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Invalidate Cache Every Frame</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="gpuTextureScaling">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>120</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Use GPU Texture Scaling</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_47">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>471</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Description</string>
+     </property>
+     <widget class="QLabel" name="label_3">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Configure GPU settings.</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::PlainText</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_48">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>190</y>
+       <width>231</width>
+       <height>191</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Debugging Settings</string>
+     </property>
+     <widget class="QCheckBox" name="debugOverlay">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Debug Overlay</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="debugOutput">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Debug Output</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="logProg">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>100</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Log Shader Programs</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="scrictModeRendering">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Strict Rendering Mode</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="glLegacyBuffers">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Use Legacy OpenGL Buffers</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="forceHighpZ">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>120</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Use High Precision Z-buffer</string>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_10">
+    <attribute name="title">
+     <string>Audio</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_30">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Audio Out</string>
+     </property>
+     <widget class="QComboBox" name="audioOutBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_49">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>231</width>
+       <height>91</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Audio Settings</string>
+     </property>
+     <widget class="QCheckBox" name="audioDump">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Dump to File</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="convert">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Convert to 16-bit</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="downmix">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Downmix to Stereo</string>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_50">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>471</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Description</string>
+     </property>
+     <widget class="QLabel" name="label_4">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Configure audio settings.</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::PlainText</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_11">
+    <attribute name="title">
+     <string>I/O</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_31">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Camera Input</string>
+     </property>
+     <widget class="QComboBox" name="cameraTypeBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_51">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Keyboard Handler</string>
+     </property>
+     <widget class="QComboBox" name="keyboardHandlerBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_52">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Controller Handler</string>
+     </property>
+     <widget class="QComboBox" name="padHandlerBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_53">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>130</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Mouse Handler</string>
+     </property>
+     <widget class="QComboBox" name="mouseHandlerBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_54">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>70</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Camera Settings</string>
+     </property>
+     <widget class="QCheckBox" name="useFakeCamera">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Use Fake Camera</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_59">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>471</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Description</string>
+     </property>
+     <widget class="QLabel" name="label_5">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Configure input and output settings.</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::PlainText</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_13">
+    <attribute name="title">
+     <string>System</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_33">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Console Region</string>
+     </property>
+     <widget class="QComboBox" name="comboBox_12">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_34">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Console Language</string>
+     </property>
+     <widget class="QComboBox" name="sysLangBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_61">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>471</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Description</string>
+     </property>
+     <widget class="QLabel" name="label_7">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Configure virtual PlayStation 3 system settings.</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::PlainText</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Homebrew</string>
+     </property>
+     <widget class="QCheckBox" name="enableHostRoot">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Enable /host_root/</string>
+      </property>
+     </widget>
+    </widget>
+    <zorder>groupBox</zorder>
+    <zorder>groupBox_33</zorder>
+    <zorder>groupBox_34</zorder>
+    <zorder>groupBox_61</zorder>
+   </widget>
+   <widget class="QWidget" name="tab_12">
+    <attribute name="title">
+     <string>Network</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_32">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>231</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Network Status</string>
+     </property>
+     <widget class="QComboBox" name="netStatusBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_60">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>471</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Description</string>
+     </property>
+     <widget class="QLabel" name="label_6">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Configure virtual PlayStation 3 network settings.</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::PlainText</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_14">
+    <attribute name="title">
+     <string>Emulator</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_55">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>231</width>
+       <height>141</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Emulator Settings</string>
+     </property>
+     <widget class="QCheckBox" name="alwaysStart">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Automatically start games after boot</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="exitOnStop">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Exit RPCS3 when process finishes</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="showFPSInTitle">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Show framerate counter in window title</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="startGameFullscreen">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Start games in Fullscreen mode</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="gb_settings">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>10</y>
+       <width>231</width>
+       <height>141</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>UI Settings</string>
+     </property>
+     <widget class="QPushButton" name="pb_reset_default">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Restore default settings</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pb_backup_config">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>211</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Save current settings</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pb_open_folder">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>80</y>
+        <width>211</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Open configuration folder</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="cb_show_welcome">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>211</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Show Welcome Screen</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="gb_configs">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>160</y>
+       <width>231</width>
+       <height>81</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>UI Configurations</string>
+     </property>
+     <widget class="QPushButton" name="pb_apply_config">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>211</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Apply</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="combo_configs">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="gb_stylesheets">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>160</y>
+       <width>231</width>
+       <height>81</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>UI Stylesheets</string>
+     </property>
+     <widget class="QPushButton" name="pb_apply_stylesheet">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>211</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Apply</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="combo_stylesheets">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>211</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_62">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>471</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Description</string>
+     </property>
+     <widget class="QLabel" name="label_8">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>451</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Configure RPCS3 Emulator settings.</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::PlainText</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QPushButton" name="okButton">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>550</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="cancelButton">
+   <property name="geometry">
+    <rect>
+     <x>90</x>
+     <y>550</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </widget>
+ </widget>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
+ <connections/>
+ <buttongroups>
+  <buttongroup name="spuBG"/>
+  <buttongroup name="ppuBG"/>
+ </buttongroups>
+</ui>

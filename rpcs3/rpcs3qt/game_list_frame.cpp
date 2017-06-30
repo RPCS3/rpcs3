@@ -25,7 +25,7 @@
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent) 
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent)
 	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
 	m_isListLayout = xgui_settings->GetValue(GUI::gl_listMode).toBool();
@@ -118,7 +118,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	// Search Bar
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
-	connect(m_Search_Bar, &QLineEdit::textChanged, [this]() {
+	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text) {
+		m_searchText = text;
 		Refresh();
 	});
 
@@ -393,7 +394,7 @@ void game_list_frame::Refresh(bool fromDrive)
 				{
 					game.icon_path = dir + "/ICON0.PNG";
 				}
-			
+
 				game.category = sstr(cat->second);
 				bootable = true;
 			}
@@ -699,14 +700,17 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	}
 }
 
-void game_list_frame::ResizeIcons(const QSize& size, const int& idx)
+void game_list_frame::ResizeIcons(const QString& sizeStr, const QSize& size, const int& index)
 {
-	if (m_Slider_Size->value() != idx) m_Slider_Size->setSliderPosition(idx);
-	m_Icon_Size_Str = GUI::gl_icon_size.at(idx).first;
+	m_Icon_Size_Str = sizeStr;
+	m_Icon_Size = size;
+
+	if (m_Slider_Size->value() != index)
+	{
+		m_Slider_Size->setSliderPosition(index);
+	}
 
 	xgui_settings->SetValue(GUI::gl_iconSize, m_Icon_Size_Str);
-
-	m_Icon_Size = size;
 
 	for (size_t i = 0; i < m_game_data.size(); i++)
 	{
@@ -743,10 +747,20 @@ void game_list_frame::SetToolBarVisible(const bool& showToolBar)
 	m_Tool_Bar->setVisible(showToolBar);
 	xgui_settings->SetValue(GUI::gl_toolBarVisible, showToolBar);
 }
+bool game_list_frame::GetToolBarVisible()
+{
+	return m_showToolBar;
+}
 
 void game_list_frame::SetCategoryActIcon(const int& id, const bool& active)
 {
 	m_categoryButtons.at(id).action->setIcon(active ? m_categoryButtons.at(id).colored : m_categoryButtons.at(id).gray);
+}
+
+void game_list_frame::SetSearchText(const QString& text)
+{
+	m_searchText = text;
+	Refresh();
 }
 
 void game_list_frame::closeEvent(QCloseEvent *event)
@@ -910,9 +924,9 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size)
 */
 bool game_list_frame::SearchMatchesApp(const std::string& name, const std::string& serial)
 {
-	if (m_Search_Bar->text() != "")
+	if (!m_searchText.isEmpty())
 	{
-		QString searchText = m_Search_Bar->text().toLower();
+		QString searchText = m_searchText.toLower();
 		return qstr(name).toLower().contains(searchText) || qstr(serial).toLower().contains(searchText);
 	}
 	return true;
