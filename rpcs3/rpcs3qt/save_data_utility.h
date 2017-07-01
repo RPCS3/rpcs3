@@ -1,5 +1,10 @@
 #pragma once
 
+// I just want the struct for the save data.
+#include "stdafx.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/Cell/Modules/cellSaveData.h"
+
 #include <QDialog>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -9,55 +14,19 @@
 #include <QHeaderView>
 #include <QMenu>
 
-//TODO: Implement function calls related to Save Data List.
-//Those function calls may be needed to use this GUI.
-//Currently this is only a stub.
-
-//A stub for the struct sent to save_data_info_dialog.
-struct save_data_information
-{
-
-};
-//A stub for the sorting.
-enum
-{
-	SAVE_DATA_LIST_SORT_BY_USERID
-};
-//A stub for a single entry of save data. used to make a save data list or do management.
-struct save_data_entry
-{
-
-};
-
 //Used to display the information of a savedata.
 //Not sure about what information should be displayed.
 class save_data_info_dialog :public QDialog
 {
 	Q_OBJECT
 
-	QTableWidget* m_list;
-
+public:
+	explicit save_data_info_dialog(const SaveDataEntry& save, QWidget* parent = nullptr);
+private:
 	void UpdateData();
-public:
-	save_data_info_dialog(QWidget* parent, const save_data_information& info);
-};
 
-//Simple way to show up the sort menu and other operations
-//Like what you get when press Triangle on SaveData.
-class save_data_manage_dialog :public QDialog
-{
-	Q_OBJECT
-
-	QComboBox* m_sort_options;
-	unsigned int* m_sort_type;
-
-private Q_SLOTS:
-	void OnInfo();
-	void OnCopy();
-	void OnDelete();
-	void OnApplySort();
-public:
-	save_data_manage_dialog(QWidget* parent, unsigned int* sort_type, save_data_entry& save);
+	SaveDataEntry m_entry;
+	QTableWidget* m_list;
 };
 
 //Display a list of SaveData. Would need to be initialized.
@@ -66,32 +35,37 @@ class save_data_list_dialog : public QDialog
 {
 	Q_OBJECT
 
-	QTableWidget* m_list;
-	QMenu* m_sort_options;
-	unsigned int m_sort_type;
-	unsigned int m_sort_type_count;
+public:
+	explicit save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent = nullptr);
 
+	s32 GetSelection();
+private Q_SLOTS:
+	void OnEntryCopy();
+	void OnEntryRemove();
+	void OnEntryInfo();
+	void ShowContextMenu(const QPoint &pos);
+private:
+	void UpdateSelectionLabel(void);
+	void LoadEntries(void);
+	void UpdateList(void);
+	void OnSort(int id);
+
+	s32 m_selectedEntry;
+	QLabel* selectedEntryLabel;
+
+	QTableWidget* m_list;
+	std::vector<SaveDataEntry> m_save_entries;
+
+	QMenu* m_sort_options;
+
+	const int m_sort_type_count = 3;
 	int m_sortColumn;
 	bool m_sortAscending;
 
-	void LoadEntries(void);
-	void UpdateList(void);
-public:
-	save_data_list_dialog(QWidget* parent, bool enable_manage);
-private:
-	QAction* userIDAct;
+	QAction* saveIDAct;
 	QAction* titleAct;
 	QAction* subtitleAct;
 	QAction* copyAct;
 	QAction* removeAct;
 	QAction* infoAct;
-
-	void OnSort(int id);
-private Q_SLOTS:
-	void OnSelect();
-	void OnManage();
-	void OnEntryCopy();
-	void OnEntryRemove();
-	void OnEntryInfo();
-	void ShowContextMenu(const QPoint &pos);
 };
