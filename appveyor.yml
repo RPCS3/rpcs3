@@ -49,7 +49,8 @@ before_build:
  - set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
  - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
  - set PATH=%PATH%;%QTDIR%
- - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
+ - if not exist llvmlibs.7z appveyor DownloadFile "https://ci.appveyor.com/api/buildjobs/1w8r1n6nh2w99aul/artifacts/llvmlibs.7z.zip" -FileName llvmlibs.7z.zip
+ - 7z x llvmlibs.7z.zip > null
  - 7z x llvmlibs.7z -aos -o%APPVEYOR_BUILD_FOLDER% > null
  - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R" -FileName vulkan.7z
  - 7z x vulkan.7z -aos -o"%APPVEYOR_BUILD_FOLDER%\lib\%CONFIGURATION%-%PLATFORM%" > null

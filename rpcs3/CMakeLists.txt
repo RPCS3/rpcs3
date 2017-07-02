@@ -96,7 +96,7 @@ if(NOT MSVC)
 	if(NOT APPLE)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
 	endif()
-
+	
 	if(WIN32)
 		set(CMAKE_RC_COMPILER_INIT windres)
 		enable_language(RC)
@@ -173,7 +173,7 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
-	find_package(LLVM 4.0 CONFIG)
+	find_package(LLVM 6.0 CONFIG)
 	if(NOT LLVM_FOUND)
 		message("System LLVM was not found, LLVM will be built from the submodule.")
 
@@ -196,6 +196,28 @@ if(NOT WITHOUT_LLVM)
 		if(NOT LLVM_FOUND)
 			message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
+	endif()
+endif()
+  
+# Now let's look for polly.
+find_package(Polly)
+if(Polly_FOUND)
+	add_definitions(-DPOLLY_AVAILABLE)
+endif()
+# Polly LLVM Compiler checks
+CHECK_C_COMPILER_FLAG("-mllvm -polly" HAS_POLLY)
+CHECK_C_COMPILER_FLAG("-mllvm -polly-target=hybrid" HAS_POLLY_HYBRID)
+CHECK_C_COMPILER_FLAG("-mllvm -polly-target=cpu" HAS_POLLY_CPU)
+
+if (HAS_POLLY)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly -mllvm -polly-parallel -lgomp -mllvm -polly-vectorizer=stripmine")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mllvm -polly -mllvm -polly-parallel -lgomp -mllvm -polly-vectorizer=stripmine")
+	if(HAS_POLLY_HYBRID)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=hybrid")
+		set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=cpu")
+	elseif(HAS_POLLY_CPU)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=cpu")
+		set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=cpu")
 	endif()
 endif()
 
@@ -274,6 +296,7 @@ endif()
 include_directories(
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
+${Polly_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
@@ -319,6 +342,7 @@ endif()
 link_directories(
 "${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
 "${RPCS3_SRC_DIR}/../Vulkan"
+"${Polly_LIBRARY_DIRS}"
 )
 
 
@@ -391,6 +415,10 @@ add_dependencies(rpcs3 GitVersion)
 if(NOT MSVC)
 	find_package(GLEW 1.13.0 REQUIRED)
 	target_link_libraries(rpcs3 GLEW::GLEW)
+endif()
+
+if(Polly_FOUND)
+    target_link_libraries(rpcs3 Polly PollyISL PollyPPCG)
 endif()
 
 if(WIN32)
