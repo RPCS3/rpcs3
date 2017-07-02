@@ -293,7 +293,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
 	}
 
-	void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	virtual void deregisterEHFrames() override
 	{
 	}
 };
