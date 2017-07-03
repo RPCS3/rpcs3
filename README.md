@@ -33,6 +33,7 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
 * Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake llvm qt5-base`
+* Fedora: `sudo dnf install cmake qt5-devel vulkan-devel libGLEW`
 
 ### Mac OSX 
 Mac OSX is not supported at this moment because it doesn't meet system requirements (OpenGL 4.3)
@@ -64,7 +65,7 @@ open the SLN, wait for projects to load, in explorer open `rpcs3qt/rpcs3qt.vcxpr
 1) `git clone https://github.com/RPCS3/rpcs3.git` </br>
 2) `cd rpcs3/` </br>
 3) `git submodule update --init` </br>
-4) `cmake CMakeLists.txt && make GitVersion && make` </br>
+4) `cmake && make GitVersion && make` </br>
 5) Run RPCS3 with `./bin/rpcs3` </br>
 
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=...` (or wherever llvm brew was installed) to cmake invocation.
