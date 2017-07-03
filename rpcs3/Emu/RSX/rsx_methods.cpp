@@ -6,6 +6,7 @@
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 #include <sstream>
 #include <cereal/archives/binary.hpp>
@@ -58,11 +59,25 @@ namespace rsx
 			rsx->ctrl->ref.exchange(arg);
 		}
 
+        void set_context_dma_semaphore(thread* rsx, u32 _reg, u32 arg)
+        {
+            LOG_ERROR(RSX, "dmaSemaphore: 0x%x", arg);
+            rsx->nv406e_semaphore_addr = arg;
+        }
+
 		void semaphore_acquire(thread* rsx, u32 _reg, u32 arg)
 		{
 			//TODO: dma
-			while (vm::ps3::read32(rsx->label_addr + method_registers.semaphore_offset_406e()) != arg)
+			//while (vm::ps3::read32(rsx->label_addr + method_registers.semaphore_offset_406e()) != arg)
+            const u32 addr = get_address(method_registers.semaphore_offset_406e(), rsx->nv406e_semaphore_addr);
+            //todo: make me atomic
+            while (vm::ps3::read32(addr) != arg)
 			{
+                //if (rsx->nv406e_semaphore_addr == CELL_GCM_CONTEXT_DMA_DEVICE_R || rsx->nv406e_semaphore_addr == CELL_GCM_CONTEXT_DMA_DEVICE_RW)
+                // todo: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
+                if (addr == 0x40000030)
+                    break;
+
 				if (Emu.IsStopped())
 					break;
 
@@ -73,9 +88,34 @@ namespace rsx
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_406e(), arg);
+			//vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_406e(), arg);
+            const u32 addr = get_address(method_registers.semaphore_offset_406e(), rsx->nv406e_semaphore_addr);
+            vm::ps3::write32(addr, arg);
 		}
 	}
+
+    struct RsxSemaphore {
+        be_t<u32> val;
+        be_t<u32> pad;
+        be_t<u64> timestamp;
+    };
+
+    struct RsxNotify {
+        be_t<u64> timestamp;
+        be_t<u64> zero;
+    };
+
+    struct RsxReport {
+        be_t<u64> timestamp;
+        be_t<u32> val;
+        be_t<u32> pad;
+    };
+
+    struct RsxReports {
+        RsxSemaphore semaphore[0x100];
+        RsxNotify notify[64];
+        RsxReport report[2048];
+    };
 
 	namespace nv4097
 	{
@@ -93,6 +133,11 @@ namespace rsx
 			}
 		}
 
+        /*void set_context_dma_semaphore(thread* rsx, u32 _reg, u32 arg)
+        {
+            rsx->nv4097_semaphore_index = arg >> 4;
+        }*/
+
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			if (!rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
@@ -101,7 +146,15 @@ namespace rsx
 			}
 
 			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(), arg);
+			//vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(), arg);
+            //const u32 addr = get_address(method_registers.semaphore_offset_4097(), rsx->nv4097_semaphore_index);
+            //vm::ps3::write32(addr, arg);
+            const u32 index = method_registers.semaphore_offset_4097() >> 4;
+            //LOG_ERROR(RSX, "readrelease: 0x%x, 0x%x, addr:0x%x", arg, index, rsx->label_addr);
+            auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
+            sema.semaphore[index].val = arg;
+            sema.semaphore[index].pad = 0;
+            sema.semaphore[index].timestamp = rsx->timestamp();
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -112,8 +165,18 @@ namespace rsx
 			}
 
 			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(),
-				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
+			//vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(),
+			//	(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
+            //const u32 addr = get_address(method_registers.semaphore_offset_4097(), rsx->nv4097_semaphore_addr);
+            //vm::ps3::write32(addr, (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
+            const u32 index = method_registers.semaphore_offset_4097() >> 4;
+            u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
+            //LOG_ERROR(RSX, "wriuterelease: 0x%x, 0x%x, addr:0x%x", val, index, rsx->label_addr);
+            auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
+            sema.semaphore[index].val = val;
+            sema.semaphore[index].pad = 0;
+            sema.semaphore[index].timestamp = rsx->timestamp();
+
 		}
 
 		template<u32 id, u32 index, int count, typename type>
@@ -323,10 +386,10 @@ namespace rsx
 
 			switch (report_dma)
 			{
-			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_LOCATION_LOCAL; break;
-			case blit_engine::context_dma::report_location_main:
-			case blit_engine::context_dma::memory_host_buffer: 
-				location = CELL_GCM_LOCATION_MAIN; break;
+			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL; break;
+            case blit_engine::context_dma::report_location_main: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN; break;
+            case blit_engine::context_dma::memory_host_buffer: location = CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER; break;
+				//location = CELL_GCM_LOCATION_MAIN; break;
 			default:
 				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", (u8)report_dma);
 				return;
@@ -353,7 +416,7 @@ namespace rsx
 				break;
 			}
 
-			//result->padding = 0;
+			result->padding = 0;
 		}
 
 		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
@@ -458,6 +521,7 @@ namespace rsx
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
+                return;
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
@@ -852,7 +916,7 @@ namespace rsx
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
-		rsx->reset();
+		//rsx->reset(); // moved to 'actual' rsx flip command
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->gcm_current_buffer = arg;
@@ -873,6 +937,7 @@ namespace rsx
 
 	void user_command(thread* rsx, u32, u32 arg)
 	{
+        sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
 		if (rsx->user_handler)
 		{
 			rsx->intr_thread->cmd_list
@@ -885,6 +950,31 @@ namespace rsx
 			rsx->intr_thread->notify();
 		}
 	}
+
+    namespace gcm
+    {
+        // not entirely sure which one should actually do the flip, or if these should be handled seperately,
+        // so for now lets flip in queue and just let the driver deal with it
+        template<u32 index>
+        struct driver_flip
+        {
+            static void impl(thread* rsx, u32 _reg, u32 arg)
+            {
+                rsx->reset(); // fixes kh, so lets leave it here and see what happens
+                sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
+            }
+        };
+
+        template<u32 index>
+        struct queue_flip
+        {
+            static void impl(thread* rsx, u32 _reg, u32 arg)
+            {
+                flip_command(rsx, _reg, arg);
+                sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
+            }
+        };
+    }
 
 	void rsx_state::reset()
 	{
@@ -957,7 +1047,7 @@ namespace rsx
 		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
 
 		// rsx dma initial values
-		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
+		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL;
 		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 		registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
 		registers[NV309E_SET_CONTEXT_DMA_IMAGE] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
@@ -1067,10 +1157,17 @@ namespace rsx
 		methods[NV4097_SET_SURFACE_COLOR_BOFFSET]         = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_B]               = nullptr;
 		methods[NV4097_SET_SURFACE_COLOR_TARGET]          = nullptr;
+        methods[0x224 >> 2]                               = nullptr;
+        methods[0x228 >> 2]                               = nullptr;
+        methods[0x230 >> 2]                               = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_Z]               = nullptr;
 		methods[NV4097_INVALIDATE_ZCULL]                  = nullptr;
 		methods[NV4097_SET_CYLINDRICAL_WRAP]              = nullptr;
 		methods[NV4097_SET_CYLINDRICAL_WRAP1]             = nullptr;
+        methods[0x240 >> 2]                               = nullptr;
+        methods[0x244 >> 2]                               = nullptr;
+        methods[0x248 >> 2]                               = nullptr;
+        methods[0x24C >> 2]                               = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_C]               = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_D]               = nullptr;
 		methods[NV4097_SET_SURFACE_COLOR_COFFSET]         = nullptr;
@@ -1139,6 +1236,7 @@ namespace rsx
 		methods[NV4097_SET_FOG_MODE]                      = nullptr;
 		methods[NV4097_SET_FOG_PARAMS]                    = nullptr;
 		methods[NV4097_SET_FOG_PARAMS + 1]                = nullptr;
+        methods[0x8d8 >> 2]                               = nullptr;
 		methods[NV4097_SET_SHADER_PROGRAM]                = nullptr;
 		methods[NV4097_SET_VERTEX_TEXTURE_OFFSET]         = nullptr;
 		methods[NV4097_SET_VERTEX_TEXTURE_FORMAT]         = nullptr;
@@ -1222,6 +1320,7 @@ namespace rsx
 		methods[NV4097_SET_TEXTURE_BORDER_COLOR]          = nullptr;
 		methods[NV4097_SET_VERTEX_DATA4F_M]               = nullptr;
 		methods[NV4097_SET_COLOR_KEY_COLOR]               = nullptr;
+        methods[0x1d04 >> 2]                              = nullptr;
 		methods[NV4097_SET_SHADER_CONTROL]                = nullptr;
 		methods[NV4097_SET_INDEXED_CONSTANT_READ_LIMITS]  = nullptr;
 		methods[NV4097_SET_SEMAPHORE_OFFSET]              = nullptr;
@@ -1348,6 +1447,8 @@ namespace rsx
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
 
+        bind_array<(0x400 >> 2), 1, 0x10, nullptr>();
+        bind_array<(0x440 >> 2), 1, 0x20, nullptr>();
 		bind_array<NV4097_SET_ANISO_SPREAD, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nullptr>();
@@ -1370,6 +1471,7 @@ namespace rsx
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
+        bind<NV406E_SET_CONTEXT_DMA_SEMAPHORE, nv406e::set_context_dma_semaphore>();
 		bind<NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire>();
 		bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
 
@@ -1384,6 +1486,7 @@ namespace rsx
 		*/
 
 		// NV4097
+        //bind<NV4097_SET_CONTEXT_DMA_SEMAPHORE, nv4097::set_context_dma_semaphore>();
 		bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
 		bind<NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release>();
 		bind<NV4097_SET_BEGIN_END, nv4097::set_begin_end>();
@@ -1439,9 +1542,13 @@ namespace rsx
 		//NV0039
 		bind<NV0039_BUFFER_NOTIFY, nv0039::buffer_notify>();
 
-		// custom methods
-		bind<GCM_FLIP_COMMAND, flip_command>();
+		// lv1 hypervisor
 		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
+        bind_range<GCM_FLIP_HEAD, 1, 2, gcm::driver_flip>();
+        bind_range<GCM_DRIVER_QUEUE, 1, 8, gcm::queue_flip>();
+
+        // custom 
+        bind<GCM_FLIP_COMMAND, flip_command>();
 
 		return true;	
 	}();
