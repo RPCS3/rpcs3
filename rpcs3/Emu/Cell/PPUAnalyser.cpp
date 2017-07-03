@@ -10,7 +10,6 @@
 namespace vm { using namespace ps3; }
 
 const ppu_decoder<ppu_itype> s_ppu_itype;
-const ppu_decoder<ppu_iname> s_ppu_iname;
 
 template<>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
@@ -36,10 +35,10 @@ void fmt_class_string<bs_t<ppu_attr>>::format(std::string& out, u64 arg)
 	format_bitset(out, arg, "[", ",", "]", &fmt_class_string<ppu_attr>::format);
 }
 
-void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc)
+void ppu_module::validate(u32 reloc)
 {
 	// Load custom PRX configuration if available
-	if (fs::file yml{fname + ".yml"})
+	if (fs::file yml{path + ".yml"})
 	{
 		const auto cfg = YAML::Load(yml.to_string());
 
@@ -57,14 +56,14 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 
 				while (addr > found && index + 1 < funcs.size())
 				{
-					LOG_WARNING(LOADER, "%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", fname, found, addr, size);
+					LOG_WARNING(LOADER, "%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", path, found, addr, size);
 					index++;
 					found = funcs[index].addr - reloc;
 				}
 
 				if (addr < found)
 				{
-					LOG_ERROR(LOADER, "%s.yml : function not found (0x%x, 0x%x)", fname, addr, size);
+					LOG_ERROR(LOADER, "%s.yml : function not found (0x%x, 0x%x)", path, addr, size);
 					continue;
 				}
 
@@ -72,7 +71,7 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 				{
 					if (size + 4 != funcs[index].size || vm::read32(addr + size) != ppu_instructions::NOP())
 					{
-						LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", fname, found, funcs[index].size, addr, size);
+						LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
 					}
 				}
 
@@ -80,7 +79,7 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not found at the end (0x%x, 0x%x)", fname, addr, size);
+				LOG_ERROR(LOADER, "%s.yml : function not found at the end (0x%x, 0x%x)", path, addr, size);
 				break;
 			}
 		}
@@ -94,13 +93,13 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 		{
 			if (funcs[index].size)
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not covered at 0x%x (size=0x%x)", fname, funcs[index].addr, funcs[index].size);
+				LOG_ERROR(LOADER, "%s.yml : function not covered at 0x%x (size=0x%x)", path, funcs[index].addr, funcs[index].size);
 			}
 
 			index++;
 		}
 
-		LOG_SUCCESS(LOADER, "%s.yml : validation completed", fname);
+		LOG_SUCCESS(LOADER, "%s.yml : validation completed", path);
 	}
 }
 
@@ -522,17 +521,17 @@ namespace ppu_patterns
 	};
 }
 
-std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc, u32 entry)
+void ppu_module::analyse(u32 lib_toc, u32 entry)
 {
 	// Assume first segment is executable
-	const u32 start = segs[0].first;
-	const u32 end = segs[0].first + segs[0].second;
+	const u32 start = segs[0].addr;
+	const u32 end = segs[0].addr + segs[0].size;
 
 	// Known TOCs (usually only 1)
 	std::unordered_set<u32> TOCs;
 
 	// Known functions
-	std::map<u32, ppu_function> funcs;
+	std::map<u32, ppu_function> fmap;
 
 	// Function analysis workload
 	std::vector<std::reference_wrapper<ppu_function>> func_queue;
@@ -543,7 +542,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Register new function
 	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function&
 	{
-		ppu_function& func = funcs[addr];
+		ppu_function& func = fmap[addr];
 
 		if (caller)
 		{
@@ -586,7 +585,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		// Grope for OPD section (TODO: optimization, better constraints)
 		for (const auto& seg : segs)
 		{
-			for (vm::cptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
+			for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
 			{
 				if (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && ptr[1] == toc)
 				{
@@ -602,7 +601,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Get next reliable function address
 	auto get_limit = [&](u32 addr) -> u32
 	{
-		for (auto it = funcs.lower_bound(addr), end = funcs.end(); it != end; it++)
+		for (auto it = fmap.lower_bound(addr), end = fmap.end(); it != end; it++)
 		{
 			if (test(it->second.attr, ppu_attr::known_addr))
 			{
@@ -616,7 +615,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find references indiscriminately
 	for (const auto& seg : segs)
 	{
-		for (vm::cptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
+		for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
 		{
 			const u32 value = *ptr;
 
@@ -627,7 +626,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 			for (const auto& _seg : segs)
 			{
-				if (value >= _seg.first && value < _seg.first + _seg.second)
+				if (value >= _seg.addr && value < _seg.addr + _seg.size)
 				{
 					addr_heap.emplace(value);
 					break;
@@ -639,10 +638,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find OPD section
 	for (const auto& sec : secs)
 	{
-		vm::cptr<void> sec_end = vm::cast(sec.first + sec.second);
+		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr += 2)
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr += 2)
 		{
 			if (ptr + 6 <= sec_end && !ptr[0] && !ptr[2] && ptr[1] == ptr[4] && ptr[3] == ptr[5])
 			{
@@ -677,10 +676,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			}
 		}
 
-		if (sec_end) LOG_NOTICE(PPU, "Reading OPD section at 0x%x...", sec.first);
+		if (sec_end) LOG_NOTICE(PPU, "Reading OPD section at 0x%x...", sec.addr);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr += 2)
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr += 2)
 		{
 			// Special case: see "Probe"
 			if (!ptr[0]) ptr += 4;
@@ -709,7 +708,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	}
 
 	// Clean TOCs
-	for (auto&& pair : funcs)
+	for (auto&& pair : fmap)
 	{
 		if (pair.second.toc == -1)
 		{
@@ -720,12 +719,12 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find .eh_frame section
 	for (const auto& sec : secs)
 	{
-		vm::cptr<void> sec_end = vm::cast(sec.first + sec.second);
+		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end;)
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end;)
 		{
-			if (ptr % 4 || ptr.addr() < sec.first || ptr >= sec_end)
+			if (ptr % 4 || ptr.addr() < sec.addr || ptr >= sec_end)
 			{
 				sec_end.set(0);
 				break;
@@ -749,7 +748,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			{
 				const u32 cie_off = ptr.addr() - ptr[1] + 4;
 
-				if (cie_off % 4 || cie_off < sec.first || cie_off >= sec_end.addr())
+				if (cie_off % 4 || cie_off < sec.addr || cie_off >= sec_end.addr())
 				{
 					sec_end.set(0);
 					break;
@@ -759,10 +758,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			ptr = vm::cast(ptr.addr() + size);
 		}
 
-		if (sec_end && sec.second > 4) LOG_NOTICE(PPU, "Reading .eh_frame section at 0x%x...", sec.first);
+		if (sec_end && sec.size > 4) LOG_NOTICE(PPU, "Reading .eh_frame section at 0x%x...", sec.addr);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
 		{
 			if (ptr[0] == 0)
 			{
@@ -837,7 +836,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		{
 			for (u32 addr : func.callers)
 			{
-				ppu_function& caller = funcs[addr];
+				ppu_function& caller = fmap[addr];
 
 				if (!caller.toc)
 				{
@@ -847,7 +846,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 			for (u32 addr : func.calls)
 			{
-				ppu_function& callee = funcs[addr];
+				ppu_function& callee = fmap[addr];
 
 				if (!callee.toc)
 				{
@@ -1077,10 +1076,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		if (test(func.attr, ppu_attr::no_size))
 		{
 			// Get next function
-			const auto _next = funcs.lower_bound(func.blocks.crbegin()->first + 1);
+			const auto _next = fmap.lower_bound(func.blocks.crbegin()->first + 1);
 
 			// Get limit
-			const u32 func_end2 = _next == funcs.end() ? func_end : std::min<u32>(_next->first, func_end);
+			const u32 func_end2 = _next == fmap.end() ? func_end : std::min<u32>(_next->first, func_end);
 
 			// Set more block entries
 			std::for_each(addr_heap.lower_bound(func.addr), addr_heap.lower_bound(func_end2), add_block);
@@ -1322,14 +1321,14 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	}
 
 	// Function shrinkage, disabled (TODO: it's potentially dangerous but improvable)
-	for (auto& _pair : funcs)
+	for (auto& _pair : fmap)
 	{
 		auto& func = _pair.second;
 
 		// Get next function addr
-		const auto _next = funcs.lower_bound(_pair.first + 1);
+		const auto _next = fmap.lower_bound(_pair.first + 1);
 
-		const u32 next = _next == funcs.end() ? end : _next->first;
+		const u32 next = _next == fmap.end() ? end : _next->first;
 
 		// Just ensure that functions don't overlap
 		if (func.addr + func.size > next)
@@ -1415,7 +1414,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	{
 		lib_toc = *TOCs.begin();
 
-		for (auto&& pair : funcs)
+		for (auto&& pair : fmap)
 		{
 			if (pair.second.toc == 0)
 			{
@@ -1425,16 +1424,12 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	}
 	
 	// Convert map to vector (destructive)
-	std::vector<ppu_function> result;
-
-	for (auto&& pair : funcs)
+	for (auto&& pair : fmap)
 	{
 		auto& func = pair.second;
 		LOG_TRACE(PPU, "Function %s (size=0x%x, toc=0x%x, attr %#x)", func.name, func.size, func.toc, func.attr);
-		result.emplace_back(std::move(func));
+		funcs.emplace_back(std::move(func));
 	}
 
-	LOG_NOTICE(PPU, "Function analysis: %zu functions (%zu enqueued)", result.size(), func_queue.size());
-
-	return result;
+	LOG_NOTICE(PPU, "Function analysis: %zu functions (%zu enqueued)", funcs.size(), func_queue.size());
 }

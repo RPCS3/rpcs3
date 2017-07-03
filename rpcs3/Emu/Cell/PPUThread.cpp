@@ -982,23 +982,30 @@ extern void ppu_initialize(const ppu_module& info)
 	// Worker threads
 	std::vector<std::thread> jthreads;
 
-	// Global variables (pointers) to initialize
-	std::vector<std::pair<std::string, void*>> globals;
+	// Global variables to initialize
+	std::vector<std::pair<std::string, u64>> globals;
 
 	// Split module into fragments <= 1 MiB
 	std::size_t fpos = 0;
 
-	// Copy module information
-	ppu_module part = info;
+	// Difference between function name and current location
+	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
 
 	while (fpos < info.funcs.size())
 	{
+		// First function in current module part
 		const auto fstart = fpos;
 
-		std::size_t bsize = 0;
-
+		// Copy module information (TODO: optimize)
+		ppu_module part = info;
 		part.funcs.clear();
 		part.funcs.reserve(16000);
+
+		// Unique suffix for each module part
+		const u32 suffix = info.funcs.at(fstart).addr - reloc;
+
+		// Overall block size in bytes
+		std::size_t bsize = 0;
 
 		while (fpos < info.funcs.size())
 		{
@@ -1018,28 +1025,28 @@ extern void ppu_initialize(const ppu_module& info)
 				entry.addr = block.first;
 				entry.size = block.second;
 				entry.toc  = func.toc;
-				fmt::append(entry.name, "__0x%x", block.first);
+				fmt::append(entry.name, "__0x%x", block.first - reloc);
 				part.funcs.emplace_back(std::move(entry));
 			}
 
 			fpos++;
 		}
 
-		part.name.clear();
+		// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
+		std::string obj_name = "v2";
 
 		if (info.name.size())
 		{
-			part.name += '-';
-			part.name += info.name;
+			obj_name += '-';
+			obj_name += info.name;
 		}
 
 		if (fstart || fpos < info.funcs.size())
 		{
-			fmt::append(part.name, "+%06X", info.funcs.at(fstart).addr);
+			fmt::append(obj_name, "+%06X", suffix);
 		}
 
 		// Compute module hash
-		std::string obj_name;
 		{
 			sha1_context ctx;
 			u8 output[20];
@@ -1052,28 +1059,32 @@ extern void ppu_initialize(const ppu_module& info)
 					continue;
 				}
 
-				const be_t<u32> addr = func.addr;
+				const be_t<u32> addr = func.addr - reloc;
 				const be_t<u32> size = func.size;
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&addr), sizeof(addr));
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&size), sizeof(size));
 
 				for (const auto& block : func.blocks)
 				{
-					if (block.second == 0)
+					if (block.second == 0 || reloc)
 					{
 						continue;
 					}
 
+					// TODO: relocations must be taken into account (TODO)
 					sha1_update(&ctx, vm::ps3::_ptr<const u8>(block.first), block.second);
+				}
+
+				if (reloc)
+				{
+					continue;
 				}
 
 				sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
 			}
 
 			sha1_finish(&ctx, output);
-
-			// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
-			fmt::append(obj_name, "v2%s-%016X-%s.obj", part.name, reinterpret_cast<be_t<u64>&>(output), jit.cpu());
+			fmt::append(obj_name, "-%016X-%s.obj", reinterpret_cast<be_t<u64>&>(output), jit.cpu());
 		}
 
 		if (Emu.IsStopped())
@@ -1081,19 +1092,49 @@ extern void ppu_initialize(const ppu_module& info)
 			break;
 		}
 
-		globals.emplace_back(fmt::format("__mptr%x", part.funcs[0].addr), vm::g_base_addr);
-		globals.emplace_back(fmt::format("__cptr%x", part.funcs[0].addr), vm::g_exec_addr);
+		globals.emplace_back(fmt::format("__mptr%x", suffix), (u64)vm::g_base_addr);
+		globals.emplace_back(fmt::format("__cptr%x", suffix), (u64)vm::g_exec_addr);
+
+		// Initialize segments for relocations
+		for (u32 i = 0; i < info.segs.size(); i++)
+		{
+			globals.emplace_back(fmt::format("__seg%u_%x", i, suffix), info.segs[i].addr);
+		}
+
+		// Get cache path for this executable
+		std::string cache_path;
+
+		if (info.name.empty())
+		{
+			cache_path = Emu.GetCachePath();
+		}
+		else
+		{
+			cache_path = vfs::get("/dev_flash/");
+
+			if (info.path.compare(0, cache_path.size(), cache_path) == 0)
+			{
+				// Remove prefix for dev_flash files
+				cache_path.clear();
+			}
+			else
+			{
+				cache_path = Emu.GetTitleID();
+			}
+
+			cache_path = fs::get_data_dir(cache_path, info.path);
+		}
 
 		// Check object file
-		if (fs::is_file(Emu.GetCachePath() + obj_name))
+		if (fs::is_file(cache_path + obj_name))
 		{
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(jit, part, Emu.GetCachePath(), obj_name);
+			ppu_initialize2(jit, part, cache_path, obj_name);
 			continue;
 		}
 
 		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part)]()
+		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part), cache_path = std::move(cache_path)]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
@@ -1109,17 +1150,17 @@ extern void ppu_initialize(const ppu_module& info)
 
 				// Use another JIT instance
 				jit_compiler jit2({}, g_cfg.core.llvm_cpu);
-				ppu_initialize2(jit2, part, Emu.GetCachePath(), obj_name);
+				ppu_initialize2(jit2, part, cache_path, obj_name);
 			}
 
-			if (Emu.IsStopped())
+			if (Emu.IsStopped() || !fs::is_file(cache_path + obj_name))
 			{
 				return;
 			}
 
 			// Proceed with original JIT instance		
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(jit, part, Emu.GetCachePath(), obj_name);
+			ppu_initialize2(jit, part, cache_path, obj_name);
 		});
 	}
 
@@ -1145,7 +1186,7 @@ extern void ppu_initialize(const ppu_module& info)
 		{
 			if (block.second)
 			{
-				ppu_ref(block.first) = ::narrow<u32>(jit.get(fmt::format("__0x%x", block.first)));
+				ppu_ref(block.first) = ::narrow<u32>(jit.get(fmt::format("__0x%x", block.first - reloc)));
 			}
 		}
 	}
@@ -1155,7 +1196,7 @@ extern void ppu_initialize(const ppu_module& info)
 	{
 		if (u64 addr = jit.get(var.first))
 		{
-			*reinterpret_cast<void**>(addr) = var.second;
+			*reinterpret_cast<u64*>(addr) = var.second;
 		}
 	}
 #endif
@@ -1256,10 +1297,16 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				});
 
 				// Translate
-				const auto func = translator.Translate(module_part.funcs[fi]);
-
-				// Run optimization passes
-				pm.run(*func);
+				if (const auto func = translator.Translate(module_part.funcs[fi]))
+				{
+					// Run optimization passes
+					pm.run(*func);
+				}
+				else
+				{
+					Emu.Pause();
+					return;
+				}				
 			}
 		}
 
