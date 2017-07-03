@@ -65,7 +65,7 @@ open the SLN, wait for projects to load, in explorer open `rpcs3qt/rpcs3qt.vcxpr
 1) `git clone https://github.com/RPCS3/rpcs3.git` </br>
 2) `cd rpcs3/` </br>
 3) `git submodule update --init` </br>
-4) `cmake && make GitVersion && make` </br>
+4) `cmake CMakeLists.txt && make GitVersion && make` </br>
 5) Run RPCS3 with `./bin/rpcs3` </br>
 
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=...` (or wherever llvm brew was installed) to cmake invocation.
