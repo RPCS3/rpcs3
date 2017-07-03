@@ -1,386 +1,743 @@
 #include "stdafx.h"
-#include "System.h"
+#include "Utilities/event.h"
+#include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
-#include "Ini.h"
+#include "Emu/System.h"
 
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/PPUInstrTable.h"
-using namespace PPU_instr;
+#include "Emu/Cell/RawSPUThread.h"
+#include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/PSP2/ARMv7Thread.h"
 
-static const wxString& BreakPointsDBName = "BreakPoints.dat";
-static const u16 bpdb_version = 0x1000;
+#include "Emu/IdManager.h"
+#include "Emu/RSX/GSRender.h"
 
-ModuleInitializer::ModuleInitializer()
+#include "Loader/PSF.h"
+#include "Loader/ELF.h"
+
+#include "Utilities/StrUtil.h"
+
+#include "../Crypto/unself.h"
+
+#include <thread>
+
+#include "Utilities/GDBDebugServer.h"
+
+cfg_root g_cfg;
+
+system_type g_system;
+
+std::string g_cfg_defaults;
+
+extern atomic_t<u32> g_thread_count;
+
+extern u64 get_system_time();
+
+extern void ppu_load_exec(const ppu_exec_object&);
+extern void spu_load_exec(const spu_exec_object&);
+extern void arm_load_exec(const arm_exec_object&);
+extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+
+fs::file g_tty;
+
+template <>
+void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
 {
-	Emu.AddModuleInit(this);
+	format_enum(out, arg, [](mouse_handler value)
+	{
+		switch (value)
+		{
+		case mouse_handler::null: return "Null";
+		case mouse_handler::basic: return "Basic";
+		}
+
+		return unknown;
+	});
 }
 
-Emulator::Emulator()
-	: m_status(Stopped)
-	, m_mode(DisAsm)
-	, m_dbg_console(NULL)
-	, m_rsx_callback(0)
+template <>
+void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 {
+	format_enum(out, arg, [](pad_handler value)
+	{
+		switch (value)
+		{
+		case pad_handler::null: return "Null";
+		case pad_handler::keyboard: return "Keyboard";
+		case pad_handler::ds4: return "DualShock 4";
+#ifdef _MSC_VER
+		case pad_handler::xinput: return "XInput";
+#endif
+#ifdef _WIN32
+		case pad_handler::mm: return "MMJoystick";
+#endif
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<video_renderer>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](video_renderer value)
+	{
+		switch (value)
+		{
+		case video_renderer::null: return "Null";
+		case video_renderer::opengl: return "OpenGL";
+		case video_renderer::vulkan: return "Vulkan";
+#ifdef _MSC_VER
+		case video_renderer::dx12: return "D3D12";
+#endif
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<video_resolution>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](video_resolution value)
+	{
+		switch (value)
+		{
+		case video_resolution::_1080: return "1920x1080";
+		case video_resolution::_720: return "1280x720";
+		case video_resolution::_480: return "720x480";
+		case video_resolution::_576: return "720x576";
+		case video_resolution::_1600x1080: return "1600x1080";
+		case video_resolution::_1440x1080: return "1440x1080";
+		case video_resolution::_1280x1080: return "1280x1080";
+		case video_resolution::_960x1080: return "960x1080";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](video_aspect value)
+	{
+		switch (value)
+		{
+		case video_aspect::_auto: return "Auto";
+		case video_aspect::_4_3: return "4:3";
+		case video_aspect::_16_9: return "16:9";
+		}
+
+		return unknown;
+	});
+}
+
+
+template <>
+void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](keyboard_handler value)
+	{
+		switch (value)
+		{
+		case keyboard_handler::null: return "Null";
+		case keyboard_handler::basic: return "Basic";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_renderer value)
+	{
+		switch (value)
+		{
+		case audio_renderer::null: return "Null";
+#ifdef _WIN32
+		case audio_renderer::xaudio: return "XAudio2";
+#elif __linux__
+		case audio_renderer::alsa: return "ALSA";
+#endif
+		case audio_renderer::openal: return "OpenAL";
+		}
+
+		return unknown;
+	});
 }
 
 void Emulator::Init()
 {
-	while(m_modules_init.GetCount())
+	if (!g_tty)
 	{
-		m_modules_init[0].Init();
-		m_modules_init.RemoveAt(0);
+		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
 	}
-	//if(m_memory_viewer) m_memory_viewer->Close();
-	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
+	
+	idm::init();
+	fxm::init();
+
+	// Reset defaults, cache them
+	g_cfg.from_default();
+	g_cfg_defaults = g_cfg.to_string();
+
+	// Reload global configuration
+	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+
+	// Create directories
+	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
+	const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	const std::string dev_hdd0 = fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
+	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
+
+	fs::create_path(dev_hdd0);
+	fs::create_dir(dev_hdd0 + "game/");
+	fs::create_dir(dev_hdd0 + "game/TEST12345/");
+	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
+	fs::create_dir(dev_hdd0 + "home/");
+	fs::create_dir(dev_hdd0 + "home/00000001/");
+	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
+	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
+	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
+	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
+	fs::create_dir(dev_hdd1 + "cache/");
+	fs::create_dir(dev_hdd1 + "game/");
+	fs::create_path(dev_hdd1);
+	fs::create_path(dev_usb);
+  
+#ifdef WITH_GDB_DEBUGGER
+	fxm::make<GDBDebugServer>();
+#endif
+	// Initialize patch engine
+	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
 
-void Emulator::SetPath(const wxString& path, const wxString& elf_path)
+void Emulator::SetPath(const std::string& path, const std::string& elf_path)
 {
 	m_path = path;
 	m_elf_path = elf_path;
 }
 
-void Emulator::CheckStatus()
+bool Emulator::BootGame(const std::string& path, bool direct)
 {
-	ArrayF<CPUThread>& threads = GetCPU().GetThreads();
-	if(!threads.GetCount())
+	static const char* boot_list[] =
 	{
-		Stop();
-		return;	
+		"/PS3_GAME/USRDIR/EBOOT.BIN",
+		"/USRDIR/EBOOT.BIN",
+		"/EBOOT.BIN",
+		"/eboot.bin",
+	};
+
+	if (direct && fs::is_file(path))
+	{
+		SetPath(path);
+		Load();
+
+		return true;
 	}
 
-	bool IsAllPaused = true;
-	for(u32 i=0; i<threads.GetCount(); ++i)
+	for (std::string elf : boot_list)
 	{
-		if(threads[i].IsPaused()) continue;
-		IsAllPaused = false;
-		break;
-	}
-	if(IsAllPaused)
-	{
-		//ConLog.Warning("all paused!");
-		Pause();
-		return;
+		elf = path + elf;
+
+		if (fs::is_file(elf))
+		{
+			SetPath(elf);
+			Load();
+
+			return true;
+		}
 	}
 
-	bool IsAllStoped = true;
-	for(u32 i=0; i<threads.GetCount(); ++i)
-	{
-		if(threads[i].IsStopped()) continue;
-		IsAllStoped = false;
-		break;
-	}
-	if(IsAllStoped)
-	{
-		//ConLog.Warning("all stoped!");
-		Pause(); //Stop();
-	}
+	return false;
+}
+
+std::string Emulator::GetGameDir()
+{
+	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
+}
+
+std::string Emulator::GetLibDir()
+{
+	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
 void Emulator::Load()
 {
-	if(!wxFileExists(m_path)) return;
-	ConLog.Write("Loading '%s'...", m_path);
-	GetInfo().Reset();
-	m_vfs.Init(m_path);
-	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	//m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
-	//m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	//m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
-
-	ConLog.SkipLn();
-	ConLog.Write("Mount info:");
-	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
-	{
-		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path(), m_vfs.m_devices[i].GetLocalPath());
-	}
-	ConLog.SkipLn();
-
-	if(m_elf_path.IsEmpty())
-	{
-		GetVFS().GetDeviceLocal(m_path, m_elf_path);
-	}
-
-	vfsFile f(m_elf_path);
-
-	if(!f.IsOpened())
-	{
-		ConLog.Error("Elf not found! (%s - %s)", m_path, m_elf_path);
-		return;
-	}
-
-	bool is_error;
-	Loader l(f);
+	Stop();
 
 	try
 	{
-		if(!(is_error = !l.Analyze() || l.GetMachine() == MACHINE_Unknown))
+		Init();
+
+		// Open SELF or ELF
+		fs::file elf_file(m_path);
+
+		if (!elf_file)
 		{
-			switch(l.GetMachine())
+			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
+			return;
+		}
+
+		LOG_NOTICE(LOADER, "Path: %s", m_path);
+
+		const std::string elf_dir = fs::get_parent_dir(m_path);
+		const fs::file sfov(elf_dir + "/sce_sys/param.sfo");
+		const fs::file sfo1(elf_dir + "/../PARAM.SFO");
+
+		// Load PARAM.SFO (TODO)
+		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
+		m_title = psf::get_string(_psf, "TITLE", m_path);
+		m_title_id = psf::get_string(_psf, "TITLE_ID");
+
+		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
+		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
+
+		// Initialize data/cache directory
+		m_cache_path = fs::get_data_dir(m_title_id, m_path);
+		LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
+
+		// Load custom config-0
+		if (fs::file cfg_file{m_cache_path + "/config.yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: %s/config.yml", m_cache_path);
+			g_cfg.from_string(cfg_file.to_string());
+		}
+
+		// Load custom config-1
+		if (fs::file cfg_file{fs::get_config_dir() + "data/" + m_title_id + "/config.yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: data/%s/config.yml", m_title_id);
+			g_cfg.from_string(cfg_file.to_string());
+		}
+
+		// Load custom config-2
+		if (fs::file cfg_file{m_path + ".yml"})
+		{
+			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
+			g_cfg.from_string(cfg_file.to_string());
+		}
+
+		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
+
+		// Load patches from different locations
+		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
+		fxm::check_unlocked<patch_engine>()->append(m_cache_path + "/patch.yml");
+
+		// Mount all devices
+		const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
+		const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+		const std::string home_dir = g_cfg.vfs.app_home;
+		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
+
+		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
+
+		// Mount /dev_bdvd/ if necessary
+		if (bdvd_dir.empty()) 
+		{
+			size_t pos = elf_dir.rfind("PS3_GAME");
+			std::string temp = elf_dir.substr(0, pos);
+			if ((pos != std::string::npos) && fs::is_file(temp + "/PS3_DISC.SFB")) {
+				bdvd_dir = temp;
+			}
+		}
+		if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
+		{
+			vfs::mount("dev_bdvd", fmt::replace_all(bdvd_dir, "$(EmulatorDir)", emu_dir));
+			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
+		}
+
+		// Mount /host_root/ if necessary
+		if (g_cfg.vfs.host_root)
+		{
+			vfs::mount("host_root", {});
+		}
+
+		// Check SELF header
+		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
+		{
+			const std::string decrypted_path = m_cache_path + "boot.elf";
+
+			fs::stat_t encrypted_stat = elf_file.stat();
+			fs::stat_t decrypted_stat;
+
+			// Check modification time and try to load decrypted ELF
+			if (fs::stat(decrypted_path, decrypted_stat) && decrypted_stat.mtime == encrypted_stat.mtime)
 			{
-			case MACHINE_SPU:
-			case MACHINE_PPC64:
-				Memory.Init(Memory_PS3);
-			break;
+				elf_file.open(decrypted_path);
+			}
+			else
+			{
+				// Decrypt SELF
+				elf_file = decrypt_self(std::move(elf_file));
 
-			case MACHINE_MIPS:
-				Memory.Init(Memory_PSP);
-			break;
+				if (fs::file elf_out{decrypted_path, fs::rewrite})
+				{
+					elf_out.write(elf_file.to_vector<u8>());
+					elf_out.close();
+					fs::utime(decrypted_path, encrypted_stat.atime, encrypted_stat.mtime);
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "Failed to create boot.elf");
+				}
+			}
+		}
 
-			case MACHINE_ARM:
-				Memory.Init(Memory_PSV);
-			break;
+		ppu_exec_object ppu_exec;
+		ppu_prx_object ppu_prx;
+		spu_exec_object spu_exec;
+		arm_exec_object arm_exec;
+
+		if (!elf_file)
+		{
+			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", m_path);
+			return;
+		}
+		else if (ppu_exec.open(elf_file) == elf_error::ok)
+		{
+			// PS3 executable
+			g_system = system_type::ps3;
+			m_state = system_state::ready;
+			GetCallbacks().on_ready();
+
+			vm::ps3::init();
+
+			if (m_elf_path.empty())
+			{
+				if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
+				{
+					//Disc games are on /dev_bdvd/
+					size_t pos = m_path.rfind("PS3_GAME");
+					m_elf_path = "/dev_bdvd/" + m_path.substr(pos);
+				}
+				else if (m_path.find(vfs::get("/dev_hdd0/game/")) != -1)
+				{
+					m_elf_path = "/dev_hdd0/game/" + m_path.substr(vfs::get("/dev_hdd0/game/").size());
+				}
+				else
+				{
+					//For homebrew
+					m_elf_path = "/host_root/" + m_path;
+				}
+
+				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 			}
 
-			is_error = !l.Load();
+			ppu_load_exec(ppu_exec);
+
+			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
 		}
-		
-	}
-	catch(const wxString& e)
-	{
-		ConLog.Error(e);
-		is_error = true;
-	}
-	catch(...)
-	{
-		ConLog.Error("Unhandled loader error.");
-		is_error = true;
-	}
-
-	CPUThreadType thread_type;
-
-	if(!is_error)
-	{
-		switch(l.GetMachine())
+		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
-		case MACHINE_PPC64: thread_type = CPU_THREAD_PPU; break;
-		case MACHINE_SPU: thread_type = CPU_THREAD_SPU; break;
-		case MACHINE_ARM: thread_type = CPU_THREAD_ARMv7; break;
+			// PPU PRX (experimental)
+			g_system = system_type::ps3;
+			m_state = system_state::ready;
+			GetCallbacks().on_ready();
+			vm::ps3::init();
+			ppu_load_prx(ppu_prx, "");
+		}
+		else if (spu_exec.open(elf_file) == elf_error::ok)
+		{
+			// SPU executable (experimental)
+			g_system = system_type::ps3;
+			m_state = system_state::ready;
+			GetCallbacks().on_ready();
+			vm::ps3::init();
+			spu_load_exec(spu_exec);
+		}
+		else if (arm_exec.open(elf_file) == elf_error::ok)
+		{
+			// ARMv7 executable
+			g_system = system_type::psv;
+			m_state = system_state::ready;
+			GetCallbacks().on_ready();
+			vm::psv::init();
 
-		default:
-			ConLog.Error("Unimplemented thread type for machine.");
-			is_error = true;
-		break;
+			if (m_elf_path.empty())
+			{
+				m_elf_path = "host_root:" + m_path;
+				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
+			}
+
+			arm_load_exec(arm_exec);
+		}
+		else
+		{
+			LOG_ERROR(LOADER, "Invalid or unsupported file format: %s", m_path);
+
+			LOG_WARNING(LOADER, "** ppu_exec -> %s", ppu_exec.get_error());
+			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
+			LOG_WARNING(LOADER, "** spu_exec -> %s", spu_exec.get_error());
+			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
+			return;
+		}
+
+		if (g_cfg.misc.autostart && IsReady())
+		{
+			Run();
+		}
+		else if (IsPaused())
+		{
+			m_state = system_state::ready;
+			GetCallbacks().on_ready();
 		}
 	}
-
-	if(is_error)
+	catch (const std::exception& e)
 	{
-		Memory.Close();
+		LOG_FATAL(LOADER, "%s thrown: %s", typeid(e).name(), e.what());
 		Stop();
-		return;
 	}
-
-	LoadPoints(BreakPointsDBName);
-
-	CPUThread& thread = GetCPU().AddThread(thread_type);
-
-	switch(l.GetMachine())
-	{
-	case MACHINE_SPU:
-		ConLog.Write("offset = 0x%llx", Memory.MainMem.GetStartAddr());
-		ConLog.Write("max addr = 0x%x", l.GetMaxAddr());
-		thread.SetOffset(Memory.MainMem.GetStartAddr());
-		Memory.MainMem.Alloc(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
-		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
-	break;
-
-	case MACHINE_PPC64:
-	{
-		thread.SetEntry(l.GetEntry());
-		Memory.StackMem.Alloc(0x1000);
-		thread.InitStack();
-		thread.AddArgv(m_path);
-		//thread.AddArgv("-emu");
-
-		m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
-		Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
-
-		mem32_ptr_t callback_data(m_rsx_callback);
-		callback_data += ADDI(11, 0, 0x3ff);
-		callback_data += SC(2);
-		callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
-
-		m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 4);
-
-		mem32_ptr_t ppu_thr_exit_data(m_ppu_thr_exit);
-		ppu_thr_exit_data += ADDI(3, 0, 0);
-		ppu_thr_exit_data += ADDI(11, 0, 41);
-		ppu_thr_exit_data += SC(2);
-		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
-	}
-	break;
-
-	default:
-		thread.SetEntry(l.GetEntry());
-	break;
-	}
-
-	if(!m_dbg_console)
-	{
-		m_dbg_console = new DbgConsole();
-	}
-	else
-	{
-		GetDbgCon().Close();
-		GetDbgCon().Clear();
-	}
-
-	GetGSManager().Init();
-	GetCallbackManager().Init();
-
-	thread.Run();
-
-	wxCriticalSectionLocker lock(m_cs_status);
-	m_status = Ready;
-	wxGetApp().SendDbgCommand(DID_READY_EMU);
 }
 
 void Emulator::Run()
 {
-	if(!IsReady())
+	if (!IsReady())
 	{
 		Load();
 		if(!IsReady()) return;
 	}
 
-	if(IsRunning()) Stop();
-	if(IsPaused())
+	if (IsRunning()) Stop();
+
+	if (IsPaused())
 	{
 		Resume();
 		return;
 	}
 
-	wxGetApp().SendDbgCommand(DID_START_EMU);
+	
+	GetCallbacks().on_run();
 
-	wxCriticalSectionLocker lock(m_cs_status);
-	//ConLog.Write("run...");
-	m_status = Running;
+	m_pause_start_time = 0;
+	m_pause_amend_time = 0;
+	m_state = system_state::running;
 
-	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
+	auto on_select = [](u32, cpu_thread& cpu)
+	{
+		cpu.run();
+	};
 
-	//m_memory_viewer->SetPC(loader.GetEntry());
-	//m_memory_viewer->Show();
-	//m_memory_viewer->ShowPC();
-
-	GetCPU().Exec();
-	wxGetApp().SendDbgCommand(DID_STARTED_EMU);
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
 }
 
-void Emulator::Pause()
+bool Emulator::Pause()
 {
-	if(!IsRunning()) return;
-	//ConLog.Write("pause...");
-	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
+	const u64 start = get_system_time();
 
-	wxCriticalSectionLocker lock(m_cs_status);
-	m_status = Paused;
-	wxGetApp().SendDbgCommand(DID_PAUSED_EMU);
+	// Try to pause
+	if (!m_state.compare_and_swap_test(system_state::running, system_state::paused))
+	{
+		return m_state.compare_and_swap_test(system_state::ready, system_state::paused);
+	}
+
+	GetCallbacks().on_pause();
+
+	// Update pause start time
+	if (m_pause_start_time.exchange(start))
+	{
+		LOG_ERROR(GENERAL, "Emulator::Pause() error: concurrent access");
+	}
+
+	auto on_select = [](u32, cpu_thread& cpu)
+	{
+		cpu.state += cpu_flag::dbg_global_pause;
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
+
+	if (auto mfc = fxm::check<mfc_thread>())
+	{
+		on_select(0, *mfc);
+	}
+
+	return true;
 }
 
 void Emulator::Resume()
 {
-	if(!IsPaused()) return;
-	//ConLog.Write("resume...");
-	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
+	// Get pause start time
+	const u64 time = m_pause_start_time.exchange(0);
 
-	wxCriticalSectionLocker lock(m_cs_status);
-	m_status = Running;
+	// Try to increment summary pause time
+	if (time)
+	{
+		m_pause_amend_time += get_system_time() - time;
+	}
 
-	CheckStatus();
-	if(IsRunning() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
-	wxGetApp().SendDbgCommand(DID_RESUMED_EMU);
+	// Try to resume
+	if (!m_state.compare_and_swap_test(system_state::paused, system_state::running))
+	{
+		return;
+	}
+
+	if (!time)
+	{
+		LOG_ERROR(GENERAL, "Emulator::Resume() error: concurrent access");
+	}
+
+	auto on_select = [](u32, cpu_thread& cpu)
+	{
+		cpu.state -= cpu_flag::dbg_global_pause;
+		cpu.notify();
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
+
+	if (auto mfc = fxm::check<mfc_thread>())
+	{
+		on_select(0, *mfc);
+	}
+
+	GetCallbacks().on_resume();
 }
 
 void Emulator::Stop()
 {
-	if(IsStopped()) return;
-	//ConLog.Write("shutdown...");
-
-	wxGetApp().SendDbgCommand(DID_STOP_EMU);
+	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
-		wxCriticalSectionLocker lock(m_cs_status);
-		m_status = Stopped;
-	}
-
-	m_rsx_callback = 0;
-
-	SavePoints(BreakPointsDBName);
-	m_break_points.Clear();
-	m_marked_points.Clear();
-
-	m_vfs.UnMountAll();
-
-	GetGSManager().Close();
-	GetCPU().Close();
-	//SysCallsManager.Close();
-	GetIdManager().Clear();
-	GetPadManager().Close();
-	GetKeyboardManager().Close();
-	GetMouseManager().Close();
-	GetCallbackManager().Clear();
-	UnloadModules();
-
-	CurGameInfo.Reset();
-	Memory.Close();
-
-	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
-	wxGetApp().SendDbgCommand(DID_STOPPED_EMU);
-}
-
-void Emulator::SavePoints(const wxString& path)
-{
-	wxFile f(path, wxFile::write);
-
-	u32 break_count = m_break_points.GetCount();
-	u32 marked_count = m_marked_points.GetCount();
-
-	f.Write(&bpdb_version, sizeof(u16));
-	f.Write(&break_count, sizeof(u32));
-	f.Write(&marked_count, sizeof(u32));
-
-	if(break_count)
-	{
-		f.Write(&m_break_points[0], sizeof(u64) * break_count);
-	}
-
-	if(marked_count)
-	{
-		f.Write(&m_marked_points[0], sizeof(u64) * marked_count);
-	}
-}
-
-void Emulator::LoadPoints(const wxString& path)
-{
-	if(!wxFileExists(path)) return;
-
-	wxFile f(path);
-
-	u32 break_count, marked_count;
-	u16 version;
-	f.Read(&version, sizeof(u16));
-	f.Read(&break_count, sizeof(u32));
-	f.Read(&marked_count, sizeof(u32));
-
-	if(version != bpdb_version ||
-		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != f.Length())
-	{
-		ConLog.Error("'%s' is broken", path);
 		return;
 	}
 
-	if(break_count > 0)
+	LOG_NOTICE(GENERAL, "Stopping emulator...");
+
+	GetCallbacks().on_stop();
+
+#ifdef WITH_GDB_DEBUGGER
+	//fxm for some reason doesn't call on_stop
+	fxm::get<GDBDebugServer>()->on_stop();
+	fxm::remove<GDBDebugServer>();
+#endif
+
+	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
+
+	auto on_select = [&](u32, cpu_thread& cpu)
 	{
-		m_break_points.SetCount(break_count);
-		f.Read(&m_break_points[0], sizeof(u64) * break_count);
+		cpu.state += cpu_flag::dbg_global_stop;
+		cpu.get()->set_exception(e_stop);
+	};
+
+	idm::select<ppu_thread>(on_select);
+	idm::select<ARMv7Thread>(on_select);
+	idm::select<RawSPUThread>(on_select);
+	idm::select<SPUThread>(on_select);
+
+	if (auto mfc = fxm::check<mfc_thread>())
+	{
+		on_select(0, *mfc);
 	}
 
-	if(marked_count > 0)
+	LOG_NOTICE(GENERAL, "All threads signaled...");
+
+	while (g_thread_count)
 	{
-		m_marked_points.SetCount(marked_count);
-		f.Read(&m_marked_points[0], sizeof(u64) * marked_count);
+		m_cb.process_events();
+
+		std::this_thread::sleep_for(10ms);
 	}
+
+	LOG_NOTICE(GENERAL, "All threads stopped...");
+
+	lv2_obj::cleanup();
+	idm::clear();
+	fxm::clear();
+
+	LOG_NOTICE(GENERAL, "Objects cleared...");
+
+	RSXIOMem.Clear();
+	vm::close();
+
+	if (g_cfg.misc.autoexit)
+	{
+		GetCallbacks().exit();
+	}
+	else
+	{
+		Init();
+	}
+
+#ifdef LLVM_AVAILABLE
+	extern void jit_finalize();
+	jit_finalize();
+#endif
+}
+
+s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
+{
+	logs::channel* channel = &logs::GENERAL;
+	logs::level level = logs::level::error;
+	const char* func = "Unknown function";
+
+	if (auto thread = get_current_cpu_thread())
+	{
+		if (g_system == system_type::ps3 && thread->id_type() == 1)
+		{
+			auto& ppu = static_cast<ppu_thread&>(*thread);
+
+			// Filter some annoying reports
+			switch (arg)
+			{
+			case CELL_ESRCH:
+			case CELL_EDEADLK:
+			{
+				if (ppu.m_name == "_cellsurMixerMain" || ppu.m_name == "_sys_MixerChStripMain")
+				{
+					if (std::memcmp(ppu.last_function, "sys_mutex_lock", 15) == 0 ||
+						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0 ||
+						std::memcmp(ppu.last_function, "_sys_mutex_lock", 16) == 0 ||
+						std::memcmp(ppu.last_function, "_sys_lwmutex_lock", 18) == 0)
+					{
+						level = logs::level::trace;
+					}
+				}
+
+				break;
+			}
+			}
+
+			if (ppu.last_function)
+			{
+				func = ppu.last_function;
+			}			
+		}
+
+		if (g_system == system_type::psv)
+		{
+			if (auto _func = static_cast<ARMv7Thread*>(thread)->last_function)
+			{
+				func = _func;
+			}
+		}
+	}
+
+	channel->format(level, "'%s' failed with 0x%08x%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg));
+	return static_cast<s32>(arg);
 }
 
 Emulator Emu;

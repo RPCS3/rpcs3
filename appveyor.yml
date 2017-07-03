@@ -1,0 +1,41 @@
+version: '0.0.2-{build}'
+
+os: Visual Studio 2015
+platform: x64
+clone_folder: C:\rpcs3
+clone_depth: 3
+test: off
+
+configuration:
+# Release
+ - ReleaseLLVM
+
+before_build:
+ - ps: $env:Date="$(git show -s --date=short --format='%ad')"
+ - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp 3rdparty/cereal 3rdparty/zlib 3rdparty/hidapi
+ - 7z x zlib.7z -aos -oC:\rpcs3\ > null
+ - 7z x vulkan.7z -aos -oC:\rpcs3\Vulkan > null
+ - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
+   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/lib/cmake/llvm -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
+
+build_script:
+ - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+install:
+ - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
+ - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRaHYxV3VOS2d0a0U" -FileName vulkan.7z
+ - if not exist zlib.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B-HVE3xvheVFX05lRFdnZlh5aUU" -FileName zlib.7z
+ - set QTDIR=C:\Qt\5.8\msvc2015_64
+ - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL
+ - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%QTDIR%;%PATH%
+ - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
+
+artifacts:
+ - path: bin
+   name: 'rpcs3-v0.0.2-$(Date)-$(COMMIT_SHA)_win64'
+   type: zip
+
+cache:
+ - llvmlibs.7z -> appveyor.yml
+ - vulkan.7z -> appveyor.yml
+ - zlib.7z -> appveyor.yml

@@ -1,1271 +1,249 @@
 #pragma once
 
-#include "Emu/Cell/SPUOpcodes.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
+#include "SPUOpcodes.h"
 
-#define UNIMPLEMENTED() UNK(__FUNCTION__)
+class SPUThread;
 
-class SPUInterpreter : public SPUOpcodes
+using spu_inter_func_t = void(*)(SPUThread& spu, spu_opcode_t op);
+
+struct spu_interpreter
 {
-private:
-	SPUThread& CPU;
+	static void UNK(SPUThread&, spu_opcode_t);
+	static void set_interrupt_status(SPUThread&, spu_opcode_t);
 
-public:
-	SPUInterpreter(SPUThread& cpu) : CPU(cpu)
-	{
-	}
+	static void STOP(SPUThread&, spu_opcode_t);
+	static void LNOP(SPUThread&, spu_opcode_t);
+	static void SYNC(SPUThread&, spu_opcode_t);
+	static void DSYNC(SPUThread&, spu_opcode_t);
+	static void MFSPR(SPUThread&, spu_opcode_t);
+	static void RDCH(SPUThread&, spu_opcode_t);
+	static void RCHCNT(SPUThread&, spu_opcode_t);
+	static void SF(SPUThread&, spu_opcode_t);
+	static void OR(SPUThread&, spu_opcode_t);
+	static void BG(SPUThread&, spu_opcode_t);
+	static void SFH(SPUThread&, spu_opcode_t);
+	static void NOR(SPUThread&, spu_opcode_t);
+	static void ABSDB(SPUThread&, spu_opcode_t);
+	static void ROT(SPUThread&, spu_opcode_t);
+	static void ROTM(SPUThread&, spu_opcode_t);
+	static void ROTMA(SPUThread&, spu_opcode_t);
+	static void SHL(SPUThread&, spu_opcode_t);
+	static void ROTH(SPUThread&, spu_opcode_t);
+	static void ROTHM(SPUThread&, spu_opcode_t);
+	static void ROTMAH(SPUThread&, spu_opcode_t);
+	static void SHLH(SPUThread&, spu_opcode_t);
+	static void ROTI(SPUThread&, spu_opcode_t);
+	static void ROTMI(SPUThread&, spu_opcode_t);
+	static void ROTMAI(SPUThread&, spu_opcode_t);
+	static void SHLI(SPUThread&, spu_opcode_t);
+	static void ROTHI(SPUThread&, spu_opcode_t);
+	static void ROTHMI(SPUThread&, spu_opcode_t);
+	static void ROTMAHI(SPUThread&, spu_opcode_t);
+	static void SHLHI(SPUThread&, spu_opcode_t);
+	static void A(SPUThread&, spu_opcode_t);
+	static void AND(SPUThread&, spu_opcode_t);
+	static void CG(SPUThread&, spu_opcode_t);
+	static void AH(SPUThread&, spu_opcode_t);
+	static void NAND(SPUThread&, spu_opcode_t);
+	static void AVGB(SPUThread&, spu_opcode_t);
+	static void MTSPR(SPUThread&, spu_opcode_t);
+	static void WRCH(SPUThread&, spu_opcode_t);
+	static void BIZ(SPUThread&, spu_opcode_t);
+	static void BINZ(SPUThread&, spu_opcode_t);
+	static void BIHZ(SPUThread&, spu_opcode_t);
+	static void BIHNZ(SPUThread&, spu_opcode_t);
+	static void STOPD(SPUThread&, spu_opcode_t);
+	static void STQX(SPUThread&, spu_opcode_t);
+	static void BI(SPUThread&, spu_opcode_t);
+	static void BISL(SPUThread&, spu_opcode_t);
+	static void IRET(SPUThread&, spu_opcode_t);
+	static void BISLED(SPUThread&, spu_opcode_t);
+	static void HBR(SPUThread&, spu_opcode_t);
+	static void GB(SPUThread&, spu_opcode_t);
+	static void GBH(SPUThread&, spu_opcode_t);
+	static void GBB(SPUThread&, spu_opcode_t);
+	static void FSM(SPUThread&, spu_opcode_t);
+	static void FSMH(SPUThread&, spu_opcode_t);
+	static void FSMB(SPUThread&, spu_opcode_t);
+	static void LQX(SPUThread&, spu_opcode_t);
+	static void ROTQBYBI(SPUThread&, spu_opcode_t);
+	static void ROTQMBYBI(SPUThread&, spu_opcode_t);
+	static void SHLQBYBI(SPUThread&, spu_opcode_t);
+	static void CBX(SPUThread&, spu_opcode_t);
+	static void CHX(SPUThread&, spu_opcode_t);
+	static void CWX(SPUThread&, spu_opcode_t);
+	static void CDX(SPUThread&, spu_opcode_t);
+	static void ROTQBI(SPUThread&, spu_opcode_t);
+	static void ROTQMBI(SPUThread&, spu_opcode_t);
+	static void SHLQBI(SPUThread&, spu_opcode_t);
+	static void ROTQBY(SPUThread&, spu_opcode_t);
+	static void ROTQMBY(SPUThread&, spu_opcode_t);
+	static void SHLQBY(SPUThread&, spu_opcode_t);
+	static void ORX(SPUThread&, spu_opcode_t);
+	static void CBD(SPUThread&, spu_opcode_t);
+	static void CHD(SPUThread&, spu_opcode_t);
+	static void CWD(SPUThread&, spu_opcode_t);
+	static void CDD(SPUThread&, spu_opcode_t);
+	static void ROTQBII(SPUThread&, spu_opcode_t);
+	static void ROTQMBII(SPUThread&, spu_opcode_t);
+	static void SHLQBII(SPUThread&, spu_opcode_t);
+	static void ROTQBYI(SPUThread&, spu_opcode_t);
+	static void ROTQMBYI(SPUThread&, spu_opcode_t);
+	static void SHLQBYI(SPUThread&, spu_opcode_t);
+	static void NOP(SPUThread&, spu_opcode_t);
+	static void CGT(SPUThread&, spu_opcode_t);
+	static void XOR(SPUThread&, spu_opcode_t);
+	static void CGTH(SPUThread&, spu_opcode_t);
+	static void EQV(SPUThread&, spu_opcode_t);
+	static void CGTB(SPUThread&, spu_opcode_t);
+	static void SUMB(SPUThread&, spu_opcode_t);
+	static void HGT(SPUThread&, spu_opcode_t);
+	static void CLZ(SPUThread&, spu_opcode_t);
+	static void XSWD(SPUThread&, spu_opcode_t);
+	static void XSHW(SPUThread&, spu_opcode_t);
+	static void CNTB(SPUThread&, spu_opcode_t);
+	static void XSBH(SPUThread&, spu_opcode_t);
+	static void CLGT(SPUThread&, spu_opcode_t);
+	static void ANDC(SPUThread&, spu_opcode_t);
+	static void CLGTH(SPUThread&, spu_opcode_t);
+	static void ORC(SPUThread&, spu_opcode_t);
+	static void CLGTB(SPUThread&, spu_opcode_t);
+	static void HLGT(SPUThread&, spu_opcode_t);
+	static void CEQ(SPUThread&, spu_opcode_t);
+	static void MPYHHU(SPUThread&, spu_opcode_t);
+	static void ADDX(SPUThread&, spu_opcode_t);
+	static void SFX(SPUThread&, spu_opcode_t);
+	static void CGX(SPUThread&, spu_opcode_t);
+	static void BGX(SPUThread&, spu_opcode_t);
+	static void MPYHHA(SPUThread&, spu_opcode_t);
+	static void MPYHHAU(SPUThread&, spu_opcode_t);
+	static void MPY(SPUThread&, spu_opcode_t);
+	static void MPYH(SPUThread&, spu_opcode_t);
+	static void MPYHH(SPUThread&, spu_opcode_t);
+	static void MPYS(SPUThread&, spu_opcode_t);
+	static void CEQH(SPUThread&, spu_opcode_t);
+	static void MPYU(SPUThread&, spu_opcode_t);
+	static void CEQB(SPUThread&, spu_opcode_t);
+	static void HEQ(SPUThread&, spu_opcode_t);
+	static void BRZ(SPUThread&, spu_opcode_t);
+	static void STQA(SPUThread&, spu_opcode_t);
+	static void BRNZ(SPUThread&, spu_opcode_t);
+	static void BRHZ(SPUThread&, spu_opcode_t);
+	static void BRHNZ(SPUThread&, spu_opcode_t);
+	static void STQR(SPUThread&, spu_opcode_t);
+	static void BRA(SPUThread&, spu_opcode_t);
+	static void LQA(SPUThread&, spu_opcode_t);
+	static void BRASL(SPUThread&, spu_opcode_t);
+	static void BR(SPUThread&, spu_opcode_t);
+	static void FSMBI(SPUThread&, spu_opcode_t);
+	static void BRSL(SPUThread&, spu_opcode_t);
+	static void LQR(SPUThread&, spu_opcode_t);
+	static void IL(SPUThread&, spu_opcode_t);
+	static void ILHU(SPUThread&, spu_opcode_t);
+	static void ILH(SPUThread&, spu_opcode_t);
+	static void IOHL(SPUThread&, spu_opcode_t);
+	static void ORI(SPUThread&, spu_opcode_t);
+	static void ORHI(SPUThread&, spu_opcode_t);
+	static void ORBI(SPUThread&, spu_opcode_t);
+	static void SFI(SPUThread&, spu_opcode_t);
+	static void SFHI(SPUThread&, spu_opcode_t);
+	static void ANDI(SPUThread&, spu_opcode_t);
+	static void ANDHI(SPUThread&, spu_opcode_t);
+	static void ANDBI(SPUThread&, spu_opcode_t);
+	static void AI(SPUThread&, spu_opcode_t);
+	static void AHI(SPUThread&, spu_opcode_t);
+	static void STQD(SPUThread&, spu_opcode_t);
+	static void LQD(SPUThread&, spu_opcode_t);
+	static void XORI(SPUThread&, spu_opcode_t);
+	static void XORHI(SPUThread&, spu_opcode_t);
+	static void XORBI(SPUThread&, spu_opcode_t);
+	static void CGTI(SPUThread&, spu_opcode_t);
+	static void CGTHI(SPUThread&, spu_opcode_t);
+	static void CGTBI(SPUThread&, spu_opcode_t);
+	static void HGTI(SPUThread&, spu_opcode_t);
+	static void CLGTI(SPUThread&, spu_opcode_t);
+	static void CLGTHI(SPUThread&, spu_opcode_t);
+	static void CLGTBI(SPUThread&, spu_opcode_t);
+	static void HLGTI(SPUThread&, spu_opcode_t);
+	static void MPYI(SPUThread&, spu_opcode_t);
+	static void MPYUI(SPUThread&, spu_opcode_t);
+	static void CEQI(SPUThread&, spu_opcode_t);
+	static void CEQHI(SPUThread&, spu_opcode_t);
+	static void CEQBI(SPUThread&, spu_opcode_t);
+	static void HEQI(SPUThread&, spu_opcode_t);
+	static void HBRA(SPUThread&, spu_opcode_t);
+	static void HBRR(SPUThread&, spu_opcode_t);
+	static void ILA(SPUThread&, spu_opcode_t);
+	static void SELB(SPUThread&, spu_opcode_t);
+	static void SHUFB(SPUThread&, spu_opcode_t);
+	static void MPYA(SPUThread&, spu_opcode_t);
+	static void DFCGT(SPUThread&, spu_opcode_t);
+	static void DFCMGT(SPUThread&, spu_opcode_t);
+	static void DFTSV(SPUThread&, spu_opcode_t);
+	static void DFCEQ(SPUThread&, spu_opcode_t);
+	static void DFCMEQ(SPUThread&, spu_opcode_t);
+};
 
-private:
-	void SysCall()
-	{
-	}
+struct spu_interpreter_fast final : spu_interpreter
+{
+	static void FREST(SPUThread&, spu_opcode_t);
+	static void FRSQEST(SPUThread&, spu_opcode_t);
+	static void FCGT(SPUThread&, spu_opcode_t);
+	static void FA(SPUThread&, spu_opcode_t);
+	static void FS(SPUThread&, spu_opcode_t);
+	static void FM(SPUThread&, spu_opcode_t);
+	static void FCMGT(SPUThread&, spu_opcode_t);
+	static void DFA(SPUThread&, spu_opcode_t);
+	static void DFS(SPUThread&, spu_opcode_t);
+	static void DFM(SPUThread&, spu_opcode_t);
+	static void DFMA(SPUThread&, spu_opcode_t);
+	static void DFMS(SPUThread&, spu_opcode_t);
+	static void DFNMS(SPUThread&, spu_opcode_t);
+	static void DFNMA(SPUThread&, spu_opcode_t);
+	static void FSCRRD(SPUThread&, spu_opcode_t);
+	static void FESD(SPUThread&, spu_opcode_t);
+	static void FRDS(SPUThread&, spu_opcode_t);
+	static void FSCRWR(SPUThread&, spu_opcode_t);
+	static void FCEQ(SPUThread&, spu_opcode_t);
+	static void FCMEQ(SPUThread&, spu_opcode_t);
+	static void FI(SPUThread&, spu_opcode_t);
+	static void CFLTS(SPUThread&, spu_opcode_t);
+	static void CFLTU(SPUThread&, spu_opcode_t);
+	static void CSFLT(SPUThread&, spu_opcode_t);
+	static void CUFLT(SPUThread&, spu_opcode_t);
+	static void FNMS(SPUThread&, spu_opcode_t);
+	static void FMA(SPUThread&, spu_opcode_t);
+	static void FMS(SPUThread&, spu_opcode_t);
+};
 
-	//0 - 10
-	void STOP(u32 code)
-	{
-		if(code & 0x2000)
-		{
-			CPU.SetExitStatus(code & 0xfff);
-			CPU.Stop();
-		}
-	}
-	void LNOP()
-	{
-	}
-	void SYNC(u32 Cbit)
-	{
-		//UNIMPLEMENTED();
-	}
-	void DSYNC()
-	{
-		//UNIMPLEMENTED();
-	}
-	void MFSPR(u32 rt, u32 sa)
-	{
-		//If register is a dummy register (register labeled 0x0)
-		if(sa == 0x0)
-		{
-			CPU.GPR[rt]._u128.hi = 0x0;
-			CPU.GPR[rt]._u128.lo = 0x0;
-		}
-		else
-		{
-			CPU.GPR[rt]._u128.hi =  CPU.SPR[sa]._u128.hi;
-			CPU.GPR[rt]._u128.lo =  CPU.SPR[sa]._u128.lo;
-		}
-	}
-	void RDCH(u32 rt, u32 ra)
-	{
-		CPU.ReadChannel(CPU.GPR[rt], ra);
-	}
-	void RCHCNT(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.GetChannelCount(ra);
-	}
-	void SF(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[rb]._u32[0] + ~CPU.GPR[ra]._u32[0] + 1;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[rb]._u32[1] + ~CPU.GPR[ra]._u32[1] + 1;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[rb]._u32[2] + ~CPU.GPR[ra]._u32[2] + 1;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[rb]._u32[3] + ~CPU.GPR[ra]._u32[3] + 1;
-	}
-	void OR(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] | CPU.GPR[rb]._u32[0];
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] | CPU.GPR[rb]._u32[1];
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._u32[2] | CPU.GPR[rb]._u32[2];
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] | CPU.GPR[rb]._u32[3];
-	}
-	void BG(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] > CPU.GPR[rb]._u32[0] ? 0 : 1;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] > CPU.GPR[rb]._u32[1] ? 0 : 1;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._u32[2] > CPU.GPR[rb]._u32[2] ? 0 : 1;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] > CPU.GPR[rb]._u32[3] ? 0 : 1;
-	}
-	void SFH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[rb]._u16[h] - CPU.GPR[ra]._u16[h];
-	}
-	void NOR(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = ~(CPU.GPR[ra]._u32[0] | CPU.GPR[rb]._u32[0]);
-		CPU.GPR[rt]._u32[1] = ~(CPU.GPR[ra]._u32[1] | CPU.GPR[rb]._u32[1]);
-		CPU.GPR[rt]._u32[2] = ~(CPU.GPR[ra]._u32[2] | CPU.GPR[rb]._u32[2]);
-		CPU.GPR[rt]._u32[3] = ~(CPU.GPR[ra]._u32[3] | CPU.GPR[rb]._u32[3]);
-	}
-	void ABSDB(u32 rt, u32 ra, u32 rb)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[rb]._u8[b] > CPU.GPR[ra]._u8[b] ? CPU.GPR[rb]._u8[b] - CPU.GPR[ra]._u8[b] : CPU.GPR[ra]._u8[b] - CPU.GPR[rb]._u8[b];
-	}
-	void ROT(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << (CPU.GPR[rb]._u32[0] & 0x1f)) | (CPU.GPR[ra]._u32[0] >> (32 - (CPU.GPR[rb]._u32[0] & 0x1f)));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << (CPU.GPR[rb]._u32[1] & 0x1f)) | (CPU.GPR[ra]._u32[1] >> (32 - (CPU.GPR[rb]._u32[1] & 0x1f)));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << (CPU.GPR[rb]._u32[2] & 0x1f)) | (CPU.GPR[ra]._u32[2] >> (32 - (CPU.GPR[rb]._u32[2] & 0x1f)));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << (CPU.GPR[rb]._u32[3] & 0x1f)) | (CPU.GPR[ra]._u32[3] >> (32 - (CPU.GPR[rb]._u32[3] & 0x1f)));
-	}
-	void ROTM(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = ((0 - CPU.GPR[rb]._u32[0]) % 64) < 32 ? CPU.GPR[ra]._u32[0] >> ((0 - CPU.GPR[rb]._u32[0]) % 64) : 0;
-		CPU.GPR[rt]._u32[1] = ((0 - CPU.GPR[rb]._u32[1]) % 64) < 32 ? CPU.GPR[ra]._u32[1] >> ((0 - CPU.GPR[rb]._u32[1]) % 64) : 0;
-		CPU.GPR[rt]._u32[2] = ((0 - CPU.GPR[rb]._u32[2]) % 64) < 32 ? CPU.GPR[ra]._u32[2] >> ((0 - CPU.GPR[rb]._u32[2]) % 64) : 0;
-		CPU.GPR[rt]._u32[3] = ((0 - CPU.GPR[rb]._u32[3]) % 64) < 32 ? CPU.GPR[ra]._u32[3] >> ((0 - CPU.GPR[rb]._u32[3]) % 64) : 0;
-	}
-	void ROTMA(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._i32[0] = ((0 - CPU.GPR[rb]._i32[0]) % 64) < 32 ? CPU.GPR[ra]._i32[0] >> ((0 - CPU.GPR[rb]._i32[0]) % 64) : CPU.GPR[ra]._i32[0] >> 31;
-		CPU.GPR[rt]._i32[1] = ((0 - CPU.GPR[rb]._i32[1]) % 64) < 32 ? CPU.GPR[ra]._i32[1] >> ((0 - CPU.GPR[rb]._i32[1]) % 64) : CPU.GPR[ra]._i32[1] >> 31;
-		CPU.GPR[rt]._i32[2] = ((0 - CPU.GPR[rb]._i32[2]) % 64) < 32 ? CPU.GPR[ra]._i32[2] >> ((0 - CPU.GPR[rb]._i32[2]) % 64) : CPU.GPR[ra]._i32[2] >> 31;
-		CPU.GPR[rt]._i32[3] = ((0 - CPU.GPR[rb]._i32[3]) % 64) < 32 ? CPU.GPR[ra]._i32[3] >> ((0 - CPU.GPR[rb]._i32[3]) % 64) : CPU.GPR[ra]._i32[3] >> 31;
-	}
-	void SHL(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[rb]._u32[0] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[0] << (CPU.GPR[rb]._u32[0] & 0x3f);
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[rb]._u32[1] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[1] << (CPU.GPR[rb]._u32[1] & 0x3f);
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[rb]._u32[2] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[2] << (CPU.GPR[rb]._u32[2] & 0x3f);
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[rb]._u32[3] & 0x3f) > 31 ? 0 : CPU.GPR[ra]._u32[3] << (CPU.GPR[rb]._u32[3] & 0x3f);
-	}
-	void ROTH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++) 
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0xf)) | (CPU.GPR[ra]._u16[h] >> (16 - (CPU.GPR[rb]._u32[h] & 0xf)));
-	}
-	void ROTHM(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = ((0 - CPU.GPR[rb]._u16[h]) % 32) < 16 ? CPU.GPR[ra]._u16[h] >> ((0 - CPU.GPR[rb]._u16[h]) % 32) : 0;
-	}
-	void ROTMAH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = ((0 - CPU.GPR[rb]._i16[h]) % 32) < 16 ? CPU.GPR[ra]._i16[h] >> ((0 - CPU.GPR[rb]._i16[h]) % 32) : CPU.GPR[ra]._i16[h] >> 15;
-	}
-	void SHLH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[rb]._u16[h] & 0x1f) > 15 ? 0 : CPU.GPR[ra]._u16[h] << (CPU.GPR[rb]._u16[h] & 0x3f);
-	}
-	void ROTI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = i7 & 0x1f;
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << nRot) | (CPU.GPR[ra]._u32[0] >> (32 - nRot));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << nRot) | (CPU.GPR[ra]._u32[1] >> (32 - nRot));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << nRot) | (CPU.GPR[ra]._u32[2] >> (32 - nRot));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << nRot) | (CPU.GPR[ra]._u32[3] >> (32 - nRot));
-	}
-	void ROTMI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = (0 - i7) % 64;
-		CPU.GPR[rt]._u32[0] = nRot < 32 ? CPU.GPR[ra]._u32[0] >> nRot : 0;
-		CPU.GPR[rt]._u32[1] = nRot < 32 ? CPU.GPR[ra]._u32[1] >> nRot : 0;
-		CPU.GPR[rt]._u32[2] = nRot < 32 ? CPU.GPR[ra]._u32[2] >> nRot : 0;
-		CPU.GPR[rt]._u32[3] = nRot < 32 ? CPU.GPR[ra]._u32[3] >> nRot : 0;
-	}
-	void ROTMAI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = (0 - i7) % 64;
-		CPU.GPR[rt]._i32[0] = nRot < 32 ? CPU.GPR[ra]._i32[0] >> nRot : CPU.GPR[ra]._i32[0] >> 31;
-		CPU.GPR[rt]._i32[1] = nRot < 32 ? CPU.GPR[ra]._i32[1] >> nRot : CPU.GPR[ra]._i32[1] >> 31;
-		CPU.GPR[rt]._i32[2] = nRot < 32 ? CPU.GPR[ra]._i32[2] >> nRot : CPU.GPR[ra]._i32[2] >> 31;
-		CPU.GPR[rt]._i32[3] = nRot < 32 ? CPU.GPR[ra]._i32[3] >> nRot : CPU.GPR[ra]._i32[3] >> 31;
-	}
-	void SHLI(u32 rt, u32 ra, s32 i7)
-	{
-		const u32 s = i7 & 0x3f;
-
-		for(u32 j = 0; j < 4; ++j)
-		{
-			const u32 t = CPU.GPR[ra]._u32[j];
-			u32 r = 0;
-
-			for(u32 b = 0; b + s < 32; ++b)
-			{
-				r |= t & (1 << (b + s));
-			}
-
-			CPU.GPR[rt]._u32[j] = r;
-		}
-	}
-	void ROTHI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = i7 & 0xf;
-
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u16[h] << nRot) | (CPU.GPR[ra]._u16[h] >> (16 - nRot));
-	}
-	void ROTHMI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = (0 - i7) % 32;
-
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = nRot < 16 ? CPU.GPR[ra]._u16[h] >> nRot : 0;
-	}
-	void ROTMAHI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = (0 - i7) % 32;
-
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = nRot < 16 ? CPU.GPR[ra]._i16[h] >> nRot : CPU.GPR[ra]._i16[h] >> 15;
-	}
-	void SHLHI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nRot = i7 & 0x1f;
-
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[0] = nRot > 15 ? 0 : CPU.GPR[ra]._u16[0] << nRot;
-	}
-	void A(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0];
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] + CPU.GPR[rb]._u32[1];
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._u32[2] + CPU.GPR[rb]._u32[2];
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3];
-	}
-	void AND(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] & CPU.GPR[rb]._u32[0];
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] & CPU.GPR[rb]._u32[1];
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._u32[2] & CPU.GPR[rb]._u32[2];
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] & CPU.GPR[rb]._u32[3];
-	}
-	void CG(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = ((CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0]) < CPU.GPR[ra]._u32[0]) ? 1 : 0;
-		CPU.GPR[rt]._u32[1] = ((CPU.GPR[ra]._u32[1] + CPU.GPR[rb]._u32[1]) < CPU.GPR[ra]._u32[1]) ? 1 : 0;
-		CPU.GPR[rt]._u32[2] = ((CPU.GPR[ra]._u32[2] + CPU.GPR[rb]._u32[2]) < CPU.GPR[ra]._u32[2]) ? 1 : 0;
-		CPU.GPR[rt]._u32[3] = ((CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) < CPU.GPR[ra]._u32[3]) ? 1 : 0;
-	}
-	void AH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] + CPU.GPR[rb]._u16[h];
-	}
-	void NAND(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = ~(CPU.GPR[ra]._u32[0] & CPU.GPR[rb]._u32[0]);
-		CPU.GPR[rt]._u32[1] = ~(CPU.GPR[ra]._u32[1] & CPU.GPR[rb]._u32[1]);
-		CPU.GPR[rt]._u32[2] = ~(CPU.GPR[ra]._u32[2] & CPU.GPR[rb]._u32[2]);
-		CPU.GPR[rt]._u32[3] = ~(CPU.GPR[ra]._u32[3] & CPU.GPR[rb]._u32[3]);
-	}
-	void AVGB(u32 rt, u32 ra, u32 rb)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = (CPU.GPR[ra]._u8[b] + CPU.GPR[rb]._u8[b] + 1) >> 1;
-	}
-	void MTSPR(u32 rt, u32 sa)
-	{
-		if(sa != 0)
-		{
-			CPU.SPR[sa]._u128.hi = CPU.GPR[rt]._u128.hi;
-			CPU.SPR[sa]._u128.lo = CPU.GPR[rt]._u128.lo;
-		}
-	}
-	void WRCH(u32 ra, u32 rt)
-	{
-		CPU.WriteChannel(ra, CPU.GPR[rt]);
-	}
-	void BIZ(u32 rt, u32 ra)
-	{
-		if(CPU.GPR[rt]._u32[0] == 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
-	}
-	void BINZ(u32 rt, u32 ra)
-	{
-		if(CPU.GPR[rt]._u32[0] != 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
-	}
-	void BIHZ(u32 rt, u32 ra)
-	{
-		if(CPU.GPR[rt]._u16[0] == 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
-	}
-	void BIHNZ(u32 rt, u32 ra)
-	{
-		if(CPU.GPR[rt]._u16[0] != 0)
-			CPU.SetBranch(CPU.GPR[ra]._u32[0] & 0xfffffffc);
-	}
-	void STOPD(u32 rc, u32 ra, u32 rb)
-	{
-		Emu.Pause();
-	}
-	void STQX(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.WriteLS128(CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0], CPU.GPR[rt]._u128);
-	}
-	void BI(u32 ra)
-	{
-		CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
-	}
-	void BISL(u32 rt, u32 ra)
-	{
-		CPU.SetBranch(CPU.GPR[ra]._u32[3] & 0xfffffffc);
-		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[0] = CPU.PC + 4;
-	}
-	void IRET(u32 ra)
-	{
-		UNIMPLEMENTED();
-		//SetBranch(SRR0);
-	}
-	void BISLED(u32 rt, u32 ra)
-	{
-		UNIMPLEMENTED();
-	}
-	void HBR(u32 p, u32 ro, u32 ra)
-	{
-		CPU.SetBranch(CPU.GPR[ra]._u32[0]);
-	}
-	void GB(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[0] =	(CPU.GPR[ra]._u32[0] & 1) |
-										((CPU.GPR[ra]._u32[1] & 1) << 1) |
-										((CPU.GPR[ra]._u32[2] & 1) << 2) |
-										((CPU.GPR[ra]._u32[3] & 1) << 3);
-	}
-	void GBH(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt].Reset();
-
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u32[0] |= (CPU.GPR[ra]._u16[h] & 1) << h;
-	}
-	void GBB(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt].Reset();
-
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u32[0] |= (CPU.GPR[ra]._u8[b] & 1) << b;
-	}
-	void FSM(u32 rt, u32 ra)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = (CPU.GPR[ra]._u32[0] & (8 >> w)) ? ~0 : 0;
-	}
-	void FSMH(u32 rt, u32 ra)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = (CPU.GPR[ra]._u32[0] & (128 >> h)) ? ~0 : 0;
-	}
-	void FSMB(u32 rt, u32 ra)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = (CPU.GPR[ra]._u32[0] & (32768 >> b)) ? ~0 : 0;
-	}
-	void FREST(u32 rt, u32 ra)
-	{
-		UNIMPLEMENTED();
-	}
-	void FRSQEST(u32 rt, u32 ra)
-	{
-		UNIMPLEMENTED();
-	}
-	void LQX(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0]);
-	}
-	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
-	{
-		const int nShift = (CPU.GPR[rb]._u32[0] >> 3) & 0xf;
-
-		for (int b = 0; b < 8; b++)
-			CPU.GPR[rt]._u8[b] = nShift == 0 ? CPU.GPR[ra]._u8[b] : (CPU.GPR[ra]._u8[b] << nShift) | (CPU.GPR[ra]._u8[b] >> (16 - nShift));
-	}
-	void ROTQMBYBI(u32 rt, u32 ra, u32 rb)
-	{
-		const int nShift = ((0 - CPU.GPR[rb]._u32[0]) >> 3) & 0x1f;
-
-		for (int b = 0; b < 16; b++)
-		{
-			if (b >= nShift)
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b - nShift];
-			else
-				CPU.GPR[rt]._u8[b] = 0;
-		}
-	}
-	void SHLQBYBI(u32 rt, u32 ra, u32 rb)
-	{
-		const int nShift = (CPU.GPR[rb]._u32[0] >> 3) & 0x1f;
-
-		for (int b = 0; b < 16; b++)
-		{
-			if ((b + nShift) < 16)
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + nShift];
-			else
-				CPU.GPR[rt]._u8[b] = 0;
-		}
-	}
-	void CBX(u32 rt, u32 ra, u32 rb)
-	{
-		int n = (CPU.GPR[rb]._u32[0] + CPU.GPR[ra]._u32[0]) & 0xf;
-
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = b == n ? 3 : b | 0x10;
-	}
-	void CHX(u32 rt, u32 ra, u32 rb)
-	{
-		int n = ((CPU.GPR[rb]._u32[0] + CPU.GPR[ra]._u32[0]) & 0xf) >> 1;
-
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = h == n ? 0x0203 : (h * 2 * 0x0101 + 0x1011);
-	}
-	void CWX(u32 rt, u32 ra, u32 rb)
-	{
-		const u32 t = ((CPU.GPR[ra]._u32[0] + CPU.GPR[rb]._u32[0]) & 0xc) / 4;
-		for(u32 i=0; i<16; ++i) CPU.GPR[rt]._i8[i] = 0x10 + i;
-		CPU.GPR[rt]._u32[t] = 0x10203;
-	}
-	void CDX(u32 rt, u32 ra, u32 rb)
-	{
-		int n = ((CPU.GPR[rb]._u32[0] + CPU.GPR[ra]._u32[0]) & 0x8) >> 2;
-
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = (w == n) ? 0x00010203 : (w == (n + 1)) ? 0x04050607 : (0x01010101 * (w * 4) + 0x10111213);
-	}
-	void ROTQBI(u32 rt, u32 ra, u32 rb)
-	{
-		int nShift = CPU.GPR[rb]._u32[0] & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << nShift) | (CPU.GPR[ra]._u32[1] >> (32 - nShift));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << nShift) | (CPU.GPR[ra]._u32[2] >> (32 - nShift));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << nShift) | (CPU.GPR[ra]._u32[3] >> (32 - nShift));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << nShift) | (CPU.GPR[ra]._u32[0] >> (32 - nShift));
-	}
-	void ROTQMBI(u32 rt, u32 ra, u32 rb)
-	{
-		int nShift = (0 - CPU.GPR[rb]._u32[0]) % 8;
-
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] >> nShift;
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] >> nShift) | (CPU.GPR[ra]._u32[0] << (32 - nShift));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] >> nShift) | (CPU.GPR[ra]._u32[1] << (32 - nShift));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] >> nShift) | (CPU.GPR[ra]._u32[2] << (32 - nShift));
-	}
-	void SHLQBI(u32 rt, u32 ra, u32 rb)
-	{
-		const int nShift = CPU.GPR[rb]._u32[0] & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << nShift) | (CPU.GPR[ra]._u32[1] >> (32 - nShift));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << nShift) | (CPU.GPR[ra]._u32[2] >> (32 - nShift));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << nShift) | (CPU.GPR[ra]._u32[3] >> (32 - nShift));
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] << nShift;
-	}
-	void ROTQBY(u32 rt, u32 ra, u32 rb)
-	{
-		const s32 s = CPU.GPR[rb]._u8[0] & 0xf;
-
-		for(u32 b = 0; b < 16; ++b)
-		{
-			if(b + s < 16)
-			{
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
-			}
-			else
-			{
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s - 16];
-			}
-		}
-	}
-	void ROTQMBY(u32 rt, u32 ra, u32 rb)
-	{
-		const int nShift = (0 - CPU.GPR[rb]._u32[0]) % 32;
-
-		for (int b = 0; b < 16; b++)
-			if (b >= nShift)
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b - nShift];
-			else
-				CPU.GPR[rt]._u8[b] = 0;
-	}
-	void SHLQBY(u32 rt, u32 ra, u32 rb)
-	{
-		const int nShift = CPU.GPR[rb]._u32[0] & 0x1f;
-
-		for (int b = 0; b < 16; b++)
-			if (b + nShift < 16)
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + nShift];
-			else
-				CPU.GPR[rt]._u8[b] = 0;
-	}
-	void ORX(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt].Reset();
-
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] | CPU.GPR[ra]._u32[1] | CPU.GPR[ra]._u32[2] | CPU.GPR[ra]._u32[3];
-	}
-	void CBD(u32 rt, u32 ra, s32 i7)
-	{
-		const int n = (CPU.GPR[ra]._u32[0] + i7) & 0xf;
-
-		for (int b = 0; b < 16; b++)
-			if (b == n)
-				CPU.GPR[rt]._u8[b] = 0x3;
-			else
-				CPU.GPR[rt]._u8[b] = b | 0x10;
-	}
-	void CHD(u32 rt, u32 ra, s32 i7)
-	{
-		int n = ((CPU.GPR[ra]._u32[0] + i7) & 0xf) >> 1;
-
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = h == n ? 0x0203 : (h * 2 * 0x0101 + 0x1011);
-	}
-	void CWD(u32 rt, u32 ra, s32 i7)
-	{
-		const int t = ((CPU.GPR[ra]._u32[0] + i7) & 0xf) >> 2;
-
-		for (int i=0; i<16; ++i) 
-			CPU.GPR[rt]._u8[i] = 0x10 + i;
-
-		CPU.GPR[rt]._u32[t] = 0x10203;
-	}
-	void CDD(u32 rt, u32 ra, s32 i7)
-	{
-		const int t = ((CPU.GPR[ra]._u32[0] + i7) & 0xf) >> 3;
-
-		for (int i=0; i<16; ++i) 
-			CPU.GPR[rt]._u8[i] = 0x10 + i;
-
-		CPU.GPR[rt]._u64[t] = (u64)0x0001020304050607;
-	}
-	void ROTQBII(u32 rt, u32 ra, s32 i7)
-	{
-		int nShift = i7 & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << nShift) | (CPU.GPR[ra]._u32[1] >> (32 - nShift));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << nShift) | (CPU.GPR[ra]._u32[2] >> (32 - nShift));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << nShift) | (CPU.GPR[ra]._u32[3] >> (32 - nShift));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] << nShift) | (CPU.GPR[ra]._u32[0] >> (32 - nShift));
-	}
-	void ROTQMBII(u32 rt, u32 ra, s32 i7)
-	{
-		int nShift = (0 - i7) % 8;
-
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] >> nShift;
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] >> nShift) | (CPU.GPR[ra]._u32[0] << (32 - nShift));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] >> nShift) | (CPU.GPR[ra]._u32[1] << (32 - nShift));
-		CPU.GPR[rt]._u32[3] = (CPU.GPR[ra]._u32[3] >> nShift) | (CPU.GPR[ra]._u32[2] << (32 - nShift));
-	}
-	void SHLQBII(u32 rt, u32 ra, s32 i7)
-	{
-		const int nShift = i7 & 0x7;
-
-		CPU.GPR[rt]._u32[0] = (CPU.GPR[ra]._u32[0] << nShift) | (CPU.GPR[ra]._u32[1] >> (32 - nShift));
-		CPU.GPR[rt]._u32[1] = (CPU.GPR[ra]._u32[1] << nShift) | (CPU.GPR[ra]._u32[2] >> (32 - nShift));
-		CPU.GPR[rt]._u32[2] = (CPU.GPR[ra]._u32[2] << nShift) | (CPU.GPR[ra]._u32[3] >> (32 - nShift));
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] << nShift;
-	}
-	void ROTQBYI(u32 rt, u32 ra, s32 i7)
-	{
-		const u16 s = i7 & 0xf;
-
-		for(u32 b = 0; b < 16; ++b)
-		{
-			if(b + s < 16)
-			{
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
-			}
-			else
-			{
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s - 16];
-			}
-		}
-	}
-	void ROTQMBYI(u32 rt, u32 ra, s32 i7)
-	{
-		const int nShift = (0 - i7) % 32;
-
-		for (int b = 0; b < 16; b++)
-			if (b >= nShift)
-				CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b - nShift];
-			else
-				CPU.GPR[rt]._u8[b] = 0;
-	}
-	void SHLQBYI(u32 rt, u32 ra, s32 i7)
-	{
-		const u16 s = i7 & 0x1f;
-
-		CPU.GPR[rt].Reset();
-
-		for(u32 b = 0; b + s < 16; ++b)
-		{
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
-		}
-	}
-	void NOP(u32 rt)
-	{
-	}
-	void CGT(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._i32[w] > CPU.GPR[rb]._i32[w] ? 0xffffffff : 0;
-	}
-	void XOR(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] ^ CPU.GPR[rb]._u32[w];
-	}
-	void CGTH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._i16[h] > CPU.GPR[rb]._i16[h] ? 0xffff : 0;
-	}
-	void EQV(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = (CPU.GPR[ra]._u32[w] & CPU.GPR[rb]._u32[w]) | ~(CPU.GPR[ra]._u32[w] | CPU.GPR[rb]._u32[w]);
-	}
-	void CGTB(u32 rt, u32 ra, u32 rb)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._i8[b] > CPU.GPR[rb]._i8[b] ? 0xff : 0;
-	}
-	void SUMB(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-		{
-			CPU.GPR[rt]._u16[w*2] = CPU.GPR[ra]._u8[w*4] + CPU.GPR[ra]._u8[w*4 + 1] + CPU.GPR[ra]._u8[w*4 + 2] + CPU.GPR[ra]._u8[w*4 + 3];
-			CPU.GPR[rt]._u16[w*2 + 1] = CPU.GPR[rb]._u8[w*4] + CPU.GPR[rb]._u8[w*4 + 1] + CPU.GPR[rb]._u8[w*4 + 2] + CPU.GPR[rb]._u8[w*4 + 3];
-		}
-	}
-	//HGT uses signed values.  HLGT uses unsigned values
-	void HGT(u32 rt, s32 ra, s32 rb)
-	{
-		if(CPU.GPR[ra]._i32[0] > CPU.GPR[rb]._i32[0])
-		{
-			CPU.Stop();
-		}
-	}
-	void CLZ(u32 rt, u32 ra)
-	{
-		for (int w = 0; w < 4; w++)
-		{
-			int nPos;
-
-			for (nPos = 0; nPos < 32; nPos++)
-				if (CPU.GPR[ra]._u32[w] & (1 << (31 - nPos)))
-					break;
-
-			CPU.GPR[rt]._u32[w] = nPos;
-		}
-	}
-	void XSWD(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt]._i64[0] = (s64)CPU.GPR[ra]._i32[1];
-		CPU.GPR[rt]._i64[1] = (s64)CPU.GPR[ra]._i32[3];
-	}
-	void XSHW(u32 rt, u32 ra)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = (s32)CPU.GPR[ra]._i16[w*2 + 1];
-	}
-	void CNTB(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt].Reset();
-		
-		for (int b = 0; b < 16; b++)
-			for (int i = 0; i < 8; i++)
-				CPU.GPR[rt]._u8[b] += (CPU.GPR[ra]._u8[b] & (1 << i)) ? 1 : 0;
-	}
-	void XSBH(u32 rt, u32 ra)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = (s16)CPU.GPR[ra]._i8[h*2 + 1];
-	}
-	void CLGT(u32 rt, u32 ra, u32 rb)
-	{
-		for(u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] > CPU.GPR[rb]._u32[i]) ? 0xffffffff : 0x00000000;
-		}
-	}
-	void ANDC(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] & (~CPU.GPR[rb]._u32[w]);
-	}
-	void FCGT(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._f[0] > CPU.GPR[rb]._f[0] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._f[1] > CPU.GPR[rb]._f[1] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._f[2] > CPU.GPR[rb]._f[2] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._f[3] > CPU.GPR[rb]._f[3] ? 0xffffffff : 0;
-	}
-	void DFCGT(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u64[0] = CPU.GPR[ra]._d[0] > CPU.GPR[rb]._d[0] ? 0xffffffffffffffff : 0;
-		CPU.GPR[rt]._u64[1] = CPU.GPR[ra]._d[1] > CPU.GPR[rb]._d[1] ? 0xffffffffffffffff : 0;
-	}
-	void FA(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] + CPU.GPR[rb]._f[0];
-		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] + CPU.GPR[rb]._f[1];
-		CPU.GPR[rt]._f[2] = CPU.GPR[ra]._f[2] + CPU.GPR[rb]._f[2];
-		CPU.GPR[rt]._f[3] = CPU.GPR[ra]._f[3] + CPU.GPR[rb]._f[3];
-	}
-	void FS(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] - CPU.GPR[rb]._f[0];
-		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] - CPU.GPR[rb]._f[1];
-		CPU.GPR[rt]._f[2] = CPU.GPR[ra]._f[2] - CPU.GPR[rb]._f[2];
-		CPU.GPR[rt]._f[3] = CPU.GPR[ra]._f[3] - CPU.GPR[rb]._f[3];
-	}
-	void FM(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0];
-		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1];
-		CPU.GPR[rt]._f[2] = CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2];
-		CPU.GPR[rt]._f[3] = CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3];
-	}
-	void CLGTH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] > CPU.GPR[rb]._u16[h] ? 0xffff : 0;
-	}
-	void ORC(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] | (~CPU.GPR[rb]._u32[w]);
-	}
-	void FCMGT(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = fabs(CPU.GPR[ra]._f[0]) > fabs(CPU.GPR[rb]._f[0]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = fabs(CPU.GPR[ra]._f[1]) > fabs(CPU.GPR[rb]._f[1]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = fabs(CPU.GPR[ra]._f[2]) > fabs(CPU.GPR[rb]._f[2]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = fabs(CPU.GPR[ra]._f[3]) > fabs(CPU.GPR[rb]._f[3]) ? 0xffffffff : 0;
-	}
-	void DFCMGT(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u64[0] = fabs(CPU.GPR[ra]._d[0]) > fabs(CPU.GPR[rb]._d[0]) ? 0xffffffffffffffff : 0;
-		CPU.GPR[rt]._u64[1] = fabs(CPU.GPR[ra]._d[1]) > fabs(CPU.GPR[rb]._d[1]) ? 0xffffffffffffffff : 0;
-	}
-	void DFA(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] + CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] + CPU.GPR[rb]._d[1];
-	}
-	void DFS(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] - CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] - CPU.GPR[rb]._d[1];
-	}
-	void DFM(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1];
-	}
-	void CLGTB(u32 rt, u32 ra, u32 rb)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b] > CPU.GPR[rb]._u8[b] ? 0xff : 0;
-	}
-	void HLGT(u32 rt, u32 ra, u32 rb)
-	{
-		if(CPU.GPR[ra]._u32[0] > CPU.GPR[rb]._u32[0])
-		{
-			CPU.Stop();
-		}
-	}
-	void DFMA(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] += CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] += CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1];
-	}
-	void DFMS(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0] - CPU.GPR[rt]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1] - CPU.GPR[rt]._d[1];
-	}
-	void DFNMS(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] -= CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] -= CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1];
-	}
-	void DFNMA(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = - CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0] - CPU.GPR[rt]._d[0] ;
-		CPU.GPR[rt]._d[1] = - CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1] - CPU.GPR[rt]._d[1] ;
-	}
-	void CEQ(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._i32[w] == CPU.GPR[rb]._i32[w] ? 0xffffffff : 0;
-	}
-	void MPYHHU(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w*2];
-	}
-	void ADDX(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] + CPU.GPR[rb]._u32[w] + (CPU.GPR[rt]._u32[w] & 1);
-	}
-	void SFX(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[rb]._u32[w] - CPU.GPR[ra]._u32[w] - (1 - (CPU.GPR[rt]._u32[w] & 1));
-	}
-	void CGX(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = (CPU.GPR[ra]._u32[w] + CPU.GPR[rb]._u32[w] + (CPU.GPR[rt]._u32[w] & 1)) < CPU.GPR[ra]._u32[w] ? 1 : 0;
-	}
-	void BGX(u32 rt, u32 ra, u32 rb)
-	{
-		s64 nResult;
-		
-		for (int w = 0; w < 4; w++)
-		{
-			nResult = (u64)CPU.GPR[rb]._u32[w] - (u64)CPU.GPR[ra]._u32[w] - (1 - (CPU.GPR[rt]._u32[w] & 1));
-			CPU.GPR[rt]._u32[w] = nResult < 0 ? 0 : 1;
-		}
-	}
-	void MPYHHA(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] += CPU.GPR[ra]._i16[w*2] * CPU.GPR[rb]._i16[w*2];
-	}
-	void MPYHHAU(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] += CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w*2];
-	}
-	//Forced bits to 0, hence the shift:
-	
-	void FSCRRD(u32 rt)
-	{
-		/*CPU.GPR[rt]._u128.lo = 
-			CPU.FPSCR.Exception0 << 20 &
-			CPU.FPSCR.*/
-		UNIMPLEMENTED();
-	}
-	void FESD(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt]._d[0] = (double)CPU.GPR[ra]._f[0];
-		CPU.GPR[rt]._d[1] = (double)CPU.GPR[ra]._f[2];
-	}
-	void FRDS(u32 rt, u32 ra)
-	{
-		CPU.GPR[rt]._f[0] = (float)CPU.GPR[ra]._d[0];
-		CPU.GPR[rt]._f[1] = 0x00000000;
-		CPU.GPR[rt]._f[2] = (float)CPU.GPR[ra]._d[1];
-		CPU.GPR[rt]._f[3] = 0x00000000;
-	}
-	void FSCRWR(u32 rt, u32 ra)
-	{
-		UNIMPLEMENTED();
-	}
-	void DFTSV(u32 rt, u32 ra, s32 i7)
-	{
-		UNIMPLEMENTED();
-	}
-	void FCEQ(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._f[0] == CPU.GPR[rb]._f[0] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._f[1] == CPU.GPR[rb]._f[1] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._f[2] == CPU.GPR[rb]._f[2] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._f[3] == CPU.GPR[rb]._f[3] ? 0xffffffff : 0;
-	}
-	void DFCEQ(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u64[0] = CPU.GPR[ra]._d[0] == CPU.GPR[rb]._d[0] ? 0xffffffffffffffff : 0;
-		CPU.GPR[rt]._u64[1] = CPU.GPR[ra]._d[1] == CPU.GPR[rb]._d[1] ? 0xffffffffffffffff : 0;
-	}
-	void MPY(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2 + 1] * CPU.GPR[rb]._i16[w*2 + 1];
-	}
-	void MPYH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = ((CPU.GPR[ra]._i32[w] >> 16) * (CPU.GPR[rb]._i32[w] & 0xffff)) << 16;
-	}
-	void MPYHH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2] * CPU.GPR[rb]._i16[w*2];
-	}
-	void MPYS(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = (CPU.GPR[ra]._i16[w*2 + 1] * CPU.GPR[rb]._i16[w*2 + 1]) >> 16;
-	}
-	void CEQH(u32 rt, u32 ra, u32 rb)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] == CPU.GPR[rb]._u16[h] ? 0xffff : 0;
-	}
-	void FCMEQ(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u32[0] = fabs(CPU.GPR[ra]._f[0]) == fabs(CPU.GPR[rb]._f[0]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = fabs(CPU.GPR[ra]._f[1]) == fabs(CPU.GPR[rb]._f[1]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = fabs(CPU.GPR[ra]._f[2]) == fabs(CPU.GPR[rb]._f[2]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = fabs(CPU.GPR[ra]._f[3]) == fabs(CPU.GPR[rb]._f[3]) ? 0xffffffff : 0;
-	}
-	void DFCMEQ(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._u64[0] = fabs(CPU.GPR[ra]._d[0]) == fabs(CPU.GPR[rb]._d[0]) ? 0xffffffffffffffff : 0;
-		CPU.GPR[rt]._u64[1] = fabs(CPU.GPR[ra]._d[1]) == fabs(CPU.GPR[rb]._d[1]) ? 0xffffffffffffffff : 0;
-	}
-	void MPYU(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u16[w*2] * CPU.GPR[rb]._u16[w*2];
-	}
-	void CEQB(u32 rt, u32 ra, u32 rb)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b] == CPU.GPR[rb]._u8[b] ? 0xff : 0;
-	}
-	void FI(u32 rt, u32 ra, u32 rb)
-	{
-		UNIMPLEMENTED();
-	}
-	void HEQ(u32 rt, u32 ra, u32 rb)
-	{
-		UNIMPLEMENTED();
-	}
-
-	//0 - 9
-	void CFLTS(u32 rt, u32 ra, s32 i8)
-	{
-		UNIMPLEMENTED();
-	}
-	void CFLTU(u32 rt, u32 ra, s32 i8)
-	{
-		UNIMPLEMENTED();
-	}
-	void CSFLT(u32 rt, u32 ra, s32 i8)
-	{
-		UNIMPLEMENTED();
-	}
-	void CUFLT(u32 rt, u32 ra, s32 i8)
-	{
-		UNIMPLEMENTED();
-	}
-
-	//0 - 8
-	void BRZ(u32 rt, s32 i16)
-	{
-		if(!CPU.GPR[rt]._u32[3]) CPU.SetBranch(branchTarget(CPU.PC, i16));
-	}
-	void STQA(u32 rt, s32 i16)
-	{
-		CPU.WriteLS128(i16 << 2, CPU.GPR[rt]._u128);
-	}
-	void BRNZ(u32 rt, s32 i16)
-	{
-		if(CPU.GPR[rt]._u32[3] != 0) 
-			CPU.SetBranch(branchTarget(CPU.PC, i16));
-	}
-	void BRHZ(u32 rt, s32 i16)
-	{
-		if(!CPU.GPR[rt]._u16[7]) CPU.SetBranch(branchTarget(CPU.PC, i16));
-	}
-	void BRHNZ(u32 rt, s32 i16)
-	{
-		if(CPU.GPR[rt]._u16[7]) CPU.SetBranch(branchTarget(CPU.PC, i16));
-	}
-	void STQR(u32 rt, s32 i16)
-	{
-		CPU.WriteLS128(branchTarget(CPU.PC, i16), CPU.GPR[rt]._u128);
-	}
-	void BRA(s32 i16)
-	{
-		CPU.SetBranch(i16 << 2);
-	}
-	void LQA(u32 rt, s32 i16)
-	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(i16 << 2);
-	}
-	void BRASL(u32 rt, s32 i16)
-	{
-		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[0] = CPU.PC + 4;
-		CPU.SetBranch(i16 << 2);
-	}
-	void BR(s32 i16)
-	{
-		CPU.SetBranch(branchTarget(CPU.PC, i16));
-	}
-	void FSMBI(u32 rt, s32 i16)
-	{
-		const u32 s = i16;
-
-		for(u32 j = 0; j < 16; ++j)
-		{
-			if((s >> j) & 0x1)
-			{
-				CPU.GPR[rt]._u8[j] = 0xFF;
-			}
-			else
-			{
-				CPU.GPR[rt]._u8[j] = 0x00;
-			}
-		}
-	}
-	void BRSL(u32 rt, s32 i16)
-	{
-		CPU.GPR[rt].Reset();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
-		CPU.SetBranch(branchTarget(CPU.PC, i16));
-	}
-	void LQR(u32 rt, s32 i16)
-	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(branchTarget(CPU.PC, i16));
-	}
-	void IL(u32 rt, s32 i16)
-	{
-		CPU.GPR[rt]._u32[0] = i16;
-		CPU.GPR[rt]._u32[1] = i16;
-		CPU.GPR[rt]._u32[2] = i16;
-		CPU.GPR[rt]._u32[3] = i16;
-	}
-	void ILHU(u32 rt, s32 i16)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u16[w*2 + 1] = i16;
-	}
-	void ILH(u32 rt, s32 i16)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = i16;
-	}
-	void IOHL(u32 rt, s32 i16)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] |= i16;
-	}
-	
-
-	//0 - 7
-	void ORI(u32 rt, u32 ra, s32 i10)
-	{
-		for(u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] = CPU.GPR[ra]._u32[i] | i10;
-		}
-	}
-	void ORHI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] | i10;
-	}
-	void ORBI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b] | (i10 & 0xff);
-	}
-	void SFI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = i10 - CPU.GPR[ra]._i32[w];
-	}
-	void SFHI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._i16[h] = i10 - CPU.GPR[ra]._i16[h];
-	}
-	void ANDI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] & i10;
-	}
-	void ANDHI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] & i10;
-	}
-	void ANDBI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b] & (i10 & 0xff);
-	}
-	void AI(u32 rt, u32 ra, s32 i10)
-	{
-		for(u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] = CPU.GPR[ra]._u32[i] + i10;
-		}
-	}
-	void AHI(u32 rt, u32 ra, s32 i10)
-	{
-		for(u32 i = 0; i < 8; ++i)
-		{
-			CPU.GPR[rt]._u16[i] = CPU.GPR[ra]._u16[i] + i10;
-		}
-	}
-	void STQD(u32 rt, s32 i10, u32 ra)
-	{
-		CPU.WriteLS128(CPU.GPR[ra]._u32[3] + i10, CPU.GPR[rt]._u128);
-	}
-	void LQD(u32 rt, s32 i10, u32 ra)
-	{
-		CPU.GPR[rt]._u128 = CPU.ReadLS128(CPU.GPR[ra]._u32[3] + i10);
-	}
-	void XORI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] ^ i10;
-	}
-	void XORHI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] ^ i10;
-	}
-	void XORBI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b] ^ (i10 & 0xff);
-	}
-	void CGTI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._i32[w] > i10 ? 0xffffffff : 0;
-	}
-	void CGTHI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._i16[h] > i10 ? 0xffff : 0;
-	}
-	void CGTBI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._i8[b] > (s8)(i10 & 0xff) ? 0xff : 0;
-	}
-	void HGTI(u32 rt, u32 ra, s32 i10)
-	{
-		UNIMPLEMENTED();
-	}
-	void CLGTI(u32 rt, u32 ra, s32 i10)
-	{
-		for(u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] = (CPU.GPR[rt]._u32[i] > (u32)i10) ? 0xffffffff : 0x00000000;
-		}
-	}
-	void CLGTHI(u32 rt, u32 ra, s32 i10)
-	{
-		for(u32 i = 0; i < 8; ++i)
-		{
-			CPU.GPR[rt]._u16[i] = (CPU.GPR[rt]._u16[i] > (u16)i10) ? 0xffff : 0x0000;
-		}
-	}
-	void CLGTBI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b] > (u8)(i10 & 0xff) ? 0xff : 0;
-	}
-	void HLGTI(u32 rt, u32 ra, s32 i10)
-	{
-		UNIMPLEMENTED();
-	}
-	void MPYI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = CPU.GPR[rt]._i16[w*2 + 1] * i10;
-	}
-	void MPYUI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._u32[w] = CPU.GPR[rt]._u16[w*2 + 1] * (u16)(i10 & 0xffff);
-	}
-	void CEQI(u32 rt, u32 ra, s32 i10)
-	{
-		for(u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] = (CPU.GPR[rt]._u32[i] == (u32)i10) ? 0xffffffff : 0x00000000;
-		}
-	}
-	void CEQHI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int h = 0; h < 8; h++)
-			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._i16[h] == (s16)i10 ? 0xffff : 0;
-	}
-	void CEQBI(u32 rt, u32 ra, s32 i10)
-	{
-		for (int b = 0; b < 16; b++)
-			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b] == (u8)(i10 & 0xff) ? 0xff : 0;
-	}
-	void HEQI(u32 rt, u32 ra, s32 i10)
-	{
-		UNIMPLEMENTED();
-	}
-
-
-	//0 - 6
-	void HBRA(s32 ro, s32 i16)
-	{
-		UNIMPLEMENTED();
-		UNIMPLEMENTED();
-	}
-	void HBRR(s32 ro, s32 i16)
-	{
-	}
-	void ILA(u32 rt, s32 i18)
-	{
-		CPU.GPR[rt]._u32[0] = i18;
-		CPU.GPR[rt]._u32[1] = i18;
-		CPU.GPR[rt]._u32[2] = i18;
-		CPU.GPR[rt]._u32[3] = i18;
-	}
-
-	//0 - 3
-	void SELB(u32 rt, u32 ra, u32 rb, u32 rc)
-	{
-		for(u32 i = 0; i < 4; ++i)
-		{
-			CPU.GPR[rt]._u32[i] =
-				( CPU.GPR[rc]._u32[i] & CPU.GPR[rb]._u32[i]) |
-				(~CPU.GPR[rc]._u32[i] & CPU.GPR[ra]._u32[i]);
-		}
-	}
-	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
-	{
-		ConLog.Warning("SHUFB");
-	}
-	void MPYA(u32 rc, u32 ra, u32 rb, u32 rt)
-	{
-		for (int w = 0; w < 4; w++)
-			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2 + 1] * CPU.GPR[rb]._i16[w*2 + 1] + CPU.GPR[rc]._i32[w];
-	}
-	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc)
-	{
-		CPU.GPR[rt]._f[0] -= CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0];
-		CPU.GPR[rt]._f[1] -= CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1];
-		CPU.GPR[rt]._f[2] -= CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2];
-		CPU.GPR[rt]._f[3] -= CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3];
-	}
-	void FMA(u32 rc, u32 ra, u32 rb, u32 rt)
-	{
-		CPU.GPR[rt]._f[0] += CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0];
-		CPU.GPR[rt]._f[1] += CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1];
-		CPU.GPR[rt]._f[2] += CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2];
-		CPU.GPR[rt]._f[3] += CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3];
-	}
-	void FMS(u32 rc, u32 ra, u32 rb, u32 rt)
-	{
-		CPU.GPR[rt]._f[0] = CPU.GPR[ra]._f[0] * CPU.GPR[rb]._f[0] - CPU.GPR[rt]._f[0];
-		CPU.GPR[rt]._f[1] = CPU.GPR[ra]._f[1] * CPU.GPR[rb]._f[1] - CPU.GPR[rt]._f[1];
-		CPU.GPR[rt]._f[2] = CPU.GPR[ra]._f[2] * CPU.GPR[rb]._f[2] - CPU.GPR[rt]._f[2];
-		CPU.GPR[rt]._f[3] = CPU.GPR[ra]._f[3] * CPU.GPR[rb]._f[3] - CPU.GPR[rt]._f[3];
-	}
-
-	void UNK(u32 code, u32 opcode, u32 gcode)
-	{
-		UNK(wxString::Format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
-	}
-
-	void UNK(const wxString& err)
-	{
-		ConLog.Error(err + wxString::Format(" #pc: 0x%x", CPU.PC));
-		Emu.Pause();
-		for(uint i=0; i<128; ++i) ConLog.Write("r%d = 0x%s", i, CPU.GPR[i].ToString());
-	}
+struct spu_interpreter_precise final : spu_interpreter
+{
+	static void FREST(SPUThread&, spu_opcode_t);
+	static void FRSQEST(SPUThread&, spu_opcode_t);
+	static void FCGT(SPUThread&, spu_opcode_t);
+	static void FA(SPUThread&, spu_opcode_t);
+	static void FS(SPUThread&, spu_opcode_t);
+	static void FM(SPUThread&, spu_opcode_t);
+	static void FCMGT(SPUThread&, spu_opcode_t);
+	static void DFA(SPUThread&, spu_opcode_t);
+	static void DFS(SPUThread&, spu_opcode_t);
+	static void DFM(SPUThread&, spu_opcode_t);
+	static void DFMA(SPUThread&, spu_opcode_t);
+	static void DFMS(SPUThread&, spu_opcode_t);
+	static void DFNMS(SPUThread&, spu_opcode_t);
+	static void DFNMA(SPUThread&, spu_opcode_t);
+	static void FSCRRD(SPUThread&, spu_opcode_t);
+	static void FESD(SPUThread&, spu_opcode_t);
+	static void FRDS(SPUThread&, spu_opcode_t);
+	static void FSCRWR(SPUThread&, spu_opcode_t);
+	static void FCEQ(SPUThread&, spu_opcode_t);
+	static void FCMEQ(SPUThread&, spu_opcode_t);
+	static void FI(SPUThread&, spu_opcode_t);
+	static void CFLTS(SPUThread&, spu_opcode_t);
+	static void CFLTU(SPUThread&, spu_opcode_t);
+	static void CSFLT(SPUThread&, spu_opcode_t);
+	static void CUFLT(SPUThread&, spu_opcode_t);
+	static void FNMS(SPUThread&, spu_opcode_t);
+	static void FMA(SPUThread&, spu_opcode_t);
+	static void FMS(SPUThread&, spu_opcode_t);
 };

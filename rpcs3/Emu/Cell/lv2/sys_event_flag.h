@@ -1,0 +1,122 @@
+#pragma once
+
+#include "sys_sync.h"
+
+enum
+{
+	SYS_SYNC_WAITER_SINGLE = 0x10000,
+	SYS_SYNC_WAITER_MULTIPLE = 0x20000,
+
+	SYS_EVENT_FLAG_WAIT_AND = 0x01,
+	SYS_EVENT_FLAG_WAIT_OR = 0x02,
+
+	SYS_EVENT_FLAG_WAIT_CLEAR = 0x10,
+	SYS_EVENT_FLAG_WAIT_CLEAR_ALL = 0x20,
+};
+
+struct sys_event_flag_attribute_t
+{
+	be_t<u32> protocol;
+	be_t<u32> pshared;
+	be_t<u64> ipc_key;
+	be_t<s32> flags;
+	be_t<s32> type;
+
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
+};
+
+struct lv2_event_flag final : lv2_obj
+{
+	static const u32 id_base = 0x98000000;
+
+	const u32 protocol;
+	const u32 shared;
+	const u64 key;
+	const s32 flags;
+	const s32 type;
+	const u64 name;
+
+	semaphore<> mutex;
+	atomic_t<u32> waiters{0};
+	atomic_t<u64> pattern;
+	std::deque<cpu_thread*> sq;
+
+	lv2_event_flag(u32 protocol, s32 type, u64 name, u64 pattern)
+		: protocol(protocol)
+		, shared(0)
+		, key(0)
+		, flags(0)
+		, type(type)
+		, name(name)
+		, pattern(pattern)
+	{
+	}
+
+	// Check mode arg
+	static bool check_mode(u32 mode)
+	{
+		switch (mode & 0xf)
+		{
+		case SYS_EVENT_FLAG_WAIT_AND: break;
+		case SYS_EVENT_FLAG_WAIT_OR: break;
+		default: return false;
+		}
+
+		switch (mode & ~0xf)
+		{
+		case 0: break;
+		case SYS_EVENT_FLAG_WAIT_CLEAR: break;
+		case SYS_EVENT_FLAG_WAIT_CLEAR_ALL: break;
+		default: return false;
+		}
+
+		return true;
+	}
+
+	// Check and clear pattern (must be atomic op)
+	static bool check_pattern(u64& pattern, u64 bitptn, u64 mode, u64* result)
+	{
+		// Write pattern
+		if (result)
+		{
+			*result = pattern;
+		}
+
+		// Check pattern
+		if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_AND && (pattern & bitptn) != bitptn ||
+			(mode & 0xf) == SYS_EVENT_FLAG_WAIT_OR && (pattern & bitptn) == 0)
+		{
+			return false;
+		}
+
+		// Clear pattern if necessary
+		if ((mode & ~0xf) == SYS_EVENT_FLAG_WAIT_CLEAR)
+		{
+			pattern &= ~bitptn;
+		}
+		else if ((mode & ~0xf) == SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
+		{
+			pattern = 0;
+		}
+
+		return true;
+	}
+};
+
+// Aux
+class ppu_thread;
+
+// Syscalls
+
+error_code sys_event_flag_create(vm::ps3::ptr<u32> id, vm::ps3::ptr<sys_event_flag_attribute_t> attr, u64 init);
+error_code sys_event_flag_destroy(u32 id);
+error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ps3::ptr<u64> result, u64 timeout);
+error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ps3::ptr<u64> result);
+error_code sys_event_flag_set(u32 id, u64 bitptn);
+error_code sys_event_flag_clear(u32 id, u64 bitptn);
+error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ps3::ptr<u32> num);
+error_code sys_event_flag_get(u32 id, vm::ps3::ptr<u64> flags);

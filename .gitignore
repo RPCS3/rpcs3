@@ -9,7 +9,7 @@
 # Compiled Static libraries
 *.lai
 *.la
-*.a
+# *.a # Commented out since OpenAL Soft's binaries use this extension.
 *.opensdf
 *.sdf
 *.suo
@@ -28,17 +28,67 @@
 *.unsuccessfulbuild
 *.res
 *.dump
+*.wav
 
-/libs
+/build
+/bin
+/lib
+/tmp
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
+/llvm_build
+/Vulkan/Vulkan-build
+/Vulkan/glslang-build
 
 /wxWidgets/lib
 /bin/rpcs3.ini
+/bin/rpcs3.ipdb
+/bin/rpcs3.iobj
 /bin/FragmentProgram.txt
 /bin/VertexProgram.txt
+/bin/*.hlsl
 /bin/BreakPoints.dat
 /bin/textures
-/bin/data/
+/bin/*.lib
+/bin/*.exp
 rpcs3/git-version.h
+
+# Visual Studio Files
+.vs/*
+*.vspx
+*.psess
+*.VC.*
+*.vcxproj.user
+
+# Copyrighted files
+/bin/data/
+/bin/dev_flash/data/font
+/bin/dev_flash/sys
+/bin/dev_flash/vsh
+
+# Ignore installed games except test homebrews
+!/bin/dev_hdd0/game/
+/bin/dev_hdd0/game/*
+!/bin/dev_hdd0/game/TEST12345/
+
+# Ignore other system generated files
+bin/dev_hdd0/*.txt
+x64/*
+rpcs3/x64/*
+rpcs3-tests/x64/*
+
+# cmake
+Makefile
+*CMakeFiles*
+CMakeCache.txt
+*cmake_install.cmake*
+
+# cotire
+rpcs3/cotire/*
+rpcs3/rpcs3_*_cotire.cmake
+
+# Qt
+moc_*.cpp
+qrc_resources.cpp
+rpcs3_automoc.cpp

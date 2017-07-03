@@ -1,162 +1,390 @@
 #pragma once
 
-#include "Gui/MemoryViewer.h"
-#include "Emu/CPU/CPUThreadManager.h"
-#include "Emu/Io/Pad.h"
-#include "Emu/Io/Keyboard.h"
-#include "Emu/Io/Mouse.h"
-#include "Emu/GS/GSManager.h"
-#include "Emu/FS/VFS.h"
-#include "Emu/DbgConsole.h"
-#include "Loader/Loader.h"
-#include "SysCalls/Callback.h"
-#include "SysCalls/Modules.h"
+#include "VFS.h"
+#include "Utilities/Atomic.h"
+#include "Utilities/Config.h"
+#include <functional>
+#include <memory>
+#include <string>
 
-struct EmuInfo
+enum class system_type
 {
-private:
-	u64 tls_addr;
-	u64 tls_filesz;
-	u64 tls_memsz;
-
-	sys_process_param_info proc_param;
-
-public:
-	EmuInfo() { Reset(); }
-
-	sys_process_param_info& GetProcParam() { return proc_param; }
-
-	void Reset()
-	{
-		SetTLSData(0, 0, 0);
-		memset(&proc_param, 0, sizeof(sys_process_param_info));
-
-		proc_param.malloc_pagesize = 0x100000;
-		proc_param.sdk_version = 0x360001;
-		//TODO
-	}
-
-	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
-	{
-		tls_addr = addr;
-		tls_filesz = filesz;
-		tls_memsz = memsz;
-	}
-
-	u64 GetTLSAddr() const { return tls_addr; }
-	u64 GetTLSFilesz() const { return tls_filesz; }
-	u64 GetTLSMemsz() const { return tls_memsz; }
+	ps3,
+	psv, // Experimental
+	//psp, // Hypothetical
 };
 
-class ModuleInitializer
+enum class system_state
 {
-public:
-	ModuleInitializer();
-
-	virtual void Init() = 0;
+	running,
+	paused,
+	stopped,
+	ready,
 };
 
-class Emulator
+enum class ppu_decoder_type
 {
-	enum Mode
-	{
-		DisAsm,
-		InterpreterDisAsm,
-		Interpreter,
-	};
+	precise,
+	fast,
+	llvm,
+};
 
-	mutable wxCriticalSection m_cs_status;
-	Status m_status;
-	uint m_mode;
+enum class spu_decoder_type
+{
+	precise,
+	fast,
+	asmjit,
+	llvm,
+};
 
-	u32 m_rsx_callback;
-	u32 m_ppu_thr_exit;
-	MemoryViewerPanel* m_memory_viewer;
-	//ArrayF<CPUThread> m_cpu_threads;
-	ArrayF<ModuleInitializer> m_modules_init;
+enum class lib_loading_type
+{
+	automatic,
+	manual,
+	both,
+	liblv2only
+};
 
-	Array<u64> m_break_points;
-	Array<u64> m_marked_points;
+enum class keyboard_handler
+{
+	null,
+	basic,
+};
 
-	CPUThreadManager m_thread_manager;
-	PadManager m_pad_manager;
-	KeyboardManager m_keyboard_manager;
-	MouseManager m_mouse_manager;
-	IdManager m_id_manager;
-	DbgConsole* m_dbg_console;
-	GSManager m_gs_manager;
-	CallbackManager m_callback_manager;
-	VFS m_vfs;
+enum class mouse_handler
+{
+	null,
+	basic,
+};
 
-	EmuInfo m_info;
+enum class pad_handler
+{
+	null,
+	keyboard,
+	ds4,
+#ifdef _MSC_VER
+	xinput,
+#endif
+#ifdef _WIN32
+	mm,
+#endif
+};
+
+enum class video_renderer
+{
+	null,
+	opengl,
+	vulkan,
+#ifdef _MSC_VER
+	dx12,
+#endif
+};
+
+enum class audio_renderer
+{
+	null,
+#ifdef _WIN32
+	xaudio,
+#elif __linux__
+	alsa,
+#endif
+	openal,
+};
+
+enum class camera_handler
+{
+	null,
+	fake,
+};
+
+enum class fake_camera_type
+{
+	unknown,
+	eyetoy,
+	eyetoy2,
+	uvc1_1,
+};
+
+enum class video_resolution
+{
+	_1080,
+	_720,
+	_480,
+	_576,
+	_1600x1080,
+	_1440x1080,
+	_1280x1080,
+	_960x1080,
+};
+
+enum class video_aspect
+{
+	_auto,
+	_4_3,
+	_16_9,
+};
+
+enum class frame_limit_type
+{
+	none,
+	_59_94,
+	_50,
+	_60,
+	_30,
+	_auto,
+};
+
+enum CellNetCtlState : s32;
+enum CellSysutilLang : s32;
+
+// Current process type
+extern system_type g_system;
+
+struct EmuCallbacks
+{
+	std::function<void(std::function<void()>)> call_after;
+	std::function<void()> process_events;
+	std::function<void()> on_run;
+	std::function<void()> on_pause;
+	std::function<void()> on_resume;
+	std::function<void()> on_stop;
+	std::function<void()> on_ready;
+	std::function<void()> exit;
+	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
+	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
+	std::function<std::shared_ptr<class PadHandlerBase>()> get_pad_handler;
+	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
+	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
+	std::function<std::shared_ptr<class AudioThread>()> get_audio;
+	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
+	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
+};
+
+class Emulator final
+{
+	atomic_t<system_state> m_state{system_state::stopped};
+
+	EmuCallbacks m_cb;
+
+	atomic_t<u64> m_pause_start_time; // set when paused
+	atomic_t<u64> m_pause_amend_time; // increased when resumed
+
+	std::string m_path;
+	std::string m_elf_path;
+	std::string m_cache_path;
+	std::string m_title_id;
+	std::string m_title;
 
 public:
-	wxString m_path;
-	wxString m_elf_path;
+	Emulator() = default;
 
-	Emulator();
+	void SetCallbacks(EmuCallbacks&& cb)
+	{
+		m_cb = std::move(cb);
+	}
+
+	const auto& GetCallbacks() const
+	{
+		return m_cb;
+	}
+
+	// Call from the GUI thread
+	void CallAfter(std::function<void()>&& func) const
+	{
+		return m_cb.call_after(std::move(func));
+	}
+
+	/** Set emulator mode to running unconditionnaly.
+	 * Required to execute various part (PPUInterpreter, memory manager...) outside of rpcs3.
+	 */
+	void SetTestMode()
+	{
+		m_state = system_state::running;
+	}
 
 	void Init();
-	void SetPath(const wxString& path, const wxString& elf_path = wxEmptyString);
+	void SetPath(const std::string& path, const std::string& elf_path = {});
 
-	std::shared_ptr<vfsFileBase> OpenFile(const wxString& path, vfsOpenMode mode = vfsRead)
+	const std::string& GetPath() const
 	{
-		return std::shared_ptr<vfsFileBase>((vfsFileBase*)m_vfs.Open(path, mode));
+		return m_elf_path;
 	}
 
-	std::shared_ptr<vfsStream> OpenStream(const wxString& path, vfsOpenMode mode = vfsRead)
+	const std::string& GetTitleID() const
 	{
-		return std::shared_ptr<vfsStream>(m_vfs.Open(path, mode));
+		return m_title_id;
 	}
 
-	CPUThreadManager&	GetCPU()				{ return m_thread_manager; }
-	PadManager&			GetPadManager()			{ return m_pad_manager; }
-	KeyboardManager&	GetKeyboardManager()	{ return m_keyboard_manager; }
-	MouseManager&		GetMouseManager()		{ return m_mouse_manager; }
-	IdManager&			GetIdManager()			{ return m_id_manager; }
-	DbgConsole&			GetDbgCon()				{ return *m_dbg_console; }
-	GSManager&			GetGSManager()			{ return m_gs_manager; }
-	CallbackManager&	GetCallbackManager()	{ return m_callback_manager; }
-	VFS&				GetVFS()				{ return m_vfs; }
-	Array<u64>&			GetBreakPoints()		{ return m_break_points; }
-	Array<u64>&			GetMarkedPoints()		{ return m_marked_points; }
-	
-	void AddModuleInit(ModuleInitializer* m)
+	const std::string& GetTitle() const
 	{
-		m_modules_init.Add(m);
+		return m_title;
 	}
 
-	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
+	const std::string& GetCachePath() const
 	{
-		m_info.SetTLSData(addr, filesz, memsz);
+		return m_cache_path;
 	}
 
-	EmuInfo& GetInfo() { return m_info; }
+	u64 GetPauseTime()
+	{
+		return m_pause_amend_time;
+	}
 
-	u64 GetTLSAddr() const { return m_info.GetTLSAddr(); }
-	u64 GetTLSFilesz() const { return m_info.GetTLSFilesz(); }
-	u64 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
+	bool BootGame(const std::string& path, bool direct = false);
 
-	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
-
-	u32 GetRSXCallback() const { return m_rsx_callback; }
-	u32 GetPPUThreadExit() const { return m_ppu_thr_exit; }
-
-	void CheckStatus();
+	static std::string GetGameDir();
+	static std::string GetLibDir();
 
 	void Load();
 	void Run();
-	void Pause();
+	bool Pause();
 	void Resume();
 	void Stop();
 
-	void SavePoints(const wxString& path);
-	void LoadPoints(const wxString& path);
-
-	__forceinline bool IsRunning()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Running; }
-	__forceinline bool IsPaused()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }
-	__forceinline bool IsStopped()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Stopped; }
-	__forceinline bool IsReady()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Ready; }
+	bool IsRunning() const { return m_state == system_state::running; }
+	bool IsPaused()  const { return m_state == system_state::paused; }
+	bool IsStopped() const { return m_state == system_state::stopped; }
+	bool IsReady()   const { return m_state == system_state::ready; }
+	auto GetStatus() const { return m_state.load(); }
 };
 
 extern Emulator Emu;
+
+struct cfg_root : cfg::node
+{
+	struct node_core : cfg::node
+	{
+		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
+
+		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::fast};
+		cfg::_int<1, 16> ppu_threads{this, "PPU Threads", 2}; // Amount of PPU threads running simultaneously (must be 2)
+		cfg::_bool ppu_debug{this, "PPU Debug"};
+		cfg::_bool llvm_logs{this, "Save LLVM logs"};
+		cfg::string llvm_cpu{this, "Use LLVM CPU"};
+
+		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
+		cfg::_bool bind_spu_cores{this, "Bind SPU threads to secondary cores"};
+		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
+		cfg::_bool spu_debug{this, "SPU Debug"};
+
+		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::automatic};
+		cfg::_bool hook_functions{this, "Hook static functions"};
+		cfg::set_entry load_libraries{this, "Load libraries"};
+
+	} core{this};
+
+	struct node_vfs : cfg::node
+	{
+		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
+
+		cfg::string emulator_dir{this, "$(EmulatorDir)"}; // Default (empty): taken from fs::get_config_dir()
+		cfg::string dev_hdd0{this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/"};
+		cfg::string dev_hdd1{this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/"};
+		cfg::string dev_flash{this, "/dev_flash/", "$(EmulatorDir)dev_flash/"};
+		cfg::string dev_usb000{this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/"};
+		cfg::string dev_bdvd{this, "/dev_bdvd/"}; // Not mounted
+		cfg::string app_home{this, "/app_home/"}; // Not mounted
+
+		cfg::_bool host_root{this, "Enable /host_root/"};
+
+	} vfs{this};
+
+	struct node_video : cfg::node
+	{
+		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
+
+		cfg::_enum<video_renderer> renderer{this, "Renderer", video_renderer::opengl};
+
+		cfg::_enum<video_resolution> resolution{this, "Resolution", video_resolution::_720};
+		cfg::_enum<video_aspect> aspect_ratio{this, "Aspect ratio", video_aspect::_16_9};
+		cfg::_enum<frame_limit_type> frame_limit{this, "Frame limit", frame_limit_type::none};
+
+		cfg::_bool write_color_buffers{this, "Write Color Buffers"};
+		cfg::_bool write_depth_buffer{this, "Write Depth Buffer"};
+		cfg::_bool read_color_buffers{this, "Read Color Buffers"};
+		cfg::_bool read_depth_buffer{this, "Read Depth Buffer"};
+		cfg::_bool log_programs{this, "Log shader programs"};
+		cfg::_bool vsync{this, "VSync"};
+		cfg::_bool debug_output{this, "Debug output"};
+		cfg::_bool overlay{this, "Debug overlay"};
+		cfg::_bool gl_legacy_buffers{this, "Use Legacy OpenGL Buffers"};
+		cfg::_bool use_gpu_texture_scaling{this, "Use GPU texture scaling", true};
+		cfg::_bool force_high_precision_z_buffer{this, "Force High Precision Z buffer"};
+		cfg::_bool invalidate_surface_cache_every_frame{this, "Invalidate Cache Every Frame", true};
+		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
+
+		struct node_d3d12 : cfg::node
+		{
+			node_d3d12(cfg::node* _this) : cfg::node(_this, "D3D12") {}
+
+			cfg::string adapter{this, "Adapter"};
+
+		} d3d12{this};
+
+		struct node_vk : cfg::node
+		{
+			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
+
+			cfg::string adapter{this, "Adapter"};
+
+		} vk{this};
+
+	} video{this};
+
+	struct node_audio : cfg::node
+	{
+		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
+
+		cfg::_enum<audio_renderer> renderer{this, "Renderer", static_cast<audio_renderer>(1)};
+
+		cfg::_bool dump_to_file{this, "Dump to file"};
+		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
+		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
+
+	} audio{this};
+	
+	struct node_io : cfg::node
+	{
+		node_io(cfg::node* _this) : cfg::node(_this, "Input/Output") {}
+
+		cfg::_enum<keyboard_handler> keyboard{this, "Keyboard", keyboard_handler::null};
+		cfg::_enum<mouse_handler> mouse{this, "Mouse", mouse_handler::basic};
+		cfg::_enum<pad_handler> pad{this, "Pad", pad_handler::keyboard};
+		cfg::_enum<camera_handler> camera{this, "Camera", camera_handler::null};
+		cfg::_enum<fake_camera_type> camera_type{this, "Camera type", fake_camera_type::unknown};
+
+	} io{this};
+	
+	struct node_sys : cfg::node
+	{
+		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
+
+		cfg::_enum<CellSysutilLang> language{this, "Language"};
+
+	} sys{this};
+	
+	struct node_net : cfg::node
+	{
+		node_net(cfg::node* _this) : cfg::node(_this, "Net") {}
+
+		cfg::_enum<CellNetCtlState> net_status{this, "Connection status"};
+		cfg::string ip_address{this, "IP address", "192.168.1.1"};
+
+	} net{this};
+
+	struct node_misc : cfg::node
+	{
+		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
+		
+		cfg::_bool autostart{this, "Automatically start games after boot", true};
+		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
+		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
+		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
+		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
+
+	} misc{this};
+
+	cfg::log_entry log{this, "Log"};
+};
+
+extern cfg_root g_cfg;

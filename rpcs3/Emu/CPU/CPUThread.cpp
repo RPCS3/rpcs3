@@ -1,339 +1,184 @@
 #include "stdafx.h"
+#include "Emu/System.h"
+#include "Emu/Memory/vm.h"
 #include "CPUThread.h"
+#include "Emu/IdManager.h"
+#include "Utilities/GDBDebugServer.h"
 
-CPUThread* GetCurrentCPUThread()
-{
-	return (CPUThread*)GetCurrentNamedThread();
-}
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
-CPUThread::CPUThread(CPUThreadType type)
-	: ThreadBase(true, "CPUThread")
-	, m_type(type)
-	, m_stack_size(0)
-	, m_stack_addr(0)
-	, m_offset(0)
-	, m_prio(0)
-	, m_sync_wait(false)
-	, m_wait_thread_id(-1)
-	, m_free_data(false)
-	, m_dec(nullptr)
-	, m_is_step(false)
-	, m_is_branch(false)
-{
-}
+DECLARE(cpu_thread::g_threads_created){0};
+DECLARE(cpu_thread::g_threads_deleted){0};
 
-CPUThread::~CPUThread()
+template <>
+void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 {
-	Close();
-}
-
-void CPUThread::Close()
-{
-	if(IsAlive())
+	format_enum(out, arg, [](cpu_flag f)
 	{
-		m_free_data = true;
-	}
-	else
-	{
-		delete m_dec;
-		m_dec = nullptr;
-	}
-
-	Stop();
-}
-
-void CPUThread::Reset()
-{
-	CloseStack();
-
-	m_sync_wait = 0;
-	m_wait_thread_id = -1;
-
-	SetPc(0);
-	cycle = 0;
-	m_is_branch = false;
-
-	m_status = Stopped;
-	m_error = 0;
-	
-	DoReset();
-}
-
-void CPUThread::CloseStack()
-{
-	if(m_stack_addr)
-	{
-		Memory.Free(m_stack_addr);
-		m_stack_addr = 0;
-	}
-
-	m_stack_size = 0;
-	m_stack_point = 0;
-}
-
-void CPUThread::SetId(const u32 id)
-{
-	m_id = id;
-}
-
-void CPUThread::SetName(const wxString& name)
-{
-	m_name = name;
-}
-
-void CPUThread::Wait(bool wait)
-{
-	wxCriticalSectionLocker lock(m_cs_sync);
-	m_sync_wait = wait;
-}
-
-void CPUThread::Wait(const CPUThread& thr)
-{
-	wxCriticalSectionLocker lock(m_cs_sync);
-	m_wait_thread_id = thr.GetId();
-	m_sync_wait = true;
-}
-
-bool CPUThread::Sync()
-{
-	wxCriticalSectionLocker lock(m_cs_sync);
-
-	return m_sync_wait;
-}
-
-int CPUThread::ThreadStatus()
-{
-	if(Emu.IsStopped())
-	{
-		return CPUThread_Stopped;
-	}
-
-	if(TestDestroy())
-	{
-		return CPUThread_Break;
-	}
-
-	if(m_is_step)
-	{
-		return CPUThread_Step;
-	}
-
-	if(Emu.IsPaused() || Sync())
-	{
-		return CPUThread_Sleeping;
-	}
-
-	return CPUThread_Running;
-}
-
-void CPUThread::SetEntry(const u64 pc)
-{
-	entry = pc;
-}
-
-void CPUThread::NextPc(u8 instr_size)
-{
-	if(m_is_branch)
-	{
-		m_is_branch = false;
-
-		SetPc(nPC);
-	}
-	else
-	{
-		PC += instr_size;
-	}
-}
-
-void CPUThread::SetBranch(const u64 pc)
-{
-	if(!Memory.IsGoodAddr(m_offset + pc))
-	{
-		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), m_offset + pc, m_offset + PC);
-		Emu.Pause();
-	}
-
-	m_is_branch = true;
-	nPC = pc;
-}
-
-void CPUThread::SetPc(const u64 pc)
-{
-	PC = pc;
-}
-
-void CPUThread::SetError(const u32 error)
-{
-	if(error == 0)
-	{
-		m_error = 0;
-	}
-	else
-	{
-		m_error |= error;
-	}
-}
-
-wxArrayString CPUThread::ErrorToString(const u32 error)
-{
-	wxArrayString earr;
-
-	if(error == 0) return earr;
-
-	earr.Add("Unknown error");
-
-	return earr;
-}
-
-void CPUThread::Run()
-{
-	if(IsRunning()) Stop();
-	if(IsPaused())
-	{
-		Resume();
-		return;
-	}
-	
-	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
-
-	m_status = Running;
-
-	SetPc(entry);
-	InitStack();
-	InitRegs();
-	DoRun();
-	Emu.CheckStatus();
-
-	wxGetApp().SendDbgCommand(DID_STARTED_THREAD, this);
-}
-
-void CPUThread::Resume()
-{
-	if(!IsPaused()) return;
-
-	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
-
-	m_status = Running;
-	DoResume();
-	Emu.CheckStatus();
-
-	ThreadBase::Start();
-
-	wxGetApp().SendDbgCommand(DID_RESUMED_THREAD, this);
-}
-
-void CPUThread::Pause()
-{
-	if(!IsRunning()) return;
-
-	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
-
-	m_status = Paused;
-	DoPause();
-	Emu.CheckStatus();
-
-	ThreadBase::Stop(false);
-	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
-}
-
-void CPUThread::Stop()
-{
-	if(IsStopped()) return;
-
-	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
-
-	m_status = Stopped;
-	ThreadBase::Stop(false);
-	Reset();
-	DoStop();
-	Emu.CheckStatus();
-
-	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
-}
-
-void CPUThread::Exec()
-{
-	m_is_step = false;
-	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
-	ThreadBase::Start();
-}
-
-void CPUThread::ExecOnce()
-{
-	m_is_step = true;
-	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
-	ThreadBase::Start();
-	if(!ThreadBase::Wait()) while(m_is_step) Sleep(1);
-	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
-	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
-}
-
-void CPUThread::Task()
-{
-	//ConLog.Write("%s enter", CPUThread::GetFName());
-
-	const Array<u64>& bp = Emu.GetBreakPoints();
-
-	try
-	{
-		for(uint i=0; i<bp.GetCount(); ++i)
+		switch (f)
 		{
-			if(bp[i] == m_offset + PC)
+		case cpu_flag::stop: return "STOP";
+		case cpu_flag::exit: return "EXIT";
+		case cpu_flag::suspend: return "s";
+		case cpu_flag::ret: return "ret";
+		case cpu_flag::signal: return "sig";
+		case cpu_flag::memory: return "mem";
+		case cpu_flag::dbg_global_pause: return "G-PAUSE";
+		case cpu_flag::dbg_global_stop: return "G-EXIT";
+		case cpu_flag::dbg_pause: return "PAUSE";
+		case cpu_flag::dbg_step: return "STEP";
+		case cpu_flag::__bitset_enum_max: break;
+		}
+
+		return unknown;
+	});
+}
+
+template<>
+void fmt_class_string<bs_t<cpu_flag>>::format(std::string& out, u64 arg)
+{
+	format_bitset(out, arg, "[", "|", "]", &fmt_class_string<cpu_flag>::format);
+}
+
+thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
+
+void cpu_thread::on_task()
+{
+	state -= cpu_flag::exit;
+
+	g_tls_current_cpu_thread = this;
+
+	// Check thread status
+	while (!test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
+	{
+		// Check stop status
+		if (!test(state & cpu_flag::stop))
+		{
+			try
 			{
-				Emu.Pause();
-				break;
+				cpu_task();
+			}
+			catch (cpu_flag _s)
+			{
+				state += _s;
+			}
+			catch (const std::exception&)
+			{
+				LOG_NOTICE(GENERAL, "\n%s", dump());
+				throw;
+			}
+
+			state -= cpu_flag::ret;
+			continue;
+		}
+
+		thread_ctrl::wait();
+	}
+}
+
+void cpu_thread::on_stop()
+{
+	state += cpu_flag::exit;
+	notify();
+}
+
+cpu_thread::~cpu_thread()
+{
+	vm::cleanup_unlock(*this);
+	g_threads_deleted++;
+}
+
+cpu_thread::cpu_thread(u32 id)
+	: id(id)
+{
+	g_threads_created++;
+}
+
+bool cpu_thread::check_state()
+{
+#ifdef WITH_GDB_DEBUGGER
+	if (test(state, cpu_flag::dbg_pause)) {
+		fxm::get<GDBDebugServer>()->notify();
+	}
+#endif
+
+	bool cpu_sleep_called = false;
+	bool cpu_flag_memory = false;
+
+	while (true)
+	{
+		if (test(state, cpu_flag::memory) && state.test_and_reset(cpu_flag::memory))
+		{
+			cpu_flag_memory = true;
+
+			if (auto& ptr = vm::g_tls_locked)
+			{
+				ptr->compare_and_swap(this, nullptr);
+				ptr = nullptr;
 			}
 		}
 
-		while(true)
+		if (test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
 		{
-			int status = ThreadStatus();
+			return true;
+		}
 
-			if(status == CPUThread_Stopped || status == CPUThread_Break)
-			{
-				break;
-			}
+		if (test(state & cpu_flag::signal) && state.test_and_reset(cpu_flag::signal))
+		{
+			cpu_sleep_called = false;
+		}
 
-			if(status == CPUThread_Sleeping)
-			{
-				Sleep(1);
-				continue;
-			}
+		if (!test(state, cpu_state_pause))
+		{
+			if (cpu_flag_memory) vm::passive_lock(*this);
+			break;
+		}
+		else if (!cpu_sleep_called && test(state, cpu_flag::suspend))
+		{
+			cpu_sleep();
+			cpu_sleep_called = true;
+			continue;
+		}
 
-			Step();
-			NextPc(m_dec->DecodeMemory(PC + m_offset));
+		thread_ctrl::wait();
+	}
 
-			if(status == CPUThread_Step)
-			{
-				m_is_step = false;
-				break;
-			}
+	const auto state_ = state.load();
 
-			for(uint i=0; i<bp.GetCount(); ++i)
-			{
-				if(bp[i] == m_offset + PC)
-				{
-					Emu.Pause();
-					break;
-				}
-			}
+	if (test(state_, cpu_flag::ret + cpu_flag::stop))
+	{
+		return true;
+	}
+
+	if (test(state_, cpu_flag::dbg_step))
+	{
+		state += cpu_flag::dbg_pause;
+		state -= cpu_flag::dbg_step;
+	}
+
+	return false;
+}
+
+void cpu_thread::test_state()
+{
+	if (UNLIKELY(test(state)))
+	{
+		if (check_state())
+		{
+			throw cpu_flag::ret;
 		}
 	}
-	catch(const wxString& e)
-	{
-		ConLog.Error("Exception: %s", e);
-	}
-	catch(const char* e)
-	{
-		ConLog.Error("Exception: %s", e);
-	}
+}
 
-	//ConLog.Write("%s leave", CPUThread::GetFName());
+void cpu_thread::run()
+{
+	state -= cpu_flag::stop;
+	notify();
+}
 
-	if(m_free_data)
-	{
-		delete m_dec;
-		m_dec = nullptr;
-		free(this);
-	}
+std::string cpu_thread::dump() const
+{
+	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
 }

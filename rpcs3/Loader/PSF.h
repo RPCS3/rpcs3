@@ -1,42 +1,67 @@
 #pragma once
-#include "Loader.h"
 
-struct PsfHeader
+#include <map>
+
+namespace psf
 {
-	u32 psf_magic;
-	u32 psf_version;
-	u32 psf_offset_key_table;
-	u32 psf_offset_values_table;
-	u32 psf_entries_num;
+	enum class format : u16
+	{
+		array   = 0x0004, // claimed to be a non-NTS string (char array)
+		string  = 0x0204,
+		integer = 0x0404,
+	};
 
-	bool CheckMagic() const { return psf_magic == *(u32*)"\0PSF"; }
-};
+	class entry final
+	{
+		std::string m_value_string;
+		u32 m_value_integer; // TODO: is it really unsigned?
+		u32 m_max_size; // Entry max size (supplementary info, stored in PSF format)
+		format m_type;
 
-struct PsfDefTbl
-{
-	u16 psf_name_tbl_offset;
-	u16 psf_data_type;
-	u32 psf_data_size;
-	u32 psf_data_fsize;
-	u32 psf_data_tbl_offset;
-};
+	public:
+		// Construct string entry, assign the value
+		entry(format type, u32 max_size, const std::string& value = {});
 
-class PSFLoader
-{
-	vfsStream& psf_f;
-	bool m_show_log;
+		// Construct integer entry, assign the value
+		entry(u32 value);
 
-public:
-	PSFLoader(vfsStream& f);
+		~entry();
 
-	wxArrayString m_table;
-	GameInfo m_info;
-	PsfHeader psfhdr;
-	virtual bool Load(bool show = true);
-	virtual bool Close();
+		const std::string& as_string() const;
+		u32 as_integer() const;
 
-private:
-	bool LoadHdr();
-	bool LoadKeyTable();
-	bool LoadValuesTable();
-};
+		entry& operator =(const std::string& value);
+		entry& operator =(u32 value);
+
+		format type() const { return m_type; }
+		u32 max() const { return m_max_size; }
+		u32 size() const;
+	};
+
+	// Define PSF registry as a sorted map of entries:
+	using registry = std::map<std::string, entry>;
+
+	// Load PSF registry from SFO binary format
+	registry load_object(const fs::file&);
+
+	// Convert PSF registry to SFO binary format
+	void save_object(const fs::file&, const registry&);
+
+	// Get string value or default value
+	std::string get_string(const registry& psf, const std::string& key, const std::string& def = {});
+
+	// Get integer value or default value
+	u32 get_integer(const registry& psf, const std::string& key, u32 def = 0);
+
+	// Make string entry
+	inline entry string(u32 max_size, const std::string& value)
+	{
+		return{ format::string, max_size, value };
+	}
+
+	// Make array entry
+	inline entry array(u32 max_size, const std::string& value)
+	{
+		return{ format::array, max_size, value };
+	}
+}

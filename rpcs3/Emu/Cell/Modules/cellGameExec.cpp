@@ -1,0 +1,58 @@
+#include "stdafx.h"
+#include "Emu/Cell/PPUModule.h"
+
+#include "cellGame.h"
+
+logs::channel cellGameExec("cellGameExec");
+
+s32 cellGameSetExitParam()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellGameGetHomeDataExportPath(vm::ptr<char> exportPath)
+{
+	cellGameExec.warning("cellGameGetHomeDataExportPath(exportPath=0x%x)", exportPath);
+
+	// TODO: PlayStation home is defunct.
+
+	return CELL_GAME_ERROR_NOAPP;
+}
+
+s32 cellGameGetHomePath()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellGameGetHomeDataImportPath()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellGameGetHomeLaunchOptionPath(vm::ptr<char> commonPath, vm::ptr<char> personalPath)
+{
+	cellGameExec.todo("cellGameGetHomeLaunchOptionPath(commonPath=%s, personalPath=%s)", commonPath, personalPath);
+
+	// TODO: PlayStation home is not supported atm.
+	return CELL_GAME_ERROR_NOAPP;
+}
+
+s32 cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm::ptr<u32> execData)
+{
+	cellGameExec.todo("cellGameGetBootGameInfo(type=*0x%x, dirName=%s, execData=*0x%x)", type, dirName, execData);
+
+	// TODO: Support more boot types
+	*type = CELL_GAME_GAMETYPE_SYS;
+
+	return CELL_OK;
+}
+
+DECLARE(ppu_module_manager::cellGameExec)("cellGameExec", []()
+{
+	REG_FUNC(cellGameExec, cellGameSetExitParam);
+	REG_FUNC(cellGameExec, cellGameGetHomeDataExportPath);
+	REG_FUNC(cellGameExec, cellGameGetHomePath);
+	REG_FUNC(cellGameExec, cellGameGetHomeDataImportPath);
+	REG_FUNC(cellGameExec, cellGameGetHomeLaunchOptionPath);
+	REG_FUNC(cellGameExec, cellGameGetBootGameInfo);
+});

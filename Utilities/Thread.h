@@ -1,221 +1,323 @@
 #pragma once
-#include "Array.h"
-#include <functional>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
 
-class ThreadExec;
+#include "types.h"
+#include "Atomic.h"
 
-class ThreadBase
+#include <exception>
+#include <string>
+#include <memory>
+
+#include "sema.h"
+#include "cond.h"
+
+// Will report exception and call std::abort() if put in catch(...)
+[[noreturn]] void catch_all_exceptions();
+
+// Simple list of void() functors
+class task_stack
 {
-protected:
-	wxString m_name;
-	bool m_detached;
-
-public:
-	wxMutex m_main_mutex;
-
-protected:
-	ThreadBase(bool detached = true, const wxString& name = "Unknown ThreadBase");
-
-public:
-	ThreadExec* m_executor;
-
-	virtual void Task()=0;
-
-	virtual void Start();
-	virtual void Resume();
-	virtual void Pause();
-	virtual void Stop(bool wait = true);
-
-	virtual bool Wait() const;
-	virtual bool IsRunning() const;
-	virtual bool IsPaused() const;
-	virtual bool IsAlive() const;
-	virtual bool TestDestroy() const;
-	virtual wxString GetThreadName() const;
-	virtual void SetThreadName(const wxString& name);
-};
-
-ThreadBase* GetCurrentNamedThread();
-
-class ThreadExec : public wxThread
-{
-	wxCriticalSection m_wait_for_exit;
-	volatile bool m_alive;
-
-public:
-	ThreadBase* m_parent;
-
-	ThreadExec(bool detached, ThreadBase* parent)
-		: wxThread(detached ? wxTHREAD_DETACHED : wxTHREAD_JOINABLE)
-		, m_parent(parent)
-		, m_alive(true)
+	struct task_base
 	{
-		Create();
-		Run();
+		std::unique_ptr<task_base> next;
+
+		virtual ~task_base();
+
+		virtual void invoke()
+		{
+			if (next)
+			{
+				next->invoke();
+			}
+		}
+	};
+
+	template <typename F>
+	struct task_type final : task_base
+	{
+		std::remove_reference_t<F> func;
+
+		task_type(F&& func)
+			: func(std::forward<F>(func))
+		{
+		}
+
+		void invoke() final override
+		{
+			func();
+			task_base::invoke();
+		}
+	};
+
+	std::unique_ptr<task_base> m_stack;
+
+public:
+	task_stack() = default;
+
+	template <typename F>
+	task_stack(F&& func)
+		: m_stack(new task_type<F>(std::forward<F>(func)))
+	{
 	}
 
-	void Stop(bool wait = true)
+	void push(task_stack stack)
 	{
-		if(!m_alive) return;
+		auto _top = stack.m_stack.release();
+		auto _next = m_stack.release();
+		m_stack.reset(_top);
+		while (UNLIKELY(_top->next)) _top = _top->next.get();
+		_top->next.reset(_next);
+	}
 
-		m_parent = nullptr;
+	void reset()
+	{
+		m_stack.reset();
+	}
 
-		if(wait)
+	void invoke() const
+	{
+		if (m_stack)
 		{
-			Delete();
-			//wxCriticalSectionLocker lock(m_wait_for_exit);
+			m_stack->invoke();
+		}
+	}
+};
+
+// Thread control class
+class thread_ctrl final
+{
+	// Current thread
+	static thread_local thread_ctrl* g_tls_this_thread;
+
+	// Self pointer
+	std::shared_ptr<thread_ctrl> m_self;
+
+	// Thread handle (platform-specific)
+	atomic_t<std::uintptr_t> m_thread{0};
+
+	// Thread mutex
+	mutable semaphore<> m_mutex;
+
+	// Thread condition variable
+	cond_variable m_cond;
+
+	// Thread flags
+	atomic_t<u32> m_signal{0};
+
+	// Thread joining condition variable
+	cond_variable m_jcv;
+
+	// Remotely set or caught exception
+	std::exception_ptr m_exception;
+
+	// Thread initial task or atexit task
+	task_stack m_task;
+
+	// Fixed name
+	std::string m_name;
+
+	// Start thread
+	static void start(const std::shared_ptr<thread_ctrl>&, task_stack);
+
+	// Called at the thread start
+	void initialize();
+
+	// Called at the thread end
+	void finalize(std::exception_ptr) noexcept;
+
+	// Add task (atexit)
+	static void _push(task_stack);
+
+	// Internal waiting function, may throw. Infinite value is -1.
+	static bool _wait_for(u64 usec);
+
+	// Internal throwing function. Mutex must be locked and will be unlocked.
+	[[noreturn]] void _throw();
+
+	// Internal notification function
+	void _notify(cond_variable thread_ctrl::*);
+
+public:
+	thread_ctrl(std::string&& name);
+
+	thread_ctrl(const thread_ctrl&) = delete;
+
+	~thread_ctrl();
+
+	// Get thread name
+	const std::string& get_name() const
+	{
+		return m_name;
+	}
+
+	// Get exception
+	std::exception_ptr get_exception() const;
+
+	// Set exception
+	void set_exception(std::exception_ptr ptr);
+
+	// Get thread result (may throw, simultaneous joining allowed)
+	void join();
+
+	// Notify the thread
+	void notify();
+
+	// Wait once with timeout. Abortable, may throw. May spuriously return false.
+	static inline bool wait_for(u64 usec)
+	{
+		return _wait_for(usec);
+	}
+
+	// Wait. Abortable, may throw.
+	static inline void wait()
+	{
+		_wait_for(-1);
+	}
+
+	// Wait until pred(). Abortable, may throw.
+	template<typename F, typename RT = std::result_of_t<F()>>
+	static inline RT wait(F&& pred)
+	{
+		while (true)
+		{
+			if (RT result = pred())
+			{
+				return result;
+			}
+
+			_wait_for(-1);
 		}
 	}
 
-	ExitCode Entry()
+	// Wait eternally until aborted.
+	[[noreturn]] static inline void eternalize()
 	{
-		//wxCriticalSectionLocker lock(m_wait_for_exit);
-		m_parent->Task();
-		m_alive = false;
-		if(m_parent) m_parent->m_executor = nullptr;
-		return (ExitCode)0;
+		while (true)
+		{
+			_wait_for(-1);
+		}
 	}
+
+	// Test exception (may throw).
+	static void test();
+
+	// Get current thread (may be nullptr)
+	static thread_ctrl* get_current()
+	{
+		return g_tls_this_thread;
+	}
+
+	// Register function at thread exit (for the current thread)
+	template<typename F>
+	static inline void atexit(F&& func)
+	{
+		_push(std::forward<F>(func));
+	}
+
+	// Create detached named thread
+	template<typename N, typename F>
+	static inline void spawn(N&& name, F&& func)
+	{
+		auto out = std::make_shared<thread_ctrl>(std::forward<N>(name));
+
+		thread_ctrl::start(out, std::forward<F>(func));
+	}
+
+	// Named thread factory
+	template<typename N, typename F>
+	static inline void spawn(std::shared_ptr<thread_ctrl>& out, N&& name, F&& func)
+	{
+		out = std::make_shared<thread_ctrl>(std::forward<N>(name));
+
+		thread_ctrl::start(out, std::forward<F>(func));
+	}
+
+	static void set_native_priority(int priority);
+	static void set_ideal_processor_core(int core);
 };
 
-//ThreadBase* GetCurrentThread();
-
-template<typename T> class MTPacketBuffer
+class named_thread
 {
-protected:
-	volatile bool m_busy;
-	volatile u32 m_put, m_get;
-	Array<u8> m_buffer;
-	u32 m_max_buffer_size;
-	mutable wxCriticalSection m_cs_main;
-
-	void CheckBusy()
-	{
-		m_busy = m_put >= m_max_buffer_size;
-	}
+	// Pointer to managed resource (shared with actual thread)
+	std::shared_ptr<thread_ctrl> m_thread;
 
 public:
-	MTPacketBuffer(u32 max_buffer_size)
-		: m_max_buffer_size(max_buffer_size)
-	{
-		Flush();
-	}
+	named_thread();
 
-	~MTPacketBuffer()
-	{
-		Flush();
-	}
+	virtual ~named_thread();
 
-	void Flush()
-	{
-		wxCriticalSectionLocker lock(m_cs_main);
-		m_put = m_get = 0;
-		m_buffer.Clear();
-		m_busy = false;
-	}
+	// Deleted copy/move constructors + copy/move operators
+	named_thread(const named_thread&) = delete;
 
-private:
-	virtual void _push(const T& v) = 0;
-	virtual T _pop() = 0;
-
-public:
-	void Push(const T& v)
-	{
-		wxCriticalSectionLocker lock(m_cs_main);
-		_push(v);
-	}
-
-	T Pop()
-	{
-		wxCriticalSectionLocker lock(m_cs_main);
-		return _pop();
-	}
-
-	bool HasNewPacket() const { wxCriticalSectionLocker lock(m_cs_main); return m_put != m_get; }
-	bool IsBusy() const { return m_busy; }
-};
-
-static __forceinline bool SemaphorePostAndWait(wxSemaphore& sem)
-{
-	if(sem.TryWait() != wxSEMA_BUSY) return false;
-
-	sem.Post();
-	sem.Wait();
-
-	return true;
-}
-
-/*
-class StepThread : public ThreadBase
-{
-	wxSemaphore m_main_sem;
-	wxSemaphore m_destroy_sem;
-	volatile bool m_exit;
+	// Get thread name
+	virtual std::string get_name() const;
 
 protected:
-	StepThread(const wxString& name = "Unknown StepThread")
-		: ThreadBase(true, name)
-		, m_exit(false)
-	{
-	}
+	// Start thread (cannot be called from the constructor: should throw in such case)
+	void start_thread(const std::shared_ptr<void>& _this);
 
-	virtual ~StepThread() throw()
-	{
-	}
+	// Thread task (called in the thread)
+	virtual void on_task() = 0;
 
-private:
-	virtual void Task()
-	{
-		m_exit = false;
+	// Thread finalization (called after on_task)
+	virtual void on_exit() {}
 
-		while(!TestDestroy())
-		{
-			m_main_sem.Wait();
-
-			if(TestDestroy() || m_exit) break;
-
-			Step();
-		}
-
-		while(!TestDestroy()) Sleep(0);
-		if(m_destroy_sem.TryWait() != wxSEMA_NO_ERROR) m_destroy_sem.Post();
-	}
-
-	virtual void Step()=0;
+	// Called once upon thread spawn within the thread's own context
+	virtual void on_spawn() {}
 
 public:
-	void DoStep()
+	// ID initialization
+	virtual void on_init(const std::shared_ptr<void>& _this)
 	{
-		if(IsRunning()) m_main_sem.Post();
+		return start_thread(_this);
 	}
 
-	void WaitForExit()
+	// ID finalization
+	virtual void on_stop()
 	{
-		if(TestDestroy()) m_destroy_sem.Wait();
+		m_thread->join();
 	}
 
-	void WaitForNextStep()
+	// Access thread_ctrl
+	thread_ctrl* get() const
 	{
-		if(!IsRunning()) return;
-
-		while(m_main_sem.TryWait() != wxSEMA_NO_ERROR) Sleep(0);
+		return m_thread.get();
 	}
 
-	void Exit(bool wait = false)
+	void join() const
 	{
-		if(!IsAlive()) return;
+		return m_thread->join();
+	}
 
-		if(m_main_sem.TryWait() != wxSEMA_NO_ERROR)
-		{
-			m_exit = true;
-			m_main_sem.Post();
-		}
-
-		Delete();
-
-		if(wait) WaitForExit();
+	void notify() const
+	{
+		return m_thread->notify();
 	}
 };
-*/
+
+// Wrapper for named thread, joins automatically in the destructor, can only be used in function scope
+class scope_thread final
+{
+	std::shared_ptr<thread_ctrl> m_thread;
+
+public:
+	template<typename N, typename F>
+	scope_thread(N&& name, F&& func)
+	{
+		thread_ctrl::spawn(m_thread, std::forward<N>(name), std::forward<F>(func));
+	}
+
+	// Deleted copy/move constructors + copy/move operators
+	scope_thread(const scope_thread&) = delete;
+
+	// Destructor with exceptions allowed
+	~scope_thread() noexcept(false)
+	{
+		m_thread->join();
+	}
+
+	// Access thread_ctrl
+	thread_ctrl* get() const
+	{
+		return m_thread.get();
+	}
+};

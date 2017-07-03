@@ -1,0 +1,7 @@
+﻿root = true
+
+[*.{h,cpp,hpp}]
+charset = utf-8
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true

@@ -1,186 +1,75 @@
 #pragma once
-#include "Emu/Memory/MemoryBlock.h"
-#include "Emu/Cell/PPCDecoder.h"
 
-enum CPUThreadType
+#include "../Utilities/Thread.h"
+#include "../Utilities/bit_set.h"
+
+// Thread state flags
+enum class cpu_flag : u32
 {
-	CPU_THREAD_PPU,
-	CPU_THREAD_SPU,
-	CPU_THREAD_RAW_SPU,
-	CPU_THREAD_ARMv7,
+	stop, // Thread not running (HLE, initial state)
+	exit, // Irreversible exit
+	suspend, // Thread suspended
+	ret, // Callback return requested
+	signal, // Thread received a signal (HLE)
+	memory, // Thread must unlock memory mutex
+
+	dbg_global_pause, // Emulation paused
+	dbg_global_stop, // Emulation stopped
+	dbg_pause, // Thread paused
+	dbg_step, // Thread forced to pause after one step (one instruction, etc)
+
+	__bitset_enum_max
 };
 
-enum CPUThreadStatus
+// Flag set for pause state
+constexpr bs_t<cpu_flag> cpu_state_pause = cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause;
+
+class cpu_thread : public named_thread
 {
-	CPUThread_Ready,
-	CPUThread_Running,
-	CPUThread_Paused,
-	CPUThread_Stopped,
-	CPUThread_Sleeping,
-	CPUThread_Break,
-	CPUThread_Step,
+	void on_task() override final;
+
+public:
+	virtual void on_stop() override;
+	virtual ~cpu_thread() override;
+
+	const u32 id;
+
+	cpu_thread(u32 id);
+
+	// Public thread state
+	atomic_t<bs_t<cpu_flag>> state{+cpu_flag::stop};
+
+	// Process thread state, return true if the checker must return
+	bool check_state();
+
+	// Process thread state
+	void test_state();
+
+	// Run thread
+	void run();
+
+	// Check thread type
+	u32 id_type()
+	{
+		return id >> 24;
+	}
+
+	// Thread stats for external observation
+	static atomic_t<u64> g_threads_created, g_threads_deleted;
+
+	// Print CPU state
+	virtual std::string dump() const;
+
+	// Thread entry point function
+	virtual void cpu_task() = 0;
+
+	// Callback for cpu_flag::suspend
+	virtual void cpu_sleep() {}
 };
 
-class CPUThread : public ThreadBase
+inline cpu_thread* get_current_cpu_thread() noexcept
 {
-protected:
-	u32 m_status;
-	u32 m_error;
-	u32 m_id;
-	u64 m_prio;
-	u64 m_offset;
-	CPUThreadType m_type;
-	bool m_joinable;
-	bool m_joining;
-	bool m_free_data;
-	bool m_is_step;
+	extern thread_local cpu_thread* g_tls_current_cpu_thread;
 
-	u64 m_stack_addr;
-	u64 m_stack_size;
-	u64 m_stack_point;
-
-	u32 m_exit_status;
-
-	CPUDecoder* m_dec;
-
-public:
-	virtual void InitRegs()=0;
-
-	virtual void InitStack()=0;
-	virtual void CloseStack();
-
-	u64 GetStackAddr() const { return m_stack_addr; }
-	u64 GetStackSize() const { return m_stack_size; }
-	virtual u64 GetFreeStackSize() const=0;
-
-	void SetStackAddr(u64 stack_addr) { m_stack_addr = stack_addr; }
-	void SetStackSize(u64 stack_size) { m_stack_size = stack_size; }
-
-	virtual void SetArg(const uint pos, const u64 arg) = 0;
-
-	void SetId(const u32 id);
-	void SetName(const wxString& name);
-	void SetPrio(const u64 prio) { m_prio = prio; }
-	void SetOffset(const u64 offset) { m_offset = offset; }
-	void SetExitStatus(const u32 status) { m_exit_status = status; }
-
-	u64 GetOffset() const { return m_offset; }
-	u32 GetExitStatus() const { return m_exit_status; }
-	u64 GetPrio() const { return m_prio; }
-
-	wxString GetName() const { return m_name; }
-	wxString GetFName() const
-	{
-		return 
-			wxString::Format("%s[%d] Thread%s", 
-				GetTypeString(),
-				m_id,
-				(GetName().IsEmpty() ? "" : " (" + GetName() + ")")
-			);
-	}
-
-	static wxString CPUThreadTypeToString(CPUThreadType type)
-	{
-		switch(type)
-		{
-		case CPU_THREAD_PPU: return "PPU";
-		case CPU_THREAD_SPU: return "SPU";
-		case CPU_THREAD_RAW_SPU: return "RawSPU";
-		case CPU_THREAD_ARMv7: return "ARMv7";
-		}
-
-		return "Unknown";
-	}
-
-	wxString GetTypeString() const { return CPUThreadTypeToString(m_type); }
-
-	virtual wxString GetThreadName() const
-	{
-		return GetFName() + wxString::Format("[0x%08llx]", PC);
-	}
-
-public:
-	u64 entry;
-	u64 PC;
-	u64 nPC;
-	u64 cycle;
-	bool m_is_branch;
-
-protected:
-	CPUThread(CPUThreadType type);
-
-public:
-	~CPUThread();
-
-	u32 m_wait_thread_id;
-
-	wxCriticalSection m_cs_sync;
-	bool m_sync_wait;
-	void Wait(bool wait);
-	void Wait(const CPUThread& thr);
-	bool Sync();
-
-	template<typename T>
-	void WaitFor(T func)
-	{
-		while(func(ThreadStatus()))
-		{
-			Sleep(1);
-		}
-	}
-
-	int ThreadStatus();
-
-	void NextPc(u8 instr_size);
-	void SetBranch(const u64 pc);
-	void SetPc(const u64 pc);
-	void SetEntry(const u64 entry);
-
-	void SetError(const u32 error);
-
-	static wxArrayString ErrorToString(const u32 error);
-	wxArrayString ErrorToString() { return ErrorToString(m_error); }
-
-	bool IsOk()		const { return m_error == 0; }
-	bool IsRunning()	const { return m_status == Running; }
-	bool IsPaused()		const { return m_status == Paused; }
-	bool IsStopped()	const { return m_status == Stopped; }
-
-	bool IsJoinable() const { return m_joinable; }
-	bool IsJoining()  const { return m_joining; }
-	void SetJoinable(bool joinable) { m_joinable = joinable; }
-	void SetJoining(bool joining) { m_joining = joining; }
-
-	u32 GetError() const { return m_error; }
-	u32 GetId() const { return m_id; }
-	CPUThreadType GetType()	const { return m_type; }
-
-	void Reset();
-	void Close();
-	void Run();
-	void Pause();
-	void Resume();
-	void Stop();
-
-	virtual void AddArgv(const wxString& arg) {}
-
-	virtual wxString RegsToString() = 0;
-	virtual wxString ReadRegString(wxString reg) = 0;
-	virtual bool WriteRegString(wxString reg, wxString value) = 0;
-
-	virtual void Exec();
-	void ExecOnce();
-
-protected:
-	virtual void DoReset()=0;
-	virtual void DoRun()=0;
-	virtual void DoPause()=0;
-	virtual void DoResume()=0;
-	virtual void DoStop()=0;
-
-protected:
-	virtual void Step() {}
-	virtual void Task();
-};
-
-CPUThread* GetCurrentCPUThread();
+	return g_tls_current_cpu_thread;
+}
