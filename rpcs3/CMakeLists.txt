@@ -5,7 +5,7 @@ set(RES_FILES "")
 set(CMAKE_CXX_STANDARD 14)
 
 # Qt section
-find_package(Qt5 5.8 COMPONENTS Widgets)
+find_package(Qt5 5.7 COMPONENTS Widgets)
 if (WIN32)
     find_package(Qt5WinExtras REQUIRED)
     set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras)
@@ -17,8 +17,8 @@ endif()
 
 # Let's make sure we have Qt before we continue
 if (NOT Qt5Widgets_FOUND)
-	if (Qt5Widgets_VERSION VERSION_LESS 5.8.0)
-		message("Minimum supported Qt5 version is 5.8! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
+	if (Qt5Widgets_VERSION VERSION_LESS 5.7.0)
+		message("Minimum supported Qt5 version is 5.7! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
 		if ("${CMAKE_SYSTEM}" MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
 If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
