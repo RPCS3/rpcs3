@@ -317,7 +317,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				}
 				else
 				{
-					return CELL_OK; // ???
+					// This happens if someone tries to load but there is no data selected.  Some games will throw errors (Akiba) if cell_ok is returned
+					return CELL_CANCEL;
 				}
 			}
 			// Cancel selected in UI
