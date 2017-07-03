@@ -77,7 +77,7 @@ struct vdec_thread : ppu_thread
 
 	std::mutex mutex;
 	std::queue<vdec_frame> out;
-	u32 max_frames = 20;
+	u32 max_frames = 60;
 
 	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg, u32 prio, u32 stack)
 		: ppu_thread("HLE Video Decoder", prio, stack)
