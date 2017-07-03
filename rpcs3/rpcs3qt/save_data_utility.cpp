@@ -85,7 +85,11 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
 	QPushButton *push_cancel = new QPushButton(tr("&Cancel"), this);
+	push_cancel->setAutoDefault(false);
 	QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
+	push_select->setAutoDefault(true);
+	push_select->setDefault(true);
+
 	connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
 	hbox_action->addWidget(push_select);
 	setWindowTitle(tr("Save Data Chooser"));
