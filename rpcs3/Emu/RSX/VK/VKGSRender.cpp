@@ -230,7 +230,8 @@ namespace vk
 	{
 		switch (op)
 		{
-		case rsx::blend_equation::add: return VK_BLEND_OP_ADD;
+		case rsx::blend_equation::add:
+		case rsx::blend_equation::add_signed: return VK_BLEND_OP_ADD;
 		case rsx::blend_equation::substract: return VK_BLEND_OP_SUBTRACT;
 		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;

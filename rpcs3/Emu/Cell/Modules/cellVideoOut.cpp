@@ -199,7 +199,7 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	info->colorInfo.gamma = 100;
 	info->availableModes[0].aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 	info->availableModes[0].conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-	info->availableModes[0].refreshRates =  CELL_VIDEO_OUT_REFRESH_RATE_60HZ;
+	info->availableModes[0].refreshRates =  CELL_VIDEO_OUT_REFRESH_RATE_60HZ | CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
 	info->availableModes[0].resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
 	info->availableModes[0].scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 	return CELL_OK;

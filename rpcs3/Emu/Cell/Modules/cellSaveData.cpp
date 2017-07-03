@@ -293,20 +293,40 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 			}
 
-			// Display Save Data List
-			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, listSet);
+			// Display Save Data List but do so asynchronously in the GUI thread.  For, qTimers only work using main UI thread.
+			atomic_t<bool> dlg_result(false);
+			bool hasNewData = (bool) listSet->newData; // Are we saving?
+
+
+			Emu.CallAfter([&]()
+			{
+				selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, hasNewData, listSet);
+				dlg_result = true;
+			});
+
+			while (!dlg_result)
+			{
+				thread_ctrl::wait_for(1000);
+			}
 
 			if (selected == -1)
 			{
-				if (listSet->newData)
+				if (hasNewData)
 				{
 					save_entry.dirName = listSet->newData->dirName.get_ptr();
 				}
 				else
 				{
-					return CELL_OK; // ???
+					// This happens if someone tries to load but there is no data selected.  Some games will throw errors (Akiba) if cell_ok is returned
+					return CELL_CANCEL;
 				}
 			}
+			// Cancel selected in UI
+			else if (selected == -2)
+			{
+				return CELL_CANCEL;
+			}
+
 			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
 			{
 				return CELL_OK;

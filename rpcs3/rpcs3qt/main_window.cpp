@@ -996,7 +996,7 @@ void main_window::CreateActions()
 	confAutopauseManagerAct->setEnabled(false);
 
 	confVFSDialogAct = new QAction(tr("Virtual File System"), this);
-
+	
 	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
 	confSavedataManagerAct->setEnabled(false);
 
@@ -1164,7 +1164,7 @@ void main_window::CreateConnects()
 		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
 	connect(confSavedataManagerAct, &QAction::triggered, [=](){
-		save_data_list_dialog* sdid = new save_data_list_dialog(this, true);
+		save_data_list_dialog* sdid = new save_data_list_dialog({}, 0, false, this);
 		sdid->show();
 	});
 	connect(toolsCgDisasmAct, &QAction::triggered, [=](){
@@ -1424,6 +1424,12 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	freezeRecentAct->setChecked(guiSettings->GetValue(GUI::rg_freeze).toBool());
 	m_rg_entries = guiSettings->Var2List(guiSettings->GetValue(GUI::rg_entries));
 
+	// clear recent games menu of actions
+	for (auto act : m_recentGameActs)
+	{
+		m_bootRecentMenu->removeAction(act);
+	}
+	m_recentGameActs.clear();
 	// Fill the recent games menu
 	for (uint i = 0; i < m_rg_entries.count(); i++)
 	{
@@ -1442,10 +1448,10 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 		}
 	}
 
-	showLogAct->setChecked(guiSettings->GetValue(GUI::mw_logger).toBool());
-	showGameListAct->setChecked(guiSettings->GetValue(GUI::mw_gamelist).toBool());
-	showDebuggerAct->setChecked(guiSettings->GetValue(GUI::mw_debugger).toBool());
-	showControlsAct->setChecked(guiSettings->GetValue(GUI::mw_controls).toBool());
+	showLogAct->setChecked(logFrame->isVisible() || guiSettings->GetValue(GUI::mw_logger).toBool());
+	showGameListAct->setChecked(gameListFrame->isVisible() || guiSettings->GetValue(GUI::mw_gamelist).toBool());
+	showDebuggerAct->setChecked(debuggerFrame->isVisible() || guiSettings->GetValue(GUI::mw_debugger).toBool());
+	showControlsAct->setChecked(controls->isVisible() || guiSettings->GetValue(GUI::mw_controls).toBool());
 	showGameListToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
 	guiSettings->GetValue(GUI::mw_controls).toBool() ? controls->show() : controls->hide();
 

@@ -18,6 +18,11 @@ enum class ppu_cmd : u32
 	sleep,
 };
 
+// Formatting helper
+enum class ppu_syscall_code : u64
+{
+};
+
 class ppu_thread : public cpu_thread
 {
 public:
@@ -38,11 +43,23 @@ public:
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers
 
-	alignas(16) bool cr[32] = {}; // Condition Registers (abstract representation)
+	alignas(16) bool cr[32] = {}; // Condition Registers (unpacked)
+
+	alignas(16) struct // Floating-Point Status and Control Register (unpacked)
+	{
+		// TODO
+		bool _start[16]{};
+		bool fl{}; // FPCC.FL
+		bool fg{}; // FPCC.FG
+		bool fe{}; // FPCC.FE
+		bool fu{}; // FPCC.FU
+		bool _end[12]{};
+	}
+	fpscr;
 
 	u64 lr{}; // Link Register
 	u64 ctr{}; // Counter Register
-	u32 vrsave{0xffffffff}; // VR Save Register (almost unused)
+	u32 vrsave{0xffffffff}; // VR Save Register
 	u32 cia{}; // Current Instruction Address
 
 	// Pack CR bits
@@ -110,15 +127,6 @@ public:
 			has the same sign as the denormalized or underflowing value.
 	*/
 	bool nj = true;
-
-	struct // Floating-Point Status and Control Register (abstract representation)
-	{
-		bool fl{}; // FPCC.FL
-		bool fg{}; // FPCC.FG
-		bool fe{}; // FPCC.FE
-		bool fu{}; // FPCC.FU
-	}
-	fpscr;
 
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
