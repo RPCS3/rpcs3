@@ -48,8 +48,6 @@ To initialize the repository don't forget to execute `git submodule update --ini
 
 *If you're using Visual Studio 2017 without Qt plugin support (or simply dont want to use it):* 
 1) Add `QTDIR` environment variable and set it to `<QtInstallFolder>\5.7\msvc2015_64\` </br>
-*OR* </br>
-open the SLN, wait for projects to load, in explorer open `rpcs3qt/rpcs3qt.vcxproj.user` and set `<QTDIR>QtInstallFolder/5.7/msvc2015_64</QTDIR>`
 
 *If you wish to use the Visual Studio plugin for Qt:* </br>
 1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `C:\Qt\5.7\msvc2015_64`. </br>
