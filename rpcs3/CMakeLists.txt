@@ -165,7 +165,7 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if (NOT WITHOUT_LLVM)
-	find_package(LLVM 4.0 CONFIG)
+	find_package(LLVM 5.0 CONFIG)
 endif()
 
 
@@ -268,7 +268,7 @@ if(WIN32)
 endif()
 
 if(NOT LLVM_FOUND)
-	Message("LLVM 4.0 not found. RPCS3 will be compiled without LLVM support.")
+	Message("LLVM 5.0 not found. RPCS3 will be compiled without LLVM support.")
 else()
 	add_definitions(${LLVM_DEFINITIONS})
 	add_definitions(-DLLVM_AVAILABLE)
