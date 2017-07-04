@@ -141,8 +141,20 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 						save_entry2.atime = entry.atime;
 						save_entry2.mtime = entry.mtime;
 						save_entry2.ctime = entry.ctime;
-						//save_entry2.iconBuf = NULL; // TODO: Here should be the PNG buffer
-						//save_entry2.iconBufSize = 0; // TODO: Size of the PNG file
+						if (fs::is_file(base_dir + entry.name + "/ICON0.PNG"))
+						{
+							fs::file icon = fs::file(base_dir + entry.name + "/ICON0.PNG");
+							u32 iconSize = icon.size();
+							void* iconData = new uchar[iconSize];
+							icon.read(iconData, iconSize);
+							save_entry2.iconBuf = iconData;
+							save_entry2.iconBufSize = iconSize;
+						}
+						else
+						{
+							save_entry2.iconBuf = nullptr;
+							save_entry2.iconBufSize = 0;
+						}
 						save_entry2.isNew = false;
 
 						save_entries.push_back(save_entry2);

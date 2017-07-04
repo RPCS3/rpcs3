@@ -282,8 +282,8 @@ struct SaveDataEntry
 	s64 atime;
 	s64 mtime;
 	s64 ctime;
-	//void* iconBuf;
-	//u32 iconBufSize;
+	void* iconBuf;
+	u32 iconBufSize;
 	bool isNew;
 };
 

@@ -45,7 +45,21 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 void save_data_info_dialog::UpdateData()
 {
 	m_list->clearContents();
-	m_list->setRowCount(4); // set this to nr of members in struct
+	int num_entries = 5; // set this to number of members in struct
+	m_list->setRowCount(num_entries);
+
+	QImage img;
+	if ((m_entry.iconBuf && img.loadFromData((uchar*)m_entry.iconBuf, m_entry.iconBufSize, "PNG")) == false)
+	{
+		m_list->setRowCount(num_entries-1); // Image failed so don't show it.
+	}
+	else
+	{
+		QTableWidgetItem* img_item = new QTableWidgetItem();
+		img_item->setData(Qt::DecorationRole, QPixmap::fromImage(img));
+		m_list->setItem(4, 0, new QTableWidgetItem(tr("Icon")));
+		m_list->setItem(4, 1, img_item);
+	}
 
 	//Maybe there should be more details of save data.
 	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
