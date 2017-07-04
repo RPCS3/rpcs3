@@ -746,7 +746,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_fs_mount),                    //837 (0x345)
 	null_func,//BIND_FUNC(sys_fs_unmount),                  //838 (0x346)
 	null_func,//BIND_FUNC(sys_fs_sync),                     //839 (0x347)
-	null_func,//BIND_FUNC(sys_fs_disk_free),                //840 (0x348)
+	BIND_FUNC(sys_fs_disk_free),                            //840 (0x348)
 	null_func,//BIND_FUNC(sys_fs_get_mount_info_size),      //841 (0x349)
 	null_func,//BIND_FUNC(sys_fs_get_mount_info),           //842 (0x34A)
 	null_func,//BIND_FUNC(sys_fs_get_fs_info_size),         //843 (0x34B)
