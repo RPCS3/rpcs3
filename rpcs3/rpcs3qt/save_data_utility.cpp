@@ -49,16 +49,16 @@ void save_data_info_dialog::UpdateData()
 	m_list->setRowCount(num_entries);
 
 	QImage img;
-	if ((m_entry.iconBuf && img.loadFromData((uchar*)m_entry.iconBuf, m_entry.iconBufSize, "PNG")) == false)
-	{
-		m_list->setRowCount(num_entries-1); // Image failed so don't show it.
-	}
-	else
+	if (m_entry.iconBuf && img.loadFromData((uchar*) m_entry.iconBuf, m_entry.iconBufSize, "PNG"))
 	{
 		QTableWidgetItem* img_item = new QTableWidgetItem();
 		img_item->setData(Qt::DecorationRole, QPixmap::fromImage(img));
 		m_list->setItem(4, 0, new QTableWidgetItem(tr("Icon")));
 		m_list->setItem(4, 1, img_item);
+	}
+	else
+	{
+		m_list->setRowCount(num_entries - 1); // Image failed so don't show it.
 	}
 
 	//Maybe there should be more details of save data.
