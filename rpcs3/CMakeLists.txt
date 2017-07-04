@@ -94,6 +94,11 @@ if(NOT MSVC)
 	
 	add_compile_options(-msse -msse2 -mcx16 -mssse3)
 	
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+		# This fixes 'some' of the st11range issues. See issue #2516
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -image-base=0x10000")
+	endif()
+	
 	find_package(GLEW REQUIRED)
 	find_package(ZLIB REQUIRED)
 else()
