@@ -18,6 +18,9 @@ struct bf_base
 	// Value mask
 	static constexpr utype vmask = static_cast<utype>(~utype{} >> (bitmax - bitsize));
 
+	// All ones mask
+	static constexpr utype mask1 = static_cast<utype>(~utype{});
+
 protected:
 	type m_data;
 };
@@ -36,7 +39,7 @@ struct bf_t : bf_base<T, N>
 	// Get bitmask of size N, at I pos
 	static constexpr utype data_mask()
 	{
-		return static_cast<utype>(static_cast<utype>(~utype{} >> (bf_t::bitmax - bf_t::bitsize)) << bitpos);
+		return static_cast<utype>(static_cast<utype>(bf_t::mask1 >> (bf_t::bitmax - bf_t::bitsize)) << bitpos);
 	}
 
 	// Bitfield extraction helper
