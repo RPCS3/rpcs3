@@ -70,6 +70,8 @@ private:
 	std::mutex queue_guard;
 	std::list<work_item> work_queue;
 
+	bool framebuffer_status_valid = false;
+
 	rsx::gcm_framebuffer_info surface_info[rsx::limits::color_buffers_count];
 	rsx::gcm_framebuffer_info depth_surface_info;
 

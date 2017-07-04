@@ -838,6 +838,9 @@ void VKGSRender::begin()
 
 	init_buffers();
 
+	if (!framebuffer_status_valid)
+		return;
+
 	float actual_line_width = rsx::method_registers.line_width();
 
 	vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
@@ -898,7 +901,7 @@ void VKGSRender::close_render_pass()
 
 void VKGSRender::end()
 {
-	if (skip_frame)
+	if (skip_frame || !framebuffer_status_valid)
 	{
 		rsx::thread::end();
 		return;
@@ -1200,6 +1203,15 @@ void VKGSRender::set_viewport()
 	scissor.offset.y = scissor_y;
 
 	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &scissor);
+
+	if (scissor_x >= viewport.width || scissor_y >= viewport.height || scissor_w == 0 || scissor_h == 0)
+	{
+		if (!g_cfg.video.strict_rendering_mode)
+		{
+			framebuffer_status_valid = false;
+			return;
+		}
+	}
 }
 
 void VKGSRender::on_init_thread()
@@ -1229,6 +1241,9 @@ void VKGSRender::clear_surface(u32 mask)
 	if (m_current_present_image == 0xFFFF) return;
 
 	init_buffers();
+
+	if (!framebuffer_status_valid) return;
+
 	copy_render_targets_to_dma_location();
 
 	float depth_clear = 1.f;
@@ -1833,6 +1848,14 @@ void VKGSRender::prepare_rtts()
 	u32 clip_height = rsx::method_registers.surface_clip_height();
 	u32 clip_x = rsx::method_registers.surface_clip_origin_x();
 	u32 clip_y = rsx::method_registers.surface_clip_origin_y();
+
+	if (clip_width == 0 || clip_height == 0)
+	{
+		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_width, clip_height);
+		framebuffer_status_valid = false;
+	}
+
+	framebuffer_status_valid = true;
 
 	auto surface_addresses = get_color_surface_addresses();
 	auto zeta_address = get_zeta_surface_address();

@@ -191,7 +191,7 @@ void GLGSRender::begin()
 
 	init_buffers();
 
-	if (!draw_fbo.check())
+	if (!framebuffer_status_valid)
 		return;
 
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
@@ -322,7 +322,7 @@ namespace
 
 void GLGSRender::end()
 {
-	if (skip_frame || !draw_fbo || !draw_fbo.check())
+	if (skip_frame || !framebuffer_status_valid)
 	{
 		rsx::thread::end();
 		return;
@@ -523,12 +523,25 @@ void GLGSRender::end()
 void GLGSRender::set_viewport()
 {
 	//NOTE: scale offset matrix already contains the viewport transformation
-	glViewport(0, 0, rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+	const auto clip_width = rsx::method_registers.surface_clip_width();
+	const auto clip_height = rsx::method_registers.surface_clip_height();
+	glViewport(0, 0, clip_width, clip_height);
 
 	u16 scissor_x = rsx::method_registers.scissor_origin_x();
 	u16 scissor_w = rsx::method_registers.scissor_width();
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
+
+	//Do not bother drawing anything if output is zero sized
+	//TODO: Clip scissor region
+	if (scissor_x >= clip_width || scissor_y >= clip_height || scissor_w == 0 || scissor_h == 0)
+	{
+		if (!g_cfg.video.strict_rendering_mode)
+		{
+			framebuffer_status_valid = false;
+			return;
+		}
+	}
 
 	//NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
 	//See LIMBO [NPUB-30373] which uses shader window origin = top
@@ -726,7 +739,7 @@ void GLGSRender::on_exit()
 
 void GLGSRender::clear_surface(u32 arg)
 {
-	if (skip_frame) return;
+	if (skip_frame || !framebuffer_status_valid) return;
 	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 	if ((arg & 0xf3) == 0) return;
 

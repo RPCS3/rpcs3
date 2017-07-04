@@ -167,6 +167,8 @@ private:
 	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;
 
+	bool framebuffer_status_valid = false;
+
 	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 	rsx::gcm_framebuffer_info m_depth_surface_info;
 

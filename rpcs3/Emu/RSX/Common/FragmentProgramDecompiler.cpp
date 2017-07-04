@@ -37,13 +37,12 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 		break;
 	}
 
-	if (dst.saturate)
-	{
-		code = saturate(code);
-	}
-	else if (!dst.no_dest)
+	if (!dst.no_dest)
 	{
 		code = NoOverflow(code);
+
+		if (dst.saturate)
+			code = saturate(code);
 	}
 
 	code += (append_mask ? "$m" : "");
@@ -63,13 +62,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 
 	std::string dest = AddReg(dst.dest_reg, dst.fp16) + "$m";
-
-	if (dst.exp_tex)
-	{
-		//TODO
-		//If exp_tex really sets _bx2 flag, we may need to perform extra modifications to the src
-		AddCode("//TODO: exp tex flag is set");
-	}
 
 	AddCodeCond(Format(dest), code);
 	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
@@ -206,6 +198,7 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 	if (dst.exp_tex)
 	{
 		//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
+		AddCode("//exp tex flag is set");
 		return "((" + code + "- 0.5) * 2.)";
 	}
 
@@ -214,11 +207,9 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 	case 0:
 		break;
 	case 1:
-		//Disabled: Causes blue output in some games such as persona V and soul calibur IV
-		//return "clamp(" + code + ", -65504., 65504.)";
-		break;
+		return "clamp(" + code + ", -65504., 65504.)";
 	case 2:
-		return "clamp(" + code + ", -1., 1.)";
+		return "clamp(" + code + ", -2., 2.)";
 	}
 
 	return code;
