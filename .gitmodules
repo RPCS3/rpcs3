@@ -8,7 +8,7 @@
 [submodule "llvm"]
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm
-	branch = release_40
+	branch = release_50
 [submodule "rsx_program_decompiler"]
 	path = rsx_program_decompiler
 	url = https://github.com/RPCS3/rsx_program_decompiler
