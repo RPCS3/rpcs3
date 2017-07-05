@@ -890,6 +890,14 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	return prx;
 }
 
+void ppu_unload_prx(const lv2_prx& prx)
+{
+	for (auto& seg : prx.segs)
+	{
+		vm::dealloc(seg.addr, vm::main);
+	}
+}
+
 void ppu_load_exec(const ppu_exec_object& elf)
 {
 	if (g_cfg.core.hook_functions)

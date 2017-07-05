@@ -12,6 +12,7 @@
 namespace vm { using namespace ps3; }
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern void ppu_unload_prx(const lv2_prx& prx);
 extern void ppu_initialize(const ppu_module&);
 
 logs::channel sys_prx("sys_prx");
@@ -233,7 +234,7 @@ error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_modu
 		return CELL_ESRCH;
 	}
 
-	//Memory.Free(prx->address);
+	ppu_unload_prx(*prx);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
 	
