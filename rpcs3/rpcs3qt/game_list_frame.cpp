@@ -613,7 +613,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=]() {
-		settings_dialog(xgui_settings, m_Render_Creator, this, &m_game_data[row].info).exec();
+		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &m_game_data[row].info).exec();
 	});
 	connect(removeGame, &QAction::triggered, [=]() {
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)

@@ -966,13 +966,12 @@ void main_window::CreateConnects()
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 
-	auto openSettings = [=](int index)
+	auto openSettings = [=](int tabIndex)
 	{
-		settings_dialog dlg(guiSettings, m_Render_Creator, this);
+		settings_dialog dlg(guiSettings, m_Render_Creator, tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
-		dlg.SetActiveTab(index);
 		dlg.exec();
 	};
 	connect(ui->confCPUAct,    &QAction::triggered, [=]() { openSettings(0); });
@@ -1109,7 +1108,7 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, Pause);
-	connect(ui->toolbar_snap, &QAction::triggered, [=]() { user_asked_for_frame_capture = true; });
+	//connect(ui->toolbar_snap, &QAction::triggered, [=]() { user_asked_for_frame_capture = true; });
 	connect(ui->toolbar_fullscreen, &QAction::triggered, [=]() {
 		if (isFullScreen())
 		{
