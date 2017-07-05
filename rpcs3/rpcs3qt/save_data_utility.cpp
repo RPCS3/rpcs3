@@ -35,8 +35,8 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	vbox_main->setAlignment(Qt::AlignCenter);
 	setLayout(vbox_main);
 
-	// resize to minimum view size
-	resize(minimumSize().expandedTo(sizeHint()));
+	// resize to a slightly larger than minimum size because the save icon is large.
+	resize(QSize(600, 400).expandedTo(sizeHint()));
 
 	UpdateData();
 }
@@ -45,21 +45,8 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 void save_data_info_dialog::UpdateData()
 {
 	m_list->clearContents();
-	int num_entries = 5; // set this to number of members in struct
+	int num_entries = 4; // set this to number of members in struct
 	m_list->setRowCount(num_entries);
-
-	QImage img;
-	if (m_entry.iconBuf && img.loadFromData((uchar*) m_entry.iconBuf, m_entry.iconBufSize, "PNG"))
-	{
-		QTableWidgetItem* img_item = new QTableWidgetItem();
-		img_item->setData(Qt::DecorationRole, QPixmap::fromImage(img));
-		m_list->setItem(4, 0, new QTableWidgetItem(tr("Icon")));
-		m_list->setItem(4, 1, img_item);
-	}
-	else
-	{
-		m_list->setRowCount(num_entries - 1); // Image failed so don't show it.
-	}
 
 	//Maybe there should be more details of save data.
 	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
@@ -74,6 +61,16 @@ void save_data_info_dialog::UpdateData()
 	m_list->setItem(3, 0, new QTableWidgetItem(tr("Detail")));
 	m_list->setItem(3, 1, new QTableWidgetItem(qstr(m_entry.details)));
 
+	QImage img;
+	if (m_entry.iconBuf && img.loadFromData((uchar*)m_entry.iconBuf, m_entry.iconBufSize, "PNG"))
+	{
+		m_list->insertRow(0);
+		QTableWidgetItem* img_item = new QTableWidgetItem();
+		img_item->setData(Qt::DecorationRole, QPixmap::fromImage(img));
+		m_list->setItem(0, 0, new QTableWidgetItem(tr("Icon")));
+		m_list->setItem(0, 1, img_item);
+	}
+
 	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
@@ -83,7 +80,7 @@ void save_data_info_dialog::UpdateData()
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
 	: QDialog(parent), m_save_entries(entries), m_selectedEntry(-1), selectedEntryLabel(nullptr)
 {
-	setWindowTitle(tr("Save Data Utility"));
+	setWindowTitle(tr("Save Data Chooser"));
 	setMinimumSize(QSize(400, 400));
 
 	// Table
@@ -106,7 +103,6 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
 	hbox_action->addWidget(push_select);
-	setWindowTitle(tr("Save Data Chooser"));
 
 	selectedEntryLabel = new QLabel(this);
 	UpdateSelectionLabel();
