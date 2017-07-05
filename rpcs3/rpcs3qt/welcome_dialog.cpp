@@ -15,6 +15,8 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 {
 	ui->setupUi(this);
 
+	setWindowFlags(Qt::WindowTitleHint);
+
 	gui_settings* settings = new gui_settings(this);
 
 	ui->okay->setEnabled(false);
@@ -30,4 +32,6 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 	});
 
 	connect(ui->okay, &QPushButton::pressed, this, &QDialog::accept);
+
+	setFixedSize(sizeHint());
 }

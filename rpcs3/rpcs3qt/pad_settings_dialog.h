@@ -1,5 +1,4 @@
-#ifndef PADSETTINGSDIALOG_H
-#define PADSETTINGSDIALOG_H
+#pragma once
 
 #include <QDialog>
 #include <QEvent>
@@ -57,7 +56,7 @@ class pad_settings_dialog : public QDialog, PadHandlerBase
 {
 	Q_OBJECT
 
-private slots :
+private Q_SLOTS:
 	void OnPadButtonClicked(int id);
 
 private:
@@ -80,5 +79,3 @@ public:
 	void LoadSettings();
 	const QString GetKeyName(const u32 keyCode);
 };
-
-#endif // PADSETTINGSDIALOG_H

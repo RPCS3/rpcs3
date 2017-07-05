@@ -66,6 +66,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(
 
 	g_kbpad_config.load();
 	UpdateLabel();
+
+	setFixedSize(sizeHint());
 }
 
 pad_settings_dialog::~pad_settings_dialog()

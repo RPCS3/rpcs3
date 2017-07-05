@@ -19,16 +19,15 @@ class settings_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit settings_dialog(std::shared_ptr<gui_settings> xSettings, Render_Creator r_Creator, QWidget *parent = 0, GameInfo *game = nullptr);
-	void SetActiveTab(int index);
-	private Q_SLOTS:
-	void OnBackupCurrentConfig();
-	void OnApplyConfig();
-	void OnApplyStylesheet();
+	explicit settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex = 0, QWidget *parent = 0, GameInfo *game = nullptr);
 Q_SIGNALS:
 	void GuiSettingsSyncRequest();
 	void GuiStylesheetRequest(const QString& path);
 	void GuiSettingsSaveRequest();
+private Q_SLOTS:
+	void OnBackupCurrentConfig();
+	void OnApplyConfig();
+	void OnApplyStylesheet();
 private:
 	//emulator tab
 	void AddConfigs();
