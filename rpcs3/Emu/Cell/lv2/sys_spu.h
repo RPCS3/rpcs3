@@ -153,7 +153,7 @@ struct lv2_spu_group
 	cond_variable cv; // used to signal waiting PPU thread
 
 	std::array<std::shared_ptr<SPUThread>, 256> threads; // SPU Threads
-	std::array<vm::ps3::ptr<sys_spu_image>, 256> imgs; // SPU Images
+	std::array<sys_spu_image, 256> imgs; // SPU Images
 	std::array<std::array<u64, 4>, 256> args; // SPU Thread Arguments
 
 	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
