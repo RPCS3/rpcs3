@@ -13,6 +13,9 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 
 	// Table
 	m_list = new QTableWidget(this);
+	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -35,10 +38,11 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	vbox_main->setAlignment(Qt::AlignCenter);
 	setLayout(vbox_main);
 
-	// resize to a slightly larger than minimum size because the save icon is large.
-	resize(QSize(600, 400).expandedTo(sizeHint()));
-
 	UpdateData();
+
+	// If there's a better way, let me know : https://stackoverflow.com/questions/8766633/how-to-determine-the-correct-size-of-a-qtablewidget
+	resize(75 + m_list->horizontalHeader()->length() + m_list->verticalHeader()->width(),
+		75 + m_list->verticalHeader()->length() + m_list->horizontalHeader()->height());
 }
 
 //This is intended to write the information of save data to QTableView.
@@ -70,9 +74,6 @@ void save_data_info_dialog::UpdateData()
 		m_list->setItem(0, 0, new QTableWidgetItem(tr("Icon")));
 		m_list->setItem(0, 1, img_item);
 	}
-
-	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
 
 //Show up the savedata list, either to choose one to save/load or to manage saves.
@@ -80,11 +81,14 @@ void save_data_info_dialog::UpdateData()
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
 	: QDialog(parent), m_save_entries(entries), m_selectedEntry(-1), selectedEntryLabel(nullptr)
 {
-	setWindowTitle(tr("Save Data Chooser"));
+	setWindowTitle(tr("Save Data Interface"));
 	setMinimumSize(QSize(400, 400));
 
 	// Table
 	m_list = new QTableWidget(this);
+	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -95,17 +99,18 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
-	QPushButton *push_cancel = new QPushButton(tr("&Cancel"), this);
-	push_cancel->setAutoDefault(false);
-	QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
-	push_select->setAutoDefault(true);
-	push_select->setDefault(true);
 
-	connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
-	hbox_action->addWidget(push_select);
+	if (entries.size() > 0)
+	{ // If there are no entries, don't add the selection widget or the selection label to the UI.
+		QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
+		connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
+		push_select->setAutoDefault(true);
+		push_select->setDefault(true);
+		hbox_action->addWidget(push_select);
 
-	selectedEntryLabel = new QLabel(this);
-	UpdateSelectionLabel();
+		selectedEntryLabel = new QLabel(this);
+		UpdateSelectionLabel();
+	}
 
 	if (is_saving)
 	{
@@ -118,6 +123,9 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	}
 
 	hbox_action->addStretch();
+
+	QPushButton *push_cancel = new QPushButton(tr("&Cancel"), this);
+	push_cancel->setAutoDefault(false);
 	hbox_action->addWidget(push_cancel);
 
 	// events
@@ -130,7 +138,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	// TODO: Unstub functions inside of this context menu so it makes sense to show this menu
 	//connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_data_list_dialog::ShowContextMenu);
-	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col){
+	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col) {
 		OnSort(col);
 	});
 
@@ -149,7 +157,12 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	UpdateList();
 
 	m_list->setCurrentCell(focusedEntry, 0);
+
+	// If there's a better way, let me know : https://stackoverflow.com/questions/8766633/how-to-determine-the-correct-size-of-a-qtablewidget
+	resize(50 + m_list->horizontalHeader()->length() + m_list->verticalHeader()->width(),
+		50 + m_list->verticalHeader()->length() + m_list->horizontalHeader()->height());
 }
+
 
 void save_data_list_dialog::UpdateSelectionLabel()
 {
@@ -289,8 +302,6 @@ void save_data_list_dialog::UpdateList(void)
 {
 	m_list->clearContents();
 	m_list->setRowCount(m_save_entries.size());
-	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 	int row = 0;
 	for (SaveDataEntry entry: m_save_entries)
