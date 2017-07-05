@@ -10,6 +10,12 @@
     <height>586</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="minimumSize">
    <size>
     <width>516</width>
@@ -70,7 +76,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Interpreter (Fast)</string>
+       <string>Interpreter (fast)</string>
       </property>
       <attribute name="buttonGroup">
        <string notr="true">ppuBG</string>
@@ -102,7 +108,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Interpreter (Precise)</string>
+       <string>Interpreter (precise)</string>
       </property>
       <attribute name="buttonGroup">
        <string notr="true">ppuBG</string>
@@ -131,7 +137,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Interpreter (Fast)</string>
+       <string>Interpreter (fast)</string>
       </property>
       <attribute name="buttonGroup">
        <string notr="true">spuBG</string>
@@ -163,7 +169,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Interpreter (Precise)</string>
+       <string>Interpreter (precise)</string>
       </property>
       <attribute name="buttonGroup">
        <string notr="true">spuBG</string>
@@ -380,7 +386,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Configure CPU settings.</string>
+       <string>CPU settings allow you to change both the PPU (Power Processing Element) and SPU (Synergistic Processing Unit) decoder modes. You can also adjust firmware settings for the emulated console. These settings allow you to load firmware libraries automatically, manually or both at the same time as well as on-the-fly.</string>
       </property>
       <property name="textFormat">
        <enum>Qt::PlainText</enum>
@@ -668,7 +674,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Configure GPU settings.</string>
+       <string>GPU settings allow you to change the rendering backend of the emulated console. You can also choose your preferred graphics device for GPU specific rendering APIs as well as adjust the output resolution, aspect ratio and framelimit of the emulated console. Additional enhancement settings will be added in the future.</string>
       </property>
       <property name="textFormat">
        <enum>Qt::PlainText</enum>
@@ -883,7 +889,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Configure audio settings.</string>
+       <string>Audio settings allow you to change the way audio is encoded and handled by the emulator. More detailed settings will be added in the future.</string>
       </property>
       <property name="textFormat">
        <enum>Qt::PlainText</enum>
@@ -1041,7 +1047,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Configure input and output settings.</string>
+       <string>I/O settings allow you to change controller, keyboard and mouse handlers as well as PlayStation camera inputs. More detailed settings will be added in the future.</string>
       </property>
       <property name="textFormat">
        <enum>Qt::PlainText</enum>
@@ -1130,7 +1136,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Configure virtual PlayStation 3 system settings.</string>
+       <string>System settings allow you change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.</string>
       </property>
       <property name="textFormat">
        <enum>Qt::PlainText</enum>
@@ -1223,7 +1229,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Configure virtual PlayStation 3 network settings.</string>
+       <string>Network settings allow you to change basic network settings found within a real PlayStation 3 system. More detailed settings may or may not be added in the future.</string>
       </property>
       <property name="textFormat">
        <enum>Qt::PlainText</enum>
@@ -1465,7 +1471,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Configure RPCS3 Emulator settings.</string>
+       <string>Emulator settings allow you to set personal preferences within the emulator such as automatic exit when a process is finished, starting games after boot and allowing games to automatically boot into fullscreen mode. You can also create your own stylesheets which can be used as themes for a more personal experience. </string>
       </property>
       <property name="textFormat">
        <enum>Qt::PlainText</enum>

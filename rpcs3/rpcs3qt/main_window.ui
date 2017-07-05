@@ -62,18 +62,22 @@
     <property name="font">
      <font>
       <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="focusPolicy">
      <enum>Qt::ClickFocus</enum>
     </property>
+    <property name="styleSheet">
+     <string notr="true">color:#5e5e5e;
+margin-left:14px;</string>
+    </property>
     <property name="frame">
      <bool>false</bool>
     </property>
     <property name="placeholderText">
-     <string>Search apps ...</string>
+     <string>Search...</string>
     </property>
     <property name="clearButtonEnabled">
      <bool>false</bool>
@@ -82,10 +86,10 @@
    <widget class="QSlider" name="sizeSlider">
     <property name="geometry">
      <rect>
-      <x>300</x>
-      <y>10</y>
+      <x>290</x>
+      <y>20</y>
       <width>160</width>
-      <height>31</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -98,19 +102,13 @@
      <enum>Qt::ClickFocus</enum>
     </property>
     <property name="styleSheet">
-     <string notr="true">QSlider::groove:horizontal {
-    border: 0px solid #999999;
-    height: 20px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
-    margin: 2px 0;
+     <string notr="true">QSlider::handle:horizontal {
+	background: #404040;
 }
 
-QSlider::handle:horizontal {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f);
-    border: 0px solid #5c5c5c;
-    width: 15px;
-    margin: -5px 0; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
-    border-radius: 3px;
+QSlider {
+	padding-left: 6px;
+	padding-right:6px
 }</string>
     </property>
     <property name="orientation">
@@ -187,10 +185,10 @@ QSlider::handle:horizontal {
     </property>
     <addaction name="confVFSDialogAct"/>
     <addaction name="separator"/>
-    <addaction name="confSavedataManagerAct"/>
-    <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Users"/>
+    <addaction name="confSavedataManagerAct"/>
     <addaction name="actionManage_RAP_Licences"/>
+    <addaction name="actionManage_Trophy_Data"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
@@ -400,7 +398,7 @@ selection-background-color: rgb(85, 170, 255);</string>
   </action>
   <action name="confGPUAct">
    <property name="text">
-    <string>Graphics</string>
+    <string>GPU</string>
    </property>
    <property name="toolTip">
     <string>Configure Graphics</string>
@@ -933,6 +931,16 @@ selection-background-color: rgb(85, 170, 255);</string>
    </property>
    <property name="text">
     <string>Show Game Tool Bar</string>
+   </property>
+  </action>
+  <action name="actionNetwork">
+   <property name="text">
+    <string>Network</string>
+   </property>
+  </action>
+  <action name="actionEmulator">
+   <property name="text">
+    <string>Emulator</string>
    </property>
   </action>
  </widget>
