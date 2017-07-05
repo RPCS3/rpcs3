@@ -6,27 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>589</width>
-    <height>239</height>
+    <width>634</width>
+    <height>272</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>589</width>
-    <height>239</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>589</width>
-    <height>239</height>
-   </size>
   </property>
   <property name="windowTitle">
    <string>Welcome to RPCS3</string>
@@ -41,230 +29,268 @@
   <property name="styleSheet">
    <string notr="true"/>
   </property>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>70</x>
-     <y>10</y>
-     <width>341</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>Arial</family>
-     <pointsize>14</pointsize>
-     <weight>50</weight>
-     <bold>false</bold>
-    </font>
-   </property>
-   <property name="styleSheet">
-    <string notr="true"/>
-   </property>
-   <property name="text">
-    <string>RPCS3 PlayStation 3 Emulator</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_2">
-   <property name="geometry">
-    <rect>
-     <x>14</x>
-     <y>6</y>
-     <width>41</width>
-     <height>42</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>8</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="pixmap">
-    <pixmap resource="../resources.qrc">:/Icons/insignia.png</pixmap>
-   </property>
-   <property name="scaledContents">
-    <bool>true</bool>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-   <property name="margin">
+  <layout class="QVBoxLayout" name="verticalLayout_3">
+   <property name="leftMargin">
     <number>0</number>
    </property>
-  </widget>
-  <widget class="QLabel" name="label_3">
-   <property name="geometry">
-    <rect>
-     <x>70</x>
-     <y>41</y>
-     <width>501</width>
-     <height>71</height>
-    </rect>
+   <property name="topMargin">
+    <number>0</number>
    </property>
-   <property name="font">
-    <font>
-     <family>Arial</family>
-     <kerning>true</kerning>
-    </font>
+   <property name="rightMargin">
+    <number>0</number>
    </property>
-   <property name="styleSheet">
-    <string notr="true"/>
+   <property name="bottomMargin">
+    <number>0</number>
    </property>
-   <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows and Linux funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;. Our lead developers and contributors are always working hard to ensure this project can be the best that it can be. There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::RichText</enum>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-   <property name="openExternalLinks">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="okay">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>199</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Continue</string>
-   </property>
-   <property name="autoDefault">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_4">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>120</y>
-     <width>551</width>
-     <height>41</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <kerning>true</kerning>
-    </font>
-   </property>
-   <property name="styleSheet">
-    <string notr="true"/>
-   </property>
-   <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;To get started, you must first install the &lt;span style=&quot; font-weight:600;&quot;&gt;PlayStation 3 firmware&lt;/span&gt;. Please refer to the &lt;a href=&quot;https://rpcs3.net/quickstart&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Quickstart&lt;/span&gt;&lt;/a&gt; guide found on the official website for further information. If you have any further questions, please refer to the &lt;a href=&quot;https://rpcs3.net/faq&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;FAQ&lt;/span&gt;&lt;/a&gt;. Otherwise, further discussion and support can be found on the &lt;a href=&quot;http://www.emunewz.net/forum/forumdisplay.php?fid=172&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Forums&lt;/span&gt;&lt;/a&gt; or on our &lt;a href=&quot;https://discord.me/RPCS3&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Discord&lt;/span&gt;&lt;/a&gt; server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::RichText</enum>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-   <property name="openExternalLinks">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_6">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>170</y>
-     <width>551</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>8</pointsize>
-     <weight>50</weight>
-     <italic>false</italic>
-     <bold>false</bold>
-    </font>
-   </property>
-   <property name="styleSheet">
-    <string notr="true"/>
-   </property>
-   <property name="text">
-    <string>RPCS3 does not condone piracy. You must dump your own games.</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="i_have_read">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>202</y>
-     <width>181</width>
-     <height>17</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true"/>
-   </property>
-   <property name="text">
-    <string>I have read the Quickstart guide</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="do_not_show">
-   <property name="geometry">
-    <rect>
-     <x>300</x>
-     <y>202</y>
-     <width>121</width>
-     <height>17</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true"/>
-   </property>
-   <property name="text">
-    <string>Do not show again</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_9">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>591</width>
-     <height>111</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">background:#fff;</string>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </widget>
-  <zorder>label_9</zorder>
-  <zorder>label</zorder>
-  <zorder>label_2</zorder>
-  <zorder>label_3</zorder>
-  <zorder>okay</zorder>
-  <zorder>label_4</zorder>
-  <zorder>label_6</zorder>
-  <zorder>i_have_read</zorder>
-  <zorder>do_not_show</zorder>
+   <item>
+    <widget class="QWidget" name="widget_3" native="true">
+     <property name="styleSheet">
+      <string notr="true">background-color: rgb(255, 255, 255);</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_5">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QWidget" name="widget_2" native="true">
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label_2">
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>50</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="pixmap">
+              <pixmap resource="../resources.qrc">:/Icons/insignia.png</pixmap>
+             </property>
+             <property name="scaledContents">
+              <bool>true</bool>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+             </property>
+             <property name="margin">
+              <number>0</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="font">
+             <font>
+              <family>Arial</family>
+              <pointsize>14</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
+            <property name="text">
+             <string>RPCS3 PlayStation 3 Emulator</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_3">
+            <property name="font">
+             <font>
+              <family>Arial</family>
+              <kerning>true</kerning>
+             </font>
+            </property>
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.&lt;br/&gt;It is written in C++ for Windows and Linux and funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Our lead developers and contributors are always working hard to ensure this project can be the best that it can be.&lt;br/&gt;There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::RichText</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            </property>
+            <property name="wordWrap">
+             <bool>false</bool>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+     </layout>
+     <zorder></zorder>
+    </widget>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="leftMargin">
+      <number>11</number>
+     </property>
+     <property name="topMargin">
+      <number>11</number>
+     </property>
+     <property name="rightMargin">
+      <number>11</number>
+     </property>
+     <property name="bottomMargin">
+      <number>11</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="font">
+        <font>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <property name="text">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;To get started, you must first install the &lt;span style=&quot; font-weight:600;&quot;&gt;PlayStation 3 firmware&lt;/span&gt;.&lt;br/&gt;Please refer to the &lt;a href=&quot;https://rpcs3.net/quickstart&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Quickstart&lt;/span&gt;&lt;/a&gt; guide found on the official website for further information.&lt;br/&gt;If you have any further questions, please refer to the &lt;a href=&quot;https://rpcs3.net/faq&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;FAQ&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Otherwise, further discussion and support can be found on the &lt;a href=&quot;http://www.emunewz.net/forum/forumdisplay.php?fid=172&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Forums&lt;/span&gt;&lt;/a&gt; or on our &lt;a href=&quot;https://discord.me/RPCS3&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Discord&lt;/span&gt;&lt;/a&gt; server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="textFormat">
+        <enum>Qt::RichText</enum>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+       <property name="openExternalLinks">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_6">
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+         <weight>50</weight>
+         <italic>false</italic>
+         <bold>false</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <property name="text">
+        <string>&lt;br&gt;RPCS3 does not condone piracy. You must dump your own games.&lt;br&gt;</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item alignment="Qt::AlignLeft">
+        <widget class="QPushButton" name="okay">
+         <property name="text">
+          <string>Continue</string>
+         </property>
+         <property name="autoDefault">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item alignment="Qt::AlignLeft">
+        <widget class="QCheckBox" name="i_have_read">
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="text">
+          <string>I have read the Quickstart guide</string>
+         </property>
+        </widget>
+       </item>
+       <item alignment="Qt::AlignLeft">
+        <widget class="QCheckBox" name="do_not_show">
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="text">
+          <string>Do not show again</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
  <resources>
   <include location="../resources.qrc"/>

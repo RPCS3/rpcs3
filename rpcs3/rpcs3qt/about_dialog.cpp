@@ -22,4 +22,6 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 	connect(ui->forum, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("http://www.emunewz.net/forum/forumdisplay.php?fid=172")); });
 	connect(ui->patreon, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina")); });
 	connect(ui->close, &QAbstractButton::clicked, this, &QWidget::close);
+
+	setFixedSize(sizeHint());
 }

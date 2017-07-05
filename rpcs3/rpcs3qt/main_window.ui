@@ -538,7 +538,7 @@ selection-background-color: rgb(85, 170, 255);</string>
   </action>
   <action name="toolsDecryptSprxLibsAct">
    <property name="text">
-    <string>Decrypt .sprx Libraries</string>
+    <string>SPRX Decryption</string>
    </property>
   </action>
   <action name="showDebuggerAct">
@@ -831,6 +831,9 @@ selection-background-color: rgb(85, 170, 255);</string>
    </property>
   </action>
   <action name="toolbar_snap">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="../resources.qrc">
      <normaloff>:/Icons/screenshot.png</normaloff>:/Icons/screenshot.png</iconset>
@@ -879,6 +882,9 @@ selection-background-color: rgb(85, 170, 255);</string>
    </property>
   </action>
   <action name="toolbar_sort">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="../resources.qrc">
      <normaloff>:/Icons/sort.png</normaloff>:/Icons/sort.png</iconset>
