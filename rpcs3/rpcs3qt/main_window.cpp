@@ -450,7 +450,7 @@ void main_window::InstallPup()
 	version_file_f.read(version_string);
 	version_string.erase(std::find(version_string.begin(), version_string.end(), '\n'));
 
-	QProgressDialog pdlg(QString("%1\n%2").arg(tr("Installing firmware please wait ..."), QString::fromStdString(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	QProgressDialog pdlg(QString("Installing firmware version %1\nPlease wait...").arg(QString::fromStdString(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedSize(500, pdlg.height());
