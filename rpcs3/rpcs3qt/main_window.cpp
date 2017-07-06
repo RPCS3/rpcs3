@@ -448,9 +448,22 @@ void main_window::InstallPup()
 	std::string version_string;
 	version_string.resize(version_file_f.size());
 	version_file_f.read(version_string);
-	version_string.erase(std::find(version_string.begin(), version_string.end(), '\n'));
+	version_string.erase(version_string.find('\n'));
 
-	QProgressDialog pdlg(QString("Installing firmware version %1\nPlease wait...").arg(QString::fromStdString(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	const int cur_major = 4;
+	const int cur_minor = 81;
+
+	int major = std::stoi(version_string.substr(0, version_string.find('.')));
+	int minor = std::stoi(version_string.substr(version_string.find('.') + 1));
+
+	if ((major < cur_major || (major == cur_major && minor < cur_minor)) &&
+		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1.%2 and you are trying to install version %3\nContinue installation?").arg(cur_major).arg(cur_minor).arg(QString::fromStdString(version_string)),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
+	{
+		return;
+	}
+
+	QProgressDialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(QString::fromStdString(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedSize(500, pdlg.height());
