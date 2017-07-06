@@ -9,6 +9,9 @@ inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(
 
 void msg_dialog_frame::Create(const std::string& msg)
 {
+	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
+	static const auto& horizontalSpacing = []() {return QLabel("Ora").sizeHint().width(); };
+	static const auto& verticalSpacing = []() {return QLabel("Ora Ora").sizeHint().width(); };
 	static int dialog_nr;
 	static int dialog_count;
 	++dialog_count;
@@ -37,7 +40,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
 		bar->setRange(0, m_gauge_max);
-		bar->setFixedWidth(300);
+		bar->setFixedWidth(barWidth());
 		bar->setAlignment(Qt::AlignCenter);
 
 		QHBoxLayout* barLayout = new QHBoxLayout;
@@ -132,8 +135,8 @@ void msg_dialog_frame::Create(const std::string& msg)
 		const int max_x = screensize.width() - min_x;
 		const int min_y = screensize.height() / 10;
 		const int max_y = screensize.height() - min_y;
-		const int s_width = 30 + m_dialog->frameSize().width();
-		const int s_height = 60 + m_dialog->frameSize().height();
+		const int s_width = horizontalSpacing() + m_dialog->frameSize().width();
+		const int s_height = verticalSpacing() + m_dialog->frameSize().height();
 		const int max_dialogs_x = std::max(1, (max_x - min_x) / s_width);
 		const int max_dialogs_y = std::max(1, (max_y - min_y) / s_height);
 		int dialogs_x = std::min(max_dialogs_x, thread_count);
@@ -187,6 +190,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		dialog_nr = 0;
 	}
 
+	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	m_dialog->show();
 
 #ifdef _WIN32
