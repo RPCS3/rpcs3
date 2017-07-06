@@ -9,12 +9,9 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	: QDialog(parent), m_entry(save)
 {
 	setWindowTitle(tr("Save Data Information"));
-	setMinimumSize(QSize(400, 300));
 
 	// Table
 	m_list = new QTableWidget(this);
-	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
@@ -40,9 +37,16 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 
 	UpdateData();
 
-	// If there's a better way, let me know : https://stackoverflow.com/questions/8766633/how-to-determine-the-correct-size-of-a-qtablewidget
-	resize(75 + m_list->horizontalHeader()->length() + m_list->verticalHeader()->width(),
-		75 + m_list->verticalHeader()->length() + m_list->horizontalHeader()->height());
+	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
+	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
+
+	QSize tableSize = QSize(
+		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
+		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
+
+	// no minimum size needed because we always have same table size and row count
+	resize(sizeHint() - m_list->sizeHint() + tableSize);
+
 }
 
 //This is intended to write the information of save data to QTableView.
@@ -86,8 +90,6 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	// Table
 	m_list = new QTableWidget(this);
-	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
@@ -157,10 +159,6 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	UpdateList();
 
 	m_list->setCurrentCell(focusedEntry, 0);
-
-	// If there's a better way, let me know : https://stackoverflow.com/questions/8766633/how-to-determine-the-correct-size-of-a-qtablewidget
-	resize(50 + m_list->horizontalHeader()->length() + m_list->verticalHeader()->width(),
-		50 + m_list->verticalHeader()->length() + m_list->horizontalHeader()->height());
 }
 
 
@@ -314,4 +312,14 @@ void save_data_list_dialog::UpdateList(void)
 
 		++row;
 	}
+
+	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
+	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
+
+	QSize tableSize = QSize(
+		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
+		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
+
+	resize(minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize));
+
 }
