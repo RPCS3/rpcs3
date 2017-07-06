@@ -300,17 +300,16 @@ selection-background-color: rgb(85, 170, 255);</string>
     <bool>false</bool>
    </attribute>
    <addaction name="toolbar_disc"/>
-   <addaction name="toolbar_refresh"/>
+   <addaction name="toolbar_fullscreen"/>
+   <addaction name="toolbar_snap"/>
    <addaction name="separator"/>
    <addaction name="toolbar_stop"/>
    <addaction name="toolbar_start"/>
    <addaction name="separator"/>
-   <addaction name="toolbar_snap"/>
-   <addaction name="toolbar_fullscreen"/>
-   <addaction name="separator"/>
    <addaction name="toolbar_controls"/>
    <addaction name="toolbar_config"/>
    <addaction name="separator"/>
+   <addaction name="toolbar_refresh"/>
    <addaction name="toolbar_list"/>
    <addaction name="toolbar_grid"/>
    <addaction name="toolbar_sort"/>
@@ -844,6 +843,12 @@ selection-background-color: rgb(85, 170, 255);</string>
    <property name="toolTip">
     <string>Capture frame</string>
    </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>true</bool>
+   </property>
   </action>
   <action name="toolbar_fullscreen">
    <property name="icon">
@@ -894,6 +899,12 @@ selection-background-color: rgb(85, 170, 255);</string>
    </property>
    <property name="toolTip">
     <string>Sort options</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>true</bool>
    </property>
   </action>
   <action name="toolbar_refresh">
