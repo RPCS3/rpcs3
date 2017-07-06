@@ -201,6 +201,8 @@ void msg_dialog_frame::Create(const std::string& msg)
 
 void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 {
+	static const auto& lineEditWidth = []() {return QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width(); };
+
 	if (osk_dialog)
 	{
 		osk_dialog->close();
@@ -217,17 +219,18 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 
 	//Text Input
 	QLineEdit* input = new QLineEdit(osk_dialog);
-	input->setFixedWidth(200);
+	input->setFixedWidth(lineEditWidth());
 	input->setFocus();
 
 	//Ok Button
 	QPushButton* button_ok = new QPushButton("Ok", osk_dialog);
-	button_ok->setFixedWidth(50);
 
 	//Layout
 	QHBoxLayout* buttonsLayout = new QHBoxLayout;
 	buttonsLayout->setAlignment(Qt::AlignCenter);
+	buttonsLayout->addStretch();
 	buttonsLayout->addWidget(button_ok);
+	buttonsLayout->addStretch();
 
 	QFormLayout* layout = new QFormLayout(osk_dialog);
 	layout->setFormAlignment(Qt::AlignHCenter);
@@ -245,7 +248,7 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 	connect(osk_dialog, &QDialog::rejected, [=] {if (!type.disable_cancel) { on_close(CELL_MSGDIALOG_BUTTON_ESCAPE); }});
 
 	//Fix size
-	osk_dialog->setFixedSize(osk_dialog->sizeHint());
+	osk_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	osk_dialog->show();
 }
 
