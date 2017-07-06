@@ -905,19 +905,22 @@ void GLGSRender::flip(int buffer)
 	sizei csize(m_frame->client_width(), m_frame->client_height());
 	sizei new_size = csize;
 
-	const double aq = (double)buffer_width / buffer_height;
-	const double rq = (double)new_size.width / new_size.height;
-	const double q = aq / rq;
+	if (!g_cfg.video.stretch_to_display_area)
+	{
+		const double aq = (double)buffer_width / buffer_height;
+		const double rq = (double)new_size.width / new_size.height;
+		const double q = aq / rq;
 
-	if (q > 1.0)
-	{
-		new_size.height = int(new_size.height / q);
-		aspect_ratio.y = (csize.height - new_size.height) / 2;
-	}
-	else if (q < 1.0)
-	{
-		new_size.width = int(new_size.width * q);
-		aspect_ratio.x = (csize.width - new_size.width) / 2;
+		if (q > 1.0)
+		{
+			new_size.height = int(new_size.height / q);
+			aspect_ratio.y = (csize.height - new_size.height) / 2;
+		}
+		else if (q < 1.0)
+		{
+			new_size.width = int(new_size.width * q);
+			aspect_ratio.x = (csize.width - new_size.width) / 2;
+		}
 	}
 
 	aspect_ratio.size = new_size;
