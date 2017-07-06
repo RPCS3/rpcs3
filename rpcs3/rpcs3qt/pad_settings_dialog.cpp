@@ -67,7 +67,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(
 	g_kbpad_config.load();
 	UpdateLabel();
 
-	setFixedSize(sizeHint());
+	ui->l_controller->setMaximumSize(ui->gb_description->sizeHint().width(), ui->l_controller->maximumHeight() * ui->gb_description->sizeHint().width() / ui->l_controller->maximumWidth());
+	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
 pad_settings_dialog::~pad_settings_dialog()

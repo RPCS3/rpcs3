@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>634</width>
+    <width>611</width>
     <height>272</height>
    </rect>
   </property>
@@ -143,7 +143,7 @@
              </font>
             </property>
             <property name="text">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.&lt;br/&gt;It is written in C++ for Windows and Linux and funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Our lead developers and contributors are always working hard to ensure this project can be the best that it can be.&lt;br/&gt;There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.&lt;br/&gt;It is written in C++ for Windows and Linux and funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Our developers and contributors are always working hard to ensure this project can be the best that it can be.&lt;br/&gt;There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="textFormat">
              <enum>Qt::RichText</enum>
@@ -182,7 +182,7 @@
       <number>11</number>
      </property>
      <item>
-      <widget class="QLabel" name="label_4">
+      <widget class="QLabel" name="label_5">
        <property name="font">
         <font>
          <kerning>true</kerning>
@@ -198,7 +198,7 @@
         <enum>Qt::RichText</enum>
        </property>
        <property name="alignment">
-        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        <set>Qt::AlignHCenter|Qt::AlignTop</set>
        </property>
        <property name="wordWrap">
         <bool>true</bool>
@@ -208,7 +208,7 @@
        </property>
       </widget>
      </item>
-     <item>
+     <item alignment="Qt::AlignHCenter">
       <widget class="QLabel" name="label_6">
        <property name="font">
         <font>
@@ -222,7 +222,7 @@
         <string notr="true"/>
        </property>
        <property name="text">
-        <string>&lt;br&gt;RPCS3 does not condone piracy. You must dump your own games.&lt;br&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600; color:#ff0000;&quot;&gt;RPCS3 does not condone piracy. You must dump your own games.&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -253,26 +253,6 @@
          </property>
         </widget>
        </item>
-       <item alignment="Qt::AlignLeft">
-        <widget class="QCheckBox" name="i_have_read">
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
-         <property name="text">
-          <string>I have read the Quickstart guide</string>
-         </property>
-        </widget>
-       </item>
-       <item alignment="Qt::AlignLeft">
-        <widget class="QCheckBox" name="do_not_show">
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
-         <property name="text">
-          <string>Do not show again</string>
-         </property>
-        </widget>
-       </item>
        <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
@@ -285,6 +265,39 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item alignment="Qt::AlignLeft">
+        <widget class="QCheckBox" name="i_have_read">
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="text">
+          <string>I have read the Quickstart guide</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item alignment="Qt::AlignLeft">
+        <widget class="QCheckBox" name="do_not_show">
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="text">
+          <string>Do not show again</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
