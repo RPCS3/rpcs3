@@ -334,7 +334,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				{
 					thread_ctrl::wait_for(1000);
 				}
-				return CELL_SAVEDATA_ERROR_NODATA;
+				// This feels like it should be an error code, but BLES-01092 (Prince of Persia Trilogy) will launch a blocking error dialog on error.
+				// Nier and a couple other games also behave strangely.
+				return CELL_OK;
 			}
 
 			Emu.CallAfter([&]()
