@@ -972,6 +972,10 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
+		connect(&dlg, &settings_dialog::accepted, [this](){
+			gameListFrame->LoadSettings();
+			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+			ui->toolBar->setStyleSheet(QString("background-color: rgba(%1, %2, %3, %4);").arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())); });
 		dlg.exec();
 	};
 	connect(ui->confCPUAct,    &QAction::triggered, [=]() { openSettings(0); });
@@ -1232,6 +1236,9 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	gameListFrame->setVisible(ui->showGameListAct->isChecked());
 	gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
+
+	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+	ui->toolBar->setStyleSheet(QString("background-color: rgba(%1, %2, %3, %4);").arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha()));
 
 	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));

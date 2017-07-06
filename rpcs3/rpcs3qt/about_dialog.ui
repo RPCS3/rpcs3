@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>632</width>
+    <width>609</width>
     <height>474</height>
    </rect>
   </property>
@@ -138,7 +138,7 @@
            <string notr="true"/>
           </property>
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.&lt;br/&gt;It is written in C++ for Windows and Linux funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Our lead developers and contributors are always working hard to ensure this project can be the best that it can be.&lt;br/&gt;There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.&lt;br/&gt;It is written in C++ for Windows and Linux funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Our developers and contributors are always working hard to ensure this project can be the best that it can be.&lt;br/&gt;There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="textFormat">
            <enum>Qt::RichText</enum>

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>604</width>
-    <height>682</height>
+    <width>550</width>
+    <height>604</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -30,7 +30,7 @@
       <bool>true</bool>
      </property>
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -297,6 +297,9 @@
         <spacer name="verticalSpacer_2">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -566,6 +569,9 @@
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>0</width>
@@ -666,6 +672,9 @@
         <spacer name="verticalSpacer_6">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -791,6 +800,9 @@
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>0</width>
@@ -890,6 +902,9 @@
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>0</width>
@@ -955,6 +970,9 @@
         <spacer name="verticalSpacer_9">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -1117,13 +1135,46 @@
         </layout>
        </item>
        <item>
-        <spacer name="verticalSpacer_10">
+        <layout class="QHBoxLayout" name="horizontalLayout_19">
+         <item>
+          <widget class="QWidget" name="widget_6" native="true"/>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_2">
+           <property name="title">
+            <string>UI Colors (missing in stylesheets)</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_13">
+            <item>
+             <widget class="QPushButton" name="pb_icon_color">
+              <property name="text">
+               <string>Gamelist icons</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pb_tool_bar_color">
+              <property name="text">
+               <string>Mainwindow tool bar</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_4">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>0</width>
+           <width>20</width>
            <height>0</height>
           </size>
          </property>
@@ -1155,8 +1206,6 @@
         </widget>
        </item>
       </layout>
-      <zorder>groupBox_62</zorder>
-      <zorder>verticalSpacer_10</zorder>
      </widget>
     </widget>
    </item>
@@ -1198,7 +1247,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="spuBG"/>
   <buttongroup name="ppuBG"/>
+  <buttongroup name="spuBG"/>
  </buttongroups>
 </ui>

@@ -216,7 +216,7 @@ protected:
 	void closeEvent(QCloseEvent* event);
 	void resizeEvent(QResizeEvent *event);
 private:
-	void PopulateGameGrid(uint maxCols, const QSize& image_size);
+	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 
 	int PopulateGameList();
@@ -278,6 +278,7 @@ private:
 	std::vector<GUI_GameInfo> m_game_data;
 	QSize m_Icon_Size;
 	QString m_Icon_Size_Str;
+	QColor m_Icon_Color;
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
 	QStringList m_categoryFilters;

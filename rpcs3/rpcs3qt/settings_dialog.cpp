@@ -7,6 +7,7 @@
 #include <QUrl>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QColorDialog>
 
 #include "settings_dialog.h"
 #include "emu_settings.h"
@@ -661,12 +662,29 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
+		auto colorDialog = [&](const GUI_SAVE& color, const QString& title){
+			QColorDialog dlg(xgui_settings->GetValue(color).value<QColor>(), this);
+			dlg.setWindowTitle(title);
+			dlg.setOptions(QColorDialog::ShowAlphaChannel);
+			for (int i = 0; i < dlg.customCount(); i++)
+			{
+				dlg.setCustomColor(i, xgui_settings->GetCustomColor(i));
+			}
+			dlg.exec();
+			for (int i = 0; i < dlg.customCount(); i++)
+			{
+				xgui_settings->SetCustomColor(i, dlg.customColor(i));
+			}
+			xgui_settings->SetValue(color, dlg.selectedColor());
+		};
+		connect(ui->pb_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, "Choose icon color"); });
+		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, "Choose tool bar color"); });
 
 		AddConfigs();
 		AddStylesheets();
 	}
 
-	setFixedSize(sizeHint());
+	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
 void settings_dialog::AddConfigs()
