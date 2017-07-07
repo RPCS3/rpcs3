@@ -3,7 +3,6 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellSaveData.h"
-#include "cellMsgDialog.h"
 
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
@@ -311,29 +310,15 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			bool hasNewData = (bool) listSet->newData; // Are we saving?
 
 			if (save_entries.size() == 0 && !hasNewData)
-			{ // Don't show an empty dialog that isn't saving something new. But, do show an error dialog.
-				std::shared_ptr<MsgDialogBase> dlg = Emu.GetCallbacks().get_msg_dialog();
-				dlg->type.bg_invisible = true;
-				dlg->type.button_type = 2; // OK
-				dlg->type.disable_cancel = true;
-				dlg->on_close = [&](s32 status)
+			{
+				std::string res = "";
+				for (std::string prefix : prefix_list)
 				{
-					dlg_result = true;
-				};
-				Emu.CallAfter([&]() {
-					std::string res = "";
-					for (std::string prefix : prefix_list)
-					{
-						res += (" " + prefix);
-					}
-					// The prefix(s) should be shown because some games like Disgaea 4 try to load games twice-- once for Disgaea 4 saves, and once for Disgaea 3 saves to import.
-					dlg->Create("Could not find save data for game prefix(s):" + res + ".");
-				});
-				// I *really* want to do this without waiting for results... But if I do, the destructor of dlg will be called when this scope exits meaning the dialog will get destroyed.
-				while (!dlg_result)
-				{
-					thread_ctrl::wait_for(1000);
+					res += (" " + prefix);
 				}
+				// The prefix(s) should be shown because some games like Disgaea 4 try to load games twice-- once for Disgaea 4 saves, and once for Disgaea 3 saves to import.
+				cellSaveData.error("Could not find save data for game prefix(s): %s", res);
+
 				// This feels like it should be an error code, but BLES-01092 (Prince of Persia Trilogy) will launch a blocking error dialog on error.
 				// Nier and a couple other games also behave strangely.
 				return CELL_OK;
