@@ -222,6 +222,13 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
+			// if the callback has returned ok, lets return OK.
+			// typically used at game launch when no list is actually required.
+			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
+			{
+				return CELL_OK;
+			}
+
 			// Clean save data list
 			save_entries.erase(std::remove_if(save_entries.begin(), save_entries.end(), [&listSet](const SaveDataEntry& entry) -> bool
 			{
@@ -305,24 +312,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 			}
 
-			// Display Save Data List but do so asynchronously in the GUI thread
+			// Display Save Data List but do so asynchronously in the GUI thread.
+			bool hasNewData = (bool)listSet->newData; // newData
 			atomic_t<bool> dlg_result(false);
-			bool hasNewData = (bool) listSet->newData; // Are we saving?
-
-			if (save_entries.size() == 0 && !hasNewData)
-			{
-				std::string res = "";
-				for (std::string prefix : prefix_list)
-				{
-					res += (" " + prefix);
-				}
-				// The prefix(s) should be shown because some games like Disgaea 4 try to load games twice-- once for Disgaea 4 saves, and once for Disgaea 3 saves to import.
-				cellSaveData.error("Could not find save data for game prefix(s): %s", res);
-
-				// This feels like it should be an error code, but BLES-01092 (Prince of Persia Trilogy) will launch a blocking error dialog on error.
-				// Nier and a couple other games also behave strangely.
-				return CELL_OK;
-			}
 
 			Emu.CallAfter([&]()
 			{
@@ -335,19 +327,18 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				thread_ctrl::wait_for(1000);
 			}
 
+			// UI returns -1 for new save games
 			if (selected == -1)
-			{	// New save is requested.
+			{
 				save_entry.dirName = listSet->newData->dirName.get_ptr();
 			}
-			else if (selected == -2)
-			{ 	// Cancel selected in UI.
+
+			// Cancel selected in UI
+			if (selected == -2)
+			{
 				return CELL_CANCEL;
 			}
 
-			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
-			{
-				return CELL_OK;
-			}
 		}
 
 		if (funcFixed)

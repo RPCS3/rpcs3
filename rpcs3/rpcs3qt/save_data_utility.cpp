@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "save_data_utility.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
@@ -112,6 +112,11 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 		selectedEntryLabel = new QLabel(this);
 		UpdateSelectionLabel();
+
+		if (entries.size() == 0)
+		{
+			push_select->setDisabled(true);
+		}
 	}
 
 	if (is_saving)
