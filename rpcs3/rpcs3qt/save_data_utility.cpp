@@ -112,11 +112,6 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 		selectedEntryLabel = new QLabel(this);
 		UpdateSelectionLabel();
-
-		if (entries.size() == 0)
-		{
-			push_select->setDisabled(true);
-		}
 	}
 
 	if (is_saving)
