@@ -165,6 +165,12 @@ void GLGSRender::init_buffers(bool skip_reading)
 	const u16 clip_horizontal = rsx::method_registers.surface_clip_width();
 	const u16 clip_vertical = rsx::method_registers.surface_clip_height();
 
+	if (clip_horizontal == 0 || clip_vertical == 0)
+	{
+		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_horizontal, clip_vertical);
+		framebuffer_status_valid = false;
+	}
+
 	const auto pitchs = get_pitchs();
 	const auto surface_format = rsx::method_registers.surface_color();
 	const auto depth_format = rsx::method_registers.surface_depth_fmt();
@@ -235,8 +241,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 	else
 		depth_surface_info = {};
 
-	if (!draw_fbo.check())
-		return;
+	framebuffer_status_valid = draw_fbo.check();
+	if (!framebuffer_status_valid) return;
 
 	draw_fbo.bind();
 	set_viewport();

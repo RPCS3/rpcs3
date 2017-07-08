@@ -70,10 +70,17 @@ private:
 	std::mutex queue_guard;
 	std::list<work_item> work_queue;
 
+	bool framebuffer_status_valid = false;
+
 	rsx::gcm_framebuffer_info surface_info[rsx::limits::color_buffers_count];
 	rsx::gcm_framebuffer_info depth_surface_info;
 
 	bool flush_draw_buffers = false;
+
+	bool m_last_draw_indexed;
+	GLenum m_last_ib_type;
+	size_t m_last_index_offset;
+	u32 m_last_vertex_count;
 
 public:
 	gl::fbo draw_fbo;

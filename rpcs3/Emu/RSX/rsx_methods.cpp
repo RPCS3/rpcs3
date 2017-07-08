@@ -385,6 +385,20 @@ namespace rsx
 				rsx->m_textures_dirty[index] = true;
 			}
 		};
+
+		template<u32 index>
+		struct set_vertex_array_dirty_bit
+		{
+			static void impl(thread* rsx, u32, u32)
+			{
+				rsx->m_vertex_attribs_changed = true;
+			}
+		};
+
+		void set_idbuf_dirty_bit(thread* rsx, u32, u32)
+		{
+			rsx->m_index_buffer_changed = true;
+		}
 	}
 
 	namespace nv308a
@@ -1428,6 +1442,8 @@ namespace rsx
 		bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_BORDER_COLOR, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nv4097::set_vertex_array_dirty_bit>();
+		bind<NV4097_SET_INDEX_ARRAY_ADDRESS, nv4097::set_idbuf_dirty_bit>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

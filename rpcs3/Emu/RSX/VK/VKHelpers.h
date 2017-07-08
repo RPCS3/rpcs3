@@ -18,7 +18,7 @@
 #include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
 
-#define DESCRIPTOR_MAX_DRAW_CALLS 1024
+#define DESCRIPTOR_MAX_DRAW_CALLS 4096
 
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
 #define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
@@ -1293,6 +1293,16 @@ namespace vk
 			{
 				if (!formatCount) fmt::throw_exception("Format count is zero!" HERE);
 				format = surfFormats[0].format;
+
+				//Prefer BGRA8_UNORM to avoid sRGB compression (RADV)
+				for (auto& surface_format: surfFormats)
+				{
+					if (surface_format.format == VK_FORMAT_B8G8R8A8_UNORM)
+					{
+						format = VK_FORMAT_B8G8R8A8_UNORM;
+						break;
+					}
+				}
 			}
 
 			color_space = surfFormats[0].colorSpace;
@@ -1391,6 +1401,7 @@ namespace vk
 			VkDevice m_device;
 		public:
 			VkPipeline pipeline;
+			u64 attribute_location_mask;
 
 			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
 			program(const program&) = delete;
@@ -1409,14 +1420,17 @@ namespace vk
 	struct vk_data_heap : public data_heap
 	{
 		std::unique_ptr<vk::buffer> heap;
+		bool mapped = false;
 
 		void* map(size_t offset, size_t size)
 		{
+			mapped = true;
 			return heap->map(offset, size);
 		}
 
 		void unmap()
 		{
+			mapped = false;
 			heap->unmap();
 		}
 	};

@@ -36,7 +36,7 @@ public:
 	draw_context_t new_context();
 
 	virtual void set_current(draw_context_t ctx) = 0;
-	virtual void flip(draw_context_t ctx) = 0;
+	virtual void flip(draw_context_t ctx, bool skip_frame=false) = 0;
 	virtual int client_width() = 0;
 	virtual int client_height() = 0;
 
