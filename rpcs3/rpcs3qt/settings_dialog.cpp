@@ -87,9 +87,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]() {ui->cancelButton->setFocus(); });
 
-	// Cpu Tab ------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
+	//     _____ _____  _    _   _______    _     
+	//    / ____|  __ \| |  | | |__   __|  | |    
+	//   | |    | |__) | |  | |    | | __ _| |__  
+	//   | |    |  ___/| |  | |    | |/ _` | '_ \ 
+	//   | |____| |    | |__| |    | | (_| | |_) |
+	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
 	// Checkboxes
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
@@ -294,9 +297,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		l_OnLibButtonClicked(buttid);
 	}
 
-	// Gpu Tab -------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
+	//     _____ _____  _    _   _______    _     
+	//    / ____|  __ \| |  | | |__   __|  | |    
+	//   | |  __| |__) | |  | |    | | __ _| |__  
+	//   | | |_ |  ___/| |  | |    | |/ _` | '_ \ 
+	//   | |__| | |    | |__| |    | | (_| | |_) |
+	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
 	// Comboboxes
 	ui->graphicsAdapterBox->setToolTip(json_gpu_cbs["graphicsAdapterBox"].toString());
@@ -334,6 +340,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings::GPUTextureScaling);
 	ui->gpuTextureScaling->setToolTip(json_gpu_main["gpuTextureScaling"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
+	ui->stretchToDisplayArea->setToolTip(json_gpu_main["stretchToDisplayArea"].toString());
 
 	// Checkboxes: debug options
 	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
@@ -399,131 +408,128 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 	}
 
-	if (supportsD3D12 || supportsVulkan)
+	QString oldRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
+
+	auto switchGraphicsAdapter = [=](int index)
 	{
-		QString oldRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
+		QString render = ui->renderBox->itemText(index);
+		m_isD3D12 = render == r_D3D12;
+		m_isVulkan = render == r_Vulkan;
+		ui->graphicsAdapterBox->setEnabled(m_isD3D12 || m_isVulkan);
 
-		auto switchGraphicsAdapter = [=](int index)
+		// D3D Adapter
+		if (m_isD3D12)
 		{
-			QString render = ui->renderBox->itemText(index);
-			m_isD3D12 = render == r_D3D12;
-			m_isVulkan = render == r_Vulkan;
-			ui->graphicsAdapterBox->setEnabled(m_isD3D12 || m_isVulkan);
-
-			// D3D Adapter
-			if (m_isD3D12)
+			// Reset other adapters to old config
+			if (supportsVulkan)
 			{
-				// Reset other adapters to old config
-				if (supportsVulkan)
-				{
-					xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
-				}
-				// Fill combobox
-				ui->graphicsAdapterBox->clear();
-				for (const auto& adapter : D3D12Adapters)
-				{
-					ui->graphicsAdapterBox->addItem(adapter);
-				}
-				// Reset Adapter to old config
-				int idx = ui->graphicsAdapterBox->findText(old_D3D12);
-				if (idx == -1)
-				{
-					idx = 0;
-					if (old_D3D12.isEmpty())
-					{
-						LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_D3D12));
-					}
-					else
-					{
-						LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_D3D12));
-					}
-				}
-				ui->graphicsAdapterBox->setCurrentIndex(idx);
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(ui->graphicsAdapterBox->currentText()));
+				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
 			}
-
-			// Vulkan Adapter
-			else if (m_isVulkan)
+			// Fill combobox
+			ui->graphicsAdapterBox->clear();
+			for (const auto& adapter : D3D12Adapters)
 			{
-				// Reset other adapters to old config
-				if (supportsD3D12)
-				{
-					xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
-				}
-				// Fill combobox
-				ui->graphicsAdapterBox->clear();
-				for (const auto& adapter : vulkanAdapters)
-				{
-					ui->graphicsAdapterBox->addItem(adapter);
-				}
-				// Reset Adapter to old config
-				int idx = ui->graphicsAdapterBox->findText(old_Vulkan);
-				if (idx == -1)
-				{
-					idx = 0;
-					if (old_Vulkan.isEmpty())
-					{
-						LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_Vulkan));
-					}
-					else
-					{
-						LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_Vulkan));
-					}
-				}
-				ui->graphicsAdapterBox->setCurrentIndex(idx);
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(ui->graphicsAdapterBox->currentText()));
+				ui->graphicsAdapterBox->addItem(adapter);
 			}
-
-			// Other Adapter
-			else
+			// Reset Adapter to old config
+			int idx = ui->graphicsAdapterBox->findText(old_D3D12);
+			if (idx == -1)
 			{
-				// Reset Adapters to old config
-				if (supportsD3D12)
+				idx = 0;
+				if (old_D3D12.isEmpty())
 				{
-					xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
+					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_D3D12));
 				}
-				if (supportsVulkan)
+				else
 				{
-					xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
+					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_D3D12));
 				}
-
-				// Fill combobox with placeholder
-				ui->graphicsAdapterBox->clear();
-				ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(render));
 			}
-		};
+			ui->graphicsAdapterBox->setCurrentIndex(idx);
+			xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(ui->graphicsAdapterBox->currentText()));
+		}
 
-		auto setAdapter = [=](QString text)
+		// Vulkan Adapter
+		else if (m_isVulkan)
 		{
-			if (text.isEmpty()) return;
-
-			// don't set adapter if signal was created by switching render
-			QString newRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
-			if (m_oldRender == newRender)
+			// Reset other adapters to old config
+			if (supportsD3D12)
 			{
-				if (m_isD3D12 && D3D12Adapters.contains(text))
+				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
+			}
+			// Fill combobox
+			ui->graphicsAdapterBox->clear();
+			for (const auto& adapter : vulkanAdapters)
+			{
+				ui->graphicsAdapterBox->addItem(adapter);
+			}
+			// Reset Adapter to old config
+			int idx = ui->graphicsAdapterBox->findText(old_Vulkan);
+			if (idx == -1)
+			{
+				idx = 0;
+				if (old_Vulkan.isEmpty())
 				{
-					xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(text));
+					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_Vulkan));
 				}
-				else if (m_isVulkan && vulkanAdapters.contains(text))
+				else
 				{
-					xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(text));
+					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_Vulkan));
 				}
 			}
-			else
+			ui->graphicsAdapterBox->setCurrentIndex(idx);
+			xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(ui->graphicsAdapterBox->currentText()));
+		}
+
+		// Other Adapter
+		else
+		{
+			// Reset Adapters to old config
+			if (supportsD3D12)
 			{
-				m_oldRender = newRender;
+				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
 			}
-		};
+			if (supportsVulkan)
+			{
+				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
+			}
 
-		// Init
-		setAdapter(ui->graphicsAdapterBox->currentText());
-		switchGraphicsAdapter(ui->renderBox->currentIndex());
+			// Fill combobox with placeholder
+			ui->graphicsAdapterBox->clear();
+			ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(render));
+		}
+	};
 
-		// Events
-		connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, setAdapter);
-		connect(ui->renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), switchGraphicsAdapter);
-	}
+	auto setAdapter = [=](QString text)
+	{
+		if (text.isEmpty()) return;
+
+		// don't set adapter if signal was created by switching render
+		QString newRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
+		if (m_oldRender == newRender)
+		{
+			if (m_isD3D12 && D3D12Adapters.contains(text))
+			{
+				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(text));
+			}
+			else if (m_isVulkan && vulkanAdapters.contains(text))
+			{
+				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(text));
+			}
+		}
+		else
+		{
+			m_oldRender = newRender;
+		}
+	};
+
+	// Init
+	setAdapter(ui->graphicsAdapterBox->currentText());
+	switchGraphicsAdapter(ui->renderBox->currentIndex());
+
+	// Events
+	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, setAdapter);
+	connect(ui->renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), switchGraphicsAdapter);
 
 	auto fixGLLegacy = [=](const QString& text) {
 		ui->glLegacyBuffers->setEnabled(text == r_OpenGL);
@@ -533,9 +539,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	fixGLLegacy(ui->renderBox->currentText()); // Init
 	connect(ui->renderBox, &QComboBox::currentTextChanged, fixGLLegacy);
 
-	// Audio Tab -----------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
+	//                      _ _         _______    _     
+	//       /\            | (_)       |__   __|  | |    
+	//      /  \  _   _  __| |_  ___      | | __ _| |__  
+	//     / /\ \| | | |/ _` | |/ _ \     | |/ _` | '_ \ 
+	//    / ____ \ |_| | (_| | | (_) |    | | (_| | |_) |
+	//   /_/    \_\__,_|\__,_|_|\___/     |_|\__,_|_.__/ 
 
 	// Comboboxes
 
@@ -553,9 +562,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->downmix, emu_settings::DownmixStereo);
 	ui->downmix->setToolTip(json_audio["downmix"].toString());
 
-	// I/O Tab -------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
+	//    _____       __   ____    _______    _     
+	//   |_   _|     / /  / __ \  |__   __|  | |    
+	//     | |      / /  | |  | |    | | __ _| |__  
+	//     | |     / /   | |  | |    | |/ _` | '_ \ 
+	//    _| |_   / /    | |__| |    | | (_| | |_) |
+	//   |_____| /_/      \____/     |_|\__,_|_.__/ 
 
 	// Comboboxes
 
@@ -576,9 +588,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->useFakeCamera, emu_settings::Camera);
 	ui->useFakeCamera->setToolTip(json_input["useFakeCamera"].toString());
 
-	// System Tab ----------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
+	//     _____           _                   _______    _     
+	//    / ____|         | |                 |__   __|  | |    
+	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__  
+	//    \___ \| | | / __| __/ _ \ '_ ` _ \     | |/ _` | '_ \ 
+	//    ____) | |_| \__ \ ||  __/ | | | | |    | | (_| | |_) |
+	//   |_____/ \__, |___/\__\___|_| |_| |_|    |_|\__,_|_.__/ 
+	//            __/ |                                         
+	//           |___/                                          
 
 	// Comboboxes
 
@@ -590,18 +607,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);
 	ui->enableHostRoot->setToolTip(json_sys["enableHostRoot"].toString());
 
-	// Network Tab ---------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
+	//    _   _      _                      _      _______    _     
+	//   | \ | |    | |                    | |    |__   __|  | |    
+	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__  
+	//   | . ` |/ _ \ __\ \ /\ / / _ \| '__| |/ /    | |/ _` | '_ \ 
+	//   | |\  |  __/ |_ \ V  V / (_) | |  |   <     | | (_| | |_) |
+	//   |_| \_|\___|\__| \_/\_/ \___/|_|  |_|\_\    |_|\__,_|_.__/ 
 
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::ConnectionStatus);
 	ui->netStatusBox->setToolTip(json_net["netStatusBox"].toString());
 
-	// Emulator Tab --------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
-	// ---------------------------------------------------------------------------------------------------------------------
+	//    ______                 _       _               _______    _     
+	//   |  ____|               | |     | |             |__   __|  | |    
+	//   | |__   _ __ ___  _   _| | __ _| |_ ___  _ __     | | __ _| |__  
+	//   |  __| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|    | |/ _` | '_ \ 
+	//   | |____| | | | | | |_| | | (_| | || (_) | |       | | (_| | |_) |
+	//   |______|_| |_| |_|\__,_|_|\__,_|\__\___/|_|       |_|\__,_|_.__/ 
 
 	// Comboboxes
 
@@ -670,12 +693,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			{
 				dlg.setCustomColor(i, xgui_settings->GetCustomColor(i));
 			}
-			dlg.exec();
-			for (int i = 0; i < dlg.customCount(); i++)
+			if (dlg.exec() == QColorDialog::Accepted)
 			{
-				xgui_settings->SetCustomColor(i, dlg.customColor(i));
+				for (int i = 0; i < dlg.customCount(); i++)
+				{
+					xgui_settings->SetCustomColor(i, dlg.customColor(i));
+				}
+				xgui_settings->SetValue(color, dlg.selectedColor());
 			}
-			xgui_settings->SetValue(color, dlg.selectedColor());
 		};
 		connect(ui->pb_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, "Choose icon color"); });
 		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, "Choose tool bar color"); });

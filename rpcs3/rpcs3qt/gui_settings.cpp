@@ -181,7 +181,7 @@ void gui_settings::SetGamelistColVisibility(int col, bool val)
 
 void gui_settings::SetCustomColor(int col, const QColor& val)
 {
-	SetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), QColor(0, 0, 0, 0)), val);
+	SetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), GUI::mw_tool_bar_color), val);
 }
 
 void gui_settings::SaveCurrentConfig(const QString& friendlyName)
@@ -204,7 +204,7 @@ bool gui_settings::GetGamelistColVisibility(int col)
 
 QColor gui_settings::GetCustomColor(int col)
 {
-	return GetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), QColor(255, 255, 255, 255))).value<QColor>();
+	return GetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), GUI::mw_tool_bar_color)).value<QColor>();
 }
 
 QStringList gui_settings::GetConfigEntries()

@@ -73,7 +73,7 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 		}
 	}
 	ui->sizeSlider->setSliderPosition(icon_size_index);
-	ui->toolBar->addWidget(ui->sizeSlider);
+	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->searchBar);
 
@@ -975,7 +975,14 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::accepted, [this](){
 			gameListFrame->LoadSettings();
 			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-			ui->toolBar->setStyleSheet(QString("background-color: rgba(%1, %2, %3, %4);").arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())); });
+			ui->toolBar->setStyleSheet(QString(
+				"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+				"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+				"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+				"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+				.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+				.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+		});
 		dlg.exec();
 	};
 	connect(ui->confCPUAct,    &QAction::triggered, [=]() { openSettings(0); });
@@ -1238,7 +1245,13 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
 	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-	ui->toolBar->setStyleSheet(QString("background-color: rgba(%1, %2, %3, %4);").arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha()));
+	ui->toolBar->setStyleSheet(QString(
+		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
 
 	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
