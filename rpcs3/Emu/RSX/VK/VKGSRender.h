@@ -156,6 +156,8 @@ private:
 	u32 m_client_height = 0;
 
 	u32 m_draw_calls = 0;
+	u32 m_instanced_draws = 0;
+
 	s64 m_setup_time = 0;
 	s64 m_vertex_upload_time = 0;
 	s64 m_textures_upload_time = 0;
@@ -164,6 +166,8 @@ private:
 
 	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;
+
+	bool framebuffer_status_valid = false;
 
 	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 	rsx::gcm_framebuffer_info m_depth_surface_info;
@@ -176,6 +180,16 @@ private:
 	std::atomic<int> m_queued_threads = { 0 };
 
 	std::thread::id rsx_thread;
+
+	VkPrimitiveTopology m_last_primititve_type;
+	VkIndexType m_last_ib_type;
+	VkDescriptorSet m_last_descriptor_set;
+	size_t m_last_ib_offset;
+	u32 m_last_vertex_count;
+	bool m_last_draw_indexed;
+	u32 m_last_instanced_cb_index;
+
+	bool render_pass_open = false;
 	
 #ifdef __linux__
 	Display *m_display_handle = nullptr;
@@ -197,10 +211,15 @@ private:
 	void queue_swap_request();
 	void process_swap_request();
 
+	void begin_render_pass();
+	void close_render_pass();
+
+	void emit_geometry_instance(u32 instance_count);
+
 	/// returns primitive topology, is_indexed, index_count, offset in index buffer, index type
 	std::tuple<VkPrimitiveTopology, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
 public:
-	bool load_program();
+	bool load_program(bool fast_update = false);
 	void init_buffers(bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();

@@ -266,6 +266,7 @@ struct cfg_root : cfg::node
 		cfg::_bool bind_spu_cores{this, "Bind SPU threads to secondary cores"};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
+		cfg::_int<32, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::automatic};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -313,6 +314,13 @@ struct cfg_root : cfg::node
 		cfg::_bool force_high_precision_z_buffer{this, "Force High Precision Z buffer"};
 		cfg::_bool invalidate_surface_cache_every_frame{this, "Invalidate Cache Every Frame", true};
 		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
+
+		cfg::_bool batch_instanced_geometry{this, "Batch Instanced Geometry", false};
+		cfg::_int<1, 16> vertex_upload_threads{ this, "Vertex Upload Threads", 1 };
+
+		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip"};
+		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consequtive Frames Drawn", 1};
+		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consequtive Frames Skept", 1};
 
 		struct node_d3d12 : cfg::node
 		{

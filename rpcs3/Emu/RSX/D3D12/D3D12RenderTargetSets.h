@@ -25,6 +25,7 @@ struct render_target_traits
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
 		surface_color_format color_format, size_t width, size_t height,
+		ID3D12Resource* /*old*/,
 		gsl::not_null<ID3D12Device*> device, const std::array<float, 4> &clear_color, float, u8)
 	{
 		DXGI_FORMAT dxgi_format = get_color_surface_format(color_format);
@@ -73,6 +74,7 @@ struct render_target_traits
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
 		surface_depth_format surfaceDepthFormat, size_t width, size_t height,
+		ID3D12Resource* /*old*/,
 		gsl::not_null<ID3D12Device*> device, const std::array<float, 4>& , float clear_depth, u8 clear_stencil)
 	{
 		D3D12_CLEAR_VALUE clear_depth_value = {};

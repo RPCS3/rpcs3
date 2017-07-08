@@ -4,6 +4,7 @@
 #include <deque>
 #include <set>
 #include <mutex>
+#include <atomic>
 #include "GCM.h"
 #include "rsx_cache.h"
 #include "RSXTexture.h"
@@ -148,6 +149,12 @@ namespace rsx
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
+		bool m_vertex_attribs_changed;
+		bool m_index_buffer_changed;
+
+	protected:
+		s32 m_skip_frame_ctr = 0;
+		bool skip_frame = false;
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
@@ -220,6 +227,44 @@ namespace rsx
 
 		void append_array_element(u32 index);
 		u32 get_push_buffer_index_count() const;
+
+	protected:
+		//Save draw call parameters to detect instanced renders
+		std::pair<u32, u32> m_last_first_count;
+		rsx::draw_command m_last_command;
+
+		bool is_probable_instanced_draw();
+
+	public:
+		//MT vertex streaming
+		struct upload_stream_packet
+		{
+			std::function<void(void *, rsx::vertex_base_type, u8, u32)> post_upload_func;
+			gsl::span<const gsl::byte> src_span;
+			gsl::span<gsl::byte> dst_span;
+			rsx::vertex_base_type type;
+			u32 vector_width;
+			u32 src_stride;
+			u8 dst_stride;
+		};
+
+		struct upload_stream_task
+		{
+			std::vector<upload_stream_packet> packets;
+			std::atomic<int> remaining_packets = { 0 };
+			std::atomic<int> ready_threads = { 0 };
+			std::atomic<u32> vertex_count;
+
+			std::vector<std::shared_ptr<thread_ctrl>> processing_threads;
+		};
+
+		upload_stream_task m_vertex_streaming_task;
+		void post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type,
+				u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride,
+			std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback);
+		void start_vertex_upload_task(u32 vertex_count);
+		void wait_for_vertex_upload_task();
+		bool vertex_upload_task_ready();
 
 	private:
 		std::mutex m_mtx_task;
