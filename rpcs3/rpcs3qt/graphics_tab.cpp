@@ -235,6 +235,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	QCheckBox *logProg = xemu_settings->CreateEnhancedCheckBox(emu_settings::LogShaderPrograms, this);
 	QCheckBox *vsync = xemu_settings->CreateEnhancedCheckBox(emu_settings::VSync, this);
 	QCheckBox *gpuTextureScaling = xemu_settings->CreateEnhancedCheckBox(emu_settings::GPUTextureScaling, this);
+	QCheckBox *stretchToDisplayArea = xemu_settings->CreateEnhancedCheckBox(emu_settings::StretchToDisplayArea, this);
 	QCheckBox *forceHighpZ = xemu_settings->CreateEnhancedCheckBox(emu_settings::ForceHighpZ, this);
 	QCheckBox *autoInvalidateCache = xemu_settings->CreateEnhancedCheckBox(emu_settings::AutoInvalidateCache, this);
 	QCheckBox *scrictModeRendering = xemu_settings->CreateEnhancedCheckBox(emu_settings::StrictRenderingMode, this);
@@ -269,6 +270,7 @@ graphics_tab::graphics_tab(std::shared_ptr<emu_settings> xSettings, Render_Creat
 	vbox22->addWidget(vsync);
 	vbox22->addWidget(autoInvalidateCache);
 	vbox22->addWidget(gpuTextureScaling);
+	vbox22->addWidget(stretchToDisplayArea);
 	vbox22->addSpacing(20);
 
 	hbox2->addLayout(vbox21);
