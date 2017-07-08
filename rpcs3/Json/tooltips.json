@@ -12,7 +12,7 @@
 			"LLVM": "Recompiles the game's executable once before running it for the first time.\nThis is by far the fastest option and should always be used.\nShould you face compatibility issues, fall back to one of the Interpreters and retry.\nIf unsure, use this option."
 		},
 		"SPU": {
-			"precise": "This is extremely slow but may fix broken graphics in some games,\nin particular Rockstar games like Midnight Club LA and GTA V.",
+			"precise": "This is extremely slow but may fix broken graphics in some games.",
 			"fast": "This is slower than the SPU recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
 			"ASMJIT": "This is the fastest option with very good compatibility.\nIf unsure, use this option.",
 			"LLVM": "This doesn't exist (yet)"
@@ -57,7 +57,8 @@
 			"readDepth": "Never use this.",
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
 			"autoInvalidateCache": "Enable this option if the game has broken shadows. May slightly degrade performance.",
-			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.\nOnly works with OpenGL for now."
+			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.\nOnly works with OpenGL for now.",
+			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		},
 		"debug": {
 			"glLegacyBuffers": "Enables use of classic openGL buffers which allows capturing tools to work with rpcs3 e.g RenderDoc.\nIf unsure, don't use this option.",
@@ -72,7 +73,7 @@
 		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nYou can change the button mappings in Configuration --> Controls.\nIf you have a DualShock 4, select DualShock 4.\nWindows: If you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with mmjoystick.\nCheck button mappings in the Windows control panel.\n\nLinux: evdev input is WIP.",
 		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
-		"cameraBox": "Camera support is not implemented, leave this on null.",
+		"useFakeCamera": "Camera support is not implemented, leave this on null.",
 		"cameraTypeBox": "Camera support is not implemented, leave this on unknown."
 	},
 	"network": {

@@ -499,6 +499,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="stretchToDisplayArea">
+              <property name="text">
+               <string>Stretch To Display Area</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
@@ -693,7 +700,9 @@
           <item>
            <widget class="QLabel" name="label_4">
             <property name="text">
-             <string>Audio settings allow you to change the way audio is encoded and handled by the emulator. More detailed settings will be added in the future.</string>
+             <string>Audio settings allow you to change the way audio is encoded and handled by the emulator. More detailed settings will be added in the future.
+
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -820,7 +829,9 @@
           <item>
            <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>I/O settings allow you to change controller, keyboard and mouse handlers as well as PlayStation camera inputs. More detailed settings will be added in the future.</string>
+             <string>I/O settings allow you to change controller, keyboard and mouse handlers as well as PlayStation camera inputs. More detailed settings will be added in the future.
+
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -922,7 +933,8 @@
           <item>
            <widget class="QLabel" name="label_7">
             <property name="text">
-             <string>System settings allow you change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.</string>
+             <string>System settings allow you change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -991,7 +1003,9 @@
           <item>
            <widget class="QLabel" name="label_6">
             <property name="text">
-             <string>Network settings allow you to change basic network settings found within a real PlayStation 3 system. More detailed settings may or may not be added in the future.</string>
+             <string>Network settings allow you to change basic network settings found within a real PlayStation 3 system. More detailed settings may or may not be added in the future.
+
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -1142,20 +1156,20 @@
          <item>
           <widget class="QGroupBox" name="groupBox_2">
            <property name="title">
-            <string>UI Colors (missing in stylesheets)</string>
+            <string>UI Colors (difficult in stylesheets)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_13">
             <item>
-             <widget class="QPushButton" name="pb_icon_color">
+             <widget class="QPushButton" name="pb_tool_bar_color">
               <property name="text">
-               <string>Gamelist icons</string>
+               <string>Main window tool bar</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pb_tool_bar_color">
+             <widget class="QPushButton" name="pb_icon_color">
               <property name="text">
-               <string>Mainwindow tool bar</string>
+               <string>Gamelist icons</string>
               </property>
              </widget>
             </item>
