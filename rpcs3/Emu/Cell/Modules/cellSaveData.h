@@ -283,7 +283,7 @@ struct SaveDataEntry
 	s64 mtime;
 	s64 ctime;
 	std::shared_ptr<void> iconBuf;
-	u32 iconBufSize;
+	u32 iconBufSize = 0;
 	bool isNew;
 };
 
