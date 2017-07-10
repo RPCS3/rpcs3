@@ -1,0 +1,998 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>main_window</class>
+ <widget class="QMainWindow" name="main_window">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1058</width>
+    <height>580</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>4</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>RPCS3</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="animated">
+   <bool>true</bool>
+  </property>
+  <property name="dockNestingEnabled">
+   <bool>true</bool>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::GroupedDragging</set>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <widget class="QLineEdit" name="searchBar">
+    <property name="geometry">
+     <rect>
+      <x>480</x>
+      <y>10</y>
+      <width>251</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::ClickFocus</enum>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">color:#5e5e5e;
+margin-left:14px;</string>
+    </property>
+    <property name="frame">
+     <bool>false</bool>
+    </property>
+    <property name="placeholderText">
+     <string>Search...</string>
+    </property>
+    <property name="clearButtonEnabled">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QWidget" name="sizeSliderContainer" native="true">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>10</y>
+      <width>181</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>14</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>14</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QSlider" name="sizeSlider">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QSlider::handle:horizontal {
+	background: #404040;
+}
+</string>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="tickPosition">
+        <enum>QSlider::NoTicks</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1058</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="bootRecentMenu">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="title">
+      <string>Boot Recent</string>
+     </property>
+     <addaction name="clearRecentAct"/>
+     <addaction name="freezeRecentAct"/>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="bootElfAct"/>
+    <addaction name="bootGameAct"/>
+    <addaction name="bootRecentMenu"/>
+    <addaction name="separator"/>
+    <addaction name="bootInstallPkgAct"/>
+    <addaction name="bootInstallPupAct"/>
+    <addaction name="separator"/>
+    <addaction name="exitAct"/>
+   </widget>
+   <widget class="QMenu" name="menuEmulation">
+    <property name="title">
+     <string>Emulation</string>
+    </property>
+    <addaction name="sysPauseAct"/>
+    <addaction name="sysStopAct"/>
+    <addaction name="sysRebootAct"/>
+    <addaction name="separator"/>
+    <addaction name="captureFrame"/>
+    <addaction name="separator"/>
+    <addaction name="sysSendOpenMenuAct"/>
+    <addaction name="sysSendExitAct"/>
+   </widget>
+   <widget class="QMenu" name="menuConfiguration">
+    <property name="title">
+     <string>Configuration</string>
+    </property>
+    <addaction name="confCPUAct"/>
+    <addaction name="confGPUAct"/>
+    <addaction name="separator"/>
+    <addaction name="confPadAct"/>
+    <addaction name="confAudioAct"/>
+    <addaction name="confIOAct"/>
+    <addaction name="confSystemAct"/>
+    <addaction name="separator"/>
+    <addaction name="confAutopauseManagerAct"/>
+   </widget>
+   <widget class="QMenu" name="menuManage">
+    <property name="title">
+     <string>Manage</string>
+    </property>
+    <addaction name="confVFSDialogAct"/>
+    <addaction name="separator"/>
+    <addaction name="actionManage_Users"/>
+    <addaction name="confSavedataManagerAct"/>
+    <addaction name="actionManage_RAP_Licences"/>
+    <addaction name="actionManage_Trophy_Data"/>
+   </widget>
+   <widget class="QMenu" name="menuUtilities">
+    <property name="title">
+     <string>Utilities</string>
+    </property>
+    <addaction name="toolsCgDisasmAct"/>
+    <addaction name="toolskernel_explorerAct"/>
+    <addaction name="toolsmemory_viewerAct"/>
+    <addaction name="toolsRsxDebuggerAct"/>
+    <addaction name="toolsStringSearchAct"/>
+    <addaction name="separator"/>
+    <addaction name="toolsDecryptSprxLibsAct"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <widget class="QMenu" name="menuGame_List_Icons">
+     <property name="title">
+      <string>Game List Icons</string>
+     </property>
+     <addaction name="setIconSizeTinyAct"/>
+     <addaction name="setIconSizeSmallAct"/>
+     <addaction name="setIconSizeMediumAct"/>
+     <addaction name="setIconSizeLargeAct"/>
+    </widget>
+    <widget class="QMenu" name="menuGame_List_Mode">
+     <property name="title">
+      <string>Game List Mode</string>
+     </property>
+     <addaction name="setlistModeListAct"/>
+     <addaction name="setlistModeGridAct"/>
+    </widget>
+    <widget class="QMenu" name="menuGame_Categories">
+     <property name="title">
+      <string>Game Categories</string>
+     </property>
+     <addaction name="showCatHDDGameAct"/>
+     <addaction name="showCatDiscGameAct"/>
+     <addaction name="showCatHomeAct"/>
+     <addaction name="showCatAudioVideoAct"/>
+     <addaction name="showCatGameDataAct"/>
+     <addaction name="showCatUnknownAct"/>
+     <addaction name="showCatOtherAct"/>
+    </widget>
+    <addaction name="showDebuggerAct"/>
+    <addaction name="showLogAct"/>
+    <addaction name="separator"/>
+    <addaction name="showToolBarAct"/>
+    <addaction name="separator"/>
+    <addaction name="showGameListAct"/>
+    <addaction name="showGameToolBarAct"/>
+    <addaction name="separator"/>
+    <addaction name="refreshGameListAct"/>
+    <addaction name="menuGame_List_Mode"/>
+    <addaction name="menuGame_List_Icons"/>
+    <addaction name="menuGame_Categories"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionCheck_for_Updates"/>
+    <addaction name="separator"/>
+    <addaction name="aboutAct"/>
+    <addaction name="aboutQtAct"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEmulation"/>
+   <addaction name="menuConfiguration"/>
+   <addaction name="menuManage"/>
+   <addaction name="menuUtilities"/>
+   <addaction name="menuView"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="contextMenuPolicy">
+    <enum>Qt::PreventContextMenu</enum>
+   </property>
+   <property name="windowTitle">
+    <string>Show tool bar</string>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QToolBar { background-color: rgba(227, 227, 227, 255); }
+QToolBar::separator {background-color: #D1D1D1; width: 1px; margin-top: 2px; margin-bottom: 2px;}
+QSlider { background-color: rgba(227, 227, 227, 255); }
+QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
+   </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::TopToolBarArea</set>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>30</width>
+     <height>30</height>
+    </size>
+   </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonIconOnly</enum>
+   </property>
+   <property name="floatable">
+    <bool>false</bool>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="toolbar_disc"/>
+   <addaction name="toolbar_fullscreen"/>
+   <addaction name="toolbar_snap"/>
+   <addaction name="separator"/>
+   <addaction name="toolbar_stop"/>
+   <addaction name="toolbar_start"/>
+   <addaction name="separator"/>
+   <addaction name="toolbar_controls"/>
+   <addaction name="toolbar_config"/>
+   <addaction name="separator"/>
+   <addaction name="toolbar_refresh"/>
+   <addaction name="toolbar_list"/>
+   <addaction name="toolbar_grid"/>
+   <addaction name="toolbar_sort"/>
+   <addaction name="separator"/>
+  </widget>
+  <action name="bootElfAct">
+   <property name="text">
+    <string>Boot SELF/ELF</string>
+   </property>
+  </action>
+  <action name="bootGameAct">
+   <property name="text">
+    <string>Boot Game</string>
+   </property>
+  </action>
+  <action name="bootInstallPkgAct">
+   <property name="text">
+    <string>Install .pkg</string>
+   </property>
+   <property name="toolTip">
+    <string>Install application from pkg file</string>
+   </property>
+  </action>
+  <action name="bootInstallPupAct">
+   <property name="text">
+    <string>Install firmware</string>
+   </property>
+   <property name="toolTip">
+    <string>Install firmware from PS3UPDAT.PUP</string>
+   </property>
+  </action>
+  <action name="sysPauseAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+   <property name="toolTip">
+    <string>Start Emulation</string>
+   </property>
+  </action>
+  <action name="sysStopAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/stop.png</normaloff>:/Icons/stop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop Emulation</string>
+   </property>
+  </action>
+  <action name="sysSendOpenMenuAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Send Open System Menu CMD</string>
+   </property>
+  </action>
+  <action name="sysSendExitAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Send Exit CMD</string>
+   </property>
+  </action>
+  <action name="confCPUAct">
+   <property name="text">
+    <string>CPU</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure CPU</string>
+   </property>
+  </action>
+  <action name="confGPUAct">
+   <property name="text">
+    <string>GPU</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Graphics</string>
+   </property>
+  </action>
+  <action name="confPadAct">
+   <property name="text">
+    <string>Controls</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Controls</string>
+   </property>
+  </action>
+  <action name="confAudioAct">
+   <property name="text">
+    <string>Audio</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Audio</string>
+   </property>
+  </action>
+  <action name="confIOAct">
+   <property name="text">
+    <string>Input/Output</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Input/Output</string>
+   </property>
+  </action>
+  <action name="confSystemAct">
+   <property name="text">
+    <string>System</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure System</string>
+   </property>
+  </action>
+  <action name="confAutopauseManagerAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Auto Pause</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Auto Pause</string>
+   </property>
+  </action>
+  <action name="exitAct">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="toolTip">
+    <string>Exit RPCS3</string>
+   </property>
+   <property name="statusTip">
+    <string>Exit the application</string>
+   </property>
+  </action>
+  <action name="confSavedataManagerAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save Data</string>
+   </property>
+   <property name="toolTip">
+    <string>Manage Save Data</string>
+   </property>
+  </action>
+  <action name="actionManage_Trophy_Data">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Trophies</string>
+   </property>
+   <property name="toolTip">
+    <string>Manage Trophies</string>
+   </property>
+  </action>
+  <action name="actionManage_Users">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>User Accounts</string>
+   </property>
+   <property name="toolTip">
+    <string>Manage User Accounts</string>
+   </property>
+  </action>
+  <action name="actionManage_yml_Patches">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Manage .yml Patches</string>
+   </property>
+  </action>
+  <action name="toolsCgDisasmAct">
+   <property name="text">
+    <string>Cg Disasm</string>
+   </property>
+  </action>
+  <action name="toolskernel_explorerAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Kernel Explorer</string>
+   </property>
+  </action>
+  <action name="toolsmemory_viewerAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Memory Viewer</string>
+   </property>
+  </action>
+  <action name="toolsRsxDebuggerAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>RSX Debugger</string>
+   </property>
+  </action>
+  <action name="toolsStringSearchAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>String Search</string>
+   </property>
+  </action>
+  <action name="toolsDecryptSprxLibsAct">
+   <property name="text">
+    <string>SPRX Decryption</string>
+   </property>
+  </action>
+  <action name="showDebuggerAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Debugger</string>
+   </property>
+  </action>
+  <action name="showLogAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Log/TTY</string>
+   </property>
+  </action>
+  <action name="aboutAct">
+   <property name="text">
+    <string>About RPCS3</string>
+   </property>
+  </action>
+  <action name="aboutQtAct">
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+  </action>
+  <action name="actionShow_Controls">
+   <property name="text">
+    <string>Show Controls</string>
+   </property>
+  </action>
+  <action name="showGameListAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Game List</string>
+   </property>
+  </action>
+  <action name="showToolBarAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Tool Bar</string>
+   </property>
+  </action>
+  <action name="refreshGameListAct">
+   <property name="text">
+    <string>Game List Refresh</string>
+   </property>
+  </action>
+  <action name="actionShow_Categories">
+   <property name="text">
+    <string>Game List Categories</string>
+   </property>
+  </action>
+  <action name="actionManage_RAP_Licences">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>RAP Files</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_Updates">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Check for Updates</string>
+   </property>
+  </action>
+  <action name="confVFSDialogAct">
+   <property name="text">
+    <string>Virtual File System</string>
+   </property>
+  </action>
+  <action name="clearRecentAct">
+   <property name="text">
+    <string>List Clear</string>
+   </property>
+  </action>
+  <action name="freezeRecentAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>List Freeze</string>
+   </property>
+  </action>
+  <action name="setIconSizeTinyAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Tiny</string>
+   </property>
+  </action>
+  <action name="setIconSizeSmallAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Small</string>
+   </property>
+  </action>
+  <action name="setIconSizeMediumAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Medium</string>
+   </property>
+  </action>
+  <action name="setIconSizeLargeAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Large</string>
+   </property>
+  </action>
+  <action name="setlistModeListAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>List View</string>
+   </property>
+  </action>
+  <action name="setlistModeGridAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Grid View</string>
+   </property>
+  </action>
+  <action name="sysRebootAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/restart.png</normaloff>:/Icons/restart.png</iconset>
+   </property>
+   <property name="text">
+    <string>Restart</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="text">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="actionSave_State">
+   <property name="text">
+    <string>Save State</string>
+   </property>
+  </action>
+  <action name="showCatHDDGameAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>HDD Games</string>
+   </property>
+  </action>
+  <action name="showCatDiscGameAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Disc Games</string>
+   </property>
+  </action>
+  <action name="showCatHomeAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Home</string>
+   </property>
+  </action>
+  <action name="showCatAudioVideoAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Audio/Video</string>
+   </property>
+  </action>
+  <action name="showCatGameDataAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Game Data</string>
+   </property>
+  </action>
+  <action name="showCatUnknownAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Unknown</string>
+   </property>
+  </action>
+  <action name="captureFrame">
+   <property name="text">
+    <string>Capture Frame</string>
+   </property>
+   <property name="toolTip">
+    <string>Capture frame</string>
+   </property>
+  </action>
+  <action name="toolbar_start">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
+   </property>
+   <property name="text">
+    <string>start</string>
+   </property>
+   <property name="toolTip">
+    <string>Pause emulation</string>
+   </property>
+  </action>
+  <action name="toolbar_stop">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/stop.png</normaloff>:/Icons/stop.png</iconset>
+   </property>
+   <property name="text">
+    <string>stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop emulation</string>
+   </property>
+  </action>
+  <action name="toolbar_config">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/configure.png</normaloff>:/Icons/configure.png</iconset>
+   </property>
+   <property name="text">
+    <string>config</string>
+   </property>
+   <property name="toolTip">
+    <string>Configuration</string>
+   </property>
+  </action>
+  <action name="toolbar_controls">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/controls.png</normaloff>:/Icons/controls.png</iconset>
+   </property>
+   <property name="text">
+    <string>controls</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure controls</string>
+   </property>
+  </action>
+  <action name="toolbar_snap">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/screenshot.png</normaloff>:/Icons/screenshot.png</iconset>
+   </property>
+   <property name="text">
+    <string>snap</string>
+   </property>
+   <property name="toolTip">
+    <string>Capture frame</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="toolbar_fullscreen">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/fullscreen.png</normaloff>:/Icons/fullscreen.png</iconset>
+   </property>
+   <property name="text">
+    <string>fullscreen</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle fullscreen</string>
+   </property>
+  </action>
+  <action name="toolbar_list">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/list.png</normaloff>:/Icons/list.png</iconset>
+   </property>
+   <property name="text">
+    <string>list</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch to list mode</string>
+   </property>
+  </action>
+  <action name="toolbar_grid">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/grid.png</normaloff>:/Icons/grid.png</iconset>
+   </property>
+   <property name="text">
+    <string>grid</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch to grid mode</string>
+   </property>
+  </action>
+  <action name="toolbar_sort">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/sort.png</normaloff>:/Icons/sort.png</iconset>
+   </property>
+   <property name="text">
+    <string>sort</string>
+   </property>
+   <property name="toolTip">
+    <string>Sort options</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="toolbar_refresh">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/refresh.png</normaloff>:/Icons/refresh.png</iconset>
+   </property>
+   <property name="text">
+    <string>refresh</string>
+   </property>
+   <property name="toolTip">
+    <string>Refresh gamelist</string>
+   </property>
+  </action>
+  <action name="toolbar_disc">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/Icons/disc.png</normaloff>:/Icons/disc.png</iconset>
+   </property>
+   <property name="text">
+    <string>disc</string>
+   </property>
+   <property name="toolTip">
+    <string>Boot game</string>
+   </property>
+  </action>
+  <action name="showCatOtherAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Other</string>
+   </property>
+  </action>
+  <action name="showGameToolBarAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Game Tool Bar</string>
+   </property>
+  </action>
+  <action name="actionNetwork">
+   <property name="text">
+    <string>Network</string>
+   </property>
+  </action>
+  <action name="actionEmulator">
+   <property name="text">
+    <string>Emulator</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources>
+  <include location="../resources.qrc"/>
+  <include location="../resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
