@@ -49,6 +49,9 @@ vfs_dialog::vfs_dialog(QWidget* parent) : QDialog(parent),
 		}
 	});
 	QPushButton* okay = new QPushButton(tr("Okay"));
+	okay->setAutoDefault(true);
+	okay->setDefault(true);
+
 	connect(okay, &QAbstractButton::pressed, [this]() {
 		for (int i = 0; i < tabs->count(); ++i)
 		{
