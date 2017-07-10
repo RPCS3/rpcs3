@@ -90,13 +90,31 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 
 error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
+	const auto name = path.substr(path.find_last_of('/') + 1);
+
+	const auto existing = idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
+	{
+		if (prx.name == name && prx.path == path)
+		{
+			return true;
+		}
+
+		return false;
+	});
+
+	if (existing)
+	{
+		return CELL_PRX_ERROR_LIBRARY_FOUND;
+	}
+
 	if (s_prx_ignore.count(path))
 	{
 		sys_prx.warning("Ignored module: %s", path);
 
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
-		prx->name = path.substr(path.find_last_of('/') + 1);
+		prx->name = name;
+		prx->path = path;
 
 		return not_an_error(idm::last_id());
 	}
