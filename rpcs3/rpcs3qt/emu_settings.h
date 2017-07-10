@@ -95,6 +95,7 @@ public:
 		EnableHostRoot,
 
 		// Virtual File System
+		emulatorLocation,
 		dev_hdd0Location,
 		dev_hdd1Location,
 		dev_flashLocation,
@@ -188,6 +189,7 @@ private:
 		{EnableHostRoot,	{ "VFS", "Enable /host_root/"}},
 
 		// Virtual File System
+		{ emulatorLocation, { "VFS", "$(EmulatorDir)"}},
 		{ dev_hdd0Location, { "VFS", "/dev_hdd0/" }},
 		{ dev_hdd1Location, { "VFS", "/dev_hdd1/" }},
 		{ dev_flashLocation, { "VFS", "/dev_flash/"}},
