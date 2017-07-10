@@ -116,14 +116,16 @@ struct render_target_traits
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(ds, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
+	static
 	void invalidate_rtt_surface_contents(
 		gsl::not_null<ID3D12GraphicsCommandList*>,
-		ID3D12Resource*)
+		ID3D12Resource*, bool)
 	{}
 
+	static
 	void invalidate_depth_surface_contents(
 		gsl::not_null<ID3D12GraphicsCommandList*>,
-		ID3D12Resource*)
+		ID3D12Resource*, bool)
 	{
 		//TODO
 	}

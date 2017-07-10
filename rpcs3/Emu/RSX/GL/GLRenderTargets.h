@@ -240,8 +240,8 @@ struct gl_render_target_traits
 	static void prepare_ds_for_drawing(void *, gl::render_target*) {}
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
-	static void invalidate_rtt_surface_contents(void *, gl::render_target*) {}
-	static void invalidate_depth_surface_contents(void *, gl::render_target *ds) { ds->set_cleared(false);  }
+	static void invalidate_rtt_surface_contents(void *, gl::render_target*, bool) {}
+	static void invalidate_depth_surface_contents(void *, gl::render_target *ds, bool) { ds->set_cleared(false);  }
 
 	static
 	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format format, size_t width, size_t height)

@@ -11,6 +11,8 @@ namespace vk
 {
 	struct render_target : public image
 	{
+		u8 deref_count = 0;
+
 		bool dirty = false;
 		u16 native_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -147,6 +149,9 @@ namespace rsx
 		{
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
+
+			//Reset deref count
+			surface->deref_count = 0;
 		}
 
 		static void prepare_rtt_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -159,6 +164,9 @@ namespace rsx
 		{
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+
+			//Reset deref count
+			surface->deref_count = 0;
 		}
 
 		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -167,9 +175,25 @@ namespace rsx
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static void invalidate_rtt_surface_contents(vk::command_buffer*, vk::render_target*) {}
+		static void invalidate_rtt_surface_contents(vk::command_buffer* pcmd, vk::render_target *rtt, bool /*forced*/)
+		{
+			if (0)//forced)
+			{
+				VkClearColorValue clear_color;
+				VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+
+				clear_color.float32[0] = 0.f;
+				clear_color.float32[1] = 0.f;
+				clear_color.float32[2] = 0.f;
+				clear_color.float32[3] = 0.f;
+
+				change_image_layout(*pcmd, rtt, VK_IMAGE_LAYOUT_GENERAL, range);
+				vkCmdClearColorImage(*pcmd, rtt->value, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+				change_image_layout(*pcmd, rtt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
+			}
+		}
 		
-		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds)
+		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds, bool /*forced*/)
 		{
 			ds->dirty = true;
 		}
@@ -186,15 +210,21 @@ namespace rsx
 			return false;
 		}
 
-		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format, size_t width, size_t height)
+		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height)
 		{
-			// TODO: check format
-			//VkFormat fmt = vk::get_compatible_depth_surface_format(format);
-
-			if (//tex.get_format() == fmt &&
-				ds->info.extent.width == width &&
+			if (ds->info.extent.width == width &&
 				ds->info.extent.height == height)
-				return true;
+			{
+				//Check format
+				switch (ds->info.format)
+				{
+				case VK_FORMAT_D16_UNORM:
+					return format == surface_depth_format::z16;
+				case VK_FORMAT_D24_UNORM_S8_UINT:
+				case VK_FORMAT_D32_SFLOAT_S8_UINT:
+					return format == surface_depth_format::z24s8;
+				}
+			}
 
 			return false;
 		}
@@ -236,6 +266,17 @@ namespace rsx
 			m_render_targets_storage.clear();
 			m_depth_stencil_storage.clear();
 			invalidated_resources.clear();
+		}
+
+		void free_invalidated()
+		{
+			invalidated_resources.remove_if([](std::unique_ptr<vk::render_target>& rtt)
+			{
+				if (rtt->deref_count > 1) return true;
+
+				rtt->deref_count++;
+				return false;
+			});
 		}
 	};
 }

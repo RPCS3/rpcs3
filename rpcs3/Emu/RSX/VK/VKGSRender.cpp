@@ -944,7 +944,7 @@ void VKGSRender::end()
 	load_program(is_instanced);
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
-	m_setup_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
+	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
 
 	if (is_instanced)
 	{
@@ -1472,7 +1472,7 @@ void VKGSRender::process_swap_request()
 	//Feed back damaged resources to the main texture cache for management...
 	//m_texture_cache.merge_dirty_textures(m_rtts.invalidated_resources);
 	
-	m_rtts.invalidated_resources.clear();
+	m_rtts.free_invalidated();
 	m_texture_cache.flush();
 
 	if (g_cfg.video.invalidate_surface_cache_every_frame)
@@ -1853,6 +1853,7 @@ void VKGSRender::prepare_rtts()
 	{
 		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_width, clip_height);
 		framebuffer_status_valid = false;
+		return;
 	}
 
 	framebuffer_status_valid = true;
