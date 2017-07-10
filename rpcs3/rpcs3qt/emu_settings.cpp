@@ -207,53 +207,47 @@ void emu_settings::SaveSettings()
 	config.write(out.c_str(), out.size());
 }
 
-QComboBox* emu_settings::CreateEnhancedComboBox(SettingsType type, QWidget* parent)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type)
 {
-	QComboBox* box = new QComboBox(parent);
-
 	for (QString setting : GetSettingOptions(type))
 	{
-		box->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
+		combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
 	}
 
 	QString selected = qstr(GetSetting(type));
-	int index = box->findData(selected);
+	int index = combobox->findData(selected);
 	if (index == -1)
 	{
 		LOG_WARNING(GENERAL, "Current setting not found while creating combobox");
 	}
 	else
 	{
-		box->setCurrentIndex(index);
+		combobox->setCurrentIndex(index);
 	}
 
-	connect(box, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
-		SetSetting(type, sstr(box->itemData(index)));
+	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
+		SetSetting(type, sstr(combobox->itemData(index)));
 	});
-
-	return box;
 }
 
-QCheckBox* emu_settings::CreateEnhancedCheckBox(SettingsType type, QWidget* parent)
+void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 {
 	cfg_location loc = SettingsLoc[type];
-	std::string name = loc[loc.size()-1];
-	QCheckBox* settingsButton = new QCheckBox(tr(name.c_str()), parent);
+	std::string name = loc[loc.size() - 1];
 
 	std::string currSet = GetSetting(type);
 	if (currSet == "true")
 	{
-		settingsButton->setChecked(true);
+		checkbox->setChecked(true);
 	}
 	else if (currSet != "false")
 	{
 		LOG_WARNING(GENERAL, "Passed in an invalid setting for creating enhanced checkbox");
 	}
-	connect(settingsButton, &QCheckBox::stateChanged, [=](int val) {
+	connect(checkbox, &QCheckBox::stateChanged, [=](int val) {
 		std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
 	});
-	return settingsButton;
 }
 
 std::vector<std::string> emu_settings::GetLoadedLibraries()

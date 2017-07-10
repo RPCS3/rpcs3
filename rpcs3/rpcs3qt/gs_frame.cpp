@@ -151,7 +151,7 @@ int gs_frame::client_height()
 #endif
 }
 
-void gs_frame::flip(draw_context_t)
+void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
 	QString title;
 

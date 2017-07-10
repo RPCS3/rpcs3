@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QVariant>
 #include <QSize>
+#include <QColor>
 
 typedef struct GUI_SAVE
 {
@@ -51,6 +52,9 @@ namespace GUI
 	const QString meta        = "Meta";
 	const QString fs          = "FileSystem";
 
+	const QColor mw_tool_bar_color = QColor(227, 227, 227, 255);
+	const QColor gl_icon_color     = QColor(209, 209, 209, 255);
+
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
 
@@ -65,12 +69,14 @@ namespace GUI
 	const GUI_SAVE fd_decrypt_sprx = GUI_SAVE( main_window, "lastExplorePathSPRX", "" );
 	const GUI_SAVE fd_cg_disasm    = GUI_SAVE( main_window, "lastExplorePathCGD",  "" );
 
-	const GUI_SAVE mw_debugger    = GUI_SAVE( main_window, "debuggerVisible", false );
-	const GUI_SAVE mw_logger      = GUI_SAVE( main_window, "loggerVisible",   true );
-	const GUI_SAVE mw_gamelist    = GUI_SAVE( main_window, "gamelistVisible", true );
-	const GUI_SAVE mw_controls    = GUI_SAVE( main_window, "controlsVisible", true );
-	const GUI_SAVE mw_geometry    = GUI_SAVE( main_window, "geometry",        QByteArray() );
-	const GUI_SAVE mw_windowState = GUI_SAVE( main_window, "windowState",     QByteArray() );
+	const GUI_SAVE mw_debugger       = GUI_SAVE( main_window, "debuggerVisible", false );
+	const GUI_SAVE mw_logger         = GUI_SAVE( main_window, "loggerVisible",   true );
+	const GUI_SAVE mw_gamelist       = GUI_SAVE( main_window, "gamelistVisible", true );
+	const GUI_SAVE mw_toolBarVisible = GUI_SAVE( main_window, "toolBarVisible",  true );
+	const GUI_SAVE mw_toolBarColor   = GUI_SAVE( main_window, "toolBarColor",    mw_tool_bar_color);
+	const GUI_SAVE mw_geometry       = GUI_SAVE( main_window, "geometry",        QByteArray() );
+	const GUI_SAVE mw_windowState    = GUI_SAVE( main_window, "windowState",     QByteArray() );
+	const GUI_SAVE mw_mwState        = GUI_SAVE( main_window, "wwState",         QByteArray() );
 
 	const GUI_SAVE cat_hdd_game    = GUI_SAVE( game_list, "categoryVisibleHDDGame",    true );
 	const GUI_SAVE cat_disc_game   = GUI_SAVE( game_list, "categoryVisibleDiscGame",   true );
@@ -84,10 +90,11 @@ namespace GUI
 	const GUI_SAVE gl_sortCol        = GUI_SAVE( game_list, "sortCol",        1 );
 	const GUI_SAVE gl_state          = GUI_SAVE( game_list, "state",          QByteArray() );
 	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       gl_icon_key_small );
+	const GUI_SAVE gl_iconColor      = GUI_SAVE( game_list, "iconColor",      gl_icon_color);
 	const GUI_SAVE gl_listMode       = GUI_SAVE( game_list, "listMode",       true );
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
 	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.09 );
-	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", true );
+	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", false);
 
 	const GUI_SAVE fs_dev_hdd0_list = GUI_SAVE(fs, "dev_hdd0_list", QStringList());
 	const GUI_SAVE fs_dev_hdd1_list = GUI_SAVE(fs, "dev_hdd1_list", QStringList());
@@ -128,6 +135,7 @@ public:
 
 	logs::level GetLogLevel();
 	bool GetGamelistColVisibility(int col);
+	QColor GetCustomColor(int col);
 	QStringList GetConfigEntries();
 	QString GetCurrentStylesheetPath();
 	QStringList GetStylesheetEntries();
@@ -143,6 +151,8 @@ public Q_SLOTS:
 	void SetCategoryVisibility(int cat, const bool& val);
 
 	void SetGamelistColVisibility(int col, bool val);
+
+	void SetCustomColor(int col, const QColor& val);
 
 	void SaveCurrentConfig(const QString& friendlyName);
 

@@ -31,7 +31,7 @@ matrix:
       compiler: gcc
   include:
     - os: linux
-      compiler: gcc
+      compiler: clang
       env: WITHOUT_LLVM="yes"
   
 
@@ -39,6 +39,9 @@ git:
   submodules: false
 
 before_install:
+  - if [ "$CC" = "clang" ]; then
+      export CXX="clang++-4.0" CC="clang-4.0";
+    fi;    
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
@@ -74,8 +77,8 @@ before_script:
     fi;
   - make -j 3
   - # AppImage generation
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      export LD_LIBRARY_PATH=/opt/qt59/lib/:$LD_LIBRARY_PATH ;
+  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-4.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+      export LD_LIBRARY_PATH=${PWD}/3rdparty/libpng:/opt/qt59/lib/:$LD_LIBRARY_PATH ;
       make DESTDIR=appdir install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ; 
@@ -85,7 +88,10 @@ before_script:
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -appimage ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
       zip -r9 rpcs3.zip ./RPCS3*.AppImage; 
-      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}-${CC}_linux64 --upload-file rpcs3.zip; 
+      if [ -z "$WITHOUT_LLVM" ]; then
+        export LLVM="-LLVM";
+      fi;
+      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}${LLVM}_linux64 --upload-file rpcs3.zip; 
    fi;
 
 script:
@@ -111,6 +117,7 @@ addons:
       - libc6-dev
       - llvm-4.0
       - llvm-4.0-dev
+      - clang-4.0
       - libedit-dev
       - g++-5
       - gcc-5

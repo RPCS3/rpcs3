@@ -10,6 +10,7 @@ namespace vk
 		{
 			load_uniforms(glsl::program_domain::glsl_vertex_program, vertex_input);
 			load_uniforms(glsl::program_domain::glsl_vertex_program, fragment_inputs);
+			attribute_location_mask = 0;
 		}
 
 		program::~program()
@@ -60,6 +61,7 @@ namespace vk
 					descriptor_writer.dstBinding = uniform.location + TEXTURES_FIRST_BIND_SLOT;
 
 					vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+					attribute_location_mask |= (1ull << (uniform.location + TEXTURES_FIRST_BIND_SLOT));
 					return;
 				}
 			}
@@ -79,6 +81,7 @@ namespace vk
 			descriptor_writer.dstBinding = binding_point;
 
 			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			attribute_location_mask |= (1ull << binding_point);
 		}
 
 		void program::bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set)
@@ -97,6 +100,7 @@ namespace vk
 					descriptor_writer.dstBinding = uniform.location + VERTEX_BUFFERS_FIRST_BIND_SLOT;
 
 					vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+					attribute_location_mask |= (1ull << (uniform.location + VERTEX_BUFFERS_FIRST_BIND_SLOT));
 					return;
 				}
 			}

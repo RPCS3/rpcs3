@@ -307,6 +307,32 @@ namespace rsx
 		return (u32)element_push_buffer.size();
 	}
 
+	bool thread::is_probable_instanced_draw()
+	{
+		if (!g_cfg.video.batch_instanced_geometry)
+			return false;
+
+		//If the array registers have not been touched, the index array has also not been touched via notify or via register set, its likely an instanced draw
+		//gcm lib will set the registers once and then call the same draw command over and over with different transform params to achieve this
+		if (m_index_buffer_changed || m_vertex_attribs_changed)
+			return false;
+
+		auto& draw_clause = rsx::method_registers.current_draw_clause;
+		if (draw_clause.command != m_last_command)
+			return false;
+
+		if (draw_clause.command != rsx::draw_command::inlined_array)
+		{
+			if (draw_clause.first_count_commands.back().second != m_last_first_count.second ||
+				draw_clause.first_count_commands.front().first != m_last_first_count.first)
+				return false;
+		}
+		else if (m_last_first_count.second != draw_clause.inline_vertex_array.size())
+			return false;
+
+		return true;
+	}
+
 	void thread::end()
 	{
 		rsx::method_registers.transform_constants.clear();
@@ -327,6 +353,17 @@ namespace rsx
 			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			capture_frame("Draw " + rsx::to_string(rsx::method_registers.current_draw_clause.primitive) + std::to_string(element_count));
 		}
+
+		auto& clause = rsx::method_registers.current_draw_clause;
+		
+		m_last_command = clause.command;
+		if (m_last_command == rsx::draw_command::inlined_array)
+			m_last_first_count = std::make_pair(0, (u32)clause.inline_vertex_array.size());
+		else
+			m_last_first_count = std::make_pair(clause.first_count_commands.front().first, clause.first_count_commands.back().second);
+
+		m_index_buffer_changed = false;
+		m_vertex_attribs_changed = false;
 	}
 
 	void thread::on_task()
@@ -498,6 +535,17 @@ namespace rsx
 		{
 			m_vblank_thread->join();
 			m_vblank_thread.reset();
+		}
+
+		if (m_vertex_streaming_task.processing_threads.size() > 0)
+		{
+			for (auto &thr : m_vertex_streaming_task.processing_threads)
+			{
+				thr->join();
+				thr.reset();
+			}
+
+			m_vertex_streaming_task.processing_threads.resize(0);
 		}
 	}
 
@@ -1070,6 +1118,127 @@ namespace rsx
 		if (!RSXIOMem.Write32(addr, value))
 		{
 			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
+		}
+	}
+
+	void thread::post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback)
+	{
+		upload_stream_packet packet;
+		packet.dst_span = dst;
+		packet.src_span = src;
+		packet.src_stride = attribute_src_stride;
+		packet.type = type;
+		packet.dst_stride = dst_stride;
+		packet.vector_width = vector_element_count;
+		packet.post_upload_func = callback;
+
+		m_vertex_streaming_task.packets.push_back(packet);
+	}
+
+	void thread::start_vertex_upload_task(u32 vertex_count)
+	{
+		if (m_vertex_streaming_task.processing_threads.size() == 0)
+		{
+			const u32 streaming_thread_count = (u32)g_cfg.video.vertex_upload_threads;
+			m_vertex_streaming_task.processing_threads.resize(streaming_thread_count);
+
+			for (u32 n = 0; n < streaming_thread_count; ++n)
+			{
+				thread_ctrl::spawn(m_vertex_streaming_task.processing_threads[n], "Vertex Stream " + std::to_string(n), [this, n]()
+				{
+					auto &task = m_vertex_streaming_task;
+					const u32 index = n;
+
+					while (!Emu.IsStopped())
+					{
+						if (task.remaining_packets != 0)
+						{
+							//Wait for me!
+							task.ready_threads--;
+
+							const size_t step = task.processing_threads.size();
+							const size_t job_count = task.packets.size();
+							//Process every nth packet
+
+							size_t current_job = index;
+
+							while (true)
+							{
+								if (current_job >= job_count)
+									break;
+
+								auto &packet = task.packets[current_job];
+
+								write_vertex_array_data_to_buffer(packet.dst_span, packet.src_span, task.vertex_count, packet.type, packet.vector_width, packet.src_stride, packet.dst_stride);
+
+								if (packet.post_upload_func)
+									packet.post_upload_func(packet.dst_span.data(), packet.type, (u8)packet.vector_width, task.vertex_count);
+
+								_mm_sfence();
+								task.remaining_packets--;
+								current_job += step;
+							}
+
+							_mm_mfence();
+
+							while (task.remaining_packets > 0 && !Emu.IsStopped())
+							{
+								_mm_lfence();
+								std::this_thread::sleep_for(0us);
+							}
+							
+							_mm_sfence();
+							task.ready_threads++;
+						}
+						else
+							std::this_thread::sleep_for(0us);
+							//thread_ctrl::wait();
+							//busy_wait();
+					}
+				});
+			}
+		}
+
+		while (m_vertex_streaming_task.ready_threads != 0 && !Emu.IsStopped())
+		{
+			_mm_lfence();
+			busy_wait();
+		}
+
+		m_vertex_streaming_task.vertex_count = vertex_count;
+		m_vertex_streaming_task.ready_threads = 0;
+		m_vertex_streaming_task.remaining_packets = (int)m_vertex_streaming_task.packets.size();
+	}
+
+	void thread::wait_for_vertex_upload_task()
+	{
+		while (m_vertex_streaming_task.remaining_packets > 0 && !Emu.IsStopped())
+		{
+			_mm_lfence();
+			busy_wait();
+		}
+
+		m_vertex_streaming_task.packets.resize(0);
+	}
+
+	bool thread::vertex_upload_task_ready()
+	{
+		if (g_cfg.video.vertex_upload_threads < 2)
+			return false;
+
+		return (m_vertex_streaming_task.remaining_packets == 0 && m_vertex_streaming_task.ready_threads == 0);
+	}
+
+	void thread::flip(int buffer)
+	{
+		if (g_cfg.video.frame_skip_enabled)
+		{
+			m_skip_frame_ctr++;
+
+			if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
+				m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+
+			skip_frame = (m_skip_frame_ctr < 0);
 		}
 	}
 }

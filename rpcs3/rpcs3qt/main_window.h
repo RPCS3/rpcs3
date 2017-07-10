@@ -18,15 +18,19 @@
 
 #include <memory>
 
+namespace Ui {
+	class main_window;
+}
+
 class main_window : public QMainWindow
 {
 	Q_OBJECT
 
+	Ui::main_window *ui;
+
 	bool m_sys_menu_opened;
 
 	Render_Creator m_Render_Creator;
-
-	QWidget* controls;
 
 	QIcon appIcon;
 	QIcon icon_play;
@@ -34,12 +38,11 @@ class main_window : public QMainWindow
 	QIcon icon_stop;
 	QIcon icon_restart;
 
-	QPushButton* menu_run;
-	QPushButton* menu_stop;
-	QPushButton* menu_restart;
-	QPushButton* menu_capture_frame;
-
 #ifdef _WIN32
+	QIcon icon_thumb_play;
+	QIcon icon_thumb_pause;
+	QIcon icon_thumb_stop;
+	QIcon icon_thumb_restart;
 	QWinThumbnailToolBar *thumb_bar;
 	QWinThumbnailToolButton *thumb_playPause;
 	QWinThumbnailToolButton *thumb_stop;
@@ -72,7 +75,6 @@ private Q_SLOTS:
 	void InstallPkg();
 	void InstallPup();
 	void DecryptSPRXLibraries();
-	void About();
 
 	void SaveWindowState();
 
@@ -82,69 +84,25 @@ protected:
 private:
 	void CreateActions();
 	void CreateConnects();
-	void CreateMenus();
 	void CreateDockWindows();
 	void ConfigureGuiFromSettings(bool configureAll = false);
 	void EnableMenus(bool enabled);
 	void keyPressEvent(QKeyEvent *keyEvent);
+	void mouseDoubleClickEvent(QMouseEvent *event);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
 	void AddRecentAction(const q_string_pair& entry);
 
 	q_pair_list m_rg_entries;
-	QMenu* m_bootRecentMenu;
 	QList<QAction*> m_recentGameActs;
 
 	QActionGroup* iconSizeActGroup;
 	QActionGroup* listModeActGroup;
 	QActionGroup* categoryVisibleActGroup;
 
-	QAction *bootElfAct;
-	QAction *bootGameAct;
-	QAction *clearRecentAct;
-	QAction *freezeRecentAct;
-	QAction *bootInstallPkgAct;
-	QAction *bootInstallPupAct;
-	QAction *sysPauseAct;
-	QAction *sysStopAct;
-	QAction *sysSendOpenMenuAct;
-	QAction *sysSendExitAct;
-	QAction *confSettingsAct;
-	QAction *confPadAct;
-	QAction *confAutopauseManagerAct;
-	QAction *confVFSDialogAct;
-	QAction *confSavedataManagerAct;
-	QAction *toolsCgDisasmAct;
-	QAction *toolskernel_explorerAct;
-	QAction *toolsmemory_viewerAct;
-	QAction *toolsRsxDebuggerAct;
-	QAction *toolsStringSearchAct;
-	QAction *toolsDecryptSprxLibsAct;
-	QAction *exitAct;
-	QAction *showDebuggerAct;
-	QAction *showLogAct;
-	QAction *showGameListAct;
-	QAction *showControlsAct;
-	QAction *refreshGameListAct;
-	QAction *showGameListToolBarAct;
-	QAction* showCatHDDGameAct;
-	QAction* showCatDiscGameAct;
-	QAction* showCatHomeAct;
-	QAction* showCatAudioVideoAct;
-	QAction* showCatGameDataAct;
-	QAction* showCatUnknownAct;
-	QAction* showCatOtherAct;
-	QAction* setIconSizeTinyAct;
-	QAction* setIconSizeSmallAct;
-	QAction* setIconSizeMediumAct;
-	QAction* setIconSizeLargeAct;
-	QAction* setlistModeListAct;
-	QAction* setlistModeGridAct;
-	QAction *aboutAct;
-	QAction *aboutQtAct;
-
 	// Dockable widget frames
+	QMainWindow *m_mw;
 	log_frame *logFrame;
 	debugger_frame *debuggerFrame;
 	game_list_frame *gameListFrame;

@@ -35,7 +35,7 @@ protected:
 	void* make_context() override;
 	void set_current(draw_context_t context) override;
 	void delete_context(void* context) override;
-	void flip(draw_context_t context) override;
+	void flip(draw_context_t context, bool skip_frame=false) override;
 	int client_width() override;
 	int client_height() override;
 

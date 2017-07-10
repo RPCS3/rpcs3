@@ -147,7 +147,7 @@ void SPUThread::on_spawn()
 			auto half_count = core_count / 2;
 			auto assigned_secondary_core = ((g_num_spu_threads % half_count) * 2) + 1;
 
-			thread_ctrl::set_ideal_processor_core(assigned_secondary_core);
+			thread_ctrl::set_ideal_processor_core((s32)assigned_secondary_core);
 		}
 	}
 
@@ -486,19 +486,23 @@ void SPUThread::process_mfc_cmd()
 	LOG_TRACE(SPU, "DMAC: cmd=%s, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 
 	const auto mfc = fxm::check_unlocked<mfc_thread>();
+	const u32 max_imm_dma_size = g_cfg.core.max_spu_immediate_write_size;
 
 	// Check queue size
-	while (mfc_queue.size() >= 16)
+	auto check_queue_size = [&]()
 	{
-		if (test(state, cpu_flag::stop + cpu_flag::dbg_global_stop))
+		while (mfc_queue.size() >= 16)
 		{
-			return;
-		}
+			if (test(state, cpu_flag::stop + cpu_flag::dbg_global_stop))
+			{
+				return;
+			}
 
-		// TODO: investigate lost notifications
-		busy_wait();
-		_mm_lfence();
-	}
+			// TODO: investigate lost notifications
+			std::this_thread::sleep_for(0us);
+			_mm_lfence();
+		}
+	};
 
 	switch (ch_mfc_cmd.cmd)
 	{
@@ -648,7 +652,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_GETF_CMD:
 	{
 		// Try to process small transfers immediately
-		if (ch_mfc_cmd.size <= 256 && mfc_queue.size() == 0)
+		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0)
 		{
 			vm::reader_lock lock(vm::try_to_lock);
 
@@ -679,7 +683,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_GETLB_CMD:
 	case MFC_GETLF_CMD:
 	{
-		if (ch_mfc_cmd.size <= 16 * 8 && mfc_queue.size() == 0 && (ch_stall_mask & (1u << ch_mfc_cmd.tag)) == 0)
+		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0 && (ch_stall_mask & (1u << ch_mfc_cmd.tag)) == 0)
 		{
 			vm::reader_lock lock(vm::try_to_lock);
 
@@ -697,7 +701,7 @@ void SPUThread::process_mfc_cmd()
 			
 			u32 total_size = 0;
 
-			while (ch_mfc_cmd.size && total_size < 256)
+			while (ch_mfc_cmd.size && total_size <= max_imm_dma_size)
 			{
 				ch_mfc_cmd.lsa &= 0x3fff0;
 
@@ -713,7 +717,7 @@ void SPUThread::process_mfc_cmd()
 
 				if (size)
 				{
-					if (total_size + size > 256)
+					if (total_size + size > max_imm_dma_size)
 					{
 						break;
 					}
@@ -771,6 +775,7 @@ void SPUThread::process_mfc_cmd()
 	}
 
 	// Enqueue
+	check_queue_size();
 	verify(HERE), mfc_queue.try_push(ch_mfc_cmd);
 
 	//if (test(mfc->state, cpu_flag::is_waiting))
@@ -873,11 +878,15 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	auto read_channel = [&](spu_channel_t& channel)
 	{
+		if (channel.try_pop(out))
+			return true;
+
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
 			busy_wait();
 		}
 
+		u32 ctr = 0;
 		while (!channel.try_pop(out))
 		{
 			if (test(state, cpu_flag::stop))
@@ -885,7 +894,16 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 				return false;
 			}
 
-			thread_ctrl::wait();
+			if (ctr > 10000)
+			{
+				ctr = 0;
+				std::this_thread::sleep_for(0us);
+			}
+			else
+			{
+				ctr++;
+				thread_ctrl::wait();
+			}
 		}
 
 		return true;

@@ -186,9 +186,12 @@ void GLGSRender::begin()
 {
 	rsx::thread::begin();
 
+	if (skip_frame)
+		return;
+
 	init_buffers();
 
-	if (!draw_fbo.check())
+	if (!framebuffer_status_valid)
 		return;
 
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
@@ -212,7 +215,7 @@ void GLGSRender::begin()
 		__glcheck glDepthBoundsEXT(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
-	__glcheck glDepthRange(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
+	//__glcheck glDepthRange(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
 	__glcheck enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
 	if (__glcheck enable(rsx::method_registers.blend_enabled(), GL_BLEND))
@@ -319,7 +322,7 @@ namespace
 
 void GLGSRender::end()
 {
-	if (!draw_fbo || !draw_fbo.check())
+	if (skip_frame || !framebuffer_status_valid)
 	{
 		rsx::thread::end();
 		return;
@@ -346,6 +349,21 @@ void GLGSRender::end()
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
+	auto copy_rtt_contents = [](gl::render_target *surface)
+	{
+		//Copy data from old contents onto this one
+		//1. Clip a rectangular region defning the data
+		//2. Perform a GPU blit
+		u16 parent_w = surface->old_contents->width();
+		u16 parent_h = surface->old_contents->height();
+		u16 copy_w, copy_h;
+
+		std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+		glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
+		surface->set_cleared();
+		surface->old_contents = nullptr;
+	};
+
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && !ds->cleared())
 	{
@@ -357,11 +375,31 @@ void GLGSRender::end()
 		glClearStencil(255);
 
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		
+
+		if (g_cfg.video.strict_rendering_mode)
+		{
+			//Copy previous data if any
+			if (ds->old_contents != nullptr)
+				copy_rtt_contents(ds);
+		}
+
 		glDepthMask(rsx::method_registers.depth_write_enabled());
 		glEnable(GL_SCISSOR_TEST);
 
 		ds->set_cleared();
+	}
+
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (std::get<0>(rtt) != 0)
+			{
+				auto surface = std::get<1>(rtt);
+				if (!surface->cleared() && surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
 	}
 
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
@@ -373,8 +411,13 @@ void GLGSRender::end()
 		int location;
 		if (!rsx::method_registers.fragment_textures[i].enabled())
 		{
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, 0);
+			if (m_textures_dirty[i])
+			{
+				glActiveTexture(GL_TEXTURE0 + i);
+				glBindTexture(GL_TEXTURE_2D, 0);
+
+				m_textures_dirty[i] = false;
+			}
 			continue;
 		}
 
@@ -392,12 +435,12 @@ void GLGSRender::end()
 		int texture_index = i + rsx::limits::fragment_textures_count;
 		int location;
 
-		if (!rsx::method_registers.vertex_textures[i].enabled())
+/*		if (!rsx::method_registers.vertex_textures[i].enabled())
 		{
 			glActiveTexture(GL_TEXTURE0 + texture_index);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			continue;
-		}
+		} */
 
 		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &location))
 		{
@@ -409,10 +452,20 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
-	u32 vertex_draw_count;
+	u32 vertex_draw_count = m_last_vertex_count;
 	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
-	std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
-	m_vao.bind();
+	bool skip_upload = false;
+
+	if (!is_probable_instanced_draw())
+	{
+		std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
+		m_last_vertex_count = vertex_draw_count;
+	}
+	else
+	{
+		//LOG_ERROR(RSX, "No work is needed for this draw call! Muhahahahahahaha");
+		skip_upload = true;
+	}
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
@@ -427,19 +480,28 @@ void GLGSRender::end()
 		m_index_ring_buffer->unmap();
 	}
 
-	if (indexed_draw_info)
+	if (indexed_draw_info || (skip_upload && m_last_draw_indexed == true))
 	{
 		if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 		{
-			GLenum index_type = std::get<0>(indexed_draw_info.value());
+			GLenum index_type = (skip_upload)? m_last_ib_type: std::get<0>(indexed_draw_info.value());
 			__glcheck glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}
 
-		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, std::get<0>(indexed_draw_info.value()), (GLvoid *)(std::ptrdiff_t)std::get<1>(indexed_draw_info.value()));
+		m_last_draw_indexed = true;
+
+		if (!skip_upload)
+		{
+			m_last_ib_type = std::get<0>(indexed_draw_info.value());
+			m_last_index_offset = std::get<1>(indexed_draw_info.value());
+		}
+
+		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, m_last_ib_type, (GLvoid *)(std::ptrdiff_t)m_last_index_offset);
 	}
 	else
 	{
 		draw_fbo.draw_arrays(rsx::method_registers.current_draw_clause.primitive, vertex_draw_count);
+		m_last_draw_indexed = false;
 	}
 
 	m_attrib_ring_buffer->notify();
@@ -461,12 +523,25 @@ void GLGSRender::end()
 void GLGSRender::set_viewport()
 {
 	//NOTE: scale offset matrix already contains the viewport transformation
-	glViewport(0, 0, rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+	const auto clip_width = rsx::method_registers.surface_clip_width();
+	const auto clip_height = rsx::method_registers.surface_clip_height();
+	glViewport(0, 0, clip_width, clip_height);
 
 	u16 scissor_x = rsx::method_registers.scissor_origin_x();
 	u16 scissor_w = rsx::method_registers.scissor_width();
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
+
+	//Do not bother drawing anything if output is zero sized
+	//TODO: Clip scissor region
+	if (scissor_x >= clip_width || scissor_y >= clip_height || scissor_w == 0 || scissor_h == 0)
+	{
+		if (!g_cfg.video.strict_rendering_mode)
+		{
+			framebuffer_status_valid = false;
+			return;
+		}
+	}
 
 	//NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
 	//See LIMBO [NPUB-30373] which uses shader window origin = top
@@ -664,13 +739,9 @@ void GLGSRender::on_exit()
 
 void GLGSRender::clear_surface(u32 arg)
 {
+	if (skip_frame || !framebuffer_status_valid) return;
 	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
-
-	if ((arg & 0xf3) == 0)
-	{
-		//do nothing
-		return;
-	}
+	if ((arg & 0xf3) == 0) return;
 
 	GLbitfield mask = 0;
 
@@ -687,7 +758,10 @@ void GLGSRender::clear_surface(u32 arg)
 
 		gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		if (ds && !ds->cleared())
+		{
 			ds->set_cleared();
+			ds->old_contents = nullptr;
+		}
 	}
 
 	if (surface_depth_format == rsx::surface_depth_format::z24s8 && (arg & 0x2))
@@ -711,6 +785,15 @@ void GLGSRender::clear_surface(u32 arg)
 		glClearColor(clear_r / 255.f, clear_g / 255.f, clear_b / 255.f, clear_a / 255.f);
 
 		mask |= GLenum(gl::buffers::color);
+
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (std::get<0>(rtt) != 0)
+			{
+				std::get<1>(rtt)->set_cleared(true);
+				std::get<1>(rtt)->old_contents = nullptr;
+			}
+		}
 	}
 
 	glClear(mask);
@@ -840,6 +923,23 @@ bool GLGSRender::load_program()
 
 void GLGSRender::flip(int buffer)
 {
+	if (skip_frame)
+	{
+		m_frame->flip(m_context, true);
+		rsx::thread::flip(buffer);
+
+		if (!skip_frame)
+		{
+			m_draw_calls = 0;
+			m_begin_time = 0;
+			m_draw_time = 0;
+			m_vertex_upload_time = 0;
+			m_textures_upload_time = 0;
+		}
+
+		return;
+	}
+
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
@@ -864,13 +964,10 @@ void GLGSRender::flip(int buffer)
 		__glcheck m_flip_fbo.color = *render_target_texture;
 		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
 	}
-	else if (draw_fbo)
-	{
-		//HACK! it's here, because textures cache isn't implemented correctly!
-		flip_fbo = &draw_fbo;
-	}
 	else
 	{
+		LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
+
 		if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
 		{
 			m_flip_tex_color.recreate(gl::texture::target::texture2D);
@@ -905,19 +1002,22 @@ void GLGSRender::flip(int buffer)
 	sizei csize(m_frame->client_width(), m_frame->client_height());
 	sizei new_size = csize;
 
-	const double aq = (double)buffer_width / buffer_height;
-	const double rq = (double)new_size.width / new_size.height;
-	const double q = aq / rq;
+	if (!g_cfg.video.stretch_to_display_area)
+	{
+		const double aq = (double)buffer_width / buffer_height;
+		const double rq = (double)new_size.width / new_size.height;
+		const double q = aq / rq;
 
-	if (q > 1.0)
-	{
-		new_size.height = int(new_size.height / q);
-		aspect_ratio.y = (csize.height - new_size.height) / 2;
-	}
-	else if (q < 1.0)
-	{
-		new_size.width = int(new_size.width * q);
-		aspect_ratio.x = (csize.width - new_size.width) / 2;
+		if (q > 1.0)
+		{
+			new_size.height = int(new_size.height / q);
+			aspect_ratio.y = (csize.height - new_size.height) / 2;
+		}
+		else if (q < 1.0)
+		{
+			new_size.width = int(new_size.width * q);
+			aspect_ratio.x = (csize.width - new_size.width) / 2;
+		}
 	}
 
 	aspect_ratio.size = new_size;
@@ -939,24 +1039,26 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_frame->flip(m_context);
+	rsx::thread::flip(buffer);
+
+	m_gl_texture_cache.clear_temporary_surfaces();
+
+	for (auto &tex : m_rtts.invalidated_resources)
+		tex->remove();
+
+	m_rtts.invalidated_resources.clear();
+
+	if (g_cfg.video.invalidate_surface_cache_every_frame)
+		m_rtts.invalidate_surface_cache_data(nullptr);
+
+	//If we are skipping the next frame, fo not reset perf counters
+	if (skip_frame) return;
 
 	m_draw_calls = 0;
 	m_begin_time = 0;
 	m_draw_time = 0;
 	m_vertex_upload_time = 0;
 	m_textures_upload_time = 0;
-
-	m_gl_texture_cache.clear_temporary_surfaces();
-
-	for (auto &tex : m_rtts.invalidated_resources)
-	{
-		tex->remove();
-	}
-
-	m_rtts.invalidated_resources.clear();
-
-	if (g_cfg.video.invalidate_surface_cache_every_frame)
-		m_rtts.invalidate_surface_cache_data(nullptr);
 }
 
 
