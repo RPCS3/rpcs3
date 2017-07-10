@@ -48,45 +48,11 @@ enum button_ids
 	id_cancel
 };
 
-struct pad_buttons
-{
-	QPushButton* b_up_lstick;
-	QPushButton* b_down_lstick;
-	QPushButton* b_left_lstick;
-	QPushButton* b_right_lstick;
+namespace Ui {
+	class pad_settings_dialog;
+}
 
-	QPushButton* b_up;
-	QPushButton* b_down;
-	QPushButton* b_left;
-	QPushButton* b_right;
-
-	QPushButton* b_shift_l1;
-	QPushButton* b_shift_l2;
-	QPushButton* b_shift_l3;
-
-	QPushButton* b_start;
-	QPushButton* b_select;
-
-	QPushButton* b_shift_r1;
-	QPushButton* b_shift_r2;
-	QPushButton* b_shift_r3;
-
-	QPushButton* b_square;
-	QPushButton* b_cross;
-	QPushButton* b_circle;
-	QPushButton* b_triangle;
-
-	QPushButton* b_up_rstick;
-	QPushButton* b_down_rstick;
-	QPushButton* b_left_rstick;
-	QPushButton* b_right_rstick;
-
-	QPushButton* b_ok;
-	QPushButton* b_cancel;
-	QPushButton* b_reset;
-};
-
-class pad_settings_dialog : public QDialog, pad_buttons, PadHandlerBase
+class pad_settings_dialog : public QDialog, PadHandlerBase
 {
 	Q_OBJECT
 
@@ -98,11 +64,13 @@ private:
 	u32 m_button_id;
 	bool m_key_pressed;
 	QAction *onButtonClickedAct;
+	Ui::pad_settings_dialog *ui;
 
 public:
 	// TODO get Init to work
 	virtual void Init(const u32 max_connect) override;
 	explicit pad_settings_dialog(QWidget *parent = 0);
+	~pad_settings_dialog();
 	void keyPressEvent(QKeyEvent *keyEvent);
 	void UpdateLabel();
 	void UpdateTimerLabel(const u32 id);
