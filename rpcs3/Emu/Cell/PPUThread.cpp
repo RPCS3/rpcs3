@@ -963,9 +963,43 @@ extern void ppu_initialize(const ppu_module& info)
 		return link_table;
 	}();
 
+	// Get cache path for this executable
+	std::string cache_path;
+
+	if (info.name.empty())
+	{
+		cache_path = Emu.GetCachePath();
+	}
+	else
+	{
+		cache_path = vfs::get("/dev_flash/");
+
+		if (info.path.compare(0, cache_path.size(), cache_path) == 0)
+		{
+			// Remove prefix for dev_flash files
+			cache_path.clear();
+		}
+		else
+		{
+			cache_path = Emu.GetTitleID();
+		}
+
+		cache_path = fs::get_data_dir(cache_path, info.path);
+	}
+
 #ifdef LLVM_AVAILABLE
-	// Initialize compiler
-	jit_compiler jit(s_link_table, g_cfg.core.llvm_cpu);
+	// Compiled PPU module info
+	struct jit_module
+	{
+		std::vector<u64*> vars;
+		std::vector<ppu_function_t> funcs;
+	};
+	
+	// Permanently loaded compiled PPU modules (name -> data)
+	jit_module& jit_mod = fxm::get_always<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
+
+	// Compiler instance (deferred initialization)
+	std::unique_ptr<jit_compiler> jit;
 
 	// Compiler mutex
 	semaphore<> jmutex;
@@ -991,8 +1025,11 @@ extern void ppu_initialize(const ppu_module& info)
 	// Difference between function name and current location
 	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
 
-	while (fpos < info.funcs.size())
+	while (jit_mod.vars.empty() && fpos < info.funcs.size())
 	{
+		// Initialize compiler instance
+		if (!jit) jit = std::make_unique<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
+
 		// First function in current module part
 		const auto fstart = fpos;
 
@@ -1084,7 +1121,7 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 
 			sha1_finish(&ctx, output);
-			fmt::append(obj_name, "-%016X-%s.obj", reinterpret_cast<be_t<u64>&>(output), jit.cpu());
+			fmt::append(obj_name, "-%016X-%s.obj", reinterpret_cast<be_t<u64>&>(output), jit->cpu());
 		}
 
 		if (Emu.IsStopped())
@@ -1101,40 +1138,16 @@ extern void ppu_initialize(const ppu_module& info)
 			globals.emplace_back(fmt::format("__seg%u_%x", i, suffix), info.segs[i].addr);
 		}
 
-		// Get cache path for this executable
-		std::string cache_path;
-
-		if (info.name.empty())
-		{
-			cache_path = Emu.GetCachePath();
-		}
-		else
-		{
-			cache_path = vfs::get("/dev_flash/");
-
-			if (info.path.compare(0, cache_path.size(), cache_path) == 0)
-			{
-				// Remove prefix for dev_flash files
-				cache_path.clear();
-			}
-			else
-			{
-				cache_path = Emu.GetTitleID();
-			}
-
-			cache_path = fs::get_data_dir(cache_path, info.path);
-		}
-
 		// Check object file
 		if (fs::is_file(cache_path + obj_name))
 		{
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(jit, part, cache_path, obj_name);
+			ppu_initialize2(*jit, part, cache_path, obj_name);
 			continue;
 		}
 
 		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part), cache_path = std::move(cache_path)]()
+		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part), &cache_path]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
@@ -1160,7 +1173,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			// Proceed with original JIT instance		
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(jit, part, cache_path, obj_name);
+			ppu_initialize2(*jit, part, cache_path, obj_name);
 		});
 	}
 
@@ -1175,28 +1188,69 @@ extern void ppu_initialize(const ppu_module& info)
 		return;
 	}
 
-	jit.fin();
-
-	// Get and install function addresses
-	for (const auto& func : info.funcs)
+	if (jit_mod.vars.empty())
 	{
-		if (!func.size) continue;
+		jit->fin();
 
-		for (const auto& block : func.blocks)
+		// Get and install function addresses
+		for (const auto& func : info.funcs)
 		{
-			if (block.second)
+			if (!func.size) continue;
+
+			for (const auto& block : func.blocks)
 			{
-				ppu_ref(block.first) = ::narrow<u32>(jit.get(fmt::format("__0x%x", block.first - reloc)));
+				if (block.second)
+				{
+					const u64 addr = jit->get(fmt::format("__0x%x", block.first - reloc));
+					jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
+					ppu_ref(block.first) = ::narrow<u32>(addr);
+				}
+			}
+		}
+
+		// Initialize global variables
+		for (auto& var : globals)
+		{
+			const u64 addr = jit->get(var.first);
+
+			jit_mod.vars.emplace_back(reinterpret_cast<u64*>(addr));
+
+			if (addr)
+			{
+				*reinterpret_cast<u64*>(addr) = var.second;
 			}
 		}
 	}
-
-	// Initialize global variables
-	for (auto& var : globals)
+	else
 	{
-		if (u64 addr = jit.get(var.first))
+		std::size_t index = 0;
+
+		// Locate existing functions
+		for (const auto& func : info.funcs)
 		{
-			*reinterpret_cast<u64*>(addr) = var.second;
+			if (!func.size) continue;
+
+			for (const auto& block : func.blocks)
+			{
+				if (block.second)
+				{
+					ppu_ref(block.first) = ::narrow<u32>(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
+				}
+			}
+		}
+
+		index = 0;
+
+		// Rewrite global variables
+		while (index < jit_mod.vars.size())
+		{
+			*jit_mod.vars[index++] = (u64)vm::g_base_addr;
+			*jit_mod.vars[index++] = (u64)vm::g_exec_addr;
+
+			for (const auto& seg : info.segs)
+			{
+				*jit_mod.vars[index++] = seg.addr;
+			}
 		}
 	}
 #endif
