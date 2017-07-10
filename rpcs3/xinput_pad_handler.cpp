@@ -17,9 +17,9 @@ namespace {
 		L"xinput9_1_0.dll"
 	};
 
-	inline u16 ConvertAxis(SHORT value)
+	inline u16 ConvertAxis(float value)
 	{
-		return static_cast<u16>((value + 32768l) >> 8);
+		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
 	}
 }
 
@@ -45,7 +45,7 @@ void xinput_pad_handler::Init(const u32 max_connect)
 			{
 				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
 			}
-			
+
 			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
 
 			if (xinputEnable && xinputGetState && xinputSetState)
@@ -152,7 +152,7 @@ DWORD xinput_pad_handler::ThreadProcedure()
 		{
 			auto & pad = m_pads[i];
 
-			result = (* xinputGetState)(i, &state);
+			result = (*xinputGetState)(i, &state);
 			switch (result)
 			{
 			case ERROR_DEVICE_NOT_CONNECTED:
@@ -181,10 +181,32 @@ DWORD xinput_pad_handler::ThreadProcedure()
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS + 1].m_pressed = state.Gamepad.bRightTrigger > 0;
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS + 1].m_value = state.Gamepad.bRightTrigger;
 
-				pad.m_sticks[0].m_value = ConvertAxis(state.Gamepad.sThumbLX);
-				pad.m_sticks[1].m_value = 255 - ConvertAxis(state.Gamepad.sThumbLY);
-				pad.m_sticks[2].m_value = ConvertAxis(state.Gamepad.sThumbRX);
-				pad.m_sticks[3].m_value = 255 - ConvertAxis(state.Gamepad.sThumbRY);
+				float LX, LY, RX, RY;
+
+				LX = state.Gamepad.sThumbLX;
+				LY = state.Gamepad.sThumbLY;
+				RX = state.Gamepad.sThumbRX;
+				RY = state.Gamepad.sThumbRY;
+
+				const auto normalize_input = [](float& X, float& Y, float deadzone)
+				{
+					if (X > 0) X = (X - deadzone < 0) ? 0 : X - deadzone;
+					else X = (X + deadzone > 0) ? 0 : X + deadzone;
+
+					if (Y > 0) Y = (Y - deadzone < 0) ? 0 : Y - deadzone;
+					else Y = (Y + deadzone > 0) ? 0 : Y + deadzone;
+
+					X /= (32767 - deadzone);
+					Y /= (32767 - deadzone);
+				};
+
+				normalize_input(LX, LY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+				normalize_input(RX, RY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+
+				pad.m_sticks[0].m_value = ConvertAxis(LX);
+				pad.m_sticks[1].m_value = 255 - ConvertAxis(LY);
+				pad.m_sticks[2].m_value = ConvertAxis(RX);
+				pad.m_sticks[3].m_value = 255 - ConvertAxis(RY);
 
 				XINPUT_VIBRATION vibrate;
 
