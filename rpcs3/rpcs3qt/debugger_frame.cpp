@@ -3,6 +3,7 @@
 #include <QSplitter>
 #include <QApplication>
 #include <QFontDatabase>
+#include <QCompleter>
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 extern bool user_asked_for_frame_capture;
@@ -28,6 +29,15 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_choice_units->setSizeAdjustPolicy(QComboBox::AdjustToContents);
 	m_choice_units->setMaxVisibleItems(30);
 	m_choice_units->setMaximumWidth(500);
+	m_choice_units->setEditable(true);
+	m_choice_units->setInsertPolicy(QComboBox::NoInsert);
+	m_choice_units->lineEdit()->setPlaceholderText("Choose a thread");
+	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&] {
+		m_choice_units->clearFocus();
+	});
+	m_choice_units->completer()->setCompletionMode(QCompleter::PopupCompletion);
+	m_choice_units->completer()->setMaxVisibleItems(30);
+	m_choice_units->completer()->setFilterMode(Qt::MatchContains);
 
 	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
