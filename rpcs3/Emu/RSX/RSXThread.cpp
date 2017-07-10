@@ -78,7 +78,7 @@ namespace rsx
             }
 
 			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
-				return 0x40 + offset; // TODO: Properly implement
+                fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 (offset=0x%x, location=0x%x)" HERE, offset, location);
 
 			case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
 				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
