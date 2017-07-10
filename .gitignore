@@ -92,3 +92,4 @@ rpcs3/rpcs3_*_cotire.cmake
 moc_*.cpp
 qrc_resources.cpp
 rpcs3_automoc.cpp
+ui_*.h
