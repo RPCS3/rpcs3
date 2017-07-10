@@ -7,7 +7,6 @@
 #include <QDockWidget>
 #include <QProgressDialog>
 #include <QDesktopWidget>
-#include <QDesktopServices>
 
 #include "vfs_dialog.h"
 #include "save_data_utility.h"
@@ -24,6 +23,7 @@
 #include "rsx_debugger.h"
 #include "main_window.h"
 #include "emu_settings.h"
+#include "about_dialog.h"
 
 #include <thread>
 
@@ -42,28 +42,46 @@
 
 #include "rpcs3_version.h"
 
+#include "ui_main_window.h"
+
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false)
+main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false), ui(new Ui::main_window)
 {
+	ui->setupUi(this);
+
 	guiSettings.reset(new gui_settings());
 
-	setDockNestingEnabled(true);
-
-	//Load Icons: This needs to happen before any actions or buttons are created
+	// Load Icons: This needs to happen before any actions or buttons are created
 	icon_play = QIcon(":/Icons/play.png");
 	icon_pause = QIcon(":/Icons/pause.png");
 	icon_stop = QIcon(":/Icons/stop.png");
 	icon_restart = QIcon(":/Icons/restart.png");
 	appIcon = QIcon(":/rpcs3.ico");
 
+	// add toolbar widgets (crappy Qt designer is not able to)
+	ui->sizeSlider->setRange(0, GUI::gl_icon_size.size() - 1);
+	// get icon size from list
+	int icon_size_index = 0;
+	QString icon_Size_Str = guiSettings->GetValue(GUI::gl_iconSize).toString();
+	for (int i = 0; i < GUI::gl_icon_size.count(); i++)
+	{
+		if (GUI::gl_icon_size.at(i).first == icon_Size_Str)
+		{
+			icon_size_index = i;
+			break;
+		}
+	}
+	ui->sizeSlider->setSliderPosition(icon_size_index);
+	ui->toolBar->addWidget(ui->sizeSliderContainer);
+	ui->toolBar->addSeparator();
+	ui->toolBar->addWidget(ui->searchBar);
+
 	CreateActions();
-	CreateMenus();
 	CreateDockWindows();
 
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 
-	ConfigureGuiFromSettings(true);
 	CreateConnects();
 
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
@@ -73,6 +91,7 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 		// Need to have this happen fast, but not now because connects aren't created yet.
 		// So, a tricky balance in terms of time but this works.
 		RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
+		ConfigureGuiFromSettings(true);
 	});
 }
 
@@ -91,22 +110,27 @@ auto Pause = []()
 void main_window::CreateThumbnailToolbar()
 {
 #ifdef _WIN32
+	icon_thumb_play = QIcon(":/Icons/play_blue.png");
+	icon_thumb_pause = QIcon(":/Icons/pause_blue.png");
+	icon_thumb_stop = QIcon(":/Icons/stop_blue.png");
+	icon_thumb_restart = QIcon(":/Icons/restart_blue.png");
+
 	thumb_bar = new QWinThumbnailToolBar(this);
 	thumb_bar->setWindow(windowHandle());
 
 	thumb_playPause = new QWinThumbnailToolButton(thumb_bar);
-	thumb_playPause->setToolTip(tr("Start"));
-	thumb_playPause->setIcon(icon_play);
+	thumb_playPause->setToolTip(tr("Pause"));
+	thumb_playPause->setIcon(icon_thumb_pause);
 	thumb_playPause->setEnabled(false);
 
 	thumb_stop = new QWinThumbnailToolButton(thumb_bar);
 	thumb_stop->setToolTip(tr("Stop"));
-	thumb_stop->setIcon(icon_stop);
+	thumb_stop->setIcon(icon_thumb_stop);
 	thumb_stop->setEnabled(false);
 
 	thumb_restart = new QWinThumbnailToolButton(thumb_bar);
 	thumb_restart->setToolTip(tr("Restart"));
-	thumb_restart->setIcon(icon_restart);
+	thumb_restart->setIcon(icon_thumb_restart);
 	thumb_restart->setEnabled(false);
 
 	thumb_bar->addButton(thumb_playPause);
@@ -131,9 +155,11 @@ void main_window::SetAppIconFromPath(const std::string path)
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
 	QString qpath = qstr(path);
 	std::string icon_list[] = { "/ICON0.PNG", "/PS3_GAME/ICON0.PNG" };
-	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)) ,sstr(qpath.section("/", 0, -3)) };
+	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
 	for (std::string pth : path_list)
 	{
+		if (!fs::is_dir(pth)) continue;
+
 		for (std::string ico : icon_list)
 		{
 			ico = pth + ico;
@@ -572,97 +598,6 @@ void main_window::DecryptSPRXLibraries()
 	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
 }
 
-void main_window::About()
-{
-	QDialog* about = new QDialog(this);
-
-	QPushButton* gitHub = new QPushButton(tr("GitHub"), about);
-	QPushButton* website = new QPushButton(tr("Website"), about);
-	QPushButton* forum = new QPushButton(tr("Forum"), about);
-	QPushButton* patreon = new QPushButton(tr("Patreon"), about);
-	QPushButton* close = new QPushButton(tr("Close"), about);
-	close->setDefault(true);
-
-	QLabel* icon = new QLabel(this);
-	icon->setPixmap(QIcon(":/rpcs3.ico").pixmap(96, 96));
-
-	QLabel* caption = new QLabel(tr(
-		"<h1>RPCS3</h1>"
-		"A PlayStation 3 emulator and debugger.<br>"
-		"RPCS3 Version: %1").arg(qstr(rpcs3::version.to_string())
-		));
-	QLabel* developers = new QLabel(tr(
-		"<p><b>Developers:</b><br>¬DH<br>¬AlexAltea<br>¬Hykem<br>Oil<br>Nekotekina<br>Bigpet<br>¬gopalsr83<br>¬tambry<br>"
-		"vlj<br>kd-11<br>jarveson<br>raven02<br>AniLeo<br>cornytrace<br>ssshadow<br>Numan</p>"
-	));
-	QLabel* contributors = new QLabel(tr(
-		"<p><b>Contributors:</b><br>BlackDaemon<br>elisha464<br>Aishou<br>krofna<br>xsacha<br>danilaml<br>unknownbrackets<br>Zangetsu38<br>"
-		"lioncash<br>achurch<br>darkf<br>Syphurith<br>Blaypeg<br>Survanium90<br>georgemoralis<br>ikki84<br>hcorion<br>Megamouse<br>flash-fire</p>"
-	));
-	QLabel* supporters = new QLabel(tr(
-		"<p><b>Supporters:</b><br>Howard Garrison<br>EXPotemkin<br>Marko V.<br>danhp<br>Jake (5315825)<br>Ian Reid<br>Tad Sherlock<br>Tyler Friesen<br>"
-		"Folzar<br>Payton Williams<br>RedPill Australia<br>yanghong<br>Mohammed El-Serougi<br>Дима ~Ximer13~ Кулин<br>James Reed<br>BaroqueSonata<br>"
-		"Bonzay0<br>Henrijs Kons<br>Davide Balbi<br>Lena Stöffler</p>"
-	));
-	icon->setAlignment(Qt::AlignLeft);
-	caption->setAlignment(Qt::AlignLeft);
-	developers->setAlignment(Qt::AlignTop);
-	contributors->setAlignment(Qt::AlignTop);
-	supporters->setAlignment(Qt::AlignTop);
-
-	// Caption Layout
-	QVBoxLayout* caption_layout = new QVBoxLayout();
-	caption_layout->setAlignment(Qt::AlignLeft);
-	caption_layout->addSpacing(15);
-	caption_layout->addWidget(caption);
-
-	// Header Section
-	QHBoxLayout* header_layout = new QHBoxLayout();
-	header_layout->setAlignment(Qt::AlignCenter);
-	header_layout->addLayout(caption_layout);
-	header_layout->addStretch();
-	header_layout->addWidget(icon);
-	header_layout->addStretch();
-
-	// Names Section
-	QHBoxLayout* text_layout = new QHBoxLayout();
-	text_layout->setAlignment(Qt::AlignTop);
-	text_layout->addWidget(developers);
-	text_layout->addWidget(contributors);
-	text_layout->addWidget(supporters);
-
-	// Button Section
-	QHBoxLayout* button_layout = new QHBoxLayout();
-	button_layout->addWidget(gitHub);
-	button_layout->addWidget(website);
-	button_layout->addWidget(forum);
-	button_layout->addWidget(patreon);
-	button_layout->addStretch();
-	button_layout->addWidget(close);
-
-	// Main Layout
-	QVBoxLayout* layout = new QVBoxLayout();
-	layout->addLayout(header_layout);
-	layout->addLayout(text_layout);
-	layout->addSpacing(20);
-	layout->addLayout(button_layout);
-
-	// Events
-	connect(gitHub, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });
-	connect(website, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.rpcs3.net")); });
-	connect(forum, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("http://www.emunewz.net/forum/forumdisplay.php?fid=172")); });
-	connect(patreon, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina")); });
-	connect(close, &QAbstractButton::clicked, about, &QWidget::close);
-
-	// Create About Dialog
-	about->setWindowTitle(tr("About RPCS3"));
-	about->setWindowFlags(about->windowFlags() & ~Qt::WindowContextHelpButtonHint);
-	about->setMinimumWidth(500);
-	about->setLayout(layout);
-	about->setFixedSize(about->sizeHint());
-	about->exec();
-}
-
 /** Needed so that when a backup occurs of window state in guisettings, the state is current. 
 * Also, so that on close, the window state is preserved.
 */
@@ -671,6 +606,7 @@ void main_window::SaveWindowState()
 	// Save gui settings
 	guiSettings->SetValue(GUI::mw_geometry, saveGeometry());
 	guiSettings->SetValue(GUI::mw_windowState, saveState());
+	guiSettings->SetValue(GUI::mw_mwState, m_mw->saveState());
 
 	// Save column settings
 	gameListFrame->SaveSettings();
@@ -680,64 +616,64 @@ void main_window::OnEmuRun()
 {
 	debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
-	thumb_playPause->setToolTip(tr("Pause"));
-	thumb_playPause->setIcon(icon_pause);
+	thumb_playPause->setToolTip(tr("Pause emulation"));
+	thumb_playPause->setIcon(icon_thumb_pause);
 #endif
-	sysPauseAct->setText(tr("&Pause\tCtrl+P"));
-	sysPauseAct->setIcon(icon_pause);
-	menu_run->setText(tr("&Pause"));
-	menu_run->setIcon(icon_pause);
+	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	ui->sysPauseAct->setIcon(icon_pause);
+	ui->toolbar_start->setIcon(icon_pause);
+	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
 }
 
 void main_window::OnEmuResume()
 {
 #ifdef _WIN32
-	thumb_playPause->setToolTip(tr("Pause"));
-	thumb_playPause->setIcon(icon_pause);
+	thumb_playPause->setToolTip(tr("Pause emulation"));
+	thumb_playPause->setIcon(icon_thumb_pause);
 #endif
-	sysPauseAct->setText(tr("&Pause\tCtrl+P"));
-	sysPauseAct->setIcon(icon_pause);
-	menu_run->setText(tr("&Pause"));
-	menu_run->setIcon(icon_pause);
+	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	ui->sysPauseAct->setIcon(icon_pause);
+	ui->toolbar_start->setIcon(icon_pause);
+	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 }
 
 void main_window::OnEmuPause()
 {
 #ifdef _WIN32
-	thumb_playPause->setToolTip(tr("Resume"));
-	thumb_playPause->setIcon(icon_play);
+	thumb_playPause->setToolTip(tr("Resume emulation"));
+	thumb_playPause->setIcon(icon_thumb_play);
 #endif
-	sysPauseAct->setText(tr("&Resume\tCtrl+E"));
-	sysPauseAct->setIcon(icon_play);
-	menu_run->setText(tr("&Resume"));
-	menu_run->setIcon(icon_play);
+	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setIcon(icon_play);
+	ui->toolbar_start->setIcon(icon_play);
+	ui->toolbar_start->setToolTip(tr("Resume emulation"));
 }
 
 void main_window::OnEmuStop()
 {
 	debuggerFrame->EnableButtons(false);
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setIcon(icon_play);
 #ifdef _WIN32
-	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
-	thumb_playPause->setIcon(icon_play);
+	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	thumb_playPause->setIcon(icon_thumb_play);
 #endif
-	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
-	menu_run->setIcon(icon_play);
 	EnableMenus(false);
 	if (!Emu.GetPath().empty())
 	{
-		sysPauseAct->setText(tr("&Restart\tCtrl+E"));
-		sysPauseAct->setIcon(icon_restart);
-		sysPauseAct->setEnabled(true);
-		menu_restart->setEnabled(true);
+		ui->toolbar_start->setEnabled(true);
+		ui->toolbar_start->setIcon(icon_restart);
+		ui->toolbar_start->setToolTip(tr("Restart emulation"));
+		ui->sysRebootAct->setEnabled(true);
 #ifdef _WIN32
 		thumb_restart->setEnabled(true);
 #endif
 	}
 	else
 	{
-		sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
-		sysPauseAct->setIcon(icon_play);
+		ui->toolbar_start->setIcon(icon_play);
+		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 }
 
@@ -745,13 +681,13 @@ void main_window::OnEmuReady()
 {
 	debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
-	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start") : tr("Resume"));
-	thumb_playPause->setIcon(icon_play);
+	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	thumb_playPause->setIcon(icon_thumb_play);
 #endif
-	sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
-	sysPauseAct->setIcon(icon_play);
-	menu_run->setText(Emu.IsReady() ? tr("&Start") : tr("&Resume"));
-	menu_run->setIcon(icon_play);
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setIcon(icon_play);
+	ui->toolbar_start->setIcon(icon_play);
+	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	EnableMenus(true);
 }
 
@@ -766,24 +702,24 @@ void main_window::EnableMenus(bool enabled)
 	thumb_restart->setEnabled(enabled);
 #endif
 
-	// Buttons
-	menu_run->setEnabled(enabled);
-	menu_stop->setEnabled(enabled);
-	menu_restart->setEnabled(enabled);
+	// Toolbar
+	ui->toolbar_start->setEnabled(enabled);
+	ui->toolbar_stop->setEnabled(enabled);
 
 	// Emulation
-	sysPauseAct->setEnabled(enabled);
-	sysStopAct->setEnabled(enabled);
+	ui->sysPauseAct->setEnabled(enabled);
+	ui->sysStopAct->setEnabled(enabled);
+	ui->sysRebootAct->setEnabled(enabled);
 
 	// PS3 Commands
-	sysSendOpenMenuAct->setEnabled(enabled);
-	sysSendExitAct->setEnabled(enabled);
+	ui->sysSendOpenMenuAct->setEnabled(enabled);
+	ui->sysSendExitAct->setEnabled(enabled);
 
 	// Tools
-	toolskernel_explorerAct->setEnabled(enabled);
-	toolsmemory_viewerAct->setEnabled(enabled);
-	toolsRsxDebuggerAct->setEnabled(enabled);
-	toolsStringSearchAct->setEnabled(enabled);
+	ui->toolskernel_explorerAct->setEnabled(enabled);
+	ui->toolsmemory_viewerAct->setEnabled(enabled);
+	ui->toolsRsxDebuggerAct->setEnabled(enabled);
+	ui->toolsStringSearchAct->setEnabled(enabled);
 }
 
 void main_window::BootRecentAction(const QAction* act)
@@ -816,7 +752,7 @@ void main_window::BootRecentAction(const QAction* act)
 			// clear menu of actions
 			for (auto act : m_recentGameActs)
 			{
-				m_bootRecentMenu->removeAction(act);
+				ui->bootRecentMenu->removeAction(act);
 			}
 
 			// remove action from list
@@ -832,7 +768,7 @@ void main_window::BootRecentAction(const QAction* act)
 			{
 				m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
 				m_recentGameActs[i]->setToolTip(m_rg_entries.at(i).second);
-				m_bootRecentMenu->addAction(m_recentGameActs[i]);
+				ui->bootRecentMenu->addAction(m_recentGameActs[i]);
 			}
 
 			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
@@ -905,7 +841,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 void main_window::AddRecentAction(const q_string_pair& entry)
 {
 	// don't change list on freeze
-	if (freezeRecentAct->isChecked())
+	if (ui->freezeRecentAct->isChecked())
 	{
 		return;
 	}
@@ -920,7 +856,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	// clear menu of actions
 	for (auto act : m_recentGameActs)
 	{
-		m_bootRecentMenu->removeAction(act);
+		ui->bootRecentMenu->removeAction(act);
 	}
 
 	// if path already exists, remove it in order to get it to beginning
@@ -954,7 +890,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	{
 		m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i+1));
 		m_recentGameActs[i]->setToolTip(m_rg_entries.at(i).second);
-		m_bootRecentMenu->addAction(m_recentGameActs[i]);
+		ui->bootRecentMenu->addAction(m_recentGameActs[i]);
 	}
 
 	guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(m_rg_entries));
@@ -962,252 +898,159 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 
 void main_window::CreateActions()
 {
-	bootElfAct = new QAction(tr("Boot (S)ELF file"), this);
-	bootGameAct = new QAction(tr("Boot &Game"), this);
-	bootInstallPkgAct = new QAction(tr("&Install PKG"), this);
-	bootInstallPupAct = new QAction(tr("&Install Firmware"), this);
+	ui->exitAct->setShortcuts(QKeySequence::Quit);
 
-	clearRecentAct = new QAction(tr("&Clear List"), this);
-	freezeRecentAct = new QAction(tr("&Freeze List"), this);
-	freezeRecentAct->setCheckable(true);
-
-	exitAct = new QAction(tr("E&xit"), this);
-	exitAct->setShortcuts(QKeySequence::Quit);
-	exitAct->setStatusTip(tr("Exit the application"));
-
-	sysPauseAct = new QAction(tr("&Pause"), this);
-	sysPauseAct->setEnabled(false);
-	sysPauseAct->setIcon(icon_pause);
-
-	sysStopAct = new QAction(tr("&Stop"), this);
-	sysStopAct->setEnabled(false);
-	sysStopAct->setIcon(icon_stop);
-
-	sysSendOpenMenuAct = new QAction(tr("Send &open system menu cmd"), this);
-	sysSendOpenMenuAct->setEnabled(false);
-
-	sysSendExitAct = new QAction(tr("Send &exit cmd"), this);
-	sysSendExitAct->setEnabled(false);
-
-	confSettingsAct = new QAction(tr("&Settings"), this);
-	confPadAct = new QAction(tr("&Keyboard Settings"), this);
-
-	confAutopauseManagerAct = new QAction(tr("&Auto Pause Settings"), this);
-	confAutopauseManagerAct->setEnabled(false);
-
-	confVFSDialogAct = new QAction(tr("Virtual File System"), this);
-	
-	confSavedataManagerAct = new QAction(tr("Save &Data Utility"), this);
-	confSavedataManagerAct->setEnabled(false);
-
-	toolsCgDisasmAct = new QAction(tr("&Cg Disasm"), this);
-	toolsCgDisasmAct->setEnabled(true);
-
-	toolskernel_explorerAct = new QAction(tr("&Kernel Explorer"), this);
-	toolskernel_explorerAct->setEnabled(false);
-
-	toolsmemory_viewerAct = new QAction(tr("&Memory Viewer"), this);
-	toolsmemory_viewerAct->setEnabled(false);
-
-	toolsRsxDebuggerAct = new QAction(tr("&RSX Debugger"), this);
-	toolsRsxDebuggerAct->setEnabled(false);
-
-	toolsStringSearchAct = new QAction(tr("&String Search"), this);
-	toolsStringSearchAct->setEnabled(false);
-
-	toolsDecryptSprxLibsAct = new QAction(tr("SPRX &Decryption"), this);
-
-	showDebuggerAct = new QAction(tr("Show Debugger"), this);
-	showDebuggerAct->setCheckable(true);
-
-	showLogAct = new QAction(tr("Show Log/TTY"), this);
-	showLogAct->setCheckable(true);
-
-	showGameListAct = new QAction(tr("Show Game List"), this);
-	showGameListAct->setCheckable(true);
-
-	showControlsAct = new QAction(tr("Show Controls"), this);
-	showControlsAct->setCheckable(true);
-
-	showGameListToolBarAct = new QAction(tr("Show Tool Bar"), this);
-	showGameListToolBarAct->setCheckable(true);
-
-	refreshGameListAct = new QAction(tr("&Refresh Game List"), this);
-
-	showCatHDDGameAct = new QAction(category::hdd_Game, this);
-	showCatHDDGameAct->setCheckable(true);
-
-	showCatDiscGameAct = new QAction(category::disc_Game, this);
-	showCatDiscGameAct->setCheckable(true);
-
-	showCatHomeAct = new QAction(tr("Home"), this);
-	showCatHomeAct->setCheckable(true);
-
-	showCatAudioVideoAct = new QAction(tr("Audio/Video"), this);
-	showCatAudioVideoAct->setCheckable(true);
-
-	showCatGameDataAct = new QAction(tr("GameData"), this);
-	showCatGameDataAct->setCheckable(true);
-
-	showCatUnknownAct = new QAction(category::unknown, this);
-	showCatUnknownAct->setCheckable(true);
-
-	showCatOtherAct = new QAction(category::other, this);
-	showCatOtherAct->setCheckable(true);
+	ui->toolbar_start->setEnabled(false);
+	ui->toolbar_stop->setEnabled(false);
 
 	categoryVisibleActGroup = new QActionGroup(this); 
-	categoryVisibleActGroup->addAction(showCatHDDGameAct);
-	categoryVisibleActGroup->addAction(showCatDiscGameAct);
-	categoryVisibleActGroup->addAction(showCatHomeAct);
-	categoryVisibleActGroup->addAction(showCatAudioVideoAct);
-	categoryVisibleActGroup->addAction(showCatGameDataAct);
-	categoryVisibleActGroup->addAction(showCatUnknownAct);
-	categoryVisibleActGroup->addAction(showCatOtherAct);
+	categoryVisibleActGroup->addAction(ui->showCatHDDGameAct);
+	categoryVisibleActGroup->addAction(ui->showCatDiscGameAct);
+	categoryVisibleActGroup->addAction(ui->showCatHomeAct);
+	categoryVisibleActGroup->addAction(ui->showCatAudioVideoAct);
+	categoryVisibleActGroup->addAction(ui->showCatGameDataAct);
+	categoryVisibleActGroup->addAction(ui->showCatUnknownAct);
+	categoryVisibleActGroup->addAction(ui->showCatOtherAct);
 	categoryVisibleActGroup->setExclusive(false);
 
-	setIconSizeTinyAct = new QAction(tr("Tiny"), this);
-	setIconSizeTinyAct->setCheckable(true);
-
-	setIconSizeSmallAct = new QAction(tr("Small"), this);
-	setIconSizeSmallAct->setCheckable(true);
-
-	setIconSizeMediumAct = new QAction(tr("Medium"), this);
-	setIconSizeMediumAct->setCheckable(true);
-
-	setIconSizeLargeAct = new QAction(tr("Large"), this);
-	setIconSizeLargeAct->setCheckable(true);
-
 	iconSizeActGroup = new QActionGroup(this);
-	iconSizeActGroup->addAction(setIconSizeTinyAct);
-	iconSizeActGroup->addAction(setIconSizeSmallAct);
-	iconSizeActGroup->addAction(setIconSizeMediumAct);
-	iconSizeActGroup->addAction(setIconSizeLargeAct);
-	setIconSizeSmallAct->setChecked(true);
-
-	setlistModeListAct = new QAction(tr("List"), this);
-	setlistModeListAct->setCheckable(true);
-
-	setlistModeGridAct = new QAction(tr("Grid"), this);
-	setlistModeGridAct->setCheckable(true);
+	iconSizeActGroup->addAction(ui->setIconSizeTinyAct);
+	iconSizeActGroup->addAction(ui->setIconSizeSmallAct);
+	iconSizeActGroup->addAction(ui->setIconSizeMediumAct);
+	iconSizeActGroup->addAction(ui->setIconSizeLargeAct);
 
 	listModeActGroup = new QActionGroup(this);
-	listModeActGroup->addAction(setlistModeListAct);
-	listModeActGroup->addAction(setlistModeGridAct);
-	setlistModeListAct->setChecked(true);
-
-	aboutAct = new QAction(tr("&About"), this);
-	aboutAct->setStatusTip(tr("Show the application's About box"));
-
-	aboutQtAct = new QAction(tr("About &Qt"), this);
-	aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
+	listModeActGroup->addAction(ui->setlistModeListAct);
+	listModeActGroup->addAction(ui->setlistModeGridAct);
 }
 
 void main_window::CreateConnects()
 {
-	connect(bootElfAct, &QAction::triggered, this, &main_window::BootElf);
-	connect(bootGameAct, &QAction::triggered, this, &main_window::BootGame);
-	connect(m_bootRecentMenu, &QMenu::aboutToShow, [=]() {
+	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
+	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]() {
 		// Enable/Disable Recent Games List
 		const bool stopped = Emu.IsStopped();
-		for (auto act : m_bootRecentMenu->actions())
+		for (auto act : ui->bootRecentMenu->actions())
 		{
-			if (act != freezeRecentAct && act != clearRecentAct)
+			if (act != ui->freezeRecentAct && act != ui->clearRecentAct)
 			{
 				act->setEnabled(stopped);
 			}
 		}
 	});
-	connect(clearRecentAct, &QAction::triggered, [this](){
-		if (freezeRecentAct->isChecked()) { return; }
+	connect(ui->clearRecentAct, &QAction::triggered, [this](){
+		if (ui->freezeRecentAct->isChecked()) { return; }
 		m_rg_entries.clear();
 		for (auto act : m_recentGameActs)
 		{
-			m_bootRecentMenu->removeAction(act);
+			ui->bootRecentMenu->removeAction(act);
 		}
 		m_recentGameActs.clear();
 		guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(q_pair_list()));
 	});
-	connect(freezeRecentAct, &QAction::triggered, [=](bool checked) {
+	connect(ui->freezeRecentAct, &QAction::triggered, [=](bool checked) {
 		guiSettings->SetValue(GUI::rg_freeze, checked);
 	});
-	connect(bootInstallPkgAct, &QAction::triggered, this, &main_window::InstallPkg);
-	connect(bootInstallPupAct, &QAction::triggered, this, &main_window::InstallPup);
-	connect(exitAct, &QAction::triggered, this, &QWidget::close);
-	connect(sysPauseAct, &QAction::triggered, Pause);
-	connect(sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
-	connect(sysSendOpenMenuAct, &QAction::triggered, [=](){
+	connect(ui->bootInstallPkgAct, &QAction::triggered, this, &main_window::InstallPkg);
+	connect(ui->bootInstallPupAct, &QAction::triggered, this, &main_window::InstallPup);
+	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
+	connect(ui->sysPauseAct, &QAction::triggered, Pause);
+	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
+	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(ui->captureFrame, &QAction::triggered, [=]() { user_asked_for_frame_capture = true; });
+	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=](){
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 		m_sys_menu_opened = !m_sys_menu_opened;
-		sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
+		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 	});
-	connect(sysSendExitAct, &QAction::triggered, [=](){
+	connect(ui->sysSendExitAct, &QAction::triggered, [=](){
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
-	connect(confSettingsAct, &QAction::triggered, [=](){
-		settings_dialog dlg(guiSettings, m_Render_Creator, this);
+
+	auto openSettings = [=](int tabIndex)
+	{
+		settings_dialog dlg(guiSettings, m_Render_Creator, tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
+		connect(&dlg, &settings_dialog::accepted, [this](){
+			gameListFrame->LoadSettings();
+			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+			ui->toolBar->setStyleSheet(QString(
+				"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+				"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+				"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+				"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+				.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+				.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+		});
 		dlg.exec();
-	});
-	connect(confPadAct, &QAction::triggered, this, [=](){
+	};
+	connect(ui->confCPUAct,    &QAction::triggered, [=]() { openSettings(0); });
+	connect(ui->confGPUAct,    &QAction::triggered, [=]() { openSettings(1); });
+	connect(ui->confAudioAct,  &QAction::triggered, [=]() { openSettings(2); });
+	connect(ui->confIOAct,     &QAction::triggered, [=]() { openSettings(3); });
+	connect(ui->confSystemAct, &QAction::triggered, [=]() { openSettings(4); });
+
+	connect(ui->confPadAct, &QAction::triggered, this, [=](){
 		pad_settings_dialog dlg(this);
 		dlg.exec();
 	});
-	connect(confAutopauseManagerAct, &QAction::triggered, [=](){
+	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=](){
 		auto_pause_settings_dialog dlg(this);
 		dlg.exec();
 	});
-	connect(confVFSDialogAct, &QAction::triggered, [=]() {
+	connect(ui->confVFSDialogAct, &QAction::triggered, [=]() {
 		vfs_dialog dlg(this);
 		dlg.exec();
 		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
-	connect(confSavedataManagerAct, &QAction::triggered, [=](){
+	connect(ui->confSavedataManagerAct, &QAction::triggered, [=](){
 		save_data_list_dialog* sdid = new save_data_list_dialog({}, 0, false, this);
 		sdid->show();
 	});
-	connect(toolsCgDisasmAct, &QAction::triggered, [=](){
+	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=](){
 		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings, this);
 		cgdw->show();
 	});
-	connect(toolskernel_explorerAct, &QAction::triggered, [=](){
+	connect(ui->toolskernel_explorerAct, &QAction::triggered, [=](){
 		kernel_explorer* kernelExplorer = new kernel_explorer(this);
 		kernelExplorer->show();
 	});
-	connect(toolsmemory_viewerAct, &QAction::triggered, [=](){
+	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [=](){
 		memory_viewer_panel* mvp = new memory_viewer_panel(this);
 		mvp->show();
 	});
-	connect(toolsRsxDebuggerAct, &QAction::triggered, [=](){
+	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [=](){
 		rsx_debugger* rsx = new rsx_debugger(this);
 		rsx->show();
 	});
-	connect(toolsStringSearchAct, &QAction::triggered, [=](){
+	connect(ui->toolsStringSearchAct, &QAction::triggered, [=](){
 		memory_string_searcher* mss = new memory_string_searcher(this);
 		mss->show();
 	});
-	connect(toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
-	connect(showDebuggerAct, &QAction::triggered, [=](bool checked){
+	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
+	connect(ui->showDebuggerAct, &QAction::triggered, [=](bool checked){
 		checked ? debuggerFrame->show() : debuggerFrame->hide();
 		guiSettings->SetValue(GUI::mw_debugger, checked);
 	});
-	connect(showLogAct, &QAction::triggered, [=](bool checked){
+	connect(ui->showLogAct, &QAction::triggered, [=](bool checked){
 		checked ? logFrame->show() : logFrame->hide();
 		guiSettings->SetValue(GUI::mw_logger, checked);
 	});
-	connect(showGameListAct, &QAction::triggered, [=](bool checked){
+	connect(ui->showGameListAct, &QAction::triggered, [=](bool checked){
 		checked ? gameListFrame->show() : gameListFrame->hide();
 		guiSettings->SetValue(GUI::mw_gamelist, checked);
 	});
-	connect(showControlsAct, &QAction::triggered, this, [=](bool checked){
-		checked ? controls->show() : controls->hide();
-		guiSettings->SetValue(GUI::mw_controls, checked);
+	connect(ui->showToolBarAct, &QAction::triggered, [=](bool checked) {
+		ui->toolBar->setVisible(checked);
+		guiSettings->SetValue(GUI::mw_toolBarVisible, checked);
 	});
-	connect(showGameListToolBarAct, &QAction::triggered, this, [=](bool checked){
+	connect(ui->showGameToolBarAct, &QAction::triggered, [=](bool checked) {
 		gameListFrame->SetToolBarVisible(checked);
 	});
-	connect(refreshGameListAct, &QAction::triggered, [=](){
+	connect(ui->refreshGameListAct, &QAction::triggered, [=](){
 		gameListFrame->Refresh(true);
 	});
 	connect(categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
@@ -1216,46 +1059,41 @@ void main_window::CreateConnects()
 		int id;
 		const bool& checked = act->isChecked();
 
-		if      (act == showCatHDDGameAct)    categories += category::non_disc_games, id = Category::Non_Disc_Game;
-		else if (act == showCatDiscGameAct)   categories += category::disc_Game, id = Category::Disc_Game;
-		else if (act == showCatHomeAct)       categories += category::home, id = Category::Home;
-		else if (act == showCatAudioVideoAct) categories += category::media, id = Category::Media;
-		else if (act == showCatGameDataAct)   categories += category::data, id = Category::Data;
-		else if (act == showCatUnknownAct)    categories += category::unknown, id = Category::Unknown_Cat;
-		else if (act == showCatOtherAct)      categories += category::others, id = Category::Others;
+		if      (act == ui->showCatHDDGameAct)    categories += category::non_disc_games, id = Category::Non_Disc_Game;
+		else if (act == ui->showCatDiscGameAct)   categories += category::disc_Game, id = Category::Disc_Game;
+		else if (act == ui->showCatHomeAct)       categories += category::home, id = Category::Home;
+		else if (act == ui->showCatAudioVideoAct) categories += category::media, id = Category::Media;
+		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
+		else if (act == ui->showCatUnknownAct)    categories += category::unknown, id = Category::Unknown_Cat;
+		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
 
 		gameListFrame->SetCategoryActIcon(categoryVisibleActGroup->actions().indexOf(act), checked);
 		gameListFrame->ToggleCategoryFilter(categories, checked);
 		guiSettings->SetCategoryVisibility(id, checked);
 	});
-	connect(aboutAct, &QAction::triggered, this, &main_window::About);
-	connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
-	connect(menu_run, &QAbstractButton::clicked, Pause);
-	connect(menu_stop, &QAbstractButton::clicked, [=]() { Emu.Stop(); });
-	connect(menu_restart, &QAbstractButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
-	connect(menu_capture_frame, &QAbstractButton::clicked, [=](){
-		user_asked_for_frame_capture = true;
+	connect(ui->aboutAct, &QAction::triggered, [this]() {
+		about_dialog dlg(this);
+		dlg.exec();
 	});
+	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
+	auto resizeIcons = [=](const int& index){
+		if (ui->sizeSlider->value() != index)
+		{
+			ui->sizeSlider->setSliderPosition(index);
+		}
+		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(index).first, GUI::gl_icon_size.at(index).second, index);
+	};
 	connect(iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
-		QString key;
+		int index;
 
-		if (act == setIconSizeLargeAct) key = GUI::gl_icon_key_large;
-		else if (act == setIconSizeMediumAct) key = GUI::gl_icon_key_medium;
-		else if (act == setIconSizeSmallAct) key = GUI::gl_icon_key_small;
-		else key = GUI::gl_icon_key_tiny;
+		if (act == ui->setIconSizeTinyAct) index = 0;
+		else if (act == ui->setIconSizeSmallAct) index = 1;
+		else if (act == ui->setIconSizeMediumAct) index = 2;
+		else index = 3;
 
-		guiSettings->SetValue(GUI::gl_iconSize, key);
-
-		for (int i = 0; i < GUI::gl_icon_size.count(); i++)
-		{
-			if (GUI::gl_icon_size.at(i).first == key)
-			{
-				gameListFrame->ResizeIcons(GUI::gl_icon_size.at(i).second, i);
-				break;
-			}
-		}
+		resizeIcons(index);
 	});
 	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
@@ -1263,7 +1101,7 @@ void main_window::CreateConnects()
 	});
 	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
-		isList ? setlistModeListAct->trigger() : setlistModeGridAct->trigger();
+		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
 	});
 	connect(gameListFrame, &game_list_frame::RequestCategoryActSet, [=](const int& id)
 	{
@@ -1271,131 +1109,78 @@ void main_window::CreateConnects()
 	});
 	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
-		bool isList = act == setlistModeListAct;
+		bool isList = act == ui->setlistModeListAct;
 		gameListFrame->SetListMode(isList);
 		categoryVisibleActGroup->setEnabled(isList);
 	});
-}
-
-void main_window::CreateMenus()
-{
-	QMenu *bootMenu = menuBar()->addMenu(tr("&Boot"));
-	bootMenu->addAction(bootElfAct);
-	bootMenu->addAction(bootGameAct);
-
-	m_bootRecentMenu = bootMenu->addMenu(tr("Boot Recent"));
-	m_bootRecentMenu->setToolTipsVisible(true);
-	m_bootRecentMenu->addAction(clearRecentAct);
-	m_bootRecentMenu->addAction(freezeRecentAct);
-	m_bootRecentMenu->addSeparator();
-
-	bootMenu->addSeparator();
-	bootMenu->addAction(bootInstallPkgAct);
-	bootMenu->addAction(bootInstallPupAct);
-	bootMenu->addSeparator();
-	bootMenu->addAction(exitAct);
-
-	QMenu *sysMenu = menuBar()->addMenu(tr("&System"));
-	sysMenu->addAction(sysPauseAct);
-	sysMenu->addAction(sysStopAct);
-	sysMenu->addSeparator();
-	sysMenu->addAction(sysSendOpenMenuAct);
-	sysMenu->addAction(sysSendExitAct);
-
-	QMenu *confMenu = menuBar()->addMenu(tr("&Config"));
-	confMenu->addAction(confSettingsAct);
-	confMenu->addAction(confPadAct);
-	confMenu->addSeparator();
-	confMenu->addAction(confAutopauseManagerAct);
-	confMenu->addAction(confVFSDialogAct);
-	confMenu->addSeparator();
-	confMenu->addAction(confSavedataManagerAct);
-
-	QMenu *toolsMenu = menuBar()->addMenu(tr("&Utilities"));
-	toolsMenu->addAction(toolsCgDisasmAct);
-	toolsMenu->addAction(toolskernel_explorerAct);
-	toolsMenu->addAction(toolsmemory_viewerAct);
-	toolsMenu->addAction(toolsRsxDebuggerAct);
-	toolsMenu->addAction(toolsStringSearchAct);
-	toolsMenu->addAction(toolsDecryptSprxLibsAct);
-
-	QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
-	viewMenu->addAction(showLogAct);
-	viewMenu->addAction(showDebuggerAct);
-	viewMenu->addAction(showControlsAct);
-	viewMenu->addSeparator();
-	viewMenu->addAction(showGameListAct);
-	viewMenu->addAction(showGameListToolBarAct);
-	viewMenu->addAction(refreshGameListAct);
-
-	QMenu *categoryMenu = viewMenu->addMenu(tr("Show Categories"));
-	categoryMenu->addActions(categoryVisibleActGroup->actions());
-
-	QMenu *iconSizeMenu = viewMenu->addMenu(tr("Icon Size"));
-	iconSizeMenu->addActions(iconSizeActGroup->actions());
-
-	QMenu *listModeMenu = viewMenu->addMenu(tr("Game List Mode"));
-	listModeMenu->addActions(listModeActGroup->actions());
-
-	QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
-	helpMenu->addAction(aboutAct);
-	helpMenu->addAction(aboutQtAct);
-
-	QHBoxLayout* controls_layout = new QHBoxLayout();
-	menu_run = new QPushButton(tr("Start"));
-	menu_stop = new QPushButton(tr("Stop"));
-	menu_restart = new QPushButton(tr("Restart"));
-	menu_capture_frame = new QPushButton(tr("Capture Frame"));
-	menu_run->setEnabled(false);
-	menu_stop->setEnabled(false);
-	menu_restart->setEnabled(false);
-	menu_run->setIcon(icon_play);
-	menu_stop->setIcon(icon_stop);
-	menu_restart->setIcon(icon_restart);
-	controls_layout->addWidget(menu_run);
-	controls_layout->addWidget(menu_stop);
-	controls_layout->addWidget(menu_restart);
-	controls_layout->addWidget(menu_capture_frame);
-	controls_layout->addSpacing(5);
-	controls_layout->setContentsMargins(0, 0, 0, 0);
-	controls = new QWidget(this);
-	controls->setLayout(controls_layout);
-	menuBar()->setCornerWidget(controls, Qt::TopRightCorner);
+	connect(ui->toolBar, &QToolBar::visibilityChanged, [=](bool checked) {
+		ui->showToolBarAct->setChecked(checked);
+		guiSettings->SetValue(GUI::mw_toolBarVisible, checked);
+	});
+	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { gameListFrame->Refresh(true); });
+	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
+	connect(ui->toolbar_start, &QAction::triggered, Pause);
+	//connect(ui->toolbar_snap, &QAction::triggered, [=]() { user_asked_for_frame_capture = true; });
+	connect(ui->toolbar_fullscreen, &QAction::triggered, [=]() {
+		if (isFullScreen())
+		{
+			showNormal();
+			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen.png"));
+		}
+		else
+		{
+			showFullScreen();
+			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen_invert.png"));
+		}
+	});
+	connect(ui->toolbar_controls, &QAction::triggered, [=]() { pad_settings_dialog dlg(this); dlg.exec(); });
+	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
+	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
+	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
+	//connect(ui->toolbar_sort, &QAction::triggered, gameListFrame, sort);
+	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
+	connect(ui->searchBar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
 }
 
 void main_window::CreateDockWindows()
 {
-	gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, this);
+	// new mainwindow widget because existing seems to be bugged for now
+	m_mw = new QMainWindow();
+
+	gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
 	gameListFrame->setObjectName("gamelist");
-	debuggerFrame = new debugger_frame(this);
+	debuggerFrame = new debugger_frame(m_mw);
 	debuggerFrame->setObjectName("debugger");
-	logFrame = new log_frame(guiSettings, this);
+	logFrame = new log_frame(guiSettings, m_mw);
 	logFrame->setObjectName("logger");
 
-	addDockWidget(Qt::LeftDockWidgetArea, gameListFrame);
-	addDockWidget(Qt::LeftDockWidgetArea, logFrame);
-	addDockWidget(Qt::RightDockWidgetArea, debuggerFrame);
+	m_mw->addDockWidget(Qt::LeftDockWidgetArea, gameListFrame);
+	m_mw->addDockWidget(Qt::LeftDockWidgetArea, logFrame);
+	m_mw->addDockWidget(Qt::RightDockWidgetArea, debuggerFrame);
+	m_mw->setDockNestingEnabled(true);
+	setCentralWidget(m_mw);
 
 	connect(logFrame, &log_frame::log_frameClosed, [=]()
 	{
-		if (showLogAct->isChecked())
+		if (ui->showLogAct->isChecked())
 		{
-			showLogAct->setChecked(false);
+			ui->showLogAct->setChecked(false);
 			guiSettings->SetValue(GUI::mw_logger, false);
 		}
 	});
 	connect(debuggerFrame, &debugger_frame::DebugFrameClosed, [=](){
-		if (showDebuggerAct->isChecked())
+		if (ui->showDebuggerAct->isChecked())
 		{
-			showDebuggerAct->setChecked(false);
+			ui->showDebuggerAct->setChecked(false);
 			guiSettings->SetValue(GUI::mw_debugger, false);
 		}
 	});
 	connect(gameListFrame, &game_list_frame::game_list_frameClosed, [=]()
 	{
-		if (showGameListAct->isChecked())
+		if (ui->showGameListAct->isChecked())
 		{
-			showGameListAct->setChecked(false);
+			ui->showGameListAct->setChecked(false);
 			guiSettings->SetValue(GUI::mw_gamelist, false);
 		}
 	});
@@ -1420,14 +1205,15 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	}
 
 	restoreState(guiSettings->GetValue(GUI::mw_windowState).toByteArray());
+	m_mw->restoreState(guiSettings->GetValue(GUI::mw_mwState).toByteArray());
 
-	freezeRecentAct->setChecked(guiSettings->GetValue(GUI::rg_freeze).toBool());
+	ui->freezeRecentAct->setChecked(guiSettings->GetValue(GUI::rg_freeze).toBool());
 	m_rg_entries = guiSettings->Var2List(guiSettings->GetValue(GUI::rg_entries));
 
 	// clear recent games menu of actions
 	for (auto act : m_recentGameActs)
 	{
-		m_bootRecentMenu->removeAction(act);
+		ui->bootRecentMenu->removeAction(act);
 	}
 	m_recentGameActs.clear();
 	// Fill the recent games menu
@@ -1440,7 +1226,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 		if (act)
 		{
 			m_recentGameActs.append(act);
-			m_bootRecentMenu->addAction(act);
+			ui->bootRecentMenu->addAction(act);
 		}
 		else
 		{
@@ -1448,33 +1234,45 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 		}
 	}
 
-	showLogAct->setChecked(logFrame->isVisible() || guiSettings->GetValue(GUI::mw_logger).toBool());
-	showGameListAct->setChecked(gameListFrame->isVisible() || guiSettings->GetValue(GUI::mw_gamelist).toBool());
-	showDebuggerAct->setChecked(debuggerFrame->isVisible() || guiSettings->GetValue(GUI::mw_debugger).toBool());
-	showControlsAct->setChecked(controls->isVisible() || guiSettings->GetValue(GUI::mw_controls).toBool());
-	showGameListToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
-	guiSettings->GetValue(GUI::mw_controls).toBool() ? controls->show() : controls->hide();
+	ui->showLogAct->setChecked(guiSettings->GetValue(GUI::mw_logger).toBool());
+	ui->showGameListAct->setChecked(guiSettings->GetValue(GUI::mw_gamelist).toBool());
+	ui->showDebuggerAct->setChecked(guiSettings->GetValue(GUI::mw_debugger).toBool());
+	ui->showToolBarAct->setChecked(guiSettings->GetValue(GUI::mw_toolBarVisible).toBool());
+	ui->showGameToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
 
-	showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
-	showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
-	showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(Category::Home));
-	showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(Category::Media));
-	showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(Category::Data));
-	showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
-	showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
+	debuggerFrame->setVisible(ui->showDebuggerAct->isChecked());
+	logFrame->setVisible(ui->showLogAct->isChecked());
+	gameListFrame->setVisible(ui->showGameListAct->isChecked());
+	gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
+	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
+
+	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+	ui->toolBar->setStyleSheet(QString(
+		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+
+	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
+	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
+	ui->showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(Category::Home));
+	ui->showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(Category::Media));
+	ui->showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(Category::Data));
+	ui->showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
+	ui->showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
 	QString key = guiSettings->GetValue(GUI::gl_iconSize).toString();
-	if (key == GUI::gl_icon_key_large) setIconSizeLargeAct->setChecked(true);
-	else if (key == GUI::gl_icon_key_medium) setIconSizeMediumAct->setChecked(true);
-	else if (key == GUI::gl_icon_key_small) setIconSizeSmallAct->setChecked(true);
-	else setIconSizeTinyAct->setChecked(true);
-
+	if (key == GUI::gl_icon_key_large) ui->setIconSizeLargeAct->setChecked(true);
+	else if (key == GUI::gl_icon_key_medium) ui->setIconSizeMediumAct->setChecked(true);
+	else if (key == GUI::gl_icon_key_small) ui->setIconSizeSmallAct->setChecked(true);
+	else ui->setIconSizeTinyAct->setChecked(true);
 
 	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();
-	if (isListMode) setlistModeListAct->setChecked(true);
-	else setlistModeGridAct->setChecked(true);
+	if (isListMode) ui->setlistModeListAct->setChecked(true);
+	else ui->setlistModeGridAct->setChecked(true);
 	categoryVisibleActGroup->setEnabled(isListMode);
-
 
 	if (configureAll)
 	{
@@ -1488,7 +1286,12 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
 {
-	if (keyEvent->modifiers() == Qt::ControlModifier)
+	if ((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return || isFullScreen() && keyEvent->key() == Qt::Key_Escape)
+	{
+		ui->toolbar_fullscreen->trigger();
+	}
+
+	if (keyEvent->modifiers() & Qt::ControlModifier)
 	{
 		switch (keyEvent->key())
 		{
@@ -1496,6 +1299,18 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
 		case Qt::Key_R: if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
+		}
+	}
+}
+
+void main_window::mouseDoubleClickEvent(QMouseEvent *event)
+{
+	if (isFullScreen())
+	{
+		if (event->button() == Qt::LeftButton)
+		{
+			showNormal();
+			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen.png"));
 		}
 	}
 }
@@ -1515,7 +1330,6 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	setAttribute(Qt::WA_DeleteOnClose);
 	QMainWindow::close();
 
-	
 	// It's possible to have other windows open, like games.  So, force the application to die.
 	QApplication::quit();
 }

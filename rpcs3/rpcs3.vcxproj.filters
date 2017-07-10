@@ -55,6 +55,11 @@
       <Extensions>qrc;*</Extensions>
       <ParseFiles>false</ParseFiles>
     </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+      <ParseFiles>true</ParseFiles>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -62,21 +67,6 @@
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>rpcs3</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_audio_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_audio_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_audio_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_audio_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\audio_tab.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\auto_pause_settings_dialog.cpp">
       <Filter>Gui</Filter>
@@ -106,21 +96,6 @@
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\cg_disasm_window.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_core_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_core_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_core_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_core_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\core_tab.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_debugger_frame.cpp">
@@ -171,21 +146,6 @@
     <ClCompile Include="rpcs3qt\gl_gs_frame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_graphics_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_graphics_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_graphics_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_graphics_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\graphics_tab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gs_frame.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -214,36 +174,6 @@
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\gui_settings.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gui_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_gui_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_gui_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gui_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\gui_tab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_input_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_input_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_input_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_input_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\input_tab.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_kernel_explorer.cpp">
@@ -304,36 +234,6 @@
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\memory_string_searcher.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_misc_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_misc_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_misc_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_misc_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\misc_tab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_networking_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_networking_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_networking_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_networking_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\networking_tab.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pad_settings_dialog.cpp">
@@ -398,21 +298,6 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\settings_dialog.cpp">
       <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\system_tab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_system_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_system_tab.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_system_tab.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_system_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="basic_keyboard_handler.cpp">
       <Filter>Io\Basic</Filter>
@@ -561,6 +446,21 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_vfs_dialog_tab.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\about_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_about_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_about_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_about_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_about_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -599,6 +499,21 @@
     <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_about_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_main_window.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_pad_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_welcome_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">
@@ -607,16 +522,10 @@
     <CustomBuild Include="release\moc_predefs.h.cbt">
       <Filter>Generated Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\audio_tab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\auto_pause_settings_dialog.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\cg_disasm_window.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\core_tab.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\debugger_frame.h">
@@ -628,19 +537,10 @@
     <CustomBuild Include="rpcs3qt\game_list_frame.h">
       <Filter>Gui</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\graphics_tab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\gs_frame.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\gui_settings.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\gui_tab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\input_tab.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\kernel_explorer.h">
@@ -655,12 +555,6 @@
     <CustomBuild Include="rpcs3qt\memory_string_searcher.h">
       <Filter>Gui</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\misc_tab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\networking_tab.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\pad_settings_dialog.h">
       <Filter>Gui</Filter>
     </CustomBuild>
@@ -671,9 +565,6 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\settings_dialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\system_tab.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="basic_keyboard_handler.h">
@@ -704,6 +595,24 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\vfs_dialog_tab.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\about_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\main_window.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pad_settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\welcome_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\about_dialog.h">
       <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>
