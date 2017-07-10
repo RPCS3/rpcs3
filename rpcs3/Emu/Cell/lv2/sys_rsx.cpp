@@ -54,7 +54,7 @@ struct RsxDriverInfo {
     be_t<u32> unk14;         // 0x12E0
     be_t<u32> unk15;         // 0x12E4
     be_t<u32> unk16;         // 0x12E8
-    be_t<u32> unk17;         // 0x12F0 
+    be_t<u32> unk17;         // 0x12F0
     be_t<u32> lastError;     // 0x12F4 error param for cellGcmSetGraphicsHandler
     // todo: theres more to this 
 };
@@ -299,7 +299,7 @@ s32 sys_rsx_context_iounmap(u32 context_id, u32 io_addr, u32 a3, u32 size)
  */
 s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
-    if (package_id != 0x101)
+    if (package_id != 0xFED)
 	sys_rsx.todo("sys_rsx_context_attribute(context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
 
     // hle/lle protection
@@ -318,14 +318,8 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	
 	case 0x100: // Display mode set
         break;
-    case 0x101: // Display sync
-        // todo: this is wrong and should be 'second' vblank handler and freq
-        // although gcmSys seems just hardcoded at 1, so w/e
-        driverInfo.head[1].vBlankCount++;
-        driverInfo.head[1].lastSecondVTime = rsxTimeStamp();
-        sys_event_port_send(g_rsx_event_port, 0, (1 << 1), 0);
-        sys_event_port_send(g_rsx_event_port, 0, (1 << 11), 0); // second vhandler
-		break;
+    case 0x101: // Display sync set, cellGcmSetFlipMode
+        break;
 
 	case 0x102: // Display flip
         driverInfo.head[a3].flipFlags |= 0x80000000;
@@ -424,6 +418,14 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
     case 0x603: // Framebuffer close
         break;
 
+    case 0xFED: // hack: vblank command
+        // todo: this is wrong and should be 'second' vblank handler and freq
+        // although gcmSys seems just hardcoded at 1, so w/e
+        driverInfo.head[a3].vBlankCount++;
+        driverInfo.head[a3].lastSecondVTime = rsxTimeStamp();
+        sys_event_port_send(g_rsx_event_port, 0, (1 << 1), 0);
+        sys_event_port_send(g_rsx_event_port, 0, (1 << 11), 0); // second vhandler
+        break;
     case 0xFEF: // hack: user command
         // 'custom' invalid package id for now 
         // as i think we need custom lv1 interrupts to handle this accurately
@@ -472,6 +474,9 @@ s32 sys_rsx_device_unmap(u32 dev_id)
 	return CELL_OK;
 }
 
+/*
+* lv2 SysCall 677 (0x2A5): sys_rsx_attribute
+*/
 s32 sys_rsx_attribute(u32 packageId, u32 a2, u32 a3, u32 a4, u32 a5)
 {
 	sys_rsx.todo("sys_rsx_attribute(packageId=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", packageId, a2, a3, a4, a5);
