@@ -939,13 +939,18 @@ std::string game_list_frame::CurrentSelectionIconPath()
 {
 	std::string selection = "";
 
-	if (m_oldLayoutIsList && gameList->currentRow() >= 0)
+	// The index can be more than the size of m_game_data if you use the VFS to load a directory which has less games.
+	if (m_oldLayoutIsList && gameList->currentRow() >= 0 && gameList->currentRow() < m_game_data.size())
 	{
 		selection = m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
 	}
 	else if (!m_oldLayoutIsList && m_xgrid->currentItem() != nullptr)
 	{
-		selection = m_game_data.at(m_xgrid->currentItem()->data(Qt::UserRole).toInt()).info.icon_path;
+		int ind = m_xgrid->currentItem()->data(Qt::UserRole).toInt();
+		if (ind < m_game_data.size())
+		{
+			selection = m_game_data.at(ind).info.icon_path;
+		}
 	}
 
 	m_oldLayoutIsList = m_isListLayout;
