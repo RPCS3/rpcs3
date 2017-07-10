@@ -403,7 +403,7 @@ namespace rsx
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
-                    sys_rsx_context_attribute(0x55555555, 0x101, 0, 0, 0, 0);
+                    sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
 					if (vblank_handler)
 					{
 						intr_thread->cmd_list

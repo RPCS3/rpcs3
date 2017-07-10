@@ -909,22 +909,6 @@ namespace rsx
 			}
 			Emu.Pause();
 		}
-
-		double limit = 0.;
-		switch (g_cfg.video.frame_limit)
-		{
-		case frame_limit_type::none: limit = 0.; break;
-		case frame_limit_type::_59_94: limit = 59.94; break;
-		case frame_limit_type::_50: limit = 50.; break;
-		case frame_limit_type::_60: limit = 60.; break;
-		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_auto: limit = rsx->fps_limit; break; // TODO
-		}
-		if (limit)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
-			rsx->timer_sync.Start();
-		}
 		
 		rsx->gcm_current_buffer = arg;
 		rsx->flip(arg);
@@ -933,7 +917,6 @@ namespace rsx
 		//rsx->reset(); // moved to 'actual' rsx flip command
 
 		rsx->last_flip_time = get_system_time() - 1000000;
-		rsx->gcm_current_buffer = arg;
 		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
 		if (rsx->flip_handler)
@@ -974,6 +957,22 @@ namespace rsx
         {
             static void impl(thread* rsx, u32 _reg, u32 arg)
             {
+                double limit = 0.;
+                switch (g_cfg.video.frame_limit)
+                {
+                case frame_limit_type::none: limit = 0.; break;
+                case frame_limit_type::_59_94: limit = 59.94; break;
+                case frame_limit_type::_50: limit = 50.; break;
+                case frame_limit_type::_60: limit = 60.; break;
+                case frame_limit_type::_30: limit = 30.; break;
+                case frame_limit_type::_auto: limit = rsx->fps_limit; break; // TODO
+                }
+                if (limit)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
+                    rsx->timer_sync.Start();
+                }
+
                 rsx->reset(); // fixes kh, so lets leave it here and see what happens
                 sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
             }
