@@ -16,17 +16,13 @@ evdev_joystick_config g_evdev_joystick_config;
 
 namespace
 {
-    const u32 THREAD_SLEEP = 10;
-    const u32 THREAD_SLEEP_INACTIVE = 100;
+    const u32 THREAD_SLEEP_USEC = 100;
+    const u32 THREAD_SLEEP_INACTIVE_USEC = 1000000;
     const u32 READ_TIMEOUT = 10;
-    const u32 THREAD_TIMEOUT = 1000;
+    const u32 THREAD_TIMEOUT_USEC = 1000000;
 
     const std::string EVENT_JOYSTICK = "event-joystick";
-
-    inline u32 milli2micro(u32 milli) { return milli * 1000; }
 }
-
-enum { DPAD_AXIS_X = -1, DPAD_AXIS_Y = -2 };
 
 evdev_joystick_handler::evdev_joystick_handler() {}
 
@@ -37,12 +33,16 @@ void evdev_joystick_handler::Init(const u32 max_connect)
     std::memset(&m_info, 0, sizeof m_info);
     m_info.max_connect = std::min(max_connect, static_cast<u32>(1));
 
+    needscale = static_cast<bool>(g_evdev_joystick_config.needscale);
+    axistrigger = static_cast<bool>(g_evdev_joystick_config.axistrigger);
+
     g_evdev_joystick_config.load();
 
     fs::dir devdir{"/dev/input/by-id"};
     fs::dir_entry et;
 
-    while (devdir.read(et)) {
+    while (devdir.read(et))
+    {
         // Does the entry name end with event-joystick?
         if (et.name.size() > EVENT_JOYSTICK.size() &&
             et.name.compare(et.name.size() - EVENT_JOYSTICK.size(),
@@ -80,10 +80,10 @@ void evdev_joystick_handler::Init(const u32 max_connect)
         pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_evdev_joystick_config.r3, CELL_PAD_CTRL_R3);
         pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
 
-        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, DPAD_AXIS_Y, CELL_PAD_CTRL_UP);
-        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, DPAD_AXIS_Y, CELL_PAD_CTRL_DOWN);
-        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, DPAD_AXIS_X, CELL_PAD_CTRL_LEFT);
-        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, DPAD_AXIS_X, CELL_PAD_CTRL_RIGHT);
+        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_evdev_joystick_config.up, CELL_PAD_CTRL_UP);
+        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_evdev_joystick_config.down, CELL_PAD_CTRL_DOWN);
+        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_evdev_joystick_config.left, CELL_PAD_CTRL_LEFT);
+        pad.m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_evdev_joystick_config.right, CELL_PAD_CTRL_RIGHT);
 
         pad.m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X+g_evdev_joystick_config.lxstick, 0, 0);
         pad.m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X+g_evdev_joystick_config.lystick, 0, 0);
@@ -166,11 +166,16 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
 
     int axes=0;
     for (int i=ABS_X; i<=ABS_RZ; i++)
+    {
+        // Skip ABS_Z and ABS_RZ on controllers where it's used for the triggers.
+        if (axistrigger && (i == ABS_Z || i == ABS_RZ)) continue;
+
         if (libevdev_has_event_code(dev, EV_ABS, i))
         {
             LOG_NOTICE(GENERAL, "Joystick #%d has axis %d as %d", index, i, axes);
             joy_axis_maps[index][i - ABS_X] = axes++;
         }
+    }
 
     for (int i=ABS_HAT0X; i<=ABS_HAT3Y; i+=2)
         if (libevdev_has_event_code(dev, EV_ABS, i) ||
@@ -190,9 +195,9 @@ void evdev_joystick_handler::Close()
         active.store(false);
         if (!dead.load())
         {
-            usleep(milli2micro(THREAD_TIMEOUT));
+            usleep(THREAD_TIMEOUT_USEC);
             if (!dead.load())
-                LOG_ERROR(GENERAL, "EvdevJoystick thread could not stop within %d milliseconds", THREAD_TIMEOUT);
+                LOG_ERROR(GENERAL, "EvdevJoystick thread could not stop within %d microseconds", THREAD_TIMEOUT_USEC);
         }
     }
 
@@ -245,6 +250,9 @@ void evdev_joystick_handler::thread_func()
             case EV_SYN:
                 LOG_NOTICE(GENERAL, "Joystick #%d sent EV_SYN", i);
                 break;
+            case EV_MSC:
+                LOG_NOTICE(GENERAL, "Joystick #%d sent EV_MSC", i);
+                break;
             case EV_KEY:
             {
                 LOG_NOTICE(GENERAL, "Joystick #%d EV_KEY: %d %d", i, evt.code, evt.value);
@@ -284,7 +292,7 @@ void evdev_joystick_handler::thread_func()
                         break;
                     }
 
-                    int source_axis = hat == joy_hat_ids[i] ? DPAD_AXIS_X : DPAD_AXIS_Y;
+                    int source_axis = hat == joy_hat_ids[i] ? EVDEV_DPAD_HAT_AXIS_X : EVDEV_DPAD_HAT_AXIS_Y;
 
                     for (Button& bt : pad.m_buttons)
                     {
@@ -298,7 +306,7 @@ void evdev_joystick_handler::thread_func()
                         else
                         {
                             int code = -1;
-                            if (source_axis == DPAD_AXIS_X)
+                            if (source_axis == EVDEV_DPAD_HAT_AXIS_X)
                             {
                                 code = evt.value > 0 ? CELL_PAD_CTRL_RIGHT : CELL_PAD_CTRL_LEFT;
                             }
@@ -315,7 +323,37 @@ void evdev_joystick_handler::thread_func()
                         }
                     }
                 }
-                else if (evt.code <= ABS_RZ)
+                else if (axistrigger && (evt.code == ABS_Z || evt.code == ABS_RZ))
+                {
+                    // For Xbox 360 controllers, a third axis represent the left/right triggers.
+                    int which_trigger=0;
+
+                    if (evt.code == ABS_Z)
+                    {
+                        which_trigger = CELL_PAD_CTRL_L2;
+                    }
+                    else if (evt.code == ABS_RZ)
+                    {
+                        which_trigger = CELL_PAD_CTRL_R2;
+                    }
+                    else
+                    {
+                        LOG_ERROR(GENERAL, "Joystick #%d sent invalid event code %d for 3rd axis", i, evt.code);
+                        break;
+                    }
+
+                    auto which_button = std::find_if(
+                        pad.m_buttons.begin(), pad.m_buttons.end(),
+                        [&](const Button& bt) { return bt.m_outKeyCode == which_trigger; });
+                    if (which_button == pad.m_buttons.end())
+                    {
+                        LOG_ERROR(GENERAL, "Joystick #%d's pad has no trigger %d", i, which_trigger);
+                        break;
+                    }
+                    which_button->m_pressed = evt.value == 255;
+                    which_button->m_value = evt.value;
+                }
+                else if (evt.code >= ABS_X && evt.code <= ABS_RZ)
                 {
                     int axis = joy_axis_maps[i][evt.code - ABS_X];
 
@@ -326,7 +364,16 @@ void evdev_joystick_handler::thread_func()
                     }
 
                     auto& stick = pad.m_sticks[axis];
-                    stick.m_value = evt.value;
+
+                    int value = evt.value;
+
+                    if (needscale)
+                    {
+                        // Scale from the -32768...32768 range to the 0...256 range.
+                        value = (value / 256) + 128;
+                    }
+
+                    stick.m_value = value;
                 }
                 break;
             default:
@@ -335,8 +382,8 @@ void evdev_joystick_handler::thread_func()
             }
         }
 
-        int to_sleep = m_info.now_connect > 0 ? THREAD_SLEEP : THREAD_SLEEP_INACTIVE;
-        usleep(milli2micro(to_sleep));
+        int to_sleep = m_info.now_connect > 0 ? THREAD_SLEEP_USEC : THREAD_SLEEP_INACTIVE_USEC;
+        usleep(to_sleep);
     }
 
     dead = true;
