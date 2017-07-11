@@ -55,6 +55,65 @@ void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
 	});
 }
 
+namespace spu
+{
+	namespace scheduler
+	{
+		struct executable_block_map
+		{
+			std::array<std::atomic<u8>, 1024> locations;
+
+			std::atomic<u8>& operator[](u32 offset)
+			{
+				return locations[offset];
+			}
+		};
+
+		//TODO: Only initialize loaded memory blocks to save RAM
+		//TODO: Concurrent spu thread limit can be configurable
+		std::array<executable_block_map, 65536> atomic_instruction_table;
+		constexpr u8 max_concurrent_instructions = 1;
+
+		void acquire_pc_address(u32 pc, u32 timeout_ms = 3)
+		{
+			const u32 block = pc >> 12;
+			const u32 offset = (pc & 0xFFF) >> 2;
+
+			while (timeout_ms--)
+			{
+				if (atomic_instruction_table[block][offset].load(std::memory_order_consume) >= max_concurrent_instructions)
+					std::this_thread::sleep_for(1ms);
+			}
+
+			atomic_instruction_table[block][offset]++;
+		}
+
+		void release_pc_address(u32 pc)
+		{
+			const u32 block = pc >> 12;
+			const u32 offset = (pc & 0xFFF) >> 2;
+
+			atomic_instruction_table[block][offset]--;
+		}
+
+		struct concurrent_execution_watchdog
+		{
+			u32 pc = 0;
+
+			concurrent_execution_watchdog(SPUThread& spu)
+				:pc(spu.pc)
+			{
+				acquire_pc_address(pc);
+			}
+
+			~concurrent_execution_watchdog()
+			{
+				release_pc_address(pc);
+			}
+		};
+	}
+}
+
 void spu_int_ctrl_t::set(u64 ints)
 {
 	// leave only enabled interrupts
@@ -483,6 +542,7 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 
 void SPUThread::process_mfc_cmd()
 {
+	spu::scheduler::concurrent_execution_watchdog watchdog(*this);
 	LOG_TRACE(SPU, "DMAC: cmd=%s, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 
 	const auto mfc = fxm::check_unlocked<mfc_thread>();
