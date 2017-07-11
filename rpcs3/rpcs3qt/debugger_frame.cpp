@@ -5,6 +5,7 @@
 #include <QFontDatabase>
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+extern bool user_asked_for_frame_capture;
 
 debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), parent)
 {
@@ -30,6 +31,7 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 
 	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
+	m_btn_capture = new QPushButton(tr("Capture"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
 	m_btn_run = new QPushButton(Run, this);
 
@@ -37,6 +39,7 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 
 	hbox_b_main->addWidget(m_go_to_addr);
 	hbox_b_main->addWidget(m_go_to_pc);
+	hbox_b_main->addWidget(m_btn_capture);
 	hbox_b_main->addWidget(m_btn_step);
 	hbox_b_main->addWidget(m_btn_run);
 	hbox_b_main->addWidget(m_choice_units);
@@ -72,6 +75,7 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::Show_Val);
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::Show_PC);
+	connect(m_btn_capture, &QAbstractButton::clicked, [=]() { user_asked_for_frame_capture = true; });
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_run, &QAbstractButton::clicked, [=](){
 		if (const auto cpu = this->cpu.lock())
