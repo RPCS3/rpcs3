@@ -514,6 +514,9 @@
     <ClInclude Include="QTGeneratedFiles\ui_welcome_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\system_info.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">

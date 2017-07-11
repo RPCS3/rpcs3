@@ -41,6 +41,7 @@
 #include "Utilities/StrUtil.h"
 
 #include "rpcs3_version.h"
+#include "system_info.h"
 
 #include "ui_main_window.h"
 
@@ -92,6 +93,15 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 		// So, a tricky balance in terms of time but this works.
 		RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
 		ConfigureGuiFromSettings(true);
+
+		if (!System_Info::getCPU().second)
+		{
+			QMessageBox::critical(this, "SSSE3 Error (with three S, not two)",
+				"Your system does not meet the minimum requirements needed to run RPCS3.\n"
+				"Your CPU does not support SSSE3 (with three S, not two).\n"
+				"\n"
+				"No games will run and RPCS3 will crash if you try.");
+		}
 	});
 }
 
