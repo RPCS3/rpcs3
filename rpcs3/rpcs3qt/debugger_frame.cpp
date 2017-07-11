@@ -31,8 +31,7 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
-	m_btn_run = new QPushButton(tr("Run"), this);
-	m_btn_pause = new QPushButton(tr("Pause"), this);
+	m_btn_run = new QPushButton(Run, this);
 
 	EnableButtons(!Emu.IsStopped());
 
@@ -40,7 +39,6 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	hbox_b_main->addWidget(m_go_to_pc);
 	hbox_b_main->addWidget(m_btn_step);
 	hbox_b_main->addWidget(m_btn_run);
-	hbox_b_main->addWidget(m_btn_pause);
 	hbox_b_main->addWidget(m_choice_units);
 	hbox_b_main->addStretch();
 
@@ -76,14 +74,20 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::Show_PC);
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_run, &QAbstractButton::clicked, [=](){
-		const auto cpu = this->cpu.lock();
-		if (cpu && cpu->state.test_and_reset(cpu_flag::dbg_pause))
-			if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
-				cpu->notify();
-		UpdateUI();
-	});
-	connect(m_btn_pause, &QAbstractButton::clicked, [=](){
-		if (const auto cpu = this->cpu.lock()) cpu->state += cpu_flag::dbg_pause;
+		if (const auto cpu = this->cpu.lock())
+		{
+			if (m_btn_run->text() == Run && cpu->state.test_and_reset(cpu_flag::dbg_pause))
+			{
+				if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
+				{
+					cpu->notify();
+				}
+			}
+			else
+			{
+				cpu->state += cpu_flag::dbg_pause;
+			}
+		}
 		UpdateUI();
 	});
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &debugger_frame::UpdateUI);
@@ -147,7 +151,6 @@ void debugger_frame::UpdateUI()
 
 			m_btn_run->setEnabled(false);
 			m_btn_step->setEnabled(false);
-			m_btn_pause->setEnabled(false);
 		}
 	}
 	else
@@ -163,15 +166,13 @@ void debugger_frame::UpdateUI()
 
 			if (test(state & cpu_flag::dbg_pause))
 			{
-				m_btn_run->setEnabled(true);
+				m_btn_run->setText(Run);
 				m_btn_step->setEnabled(true);
-				m_btn_pause->setEnabled(false);
 			}
 			else
 			{
-				m_btn_run->setEnabled(false);
+				m_btn_run->setText(Pause);
 				m_btn_step->setEnabled(false);
-				m_btn_pause->setEnabled(true);
 			}
 		}
 	}
@@ -407,7 +408,6 @@ void debugger_frame::EnableButtons(bool enable)
 	m_go_to_pc->setEnabled(enable);
 	m_btn_step->setEnabled(enable);
 	m_btn_run->setEnabled(enable);
-	m_btn_pause->setEnabled(enable);
 }
 
 debugger_list::debugger_list(debugger_frame* parent) : QListWidget(parent)
