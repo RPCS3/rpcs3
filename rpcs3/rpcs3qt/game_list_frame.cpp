@@ -25,7 +25,7 @@
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_Creator r_Creator, QWidget *parent) 
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent)
 	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
 	m_isListLayout = xgui_settings->GetValue(GUI::gl_listMode).toBool();
@@ -33,6 +33,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	m_Margin_Factor = xgui_settings->GetValue(GUI::gl_marginFactor).toReal();
 	m_Text_Factor = xgui_settings->GetValue(GUI::gl_textFactor).toReal();
 	m_showToolBar = xgui_settings->GetValue(GUI::gl_toolBarVisible).toBool();
+	m_Icon_Color = xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>();
 
 	m_oldLayoutIsList = m_isListLayout;
 
@@ -49,6 +50,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	}
 
 	// Save factors for first setup
+	xgui_settings->SetValue(GUI::gl_iconColor, m_Icon_Color);
 	xgui_settings->SetValue(GUI::gl_marginFactor, m_Margin_Factor);
 	xgui_settings->SetValue(GUI::gl_textFactor, m_Text_Factor);
 	xgui_settings->SetValue(GUI::gl_toolBarVisible, m_showToolBar);
@@ -118,7 +120,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	// Search Bar
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
-	connect(m_Search_Bar, &QLineEdit::textChanged, [this]() {
+	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text) {
+		m_searchText = text;
 		Refresh();
 	});
 
@@ -148,7 +151,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	setWidget(m_Game_Dock);
 
 	bool showText = (m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny);
-	m_xgrid = new game_list_grid(m_Icon_Size, m_Margin_Factor, m_Text_Factor, showText);
+	m_xgrid = new game_list_grid(m_Icon_Size, m_Icon_Color, m_Margin_Factor, m_Text_Factor, showText);
 
 	gameList = new QTableWidget();
 	gameList->setShowGrid(false);
@@ -167,7 +170,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, Render_
 	gameList->horizontalHeader()->setDefaultSectionSize(150);
 	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 	gameList->setAlternatingRowColors(true);
-	gameList->setStyleSheet("alternate-background-color: rgb(242, 242, 242);");
 
 	gameList->setColumnCount(10);
 	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
@@ -292,6 +294,8 @@ void game_list_frame::LoadSettings()
 
 	m_sortColumn = xgui_settings->GetValue(GUI::gl_sortCol).toInt();
 
+	m_Icon_Color = xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>();
+
 	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
 	Refresh(true);
@@ -393,7 +397,7 @@ void game_list_frame::Refresh(bool fromDrive)
 				{
 					game.icon_path = dir + "/ICON0.PNG";
 				}
-			
+
 				game.category = sstr(cat->second);
 				bootable = true;
 			}
@@ -419,7 +423,7 @@ void game_list_frame::Refresh(bool fromDrive)
 			if (!game.icon_path.empty() && img.load(qstr(game.icon_path)))
 			{
 				QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-				scaled.fill(QColor(209, 209, 209, 255));
+				scaled.fill(m_Icon_Color);
 				QPainter painter(&scaled);
 				painter.drawImage(QPoint(0,0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 				painter.end();
@@ -470,7 +474,7 @@ void game_list_frame::Refresh(bool fromDrive)
 			m_games_per_row = 0;
 		}
 
-		PopulateGameGrid(m_games_per_row, m_Icon_Size);
+		PopulateGameGrid(m_games_per_row, m_Icon_Size, m_Icon_Color);
 		connect(m_xgrid, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 		m_Central_Widget->addWidget(m_xgrid);
@@ -593,6 +597,8 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 		globalPos = m_xgrid->mapToGlobal(pos);
 	}
 
+	GameInfo currGame = m_game_data[row].info;
+
 	QMenu myMenu;
 
 	// Make Actions
@@ -612,7 +618,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=]() {
-		settings_dialog(xgui_settings, m_Render_Creator, this, &m_game_data[row].info).exec();
+		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
 	});
 	connect(removeGame, &QAction::triggered, [=]() {
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
@@ -623,16 +629,15 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
-	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + m_game_data[row].info.root); });
-	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + m_game_data[row].info.serial); });
+	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + currGame.root); });
+	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
-		QString serial = qstr(m_game_data[row].info.serial);
-		QString link = "https://rpcs3.net/compatibility?g=" + serial;
+		QString link = "https://rpcs3.net/compatibility?g=" + qstr(currGame.serial);
 		QDesktopServices::openUrl(QUrl(link));
 	});
 
 	//Disable options depending on software category
-	QString category = qstr(m_game_data[row].info.category);
+	QString category = qstr(currGame.category);
 
 	if (category == category::disc_Game)
 	{
@@ -649,6 +654,12 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	else if (category != category::hdd_Game)
 	{
 		checkCompat->setEnabled(false);
+	}
+
+	// Disable removeconfig if no config exists.
+	if (fs::is_file(fs::get_config_dir() + "data/" + currGame.serial + "/config.yml") == false)
+	{
+		removeConfig->setEnabled(false);
 	}
 
 	myMenu.exec(globalPos);
@@ -699,19 +710,22 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	}
 }
 
-void game_list_frame::ResizeIcons(const QSize& size, const int& idx)
+void game_list_frame::ResizeIcons(const QString& sizeStr, const QSize& size, const int& index)
 {
-	if (m_Slider_Size->value() != idx) m_Slider_Size->setSliderPosition(idx);
-	m_Icon_Size_Str = GUI::gl_icon_size.at(idx).first;
+	m_Icon_Size_Str = sizeStr;
+	m_Icon_Size = size;
+
+	if (m_Slider_Size->value() != index)
+	{
+		m_Slider_Size->setSliderPosition(index);
+	}
 
 	xgui_settings->SetValue(GUI::gl_iconSize, m_Icon_Size_Str);
-
-	m_Icon_Size = size;
 
 	for (size_t i = 0; i < m_game_data.size(); i++)
 	{
 		QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-		scaled.fill(QColor(209, 209, 209, 255));
+		scaled.fill(m_Icon_Color);
 		QPainter painter(&scaled);
 		painter.drawImage(QPoint(0, 0), m_game_data[i].icon.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 		painter.end();
@@ -743,10 +757,20 @@ void game_list_frame::SetToolBarVisible(const bool& showToolBar)
 	m_Tool_Bar->setVisible(showToolBar);
 	xgui_settings->SetValue(GUI::gl_toolBarVisible, showToolBar);
 }
+bool game_list_frame::GetToolBarVisible()
+{
+	return m_showToolBar;
+}
 
 void game_list_frame::SetCategoryActIcon(const int& id, const bool& active)
 {
 	m_categoryButtons.at(id).action->setIcon(active ? m_categoryButtons.at(id).colored : m_categoryButtons.at(id).gray);
+}
+
+void game_list_frame::SetSearchText(const QString& text)
+{
+	m_searchText = text;
+	Refresh();
 }
 
 void game_list_frame::closeEvent(QCloseEvent *event)
@@ -814,7 +838,7 @@ int game_list_frame::PopulateGameList()
 	return result;
 }
 
-void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size)
+void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color)
 {
 	uint r = 0;
 	uint c = 0;
@@ -827,11 +851,11 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size)
 
 	if (m_Icon_Size_Str == GUI::gl_icon_key_medium)
 	{
-		m_xgrid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor * 2, showText);
+		m_xgrid = new game_list_grid(image_size, image_color, m_Margin_Factor, m_Text_Factor * 2, showText);
 	}
 	else
 	{
-		m_xgrid = new game_list_grid(image_size, m_Margin_Factor, m_Text_Factor, showText);
+		m_xgrid = new game_list_grid(image_size, image_color, m_Margin_Factor, m_Text_Factor, showText);
 	}
 
 	// Get number of things that'll be in grid and precompute grid size.
@@ -910,9 +934,9 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size)
 */
 bool game_list_frame::SearchMatchesApp(const std::string& name, const std::string& serial)
 {
-	if (m_Search_Bar->text() != "")
+	if (!m_searchText.isEmpty())
 	{
-		QString searchText = m_Search_Bar->text().toLower();
+		QString searchText = m_searchText.toLower();
 		return qstr(name).toLower().contains(searchText) || qstr(serial).toLower().contains(searchText);
 	}
 	return true;
@@ -922,13 +946,18 @@ std::string game_list_frame::CurrentSelectionIconPath()
 {
 	std::string selection = "";
 
-	if (m_oldLayoutIsList && gameList->currentRow() >= 0)
+	// The index can be more than the size of m_game_data if you use the VFS to load a directory which has less games.
+	if (m_oldLayoutIsList && gameList->currentRow() >= 0 && gameList->currentRow() < m_game_data.size())
 	{
 		selection = m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
 	}
 	else if (!m_oldLayoutIsList && m_xgrid->currentItem() != nullptr)
 	{
-		selection = m_game_data.at(m_xgrid->currentItem()->data(Qt::UserRole).toInt()).info.icon_path;
+		int ind = m_xgrid->currentItem()->data(Qt::UserRole).toInt();
+		if (ind < m_game_data.size())
+		{
+			selection = m_game_data.at(ind).info.icon_path;
+		}
 	}
 
 	m_oldLayoutIsList = m_isListLayout;

@@ -179,6 +179,11 @@ void gui_settings::SetGamelistColVisibility(int col, bool val)
 	SetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", show), val);
 }
 
+void gui_settings::SetCustomColor(int col, const QColor& val)
+{
+	SetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), GUI::mw_tool_bar_color), val);
+}
+
 void gui_settings::SaveCurrentConfig(const QString& friendlyName)
 {
 	SetValue(GUI::m_currentConfig, friendlyName);
@@ -195,6 +200,11 @@ bool gui_settings::GetGamelistColVisibility(int col)
 	// hide sound format and parental level
 	bool show = col != 8 && col != 9;
 	return GetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", show)).toBool();
+}
+
+QColor gui_settings::GetCustomColor(int col)
+{
+	return GetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), GUI::mw_tool_bar_color)).value<QColor>();
 }
 
 QStringList gui_settings::GetConfigEntries()

@@ -32,6 +32,8 @@ public:
 private:
 	QString EmuConfigDir();
 
+	const QString EmptyPath = "Empty Path";
+
 	vfs_settings_info m_info;
 	gui_settings* m_gui_settings;
 	emu_settings* m_emu_settings;

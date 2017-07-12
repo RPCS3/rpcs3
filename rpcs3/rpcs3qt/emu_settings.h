@@ -95,6 +95,7 @@ public:
 		EnableHostRoot,
 
 		// Virtual File System
+		emulatorLocation,
 		dev_hdd0Location,
 		dev_hdd1Location,
 		dev_flashLocation,
@@ -107,11 +108,11 @@ public:
 	emu_settings(const std::string& path);
 	~emu_settings();
 
-	/** Returns a combo box of that setting type that is bound to the parent. */
-	QComboBox* CreateEnhancedComboBox(SettingsType type, QWidget* parent = nullptr);
+	/** Connects a combo box with the target settings type*/
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type);
 
-	/** Returns a check button that is connected to the target settings type, bound to the life of parent*/
-	QCheckBox* CreateEnhancedCheckBox(SettingsType target, QWidget* parent = nullptr);
+	/** Connects a check box with the target settings type*/
+	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
@@ -188,6 +189,7 @@ private:
 		{EnableHostRoot,	{ "VFS", "Enable /host_root/"}},
 
 		// Virtual File System
+		{ emulatorLocation, { "VFS", "$(EmulatorDir)"}},
 		{ dev_hdd0Location, { "VFS", "/dev_hdd0/" }},
 		{ dev_hdd1Location, { "VFS", "/dev_hdd1/" }},
 		{ dev_flashLocation, { "VFS", "/dev_flash/"}},
