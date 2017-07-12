@@ -14,6 +14,7 @@ extern logs::channel sysPrxForUser;
 vm::gvar<sys_lwmutex_t> g_ppu_atexit_lwm;
 vm::gvar<vm::ptr<void()>[8]> g_ppu_atexit;
 vm::gvar<u32> g_ppu_once_mutex;
+vm::gvar<sys_lwmutex_t> g_ppu_prx_lwm;
 
 static u32 s_tls_addr = 0; // TLS image address
 static u32 s_tls_file = 0; // TLS image size
@@ -110,6 +111,12 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	attr->flags     = 0;
 	attr->name_u64  = "_lv2ppu\0"_u64;
 	sys_mutex_create(g_ppu_once_mutex, attr);
+
+	lwa->protocol   = SYS_SYNC_PRIORITY;
+	lwa->recursive  = SYS_SYNC_RECURSIVE;
+	lwa->name_u64   = "_lv2prx\0"_u64;
+	sys_lwmutex_create(g_ppu_prx_lwm, lwa);
+	// TODO: missing prx initialization
 }
 
 error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
@@ -262,6 +269,7 @@ void sysPrxForUser_sys_ppu_thread_init()
 	REG_VNID(sysPrxForUser, 0x00000000u, g_ppu_atexit_lwm);
 	REG_VNID(sysPrxForUser, 0x00000001u, g_ppu_once_mutex);
 	REG_VNID(sysPrxForUser, 0x00000002u, g_ppu_atexit);
+	REG_VNID(sysPrxForUser, 0x00000003u, g_ppu_prx_lwm);
 
 	REG_FUNC(sysPrxForUser, sys_initialize_tls);
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_create);
