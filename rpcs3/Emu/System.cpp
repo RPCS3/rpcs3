@@ -260,12 +260,12 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	return false;
 }
 
-std::string Emulator::GetGameDir()
+std::string Emulator::GetHddDir()
 {
 	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
 	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
-	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
 }
 
 std::string Emulator::GetLibDir()

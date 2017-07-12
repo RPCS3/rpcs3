@@ -9,7 +9,9 @@
 #include "Utilities/types.h"
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
+#include <set>
 
 #include <QDesktopServices>
 #include <QDir>
@@ -353,16 +355,32 @@ void game_list_frame::Refresh(bool fromDrive)
 
 		m_game_data.clear();
 
-		const std::string& game_path = Emu.GetGameDir();
+		const std::string _hdd = Emu.GetHddDir();
 
-		for (const auto& entry : fs::dir(Emu.GetGameDir()))
+		std::vector<std::string> path_list;
+
+		const auto add_dir = [&](const std::string& path)
 		{
-			if (!entry.is_directory)
+			for (const auto& entry : fs::dir(path))
 			{
-				continue;
+				if (entry.is_directory)
+				{
+					path_list.emplace_back(path + entry.name);
+				}
 			}
+		};
 
-			const std::string& dir = game_path + entry.name;
+		add_dir(_hdd + "game/");
+		add_dir(_hdd + "disc/");
+
+		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
+		{
+			path_list.push_back(pair.second.Scalar());
+		}
+
+		// std::set is used to remove duplicates from the list
+		for (const auto& dir : std::set<std::string>(std::make_move_iterator(path_list.begin()), std::make_move_iterator(path_list.end())))
+		{
 			const std::string& sfb = dir + "/PS3_DISC.SFB";
 			const std::string& sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
 
@@ -375,7 +393,7 @@ void game_list_frame::Refresh(bool fromDrive)
 			const auto& psf = psf::load_object(sfo_file);
 
 			GameInfo game;
-			game.root         = entry.name;
+			game.path         = dir;
 			game.serial       = psf::get_string(psf, "TITLE_ID", "");
 			game.name         = psf::get_string(psf, "TITLE", sstr(category::unknown));
 			game.app_ver      = psf::get_string(psf, "APP_VER", sstr(category::unknown));
@@ -534,24 +552,23 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	
 	if (1)
 	{
-		const std::string& path = Emu.GetGameDir() + m_game_data[i].info.root;
-		RequestIconPathSet(path);
+		RequestIconPathSet(m_game_data[i].info.path);
 	
 		Emu.Stop();
 	
-		if (!Emu.BootGame(path))
+		if (!Emu.BootGame(m_game_data[i].info.path))
 		{
-			LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[i].info.root);
+			LOG_ERROR(LOADER, "Failed to boot %s", m_game_data[i].info.path);
 		}
 		else
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
-			RequestAddRecentGame(q_string_pair(qstr(path), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
+			RequestAddRecentGame(q_string_pair(qstr(m_game_data[i].info.path), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
 		}
 	}
 	else
 	{
-		open_dir(Emu.GetGameDir() + m_game_data[i].info.root);
+		open_dir(m_game_data[i].info.path);
 	}
 }
 
@@ -619,16 +636,17 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	connect(configure, &QAction::triggered, [=]() {
 		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
 	});
-	connect(removeGame, &QAction::triggered, [=]() {
+	connect(removeGame, &QAction::triggered, [=]()
+	{
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
 		{
-			fs::remove_all(Emu.GetGameDir() + m_game_data[row].info.root);
+			fs::remove_all(m_game_data[row].info.path);
 			m_game_data.erase(m_game_data.begin() + row);
 			Refresh();
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
-	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + currGame.root); });
+	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
 		QString link = "https://rpcs3.net/compatibility?g=" + qstr(currGame.serial);
@@ -666,20 +684,19 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 void game_list_frame::Boot(int row)
 {
-	const std::string& path = Emu.GetGameDir() + m_game_data[row].info.root;
-	RequestIconPathSet(path);
+	RequestIconPathSet(m_game_data[row].info.path);
 
 	Emu.Stop();
 
-	if (!Emu.BootGame(path))
+	if (!Emu.BootGame(m_game_data[row].info.path))
 	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(m_game_data[row].info.root));
-		LOG_ERROR(LOADER, "Failed to boot /dev_hdd0/game/%s", m_game_data[row].info.root);
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(m_game_data[row].info.path));
+		LOG_ERROR(LOADER, "Failed to boot %s", m_game_data[row].info.path);
 	}
 	else
 	{
 		LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
-		RequestAddRecentGame(q_string_pair(qstr(path), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
+		RequestAddRecentGame(q_string_pair(qstr(m_game_data[row].info.path), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
 	}
 }
 
@@ -824,7 +841,7 @@ int game_list_frame::PopulateGameList()
 		gameList->setItem(row, 3, l_GetItem(game.info.fw));
 		gameList->setItem(row, 4, l_GetItem(game.info.app_ver));
 		gameList->setItem(row, 5, l_GetItem(game.info.category));
-		gameList->setItem(row, 6, l_GetItem(game.info.root));
+		gameList->setItem(row, 6, l_GetItem(game.info.path));
 		gameList->setItem(row, 7, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
 		gameList->setItem(row, 8, l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
 		gameList->setItem(row, 9, l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level)));
