@@ -210,6 +210,11 @@ public:
 		return m_elf_path;
 	}
 
+	const std::string& GetBoot() const
+	{
+		return m_path;
+	}
+
 	const std::string& GetTitleID() const
 	{
 		return m_title_id;

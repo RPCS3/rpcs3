@@ -376,6 +376,7 @@ void game_list_frame::Refresh(bool fromDrive)
 		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
 		{
 			path_list.push_back(pair.second.Scalar());
+			path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
 		}
 
 		// std::set is used to remove duplicates from the list
@@ -563,7 +564,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		else
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
-			RequestAddRecentGame(q_string_pair(qstr(m_game_data[i].info.path), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
+			RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
 		}
 	}
 	else
@@ -696,7 +697,7 @@ void game_list_frame::Boot(int row)
 	else
 	{
 		LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
-		RequestAddRecentGame(q_string_pair(qstr(m_game_data[row].info.path), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
+		RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
 	}
 }
 
