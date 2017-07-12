@@ -703,7 +703,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				xgui_settings->SetValue(color, dlg.selectedColor());
 			}
 		};
-		connect(ui->pb_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, "Choose icon color"); });
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, "Choose gamelist icon color"); });
+		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_toolIconColor, "Choose gamelist tool icon color"); });
 		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, "Choose tool bar color"); });
 		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolIconColor, "Choose tool icon color"); });
 
