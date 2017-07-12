@@ -37,6 +37,8 @@ class main_window : public QMainWindow
 	QIcon icon_pause;
 	QIcon icon_stop;
 	QIcon icon_restart;
+	QIcon icon_fullscreen_on;
+	QIcon icon_fullscreen_off;
 
 #ifdef _WIN32
 	QIcon icon_thumb_play;
@@ -78,6 +80,7 @@ private Q_SLOTS:
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();
+	void RepaintToolBarIcons();
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
@@ -88,6 +91,7 @@ private:
 	void CreateDockWindows();
 	void ConfigureGuiFromSettings(bool configureAll = false);
 	void EnableMenus(bool enabled);
+
 	void keyPressEvent(QKeyEvent *keyEvent);
 	void mouseDoubleClickEvent(QMouseEvent *event);
 

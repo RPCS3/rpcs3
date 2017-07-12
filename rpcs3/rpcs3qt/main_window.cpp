@@ -72,10 +72,7 @@ void main_window::Init()
 	guiSettings.reset(new gui_settings());
 
 	// Load Icons: This needs to happen before any actions or buttons are created
-	icon_play = QIcon(":/Icons/play.png");
-	icon_pause = QIcon(":/Icons/pause.png");
-	icon_stop = QIcon(":/Icons/stop.png");
-	icon_restart = QIcon(":/Icons/restart.png");
+	RepaintToolBarIcons();
 	appIcon = QIcon(":/rpcs3.ico");
 
 	// add toolbar widgets (crappy Qt designer is not able to)
@@ -617,6 +614,53 @@ void main_window::SaveWindowState()
 	gameListFrame->SaveSettings();
 }
 
+void main_window::RepaintToolBarIcons()
+{
+	QColor newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+
+	icon_play = game_list_frame::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
+	icon_pause = game_list_frame::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
+	icon_stop = game_list_frame::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor);
+	icon_restart = game_list_frame::colorizedIcon(QIcon(":/Icons/restart.png"), GUI::mw_tool_icon_color, newColor);
+	icon_fullscreen_on = game_list_frame::colorizedIcon(QIcon(":/Icons/fullscreen.png"), GUI::mw_tool_icon_color, newColor);
+	icon_fullscreen_off = game_list_frame::colorizedIcon(QIcon(":/Icons/fullscreen_invert.png"), GUI::mw_tool_icon_color, newColor);
+
+	ui->toolbar_config->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/configure.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_controls->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/controllers.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_disc->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/disc.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_grid->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/grid.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_list->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/list.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_refresh->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/refresh.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_snap->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/screenshot.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_sort->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/sort.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_stop->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor));
+	
+	if (Emu.IsRunning())
+	{
+		ui->toolbar_start->setIcon(icon_pause);
+	}
+	else if (Emu.IsStopped() && !Emu.GetPath().empty())
+	{
+		ui->toolbar_start->setIcon(icon_restart);
+	}
+	else
+	{
+		ui->toolbar_start->setIcon(icon_play);
+	}
+	
+	if (isFullScreen())
+	{
+		ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
+	}
+	else
+	{
+		ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
+	}
+
+	ui->sizeSlider->setStyleSheet(QString("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
+		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
+}
+
 void main_window::OnEmuRun()
 {
 	debuggerFrame->EnableButtons(true);
@@ -977,6 +1021,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
+		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
 			gameListFrame->LoadSettings();
 			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
@@ -1129,12 +1174,12 @@ void main_window::CreateConnects()
 		if (isFullScreen())
 		{
 			showNormal();
-			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen.png"));
+			ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
 		}
 		else
 		{
 			showFullScreen();
-			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen_invert.png"));
+			ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
 		}
 	});
 	connect(ui->toolbar_controls, &QAction::triggered, [=]() { pad_settings_dialog dlg(this); dlg.exec(); });
@@ -1313,7 +1358,7 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 		if (event->button() == Qt::LeftButton)
 		{
 			showNormal();
-			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen.png"));
+			ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
 		}
 	}
 }
