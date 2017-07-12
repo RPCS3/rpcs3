@@ -532,8 +532,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
 	
-	// enable boot for bootable categories only
-	if (m_game_data[i].bootable)
+	if (1)
 	{
 		const std::string& path = Emu.GetGameDir() + m_game_data[i].info.root;
 		RequestIconPathSet(path);
@@ -643,7 +642,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	{
 		removeGame->setEnabled(false);
 	}
-	else if (!m_game_data[row].bootable)
+	else if (0)
 	{
 		boot->setEnabled(false), f.setBold(false), boot->setFont(f);
 		configure->setEnabled(false);
