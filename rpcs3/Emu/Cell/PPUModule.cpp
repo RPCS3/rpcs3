@@ -890,6 +890,14 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	return prx;
 }
 
+void ppu_unload_prx(const lv2_prx& prx)
+{
+	for (auto& seg : prx.segs)
+	{
+		vm::dealloc(seg.addr, vm::main);
+	}
+}
+
 void ppu_load_exec(const ppu_exec_object& elf)
 {
 	if (g_cfg.core.hook_functions)
@@ -1090,6 +1098,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	if (g_cfg.core.lib_loading == lib_loading_type::automatic || g_cfg.core.lib_loading == lib_loading_type::both)
 	{
+		// Load only libsysmodule.sprx
+		load_libs.emplace("libsysmodule.sprx");
+	}
+	else if (0)
+	{
 		// Load recommended set of modules: Module name -> SPRX
 		std::unordered_multimap<std::string, std::string> sprx_map
 		{
@@ -1197,7 +1210,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 		}
 
-		// TODO: recursively scan all SPRX files in /app_home/ for imports
 		for (const auto& pair : link->modules)
 		{
 			if (!pair.second.imported)
