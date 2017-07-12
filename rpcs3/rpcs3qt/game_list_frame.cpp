@@ -23,7 +23,6 @@
 #include <QTimer>
 #include <QUrl>
 #include <QLabel>
-#include <QBitmap>
 
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
@@ -748,53 +747,6 @@ void game_list_frame::ResizeIcons(const QString& sizeStr, const QSize& size, con
 	Refresh();
 }
 
-QIcon game_list_frame::colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks)
-{
-	QPixmap pixmap = icon.pixmap(icon.availableSizes().at(0));
-	QBitmap mask = pixmap.createMaskFromColor(oldColor, Qt::MaskOutColor);
-	pixmap.fill(newColor);
-	pixmap.setMask(mask);
-	
-	// special masks for disc icon and others
-
-	if (useSpecialMasks)
-	{
-		auto saturatedColor = [](const QColor& col, float sat /* must be < 1 */)
-		{
-			int r = col.red() + sat * (255 - col.red());
-			int g = col.green() + sat * (255 - col.green());
-			int b = col.blue() + sat * (255 - col.blue());
-			return QColor(r, g, b, col.alpha());
-		};
-
-		QColor colorS1(Qt::white);
-		QPixmap pixmapS1 = icon.pixmap(icon.availableSizes().at(0));
-		QBitmap maskS1 = pixmapS1.createMaskFromColor(colorS1, Qt::MaskOutColor);
-		pixmapS1.fill(colorS1);
-		pixmapS1.setMask(maskS1);
-
-		QColor colorS2(0, 173, 246, 255);
-		QPixmap pixmapS2 = icon.pixmap(icon.availableSizes().at(0));
-		QBitmap maskS2 = pixmapS2.createMaskFromColor(colorS2, Qt::MaskOutColor);
-		pixmapS2.fill(saturatedColor(newColor, 0.6f));
-		pixmapS2.setMask(maskS2);
-
-		QColor colorS3(0, 132, 244, 255);
-		QPixmap pixmapS3 = icon.pixmap(icon.availableSizes().at(0));
-		QBitmap maskS3 = pixmapS3.createMaskFromColor(colorS3, Qt::MaskOutColor);
-		pixmapS3.fill(saturatedColor(newColor, 0.3f));
-		pixmapS3.setMask(maskS3);
-
-		QPainter painter(&pixmap);
-		painter.drawPixmap(QPoint(0, 0), pixmapS1);
-		painter.drawPixmap(QPoint(0, 0), pixmapS2);
-		painter.drawPixmap(QPoint(0, 0), pixmapS3);
-		painter.end();
-	}
-
-	return QIcon(pixmap);
-}
-
 void game_list_frame::SetListMode(const bool& isList)
 {
 	m_oldLayoutIsList = m_isListLayout;
@@ -838,23 +790,23 @@ void game_list_frame::RepaintToolBarIcons()
 {
 	QColor newColor = xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>();
 
-	m_catActHDD.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/hdd_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActDisc.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/disc_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActHome.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color, newColor);
-	m_catActAudioVideo.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/media_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActGameData.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/data_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActUnknown.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/unknown_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActOther.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/other_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_catActHDD.colored = gui_settings::colorizedIcon(QIcon(":/Icons/hdd_blue.png"), GUI::gl_tool_icon_color, newColor, true);
+	m_catActDisc.colored = gui_settings::colorizedIcon(QIcon(":/Icons/disc_blue.png"), GUI::gl_tool_icon_color, newColor, true);
+	m_catActHome.colored = gui_settings::colorizedIcon(QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_catActAudioVideo.colored = gui_settings::colorizedIcon(QIcon(":/Icons/media_blue.png"), GUI::gl_tool_icon_color, newColor, true);
+	m_catActGameData.colored = gui_settings::colorizedIcon(QIcon(":/Icons/data_blue.png"), GUI::gl_tool_icon_color, newColor, true);
+	m_catActUnknown.colored = gui_settings::colorizedIcon(QIcon(":/Icons/unknown_blue.png"), GUI::gl_tool_icon_color, newColor, true);
+	m_catActOther.colored = gui_settings::colorizedIcon(QIcon(":/Icons/other_blue.png"), GUI::gl_tool_icon_color, newColor);
 
 	for (const auto& butt : m_categoryButtons)
 	{
 		butt->action->setIcon(butt->isActive ? butt->colored : butt->gray);
 	}
 
-	m_modeActList.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/list_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_modeActList.colored = gui_settings::colorizedIcon(QIcon(":/Icons/list_blue.png"), GUI::gl_tool_icon_color, newColor);
 	m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 
-	m_modeActGrid.colored = game_list_frame::colorizedIcon(QIcon(":/Icons/grid_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_modeActGrid.colored = gui_settings::colorizedIcon(QIcon(":/Icons/grid_blue.png"), GUI::gl_tool_icon_color, newColor);
 	m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 
 	m_Slider_Size->setStyleSheet(QString("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
