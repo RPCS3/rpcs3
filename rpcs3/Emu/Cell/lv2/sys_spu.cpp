@@ -203,7 +203,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	group->threads[spu_num] = std::move(spu);
 	group->args[spu_num] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
-	group->imgs[spu_num] = img;
+	group->imgs[spu_num] = *img;
 
 	if (++group->init == group->num)
 	{
@@ -345,9 +345,9 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->index];
 			auto& img = group->imgs[thread->index];
 
-			img->deploy(thread->offset);
+			img.deploy(thread->offset);
 
-			thread->pc = img->entry_point;
+			thread->pc = img.entry_point;
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
 			thread->gpr[4] = v128::from64(0, args[1]);
