@@ -12,8 +12,9 @@ class basic_mouse_handler final : public QObject, public MouseHandlerBase
 public:
 	virtual void Init(const u32 max_connect) override;
 
-	basic_mouse_handler(QObject* target, QObject* parent);
+	basic_mouse_handler();
 
+	void SetTargetWindow(QObject* target);
 	void MouseButtonDown(QMouseEvent* event);
 	void MouseButtonUp(QMouseEvent* event);
 	void MouseScroll(QWheelEvent* event);
@@ -21,5 +22,5 @@ public:
 
 	bool eventFilter(QObject* obj, QEvent* ev);
 private:
-	QObject* m_target;
+	QObject* m_target = nullptr;
 };

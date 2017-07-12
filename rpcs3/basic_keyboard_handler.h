@@ -12,12 +12,13 @@ class basic_keyboard_handler final : public QObject, public KeyboardHandlerBase
 public:
 	virtual void Init(const u32 max_connect) override;
 
-	explicit basic_keyboard_handler(QObject* target = nullptr, QObject* parent = nullptr);
+	explicit basic_keyboard_handler();
 
+	void SetTargetWindow(QObject* target);
 	bool eventFilter(QObject* obj, QEvent* ev);
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();
 private:
-	QObject* m_target;
+	QObject* m_target = nullptr;
 };

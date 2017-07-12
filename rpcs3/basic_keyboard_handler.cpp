@@ -17,16 +17,21 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	m_info.status[0] = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }
 
-basic_keyboard_handler::basic_keyboard_handler(QObject* target, QObject* parent) : QObject(parent), m_target(target)
+basic_keyboard_handler::basic_keyboard_handler() : QObject()
 {
-	// Adds event filter to the target to filter keyevents.
+}
+
+/* Sets the target window for the event handler, and also installs an event filter on the target. */
+void basic_keyboard_handler::SetTargetWindow(QObject* target)
+{
+	m_target = target;
 	target->installEventFilter(this);
 }
 
+
 bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 {
-	// Commenting target since I don't know how to target game window yet.
-	//if (target == m_target)
+	if (target == m_target)
 	{
 		if (ev->type() == QEvent::KeyPress)
 		{

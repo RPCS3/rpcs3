@@ -12,15 +12,13 @@ void keyboard_pad_handler::Init(const u32 max_connect)
 	m_info.now_connect = std::min(m_pads.size(), (size_t)max_connect);
 }
 
-keyboard_pad_handler::keyboard_pad_handler(QObject* target, QObject* parent) : QObject(parent), m_target(target)
+keyboard_pad_handler::keyboard_pad_handler() : QObject()
 {
-	target->installEventFilter(this);
 }
 
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 {
-	// Commenting target since I don't know how to target game window yet.
-	//if (target == m_target)
+	if (target == m_target)
 	{
 		if (ev->type() == QEvent::KeyPress)
 		{
@@ -32,6 +30,13 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 		}
 	}
 	return false;
+}
+
+/* Sets the target window for the event handler, and also installs an event filter on the target. */
+void keyboard_pad_handler::SetTargetWindow(QObject* target)
+{
+	m_target = target;
+	target->installEventFilter(this);
 }
 
 void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)

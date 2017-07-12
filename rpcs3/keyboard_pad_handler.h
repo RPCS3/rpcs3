@@ -58,13 +58,14 @@ class keyboard_pad_handler final : public QObject, public PadHandlerBase
 public:
 	virtual void Init(const u32 max_connect) override;
 
-	keyboard_pad_handler(QObject* target, QObject* parent);
+	keyboard_pad_handler();
 
+	void SetTargetWindow(QObject* target);
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();
 
 	bool eventFilter(QObject* obj, QEvent* ev);
 private:
-	QObject* m_target;
+	QObject* m_target = nullptr;
 };
