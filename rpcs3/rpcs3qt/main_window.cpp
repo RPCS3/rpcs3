@@ -618,22 +618,22 @@ void main_window::RepaintToolBarIcons()
 {
 	QColor newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
 
-	icon_play = game_list_frame::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
-	icon_pause = game_list_frame::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
-	icon_stop = game_list_frame::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor);
-	icon_restart = game_list_frame::colorizedIcon(QIcon(":/Icons/restart.png"), GUI::mw_tool_icon_color, newColor);
-	icon_fullscreen_on = game_list_frame::colorizedIcon(QIcon(":/Icons/fullscreen.png"), GUI::mw_tool_icon_color, newColor);
-	icon_fullscreen_off = game_list_frame::colorizedIcon(QIcon(":/Icons/fullscreen_invert.png"), GUI::mw_tool_icon_color, newColor);
+	icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
+	icon_pause = gui_settings::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
+	icon_stop = gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor);
+	icon_restart = gui_settings::colorizedIcon(QIcon(":/Icons/restart.png"), GUI::mw_tool_icon_color, newColor);
+	icon_fullscreen_on = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen.png"), GUI::mw_tool_icon_color, newColor);
+	icon_fullscreen_off = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen_invert.png"), GUI::mw_tool_icon_color, newColor);
 
-	ui->toolbar_config->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/configure.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_controls->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/controllers.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_disc->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/disc.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_grid->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/grid.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_list->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/list.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_refresh->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/refresh.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_snap->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/screenshot.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_sort->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/sort.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_stop->setIcon(game_list_frame::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_config->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/configure.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_controls->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/controllers.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_disc->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/disc.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_grid->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/grid.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_list->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/list.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_refresh->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/refresh.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_snap->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/screenshot.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_sort->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/sort.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_stop->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor));
 	
 	if (Emu.IsRunning())
 	{
