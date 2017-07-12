@@ -23,6 +23,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QLabel>
+#include <QBitmap>
 
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
@@ -752,6 +753,15 @@ void game_list_frame::ResizeIcons(const QString& sizeStr, const QSize& size, con
 	}
 
 	Refresh();
+}
+
+QIcon game_list_frame::colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor)
+{
+	QPixmap pixmap = icon.pixmap(icon.availableSizes().at(0));
+	QBitmap mask = pixmap.createMaskFromColor(oldColor, Qt::MaskOutColor);
+	pixmap.fill(newColor);
+	pixmap.setMask(mask);
+	return QIcon(pixmap);
 }
 
 void game_list_frame::SetListMode(const bool& isList)
