@@ -33,6 +33,7 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libmic.sprx", 0 },
 	{ "/dev_flash/sys/external/libnet.sprx", 0 },
 	{ "/dev_flash/sys/external/libnetctl.sprx", 0 },
+	{ "/dev_flash/sys/external/libpamf.sprx", 0 },
 	{ "/dev_flash/sys/external/librudp.sprx", 0 },
 	{ "/dev_flash/sys/external/libssl.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil.sprx", 0 },
