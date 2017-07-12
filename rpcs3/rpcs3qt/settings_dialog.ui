@@ -1167,6 +1167,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="pb_tool_icon_color">
+              <property name="text">
+               <string>Main window tool icons</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="pb_icon_color">
               <property name="text">
                <string>Gamelist icons</string>
