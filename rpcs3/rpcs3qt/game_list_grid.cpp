@@ -3,8 +3,8 @@
 
 #include <QHeaderView>
 
-game_list_grid::game_list_grid(const QSize& icon_size, const qreal& margin_factor, const qreal& text_factor, const bool& showText)
-	: QTableWidget(), m_icon_size(icon_size), m_margin_factor(margin_factor), m_text_factor(text_factor), m_text_enabled(showText)
+game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText)
+	: QTableWidget(), m_icon_size(icon_size), m_icon_color(icon_color), m_margin_factor(margin_factor), m_text_factor(text_factor), m_text_enabled(showText)
 {
 	QSize item_size;
 	if (m_text_enabled)
@@ -71,7 +71,7 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 
 	// create background for image
 	QImage bg_img = QImage(img.size(), QImage::Format_ARGB32);
-	bg_img.fill(QColor(209, 209, 209, 255));
+	bg_img.fill(m_icon_color);
 
 	// place raw image inside expanded image
 	QPainter painter(&exp_img);

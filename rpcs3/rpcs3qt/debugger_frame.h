@@ -40,9 +40,9 @@ class debugger_frame : public QDockWidget
 	QTextEdit* m_regs;
 	QPushButton* m_go_to_addr;
 	QPushButton* m_go_to_pc;
+	QPushButton* m_btn_capture;
 	QPushButton* m_btn_step;
 	QPushButton* m_btn_run;
-	QPushButton* m_btn_pause;
 	QComboBox* m_choice_units;
 	QString m_current_choice;
 	bool m_noThreadSelected = true;
@@ -54,7 +54,9 @@ class debugger_frame : public QDockWidget
 
 	QTimer* update;
 
-	const QString NoThread = "No Thread";
+	const QString NoThread = tr("No Thread");
+	const QString Run = tr("Run");
+	const QString Pause = tr("Pause");
 
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
