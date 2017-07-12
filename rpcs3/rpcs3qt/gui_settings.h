@@ -7,6 +7,7 @@
 #include <QVariant>
 #include <QSize>
 #include <QColor>
+#include <QBitmap>
 
 typedef struct GUI_SAVE
 {
@@ -145,6 +146,15 @@ public:
 	QString GetCurrentStylesheetPath();
 	QStringList GetStylesheetEntries();
 	QStringList GetGameListCategoryFilters();
+
+	/**
+		Creates a custom colored QIcon based on another QIcon
+		@param icon the icon to colorize
+		@param oldColor the current color of icon
+		@param newColor the desired color for the new icon
+		@param useSpecialMasks only used for icons with white parts and disc game icon
+	*/
+	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false);
 
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);
