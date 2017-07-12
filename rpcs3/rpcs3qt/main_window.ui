@@ -186,8 +186,6 @@ margin-left:14px;</string>
     <addaction name="sysStopAct"/>
     <addaction name="sysRebootAct"/>
     <addaction name="separator"/>
-    <addaction name="captureFrame"/>
-    <addaction name="separator"/>
     <addaction name="sysSendOpenMenuAct"/>
     <addaction name="sysSendExitAct"/>
    </widget>
@@ -518,14 +516,6 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
     <string>Manage User Accounts</string>
    </property>
   </action>
-  <action name="actionManage_yml_Patches">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Manage .yml Patches</string>
-   </property>
-  </action>
   <action name="toolsCgDisasmAct">
    <property name="text">
     <string>Cg Disasm</string>
@@ -594,11 +584,6 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
     <string>About Qt</string>
    </property>
   </action>
-  <action name="actionShow_Controls">
-   <property name="text">
-    <string>Show Controls</string>
-   </property>
-  </action>
   <action name="showGameListAct">
    <property name="checkable">
     <bool>true</bool>
@@ -618,11 +603,6 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
   <action name="refreshGameListAct">
    <property name="text">
     <string>Game List Refresh</string>
-   </property>
-  </action>
-  <action name="actionShow_Categories">
-   <property name="text">
-    <string>Game List Categories</string>
    </property>
   </action>
   <action name="actionManage_RAP_Licences">
@@ -725,16 +705,6 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
     <string>Restart</string>
    </property>
   </action>
-  <action name="actionPause">
-   <property name="text">
-    <string>Pause</string>
-   </property>
-  </action>
-  <action name="actionSave_State">
-   <property name="text">
-    <string>Save State</string>
-   </property>
-  </action>
   <action name="showCatHDDGameAct">
    <property name="checkable">
     <bool>true</bool>
@@ -799,14 +769,6 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
    </property>
    <property name="text">
     <string>Unknown</string>
-   </property>
-  </action>
-  <action name="captureFrame">
-   <property name="text">
-    <string>Capture Frame</string>
-   </property>
-   <property name="toolTip">
-    <string>Capture frame</string>
    </property>
   </action>
   <action name="toolbar_start">
@@ -976,16 +938,6 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
    </property>
    <property name="text">
     <string>Show Game Tool Bar</string>
-   </property>
-  </action>
-  <action name="actionNetwork">
-   <property name="text">
-    <string>Network</string>
-   </property>
-  </action>
-  <action name="actionEmulator">
-   <property name="text">
-    <string>Emulator</string>
    </property>
   </action>
  </widget>

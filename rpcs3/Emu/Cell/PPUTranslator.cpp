@@ -1,4 +1,4 @@
-﻿#ifdef LLVM_AVAILABLE
+#ifdef LLVM_AVAILABLE
 
 #include "PPUTranslator.h"
 #include "PPUThread.h"
@@ -3115,7 +3115,7 @@ void PPUTranslator::STSWI(ppu_opcode_t op)
 	{
 		if (index > 3)
 		{
-			WriteMemory(GetGpr(reg, 32), addr);
+			WriteMemory(addr, GetGpr(reg, 32));
 			index -= 4;
 
 			if (index)
@@ -3129,7 +3129,7 @@ void PPUTranslator::STSWI(ppu_opcode_t op)
 
 			while (index)
 			{
-				WriteMemory(m_ir->CreateLShr(buf, 24), addr);
+				WriteMemory(addr, m_ir->CreateLShr(buf, 24));
 
 				if (--index)
 				{

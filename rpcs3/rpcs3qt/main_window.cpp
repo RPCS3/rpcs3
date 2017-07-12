@@ -155,9 +155,11 @@ void main_window::SetAppIconFromPath(const std::string path)
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
 	QString qpath = qstr(path);
 	std::string icon_list[] = { "/ICON0.PNG", "/PS3_GAME/ICON0.PNG" };
-	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)) ,sstr(qpath.section("/", 0, -3)) };
+	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
 	for (std::string pth : path_list)
 	{
+		if (!fs::is_dir(pth)) continue;
+
 		for (std::string ico : icon_list)
 		{
 			ico = pth + ico;
@@ -690,8 +692,6 @@ void main_window::OnEmuReady()
 	EnableMenus(true);
 }
 
-extern bool user_asked_for_frame_capture;
-
 void main_window::EnableMenus(bool enabled)
 {
 	// Thumbnail Buttons
@@ -957,7 +957,6 @@ void main_window::CreateConnects()
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Stop();	Emu.Load();	});
-	connect(ui->captureFrame, &QAction::triggered, [=]() { user_asked_for_frame_capture = true; });
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=](){
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 		m_sys_menu_opened = !m_sys_menu_opened;
@@ -1120,7 +1119,7 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, Pause);
-	//connect(ui->toolbar_snap, &QAction::triggered, [=]() { user_asked_for_frame_capture = true; });
+	//connect(ui->toolbar_snap, &QAction::triggered, [=]() {});
 	connect(ui->toolbar_fullscreen, &QAction::triggered, [=]() {
 		if (isFullScreen())
 		{

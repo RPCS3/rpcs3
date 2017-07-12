@@ -626,6 +626,8 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 		globalPos = m_xgrid->mapToGlobal(pos);
 	}
 
+	GameInfo currGame = m_game_data[row].info;
+
 	QMenu myMenu;
 
 	// Make Actions
@@ -645,7 +647,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=]() {
-		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &m_game_data[row].info).exec();
+		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
 	});
 	connect(removeGame, &QAction::triggered, [=]() {
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
@@ -656,16 +658,15 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
-	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(m_game_data[row].dir + m_game_data[row].info.root); });
-	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + m_game_data[row].info.serial); });
+	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(Emu.GetGameDir() + currGame.root); });
+	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
-		QString serial = qstr(m_game_data[row].info.serial);
-		QString link = "https://rpcs3.net/compatibility?g=" + serial;
+		QString link = "https://rpcs3.net/compatibility?g=" + qstr(currGame.serial);
 		QDesktopServices::openUrl(QUrl(link));
 	});
 
 	//Disable options depending on software category
-	QString category = qstr(m_game_data[row].info.category);
+	QString category = qstr(currGame.category);
 
 	if (category == category::disc_Game)
 	{
@@ -682,6 +683,12 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	else if (category != category::hdd_Game)
 	{
 		checkCompat->setEnabled(false);
+	}
+
+	// Disable removeconfig if no config exists.
+	if (fs::is_file(fs::get_config_dir() + "data/" + currGame.serial + "/config.yml") == false)
+	{
+		removeConfig->setEnabled(false);
 	}
 
 	myMenu.exec(globalPos);
@@ -968,13 +975,18 @@ std::string game_list_frame::CurrentSelectionIconPath()
 {
 	std::string selection = "";
 
-	if (m_oldLayoutIsList && gameList->currentRow() >= 0)
+	// The index can be more than the size of m_game_data if you use the VFS to load a directory which has less games.
+	if (m_oldLayoutIsList && gameList->currentRow() >= 0 && gameList->currentRow() < m_game_data.size())
 	{
 		selection = m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
 	}
 	else if (!m_oldLayoutIsList && m_xgrid->currentItem() != nullptr)
 	{
-		selection = m_game_data.at(m_xgrid->currentItem()->data(Qt::UserRole).toInt()).info.icon_path;
+		int ind = m_xgrid->currentItem()->data(Qt::UserRole).toInt();
+		if (ind < m_game_data.size())
+		{
+			selection = m_game_data.at(ind).info.icon_path;
+		}
 	}
 
 	m_oldLayoutIsList = m_isListLayout;

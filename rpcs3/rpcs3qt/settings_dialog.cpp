@@ -22,7 +22,7 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, GameInfo* game)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, const GameInfo* game)
 	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog)
 {
 	ui->setupUi(this);
