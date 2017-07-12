@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>6</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -1174,9 +1174,16 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pb_icon_color">
+             <widget class="QPushButton" name="pb_gl_icon_color">
               <property name="text">
                <string>Gamelist icons</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pb_gl_tool_icon_color">
+              <property name="text">
+               <string>Gamelist tool icons</string>
               </property>
              </widget>
             </item>
