@@ -1022,6 +1022,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
+		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
 			gameListFrame->LoadSettings();
 			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
