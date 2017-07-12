@@ -10,7 +10,6 @@
 #include <QColorDialog>
 
 #include "settings_dialog.h"
-#include "emu_settings.h"
 
 #include "ui_settings_dialog.h"
 
@@ -686,8 +685,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
-		auto colorDialog = [&](const GUI_SAVE& color, const QString& title){
-			QColorDialog dlg(xgui_settings->GetValue(color).value<QColor>(), this);
+		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button){
+			QColor oldColor = xgui_settings->GetValue(color).value<QColor>();
+			QColorDialog dlg(oldColor, this);
 			dlg.setWindowTitle(title);
 			dlg.setOptions(QColorDialog::ShowAlphaChannel);
 			for (int i = 0; i < dlg.customCount(); i++)
@@ -701,12 +701,39 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 					xgui_settings->SetCustomColor(i, dlg.customColor(i));
 				}
 				xgui_settings->SetValue(color, dlg.selectedColor());
+				button->setIcon(gui_settings::colorizedIcon(button->icon(), oldColor, dlg.selectedColor(), true));
 			}
 		};
-		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, "Choose gamelist icon color"); });
-		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_toolIconColor, "Choose gamelist tool icon color"); });
-		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, "Choose tool bar color"); });
-		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolIconColor, "Choose tool icon color"); });
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color); });
+		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color); });
+		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color); });
+		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color); });
+
+		// colorize preview icons
+		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor()){
+			QLabel* text = new QLabel(button->text());
+			text->setAlignment(Qt::AlignCenter);
+			text->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+			if (icon.isNull())
+			{
+				QPixmap pixmap(100, 100);
+				pixmap.fill(color);
+				button->setIcon(pixmap);
+			}
+			else
+			{
+				button->setIcon(gui_settings::colorizedIcon(icon, iconColor, color));
+			}
+			button->setText("");
+			button->setStyleSheet("text-align:left;");
+			button->setLayout(new QGridLayout);
+			button->layout()->setContentsMargins(0, 0, 0, 0);
+			button->layout()->addWidget(text);
+		};
+		addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>());
+		addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
+		addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
+		addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(GUI::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color);
 
 		AddConfigs();
 		AddStylesheets();
