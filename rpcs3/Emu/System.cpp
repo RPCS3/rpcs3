@@ -422,15 +422,15 @@ void Emulator::Load()
 
 			if (m_elf_path.empty())
 			{
-				if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
+				if (m_path.find(vfs::get("/dev_hdd0/game/")) != -1)
+				{
+					m_elf_path = "/dev_hdd0/game/" + m_path.substr(vfs::get("/dev_hdd0/game/").size());
+				}
+				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					//Disc games are on /dev_bdvd/
 					size_t pos = m_path.rfind("PS3_GAME");
 					m_elf_path = "/dev_bdvd/" + m_path.substr(pos);
-				}
-				else if (m_path.find(vfs::get("/dev_hdd0/game/")) != -1)
-				{
-					m_elf_path = "/dev_hdd0/game/" + m_path.substr(vfs::get("/dev_hdd0/game/").size());
 				}
 				else
 				{
