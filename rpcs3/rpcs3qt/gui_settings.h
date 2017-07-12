@@ -55,6 +55,7 @@ namespace GUI
 	const QColor mw_tool_bar_color  = QColor(227, 227, 227, 255);
 	const QColor mw_tool_icon_color = QColor(64, 64, 64, 255);
 	const QColor gl_icon_color      = QColor(209, 209, 209, 255);
+	const QColor gl_tool_icon_color = QColor(0, 100, 231, 255);
 
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
@@ -97,6 +98,7 @@ namespace GUI
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
 	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.09 );
 	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", false);
+	const GUI_SAVE gl_toolIconColor  = GUI_SAVE( game_list, "toolIconColor",  gl_tool_icon_color);
 
 	const GUI_SAVE fs_emulator_dir_list = GUI_SAVE(fs, "emulator_dir_list", QStringList());
 	const GUI_SAVE fs_dev_hdd0_list = GUI_SAVE(fs, "dev_hdd0_list", QStringList());
