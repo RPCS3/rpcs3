@@ -974,9 +974,17 @@ namespace rsx
 	RSXFragmentProgram thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info) const
 	{
 		RSXFragmentProgram result = {};
-		u32 shader_program = rsx::method_registers.shader_program_address();
-		result.offset = shader_program & ~0x3;
-		result.addr = vm::base(rsx::get_address(result.offset, (shader_program & 0x3) - 1));
+
+		const u32 shader_program = rsx::method_registers.shader_program_address();
+		if (shader_program == 0)
+			return result;
+
+		const u32 program_location = (shader_program & 0x3) - 1;
+		const u32 program_offset = (shader_program & ~0x3);
+
+		result.offset = program_offset;
+		result.addr = vm::base(rsx::get_address(program_offset, program_location));
+		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control();
 		result.unnormalized_coords = 0;
 		result.front_back_color_enabled = !rsx::method_registers.two_side_light_en();
@@ -1174,26 +1182,26 @@ namespace rsx
 								if (packet.post_upload_func)
 									packet.post_upload_func(packet.dst_span.data(), packet.type, (u8)packet.vector_width, task.vertex_count);
 
-								_mm_sfence();
 								task.remaining_packets--;
 								current_job += step;
+								_mm_sfence();
 							}
 
 							_mm_mfence();
 
 							while (task.remaining_packets > 0 && !Emu.IsStopped())
 							{
+								std::this_thread::yield();
 								_mm_lfence();
-								std::this_thread::sleep_for(0us);
 							}
 							
-							_mm_sfence();
 							task.ready_threads++;
+							_mm_sfence();
 						}
 						else
-							std::this_thread::sleep_for(0us);
-							//thread_ctrl::wait();
-							//busy_wait();
+						{
+							std::this_thread::yield();
+						}
 					}
 				});
 			}
@@ -1201,8 +1209,7 @@ namespace rsx
 
 		while (m_vertex_streaming_task.ready_threads != 0 && !Emu.IsStopped())
 		{
-			_mm_lfence();
-			busy_wait();
+			_mm_pause();
 		}
 
 		m_vertex_streaming_task.vertex_count = vertex_count;
@@ -1214,8 +1221,7 @@ namespace rsx
 	{
 		while (m_vertex_streaming_task.remaining_packets > 0 && !Emu.IsStopped())
 		{
-			_mm_lfence();
-			busy_wait();
+			_mm_pause();
 		}
 
 		m_vertex_streaming_task.packets.resize(0);

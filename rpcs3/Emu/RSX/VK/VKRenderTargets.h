@@ -7,12 +7,17 @@
 #include "../Common/TextureUtils.h"
 #include "VKFormats.h"
 
+struct ref_counted
+{
+	u8 deref_count = 0;
+
+	void reset_refs() { deref_count = 0; }
+};
+
 namespace vk
 {
-	struct render_target : public image
+	struct render_target : public image, public ref_counted
 	{
-		u8 deref_count = 0;
-
 		bool dirty = false;
 		u16 native_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -34,6 +39,17 @@ namespace vk
 
 			:image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
 					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
+		{}
+	};
+
+	struct framebuffer_holder: public vk::framebuffer, public ref_counted
+	{
+		framebuffer_holder(VkDevice dev,
+			VkRenderPass pass,
+			u32 width, u32 height,
+			std::vector<std::unique_ptr<vk::image_view>> &&atts)
+
+			: framebuffer(dev, pass, width, height, std::move(atts))
 		{}
 	};
 }
@@ -270,9 +286,9 @@ namespace rsx
 
 		void free_invalidated()
 		{
-			invalidated_resources.remove_if([](std::unique_ptr<vk::render_target>& rtt)
+			invalidated_resources.remove_if([](std::unique_ptr<vk::render_target> &rtt)
 			{
-				if (rtt->deref_count > 1) return true;
+				if (rtt->deref_count >= 2) return true;
 
 				rtt->deref_count++;
 				return false;
