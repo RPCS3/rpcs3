@@ -189,6 +189,8 @@ public:
 	/** Resize Gamelist Icons to size */
 	void ResizeIcons(const QString& sizeStr, const QSize& size, const int& index);
 
+	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor);
+
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);
