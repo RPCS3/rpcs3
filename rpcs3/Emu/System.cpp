@@ -178,7 +178,7 @@ void Emulator::Init()
 	{
 		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
 	}
-	
+
 	idm::init();
 	fxm::init();
 
@@ -197,6 +197,7 @@ void Emulator::Init()
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
 	fs::create_path(dev_hdd0);
+	fs::create_dir(dev_hdd0 + "disc/");
 	fs::create_dir(dev_hdd0 + "game/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
@@ -210,7 +211,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
-  
+
 #ifdef WITH_GDB_DEBUGGER
 	fxm::make<GDBDebugServer>();
 #endif
@@ -258,6 +259,14 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	return false;
 }
 
+std::string Emulator::GetDiscDir()
+{
+	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir) + "disc/";
+}
+
 std::string Emulator::GetGameDir()
 {
 	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
@@ -274,7 +283,7 @@ std::string Emulator::GetLibDir()
 	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
-void Emulator::Load()
+bool Emulator::Load()
 {
 	Stop();
 
@@ -282,26 +291,61 @@ void Emulator::Load()
 	{
 		Init();
 
-		// Open SELF or ELF
-		fs::file elf_file(m_path);
-
-		if (!elf_file)
-		{
-			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
-			return;
-		}
-
-		LOG_NOTICE(LOADER, "Path: %s", m_path);
-
 		const std::string elf_dir = fs::get_parent_dir(m_path);
-		const fs::file sfov(elf_dir + "/sce_sys/param.sfo");
-		const fs::file sfo1(elf_dir + "/../PARAM.SFO");
+		fs::file sfov(elf_dir + "/sce_sys/param.sfo");
+		fs::file sfo1(elf_dir + "/../PARAM.SFO");
 
 		// Load PARAM.SFO (TODO)
 		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
 		m_title = psf::get_string(_psf, "TITLE", m_path);
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 
+		sfov.close();
+		sfo1.close();
+
+		if (psf::get_string(_psf, "CATEGORY", "unknown") == "DG")
+		{
+			size_t pos = elf_dir.rfind("PS3_GAME");
+			const std::string game_dir = elf_dir.substr(0, pos - 1);
+
+			const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+			const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+
+			if (pos == std::string::npos || !fs::is_file(game_dir + "/PS3_DISC.SFB"))
+			{
+				LOG_ERROR(LOADER, "Failed to boot disc game. Missing PS3_GAME folder or PS3_DISC.SFB file.");
+				return false;
+			}
+			else if (elf_dir.find(emu_dir) != std::string::npos && elf_dir.find(GetDiscDir()) == std::string::npos)
+			{
+				const std::string dest_dir = GetDiscDir() + game_dir.substr(game_dir.find_last_of('/') + 1);
+				const std::string elf_path = m_path.substr(m_path.rfind("PS3_GAME") - 1);
+
+				if (fs::rename(game_dir, dest_dir))
+				{
+					LOG_SUCCESS(LOADER, "Disc game folder renamed to %s", dest_dir);
+
+					SetPath(dest_dir + elf_path);
+					return Load();
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "Disc game folder rename error: %s to %s", game_dir, dest_dir);
+					return false;
+				}
+			}
+		}
+
+		// Open SELF or ELF
+		fs::file elf_file(m_path);
+
+		if (!elf_file)
+		{
+			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
+			return false;
+		}
+
+		LOG_NOTICE(LOADER, "Path: %s", m_path);
 		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 
@@ -409,7 +453,7 @@ void Emulator::Load()
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", m_path);
-			return;
+			return false;
 		}
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -487,7 +531,7 @@ void Emulator::Load()
 			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
 			LOG_WARNING(LOADER, "** spu_exec -> %s", spu_exec.get_error());
 			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
-			return;
+			return false;
 		}
 
 		if (g_cfg.misc.autostart && IsReady())
@@ -499,6 +543,7 @@ void Emulator::Load()
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 		}
+		return true;
 	}
 	catch (const std::exception& e)
 	{
@@ -523,7 +568,6 @@ void Emulator::Run()
 		return;
 	}
 
-	
 	GetCallbacks().on_run();
 
 	m_pause_start_time = 0;
@@ -724,7 +768,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 			if (ppu.last_function)
 			{
 				func = ppu.last_function;
-			}			
+			}
 		}
 
 		if (g_system == system_type::psv)

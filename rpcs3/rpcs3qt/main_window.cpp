@@ -261,6 +261,7 @@ void main_window::BootGame()
 		if (stopped) Emu.Resume();
 		return;
 	}
+
 	Emu.Stop();
 	guiSettings->SetValue(GUI::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);

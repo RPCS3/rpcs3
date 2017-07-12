@@ -34,9 +34,19 @@ int main(int argc, char** argv)
 
 	if (parser.positionalArguments().length() > 0)
 	{
-		Emu.SetPath(sstr(parser.positionalArguments().at(0)));
-		Emu.Load();
-		Emu.Run();
+		std::string path = sstr(parser.positionalArguments().at(0));
+		std::replace(path.begin(), path.end(), '\\', '/');
+		Emu.SetPath(path);
+
+		if (Emu.Load())
+		{
+			Emu.Run();
+		}
+		else
+		{
+			fprintf(stderr, "%s\n", qPrintable(QCoreApplication::translate("main", "Error: Could not load game")));
+			parser.showHelp(1);
+		}
 	}
 
 	return app.exec();

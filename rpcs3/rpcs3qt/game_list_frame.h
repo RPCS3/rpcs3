@@ -156,6 +156,7 @@ typedef struct GUI_GameInfo
 	QImage icon;
 	QPixmap pxmap;
 	bool bootable;
+	std::string dir;
 };
 
 typedef struct Tool_Bar_Button
