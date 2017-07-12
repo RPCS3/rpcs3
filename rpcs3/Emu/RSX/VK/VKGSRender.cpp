@@ -677,6 +677,7 @@ VKGSRender::~VKGSRender()
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();
 	m_framebuffer_to_clean.clear();
+	m_draw_fbo.reset();
 
 	//Render passes
 	for (auto &render_pass : m_render_passes)
@@ -880,11 +881,11 @@ void VKGSRender::begin_render_pass()
 	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	rp_begin.renderPass = current_render_pass;
-	rp_begin.framebuffer = m_framebuffer_to_clean.back()->value;
+	rp_begin.framebuffer = m_draw_fbo->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
-	rp_begin.renderArea.extent.width = m_framebuffer_to_clean.back()->width();
-	rp_begin.renderArea.extent.height = m_framebuffer_to_clean.back()->height();
+	rp_begin.renderArea.extent.width = m_draw_fbo->width();
+	rp_begin.renderArea.extent.height = m_draw_fbo->height();
 
 	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 	render_pass_open = true;
@@ -941,10 +942,15 @@ void VKGSRender::end()
 	}
 
 	//Load program here since it is dependent on vertex state
-	load_program(is_instanced);
+	if (!load_program(is_instanced))
+	{
+		LOG_ERROR(RSX, "No valid program bound to pipeline. Skipping draw");
+		rsx::thread::end();
+		return;
+	}
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
-	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
+	//m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
 
 	if (is_instanced)
 	{
@@ -1123,7 +1129,7 @@ void VKGSRender::end()
 			depth_clear_value.depthStencil.depth = 1.f;
 			depth_clear_value.depthStencil.stencil = 255;
 
-			VkClearRect clear_rect = { 0, 0, m_framebuffer_to_clean.back()->width(), m_framebuffer_to_clean.back()->height(), 0, 1 };
+			VkClearRect clear_rect = { 0, 0, m_draw_fbo->width(), m_draw_fbo->height(), 0, 1 };
 			VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
 			vkCmdClearAttachments(*m_current_command_buffer, 1, &clear_desc, 1, &clear_rect);
 
@@ -1133,18 +1139,15 @@ void VKGSRender::end()
 
 	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<2>(upload_info);
 
-	if (m_attrib_ring_info.mapped)
-	{
-		wait_for_vertex_upload_task();
-		m_attrib_ring_info.unmap();
-	}
-
 	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - textures_end).count();
 
 	if (!index_info)
 	{
-		vkCmdDraw(*m_current_command_buffer, std::get<1>(upload_info), 1, 0, 0);
+		const auto vertex_count = std::get<1>(upload_info);
+		vkCmdDraw(*m_current_command_buffer, vertex_count, 1, 0, 0);
+
+		m_last_vertex_count = vertex_count;
 		m_last_draw_indexed = false;
 	}
 	else
@@ -1174,6 +1177,22 @@ void VKGSRender::end()
 
 	copy_render_targets_to_dma_location();
 	m_draw_calls++;
+
+	if (g_cfg.video.overlay)
+	{
+		if (m_last_vertex_count < 1024)
+			m_uploads_small++;
+		else if (m_last_vertex_count < 2048)
+			m_uploads_1k++;
+		else if (m_last_vertex_count < 4096)
+			m_uploads_2k++;
+		else if (m_last_vertex_count < 8192)
+			m_uploads_4k++;
+		else if (m_last_vertex_count < 16384)
+			m_uploads_8k++;
+		else
+			m_uploads_16k++;
+	}
 
 	rsx::thread::end();
 }
@@ -1260,8 +1279,8 @@ void VKGSRender::clear_surface(u32 mask)
 	u16 scissor_y = rsx::method_registers.scissor_origin_y();
 	u16 scissor_h = rsx::method_registers.scissor_height();
 
-	const u32 fb_width = m_framebuffer_to_clean.back()->width();
-	const u32 fb_height = m_framebuffer_to_clean.back()->height();
+	const u32 fb_width = m_draw_fbo->width();
+	const u32 fb_height = m_draw_fbo->height();
 
 	//clip region
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
@@ -1392,6 +1411,12 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 void VKGSRender::flush_command_queue(bool hard_sync)
 {
+	if (m_attrib_ring_info.mapped)
+	{
+		wait_for_vertex_upload_task();
+		m_attrib_ring_info.unmap();
+	}
+
 	close_render_pass();
 	close_and_submit_command_buffer({}, m_current_command_buffer->submit_fence);
 
@@ -1480,7 +1505,13 @@ void VKGSRender::process_swap_request()
 
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();
-	m_framebuffer_to_clean.clear();
+
+	m_framebuffer_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
+	{
+		if (fbo->deref_count >= 2) return true;
+		fbo->deref_count++;
+		return false;
+	});
 
 	if (g_cfg.video.overlay)
 	{
@@ -1545,8 +1576,10 @@ bool VKGSRender::load_program(bool fast_update)
 			return std::make_tuple(true, surface->native_pitch);
 		};
 
-		vertex_program = get_current_vertex_program();
 		fragment_program = get_current_fragment_program(rtt_lookup_func);
+		if (!fragment_program.valid) return false;
+
+		vertex_program = get_current_vertex_program();
 
 		vk::pipeline_props properties = {};
 
@@ -1864,6 +1897,35 @@ void VKGSRender::prepare_rtts()
 	const u32 surface_pitchs[] = { rsx::method_registers.surface_a_pitch(), rsx::method_registers.surface_b_pitch(),
 			rsx::method_registers.surface_c_pitch(), rsx::method_registers.surface_d_pitch() };
 
+	if (m_draw_fbo)
+	{
+		const u32 fb_width = m_draw_fbo->width();
+		const u32 fb_height = m_draw_fbo->height();
+
+		bool really_changed = false;
+
+		if (fb_width == clip_width && fb_height == clip_height)
+		{
+			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
+			{
+				if (m_surface_info[i].address != surface_addresses[i])
+				{
+					really_changed = true;
+					break;
+				}
+			}
+
+			if (!really_changed)
+			{
+				if (zeta_address == m_depth_surface_info.address)
+				{
+					//Nothing has changed, we're still using the same framebuffer
+					return;
+				}
+			}
+		}
+	}
+
 	m_rtts.prepare_render_target(&*m_current_command_buffer,
 		rsx::method_registers.surface_color(), rsx::method_registers.surface_depth_fmt(),
 		clip_width, clip_height,
@@ -1887,20 +1949,16 @@ void VKGSRender::prepare_rtts()
 
 	//Bind created rtts as current fbo...
 	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
-	std::vector<std::unique_ptr<vk::image_view>> fbo_images;
+
+	//Search old framebuffers for this same configuration
+	bool framebuffer_found = false;
+
+	std::vector<vk::image*> bound_images;
+	bound_images.reserve(5);
 
 	for (u8 index : draw_buffers)
 	{
-		vk::image *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
-
-		VkImageSubresourceRange subres = {};
-		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		subres.baseArrayLayer = 0;
-		subres.baseMipLevel = 0;
-		subres.layerCount = 1;
-		subres.levelCount = 1;
-
-		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
+		bound_images.push_back(std::get<1>(m_rtts.m_bound_render_targets[index]));
 
 		m_surface_info[index].address = surface_addresses[index];
 		m_surface_info[index].pitch = surface_pitchs[index];
@@ -1913,20 +1971,9 @@ void VKGSRender::prepare_rtts()
 		}
 	}
 
-	m_draw_buffers_count = static_cast<u32>(fbo_images.size());
-
-	if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
+	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
-		vk::image *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
-
-		VkImageSubresourceRange subres = {};
-		subres.aspectMask = (rsx::method_registers.surface_depth_fmt() == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
-		subres.baseArrayLayer = 0;
-		subres.baseMipLevel = 0;
-		subres.layerCount = 1;
-		subres.levelCount = 1;
-
-		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
+		bound_images.push_back(std::get<1>(m_rtts.m_bound_depth_stencil));
 
 		m_depth_surface_info.address = zeta_address;
 		m_depth_surface_info.pitch = rsx::method_registers.surface_z_pitch();
@@ -1934,6 +1981,8 @@ void VKGSRender::prepare_rtts()
 		if (m_depth_surface_info.pitch <= 64 && clip_width > m_depth_surface_info.pitch)
 			m_depth_surface_info.pitch = 0;
 	}
+
+	m_draw_buffers_count = static_cast<u32>(bound_images.size());
 
 	if (g_cfg.video.write_color_buffers)
 	{
@@ -1943,7 +1992,7 @@ void VKGSRender::prepare_rtts()
 			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height;
 
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
-					m_surface_info[index].width, m_surface_info[index].height);
+				m_surface_info[index].width, m_surface_info[index].height);
 		}
 	}
 
@@ -1960,10 +2009,59 @@ void VKGSRender::prepare_rtts()
 		}
 	}
 
-	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()), (u8)draw_buffers.size());
-	VkRenderPass current_render_pass = m_render_passes[idx];
+	for (auto &fbo : m_framebuffer_to_clean)
+	{
+		if (fbo->matches(bound_images, clip_width, clip_height))
+		{
+			m_draw_fbo.swap(fbo);
+			m_draw_fbo->reset_refs();
+			framebuffer_found = true;
+			//LOG_ERROR(RSX, "Matching framebuffer exists, using that instead");
+			break;
+		}
+	}
 
-	m_framebuffer_to_clean.push_back(std::make_unique<vk::framebuffer>(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
+	if (!framebuffer_found)
+	{
+		std::vector<std::unique_ptr<vk::image_view>> fbo_images;
+		fbo_images.reserve(5);
+
+		for (u8 index : draw_buffers)
+		{
+			vk::image *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
+
+			VkImageSubresourceRange subres = {};
+			subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			subres.baseArrayLayer = 0;
+			subres.baseMipLevel = 0;
+			subres.layerCount = 1;
+			subres.levelCount = 1;
+
+			fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
+		}
+
+		if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
+		{
+			vk::image *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
+
+			VkImageSubresourceRange subres = {};
+			subres.aspectMask = (rsx::method_registers.surface_depth_fmt() == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
+			subres.baseArrayLayer = 0;
+			subres.baseMipLevel = 0;
+			subres.layerCount = 1;
+			subres.levelCount = 1;
+
+			fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
+		}
+
+		size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()), (u8)draw_buffers.size());
+		VkRenderPass current_render_pass = m_render_passes[idx];
+
+		if (m_draw_fbo)
+			m_framebuffer_to_clean.push_back(std::move(m_draw_fbo));
+
+		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
+	}
 }
 
 
@@ -1982,6 +2080,13 @@ void VKGSRender::flip(int buffer)
 			m_setup_time = 0;
 			m_vertex_upload_time = 0;
 			m_textures_upload_time = 0;
+
+			m_uploads_small = 0;
+			m_uploads_1k = 0;
+			m_uploads_2k = 0;
+			m_uploads_4k = 0;
+			m_uploads_8k = 0;
+			m_uploads_16k = 0;
 		}
 
 		return;
@@ -2061,7 +2166,7 @@ void VKGSRender::flip(int buffer)
 			vk::change_image_layout(*m_current_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, range);
 		}
 
-		std::unique_ptr<vk::framebuffer> direct_fbo;
+		std::unique_ptr<vk::framebuffer_holder> direct_fbo;
 		std::vector<std::unique_ptr<vk::image_view>> swap_image_view;
 		if (g_cfg.video.overlay)
 		{
@@ -2083,9 +2188,24 @@ void VKGSRender::flip(int buffer)
 			size_t idx = vk::get_render_pass_location(m_swap_chain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
 			VkRenderPass single_target_pass = m_render_passes[idx];
 
-			swap_image_view.push_back(std::make_unique<vk::image_view>(*m_device, target_image, VK_IMAGE_VIEW_TYPE_2D, m_swap_chain->get_surface_format(), vk::default_component_map(), subres));
-			direct_fbo.reset(new vk::framebuffer(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
-			
+			for (auto &It = m_framebuffer_to_clean.begin(); It != m_framebuffer_to_clean.end(); It++)
+			{
+				auto &fbo = *It;
+				if (fbo->attachments[0]->info.image == target_image)
+				{
+					direct_fbo.swap(fbo);
+					direct_fbo->reset_refs();
+					m_framebuffer_to_clean.erase(It);
+					break;
+				}
+			}
+
+			if (!direct_fbo)
+			{
+				swap_image_view.push_back(std::make_unique<vk::image_view>(*m_device, target_image, VK_IMAGE_VIEW_TYPE_2D, m_swap_chain->get_surface_format(), vk::default_component_map(), subres));
+				direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
+			}
+
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 0, direct_fbo->width(), direct_fbo->height(), "draw calls: " + std::to_string(m_draw_calls) + ", instanced repeats: " + std::to_string(m_instanced_draws));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 18, direct_fbo->width(), direct_fbo->height(), "draw call setup: " + std::to_string(m_setup_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 36, direct_fbo->width(), direct_fbo->height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
@@ -2093,10 +2213,29 @@ void VKGSRender::flip(int buffer)
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 72, direct_fbo->width(), direct_fbo->height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 90, direct_fbo->width(), direct_fbo->height(), "submit and flip: " + std::to_string(m_flip_time) + "us");
 			
+			//Vertex upload statistics
+			u32 _small, _1k, _2k, _4k, _8k, _16k;
+			if (m_draw_calls > 0)
+			{
+				_small = m_uploads_small * 100 / m_draw_calls;
+				_1k = m_uploads_1k * 100 / m_draw_calls;
+				_2k = m_uploads_2k * 100 / m_draw_calls;
+				_4k = m_uploads_4k * 100 / m_draw_calls;
+				_8k = m_uploads_8k * 100 / m_draw_calls;
+				_16k = m_uploads_16k * 100 / m_draw_calls;
+			}
+			else
+			{
+				_small = _1k = _2k = _4k = _8k = _16k = 0;
+			}
+
+			std::string message = fmt::format("Vertex sizes: < 1k: %d%%, 1k+: %d%%, 2k+: %d%%, 4k+: %d%%, 8k+: %d%%, 16k+: %d%%", _small, _1k, _2k, _4k, _8k, _16k);
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), message);
+
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
+			m_framebuffer_to_clean.push_back(std::move(direct_fbo));
 		}
 
-		m_framebuffer_to_clean.push_back(std::move(direct_fbo));
 		queue_swap_request();
 	}
 	else
@@ -2194,4 +2333,11 @@ void VKGSRender::flip(int buffer)
 	m_setup_time = 0;
 	m_vertex_upload_time = 0;
 	m_textures_upload_time = 0;
+
+	m_uploads_small = 0;
+	m_uploads_1k = 0;
+	m_uploads_2k = 0;
+	m_uploads_4k = 0;
+	m_uploads_8k = 0;
+	m_uploads_16k = 0;
 }

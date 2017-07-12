@@ -322,16 +322,14 @@ namespace
 
 void GLGSRender::end()
 {
-	if (skip_frame || !framebuffer_status_valid)
+	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
+	//Load program here since it is dependent on vertex state
+
+	if (skip_frame || !framebuffer_status_valid || !load_program())
 	{
 		rsx::thread::end();
 		return;
 	}
-
-	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
-
-	//Load program here since it is dependent on vertex state
-	load_program();
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -841,8 +839,10 @@ bool GLGSRender::load_program()
 		return std::make_tuple(true, surface->get_native_pitch());
 	};
 
-	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program = get_current_fragment_program(rtt_lookup_func);
+	if (!fragment_program.valid) return false;
+
+	RSXVertexProgram vertex_program = get_current_vertex_program();
 
 	u32 unnormalized_rtts = 0;
 

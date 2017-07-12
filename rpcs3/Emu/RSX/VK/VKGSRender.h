@@ -149,15 +149,26 @@ private:
 	vk::descriptor_pool descriptor_pool;
 
 	std::vector<std::unique_ptr<vk::buffer_view> > m_buffer_view_to_clean;
-	std::vector<std::unique_ptr<vk::framebuffer> > m_framebuffer_to_clean;
 	std::vector<std::unique_ptr<vk::sampler> > m_sampler_to_clean;
+	std::list<std::unique_ptr<vk::framebuffer_holder> > m_framebuffer_to_clean;
+	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
 	u32 m_client_width = 0;
 	u32 m_client_height = 0;
 
+	// Draw call stats
 	u32 m_draw_calls = 0;
 	u32 m_instanced_draws = 0;
 
+	// Vertex buffer usage stats
+	u32 m_uploads_small = 0;
+	u32 m_uploads_1k = 0;
+	u32 m_uploads_2k = 0;
+	u32 m_uploads_4k = 0;
+	u32 m_uploads_8k = 0;
+	u32 m_uploads_16k = 0;
+
+	// Timers
 	s64 m_setup_time = 0;
 	s64 m_vertex_upload_time = 0;
 	s64 m_textures_upload_time = 0;
