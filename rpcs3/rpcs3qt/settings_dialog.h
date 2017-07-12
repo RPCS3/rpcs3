@@ -24,6 +24,7 @@ Q_SIGNALS:
 	void GuiSettingsSyncRequest();
 	void GuiStylesheetRequest(const QString& path);
 	void GuiSettingsSaveRequest();
+	void ToolBarRepaintRequest();
 private Q_SLOTS:
 	void OnBackupCurrentConfig();
 	void OnApplyConfig();
