@@ -444,10 +444,7 @@ void main_window::InstallPup()
 		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == std::string::npos; }),
 		updatefilenames.end());
 
-	fs::file version_file_f = pup.get_file(0x100);
-	std::string version_string;
-	version_string.resize(version_file_f.size());
-	version_file_f.read(version_string);
+	std::string version_string = pup.get_file(0x100).to_string();
 	version_string.erase(version_string.find('\n'));
 
 	const float cur_version = 4.81f;
