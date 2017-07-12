@@ -41,17 +41,12 @@ Q_SIGNALS:
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest(const QString& path);
 	void HandleCallAfter(const std::function<void()>& func);
-	void ResetPads();
 private:
 	void InitializeCallbacks();
 	void InitializeConnects();
 
-	// See ResetPads() for why these shared pointers exist.
-	std::shared_ptr<keyboard_pad_handler> m_keyboardPadHandler;
-	std::shared_ptr<basic_keyboard_handler> m_basicKeyboardHandler;
-	std::shared_ptr<basic_mouse_handler> m_basicMouseHandler;
-
 	main_window* RPCS3MainWin;
 
 	std::shared_ptr<gui_settings> guiSettings;
+	QWindow* gameWindow = nullptr; //! (Currently) only needed so that pad handlers have a valid target for event filtering.
 };
