@@ -292,23 +292,22 @@ void Emulator::Load()
 			games.reset();
 		}
 
-		// Open SELF or ELF
-		fs::file elf_file(m_path);
-
-		if (!elf_file)
-		{
-			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
-			return;
-		}
-
 		LOG_NOTICE(LOADER, "Path: %s", m_path);
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
-		const fs::file sfov(elf_dir + "/sce_sys/param.sfo");
-		const fs::file sfo1(elf_dir + "/../PARAM.SFO");
 
 		// Load PARAM.SFO (TODO)
-		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
+		const auto _psf = psf::load_object([&]
+		{
+			if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
+			{
+				return sfov;
+			}
+			else
+			{
+				return fs::file(elf_dir + "/../PARAM.SFO");
+			}
+		}());
 		m_title = psf::get_string(_psf, "TITLE", m_path);
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		const auto _cat = psf::get_string(_psf, "CATEGORY");
@@ -444,6 +443,15 @@ void Emulator::Load()
 		if (g_cfg.vfs.host_root)
 		{
 			vfs::mount("host_root", {});
+		}
+
+		// Open SELF or ELF
+		fs::file elf_file(m_path);
+
+		if (!elf_file)
+		{
+			LOG_ERROR(LOADER, "Failed to open executable: %s", m_path);
+			return;
 		}
 
 		// Check SELF header
