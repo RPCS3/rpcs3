@@ -565,6 +565,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
 			RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
+			Refresh(true);
 		}
 	}
 	else
@@ -698,6 +699,7 @@ void game_list_frame::Boot(int row)
 	{
 		LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
 		RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
+		Refresh(true);
 	}
 }
 
