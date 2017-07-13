@@ -1,5 +1,4 @@
-#ifndef GAME_LIST_GRID_DELEGATE
-#define GAME_LIST_GRID_DELEGATE
+#pragma once
 
 #include <QPainter>
 #include <QAbstractItemDelegate>
@@ -18,5 +17,3 @@ private:
 	qreal m_margin_factor;
 	qreal m_text_factor;
 };
-
-#endif

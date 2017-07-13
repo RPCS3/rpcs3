@@ -3,12 +3,8 @@
 #include "game_list.h"
 #include "game_list_grid_delegate.h"
 
-#include <QWidget>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QScrollArea>
-#include <QString>
-#include <QTableWidget>
 
 class game_list_grid : public game_list
 {
