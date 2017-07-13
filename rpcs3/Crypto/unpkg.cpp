@@ -228,6 +228,12 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 
 			const bool did_overwrite = fs::is_file(path);
 
+			if (did_overwrite && (entry.type&PKG_FILE_ENTRY_OVERWRITE) == 0)
+			{
+				LOG_NOTICE(LOADER, "Didn't overwrite %s", name);
+				break;
+			}
+
 			if (fs::file out{ path, fs::rewrite })
 			{
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)

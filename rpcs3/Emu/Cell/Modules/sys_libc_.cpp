@@ -97,9 +97,27 @@ s32 _sys_memcmp(vm::cptr<void> buf1, vm::cptr<void> buf2, u32 size)
 	return std::memcmp(buf1.get_ptr(), buf2.get_ptr(), size);
 }
 
-s32 _sys_memchr()
+vm::ptr<u8> _sys_memchr(vm::ptr<u8> buf, u8 ch, s32 size)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.trace("_sys_memchr(buf=*0x%x, ch=0x%x, size=0x%x)", buf, ch, size);
+
+	if (!buf)
+	{
+		return vm::null;
+	}
+
+	while (size > 0)
+	{
+		if (*buf == ch)
+		{
+			return buf;
+		}
+
+		buf++;
+		size--;
+	}
+
+	return vm::null;
 }
 
 vm::ptr<void> _sys_memmove(vm::ptr<void> dst, vm::cptr<void> src, u32 size)

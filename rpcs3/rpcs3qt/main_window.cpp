@@ -239,7 +239,7 @@ void main_window::BootElf()
 		LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(q_string_pair(qstr(path), qstr(serial + Emu.GetTitle())));
+		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
 	}
 }
 
@@ -275,7 +275,7 @@ void main_window::BootGame()
 		LOG_SUCCESS(LOADER, "Boot Game: boot done.");
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(q_string_pair(qstr(path), qstr(serial + Emu.GetTitle())));
+		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
 	}
 }
 
@@ -310,7 +310,7 @@ void main_window::InstallPkg()
 	pkg_f.seek(0);
 
 	// Get full path
-	const auto& local_path = Emu.GetGameDir() + std::string(std::begin(title_id), std::end(title_id));
+	const auto& local_path = Emu.GetHddDir() + "game/" + std::string(std::begin(title_id), std::end(title_id));
 
 	if (!fs::create_dir(local_path))
 	{
@@ -790,7 +790,7 @@ void main_window::BootRecentAction(const QAction* act)
 	else
 	{
 		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
-		AddRecentAction(q_string_pair(pth, nam));
+		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), nam));
 	}
 };
 
