@@ -12,6 +12,8 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_rsx("sys_rsx");
 
+extern u64 get_timebased_time();
+
 struct RsxDriverInfo {
     be_t<u32> version_driver;     // 0x0
     be_t<u32> version_gpu;        // 0x4
@@ -28,7 +30,7 @@ struct RsxDriverInfo {
     be_t<u32> systemModeFlags;    // 0x54
     u8 unk4[0x1064];              // 0x10B8
     struct Head {
-        be_t<u64> lastFlip;        // 0x0 last flip time
+        be_t<u64> lastFlipTime;    // 0x0 last flip time
         be_t<u32> flipFlags;       // 0x8 flags to handle flip/queue
         be_t<u32> unk1;            // 0xC
         be_t<u32> flipBufferId;    // 0x10
@@ -98,9 +100,8 @@ struct RsxReports {
 be_t<u32> g_rsx_event_port{ 0 };
 u32 g_driverInfo{ 0 };
 
-// this timestamp is a complete guess, it seems 'roughly' right for now so im just leaving it 
 u64 rsxTimeStamp() {
-    return (get_system_time() / 1000000 * 0x5F5E100);
+    return get_timebased_time();
 }
 
 s32 sys_rsx_device_open()
@@ -323,7 +324,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	case 0x102: // Display flip
         driverInfo.head[a3].flipFlags |= 0x80000000;
-        driverInfo.head[a3].lastFlip = rsxTimeStamp(); // should rsxthread set this?
+        driverInfo.head[a3].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
         // lets give this a shot for giving bufferid back to gcm
         driverInfo.head[a3].flipBufferId = driverInfo.head[a3].queuedBufferId;
         // seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
@@ -390,15 +391,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
         auto& tile = render->tiles[a3];
         tile.location = ((a4 >> 32) & 0xF) - 1;
         tile.offset = ((((a4 >> 32) & 0xFFFFFFFF) >> 16) * 0x10000);
-        tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset; // size is wrong, 
+        tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset;
         tile.pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
         tile.comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
         tile.base = (a5 & 0xFFFFFFFF) & 0x7FF;
         tile.bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
         tile.binded = a5 != 0;
-
-        sys_rsx.error("package 0x300 tile, index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d",
-            a3, tile.location, tile.offset, tile.size, tile.pitch, tile.comp, tile.base, tile.bank);
     }
 	break;
 

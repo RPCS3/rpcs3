@@ -61,7 +61,6 @@ namespace rsx
 
         void set_context_dma_semaphore(thread* rsx, u32 _reg, u32 arg)
         {
-            LOG_ERROR(RSX, "dmaSemaphore: 0x%x", arg);
             rsx->nv406e_semaphore_addr = arg;
         }
 
@@ -73,7 +72,6 @@ namespace rsx
             //todo: make me atomic
             while (vm::ps3::read32(addr) != arg)
 			{
-                //if (rsx->nv406e_semaphore_addr == CELL_GCM_CONTEXT_DMA_DEVICE_R || rsx->nv406e_semaphore_addr == CELL_GCM_CONTEXT_DMA_DEVICE_RW)
                 // todo: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
                 if (addr == 0x40000030)
                     break;
@@ -972,7 +970,6 @@ namespace rsx
                     std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
                     rsx->timer_sync.Start();
                 }
-
                 rsx->reset(); // fixes kh, so lets leave it here and see what happens
                 sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
             }
