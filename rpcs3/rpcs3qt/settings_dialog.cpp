@@ -583,10 +583,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceComboBox(ui->cameraTypeBox, emu_settings::CameraType);
 	ui->cameraTypeBox->setToolTip(json_input["cameraTypeBox"].toString());
 
-	// Checkboxes
-
-	xemu_settings->EnhanceCheckBox(ui->useFakeCamera, emu_settings::Camera);
-	ui->useFakeCamera->setToolTip(json_input["useFakeCamera"].toString());
+	xemu_settings->EnhanceComboBox(ui->cameraBox, emu_settings::Camera);
+	ui->cameraBox->setToolTip(json_input["cameraBox"].toString());
 
 	//     _____           _                   _______    _     
 	//    / ____|         | |                 |__   __|  | |    
