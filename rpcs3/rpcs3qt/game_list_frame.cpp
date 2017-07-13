@@ -155,7 +155,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	bool showText = (m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny);
 	m_xgrid = new game_list_grid(m_Icon_Size, m_Icon_Color, m_Margin_Factor, m_Text_Factor, showText);
 
-	gameList = new QTableWidget();
+	gameList = new game_list();
 	gameList->setShowGrid(false);
 	gameList->setItemDelegate(new table_item_delegate(this));
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -966,11 +966,11 @@ std::string game_list_frame::CurrentSelectionIconPath()
 	std::string selection = "";
 
 	// The index can be more than the size of m_game_data if you use the VFS to load a directory which has less games.
-	if (m_oldLayoutIsList && gameList->currentRow() >= 0 && gameList->currentRow() < m_game_data.size())
+	if (m_oldLayoutIsList && gameList->selectedItems().count() && gameList->currentRow() < m_game_data.size())
 	{
 		selection = m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
 	}
-	else if (!m_oldLayoutIsList && m_xgrid->currentItem() != nullptr)
+	else if (!m_oldLayoutIsList && m_xgrid->selectedItems().count())
 	{
 		int ind = m_xgrid->currentItem()->data(Qt::UserRole).toInt();
 		if (ind < m_game_data.size())
