@@ -130,6 +130,11 @@ struct ppu_linkage_info
 // Initialize static modules.
 static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link)
 {
+	if (!link->modules.empty())
+	{
+		return;
+	}
+
 	ppu_initialize_syscalls();
 
 	const std::initializer_list<const ppu_static_module*> registered
@@ -674,6 +679,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	// Access linkage information object
 	const auto link = fxm::get_always<ppu_linkage_info>();
 
+	// Initialize HLE modules
+	ppu_initialize_modules(link);
+
 	for (const auto& prog : elf.progs)
 	{
 		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
@@ -894,6 +902,15 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	prx->epilogue.set(prx->specials[0x330F7005]);
 	prx->name = path.substr(path.find_last_of('/') + 1);
 	prx->path = path;
+
+	if (Emu.IsReady() && fxm::import<ppu_module>([&] { return prx; }))
+	{
+		// Special loading mode
+		auto ppu = idm::make_ptr<ppu_thread>("test_thread", 0, 0x100000);
+
+		ppu->cmd_push({ppu_cmd::initialize, 0});
+	}
+
 	return prx;
 }
 
