@@ -73,7 +73,7 @@
 		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nYou can change the button mappings in Configuration --> Controls.\nIf you have a DualShock 4, select DualShock 4.\nWindows: If you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.\n\nLinux: evdev input is WIP.",
 		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
-		"useFakeCamera": "Camera support is not implemented, leave this on null.",
+		"cameraBox": "Camera support is not implemented, leave this on null.",
 		"cameraTypeBox": "Camera support is not implemented, leave this on unknown."
 	},
 	"network": {
