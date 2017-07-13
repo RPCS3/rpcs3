@@ -46,11 +46,9 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false), ui(new Ui::main_window)
+main_window::main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *parent) : QMainWindow(parent), guiSettings(guiSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
 {
 	ui->setupUi(this);
-
-	guiSettings.reset(new gui_settings());
 
 	// Load Icons: This needs to happen before any actions or buttons are created
 	icon_play = QIcon(":/Icons/play.png");
