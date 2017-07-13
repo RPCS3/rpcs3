@@ -349,6 +349,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	connect(libModeBG, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), l_OnLibButtonClicked);
 	connect(ui->searchBox, &QLineEdit::textChanged, l_OnSearchBoxTextChanged);
 
+	// enable multiselection (there must be a better way)
+	connect(ui->lleList, &QListWidget::itemChanged, [&](QListWidgetItem* item){
+		for (auto cb : ui->lleList->selectedItems())
+		{
+			cb->setCheckState(item->checkState());
+		}
+	});
+
 	int buttid = libModeBG->checkedId();
 	if (buttid != -1)
 	{
