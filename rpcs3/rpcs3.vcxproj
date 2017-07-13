@@ -924,6 +924,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
     <ClInclude Include="ds4_pad_handler.h" />
+    <ClInclude Include="game_list.h" />
     <ClInclude Include="keyboard_pad_handler.h" />
     <CustomBuild Include="rpcs3qt\gs_frame.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing gs_frame.h...</Message>

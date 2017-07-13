@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
 
+#include "game_list.h"
 #include "game_list_grid.h"
 #include "gui_settings.h"
 #include "emu_settings.h"
@@ -231,7 +232,7 @@ private:
 	QToolBar* m_Tool_Bar;
 	QLineEdit* m_Search_Bar;
 	QSlider* m_Slider_Size;
-	QTableWidget *gameList;
+	game_list* gameList;
 	game_list_grid* m_xgrid;
 
 	// Actions regarding showing/hiding columns
