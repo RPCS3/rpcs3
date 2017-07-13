@@ -536,7 +536,7 @@ void Emulator::Load()
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::ps3::init();
-			ppu_load_prx(ppu_prx, "");
+			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
