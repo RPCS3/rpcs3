@@ -1,5 +1,4 @@
-#ifndef VFS_DIALOG_TAB
-#define VFS_DIALOG_TAB
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/System.h"
@@ -42,5 +41,3 @@ private:
 	QListWidget* dirList;
 	QLabel*		 selectedConfigLabel;
 };
-
-#endif

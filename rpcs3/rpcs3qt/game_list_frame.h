@@ -9,8 +9,6 @@
 #include "emu_settings.h"
 
 #include <QDockWidget>
-#include <QList>
-#include <QTableWidget>
 #include <QMainWindow>
 #include <QToolBar>
 #include <QLineEdit>
