@@ -52,6 +52,7 @@ namespace GUI
 	const QString logger      = "Logger";
 	const QString meta        = "Meta";
 	const QString fs          = "FileSystem";
+	const QString gs_frame    = "GSFrame";
 
 	const QColor mw_tool_bar_color  = QColor(227, 227, 227, 255);
 	const QColor mw_tool_icon_color = QColor(64, 64, 64, 255);
@@ -113,6 +114,10 @@ namespace GUI
 
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
+
+	const GUI_SAVE gs_resize = GUI_SAVE(gs_frame, "resize", false);
+	const GUI_SAVE gs_width = GUI_SAVE(gs_frame, "width", 1280);
+	const GUI_SAVE gs_height = GUI_SAVE(gs_frame, "height", 720);
 }
 
 /** Class for GUI settings..

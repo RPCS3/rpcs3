@@ -56,7 +56,7 @@ class main_window : public QMainWindow
 #endif
 
 public:
-	explicit main_window(QWidget *parent = 0);
+	explicit main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *parent = 0);
 	void Init();
 	~main_window();
 	void CreateThumbnailToolbar();

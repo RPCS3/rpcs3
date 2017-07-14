@@ -8,6 +8,9 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QColorDialog>
+#include <QSpinBox>
+#include <QApplication>
+#include <QDesktopWidget>
 
 #include "settings_dialog.h"
 
@@ -732,6 +735,37 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
 		addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
 		addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(GUI::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color);
+
+		bool enableButtons = xgui_settings->GetValue(GUI::gs_resize).toBool();
+		ui->gs_resizeOnBoot->setChecked(enableButtons);
+		ui->gs_width->setEnabled(enableButtons);
+		ui->gs_height->setEnabled(enableButtons);
+
+		QRect rec = QApplication::desktop()->screenGeometry();
+		int width = xgui_settings->GetValue(GUI::gs_width).toInt();
+		int height = xgui_settings->GetValue(GUI::gs_height).toInt();
+		const int max_width = rec.width();
+		const int max_height = rec.height();
+		ui->gs_width->setValue(width < max_width ? width : max_width);
+		ui->gs_height->setValue(height < max_height ? height : max_height);
+
+		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val) {
+			xgui_settings->SetValue(GUI::gs_resize, val);
+			ui->gs_width->setEnabled(val);
+			ui->gs_height->setEnabled(val);
+		});
+		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w) {
+			int width = QApplication::desktop()->screenGeometry().width();
+			w = w > width ? width : w;
+			ui->gs_width->setValue(w);
+			xgui_settings->SetValue(GUI::gs_width, w);
+		});
+		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h) {
+			int height = QApplication::desktop()->screenGeometry().height();
+			h = h > height ? height : h;
+			ui->gs_height->setValue(h);
+			xgui_settings->SetValue(GUI::gs_height, h);
+		});
 
 		AddConfigs();
 		AddStylesheets();
