@@ -72,17 +72,26 @@ namespace spu
 		//TODO: Only initialize loaded memory blocks to save RAM
 		//TODO: Concurrent spu thread limit can be configurable
 		std::array<executable_block_map, 65536> atomic_instruction_table;
-		constexpr u8 max_concurrent_instructions = 1;
+		constexpr u32 native_jiffy_duration_us = 2000000;
 
 		void acquire_pc_address(u32 pc, u32 timeout_ms = 3)
 		{
+			const u8 max_concurrent_instructions = (u8)g_cfg.core.preferred_spu_threads;
+
 			const u32 block = pc >> 12;
 			const u32 offset = (pc & 0xFFF) >> 2;
 
-			while (timeout_ms--)
+			if (timeout_ms > 0)
 			{
-				if (atomic_instruction_table[block][offset].load(std::memory_order_consume) >= max_concurrent_instructions)
-					std::this_thread::sleep_for(1ms);
+				while (timeout_ms--)
+				{
+					if (atomic_instruction_table[block][offset].load(std::memory_order_consume) >= max_concurrent_instructions)
+						std::this_thread::sleep_for(1ms);
+				}
+			}
+			else
+			{
+				std::this_thread::yield();
 			}
 
 			atomic_instruction_table[block][offset]++;
@@ -99,16 +108,22 @@ namespace spu
 		struct concurrent_execution_watchdog
 		{
 			u32 pc = 0;
+			bool active = false;
 
 			concurrent_execution_watchdog(SPUThread& spu)
 				:pc(spu.pc)
 			{
-				acquire_pc_address(pc);
+				if (g_cfg.core.preferred_spu_threads > 0)
+				{
+					acquire_pc_address(pc, (u32)g_cfg.core.spu_delay_penalty);
+					active = true;
+				}
 			}
 
 			~concurrent_execution_watchdog()
 			{
-				release_pc_address(pc);
+				if (active)
+					release_pc_address(pc);
 			}
 		};
 	}
@@ -559,7 +574,7 @@ void SPUThread::process_mfc_cmd()
 			}
 
 			// TODO: investigate lost notifications
-			std::this_thread::sleep_for(0us);
+			std::this_thread::yield();
 			_mm_lfence();
 		}
 	};
@@ -957,7 +972,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			if (ctr > 10000)
 			{
 				ctr = 0;
-				std::this_thread::sleep_for(0us);
+				std::this_thread::yield();
 			}
 			else
 			{
@@ -1038,6 +1053,11 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	case SPU_RdDec:
 	{
 		out = ch_dec_value - (u32)(get_timebased_time() - ch_dec_start_timestamp);
+
+		//Polling: We might as well hint to the scheduler to slot in another thread since this one is counting down
+		if (g_cfg.core.spu_loop_detection && out > spu::scheduler::native_jiffy_duration_us)
+			std::this_thread::yield();
+
 		return true;
 	}
 
