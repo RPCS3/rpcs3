@@ -19,22 +19,16 @@ logs::channel sys_prx("sys_prx");
 
 static const std::unordered_map<std::string, int> s_prx_ignore
 {
-	{ "/dev_flash/sys/external/libad_async.sprx", 0 },
-	{ "/dev_flash/sys/external/libad_billboard_util.sprx", 0 },
-	{ "/dev_flash/sys/external/libad_core.sprx", 0 },
 	{ "/dev_flash/sys/external/libaudio.sprx", 0 },
 	{ "/dev_flash/sys/external/libbeisobmf.sprx", 0 },
 	{ "/dev_flash/sys/external/libcamera.sprx", 0 },
-	//{ "/dev_flash/sys/external/libgcm_sys.sprx", 0 },
 	{ "/dev_flash/sys/external/libgem.sprx", 0 },
-	{ "/dev_flash/sys/external/libhttp.sprx", 0 },
 	{ "/dev_flash/sys/external/libio.sprx", 0 },
 	{ "/dev_flash/sys/external/libmedi.sprx", 0 },
 	{ "/dev_flash/sys/external/libmic.sprx", 0 },
 	{ "/dev_flash/sys/external/libnet.sprx", 0 },
 	{ "/dev_flash/sys/external/libnetctl.sprx", 0 },
 	{ "/dev_flash/sys/external/librudp.sprx", 0 },
-	{ "/dev_flash/sys/external/libssl.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_ap.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_authdialog.sprx", 0 },
