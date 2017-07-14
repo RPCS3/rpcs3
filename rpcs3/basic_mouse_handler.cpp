@@ -1,5 +1,7 @@
 #include "basic_mouse_handler.h"
 
+#include <QApplication>
+
 void basic_mouse_handler::Init(const u32 max_connect)
 {
 	m_mice.emplace_back(Mouse());
@@ -17,15 +19,29 @@ basic_mouse_handler::basic_mouse_handler() : QObject()
 {}
 
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
-void basic_mouse_handler::SetTargetWindow(QObject* target)
+void basic_mouse_handler::SetTargetWindow(QWindow* target)
 {
-	m_target = target;
-	target->installEventFilter(this);
+	if (target != nullptr)
+	{
+		m_target = target;
+		// TODO: Make gsrender initialize properly so I don't have to (inneficiently) filter from QApplication to ensure that events are hit properly.
+		//target->installEventFilter(this);
+		QApplication::instance()->installEventFilter(this);
+	}
+	else
+	{
+		// If this is hit, it probably means that some refactoring occurs because currently a gsframe is created in Load.
+		// We still want events so filter from application instead since target is null.
+		QApplication::instance()->installEventFilter(this);
+		LOG_ERROR(GENERAL, "Trying to set mouse handler to a null target window.");
+	}
 }
 
-bool basic_mouse_handler::eventFilter(QObject* obj, QEvent* ev)
+bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 {
-	if (m_target == obj)
+	// !m_target is for future proofing when gsrender isn't automatically initialized on load to ensure events still occur
+	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
+	if (!m_target || !m_target->isVisible() || target == m_target)
 	{
 		switch (ev->type())
 		{

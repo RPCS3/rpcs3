@@ -3,8 +3,8 @@
 #include "stdafx.h"
 #include "Emu/Io/KeyboardHandler.h"
 
-#include <QObject>
 #include <QKeyEvent>
+#include <QWindow>
 
 class basic_keyboard_handler final : public QObject, public KeyboardHandlerBase
 {
@@ -14,11 +14,11 @@ public:
 
 	explicit basic_keyboard_handler();
 
-	void SetTargetWindow(QObject* target);
+	void SetTargetWindow(QWindow* target);
 	bool eventFilter(QObject* obj, QEvent* ev);
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();
 private:
-	QObject* m_target = nullptr;
+	QWindow* m_target = nullptr;
 };

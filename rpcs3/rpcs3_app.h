@@ -45,5 +45,5 @@ private:
 	void InitializeConnects();
 
 	main_window* RPCS3MainWin;
-	QWindow* game_window; //! Only needed so that pad handlers have a valid target for event filtering.
+	QWindow* game_window = nullptr; //! Only needed so that pad handlers have a valid target for event filtering.
 };

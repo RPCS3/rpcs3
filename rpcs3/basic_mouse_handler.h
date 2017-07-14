@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "Emu/Io/MouseHandler.h"
 
+#include <QWindow>
 #include <QMouseEvent>
 #include <QWheelEvent>
 
@@ -14,7 +15,7 @@ public:
 
 	basic_mouse_handler();
 
-	void SetTargetWindow(QObject* target);
+	void SetTargetWindow(QWindow* target);
 	void MouseButtonDown(QMouseEvent* event);
 	void MouseButtonUp(QMouseEvent* event);
 	void MouseScroll(QWheelEvent* event);
@@ -22,5 +23,5 @@ public:
 
 	bool eventFilter(QObject* obj, QEvent* ev);
 private:
-	QObject* m_target = nullptr;
+	QWindow* m_target = nullptr;
 };

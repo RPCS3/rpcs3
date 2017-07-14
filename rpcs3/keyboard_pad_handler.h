@@ -5,8 +5,8 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 
+#include <QWindow>
 #include <QKeyEvent>
-#include <QObject>
 
 struct keyboard_pad_config final : cfg::node
 {
@@ -60,12 +60,12 @@ public:
 
 	keyboard_pad_handler();
 
-	void SetTargetWindow(QObject* target);
+	void SetTargetWindow(QWindow* target);
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();
 
 	bool eventFilter(QObject* obj, QEvent* ev);
 private:
-	QObject* m_target = nullptr;
+	QWindow* m_target = nullptr;
 };
