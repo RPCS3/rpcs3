@@ -428,7 +428,7 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
   </action>
   <action name="confPadAct">
    <property name="text">
-    <string>Controls</string>
+    <string>Keyboard</string>
    </property>
    <property name="toolTip">
     <string>Configure Controls</string>
@@ -810,10 +810,10 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
      <normaloff>:/Icons/controls.png</normaloff>:/Icons/controls.png</iconset>
    </property>
    <property name="text">
-    <string>controls</string>
+    <string>Keyboard</string>
    </property>
    <property name="toolTip">
-    <string>Configure controls</string>
+    <string>Configure keyboard</string>
    </property>
   </action>
   <action name="toolbar_snap">
