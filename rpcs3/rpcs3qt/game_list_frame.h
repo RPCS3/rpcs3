@@ -162,6 +162,7 @@ typedef struct Tool_Bar_Button
 	QAction* action;
 	QIcon colored;
 	QIcon gray;
+	bool isActive;
 };
 
 class game_list_frame : public QDockWidget {
@@ -194,6 +195,7 @@ public Q_SLOTS:
 	void SetToolBarVisible(const bool& showToolBar);
 	void SetCategoryActIcon(const int& id, const bool& active);
 	void SetSearchText(const QString& text);
+	void RepaintToolBarIcons();
 
 private Q_SLOTS:
 	void Boot(int row);
@@ -256,7 +258,7 @@ private:
 	Tool_Bar_Button m_catActUnknown;
 	Tool_Bar_Button m_catActOther;
 
-	QList<Tool_Bar_Button> m_categoryButtons;
+	QList<Tool_Bar_Button*> m_categoryButtons;
 
 	QActionGroup* m_categoryActs;
 

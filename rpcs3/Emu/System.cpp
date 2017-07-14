@@ -381,6 +381,7 @@ void Emulator::Load()
 			}
 		}
 
+		// Booting disc game
 		if (_cat == "DG" && bdvd_dir.empty())
 		{
 			// Mount /dev_bdvd/ if necessary
@@ -390,6 +391,7 @@ void Emulator::Load()
 			}
 		}
 
+		// Booting patch data
 		if (_cat == "GD" && bdvd_dir.empty())
 		{
 			// Load /dev_bdvd/ from game list if available
@@ -397,28 +399,31 @@ void Emulator::Load()
 			{
 				bdvd_dir = node.Scalar();
 			}
-		}
-
-		if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
-		{
-			vfs::mount("dev_bdvd", bdvd_dir);
-			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
+			else
+			{
+				LOG_FATAL(LOADER, "Disc directory not found. Try to run the game from the actual game disc directory.");
+			}
 		}
 
 		// Check /dev_bdvd/
-		if (_cat == "DG")
+		if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 		{
 			fs::file sfb_file;
 
-			if (bdvd_dir.empty())
-			{
-				LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
-				return;
-			}
+			vfs::mount("dev_bdvd", bdvd_dir);
+			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
 
 			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
 			{
 				LOG_ERROR(LOADER, "Invalid disc directory for the disc game %s", m_title_id);
+				return;
+			}
+
+			const std::string bdvd_title_id = psf::get_string(psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")}), "TITLE_ID");
+
+			if (bdvd_title_id != m_title_id)
+			{
+				LOG_ERROR(LOADER, "Unexpected disc directory for the disc game %s (found %s)", m_title_id, bdvd_title_id);
 				return;
 			}
 
@@ -427,6 +432,11 @@ void Emulator::Load()
 			YAML::Emitter out;
 			out << games;
 			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
+		}
+		else if (_cat == "DG" || _cat == "GD")
+		{
+			LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
+			return;
 		}
 
 		// Check game updates
@@ -536,7 +546,7 @@ void Emulator::Load()
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::ps3::init();
-			ppu_load_prx(ppu_prx, "");
+			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{

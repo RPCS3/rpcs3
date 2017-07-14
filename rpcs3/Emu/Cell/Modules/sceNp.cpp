@@ -1717,6 +1717,18 @@ s32 sceNpSignalingGetPeerNetInfoResult()
 	return CELL_OK;
 }
 
+s32 sceNpUtilCanonicalizeNpIdForPs3()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpUtilCanonicalizeNpIdForPsp()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
 s32 sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 {
 	sceNp.warning("sceNpUtilCmpNpId(id1=*0x%x, id2=*0x%x)", id1, id2);
@@ -2032,11 +2044,13 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, sceNpSignalingGetPeerNetInfo);
 	REG_FUNC(sceNp, sceNpSignalingCancelPeerNetInfo);
 	REG_FUNC(sceNp, sceNpSignalingGetPeerNetInfoResult);
+	REG_FUNC(sceNp, sceNpUtilCanonicalizeNpIdForPs3);
+	REG_FUNC(sceNp, sceNpUtilCanonicalizeNpIdForPsp);
 	REG_FUNC(sceNp, sceNpUtilCmpNpId);
 	REG_FUNC(sceNp, sceNpUtilCmpNpIdInOrder);
-	REG_FUNC(sceNp, sceNpUtilCmpOnlineId); // 0x8C760B52
-	REG_FUNC(sceNp, sceNpUtilGetPlatformType); // 0xC611029A
-	REG_FUNC(sceNp, sceNpUtilSetPlatformType); // 0xAFC62605
+	REG_FUNC(sceNp, sceNpUtilCmpOnlineId);
+	REG_FUNC(sceNp, sceNpUtilGetPlatformType);
+	REG_FUNC(sceNp, sceNpUtilSetPlatformType);
 	REG_FUNC(sceNp, _sceNpSysutilClientMalloc);
 	REG_FUNC(sceNp, _sceNpSysutilClientFree);
 	REG_FUNC(sceNp, _Z33_sce_np_sysutil_send_empty_packetiPN16sysutil_cxmlutil11FixedMemoryEPKcS3_);

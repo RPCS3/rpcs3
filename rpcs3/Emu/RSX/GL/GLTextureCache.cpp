@@ -1,7 +1,4 @@
-#pragma once
-
 #include "stdafx.h"
-
 #include "GLGSRender.h"
 #include "GLTextureCache.h"
 

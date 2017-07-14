@@ -128,12 +128,6 @@ margin-left:14px;</string>
        <property name="autoFillBackground">
         <bool>false</bool>
        </property>
-       <property name="styleSheet">
-        <string notr="true">QSlider::handle:horizontal {
-	background: #404040;
-}
-</string>
-       </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
