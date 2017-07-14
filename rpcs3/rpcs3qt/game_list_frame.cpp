@@ -565,6 +565,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
 			RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
+			Refresh(true);
 		}
 	}
 	else
@@ -863,7 +864,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	std::string selected_item = CurrentSelectionIconPath();
 
-	delete m_xgrid;
+	m_xgrid->deleteLater();
 
 	bool showText = m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny;
 

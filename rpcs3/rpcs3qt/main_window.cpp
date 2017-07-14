@@ -243,6 +243,7 @@ void main_window::BootElf()
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		gameListFrame->Refresh(true);
 	}
 }
 
@@ -279,6 +280,7 @@ void main_window::BootGame()
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		gameListFrame->Refresh(true);
 	}
 }
 
@@ -794,6 +796,7 @@ void main_window::BootRecentAction(const QAction* act)
 	{
 		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
 		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), nam));
+		gameListFrame->Refresh(true);
 	}
 };
 
