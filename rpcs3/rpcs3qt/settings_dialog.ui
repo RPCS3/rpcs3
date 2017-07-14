@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>6</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -774,11 +774,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_31">
             <item>
-             <widget class="QCheckBox" name="useFakeCamera">
-              <property name="text">
-               <string>Use Fake Camera</string>
-              </property>
-             </widget>
+             <widget class="QComboBox" name="cameraBox"/>
             </item>
            </layout>
           </widget>
@@ -1249,9 +1245,23 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pb_icon_color">
+             <widget class="QPushButton" name="pb_tool_icon_color">
+              <property name="text">
+               <string>Main window tool icons</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pb_gl_icon_color">
               <property name="text">
                <string>Gamelist icons</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pb_gl_tool_icon_color">
+              <property name="text">
+               <string>Gamelist tool icons</string>
               </property>
              </widget>
             </item>

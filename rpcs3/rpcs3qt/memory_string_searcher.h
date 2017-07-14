@@ -8,7 +8,6 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QHBoxLayout>
-#include <QDialog>
 
 class memory_string_searcher : public QDialog
 {

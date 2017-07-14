@@ -7,13 +7,13 @@
 	},
 	"cpu": {
 		"PPU": {
-			"precise": "This is the most accurate Interpreter, but very slow to play games with.\nYou may try this as a last resort if you encounter odd bugs or crashes.\nIf unsure, use PPU Interpreter Fast or PPU recompiler (LLVM).",
+			"precise": "This is the most accurate Interpreter, but very slow to play games with.\nYou may try this as a last resort if you encounter odd bugs or crashes.\nIf unsure, use PPU Interpreter Fast or PPU Recompiler (LLVM).",
 			"fast": "This is the fastest interpreter.\nTrades accuracy for speed, and it very rarely breaks games even in comparison to the Precise option.\nTry this if PPU Recompiler (LLVM) fails.",
 			"LLVM": "Recompiles the game's executable once before running it for the first time.\nThis is by far the fastest option and should always be used.\nShould you face compatibility issues, fall back to one of the Interpreters and retry.\nIf unsure, use this option."
 		},
 		"SPU": {
 			"precise": "This is extremely slow but may fix broken graphics in some games.",
-			"fast": "This is slower than the SPU recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
+			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
 			"ASMJIT": "This is the fastest option with very good compatibility.\nIf unsure, use this option.",
 			"LLVM": "This doesn't exist (yet)"
 		},
@@ -46,7 +46,7 @@
 		"comboboxes": {
 			"renderBox": "Vulkan is the fastest renderer. OpenGL is the most accurate renderer.\nIf unsure, use Vulkan. Should you have any compatibility issues, fall back to OpenGL.\nDirectX 12 is deprecated and should never be used.",
 			"resBox": "Leave this on 1280x720, every PS3 game is compatible with this resolution.\nSet it to 1920x1080 only if supported by the game. Lower resolutions may work but are not practical.\nHowever rarely due to emulation bugs some games will only render at low resolutions like 480p.",
-			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed whe using OpenGL.",
+			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
 			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well especially if you use a resolution that is not 720p.",
 			"frameLimitBox": "Auto is the most compatible option.\nSome games can work with frame limit off, but it may cause bugs and crashes.\nSet to off if you get severe hitching and stuttering."
 		},
@@ -61,19 +61,19 @@
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		},
 		"debug": {
-			"glLegacyBuffers": "Enables use of classic openGL buffers which allows capturing tools to work with rpcs3 e.g RenderDoc.\nIf unsure, don't use this option.",
+			"glLegacyBuffers": "Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
 			"forceHighpZ": "Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.",
-			"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with vulkan.\nOnly useful for developers.\nIf unsure, don't use this option.",
+			"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful for developers.\nIf unsure, don't use this option.",
 			"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
 			"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option."
 		}
 	},
 	"input": {
-		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nYou can change the button mappings in Configuration --> Controls.\nIf you have a DualShock 4, select DualShock 4.\nWindows: If you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with mmjoystick.\nCheck button mappings in the Windows control panel.\n\nLinux: evdev input is WIP.",
+		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nYou can change the button mappings in Configuration --> Controls.\nIf you have a DualShock 4, select DualShock 4.\nWindows: If you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.\n\nLinux: evdev input is WIP.",
 		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
-		"useFakeCamera": "Camera support is not implemented, leave this on null.",
+		"cameraBox": "Camera support is not implemented, leave this on null.",
 		"cameraTypeBox": "Camera support is not implemented, leave this on unknown."
 	},
 	"network": {

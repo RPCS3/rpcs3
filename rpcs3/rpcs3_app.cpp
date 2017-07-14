@@ -69,6 +69,8 @@ void rpcs3_app::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
+	RPCS3MainWin->Init();
+
 	setApplicationName("RPCS3");
 	RPCS3MainWin->show();
 
