@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -910,6 +910,10 @@ s32 sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, vm::ptr
 	if (!callback)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+	else
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
 	return CELL_OK;
