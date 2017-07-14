@@ -57,6 +57,7 @@ class main_window : public QMainWindow
 
 public:
 	explicit main_window(QWidget *parent = 0);
+	void Init();
 	~main_window();
 	void CreateThumbnailToolbar();
 	QIcon GetAppIcon();

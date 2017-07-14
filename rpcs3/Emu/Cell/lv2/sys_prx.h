@@ -115,6 +115,7 @@ struct lv2_prx final : lv2_obj, ppu_module
 	bool is_started = false;
 
 	std::unordered_map<u32, u32> specials;
+	std::unordered_map<u32, void*> imports;
 
 	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> start = vm::null;
 	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> stop = vm::null;

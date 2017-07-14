@@ -48,6 +48,25 @@ inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString();
 
 main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false), ui(new Ui::main_window)
 {
+}
+
+main_window::~main_window()
+{
+}
+
+auto Pause = []()
+{
+	if (Emu.IsReady()) Emu.Run();
+	else if (Emu.IsPaused()) Emu.Resume();
+	else if (Emu.IsRunning()) Emu.Pause();
+	else if (!Emu.GetPath().empty()) Emu.Load();
+};
+
+/* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).  
+ * Simplifies logic a bit.
+ */
+void main_window::Init()
+{
 	ui->setupUi(this);
 
 	guiSettings.reset(new gui_settings());
@@ -84,25 +103,9 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 	!appIcon.isNull() ? setWindowIcon(appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
-	QTimer::singleShot(1, [=]() {
-		// Need to have this happen fast, but not now because connects aren't created yet.
-		// So, a tricky balance in terms of time but this works.
-		RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
-		ConfigureGuiFromSettings(true);
-	});
+	RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
+	ConfigureGuiFromSettings(true);
 }
-
-main_window::~main_window()
-{
-}
-
-auto Pause = []()
-{
-	if (Emu.IsReady()) Emu.Run();
-	else if (Emu.IsPaused()) Emu.Resume();
-	else if (Emu.IsRunning()) Emu.Pause();
-	else if (!Emu.GetPath().empty()) Emu.Load();
-};
 
 void main_window::CreateThumbnailToolbar()
 {
@@ -237,6 +240,7 @@ void main_window::BootElf()
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		gameListFrame->Refresh(true);
 	}
 }
 
@@ -273,6 +277,7 @@ void main_window::BootGame()
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		gameListFrame->Refresh(true);
 	}
 }
 
@@ -835,6 +840,7 @@ void main_window::BootRecentAction(const QAction* act)
 	{
 		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
 		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), nam));
+		gameListFrame->Refresh(true);
 	}
 };
 
