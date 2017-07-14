@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/Modules/cellSysUtil.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "cellSaveData.h"
 
