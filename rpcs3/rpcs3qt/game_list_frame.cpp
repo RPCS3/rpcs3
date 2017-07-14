@@ -557,14 +557,15 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	
 		Emu.Stop();
 	
-		if (!Emu.BootGame(m_game_data[i].info.path))
-		{
-			LOG_ERROR(LOADER, "Failed to boot %s", m_game_data[i].info.path);
-		}
-		else
+		if (Emu.BootGame(m_game_data[i].info.path))
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
 			RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
+			Refresh(true);
+		}
+		else
+		{
+			LOG_ERROR(LOADER, "Failed to boot %s", m_game_data[i].info.path);
 		}
 	}
 	else
@@ -863,7 +864,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	std::string selected_item = CurrentSelectionIconPath();
 
-	delete m_xgrid;
+	m_xgrid->deleteLater();
 
 	bool showText = m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny;
 
