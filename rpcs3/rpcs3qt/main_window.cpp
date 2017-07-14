@@ -444,7 +444,20 @@ void main_window::InstallPup()
 		updatefilenames.begin(), updatefilenames.end(), [](std::string s) { return s.find("dev_flash_") == std::string::npos; }),
 		updatefilenames.end());
 
-	QProgressDialog pdlg(tr("Installing firmware ... please wait ..."), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	std::string version_string = pup.get_file(0x100).to_string();
+	version_string.erase(version_string.find('\n'));
+
+	const float cur_version = 4.81f;
+	float version = std::stof(version_string);
+
+	if (version < cur_version &&
+		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(cur_version).arg(QString::fromStdString(version_string)),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
+	{
+		return;
+	}
+
+	QProgressDialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(QString::fromStdString(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedSize(500, pdlg.height());
@@ -530,7 +543,7 @@ void main_window::InstallPup()
 
 	if (progress > 0)
 	{
-		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware.");
+		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
 		guiSettings->ShowInfoBox(GUI::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
 
 #ifdef _WIN32
