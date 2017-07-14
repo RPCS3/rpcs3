@@ -1,7 +1,6 @@
 #include "rpcs3_app.h"
 
 #include "rpcs3qt/welcome_dialog.h"
-#include "rpcs3qt/gui_settings.h"
 
 #include "Emu/System.h"
 #include "rpcs3qt/gs_frame.h"
@@ -56,8 +55,10 @@ void rpcs3_app::Init()
 {
 	Emu.Init();
 
+	guiSettings.reset(new gui_settings());
+
 	// Create the main window
-	RPCS3MainWin = new main_window(nullptr);
+	RPCS3MainWin = new main_window(guiSettings, nullptr);
 
 	// Reset the pads -- see the method for why this is currently needed.
 	ResetPads();
@@ -68,15 +69,15 @@ void rpcs3_app::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
+	RPCS3MainWin->Init();
+
 	setApplicationName("RPCS3");
 	RPCS3MainWin->show();
 
 	// Create the thumbnail toolbar after the main_window is created
 	RPCS3MainWin->CreateThumbnailToolbar();
 
-	// Slightly inneficient to make a gui_settings instance right here.
-	// But, I don't really feel like adding this as a dependency injection into RPCS3MainWin.
-	if (gui_settings().GetValue(GUI::ib_show_welcome).toBool())
+	if (guiSettings->GetValue(GUI::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();
 		welcome->exec();
@@ -146,14 +147,22 @@ void rpcs3_app::InitializeCallbacks()
 		extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
 		const auto size = g_video_out_resolution_map.at(g_cfg.video.resolution);
+		int w = size.first;
+		int h = size.second;
+
+		if (guiSettings->GetValue(GUI::gs_resize).toBool())
+		{
+			w = guiSettings->GetValue(GUI::gs_width).toInt();
+			h = guiSettings->GetValue(GUI::gs_height).toInt();
+		}
 
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
-		case video_renderer::null: return std::make_unique<gs_frame>("Null", size.first, size.second, RPCS3MainWin->GetAppIcon());
-		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(size.first, size.second, RPCS3MainWin->GetAppIcon());
-		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", size.first, size.second, RPCS3MainWin->GetAppIcon());
+		case video_renderer::null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon());
 #ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", size.first, size.second, RPCS3MainWin->GetAppIcon());
+		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon());
 #endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}

@@ -12,6 +12,7 @@
 namespace vm { using namespace ps3; }
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern void ppu_unload_prx(const lv2_prx& prx);
 extern void ppu_initialize(const ppu_module&);
 
 logs::channel sys_prx("sys_prx");
@@ -26,11 +27,14 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libcamera.sprx", 0 },
 	{ "/dev_flash/sys/external/libgcm_sys.sprx", 0 },
 	{ "/dev_flash/sys/external/libgem.sprx", 0 },
+	{ "/dev_flash/sys/external/libhttp.sprx", 0 },
 	{ "/dev_flash/sys/external/libio.sprx", 0 },
 	{ "/dev_flash/sys/external/libmedi.sprx", 0 },
 	{ "/dev_flash/sys/external/libmic.sprx", 0 },
 	{ "/dev_flash/sys/external/libnet.sprx", 0 },
 	{ "/dev_flash/sys/external/libnetctl.sprx", 0 },
+	{ "/dev_flash/sys/external/librudp.sprx", 0 },
+	{ "/dev_flash/sys/external/libssl.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_ap.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_authdialog.sprx", 0 },
@@ -89,13 +93,31 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 
 error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
+	const auto name = path.substr(path.find_last_of('/') + 1);
+
+	const auto existing = idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
+	{
+		if (prx.name == name && prx.path == path)
+		{
+			return true;
+		}
+
+		return false;
+	});
+
+	if (existing)
+	{
+		return CELL_PRX_ERROR_LIBRARY_FOUND;
+	}
+
 	if (s_prx_ignore.count(path))
 	{
 		sys_prx.warning("Ignored module: %s", path);
 
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
-		prx->name = path.substr(path.find_last_of('/') + 1);
+		prx->name = name;
+		prx->path = path;
 
 		return not_an_error(idm::last_id());
 	}
@@ -233,7 +255,7 @@ error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_modu
 		return CELL_ESRCH;
 	}
 
-	//Memory.Free(prx->address);
+	ppu_unload_prx(*prx);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
 	

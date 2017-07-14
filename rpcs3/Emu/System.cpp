@@ -21,6 +21,7 @@
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
+#include "yaml-cpp/yaml.h"
 
 #include <thread>
 
@@ -206,6 +207,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
 	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
 	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
+	fs::create_dir(dev_hdd0 + "disc/");
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
@@ -258,12 +260,12 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	return false;
 }
 
-std::string Emulator::GetGameDir()
+std::string Emulator::GetHddDir()
 {
 	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
 	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 
-	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir) + "game/";
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
 }
 
 std::string Emulator::GetLibDir()
@@ -282,25 +284,33 @@ void Emulator::Load()
 	{
 		Init();
 
-		// Open SELF or ELF
-		fs::file elf_file(m_path);
+		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations) 
+		YAML::Node games = YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string());
 
-		if (!elf_file)
+		if (!games.IsMap())
 		{
-			LOG_ERROR(LOADER, "Failed to open file: %s", m_path);
-			return;
+			games.reset();
 		}
 
 		LOG_NOTICE(LOADER, "Path: %s", m_path);
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
-		const fs::file sfov(elf_dir + "/sce_sys/param.sfo");
-		const fs::file sfo1(elf_dir + "/../PARAM.SFO");
 
 		// Load PARAM.SFO (TODO)
-		const auto _psf = psf::load_object(sfov ? sfov : sfo1);
+		const auto _psf = psf::load_object([&]
+		{
+			if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
+			{
+				return sfov;
+			}
+			else
+			{
+				return fs::file(elf_dir + "/../PARAM.SFO");
+			}
+		}());
 		m_title = psf::get_string(_psf, "TITLE", m_path);
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
+		const auto _cat = psf::get_string(_psf, "CATEGORY");
 
 		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
@@ -349,25 +359,109 @@ void Emulator::Load()
 		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
 
-		// Mount /dev_bdvd/ if necessary
-		if (bdvd_dir.empty()) 
+		// Detect boot location
+		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
+		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
+
+		if (_cat == "DG" && m_path.find(hdd0_game + m_title_id + '/') != -1)
 		{
-			size_t pos = elf_dir.rfind("PS3_GAME");
-			std::string temp = elf_dir.substr(0, pos);
-			if ((pos != std::string::npos) && fs::is_file(temp + "/PS3_DISC.SFB")) {
-				bdvd_dir = temp;
+			// Booting disc game from wrong location
+			LOG_ERROR(LOADER, "Disc game found at invalid location: /dev_hdd0/game/%s/", m_title_id);
+
+			// Move and retry from correct location
+			if (fs::rename(hdd0_game + m_title_id, hdd0_disc + m_title_id))
+			{
+				LOG_SUCCESS(LOADER, "Disc game moved to special location: /dev_hdd0/disc/%s/", m_title_id);
+				return SetPath(hdd0_disc + m_path.substr(hdd0_game.size())), Load();
+			}
+			else
+			{
+				LOG_ERROR(LOADER, "Failed to move disc game to /dev_hdd0/disc/%s/ (%s)", m_title_id, fs::g_tls_error);
+				return;
 			}
 		}
+
+		// Booting disc game
+		if (_cat == "DG" && bdvd_dir.empty())
+		{
+			// Mount /dev_bdvd/ if necessary
+			if (auto pos = elf_dir.rfind("/PS3_GAME") + 1)
+			{
+				bdvd_dir = elf_dir.substr(0, pos);
+			}
+		}
+
+		// Booting patch data
+		if (_cat == "GD" && bdvd_dir.empty())
+		{
+			// Load /dev_bdvd/ from game list if available
+			if (auto node = games[m_title_id])
+			{
+				bdvd_dir = node.Scalar();
+			}
+			else
+			{
+				LOG_FATAL(LOADER, "Disc directory not found. Try to run the game from the actual game disc directory.");
+			}
+		}
+
+		// Check /dev_bdvd/
 		if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 		{
-			vfs::mount("dev_bdvd", fmt::replace_all(bdvd_dir, "$(EmulatorDir)", emu_dir));
+			fs::file sfb_file;
+
+			vfs::mount("dev_bdvd", bdvd_dir);
 			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
+
+			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
+			{
+				LOG_ERROR(LOADER, "Invalid disc directory for the disc game %s", m_title_id);
+				return;
+			}
+
+			const std::string bdvd_title_id = psf::get_string(psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")}), "TITLE_ID");
+
+			if (bdvd_title_id != m_title_id)
+			{
+				LOG_ERROR(LOADER, "Unexpected disc directory for the disc game %s (found %s)", m_title_id, bdvd_title_id);
+				return;
+			}
+
+			// Store /dev_bdvd/ location
+			games[m_title_id] = bdvd_dir;
+			YAML::Emitter out;
+			out << games;
+			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
+		}
+		else if (_cat == "DG" || _cat == "GD")
+		{
+			LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
+			return;
+		}
+
+		// Check game updates
+		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
+
+		if (_cat == "DG" && fs::is_file(hdd0_boot))
+		{
+			// Booting game update
+			LOG_SUCCESS(LOADER, "Updates found at /dev_hdd0/game/%s/!", m_title_id);
+			return SetPath(hdd0_boot), Load();
 		}
 
 		// Mount /host_root/ if necessary
 		if (g_cfg.vfs.host_root)
 		{
 			vfs::mount("host_root", {});
+		}
+
+		// Open SELF or ELF
+		fs::file elf_file(m_path);
+
+		if (!elf_file)
+		{
+			LOG_ERROR(LOADER, "Failed to open executable: %s", m_path);
+			return;
 		}
 
 		// Check SELF header
@@ -422,15 +516,15 @@ void Emulator::Load()
 
 			if (m_elf_path.empty())
 			{
-				if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
+				if (m_path.find(hdd0_game) != -1)
+				{
+					m_elf_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
+				}
+				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					//Disc games are on /dev_bdvd/
 					size_t pos = m_path.rfind("PS3_GAME");
 					m_elf_path = "/dev_bdvd/" + m_path.substr(pos);
-				}
-				else if (m_path.find(vfs::get("/dev_hdd0/game/")) != -1)
-				{
-					m_elf_path = "/dev_hdd0/game/" + m_path.substr(vfs::get("/dev_hdd0/game/").size());
 				}
 				else
 				{
@@ -452,7 +546,7 @@ void Emulator::Load()
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::ps3::init();
-			ppu_load_prx(ppu_prx, "");
+			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -724,7 +818,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 			if (ppu.last_function)
 			{
 				func = ppu.last_function;
-			}			
+			}
 		}
 
 		if (g_system == system_type::psv)

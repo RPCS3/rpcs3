@@ -14,6 +14,7 @@ extern logs::channel sysPrxForUser;
 vm::gvar<sys_lwmutex_t> g_ppu_atexit_lwm;
 vm::gvar<vm::ptr<void()>[8]> g_ppu_atexit;
 vm::gvar<u32> g_ppu_once_mutex;
+vm::gvar<sys_lwmutex_t> g_ppu_prx_lwm;
 
 static u32 s_tls_addr = 0; // TLS image address
 static u32 s_tls_file = 0; // TLS image size
@@ -110,6 +111,12 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	attr->flags     = 0;
 	attr->name_u64  = "_lv2ppu\0"_u64;
 	sys_mutex_create(g_ppu_once_mutex, attr);
+
+	lwa->protocol   = SYS_SYNC_PRIORITY;
+	lwa->recursive  = SYS_SYNC_RECURSIVE;
+	lwa->name_u64   = "_lv2prx\0"_u64;
+	sys_lwmutex_create(g_ppu_prx_lwm, lwa);
+	// TODO: missing prx initialization
 }
 
 error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
@@ -182,13 +189,12 @@ error_code sys_ppu_thread_register_atexit(ppu_thread& ppu, vm::ptr<void()> func)
 {
 	sysPrxForUser.notice("sys_ppu_thread_register_atexit(ptr=*0x%x)", func);
 
-	verify(HERE), !sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0);
+	sys_lwmutex_locker lock(ppu, g_ppu_atexit_lwm);
 
 	for (auto ptr : *g_ppu_atexit)
 	{
 		if (ptr == func)
 		{
-			verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
 			return CELL_EPERM;
 		}
 	}
@@ -198,12 +204,10 @@ error_code sys_ppu_thread_register_atexit(ppu_thread& ppu, vm::ptr<void()> func)
 		if (pp == vm::null)
 		{
 			pp = func;
-			verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
 			return CELL_OK;
 		}
 	}
 
-	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
 	return CELL_ENOMEM;
 }
 
@@ -211,19 +215,17 @@ error_code sys_ppu_thread_unregister_atexit(ppu_thread& ppu, vm::ptr<void()> fun
 {
 	sysPrxForUser.notice("sys_ppu_thread_unregister_atexit(ptr=*0x%x)", func);
 
-	verify(HERE), !sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0);
+	sys_lwmutex_locker lock(ppu, g_ppu_atexit_lwm);
 
 	for (auto& pp : *g_ppu_atexit)
 	{
 		if (pp == func)
 		{
 			pp = vm::null;
-			verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
 			return CELL_OK;
 		}
 	}
 
-	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
 	return CELL_ESRCH;
 }
 
@@ -231,7 +233,7 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()
 {
 	sysPrxForUser.notice("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
 
-	verify(HERE), !sys_mutex_lock(ppu, *g_ppu_once_mutex, 0);
+	verify(HERE), sys_mutex_lock(ppu, *g_ppu_once_mutex, 0) == CELL_OK;
 
 	if (*once_ctrl == SYS_PPU_THREAD_ONCE_INIT)
 	{
@@ -240,7 +242,7 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()
 		*once_ctrl = SYS_PPU_THREAD_DONE_INIT;
 	}
 
-	verify(HERE), !sys_mutex_unlock(ppu, *g_ppu_once_mutex);
+	verify(HERE), sys_mutex_unlock(ppu, *g_ppu_once_mutex) == CELL_OK;
 }
 
 error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)
@@ -267,6 +269,7 @@ void sysPrxForUser_sys_ppu_thread_init()
 	REG_VNID(sysPrxForUser, 0x00000000u, g_ppu_atexit_lwm);
 	REG_VNID(sysPrxForUser, 0x00000001u, g_ppu_once_mutex);
 	REG_VNID(sysPrxForUser, 0x00000002u, g_ppu_atexit);
+	REG_VNID(sysPrxForUser, 0x00000003u, g_ppu_prx_lwm);
 
 	REG_FUNC(sysPrxForUser, sys_initialize_tls);
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_create);

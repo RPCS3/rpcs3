@@ -46,17 +46,31 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_opened(false), ui(new Ui::main_window)
+main_window::main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *parent) : QMainWindow(parent), guiSettings(guiSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
+{
+}
+
+main_window::~main_window()
+{
+}
+
+auto Pause = []()
+{
+	if (Emu.IsReady()) Emu.Run();
+	else if (Emu.IsPaused()) Emu.Resume();
+	else if (Emu.IsRunning()) Emu.Pause();
+	else if (!Emu.GetPath().empty()) Emu.Load();
+};
+
+/* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).  
+ * Simplifies logic a bit.
+ */
+void main_window::Init()
 {
 	ui->setupUi(this);
 
-	guiSettings.reset(new gui_settings());
-
 	// Load Icons: This needs to happen before any actions or buttons are created
-	icon_play = QIcon(":/Icons/play.png");
-	icon_pause = QIcon(":/Icons/pause.png");
-	icon_stop = QIcon(":/Icons/stop.png");
-	icon_restart = QIcon(":/Icons/restart.png");
+	RepaintToolBarIcons();
 	appIcon = QIcon(":/rpcs3.ico");
 
 	// add toolbar widgets (crappy Qt designer is not able to)
@@ -87,25 +101,9 @@ main_window::main_window(QWidget *parent) : QMainWindow(parent), m_sys_menu_open
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 	!appIcon.isNull() ? setWindowIcon(appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
-	QTimer::singleShot(1, [=]() {
-		// Need to have this happen fast, but not now because connects aren't created yet.
-		// So, a tricky balance in terms of time but this works.
-		RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath()); 
-		ConfigureGuiFromSettings(true);
-	});
+	RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
+	ConfigureGuiFromSettings(true);
 }
-
-main_window::~main_window()
-{
-}
-
-auto Pause = []()
-{
-	if (Emu.IsReady()) Emu.Run();
-	else if (Emu.IsPaused()) Emu.Resume();
-	else if (Emu.IsRunning()) Emu.Pause();
-	else if (!Emu.GetPath().empty()) Emu.Load();
-};
 
 void main_window::CreateThumbnailToolbar()
 {
@@ -239,7 +237,8 @@ void main_window::BootElf()
 		LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(q_string_pair(qstr(path), qstr(serial + Emu.GetTitle())));
+		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		gameListFrame->Refresh(true);
 	}
 }
 
@@ -275,7 +274,8 @@ void main_window::BootGame()
 		LOG_SUCCESS(LOADER, "Boot Game: boot done.");
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(q_string_pair(qstr(path), qstr(serial + Emu.GetTitle())));
+		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		gameListFrame->Refresh(true);
 	}
 }
 
@@ -310,7 +310,7 @@ void main_window::InstallPkg()
 	pkg_f.seek(0);
 
 	// Get full path
-	const auto& local_path = Emu.GetGameDir() + std::string(std::begin(title_id), std::end(title_id));
+	const auto& local_path = Emu.GetHddDir() + "game/" + std::string(std::begin(title_id), std::end(title_id));
 
 	if (!fs::create_dir(local_path))
 	{
@@ -625,6 +625,53 @@ void main_window::SaveWindowState()
 	gameListFrame->SaveSettings();
 }
 
+void main_window::RepaintToolBarIcons()
+{
+	QColor newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+
+	icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
+	icon_pause = gui_settings::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
+	icon_stop = gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor);
+	icon_restart = gui_settings::colorizedIcon(QIcon(":/Icons/restart.png"), GUI::mw_tool_icon_color, newColor);
+	icon_fullscreen_on = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen.png"), GUI::mw_tool_icon_color, newColor);
+	icon_fullscreen_off = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen_invert.png"), GUI::mw_tool_icon_color, newColor);
+
+	ui->toolbar_config->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/configure.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_controls->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/controllers.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_disc->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/disc.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_grid->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/grid.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_list->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/list.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_refresh->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/refresh.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_snap->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/screenshot.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_sort->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/sort.png"), GUI::mw_tool_icon_color, newColor));
+	ui->toolbar_stop->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor));
+	
+	if (Emu.IsRunning())
+	{
+		ui->toolbar_start->setIcon(icon_pause);
+	}
+	else if (Emu.IsStopped() && !Emu.GetPath().empty())
+	{
+		ui->toolbar_start->setIcon(icon_restart);
+	}
+	else
+	{
+		ui->toolbar_start->setIcon(icon_play);
+	}
+	
+	if (isFullScreen())
+	{
+		ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
+	}
+	else
+	{
+		ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
+	}
+
+	ui->sizeSlider->setStyleSheet(QString("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
+		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
+}
+
 void main_window::OnEmuRun()
 {
 	debuggerFrame->EnableButtons(true);
@@ -803,7 +850,8 @@ void main_window::BootRecentAction(const QAction* act)
 	else
 	{
 		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
-		AddRecentAction(q_string_pair(pth, nam));
+		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), nam));
+		gameListFrame->Refresh(true);
 	}
 };
 
@@ -984,6 +1032,8 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
+		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
+		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
 			gameListFrame->LoadSettings();
 			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
@@ -1136,12 +1186,12 @@ void main_window::CreateConnects()
 		if (isFullScreen())
 		{
 			showNormal();
-			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen.png"));
+			ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
 		}
 		else
 		{
 			showFullScreen();
-			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen_invert.png"));
+			ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
 		}
 	});
 	connect(ui->toolbar_controls, &QAction::triggered, [=]() { pad_settings_dialog dlg(this); dlg.exec(); });
@@ -1320,7 +1370,7 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 		if (event->button() == Qt::LeftButton)
 		{
 			showNormal();
-			ui->toolbar_fullscreen->setIcon(QIcon(":/Icons/fullscreen.png"));
+			ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
 		}
 	}
 }
