@@ -113,6 +113,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	// Search Bar
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
+	m_Search_Bar->setMinimumWidth(m_Tool_Bar->height() * 5);
 	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text) {
 		m_searchText = text;
 		Refresh();
@@ -122,7 +123,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_Slider_Size = new QSlider(Qt::Horizontal , m_Tool_Bar);
 	m_Slider_Size->setRange(0, GUI::gl_icon_size.size() - 1);
 	m_Slider_Size->setSliderPosition(icon_size_index);
-	m_Slider_Size->setFixedWidth(100);
+	m_Slider_Size->setFixedWidth(m_Tool_Bar->height() * 3);
 
 	m_Tool_Bar->addWidget(m_Search_Bar);
 	m_Tool_Bar->addWidget(new QLabel("       "));
