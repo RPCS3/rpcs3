@@ -91,6 +91,13 @@ void main_window::Init()
 	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->searchBar);
 
+	// for highdpi resize toolbar icons and height dynamically
+	// choose factors to mimic Gui-Design in main_window.ui
+	const int toolBarHeight = menuBar()->sizeHint().height() * 2;
+	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
+	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
+	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.625f);
+
 	CreateActions();
 	CreateDockWindows();
 

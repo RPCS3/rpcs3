@@ -87,7 +87,7 @@ namespace GUI
 	const GUI_SAVE cat_disc_game   = GUI_SAVE( game_list, "categoryVisibleDiscGame",   true );
 	const GUI_SAVE cat_home        = GUI_SAVE( game_list, "categoryVisibleHome",       true );
 	const GUI_SAVE cat_audio_video = GUI_SAVE( game_list, "categoryVisibleAudioVideo", true );
-	const GUI_SAVE cat_game_data   = GUI_SAVE( game_list, "categoryVisibleGameData",   true );
+	const GUI_SAVE cat_game_data   = GUI_SAVE( game_list, "categoryVisibleGameData",   false );
 	const GUI_SAVE cat_unknown     = GUI_SAVE( game_list, "categoryVisibleUnknown",    true );
 	const GUI_SAVE cat_other       = GUI_SAVE( game_list, "categoryVisibleOther",      true );
 
