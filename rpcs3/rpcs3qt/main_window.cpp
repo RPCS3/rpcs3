@@ -1,4 +1,4 @@
-
+﻿
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -447,14 +447,10 @@ void main_window::InstallPup()
 	std::string version_string = pup.get_file(0x100).to_string();
 	version_string.erase(version_string.find('\n'));
 
-	const int cur_major = 4;
-	const int cur_minor = 81;
+	const std::string cur_version = "4.81";
 
-	int major = std::stoi(version_string.substr(0, version_string.find('.')));
-	int minor = std::stoi(version_string.substr(version_string.find('.') + 1));
-
-	if ((major < cur_major || (major == cur_major && minor < cur_minor)) &&
-		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1.%2 and you are trying to install version %3\nContinue installation?").arg(cur_major).arg(cur_minor).arg(QString::fromStdString(version_string)),
+	if (version_string < cur_version &&
+		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(QString::fromStdString(cur_version), QString::fromStdString(version_string)),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 	{
 		return;
