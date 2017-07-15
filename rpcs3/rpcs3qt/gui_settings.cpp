@@ -78,6 +78,53 @@ q_pair_list gui_settings::Var2List(const QVariant& var)
 	return list;
 }
 
+QIcon gui_settings::colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks)
+{
+	QPixmap pixmap = icon.pixmap(icon.availableSizes().at(0));
+	QBitmap mask = pixmap.createMaskFromColor(oldColor, Qt::MaskOutColor);
+	pixmap.fill(newColor);
+	pixmap.setMask(mask);
+
+	// special masks for disc icon and others
+
+	if (useSpecialMasks)
+	{
+		auto saturatedColor = [](const QColor& col, float sat /* must be < 1 */)
+		{
+			int r = col.red() + sat * (255 - col.red());
+			int g = col.green() + sat * (255 - col.green());
+			int b = col.blue() + sat * (255 - col.blue());
+			return QColor(r, g, b, col.alpha());
+		};
+
+		QColor colorS1(Qt::white);
+		QPixmap pixmapS1 = icon.pixmap(icon.availableSizes().at(0));
+		QBitmap maskS1 = pixmapS1.createMaskFromColor(colorS1, Qt::MaskOutColor);
+		pixmapS1.fill(colorS1);
+		pixmapS1.setMask(maskS1);
+
+		QColor colorS2(0, 173, 246, 255);
+		QPixmap pixmapS2 = icon.pixmap(icon.availableSizes().at(0));
+		QBitmap maskS2 = pixmapS2.createMaskFromColor(colorS2, Qt::MaskOutColor);
+		pixmapS2.fill(saturatedColor(newColor, 0.6f));
+		pixmapS2.setMask(maskS2);
+
+		QColor colorS3(0, 132, 244, 255);
+		QPixmap pixmapS3 = icon.pixmap(icon.availableSizes().at(0));
+		QBitmap maskS3 = pixmapS3.createMaskFromColor(colorS3, Qt::MaskOutColor);
+		pixmapS3.fill(saturatedColor(newColor, 0.3f));
+		pixmapS3.setMask(maskS3);
+
+		QPainter painter(&pixmap);
+		painter.drawPixmap(QPoint(0, 0), pixmapS1);
+		painter.drawPixmap(QPoint(0, 0), pixmapS2);
+		painter.drawPixmap(QPoint(0, 0), pixmapS3);
+		painter.end();
+	}
+
+	return QIcon(pixmap);
+}
+
 void gui_settings::SetValue(const GUI_SAVE& entry, const QVariant& value)
 {
 	settings.beginGroup(entry.key);

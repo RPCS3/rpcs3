@@ -24,6 +24,24 @@ s32 sys_lwmutex_trylock(ppu_thread& CPU, vm::ptr<sys_lwmutex_t> lwmutex);
 s32 sys_lwmutex_unlock(ppu_thread& CPU, vm::ptr<sys_lwmutex_t> lwmutex);
 s32 sys_lwmutex_destroy(ppu_thread& CPU, vm::ptr<sys_lwmutex_t> lwmutex);
 
+struct sys_lwmutex_locker
+{
+	ppu_thread& ppu;
+	vm::ptr<sys_lwmutex_t> mutex;
+
+	sys_lwmutex_locker(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> mutex)
+		: ppu(ppu)
+		, mutex(mutex)
+	{
+		verify(HERE), sys_lwmutex_lock(ppu, mutex, 0) == CELL_OK;
+	}
+
+	~sys_lwmutex_locker() noexcept(false)
+	{
+		verify(HERE), sys_lwmutex_unlock(ppu, mutex) == CELL_OK;
+	}
+};
+
 struct sys_lwcond_t;
 struct sys_lwcond_attribute_t;
 

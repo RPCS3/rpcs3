@@ -461,8 +461,10 @@ namespace vm
 
 #ifdef _WIN32
 		verify(__func__), ::VirtualFree(real_addr, size, MEM_DECOMMIT);
+		verify(__func__), ::VirtualFree(exec_addr, size, MEM_DECOMMIT);
 #else
 		verify(__func__), ::mmap(real_addr, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
+		verify(__func__), ::mmap(exec_addr, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
 	}
 
