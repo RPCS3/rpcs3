@@ -1,5 +1,4 @@
-#ifndef VFS_DIALOG_TAB
-#define VFS_DIALOG_TAB
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/System.h"
@@ -32,6 +31,8 @@ public:
 private:
 	QString EmuConfigDir();
 
+	const QString EmptyPath = "Empty Path";
+
 	vfs_settings_info m_info;
 	gui_settings* m_gui_settings;
 	emu_settings* m_emu_settings;
@@ -40,5 +41,3 @@ private:
 	QListWidget* dirList;
 	QLabel*		 selectedConfigLabel;
 };
-
-#endif

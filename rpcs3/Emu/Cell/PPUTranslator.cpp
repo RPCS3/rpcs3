@@ -818,16 +818,19 @@ void PPUTranslator::VCMPGTUW(ppu_opcode_t op)
 	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
 }
 
+// TODO: remove this (wrong casts)
 #define FP_SAT_OP(fcmp, value) m_ir->CreateSelect(fcmp, cast<Constant>(cast<FCmpInst>(fcmp)->getOperand(1)), value)
 
 void PPUTranslator::VCTSXS(ppu_opcode_t op)
 {
 	const auto b = GetVr(op.vb, VrType::vf);
 	const auto scaled = Scale(b, op.vuimm);
-	//const auto is_nan = m_ir->CreateFCmpUNO(b, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0))); // NaN -> 0.0
-	const auto sat_l = m_ir->CreateFCmpOLT(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), -std::pow(2, 31)))); // TODO ???
+	//const auto const0 = ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0));
+	const auto const1 = ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), -std::pow(2, 31)));
+	//const auto is_nan = m_ir->CreateFCmpUNO(b, const0); // NaN -> 0.0
+	const auto sat_l = m_ir->CreateFCmpOLT(scaled, const1); // TODO ???
 	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), std::pow(2, 31))));
-	const auto converted = m_ir->CreateFPToSI(FP_SAT_OP(sat_l, scaled), GetType<s32[4]>());
+	const auto converted = m_ir->CreateFPToSI(m_ir->CreateSelect(sat_l, const1, scaled), GetType<s32[4]>());
 	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat(4, m_ir->getInt32(0x7fffffff)), converted));
 	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
 }
@@ -836,10 +839,11 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 {
 	const auto b = GetVr(op.vb, VrType::vf);
 	const auto scaled = Scale(b, op.vuimm);
-	//const auto is_nan = m_ir->CreateFCmpUNO(b, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0))); // NaN -> 0.0
-	const auto sat_l = m_ir->CreateFCmpOLT(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0)));
+	const auto const0 = ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0));
+	//const auto is_nan = m_ir->CreateFCmpUNO(b, const0); // NaN -> 0.0
+	const auto sat_l = m_ir->CreateFCmpOLT(scaled, const0);
 	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), std::pow(2, 32)))); // TODO ???
-	const auto converted = m_ir->CreateFPToUI(FP_SAT_OP(sat_l, scaled), GetType<u32[4]>());
+	const auto converted = m_ir->CreateFPToUI(m_ir->CreateSelect(sat_l, const0, scaled), GetType<u32[4]>());
 	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat(4, m_ir->getInt32(0xffffffff)), converted));
 	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
 }

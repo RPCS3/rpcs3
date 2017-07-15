@@ -210,6 +210,11 @@ public:
 		return m_elf_path;
 	}
 
+	const std::string& GetBoot() const
+	{
+		return m_path;
+	}
+
 	const std::string& GetTitleID() const
 	{
 		return m_title_id;
@@ -232,7 +237,7 @@ public:
 
 	bool BootGame(const std::string& path, bool direct = false);
 
-	static std::string GetGameDir();
+	static std::string GetHddDir();
 	static std::string GetLibDir();
 
 	void Load();

@@ -41,7 +41,6 @@
 /Vulkan/Vulkan-build
 /Vulkan/glslang-build
 
-/wxWidgets/lib
 /bin/rpcs3.ini
 /bin/rpcs3.ipdb
 /bin/rpcs3.iobj
@@ -92,3 +91,4 @@ rpcs3/rpcs3_*_cotire.cmake
 moc_*.cpp
 qrc_resources.cpp
 rpcs3_automoc.cpp
+ui_*.h

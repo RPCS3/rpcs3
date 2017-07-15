@@ -23,12 +23,17 @@ m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
 	{
 		new QListWidgetItem(dir, dirList);
 	}
+
 	dirList->setMinimumWidth(dirList->sizeHintForColumn(0));
 
 	QHBoxLayout* selectedConfigLayout = new QHBoxLayout;
 	QLabel* selectedMessage = new QLabel(m_info.name + " directory:");
 	selectedConfigLabel = new QLabel();
 	selectedConfigLabel->setText(EmuConfigDir());
+	if (selectedConfigLabel->text() == "")
+	{
+		selectedConfigLabel->setText(EmptyPath);
+	}
 	selectedConfigLayout->addWidget(selectedMessage);
 	selectedConfigLayout->addWidget(selectedConfigLabel);
 	selectedConfigLayout->addStretch();
@@ -41,7 +46,14 @@ m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
 
 	connect(dirList, &QListWidget::itemDoubleClicked, [this](QListWidgetItem* item)
 	{
-		selectedConfigLabel->setText(item->text());
+		if (item->text() == "")
+		{
+			selectedConfigLabel->setText(EmptyPath);
+		}
+		else
+		{
+			selectedConfigLabel->setText(item->text());
+		}
 	});
 }
 
@@ -54,8 +66,16 @@ void vfs_dialog_tab::SaveSettings()
 	}
 
 	m_gui_settings->SetValue(m_info.listLocation, allDirs);
-	m_info.cfg_node->from_string(sstr(selectedConfigLabel->text()));
-	m_emu_settings->SetSetting(m_info.settingLoc, sstr(selectedConfigLabel->text()));
+	if (selectedConfigLabel->text() == EmptyPath)
+	{
+		m_info.cfg_node->from_string("");
+		m_emu_settings->SetSetting(m_info.settingLoc, "");
+	}
+	else
+	{
+		m_info.cfg_node->from_string(sstr(selectedConfigLabel->text()));
+		m_emu_settings->SetSetting(m_info.settingLoc, sstr(selectedConfigLabel->text()));
+	}
 	m_emu_settings->SaveSettings();
 }
 
@@ -64,6 +84,10 @@ void vfs_dialog_tab::Reset()
 	dirList->clear();
 	m_info.cfg_node->from_default();
 	selectedConfigLabel->setText(EmuConfigDir());
+	if (selectedConfigLabel->text() == "")
+	{
+		selectedConfigLabel->setText(EmptyPath);
+	}
 	dirList->addItem(new QListWidgetItem(EmuConfigDir()));
 	m_gui_settings->SetValue(m_info.listLocation, QStringList(EmuConfigDir()));
 }

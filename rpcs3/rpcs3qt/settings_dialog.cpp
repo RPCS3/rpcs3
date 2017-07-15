@@ -8,9 +8,11 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QColorDialog>
+#include <QSpinBox>
+#include <QApplication>
+#include <QDesktopWidget>
 
 #include "settings_dialog.h"
-#include "emu_settings.h"
 
 #include "ui_settings_dialog.h"
 
@@ -22,7 +24,7 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, GameInfo* game)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, const GameInfo* game)
 	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog)
 {
 	ui->setupUi(this);
@@ -81,6 +83,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
+		ToolBarRepaintRequest();
 	});
 	connect(ui->okButton, &QAbstractButton::clicked, xemu_settings.get(), &emu_settings::SaveSettings);
 	connect(ui->okButton, &QAbstractButton::clicked, this, &QDialog::accept);
@@ -583,10 +586,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceComboBox(ui->cameraTypeBox, emu_settings::CameraType);
 	ui->cameraTypeBox->setToolTip(json_input["cameraTypeBox"].toString());
 
-	// Checkboxes
-
-	xemu_settings->EnhanceCheckBox(ui->useFakeCamera, emu_settings::Camera);
-	ui->useFakeCamera->setToolTip(json_input["useFakeCamera"].toString());
+	xemu_settings->EnhanceComboBox(ui->cameraBox, emu_settings::Camera);
+	ui->cameraBox->setToolTip(json_input["cameraBox"].toString());
 
 	//     _____           _                   _______    _     
 	//    / ____|         | |                 |__   __|  | |    
@@ -685,8 +686,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
-		auto colorDialog = [&](const GUI_SAVE& color, const QString& title){
-			QColorDialog dlg(xgui_settings->GetValue(color).value<QColor>(), this);
+		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button){
+			QColor oldColor = xgui_settings->GetValue(color).value<QColor>();
+			QColorDialog dlg(oldColor, this);
 			dlg.setWindowTitle(title);
 			dlg.setOptions(QColorDialog::ShowAlphaChannel);
 			for (int i = 0; i < dlg.customCount(); i++)
@@ -700,10 +702,70 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 					xgui_settings->SetCustomColor(i, dlg.customColor(i));
 				}
 				xgui_settings->SetValue(color, dlg.selectedColor());
+				button->setIcon(gui_settings::colorizedIcon(button->icon(), oldColor, dlg.selectedColor(), true));
 			}
 		};
-		connect(ui->pb_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, "Choose icon color"); });
-		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, "Choose tool bar color"); });
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color); });
+		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color); });
+		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color); });
+		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color); });
+
+		// colorize preview icons
+		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor()){
+			QLabel* text = new QLabel(button->text());
+			text->setAlignment(Qt::AlignCenter);
+			text->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+			if (icon.isNull())
+			{
+				QPixmap pixmap(100, 100);
+				pixmap.fill(color);
+				button->setIcon(pixmap);
+			}
+			else
+			{
+				button->setIcon(gui_settings::colorizedIcon(icon, iconColor, color));
+			}
+			button->setText("");
+			button->setStyleSheet("text-align:left;");
+			button->setLayout(new QGridLayout);
+			button->layout()->setContentsMargins(0, 0, 0, 0);
+			button->layout()->addWidget(text);
+		};
+		addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>());
+		addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
+		addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
+		addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(GUI::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color);
+
+		bool enableButtons = xgui_settings->GetValue(GUI::gs_resize).toBool();
+		ui->gs_resizeOnBoot->setChecked(enableButtons);
+		ui->gs_width->setEnabled(enableButtons);
+		ui->gs_height->setEnabled(enableButtons);
+
+		QRect rec = QApplication::desktop()->screenGeometry();
+		int width = xgui_settings->GetValue(GUI::gs_width).toInt();
+		int height = xgui_settings->GetValue(GUI::gs_height).toInt();
+		const int max_width = rec.width();
+		const int max_height = rec.height();
+		ui->gs_width->setValue(width < max_width ? width : max_width);
+		ui->gs_height->setValue(height < max_height ? height : max_height);
+
+		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val) {
+			xgui_settings->SetValue(GUI::gs_resize, val);
+			ui->gs_width->setEnabled(val);
+			ui->gs_height->setEnabled(val);
+		});
+		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w) {
+			int width = QApplication::desktop()->screenGeometry().width();
+			w = w > width ? width : w;
+			ui->gs_width->setValue(w);
+			xgui_settings->SetValue(GUI::gs_width, w);
+		});
+		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h) {
+			int height = QApplication::desktop()->screenGeometry().height();
+			h = h > height ? height : h;
+			ui->gs_height->setValue(h);
+			xgui_settings->SetValue(GUI::gs_height, h);
+		});
 
 		AddConfigs();
 		AddStylesheets();
