@@ -49,8 +49,11 @@ public:
 		return m_context;
 	}
 
-	// Add module
+	// Add module (path to obj cache dir)
 	void add(std::unique_ptr<llvm::Module> module, const std::string& path);
+
+	// Add object (path to obj file)
+	void add(const std::string& path);
 
 	// Finalize
 	void fin();

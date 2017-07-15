@@ -343,22 +343,30 @@ public:
 		LOG_SUCCESS(GENERAL, "LLVM: Created module: %s", module->getName().data());
 	}
 
-	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* module) override
+	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
 	{
-		std::string name = m_path;
-		name.append(module->getName());
-
-		if (fs::file cached{name, fs::read})
+		if (fs::file cached{path, fs::read})
 		{
 			auto buf = llvm::MemoryBuffer::getNewUninitMemBuffer(cached.size());
 			cached.read(const_cast<char*>(buf->getBufferStart()), buf->getBufferSize());
+			return buf;
+		}
+
+		return nullptr;
+	}
+
+	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* module) override
+	{
+		std::string path = m_path;
+		path.append(module->getName());
+
+		if (auto buf = load(path))
+		{
 			LOG_SUCCESS(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
 			return buf;
 		}
-		else
-		{
-			return nullptr;
-		}
+
+		return nullptr;
 	}
 };
 
@@ -428,6 +436,11 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& 
 		// Delete IR to lower memory consumption
 		func.deleteBody();
 	}
+}
+
+void jit_compiler::add(const std::string& path)
+{
+	m_engine->addObjectFile(std::move(llvm::object::ObjectFile::createObjectFile(*ObjectCache::load(path)).get()));
 }
 
 void jit_compiler::fin()
