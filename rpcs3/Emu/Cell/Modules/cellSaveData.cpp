@@ -720,7 +720,7 @@ s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<Ce
 {
 
 	//TODO: accurately get the current user
-	if (userId == CELL_SYSUTIL_USERID_CURRENT)
+	if (userId == 0)
 	{
 		userId = 1u;
 	}
@@ -1030,7 +1030,7 @@ s32 cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat>
 {
 	cellSaveData.warning("cellSavaDataGetListItem(dirName=%s, dir=*0x%x, sysFileParam=*0x%x, bind=*0x%x, sizeKB=*0x%x)", dirName, dir, sysFileParam, bind, sizeKB);
 	
-	return save_op_get_list_item(dirName, dir, sysFileParam, bind, sizeKB, CELL_SYSUTIL_USERID_CURRENT);
+	return save_op_get_list_item(dirName, dir, sysFileParam, bind, sizeKB, 0);
 }
 
 s32 cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
