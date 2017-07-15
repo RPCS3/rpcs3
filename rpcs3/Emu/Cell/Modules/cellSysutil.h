@@ -79,8 +79,6 @@ enum
 	CELL_SYSUTIL_SYSCHAT_STOP                    = 0x0162,
 	CELL_SYSUTIL_SYSCHAT_VOICE_STREAMING_RESUMED = 0x0163,
 	CELL_SYSUTIL_SYSCHAT_VOICE_STREAMING_PAUSED  = 0x0164,
-
-	CELL_SYSUTIL_USERID_CURRENT = 0,
 };
 
 using CellSysutilCallback = void(u64 status, u64 param, vm::ptr<void> userdata);
