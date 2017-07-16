@@ -15,6 +15,7 @@
 
 #include "rpcs3qt/msg_dialog_frame.h"
 #include "rpcs3qt/main_window.h"
+#include "rpcs3qt/gui_settings.h"
 
 #include <QApplication>
 
@@ -51,4 +52,6 @@ private:
 	std::shared_ptr<basic_mouse_handler> m_basicMouseHandler;
 
 	main_window* RPCS3MainWin;
+
+	std::shared_ptr<gui_settings> guiSettings;
 };
