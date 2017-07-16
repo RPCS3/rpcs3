@@ -517,7 +517,7 @@
     <ClInclude Include="rpcs3qt\system_info.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="game_list.h">
+    <ClInclude Include="rpcs3qt\game_list.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
