@@ -58,9 +58,6 @@
                 <property name="text">
                  <string>Interpreter (precise)</string>
                 </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">ppuBG</string>
-                </attribute>
                </widget>
               </item>
               <item>
@@ -68,9 +65,6 @@
                 <property name="text">
                  <string>Interpreter (fast)</string>
                 </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">ppuBG</string>
-                </attribute>
                </widget>
               </item>
               <item>
@@ -78,9 +72,6 @@
                 <property name="text">
                  <string>Recompiler (LLVM)</string>
                 </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">ppuBG</string>
-                </attribute>
                </widget>
               </item>
              </layout>
@@ -97,9 +88,6 @@
                 <property name="text">
                  <string>Interpreter (precise)</string>
                 </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">spuBG</string>
-                </attribute>
                </widget>
               </item>
               <item>
@@ -107,9 +95,6 @@
                 <property name="text">
                  <string>Interpreter (fast)</string>
                 </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">spuBG</string>
-                </attribute>
                </widget>
               </item>
               <item>
@@ -117,9 +102,6 @@
                 <property name="text">
                  <string>Recompiler (ASMJIT)</string>
                 </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">spuBG</string>
-                </attribute>
                </widget>
               </item>
               <item>
@@ -130,9 +112,6 @@
                 <property name="text">
                  <string>Recompiler (LLVM)</string>
                 </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">spuBG</string>
-                </attribute>
                </widget>
               </item>
              </layout>
@@ -232,7 +211,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Load automatic and manual libraries</string>
+                 <string>Load automatic and manual selection</string>
                 </property>
                </widget>
               </item>
@@ -1383,8 +1362,4 @@
   <include location="../resources.qrc"/>
  </resources>
  <connections/>
- <buttongroups>
-  <buttongroup name="ppuBG"/>
-  <buttongroup name="spuBG"/>
- </buttongroups>
 </ui>
