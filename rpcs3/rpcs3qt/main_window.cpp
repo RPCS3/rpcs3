@@ -1,4 +1,4 @@
-
+﻿
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -90,6 +90,13 @@ void main_window::Init()
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->searchBar);
+
+	// for highdpi resize toolbar icons and height dynamically
+	// choose factors to mimic Gui-Design in main_window.ui
+	const int toolBarHeight = menuBar()->sizeHint().height() * 2;
+	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
+	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
+	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.625f);
 
 	CreateActions();
 	CreateDockWindows();
@@ -447,11 +454,10 @@ void main_window::InstallPup()
 	std::string version_string = pup.get_file(0x100).to_string();
 	version_string.erase(version_string.find('\n'));
 
-	const float cur_version = 4.81f;
-	float version = std::stof(version_string);
+	const std::string cur_version = "4.81";
 
-	if (version < cur_version &&
-		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(cur_version).arg(QString::fromStdString(version_string)),
+	if (version_string < cur_version &&
+		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(QString::fromStdString(cur_version), QString::fromStdString(version_string)),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 	{
 		return;
