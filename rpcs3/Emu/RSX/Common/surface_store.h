@@ -114,7 +114,7 @@ namespace rsx
 			}
 
 			//Search invalidated resources for a suitable surface
-			for (auto &It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
+			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
 			{
 				auto &rtt = *It;
 				if (Traits::rtt_has_format_width_height(rtt, color_format, width, height))
@@ -178,7 +178,7 @@ namespace rsx
 			}
 
 			//Search invalidated resources for a suitable surface
-			for (auto &It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
+			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
 			{
 				auto &ds = *It;
 				if (Traits::ds_has_format_width_height(ds, depth_format, width, height))
