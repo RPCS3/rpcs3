@@ -2188,7 +2188,7 @@ void VKGSRender::flip(int buffer)
 			size_t idx = vk::get_render_pass_location(m_swap_chain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
 			VkRenderPass single_target_pass = m_render_passes[idx];
 
-			for (auto &It = m_framebuffer_to_clean.begin(); It != m_framebuffer_to_clean.end(); It++)
+			for (auto It = m_framebuffer_to_clean.begin(); It != m_framebuffer_to_clean.end(); It++)
 			{
 				auto &fbo = *It;
 				if (fbo->attachments[0]->info.image == target_image)

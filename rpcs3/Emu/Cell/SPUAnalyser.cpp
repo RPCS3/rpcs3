@@ -62,7 +62,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	const u32 block_sz = max_limit - entry;
 
 	{
-		//reader_lock lock(m_mutex);
+		reader_lock lock(m_mutex);
 
 		// Try to find existing function in the database
 		if (auto func = find(base, key, block_sz))
@@ -101,7 +101,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		const auto type = s_spu_itype.decode(op.opcode);
 
 		{
-			//reader_lock lock(m_mutex);
+			reader_lock lock(m_mutex);
 
 			// Find existing function
 			if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
