@@ -59,33 +59,19 @@ namespace spu
 {
 	namespace scheduler
 	{
-		struct executable_block_map
-		{
-			std::array<std::atomic<u8>, 1024> locations;
-
-			std::atomic<u8>& operator[](u32 offset)
-			{
-				return locations[offset];
-			}
-		};
-
-		//TODO: Only initialize loaded memory blocks to save RAM
-		//TODO: Concurrent spu thread limit can be configurable
-		std::array<executable_block_map, 65536> atomic_instruction_table;
+		std::array<std::atomic<u8>, 65536> atomic_instruction_table = {};
 		constexpr u32 native_jiffy_duration_us = 2000000;
 
 		void acquire_pc_address(u32 pc, u32 timeout_ms = 3)
 		{
 			const u8 max_concurrent_instructions = (u8)g_cfg.core.preferred_spu_threads;
-
-			const u32 block = pc >> 12;
-			const u32 offset = (pc & 0xFFF) >> 2;
+			const u32 pc_offset = pc >> 2;
 
 			if (timeout_ms > 0)
 			{
 				while (timeout_ms--)
 				{
-					if (atomic_instruction_table[block][offset].load(std::memory_order_consume) >= max_concurrent_instructions)
+					if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
 						std::this_thread::sleep_for(1ms);
 				}
 			}
@@ -94,15 +80,14 @@ namespace spu
 				std::this_thread::yield();
 			}
 
-			atomic_instruction_table[block][offset]++;
+			atomic_instruction_table[pc_offset]++;
 		}
 
 		void release_pc_address(u32 pc)
 		{
-			const u32 block = pc >> 12;
-			const u32 offset = (pc & 0xFFF) >> 2;
+			const u32 pc_offset = pc >> 2;
 
-			atomic_instruction_table[block][offset]--;
+			atomic_instruction_table[pc_offset]--;
 		}
 
 		struct concurrent_execution_watchdog
