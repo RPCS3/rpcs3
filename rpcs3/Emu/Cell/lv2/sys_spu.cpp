@@ -135,15 +135,15 @@ void sys_spu_image::deploy(u32 loc)
 	}
 
 	// Apply the patch
-	fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + loc);
+	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + loc);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + loc);
+		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + loc);
 	}
 
-	LOG_NOTICE(LOADER, "Loaded SPU image: %s%s", hash, dump);
+	LOG_NOTICE(LOADER, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
 }
 
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)

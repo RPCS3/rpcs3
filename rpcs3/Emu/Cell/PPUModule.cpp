@@ -1029,15 +1029,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Apply the patch
-	fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	LOG_NOTICE(LOADER, "PPU executable hash: %s", hash);
+	LOG_NOTICE(LOADER, "PPU executable hash: %s (<- %u)", hash, applied);
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
