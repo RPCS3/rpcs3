@@ -1191,10 +1191,6 @@ void main_window::CreateConnects()
 		gameListFrame->SetListMode(isList);
 		categoryVisibleActGroup->setEnabled(isList);
 	});
-	connect(ui->toolBar, &QToolBar::visibilityChanged, [=](bool checked) {
-		ui->showToolBarAct->setChecked(checked);
-		guiSettings->SetValue(GUI::mw_toolBarVisible, checked);
-	});
 	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
