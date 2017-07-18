@@ -561,13 +561,13 @@ namespace
 								const u32 real_element_size = vk::get_suitable_vk_size(vertex_array.type, vertex_array.attribute_size);
 								
 								gsl::span<gsl::byte> dest_span(dst + (memory_allocations[n] - offset_base), allocated_sizes[n]);
-								rsxthr->post_vertex_stream_to_upload(vertex_array.data, dest_span, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, real_element_size, vk::prepare_buffer_for_writing);
+								rsxthr->post_vertex_stream_to_upload(vertex_array.data, dest_span, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, real_element_size, vertex_count, vk::prepare_buffer_for_writing);
 
 								space_remaining -= allocated_sizes[n];
 								n++;
 							}
 
-							rsxthr->start_vertex_upload_task(vertex_count);
+							rsxthr->start_vertex_upload_task();
 						}
 					}
 				}
