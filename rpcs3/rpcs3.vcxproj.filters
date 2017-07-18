@@ -514,9 +514,6 @@
     <ClInclude Include="QTGeneratedFiles\ui_welcome_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\system_info.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
     <ClInclude Include="rpcs3qt\game_list.h">
       <Filter>Gui</Filter>
     </ClInclude>
