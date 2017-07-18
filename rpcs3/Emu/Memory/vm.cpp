@@ -27,9 +27,9 @@
 
 namespace vm
 {
-	static u8* memory_reserve_4GiB(std::uintptr_t addr = 0)
+	static u8* memory_reserve_4GiB(std::uintptr_t _addr = 0)
 	{
-		for (u64 addr = 0x100000000;; addr += 0x100000000)
+		for (u64 addr = _addr + 0x100000000;; addr += 0x100000000)
 		{
 			if (auto ptr = utils::memory_reserve(0x100000000, (void*)addr))
 			{

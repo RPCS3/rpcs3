@@ -46,5 +46,16 @@ std::string utils::get_system_info()
 #endif
 
 	fmt::append(result, "%s | %d Threads | %.2f GiB RAM", brand, num_proc, mem_total / (1024.0f * 1024 * 1024));
+
+	if (has_avx())
+	{
+		result += " | AVX";
+	}
+
+	if (has_rtm())
+	{
+		result += " | TSX";
+	}
+
 	return result;
 }

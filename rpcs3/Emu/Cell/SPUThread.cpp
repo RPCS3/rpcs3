@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/lockless.h"
+#include "Utilities/sysinfo.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -21,6 +22,8 @@
 #include <cfenv>
 #include <atomic>
 #include <thread>
+
+const bool s_use_rtm = utils::has_rtm();
 
 #ifdef _MSC_VER
 bool operator ==(const u128& lhs, const u128& rhs)
@@ -604,9 +607,22 @@ void SPUThread::process_mfc_cmd()
 				thread_ctrl::wait_for(100);
 			}
 		}
+		else if (s_use_rtm && utils::transaction_enter())
+		{
+			if (!vm::reader_lock{vm::try_to_lock})
+			{
+				_xabort(0);
+			}
+
+			rtime = vm::reservation_acquire(raddr, 128);
+			rdata = data;
+			_xend();
+
+			_ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ffff) = rdata;
+			return ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+		}
 		else
 		{
-			// Fast path
 			rdata = data;
 			_mm_lfence();
 		}
@@ -637,15 +653,36 @@ void SPUThread::process_mfc_cmd()
 		if (raddr == ch_mfc_cmd.eal && rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
 		{
 			// TODO: vm::check_addr
-			vm::writer_lock lock;
-
-			if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+			if (s_use_rtm && utils::transaction_enter())
 			{
-				data = to_write;
-				result = true;
+				if (!vm::reader_lock{vm::try_to_lock})
+				{
+					_xabort(0);
+				}
 
-				vm::reservation_update(raddr, 128);
-				vm::notify(raddr, 128);
+				if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+				{
+					data = to_write;
+					result = true;
+
+					vm::reservation_update(raddr, 128);
+					vm::notify(raddr, 128);
+				}
+
+				_xend();
+			}
+			else
+			{
+				vm::writer_lock lock;
+
+				if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+				{
+					data = to_write;
+					result = true;
+
+					vm::reservation_update(raddr, 128);
+					vm::notify(raddr, 128);
+				}
 			}
 		}
 
@@ -681,6 +718,23 @@ void SPUThread::process_mfc_cmd()
 
 		// Store unconditionally
 		// TODO: vm::check_addr
+
+		if (s_use_rtm && utils::transaction_enter())
+		{
+			if (!vm::reader_lock{vm::try_to_lock})
+			{
+				_xabort(0);
+			}
+
+			data = to_write;
+			vm::reservation_update(ch_mfc_cmd.eal, 128);
+			vm::notify(ch_mfc_cmd.eal, 128);
+			_xend();
+
+			ch_atomic_stat.set_value(MFC_PUTLLUC_SUCCESS);
+			return;
+		}
+
 		vm::writer_lock lock(0);
 		data = to_write;
 		vm::reservation_update(ch_mfc_cmd.eal, 128);
