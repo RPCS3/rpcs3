@@ -191,31 +191,26 @@ namespace rsx
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static void invalidate_rtt_surface_contents(vk::command_buffer* pcmd, vk::render_target *rtt, bool /*forced*/)
+		static void invalidate_rtt_surface_contents(vk::command_buffer* pcmd, vk::render_target *rtt, vk::render_target *old_surface, bool forced)
 		{
-			if (0)//forced)
+			if (forced)
 			{
-				VkClearColorValue clear_color;
-				VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
-
-				clear_color.float32[0] = 0.f;
-				clear_color.float32[1] = 0.f;
-				clear_color.float32[2] = 0.f;
-				clear_color.float32[3] = 0.f;
-
-				change_image_layout(*pcmd, rtt, VK_IMAGE_LAYOUT_GENERAL, range);
-				vkCmdClearColorImage(*pcmd, rtt->value, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
-				change_image_layout(*pcmd, rtt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
+				rtt->old_contents = old_surface;
+				rtt->dirty = true;
 			}
 		}
 		
-		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds, bool /*forced*/)
+		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds, vk::render_target *old_surface, bool /*forced*/)
 		{
 			ds->dirty = true;
+			ds->old_contents = old_surface;
 		}
 
-		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height)
+		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)
 		{
+			if (check_refs && rtt->deref_count == 0) //Surface may still have read refs from data 'copy'
+				return false;
+
 			VkFormat fmt = vk::get_compatible_surface_format(format).first;
 
 			if (rtt->info.format == fmt &&
@@ -226,8 +221,11 @@ namespace rsx
 			return false;
 		}
 
-		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height)
+		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height, bool check_refs=false)
 		{
+			if (check_refs && ds->deref_count == 0) //Surface may still have read refs from data 'copy'
+				return false;
+
 			if (ds->info.extent.width == width &&
 				ds->info.extent.height == height)
 			{

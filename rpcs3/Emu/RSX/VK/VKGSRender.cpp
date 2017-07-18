@@ -875,7 +875,7 @@ void VKGSRender::begin_render_pass()
 	size_t idx = vk::get_render_pass_location(
 		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
 		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
-		(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
+		(u8)m_draw_buffers_count);
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
 	VkRenderPassBeginInfo rp_begin = {};
@@ -1005,14 +1005,14 @@ void VKGSRender::end()
 			{
 				auto surface = std::get<1>(rtt);
 
-				if (surface->dirty && surface->old_contents != nullptr)
+				if (surface->old_contents != nullptr)
 					copy_rtt_contents(surface);
 			}
 		}
 
 		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 		{
-			if (ds->dirty && ds->old_contents != nullptr)
+			if (ds->old_contents != nullptr)
 				copy_rtt_contents(ds);
 		}
 	}
@@ -1120,6 +1120,11 @@ void VKGSRender::end()
 	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets, 0, nullptr);
 
+	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
+	std::vector<VkClearAttachment> buffers_to_clear;
+	buffers_to_clear.reserve(4);
+	const auto targets = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
+
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 	{
 		if (ds->dirty)
@@ -1129,12 +1134,28 @@ void VKGSRender::end()
 			depth_clear_value.depthStencil.depth = 1.f;
 			depth_clear_value.depthStencil.stencil = 255;
 
-			VkClearRect clear_rect = { 0, 0, m_draw_fbo->width(), m_draw_fbo->height(), 0, 1 };
 			VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
-			vkCmdClearAttachments(*m_current_command_buffer, 1, &clear_desc, 1, &clear_rect);
+			buffers_to_clear.push_back(clear_desc);
 
 			ds->dirty = false;
 		}
+	}
+
+	for (int index = 0; index < targets.size(); ++index)
+	{
+		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0 && std::get<1>(m_rtts.m_bound_render_targets[index])->dirty)
+		{
+			const u32 real_index = (index == 1 && targets.size() == 1) ? 0 : static_cast<u32>(index);
+			buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, real_index, {} });
+
+			std::get<1>(m_rtts.m_bound_render_targets[index])->dirty = false;
+		}
+	}
+
+	if (buffers_to_clear.size() > 0)
+	{
+		VkClearRect clear_rect = { 0, 0, m_draw_fbo->width(), m_draw_fbo->height(), 0, 1 };
+		vkCmdClearAttachments(*m_current_command_buffer, static_cast<u32>(buffers_to_clear.size()), buffers_to_clear.data(), 1, &clear_rect);
 	}
 
 	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<2>(upload_info);
@@ -1270,8 +1291,6 @@ void VKGSRender::clear_surface(u32 mask)
 	u32   depth_stencil_mask = 0;
 
 	std::vector<VkClearAttachment> clear_descriptors;
-	std::vector<VkClearRect> clear_regions;
-
 	VkClearValue depth_stencil_clear_values, color_clear_values;
 
 	u16 scissor_x = rsx::method_registers.scissor_origin_x();
@@ -1328,8 +1347,8 @@ void VKGSRender::clear_surface(u32 mask)
 
 		for (int index = 0; index < targets.size(); ++index)
 		{
-			clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, (uint32_t)index, color_clear_values });
-			clear_regions.push_back(region);
+			const u32 real_index = (index == 1 && targets.size() == 1) ? 0 : static_cast<u32>(index);
+			clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, real_index, color_clear_values });
 		}
 
 		for (auto &rtt : m_rtts.m_bound_render_targets)
@@ -1343,13 +1362,10 @@ void VKGSRender::clear_surface(u32 mask)
 	}
 
 	if (mask & 0x3)
-	{
 		clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
-		clear_regions.push_back(region);
-	}
 
 	begin_render_pass();
-	vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), (u32)clear_regions.size(), clear_regions.data());
+	vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
 
 	if (mask & 0x3)
 	{
@@ -1724,7 +1740,7 @@ bool VKGSRender::load_program(bool fast_update)
 		size_t idx = vk::get_render_pass_location(
 			vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
 			vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
-			(u8)vk::get_draw_buffers(rsx::method_registers.surface_color_target()).size());
+			(u8)m_draw_buffers_count);
 
 		properties.render_pass = m_render_passes[idx];
 
@@ -1982,7 +1998,7 @@ void VKGSRender::prepare_rtts()
 			m_depth_surface_info.pitch = 0;
 	}
 
-	m_draw_buffers_count = static_cast<u32>(bound_images.size());
+	m_draw_buffers_count = static_cast<u32>(draw_buffers.size());
 
 	if (g_cfg.video.write_color_buffers)
 	{
