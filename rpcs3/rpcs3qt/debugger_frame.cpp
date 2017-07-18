@@ -190,11 +190,6 @@ void debugger_frame::UpdateUI()
 			}
 		}
 	}
-
-	if (Emu.IsStopped())
-	{
-		g_breakpoints.clear();
-	}
 }
 
 void debugger_frame::UpdateUnitList()
@@ -388,6 +383,8 @@ void debugger_frame::Show_Val()
 		}
 		m_list->ShowAddr(CentrePc(pc));
 	}
+
+	diag->deleteLater();
 }
 
 void debugger_frame::Show_PC()
@@ -422,6 +419,11 @@ void debugger_frame::EnableButtons(bool enable)
 	m_go_to_pc->setEnabled(enable);
 	m_btn_step->setEnabled(enable);
 	m_btn_run->setEnabled(enable);
+}
+
+void debugger_frame::ClearBreakpoints()
+{
+	g_breakpoints.clear();
 }
 
 debugger_list::debugger_list(debugger_frame* parent) : QListWidget(parent)

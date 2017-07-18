@@ -73,6 +73,7 @@ public:
 	void DoUpdate();
 	void WriteRegs();
 	void EnableButtons(bool enable);
+	void ClearBreakpoints();
 
 	void OnUpdate();
 

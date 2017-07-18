@@ -729,6 +729,8 @@ void main_window::OnEmuPause()
 void main_window::OnEmuStop()
 {
 	debuggerFrame->EnableButtons(false);
+	debuggerFrame->ClearBreakpoints();
+
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(icon_play);
 #ifdef _WIN32
