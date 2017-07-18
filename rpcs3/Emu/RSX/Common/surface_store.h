@@ -117,7 +117,7 @@ namespace rsx
 			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
 			{
 				auto &rtt = *It;
-				if (Traits::rtt_has_format_width_height(rtt, color_format, width, height))
+				if (Traits::rtt_has_format_width_height(rtt, color_format, width, height, true))
 				{
 					new_surface_storage = std::move(rtt);
 
@@ -129,7 +129,7 @@ namespace rsx
 						invalidated_resources.erase(It);
 
 					new_surface = Traits::get(new_surface_storage);
-					Traits::invalidate_rtt_surface_contents(command_list, new_surface, true);
+					Traits::invalidate_rtt_surface_contents(command_list, new_surface, old_surface, true);
 					Traits::prepare_rtt_for_drawing(command_list, new_surface);
 					break;
 				}
@@ -181,7 +181,7 @@ namespace rsx
 			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
 			{
 				auto &ds = *It;
-				if (Traits::ds_has_format_width_height(ds, depth_format, width, height))
+				if (Traits::ds_has_format_width_height(ds, depth_format, width, height, true))
 				{
 					new_surface_storage = std::move(ds);
 
@@ -193,7 +193,7 @@ namespace rsx
 
 					new_surface = Traits::get(new_surface_storage);
 					Traits::prepare_ds_for_drawing(command_list, new_surface);
-					Traits::invalidate_depth_surface_contents(command_list, new_surface, true);
+					Traits::invalidate_depth_surface_contents(command_list, new_surface, old_surface, true);
 					break;
 				}
 			}
@@ -432,10 +432,10 @@ namespace rsx
 		void invalidate_surface_cache_data(command_list_type command_list)
 		{
 			for (auto &rtt : m_render_targets_storage)
-				Traits::invalidate_rtt_surface_contents(command_list, Traits::get(std::get<1>(rtt)), false);
+				Traits::invalidate_rtt_surface_contents(command_list, Traits::get(std::get<1>(rtt)), nullptr, false);
 
 			for (auto &ds : m_depth_stencil_storage)
-				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)), true);
+				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)), nullptr, true);
 		}
 	};
 }
