@@ -272,6 +272,9 @@ struct cfg_root : cfg::node
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
 		cfg::_int<32, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
+		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
+		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
+		cfg::_bool spu_loop_detection{this, "SPU loop detection", false}; //Try to detect wait loops and trigger thread yield
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::automatic};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -320,12 +323,13 @@ struct cfg_root : cfg::node
 		cfg::_bool invalidate_surface_cache_every_frame{this, "Invalidate Cache Every Frame", true};
 		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
 
-		cfg::_bool batch_instanced_geometry{this, "Batch Instanced Geometry", false};
-		cfg::_int<1, 16> vertex_upload_threads{ this, "Vertex Upload Threads", 1 };
+		cfg::_bool batch_instanced_geometry{this, "Batch Instanced Geometry", false}; //Avoid re-uploading geometry if the same draw command is repeated
+		cfg::_int<1, 16> vertex_upload_threads{ this, "Vertex Upload Threads", 1 }; //Max number of threads to use for parallel vertex processing
+		cfg::_int<32, 65536> mt_vertex_upload_threshold{ this, "Multithreaded Vertex Upload Threshold", 4096}; //Minimum vertex count to parallelize
 
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip"};
-		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consequtive Frames Drawn", 1};
-		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consequtive Frames Skept", 1};
+		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames Drawn", 1};
+		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames Skept", 1};
 
 		struct node_d3d12 : cfg::node
 		{

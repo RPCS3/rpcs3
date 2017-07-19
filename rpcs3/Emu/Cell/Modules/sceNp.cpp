@@ -511,9 +511,9 @@ s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<
 	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
 	// TODO: Check for other error and pass other events
-	*event = SCE_NP_BASIC_EVENT_OFFLINE;
+	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
-	return CELL_OK;
+	return SCE_NP_BASIC_ERROR_NO_EVENT;
 }
 
 s32 sceNpCommerceCreateCtx()

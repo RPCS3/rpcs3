@@ -324,6 +324,17 @@ void D3D12GSRender::end()
 {
 	std::chrono::time_point<steady_clock> start_duration = steady_clock::now();
 
+	std::chrono::time_point<steady_clock> program_load_start = steady_clock::now();
+	load_program();
+	std::chrono::time_point<steady_clock> program_load_end = steady_clock::now();
+	m_timers.program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
+
+	if (!m_fragment_program.valid)
+	{
+		rsx::thread::end();
+		return;
+	}
+
 	std::chrono::time_point<steady_clock> rtt_duration_start = steady_clock::now();
 	prepare_render_targets(get_current_resource_storage().command_list.Get());
 
@@ -343,11 +354,6 @@ void D3D12GSRender::end()
 
 	std::chrono::time_point<steady_clock> vertex_index_duration_end = steady_clock::now();
 	m_timers.vertex_index_duration += std::chrono::duration_cast<std::chrono::microseconds>(vertex_index_duration_end - vertex_index_duration_start).count();
-
-	std::chrono::time_point<steady_clock> program_load_start = steady_clock::now();
-	load_program();
-	std::chrono::time_point<steady_clock> program_load_end = steady_clock::now();
-	m_timers.program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
 	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_shared_root_signature.Get());
 	get_current_resource_storage().command_list->OMSetStencilRef(rsx::method_registers.stencil_func_ref());

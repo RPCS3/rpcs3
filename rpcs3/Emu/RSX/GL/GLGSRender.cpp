@@ -322,16 +322,14 @@ namespace
 
 void GLGSRender::end()
 {
-	if (skip_frame || !framebuffer_status_valid)
+	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
+	//Load program here since it is dependent on vertex state
+
+	if (skip_frame || !framebuffer_status_valid || !load_program())
 	{
 		rsx::thread::end();
 		return;
 	}
-
-	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
-
-	//Load program here since it is dependent on vertex state
-	load_program();
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -364,43 +362,79 @@ void GLGSRender::end()
 		surface->old_contents = nullptr;
 	};
 
+	//Check if we have any 'recycled' surfaces in memory and if so, clear them
+	std::vector<int> buffers_to_clear;
+	bool clear_all_color = true;
+	bool clear_depth = false;
+
+	for (int index = 0; index < 4; index++)
+	{
+		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0)
+		{
+			if (std::get<1>(m_rtts.m_bound_render_targets[index])->cleared())
+				clear_all_color = false;
+			else
+				buffers_to_clear.push_back(index);
+		}
+	}
+
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && !ds->cleared())
 	{
-		//Temporarily disable pixel tests
-		glDisable(GL_SCISSOR_TEST);
-		glDepthMask(GL_TRUE);
-		
-		glClearDepth(1.0);
-		glClearStencil(255);
+		clear_depth = true;
+	}
 
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	//Temporarily disable pixel tests
+	glDisable(GL_SCISSOR_TEST);
 
-		if (g_cfg.video.strict_rendering_mode)
+	if (clear_depth || buffers_to_clear.size() > 0)
+	{
+		GLenum mask = 0;
+
+		if (clear_depth)
 		{
-			//Copy previous data if any
-			if (ds->old_contents != nullptr)
-				copy_rtt_contents(ds);
+			glDepthMask(GL_TRUE);
+			glClearDepth(1.0);
+			glClearStencil(255);
+			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
 		}
 
-		glDepthMask(rsx::method_registers.depth_write_enabled());
-		glEnable(GL_SCISSOR_TEST);
+		if (clear_all_color)
+			mask |= GL_COLOR_BUFFER_BIT;
+
+		glClear(mask);
+
+		if (buffers_to_clear.size() > 0 && !clear_all_color)
+		{
+			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
+			//It is impossible for the render target to be typa A or B here (clear all would have been flagged)
+			for (auto &i: buffers_to_clear)
+				glClearBufferfv(draw_fbo.id(), i, colors);
+		}
+
+		if (clear_depth)
+			glDepthMask(rsx::method_registers.depth_write_enabled());
 
 		ds->set_cleared();
 	}
 
 	if (g_cfg.video.strict_rendering_mode)
 	{
+		if (ds->old_contents != nullptr)
+			copy_rtt_contents(ds);
+
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
 			if (std::get<0>(rtt) != 0)
 			{
 				auto surface = std::get<1>(rtt);
-				if (!surface->cleared() && surface->old_contents != nullptr)
+				if (surface->old_contents != nullptr)
 					copy_rtt_contents(surface);
 			}
 		}
 	}
+
+	glEnable(GL_SCISSOR_TEST);
 
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
@@ -463,7 +497,6 @@ void GLGSRender::end()
 	}
 	else
 	{
-		//LOG_ERROR(RSX, "No work is needed for this draw call! Muhahahahahahaha");
 		skip_upload = true;
 	}
 
@@ -841,8 +874,10 @@ bool GLGSRender::load_program()
 		return std::make_tuple(true, surface->get_native_pitch());
 	};
 
-	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program = get_current_fragment_program(rtt_lookup_func);
+	if (!fragment_program.valid) return false;
+
+	RSXVertexProgram vertex_program = get_current_vertex_program();
 
 	u32 unnormalized_rtts = 0;
 

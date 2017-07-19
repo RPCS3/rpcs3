@@ -21,6 +21,7 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 
 private:
+	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY);
 	DWORD ThreadProcedure();
 	static DWORD WINAPI ThreadProcProxy(LPVOID parameter);
 

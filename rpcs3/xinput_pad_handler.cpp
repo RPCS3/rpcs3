@@ -17,9 +17,18 @@ namespace {
 		L"xinput9_1_0.dll"
 	};
 
-	inline u16 ConvertAxis(SHORT value)
+	inline u16 Clamp0To255(f32 input)
 	{
-		return static_cast<u16>((value + 32768l) >> 8);
+		if (input > 255.f)
+			return 255;
+		else if (input < 0.f)
+			return 0;
+		else return static_cast<u16>(input);
+	}
+
+	inline u16 ConvertAxis(float value)
+	{
+		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
 	}
 }
 
@@ -45,7 +54,7 @@ void xinput_pad_handler::Init(const u32 max_connect)
 			{
 				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
 			}
-			
+
 			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
 
 			if (xinputEnable && xinputGetState && xinputSetState)
@@ -137,6 +146,27 @@ void xinput_pad_handler::Close()
 	m_pads.clear();
 }
 
+std::tuple<u16, u16> xinput_pad_handler::ConvertToSquirclePoint(u16 inX, u16 inY)
+{
+	// convert inX and Y to a (-1, 1) vector;
+	const f32 x = (inX - 127) / 127.f;
+	const f32 y = ((inY - 127) / 127.f);
+
+	// compute angle and len of given point to be used for squircle radius
+	const f32 angle = std::atan2(y, x);
+	const f32 r = std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f));
+
+	// now find len/point on the given squircle from our current angle and radius in polar coords
+	// https://thatsmaths.com/2016/07/14/squircles/
+	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / 8.f) * r;
+
+	// we now have len and angle, convert to cartisian 
+
+	const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127);
+	const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127);
+	return std::tuple<u16, u16>(newX, newY);
+}
+
 DWORD xinput_pad_handler::ThreadProcedure()
 {
 	// holds internal controller state change
@@ -152,7 +182,7 @@ DWORD xinput_pad_handler::ThreadProcedure()
 		{
 			auto & pad = m_pads[i];
 
-			result = (* xinputGetState)(i, &state);
+			result = (*xinputGetState)(i, &state);
 			switch (result)
 			{
 			case ERROR_DEVICE_NOT_CONNECTED:
@@ -181,10 +211,46 @@ DWORD xinput_pad_handler::ThreadProcedure()
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS + 1].m_pressed = state.Gamepad.bRightTrigger > 0;
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS + 1].m_value = state.Gamepad.bRightTrigger;
 
-				pad.m_sticks[0].m_value = ConvertAxis(state.Gamepad.sThumbLX);
-				pad.m_sticks[1].m_value = 255 - ConvertAxis(state.Gamepad.sThumbLY);
-				pad.m_sticks[2].m_value = ConvertAxis(state.Gamepad.sThumbRX);
-				pad.m_sticks[3].m_value = 255 - ConvertAxis(state.Gamepad.sThumbRY);
+				float LX, LY, RX, RY;
+
+				LX = state.Gamepad.sThumbLX;
+				LY = state.Gamepad.sThumbLY;
+				RX = state.Gamepad.sThumbRX;
+				RY = state.Gamepad.sThumbRY;
+
+				auto normalize_input = [](float& X, float& Y, float deadzone)
+				{
+					X /= 32767.0f;
+					Y /= 32767.0f;
+					deadzone /= 32767.0f;
+
+					float mag = sqrtf(X*X + Y*Y);
+
+					if (mag > deadzone)
+					{
+						float legalRange = 1.0f - deadzone;
+						float normalizedMag = std::min(1.0f, (mag - deadzone) / legalRange);
+						float scale = normalizedMag / mag;
+						X = X * scale;
+						Y = Y * scale;
+					}
+					else
+					{
+						X = 0;
+						Y = 0;
+					}
+				};
+
+				normalize_input(LX, LY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+				normalize_input(RX, RY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+
+				pad.m_sticks[0].m_value = ConvertAxis(LX);
+				pad.m_sticks[1].m_value = 255 - ConvertAxis(LY);
+				pad.m_sticks[2].m_value = ConvertAxis(RX);
+				pad.m_sticks[3].m_value = 255 - ConvertAxis(RY);
+
+				std::tie(pad.m_sticks[0].m_value, pad.m_sticks[1].m_value) = ConvertToSquirclePoint(pad.m_sticks[0].m_value, pad.m_sticks[1].m_value);
+				std::tie(pad.m_sticks[2].m_value, pad.m_sticks[3].m_value) = ConvertToSquirclePoint(pad.m_sticks[2].m_value, pad.m_sticks[3].m_value);
 
 				XINPUT_VIBRATION vibrate;
 

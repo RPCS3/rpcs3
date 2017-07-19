@@ -148,6 +148,9 @@ margin-left:14px;</string>
      <height>21</height>
     </rect>
    </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::PreventContextMenu</enum>
+   </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>

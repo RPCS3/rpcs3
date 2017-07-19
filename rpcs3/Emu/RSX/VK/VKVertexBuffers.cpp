@@ -477,7 +477,7 @@ namespace
 			{
 				const auto &vbo = vertex_buffers[i];
 
-				if (vbo.which() == 0 && vertex_count > 128 && vertex_buffers.size() > 2 && rsxthr->vertex_upload_task_ready())
+				if (vbo.which() == 0 && vertex_count >= (u32)g_cfg.video.mt_vertex_upload_threshold && vertex_buffers.size() > 1 && rsxthr->vertex_upload_task_ready())
 				{
 					//vertex array buffer. We can thread this thing heavily
 					const auto& v = vbo.get<rsx::vertex_array_buffer>();

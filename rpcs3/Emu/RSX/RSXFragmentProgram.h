@@ -239,6 +239,8 @@ struct RSXFragmentProgram
 	u8 textures_alpha_kill[16];
 	u32 textures_zfunc[16];
 
+	bool valid;
+
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
 		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
@@ -263,6 +265,7 @@ struct RSXFragmentProgram
 		, ctrl(0)
 		, unnormalized_coords(0)
 		, texture_dimensions(0)
+		, valid(false)
 	{
 	}
 };

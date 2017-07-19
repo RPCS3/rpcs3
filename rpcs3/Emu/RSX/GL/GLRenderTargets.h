@@ -192,6 +192,7 @@ struct gl_render_target_traits
 		if (old_surface != nullptr && old_surface->get_compatible_internal_format() == internal_fmt)
 			result->old_contents = old_surface;
 
+		result->set_cleared();
 		return result;
 	}
 
@@ -240,19 +241,25 @@ struct gl_render_target_traits
 	static void prepare_ds_for_drawing(void *, gl::render_target*) {}
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
-	static void invalidate_rtt_surface_contents(void *, gl::render_target*) {}
-	static void invalidate_depth_surface_contents(void *, gl::render_target *ds) { ds->set_cleared(false);  }
+	static void invalidate_rtt_surface_contents(void *, gl::render_target *rtt, gl::render_target* /*old*/, bool forced) { if (forced) rtt->set_cleared(false); }
+	static void invalidate_depth_surface_contents(void *, gl::render_target *ds, gl::render_target* /*old*/, bool) { ds->set_cleared(false);  }
 
 	static
-	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format format, size_t width, size_t height)
+	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format format, size_t width, size_t height, bool check_refs=false)
 	{
+		if (check_refs) //TODO
+			return false;
+
 		auto internal_fmt = rsx::internals::sized_internal_format(format);
 		return rtt->get_compatible_internal_format() == internal_fmt && rtt->width() == width && rtt->height() == height;
 	}
 
 	static
-	bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format, size_t width, size_t height)
+	bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format, size_t width, size_t height, bool check_refs=false)
 	{
+		if (check_refs) //TODO
+			return false;
+
 		// TODO: check format
 		return rtt->width() == width && rtt->height() == height;
 	}

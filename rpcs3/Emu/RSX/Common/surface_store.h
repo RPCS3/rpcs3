@@ -93,7 +93,12 @@ namespace rsx
 			auto It = m_render_targets_storage.find(address);
 			// TODO: Fix corner cases
 			// This doesn't take overlapping surface(s) into account.
+
+			surface_storage_type old_surface_storage;
+			surface_storage_type new_surface_storage;
 			surface_type old_surface = nullptr;
+			surface_type new_surface = nullptr;
+
 			if (It != m_render_targets_storage.end())
 			{
 				surface_storage_type &rtt = It->second;
@@ -104,8 +109,41 @@ namespace rsx
 				}
 
 				old_surface = Traits::get(rtt);
-				invalidated_resources.push_back(std::move(rtt));
+				old_surface_storage = std::move(rtt);
 				m_render_targets_storage.erase(address);
+			}
+
+			//Search invalidated resources for a suitable surface
+			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
+			{
+				auto &rtt = *It;
+				if (Traits::rtt_has_format_width_height(rtt, color_format, width, height, true))
+				{
+					new_surface_storage = std::move(rtt);
+
+					if (old_surface)
+						//Exchange this surface with the invalidated one
+						rtt = std::move(old_surface_storage);
+					else
+						//rtt is now empty - erase it
+						invalidated_resources.erase(It);
+
+					new_surface = Traits::get(new_surface_storage);
+					Traits::invalidate_rtt_surface_contents(command_list, new_surface, old_surface, true);
+					Traits::prepare_rtt_for_drawing(command_list, new_surface);
+					break;
+				}
+			}
+
+			if (old_surface != nullptr && new_surface == nullptr)
+				//This was already determined to be invalid and is excluded from testing above
+				invalidated_resources.push_back(std::move(old_surface_storage));
+
+			if (new_surface != nullptr)
+			{
+				//New surface was found among existing surfaces
+				m_render_targets_storage[address] = std::move(new_surface_storage);
+				return new_surface;
 			}
 
 			m_render_targets_storage[address] = Traits::create_new_surface(address, color_format, width, height, old_surface, std::forward<Args>(extra_params)...);
@@ -119,7 +157,11 @@ namespace rsx
 			surface_depth_format depth_format, size_t width, size_t height,
 			Args&&... extra_params)
 		{
+			surface_storage_type old_surface_storage;
+			surface_storage_type new_surface_storage;
 			surface_type old_surface = nullptr;
+			surface_type new_surface = nullptr;
+
 			auto It = m_depth_stencil_storage.find(address);
 			if (It != m_depth_stencil_storage.end())
 			{
@@ -131,8 +173,40 @@ namespace rsx
 				}
 
 				old_surface = Traits::get(ds);
-				invalidated_resources.push_back(std::move(ds));
+				old_surface_storage = std::move(ds);
 				m_depth_stencil_storage.erase(address);
+			}
+
+			//Search invalidated resources for a suitable surface
+			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
+			{
+				auto &ds = *It;
+				if (Traits::ds_has_format_width_height(ds, depth_format, width, height, true))
+				{
+					new_surface_storage = std::move(ds);
+
+					if (old_surface)
+						//Exchange this surface with the invalidated one
+						ds = std::move(old_surface_storage);
+					else
+						invalidated_resources.erase(It);
+
+					new_surface = Traits::get(new_surface_storage);
+					Traits::prepare_ds_for_drawing(command_list, new_surface);
+					Traits::invalidate_depth_surface_contents(command_list, new_surface, old_surface, true);
+					break;
+				}
+			}
+
+			if (old_surface != nullptr && new_surface == nullptr)
+				//This was already determined to be invalid and is excluded from testing above
+				invalidated_resources.push_back(std::move(old_surface_storage));
+
+			if (new_surface != nullptr)
+			{
+				//New surface was found among existing surfaces
+				m_depth_stencil_storage[address] = std::move(new_surface_storage);
+				return new_surface;
 			}
 
 			m_depth_stencil_storage[address] = Traits::create_new_surface(address, depth_format, width, height, old_surface, std::forward<Args>(extra_params)...);
@@ -358,10 +432,10 @@ namespace rsx
 		void invalidate_surface_cache_data(command_list_type command_list)
 		{
 			for (auto &rtt : m_render_targets_storage)
-				Traits::invalidate_rtt_surface_contents(command_list, Traits::get(std::get<1>(rtt)));
+				Traits::invalidate_rtt_surface_contents(command_list, Traits::get(std::get<1>(rtt)), nullptr, false);
 
 			for (auto &ds : m_depth_stencil_storage)
-				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)));
+				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)), nullptr, true);
 		}
 	};
 }
