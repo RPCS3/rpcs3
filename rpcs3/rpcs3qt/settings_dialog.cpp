@@ -112,23 +112,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->ppu_fast->setToolTip(json_cpu_ppu["fast"].toString());
 	ui->ppu_llvm->setToolTip(json_cpu_ppu["LLVM"].toString());
 
+	QButtonGroup *ppuBG = new QButtonGroup(this);
+	ppuBG->addButton(ui->ppu_precise, (int)ppu_decoder_type::precise);
+	ppuBG->addButton(ui->ppu_fast,    (int)ppu_decoder_type::fast);
+	ppuBG->addButton(ui->ppu_llvm,    (int)ppu_decoder_type::llvm);
+
 	{ // PPU Stuff
 		QString selectedPPU = qstr(xemu_settings->GetSetting(emu_settings::PPUDecoder));
-		for (const auto& button : ui->ppuBG->buttons())
+		QStringList ppu_list = xemu_settings->GetSettingOptions(emu_settings::PPUDecoder);
+
+		for (int i = 0; i < ppu_list.count(); i++)
 		{
-			QString current = button->text();
-			button->setCheckable(true);
-			if (current == selectedPPU)
+			ppuBG->button(i)->setText(ppu_list[i]);
+
+			if (ppu_list[i] == selectedPPU)
 			{
-				button->setChecked(true);
+				ppuBG->button(i)->setChecked(true);
 			}
+
 #ifndef LLVM_AVAILABLE
-			if (current == "Recompiler (LLVM)")
+			if (ppu_list[i].toLower().contains("llvm"))
 			{
-				button->setEnabled(false);
+				ppuBG->button(i)->setEnabled(false);
 			}
 #endif
-			connect(button, &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(current)); });
+
+			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i])); });
 		}
 	}
 
@@ -138,21 +147,26 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->spu_asmjit->setToolTip(json_cpu_spu["ASMJIT"].toString());
 	ui->spu_llvm->setToolTip(json_cpu_spu["LLVM"].toString());
 
+	QButtonGroup *spuBG = new QButtonGroup(this);
+	spuBG->addButton(ui->spu_precise, (int)spu_decoder_type::precise);
+	spuBG->addButton(ui->spu_fast,    (int)spu_decoder_type::fast);
+	spuBG->addButton(ui->spu_asmjit,  (int)spu_decoder_type::asmjit);
+	spuBG->addButton(ui->spu_llvm,    (int)spu_decoder_type::llvm);
+
 	{ // Spu stuff
 		QString selectedSPU = qstr(xemu_settings->GetSetting(emu_settings::SPUDecoder));
-		for (const auto& button : ui->spuBG->buttons())
+		QStringList spu_list = xemu_settings->GetSettingOptions(emu_settings::SPUDecoder);
+
+		for (int i = 0; i < spu_list.count(); i++)
 		{
-			QString current = button->text();
-			if (current == "Recompiler (LLVM)")
+			spuBG->button(i)->setText(spu_list[i]);
+
+			if (spu_list[i] == selectedSPU)
 			{
-				button->setEnabled(false);
+				spuBG->button(i)->setChecked(true);
 			}
-			button->setCheckable(true);
-			if (current == selectedSPU)
-			{
-				button->setChecked(true);
-			}
-			connect(button, &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(current)); });
+
+			connect(spuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i])); });
 		}
 	}
 
@@ -164,22 +178,25 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	// creating this in ui file keeps scrambling the order...
 	QButtonGroup *libModeBG = new QButtonGroup(this);
-	libModeBG->addButton(ui->lib_auto, 0);
-	libModeBG->addButton(ui->lib_manu, 1);
-	libModeBG->addButton(ui->lib_both, 2);
-	libModeBG->addButton(ui->lib_lv2,  3);
+	libModeBG->addButton(ui->lib_auto, (int)lib_loading_type::automatic);
+	libModeBG->addButton(ui->lib_manu, (int)lib_loading_type::manual);
+	libModeBG->addButton(ui->lib_both, (int)lib_loading_type::both);
+	libModeBG->addButton(ui->lib_lv2,  (int)lib_loading_type::liblv2only);
 
 	{// Handle lib loading options
 		QString selectedLib = qstr(xemu_settings->GetSetting(emu_settings::LibLoadOptions));
-		for (const auto& button : libModeBG->buttons())
+		QStringList libmode_list = xemu_settings->GetSettingOptions(emu_settings::LibLoadOptions);
+
+		for (int i = 0; i < libmode_list.count(); i++)
 		{
-			QString current = button->text();
-			button->setCheckable(true);
-			if (current == selectedLib)
+			libModeBG->button(i)->setText(libmode_list[i]);
+
+			if (libmode_list[i] == selectedLib)
 			{
-				button->setChecked(true);
+				libModeBG->button(i)->setChecked(true);
 			}
-			connect(button, &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(current)); });
+
+			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i])); });
 		}
 	}
 
@@ -228,7 +245,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	auto l_OnLibButtonClicked = [=](int ind)
 	{
-		if (ind == 1 || ind == 2)
+		if (ind == (int)lib_loading_type::manual || ind == (int)lib_loading_type::both)
 		{
 			ui->searchBox->setEnabled(true);
 			ui->lleList->setEnabled(true);
