@@ -42,14 +42,14 @@ error_code cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 {
 	cellSubdisplay.warning("cellSubDisplayGetRequiredMemory(pParam=*0x%x)", pParam);
 
-	if (pParam->version == CELL_SUBDISPLAY_VERSION_0002)
+	switch (pParam->version)
 	{
-		return not_an_error(CELL_SUBDISPLAY_0002_MEMORY_CONTAINER_SIZE);
+		case CELL_SUBDISPLAY_VERSION_0001: return not_an_error(CELL_SUBDISPLAY_0001_MEMORY_CONTAINER_SIZE);
+		case CELL_SUBDISPLAY_VERSION_0002: return not_an_error(CELL_SUBDISPLAY_0002_MEMORY_CONTAINER_SIZE);
+		case CELL_SUBDISPLAY_VERSION_0003: return not_an_error(CELL_SUBDISPLAY_0003_MEMORY_CONTAINER_SIZE);
 	}
-	else
-	{
-		return not_an_error(CELL_SUBDISPLAY_0001_MEMORY_CONTAINER_SIZE);
-	}
+
+	return CELL_SUBDISPLAY_ERROR_INVALID_VALUE;
 }
 
 error_code cellSubDisplayStart()
@@ -109,6 +109,12 @@ error_code cellSubDisplayGetPeerList(s32 groupId, vm::ptr<CellSubDisplayPeerInfo
 	return CELL_OK;
 }
 
+error_code cellSubDisplayGetTouchInfo(s32 groupId, vm::ptr<CellSubDisplayTouchInfo> pTouchInfo, vm::ptr<s32> pNumTouchInfo)
+{
+	cellSubdisplay.todo("cellSubDisplayGetTouchInfo(groupId=%d, pTouchInfo=*0x%x, pNumTouchInfo=*0x%x)", groupId, pTouchInfo, pNumTouchInfo);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellSubdisplay)("cellSubdisplay", []()
 {
 	// Initialization / Termination Functions
@@ -126,4 +132,7 @@ DECLARE(ppu_module_manager::cellSubdisplay)("cellSubdisplay", []()
 	// Peer Status Acquisition Functions
 	REG_FUNC(cellSubdisplay, cellSubDisplayGetPeerNum);
 	REG_FUNC(cellSubdisplay, cellSubDisplayGetPeerList);
+
+	//
+	REG_FUNC(cellSubdisplay, cellSubDisplayGetTouchInfo);
 });

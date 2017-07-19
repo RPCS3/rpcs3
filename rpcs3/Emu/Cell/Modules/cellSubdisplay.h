@@ -23,9 +23,11 @@ enum
 	CELL_SUBDISPLAY_STATUS_FATALERROR          = 3,
 	CELL_SUBDISPLAY_VERSION_0001               = 1,
 	CELL_SUBDISPLAY_VERSION_0002               = 2,
+	CELL_SUBDISPLAY_VERSION_0003               = 3,
 	CELL_SUBDISPLAY_MODE_REMOTEPLAY            = 1,
 	CELL_SUBDISPLAY_VIDEO_FORMAT_A8R8G8B8      = 1,
 	CELL_SUBDISPLAY_VIDEO_FORMAT_R8G8B8A8      = 2,
+	CELL_SUBDISPLAY_VIDEO_FORMAT_YUV420        = 3,
 	CELL_SUBDISPLAY_VIDEO_ASPECT_RATIO_16_9    = 0,
 	CELL_SUBDISPLAY_VIDEO_ASPECT_RATIO_4_3     = 1,
 	CELL_SUBDISPLAY_VIDEO_MODE_SETDATA         = 0,
@@ -34,6 +36,7 @@ enum
 	CELL_SUBDISPLAY_AUDIO_MODE_CAPTURE         = 1,
 	CELL_SUBDISPLAY_0001_MEMORY_CONTAINER_SIZE = 8 * 1024 * 1024,
 	CELL_SUBDISPLAY_0002_MEMORY_CONTAINER_SIZE = 10 * 1024 * 1024,
+	CELL_SUBDISPLAY_0003_MEMORY_CONTAINER_SIZE = 10 * 1024 * 1024,
 	CELL_SUBDISPLAY_NICKNAME_LEN               = 256,
 	CELL_SUBDISPLAY_PSPID_LEN                  = 16,
 };
@@ -80,6 +83,14 @@ struct CellSubDisplayPeerInfo
 	be_t<u32> portNo;
 	CellSubDisplayPSPId pspId;
 	CellSubDisplayNickname pspNickname;
+};
+
+struct CellSubDisplayTouchInfo
+{
+	u8 status;
+	u8 force;
+	be_t<u16> x;
+	be_t<u16> y;
 };
 
 using CellSubDisplayHandler = void(s32 cbMsg, u64 cbParam, vm::ptr<void> userdata);
