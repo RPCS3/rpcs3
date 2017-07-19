@@ -278,7 +278,7 @@ void evdev_joystick_handler::thread_func()
                     [&](const Button& bt) { return bt.m_keyCode == button_code; });
                 if (which_button == pad.m_buttons.end())
                 {
-                    LOG_ERROR(GENERAL, "Joystick #%d sent button event for invalid button %d", i, evt.code);
+                    LOG_ERROR(GENERAL, "Joystick #%d sent button event for unmapped button %d", i, evt.code);
                     break;
                 }
 
