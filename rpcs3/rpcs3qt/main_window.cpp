@@ -729,6 +729,8 @@ void main_window::OnEmuPause()
 void main_window::OnEmuStop()
 {
 	debuggerFrame->EnableButtons(false);
+	debuggerFrame->ClearBreakpoints();
+
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(icon_play);
 #ifdef _WIN32
@@ -1188,10 +1190,6 @@ void main_window::CreateConnects()
 		bool isList = act == ui->setlistModeListAct;
 		gameListFrame->SetListMode(isList);
 		categoryVisibleActGroup->setEnabled(isList);
-	});
-	connect(ui->toolBar, &QToolBar::visibilityChanged, [=](bool checked) {
-		ui->showToolBarAct->setChecked(checked);
-		guiSettings->SetValue(GUI::mw_toolBarVisible, checked);
 	});
 	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { gameListFrame->Refresh(true); });
