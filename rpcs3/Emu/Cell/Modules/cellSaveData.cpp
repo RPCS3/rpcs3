@@ -743,20 +743,26 @@ s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<Ce
 		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
 	}
 
-	fs::stat_t dir_info{};
-	if (!fs::stat(save_path, dir_info))
+	if (dir)
 	{
-		return CELL_SAVEDATA_ERROR_INTERNAL;
+		fs::stat_t dir_info{};
+		if (!fs::stat(save_path, dir_info))
+		{
+			return CELL_SAVEDATA_ERROR_INTERNAL;
+		}
+
+		// get file stats, namely directory
+		strcpy_trunc(dir->dirName, dirName.get_ptr());
+		dir->atime = dir_info.atime;
+		dir->ctime = dir_info.ctime;
+		dir->mtime = dir_info.mtime;
 	}
 
-	// get file stats, namely directory
-	strcpy_trunc(dir->dirName, dirName.get_ptr());
-	dir->atime = dir_info.atime;
-	dir->ctime = dir_info.ctime;
-	dir->mtime = dir_info.mtime;
-
-	//TODO: Set bind in accordance to any problems
-	*bind = 0;
+	if (bind)
+	{
+		//TODO: Set bind in accordance to any problems
+		*bind = 0;
+	}
 
 	return CELL_OK;
 }

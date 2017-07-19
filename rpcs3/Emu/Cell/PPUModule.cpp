@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
+#include "Utilities/bin_patch.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
@@ -954,6 +955,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	u32 primary_stacksize = 0x100000;
 	u32 malloc_pagesize = 0x100000;
 
+	// Executable hash
+	sha1_context sha;
+	sha1_starts(&sha);
+	u8 sha1_hash[20];
+
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
 	{
@@ -964,7 +970,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
-		
+
+		// Hash big-endian values
+		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
+		sha1_update(&sha, (uchar*)&prog.p_flags, sizeof(prog.p_flags));
+
 		if (type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
@@ -973,8 +983,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			if (!vm::falloc(addr, size, vm::main))
 				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 
-			// Copy segment data
+			// Copy segment data, hash it
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
+			sha1_update(&sha, (uchar*)&prog.p_vaddr, sizeof(prog.p_vaddr));
+			sha1_update(&sha, (uchar*)&prog.p_memsz, sizeof(prog.p_memsz));
+			sha1_update(&sha, prog.bin.data(), prog.bin.size());
 
 			// Initialize executable code if necessary
 			if (prog.p_flags & 0x1)
@@ -1003,6 +1016,28 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			_main->secs.emplace_back(_sec);
 		}
 	}
+
+	sha1_finish(&sha, sha1_hash);
+
+	// Format patch name
+	std::string hash("PPU-0000000000000000000000000000000000000000");
+	for (u32 i = 0; i < sizeof(sha1_hash); i++)
+	{
+		constexpr auto pal = "0123456789abcdef";
+		hash[4 + i * 2] = pal[sha1_hash[i] >> 4];
+		hash[5 + i * 2] = pal[sha1_hash[i] & 15];
+	}
+
+	// Apply the patch
+	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+
+	if (!Emu.GetTitleID().empty())
+	{
+		// Alternative patch
+		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+	}
+
+	LOG_NOTICE(LOADER, "PPU executable hash: %s (<- %u)", hash, applied);
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
