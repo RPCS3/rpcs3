@@ -1142,7 +1142,8 @@ extern void ppu_initialize(const ppu_module& info)
 		if (fs::is_file(cache_path + obj_name))
 		{
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(*jit, part, cache_path, obj_name);
+			jit->add(cache_path + obj_name);
+			LOG_SUCCESS(PPU, "LLVM: Loaded module %s", obj_name);
 			continue;
 		}
 
@@ -1173,7 +1174,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			// Proceed with original JIT instance		
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(*jit, part, cache_path, obj_name);
+			jit->add(cache_path + obj_name);
 		});
 	}
 
@@ -1286,8 +1287,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 	std::shared_ptr<MsgDialogBase> dlg;
 
-	// Check cached file
-	if (!fs::is_file(cache_path + obj_name))
 	{
 		legacy::FunctionPassManager pm(module.get());
 

@@ -11,9 +11,13 @@ enum class patch_type
 	le16,
 	le32,
 	le64,
+	lef32,
+	lef64,
 	be16,
 	be32,
 	be64,
+	bef32,
+	bef64,
 };
 
 class patch_engine
@@ -23,6 +27,12 @@ class patch_engine
 		patch_type type;
 		u32 offset;
 		u64 value;
+
+		template <typename T>
+		T& value_as()
+		{
+			return *reinterpret_cast<T*>(reinterpret_cast<char*>(&value));
+		}
 	};
 
 	// Database
@@ -32,6 +42,6 @@ public:
 	// Load from file
 	void append(const std::string& path);
 
-	// Apply patch
-	void apply(const std::string& name, u8* dst) const;
+	// Apply patch (returns the number of entries applied)
+	std::size_t apply(const std::string& name, u8* dst) const;
 };

@@ -98,13 +98,13 @@ struct elf_phdr<en_t, u32>
 template<template<typename T> class en_t, typename sz_t>
 struct elf_prog final : elf_phdr<en_t, sz_t>
 {
-	std::vector<char> bin;
+	std::vector<uchar> bin;
 
 	using base = elf_phdr<en_t, sz_t>;
 
 	elf_prog() = default;
 
-	elf_prog(u32 type, u32 flags, sz_t vaddr, sz_t memsz, sz_t align, std::vector<char>&& bin)
+	elf_prog(u32 type, u32 flags, sz_t vaddr, sz_t memsz, sz_t align, std::vector<uchar>&& bin)
 		: bin(std::move(bin))
 	{
 		base::p_type = type;
