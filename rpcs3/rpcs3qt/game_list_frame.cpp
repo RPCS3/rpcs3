@@ -23,6 +23,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QLabel>
+#include <QMimeData>
 
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
@@ -30,6 +31,8 @@ inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString();
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent)
 	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
+	setAcceptDrops(true);
+
 	m_isListLayout = xgui_settings->GetValue(GUI::gl_listMode).toBool();
 	m_Icon_Size_Str = xgui_settings->GetValue(GUI::gl_iconSize).toString();
 	m_Margin_Factor = xgui_settings->GetValue(GUI::gl_marginFactor).toReal();
@@ -1036,4 +1039,56 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 	}
 
 	return sstr(string.join(", "));
+}
+
+bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
+{
+	const QList<QUrl> list = md.urls();
+
+	if (list.count() > 1)
+	{
+		return false;
+	}
+
+	for (const auto& url : list)
+	{
+		if (QFileInfo(url.fileName()).suffix().toLower() == "pkg")
+		{
+			if (save)
+			{
+				m_installPath = url.toLocalFile();
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+void game_list_frame::dropEvent(QDropEvent* ev)
+{
+	if (IsValidFile(*ev->mimeData(), true))
+	{
+		RequestPackageInstall(m_installPath);
+	}
+}
+
+void game_list_frame::dragEnterEvent(QDragEnterEvent* ev)
+{
+	if (IsValidFile(*ev->mimeData()))
+	{
+		ev->accept();
+	}
+}
+
+void game_list_frame::dragMoveEvent(QDragMoveEvent* ev)
+{
+	if (IsValidFile(*ev->mimeData()))
+	{
+		ev->accept();
+	}
+}
+
+void game_list_frame::dragLeaveEvent(QDragLeaveEvent* ev)
+{
+	ev->accept();
 }

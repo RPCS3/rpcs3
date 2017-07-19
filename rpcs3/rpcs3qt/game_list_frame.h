@@ -13,6 +13,7 @@
 #include <QToolBar>
 #include <QLineEdit>
 #include <QStackedWidget>
+#include <QDropEvent>
 
 #include <memory>
 
@@ -207,21 +208,27 @@ private Q_SLOTS:
 	void doubleClickedSlot(const QModelIndex& index);
 Q_SIGNALS:
 	void game_list_frameClosed();
-	void RequestIconPathSet(const std::string path);
+	void RequestIconPathSet(const std::string& path);
 	void RequestAddRecentGame(const q_string_pair& entry);
 	void RequestIconSizeActSet(const int& idx);
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
+	void RequestPackageInstall(const QString& path);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
 	void resizeEvent(QResizeEvent *event);
+	void dropEvent(QDropEvent* event);
+	void dragEnterEvent(QDragEnterEvent* event);
+	void dragMoveEvent(QDragMoveEvent* event);
+	void dragLeaveEvent(QDragLeaveEvent* event);
 private:
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
+	bool IsValidFile(const QMimeData& md, bool save = false);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
@@ -284,6 +291,7 @@ private:
 	qreal m_Text_Factor;
 	QStringList m_categoryFilters;
 	QString m_searchText;
+	QString m_installPath;
 	Render_Creator m_Render_Creator;
 
 	uint m_games_per_row = 0;

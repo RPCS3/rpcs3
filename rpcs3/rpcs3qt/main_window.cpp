@@ -296,10 +296,24 @@ void main_window::BootGame()
 	}
 }
 
-void main_window::InstallPkg()
+void main_window::InstallPkg(const QString& dropPath)
 {
-	QString path_last_PKG = guiSettings->GetValue(GUI::fd_install_pkg).toString();
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	QString filePath = dropPath;
+
+	if (filePath.isEmpty())
+	{
+		QString path_last_PKG = guiSettings->GetValue(GUI::fd_install_pkg).toString();
+		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	}
+	else
+	{
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+	}
 
 	if (filePath == NULL)
 	{
@@ -1029,7 +1043,7 @@ void main_window::CreateConnects()
 	connect(ui->freezeRecentAct, &QAction::triggered, [=](bool checked) {
 		guiSettings->SetValue(GUI::rg_freeze, checked);
 	});
-	connect(ui->bootInstallPkgAct, &QAction::triggered, this, &main_window::InstallPkg);
+	connect(ui->bootInstallPkgAct, &QAction::triggered, [this]{InstallPkg();});
 	connect(ui->bootInstallPupAct, &QAction::triggered, this, &main_window::InstallPup);
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
@@ -1260,6 +1274,7 @@ void main_window::CreateDockWindows()
 	});
 	connect(gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
 	connect(gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
+	connect(gameListFrame, &game_list_frame::RequestPackageInstall, this, &main_window::InstallPkg);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configureAll)
