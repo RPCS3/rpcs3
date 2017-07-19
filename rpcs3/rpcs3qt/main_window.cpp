@@ -1288,7 +1288,12 @@ void main_window::CreateDockWindows()
 	});
 	connect(gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
 	connect(gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
-	connect(gameListFrame, &game_list_frame::RequestPackageInstall, this, &main_window::InstallPkg);
+	connect(gameListFrame, &game_list_frame::RequestPackageInstall, [this](const QStringList& paths){
+		for (const auto& path : paths)
+		{
+			InstallPkg(path);
+		}
+	});
 	connect(gameListFrame, &game_list_frame::RequestFirmwareInstall, this, &main_window::InstallPup);
 }
 

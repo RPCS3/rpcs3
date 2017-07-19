@@ -1041,7 +1041,7 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 	return sstr(string.join(", "));
 }
 
-bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
+bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
 {
 	const QList<QUrl> list = md.urls();
 	QString last_suffix;
@@ -1054,9 +1054,9 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
 		{
 			last_suffix = suffix;
 		}
-		else if (list.count() == 1 && (last_suffix == "pkg" || last_suffix == "pup"))
+		else if (last_suffix == "pup")
 		{
-			return true;
+			return list.count() == 1;
 		}
 		else if (last_suffix != suffix)
 		{
@@ -1082,7 +1082,7 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
 			return false;
 		}
 
-		if (save)
+		if (savePaths)
 		{
 			m_dropPaths.append(list[i].toLocalFile());
 		}
@@ -1090,14 +1090,14 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
 	return true;
 }
 
-void game_list_frame::dropEvent(QDropEvent* ev)
+void game_list_frame::dropEvent(QDropEvent* event)
 {
-	if (IsValidFile(*ev->mimeData(), true))
+	if (IsValidFile(*event->mimeData(), true))
 	{
 		switch (m_dropType)
 		{
 		case DROP_PKG:
-			RequestPackageInstall(m_dropPaths.first());
+			RequestPackageInstall(m_dropPaths);
 			break;
 		case DROP_PUP:
 			RequestFirmwareInstall(m_dropPaths.first());
@@ -1106,6 +1106,7 @@ void game_list_frame::dropEvent(QDropEvent* ev)
 			for (const auto& rap : m_dropPaths)
 			{
 				const std::string rapname = sstr(QFileInfo(rap).fileName());
+
 				// TODO: use correct user ID once User Manager is implemented
 				if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
 				{
@@ -1126,23 +1127,23 @@ void game_list_frame::dropEvent(QDropEvent* ev)
 	m_dropPaths.clear();
 }
 
-void game_list_frame::dragEnterEvent(QDragEnterEvent* ev)
+void game_list_frame::dragEnterEvent(QDragEnterEvent* event)
 {
-	if (IsValidFile(*ev->mimeData()))
+	if (IsValidFile(*event->mimeData()))
 	{
-		ev->accept();
+		event->accept();
 	}
 }
 
-void game_list_frame::dragMoveEvent(QDragMoveEvent* ev)
+void game_list_frame::dragMoveEvent(QDragMoveEvent* event)
 {
-	if (IsValidFile(*ev->mimeData()))
+	if (IsValidFile(*event->mimeData()))
 	{
-		ev->accept();
+		event->accept();
 	}
 }
 
-void game_list_frame::dragLeaveEvent(QDragLeaveEvent* ev)
+void game_list_frame::dragLeaveEvent(QDragLeaveEvent* event)
 {
-	ev->accept();
+	event->accept();
 }

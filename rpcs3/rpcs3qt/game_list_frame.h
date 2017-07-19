@@ -220,7 +220,7 @@ Q_SIGNALS:
 	void RequestIconSizeActSet(const int& idx);
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
-	void RequestPackageInstall(const QString& path);
+	void RequestPackageInstall(const QStringList& paths);
 	void RequestFirmwareInstall(const QString& path);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
@@ -236,7 +236,7 @@ private:
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
-	bool IsValidFile(const QMimeData& md, bool save = false);
+	bool IsValidFile(const QMimeData& md, bool savePaths = false);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
