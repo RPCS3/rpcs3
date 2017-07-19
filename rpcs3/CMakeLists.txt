@@ -85,9 +85,6 @@ else()
 endif()
 
 if(NOT MSVC)
-	if($ENV{CI})
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O1") # fix for travis gcc OoM crash. Might be fixed with the move to containers.
-	endif()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
 	if(WIN32)
 		set(CMAKE_RC_COMPILER_INIT windres)
