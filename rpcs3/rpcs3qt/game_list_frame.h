@@ -166,6 +166,12 @@ typedef struct Tool_Bar_Button
 	bool isActive;
 };
 
+enum {
+	DROP_ERROR,
+	DROP_PACKAGE,
+	DROP_RAPFILE
+};
+
 class game_list_frame : public QDockWidget {
 	Q_OBJECT
 
@@ -291,7 +297,8 @@ private:
 	qreal m_Text_Factor;
 	QStringList m_categoryFilters;
 	QString m_searchText;
-	QString m_installPath;
+	QStringList m_dropPaths;
+	int m_dropType;
 	Render_Creator m_Render_Creator;
 
 	uint m_games_per_row = 0;

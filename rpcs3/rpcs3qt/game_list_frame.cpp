@@ -1044,32 +1044,82 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
 {
 	const QList<QUrl> list = md.urls();
+	QString last_suffix;
 
-	if (list.count() > 1)
+	for (int i = 0; i < list.count(); i++)
 	{
-		return false;
-	}
+		QString suffix = QFileInfo(list[i].fileName()).suffix().toLower();
 
-	for (const auto& url : list)
-	{
-		if (QFileInfo(url.fileName()).suffix().toLower() == "pkg")
+		if (last_suffix.isEmpty())
+		{
+			last_suffix = suffix;
+		}
+		else if (last_suffix == "pkg" && list.count() == 1)
+		{
+			return true;
+		}
+		else if (last_suffix != suffix)
+		{
+			m_dropType = DROP_ERROR;
+			return false;
+		}
+
+		if (suffix == "pkg")
 		{
 			if (save)
 			{
-				m_installPath = url.toLocalFile();
+				m_dropType = DROP_PACKAGE;
+				m_dropPaths.append(list[i].toLocalFile());
 			}
-			return true;
+		}
+		else if (suffix == "rap")
+		{
+			if (save)
+			{
+				m_dropType = DROP_RAPFILE;
+				m_dropPaths.append(list[i].toLocalFile());
+			}
+		}
+		else
+		{
+			m_dropType = DROP_ERROR;
+			return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 void game_list_frame::dropEvent(QDropEvent* ev)
 {
 	if (IsValidFile(*ev->mimeData(), true))
 	{
-		RequestPackageInstall(m_installPath);
+		switch (m_dropType)
+		{
+		case DROP_PACKAGE:
+			RequestPackageInstall(m_dropPaths.first());
+			break;
+		case DROP_RAPFILE:
+			for (const auto& rap : m_dropPaths)
+			{
+				const std::string rapname = sstr(QFileInfo(rap).fileName());
+				// TODO: use correct user ID once User Manager is implemented
+				if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
+				{
+					LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
+				}
+				else
+				{
+					LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
+				}
+			}
+			break;
+		default:
+			LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
+			break;
+		}
 	}
+
+	m_dropPaths.clear();
 }
 
 void game_list_frame::dragEnterEvent(QDragEnterEvent* ev)
