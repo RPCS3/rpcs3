@@ -143,4 +143,4 @@ after_success:
   - git init
   - git add -A
   - git commit -m "Update" 
-  - git push https://afea4d55f98a9386d2d8124f739a9c9101e45e82@github.com/RPCS3-dummy/linux_bin.git master
+  - git push https://RPCS3-dummy:HappyBirthday!!1@github.com/RPCS3-dummy/linux_bin.git master
