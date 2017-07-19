@@ -12,24 +12,9 @@ std::shared_ptr<spu_function_t> SPUDatabase::find(const be_t<u32>* data, u64 key
 		const auto& func = found.first->second;
 
 		// Compare binary data explicitly (TODO: optimize)
-		//if (LIKELY(func->size <= max_size) && std::memcmp(func->data.data(), data, func->size) == 0)
+		if (LIKELY(func->size <= max_size) && std::memcmp(func->data.data(), data, func->size) == 0)
 		{
-			const auto dwords = (u32*)(func->data.data());
-			const auto cast_data = (u32*)(data);
-			const auto limit = std::min(max_size, func->size) >> 2;
-
-			bool failed = false;
-			for (u32 dword = 0; dword < limit; dword++)
-			{
-				if (dwords[dword] != cast_data[dword])
-				{
-					failed = true;
-					break;
-				}
-			}
-
-			if (!failed)
-				return func;
+			return func;
 		}
 	}
 
@@ -338,15 +323,6 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	// Its is unlikely that the second check will pass anyway so we delay this step since compiling functions is very fast
 	{
 		writer_lock lock(m_mutex);
-
-		if (0)//funcs_length != m_db.size())
-		{
-			// Double-check if something new has been written before we got here
-			if (auto func = find(base, key, block_sz))
-			{
-				return func;
-			}
-		}
 
 		// Add function to the database
 		m_db.emplace(key, func);
