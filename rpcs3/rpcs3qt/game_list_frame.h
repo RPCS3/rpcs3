@@ -168,8 +168,9 @@ typedef struct Tool_Bar_Button
 
 enum {
 	DROP_ERROR,
-	DROP_PACKAGE,
-	DROP_RAPFILE
+	DROP_PKG,
+	DROP_PUP,
+	DROP_RAP
 };
 
 class game_list_frame : public QDockWidget {
@@ -220,6 +221,7 @@ Q_SIGNALS:
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
 	void RequestPackageInstall(const QString& path);
+	void RequestFirmwareInstall(const QString& path);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);

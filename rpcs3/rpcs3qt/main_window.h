@@ -76,7 +76,7 @@ private Q_SLOTS:
 	void BootElf();
 	void BootGame();
 	void InstallPkg(const QString& dropPath = "");
-	void InstallPup();
+	void InstallPup(const QString& dropPath = "");
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();

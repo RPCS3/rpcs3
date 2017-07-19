@@ -1054,7 +1054,7 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
 		{
 			last_suffix = suffix;
 		}
-		else if (last_suffix == "pkg" && list.count() == 1)
+		else if (list.count() == 1 && (last_suffix == "pkg" || last_suffix == "pup"))
 		{
 			return true;
 		}
@@ -1066,24 +1066,25 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool save)
 
 		if (suffix == "pkg")
 		{
-			if (save)
-			{
-				m_dropType = DROP_PACKAGE;
-				m_dropPaths.append(list[i].toLocalFile());
-			}
+			m_dropType = DROP_PKG;
+		}
+		else if (suffix == "pup")
+		{
+			m_dropType = DROP_PUP;
 		}
 		else if (suffix == "rap")
 		{
-			if (save)
-			{
-				m_dropType = DROP_RAPFILE;
-				m_dropPaths.append(list[i].toLocalFile());
-			}
+			m_dropType = DROP_RAP;
 		}
 		else
 		{
 			m_dropType = DROP_ERROR;
 			return false;
+		}
+
+		if (save)
+		{
+			m_dropPaths.append(list[i].toLocalFile());
 		}
 	}
 	return true;
@@ -1095,10 +1096,13 @@ void game_list_frame::dropEvent(QDropEvent* ev)
 	{
 		switch (m_dropType)
 		{
-		case DROP_PACKAGE:
+		case DROP_PKG:
 			RequestPackageInstall(m_dropPaths.first());
 			break;
-		case DROP_RAPFILE:
+		case DROP_PUP:
+			RequestFirmwareInstall(m_dropPaths.first());
+			break;
+		case DROP_RAP:
 			for (const auto& rap : m_dropPaths)
 			{
 				const std::string rapname = sstr(QFileInfo(rap).fileName());
