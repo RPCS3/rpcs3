@@ -137,4 +137,10 @@ addons:
 
 after_success:
   - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
-  - git pull https://github.com/RPCS3-dummy/linux_bin.git && cp -RL ./bin/. linux_bin && cd linux_bin && git init && git add -A && git commit -m "Update" && git push https://c45723906721d0aa34ad51c4503af71bda93ddaf:x-oauth-basic@github.com/RPCS3-dummy/linux_bin.git master
+  - git pull https://github.com/RPCS3-dummy/linux_bin.git 
+  - cp -RL ./bin/. linux_bin
+  - cd linux_bin
+  - git init
+  - git add -A
+  - git commit -m "Update" 
+  - git push https://c45723906721d0aa34ad51c4503af71bda93ddaf:x-oauth-basic@github.com/RPCS3-dummy/linux_bin.git master
