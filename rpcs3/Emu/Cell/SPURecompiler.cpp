@@ -22,8 +22,23 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	// Get SPU LS pointer
 	const auto _ls = vm::ps3::_ptr<u32>(spu.offset);
 
-	// Always validate (TODO)
-	const auto func = spu.spu_db->analyse(_ls, spu.pc);
+	// Search if cached data matches
+	bool found = false;
+	auto func = spu.compiled_cache[spu.pc / 4];
+
+	if (func)
+	{
+		const be_t<u32>* base = _ls + spu.pc / 4;
+		if (std::memcmp(base, func->data.data(), func->size) == 0)
+			found = true;
+	}
+
+	// Check shared db if we dont have a match
+	if (!found)
+	{
+		func = spu.spu_db->analyse(_ls, spu.pc);
+		spu.compiled_cache[spu.pc / 4] = func;
+	}
 
 	// Reset callstack if necessary
 	if ((func->does_reset_stack && spu.recursion_level) || spu.recursion_level >= 128)
@@ -32,6 +47,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 		return;
 	}
 
+	// Compile if needed
 	if (!func->compiled)
 	{
 		if (!spu.spu_rec)
