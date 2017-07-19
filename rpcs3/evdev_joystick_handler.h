@@ -39,6 +39,11 @@ struct evdev_joystick_config final : cfg::node
     cfg::int32 lxstick{this, "Left stick X axis",  2};
     cfg::int32 lystick{this, "Left stick Y axis",  3};
 
+    cfg::_bool rxreverse{this, "Reverse right stick X axis", false};
+    cfg::_bool ryreverse{this, "Reverse right stick Y axis", false};
+    cfg::_bool lxreverse{this, "Reverse left stick X axis", false};
+    cfg::_bool lyreverse{this, "Reverse left stick Y axis", false};
+
     cfg::_bool needscale{this, "Axis scaling", true};
     cfg::_bool axistrigger{this, "Z axis triggers", true};
 
@@ -81,4 +86,5 @@ private:
     std::vector<std::vector<int>> joy_axis_maps;
     std::vector<int> joy_hat_ids;
     bool needscale, axistrigger;
+    std::vector<bool> revaxis;
 };

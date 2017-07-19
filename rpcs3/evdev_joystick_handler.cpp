@@ -33,10 +33,15 @@ void evdev_joystick_handler::Init(const u32 max_connect)
     std::memset(&m_info, 0, sizeof m_info);
     m_info.max_connect = std::min(max_connect, static_cast<u32>(1));
 
+    g_evdev_joystick_config.load();
+
     needscale = static_cast<bool>(g_evdev_joystick_config.needscale);
     axistrigger = static_cast<bool>(g_evdev_joystick_config.axistrigger);
 
-    g_evdev_joystick_config.load();
+    revaxis.emplace_back(g_evdev_joystick_config.lxreverse);
+    revaxis.emplace_back(g_evdev_joystick_config.lyreverse);
+    revaxis.emplace_back(g_evdev_joystick_config.rxreverse);
+    revaxis.emplace_back(g_evdev_joystick_config.ryreverse);
 
     fs::dir devdir{"/dev/input/by-id"};
     fs::dir_entry et;
@@ -371,6 +376,11 @@ void evdev_joystick_handler::thread_func()
                     {
                         // Scale from the -32768...32768 range to the 0...256 range.
                         value = (value / 256) + 128;
+                    }
+
+                    if (revaxis[axis])
+                    {
+                        value = 256 - value;
                     }
 
                     stick.m_value = value;
