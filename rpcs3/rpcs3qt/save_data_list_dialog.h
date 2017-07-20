@@ -5,29 +5,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
-#include <QDialog>
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QComboBox>
 #include <QTableWidget>
+#include <QDialog>
 #include <QLabel>
-#include <QHeaderView>
-#include <QMenu>
-
-//Used to display the information of a savedata.
-//Not sure about what information should be displayed.
-class save_data_info_dialog :public QDialog
-{
-	Q_OBJECT
-
-public:
-	explicit save_data_info_dialog(const SaveDataEntry& save, QWidget* parent = nullptr);
-private:
-	void UpdateData();
-
-	SaveDataEntry m_entry;
-	QTableWidget* m_list;
-};
 
 //Display a list of SaveData. Would need to be initialized.
 //Can also be used as a Save Data Chooser.
