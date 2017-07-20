@@ -30,7 +30,7 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 430\n\n";
+	OS << "#version 420\n\n";
 	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
 	OS << "{\n";
 	OS << "	mat4 scaleOffsetMat;\n";
@@ -77,7 +77,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					}
 
 					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(location=" << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
+					OS << "layout(binding = " << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
 				}
 			}
 		}
