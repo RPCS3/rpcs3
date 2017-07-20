@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "cellSubdisplay.h"
+#include "cellSubDisplay.h"
 
-logs::channel cellSubdisplay("cellSubdisplay");
+logs::channel cellSubDisplay("cellSubDisplay");
 
 template<>
 void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)
@@ -28,19 +28,19 @@ void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)
 
 error_code cellSubDisplayInit(vm::ptr<CellSubDisplayParam> pParam, vm::ptr<CellSubDisplayHandler> func, vm::ptr<void> userdata, u32 container)
 {
-	cellSubdisplay.todo("cellSubDisplayInit(pParam=*0x%x, func=*0x%x, userdata=*0x%x, container=0x%x)", pParam, func, userdata, container);
+	cellSubDisplay.todo("cellSubDisplayInit(pParam=*0x%x, func=*0x%x, userdata=*0x%x, container=0x%x)", pParam, func, userdata, container);
 	return CELL_OK;
 }
 
 error_code cellSubDisplayEnd()
 {
-	cellSubdisplay.todo("cellSubDisplayEnd()");
+	cellSubDisplay.todo("cellSubDisplayEnd()");
 	return CELL_OK;
 }
 
 error_code cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 {
-	cellSubdisplay.warning("cellSubDisplayGetRequiredMemory(pParam=*0x%x)", pParam);
+	cellSubDisplay.warning("cellSubDisplayGetRequiredMemory(pParam=*0x%x)", pParam);
 
 	switch (pParam->version)
 	{
@@ -54,25 +54,25 @@ error_code cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 
 error_code cellSubDisplayStart()
 {
-	cellSubdisplay.todo("cellSubDisplayStart()");
+	cellSubDisplay.todo("cellSubDisplayStart()");
 	return CELL_OK;
 }
 
 error_code cellSubDisplayStop()
 {
-	cellSubdisplay.todo("cellSubDisplayStop()");
+	cellSubDisplay.todo("cellSubDisplayStop()");
 	return CELL_OK;
 }
 
 error_code cellSubDisplayGetVideoBuffer(s32 groupId, vm::pptr<void> ppVideoBuf, vm::ptr<u32> pSize)
 {
-	cellSubdisplay.todo("cellSubDisplayGetVideoBuffer(groupId=%d, ppVideoBuf=**0x%x, pSize=*0x%x)", groupId, ppVideoBuf, pSize);
+	cellSubDisplay.todo("cellSubDisplayGetVideoBuffer(groupId=%d, ppVideoBuf=**0x%x, pSize=*0x%x)", groupId, ppVideoBuf, pSize);
 	return CELL_OK;
 }
 
 error_code cellSubDisplayAudioOutBlocking(s32 groupId, vm::ptr<void> pvData, s32 samples)
 {
-	cellSubdisplay.todo("cellSubDisplayAudioOutBlocking(groupId=%d, pvData=*0x%x, samples=%d)", groupId, pvData, samples);
+	cellSubDisplay.todo("cellSubDisplayAudioOutBlocking(groupId=%d, pvData=*0x%x, samples=%d)", groupId, pvData, samples);
 
 	if (samples % 1024)
 	{
@@ -84,7 +84,7 @@ error_code cellSubDisplayAudioOutBlocking(s32 groupId, vm::ptr<void> pvData, s32
 
 error_code cellSubDisplayAudioOutNonBlocking(s32 groupId, vm::ptr<void> pvData, s32 samples)
 {
-	cellSubdisplay.todo("cellSubDisplayAudioOutNonBlocking(groupId=%d, pvData=*0x%x, samples=%d)", groupId, pvData, samples);
+	cellSubDisplay.todo("cellSubDisplayAudioOutNonBlocking(groupId=%d, pvData=*0x%x, samples=%d)", groupId, pvData, samples);
 
 	if (samples % 1024)
 	{
@@ -96,13 +96,13 @@ error_code cellSubDisplayAudioOutNonBlocking(s32 groupId, vm::ptr<void> pvData, 
 
 error_code cellSubDisplayGetPeerNum(s32 groupId)
 {
-	cellSubdisplay.todo("cellSubDisplayGetPeerNum(groupId=%d)", groupId);
+	cellSubDisplay.todo("cellSubDisplayGetPeerNum(groupId=%d)", groupId);
 	return CELL_OK;
 }
 
 error_code cellSubDisplayGetPeerList(s32 groupId, vm::ptr<CellSubDisplayPeerInfo> pInfo, vm::ptr<s32> pNum)
 {
-	cellSubdisplay.todo("cellSubDisplayGetPeerList(groupId=%d, pInfo=*0x%x, pNum=*0x%x)", groupId, pInfo, pNum);
+	cellSubDisplay.todo("cellSubDisplayGetPeerList(groupId=%d, pInfo=*0x%x, pNum=*0x%x)", groupId, pInfo, pNum);
 
 	*pNum = 0;
 
@@ -111,28 +111,28 @@ error_code cellSubDisplayGetPeerList(s32 groupId, vm::ptr<CellSubDisplayPeerInfo
 
 error_code cellSubDisplayGetTouchInfo(s32 groupId, vm::ptr<CellSubDisplayTouchInfo> pTouchInfo, vm::ptr<s32> pNumTouchInfo)
 {
-	cellSubdisplay.todo("cellSubDisplayGetTouchInfo(groupId=%d, pTouchInfo=*0x%x, pNumTouchInfo=*0x%x)", groupId, pTouchInfo, pNumTouchInfo);
+	cellSubDisplay.todo("cellSubDisplayGetTouchInfo(groupId=%d, pTouchInfo=*0x%x, pNumTouchInfo=*0x%x)", groupId, pTouchInfo, pNumTouchInfo);
 	return CELL_OK;
 }
 
-DECLARE(ppu_module_manager::cellSubdisplay)("cellSubdisplay", []()
+DECLARE(ppu_module_manager::cellSubDisplay)("cellSubDisplay", []()
 {
 	// Initialization / Termination Functions
-	REG_FUNC(cellSubdisplay, cellSubDisplayInit);
-	REG_FUNC(cellSubdisplay, cellSubDisplayEnd);
-	REG_FUNC(cellSubdisplay, cellSubDisplayGetRequiredMemory);
-	REG_FUNC(cellSubdisplay, cellSubDisplayStart);
-	REG_FUNC(cellSubdisplay, cellSubDisplayStop);
+	REG_FUNC(cellSubDisplay, cellSubDisplayInit);
+	REG_FUNC(cellSubDisplay, cellSubDisplayEnd);
+	REG_FUNC(cellSubDisplay, cellSubDisplayGetRequiredMemory);
+	REG_FUNC(cellSubDisplay, cellSubDisplayStart);
+	REG_FUNC(cellSubDisplay, cellSubDisplayStop);
 
 	// Data Setting Functions
-	REG_FUNC(cellSubdisplay, cellSubDisplayGetVideoBuffer);
-	REG_FUNC(cellSubdisplay, cellSubDisplayAudioOutBlocking);
-	REG_FUNC(cellSubdisplay, cellSubDisplayAudioOutNonBlocking);
+	REG_FUNC(cellSubDisplay, cellSubDisplayGetVideoBuffer);
+	REG_FUNC(cellSubDisplay, cellSubDisplayAudioOutBlocking);
+	REG_FUNC(cellSubDisplay, cellSubDisplayAudioOutNonBlocking);
 
 	// Peer Status Acquisition Functions
-	REG_FUNC(cellSubdisplay, cellSubDisplayGetPeerNum);
-	REG_FUNC(cellSubdisplay, cellSubDisplayGetPeerList);
+	REG_FUNC(cellSubDisplay, cellSubDisplayGetPeerNum);
+	REG_FUNC(cellSubDisplay, cellSubDisplayGetPeerList);
 
 	//
-	REG_FUNC(cellSubdisplay, cellSubDisplayGetTouchInfo);
+	REG_FUNC(cellSubDisplay, cellSubDisplayGetTouchInfo);
 });

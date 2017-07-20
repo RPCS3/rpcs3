@@ -202,7 +202,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellSpurs,
 		&ppu_module_manager::cellSpursJq,
 		&ppu_module_manager::cellSsl,
-		&ppu_module_manager::cellSubdisplay,
+		&ppu_module_manager::cellSubDisplay,
 		&ppu_module_manager::cellSync,
 		&ppu_module_manager::cellSync2,
 		&ppu_module_manager::cellSysconf,
