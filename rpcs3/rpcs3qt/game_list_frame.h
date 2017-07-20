@@ -208,7 +208,6 @@ public Q_SLOTS:
 	void RepaintToolBarIcons();
 
 private Q_SLOTS:
-	void Boot(int row);
 	void RemoveCustomConfiguration(int row);
 	void OnColClicked(int col);
 
@@ -233,6 +232,7 @@ protected:
 	void dragMoveEvent(QDragMoveEvent* event);
 	void dragLeaveEvent(QDragLeaveEvent* event);
 private:
+	bool Boot(const GameInfo& info);
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 

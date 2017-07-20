@@ -381,8 +381,8 @@ void game_list_frame::Refresh(bool fromDrive)
 		// std::set is used to remove duplicates from the list
 		for (const auto& dir : std::set<std::string>(std::make_move_iterator(path_list.begin()), std::make_move_iterator(path_list.end())))
 		{
-			const std::string& sfb = dir + "/PS3_DISC.SFB";
-			const std::string& sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
+			const std::string sfb = dir + "/PS3_DISC.SFB";
+			const std::string sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
 
 			const fs::file sfo_file(sfo);
 			if (!sfo_file)
@@ -552,19 +552,9 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	
 	if (1)
 	{
-		RequestIconPathSet(m_game_data[i].info.path);
-	
-		Emu.Stop();
-	
-		if (!Emu.BootGame(m_game_data[i].info.path))
-		{
-			LOG_ERROR(LOADER, "Failed to boot %s", m_game_data[i].info.path);
-		}
-		else
+		if (Boot(m_game_data[i].info))
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
-			RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
-			Refresh(true);
 		}
 	}
 	else
@@ -633,7 +623,12 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	myMenu.addSeparator();
 	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
 
-	connect(boot, &QAction::triggered, [=]() {Boot(row); });
+	connect(boot, &QAction::triggered, [=]() {
+		if (Boot(m_game_data[row].info))
+		{
+			LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
+		}
+	});
 	connect(configure, &QAction::triggered, [=]() {
 		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
 	});
@@ -683,22 +678,23 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	myMenu.exec(globalPos);
 }
 
-void game_list_frame::Boot(int row)
+bool game_list_frame::Boot(const GameInfo& game)
 {
-	RequestIconPathSet(m_game_data[row].info.path);
+	RequestIconPathSet(game.path);
 
 	Emu.Stop();
 
-	if (!Emu.BootGame(m_game_data[row].info.path))
+	if (!Emu.BootGame(game.path))
 	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(m_game_data[row].info.path));
-		LOG_ERROR(LOADER, "Failed to boot %s", m_game_data[row].info.path);
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(game.path));
+		LOG_ERROR(LOADER, "Failed to boot %s", game.path);
+		return false;
 	}
 	else
 	{
-		LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
-		RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
+		RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
 		Refresh(true);
+		return true;
 	}
 }
 
