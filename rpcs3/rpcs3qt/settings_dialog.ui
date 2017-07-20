@@ -1192,7 +1192,7 @@
                  <item>
                   <widget class="QGroupBox" name="groupBox_5">
                    <property name="title">
-                    <string>Heigth</string>
+                    <string>Height</string>
                    </property>
                    <layout class="QVBoxLayout" name="verticalLayout_48">
                     <item>
