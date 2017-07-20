@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "save_data_list_dialog.h"
 #include "save_data_info_dialog.h"
+#include "gui_settings.h"
 
 #include <QPushButton>
 #include <QHBoxLayout>
@@ -23,10 +24,9 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
-	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
-	m_list->setColumnCount(3);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID"));
+	m_list->setColumnCount(4);
+	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID") << tr("Entry Notes"));
 
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
@@ -87,6 +87,16 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	LoadEntries();
 	UpdateList();
 
+	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col) {
+		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
+		SaveDataEntry originalEntry = m_save_entries[originalIndex];
+		QString originalDirName = qstr(originalEntry.dirName);
+		gui_settings settings(this);
+		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
+		currNotes[originalDirName] = m_list->item(row, col)->text();
+		settings.SetValue(GUI::m_saveNotes, currNotes);
+	});
+
 	m_list->setCurrentCell(focusedEntry, 0);
 }
 
@@ -124,7 +134,7 @@ s32 save_data_list_dialog::GetSelection()
 
 void save_data_list_dialog::OnSort(int idx)
 {
-	if ((idx < m_sort_type_count) && (idx >= 0))
+	if (idx >= 0)
 	{
 		if (idx == m_sortColumn)
 		{
@@ -228,16 +238,42 @@ void save_data_list_dialog::UpdateList(void)
 {
 	m_list->clearContents();
 	m_list->setRowCount(m_save_entries.size());
+	gui_settings settings(this);
 
 	int row = 0;
 	for (SaveDataEntry entry: m_save_entries)
-	{ 
-		QTableWidgetItem* item = new QTableWidgetItem(qstr(entry.title));
-		item->setData(Qt::UserRole, row); // For sorting to work properly
-		m_list->setItem(row, 0, item);
-		m_list->setItem(row, 1, new QTableWidgetItem(qstr(entry.subtitle)));
-		m_list->setItem(row, 2, new QTableWidgetItem(qstr(entry.dirName)));
+	{
+		QString title = qstr(entry.title);
+		QString subtitle = qstr(entry.subtitle);
+		QString dirName = qstr(entry.dirName);
 
+		QTableWidgetItem* titleItem = new QTableWidgetItem(title);
+		titleItem->setData(Qt::UserRole, row); // For sorting to work properly
+		titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
+
+		m_list->setItem(row, 0, titleItem);
+		QTableWidgetItem* subtitleItem = new QTableWidgetItem(subtitle);
+		subtitleItem->setFlags(subtitleItem->flags() & ~Qt::ItemIsEditable);
+		m_list->setItem(row, 1, subtitleItem);
+
+		QTableWidgetItem* dirNameItem = new QTableWidgetItem(dirName);
+		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
+		m_list->setItem(row, 2, dirNameItem);
+
+		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
+		QTableWidgetItem* noteItem = new QTableWidgetItem();
+		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
+		m_list->setItem(row, 3, noteItem);
+		if (currNotes.contains(dirName))
+		{
+			noteItem->setText(currNotes[dirName].toString());
+		}
+		else
+		{
+			currNotes[dirName] = "";
+			settings.SetValue(GUI::m_saveNotes, currNotes);
+		}
+		m_list->setItem(row, 3, noteItem);
 		++row;
 	}
 

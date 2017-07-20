@@ -38,7 +38,6 @@ private:
 
 	QMenu* m_sort_options;
 
-	const int m_sort_type_count = 3;
 	int m_sortColumn;
 	bool m_sortAscending;
 
