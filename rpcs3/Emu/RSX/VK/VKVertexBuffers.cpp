@@ -259,6 +259,9 @@ namespace
 
 		void operator()(const rsx::vertex_array_buffer& vertex_array)
 		{
+			if (!m_program->has_uniform(s_reg_table[vertex_array.index]))
+				return;
+
 			// Fill vertex_array
 			u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
 			u32 real_element_size = vk::get_suitable_vk_size(vertex_array.type, vertex_array.attribute_size);
@@ -284,6 +287,9 @@ namespace
 
 		void operator()(const rsx::vertex_array_register& vertex_register)
 		{
+			if (!m_program->has_uniform(s_reg_table[vertex_register.index]))
+				return;
+
 			size_t data_size = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
 			const VkFormat format = vk::get_suitable_vk_format(vertex_register.type, vertex_register.attribute_size);
 
@@ -316,6 +322,9 @@ namespace
 
 		void operator()(const rsx::empty_vertex_array& vbo)
 		{
+			if (!m_program->has_uniform(s_reg_table[vbo.index]))
+				return;
+
 			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, 0, 0));
 			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vbo.index], descriptor_sets);
 		}
@@ -471,8 +480,6 @@ namespace
 
 			for (int i = 0; i < vertex_buffers.size(); ++i)
 			{
-				if (!m_program->has_uniform(s_reg_table[i])) continue;
-					
 				const auto &vbo = vertex_buffers[i];
 				bool can_multithread = false;
 
