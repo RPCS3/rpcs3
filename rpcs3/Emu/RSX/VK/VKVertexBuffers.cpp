@@ -316,11 +316,7 @@ namespace
 
 		void operator()(const rsx::empty_vertex_array& vbo)
 		{
-			size_t offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(32);
-			void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, 32);
-			memset(dst, 0, 32);
-			m_attrib_ring_info.unmap();
-			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, offset_in_attrib_buffer, 32));
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, 0, 0));
 			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vbo.index], descriptor_sets);
 		}
 
@@ -602,6 +598,8 @@ namespace
 
 				if (!vertex_info.size()) // disabled
 				{
+					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, 0, 0));
+					m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[index], m_descriptor_sets);
 					continue;
 				}
 
