@@ -39,7 +39,7 @@ protected:
 	int client_width() override;
 	int client_height() override;
 
-	void hideEvent(QHideEvent* ev) override;
+	bool event(QEvent* ev) override;
 private Q_SLOTS:
 	void HandleCursor(QWindow::Visibility visibility);
 };

@@ -34,7 +34,8 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon)
 
 	resize(w, h);
 
-	setVisibility(QWindow::Visibility::AutomaticVisibility);
+	setVisibility(Hidden);
+	create();
 
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, &gs_frame::HandleCursor);
@@ -97,7 +98,7 @@ void gs_frame::OnFullScreen()
 void gs_frame::close()
 {
 	Emu.Stop();
-	Emu.CallAfter([=]() {QWindow::close(); deleteLater(); });
+	Emu.CallAfter([=]() { deleteLater(); });
 }
 
 bool gs_frame::shown()
@@ -215,13 +216,12 @@ void gs_frame::HandleCursor(QWindow::Visibility visibility)
 	}
 }
 
-/** Override qt hideEvent.
- * For some reason beyond me, hitting X hides the game window instead of closes. To remedy this, I forcefully murder it for commiting this transgression.
- * Closing the window has a side-effect of also stopping the emulator.
-*/
-void gs_frame::hideEvent(QHideEvent* ev)
+bool gs_frame::event(QEvent* ev)
 {
-	Q_UNUSED(ev);
-
-	close();
+	if (ev->type()==QEvent::Close)
+	{
+		close();
+		return true;
+	}
+	return false;
 }
