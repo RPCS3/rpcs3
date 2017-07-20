@@ -474,28 +474,35 @@ namespace
 				if (!m_program->has_uniform(s_reg_table[i])) continue;
 					
 				const auto &vbo = vertex_buffers[i];
+				bool can_multithread = false;
 
-				if (vbo.which() == 0 && vertex_count >= (u32)g_cfg.video.mt_vertex_upload_threshold && vbo.size() > 1 && rsxthr->vertex_upload_task_ready())
+				if (vbo.which() == 0 && vertex_count >= (u32)g_cfg.video.mt_vertex_upload_threshold && rsxthr->vertex_upload_task_ready())
 				{
 					//vertex array buffer. We can thread this thing heavily
 					const auto& v = vbo.get<rsx::vertex_array_buffer>();
 					
-					u32 element_size = rsx::get_vertex_type_size_on_host(v.type, v.attribute_size);
-					u32 real_element_size = vk::get_suitable_vk_size(v.type, v.attribute_size);
+					if (v.attribute_size > 1)
+					{
+						can_multithread = true;
+					
+						u32 element_size = rsx::get_vertex_type_size_on_host(v.type, v.attribute_size);
+						u32 real_element_size = vk::get_suitable_vk_size(v.type, v.attribute_size);
 
-					u32 upload_size = real_element_size * vertex_count;
-					size_t offset = m_attrib_ring_info.alloc<256>(upload_size);
+						u32 upload_size = real_element_size * vertex_count;
+						size_t offset = m_attrib_ring_info.alloc<256>(upload_size);
 
-					memory_allocations.push_back(offset);
-					allocated_sizes.push_back(upload_size);
-					upload_jobs.push_back(i);
+						memory_allocations.push_back(offset);
+						allocated_sizes.push_back(upload_size);
+						upload_jobs.push_back(i);
 
-					const VkFormat format = vk::get_suitable_vk_format(v.type, v.attribute_size);
+						const VkFormat format = vk::get_suitable_vk_format(v.type, v.attribute_size);
 
-					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, format, offset, upload_size));
-					m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[v.index], m_descriptor_sets);
+						m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, format, offset, upload_size));
+						m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[v.index], m_descriptor_sets);
+					}
 				}
-				else
+				
+				if (!can_multithread)
 					std::apply_visitor(visitor, vbo);
 			}
 
