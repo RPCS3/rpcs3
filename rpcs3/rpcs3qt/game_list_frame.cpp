@@ -1041,29 +1041,129 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 	return sstr(string.join(", "));
 }
 
+/**
+Add valid disc games to gamelist (games.yaml)
+@param path = path to scan for game
+*/
+void game_list_frame::AddGamesFromPath(const QString& path)
+{
+	const QFileInfo pathInfo(path);
+
+	// create list with valid elf path endings (empty string in case the path is the elf)
+	const QStringList elf_list = QStringList() << "" << "/EBOOT.BIN" << "/USRDIR/EBOOT.BIN" << "/PS3_GAME/USRDIR/EBOOT.BIN";
+	QStringList path_list;
+
+	if (pathInfo.isDir()) // create path list from contained files
+	{
+		for (const auto& entry : fs::dir(sstr(path)))
+		{
+			if (entry.name != "." && entry.name != "..")
+			{
+				path_list << path + "/" + qstr(entry.name);
+			}
+		}
+	}
+	else if (pathInfo.isFile()) // path list only contains file path
+	{
+		path_list << path;
+	}
+
+	if (path_list.isEmpty()) return;
+
+	for (const auto& pth : path_list)
+	{
+		const bool pathIsDir = QFileInfo(pth).isDir(); // needed for cases like: bakuretsu/bakuretsu/lala.la/eboot.bin
+
+		for (auto elf : elf_list)
+		{
+			elf = pathIsDir ? pth + elf : pth; // if pth is dir, add elf path ending, else assume path leads to elf
+
+			if (!QFileInfo(elf).isFile()) continue;
+
+			const std::string dir = sstr(elf.section("/", 0, -4)); // game's main dir (sth like BLES12345)
+
+			if (!fs::is_file(dir + "/PS3_DISC.SFB")) continue; // invalid without sfb file
+
+			const fs::file sfo_file(dir + "/PS3_GAME/PARAM.SFO");
+
+			if (!sfo_file) continue; // invalid without sfo file
+
+			const auto& psf = psf::load_object(sfo_file);
+
+			if (psf::get_string(psf, "CATEGORY") != "DG") continue; // only disc games allowed
+
+			// finally we can add the game to our list:
+
+			YAML::Node games = YAML::Load(fs::file{ fs::get_config_dir() + "/games.yml", fs::read + fs::create }.to_string());
+
+			if (!games.IsMap()) games.reset();
+
+			games[psf::get_string(psf, "TITLE_ID")] = dir;
+
+			YAML::Emitter out;
+			out << games;
+			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
+
+			LOG_SUCCESS(GENERAL, "Game addition to list by drop: %s", sstr(elf));
+		}
+	}
+}
+
+/**
+	Check data for valid file types and cache their paths if necessary
+	@param md = data containing file urls
+	@param savePaths = flag for path caching
+	@returns validity of file type
+*/
 bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
 {
-	const QList<QUrl> list = md.urls();
-	QString last_suffix;
-
-	for (int i = 0; i < list.count(); i++)
+	auto error = [&](bool val = false) // helps us setting the DROP_ERROR on return false
 	{
+		if (!val) m_dropType = DROP_ERROR;
+		return val;
+	};
+
+	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
+
+	for (int i = 0; i < list.count(); i++) // check each file in url list for valid type
+	{
+		const QString path = list[i].toLocalFile(); // convert url to filepath
+
+		// check for directories first, only valid if all other paths led to directories until now.
+		if (QFileInfo(path).isDir())
+		{
+			if (i != 0 && m_dropType != DROP_DIR) return error();
+
+			m_dropType = DROP_DIR;
+
+			if (savePaths)
+			{
+				m_dropPaths.append(path);
+			}
+			continue;
+		}
+
+		// now that we know it has to be a file we get the file ending
 		QString suffix = QFileInfo(list[i].fileName()).suffix().toLower();
 
-		if (last_suffix.isEmpty())
+		if (suffix.isEmpty()) return error(); // NANI the heck would you want such a file?
+
+		QString last_suffix;
+
+		if (i == 0) // the first item defines our file type
 		{
 			last_suffix = suffix;
 		}
-		else if (last_suffix == "pup")
+		else if (last_suffix == "pup") // we only accept one firmware file
 		{
-			return list.count() == 1;
+			return error(list.count() != 1);
 		}
-		else if (last_suffix != suffix)
+		else if (last_suffix != suffix) // we don't accept multiple file types
 		{
-			m_dropType = DROP_ERROR;
-			return false;
+			return error();
 		}
 
+		// set drop type by file ending
 		if (suffix == "pkg")
 		{
 			m_dropType = DROP_PKG;
@@ -1076,15 +1176,18 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
 		{
 			m_dropType = DROP_RAP;
 		}
-		else
+		else if (suffix == "bin")
 		{
-			m_dropType = DROP_ERROR;
-			return false;
+			m_dropType = DROP_GAME;
+		}
+		else // if (suffix == "kuso")
+		{
+			return error();
 		}
 
-		if (savePaths)
+		if (savePaths) // we only need to know the paths on drop
 		{
-			m_dropPaths.append(list[i].toLocalFile());
+			m_dropPaths.append(path);
 		}
 	}
 	return true;
@@ -1092,17 +1195,17 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
 
 void game_list_frame::dropEvent(QDropEvent* event)
 {
-	if (IsValidFile(*event->mimeData(), true))
+	if (IsValidFile(*event->mimeData(), true)) // get valid file paths and valid drop type
 	{
 		switch (m_dropType)
 		{
-		case DROP_PKG:
+		case DROP_PKG: // install the package
 			RequestPackageInstall(m_dropPaths);
 			break;
-		case DROP_PUP:
+		case DROP_PUP: // install the firmware
 			RequestFirmwareInstall(m_dropPaths.first());
 			break;
-		case DROP_RAP:
+		case DROP_RAP: // import rap files to exdata dir
 			for (const auto& rap : m_dropPaths)
 			{
 				const std::string rapname = sstr(QFileInfo(rap).fileName());
@@ -1118,13 +1221,29 @@ void game_list_frame::dropEvent(QDropEvent* event)
 				}
 			}
 			break;
-		default:
+		case DROP_DIR: // import valid games to gamelist (games.yaml)
+			for (const auto& path : m_dropPaths)
+			{
+				AddGamesFromPath(path);
+			}
+			Refresh(true);
+			break;
+		case DROP_GAME: // import valid games to gamelist (games.yaml)
+			for (const auto& path : m_dropPaths)
+			{
+				AddGamesFromPath(path);
+			}
+			Refresh(true);
+			break;
+		default: // DROP_ERROR
 			LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
 			break;
 		}
 	}
 
+	// reset drop variables after each drop, no matter if successful or not
 	m_dropPaths.clear();
+	m_dropType = DROP_ERROR;
 }
 
 void game_list_frame::dragEnterEvent(QDragEnterEvent* event)

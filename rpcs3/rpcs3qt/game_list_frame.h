@@ -170,7 +170,9 @@ enum {
 	DROP_ERROR,
 	DROP_PKG,
 	DROP_PUP,
-	DROP_RAP
+	DROP_RAP,
+	DROP_DIR,
+	DROP_GAME
 };
 
 class game_list_frame : public QDockWidget {
@@ -237,6 +239,7 @@ private:
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
 	bool IsValidFile(const QMimeData& md, bool savePaths = false);
+	void AddGamesFromPath(const QString& path);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
