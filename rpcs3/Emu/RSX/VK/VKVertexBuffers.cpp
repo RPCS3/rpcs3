@@ -471,9 +471,11 @@ namespace
 
 			for (int i = 0; i < vertex_buffers.size(); ++i)
 			{
+				if (!m_program->has_uniform(s_reg_table[i])) continue;
+					
 				const auto &vbo = vertex_buffers[i];
 
-				if (vbo.which() == 0 && vertex_count >= (u32)g_cfg.video.mt_vertex_upload_threshold && vertex_buffers.size() > 1 && rsxthr->vertex_upload_task_ready())
+				if (vbo.which() == 0 && vertex_count >= (u32)g_cfg.video.mt_vertex_upload_threshold && vbo.size() > 1 && rsxthr->vertex_upload_task_ready())
 				{
 					//vertex array buffer. We can thread this thing heavily
 					const auto& v = vbo.get<rsx::vertex_array_buffer>();
@@ -591,7 +593,8 @@ namespace
 					  sizeof(u32)) /
 				stride;
 
-			for (int index = 0; index < rsx::limits::vertex_count; ++index) {
+			for (int index = 0; index < rsx::limits::vertex_count; ++index)
+			{
 				auto& vertex_info = rsx::method_registers.vertex_arrays_info[index];
 
 				if (!m_program->has_uniform(s_reg_table[index])) continue;
@@ -622,8 +625,7 @@ namespace
 
 				// TODO: properly handle cmp type
 				if (vertex_info.type() == rsx::vertex_base_type::cmp)
-					LOG_ERROR(
-						RSX, "Compressed vertex attributes not supported for inlined arrays yet");
+					LOG_ERROR(RSX, "Compressed vertex attributes not supported for inlined arrays yet");
 
 				switch (vertex_info.type())
 				{
