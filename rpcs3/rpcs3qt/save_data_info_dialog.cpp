@@ -6,9 +6,6 @@
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
-
-//Cause i can not decide what struct to be used to fill those. Just use no real data now.
-//Currently variable info isn't used. it supposed to be a container for the information passed by other.
 save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
 	: QDialog(parent), m_entry(save)
 {

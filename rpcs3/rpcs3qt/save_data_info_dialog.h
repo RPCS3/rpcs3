@@ -9,7 +9,6 @@
 #include <QTableWidget>
 
 //Used to display the information of a savedata.
-//Not sure about what information should be displayed.
 class save_data_info_dialog :public QDialog
 {
 	Q_OBJECT

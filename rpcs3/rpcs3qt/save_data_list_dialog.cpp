@@ -263,7 +263,6 @@ void save_data_list_dialog::UpdateList(void)
 		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
-		m_list->setItem(row, 3, noteItem);
 		if (currNotes.contains(dirName))
 		{
 			noteItem->setText(currNotes[dirName].toString());
