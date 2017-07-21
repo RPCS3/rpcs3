@@ -757,9 +757,9 @@ namespace rsx
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			const bool enabled = !!(input_mask & (1 << index));
-			const bool consumed = !!(consumed_attrib_mask & (1 << index));
+			const bool consumed = !!(consumed_attrib_mask & (1ull << index));
 
-			if (!enabled &&  !consumed)
+			if (!enabled && !consumed)
 				continue;
 
 			if (state.vertex_arrays_info[index].size() > 0)
