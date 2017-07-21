@@ -1,9 +1,12 @@
 #include "stdafx.h"
+#include "Utilities/sysinfo.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
 #include "ARMv7Thread.h"
 #include "ARMv7Interpreter.h"
+
+const bool s_use_rtm = utils::has_rtm();
 
 using namespace arm_code::arm_encoding_alias;
 
@@ -2091,13 +2094,34 @@ void arm_interpreter::STREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 			return;
 		}
 
-		vm::writer_lock lock(0);
+		bool result;
 
-		const bool result = cpu.rtime == vm::reservation_acquire(addr, cpu.rtime) && data.compare_and_swap_test(cpu.rdata, value);
-
-		if (result)
+		if (s_use_rtm && utils::transaction_enter())
 		{
-			vm::reservation_update(addr, sizeof(u32));
+			if (!vm::reader_lock{vm::try_to_lock})
+			{
+				_xabort(0);
+			}
+
+			result = cpu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(cpu.rdata, value);
+
+			if (result)
+			{
+				vm::reservation_update(addr, sizeof(u32));
+			}
+
+			_xend();
+		}
+		else
+		{
+			vm::writer_lock lock(0);
+
+			result = cpu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(cpu.rdata, value);
+
+			if (result)
+			{
+				vm::reservation_update(addr, sizeof(u32));
+			}
 		}
 		
 		cpu.raddr = 0;

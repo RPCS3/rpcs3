@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
+#include "Utilities/sysinfo.h"
 #include "Crypto/sha1.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -52,6 +53,8 @@
 #include <thread>
 #include <cfenv>
 #include "Utilities/GSL.h"
+
+const bool s_use_rtm = utils::has_rtm();
 
 extern u64 get_system_time();
 
@@ -825,6 +828,26 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
+	if (s_use_rtm && utils::transaction_enter())
+	{
+		if (!vm::reader_lock{vm::try_to_lock})
+		{
+			_xabort(0);
+		}
+
+		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+
+		if (result)
+		{
+			vm::reservation_update(addr, sizeof(u32));
+			vm::notify(addr, sizeof(u32));
+		}
+
+		_xend();
+		ppu.raddr = 0;
+		return result;
+	}
+
 	vm::writer_lock lock(0);
 
 	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
@@ -847,6 +870,26 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	{
 		ppu.raddr = 0;
 		return false;
+	}
+
+	if (s_use_rtm && utils::transaction_enter())
+	{
+		if (!vm::reader_lock{vm::try_to_lock})
+		{
+			_xabort(0);
+		}
+
+		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
+
+		if (result)
+		{
+			vm::reservation_update(addr, sizeof(u64));
+			vm::notify(addr, sizeof(u64));
+		}
+
+		_xend();
+		ppu.raddr = 0;
+		return result;
 	}
 
 	vm::writer_lock lock(0);
