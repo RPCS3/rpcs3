@@ -497,7 +497,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellStorage.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\Modules\cellSubdisplay.cpp">
+    <ClCompile Include="Emu\Cell\Modules\cellSubDisplay.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellSync.cpp">
@@ -922,6 +922,9 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\sysinfo.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1360,7 +1363,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSpursJq.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\Modules\cellSubdisplay.h">
+    <ClInclude Include="Emu\Cell\Modules\cellSubDisplay.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSync.h">
@@ -1775,6 +1778,9 @@
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\CRC.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\sysinfo.h">
       <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>

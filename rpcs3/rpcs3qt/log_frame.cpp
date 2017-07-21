@@ -2,7 +2,7 @@
 
 #include <stdafx.h>
 #include "rpcs3_version.h"
-#include "system_info.h"
+#include "Utilities/sysinfo.h"
 
 #include <QMenu>
 #include <QActionGroup>
@@ -40,7 +40,7 @@ struct gui_listener : logs::listener
 		read = new packet;
 		last = new packet;
 		read->next = last.load();
-		last->msg = fmt::format("RPCS3 v%s\n%s\n", rpcs3::version.to_string(), System_Info::getCPU().first);
+		last->msg = fmt::format("RPCS3 v%s\n%s\n", rpcs3::version.to_string(), utils::get_system_info());
 
 		// Self-registration
 		logs::listener::add(this);

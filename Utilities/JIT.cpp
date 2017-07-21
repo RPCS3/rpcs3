@@ -12,6 +12,7 @@
 #include "File.h"
 #include "Log.h"
 #include "mutex.h"
+#include "sysinfo.h"
 #include "VirtualMemory.h"
 
 #ifdef _MSC_VER
@@ -377,6 +378,20 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, std::uintptr_t>
 	if (m_cpu.empty())
 	{
 		m_cpu = llvm::sys::getHostCPUName();
+
+		if (m_cpu == "sandybridge" ||
+			m_cpu == "ivybridge" ||
+			m_cpu == "haswell" ||
+			m_cpu == "broadwell" ||
+			m_cpu == "skylake" ||
+			m_cpu == "skylake-avx512" ||
+			m_cpu == "cannonlake")
+		{
+			if (!utils::has_avx())
+			{
+				m_cpu = "nehalem";
+			}
+		}
 	}
 
 	std::string result;

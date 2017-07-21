@@ -309,7 +309,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	std::string cond = compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle.c_str(), getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	std::string cond = compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
 
 	ShaderVariable dst_var(dst);
 	dst_var.symplify();

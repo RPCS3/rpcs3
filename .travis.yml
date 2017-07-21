@@ -87,11 +87,10 @@ before_script:
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -appimage ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
-      zip -r9 rpcs3.zip ./RPCS3*.AppImage; 
       if [ -z "$WITHOUT_LLVM" ]; then
         export LLVM="-LLVM";
       fi;
-      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}${LLVM}_linux64 --upload-file rpcs3.zip; 
+      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}${LLVM}_linux64 --upload-file ./RPCS3*.AppImage;
    fi;
 
 script:
