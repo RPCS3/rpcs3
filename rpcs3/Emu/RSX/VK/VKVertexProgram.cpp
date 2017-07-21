@@ -64,7 +64,6 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 	std::sort(input_data.begin(), input_data.end());
 
-	int location = VERTEX_BUFFERS_FIRST_BIND_SLOT;
 	for (const std::tuple<size_t, std::string> item : input_data)
 	{
 		for (const ParamType &PT : inputs)
@@ -74,7 +73,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 				if (PI.name == std::get<1>(item))
 				{
 					vk::glsl::program_input in;
-					in.location = location;
+					in.location = (int)std::get<0>(item) + VERTEX_BUFFERS_FIRST_BIND_SLOT;
 					in.domain = vk::glsl::glsl_vertex_program;
 					in.name = PI.name + "_buffer";
 					in.type = vk::glsl::input_type_texel_buffer;
@@ -92,7 +91,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					}
 
 					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(set = 0, binding=" << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
+					OS << "layout(set = 0, binding=" << in.location << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
 				}
 			}
 		}
