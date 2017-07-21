@@ -201,12 +201,11 @@ private Q_SLOTS:
 	void Boot(int row);
 	void RemoveCustomConfiguration(int row);
 	void OnColClicked(int col);
-
 	void ShowContextMenu(const QPoint &pos);
 	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
 	void doubleClickedSlot(const QModelIndex& index);
 Q_SIGNALS:
-	void game_list_frameClosed();
+	void GameListFrameClosed();
 	void RequestIconPathSet(const std::string path);
 	void RequestAddRecentGame(const q_string_pair& entry);
 	void RequestIconSizeActSet(const int& idx);
