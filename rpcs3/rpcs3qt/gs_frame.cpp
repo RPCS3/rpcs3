@@ -221,7 +221,6 @@ bool gs_frame::event(QEvent* ev)
 	if (ev->type()==QEvent::Close)
 	{
 		close();
-		return true;
 	}
-	return false;
+	return QWindow::event(ev);
 }
