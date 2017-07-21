@@ -83,7 +83,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
-		ToolBarRepaintRequest();
+		Q_EMIT ToolBarRepaintRequest();
 	});
 	connect(ui->okButton, &QAbstractButton::clicked, xemu_settings.get(), &emu_settings::SaveSettings);
 	connect(ui->okButton, &QAbstractButton::clicked, this, &QDialog::accept);

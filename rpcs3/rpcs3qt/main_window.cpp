@@ -109,7 +109,7 @@ void main_window::Init()
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 	!appIcon.isNull() ? setWindowIcon(appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
-	RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
+	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 	
 	if (!utils::has_ssse3())
@@ -1237,7 +1237,7 @@ void main_window::CreateDockWindows()
 	m_mw->setDockNestingEnabled(true);
 	setCentralWidget(m_mw);
 
-	connect(logFrame, &log_frame::log_frameClosed, [=]()
+	connect(logFrame, &log_frame::LogFrameClosed, [=]()
 	{
 		if (ui->showLogAct->isChecked())
 		{
@@ -1252,7 +1252,7 @@ void main_window::CreateDockWindows()
 			guiSettings->SetValue(GUI::mw_debugger, false);
 		}
 	});
-	connect(gameListFrame, &game_list_frame::game_list_frameClosed, [=]()
+	connect(gameListFrame, &game_list_frame::GameListFrameClosed, [=]()
 	{
 		if (ui->showGameListAct->isChecked())
 		{

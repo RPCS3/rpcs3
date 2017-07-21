@@ -121,7 +121,7 @@ void debugger_frame::SaveSettings()
 void debugger_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	DebugFrameClosed();
+	Q_EMIT DebugFrameClosed();
 }
 
 void debugger_frame::showEvent(QShowEvent * event)
