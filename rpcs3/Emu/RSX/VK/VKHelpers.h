@@ -1420,6 +1420,7 @@ namespace vk
 		public:
 			VkPipeline pipeline;
 			u64 attribute_location_mask;
+			u64 vertex_attributes_mask;
 
 			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
 			program(const program&) = delete;
@@ -1432,6 +1433,8 @@ namespace vk
 			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
 			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
+
+			u64 get_vertex_input_attributes_mask();
 		};
 	}
 

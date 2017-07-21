@@ -38,7 +38,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};\n";
 
 	vk::glsl::program_input in;
-	in.location = 0;
+	in.location = SCALE_OFFSET_BIND_SLOT;
 	in.domain = vk::glsl::glsl_vertex_program;
 	in.name = "ScaleOffsetBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
@@ -64,7 +64,6 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 	std::sort(input_data.begin(), input_data.end());
 
-	int location = 2;
 	for (const std::tuple<size_t, std::string> item : input_data)
 	{
 		for (const ParamType &PT : inputs)
@@ -74,7 +73,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 				if (PI.name == std::get<1>(item))
 				{
 					vk::glsl::program_input in;
-					in.location = location;
+					in.location = (int)std::get<0>(item) + VERTEX_BUFFERS_FIRST_BIND_SLOT;
 					in.domain = vk::glsl::glsl_vertex_program;
 					in.name = PI.name + "_buffer";
 					in.type = vk::glsl::input_type_texel_buffer;
@@ -92,7 +91,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					}
 
 					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(set = 0, binding=" << 3 + location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
+					OS << "layout(set = 0, binding=" << in.location << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
 				}
 			}
 		}
@@ -108,17 +107,15 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = 1;
+	in.location = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
 	in.domain = vk::glsl::glsl_vertex_program;
 	in.name = "VertexConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 
 	inputs.push_back(in);
 
-	//We offset this value by the index of the first fragment texture (19) below
-	//and allow 16 fragment textures to precede this slot
-	int location = 16;
 
+	int location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)
@@ -137,7 +134,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 
 				inputs.push_back(in);
 
-				OS << "layout(set = 0, binding=" << 19 + location++ << ") uniform " << PT.type << " " << PI.name << ";\n";
+				OS << "layout(set = 0, binding=" << location++ << ") uniform " << PT.type << " " << PI.name << ";\n";
 			}
 		}
 	}
