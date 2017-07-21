@@ -748,7 +748,7 @@ namespace rsx
 	}
 
 	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
 		result.reserve(rsx::limits::vertex_count);
@@ -756,8 +756,10 @@ namespace rsx
 		u32 input_mask = state.vertex_attrib_input_mask();
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			bool enabled = !!(input_mask & (1 << index));
-			if (!enabled)
+			const bool enabled = !!(input_mask & (1 << index));
+			const bool consumed = !!(consumed_attrib_mask & (1 << index));
+
+			if (!enabled &&  !consumed)
 				continue;
 
 			if (state.vertex_arrays_info[index].size() > 0)

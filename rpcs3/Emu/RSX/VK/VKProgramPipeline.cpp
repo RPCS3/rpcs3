@@ -11,6 +11,7 @@ namespace vk
 			load_uniforms(glsl::program_domain::glsl_vertex_program, vertex_input);
 			load_uniforms(glsl::program_domain::glsl_vertex_program, fragment_inputs);
 			attribute_location_mask = 0;
+			vertex_attributes_mask = 0;
 		}
 
 		program::~program()
@@ -106,6 +107,23 @@ namespace vk
 			}
 			
 			LOG_NOTICE(RSX, "vertex buffer not found in program: %s", binding_name.c_str());
+		}
+
+		u64 program::get_vertex_input_attributes_mask()
+		{
+			if (vertex_attributes_mask)
+				return vertex_attributes_mask;
+
+			for (auto &uniform : uniforms)
+			{
+				if (uniform.domain == program_domain::glsl_vertex_program &&
+					uniform.type == program_input_type::input_type_texel_buffer)
+				{
+					vertex_attributes_mask |= (1 << (uniform.location + VERTEX_BUFFERS_FIRST_BIND_SLOT));
+				}
+			}
+
+			return vertex_attributes_mask;
 		}
 	}
 }

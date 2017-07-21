@@ -682,6 +682,6 @@ VKGSRender::upload_vertex_data()
 {
 	draw_command_visitor visitor(*m_device, m_index_buffer_ring_info, m_attrib_ring_info, m_program,
 		descriptor_sets, m_buffer_view_to_clean,
-		[this](const auto& state, const auto& range) { return this->get_vertex_buffers(state, range);}, this);
+		[this](const auto& state, const auto& range) { return this->get_vertex_buffers(state, range, m_program->get_vertex_input_attributes_mask());}, this);
 	return std::apply_visitor(visitor, get_draw_command(rsx::method_registers));
 }
