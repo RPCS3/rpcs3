@@ -325,7 +325,7 @@ namespace
 			if (!m_program->has_uniform(s_reg_table[vbo.index]))
 				return;
 
-			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, 0, 0));
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R8G8B8A8_UNORM, 0, 0));
 			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vbo.index], descriptor_sets);
 		}
 
@@ -615,7 +615,7 @@ namespace
 
 				if (!vertex_info.size()) // disabled
 				{
-					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, 0, 0));
+					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8G8B8A8_UNORM, 0, 0));
 					m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[index], m_descriptor_sets);
 					continue;
 				}
