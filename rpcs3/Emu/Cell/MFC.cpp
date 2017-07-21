@@ -1,8 +1,11 @@
 #include "stdafx.h"
+#include "Utilities/sysinfo.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "MFC.h"
+
+const bool s_use_rtm = utils::has_rtm();
 
 template <>
 void fmt_class_string<MFC>::format(std::string& out, u64 arg)
@@ -145,10 +148,25 @@ void mfc_thread::cpu_task()
 					vm::reservation_acquire(cmd.eal, 128);
 
 					// Store unconditionally
-					vm::writer_lock lock(0);
-					data = to_write;
-					vm::reservation_update(cmd.eal, 128);
-					vm::notify(cmd.eal, 128);
+					if (s_use_rtm && utils::transaction_enter())
+					{
+						if (!vm::reader_lock{vm::try_to_lock})
+						{
+							_xabort(0);
+						}
+
+						data = to_write;
+						vm::reservation_update(cmd.eal, 128);
+						vm::notify(cmd.eal, 128);
+						_xend();
+					}
+					else
+					{
+						vm::writer_lock lock(0);
+						data = to_write;
+						vm::reservation_update(cmd.eal, 128);
+						vm::notify(cmd.eal, 128);
+					}
 				}
 				else if (cmd.cmd & MFC_LIST_MASK)
 				{

@@ -5,6 +5,7 @@
 #include "SPUThread.h"
 #include "SPURecompiler.h"
 #include "SPUASMJITRecompiler.h"
+#include <algorithm>
 
 extern u64 get_system_time();
 
@@ -23,20 +24,12 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	const auto _ls = vm::ps3::_ptr<u32>(spu.offset);
 
 	// Search if cached data matches
-	bool found = false;
 	auto func = spu.compiled_cache[spu.pc / 4];
 
-	if (func)
-	{
-		const be_t<u32>* base = _ls + spu.pc / 4;
-		if (std::memcmp(base, func->data.data(), func->size) == 0)
-			found = true;
-	}
-
 	// Check shared db if we dont have a match
-	if (!found)
+	if (!func || !std::equal(func->data.begin(), func->data.end(), _ls + spu.pc / 4, [](const be_t<u32>& l, const be_t<u32>& r) { return *(u32*)(u8*)&l == *(u32*)(u8*)&r; }))
 	{
-		func = spu.spu_db->analyse(_ls, spu.pc);
+		func = spu.spu_db->analyse(_ls, spu.pc).get();
 		spu.compiled_cache[spu.pc / 4] = func;
 	}
 
