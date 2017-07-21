@@ -141,6 +141,12 @@ s32 cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr
 	return CELL_OK;
 }
 
+s32 cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
+{
+	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	return CELL_OK;
+}
+
 s32 cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
 {
 	cellOskDialog.todo("cellOskDialogExtAddJapaneseOptionDictionary(filePath=**0x%0x)", filePath);
@@ -247,6 +253,7 @@ DECLARE(ppu_module_manager::cellOskDialog)("cellOskExtUtility", []()
 {
 	REG_FUNC(cellOskExtUtility, cellOskDialogExtInputDeviceUnlock);
 	REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterKeyboardEventHookCallback);
+	REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterKeyboardEventHookCallbackEx);
 	REG_FUNC(cellOskExtUtility, cellOskDialogExtAddJapaneseOptionDictionary);
 	REG_FUNC(cellOskExtUtility, cellOskDialogExtEnableClipboard);
 	REG_FUNC(cellOskExtUtility, cellOskDialogExtSendFinishMessage);
