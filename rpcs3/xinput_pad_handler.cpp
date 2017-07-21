@@ -3,6 +3,8 @@
 #ifdef _MSC_VER
 #include "xinput_pad_handler.h"
 
+xinput_config xinput_cfg;
+
 namespace {
 	const DWORD THREAD_TIMEOUT = 1000;
 	const DWORD THREAD_SLEEP = 10;
@@ -112,6 +114,13 @@ void xinput_pad_handler::Init(const u32 max_connect)
 			pad.m_vibrateMotors.emplace_back(false, 0);
 		}
 
+		xinput_cfg.load();
+		if (!xinput_cfg.exist()) xinput_cfg.save();
+
+		squircle_factor = xinput_cfg.padsquircling / 1000.f;
+		left_stick_deadzone = xinput_cfg.lstickdeadzone;
+		right_stick_deadzone = xinput_cfg.rstickdeadzone;
+
 		active = true;
 		thread = CreateThread(NULL, 0, &xinput_pad_handler::ThreadProcProxy, this, 0, NULL);
 	}
@@ -158,7 +167,7 @@ std::tuple<u16, u16> xinput_pad_handler::ConvertToSquirclePoint(u16 inX, u16 inY
 
 	// now find len/point on the given squircle from our current angle and radius in polar coords
 	// https://thatsmaths.com/2016/07/14/squircles/
-	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / 8.f) * r;
+	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / squircle_factor) * r;
 
 	// we now have len and angle, convert to cartisian 
 
@@ -241,16 +250,19 @@ DWORD xinput_pad_handler::ThreadProcedure()
 					}
 				};
 
-				normalize_input(LX, LY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-				normalize_input(RX, RY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+				normalize_input(LX, LY, left_stick_deadzone);
+				normalize_input(RX, RY, right_stick_deadzone);
 
 				pad.m_sticks[0].m_value = ConvertAxis(LX);
 				pad.m_sticks[1].m_value = 255 - ConvertAxis(LY);
 				pad.m_sticks[2].m_value = ConvertAxis(RX);
 				pad.m_sticks[3].m_value = 255 - ConvertAxis(RY);
 
-				std::tie(pad.m_sticks[0].m_value, pad.m_sticks[1].m_value) = ConvertToSquirclePoint(pad.m_sticks[0].m_value, pad.m_sticks[1].m_value);
-				std::tie(pad.m_sticks[2].m_value, pad.m_sticks[3].m_value) = ConvertToSquirclePoint(pad.m_sticks[2].m_value, pad.m_sticks[3].m_value);
+				if (squircle_factor != 0.f)
+				{
+					std::tie(pad.m_sticks[0].m_value, pad.m_sticks[1].m_value) = ConvertToSquirclePoint(pad.m_sticks[0].m_value, pad.m_sticks[1].m_value);
+					std::tie(pad.m_sticks[2].m_value, pad.m_sticks[3].m_value) = ConvertToSquirclePoint(pad.m_sticks[2].m_value, pad.m_sticks[3].m_value);
+				}
 
 				XINPUT_VIBRATION vibrate;
 
