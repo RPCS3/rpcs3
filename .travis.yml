@@ -36,7 +36,8 @@ git:
 
 before_install:
   - if [ "$CC" = "clang" ]; then
-      export CXX="clang++-4.0" CC="clang-4.0";
+      export CXX="clang++-6.0" CC="clang-6.0";
+      ls /usr/lib/llvm-6.0/lib/ ; ls /usr/lib | grep -i "llvm" ; ls /usr/lib/llvm-6.0/ ; ls /usr/lib/llvm-6.0/build ; ls /usr/lib/llvm-6.0/build/lib ; ls /usr/lib/llvm-6.0/lib/cmake/ ; ls /usr/lib/llvm-6.0/lib/clang/ ;
     fi;    
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
@@ -68,10 +69,10 @@ before_script:
   - mkdir build
   - cd build
   - export CMAKE_PREFIX_PATH=~/Qt/5.9.1/gcc_64/lib/cmake
-  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DPolly_DIR=/usr/lib/llvm-6.0/lib/cmake/polly;
   - make -j 3
   - # AppImage generation
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-4.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+  - if [ "$CC" = "clang-6.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export LD_LIBRARY_PATH=~/Qt/5.9.1/gcc_64/lib;
       make DESTDIR=appdir install ; find appdir/ ;
       find ../bin ;
@@ -89,7 +90,7 @@ before_script:
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
-      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}_linux64 --upload-file ./RPCS3*.AppImage;
+      curl https://transfer.sh/${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}_linux64 --upload-file ./RPCS3*.AppImage;
    fi;
 
 script:
@@ -103,7 +104,7 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-trusty-4.0
+      - llvm-toolchain-trusty
     packages:
       - cmake
       - libasound2-dev
@@ -113,9 +114,12 @@ addons:
       #- libvulkan1
       #- libvulkan-dev
       - libc6-dev
-      - llvm-4.0
-      - llvm-4.0-dev
-      - clang-4.0
+      - llvm-6.0
+      - llvm-6.0-dev
+      - libllvm6.0
+      - libclang1-6.0
+      - libclang-6.0-dev
+      - clang-6.0
       - libedit-dev
       - g++-5
       - gcc-5

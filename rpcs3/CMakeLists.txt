@@ -90,7 +90,7 @@ if(NOT MSVC)
 	if(NOT APPLE)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
 	endif()
-
+	
 	if(WIN32)
 		set(CMAKE_RC_COMPILER_INIT windres)
 		enable_language(RC)
@@ -157,7 +157,29 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if (NOT WITHOUT_LLVM)
-	find_package(LLVM 4.0 CONFIG)
+	find_package(LLVM 6.0 CONFIG)
+endif()
+
+# Now let's look for polly.
+find_package(Polly)
+if(Polly_FOUND)
+	add_definitions(-DPOLLY_AVAILABLE)
+endif()
+# Polly LLVM Compiler checks
+CHECK_C_COMPILER_FLAG("-mllvm -polly" HAS_POLLY)
+CHECK_C_COMPILER_FLAG("-mllvm -polly-target=hybrid" HAS_POLLY_HYBRID)
+CHECK_C_COMPILER_FLAG("-mllvm -polly-target=cpu" HAS_POLLY_CPU)
+
+if (HAS_POLLY)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly -mllvm -polly-parallel -lgomp -mllvm -polly-vectorizer=stripmine")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mllvm -polly -mllvm -polly-parallel -lgomp -mllvm -polly-vectorizer=stripmine")
+	if(HAS_POLLY_HYBRID)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=hybrid")
+		set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=cpu")
+	elseif(HAS_POLLY_CPU)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=cpu")
+		set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly-target=cpu")
+	endif()
 endif()
 
 
@@ -215,6 +237,7 @@ ${GLEW_INCLUDE_DIR}
 ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
+${Polly_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
@@ -259,6 +282,7 @@ endif()
 link_directories(
 "${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
 "${RPCS3_SRC_DIR}/../Vulkan"
+"${Polly_LIBRARY_DIRS}"
 )
 
 
@@ -329,6 +353,10 @@ else()
 endif()
 
 add_dependencies(rpcs3 GitVersion)
+
+if(Polly_FOUND)
+	target_link_libraries(rpcs3 Polly PollyISL PollyPPCG)
+endif()
 
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)

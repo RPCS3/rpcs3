@@ -40,6 +40,12 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Vectorize.h"
+
+#ifdef POLLY_AVAILABLE
+#include <polly/RegisterPasses.h>
+#include <polly/ScopDetection.h>
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -1336,6 +1342,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		}
 	}
 
+#ifdef POLLY_AVAILABLE
+	PassRegistry &Registry = *PassRegistry::getPassRegistry();
+	polly::initializePollyPasses(Registry);
+	initializeAnalysis(Registry);
+#endif
 	std::shared_ptr<MsgDialogBase> dlg;
 
 	{
@@ -1353,6 +1364,9 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createLoopInstSimplifyPass());
 		//pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
+#ifdef POLLY_AVAILABLE
+		polly::registerPollyPasses(pm);
+#endif
 		//pm.add(createSCCPPass());
 		//pm.add(createReassociatePass());
 		//pm.add(createInstructionCombiningPass());
