@@ -125,8 +125,13 @@ namespace
 		u32 min_block_size = std::min(src_stride, dst_stride);
 		if (min_block_size == 0) min_block_size = dst_stride;
 
-		const u32 remainder = is_128_aligned? 0:  (16 - min_block_size) / min_block_size;
-		const u32 iterations = is_128_aligned? vertex_count: vertex_count - remainder;
+		u32 iterations = 0;
+		u32 remainder = is_128_aligned ? 0 : 1 + ((16 - min_block_size) / min_block_size);
+
+		if (vertex_count > remainder)
+			iterations = vertex_count - remainder;
+		else
+			remainder = vertex_count;
 
 		for (u32 i = 0; i < iterations; ++i)
 		{
@@ -168,8 +173,13 @@ namespace
 		u32 min_block_size = std::min(src_stride, dst_stride);
 		if (min_block_size == 0) min_block_size = dst_stride;
 
-		const u32 remainder = is_128_aligned ? 0 : (16 - min_block_size) / min_block_size;
-		const u32 iterations = is_128_aligned ? vertex_count : vertex_count - remainder;
+		u32 iterations = 0;
+		u32 remainder = is_128_aligned ? 0 : 1 + ((16 - min_block_size) / min_block_size);
+
+		if (vertex_count > remainder)
+			iterations = vertex_count - remainder;
+		else
+			remainder = vertex_count;
 
 		for (u32 i = 0; i < iterations; ++i)
 		{
