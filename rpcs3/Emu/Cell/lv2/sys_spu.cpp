@@ -158,6 +158,13 @@ error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	return CELL_OK;
 }
 
+error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, u32 ptr1, u32 ptr2)
+{
+	sys_spu.todo("_sys_spu_image_get_information(img=*0x%x, 1=*0x%x, 2=*0x%x)", img, ptr1, ptr2);
+
+	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_get_information");
+}
+
 error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
@@ -173,6 +180,27 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 	img->load(elf_file);
 
 	return CELL_OK;
+}
+
+error_code _sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 arg3, u32 arg4)
+{
+	sys_spu.todo("_sys_spu_image_import(img=*0x%x, src=*0x%x, arg3=0x%x, arg4=0x%x)", img, src, arg3, arg4);
+
+	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_import");
+}
+
+error_code _sys_spu_image_close(vm::ptr<sys_spu_image> img)
+{
+	sys_spu.todo("_sys_spu_image_close(img=*0x%x)", img);
+
+	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_close");
+}
+
+error_code _sys_raw_spu_image_load(vm::ptr<sys_spu_image> img, u32 ptr, u32 arg3)
+{
+	sys_spu.todo("_sys_raw_spu_image_load(img=*0x%x, ptr=*0x%x, arg3=0x%x)", img, ptr, arg3);
+
+	fmt::throw_exception("Unimlemented syscall: _sys_raw_spu_image_load");
 }
 
 error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
