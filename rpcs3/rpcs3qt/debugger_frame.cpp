@@ -1,5 +1,6 @@
 #include "debugger_frame.h"
 
+#include <QScrollBar>
 #include <QSplitter>
 #include <QApplication>
 #include <QFontDatabase>
@@ -293,9 +294,10 @@ void debugger_frame::WriteRegs()
 		m_regs->clear();
 		return;
 	}
-
+	int loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
 	m_regs->setText(qstr(cpu->dump()));
+	m_regs->verticalScrollBar()->setValue(loc);
 }
 
 void debugger_frame::OnUpdate()
