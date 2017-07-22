@@ -165,6 +165,11 @@ enum CellSysutilBgmPlaybackStatusEnabled
 	CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE = 1
 };
 
+enum
+{
+	CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID = -1
+};
+
 struct CellSysutilBgmPlaybackStatus
 {
 	u8 playerState;

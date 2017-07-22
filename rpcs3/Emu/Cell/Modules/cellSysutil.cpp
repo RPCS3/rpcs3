@@ -332,7 +332,11 @@ s32 cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> par
 	cellSysutil.warning("cellSysutilEnableBgmPlaybackEx(param=*0x%x)", param);
 
 	// TODO
-	g_bgm_playback_enabled = true; 
+	g_bgm_playback_enabled = true;
+	param->systemBgmFadeInTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->systemBgmFadeOutTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->gameBgmFadeInTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->gameBgmFadeOutTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
 
 	return CELL_OK;
 }
@@ -353,6 +357,10 @@ s32 cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> pa
 
 	// TODO
 	g_bgm_playback_enabled = false;
+	param->systemBgmFadeInTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->systemBgmFadeOutTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->gameBgmFadeInTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->gameBgmFadeOutTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
 
 	return CELL_OK;
 }
@@ -382,9 +390,16 @@ s32 cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> stat
 	return CELL_OK;
 }
 
-s32 cellSysutilSetBgmPlaybackExtraParam()
+s32 cellSysutilSetBgmPlaybackExtraParam(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil.todo("cellSysutilSetBgmPlaybackExtraParam()");
+	cellSysutil.warning("cellSysutilSetBgmPlaybackExtraParam(param=*0x%x)", param);
+
+	// TODO
+	param->systemBgmFadeInTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->systemBgmFadeOutTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->gameBgmFadeInTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+	param->gameBgmFadeOutTime = CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID;
+
 	return CELL_OK;
 }
 
