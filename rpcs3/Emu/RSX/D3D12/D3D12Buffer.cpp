@@ -468,7 +468,7 @@ D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList* comma
 	return std::apply_visitor(
 		draw_command_visitor(command_list, m_buffer_data, m_vertex_buffer_data.Get(),
 			[this](
-				const auto& state, const auto& list) { return get_vertex_buffers(state, list); }),
+				const auto& state, const auto& list) { return get_vertex_buffers(state, list, 0); }),
 		get_draw_command(rsx::method_registers));
 }
 

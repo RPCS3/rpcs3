@@ -1507,6 +1507,18 @@ s32 sceNpScoreGetRankingByRangeAsync()
 	return CELL_OK;
 }
 
+s32 sceNpScoreGetFriendsRanking()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpScoreGetFriendsRankingAsync()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
 s32 sceNpScoreCensorComment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
@@ -2009,6 +2021,8 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, sceNpScoreGetRankingByNpIdAsync);
 	REG_FUNC(sceNp, sceNpScoreGetRankingByRange);
 	REG_FUNC(sceNp, sceNpScoreGetRankingByRangeAsync);
+	REG_FUNC(sceNp, sceNpScoreGetFriendsRanking);
+	REG_FUNC(sceNp, sceNpScoreGetFriendsRankingAsync);
 	REG_FUNC(sceNp, sceNpScoreCensorComment);
 	REG_FUNC(sceNp, sceNpScoreCensorCommentAsync);
 	REG_FUNC(sceNp, sceNpScoreSanitizeComment);

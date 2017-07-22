@@ -214,7 +214,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSsl.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellStorage.cpp" />
-    <ClCompile Include="Emu\Cell\Modules\cellSubdisplay.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSubDisplay.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSync2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysconf.cpp" />
@@ -593,7 +593,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSpudll.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSpurs.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSpursJq.h" />
-    <ClInclude Include="Emu\Cell\Modules\cellSubdisplay.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSubDisplay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSync.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSync2.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSysconf.h" />
