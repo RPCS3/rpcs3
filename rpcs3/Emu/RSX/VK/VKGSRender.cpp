@@ -809,6 +809,7 @@ void VKGSRender::begin()
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
 		flush_command_queue(true);
+		m_vertex_cache.purge();
 
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, descriptor_pool, 0));
 		m_last_descriptor_set = VK_NULL_HANDLE;
@@ -1533,6 +1534,8 @@ void VKGSRender::process_swap_request()
 	{
 		m_text_writer->reset_descriptors();
 	}
+
+	m_vertex_cache.purge();
 
 	m_swap_command_buffer = nullptr;
 }
