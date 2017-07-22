@@ -1413,13 +1413,6 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 
 	msg += fmt::format("RPCS3 image base: %p.\n", GetModuleHandle(NULL));
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION)
-	{
-		msg += "\n"
-			"Illegal instruction exception occured.\n"
-			"Note that your CPU must support SSSE3 extension.\n";
-	}
-
 	// TODO: print registers and the callstack
 
 	// Report fatal error
