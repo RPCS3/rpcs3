@@ -639,6 +639,8 @@ void main_window::SaveWindowState()
 
 	// Save column settings
 	gameListFrame->SaveSettings();
+	// Save splitter state
+	debuggerFrame->SaveSettings();
 }
 
 void main_window::RepaintToolBarIcons()
@@ -1224,7 +1226,7 @@ void main_window::CreateDockWindows()
 
 	gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
 	gameListFrame->setObjectName("gamelist");
-	debuggerFrame = new debugger_frame(m_mw);
+	debuggerFrame = new debugger_frame(guiSettings, m_mw);
 	debuggerFrame->setObjectName("debugger");
 	logFrame = new log_frame(guiSettings, m_mw);
 	logFrame->setObjectName("logger");
