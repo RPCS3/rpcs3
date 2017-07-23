@@ -55,3 +55,5 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id);
 error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout);
 error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id);
 error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id);
+
+constexpr auto _sys_rwlock_trywlock = sys_rwlock_trywlock;

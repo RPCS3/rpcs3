@@ -1163,6 +1163,12 @@ extern void ppu_initialize(const ppu_module& info)
 				sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
 			}
 
+			if (info.name == "liblv2.sprx")
+			{
+				const be_t<u64> forced_upd = 1;
+				sha1_update(&ctx, reinterpret_cast<const u8*>(&forced_upd), sizeof(forced_upd));
+			}
+
 			sha1_finish(&ctx, output);
 			fmt::append(obj_name, "-%016X-%s.obj", reinterpret_cast<be_t<u64>&>(output), jit->cpu());
 		}
@@ -1297,6 +1303,8 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 	}
+#else
+	fmt::throw_exception("LLVM is not available in this build.");
 #endif
 }
 

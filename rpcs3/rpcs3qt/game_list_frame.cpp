@@ -222,16 +222,16 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	connect(m_xgrid, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 	connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 
-	connect(m_Slider_Size, &QSlider::valueChanged, [=](int value) { RequestIconSizeActSet(value); });
+	connect(m_Slider_Size, &QSlider::valueChanged, this,  &game_list_frame::RequestIconSizeActSet);
 
 	connect(m_modeActs, &QActionGroup::triggered, [=](QAction* act) {
-		RequestListModeActSet(act == m_modeActList.action);
+		Q_EMIT RequestListModeActSet(act == m_modeActList.action);
 		m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 		m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 	});
 
 	connect(m_categoryActs, &QActionGroup::triggered, [=](QAction* act) {
-		RequestCategoryActSet(m_categoryActs->actions().indexOf(act));
+		Q_EMIT RequestCategoryActSet(m_categoryActs->actions().indexOf(act));
 	});
 
 	for (int col = 0; col < columnActs.count(); ++col)
@@ -549,7 +549,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	
 	if (1)
 	{
-		RequestIconPathSet(m_game_data[i].info.path);
+		Q_EMIT RequestIconPathSet(m_game_data[i].info.path);
 	
 		Emu.Stop();
 	
@@ -560,7 +560,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		else
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
-			RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
+			Q_EMIT RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[i].info.serial + "] " + m_game_data[i].info.name)));
 			Refresh(true);
 		}
 	}
@@ -682,7 +682,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 void game_list_frame::Boot(int row)
 {
-	RequestIconPathSet(m_game_data[row].info.path);
+	Q_EMIT RequestIconPathSet(m_game_data[row].info.path);
 
 	Emu.Stop();
 
@@ -694,7 +694,7 @@ void game_list_frame::Boot(int row)
 	else
 	{
 		LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
-		RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
+		Q_EMIT RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + m_game_data[row].info.serial + "] " + m_game_data[row].info.name)));
 		Refresh(true);
 	}
 }
@@ -819,7 +819,7 @@ void game_list_frame::RepaintToolBarIcons()
 void game_list_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	game_list_frameClosed();
+	Q_EMIT GameListFrameClosed();
 }
 
 void game_list_frame::resizeEvent(QResizeEvent *event)
