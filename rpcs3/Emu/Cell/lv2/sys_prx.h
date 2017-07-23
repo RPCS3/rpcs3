@@ -43,7 +43,14 @@ struct sys_prx_load_module_option_t
 	vm::ps3::bptr<void> base_addr;
 };
 
-struct sys_prx_segment_info_t;// TODO
+struct sys_prx_segment_info_t
+{
+	be_t<u64> base;
+	be_t<u64> filesz;
+	be_t<u64> memsz;
+	be_t<u64> index;
+	be_t<u64> type;
+};
 
 struct sys_prx_module_info_t
 {

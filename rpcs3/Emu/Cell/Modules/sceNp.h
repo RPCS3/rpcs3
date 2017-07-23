@@ -678,7 +678,7 @@ union SceNpSignalingConnectionInfo
 	SceNpId npId;
 	struct address {
 		be_t<u32> addr; // in_addr
-		//in_port_t port; // TODO: Implement this?
+		be_t<u16> port; // in_port_t
 	};
 	be_t<u32> packet_loss;
 };
