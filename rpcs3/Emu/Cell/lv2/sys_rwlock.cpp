@@ -418,7 +418,7 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 
 		if (auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
 		{
-			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty();
+			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
 			rwlock->awake(*cpu);
 		}
