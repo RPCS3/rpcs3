@@ -1303,6 +1303,8 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 	}
+#else
+	fmt::throw_exception("LLVM is not available in this build.");
 #endif
 }
 
