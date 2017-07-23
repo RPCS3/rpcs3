@@ -312,7 +312,7 @@ error_code _sys_prx_get_module_list(u64 flags, vm::ptr<sys_prx_get_module_list_o
 
 error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_info_option_t> pOpt)
 {
-	sys_prx.todo("_sys_prx_get_module_info(id=%d, flags=%d, pOpt=*0x%x)", id, flags, pOpt);
+	sys_prx.todo("_sys_prx_get_module_info(id=0x%x, flags=%d, pOpt=*0x%x)", id, flags, pOpt);
 	return CELL_OK;
 }
 
