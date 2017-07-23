@@ -636,7 +636,7 @@ namespace vk
 			region.create(width, height, 1, 1, nullptr, image, image->native_pitch, false);
 		}
 
-		void flush_memory_to_cache(const u32 memory_address, const u32 memory_size, vk::command_buffer&cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
+		bool flush_memory_to_cache(const u32 memory_address, const u32 memory_size, vk::command_buffer&cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue, bool skip_synchronized = false)
 		{
 			cached_texture_section* region = find_flushable_section(memory_address, memory_size);
 			
@@ -644,10 +644,14 @@ namespace vk
 			if (region == nullptr)
 			{
 				LOG_ERROR(RSX, "Failed to find section for render target 0x%X + 0x%X", memory_address, memory_size);
-				return;
+				return false;
 			}
 
+			if (skip_synchronized && region->is_synchronized())
+				return false;
+
 			region->copy_texture(cmd, memory_types.host_visible_coherent, submit_queue);
+			return true;
 		}
 
 		std::tuple<bool, bool> address_is_flushable(u32 address)
@@ -787,7 +791,7 @@ namespace vk
 				return;
 			}
 
-			auto value = It->second;
+			auto &value = It->second;
 
 			if (value.format != fmt || value.block_size != memory_size)
 			{
@@ -803,9 +807,9 @@ namespace vk
 			//Auto flush if this address keeps missing (not properly synchronized)
 			if (value.misses > 16)
 			{
-				//TODO: Determine better way of getting threshold
-				LOG_ERROR(RSX, "Flushing memory at 0x%X -> Cache miss avoided", memory_address);
-				flush_memory_to_cache(memory_address, memory_size, cmd, memory_types, submit_queue);
+				//TODO: Determine better way of setting threshold
+				if (!flush_memory_to_cache(memory_address, memory_size, cmd, memory_types, submit_queue, true))
+					value.misses --;
 			}
 		}
 	};
