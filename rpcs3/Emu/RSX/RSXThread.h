@@ -213,7 +213,7 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;
 		
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;

@@ -63,6 +63,9 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool isSca)
 			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
 
 		ret += fmt::format("o[%d]", d3.dst) + GetVecMaskDisasm();
+		// Vertex Program supports double destinations, notably in MOV
+		if (d0.dst_tmp != 0x3f)
+			ret += fmt::format(" R%d", d0.dst_tmp) + GetVecMaskDisasm();
 		break;
 	}
 

@@ -251,6 +251,7 @@ static const char* get_module_id(u16 id)
 	case 0xf034: return "CELL_SYSMODULE_SAIL_REC";
 	case 0xf035: return "CELL_SYSMODULE_SYSUTIL_NP_TROPHY";
 	case 0xf044: return "CELL_SYSMODULE_SYSUTIL_NP_EULA";
+	case 0xf053: return "CELL_SYSMODULE_ADEC_AT3MULTI";
 	case 0xf054: return "CELL_SYSMODULE_LIBATRAC3MULTI";
 	case 0xffff: return "CELL_SYSMODULE_INVALID";
 	}

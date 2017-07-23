@@ -25,7 +25,7 @@ struct lv2_timer final : public lv2_obj, public named_thread
 	void on_stop() override;
 
 	semaphore<> mutex;
-	atomic_t<u32> state{SYS_TIMER_STATE_RUN};
+	atomic_t<u32> state{SYS_TIMER_STATE_STOP};
 
 	std::weak_ptr<lv2_event_queue> port;
 	u64 source;

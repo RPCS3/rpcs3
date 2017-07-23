@@ -9,7 +9,7 @@
 #include <QDesktopWidget>
 
 #include "vfs_dialog.h"
-#include "save_data_utility.h"
+#include "save_data_list_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -94,10 +94,10 @@ void main_window::Init()
 
 	// for highdpi resize toolbar icons and height dynamically
 	// choose factors to mimic Gui-Design in main_window.ui
-	const int toolBarHeight = menuBar()->sizeHint().height() * 2;
+	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
 	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
 	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
-	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.625f);
+	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
 
 	CreateActions();
 	CreateDockWindows();
@@ -639,6 +639,8 @@ void main_window::SaveWindowState()
 
 	// Save column settings
 	gameListFrame->SaveSettings();
+	// Save splitter state
+	debuggerFrame->SaveSettings();
 }
 
 void main_window::RepaintToolBarIcons()
@@ -1224,7 +1226,7 @@ void main_window::CreateDockWindows()
 
 	gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
 	gameListFrame->setObjectName("gamelist");
-	debuggerFrame = new debugger_frame(m_mw);
+	debuggerFrame = new debugger_frame(guiSettings, m_mw);
 	debuggerFrame->setObjectName("debugger");
 	logFrame = new log_frame(guiSettings, m_mw);
 	logFrame->setObjectName("logger");

@@ -189,7 +189,7 @@ public:
 	static const ppu_static_module cellSpurs;
 	static const ppu_static_module cellSpursJq;
 	static const ppu_static_module cellSsl;
-	static const ppu_static_module cellSubdisplay;
+	static const ppu_static_module cellSubDisplay;
 	static const ppu_static_module cellSync;
 	static const ppu_static_module cellSync2;
 	static const ppu_static_module cellSysconf;
