@@ -1953,8 +1953,19 @@ void VKGSRender::prepare_rtts()
 		(*m_device), &*m_current_command_buffer, m_optimal_tiling_supported_formats, m_memory_type_mapping);
 
 	//Reset framebuffer information
+	VkFormat old_format = VK_FORMAT_UNDEFINED;
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
+		//Flush old address if we keep missing it
+		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		{
+			if (old_format == VK_FORMAT_UNDEFINED)
+				old_format = vk::get_compatible_surface_format(m_surface_info[i].color_format).first;
+
+			m_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height,
+				*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+		}
+
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
 		m_surface_info[i].width = clip_width;
 		m_surface_info[i].height = clip_height;
