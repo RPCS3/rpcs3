@@ -195,7 +195,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_time_get_current_time),                   //145 (0x091)
 	null_func,//BIND_FUNC(sys_time_get_system_time),        //146 (0x092)  ROOT
 	BIND_FUNC(sys_time_get_timebase_frequency),             //147 (0x093)
-	null_func,//BIND_FUNC(_sys_rwlock_trywlock)             //148 (0x094)
+	BIND_FUNC(_sys_rwlock_trywlock),                        //148 (0x094)
 	null_func,                                              //149 (0x095)  UNS
 	BIND_FUNC(sys_raw_spu_create_interrupt_tag),            //150 (0x096)
 	BIND_FUNC(sys_raw_spu_set_int_mask),                    //151 (0x097)
