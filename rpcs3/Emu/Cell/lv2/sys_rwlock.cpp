@@ -260,7 +260,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock) -> s64
 	{
 		const s64 val = rwlock.owner;
 
@@ -268,12 +268,12 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			if (rwlock.owner.compare_and_swap_test(0, ppu.id << 1))
 			{
-				return true;
+				return 0;
 			}
 		}
 		else if (val >> 1 == ppu.id)
 		{
-			return false;
+			return val;
 		}
 
 		semaphore_lock lock(rwlock.mutex);
@@ -294,10 +294,9 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			rwlock.wq.emplace_back(&ppu);
 			rwlock.sleep(ppu, timeout);
-			return false;
 		}
 
-		return true;
+		return _old;
 	});
 
 	if (!rwlock)
@@ -305,12 +304,12 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	if (rwlock.ret)
+	if (rwlock.ret == 0)
 	{
 		return CELL_OK;
 	}
 
-	if (rwlock->owner >> 1 == ppu.id)
+	if (rwlock.ret >> 1 == ppu.id)
 	{
 		return CELL_EDEADLK;
 	}
