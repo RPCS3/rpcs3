@@ -117,6 +117,7 @@ namespace GUI
 
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
+	const GUI_SAVE m_saveNotes = GUI_SAVE(meta, "saveNotes", QVariantMap());
 
 	const GUI_SAVE gs_resize = GUI_SAVE(gs_frame, "resize", false);
 	const GUI_SAVE gs_width  = GUI_SAVE(gs_frame, "width",  1280);
