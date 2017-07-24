@@ -33,6 +33,7 @@ bool operator ==(const u128& lhs, const u128& rhs)
 #endif
 
 extern u64 get_timebased_time();
+extern u64 get_system_time();
 
 extern thread_local u64 g_tls_fault_spu;
 
@@ -63,24 +64,40 @@ namespace spu
 	namespace scheduler
 	{
 		std::array<std::atomic<u8>, 65536> atomic_instruction_table = {};
-		constexpr u32 native_jiffy_duration_us = 2000000;
+		constexpr u32 native_jiffy_duration_us = 1500; //About 1ms resolution with a half offset
 
 		void acquire_pc_address(u32 pc, u32 timeout_ms = 3)
 		{
 			const u8 max_concurrent_instructions = (u8)g_cfg.core.preferred_spu_threads;
 			const u32 pc_offset = pc >> 2;
 
-			if (timeout_ms > 0)
+			if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
 			{
-				while (timeout_ms--)
+				if (timeout_ms > 0)
 				{
-					if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
-						std::this_thread::sleep_for(1ms);
+					const auto timeout = timeout_ms * 1000u; //convert to microseconds
+					const auto start = get_system_time();
+					auto remaining = timeout;
+
+					while (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
+					{
+						if (remaining >= native_jiffy_duration_us)
+							std::this_thread::sleep_for(1ms);
+						else
+							std::this_thread::yield();
+
+						const auto now = get_system_time();
+						const auto elapsed = now - start;
+
+						if (elapsed > timeout) break;
+						remaining = timeout - elapsed;
+					}
 				}
-			}
-			else
-			{
-				std::this_thread::yield();
+				else
+				{
+					//Slight pause if function is overburdened
+					thread_ctrl::wait_for(100);
+				}
 			}
 
 			atomic_instruction_table[pc_offset]++;
