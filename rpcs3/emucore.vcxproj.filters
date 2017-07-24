@@ -497,7 +497,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellStorage.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\Modules\cellSubdisplay.cpp">
+    <ClCompile Include="Emu\Cell\Modules\cellSubDisplay.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellSync.cpp">
@@ -1363,7 +1363,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSpursJq.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\Modules\cellSubdisplay.h">
+    <ClInclude Include="Emu\Cell\Modules\cellSubDisplay.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSync.h">

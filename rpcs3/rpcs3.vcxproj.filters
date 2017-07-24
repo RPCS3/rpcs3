@@ -60,6 +60,9 @@
       <Extensions>ui</Extensions>
       <ParseFiles>true</ParseFiles>
     </Filter>
+    <Filter Include="Gui\saves">
+      <UniqueIdentifier>{31799965-1274-4c87-83a3-3bff31e8715d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -266,24 +269,6 @@
     <ClCompile Include="rpcs3qt\rsx_debugger.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_dialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_utility.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_data_utility.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_utility.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_utility.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_data_utility.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_settings_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -461,15 +446,45 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_about_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_data_info_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_info_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_info_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_data_info_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_data_list_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_list_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_list_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_data_list_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\save_data_dialog.cpp">
+      <Filter>Gui\saves</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\save_data_info_dialog.cpp">
+      <Filter>Gui\saves</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\save_data_list_dialog.cpp">
+      <Filter>Gui\saves</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\save_data_dialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\table_item_delegate.h">
@@ -517,6 +532,9 @@
     <ClInclude Include="rpcs3qt\game_list.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\save_data_dialog.h">
+      <Filter>Gui\saves</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">
@@ -562,9 +580,6 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\rsx_debugger.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\save_data_utility.h">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\settings_dialog.h">
@@ -617,6 +632,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\about_dialog.h">
       <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\save_data_info_dialog.h">
+      <Filter>Gui\saves</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\save_data_list_dialog.h">
+      <Filter>Gui\saves</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

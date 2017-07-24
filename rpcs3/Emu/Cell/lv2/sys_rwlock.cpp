@@ -225,9 +225,9 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 		// Remove one reader
 		const s64 _old = rwlock->owner.fetch_op([](s64& val)
 		{
-			if (val < 0)
+			if (val < -1)
 			{
-				val++;
+				val += 2;
 			}
 		});
 

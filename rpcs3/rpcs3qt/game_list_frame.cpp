@@ -225,16 +225,16 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	connect(m_xgrid, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 	connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 
-	connect(m_Slider_Size, &QSlider::valueChanged, [=](int value) { RequestIconSizeActSet(value); });
+	connect(m_Slider_Size, &QSlider::valueChanged, this,  &game_list_frame::RequestIconSizeActSet);
 
 	connect(m_modeActs, &QActionGroup::triggered, [=](QAction* act) {
-		RequestListModeActSet(act == m_modeActList.action);
+		Q_EMIT RequestListModeActSet(act == m_modeActList.action);
 		m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 		m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 	});
 
 	connect(m_categoryActs, &QActionGroup::triggered, [=](QAction* act) {
-		RequestCategoryActSet(m_categoryActs->actions().indexOf(act));
+		Q_EMIT RequestCategoryActSet(m_categoryActs->actions().indexOf(act));
 	});
 
 	for (int col = 0; col < columnActs.count(); ++col)
@@ -680,7 +680,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 bool game_list_frame::Boot(const GameInfo& game)
 {
-	RequestIconPathSet(game.path);
+	Q_EMIT RequestIconPathSet(game.path);
 
 	Emu.Stop();
 
@@ -692,7 +692,7 @@ bool game_list_frame::Boot(const GameInfo& game)
 	}
 	else
 	{
-		RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
+		Q_EMIT RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
 		Refresh(true);
 		return true;
 	}
@@ -818,7 +818,7 @@ void game_list_frame::RepaintToolBarIcons()
 void game_list_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	game_list_frameClosed();
+	Q_EMIT GameListFrameClosed();
 }
 
 void game_list_frame::resizeEvent(QResizeEvent *event)

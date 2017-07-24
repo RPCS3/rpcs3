@@ -41,16 +41,21 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 {
 	std::string ret;
 
+	std::string mask = GetMask(isSca);
+
 	switch (isSca ? 0x1f : d3.dst)
 	{
 	case 0x1f:
-		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
+		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp)) + mask;
 		break;
 
 	default:
 		if (d3.dst > 15)
 			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
-		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)");
+		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)") + mask;
+		// Handle double destination register as 'dst_reg = tmp'
+		if (d0.dst_tmp != 0x3f)
+			ret += " = " + m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(d0.dst_tmp)) + mask;
 		break;
 	}
 
@@ -157,7 +162,7 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 	}
 	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
 	{
-		dest = GetDST(is_sca) + mask;
+		dest = GetDST(is_sca);
 	}
 
 	//std::string code;
@@ -309,7 +314,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	std::string cond = compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle.c_str(), getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	std::string cond = compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
 
 	ShaderVariable dst_var(dst);
 	dst_var.symplify();

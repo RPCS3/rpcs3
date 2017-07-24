@@ -50,6 +50,7 @@ namespace GUI
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
+	const QString debugger    = "Debugger";
 	const QString meta        = "Meta";
 	const QString fs          = "FileSystem";
 	const QString gs_frame    = "GSFrame";
@@ -103,20 +104,23 @@ namespace GUI
 	const GUI_SAVE gl_toolIconColor  = GUI_SAVE( game_list, "toolIconColor",  gl_tool_icon_color);
 
 	const GUI_SAVE fs_emulator_dir_list = GUI_SAVE(fs, "emulator_dir_list", QStringList());
-	const GUI_SAVE fs_dev_hdd0_list = GUI_SAVE(fs, "dev_hdd0_list", QStringList());
-	const GUI_SAVE fs_dev_hdd1_list = GUI_SAVE(fs, "dev_hdd1_list", QStringList());
-	const GUI_SAVE fs_dev_flash_list = GUI_SAVE(fs, "dev_flash_list", QStringList());
-	const GUI_SAVE fs_dev_usb000_list = GUI_SAVE(fs, "dev_usb000_list", QStringList());
+	const GUI_SAVE fs_dev_hdd0_list     = GUI_SAVE(fs, "dev_hdd0_list",     QStringList());
+	const GUI_SAVE fs_dev_hdd1_list     = GUI_SAVE(fs, "dev_hdd1_list",     QStringList());
+	const GUI_SAVE fs_dev_flash_list    = GUI_SAVE(fs, "dev_flash_list",    QStringList());
+	const GUI_SAVE fs_dev_usb000_list   = GUI_SAVE(fs, "dev_usb000_list",   QStringList());
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );
 	const GUI_SAVE l_stack = GUI_SAVE( logger, "stack", false );
 
+	const GUI_SAVE d_splitterState = GUI_SAVE( debugger, "splitterState", QByteArray());
+
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
+	const GUI_SAVE m_saveNotes = GUI_SAVE(meta, "saveNotes", QVariantMap());
 
 	const GUI_SAVE gs_resize = GUI_SAVE(gs_frame, "resize", false);
-	const GUI_SAVE gs_width = GUI_SAVE(gs_frame, "width", 1280);
+	const GUI_SAVE gs_width  = GUI_SAVE(gs_frame, "width",  1280);
 	const GUI_SAVE gs_height = GUI_SAVE(gs_frame, "height", 720);
 }
 

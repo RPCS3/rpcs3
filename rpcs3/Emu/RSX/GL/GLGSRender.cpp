@@ -838,9 +838,14 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 	{
 	case NV4097_CLEAR_SURFACE:
 	{
-		init_buffers(true);
-		synchronize_buffers();
-		clear_surface(arg);
+		if (arg & 0xF3)
+		{
+			//Only do all this if we have actual work to do
+			init_buffers(true);
+			synchronize_buffers();
+			clear_surface(arg);
+		}
+
 		return true;
 	}
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:

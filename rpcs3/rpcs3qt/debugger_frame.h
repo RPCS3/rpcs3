@@ -17,6 +17,7 @@
 
 #include "instruction_editor_dialog.h"
 #include "register_editor_dialog.h"
+#include "gui_settings.h"
 
 #include <QDockWidget>
 #include <QListWidget>
@@ -26,6 +27,7 @@
 #include <QWheelEvent>
 #include <QTimer>
 #include <QTextEdit>
+#include <QSplitter>
 
 class debugger_list;
 
@@ -53,17 +55,21 @@ class debugger_frame : public QDockWidget
 	u32 m_last_stat = 0;
 
 	QTimer* update;
+	QSplitter* m_splitter;
 
 	const QString NoThread = tr("No Thread");
 	const QString Run = tr("Run");
 	const QString Pause = tr("Pause");
+
+	std::shared_ptr<gui_settings> xgui_settings;
 
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
 	std::weak_ptr<cpu_thread> cpu;
 
 public:
-	explicit debugger_frame(QWidget *parent = 0);
+	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
+	void SaveSettings();
 
 	void UpdateUI();
 	void UpdateUnitList();
@@ -80,6 +86,8 @@ public:
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
+	void showEvent(QShowEvent* event);
+	void hideEvent(QHideEvent* event);
 
 Q_SIGNALS:
 	void DebugFrameClosed();
