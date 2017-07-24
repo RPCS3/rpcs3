@@ -63,7 +63,7 @@
 			"resBox": "Leave this on 1280x720, every PS3 game is compatible with this resolution.\nSet it to 1920x1080 only if supported by the game. Lower resolutions may work but are not practical.\nHowever rarely due to emulation bugs some games will only render at low resolutions like 480p.",
 			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
 			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well especially if you use a resolution that is not 720p.",
-			"frameLimitBox": "Auto is the most compatible option.\nSome games can work with frame limit off, but it may cause bugs and crashes.\nSet to off if you get severe hitching and stuttering."
+			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the framerate is too high.\nIf that happens, set value to anything other than Off."
 		},
 		"main": {
 			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
