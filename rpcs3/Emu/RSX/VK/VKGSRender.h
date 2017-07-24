@@ -90,6 +90,49 @@ struct command_buffer_chunk: public vk::command_buffer
 	}
 };
 
+struct weak_vertex_cache
+{
+	struct uploaded_range
+	{
+		u32 offset_in_heap;
+
+		VkFormat buffer_format;
+		uintptr_t local_address;
+		u32 data_length;
+	};
+
+private:
+	std::vector<uploaded_range> vertex_ranges;
+public:
+
+	uploaded_range* find_vertex_range(uintptr_t local_addr, VkFormat fmt, u32 data_length)
+	{
+		for (auto &v : vertex_ranges)
+		{
+			if (v.local_address == local_addr && v.buffer_format == fmt && v.data_length == data_length)
+				return &v;
+		}
+
+		return nullptr;
+	}
+
+	void store_range(uintptr_t local_addr, VkFormat fmt, u32 data_length, u32 offset_in_heap)
+	{
+		uploaded_range v = {};
+		v.buffer_format = fmt;
+		v.data_length = data_length;
+		v.local_address = local_addr;
+		v.offset_in_heap = offset_in_heap;
+
+		vertex_ranges.push_back(v);
+	}
+
+	void purge()
+	{
+		vertex_ranges.resize(0);
+	}
+};
+
 class VKGSRender : public GSRender
 {
 private:
@@ -114,6 +157,7 @@ private:
 
 public:
 	//vk::fbo draw_fbo;
+	weak_vertex_cache m_vertex_cache;
 
 private:
 	VKProgramBuffer m_prog_buffer;
