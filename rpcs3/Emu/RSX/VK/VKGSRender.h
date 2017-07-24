@@ -16,6 +16,9 @@
 
 #pragma comment(lib, "VKstatic.1.lib")
 
+using namespace vk::vertex_cache;
+using null_vertex_cache = rsx::vertex_cache<uploaded_range, VkFormat>;
+
 //Heap allocation sizes in MB
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 256
 #define VK_UBO_RING_BUFFER_SIZE_M 32
@@ -90,49 +93,6 @@ struct command_buffer_chunk: public vk::command_buffer
 	}
 };
 
-struct weak_vertex_cache
-{
-	struct uploaded_range
-	{
-		u32 offset_in_heap;
-
-		VkFormat buffer_format;
-		uintptr_t local_address;
-		u32 data_length;
-	};
-
-private:
-	std::vector<uploaded_range> vertex_ranges;
-public:
-
-	uploaded_range* find_vertex_range(uintptr_t local_addr, VkFormat fmt, u32 data_length)
-	{
-		for (auto &v : vertex_ranges)
-		{
-			if (v.local_address == local_addr && v.buffer_format == fmt && v.data_length == data_length)
-				return &v;
-		}
-
-		return nullptr;
-	}
-
-	void store_range(uintptr_t local_addr, VkFormat fmt, u32 data_length, u32 offset_in_heap)
-	{
-		uploaded_range v = {};
-		v.buffer_format = fmt;
-		v.data_length = data_length;
-		v.local_address = local_addr;
-		v.offset_in_heap = offset_in_heap;
-
-		vertex_ranges.push_back(v);
-	}
-
-	void purge()
-	{
-		vertex_ranges.resize(0);
-	}
-};
-
 class VKGSRender : public GSRender
 {
 private:
@@ -157,7 +117,7 @@ private:
 
 public:
 	//vk::fbo draw_fbo;
-	weak_vertex_cache m_vertex_cache;
+	std::unique_ptr<null_vertex_cache> m_vertex_cache;
 
 private:
 	VKProgramBuffer m_prog_buffer;

@@ -252,10 +252,10 @@ namespace
 		vertex_buffer_visitor(u32 vtx_cnt, VkDevice dev, vk::vk_data_heap& heap,
 			vk::glsl::program* prog, VkDescriptorSet desc_set,
 			std::vector<std::unique_ptr<vk::buffer_view>>& buffer_view_to_clean,
-			weak_vertex_cache& vertex_cache)
+			rsx::vertex_cache<uploaded_range, VkFormat>* vertex_cache)
 			: vertex_count(vtx_cnt), m_attrib_ring_info(heap), device(dev), m_program(prog),
 			  descriptor_sets(desc_set), m_buffer_view_to_clean(buffer_view_to_clean),
-			  vertex_cache(&vertex_cache)
+			  vertex_cache(vertex_cache)
 		{
 		}
 
@@ -341,7 +341,7 @@ namespace
 		vk::glsl::program* m_program;
 		VkDescriptorSet descriptor_sets;
 		std::vector<std::unique_ptr<vk::buffer_view>>& m_buffer_view_to_clean;
-		weak_vertex_cache* vertex_cache;
+		rsx::vertex_cache<uploaded_range, VkFormat>* vertex_cache;
 	};
 
 	using attribute_storage = std::vector<std::variant<rsx::vertex_array_buffer,
@@ -470,7 +470,7 @@ namespace
 			const u32 vertex_count = vertex_max_index - min_index + 1;
 
 			vertex_buffer_visitor visitor(vertex_count, m_device,
-				m_attrib_ring_info, m_program, m_descriptor_sets, m_buffer_view_to_clean, rsxthr->m_vertex_cache);
+				m_attrib_ring_info, m_program, m_descriptor_sets, m_buffer_view_to_clean, rsxthr->m_vertex_cache.get());
 
 			const auto& vertex_buffers = get_vertex_buffers(
 				rsx::method_registers, {{min_index, vertex_max_index - min_index + 1}});
@@ -500,7 +500,7 @@ namespace
 					const VkFormat format = vk::get_suitable_vk_format(v.type, v.attribute_size);
 					const uintptr_t local_addr = (uintptr_t)v.data.data();
 
-					const auto cached = rsxthr->m_vertex_cache.find_vertex_range(local_addr, format, upload_size);
+					const auto cached = rsxthr->m_vertex_cache->find_vertex_range(local_addr, format, upload_size);
 					if (cached)
 					{
 						m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, format, cached->offset_in_heap, upload_size));
@@ -520,7 +520,7 @@ namespace
 						upload_jobs.push_back(i);
 
 						const uintptr_t local_addr = (uintptr_t)v.data.data();
-						rsxthr->m_vertex_cache.store_range(local_addr, format, upload_size, (u32)offset);
+						rsxthr->m_vertex_cache->store_range(local_addr, format, upload_size, (u32)offset);
 
 						m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, format, offset, upload_size));
 						m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[v.index], m_descriptor_sets);

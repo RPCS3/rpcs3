@@ -626,6 +626,11 @@ VKGSRender::VKGSRender() : GSRender()
 		m_text_writer.reset(new vk::text_writer());
 		m_text_writer->init(*m_device, m_memory_type_mapping, m_render_passes[idx]);
 	}
+
+	if (g_cfg.video.disable_vertex_cache)
+		m_vertex_cache.reset(new null_vertex_cache());
+	else
+		m_vertex_cache.reset(new vk::vertex_cache::weak_vertex_cache());
 }
 
 VKGSRender::~VKGSRender()
@@ -809,7 +814,7 @@ void VKGSRender::begin()
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
 		flush_command_queue(true);
-		m_vertex_cache.purge();
+		m_vertex_cache->purge();
 
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, descriptor_pool, 0));
 		m_last_descriptor_set = VK_NULL_HANDLE;
@@ -1264,6 +1269,8 @@ void VKGSRender::on_init_thread()
 
 	GSRender::on_init_thread();
 	rsx_thread = std::this_thread::get_id();
+
+	thread_ctrl::set_native_priority(1);
 }
 
 void VKGSRender::on_exit()
@@ -1535,7 +1542,7 @@ void VKGSRender::process_swap_request()
 		m_text_writer->reset_descriptors();
 	}
 
-	m_vertex_cache.purge();
+	m_vertex_cache->purge();
 
 	m_swap_command_buffer = nullptr;
 }
