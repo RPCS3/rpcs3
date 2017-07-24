@@ -169,6 +169,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	{
 		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_horizontal, clip_vertical);
 		framebuffer_status_valid = false;
+		return;
 	}
 
 	const auto pitchs = get_pitchs();

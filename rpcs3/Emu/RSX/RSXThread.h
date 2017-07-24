@@ -244,25 +244,30 @@ namespace rsx
 			gsl::span<gsl::byte> dst_span;
 			rsx::vertex_base_type type;
 			u32 vector_width;
+			u32 vertex_count;
 			u32 src_stride;
 			u8 dst_stride;
 		};
 
+		struct upload_stream_worker
+		{
+			std::shared_ptr<thread_ctrl> worker_thread;
+			std::vector<upload_stream_packet> packets;
+			std::atomic<int> thread_status = { 0 };
+		};
+
 		struct upload_stream_task
 		{
-			std::vector<upload_stream_packet> packets;
-			std::atomic<int> remaining_packets = { 0 };
-			std::atomic<int> ready_threads = { 0 };
-			std::atomic<u32> vertex_count;
-
-			std::vector<std::shared_ptr<thread_ctrl>> processing_threads;
+			std::array<upload_stream_worker, 16> worker_threads;
+			int available_threads = 0;
+			std::atomic<int> remaining_tasks = {0};
 		};
 
 		upload_stream_task m_vertex_streaming_task;
 		void post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type,
-				u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride,
+				u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, u32 vertex_count,
 			std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback);
-		void start_vertex_upload_task(u32 vertex_count);
+		void start_vertex_upload_task();
 		void wait_for_vertex_upload_task();
 		bool vertex_upload_task_ready();
 
