@@ -23,6 +23,7 @@
 #include <unordered_set>
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, const GameInfo* game)
 	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog)
@@ -31,6 +32,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->cancelButton->setDefault(true);
 	ui->tabWidget->setUsesScrollButtons(false);
 	ui->tabWidget->setCurrentIndex(tabIndex);
+
+	bool showDebugTab = xgui_settings->GetValue(GUI::m_showDebugTab).toBool();
+	xgui_settings->SetValue(GUI::m_showDebugTab, showDebugTab);
+	if (!showDebugTab)
+	{
+		ui->tabWidget->removeTab(7);
+	}
 
 	// read tooltips from json
 	QFile json_file(":/Json/tooltips.json");
@@ -42,10 +50,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	QJsonObject json_cpu_ppu = json_cpu.value("PPU").toObject();
 	QJsonObject json_cpu_spu = json_cpu.value("SPU").toObject();
 	QJsonObject json_cpu_cbs = json_cpu.value("checkboxes").toObject();
+	QJsonObject json_cpu_cbo = json_cpu.value("comboboxes").toObject();
 	QJsonObject json_cpu_lib = json_cpu.value("libraries").toObject();
 
 	QJsonObject json_gpu = json_obj.value("gpu").toObject();
-	QJsonObject json_gpu_cbs = json_gpu.value("comboboxes").toObject();
+	QJsonObject json_gpu_cbo = json_gpu.value("comboboxes").toObject();
 	QJsonObject json_gpu_main = json_gpu.value("main").toObject();
 	QJsonObject json_gpu_deb = json_gpu.value("debug").toObject();
 
@@ -57,6 +66,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	QJsonObject json_emu = json_obj.value("emulator").toObject();
 	QJsonObject json_emu_gui = json_emu.value("gui").toObject();
 	QJsonObject json_emu_misc = json_emu.value("misc").toObject();
+
+	QJsonObject json_debug = json_obj.value("debug").toObject();
 
 	std::shared_ptr<emu_settings> xemu_settings;
 	if (game)
@@ -98,6 +109,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
 	// Checkboxes
+
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	ui->hookStFunc->setToolTip(json_cpu_cbs["hookStFunc"].toString());
 
@@ -106,6 +118,33 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->lowerSPUThrPrio, emu_settings::LowerSPUThreadPrio);
 	ui->lowerSPUThrPrio->setToolTip(json_cpu_cbs["lowerSPUThrPrio"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings::SPULoopDetection);
+	ui->spuLoopDetection->setToolTip(json_cpu_cbs["spuLoopDetection"].toString());
+
+	// Comboboxes
+
+	// TODO implement enhancement for combobox / spinbox with proper range
+	//xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads);
+	const QString Auto = tr("Auto");
+	ui->preferredSPUThreads->setToolTip(json_cpu_cbo["preferredSPUThreads"].toString());
+	for (int i = 0; i <= 6; i++)
+	{
+		ui->preferredSPUThreads->addItem( i == 0 ? Auto : QString::number(i), QVariant(i) );
+	}
+	const QString valueOf_PreferredSPUThreads = qstr(xemu_settings->GetSetting(emu_settings::PreferredSPUThreads));
+	int index = ui->preferredSPUThreads->findData(valueOf_PreferredSPUThreads == "0" ? Auto : valueOf_PreferredSPUThreads);
+	if (index == -1)
+	{
+		LOG_WARNING(GENERAL, "Current setting not found while creating preferredSPUThreads");
+	}
+	else
+	{
+		ui->preferredSPUThreads->setCurrentIndex(index);
+	}
+	connect(ui->preferredSPUThreads, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
+		xemu_settings->SetSetting(emu_settings::PreferredSPUThreads, std::to_string(ui->preferredSPUThreads->itemData(index).toInt()));
+	});
 
 	// PPU tool tips
 	ui->ppu_precise->setToolTip(json_cpu_ppu["precise"].toString());
@@ -325,32 +364,23 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
 	// Comboboxes
-	ui->graphicsAdapterBox->setToolTip(json_gpu_cbs["graphicsAdapterBox"].toString());
+	ui->graphicsAdapterBox->setToolTip(json_gpu_cbo["graphicsAdapterBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
-	ui->renderBox->setToolTip(json_gpu_cbs["renderBox"].toString());
+	ui->renderBox->setToolTip(json_gpu_cbo["renderBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
-	ui->resBox->setToolTip(json_gpu_cbs["resBox"].toString());
+	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
-	ui->aspectBox->setToolTip(json_gpu_cbs["aspectBox"].toString());
+	ui->aspectBox->setToolTip(json_gpu_cbo["aspectBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings::FrameLimit);
-	ui->frameLimitBox->setToolTip(json_gpu_cbs["frameLimitBox"].toString());
+	ui->frameLimitBox->setToolTip(json_gpu_cbo["frameLimitBox"].toString());
 
 	// Checkboxes: main options
 	xemu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings::WriteColorBuffers);
 	ui->dumpColor->setToolTip(json_gpu_main["dumpColor"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
-	ui->readColor->setToolTip(json_gpu_main["readColor"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
-	ui->dumpDepth->setToolTip(json_gpu_main["dumpDepth"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
-	ui->readDepth->setToolTip(json_gpu_main["readDepth"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->vsync, emu_settings::VSync);
 	ui->vsync->setToolTip(json_gpu_main["vsync"].toString());
@@ -363,25 +393,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
 	ui->stretchToDisplayArea->setToolTip(json_gpu_main["stretchToDisplayArea"].toString());
-
-	// Checkboxes: debug options
-	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
-	ui->glLegacyBuffers->setToolTip(json_gpu_deb["glLegacyBuffers"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
-	ui->scrictModeRendering->setToolTip(json_gpu_deb["scrictModeRendering"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->forceHighpZ, emu_settings::ForceHighpZ);
-	ui->forceHighpZ->setToolTip(json_gpu_deb["forceHighpZ"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->debugOutput, emu_settings::DebugOutput);
-	ui->debugOutput->setToolTip(json_gpu_deb["debugOutput"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->debugOverlay, emu_settings::DebugOverlay);
-	ui->debugOverlay->setToolTip(json_gpu_deb["debugOverlay"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->logProg, emu_settings::LogShaderPrograms);
-	ui->logProg->setToolTip(json_gpu_deb["logProg"].toString());
 
 	// Graphics Adapter
 	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
@@ -788,6 +799,46 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		AddStylesheets();
 	}
 
+	//    _____       _                   _______    _     
+	//   |  __ \     | |                 |__   __|  | |    
+	//   | |  | | ___| |__  _   _  __ _     | | __ _| |__  
+	//   | |  | |/ _ \ '_ \| | | |/ _` |    | |/ _` | '_ \ 
+	//   | |__| |  __/ |_) | |_| | (_| |    | | (_| | |_) |
+	//   |_____/ \___|_.__/ \__,_|\__, |    |_|\__,_|_.__/ 
+	//                             __/ |                   
+	//                            |___/                    
+
+	// Checkboxes: debug options
+	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
+	ui->glLegacyBuffers->setToolTip(json_debug["glLegacyBuffers"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
+	ui->scrictModeRendering->setToolTip(json_debug["scrictModeRendering"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->forceHighpZ, emu_settings::ForceHighpZ);
+	ui->forceHighpZ->setToolTip(json_debug["forceHighpZ"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->debugOutput, emu_settings::DebugOutput);
+	ui->debugOutput->setToolTip(json_debug["debugOutput"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->debugOverlay, emu_settings::DebugOverlay);
+	ui->debugOverlay->setToolTip(json_debug["debugOverlay"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->logProg, emu_settings::LogShaderPrograms);
+	ui->logProg->setToolTip(json_debug["logProg"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
+	ui->readColor->setToolTip(json_debug["readColor"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
+	ui->dumpDepth->setToolTip(json_debug["dumpDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
+	ui->readDepth->setToolTip(json_debug["readDepth"].toString());
+
+	//
+	// Layout fix for High Dpi
+	//
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 

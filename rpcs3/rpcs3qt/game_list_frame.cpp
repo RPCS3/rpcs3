@@ -476,7 +476,9 @@ void game_list_frame::Refresh(bool fromDrive)
 		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 		gameList->resizeRowsToContents();
 		gameList->resizeColumnToContents(0);
-		gameList->scrollTo(gameList->currentIndex());
+		gameList->scrollToTop();    // fix drunk scroll behaviour (may still not be perfect)
+		gameList->scrollToBottom(); // fix drunk scroll behaviour (may still not be perfect)
+		gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
 	}
 	else
 	{
