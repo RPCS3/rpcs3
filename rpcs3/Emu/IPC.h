@@ -7,7 +7,7 @@
 
 // IPC manager for objects of type T and IPC keys of type K.
 // External declaration of g_ipc is required.
-template<typename T, typename K>
+template <typename T, typename K>
 class ipc_manager final
 {
 	std::unordered_map<K, std::weak_ptr<T>> m_map;
@@ -18,18 +18,27 @@ class ipc_manager final
 
 public:
 	// Add new object if specified ipc_key is not used
-	template<typename F>
-	static bool add(const K& ipc_key, F&& provider)
+	template <typename F>
+	static bool add(const K& ipc_key, F&& provider, std::shared_ptr<T>* out = nullptr)
 	{
 		writer_lock lock(g_ipc.m_mutex);
 
 		// Get object location
 		std::weak_ptr<T>& wptr = g_ipc.m_map[ipc_key];
 
-		if (wptr.expired())
+		if ((out && !(*out = wptr.lock())) || wptr.expired())
 		{
 			// Call a function which must return the object
-			wptr = provider();
+			if (out)
+			{
+				*out = provider();
+				wptr = *out;
+			}
+			else
+			{
+				wptr = provider();
+			}
+
 			return true;
 		}
 

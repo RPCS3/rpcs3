@@ -45,11 +45,11 @@ struct lv2_event_flag final : lv2_obj
 	atomic_t<u64> pattern;
 	std::deque<cpu_thread*> sq;
 
-	lv2_event_flag(u32 protocol, s32 type, u64 name, u64 pattern)
+	lv2_event_flag(u32 protocol, u32 shared, u64 key, s32 flags, s32 type, u64 name, u64 pattern)
 		: protocol(protocol)
-		, shared(0)
-		, key(0)
-		, flags(0)
+		, shared(shared)
+		, key(key)
+		, flags(flags)
 		, type(type)
 		, name(name)
 		, pattern(pattern)

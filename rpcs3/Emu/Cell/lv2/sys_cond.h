@@ -30,14 +30,19 @@ struct lv2_cond final : lv2_obj
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_cond(u64 name, std::shared_ptr<lv2_mutex> mutex)
-		: shared(0)
-		, key(0)
-		, flags(0)
+	lv2_cond(u32 shared, s32 flags, u64 key, u64 name, std::shared_ptr<lv2_mutex> mutex)
+		: shared(shared)
+		, key(key)
+		, flags(flags)
 		, name(name)
 		, mutex(std::move(mutex))
 	{
 		this->mutex->cond_count++;
+	}
+
+	~lv2_cond()
+	{
+		this->mutex->cond_count--;
 	}
 };
 

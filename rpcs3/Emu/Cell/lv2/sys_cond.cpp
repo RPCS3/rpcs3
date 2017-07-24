@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -12,17 +13,13 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_cond("sys_cond");
 
+template<> DECLARE(ipc_manager<lv2_cond, u64>::g_ipc) {};
+
 extern u64 get_system_time();
 
 error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
 	sys_cond.warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
-
-	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
-	{
-		sys_cond.error("sys_cond_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
-		return CELL_EINVAL;
-	}
 
 	auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
 
@@ -31,13 +28,21 @@ error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_
 		return CELL_ESRCH;
 	}
 
-	if (const u32 id = idm::make<lv2_obj, lv2_cond>(attr->name_u64, std::move(mutex)))
+	if (auto error = lv2_obj::create<lv2_cond>(attr->pshared, attr->ipc_key, attr->flags, [&]
 	{
-		*cond_id = id;
-		return CELL_OK;
+		return std::make_shared<lv2_cond>(
+			attr->pshared,
+			attr->flags,
+			attr->ipc_key,
+			attr->name_u64,
+			std::move(mutex));
+	}))
+	{
+		return error;
 	}
 
-	return CELL_EAGAIN;
+	*cond_id = idm::last_id();
+	return CELL_OK;
 }
 
 error_code sys_cond_destroy(u32 cond_id)
@@ -51,7 +56,6 @@ error_code sys_cond_destroy(u32 cond_id)
 			return CELL_EBUSY;
 		}
 
-		cond.mutex->cond_count--;
 		return {};
 	});
 

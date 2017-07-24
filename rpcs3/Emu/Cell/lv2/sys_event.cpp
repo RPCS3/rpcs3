@@ -99,10 +99,12 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 		return CELL_EINVAL;
 	}
 
+	auto queue = std::make_shared<lv2_event_queue>(protocol, type, attr->name_u64, event_queue_key, size);
+
 	if (event_queue_key == SYS_EVENT_QUEUE_LOCAL)
 	{
 		// Not an IPC queue
-		if (const u32 _id = idm::make<lv2_obj, lv2_event_queue>(protocol, type, attr->name_u64, event_queue_key, size))
+		if (const u32 _id = idm::import_existing<lv2_obj, lv2_event_queue>(std::move(queue)))
 		{
 			*equeue_id = _id;
 			return CELL_OK;
@@ -111,25 +113,27 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 		return CELL_EAGAIN;
 	}
 
-	std::shared_ptr<lv2_event_queue> result;
-
 	// Create IPC queue
-	if (!ipc_manager<lv2_event_queue, u64>::add(event_queue_key, [&]() -> const std::shared_ptr<lv2_event_queue>&
+	if (!ipc_manager<lv2_event_queue, u64>::add(event_queue_key, [&]() -> std::shared_ptr<lv2_event_queue>
 	{
-		result = idm::make_ptr<lv2_obj, lv2_event_queue>(protocol, type, attr->name_u64, event_queue_key, size);
-		return result;
+		if (const u32 _id = idm::import_existing<lv2_obj, lv2_event_queue>(queue))
+		{
+			*equeue_id = _id;
+			return std::move(queue);
+		}
+
+		return nullptr;
 	}))
 	{
 		return CELL_EEXIST;
 	}
 
-	if (result)
+	if (queue)
 	{
-		*equeue_id = idm::last_id();
-		return CELL_OK;
+		return CELL_EAGAIN;
 	}
 
-	return CELL_EAGAIN;
+	return CELL_OK;
 }
 
 error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)

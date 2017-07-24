@@ -32,11 +32,11 @@ struct lv2_rwlock final : lv2_obj
 	std::deque<cpu_thread*> rq;
 	std::deque<cpu_thread*> wq;
 
-	lv2_rwlock(u32 protocol, u64 name)
+	lv2_rwlock(u32 protocol, u32 shared, u64 key, s32 flags, u64 name)
 		: protocol(protocol)
-		, shared(0)
-		, key(0)
-		, flags(0)
+		, shared(shared)
+		, key(key)
+		, flags(flags)
 		, name(name)
 	{
 	}
