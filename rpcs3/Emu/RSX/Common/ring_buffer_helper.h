@@ -54,7 +54,7 @@ public:
 
 	size_t m_get_pos; // End of free space
 
-	void init(size_t heap_size, size_t min_guard_size=0x10000)
+	void init(size_t heap_size, size_t min_guard_size=0x200000)
 	{
 		m_size = heap_size;
 		m_put_pos = 0;
