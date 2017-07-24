@@ -293,17 +293,6 @@ struct SaveDataEntry
 	bool isNew;
 };
 
-namespace
-{
-	std::string getCBresultErrString(u32 cbresult) 
-	{
-		switch (cbresult)
-		{
-		default:
-			break;
-		}
-	}
-}
 
 class SaveDialogBase
 {
