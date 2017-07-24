@@ -3,13 +3,12 @@
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
 
+#include "game_list.h"
 #include "game_list_grid.h"
 #include "gui_settings.h"
 #include "emu_settings.h"
 
 #include <QDockWidget>
-#include <QList>
-#include <QTableWidget>
 #include <QMainWindow>
 #include <QToolBar>
 #include <QLineEdit>
@@ -163,6 +162,7 @@ typedef struct Tool_Bar_Button
 	QAction* action;
 	QIcon colored;
 	QIcon gray;
+	bool isActive;
 };
 
 class game_list_frame : public QDockWidget {
@@ -195,17 +195,17 @@ public Q_SLOTS:
 	void SetToolBarVisible(const bool& showToolBar);
 	void SetCategoryActIcon(const int& id, const bool& active);
 	void SetSearchText(const QString& text);
+	void RepaintToolBarIcons();
 
 private Q_SLOTS:
 	void Boot(int row);
 	void RemoveCustomConfiguration(int row);
 	void OnColClicked(int col);
-
 	void ShowContextMenu(const QPoint &pos);
 	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
 	void doubleClickedSlot(const QModelIndex& index);
 Q_SIGNALS:
-	void game_list_frameClosed();
+	void GameListFrameClosed();
 	void RequestIconPathSet(const std::string path);
 	void RequestAddRecentGame(const q_string_pair& entry);
 	void RequestIconSizeActSet(const int& idx);
@@ -231,7 +231,7 @@ private:
 	QToolBar* m_Tool_Bar;
 	QLineEdit* m_Search_Bar;
 	QSlider* m_Slider_Size;
-	QTableWidget *gameList;
+	game_list* gameList;
 	game_list_grid* m_xgrid;
 
 	// Actions regarding showing/hiding columns
@@ -257,7 +257,7 @@ private:
 	Tool_Bar_Button m_catActUnknown;
 	Tool_Bar_Button m_catActOther;
 
-	QList<Tool_Bar_Button> m_categoryButtons;
+	QList<Tool_Bar_Button*> m_categoryButtons;
 
 	QActionGroup* m_categoryActs;
 

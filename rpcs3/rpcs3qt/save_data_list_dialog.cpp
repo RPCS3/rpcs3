@@ -1,101 +1,47 @@
-#include "stdafx.h"
-#include "save_data_utility.h"
+﻿#include "stdafx.h"
+#include "save_data_list_dialog.h"
+#include "save_data_info_dialog.h"
+#include "gui_settings.h"
+
+#include <QPushButton>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QMenu>
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
-
-//Cause i can not decide what struct to be used to fill those. Just use no real data now.
-//Currently variable info isn't used. it supposed to be a container for the information passed by other.
-save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
-	: QDialog(parent), m_entry(save)
-{
-	setWindowTitle(tr("Save Data Information"));
-	setMinimumSize(QSize(400, 300));
-
-	// Table
-	m_list = new QTableWidget(this);
-	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
-	m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
-	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
-	m_list->setColumnCount(2);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Detail"));
-
-	// Buttons
-	QPushButton* close_button = new QPushButton(tr("&Close"), this);
-	connect(close_button, &QAbstractButton::clicked, this, &save_data_info_dialog::close);
-
-	// Button Layout
-	QHBoxLayout* hbox_actions = new QHBoxLayout();
-	hbox_actions->addStretch();	//Add a stretch to make Close on the Right-Down corner of this dialog.
-	hbox_actions->addWidget(close_button);
-
-	// Main Layout
-	QVBoxLayout* vbox_main = new QVBoxLayout();
-	vbox_main->addWidget(m_list, 1);
-	vbox_main->addLayout(hbox_actions, 0);
-	vbox_main->setAlignment(Qt::AlignCenter);
-	setLayout(vbox_main);
-
-	// resize to minimum view size
-	resize(minimumSize().expandedTo(sizeHint()));
-
-	UpdateData();
-}
-
-//This is intended to write the information of save data to QTableView.
-void save_data_info_dialog::UpdateData()
-{
-	m_list->clearContents();
-	m_list->setRowCount(4); // set this to nr of members in struct
-
-	//Maybe there should be more details of save data.
-	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
-	m_list->setItem(0, 1, new QTableWidgetItem("00000001 (Default)"));
-
-	m_list->setItem(1, 0, new QTableWidgetItem(tr("Title")));
-	m_list->setItem(1, 1, new QTableWidgetItem(qstr(m_entry.title)));
-
-	m_list->setItem(2, 0, new QTableWidgetItem(tr("Subtitle")));
-	m_list->setItem(2, 1, new QTableWidgetItem(qstr(m_entry.subtitle)));
-
-	m_list->setItem(3, 0, new QTableWidgetItem(tr("Detail")));
-	m_list->setItem(3, 1, new QTableWidgetItem(qstr(m_entry.details)));
-
-	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-}
 
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
 	: QDialog(parent), m_save_entries(entries), m_selectedEntry(-1), selectedEntryLabel(nullptr)
 {
-	setWindowTitle(tr("Save Data Utility"));
+	setWindowTitle(tr("Save Data Interface"));
 	setMinimumSize(QSize(400, 400));
 
 	// Table
 	m_list = new QTableWidget(this);
+
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
-	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
-	m_list->setColumnCount(3);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID"));
+	m_list->setColumnCount(4);
+	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID") << tr("Entry Notes"));
 
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
-	QPushButton *push_cancel = new QPushButton(tr("&Cancel"), this);
-	push_cancel->setAutoDefault(false);
-	QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
-	push_select->setAutoDefault(true);
-	push_select->setDefault(true);
 
-	connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
-	hbox_action->addWidget(push_select);
-	setWindowTitle(tr("Save Data Chooser"));
+	if (entries.size() > 0)
+	{ // If there are no entries, don't add the selection widget or the selection label to the UI.
+		QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
+		connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
+		push_select->setAutoDefault(true);
+		push_select->setDefault(true);
+		hbox_action->addWidget(push_select);
 
-	selectedEntryLabel = new QLabel(this);
-	UpdateSelectionLabel();
+		selectedEntryLabel = new QLabel(this);
+		UpdateSelectionLabel();
+	}
 
 	if (is_saving)
 	{
@@ -108,6 +54,9 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	}
 
 	hbox_action->addStretch();
+
+	QPushButton *push_cancel = new QPushButton(tr("&Cancel"), this);
+	push_cancel->setAutoDefault(false);
 	hbox_action->addWidget(push_cancel);
 
 	// events
@@ -120,7 +69,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	// TODO: Unstub functions inside of this context menu so it makes sense to show this menu
 	//connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_data_list_dialog::ShowContextMenu);
-	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col){
+	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col) {
 		OnSort(col);
 	});
 
@@ -137,6 +86,16 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	LoadEntries();
 	UpdateList();
+
+	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col) {
+		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
+		SaveDataEntry originalEntry = m_save_entries[originalIndex];
+		QString originalDirName = qstr(originalEntry.dirName);
+		gui_settings settings(this);
+		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
+		currNotes[originalDirName] = m_list->item(row, col)->text();
+		settings.SetValue(GUI::m_saveNotes, currNotes);
+	});
 
 	m_list->setCurrentCell(focusedEntry, 0);
 }
@@ -175,7 +134,7 @@ s32 save_data_list_dialog::GetSelection()
 
 void save_data_list_dialog::OnSort(int idx)
 {
-	if ((idx < m_sort_type_count) && (idx >= 0))
+	if (idx >= 0)
 	{
 		if (idx == m_sortColumn)
 		{
@@ -279,18 +238,51 @@ void save_data_list_dialog::UpdateList(void)
 {
 	m_list->clearContents();
 	m_list->setRowCount(m_save_entries.size());
-	m_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	m_list->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	gui_settings settings(this);
 
 	int row = 0;
 	for (SaveDataEntry entry: m_save_entries)
-	{ 
-		QTableWidgetItem* item = new QTableWidgetItem(qstr(entry.title));
-		item->setData(Qt::UserRole, row); // For sorting to work properly
-		m_list->setItem(row, 0, item);
-		m_list->setItem(row, 1, new QTableWidgetItem(qstr(entry.subtitle)));
-		m_list->setItem(row, 2, new QTableWidgetItem(qstr(entry.dirName)));
+	{
+		QString title = qstr(entry.title);
+		QString subtitle = qstr(entry.subtitle);
+		QString dirName = qstr(entry.dirName);
 
+		QTableWidgetItem* titleItem = new QTableWidgetItem(title);
+		titleItem->setData(Qt::UserRole, row); // For sorting to work properly
+		titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
+
+		m_list->setItem(row, 0, titleItem);
+		QTableWidgetItem* subtitleItem = new QTableWidgetItem(subtitle);
+		subtitleItem->setFlags(subtitleItem->flags() & ~Qt::ItemIsEditable);
+		m_list->setItem(row, 1, subtitleItem);
+
+		QTableWidgetItem* dirNameItem = new QTableWidgetItem(dirName);
+		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
+		m_list->setItem(row, 2, dirNameItem);
+
+		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
+		QTableWidgetItem* noteItem = new QTableWidgetItem();
+		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
+		if (currNotes.contains(dirName))
+		{
+			noteItem->setText(currNotes[dirName].toString());
+		}
+		else
+		{
+			currNotes[dirName] = "";
+			settings.SetValue(GUI::m_saveNotes, currNotes);
+		}
+		m_list->setItem(row, 3, noteItem);
 		++row;
 	}
+
+	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
+	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
+
+	QSize tableSize = QSize(
+		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
+		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
+
+	resize(minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize));
+
 }

@@ -8,9 +8,11 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QColorDialog>
+#include <QSpinBox>
+#include <QApplication>
+#include <QDesktopWidget>
 
 #include "settings_dialog.h"
-#include "emu_settings.h"
 
 #include "ui_settings_dialog.h"
 
@@ -21,6 +23,7 @@
 #include <unordered_set>
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, const GameInfo* game)
 	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog)
@@ -29,6 +32,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->cancelButton->setDefault(true);
 	ui->tabWidget->setUsesScrollButtons(false);
 	ui->tabWidget->setCurrentIndex(tabIndex);
+
+	bool showDebugTab = xgui_settings->GetValue(GUI::m_showDebugTab).toBool();
+	xgui_settings->SetValue(GUI::m_showDebugTab, showDebugTab);
+	if (!showDebugTab)
+	{
+		ui->tabWidget->removeTab(7);
+	}
 
 	// read tooltips from json
 	QFile json_file(":/Json/tooltips.json");
@@ -40,10 +50,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	QJsonObject json_cpu_ppu = json_cpu.value("PPU").toObject();
 	QJsonObject json_cpu_spu = json_cpu.value("SPU").toObject();
 	QJsonObject json_cpu_cbs = json_cpu.value("checkboxes").toObject();
+	QJsonObject json_cpu_cbo = json_cpu.value("comboboxes").toObject();
 	QJsonObject json_cpu_lib = json_cpu.value("libraries").toObject();
 
 	QJsonObject json_gpu = json_obj.value("gpu").toObject();
-	QJsonObject json_gpu_cbs = json_gpu.value("comboboxes").toObject();
+	QJsonObject json_gpu_cbo = json_gpu.value("comboboxes").toObject();
 	QJsonObject json_gpu_main = json_gpu.value("main").toObject();
 	QJsonObject json_gpu_deb = json_gpu.value("debug").toObject();
 
@@ -55,6 +66,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	QJsonObject json_emu = json_obj.value("emulator").toObject();
 	QJsonObject json_emu_gui = json_emu.value("gui").toObject();
 	QJsonObject json_emu_misc = json_emu.value("misc").toObject();
+
+	QJsonObject json_debug = json_obj.value("debug").toObject();
 
 	std::shared_ptr<emu_settings> xemu_settings;
 	if (game)
@@ -81,6 +94,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
+		Q_EMIT ToolBarRepaintRequest();
 	});
 	connect(ui->okButton, &QAbstractButton::clicked, xemu_settings.get(), &emu_settings::SaveSettings);
 	connect(ui->okButton, &QAbstractButton::clicked, this, &QDialog::accept);
@@ -95,6 +109,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
 	// Checkboxes
+
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	ui->hookStFunc->setToolTip(json_cpu_cbs["hookStFunc"].toString());
 
@@ -104,28 +119,64 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->lowerSPUThrPrio, emu_settings::LowerSPUThreadPrio);
 	ui->lowerSPUThrPrio->setToolTip(json_cpu_cbs["lowerSPUThrPrio"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings::SPULoopDetection);
+	ui->spuLoopDetection->setToolTip(json_cpu_cbs["spuLoopDetection"].toString());
+
+	// Comboboxes
+
+	// TODO implement enhancement for combobox / spinbox with proper range
+	//xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads);
+	const QString Auto = tr("Auto");
+	ui->preferredSPUThreads->setToolTip(json_cpu_cbo["preferredSPUThreads"].toString());
+	for (int i = 0; i <= 6; i++)
+	{
+		ui->preferredSPUThreads->addItem( i == 0 ? Auto : QString::number(i), QVariant(i) );
+	}
+	const QString valueOf_PreferredSPUThreads = qstr(xemu_settings->GetSetting(emu_settings::PreferredSPUThreads));
+	int index = ui->preferredSPUThreads->findData(valueOf_PreferredSPUThreads == "0" ? Auto : valueOf_PreferredSPUThreads);
+	if (index == -1)
+	{
+		LOG_WARNING(GENERAL, "Current setting not found while creating preferredSPUThreads");
+	}
+	else
+	{
+		ui->preferredSPUThreads->setCurrentIndex(index);
+	}
+	connect(ui->preferredSPUThreads, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
+		xemu_settings->SetSetting(emu_settings::PreferredSPUThreads, std::to_string(ui->preferredSPUThreads->itemData(index).toInt()));
+	});
+
 	// PPU tool tips
 	ui->ppu_precise->setToolTip(json_cpu_ppu["precise"].toString());
 	ui->ppu_fast->setToolTip(json_cpu_ppu["fast"].toString());
 	ui->ppu_llvm->setToolTip(json_cpu_ppu["LLVM"].toString());
 
+	QButtonGroup *ppuBG = new QButtonGroup(this);
+	ppuBG->addButton(ui->ppu_precise, (int)ppu_decoder_type::precise);
+	ppuBG->addButton(ui->ppu_fast,    (int)ppu_decoder_type::fast);
+	ppuBG->addButton(ui->ppu_llvm,    (int)ppu_decoder_type::llvm);
+
 	{ // PPU Stuff
 		QString selectedPPU = qstr(xemu_settings->GetSetting(emu_settings::PPUDecoder));
-		for (const auto& button : ui->ppuBG->buttons())
+		QStringList ppu_list = xemu_settings->GetSettingOptions(emu_settings::PPUDecoder);
+
+		for (int i = 0; i < ppu_list.count(); i++)
 		{
-			QString current = button->text();
-			button->setCheckable(true);
-			if (current == selectedPPU)
+			ppuBG->button(i)->setText(ppu_list[i]);
+
+			if (ppu_list[i] == selectedPPU)
 			{
-				button->setChecked(true);
+				ppuBG->button(i)->setChecked(true);
 			}
+
 #ifndef LLVM_AVAILABLE
-			if (current == "Recompiler (LLVM)")
+			if (ppu_list[i].toLower().contains("llvm"))
 			{
-				button->setEnabled(false);
+				ppuBG->button(i)->setEnabled(false);
 			}
 #endif
-			connect(button, &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(current)); });
+
+			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i])); });
 		}
 	}
 
@@ -135,21 +186,26 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->spu_asmjit->setToolTip(json_cpu_spu["ASMJIT"].toString());
 	ui->spu_llvm->setToolTip(json_cpu_spu["LLVM"].toString());
 
+	QButtonGroup *spuBG = new QButtonGroup(this);
+	spuBG->addButton(ui->spu_precise, (int)spu_decoder_type::precise);
+	spuBG->addButton(ui->spu_fast,    (int)spu_decoder_type::fast);
+	spuBG->addButton(ui->spu_asmjit,  (int)spu_decoder_type::asmjit);
+	spuBG->addButton(ui->spu_llvm,    (int)spu_decoder_type::llvm);
+
 	{ // Spu stuff
 		QString selectedSPU = qstr(xemu_settings->GetSetting(emu_settings::SPUDecoder));
-		for (const auto& button : ui->spuBG->buttons())
+		QStringList spu_list = xemu_settings->GetSettingOptions(emu_settings::SPUDecoder);
+
+		for (int i = 0; i < spu_list.count(); i++)
 		{
-			QString current = button->text();
-			if (current == "Recompiler (LLVM)")
+			spuBG->button(i)->setText(spu_list[i]);
+
+			if (spu_list[i] == selectedSPU)
 			{
-				button->setEnabled(false);
+				spuBG->button(i)->setChecked(true);
 			}
-			button->setCheckable(true);
-			if (current == selectedSPU)
-			{
-				button->setChecked(true);
-			}
-			connect(button, &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(current)); });
+
+			connect(spuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i])); });
 		}
 	}
 
@@ -161,22 +217,25 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	// creating this in ui file keeps scrambling the order...
 	QButtonGroup *libModeBG = new QButtonGroup(this);
-	libModeBG->addButton(ui->lib_auto, 0);
-	libModeBG->addButton(ui->lib_manu, 1);
-	libModeBG->addButton(ui->lib_both, 2);
-	libModeBG->addButton(ui->lib_lv2,  3);
+	libModeBG->addButton(ui->lib_auto, (int)lib_loading_type::automatic);
+	libModeBG->addButton(ui->lib_manu, (int)lib_loading_type::manual);
+	libModeBG->addButton(ui->lib_both, (int)lib_loading_type::both);
+	libModeBG->addButton(ui->lib_lv2,  (int)lib_loading_type::liblv2only);
 
 	{// Handle lib loading options
 		QString selectedLib = qstr(xemu_settings->GetSetting(emu_settings::LibLoadOptions));
-		for (const auto& button : libModeBG->buttons())
+		QStringList libmode_list = xemu_settings->GetSettingOptions(emu_settings::LibLoadOptions);
+
+		for (int i = 0; i < libmode_list.count(); i++)
 		{
-			QString current = button->text();
-			button->setCheckable(true);
-			if (current == selectedLib)
+			libModeBG->button(i)->setText(libmode_list[i]);
+
+			if (libmode_list[i] == selectedLib)
 			{
-				button->setChecked(true);
+				libModeBG->button(i)->setChecked(true);
 			}
-			connect(button, &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(current)); });
+
+			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i])); });
 		}
 	}
 
@@ -225,7 +284,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	auto l_OnLibButtonClicked = [=](int ind)
 	{
-		if (ind == 1 || ind == 2)
+		if (ind == (int)lib_loading_type::manual || ind == (int)lib_loading_type::both)
 		{
 			ui->searchBox->setEnabled(true);
 			ui->lleList->setEnabled(true);
@@ -313,32 +372,23 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
 	// Comboboxes
-	ui->graphicsAdapterBox->setToolTip(json_gpu_cbs["graphicsAdapterBox"].toString());
+	ui->graphicsAdapterBox->setToolTip(json_gpu_cbo["graphicsAdapterBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
-	ui->renderBox->setToolTip(json_gpu_cbs["renderBox"].toString());
+	ui->renderBox->setToolTip(json_gpu_cbo["renderBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
-	ui->resBox->setToolTip(json_gpu_cbs["resBox"].toString());
+	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
-	ui->aspectBox->setToolTip(json_gpu_cbs["aspectBox"].toString());
+	ui->aspectBox->setToolTip(json_gpu_cbo["aspectBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings::FrameLimit);
-	ui->frameLimitBox->setToolTip(json_gpu_cbs["frameLimitBox"].toString());
+	ui->frameLimitBox->setToolTip(json_gpu_cbo["frameLimitBox"].toString());
 
 	// Checkboxes: main options
 	xemu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings::WriteColorBuffers);
 	ui->dumpColor->setToolTip(json_gpu_main["dumpColor"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
-	ui->readColor->setToolTip(json_gpu_main["readColor"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
-	ui->dumpDepth->setToolTip(json_gpu_main["dumpDepth"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
-	ui->readDepth->setToolTip(json_gpu_main["readDepth"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->vsync, emu_settings::VSync);
 	ui->vsync->setToolTip(json_gpu_main["vsync"].toString());
@@ -351,25 +401,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
 	ui->stretchToDisplayArea->setToolTip(json_gpu_main["stretchToDisplayArea"].toString());
-
-	// Checkboxes: debug options
-	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
-	ui->glLegacyBuffers->setToolTip(json_gpu_deb["glLegacyBuffers"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
-	ui->scrictModeRendering->setToolTip(json_gpu_deb["scrictModeRendering"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->forceHighpZ, emu_settings::ForceHighpZ);
-	ui->forceHighpZ->setToolTip(json_gpu_deb["forceHighpZ"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->debugOutput, emu_settings::DebugOutput);
-	ui->debugOutput->setToolTip(json_gpu_deb["debugOutput"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->debugOverlay, emu_settings::DebugOverlay);
-	ui->debugOverlay->setToolTip(json_gpu_deb["debugOverlay"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->logProg, emu_settings::LogShaderPrograms);
-	ui->logProg->setToolTip(json_gpu_deb["logProg"].toString());
 
 	// Graphics Adapter
 	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
@@ -591,10 +622,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceComboBox(ui->cameraTypeBox, emu_settings::CameraType);
 	ui->cameraTypeBox->setToolTip(json_input["cameraTypeBox"].toString());
 
-	// Checkboxes
-
-	xemu_settings->EnhanceCheckBox(ui->useFakeCamera, emu_settings::Camera);
-	ui->useFakeCamera->setToolTip(json_input["useFakeCamera"].toString());
+	xemu_settings->EnhanceComboBox(ui->cameraBox, emu_settings::Camera);
+	ui->cameraBox->setToolTip(json_input["cameraBox"].toString());
 
 	//     _____           _                   _______    _     
 	//    / ____|         | |                 |__   __|  | |    
@@ -693,8 +722,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
-		auto colorDialog = [&](const GUI_SAVE& color, const QString& title){
-			QColorDialog dlg(xgui_settings->GetValue(color).value<QColor>(), this);
+		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button){
+			QColor oldColor = xgui_settings->GetValue(color).value<QColor>();
+			QColorDialog dlg(oldColor, this);
 			dlg.setWindowTitle(title);
 			dlg.setOptions(QColorDialog::ShowAlphaChannel);
 			for (int i = 0; i < dlg.customCount(); i++)
@@ -708,15 +738,115 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 					xgui_settings->SetCustomColor(i, dlg.customColor(i));
 				}
 				xgui_settings->SetValue(color, dlg.selectedColor());
+				button->setIcon(gui_settings::colorizedIcon(button->icon(), oldColor, dlg.selectedColor(), true));
 			}
 		};
-		connect(ui->pb_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, "Choose icon color"); });
-		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, "Choose tool bar color"); });
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color); });
+		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color); });
+		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color); });
+		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color); });
+
+		// colorize preview icons
+		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor()){
+			QLabel* text = new QLabel(button->text());
+			text->setAlignment(Qt::AlignCenter);
+			text->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+			if (icon.isNull())
+			{
+				QPixmap pixmap(100, 100);
+				pixmap.fill(color);
+				button->setIcon(pixmap);
+			}
+			else
+			{
+				button->setIcon(gui_settings::colorizedIcon(icon, iconColor, color));
+			}
+			button->setText("");
+			button->setStyleSheet("text-align:left;");
+			button->setLayout(new QGridLayout);
+			button->layout()->setContentsMargins(0, 0, 0, 0);
+			button->layout()->addWidget(text);
+		};
+		addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>());
+		addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
+		addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
+		addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(GUI::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color);
+
+		bool enableButtons = xgui_settings->GetValue(GUI::gs_resize).toBool();
+		ui->gs_resizeOnBoot->setChecked(enableButtons);
+		ui->gs_width->setEnabled(enableButtons);
+		ui->gs_height->setEnabled(enableButtons);
+
+		QRect rec = QApplication::desktop()->screenGeometry();
+		int width = xgui_settings->GetValue(GUI::gs_width).toInt();
+		int height = xgui_settings->GetValue(GUI::gs_height).toInt();
+		const int max_width = rec.width();
+		const int max_height = rec.height();
+		ui->gs_width->setValue(width < max_width ? width : max_width);
+		ui->gs_height->setValue(height < max_height ? height : max_height);
+
+		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val) {
+			xgui_settings->SetValue(GUI::gs_resize, val);
+			ui->gs_width->setEnabled(val);
+			ui->gs_height->setEnabled(val);
+		});
+		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w) {
+			int width = QApplication::desktop()->screenGeometry().width();
+			w = w > width ? width : w;
+			ui->gs_width->setValue(w);
+			xgui_settings->SetValue(GUI::gs_width, w);
+		});
+		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h) {
+			int height = QApplication::desktop()->screenGeometry().height();
+			h = h > height ? height : h;
+			ui->gs_height->setValue(h);
+			xgui_settings->SetValue(GUI::gs_height, h);
+		});
 
 		AddConfigs();
 		AddStylesheets();
 	}
 
+	//    _____       _                   _______    _     
+	//   |  __ \     | |                 |__   __|  | |    
+	//   | |  | | ___| |__  _   _  __ _     | | __ _| |__  
+	//   | |  | |/ _ \ '_ \| | | |/ _` |    | |/ _` | '_ \ 
+	//   | |__| |  __/ |_) | |_| | (_| |    | | (_| | |_) |
+	//   |_____/ \___|_.__/ \__,_|\__, |    |_|\__,_|_.__/ 
+	//                             __/ |                   
+	//                            |___/                    
+
+	// Checkboxes: debug options
+	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
+	ui->glLegacyBuffers->setToolTip(json_debug["glLegacyBuffers"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
+	ui->scrictModeRendering->setToolTip(json_debug["scrictModeRendering"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->forceHighpZ, emu_settings::ForceHighpZ);
+	ui->forceHighpZ->setToolTip(json_debug["forceHighpZ"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->debugOutput, emu_settings::DebugOutput);
+	ui->debugOutput->setToolTip(json_debug["debugOutput"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->debugOverlay, emu_settings::DebugOverlay);
+	ui->debugOverlay->setToolTip(json_debug["debugOverlay"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->logProg, emu_settings::LogShaderPrograms);
+	ui->logProg->setToolTip(json_debug["logProg"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
+	ui->readColor->setToolTip(json_debug["readColor"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
+	ui->dumpDepth->setToolTip(json_debug["dumpDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
+	ui->readDepth->setToolTip(json_debug["readDepth"].toString());
+
+	//
+	// Layout fix for High Dpi
+	//
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 

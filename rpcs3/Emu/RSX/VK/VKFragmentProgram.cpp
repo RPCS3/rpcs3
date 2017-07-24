@@ -102,8 +102,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	int location = 0;
-
+	int location = TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type != "sampler1D" &&
@@ -142,7 +141,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			inputs.push_back(in);
 
-			OS << "layout(set=0, binding=" << 19 + location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
+			OS << "layout(set=0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
 		}
 	}
 
@@ -169,7 +168,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "};\n";
 
 	vk::glsl::program_input in;
-	in.location = 1;
+	in.location = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
 	in.domain = vk::glsl::glsl_fragment_program;
 	in.name = "FragmentConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;

@@ -38,7 +38,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};\n";
 
 	vk::glsl::program_input in;
-	in.location = 0;
+	in.location = SCALE_OFFSET_BIND_SLOT;
 	in.domain = vk::glsl::glsl_vertex_program;
 	in.name = "ScaleOffsetBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
@@ -64,7 +64,6 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 	std::sort(input_data.begin(), input_data.end());
 
-	int location = 2;
 	for (const std::tuple<size_t, std::string> item : input_data)
 	{
 		for (const ParamType &PT : inputs)
@@ -74,7 +73,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 				if (PI.name == std::get<1>(item))
 				{
 					vk::glsl::program_input in;
-					in.location = location;
+					in.location = (int)std::get<0>(item) + VERTEX_BUFFERS_FIRST_BIND_SLOT;
 					in.domain = vk::glsl::glsl_vertex_program;
 					in.name = PI.name + "_buffer";
 					in.type = vk::glsl::input_type_texel_buffer;
@@ -92,7 +91,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					}
 
 					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(set = 0, binding=" << 3 + location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
+					OS << "layout(set = 0, binding=" << in.location << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
 				}
 			}
 		}
@@ -108,17 +107,15 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = 1;
+	in.location = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
 	in.domain = vk::glsl::glsl_vertex_program;
 	in.name = "VertexConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 
 	inputs.push_back(in);
 
-	//We offset this value by the index of the first fragment texture (19) below
-	//and allow 16 fragment textures to precede this slot
-	int location = 16;
 
+	int location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)
@@ -137,7 +134,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 
 				inputs.push_back(in);
 
-				OS << "layout(set = 0, binding=" << 19 + location++ << ") uniform " << PT.type << " " << PI.name << ";\n";
+				OS << "layout(set = 0, binding=" << location++ << ") uniform " << PT.type << " " << PI.name << ";\n";
 			}
 		}
 	}
@@ -146,8 +143,9 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 static const vertex_reg_info reg_table[] =
 {
 	{ "gl_Position", false, "dst_reg0", "", false },
-	{ "back_diff_color", true, "dst_reg1", "", false },
-	{ "back_spec_color", true, "dst_reg2", "", false },
+	//Technically these two are for both back and front
+	{ "back_diff_color", true, "dst_reg1", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE },
+	{ "back_spec_color", true, "dst_reg2", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR },
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
@@ -159,15 +157,15 @@ static const vertex_reg_info reg_table[] =
 	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClipFactor[0].w", false, "userClipEnabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
 	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClipFactor[1].x", false, "userClipEnabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
 	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClipFactor[1].y", false, "userClipEnabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "tc0", true, "dst_reg7", "", false },
-	{ "tc1", true, "dst_reg8", "", false },
-	{ "tc2", true, "dst_reg9", "", false },
-	{ "tc3", true, "dst_reg10", "", false },
-	{ "tc4", true, "dst_reg11", "", false },
-	{ "tc5", true, "dst_reg12", "", false },
-	{ "tc6", true, "dst_reg13", "", false },
-	{ "tc7", true, "dst_reg14", "", false },
-	{ "tc8", true, "dst_reg15", "", false },
+	{ "tc0", true, "dst_reg7", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
+	{ "tc1", true, "dst_reg8", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
+	{ "tc2", true, "dst_reg9", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
+	{ "tc3", true, "dst_reg10", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX3 },
+	{ "tc4", true, "dst_reg11", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX4 },
+	{ "tc5", true, "dst_reg12", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX5 },
+	{ "tc6", true, "dst_reg13", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6 },
+	{ "tc7", true, "dst_reg14", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7 },
+	{ "tc8", true, "dst_reg15", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX8 },
 	{ "tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9 }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
@@ -194,6 +192,16 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 			const vk::varying_register_t &reg = vk::get_varying_register(i.name);
 			OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";\n";
+		}
+		else
+		{
+			//Force some outputs to be declared even if unused so we can set default values
+			//NOTE: Registers that can be skept will not have their check_mask_value set
+			if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
+			{
+				const vk::varying_register_t &reg = vk::get_varying_register(i.name);
+				OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";\n";
+			}
 		}
 	}
 

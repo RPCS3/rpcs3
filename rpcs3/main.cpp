@@ -3,6 +3,8 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QFileInfo>
+#include <QTimer>
 
 #include "rpcs3_app.h"
 #ifdef _WIN32
@@ -17,6 +19,13 @@ int main(int argc, char** argv)
 	SetProcessDPIAware();
 	WSADATA wsa_data;
 	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+	timeBeginPeriod(1);
+
+	atexit([]
+	{
+		timeEndPeriod(1);
+		WSACleanup();
+	});
 #else
 	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");
 #endif
@@ -34,9 +43,13 @@ int main(int argc, char** argv)
 
 	if (parser.positionalArguments().length() > 0)
 	{
-		Emu.SetPath(sstr(parser.positionalArguments().at(0)));
-		Emu.Load();
-		Emu.Run();
+		// Ugly workaround
+		QTimer::singleShot(2, [path = sstr(QFileInfo(parser.positionalArguments().at(0)).canonicalFilePath())]
+		{
+			Emu.SetPath(path);
+			Emu.Load();
+			Emu.Run();
+		});
 	}
 
 	return app.exec();

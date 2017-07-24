@@ -140,6 +140,18 @@ s32 sceNpTusGetMultiUserVariableVUserAsync()
 	return CELL_OK;
 }
 
+s32 sceNpTusGetFriendsVariable()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
+s32 sceNpTusGetFriendsVariableAsync()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
 s32 sceNpTusAddAndGetVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
@@ -308,6 +320,18 @@ s32 sceNpTusGetMultiUserDataStatusVUserAsync()
 	return CELL_OK;
 }
 
+s32 sceNpTusGetFriendsDataStatus()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
+s32 sceNpTusGetFriendsDataStatusAsync()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
 s32 sceNpTusDeleteMultiSlotData()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
@@ -327,6 +351,18 @@ s32 sceNpTusDeleteMultiSlotDataAsync()
 }
 
 s32 sceNpTusDeleteMultiSlotDataVUserAsync()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
+s32 sceNpTssGetData()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
+s32 sceNpTssGetDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	return CELL_OK;
@@ -356,6 +392,8 @@ DECLARE(ppu_module_manager::sceNpTus)("sceNpTus", []()
 	REG_FUNC(sceNpTus, sceNpTusGetMultiUserVariableVUser);
 	REG_FUNC(sceNpTus, sceNpTusGetMultiUserVariableAsync);
 	REG_FUNC(sceNpTus, sceNpTusGetMultiUserVariableVUserAsync);
+	REG_FUNC(sceNpTus, sceNpTusGetFriendsVariable);
+	REG_FUNC(sceNpTus, sceNpTusGetFriendsVariableAsync);
 	REG_FUNC(sceNpTus, sceNpTusAddAndGetVariable);
 	REG_FUNC(sceNpTus, sceNpTusAddAndGetVariableVUser);
 	REG_FUNC(sceNpTus, sceNpTusAddAndGetVariableAsync);
@@ -384,8 +422,12 @@ DECLARE(ppu_module_manager::sceNpTus)("sceNpTus", []()
 	REG_FUNC(sceNpTus, sceNpTusGetMultiUserDataStatusVUser);
 	REG_FUNC(sceNpTus, sceNpTusGetMultiUserDataStatusAsync);
 	REG_FUNC(sceNpTus, sceNpTusGetMultiUserDataStatusVUserAsync);
+	REG_FUNC(sceNpTus, sceNpTusGetFriendsDataStatus);
+	REG_FUNC(sceNpTus, sceNpTusGetFriendsDataStatusAsync);
 	REG_FUNC(sceNpTus, sceNpTusDeleteMultiSlotData);
 	REG_FUNC(sceNpTus, sceNpTusDeleteMultiSlotDataVUser);
 	REG_FUNC(sceNpTus, sceNpTusDeleteMultiSlotDataAsync);
 	REG_FUNC(sceNpTus, sceNpTusDeleteMultiSlotDataVUserAsync);
+	REG_FUNC(sceNpTus, sceNpTssGetData);
+	REG_FUNC(sceNpTus, sceNpTssGetDataAsync);
 });

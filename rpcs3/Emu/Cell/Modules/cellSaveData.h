@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 namespace vm { using namespace ps3; }
 
@@ -282,8 +282,7 @@ struct SaveDataEntry
 	s64 atime;
 	s64 mtime;
 	s64 ctime;
-	//void* iconBuf;
-	//u32 iconBufSize;
+	std::vector<uchar> iconBuf;
 	bool isNew;
 };
 

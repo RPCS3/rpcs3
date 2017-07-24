@@ -1,6 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "cellSaveData.h"
 
@@ -63,7 +64,6 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
 	// TODO: check arguments
-
 	std::unique_lock<std::mutex> lock(g_savedata_mutex, std::try_to_lock);
 
 	if (!lock)
@@ -82,6 +82,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	vm::ptr<CellSaveDataFileGet>  fileGet  = g_savedata_context.ptr(&savedata_context::fileGet);
 	vm::ptr<CellSaveDataFileSet>  fileSet  = g_savedata_context.ptr(&savedata_context::fileSet);
 
+	//TODO: get current user ID
+	// userId(0) = CELL_SYSUTIL_USERID_CURRENT
 	// path of the specified user (00000001 by default)
 	const std::string& base_dir = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/", userId ? userId : 1u));
 
@@ -100,6 +102,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		const auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), { "|" });
 
+		// get the saves matching the supplied prefix
 		for (const auto& entry : fs::dir(base_dir))
 		{
 			if (!entry.is_directory)
@@ -141,11 +144,16 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 						save_entry2.atime = entry.atime;
 						save_entry2.mtime = entry.mtime;
 						save_entry2.ctime = entry.ctime;
-						//save_entry2.iconBuf = NULL; // TODO: Here should be the PNG buffer
-						//save_entry2.iconBufSize = 0; // TODO: Size of the PNG file
+						if (fs::is_file(base_dir + entry.name + "/ICON0.PNG"))
+						{
+							fs::file icon = fs::file(base_dir + entry.name + "/ICON0.PNG");
+							u32 iconSize = icon.size();
+							std::vector<uchar> iconData;
+							icon.read(iconData, iconSize);
+							save_entry2.iconBuf = iconData;
+						}
 						save_entry2.isNew = false;
-
-						save_entries.push_back(save_entry2);
+						save_entries.emplace_back(save_entry2);
 					}
 
 					break;
@@ -206,8 +214,17 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 			if (result->result < 0)
 			{
+				//TODO: display dialog
 				cellSaveData.warning("savedata_op(): funcList returned < 0.");
 				return CELL_SAVEDATA_ERROR_CBRESULT;
+			}
+
+			// if the callback has returned ok, lets return OK.
+			// typically used at game launch when no list is actually required.
+			// CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM is only valid for funcFile and funcDone
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			{
+				return CELL_OK;
 			}
 
 			// Clean save data list
@@ -223,6 +240,16 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 				return true;
 			}), save_entries.end());
+
+			// Add any new data (not currently supported by the UI)
+			//if (listSet->newData)
+			//{
+			//	SaveDataEntry *_saveDataEntry = new SaveDataEntry();
+			//	_saveDataEntry->dirName = listSet->newData->dirName.get_ptr();
+
+			//	save_entry.dirName = listSet->newData->dirName.get_ptr();
+			//	save_entries.emplace_back(*_saveDataEntry);
+			//}
 
 			// Focus save data
 			s32 focused = -1;
@@ -284,6 +311,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 			case CELL_SAVEDATA_FOCUSPOS_NEWDATA:
 			{
+				//TODO: If adding the new data to the save_entries vector
+				// to be displayed in the save mangaer UI, it should be focused here
 				break;
 			}
 			default:
@@ -293,10 +322,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 			}
 
-			// Display Save Data List but do so asynchronously in the GUI thread.  For, qTimers only work using main UI thread.
+			// Display Save Data List but do so asynchronously in the GUI thread.
+			bool hasNewData = (bool)listSet->newData; // newData
 			atomic_t<bool> dlg_result(false);
-			bool hasNewData = (bool) listSet->newData; // Are we saving?
-
 
 			Emu.CallAfter([&]()
 			{
@@ -309,28 +337,18 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				thread_ctrl::wait_for(1000);
 			}
 
+			// UI returns -1 for new save games
 			if (selected == -1)
 			{
-				if (hasNewData)
-				{
-					save_entry.dirName = listSet->newData->dirName.get_ptr();
-				}
-				else
-				{
-					// This happens if someone tries to load but there is no data selected.  Some games will throw errors (Akiba) if cell_ok is returned
-					return CELL_CANCEL;
-				}
+				save_entry.dirName = listSet->newData->dirName.get_ptr();
 			}
+
 			// Cancel selected in UI
-			else if (selected == -2)
+			if (selected == -2)
 			{
 				return CELL_CANCEL;
 			}
 
-			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
-			{
-				return CELL_OK;
-			}
 		}
 
 		if (funcFixed)
@@ -338,8 +356,19 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			// Fixed Callback
 			funcFixed(ppu, result, listGet, fixedSet);
 
+			// skip all following steps if OK_LAST
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			{
+				return CELL_OK;
+			}
+
 			if (result->result < 0)
 			{
+				//TODO: Show msgDialog if required
+				// depends on fixedSet->option
+				// 0 = none
+				// 1 = skip confirmation dialog
+				
 				cellSaveData.warning("savedata_op(): funcFixed returned < 0.");
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
@@ -362,10 +391,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			{
 				save_entry.dirName = fixedSet->dirName.get_ptr();
 			}
-			if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
-			{
-				return CELL_OK;
-			}
+
 		}
 
 		if (selected >= 0)
@@ -478,6 +504,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+		{
+			return CELL_OK;
+		}
+		
 		if (statSet->setParam)
 		{
 			// Update PARAM.SFO
@@ -497,18 +528,20 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				{ "TITLE", psf::string(128, statSet->setParam->title) },
 			});
 		}
-		else if (psf.empty())
-		{
-			// setParam is NULL for new savedata: abort operation
-
-			return CELL_OK;
-		}
+		//else if (psf.empty())
+		//{
+		//	// setParam is specified if something required updating. 
+		//	// Do not exit. Recreate mode will handle the rest
+		//	//return CELL_OK;
+		//}
 
 		switch (const u32 mode = statSet->reCreateMode & 0xffff)
 		{
 		case CELL_SAVEDATA_RECREATE_NO:
 		{
-			cellSaveData.error("Savedata %s considered broken", save_entry.dirName);
+			//CELL_SAVEDATA_RECREATE_NO = overwrite and let the user know, not data is corrupt.
+			//cellSaveData.error("Savedata %s considered broken", save_entry.dirName);			
+			//TODO: if this is a save, and it's not auto, then show a dialog
 			// fallthrough
 		}
 
@@ -520,7 +553,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		case CELL_SAVEDATA_RECREATE_YES:
 		case CELL_SAVEDATA_RECREATE_YES_RESET_OWNER:
 		{
-			// TODO?
+
+			// TODO: Only delete data, not owner info
 			for (const auto& entry : fs::dir(dir_path))
 			{
 				if (!entry.is_directory)
@@ -529,12 +563,13 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				}
 			}
 
+			//TODO: probably not deleting owner info
 			if (!statSet->setParam)
 			{
 				// Savedata deleted and setParam is NULL: delete directory and abort operation
 				if (fs::remove_dir(dir_path)) cellSaveData.error("savedata_op(): savedata directory %s deleted", save_entry.dirName);
 
-				return CELL_OK;
+				//return CELL_OK;
 			}
 
 			break;
@@ -548,16 +583,13 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		}
 	}
 
-	if ((result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) || (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM))
-	{
-		return CELL_OK;
-	}
+
 
 	// Create save directory if necessary
 	if (psf.size() && save_entry.isNew && !fs::create_dir(dir_path))
-	{
-		// Let's ignore this error for now
+	{		
 		cellSaveData.warning("savedata_op(): failed to create %s", dir_path);
+		return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
 	}
 
 	// Enter the loop where the save files are read/created/deleted
@@ -577,8 +609,12 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 		{
+			//todo: display user prompt
 			break;
 		}
+
+		//TODO: Show progress
+		// if it's not an auto load/save
 
 		std::string file_path;
 
@@ -675,6 +711,57 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	if (psf.size())
 	{
 		psf::save_object(fs::file(sfo_path, fs::rewrite), psf);
+	}
+
+	return CELL_OK;
+}
+
+s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB, u32 userId)
+{
+
+	//TODO: accurately get the current user
+	if (userId == 0)
+	{
+		userId = 1u;
+	}
+	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/%s/", userId, dirName.get_ptr()));
+	std::string sfo = save_path + "PARAM.SFO";
+
+	if (!fs::is_dir(save_path) && !fs::is_file(sfo))
+	{
+		cellSaveData.error("cellSaveDataGetListItem(): Savedata at %s does not exist", dirName);
+		return CELL_SAVEDATA_ERROR_NODATA;
+	}
+
+	auto psf = psf::load_object(fs::file(sfo));
+
+	if (sysFileParam)
+	{
+		strcpy_trunc(sysFileParam->listParam, psf.at("SAVEDATA_LIST_PARAM").as_string());
+		strcpy_trunc(sysFileParam->title, psf.at("TITLE").as_string());
+		strcpy_trunc(sysFileParam->subTitle, psf.at("SUB_TITLE").as_string());
+		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
+	}
+
+	if (dir)
+	{
+		fs::stat_t dir_info{};
+		if (!fs::stat(save_path, dir_info))
+		{
+			return CELL_SAVEDATA_ERROR_INTERNAL;
+		}
+
+		// get file stats, namely directory
+		strcpy_trunc(dir->dirName, dirName.get_ptr());
+		dir->atime = dir_info.atime;
+		dir->ctime = dir_info.ctime;
+		dir->mtime = dir_info.mtime;
+	}
+
+	if (bind)
+	{
+		//TODO: Set bind in accordance to any problems
+		*bind = 0;
 	}
 
 	return CELL_OK;
@@ -948,27 +1035,8 @@ s32 cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 maxSize
 s32 cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
 {
 	cellSaveData.warning("cellSavaDataGetListItem(dirName=%s, dir=*0x%x, sysFileParam=*0x%x, bind=*0x%x, sizeKB=*0x%x)", dirName, dir, sysFileParam, bind, sizeKB);
-
-	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/00000001/savedata/%s/", dirName.get_ptr()));
-	std::string sfo = save_path + "param.sfo";
-
-	if (!fs::is_dir(save_path) && !fs::is_file(sfo)) 
-	{
-		cellSaveData.error("cellSaveDataGetListItem(): Savedata at %s does not exist", dirName);
-		return CELL_SAVEDATA_ERROR_NODATA;
-	}
-
-	auto psf = psf::load_object(fs::file(sfo));
-
-	if (sysFileParam) 
-	{
-		strcpy_trunc(sysFileParam->listParam, psf.at("SAVEDATA_LIST_PARAM").as_string());
-		strcpy_trunc(sysFileParam->title, psf.at("TITLE").as_string());
-		strcpy_trunc(sysFileParam->subTitle, psf.at("SUB_TITLE").as_string());
-		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
-	}
-
-	return CELL_OK;
+	
+	return save_op_get_list_item(dirName, dir, sysFileParam, bind, sizeKB, 0);
 }
 
 s32 cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
@@ -1008,9 +1076,9 @@ s32 cellSaveDataUserFixedExport(ppu_thread& ppu, u32 userId, vm::cptr<char> dirN
 
 s32 cellSaveDataUserGetListItem(u32 userId, vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.warning("cellSavaDataGetListItem(dirName=%s, dir=*0x%x, sysFileParam=*0x%x, bind=*0x%x, sizeKB=*0x%x, userID=*0x%x)", dirName, dir, sysFileParam, bind, sizeKB, userId);
 
-	return CELL_OK;
+	return save_op_get_list_item(dirName, dir, sysFileParam, bind, sizeKB, userId);
 }
 
 void cellSysutil_SaveData_init()

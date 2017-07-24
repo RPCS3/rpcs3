@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
+#include "Utilities/sysinfo.h"
 #include "Crypto/sha1.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -52,6 +53,8 @@
 #include <thread>
 #include <cfenv>
 #include "Utilities/GSL.h"
+
+const bool s_use_rtm = utils::has_rtm();
 
 extern u64 get_system_time();
 
@@ -825,6 +828,26 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
+	if (s_use_rtm && utils::transaction_enter())
+	{
+		if (!vm::reader_lock{vm::try_to_lock})
+		{
+			_xabort(0);
+		}
+
+		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+
+		if (result)
+		{
+			vm::reservation_update(addr, sizeof(u32));
+			vm::notify(addr, sizeof(u32));
+		}
+
+		_xend();
+		ppu.raddr = 0;
+		return result;
+	}
+
 	vm::writer_lock lock(0);
 
 	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
@@ -847,6 +870,26 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	{
 		ppu.raddr = 0;
 		return false;
+	}
+
+	if (s_use_rtm && utils::transaction_enter())
+	{
+		if (!vm::reader_lock{vm::try_to_lock})
+		{
+			_xabort(0);
+		}
+
+		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
+
+		if (result)
+		{
+			vm::reservation_update(addr, sizeof(u64));
+			vm::notify(addr, sizeof(u64));
+		}
+
+		_xend();
+		ppu.raddr = 0;
+		return result;
 	}
 
 	vm::writer_lock lock(0);
@@ -1120,6 +1163,12 @@ extern void ppu_initialize(const ppu_module& info)
 				sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
 			}
 
+			if (info.name == "liblv2.sprx")
+			{
+				const be_t<u64> forced_upd = 1;
+				sha1_update(&ctx, reinterpret_cast<const u8*>(&forced_upd), sizeof(forced_upd));
+			}
+
 			sha1_finish(&ctx, output);
 			fmt::append(obj_name, "-%016X-%s.obj", reinterpret_cast<be_t<u64>&>(output), jit->cpu());
 		}
@@ -1142,7 +1191,8 @@ extern void ppu_initialize(const ppu_module& info)
 		if (fs::is_file(cache_path + obj_name))
 		{
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(*jit, part, cache_path, obj_name);
+			jit->add(cache_path + obj_name);
+			LOG_SUCCESS(PPU, "LLVM: Loaded module %s", obj_name);
 			continue;
 		}
 
@@ -1173,7 +1223,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			// Proceed with original JIT instance		
 			semaphore_lock lock(jmutex);
-			ppu_initialize2(*jit, part, cache_path, obj_name);
+			jit->add(cache_path + obj_name);
 		});
 	}
 
@@ -1253,6 +1303,8 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 		}
 	}
+#else
+	fmt::throw_exception("LLVM is not available in this build.");
 #endif
 }
 
@@ -1286,8 +1338,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 	std::shared_ptr<MsgDialogBase> dlg;
 
-	// Check cached file
-	if (!fs::is_file(cache_path + obj_name))
 	{
 		legacy::FunctionPassManager pm(module.get());
 

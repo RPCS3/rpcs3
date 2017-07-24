@@ -2,6 +2,7 @@
 
 #include <stdafx.h>
 #include "rpcs3_version.h"
+#include "Utilities/sysinfo.h"
 
 #include <QMenu>
 #include <QActionGroup>
@@ -39,7 +40,7 @@ struct gui_listener : logs::listener
 		read = new packet;
 		last = new packet;
 		read->next = last.load();
-		last->msg = fmt::format("RPCS3 v%s\n", rpcs3::version.to_string());
+		last->msg = fmt::format("RPCS3 v%s\n%s\n", rpcs3::version.to_string(), utils::get_system_info());
 
 		// Self-registration
 		logs::listener::add(this);
@@ -412,5 +413,5 @@ void log_frame::UpdateUI()
 void log_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	log_frameClosed();
+	Q_EMIT LogFrameClosed();
 }

@@ -34,24 +34,13 @@ void sys_spu_image::load(const fs::file& stream)
 
 	const u32 addr = this->segs.addr() + 4096;
 
-	sha1_context ctx;
-	u8 output[20];
-
-	sha1_starts(&ctx);
-	sha1_update(&ctx, reinterpret_cast<const u8*>(&obj.header), sizeof(obj.header));
-
 	for (const auto& shdr : obj.shdrs)
 	{
-		sha1_update(&ctx, reinterpret_cast<const u8*>(&shdr), sizeof(spu_exec_object::shdr_t));
-
 		LOG_NOTICE(SPU, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", shdr.sh_type, shdr.sh_addr, shdr.sh_size, shdr.sh_flags);
 	}
 
 	for (const auto& prog : obj.progs)
 	{
-		sha1_update(&ctx, reinterpret_cast<const u8*>(&prog), sizeof(spu_exec_object::phdr_t));
-		sha1_update(&ctx, reinterpret_cast<const u8*>(prog.bin.data()), prog.bin.size());
-
 		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY)
@@ -85,22 +74,6 @@ void sys_spu_image::load(const fs::file& stream)
 			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
 		}
 	}
-
-	sha1_finish(&ctx, output);
-
-	// Format patch name
-	std::string hash("spu-");
-	for (u8 x : output) fmt::append(hash, "%02x", x);
-	LOG_NOTICE(LOADER, "Loaded SPU image: %s", hash);
-
-	// Apply the patch
-	fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + addr);
-
-	if (!Emu.GetTitleID().empty())
-	{
-		// Alternative patch
-		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + addr);
-	}
 }
 
 void sys_spu_image::free()
@@ -113,15 +86,29 @@ void sys_spu_image::free()
 
 void sys_spu_image::deploy(u32 loc)
 {
+	// Segment info dump
+	std::string dump;
+
+	// Executable hash
+	sha1_context sha;
+	sha1_starts(&sha);
+	u8 sha1_hash[20];
+
 	for (int i = 0; i < nsegs; i++)
 	{
 		auto& seg = segs[i];
 
-		LOG_NOTICE(SPU, "*** Deploy: t=0x%x, ls=0x%x, size=0x%x, addr=0x%x", seg.type, seg.ls, seg.size, seg.addr);
+		fmt::append(dump, "\n\t[%d] t=0x%x, ls=0x%x, size=0x%x, addr=0x%x", i, seg.type, seg.ls, seg.size, seg.addr);
+
+		// Hash big-endian values
+		sha1_update(&sha, (uchar*)&seg.type, sizeof(seg.type));
+		sha1_update(&sha, (uchar*)&seg.size, sizeof(seg.size));
 
 		if (seg.type == SYS_SPU_SEGMENT_TYPE_COPY)
 		{
 			std::memcpy(vm::base(loc + seg.ls), vm::base(seg.addr), seg.size);
+			sha1_update(&sha, (uchar*)&seg.ls, sizeof(seg.ls));
+			sha1_update(&sha, vm::g_base_addr + seg.addr, seg.size);
 		}
 		else if (seg.type == SYS_SPU_SEGMENT_TYPE_FILL)
 		{
@@ -131,8 +118,32 @@ void sys_spu_image::deploy(u32 loc)
 			}
 
 			std::fill_n(vm::_ptr<u32>(loc + seg.ls), seg.size / 4, seg.addr);
+			sha1_update(&sha, (uchar*)&seg.ls, sizeof(seg.ls));
+			sha1_update(&sha, (uchar*)&seg.addr, sizeof(seg.addr));
 		}
 	}
+
+	sha1_finish(&sha, sha1_hash);
+
+	// Format patch name
+	std::string hash("SPU-0000000000000000000000000000000000000000");
+	for (u32 i = 0; i < sizeof(sha1_hash); i++)
+	{
+		constexpr auto pal = "0123456789abcdef";
+		hash[4 + i * 2] = pal[sha1_hash[i] >> 4];
+		hash[5 + i * 2] = pal[sha1_hash[i] & 15];
+	}
+
+	// Apply the patch
+	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + loc);
+
+	if (!Emu.GetTitleID().empty())
+	{
+		// Alternative patch
+		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + loc);
+	}
+
+	LOG_NOTICE(LOADER, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
 }
 
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
@@ -145,6 +156,13 @@ error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	}
 
 	return CELL_OK;
+}
+
+error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, u32 ptr1, u32 ptr2)
+{
+	sys_spu.todo("_sys_spu_image_get_information(img=*0x%x, 1=*0x%x, 2=*0x%x)", img, ptr1, ptr2);
+
+	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_get_information");
 }
 
 error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
@@ -162,6 +180,27 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 	img->load(elf_file);
 
 	return CELL_OK;
+}
+
+error_code _sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 arg3, u32 arg4)
+{
+	sys_spu.todo("_sys_spu_image_import(img=*0x%x, src=*0x%x, arg3=0x%x, arg4=0x%x)", img, src, arg3, arg4);
+
+	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_import");
+}
+
+error_code _sys_spu_image_close(vm::ptr<sys_spu_image> img)
+{
+	sys_spu.todo("_sys_spu_image_close(img=*0x%x)", img);
+
+	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_close");
+}
+
+error_code _sys_raw_spu_image_load(vm::ptr<sys_spu_image> img, u32 ptr, u32 arg3)
+{
+	sys_spu.todo("_sys_raw_spu_image_load(img=*0x%x, ptr=*0x%x, arg3=0x%x)", img, ptr, arg3);
+
+	fmt::throw_exception("Unimlemented syscall: _sys_raw_spu_image_load");
 }
 
 error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)

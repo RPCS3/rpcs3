@@ -56,6 +56,9 @@ void D3D12GSRender::load_program()
 	m_vertex_program = get_current_vertex_program();
 	m_fragment_program = get_current_fragment_program(rtt_lookup_func);
 
+	if (!m_fragment_program.valid)
+		return;
+
 	D3D12PipelineProperties prop = {};
 	prop.Topology = get_primitive_topology_type(rsx::method_registers.current_draw_clause.primitive);
 

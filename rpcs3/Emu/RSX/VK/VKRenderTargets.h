@@ -7,9 +7,16 @@
 #include "../Common/TextureUtils.h"
 #include "VKFormats.h"
 
+struct ref_counted
+{
+	u8 deref_count = 0;
+
+	void reset_refs() { deref_count = 0; }
+};
+
 namespace vk
 {
-	struct render_target : public image
+	struct render_target : public image, public ref_counted
 	{
 		bool dirty = false;
 		u16 native_pitch = 0;
@@ -32,6 +39,17 @@ namespace vk
 
 			:image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
 					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
+		{}
+	};
+
+	struct framebuffer_holder: public vk::framebuffer, public ref_counted
+	{
+		framebuffer_holder(VkDevice dev,
+			VkRenderPass pass,
+			u32 width, u32 height,
+			std::vector<std::unique_ptr<vk::image_view>> &&atts)
+
+			: framebuffer(dev, pass, width, height, std::move(atts))
 		{}
 	};
 }
@@ -147,6 +165,9 @@ namespace rsx
 		{
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
+
+			//Reset deref count
+			surface->deref_count = 0;
 		}
 
 		static void prepare_rtt_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -159,6 +180,9 @@ namespace rsx
 		{
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+
+			//Reset deref count
+			surface->deref_count = 0;
 		}
 
 		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -167,15 +191,26 @@ namespace rsx
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static void invalidate_rtt_surface_contents(vk::command_buffer*, vk::render_target*) {}
+		static void invalidate_rtt_surface_contents(vk::command_buffer* pcmd, vk::render_target *rtt, vk::render_target *old_surface, bool forced)
+		{
+			if (forced)
+			{
+				rtt->old_contents = old_surface;
+				rtt->dirty = true;
+			}
+		}
 		
-		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds)
+		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds, vk::render_target *old_surface, bool /*forced*/)
 		{
 			ds->dirty = true;
+			ds->old_contents = old_surface;
 		}
 
-		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height)
+		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)
 		{
+			if (check_refs && rtt->deref_count == 0) //Surface may still have read refs from data 'copy'
+				return false;
+
 			VkFormat fmt = vk::get_compatible_surface_format(format).first;
 
 			if (rtt->info.format == fmt &&
@@ -186,15 +221,24 @@ namespace rsx
 			return false;
 		}
 
-		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format, size_t width, size_t height)
+		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height, bool check_refs=false)
 		{
-			// TODO: check format
-			//VkFormat fmt = vk::get_compatible_depth_surface_format(format);
+			if (check_refs && ds->deref_count == 0) //Surface may still have read refs from data 'copy'
+				return false;
 
-			if (//tex.get_format() == fmt &&
-				ds->info.extent.width == width &&
+			if (ds->info.extent.width == width &&
 				ds->info.extent.height == height)
-				return true;
+			{
+				//Check format
+				switch (ds->info.format)
+				{
+				case VK_FORMAT_D16_UNORM:
+					return format == surface_depth_format::z16;
+				case VK_FORMAT_D24_UNORM_S8_UINT:
+				case VK_FORMAT_D32_SFLOAT_S8_UINT:
+					return format == surface_depth_format::z24s8;
+				}
+			}
 
 			return false;
 		}
@@ -236,6 +280,17 @@ namespace rsx
 			m_render_targets_storage.clear();
 			m_depth_stencil_storage.clear();
 			invalidated_resources.clear();
+		}
+
+		void free_invalidated()
+		{
+			invalidated_resources.remove_if([](std::unique_ptr<vk::render_target> &rtt)
+			{
+				if (rtt->deref_count >= 2) return true;
+
+				rtt->deref_count++;
+				return false;
+			});
 		}
 	};
 }

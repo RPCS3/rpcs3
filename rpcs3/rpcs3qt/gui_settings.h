@@ -7,6 +7,7 @@
 #include <QVariant>
 #include <QSize>
 #include <QColor>
+#include <QBitmap>
 
 typedef struct GUI_SAVE
 {
@@ -49,11 +50,15 @@ namespace GUI
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
+	const QString debugger    = "Debugger";
 	const QString meta        = "Meta";
 	const QString fs          = "FileSystem";
+	const QString gs_frame    = "GSFrame";
 
-	const QColor mw_tool_bar_color = QColor(227, 227, 227, 255);
-	const QColor gl_icon_color     = QColor(209, 209, 209, 255);
+	const QColor mw_tool_bar_color  = QColor(227, 227, 227, 255);
+	const QColor mw_tool_icon_color = QColor(64, 64, 64, 255);
+	const QColor gl_icon_color      = QColor(209, 209, 209, 255);
+	const QColor gl_tool_icon_color = QColor(0, 100, 231, 255);
 
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
@@ -74,6 +79,7 @@ namespace GUI
 	const GUI_SAVE mw_gamelist       = GUI_SAVE( main_window, "gamelistVisible", true );
 	const GUI_SAVE mw_toolBarVisible = GUI_SAVE( main_window, "toolBarVisible",  true );
 	const GUI_SAVE mw_toolBarColor   = GUI_SAVE( main_window, "toolBarColor",    mw_tool_bar_color);
+	const GUI_SAVE mw_toolIconColor  = GUI_SAVE( main_window, "toolIconColor",   mw_tool_icon_color);
 	const GUI_SAVE mw_geometry       = GUI_SAVE( main_window, "geometry",        QByteArray() );
 	const GUI_SAVE mw_windowState    = GUI_SAVE( main_window, "windowState",     QByteArray() );
 	const GUI_SAVE mw_mwState        = GUI_SAVE( main_window, "wwState",         QByteArray() );
@@ -82,7 +88,7 @@ namespace GUI
 	const GUI_SAVE cat_disc_game   = GUI_SAVE( game_list, "categoryVisibleDiscGame",   true );
 	const GUI_SAVE cat_home        = GUI_SAVE( game_list, "categoryVisibleHome",       true );
 	const GUI_SAVE cat_audio_video = GUI_SAVE( game_list, "categoryVisibleAudioVideo", true );
-	const GUI_SAVE cat_game_data   = GUI_SAVE( game_list, "categoryVisibleGameData",   true );
+	const GUI_SAVE cat_game_data   = GUI_SAVE( game_list, "categoryVisibleGameData",   false );
 	const GUI_SAVE cat_unknown     = GUI_SAVE( game_list, "categoryVisibleUnknown",    true );
 	const GUI_SAVE cat_other       = GUI_SAVE( game_list, "categoryVisibleOther",      true );
 
@@ -95,19 +101,28 @@ namespace GUI
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
 	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.09 );
 	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", false);
+	const GUI_SAVE gl_toolIconColor  = GUI_SAVE( game_list, "toolIconColor",  gl_tool_icon_color);
 
 	const GUI_SAVE fs_emulator_dir_list = GUI_SAVE(fs, "emulator_dir_list", QStringList());
-	const GUI_SAVE fs_dev_hdd0_list = GUI_SAVE(fs, "dev_hdd0_list", QStringList());
-	const GUI_SAVE fs_dev_hdd1_list = GUI_SAVE(fs, "dev_hdd1_list", QStringList());
-	const GUI_SAVE fs_dev_flash_list = GUI_SAVE(fs, "dev_flash_list", QStringList());
-	const GUI_SAVE fs_dev_usb000_list = GUI_SAVE(fs, "dev_usb000_list", QStringList());
+	const GUI_SAVE fs_dev_hdd0_list     = GUI_SAVE(fs, "dev_hdd0_list",     QStringList());
+	const GUI_SAVE fs_dev_hdd1_list     = GUI_SAVE(fs, "dev_hdd1_list",     QStringList());
+	const GUI_SAVE fs_dev_flash_list    = GUI_SAVE(fs, "dev_flash_list",    QStringList());
+	const GUI_SAVE fs_dev_usb000_list   = GUI_SAVE(fs, "dev_usb000_list",   QStringList());
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );
 	const GUI_SAVE l_stack = GUI_SAVE( logger, "stack", false );
 
+	const GUI_SAVE d_splitterState = GUI_SAVE( debugger, "splitterState", QByteArray());
+
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
+	const GUI_SAVE m_saveNotes         = GUI_SAVE(meta, "saveNotes",         QVariantMap());
+	const GUI_SAVE m_showDebugTab      = GUI_SAVE(meta, "showDebugTab",      false);
+
+	const GUI_SAVE gs_resize = GUI_SAVE(gs_frame, "resize", false);
+	const GUI_SAVE gs_width  = GUI_SAVE(gs_frame, "width",  1280);
+	const GUI_SAVE gs_height = GUI_SAVE(gs_frame, "height", 720);
 }
 
 /** Class for GUI settings..
@@ -141,6 +156,15 @@ public:
 	QString GetCurrentStylesheetPath();
 	QStringList GetStylesheetEntries();
 	QStringList GetGameListCategoryFilters();
+
+	/**
+		Creates a custom colored QIcon based on another QIcon
+		@param icon the icon to colorize
+		@param oldColor the current color of icon
+		@param newColor the desired color for the new icon
+		@param useSpecialMasks only used for icons with white parts and disc game icon
+	*/
+	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false);
 
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);

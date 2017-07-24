@@ -90,6 +90,49 @@ struct command_buffer_chunk: public vk::command_buffer
 	}
 };
 
+struct weak_vertex_cache
+{
+	struct uploaded_range
+	{
+		u32 offset_in_heap;
+
+		VkFormat buffer_format;
+		uintptr_t local_address;
+		u32 data_length;
+	};
+
+private:
+	std::vector<uploaded_range> vertex_ranges;
+public:
+
+	uploaded_range* find_vertex_range(uintptr_t local_addr, VkFormat fmt, u32 data_length)
+	{
+		for (auto &v : vertex_ranges)
+		{
+			if (v.local_address == local_addr && v.buffer_format == fmt && v.data_length == data_length)
+				return &v;
+		}
+
+		return nullptr;
+	}
+
+	void store_range(uintptr_t local_addr, VkFormat fmt, u32 data_length, u32 offset_in_heap)
+	{
+		uploaded_range v = {};
+		v.buffer_format = fmt;
+		v.data_length = data_length;
+		v.local_address = local_addr;
+		v.offset_in_heap = offset_in_heap;
+
+		vertex_ranges.push_back(v);
+	}
+
+	void purge()
+	{
+		vertex_ranges.resize(0);
+	}
+};
+
 class VKGSRender : public GSRender
 {
 private:
@@ -114,6 +157,7 @@ private:
 
 public:
 	//vk::fbo draw_fbo;
+	weak_vertex_cache m_vertex_cache;
 
 private:
 	VKProgramBuffer m_prog_buffer;
@@ -149,15 +193,26 @@ private:
 	vk::descriptor_pool descriptor_pool;
 
 	std::vector<std::unique_ptr<vk::buffer_view> > m_buffer_view_to_clean;
-	std::vector<std::unique_ptr<vk::framebuffer> > m_framebuffer_to_clean;
 	std::vector<std::unique_ptr<vk::sampler> > m_sampler_to_clean;
+	std::list<std::unique_ptr<vk::framebuffer_holder> > m_framebuffer_to_clean;
+	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
 	u32 m_client_width = 0;
 	u32 m_client_height = 0;
 
+	// Draw call stats
 	u32 m_draw_calls = 0;
 	u32 m_instanced_draws = 0;
 
+	// Vertex buffer usage stats
+	u32 m_uploads_small = 0;
+	u32 m_uploads_1k = 0;
+	u32 m_uploads_2k = 0;
+	u32 m_uploads_4k = 0;
+	u32 m_uploads_8k = 0;
+	u32 m_uploads_16k = 0;
+
+	// Timers
 	s64 m_setup_time = 0;
 	s64 m_vertex_upload_time = 0;
 	s64 m_textures_upload_time = 0;

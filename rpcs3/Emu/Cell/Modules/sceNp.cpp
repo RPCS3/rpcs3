@@ -511,9 +511,9 @@ s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<
 	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
 	// TODO: Check for other error and pass other events
-	*event = SCE_NP_BASIC_EVENT_OFFLINE;
+	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
-	return CELL_OK;
+	return SCE_NP_BASIC_ERROR_NO_EVENT;
 }
 
 s32 sceNpCommerceCreateCtx()
@@ -1507,6 +1507,18 @@ s32 sceNpScoreGetRankingByRangeAsync()
 	return CELL_OK;
 }
 
+s32 sceNpScoreGetFriendsRanking()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpScoreGetFriendsRankingAsync()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
 s32 sceNpScoreCensorComment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
@@ -1712,6 +1724,18 @@ s32 sceNpSignalingCancelPeerNetInfo()
 }
 
 s32 sceNpSignalingGetPeerNetInfoResult()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpUtilCanonicalizeNpIdForPs3()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpUtilCanonicalizeNpIdForPsp()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -1997,6 +2021,8 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, sceNpScoreGetRankingByNpIdAsync);
 	REG_FUNC(sceNp, sceNpScoreGetRankingByRange);
 	REG_FUNC(sceNp, sceNpScoreGetRankingByRangeAsync);
+	REG_FUNC(sceNp, sceNpScoreGetFriendsRanking);
+	REG_FUNC(sceNp, sceNpScoreGetFriendsRankingAsync);
 	REG_FUNC(sceNp, sceNpScoreCensorComment);
 	REG_FUNC(sceNp, sceNpScoreCensorCommentAsync);
 	REG_FUNC(sceNp, sceNpScoreSanitizeComment);
@@ -2032,11 +2058,13 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, sceNpSignalingGetPeerNetInfo);
 	REG_FUNC(sceNp, sceNpSignalingCancelPeerNetInfo);
 	REG_FUNC(sceNp, sceNpSignalingGetPeerNetInfoResult);
+	REG_FUNC(sceNp, sceNpUtilCanonicalizeNpIdForPs3);
+	REG_FUNC(sceNp, sceNpUtilCanonicalizeNpIdForPsp);
 	REG_FUNC(sceNp, sceNpUtilCmpNpId);
 	REG_FUNC(sceNp, sceNpUtilCmpNpIdInOrder);
-	REG_FUNC(sceNp, sceNpUtilCmpOnlineId); // 0x8C760B52
-	REG_FUNC(sceNp, sceNpUtilGetPlatformType); // 0xC611029A
-	REG_FUNC(sceNp, sceNpUtilSetPlatformType); // 0xAFC62605
+	REG_FUNC(sceNp, sceNpUtilCmpOnlineId);
+	REG_FUNC(sceNp, sceNpUtilGetPlatformType);
+	REG_FUNC(sceNp, sceNpUtilSetPlatformType);
 	REG_FUNC(sceNp, _sceNpSysutilClientMalloc);
 	REG_FUNC(sceNp, _sceNpSysutilClientFree);
 	REG_FUNC(sceNp, _Z33_sce_np_sysutil_send_empty_packetiPN16sysutil_cxmlutil11FixedMemoryEPKcS3_);

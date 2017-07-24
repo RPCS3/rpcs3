@@ -23,7 +23,7 @@ public:
 	/** Loads from settings. Public so that main_window can call this easily. */
 	void LoadSettings();
 Q_SIGNALS:
-	void log_frameClosed();
+	void LogFrameClosed();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);

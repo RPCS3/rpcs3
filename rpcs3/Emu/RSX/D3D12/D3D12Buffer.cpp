@@ -223,9 +223,8 @@ namespace
 		const std::vector<std::pair<u32, u32>>& vertex_ranges, d3d12_data_heap& m_buffer_data)
 	{
 		size_t index_count = std::accumulate(
-			vertex_ranges.begin(), vertex_ranges.end(), 0, [](size_t acc, const auto& pair) {
-				return acc + get_index_count(
-								 rsx::method_registers.current_draw_clause.primitive, pair.second);
+			vertex_ranges.begin(), vertex_ranges.end(), 0ll, [](size_t acc, const auto& pair) {
+				return acc + get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
 			});
 
 		// Alloc
@@ -236,7 +235,7 @@ namespace
 		void* mapped_buffer =
 			m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-		size_t vertex_count = 0;
+		u32 vertex_count = 0;
 		for (const auto& pair : vertex_ranges)
 			vertex_count += pair.second;
 
@@ -469,7 +468,7 @@ D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList* comma
 	return std::apply_visitor(
 		draw_command_visitor(command_list, m_buffer_data, m_vertex_buffer_data.Get(),
 			[this](
-				const auto& state, const auto& list) { return get_vertex_buffers(state, list); }),
+				const auto& state, const auto& list) { return get_vertex_buffers(state, list, 0); }),
 		get_draw_command(rsx::method_registers));
 }
 
