@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
@@ -725,7 +725,7 @@ s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<Ce
 		userId = 1u;
 	}
 	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/%s/", userId, dirName.get_ptr()));
-	std::string sfo = save_path + "param.sfo";
+	std::string sfo = save_path + "PARAM.SFO";
 
 	if (!fs::is_dir(save_path) && !fs::is_file(sfo))
 	{
