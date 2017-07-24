@@ -194,4 +194,13 @@ namespace rsx
 			return std::make_pair(min, max);
 		}
 	};
+
+	template <typename storage_type, typename upload_format>
+	class vertex_cache
+	{
+	public:
+		virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr;  }
+		virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
+		virtual void purge() {}
+	};
 }
