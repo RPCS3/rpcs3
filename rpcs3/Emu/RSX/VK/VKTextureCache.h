@@ -315,6 +315,7 @@ namespace vk
 		};
 
 	private:
+		std::atomic_bool in_access_violation_handler = { false };
 		shared_mutex m_cache_mutex;
 		std::unordered_map<u32, ranged_storage> m_cache;
 
@@ -766,7 +767,11 @@ namespace vk
 			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 			std::unordered_map<u32, bool> processed_ranges;
 
-			reader_lock lock(m_cache_mutex);
+			const bool _false = false;
+			const bool acquire_lock = in_access_violation_handler.compare_exchange_weak(const_cast<bool&>(_false), true);
+
+			if (acquire_lock)
+				m_cache_mutex.lock_shared();
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
 			{
@@ -829,6 +834,12 @@ namespace vk
 				processed_ranges[base] = true;
 			}
 
+			if (acquire_lock)
+			{
+				in_access_violation_handler = false;
+				m_cache_mutex.unlock_shared();
+			}
+
 			return response;
 		}
 
@@ -847,7 +858,11 @@ namespace vk
 			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 			std::unordered_map<u32, bool> processed_ranges;
 
-			reader_lock lock(m_cache_mutex);
+			const bool _false = false;
+			const bool acquire_lock = in_access_violation_handler.compare_exchange_weak(const_cast<bool&>(_false), true);
+
+			if (acquire_lock)
+				m_cache_mutex.lock_shared();
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
 			{
@@ -889,9 +904,6 @@ namespace vk
 							range_reset = true;
 						}
 
-						// Upgrade to writer lock
-						lock.upgrade();
-
 						tex.set_dirty(true);
 						tex.unprotect();
 
@@ -907,6 +919,12 @@ namespace vk
 				}
 
 				processed_ranges[base] = true;
+			}
+
+			if (acquire_lock)
+			{
+				in_access_violation_handler = false;
+				m_cache_mutex.unlock_shared();
 			}
 
 			return response;
