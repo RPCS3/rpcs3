@@ -44,6 +44,8 @@ public:
 		HookStaticFuncs,
 		BindSPUThreads,
 		LowerSPUThreadPrio,
+		SPULoopDetection,
+		PreferredSPUThreads,
 
 		// Graphics
 		Renderer,
@@ -138,6 +140,8 @@ private:
 		{ HookStaticFuncs,	{ "Core", "Hook static functions"}},
 		{ BindSPUThreads,	{ "Core", "Bind SPU threads to secondary cores"}},
 		{ LowerSPUThreadPrio, { "Core", "Lower SPU thread priority"}},
+		{ SPULoopDetection, { "Core", "SPU loop detection"}},
+		{ PreferredSPUThreads, { "Core", "Preferred SPU Threads"}},
 
 		// Graphics Tab
 		{ Renderer,			{ "Video", "Renderer"}},
