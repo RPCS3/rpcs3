@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 namespace vm { using namespace ps3; }
 
 // Return codes
@@ -94,6 +93,14 @@ enum
 	CELL_SAVEDATA_RECREATE_MASK            = 0xffff,
 };
 
+// Dialog Messages
+namespace
+{
+	const std::string SAVEDATA_MSG_DELETE_ASK = "The saved data will be deleted. Are you sure you want to continue ?";
+	const std::string SAVEDATA_MSG_SAVE_ASK	= "Do you want to save this data?";
+	const std::string SAVEDATA_MSG_LOAD_ASK	= "Do you want to load the saved data?";
+	const std::string SAVEDATA_MSG_DELETED = "Delete completed.";
+}
 
 // Datatypes
 struct CellSaveDataSetList
@@ -285,6 +292,18 @@ struct SaveDataEntry
 	std::vector<uchar> iconBuf;
 	bool isNew;
 };
+
+namespace
+{
+	std::string getCBresultErrString(u32 cbresult) 
+	{
+		switch (cbresult)
+		{
+		default:
+			break;
+		}
+	}
+}
 
 class SaveDialogBase
 {

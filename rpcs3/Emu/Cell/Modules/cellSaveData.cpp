@@ -3,6 +3,8 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 
+#include "Emu/Cell/Modules/cellMsgDialog.h"
+
 #include "cellSaveData.h"
 
 #include "Loader/PSF.h"
@@ -52,8 +54,53 @@ namespace
 		CellSaveDataStatSet  statSet;
 		CellSaveDataFileGet  fileGet;
 		CellSaveDataFileSet  fileSet;
+		CellSaveDataDoneGet doneGet;
 	};
 }
+
+namespace
+{
+	s32 showMsgDialog(std::string msg, u32 button_type)
+	{
+
+		if (msg.size())
+		{
+			u32 dlg_type = { CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR
+				| CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_OFF
+				| CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NONE
+				| CELL_MSGDIALOG_TYPE_BG_VISIBLE
+				| CELL_MSGDIALOG_TYPE_SE_MUTE_ON };
+
+			dlg_type = dlg_type | button_type;
+
+			MsgDialogType type = { dlg_type };
+
+			auto dlg = Emu.GetCallbacks().get_msg_dialog();
+			dlg->type = type;
+
+			// -2 is an unused enum value for CELL_MSGDIALOG_BUTTON_xx
+			s32 *ret_status = new s32(-2);
+			dlg->on_close = [rst = ret_status, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
+			{
+				const auto dlg = wptr.lock();
+				*rst = status;
+			};
+
+			Emu.CallAfter([&]()
+			{
+				dlg->Create(msg);
+			});
+
+			while (*ret_status == -2)
+			{
+				thread_ctrl::wait_for(1000);
+			}
+			
+			return *ret_status;
+		}
+	}
+}
+
 
 vm::gvar<savedata_context> g_savedata_context;
 
@@ -81,6 +128,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	vm::ptr<CellSaveDataStatSet>  statSet  = g_savedata_context.ptr(&savedata_context::statSet);
 	vm::ptr<CellSaveDataFileGet>  fileGet  = g_savedata_context.ptr(&savedata_context::fileGet);
 	vm::ptr<CellSaveDataFileSet>  fileSet  = g_savedata_context.ptr(&savedata_context::fileSet);
+	vm::ptr<CellSaveDataDoneGet>  doneGet = g_savedata_context.ptr(&savedata_context::doneGet);
 
 	//TODO: get current user ID
 	// userId(0) = CELL_SYSUTIL_USERID_CURRENT
@@ -359,16 +407,14 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			// skip all following steps if OK_LAST
 			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
 			{
+				// show confirmation dialog
 				return CELL_OK;
 			}
 
 			if (result->result < 0)
 			{
-				//TODO: Show msgDialog if required
-				// depends on fixedSet->option
-				// 0 = none
-				// 1 = skip confirmation dialog
-				
+				// there is only one valid error for this callback:
+				// NO_DATA
 				cellSaveData.warning("savedata_op(): funcFixed returned < 0.");
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
@@ -385,6 +431,103 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 					selected = i;
 					break;
 				}
+			}
+
+			// show confirmation dialog
+			if (fixedSet->option == 0)			
+			{
+				std::string msg;
+				switch (operation)
+				{
+				case SAVEDATA_OP_FIXED_DELETE:
+				{
+					msg = SAVEDATA_MSG_DELETE_ASK;
+					break;
+				}
+				case SAVEDATA_OP_FIXED_LOAD:
+				{
+					msg = SAVEDATA_MSG_LOAD_ASK;
+					break;
+				}
+				case SAVEDATA_OP_FIXED_SAVE:
+				{
+					msg = SAVEDATA_MSG_SAVE_ASK;
+					break;
+				}
+				default:
+				{
+					// there should be no other operations when funcFixed is specified.
+					// return param error
+					return CELL_SAVEDATA_ERROR_PARAM;
+				}
+				}
+
+				s32 ret = showMsgDialog(msg, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO);
+
+				if (ret == CELL_MSGDIALOG_BUTTON_NO)
+				{
+					return CELL_CANCEL;
+				}
+				//else continue
+			}
+
+			if (operation == SAVEDATA_OP_FIXED_DELETE)
+			{
+				std::string del_dir = fixedSet->dirName.get_ptr();
+				std::string del_path = base_dir + del_dir;
+
+				if (fs::exists(del_path) && fs::is_dir(del_path))
+				{
+					// get savedata stats					
+					fs::stat_t dir_info{};
+					if (!fs::stat(del_path, dir_info))
+					{
+						return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
+					}
+
+					strcpy_trunc(doneGet->dirName, del_path);
+					doneGet->hddFreeSizeKB = statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
+					doneGet->sizeKB = dir_info.size;
+					doneGet->excResult = 0; // normal return. Other values are for copying, import etc.
+					memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
+
+					// delete the save data
+					try
+					{
+						fs::remove_all(del_path,true);
+					}
+					catch (std::exception)
+					{
+						return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
+					}
+					cellSaveData.error("savedata_op(): savedata directory %s deleted", del_path);	
+
+					funcDone(ppu, result, doneGet);
+						
+					if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST
+						|| result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT)
+					{
+						if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+						{							
+							showMsgDialog(SAVEDATA_MSG_DELETED ,CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK);						
+						}
+
+						return CELL_OK;
+					}
+
+					// this shouldn't occur.
+					if (result->result < 0)
+					{
+						//TODO: show dialog indicating an error occured
+					}
+					return CELL_SAVEDATA_ERROR_CBRESULT;
+
+				}
+				else
+				{
+					// data could not be found
+					return CELL_SAVEDATA_ERROR_NODATA;
+				}			
 			}
 
 			if (selected == -1)
@@ -583,8 +726,6 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		}
 	}
 
-
-
 	// Create save directory if necessary
 	if (psf.size() && save_entry.isNew && !fs::create_dir(dir_path))
 	{		
@@ -724,6 +865,8 @@ s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<Ce
 	{
 		userId = 1u;
 	}
+
+
 	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/%s/", userId, dirName.get_ptr()));
 	std::string sfo = save_path + "param.sfo";
 
@@ -743,6 +886,8 @@ s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<Ce
 		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
 	}
 
+	
+	// get file stats, namely directory
 	if (dir)
 	{
 		fs::stat_t dir_info{};
@@ -751,16 +896,15 @@ s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<Ce
 			return CELL_SAVEDATA_ERROR_INTERNAL;
 		}
 
-		// get file stats, namely directory
 		strcpy_trunc(dir->dirName, dirName.get_ptr());
 		dir->atime = dir_info.atime;
 		dir->ctime = dir_info.ctime;
 		dir->mtime = dir_info.mtime;
 	}
 
+	//TODO: Set bind in accordance to any problems
 	if (bind)
 	{
-		//TODO: Set bind in accordance to any problems
 		*bind = 0;
 	}
 
@@ -897,7 +1041,7 @@ s32 cellSaveDataListAutoLoad(ppu_thread& ppu, u32 version, u32 errDialog, PSetLi
 s32 cellSaveDataDelete2(u32 container)
 {
 	cellSaveData.todo("cellSaveDataDelete2(container=0x%x)", container);
-
+	
 	return CELL_CANCEL;
 }
 
@@ -910,10 +1054,10 @@ s32 cellSaveDataDelete(u32 container)
 
 s32 cellSaveDataFixedDelete(ppu_thread& ppu, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	cellSaveData.todo("cellSaveDataFixedDelete(setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcDone=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSaveData.warning("cellSaveDataFixedDelete(setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcDone=*0x%x, container=0x%x, userdata=*0x%x)",
 		setList, setBuf, funcFixed, funcDone, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_DELETE, 0, vm::null, 1, setList, setBuf, vm::null, funcFixed, vm::null, vm::null, container, 0, userdata, 0, funcDone);
 }
 
 s32 cellSaveDataUserListSave(ppu_thread& ppu, u32 version, u32 userId, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncStat funcStat, PFuncFile funcFile, u32 container, vm::ptr<void> userdata)
@@ -982,10 +1126,10 @@ s32 cellSaveDataUserListAutoLoad(ppu_thread& ppu, u32 version, u32 userId, u32 e
 
 s32 cellSaveDataUserFixedDelete(ppu_thread& ppu, u32 userId, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	cellSaveData.todo("cellSaveDataUserFixedDelete(userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcDone=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSaveData.warning("cellSaveDataFixedDelete(userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcDone=*0x%x, container=0x%x, userdata=*0x%x)",
 		userId, setList, setBuf, funcFixed, funcDone, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_DELETE, 0, vm::null, 1, setList, setBuf, vm::null, funcFixed, vm::null, vm::null, container, 0, userdata, userId, funcDone);
 }
 
 void cellSaveDataEnableOverlay(s32 enable)

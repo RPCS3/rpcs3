@@ -1,4 +1,4 @@
-
+﻿
 #include "msg_dialog_frame.h"
 
 #include <QApplication>
@@ -25,7 +25,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 	m_dialog = new custom_dialog(type.disable_cancel);
 	m_dialog->setWindowTitle(type.se_normal ? "Normal dialog" : "Error dialog");
 	m_dialog->setWindowFlags(m_dialog->windowFlags() & ~Qt::WindowContextHelpButtonHint);
-	m_dialog->setWindowOpacity(type.bg_invisible ? 1.0 : 192.0 / 255.0);
+	m_dialog->setWindowOpacity(type.bg_invisible ? 192.0 / 255.0 : 1.0);
 
 	m_text = new QLabel(qstr(msg));
 	m_text->setAlignment(Qt::AlignCenter);
