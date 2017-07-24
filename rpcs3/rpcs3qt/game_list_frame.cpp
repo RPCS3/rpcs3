@@ -1196,10 +1196,10 @@ void game_list_frame::dropEvent(QDropEvent* event)
 		switch (m_dropType)
 		{
 		case DROP_PKG: // install the package
-			RequestPackageInstall(m_dropPaths);
+			Q_EMIT RequestPackageInstall(m_dropPaths);
 			break;
 		case DROP_PUP: // install the firmware
-			RequestFirmwareInstall(m_dropPaths.first());
+			Q_EMIT RequestFirmwareInstall(m_dropPaths.first());
 			break;
 		case DROP_RAP: // import rap files to exdata dir
 			for (const auto& rap : m_dropPaths)
