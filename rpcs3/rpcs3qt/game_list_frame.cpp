@@ -26,30 +26,19 @@
 
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline QSize sizeFromSlider(const int& pos) { return GUI::gl_icon_size_min + (GUI::gl_icon_size_max - GUI::gl_icon_size_min) * (pos / (float)GUI::gl_max_slider_pos); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent)
 	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
 {
 	m_isListLayout = xgui_settings->GetValue(GUI::gl_listMode).toBool();
-	m_Icon_Size_Str = xgui_settings->GetValue(GUI::gl_iconSize).toString();
+	m_icon_size_index = xgui_settings->GetValue(GUI::gl_iconSize).toInt();
 	m_Margin_Factor = xgui_settings->GetValue(GUI::gl_marginFactor).toReal();
 	m_Text_Factor = xgui_settings->GetValue(GUI::gl_textFactor).toReal();
 	m_showToolBar = xgui_settings->GetValue(GUI::gl_toolBarVisible).toBool();
 	m_Icon_Color = xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>();
 
 	m_oldLayoutIsList = m_isListLayout;
-
-	// get icon size from list
-	int icon_size_index = 0;
-	for (int i = 0; i < GUI::gl_icon_size.count(); i++)
-	{
-		if (GUI::gl_icon_size.at(i).first == m_Icon_Size_Str)
-		{
-			m_Icon_Size = GUI::gl_icon_size.at(i).second;
-			icon_size_index = i;
-			break;
-		}
-	}
 
 	// Save factors for first setup
 	xgui_settings->SetValue(GUI::gl_iconColor, m_Icon_Color);
@@ -123,8 +112,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 
 	// Icon Size Slider
 	m_Slider_Size = new QSlider(Qt::Horizontal , m_Tool_Bar);
-	m_Slider_Size->setRange(0, GUI::gl_icon_size.size() - 1);
-	m_Slider_Size->setSliderPosition(icon_size_index);
+	m_Slider_Size->setRange(0, GUI::gl_max_slider_pos);
+	m_Slider_Size->setSliderPosition(m_icon_size_index);
 	m_Slider_Size->setFixedWidth(m_Tool_Bar->height() * 3);
 
 	m_Tool_Bar->addWidget(m_Search_Bar);
@@ -148,7 +137,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 
 	RepaintToolBarIcons();
 
-	bool showText = (m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny);
+	bool showText = m_icon_size_index < GUI::gl_max_slider_pos;
+	m_Icon_Size = sizeFromSlider(m_icon_size_index);
 	m_xgrid = new game_list_grid(m_Icon_Size, m_Icon_Color, m_Margin_Factor, m_Text_Factor, showText);
 
 	gameList = new game_list();
@@ -727,17 +717,17 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	}
 }
 
-void game_list_frame::ResizeIcons(const QString& sizeStr, const QSize& size, const int& index)
+void game_list_frame::ResizeIcons(const int& sliderPos)
 {
-	m_Icon_Size_Str = sizeStr;
-	m_Icon_Size = size;
+	m_icon_size_index = sliderPos;
+	m_Icon_Size = sizeFromSlider(sliderPos);
 
-	if (m_Slider_Size->value() != index)
+	if (m_Slider_Size->value() != sliderPos)
 	{
-		m_Slider_Size->setSliderPosition(index);
+		m_Slider_Size->setSliderPosition(sliderPos);
 	}
 
-	xgui_settings->SetValue(GUI::gl_iconSize, m_Icon_Size_Str);
+	xgui_settings->SetValue(GUI::gl_iconSize, sliderPos);
 
 	for (size_t i = 0; i < m_game_data.size(); i++)
 	{
@@ -892,9 +882,9 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	m_xgrid->deleteLater();
 
-	bool showText = m_Icon_Size_Str != GUI::gl_icon_key_small && m_Icon_Size_Str != GUI::gl_icon_key_tiny;
+	bool showText = m_icon_size_index > GUI::gl_max_slider_pos * 2 / 5;
 
-	if (m_Icon_Size_Str == GUI::gl_icon_key_medium)
+	if (m_icon_size_index < GUI::gl_max_slider_pos * 2 / 3)
 	{
 		m_xgrid = new game_list_grid(image_size, image_color, m_Margin_Factor, m_Text_Factor * 2, showText);
 	}
