@@ -182,7 +182,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_9">
+          <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0,1,0">
            <item>
             <widget class="QGroupBox" name="lib_settings">
              <property name="sizePolicy">
@@ -867,8 +867,6 @@
         </widget>
        </item>
       </layout>
-      <zorder>groupBox_61</zorder>
-      <zorder>verticalSpacer_8</zorder>
      </widget>
      <widget class="QWidget" name="networkTab">
       <attribute name="title">
