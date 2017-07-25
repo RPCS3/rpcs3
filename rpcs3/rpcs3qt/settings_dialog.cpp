@@ -26,12 +26,11 @@ inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString();
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, const GameInfo* game)
-	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog)
+	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
 	ui->setupUi(this);
 	ui->cancelButton->setDefault(true);
 	ui->tabWidget->setUsesScrollButtons(false);
-	ui->tabWidget->setCurrentIndex(tabIndex);
 
 	bool showDebugTab = xgui_settings->GetValue(GUI::m_showDebugTab).toBool();
 	xgui_settings->SetValue(GUI::m_showDebugTab, showDebugTab);
@@ -944,4 +943,15 @@ void settings_dialog::OnApplyStylesheet()
 {
 	xgui_settings->SetValue(GUI::m_currentStylesheet, ui->combo_stylesheets->currentText());
 	Q_EMIT GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
+}
+
+int settings_dialog::exec()
+{
+	show();
+	for (int i = 0; i < ui->tabWidget->count(); i++)
+	{
+		ui->tabWidget->setCurrentIndex(i);
+	}
+	ui->tabWidget->setCurrentIndex(m_tab_Index);
+	return QDialog::exec();
 }
