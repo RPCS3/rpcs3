@@ -42,7 +42,7 @@ void evdev_joystick_handler::Init(const u32 max_connect)
     revaxis.emplace_back(g_evdev_joystick_config.rxreverse);
     revaxis.emplace_back(g_evdev_joystick_config.ryreverse);
 
-    fs::dir devdir{"/dev/input/by-id"};
+    fs::dir devdir{"/dev/input/by-path"};
     fs::dir_entry et;
 
     while (devdir.read(et))
@@ -52,7 +52,7 @@ void evdev_joystick_handler::Init(const u32 max_connect)
             et.name.compare(et.name.size() - EVENT_JOYSTICK.size(),
                             EVENT_JOYSTICK.size(), EVENT_JOYSTICK) == 0)
         {
-            joy_paths.emplace_back(fmt::format("/dev/input/by-id/%s", et.name));
+            joy_paths.emplace_back(fmt::format("/dev/input/by-path/%s", et.name));
         }
     }
 
