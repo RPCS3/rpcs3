@@ -31,7 +31,6 @@ evdev_joystick_handler::~evdev_joystick_handler() { Close(); }
 void evdev_joystick_handler::Init(const u32 max_connect)
 {
     std::memset(&m_info, 0, sizeof m_info);
-    m_info.max_connect = std::min(max_connect, static_cast<u32>(1));
 
     g_evdev_joystick_config.load();
 
@@ -56,6 +55,8 @@ void evdev_joystick_handler::Init(const u32 max_connect)
             joy_paths.emplace_back(fmt::format("/dev/input/by-id/%s", et.name));
         }
     }
+
+    m_info.max_connect = std::min(max_connect, static_cast<u32>(joy_paths.size()));
 
     for (u32 i = 0; i < m_info.max_connect; ++i)
     {
