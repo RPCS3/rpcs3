@@ -321,7 +321,7 @@ void game_list_frame::OnColClicked(int col)
 	xgui_settings->SetValue(GUI::gl_sortAsc, m_colSortOrder == Qt::AscendingOrder);
 	xgui_settings->SetValue(GUI::gl_sortCol, col);
 
-	gameList->sortByColumn(m_sortColumn, m_colSortOrder);
+	SortGameList();
 }
 
 // Filter for Categories
@@ -341,6 +341,15 @@ void game_list_frame::FilterData()
 		}
 		gameList->setRowHidden(i, !match || !SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial));
 	}
+}
+
+void game_list_frame::SortGameList()
+{
+	gameList->sortByColumn(m_sortColumn, m_colSortOrder);
+	gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
+	gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
+	gameList->resizeRowsToContents();
+	gameList->resizeColumnToContents(0);
 }
 
 void game_list_frame::Refresh(bool fromDrive)
@@ -471,13 +480,7 @@ void game_list_frame::Refresh(bool fromDrive)
 		int row = PopulateGameList();
 		FilterData();
 		gameList->selectRow(row);
-		gameList->sortByColumn(m_sortColumn, m_colSortOrder);
-		gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
-		gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
-		gameList->resizeRowsToContents();
-		gameList->resizeColumnToContents(0);
-		gameList->scrollToTop();    // fix drunk scroll behaviour (may still not be perfect)
-		gameList->scrollToBottom(); // fix drunk scroll behaviour (may still not be perfect)
+		SortGameList();
 		gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
 	}
 	else
@@ -842,8 +845,7 @@ int game_list_frame::PopulateGameList()
 
 	std::string selected_item = CurrentSelectionIconPath();
 
-	// Hack to delete everything without removing the headers.
-	gameList->setRowCount(0);
+	gameList->clearContents();
 
 	gameList->setRowCount(m_game_data.size());
 
