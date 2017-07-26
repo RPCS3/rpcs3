@@ -29,10 +29,6 @@ matrix:
   exclude:
     - os: osx
       compiler: gcc
-  include:
-    - os: linux
-      compiler: clang
-      env: WITHOUT_LLVM="yes"
   
 
 git:
@@ -47,10 +43,12 @@ before_install:
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      sudo add-apt-repository ppa:beineri/opt-qt59-trusty -y;
-      sudo apt-get update;
-      sudo apt-get install qt59base -y --allow-unauthenticated;
+      wget http://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run ;
+      chmod a+x ./qt-unified-linux-x64-online.run ;
+      export QT_QPA_PLATFORM=minimal ;
+      ./qt-unified-linux-x64-online.run --script qt-installer-noninteractive.qs --no-force-installations ;
     fi;
+  
   # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   # Install updated libglew-dev since the version provided by trusty is outdated
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
@@ -67,30 +65,30 @@ before_install:
 
 before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
-  - source /opt/qt59/bin/qt59-env.sh
   - mkdir build
   - cd build
-  - if [ -z "$WITHOUT_LLVM" ]; then
-      cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
-    else
-      cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DWITHOUT_LLVM=ON;
-    fi;
+  - export CMAKE_PREFIX_PATH=~/Qt/5.9.1/gcc_64/lib/cmake
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
   - make -j 3
   - # AppImage generation
   - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-4.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      export LD_LIBRARY_PATH=${PWD}/3rdparty/libpng:/opt/qt59/lib/:$LD_LIBRARY_PATH ;
+      export LD_LIBRARY_PATH=~/Qt/5.9.1/gcc_64/lib;
       make DESTDIR=appdir install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ; 
       chmod a+x linuxdeployqt*.AppImage ;
-      unset QTDIR; unset QT_PLUGIN_PATH ;
+      export PATH=~/Qt/5.9.1/gcc_64/bin/:${PATH} ;
+      ./linuxdeployqt*.AppImage --appimage-extract ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
-      ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -appimage ;
+      mkdir ./appdir/usr/plugins/xcbglintegrations/ ; 
+      mkdir ./appdir/usr/plugins/imageformats/ ;
+      cp ~/Qt/5.9.1/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
+      cp ~/Qt/5.9.1/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
+      cp ~/Qt/5.9.1/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
+      export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
+      ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
-      if [ -z "$WITHOUT_LLVM" ]; then
-        export LLVM="-LLVM";
-      fi;
-      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}${LLVM}_linux64 --upload-file ./RPCS3*.AppImage;
+      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}_linux64 --upload-file ./RPCS3*.AppImage;
    fi;
 
 script:
@@ -123,7 +121,7 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
-      # We need to install qt 5.8 manually because the version trusty provides is too old.
+      # We need to install qt 5.9.1 manually because the version trusty provides is too old.
       #- qtbase5-dev
       - libudev-dev
   coverity_scan:
