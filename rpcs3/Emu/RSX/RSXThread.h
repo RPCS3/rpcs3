@@ -131,11 +131,15 @@ namespace rsx
 	public:
 		std::shared_ptr<class ppu_thread> intr_thread;
 
+		// I hate this flag, but until hle is closer to lle, its needed
+		bool isHLE{ false };
+
 		u32 ioAddress, ioSize;
 		u32 flip_status;
 		int debug_level;
 
 		atomic_t<bool> requested_vsync{false};
+		atomic_t<bool> enable_second_vhandler{false};
 
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{0};
