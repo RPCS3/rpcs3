@@ -158,6 +158,17 @@ elseif(WIN32)
 	set(PLATFORM_ARCH "Windows/x86_64")
 else()
 	set(PLATFORM_ARCH "linux/x86_64")
+	option(USE_LIBEVDEV "libevdev-based joystick support" ON)
+endif()
+
+if(USE_LIBEVDEV)
+	find_package(PkgConfig)
+	pkg_check_modules(LIBEVDEV libevdev)
+	if(LIBEVDEV_FOUND)
+		add_definitions(-DHAVE_LIBEVDEV)
+		include_directories(SYSTEM ${LIBEVDEV_INCLUDE_DIRS})
+		list(APPEND ADDITIONAL_LIBS ${LIBEVDEV_LDFLAGS})
+	endif()
 endif()
 
 # Select the version of libpng to use, default is builtin

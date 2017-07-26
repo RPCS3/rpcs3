@@ -68,6 +68,9 @@ enum class pad_handler
 #ifdef _WIN32
 	mm,
 #endif
+#ifdef HAVE_LIBEVDEV
+	evdev,
+#endif
 };
 
 enum class video_renderer
