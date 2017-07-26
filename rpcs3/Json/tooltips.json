@@ -24,10 +24,10 @@
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this. Usually safe to use, but if unsure, don't use this option and try auto first."
 		},
 		"checkboxes": {
-			"hookStFunc": "Placebo setting, this does nothing at all.",
+			"hookStFunc": "It hooks memcpy to be native instead of emulating it. May speedup",
 			"bindSPUThreads": "If your CPU has SMT (Hyper-Threading) SPU threads will run on these logical cores instead.\nUsually faster on an i3, possibly slower or no difference on an i7 or Ryzen.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
-			"spuLoopDetection": ""
+			"spuLoopDetection": "Try to detect wait loops and trigger thread yield."
 		},
 		"comboboxes": {
 			"preferredSPUThreads": ""
