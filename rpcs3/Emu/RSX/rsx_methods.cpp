@@ -6,6 +6,7 @@
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 #include <sstream>
 #include <cereal/archives/binary.hpp>
@@ -485,6 +486,7 @@ namespace rsx
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
+				return;
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
@@ -879,7 +881,8 @@ namespace rsx
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
-		rsx->reset();
+		if (rsx->isHLE)
+			rsx->reset();
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
@@ -899,6 +902,7 @@ namespace rsx
 
 	void user_command(thread* rsx, u32, u32 arg)
 	{
+		sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
 		if (rsx->user_handler)
 		{
 			rsx->intr_thread->cmd_list
@@ -910,6 +914,31 @@ namespace rsx
 
 			rsx->intr_thread->notify();
 		}
+	}
+
+	namespace gcm
+	{
+		// not entirely sure which one should actually do the flip, or if these should be handled seperately,
+		// so for now lets flip in queue and just let the driver deal with it
+		template<u32 index>
+		struct driver_flip
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				rsx->reset();
+				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
+			}
+		};
+
+		template<u32 index>
+		struct queue_flip
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				flip_command(rsx, _reg, arg);
+				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
+			}
+		};
 	}
 
 	void rsx_state::reset()
@@ -1093,10 +1122,17 @@ namespace rsx
 		methods[NV4097_SET_SURFACE_COLOR_BOFFSET]         = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_B]               = nullptr;
 		methods[NV4097_SET_SURFACE_COLOR_TARGET]          = nullptr;
+		methods[0x224 >> 2]                               = nullptr;
+		methods[0x228 >> 2]                               = nullptr;
+		methods[0x230 >> 2]                               = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_Z]               = nullptr;
 		methods[NV4097_INVALIDATE_ZCULL]                  = nullptr;
 		methods[NV4097_SET_CYLINDRICAL_WRAP]              = nullptr;
 		methods[NV4097_SET_CYLINDRICAL_WRAP1]             = nullptr;
+		methods[0x240 >> 2]                               = nullptr;
+		methods[0x244 >> 2]                               = nullptr;
+		methods[0x248 >> 2]                               = nullptr;
+		methods[0x24C >> 2]                               = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_C]               = nullptr;
 		methods[NV4097_SET_SURFACE_PITCH_D]               = nullptr;
 		methods[NV4097_SET_SURFACE_COLOR_COFFSET]         = nullptr;
@@ -1165,6 +1201,7 @@ namespace rsx
 		methods[NV4097_SET_FOG_MODE]                      = nullptr;
 		methods[NV4097_SET_FOG_PARAMS]                    = nullptr;
 		methods[NV4097_SET_FOG_PARAMS + 1]                = nullptr;
+		methods[0x8d8 >> 2]                               = nullptr;
 		methods[NV4097_SET_SHADER_PROGRAM]                = nullptr;
 		methods[NV4097_SET_VERTEX_TEXTURE_OFFSET]         = nullptr;
 		methods[NV4097_SET_VERTEX_TEXTURE_FORMAT]         = nullptr;
@@ -1248,6 +1285,7 @@ namespace rsx
 		methods[NV4097_SET_TEXTURE_BORDER_COLOR]          = nullptr;
 		methods[NV4097_SET_VERTEX_DATA4F_M]               = nullptr;
 		methods[NV4097_SET_COLOR_KEY_COLOR]               = nullptr;
+		methods[0x1d04 >> 2]                              = nullptr;
 		methods[NV4097_SET_SHADER_CONTROL]                = nullptr;
 		methods[NV4097_SET_INDEXED_CONSTANT_READ_LIMITS]  = nullptr;
 		methods[NV4097_SET_SEMAPHORE_OFFSET]              = nullptr;
@@ -1374,6 +1412,8 @@ namespace rsx
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
 
+		bind_array<(0x400 >> 2), 1, 0x10, nullptr>();
+		bind_array<(0x440 >> 2), 1, 0x20, nullptr>();
 		bind_array<NV4097_SET_ANISO_SPREAD, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nullptr>();
@@ -1398,16 +1438,6 @@ namespace rsx
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
 		bind<NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire>();
 		bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
-
-		/*
-
-		// Store previous fbo addresses to detect RTT config changes.
-		std::array<u32, 4> m_previous_color_address = {};
-		u32 m_previous_address_z = 0;
-		u32 m_previous_target = 0;
-		u32 m_previous_clip_horizontal = 0;
-		u32 m_previous_clip_vertical = 0;
-		*/
 
 		// NV4097
 		bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
@@ -1467,9 +1497,14 @@ namespace rsx
 		//NV0039
 		bind<NV0039_BUFFER_NOTIFY, nv0039::buffer_notify>();
 
+		// lv1 hypervisor
+		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
+		bind_range<GCM_FLIP_HEAD, 1, 2, gcm::driver_flip>();
+		bind_range<GCM_DRIVER_QUEUE, 1, 8, gcm::queue_flip>();
+
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
-		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
+		
 
 		return true;	
 	}();

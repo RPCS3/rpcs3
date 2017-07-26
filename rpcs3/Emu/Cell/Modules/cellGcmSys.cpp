@@ -425,6 +425,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
 	render->intr_thread->run();
 	render->main_mem_addr = 0;
+	render->isHLE = true;
 	render->label_addr = m_config->gcm_info.label_addr;
 	render->init(ioAddress, ioSize, m_config->gcm_info.control_addr - 0x40, local_addr);
 
