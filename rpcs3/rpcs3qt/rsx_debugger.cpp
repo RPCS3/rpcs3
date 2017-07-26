@@ -411,9 +411,7 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 			return;
 		}
 
-		const auto buffers = render->gcm_buffers;
-		if (!buffers)
-			return;
+		const auto buffers = render->display_buffers;
 
 		// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
@@ -705,12 +703,9 @@ void rsx_debugger::GetBuffers()
 
 	// Draw Buffers
 	// TODO: Currently it only supports color buffers
-	for (u32 bufferId=0; bufferId < render->gcm_buffers_count; bufferId++)
+	for (u32 bufferId=0; bufferId < render->display_buffers_count; bufferId++)
 	{
-		if(!vm::check_addr(render->gcm_buffers.addr()))
-			continue;
-
-		auto buffers = render->gcm_buffers;
+		auto buffers = render->display_buffers;
 		u32 RSXbuffer_addr = render->local_mem_addr + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
