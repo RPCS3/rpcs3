@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Utilities/StrUtil.h"
 
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
@@ -17,9 +18,23 @@ s32 cellAudioOutUnregisterDevice()
 	return CELL_OK;
 }
 
-s32 cellAudioOutGetDeviceInfo2()
+s32 cellAudioOutGetDeviceInfo2(u32 deviceNumber, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo2> info)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.warning("cellAudioOutGetDeviceInfo2(deviceNumber=%d, deviceIndex=%d, info=*0x%x)", deviceNumber, deviceIndex, info);
+
+	if (deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
+
+	info->portType = CELL_AUDIO_OUT_PORT_HDMI;
+	info->availableModeCount = 1;
+	info->state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
+	info->deviceNumber = 0;
+	info->deviceId = 0;
+	info->type = 0;
+	strcpy_trunc(info->name, "audiodevice");
+	info->availableModes2[0].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+	info->availableModes2[0].channel = CELL_AUDIO_OUT_CHNUM_8;
+	info->availableModes2[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
+
 	return CELL_OK;
 }
 
