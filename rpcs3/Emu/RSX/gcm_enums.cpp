@@ -968,7 +968,7 @@ rsx::blit_engine::context_dma rsx::blit_engine::to_context_dma(u32 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT: return rsx::blit_engine::context_dma::to_memory_get_report;
+	case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL: return rsx::blit_engine::context_dma::to_memory_get_report;
 	case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN: return rsx::blit_engine::context_dma::report_location_main;
 	case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER: return rsx::blit_engine::context_dma::memory_host_buffer;
 	}

@@ -1,5 +1,44 @@
 #pragma once
 
+struct RsxDmaControl {
+	u8 resv[0x40];
+	atomic_be_t<u32> put;
+	atomic_be_t<u32> get;
+	atomic_be_t<u32> ref;
+	be_t<u32> unk[2];
+	be_t<u32> unk1;
+};
+
+struct RsxSemaphore {
+	be_t<u32> val;
+	be_t<u32> pad;
+	be_t<u64> timestamp;
+};
+
+struct RsxNotify {
+	be_t<u64> timestamp;
+	be_t<u64> zero;
+};
+
+struct RsxReport {
+	be_t<u64> timestamp;
+	be_t<u32> val;
+	be_t<u32> pad;
+};
+
+struct RsxReports {
+	RsxSemaphore semaphore[0x100];
+	RsxNotify notify[64];
+	RsxReport report[2048];
+};
+
+struct RsxDisplayInfo {
+	be_t<u32> offset;
+	be_t<u32> pitch;
+	be_t<u32> width;
+	be_t<u32> height;
+};
+
 // SysCalls
 s32 sys_rsx_device_open();
 s32 sys_rsx_device_close();
