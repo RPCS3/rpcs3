@@ -218,6 +218,7 @@ protected:
 private:
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
+	void SortGameList();
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
