@@ -131,7 +131,13 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			{
 				semaphore_lock lock(sem->mutex);
 
-				const s32 val = sem->val.fetch_op([](s32& val)
+				if (!sem->unqueue(sem->sq, &ppu))
+				{
+					timeout = 0;
+					continue;
+				}
+
+				verify(HERE), 0 > sem->val.fetch_op([](s32& val)
 				{
 					if (val < 0)
 					{
@@ -139,13 +145,6 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 					}
 				});
 
-				if (val >= 0)
-				{
-					timeout = 0;
-					continue;
-				}
-
-				verify(HERE), sem->unqueue(sem->sq, &ppu);
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
