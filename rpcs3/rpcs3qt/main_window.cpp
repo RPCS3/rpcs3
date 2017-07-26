@@ -75,19 +75,8 @@ void main_window::Init()
 	appIcon = QIcon(":/rpcs3.ico");
 
 	// add toolbar widgets (crappy Qt designer is not able to)
-	ui->sizeSlider->setRange(0, GUI::gl_icon_size.size() - 1);
-	// get icon size from list
-	int icon_size_index = 0;
-	QString icon_Size_Str = guiSettings->GetValue(GUI::gl_iconSize).toString();
-	for (int i = 0; i < GUI::gl_icon_size.count(); i++)
-	{
-		if (GUI::gl_icon_size.at(i).first == icon_Size_Str)
-		{
-			icon_size_index = i;
-			break;
-		}
-	}
-	ui->sizeSlider->setSliderPosition(icon_size_index);
+	ui->sizeSlider->setRange(0, GUI::gl_max_slider_pos);
+	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(GUI::gl_iconSize).toInt());
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->searchBar);
@@ -1162,22 +1151,29 @@ void main_window::CreateConnects()
 		{
 			ui->sizeSlider->setSliderPosition(index);
 		}
-		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(index).first, GUI::gl_icon_size.at(index).second, index);
+		gameListFrame->ResizeIcons(index);
 	};
 	connect(iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		int index;
 
 		if (act == ui->setIconSizeTinyAct) index = 0;
-		else if (act == ui->setIconSizeSmallAct) index = 1;
-		else if (act == ui->setIconSizeMediumAct) index = 2;
-		else index = 3;
+		else if (act == ui->setIconSizeSmallAct) index = GUI::gl_max_slider_pos / 3;
+		else if (act == ui->setIconSizeMediumAct) index = GUI::gl_max_slider_pos * 2 / 3;
+		else index = GUI::gl_max_slider_pos;
 
 		resizeIcons(index);
 	});
 	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
-		iconSizeActGroup->actions().at(idx)->trigger();
+		int index = GUI::gl_max_slider_pos / 4;
+
+		if (idx < index) ui->setIconSizeTinyAct->setChecked(true);
+		else if (idx < index * 2) ui->setIconSizeSmallAct->setChecked(true);
+		else if (idx < index * 3) ui->setIconSizeMediumAct->setChecked(true);
+		else ui->setIconSizeLargeAct->setChecked(true);
+
+		resizeIcons(idx);
 	});
 	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
@@ -1339,11 +1335,12 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	ui->showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
 	ui->showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
-	QString key = guiSettings->GetValue(GUI::gl_iconSize).toString();
-	if (key == GUI::gl_icon_key_large) ui->setIconSizeLargeAct->setChecked(true);
-	else if (key == GUI::gl_icon_key_medium) ui->setIconSizeMediumAct->setChecked(true);
-	else if (key == GUI::gl_icon_key_small) ui->setIconSizeSmallAct->setChecked(true);
-	else ui->setIconSizeTinyAct->setChecked(true);
+	int idx = guiSettings->GetValue(GUI::gl_iconSize).toInt();
+	int index = GUI::gl_max_slider_pos / 4;
+	if (idx < index) ui->setIconSizeTinyAct->setChecked(true);
+	else if (idx < index * 2) ui->setIconSizeSmallAct->setChecked(true);
+	else if (idx < index * 3) ui->setIconSizeMediumAct->setChecked(true);
+	else ui->setIconSizeLargeAct->setChecked(true);
 
 	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();
 	if (isListMode) ui->setlistModeListAct->setChecked(true);
