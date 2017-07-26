@@ -7,7 +7,7 @@ logs::channel cellRec("cellRec");
 
 struct CellRecSpursParam
 {
-	vm::ptr<struct CellSpurs> pSpurs;
+	vm::bptr<struct CellSpurs> pSpurs;
 	be_t<s32> spu_usage_rate;
 	u8 priority[8];
 };
@@ -30,8 +30,8 @@ struct CellRecOption
 		be_t<s32> audio_input_mix_vol;
 		be_t<s32> reduce_memsize;
 		be_t<s32> show_xmb;
-		vm::ptr<char> metadata_filename;
-		vm::ptr<CellRecSpursParam> pSpursParam;
+		vm::bptr<char> metadata_filename;
+		vm::bptr<CellRecSpursParam> pSpursParam;
 		be_t<u64> dummy;
 	} value;
 };
@@ -41,7 +41,7 @@ struct CellRecParam
 	be_t<s32> videoFmt;
 	be_t<s32> audioFmt;
 	be_t<s32> numOfOpt;
-	vm::ptr<CellRecOption> pOpt;
+	vm::bptr<CellRecOption> pOpt;
 };
 
 using CellRecCallback = void(s32 recStatus, s32 recError, vm::ptr<void> userdata);
