@@ -989,25 +989,48 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
 
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_STENCIL_TEST);
+	// Calculate blit coordinates
+	coordi aspect_ratio;
+	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
+	sizei csize(m_frame->client_width(), m_frame->client_height());
+	sizei new_size = csize;
 
+	if (!g_cfg.video.stretch_to_display_area)
+	{
+		const double aq = (double)buffer_width / buffer_height;
+		const double rq = (double)new_size.width / new_size.height;
+		const double q = aq / rq;
+
+		if (q > 1.0)
+		{
+			new_size.height = int(new_size.height / q);
+			aspect_ratio.y = (csize.height - new_size.height) / 2;
+		}
+		else if (q < 1.0)
+		{
+			new_size.width = int(new_size.width * q);
+			aspect_ratio.x = (csize.width - new_size.width) / 2;
+		}
+	}
+
+	aspect_ratio.size = new_size;
+
+	// Find the source image
 	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	u32 absolute_address = buffer_region.address + buffer_region.base;
-
 	gl::texture *render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address);
 
-	__glcheck m_flip_fbo.recreate();
+	m_flip_fbo.recreate();
 	m_flip_fbo.bind();
-
-	auto *flip_fbo = &m_flip_fbo;
 
 	if (render_target_texture)
 	{
+		buffer_width = render_target_texture->width();
+		buffer_height = render_target_texture->height();
+
 		__glcheck m_flip_fbo.color = *render_target_texture;
 		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
+
 	}
 	else
 	{
@@ -1040,36 +1063,14 @@ void GLGSRender::flip(int buffer)
 		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
 	}
 
-	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
-
-	coordi aspect_ratio;
-
-	sizei csize(m_frame->client_width(), m_frame->client_height());
-	sizei new_size = csize;
-
-	if (!g_cfg.video.stretch_to_display_area)
-	{
-		const double aq = (double)buffer_width / buffer_height;
-		const double rq = (double)new_size.width / new_size.height;
-		const double q = aq / rq;
-
-		if (q > 1.0)
-		{
-			new_size.height = int(new_size.height / q);
-			aspect_ratio.y = (csize.height - new_size.height) / 2;
-		}
-		else if (q < 1.0)
-		{
-			new_size.width = int(new_size.width * q);
-			aspect_ratio.x = (csize.width - new_size.width) / 2;
-		}
-	}
-
-	aspect_ratio.size = new_size;
+	// Blit source image to the screen
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_STENCIL_TEST);
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);
-
-	__glcheck flip_fbo->blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+	__glcheck m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
 	if (g_cfg.video.overlay)
 	{
@@ -1086,6 +1087,7 @@ void GLGSRender::flip(int buffer)
 	m_frame->flip(m_context);
 	rsx::thread::flip(buffer);
 
+	// Cleanup
 	m_gl_texture_cache.clear_temporary_surfaces();
 
 	for (auto &tex : m_rtts.invalidated_resources)
@@ -1098,7 +1100,7 @@ void GLGSRender::flip(int buffer)
 
 	m_vertex_cache->purge();
 
-	//If we are skipping the next frame, fo not reset perf counters
+	//If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;
 
 	m_draw_calls = 0;
