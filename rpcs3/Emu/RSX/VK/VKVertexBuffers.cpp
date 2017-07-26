@@ -252,7 +252,7 @@ namespace
 		vertex_buffer_visitor(u32 vtx_cnt, VkDevice dev, vk::vk_data_heap& heap,
 			vk::glsl::program* prog, VkDescriptorSet desc_set,
 			std::vector<std::unique_ptr<vk::buffer_view>>& buffer_view_to_clean,
-			rsx::vertex_cache<uploaded_range, VkFormat>* vertex_cache)
+			vk::vertex_cache* vertex_cache)
 			: vertex_count(vtx_cnt), m_attrib_ring_info(heap), device(dev), m_program(prog),
 			  descriptor_sets(desc_set), m_buffer_view_to_clean(buffer_view_to_clean),
 			  vertex_cache(vertex_cache)
@@ -341,7 +341,7 @@ namespace
 		vk::glsl::program* m_program;
 		VkDescriptorSet descriptor_sets;
 		std::vector<std::unique_ptr<vk::buffer_view>>& m_buffer_view_to_clean;
-		rsx::vertex_cache<uploaded_range, VkFormat>* vertex_cache;
+		vk::vertex_cache* vertex_cache;
 	};
 
 	using attribute_storage = std::vector<std::variant<rsx::vertex_array_buffer,

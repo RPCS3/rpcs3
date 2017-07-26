@@ -14,6 +14,13 @@
 
 #pragma comment(lib, "opengl32.lib")
 
+namespace gl
+{
+	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<GLenum>, GLenum>;
+	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<GLenum>;
+	using null_vertex_cache = vertex_cache;
+}
+
 struct work_item
 {
 	std::condition_variable cv;
@@ -57,8 +64,7 @@ private:
 	s64 m_vertex_upload_time = 0;
 	s64 m_textures_upload_time = 0;
 
-	//Compare to see if transform matrix have changed
-	size_t m_transform_buffer_hash = 0;
+	std::unique_ptr<gl::vertex_cache> m_vertex_cache;
 
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
