@@ -15,6 +15,16 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon)
 {
 	m_windowTitle = title;
 
+	if (!Emu.GetTitle().empty())
+	{
+		m_windowTitle += qstr(" | " + Emu.GetTitle());
+	}
+
+	if (!Emu.GetTitleID().empty())
+	{
+		m_windowTitle += qstr(" | [" + Emu.GetTitleID() + ']');
+	}
+
 	if (!appIcon.isNull())
 	{
 		setIcon(appIcon);
@@ -23,6 +33,9 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon)
 	g_cfg.misc.show_fps_in_title ? m_show_fps = true : m_show_fps = false;
 
 	resize(w, h);
+
+	setVisibility(Hidden);
+	create();
 
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, &gs_frame::HandleCursor);
@@ -39,6 +52,9 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	{
 		switch (keyEvent->key())
 		{
+		case Qt::Key_L:
+			if (keyEvent->modifiers() == Qt::AltModifier) { static int count = 0; LOG_SUCCESS(GENERAL, "Made forced mark %d in log", ++count); }
+			break;
 		case Qt::Key_Return:
 			if (keyEvent->modifiers() == Qt::AltModifier) { OnFullScreen(); return; }
 			break;
@@ -85,7 +101,7 @@ void gs_frame::OnFullScreen()
 void gs_frame::close()
 {
 	Emu.Stop();
-	Emu.CallAfter([=]() {QWindow::close(); });
+	Emu.CallAfter([=]() { deleteLater(); });
 }
 
 bool gs_frame::shown()
@@ -111,12 +127,11 @@ void gs_frame::show()
 
 void* gs_frame::handle() const
 {
-#ifdef __linux__ 
-    return (void *)this->winId();
-#elif _WIN32
-    return (HWND) this->winId();
+#ifdef _WIN32
+	return (HWND) this->winId();
+#else
+	return (void *)this->winId();
 #endif
-	
 }
 
 void* gs_frame::make_context()
@@ -152,25 +167,8 @@ int gs_frame::client_height()
 #endif
 }
 
-void gs_frame::flip(draw_context_t)
+void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
-	QString title;
-
-	if (!m_windowTitle.isEmpty())
-	{
-		title += m_windowTitle;
-	}
-
-	if (!Emu.GetTitle().empty())
-	{
-		title += qstr(" | " + Emu.GetTitle());
-	}
-
-	if (!Emu.GetTitleID().empty())
-	{
-		title += qstr(" | [" + Emu.GetTitleID() + ']');
-	}
-
 	if (m_show_fps)
 	{
 		++m_frames;
@@ -181,9 +179,9 @@ void gs_frame::flip(draw_context_t)
 		{
 			QString fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 
-			if (!title.isEmpty())
+			if (!m_windowTitle.isEmpty())
 			{
-				fps_title += " | " + title;
+				fps_title += " | " + m_windowTitle;
 			}
 
 			Emu.CallAfter([this, title = std::move(fps_title)]() {setTitle(title); });
@@ -194,9 +192,9 @@ void gs_frame::flip(draw_context_t)
 	}
 	else
 	{
-		if (this->title() != title)
+		if (this->title() != m_windowTitle)
 		{
-			Emu.CallAfter([this, title = std::move(title)]() {setTitle(title); });
+			Emu.CallAfter([this, title = std::move(m_windowTitle)]() {setTitle(m_windowTitle); });
 		}
 	}
 }
@@ -221,13 +219,11 @@ void gs_frame::HandleCursor(QWindow::Visibility visibility)
 	}
 }
 
-/** Override qt hideEvent.
- * For some reason beyond me, hitting X hides the game window instead of closes. To remedy this, I forcefully murder it for commiting this transgression.
- * Closing the window has a side-effect of also stopping the emulator.
-*/
-void gs_frame::hideEvent(QHideEvent* ev)
+bool gs_frame::event(QEvent* ev)
 {
-	Q_UNUSED(ev);
-
-	close();
+	if (ev->type()==QEvent::Close)
+	{
+		close();
+	}
+	return QWindow::event(ev);
 }

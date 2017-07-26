@@ -56,6 +56,9 @@ void D3D12GSRender::load_program()
 	m_vertex_program = get_current_vertex_program();
 	m_fragment_program = get_current_fragment_program(rtt_lookup_func);
 
+	if (!m_fragment_program.valid)
+		return;
+
 	D3D12PipelineProperties prop = {};
 	prop.Topology = get_primitive_topology_type(rsx::method_registers.current_draw_clause.primitive);
 
@@ -119,6 +122,9 @@ void D3D12GSRender::load_program()
 				case D3D12_BLEND_INV_BLEND_FACTOR:
 					return D3D12_BLEND_ZERO;
 				}
+
+				LOG_ERROR(RSX, "No suitable conversion defined for blend factor 0x%X" HERE, (u32)in);
+				return in;
 			};
 
 			d3d_sfactor_rgb = flatten_d3d12_factor(d3d_sfactor_rgb);

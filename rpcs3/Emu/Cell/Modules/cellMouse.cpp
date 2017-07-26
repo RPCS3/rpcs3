@@ -12,11 +12,6 @@ s32 cellMouseInit(u32 max_connect)
 {
 	sys_io.warning("cellMouseInit(max_connect=%d)", max_connect);
 
-	if (max_connect > 7)
-	{
-		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
-	}
-
 	const auto handler = fxm::import<MouseHandlerBase>(Emu.GetCallbacks().get_mouse_handler);
 
 	if (!handler)
@@ -24,7 +19,7 @@ s32 cellMouseInit(u32 max_connect)
 		return CELL_MOUSE_ERROR_ALREADY_INITIALIZED;
 	}
 
-	handler->Init(max_connect);
+	handler->Init(std::min(max_connect, 7u));
 	return CELL_OK;
 }
 

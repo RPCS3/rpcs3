@@ -1,9 +1,12 @@
-#ifndef WELCOME_DIALOG_H
-#define WELCOME_DIALOG_H
+#pragma once
 
 #include <QDialog>
 #include <QKeyEvent>
 #include <QCloseEvent>
+
+namespace Ui {
+	class welcome_dialog;
+}
 
 class welcome_dialog : public QDialog
 {
@@ -11,6 +14,7 @@ class welcome_dialog : public QDialog
 
 public:
 	explicit welcome_dialog(QWidget* parent = nullptr);
-};
 
-#endif
+private:
+	Ui::welcome_dialog *ui;
+};

@@ -27,9 +27,9 @@
 
 namespace vm
 {
-	static u8* memory_reserve_4GiB(std::uintptr_t addr = 0)
+	static u8* memory_reserve_4GiB(std::uintptr_t _addr = 0)
 	{
-		for (u64 addr = 0x100000000;; addr += 0x100000000)
+		for (u64 addr = _addr + 0x100000000;; addr += 0x100000000)
 		{
 			if (auto ptr = utils::memory_reserve(0x100000000, (void*)addr))
 			{
@@ -348,7 +348,8 @@ namespace vm
 			}
 		}
 
-		void* real_addr = vm::base(addr);
+		void* real_addr = g_base_addr + addr;
+		void* exec_addr = g_exec_addr + addr;
 
 #ifdef _WIN32
 		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
@@ -455,12 +456,15 @@ namespace vm
 			}
 		}
 
-		void* real_addr = vm::base(addr);
+		void* real_addr = g_base_addr + addr;
+		void* exec_addr = g_exec_addr + addr;
 
 #ifdef _WIN32
 		verify(__func__), ::VirtualFree(real_addr, size, MEM_DECOMMIT);
+		verify(__func__), ::VirtualFree(exec_addr, size, MEM_DECOMMIT);
 #else
 		verify(__func__), ::mmap(real_addr, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
+		verify(__func__), ::mmap(exec_addr, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
 	}
 

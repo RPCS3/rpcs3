@@ -87,7 +87,7 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	// Scale offset buffer
 	// Separate constant buffer
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 512));
-	fill_scale_offset_data(mapped_buffer, true, false);
+	fill_scale_offset_data(mapped_buffer, true);
 	fill_user_clip_data((char*)mapped_buffer + 64);
 	fill_fragment_state_buffer((char *)mapped_buffer + 128, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 512));
@@ -223,9 +223,8 @@ namespace
 		const std::vector<std::pair<u32, u32>>& vertex_ranges, d3d12_data_heap& m_buffer_data)
 	{
 		size_t index_count = std::accumulate(
-			vertex_ranges.begin(), vertex_ranges.end(), 0, [](size_t acc, const auto& pair) {
-				return acc + get_index_count(
-								 rsx::method_registers.current_draw_clause.primitive, pair.second);
+			vertex_ranges.begin(), vertex_ranges.end(), 0ll, [](size_t acc, const auto& pair) {
+				return acc + get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
 			});
 
 		// Alloc
@@ -235,15 +234,13 @@ namespace
 
 		void* mapped_buffer =
 			m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-		size_t first = 0;
-		for (const auto& pair : vertex_ranges) {
-			size_t element_count =
-				get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
-			write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)mapped_buffer,
-				rsx::method_registers.current_draw_clause.primitive, (u32)first, (u32)pair.second);
-			mapped_buffer = (char*)mapped_buffer + element_count * sizeof(u16);
-			first += pair.second;
-		}
+
+		u32 vertex_count = 0;
+		for (const auto& pair : vertex_ranges)
+			vertex_count += pair.second;
+
+		write_index_array_for_non_indexed_non_native_primitive_to_buffer((char *)mapped_buffer, rsx::method_registers.current_draw_clause.primitive, vertex_count);
+
 		m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
 			m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset, (UINT)buffer_size,
@@ -471,7 +468,7 @@ D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList* comma
 	return std::apply_visitor(
 		draw_command_visitor(command_list, m_buffer_data, m_vertex_buffer_data.Get(),
 			[this](
-				const auto& state, const auto& list) { return get_vertex_buffers(state, list); }),
+				const auto& state, const auto& list) { return get_vertex_buffers(state, list, 0); }),
 		get_draw_command(rsx::method_registers));
 }
 

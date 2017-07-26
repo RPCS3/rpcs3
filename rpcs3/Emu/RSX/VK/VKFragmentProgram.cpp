@@ -29,8 +29,8 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 420" << std::endl;
-	OS << "#extension GL_ARB_separate_shader_objects: enable" << std::endl << std::endl;
+	OS << "#version 420\n";
+	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
 }
 
 void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -60,7 +60,7 @@ void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 			if (var_name == "fogc")
 				var_name = "fog_c";
 
-			OS << "layout(location=" << reg.reg_location << ") in " << PT.type << " " << var_name << ";" << std::endl;
+			OS << "layout(location=" << reg.reg_location << ") in " << PT.type << " " << var_name << ";\n";
 		}
 	}
 
@@ -70,13 +70,13 @@ void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
 			const vk::varying_register_t &reg = vk::get_varying_register("front_diff_color");
-			OS << "layout(location=" << reg.reg_location << ") in vec4 front_diff_color;" << std::endl;
+			OS << "layout(location=" << reg.reg_location << ") in vec4 front_diff_color;\n";
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
 			const vk::varying_register_t &reg = vk::get_varying_register("front_spec_color");
-			OS << "layout(location=" << reg.reg_location << ") in vec4 front_spec_color;" << std::endl;
+			OS << "layout(location=" << reg.reg_location << ") in vec4 front_spec_color;\n";
 		}
 	}
 }
@@ -91,25 +91,18 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	//We always bind the first usable image to index 0, even if surface type is surface_type::b
-	//If only surface 1 is being written to, redirect to output 0
-
-	if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[1].second) && !m_parr.HasParam(PF_PARAM_NONE, "vec4", table[0].second))
-		OS << "layout(location=0) out vec4 " << table[1].first << ";" << std::endl;
-	else
+	//NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
+	u8 output_index = 0;
+	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
-		{
-			if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-				OS << "layout(location=" << i << ") " << "out vec4 " << table[i].first << ";" << std::endl;
-		}
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
 	}
 }
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	int location = 0;
-
+	int location = TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type != "sampler1D" &&
@@ -123,8 +116,22 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
-			if (m_prog.unnormalized_coords & (1 << index))
+			const auto mask = (1 << index);
+
+			if (m_prog.unnormalized_coords & mask)
+			{
 				samplerType = "sampler2DRect";
+			}
+			else if (m_prog.shadow_textures & mask)
+			{
+				if (m_shadow_sampled_textures & mask)
+				{
+					if (m_2d_sampled_textures & mask)
+						LOG_ERROR(RSX, "Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+					else
+						samplerType = "sampler2DShadow";
+				}
+			}
 
 			vk::glsl::program_input in;
 			in.location = location;
@@ -134,12 +141,12 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			inputs.push_back(in);
 
-			OS << "layout(set=0, binding=" << 19 + location++ << ") uniform " << samplerType << " " << PI.name << ";" << std::endl;
+			OS << "layout(set=0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
 		}
 	}
 
-	OS << "layout(std140, set = 0, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
-	OS << "{" << std::endl;
+	OS << "layout(std140, set = 0, binding = 2) uniform FragmentConstantsBuffer\n";
+	OS << "{\n";
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
@@ -150,18 +157,18 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			continue;
 
 		for (const ParamItem& PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << ";\n";
 	}
 
-	OS << "	float fog_param0;" << std::endl;
-	OS << "	float fog_param1;" << std::endl;
-	OS << "	uint alpha_test;" << std::endl;
-	OS << "	float alpha_ref;" << std::endl;
-	OS << "	vec4 texture_parameters[16];" << std::endl;
-	OS << "};" << std::endl;
+	OS << "	float fog_param0;\n";
+	OS << "	float fog_param1;\n";
+	OS << "	uint alpha_test;\n";
+	OS << "	float alpha_ref;\n";
+	OS << "	vec4 texture_parameters[16];\n";
+	OS << "};\n";
 
 	vk::glsl::program_input in;
-	in.location = 1;
+	in.location = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
 	in.domain = vk::glsl::glsl_fragment_program;
 	in.name = "FragmentConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
@@ -215,12 +222,14 @@ namespace vk
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", " + coord_name + ".xyz)";
 		}
+
+		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
 	}
 }
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	vk::insert_glsl_legacy_function(OS);
+	vk::insert_glsl_legacy_function(OS, vk::glsl::program_domain::glsl_fragment_program);
 
 	const std::set<std::string> output_values =
 	{
@@ -240,8 +249,8 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	OS << "void fs_main(" << parameters << ")" << std::endl;
-	OS << "{" << std::endl;
+	OS << "void fs_main(" << parameters << ")\n";
+	OS << "{\n";
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
@@ -254,7 +263,7 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
 
-			OS << ";" << std::endl;
+			OS << ";\n";
 		}
 	}
 
@@ -385,10 +394,10 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		OS << make_comparison_test(m_prog.alpha_func, "bool(alpha_test) && ", first_output_name + ".a", "alpha_ref");
 	}
 
-	OS << "}" << std::endl << std::endl;
+	OS << "}\n\n";
 
-	OS << "void main()" << std::endl;
-	OS << "{" << std::endl;
+	OS << "void main()\n";
+	OS << "{\n";
 
 	std::string parameters = "";
 	for (auto &reg_name : output_values)
@@ -399,11 +408,11 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 				parameters += ", ";
 
 			parameters += reg_name;
-			OS << "	vec4 " << reg_name << " = vec4(0.);" << std::endl;
+			OS << "	vec4 " << reg_name << " = vec4(0.);\n";
 		}
 	}
 
-	OS << std::endl << "	fs_main(" + parameters + ");" << std::endl << std::endl;
+	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
 	//Append the color output assignments
 	OS << color_output_block;
@@ -416,7 +425,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			* but it writes depth in r1.z and not h2.z.
 			* Maybe there's a different flag for depth ?
 			*/
-			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
+			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << "\n";
 			OS << "	gl_FragDepth = r1.z;\n";
 		}
 		else
@@ -426,7 +435,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		}
 	}
 
-	OS << "}" << std::endl;
+	OS << "}\n";
 }
 
 void VKFragmentDecompilerThread::Task()

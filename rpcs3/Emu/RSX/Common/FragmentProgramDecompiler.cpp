@@ -37,13 +37,12 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 		break;
 	}
 
-	if (dst.saturate)
-	{
-		code = saturate(code);
-	}
-	else if (!dst.no_dest)
+	if (!dst.no_dest)
 	{
 		code = NoOverflow(code);
+
+		if (dst.saturate)
+			code = saturate(code);
 	}
 
 	code += (append_mask ? "$m" : "");
@@ -63,13 +62,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 
 	std::string dest = AddReg(dst.dest_reg, dst.fp16) + "$m";
-
-	if (dst.exp_tex)
-	{
-		//TODO
-		//If exp_tex really sets _bx2 flag, we may need to perform extra modifications to the src
-		AddCode("//TODO: exp tex flag is set");
-	}
 
 	AddCodeCond(Format(dest), code);
 	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
@@ -206,6 +198,7 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 	if (dst.exp_tex)
 	{
 		//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
+		AddCode("//exp tex flag is set");
 		return "((" + code + "- 0.5) * 2.)";
 	}
 
@@ -214,14 +207,24 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 	case 0:
 		break;
 	case 1:
-		//Disabled: Causes blue output in some games such as persona V and soul calibur IV
-		//return "clamp(" + code + ", -65504., 65504.)";
-		break;
+		return "clamp(" + code + ", -65504., 65504.)";
 	case 2:
-		return "clamp(" + code + ", -1., 1.)";
+		return "clamp(" + code + ", -2., 2.)";
 	}
 
 	return code;
+}
+
+bool FragmentProgramDecompiler::DstExpectsSca()
+{
+	int writes = 0;
+	
+	if (dst.mask_x) writes++;
+	if (dst.mask_y) writes++;
+	if (dst.mask_z) writes++;
+	if (dst.mask_w) writes++;
+
+	return (writes == 1);
 }
 
 std::string FragmentProgramDecompiler::Format(const std::string& code)
@@ -437,7 +440,7 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
 	// Note: It's higly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
-	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0") + ")"); return true;
+	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0.x") + ").xxxx"); return true;
 	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
 	// It is not know what happens if 0 is negative.
 	case RSX_FP_OPCODE_RSQ: SetDst("(1. / sqrt(" + NotZeroPositive("$0.x") + ").xxxx)"); return true;
@@ -521,6 +524,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA));
 			else
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE));
@@ -540,7 +544,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ));
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
+			//Note shadow comparison only returns a true/false result!
+			if (DstExpectsSca() && (m_prog.shadow_textures & (1 << dst.tex_num)))
+			{
+				m_shadow_sampled_textures |= (1 << dst.tex_num);
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ), false);	//No swizzle mask on shadow lookup
+			}
+			else
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ));
@@ -558,6 +569,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD));
@@ -576,6 +588,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD));
@@ -712,11 +725,14 @@ std::string FragmentProgramDecompiler::Decompile()
 		default:
 			int prev_force_unit = forced_unit;
 
+			//Some instructions do not respect forced unit
+			//Tested with Tales of Vesperia
+			if (SIP()) break;
+			if (handle_tex_srb(opcode)) break;
+
 			if (forced_unit == FORCE_NONE)
 			{
-				if (SIP()) break;
 				if (handle_sct(opcode)) break;
-				if (handle_tex_srb(opcode)) break;
 				if (handle_scb(opcode)) break;
 			}
 			else if (forced_unit == FORCE_SCT)

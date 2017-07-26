@@ -52,10 +52,10 @@ private:
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
 
 	u32 m_draw_calls = 0;
-	u32 m_begin_time = 0;
-	u32 m_draw_time = 0;
-	u32 m_vertex_upload_time = 0;
-	u32 m_textures_upload_time = 0;
+	s64 m_begin_time = 0;
+	s64 m_draw_time = 0;
+	s64 m_vertex_upload_time = 0;
+	s64 m_textures_upload_time = 0;
 
 	//Compare to see if transform matrix have changed
 	size_t m_transform_buffer_hash = 0;
@@ -70,10 +70,17 @@ private:
 	std::mutex queue_guard;
 	std::list<work_item> work_queue;
 
+	bool framebuffer_status_valid = false;
+
 	rsx::gcm_framebuffer_info surface_info[rsx::limits::color_buffers_count];
 	rsx::gcm_framebuffer_info depth_surface_info;
 
 	bool flush_draw_buffers = false;
+
+	bool m_last_draw_indexed;
+	GLenum m_last_ib_type;
+	size_t m_last_index_offset;
+	u32 m_last_vertex_count;
 
 public:
 	gl::fbo draw_fbo;

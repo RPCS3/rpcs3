@@ -1,5 +1,4 @@
-#ifndef DEBUGGERFRAME_H
-#define DEBUGGERFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
@@ -18,6 +17,7 @@
 
 #include "instruction_editor_dialog.h"
 #include "register_editor_dialog.h"
+#include "gui_settings.h"
 
 #include <QDockWidget>
 #include <QListWidget>
@@ -27,6 +27,7 @@
 #include <QWheelEvent>
 #include <QTimer>
 #include <QTextEdit>
+#include <QSplitter>
 
 class debugger_list;
 
@@ -41,11 +42,12 @@ class debugger_frame : public QDockWidget
 	QTextEdit* m_regs;
 	QPushButton* m_go_to_addr;
 	QPushButton* m_go_to_pc;
+	QPushButton* m_btn_capture;
 	QPushButton* m_btn_step;
 	QPushButton* m_btn_run;
-	QPushButton* m_btn_pause;
 	QComboBox* m_choice_units;
 	QString m_current_choice;
+	bool m_noThreadSelected = true;
 
 	u64 m_threads_created = 0;
 	u64 m_threads_deleted = 0;
@@ -53,13 +55,21 @@ class debugger_frame : public QDockWidget
 	u32 m_last_stat = 0;
 
 	QTimer* update;
+	QSplitter* m_splitter;
+
+	const QString NoThread = tr("No Thread");
+	const QString Run = tr("Run");
+	const QString Pause = tr("Pause");
+
+	std::shared_ptr<gui_settings> xgui_settings;
 
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
 	std::weak_ptr<cpu_thread> cpu;
 
 public:
-	explicit debugger_frame(QWidget *parent = 0);
+	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
+	void SaveSettings();
 
 	void UpdateUI();
 	void UpdateUnitList();
@@ -69,18 +79,21 @@ public:
 	void DoUpdate();
 	void WriteRegs();
 	void EnableButtons(bool enable);
+	void ClearBreakpoints();
 
 	void OnUpdate();
 
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
+	void showEvent(QShowEvent* event);
+	void hideEvent(QHideEvent* event);
 
-signals:
+Q_SIGNALS:
 	void DebugFrameClosed();
-public slots:
+public Q_SLOTS:
 	void DoStep();
-private slots:
+private Q_SLOTS:
 	void OnSelectUnit();
 	void Show_Val();
 	void Show_PC();
@@ -96,6 +109,7 @@ class debugger_list : public QListWidget
 public:
 	u32 m_pc;
 	u32 m_item_count;
+	bool m_noThreadSelected;
 
 public:
 	debugger_list(debugger_frame* parent);
@@ -112,5 +126,3 @@ protected:
 	void wheelEvent(QWheelEvent* event);
 	void resizeEvent(QResizeEvent* event);
 };
-
-#endif // DEBUGGERFRAME_H

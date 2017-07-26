@@ -1,6 +1,4 @@
-
-#ifndef INSTRUCTIONEDITOR_H
-#define INSTRUCTIONEDITOR_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/System.h"
@@ -33,5 +31,3 @@ public:
 
 	void updatePreview();
 };
-
-#endif // !INSTRUCTIONEDITOR_H

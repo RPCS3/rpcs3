@@ -1,5 +1,4 @@
-#ifndef AUTOPAUSESETTINGSDIALOG_H
-#define AUTOPAUSESETTINGSDIALOG_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/System.h"
@@ -40,9 +39,9 @@ public:
 	void LoadEntries(void);
 	void SaveEntries(void);
 
-public slots :
+public Q_SLOTS:
 	void OnRemove();
-private slots :
+private Q_SLOTS:
 	void ShowContextMenu(const QPoint &pos);
 	void keyPressEvent(QKeyEvent *event);
 };
@@ -61,10 +60,8 @@ class AutoPauseConfigDialog : public QDialog
 public:
 	explicit AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32* entry);
 
-private slots :
+private Q_SLOTS:
 	void OnOk();
 	void OnCancel();
 	void OnUpdateValue();
 };
-
-#endif // AUTOPAUSESETTINGSDIALOG_H

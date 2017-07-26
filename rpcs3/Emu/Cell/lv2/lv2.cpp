@@ -33,7 +33,19 @@
 
 extern std::string ppu_get_syscall_name(u64 code);
 
-static constexpr ppu_function_t null_func = nullptr;
+template <>
+void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
+{
+	out += ppu_get_syscall_name(arg);
+}
+
+static bool null_func(ppu_thread& ppu)
+{
+	LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_syscall_code(ppu.gpr[11]));
+	ppu.gpr[3] = 0;
+	ppu.cia += 4;
+	return false;
+}
 
 std::array<ppu_function_t, 1024> g_ppu_syscall_table{};
 
@@ -183,18 +195,18 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_time_get_current_time),                   //145 (0x091)
 	null_func,//BIND_FUNC(sys_time_get_system_time),        //146 (0x092)  ROOT
 	BIND_FUNC(sys_time_get_timebase_frequency),             //147 (0x093)
-	null_func,//BIND_FUNC(_sys_rwlock_trywlock)             //148 (0x094)
+	BIND_FUNC(_sys_rwlock_trywlock),                        //148 (0x094)
 	null_func,                                              //149 (0x095)  UNS
 	BIND_FUNC(sys_raw_spu_create_interrupt_tag),            //150 (0x096)
 	BIND_FUNC(sys_raw_spu_set_int_mask),                    //151 (0x097)
 	BIND_FUNC(sys_raw_spu_get_int_mask),                    //152 (0x098)
 	BIND_FUNC(sys_raw_spu_set_int_stat),                    //153 (0x099)
 	BIND_FUNC(sys_raw_spu_get_int_stat),                    //154 (0x09A)
-	null_func,//BIND_FUNC(sys_spu_image_get_information?)   //155 (0x09B)
+	BIND_FUNC(_sys_spu_image_get_information),              //155 (0x09B)
 	BIND_FUNC(sys_spu_image_open),                          //156 (0x09C)
-	null_func,//BIND_FUNC(sys_spu_image_import)             //157 (0x09D)
-	null_func,//BIND_FUNC(sys_spu_image_close)              //158 (0x09E)
-	null_func,//BIND_FUNC(sys_raw_spu_load)                 //159 (0x09F)
+	BIND_FUNC(_sys_spu_image_import),                       //157 (0x09D)
+	BIND_FUNC(_sys_spu_image_close),                        //158 (0x09E)
+	BIND_FUNC(_sys_raw_spu_image_load),                     //159 (0x09F)
 	BIND_FUNC(sys_raw_spu_create),                          //160 (0x0A0)
 	BIND_FUNC(sys_raw_spu_destroy),                         //161 (0x0A1)
 	null_func,                                              //162 (0x0A2)  UNS
@@ -610,7 +622,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_rsxaudio_close_connection)    //655 (0x28F)
 	null_func,//BIND_FUNC(sys_rsxaudio_prepare_process)     //656 (0x290)
 	null_func,//BIND_FUNC(sys_rsxaudio_start_process)       //657 (0x291)
-	null_func,//BIND_FUNC(sys_rsxaudio_)                    //658 (0x292)
+	null_func,//BIND_FUNC(sys_rsxaudio_stop_process)        //658 (0x292)
 	null_func,//BIND_FUNC(sys_rsxaudio_)                    //659 (0x293)
 
 	null_func, null_func, null_func, null_func, null_func,  //664  UNS
@@ -734,7 +746,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_fs_mount),                    //837 (0x345)
 	null_func,//BIND_FUNC(sys_fs_unmount),                  //838 (0x346)
 	null_func,//BIND_FUNC(sys_fs_sync),                     //839 (0x347)
-	null_func,//BIND_FUNC(sys_fs_disk_free),                //840 (0x348)
+	BIND_FUNC(sys_fs_disk_free),                            //840 (0x348)
 	null_func,//BIND_FUNC(sys_fs_get_mount_info_size),      //841 (0x349)
 	null_func,//BIND_FUNC(sys_fs_get_mount_info),           //842 (0x34A)
 	null_func,//BIND_FUNC(sys_fs_get_fs_info_size),         //843 (0x34B)
@@ -973,15 +985,9 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 		if (auto func = g_ppu_syscall_table[code])
 		{
 			func(ppu);
-			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_get_syscall_name(code), code, ppu.gpr[3]);
+			LOG_TRACE(PPU, "Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
+			return;
 		}
-		else
-		{
-			LOG_TODO(HLE, "Unimplemented syscall %s -> CELL_OK", ppu_get_syscall_name(code));
-			ppu.gpr[3] = 0;
-		}
-
-		return;
 	}
 
 	fmt::throw_exception("Invalid syscall number (%llu)", code);

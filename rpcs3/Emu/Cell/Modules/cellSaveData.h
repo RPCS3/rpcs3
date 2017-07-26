@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 namespace vm { using namespace ps3; }
 
@@ -282,8 +282,7 @@ struct SaveDataEntry
 	s64 atime;
 	s64 mtime;
 	s64 ctime;
-	//void* iconBuf;
-	//u32 iconBufSize;
+	std::vector<uchar> iconBuf;
 	bool isNew;
 };
 
@@ -292,5 +291,5 @@ class SaveDialogBase
 public:
 	virtual ~SaveDialogBase();
 
-	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, vm::ptr<CellSaveDataListSet> listSet) = 0;
+	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, bool isSaving, vm::ptr<CellSaveDataListSet> listSet) = 0;
 };

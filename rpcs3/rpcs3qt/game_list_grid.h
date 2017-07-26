@@ -1,26 +1,23 @@
-#ifndef GAME_LIST_GRID_H
-#define GAME_LIST_GRID_H
+#pragma once
 
+#include "game_list.h"
 #include "game_list_grid_delegate.h"
 
-#include <QWidget>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QScrollArea>
-#include <QString>
-#include <QTableWidget>
 
-class game_list_grid : public QTableWidget
+class game_list_grid : public game_list
 {
 	Q_OBJECT
 
 	QSize m_icon_size;
+	QColor m_icon_color;
 	qreal m_margin_factor;
 	qreal m_text_factor;
 	bool m_text_enabled = true;
 
 public:
-	explicit game_list_grid(const QSize& icon_size, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
+	explicit game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
 	~game_list_grid();
 
 	void enableText(const bool& enabled);
@@ -32,5 +29,3 @@ public:
 private:
 	game_list_grid_delegate* grid_item_delegate; 
 };
-
-#endif

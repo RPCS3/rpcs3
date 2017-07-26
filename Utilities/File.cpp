@@ -110,10 +110,12 @@ static fs::error to_error(DWORD e)
 #include <unistd.h>
 #include <utime.h>
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__)
 #include <copyfile.h>
 #include <mach-o/dyld.h>
-#else
+#elif defined(__DragonFly__) || defined(__FreeBSD__)
+#include <sys/socket.h> // sendfile
+#elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
 #endif
 
@@ -578,14 +580,20 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	}
 
 	// Here we use kernel-space copying for performance reasons
-#if defined(__APPLE__) || defined(__FreeBSD__)
-	// fcopyfile works on FreeBSD and OS X 10.5+ 
+#if defined(__APPLE__)
+	// fcopyfile works on OS X 10.5+
 	if (::fcopyfile(input, output, 0, COPYFILE_ALL))
-#else
+#elif defined(__DragonFly__) || defined(__FreeBSD__)
+	if (::sendfile(input, output, 0, 0, NULL, NULL, 0))
+#elif defined(__linux__) || defined(__sun)
 	// sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
 	off_t bytes_copied = 0;
 	struct ::stat fileinfo = { 0 };
 	if (::fstat(input, &fileinfo) || ::sendfile(output, input, &bytes_copied, fileinfo.st_size))
+#else // NetBSD, OpenBSD, etc.
+	fmt::throw_exception("fs::copy_file() isn't implemented for this platform.\nFrom: %s\nTo: %s", from, to);
+	errno = 0;
+	if (true)
 #endif
 	{
 		const int err = errno;

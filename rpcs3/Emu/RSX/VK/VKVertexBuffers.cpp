@@ -240,7 +240,7 @@ namespace
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
 		write_index_array_for_non_indexed_non_native_primitive_to_buffer(
-			reinterpret_cast<char*>(buf), clause.primitive, 0, vertex_count);
+			reinterpret_cast<char*>(buf), clause.primitive, vertex_count);
 
 		m_index_buffer_ring_info.unmap();
 		return std::make_tuple(
@@ -251,14 +251,19 @@ namespace
 	{
 		vertex_buffer_visitor(u32 vtx_cnt, VkDevice dev, vk::vk_data_heap& heap,
 			vk::glsl::program* prog, VkDescriptorSet desc_set,
-			std::vector<std::unique_ptr<vk::buffer_view>>& buffer_view_to_clean)
+			std::vector<std::unique_ptr<vk::buffer_view>>& buffer_view_to_clean,
+			weak_vertex_cache& vertex_cache)
 			: vertex_count(vtx_cnt), m_attrib_ring_info(heap), device(dev), m_program(prog),
-			  descriptor_sets(desc_set), m_buffer_view_to_clean(buffer_view_to_clean)
+			  descriptor_sets(desc_set), m_buffer_view_to_clean(buffer_view_to_clean),
+			  vertex_cache(&vertex_cache)
 		{
 		}
 
 		void operator()(const rsx::vertex_array_buffer& vertex_array)
 		{
+			if (!m_program->has_uniform(s_reg_table[vertex_array.index]))
+				return;
+
 			// Fill vertex_array
 			u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
 			u32 real_element_size = vk::get_suitable_vk_size(vertex_array.type, vertex_array.attribute_size);
@@ -278,16 +283,22 @@ namespace
 			m_attrib_ring_info.unmap();
 			const VkFormat format = vk::get_suitable_vk_format(vertex_array.type, vertex_array.attribute_size);
 
+			const uintptr_t local_addr = (uintptr_t)vertex_array.data.data();
+			vertex_cache->store_range(local_addr, format, upload_size, (u32)offset_in_attrib_buffer);
+
 			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, upload_size));
 			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vertex_array.index], descriptor_sets);
 		}
 
 		void operator()(const rsx::vertex_array_register& vertex_register)
 		{
+			if (!m_program->has_uniform(s_reg_table[vertex_register.index]))
+				return;
+
 			size_t data_size = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
 			const VkFormat format = vk::get_suitable_vk_format(vertex_register.type, vertex_register.attribute_size);
 
-			u32 offset_in_attrib_buffer = 0;
+			size_t offset_in_attrib_buffer = 0;
 
 			if (vk::requires_component_expansion(vertex_register.type, vertex_register.attribute_size))
 			{
@@ -316,11 +327,10 @@ namespace
 
 		void operator()(const rsx::empty_vertex_array& vbo)
 		{
-			u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(32);
-			void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, 32);
-			memset(dst, 0, 32);
-			m_attrib_ring_info.unmap();
-			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R32_SFLOAT, offset_in_attrib_buffer, 32));
+			if (!m_program->has_uniform(s_reg_table[vbo.index]))
+				return;
+
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(device, m_attrib_ring_info.heap->value, VK_FORMAT_R8G8B8A8_UNORM, 0, 0));
 			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[vbo.index], descriptor_sets);
 		}
 
@@ -331,6 +341,7 @@ namespace
 		vk::glsl::program* m_program;
 		VkDescriptorSet descriptor_sets;
 		std::vector<std::unique_ptr<vk::buffer_view>>& m_buffer_view_to_clean;
+		weak_vertex_cache* vertex_cache;
 	};
 
 	using attribute_storage = std::vector<std::variant<rsx::vertex_array_buffer,
@@ -347,11 +358,13 @@ namespace
 			std::vector<std::unique_ptr<vk::buffer_view>>& buffer_view_to_clean,
 			std::function<attribute_storage(
 				const rsx::rsx_state&, const std::vector<std::pair<u32, u32>>&)>
-				get_vertex_buffers_f)
+				get_vertex_buffers_f,
+			VKGSRender *thread)
 			: m_device(device), m_index_buffer_ring_info(index_buffer_ring_info),
 			  m_attrib_ring_info(attrib_ring_info), m_program(program),
 			  m_descriptor_sets(descriptor_sets), m_buffer_view_to_clean(buffer_view_to_clean),
-			  get_vertex_buffers(get_vertex_buffers_f)
+			  get_vertex_buffers(get_vertex_buffers_f),
+			  rsxthr(thread)
 		{
 		}
 
@@ -450,14 +463,148 @@ namespace
 		std::function<attribute_storage(
 			const rsx::rsx_state&, const std::vector<std::pair<u32, u32>>&)>
 			get_vertex_buffers;
+		VKGSRender* rsxthr;
 
 		void upload_vertex_buffers(u32 min_index, u32 vertex_max_index)
 		{
-			vertex_buffer_visitor visitor(vertex_max_index - min_index + 1, m_device,
-				m_attrib_ring_info, m_program, m_descriptor_sets, m_buffer_view_to_clean);
+			const u32 vertex_count = vertex_max_index - min_index + 1;
+
+			vertex_buffer_visitor visitor(vertex_count, m_device,
+				m_attrib_ring_info, m_program, m_descriptor_sets, m_buffer_view_to_clean, rsxthr->m_vertex_cache);
+
 			const auto& vertex_buffers = get_vertex_buffers(
 				rsx::method_registers, {{min_index, vertex_max_index - min_index + 1}});
-			for (const auto& vbo : vertex_buffers) std::apply_visitor(visitor, vbo);
+			
+			//1. Check if we can get all these allocations at once
+			std::vector<size_t> memory_allocations(16);
+			std::vector<u32> allocated_sizes(16);
+			std::vector<int> upload_jobs(16);
+
+			memory_allocations.resize(0);
+			allocated_sizes.resize(0);
+			upload_jobs.resize(0);
+
+			for (int i = 0; i < vertex_buffers.size(); ++i)
+			{
+				const auto &vbo = vertex_buffers[i];
+				bool can_multithread = false;
+
+				if (vbo.which() == 0)
+				{
+					//vertex array buffer. We can thread this thing heavily
+					const auto& v = vbo.get<rsx::vertex_array_buffer>();
+
+					const u32 element_size = rsx::get_vertex_type_size_on_host(v.type, v.attribute_size);
+					const u32 real_element_size = vk::get_suitable_vk_size(v.type, v.attribute_size);
+					const u32 upload_size = real_element_size * vertex_count;
+					const VkFormat format = vk::get_suitable_vk_format(v.type, v.attribute_size);
+					const uintptr_t local_addr = (uintptr_t)v.data.data();
+
+					const auto cached = rsxthr->m_vertex_cache.find_vertex_range(local_addr, format, upload_size);
+					if (cached)
+					{
+						m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, format, cached->offset_in_heap, upload_size));
+						m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[v.index], m_descriptor_sets);
+
+						continue;
+					}
+					
+					if (v.attribute_size > 1 && vertex_count >= (u32)g_cfg.video.mt_vertex_upload_threshold && rsxthr->vertex_upload_task_ready())
+					{
+						can_multithread = true;
+					
+						size_t offset = m_attrib_ring_info.alloc<256>(upload_size);
+
+						memory_allocations.push_back(offset);
+						allocated_sizes.push_back(upload_size);
+						upload_jobs.push_back(i);
+
+						const uintptr_t local_addr = (uintptr_t)v.data.data();
+						rsxthr->m_vertex_cache.store_range(local_addr, format, upload_size, (u32)offset);
+
+						m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, format, offset, upload_size));
+						m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[v.index], m_descriptor_sets);
+					}
+				}
+				
+				if (!can_multithread)
+					std::apply_visitor(visitor, vbo);
+			}
+
+			if (memory_allocations.size() > 0)
+			{
+				if (memory_allocations.size() > 1)
+				{
+					//2 sets in case the blocks dont fit
+					u8 available_jobs[2] = {};
+					u32 allocated_block[2] = {};
+
+					size_t last_offset = memory_allocations[0];
+					u8 current_index = 0;
+
+					for (int n = 0; n < memory_allocations.size(); ++n)
+					{
+						if (memory_allocations[n] < last_offset)
+						{
+							//queue went around
+							current_index = 1;
+						}
+
+						available_jobs[current_index] ++;
+						allocated_block[current_index] += allocated_sizes[n];
+					}
+
+					int n = 0;
+					for (int task = 0; task < 2; ++task)
+					{
+						if (available_jobs[task])
+						{
+							if (m_attrib_ring_info.mapped)
+							{
+								rsxthr->wait_for_vertex_upload_task();
+								m_attrib_ring_info.unmap();
+							}
+
+							size_t space_remaining = allocated_block[task];
+							size_t offset_base = memory_allocations[n];
+
+							gsl::byte* dst = (gsl::byte*)m_attrib_ring_info.map(memory_allocations[n], space_remaining);
+
+							while (true)
+							{
+								if (space_remaining == 0)
+									break;
+
+								const auto& vertex_array = vertex_buffers[upload_jobs[n]].get<rsx::vertex_array_buffer>();
+								const u32 real_element_size = vk::get_suitable_vk_size(vertex_array.type, vertex_array.attribute_size);
+								
+								gsl::span<gsl::byte> dest_span(dst + (memory_allocations[n] - offset_base), allocated_sizes[n]);
+								rsxthr->post_vertex_stream_to_upload(vertex_array.data, dest_span, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, real_element_size, vertex_count, vk::prepare_buffer_for_writing);
+
+								space_remaining -= allocated_sizes[n];
+								n++;
+							}
+
+							rsxthr->start_vertex_upload_task();
+						}
+					}
+				}
+				else
+				{
+					const size_t offset_in_attrib_buffer = memory_allocations[0];
+					const u32 upload_size = allocated_sizes[0];
+					const auto& vertex_array = vertex_buffers[upload_jobs[0]].get<rsx::vertex_array_buffer>();
+					const u32 real_element_size = vk::get_suitable_vk_size(vertex_array.type, vertex_array.attribute_size);
+
+					void *dst = m_attrib_ring_info.map(offset_in_attrib_buffer, upload_size);
+					gsl::span<gsl::byte> dest_span(static_cast<gsl::byte*>(dst), upload_size);
+
+					write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, real_element_size);
+					vk::prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
+
+					m_attrib_ring_info.unmap();
+				}
+			}
 		}
 
 		u32 upload_inlined_array()
@@ -478,13 +625,16 @@ namespace
 					  sizeof(u32)) /
 				stride;
 
-			for (int index = 0; index < rsx::limits::vertex_count; ++index) {
+			for (int index = 0; index < rsx::limits::vertex_count; ++index)
+			{
 				auto& vertex_info = rsx::method_registers.vertex_arrays_info[index];
 
 				if (!m_program->has_uniform(s_reg_table[index])) continue;
 
 				if (!vertex_info.size()) // disabled
 				{
+					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8G8B8A8_UNORM, 0, 0));
+					m_program->bind_uniform(m_buffer_view_to_clean.back()->value, s_reg_table[index], m_descriptor_sets);
 					continue;
 				}
 
@@ -494,7 +644,7 @@ namespace
 				const VkFormat format =
 					vk::get_suitable_vk_format(vertex_info.type(), vertex_info.size());
 
-				u32 offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
+				size_t offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
 				u8* src = reinterpret_cast<u8*>(
 					rsx::method_registers.current_draw_clause.inline_vertex_array.data());
 				u8* dst =
@@ -507,8 +657,7 @@ namespace
 
 				// TODO: properly handle cmp type
 				if (vertex_info.type() == rsx::vertex_base_type::cmp)
-					LOG_ERROR(
-						RSX, "Compressed vertex attributes not supported for inlined arrays yet");
+					LOG_ERROR(RSX, "Compressed vertex attributes not supported for inlined arrays yet");
 
 				switch (vertex_info.type())
 				{
@@ -551,6 +700,6 @@ VKGSRender::upload_vertex_data()
 {
 	draw_command_visitor visitor(*m_device, m_index_buffer_ring_info, m_attrib_ring_info, m_program,
 		descriptor_sets, m_buffer_view_to_clean,
-		[this](const auto& state, const auto& range) { return this->get_vertex_buffers(state, range); });
+		[this](const auto& state, const auto& range) { return this->get_vertex_buffers(state, range, m_program->get_vertex_input_attributes_mask());}, this);
 	return std::apply_visitor(visitor, get_draw_command(rsx::method_registers));
 }

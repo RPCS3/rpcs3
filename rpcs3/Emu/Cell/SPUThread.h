@@ -582,6 +582,7 @@ public:
 
 	std::exception_ptr pending_exception;
 
+	std::array<struct spu_function_t*, 65536> compiled_cache{};
 	std::shared_ptr<class SPUDatabase> spu_db;
 	std::shared_ptr<class spu_recompiler_base> spu_rec;
 	u32 recursion_level = 0;

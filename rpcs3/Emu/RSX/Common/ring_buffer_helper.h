@@ -69,7 +69,12 @@ public:
 	template<int Alignement>
 	size_t alloc(size_t size)
 	{
-		if (!can_alloc<Alignement>(size)) fmt::throw_exception("Working buffer not big enough" HERE);
+		if (!can_alloc<Alignement>(size))
+		{
+			fmt::throw_exception("Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d" HERE,
+					m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
+		}
+
 		size_t alloc_size = align(size, Alignement);
 		size_t aligned_put_pos = align(m_put_pos, Alignement);
 

@@ -18,7 +18,7 @@
 #include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
 
-#define DESCRIPTOR_MAX_DRAW_CALLS 1024
+#define DESCRIPTOR_MAX_DRAW_CALLS 4096
 
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
 #define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
@@ -56,6 +56,7 @@ namespace vk
 	class swap_chain_image;
 	class physical_device;
 	class command_buffer;
+	struct image;
 
 	vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -73,6 +74,7 @@ namespace vk
 	void destroy_global_resources();
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
+	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect);
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect);
 
@@ -358,7 +360,8 @@ namespace vk
 	struct image
 	{
 		VkImage value;
-		VkComponentMapping native_layout = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
+		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
+		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkImageCreateInfo info = {};
 		std::shared_ptr<vk::memory_block> memory;
 
@@ -415,6 +418,21 @@ namespace vk
 
 		image(const image&) = delete;
 		image(image&&) = delete;
+
+		u32 width() const
+		{
+			return info.extent.width;
+		}
+
+		u32 height() const
+		{
+			return info.extent.height;
+		}
+
+		u32 depth() const
+		{
+			return info.extent.depth;
+		}
 
 	private:
 		VkDevice m_device;
@@ -592,7 +610,8 @@ namespace vk
 
 		sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 			bool unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
-			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color)
+			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
+			VkBool32 depth_compare = false, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
 			: m_device(dev)
 		{
 			VkSamplerCreateInfo info = {};
@@ -601,7 +620,7 @@ namespace vk
 			info.addressModeV = clamp_v;
 			info.addressModeW = clamp_w;
 			info.anisotropyEnable = VK_TRUE;
-			info.compareEnable = VK_FALSE;
+			info.compareEnable = depth_compare;
 			info.unnormalizedCoordinates = unnormalized_coordinates;
 			info.mipLodBias = mipLodBias;
 			info.maxAnisotropy = max_anisotropy;
@@ -610,7 +629,7 @@ namespace vk
 			info.magFilter = mag_filter;
 			info.minFilter = min_filter;
 			info.mipmapMode = mipmap_mode;
-			info.compareOp = VK_COMPARE_OP_NEVER;
+			info.compareOp = depth_compare_mode;
 			info.borderColor = border_color;
 
 			CHECK_RESULT(vkCreateSampler(m_device, &info, nullptr, &value));
@@ -631,17 +650,17 @@ namespace vk
 	{
 		VkFramebuffer value;
 		VkFramebufferCreateInfo info = {};
-		std::vector<std::unique_ptr<vk::image_view>> attachements;
+		std::vector<std::unique_ptr<vk::image_view>> attachments;
 		u32 m_width = 0;
 		u32 m_height = 0;
 
 	public:
 		framebuffer(VkDevice dev, VkRenderPass pass, u32 width, u32 height, std::vector<std::unique_ptr<vk::image_view>> &&atts)
-			: m_device(dev), attachements(std::move(atts))
+			: m_device(dev), attachments(std::move(atts))
 		{
-			std::vector<VkImageView> image_view_array(attachements.size());
+			std::vector<VkImageView> image_view_array(attachments.size());
 			size_t i = 0;
-			for (const auto &att : attachements)
+			for (const auto &att : attachments)
 			{
 				image_view_array[i++] = att->value;
 			}
@@ -673,6 +692,24 @@ namespace vk
 		u32 height()
 		{
 			return m_height;
+		}
+
+		bool matches(std::vector<vk::image*> fbo_images, u32 width, u32 height)
+		{
+			if (m_width != width || m_height != height)
+				return false;
+
+			if (fbo_images.size() != attachments.size())
+				return false;
+
+			for (int n = 0; n < fbo_images.size(); ++n)
+			{
+				if (attachments[n]->info.image != fbo_images[n]->value ||
+					attachments[n]->info.format != fbo_images[n]->info.format)
+					return false;
+			}
+
+			return true;
 		}
 
 		framebuffer(const framebuffer&) = delete;
@@ -1274,6 +1311,16 @@ namespace vk
 			{
 				if (!formatCount) fmt::throw_exception("Format count is zero!" HERE);
 				format = surfFormats[0].format;
+
+				//Prefer BGRA8_UNORM to avoid sRGB compression (RADV)
+				for (auto& surface_format: surfFormats)
+				{
+					if (surface_format.format == VK_FORMAT_B8G8R8A8_UNORM)
+					{
+						format = VK_FORMAT_B8G8R8A8_UNORM;
+						break;
+					}
+				}
 			}
 
 			color_space = surfFormats[0].colorSpace;
@@ -1372,6 +1419,8 @@ namespace vk
 			VkDevice m_device;
 		public:
 			VkPipeline pipeline;
+			u64 attribute_location_mask;
+			u64 vertex_attributes_mask;
 
 			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
 			program(const program&) = delete;
@@ -1384,20 +1433,25 @@ namespace vk
 			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
 			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
+
+			u64 get_vertex_input_attributes_mask();
 		};
 	}
 
 	struct vk_data_heap : public data_heap
 	{
 		std::unique_ptr<vk::buffer> heap;
+		bool mapped = false;
 
 		void* map(size_t offset, size_t size)
 		{
+			mapped = true;
 			return heap->map(offset, size);
 		}
 
 		void unmap()
 		{
+			mapped = false;
 			heap->unmap();
 		}
 	};

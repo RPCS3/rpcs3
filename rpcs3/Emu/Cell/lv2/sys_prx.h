@@ -43,7 +43,14 @@ struct sys_prx_load_module_option_t
 	vm::ps3::bptr<void> base_addr;
 };
 
-struct sys_prx_segment_info_t;// TODO
+struct sys_prx_segment_info_t
+{
+	be_t<u64> base;
+	be_t<u64> filesz;
+	be_t<u64> memsz;
+	be_t<u64> index;
+	be_t<u64> type;
+};
 
 struct sys_prx_module_info_t
 {
@@ -115,9 +122,12 @@ struct lv2_prx final : lv2_obj, ppu_module
 	bool is_started = false;
 
 	std::unordered_map<u32, u32> specials;
+	std::unordered_map<u32, void*> imports;
 
 	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> start = vm::null;
 	vm::ps3::ptr<s32(u32 argc, vm::ps3::ptr<void> argv)> stop = vm::null;
+	vm::ps3::ptr<s32(u64 callback, u64 argc, vm::ps3::ptr<void, u64> argv)> prologue = vm::null;
+	vm::ps3::ptr<s32(u64 callback, u64 argc, vm::ps3::ptr<void, u64> argv)> epilogue = vm::null;
 	vm::ps3::ptr<s32()> exit = vm::null;
 };
 

@@ -35,48 +35,48 @@ std::string D3D12FragmentDecompiler::compareFunction(COMPARE f, const std::strin
 
 void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 {
-	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	float4x4 scaleOffsetMat;" << std::endl;
-	OS << "	int4 userClipEnabled[2];" << std::endl;
-	OS << "	float4 userClipFactor[2];" << std::endl;
+	OS << "cbuffer SCALE_OFFSET : register(b0)\n";
+	OS << "{\n";
+	OS << "	float4x4 scaleOffsetMat;\n";
+	OS << "	int4 userClipEnabled[2];\n";
+	OS << "	float4 userClipFactor[2];\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
-	OS << "	int isAlphaTested;" << std::endl;
-	OS << "	float alphaRef;" << std::endl;
+	OS << "	int isAlphaTested;\n";
+	OS << "	float alphaRef;\n";
 	OS << "	float4 texture_parameters[16];\n";
-	OS << "};" << std::endl;
+	OS << "};\n";
 }
 
 void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
 {
-	OS << "struct PixelInput" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	float4 Position : SV_POSITION;" << std::endl;
-	OS << "	float4 diff_color : COLOR0;" << std::endl;
-	OS << "	float4 spec_color : COLOR1;" << std::endl;
-	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
-	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
-	OS << "	float4 fogc : FOG;" << std::endl;
-	OS << "	float4 tc9 : TEXCOORD9;" << std::endl;
-	OS << "	float4 tc0 : TEXCOORD0;" << std::endl;
-	OS << "	float4 tc1 : TEXCOORD1;" << std::endl;
-	OS << "	float4 tc2 : TEXCOORD2;" << std::endl;
-	OS << "	float4 tc3 : TEXCOORD3;" << std::endl;
-	OS << "	float4 tc4 : TEXCOORD4;" << std::endl;
-	OS << "	float4 tc5 : TEXCOORD5;" << std::endl;
-	OS << "	float4 tc6 : TEXCOORD6;" << std::endl;
-	OS << "	float4 tc7 : TEXCOORD7;" << std::endl;
-	OS << "	float4 tc8 : TEXCOORD8;" << std::endl;
-	OS << "	float4 dst_userClip0 : SV_ClipDistance0;" << std::endl;
-	OS << "	float4 dst_userClip1 : SV_ClipDistance1;" << std::endl;
-	OS << "};" << std::endl;
+	OS << "struct PixelInput\n";
+	OS << "{\n";
+	OS << "	float4 Position : SV_POSITION;\n";
+	OS << "	float4 diff_color : COLOR0;\n";
+	OS << "	float4 spec_color : COLOR1;\n";
+	OS << "	float4 dst_reg3 : COLOR2;\n";
+	OS << "	float4 dst_reg4 : COLOR3;\n";
+	OS << "	float4 fogc : FOG;\n";
+	OS << "	float4 tc9 : TEXCOORD9;\n";
+	OS << "	float4 tc0 : TEXCOORD0;\n";
+	OS << "	float4 tc1 : TEXCOORD1;\n";
+	OS << "	float4 tc2 : TEXCOORD2;\n";
+	OS << "	float4 tc3 : TEXCOORD3;\n";
+	OS << "	float4 tc4 : TEXCOORD4;\n";
+	OS << "	float4 tc5 : TEXCOORD5;\n";
+	OS << "	float4 tc6 : TEXCOORD6;\n";
+	OS << "	float4 tc7 : TEXCOORD7;\n";
+	OS << "	float4 tc8 : TEXCOORD8;\n";
+	OS << "	float4 dst_userClip0 : SV_ClipDistance0;\n";
+	OS << "	float4 dst_userClip1 : SV_ClipDistance1;\n";
+	OS << "};\n";
 }
 
 void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 {
-	OS << "struct PixelOutput" << std::endl;
-	OS << "{" << std::endl;
+	OS << "struct PixelOutput\n";
+	OS << "{\n";
 	const std::pair<std::string, std::string> table[] =
 	{
 		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
@@ -88,25 +88,25 @@ void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
-			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << idx++ << ";" << std::endl;
+			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << idx++ << ";\n";
 	}
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
-		OS << "	float depth : SV_Depth;" << std::endl;
-	OS << "};" << std::endl;
+		OS << "	float depth : SV_Depth;\n";
+	OS << "};\n";
 }
 
 void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 {
-	OS << "cbuffer CONSTANT : register(b2)" << std::endl;
-	OS << "{" << std::endl;
+	OS << "cbuffer CONSTANT : register(b2)\n";
+	OS << "{\n";
 	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type == "sampler1D" || PT.type == "sampler2D" || PT.type == "samplerCube" || PT.type == "sampler3D")
 			continue;
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << ";\n";
 	}
-	OS << "};" << std::endl << std::endl;
+	OS << "};\n\n";
 
 	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
@@ -115,8 +115,8 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "Texture1D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
-				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+				OS << "Texture1D " << PI.name << " : register(t" << textureIndex << ");\n";
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");\n";
 			}
 		}
 		else if (PT.type == "sampler2D")
@@ -124,8 +124,8 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
-				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+				OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");\n";
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");\n";
 			}
 		}
 		else if (PT.type == "sampler3D")
@@ -133,8 +133,8 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "Texture3D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
-				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+				OS << "Texture3D " << PI.name << " : register(t" << textureIndex << ");\n";
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");\n";
 			}
 		}
 		else if (PT.type == "samplerCube")
@@ -142,8 +142,8 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "TextureCube " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
-				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+				OS << "TextureCube " << PI.name << " : register(t" << textureIndex << ");\n";
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");\n";
 			}
 		}
 	}
@@ -196,20 +196,22 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return " " + tex_name + " (" + sampler_name + ", " + coord_name + ".xyz) ";
 		}
+
+		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
 	}
 }
 
 void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
-	insert_d3d12_legacy_function(OS);
+	insert_d3d12_legacy_function(OS, true);
 
 	const std::set<std::string> output_value =
 	{
 		"r0", "r1", "r2", "r3", "r4",
 		"h0", "h2", "h4", "h6", "h8"
 	};
-	OS << "void ps_impl(bool is_front_face, PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 h2, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)" << std::endl;
-	OS << "{" << std::endl;
+	OS << "void ps_impl(bool is_front_face, PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 h2, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)\n";
+	OS << "{\n";
 	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
@@ -234,11 +236,11 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 			}
 			if (PI.name == "ssa")
 				continue;
-			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";\n";
 		}
 	}
 	// A bit unclean, but works.
-	OS << "	" << "float4 wpos = In.Position;" << std::endl;
+	OS << "	" << "float4 wpos = In.Position;\n";
 	if (m_prog.origin_mode == rsx::window_origin::bottom)
 		OS << "	wpos.y = (" << std::to_string(m_prog.height) << " - wpos.y);\n";
 	OS << "	float4 ssa = is_front_face ? float4(1., 1., 1., 1.) : float4(-1., -1., -1., -1.);\n";
@@ -248,7 +250,7 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	{
 		for (const ParamItem &PI : PT.items)
 			if (output_value.find(PI.name) == output_value.end())
-				OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
+				OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);\n";
 	}
 	// Declare texture coordinate scaling component (to handle unormalized texture coordinates)
 
@@ -262,34 +264,34 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 			bool is_unorm = !!(m_prog.unnormalized_coords & (1 << textureIndex));
 			if (!is_unorm)
 			{
-				OS << "	float2  " << PI.name << "_scale = float2(1., 1.);" << std::endl;
+				OS << "	float2  " << PI.name << "_scale = float2(1., 1.);\n";
 				continue;
 			}
 
-			OS << "	float2  " << PI.name << "_dim;" << std::endl;
-			OS << "	" << PI.name << ".GetDimensions(" << PI.name << "_dim.x, " << PI.name << "_dim.y);" << std::endl;
-			OS << "	float2  " << PI.name << "_scale = texture_parameters[" << textureIndex << "] / " << PI.name << "_dim;" << std::endl;
+			OS << "	float2  " << PI.name << "_dim;\n";
+			OS << "	" << PI.name << ".GetDimensions(" << PI.name << "_dim.x, " << PI.name << "_dim.y);\n";
+			OS << "	float2  " << PI.name << "_scale = texture_parameters[" << textureIndex << "] / " << PI.name << "_dim;\n";
 		}
 	}
 }
 
 void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 {
-	OS << "}" << std::endl;
-	OS << std::endl;
-	OS << "PixelOutput main(PixelInput In, bool is_front_face : SV_IsFrontFace)" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	float4 r0 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 r1 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 r2 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 r3 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 r4 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 h0 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 h2 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 h4 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 h6 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	float4 h8 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	ps_impl(is_front_face, In, r0, h0, r1, h2, r2, h4, r3, h6, r4, h8);" << std::endl;
+	OS << "}\n";
+	OS << "\n";
+	OS << "PixelOutput main(PixelInput In, bool is_front_face : SV_IsFrontFace)\n";
+	OS << "{\n";
+	OS << "	float4 r0 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 r1 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 r2 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 r3 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 r4 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 h0 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 h2 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 h4 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 h6 = float4(0., 0., 0., 0.);\n";
+	OS << "	float4 h8 = float4(0., 0., 0., 0.);\n";
+	OS << "	ps_impl(is_front_face, In, r0, h0, r1, h2, r2, h4, r3, h6, r4, h8);\n";
 
 	const std::pair<std::string, std::string> table[] =
 	{
@@ -300,12 +302,12 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	};
 
 	std::string first_output_name;
-	OS << "	PixelOutput Out = (PixelOutput)0;" << std::endl;
+	OS << "	PixelOutput Out = (PixelOutput)0;\n";
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 		{
-			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
+			OS << "	Out." << table[i].first << " = " << table[i].second << ";\n";
 			if (first_output_name.empty()) first_output_name = table[i].first;
 		}
 	}
@@ -318,7 +320,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 			 * but it writes depth in r1.z and not h2.z.
 			 * Maybe there's a different flag for depth ?
 			 */
-			 //		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << std::endl;
+			 //		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << "\n";
 			OS << "	Out.depth = r1.z;\n";
 		}
 		else
@@ -364,7 +366,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		OS << make_comparison_test(m_prog.alpha_func, "isAlphaTested && ", "Out." + first_output_name + ".a", "alphaRef");
 		
 	}
-	OS << "	return Out;" << std::endl;
-	OS << "}" << std::endl;
+	OS << "	return Out;\n";
+	OS << "}\n";
 }
 #endif

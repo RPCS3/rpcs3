@@ -10,7 +10,6 @@
 namespace vm { using namespace ps3; }
 
 const ppu_decoder<ppu_itype> s_ppu_itype;
-const ppu_decoder<ppu_iname> s_ppu_iname;
 
 template<>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
@@ -23,9 +22,6 @@ void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
 		case ppu_attr::known_size: return "known_size";
 		case ppu_attr::no_return: return "no_return";
 		case ppu_attr::no_size: return "no_size";
-		case ppu_attr::uses_r0: return "uses_r0";
-		case ppu_attr::entry_point: return "entry_point";
-		case ppu_attr::complex_stack: return "complex_stack";
 		case ppu_attr::__bitset_enum_max: break;
 		}
 
@@ -39,10 +35,10 @@ void fmt_class_string<bs_t<ppu_attr>>::format(std::string& out, u64 arg)
 	format_bitset(out, arg, "[", ",", "]", &fmt_class_string<ppu_attr>::format);
 }
 
-void ppu_validate(const std::string& fname, const std::vector<ppu_function>& funcs, u32 reloc)
+void ppu_module::validate(u32 reloc)
 {
 	// Load custom PRX configuration if available
-	if (fs::file yml{fname + ".yml"})
+	if (fs::file yml{path + ".yml"})
 	{
 		const auto cfg = YAML::Load(yml.to_string());
 
@@ -60,14 +56,14 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 
 				while (addr > found && index + 1 < funcs.size())
 				{
-					LOG_WARNING(LOADER, "%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", fname, found, addr, size);
+					LOG_WARNING(LOADER, "%s.yml : unexpected function at 0x%x (0x%x, 0x%x)", path, found, addr, size);
 					index++;
 					found = funcs[index].addr - reloc;
 				}
 
 				if (addr < found)
 				{
-					LOG_ERROR(LOADER, "%s.yml : function not found (0x%x, 0x%x)", fname, addr, size);
+					LOG_ERROR(LOADER, "%s.yml : function not found (0x%x, 0x%x)", path, addr, size);
 					continue;
 				}
 
@@ -75,7 +71,7 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 				{
 					if (size + 4 != funcs[index].size || vm::read32(addr + size) != ppu_instructions::NOP())
 					{
-						LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", fname, found, funcs[index].size, addr, size);
+						LOG_ERROR(LOADER, "%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
 					}
 				}
 
@@ -83,7 +79,7 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not found at the end (0x%x, 0x%x)", fname, addr, size);
+				LOG_ERROR(LOADER, "%s.yml : function not found at the end (0x%x, 0x%x)", path, addr, size);
 				break;
 			}
 		}
@@ -97,13 +93,13 @@ void ppu_validate(const std::string& fname, const std::vector<ppu_function>& fun
 		{
 			if (funcs[index].size)
 			{
-				LOG_ERROR(LOADER, "%s.yml : function not covered at 0x%x (size=0x%x)", fname, funcs[index].addr, funcs[index].size);
+				LOG_ERROR(LOADER, "%s.yml : function not covered at 0x%x (size=0x%x)", path, funcs[index].addr, funcs[index].size);
 			}
 
 			index++;
 		}
 
-		LOG_SUCCESS(LOADER, "%s.yml : validation completed", fname);
+		LOG_SUCCESS(LOADER, "%s.yml : validation completed", path);
 	}
 }
 
@@ -324,19 +320,218 @@ namespace ppu_patterns
 		abort1,
 		abort2,
 	};
+
+	const ppu_pattern get_context[]
+	{
+		ADDI(r3, r3, 0xf),
+		CLRRDI(r3, r3, 4),
+		STD(r1, r3, 0),
+		STD(r2, r3, 8),
+		STD(r14, r3, 0x18),
+		STD(r15, r3, 0x20),
+		STD(r16, r3, 0x28),
+		STD(r17, r3, 0x30),
+		STD(r18, r3, 0x38),
+		STD(r19, r3, 0x40),
+		STD(r20, r3, 0x48),
+		STD(r21, r3, 0x50),
+		STD(r22, r3, 0x58),
+		STD(r23, r3, 0x60),
+		STD(r24, r3, 0x68),
+		STD(r25, r3, 0x70),
+		STD(r26, r3, 0x78),
+		STD(r27, r3, 0x80),
+		STD(r28, r3, 0x88),
+		STD(r29, r3, 0x90),
+		STD(r30, r3, 0x98),
+		STD(r31, r3, 0xa0),
+		MFLR(r0),
+		STD(r0, r3, 0xa8),
+		0x7c000026, // mfcr r0
+		STD(r0, r3, 0xb0),
+		STFD(f14, r3, 0xb8),
+		STFD(f15, r3, 0xc0),
+		STFD(F16, r3, 0xc8),
+		STFD(f17, r3, 0xd0),
+		STFD(f18, r3, 0xd8),
+		STFD(f19, r3, 0xe0),
+		STFD(f20, r3, 0xe8),
+		STFD(f21, r3, 0xf0),
+		STFD(f22, r3, 0xf8),
+		STFD(f23, r3, 0x100),
+		STFD(f24, r3, 0x108),
+		STFD(f25, r3, 0x110),
+		STFD(f26, r3, 0x118),
+		STFD(f27, r3, 0x120),
+		STFD(f28, r3, 0x128),
+		STFD(f29, r3, 0x130),
+		STFD(f30, r3, 0x138),
+		STFD(f31, r3, 0x140),
+		0x7c0042A6, // mfspr r0, vrsave
+		STD(r0, r3, 0x148),
+		ADDI(r4, r3, 0x150),
+		ADDI(r5, r3, 0x160),
+		ADDI(r6, r3, 0x170),
+		ADDI(r7, r3, 0x180),
+		STVX(v20, r0, r4),
+		STVX(v21, r0, r5),
+		STVX(v22, r0, r6),
+		STVX(v23, r0, r7),
+		ADDI(r4, r4, 0x40),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		STVX(v24, r0, r4),
+		STVX(v25, r0, r5),
+		STVX(v26, r0, r6),
+		STVX(v27, r0, r7),
+		ADDI(r4, r4, 0x40),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		STVX(v28, r0, r4),
+		STVX(v29, r0, r5),
+		STVX(v30, r0, r6),
+		STVX(v31, r0, r7),
+		LI(r3, 0),
+		BLR(),
+	};
+
+	const ppu_pattern set_context[]
+	{
+		ADDI(r3, r3, 0xf),
+		CLRRDI(r3, r3, 4),
+		LD(r1, r3, 0),
+		LD(r2, r3, 8),
+		LD(r14, r3, 0x18),
+		LD(r15, r3, 0x20),
+		LD(r16, r3, 0x28),
+		LD(r17, r3, 0x30),
+		LD(r18, r3, 0x38),
+		LD(r19, r3, 0x40),
+		LD(r20, r3, 0x48),
+		LD(r21, r3, 0x50),
+		LD(r22, r3, 0x58),
+		LD(r23, r3, 0x60),
+		LD(r24, r3, 0x68),
+		LD(r25, r3, 0x70),
+		LD(r26, r3, 0x78),
+		LD(r27, r3, 0x80),
+		LD(r28, r3, 0x88),
+		LD(r29, r3, 0x90),
+		LD(r30, r3, 0x98),
+		LD(r31, r3, 0xa0),
+		LD(r0, r3, 0xa8),
+		MTLR(r0),
+		LD(r0, r3, 0xb0),
+		0x7c101120, // mtocrf 1, r0
+		0x7c102120, // mtocrf 2, r0
+		0x7c104120, // mtocrf 4, r0
+		0x7c108120, // mtocrf 8, r0
+		0x7c110120, // mtocrf 0x10, r0
+		0x7c120120, // mtocrf 0x20, r0
+		0x7c140120, // mtocrf 0x40, r0
+		0x7c180120, // mtocrf 0x80, r0
+		LFD(f14, r3, 0xb8),
+		LFD(f15, r3, 0xc0),
+		LFD(F16, r3, 0xc8),
+		LFD(f17, r3, 0xd0),
+		LFD(f18, r3, 0xd8),
+		LFD(f19, r3, 0xe0),
+		LFD(f20, r3, 0xe8),
+		LFD(f21, r3, 0xf0),
+		LFD(f22, r3, 0xf8),
+		LFD(f23, r3, 0x100),
+		LFD(f24, r3, 0x108),
+		LFD(f25, r3, 0x110),
+		LFD(f26, r3, 0x118),
+		LFD(f27, r3, 0x120),
+		LFD(f28, r3, 0x128),
+		LFD(f29, r3, 0x130),
+		LFD(f30, r3, 0x138),
+		LFD(f31, r3, 0x140),
+		LD(r0, r3, 0x148),
+		0x7c0043A6, //mtspr vrsave, r0
+		ADDI(r5, r3, 0x150),
+		ADDI(r6, r3, 0x160),
+		ADDI(r7, r3, 0x170),
+		ADDI(r8, r3, 0x180),
+		LVX(v20, r0, r5),
+		LVX(v21, r0, r6),
+		LVX(v22, r0, r7),
+		LVX(v23, r0, r8),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		ADDI(r8, r8, 0x40),
+		LVX(v24, r0, r5),
+		LVX(v25, r0, r6),
+		LVX(v26, r0, r7),
+		LVX(v27, r0, r8),
+		ADDI(r5, r5, 0x40),
+		ADDI(r6, r6, 0x40),
+		ADDI(r7, r7, 0x40),
+		ADDI(r8, r8, 0x40),
+		LVX(v28, r0, r5),
+		LVX(v29, r0, r6),
+		LVX(v30, r0, r7),
+		LVX(v31, r0, r8),
+		LI(r3, 0),
+		0x7c041810, // subfc r0, r4, r3
+		0x7c640194, // addze r3, r4
+		BLR(),
+	};
+
+	const ppu_pattern x26c[]
+	{
+		LI(r9, 0),
+		STD(r9, r6, 0),
+		MR(r1, r6),
+		STDU(r1, r1, -0x70),
+		STD(r9, r1, 0),
+		CLRLDI(r7, r3, 32),
+		LWZ(r0, r7, 0),
+		MTCTR(r0),
+		LWZ(r2, r7, 4),
+		MR(r3, r4),
+		MR(r4, r5),
+		BCTRL(),
+	};
+
+	const ppu_pattern x2a0[]
+	{
+		MR(r8, r1),
+		0x7d212850, // subf r9, r1, r5
+		0x7c21496a, // stdux r1, r1, r9
+		MFLR(r0),
+		STD(r0, r8, 0x10),
+		STD(r2, r1, 0x28),
+		CLRLDI(r7, r3, 32),
+		LWZ(r0, r7, 0),
+		MTCTR(r0),
+		LWZ(r2, r7, 4),
+		MR(r3, r4),
+		BCTRL(),
+		LD(r2, r1, 0x28),
+		LD(r9, r1, 0x0),
+		LD(r0, r9, 0x10),
+		MTLR(r0),
+		MR(r1, r9),
+		BLR(),
+	};
 }
 
-std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& segs, const std::vector<std::pair<u32, u32>>& secs, u32 lib_toc, u32 entry)
+void ppu_module::analyse(u32 lib_toc, u32 entry)
 {
 	// Assume first segment is executable
-	const u32 start = segs[0].first;
-	const u32 end = segs[0].first + segs[0].second;
+	const u32 start = segs[0].addr;
+	const u32 end = segs[0].addr + segs[0].size;
 
 	// Known TOCs (usually only 1)
 	std::unordered_set<u32> TOCs;
 
 	// Known functions
-	std::map<u32, ppu_function> funcs;
+	std::map<u32, ppu_function> fmap;
 
 	// Function analysis workload
 	std::vector<std::reference_wrapper<ppu_function>> func_queue;
@@ -347,7 +542,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Register new function
 	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function&
 	{
-		ppu_function& func = funcs[addr];
+		ppu_function& func = fmap[addr];
 
 		if (caller)
 		{
@@ -374,6 +569,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		func_queue.emplace_back(func);
 		func.addr = addr;
 		func.toc = toc;
+		func.name = fmt::format("__0x%x", func.addr);
 		LOG_TRACE(PPU, "Function 0x%x added (toc=0x%x)", addr, toc);
 		return func;
 	};
@@ -389,7 +585,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		// Grope for OPD section (TODO: optimization, better constraints)
 		for (const auto& seg : segs)
 		{
-			for (vm::cptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
+			for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
 			{
 				if (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && ptr[1] == toc)
 				{
@@ -405,7 +601,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Get next reliable function address
 	auto get_limit = [&](u32 addr) -> u32
 	{
-		for (auto it = funcs.lower_bound(addr), end = funcs.end(); it != end; it++)
+		for (auto it = fmap.lower_bound(addr), end = fmap.end(); it != end; it++)
 		{
 			if (test(it->second.attr, ppu_attr::known_addr))
 			{
@@ -419,7 +615,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find references indiscriminately
 	for (const auto& seg : segs)
 	{
-		for (vm::cptr<u32> ptr = vm::cast(seg.first); ptr.addr() < seg.first + seg.second; ptr++)
+		for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
 		{
 			const u32 value = *ptr;
 
@@ -430,7 +626,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 			for (const auto& _seg : segs)
 			{
-				if (value >= _seg.first && value < _seg.first + _seg.second)
+				if (value >= _seg.addr && value < _seg.addr + _seg.size)
 				{
 					addr_heap.emplace(value);
 					break;
@@ -442,10 +638,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find OPD section
 	for (const auto& sec : secs)
 	{
-		vm::cptr<void> sec_end = vm::cast(sec.first + sec.second);
+		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr += 2)
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr += 2)
 		{
 			if (ptr + 6 <= sec_end && !ptr[0] && !ptr[2] && ptr[1] == ptr[4] && ptr[3] == ptr[5])
 			{
@@ -480,10 +676,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			}
 		}
 
-		if (sec_end) LOG_NOTICE(PPU, "Reading OPD section at 0x%x...", sec.first);
+		if (sec_end) LOG_NOTICE(PPU, "Reading OPD section at 0x%x...", sec.addr);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr += 2)
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr += 2)
 		{
 			// Special case: see "Probe"
 			if (!ptr[0]) ptr += 4;
@@ -512,7 +708,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	}
 
 	// Clean TOCs
-	for (auto&& pair : funcs)
+	for (auto&& pair : fmap)
 	{
 		if (pair.second.toc == -1)
 		{
@@ -523,12 +719,12 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	// Find .eh_frame section
 	for (const auto& sec : secs)
 	{
-		vm::cptr<void> sec_end = vm::cast(sec.first + sec.second);
+		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end;)
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end;)
 		{
-			if (ptr % 4 || ptr.addr() < sec.first || ptr >= sec_end)
+			if (ptr % 4 || ptr.addr() < sec.addr || ptr >= sec_end)
 			{
 				sec_end.set(0);
 				break;
@@ -552,7 +748,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			{
 				const u32 cie_off = ptr.addr() - ptr[1] + 4;
 
-				if (cie_off % 4 || cie_off < sec.first || cie_off >= sec_end.addr())
+				if (cie_off % 4 || cie_off < sec.addr || cie_off >= sec_end.addr())
 				{
 					sec_end.set(0);
 					break;
@@ -562,10 +758,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 			ptr = vm::cast(ptr.addr() + size);
 		}
 
-		if (sec_end && sec.second > 4) LOG_NOTICE(PPU, "Reading .eh_frame section at 0x%x...", sec.first);
+		if (sec_end && sec.size > 4) LOG_NOTICE(PPU, "Reading .eh_frame section at 0x%x...", sec.addr);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.first); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
+		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
 		{
 			if (ptr[0] == 0)
 			{
@@ -640,7 +836,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		{
 			for (u32 addr : func.callers)
 			{
-				ppu_function& caller = funcs[addr];
+				ppu_function& caller = fmap[addr];
 
 				if (!caller.toc)
 				{
@@ -650,7 +846,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 
 			for (u32 addr : func.calls)
 			{
-				ppu_function& callee = funcs[addr];
+				ppu_function& callee = fmap[addr];
 
 				if (!callee.toc)
 				{
@@ -837,15 +1033,6 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 				func.size = len;
 			}
 
-			if (ptr + 3 <= fend &&
-				(ptr[0] & 0xffff0000) == LI(r0, 0) &&
-				(ptr[1] & 0xffff0000) == ORIS(r0, r0, 0) &&
-				(ptr[2] & 0xfc000003) == B({}, {}, {}))
-			{
-				// Import stub with r0 usage
-				func.attr += ppu_attr::uses_r0;
-			}
-
 			// TODO: detect no_return, scribe more TODOs
 
 			// Acknowledge completion
@@ -889,10 +1076,10 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 		if (test(func.attr, ppu_attr::no_size))
 		{
 			// Get next function
-			const auto _next = funcs.lower_bound(func.blocks.crbegin()->first + 1);
+			const auto _next = fmap.lower_bound(func.blocks.crbegin()->first + 1);
 
 			// Get limit
-			const u32 func_end2 = _next == funcs.end() ? func_end : std::min<u32>(_next->first, func_end);
+			const u32 func_end2 = _next == fmap.end() ? func_end : std::min<u32>(_next->first, func_end);
 
 			// Set more block entries
 			std::for_each(addr_heap.lower_bound(func.addr), addr_heap.lower_bound(func_end2), add_block);
@@ -1009,7 +1196,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 							}
 
 							func.attr += ppu_attr::no_size;
-							add_block(iaddr);
+							add_block(jt_addr);
 							block_queue.clear();
 						}
 						else
@@ -1028,6 +1215,20 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 						add_block(_ptr.addr());
 					}
 
+					block.second = _ptr.addr() - block.first;
+					break;
+				}
+				else if (type == ppu_itype::SC)
+				{
+					add_block(_ptr.addr());
+					block.second = _ptr.addr() - block.first;
+					break;
+				}
+				else if (type == ppu_itype::STDU && test(func.attr, ppu_attr::no_size) && (op.opcode == *_ptr || *_ptr == ppu_instructions::BLR()))
+				{
+					// Hack
+					LOG_SUCCESS(PPU, "[0x%x] Instruction repetition: 0x%08x", iaddr, op.opcode);
+					add_block(_ptr.addr());
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
@@ -1120,14 +1321,14 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	}
 
 	// Function shrinkage, disabled (TODO: it's potentially dangerous but improvable)
-	for (auto& _pair : funcs)
+	for (auto& _pair : fmap)
 	{
 		auto& func = _pair.second;
 
 		// Get next function addr
-		const auto _next = funcs.lower_bound(_pair.first + 1);
+		const auto _next = fmap.lower_bound(_pair.first + 1);
 
-		const u32 next = _next == funcs.end() ? end : _next->first;
+		const u32 next = _next == fmap.end() ? end : _next->first;
 
 		// Just ensure that functions don't overlap
 		if (func.addr + func.size > next)
@@ -1213,7 +1414,7 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	{
 		lib_toc = *TOCs.begin();
 
-		for (auto&& pair : funcs)
+		for (auto&& pair : fmap)
 		{
 			if (pair.second.toc == 0)
 			{
@@ -1223,16 +1424,12 @@ std::vector<ppu_function> ppu_analyse(const std::vector<std::pair<u32, u32>>& se
 	}
 	
 	// Convert map to vector (destructive)
-	std::vector<ppu_function> result;
-
-	for (auto&& pair : funcs)
+	for (auto&& pair : fmap)
 	{
 		auto& func = pair.second;
-		LOG_TRACE(PPU, "Function __0x%x (size=0x%x, toc=0x%x, attr %#x)", func.addr, func.size, func.toc, func.attr);
-		result.emplace_back(std::move(func));
+		LOG_TRACE(PPU, "Function %s (size=0x%x, toc=0x%x, attr %#x)", func.name, func.size, func.toc, func.attr);
+		funcs.emplace_back(std::move(func));
 	}
 
-	LOG_NOTICE(PPU, "Function analysis: %zu functions (%zu enqueued)", result.size(), func_queue.size());
-
-	return result;
+	LOG_NOTICE(PPU, "Function analysis: %zu functions (%zu enqueued)", funcs.size(), func_queue.size());
 }

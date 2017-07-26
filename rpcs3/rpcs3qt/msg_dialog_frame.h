@@ -1,5 +1,4 @@
-#ifndef MSGDIALOG_H
-#define MSGDIALOG_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
@@ -72,6 +71,8 @@ public:
 	explicit custom_dialog(bool disableCancel, QWidget* parent = 0)
 		: QDialog(parent), m_disable_cancel(disableCancel)
 	{
+		setWindowIcon(QIcon(":/rpcs3.ico"));
+
 		if (m_disable_cancel)
 		{
 			setWindowFlags(windowFlags() & ~Qt::WindowCloseButtonHint);
@@ -85,6 +86,10 @@ private:
 		{
 			event->ignore();
 		}
+		else
+		{
+			QDialog::keyPressEvent(event);
+		}
 	}
 	void closeEvent(QCloseEvent* event)
 	{
@@ -93,7 +98,9 @@ private:
 		{
 			event->ignore();
 		}
+		else
+		{
+			QDialog::closeEvent(event);
+		}
 	}
 };
-
-#endif // !MSGDIALOG_H

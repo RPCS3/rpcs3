@@ -29,7 +29,7 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 420" << std::endl;
+	OS << "#version 420\n";
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -57,7 +57,7 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 			if (var_name == "fogc")
 				var_name = "fog_c";
 
-			OS << "in " << PT.type << " " << var_name << ";" << std::endl;
+			OS << "in " << PT.type << " " << var_name << ";\n";
 		}
 	}
 
@@ -65,12 +65,12 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 	{
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
-			OS << "in vec4 front_diff_color;" << std::endl;
+			OS << "in vec4 front_diff_color;\n";
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
-			OS << "in vec4 front_spec_color;" << std::endl;
+			OS << "in vec4 front_spec_color;\n";
 		}
 	}
 }
@@ -88,7 +88,7 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-			OS << "out vec4 " << table[i].first << ";" << std::endl;
+			OS << "out vec4 " << table[i].first << ";\n";
 	}
 }
 
@@ -107,13 +107,26 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
-			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
+			const auto mask = (1 << index);
+
+			if (m_prog.shadow_textures & mask)
+			{
+				if (m_shadow_sampled_textures & mask)
+				{
+					if (m_2d_sampled_textures & mask)
+						LOG_ERROR(RSX, "Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+					else
+						samplerType = "sampler2DShadow";
+				}
+			}
+
+			OS << "uniform " << samplerType << " " << PI.name << ";\n";
 		}
 	}
 
-	OS << std::endl;
-	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
-	OS << "{" << std::endl;
+	OS << "\n";
+	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer\n";
+	OS << "{\n";
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
@@ -124,7 +137,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			continue;
 
 		for (const ParamItem& PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << ";\n";
 	}
 
 	// Fragment state parameters
@@ -133,7 +146,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	uint alpha_test;\n";
 	OS << "	float alpha_ref;\n";
 	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
-	OS << "};" << std::endl;
+	OS << "};\n";
 }
 
 
@@ -201,12 +214,14 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", (" + coord_name + ".xyz * " + tex_name + "_coord_scale))";
 		}
+
+		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
 	}
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS);
+	insert_glsl_legacy_function(OS, gl::glsl::glsl_fragment_program);
 
 	const std::set<std::string> output_values =
 	{
@@ -226,8 +241,8 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	OS << "void fs_main(" << parameters << ")" << std::endl;
-	OS << "{" << std::endl;
+	OS << "void fs_main(" << parameters << ")\n";
+	OS << "{\n";
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
@@ -240,7 +255,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
 
-			OS << ";" << std::endl;
+			OS << ";\n";
 		}
 	}
 
@@ -382,10 +397,10 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		OS << make_comparison_test(m_prog.alpha_func, "alpha_test != 0 && ", first_output_name + ".a", "alpha_ref");
 	}
 
-	OS << "}" << std::endl << std::endl;
+	OS << "}\n\n";
 
-	OS << "void main()" << std::endl;
-	OS << "{" << std::endl;
+	OS << "void main()\n";
+	OS << "{\n";
 
 	std::string parameters = "";
 	for (auto &reg_name : output_values)
@@ -396,11 +411,11 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 				parameters += ", ";
 
 			parameters += reg_name;
-			OS << "	vec4 " << reg_name << " = vec4(0.);" << std::endl;
+			OS << "	vec4 " << reg_name << " = vec4(0.);\n";
 		}
 	}
 
-	OS << std::endl << "	fs_main(" + parameters + ");" << std::endl << std::endl;
+	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
 	//Append the color output assignments
 	OS << color_output_block;
@@ -413,7 +428,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			* but it writes depth in r1.z and not h2.z.
 			* Maybe there's a different flag for depth ?
 			*/
-			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
+			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << "\n";
 			OS << "	gl_FragDepth = r1.z;\n";
 		}
 		else
@@ -423,7 +438,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		}
 	}
 
-	OS << "}" << std::endl;
+	OS << "}\n";
 }
 
 void GLFragmentDecompilerThread::Task()

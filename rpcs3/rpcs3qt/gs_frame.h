@@ -1,5 +1,4 @@
-#ifndef GSFRAME_H
-#define GSFRAME_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/RSX/GSRender.h"
@@ -36,13 +35,11 @@ protected:
 	void* make_context() override;
 	void set_current(draw_context_t context) override;
 	void delete_context(void* context) override;
-	void flip(draw_context_t context) override;
+	void flip(draw_context_t context, bool skip_frame=false) override;
 	int client_width() override;
 	int client_height() override;
 
-	void hideEvent(QHideEvent* ev) override;
-private slots:
+	bool event(QEvent* ev) override;
+private Q_SLOTS:
 	void HandleCursor(QWindow::Visibility visibility);
 };
-
-#endif

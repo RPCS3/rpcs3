@@ -1,5 +1,4 @@
-#ifndef MEMORYVIEWER_H
-#define MEMORYVIEWER_H
+#pragma once
 
 #include <QDialog>
 #include <QLineEdit>
@@ -55,5 +54,3 @@ public:
 	//Static methods
 	static void ShowImage(QWidget* parent, u32 addr, int mode, u32 sizex, u32 sizey, bool flipv);
 };
-
-#endif // !MEMORYVIEWER_H

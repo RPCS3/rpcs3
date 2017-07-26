@@ -1,5 +1,4 @@
-#ifndef BASIC_KEYBOARD_HANDLER_H
-#define BASIC_KEYBOARD_HANDLER_H
+#pragma once
 
 #include "stdafx.h"
 #include "Emu/Io/KeyboardHandler.h"
@@ -22,5 +21,3 @@ public:
 private:
 	QObject* m_target;
 };
-
-#endif

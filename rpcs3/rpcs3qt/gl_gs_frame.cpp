@@ -33,7 +33,11 @@ void* gl_gs_frame::make_context()
 
 void gl_gs_frame::set_current(draw_context_t ctx)
 {
-	((QOpenGLContext*)ctx.get())->makeCurrent(this);
+	if (!((QOpenGLContext*)ctx.get())->makeCurrent(this))
+	{
+		create();
+		((QOpenGLContext*)ctx.get())->makeCurrent(this);
+	}
 }
 
 void gl_gs_frame::delete_context(void* ctx)
@@ -41,9 +45,12 @@ void gl_gs_frame::delete_context(void* ctx)
 	delete (QOpenGLContext*)ctx;
 }
 
-void gl_gs_frame::flip(draw_context_t context)
+void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 {
 	gs_frame::flip(context);
+
+	//Do not swap buffers if frame skip is active
+	if (skip_frame) return;
 
 	((QOpenGLContext*)context.get())->makeCurrent(this);
 	((QOpenGLContext*)context.get())->swapBuffers(this);

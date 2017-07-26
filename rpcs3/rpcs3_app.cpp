@@ -1,7 +1,6 @@
 #include "rpcs3_app.h"
 
 #include "rpcs3qt/welcome_dialog.h"
-#include "rpcs3qt/gui_settings.h"
 
 #include "Emu/System.h"
 #include "rpcs3qt/gs_frame.h"
@@ -40,7 +39,9 @@
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
+#if defined(_WIN32) || defined(__linux__)
 #include "Emu/RSX/VK/VKGSRender.h"
+#endif
 #ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #endif
@@ -57,8 +58,10 @@ void rpcs3_app::Init()
 {
 	Emu.Init();
 
+	guiSettings.reset(new gui_settings());
+
 	// Create the main window
-	RPCS3MainWin = new main_window(nullptr);
+	RPCS3MainWin = new main_window(guiSettings, nullptr);
 
 	// Reset the pads -- see the method for why this is currently needed.
 	ResetPads();
@@ -69,15 +72,15 @@ void rpcs3_app::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
+	RPCS3MainWin->Init();
+
 	setApplicationName("RPCS3");
 	RPCS3MainWin->show();
 
 	// Create the thumbnail toolbar after the main_window is created
 	RPCS3MainWin->CreateThumbnailToolbar();
 
-	// Slightly inneficient to make a gui_settings instance right here.
-	// But, I don't really feel like adding this as a dependency injection into RPCS3MainWin.
-	if (gui_settings().GetValue(GUI::ib_show_welcome).toBool())
+	if (guiSettings->GetValue(GUI::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();
 		welcome->exec();
@@ -96,7 +99,7 @@ void rpcs3_app::InitializeCallbacks()
 	};
 	callbacks.call_after = [=](std::function<void()> func)
 	{	
-		emit RequestCallAfter(std::move(func));
+		RequestCallAfter(std::move(func));
 	};
 
 	callbacks.process_events = [this]()
@@ -150,14 +153,22 @@ void rpcs3_app::InitializeCallbacks()
 		extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
 		const auto size = g_video_out_resolution_map.at(g_cfg.video.resolution);
+		int w = size.first;
+		int h = size.second;
+
+		if (guiSettings->GetValue(GUI::gs_resize).toBool())
+		{
+			w = guiSettings->GetValue(GUI::gs_width).toInt();
+			h = guiSettings->GetValue(GUI::gs_height).toInt();
+		}
 
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
-		case video_renderer::null: return std::make_unique<gs_frame>("Null", size.first, size.second, RPCS3MainWin->GetAppIcon());
-		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(size.first, size.second, RPCS3MainWin->GetAppIcon());
-		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", size.first, size.second, RPCS3MainWin->GetAppIcon());
+		case video_renderer::null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon());
 #ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", size.first, size.second, RPCS3MainWin->GetAppIcon());
+		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon());
 #endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}
@@ -169,7 +180,9 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null: return std::make_shared<NullGSRender>();
 		case video_renderer::opengl: return std::make_shared<GLGSRender>();
+#if defined(_WIN32) || defined(__linux__)
 		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
+#endif
 #ifdef _MSC_VER
 		case video_renderer::dx12: return std::make_shared<D3D12GSRender>();
 #endif
@@ -202,11 +215,11 @@ void rpcs3_app::InitializeCallbacks()
 		return std::make_unique<save_data_dialog>();
 	};
 
-	callbacks.on_run = [=]() { emit OnEmulatorRun(); };
-	callbacks.on_pause = [=]() {emit OnEmulatorPause(); };
-	callbacks.on_resume = [=]() {emit OnEmulatorResume(); };
-	callbacks.on_stop = [=]() {emit OnEmulatorStop(); };
-	callbacks.on_ready = [=]() {emit OnEmulatorReady(); };
+	callbacks.on_run = [=]() { OnEmulatorRun(); };
+	callbacks.on_pause = [=]() { OnEmulatorPause(); };
+	callbacks.on_resume = [=]() { OnEmulatorResume(); };
+	callbacks.on_stop = [=]() { OnEmulatorStop(); };
+	callbacks.on_ready = [=]() { OnEmulatorReady(); };
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

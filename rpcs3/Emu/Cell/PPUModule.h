@@ -189,7 +189,7 @@ public:
 	static const ppu_static_module cellSpurs;
 	static const ppu_static_module cellSpursJq;
 	static const ppu_static_module cellSsl;
-	static const ppu_static_module cellSubdisplay;
+	static const ppu_static_module cellSubDisplay;
 	static const ppu_static_module cellSync;
 	static const ppu_static_module cellSync2;
 	static const ppu_static_module cellSysconf;
@@ -236,7 +236,7 @@ inline RT ppu_execute_function_or_callback(const char* name, ppu_thread& ppu, Ar
 
 #define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(#func, ppu, __VA_ARGS__)
 
-#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func), ppu_generate_id(nid))
+#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = (u32)ppu.lr & ~3), ppu_generate_id(nid))
 
 #define REG_FUNC(module, func) REG_FNID(module, #func, func)
 

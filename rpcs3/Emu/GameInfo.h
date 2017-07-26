@@ -2,7 +2,7 @@
 
 struct GameInfo
 {
-	std::string root;
+	std::string path;
 
 	std::string icon_path;
 	std::string name;
@@ -24,7 +24,7 @@ struct GameInfo
 
 	void Reset()
 	{
-		root = "";
+		path = "";
 
 		name = "Unknown";
 		serial = "Unknown";

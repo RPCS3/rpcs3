@@ -1,5 +1,4 @@
-#ifndef EMU_SETTINGS_H
-#define EMU_SETTINGS_H
+#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -45,6 +44,8 @@ public:
 		HookStaticFuncs,
 		BindSPUThreads,
 		LowerSPUThreadPrio,
+		SPULoopDetection,
+		PreferredSPUThreads,
 
 		// Graphics
 		Renderer,
@@ -61,8 +62,12 @@ public:
 		DebugOverlay,
 		LegacyBuffers,
 		GPUTextureScaling,
+		StretchToDisplayArea,
 		D3D12Adapter,
 		VulkanAdapter,
+		ForceHighpZ,
+		AutoInvalidateCache,
+		StrictRenderingMode,
 
 		// Audio
 		AudioRenderer,
@@ -92,6 +97,7 @@ public:
 		EnableHostRoot,
 
 		// Virtual File System
+		emulatorLocation,
 		dev_hdd0Location,
 		dev_hdd1Location,
 		dev_flashLocation,
@@ -104,11 +110,11 @@ public:
 	emu_settings(const std::string& path);
 	~emu_settings();
 
-	/** Returns a combo box of that setting type that is bound to the parent. */
-	QComboBox* CreateEnhancedComboBox(SettingsType type, QWidget* parent = nullptr);
+	/** Connects a combo box with the target settings type*/
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type);
 
-	/** Returns a check button that is connected to the target settings type, bound to the life of parent*/
-	QCheckBox* CreateEnhancedCheckBox(SettingsType target, QWidget* parent = nullptr);
+	/** Connects a check box with the target settings type*/
+	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
@@ -121,7 +127,7 @@ public:
 
 	/** Sets the setting type to a given value.*/
 	void SetSetting(SettingsType type, const std::string& val);
-public slots:
+public Q_SLOTS:
 /** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
@@ -134,6 +140,8 @@ private:
 		{ HookStaticFuncs,	{ "Core", "Hook static functions"}},
 		{ BindSPUThreads,	{ "Core", "Bind SPU threads to secondary cores"}},
 		{ LowerSPUThreadPrio, { "Core", "Lower SPU thread priority"}},
+		{ SPULoopDetection, { "Core", "SPU loop detection"}},
+		{ PreferredSPUThreads, { "Core", "Preferred SPU Threads"}},
 
 		// Graphics Tab
 		{ Renderer,			{ "Video", "Renderer"}},
@@ -148,10 +156,14 @@ private:
 		{ VSync,			{ "Video", "VSync"}},
 		{ DebugOutput,		{ "Video", "Debug output"}},
 		{ DebugOverlay,		{ "Video", "Debug overlay"}},
-		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers (Debug)"}},
+		{ LegacyBuffers,	{ "Video", "Use Legacy OpenGL Buffers"}},
 		{ GPUTextureScaling,{ "Video", "Use GPU texture scaling"}},
-		{ D3D12Adapter,		{ "Video", "D3D12", "Adapter"}},
-		{ VulkanAdapter,		{ "Video", "Vulkan", "Adapter"}},
+		{ StretchToDisplayArea, { "Video", "Stretch To Display Area"}},
+		{ ForceHighpZ,      { "Video", "Force High Precision Z buffer"}},
+		{ AutoInvalidateCache, { "Video", "Invalidate Cache Every Frame"}},
+		{ StrictRenderingMode, { "Video", "Strict Rendering Mode"}},
+		{ D3D12Adapter,        { "Video", "D3D12", "Adapter"}},
+		{ VulkanAdapter,       { "Video", "Vulkan", "Adapter"}},
 
 		// Audio
 		{ AudioRenderer,	{ "Audio", "Renderer"}},
@@ -181,6 +193,7 @@ private:
 		{EnableHostRoot,	{ "VFS", "Enable /host_root/"}},
 
 		// Virtual File System
+		{ emulatorLocation, { "VFS", "$(EmulatorDir)"}},
 		{ dev_hdd0Location, { "VFS", "/dev_hdd0/" }},
 		{ dev_hdd1Location, { "VFS", "/dev_hdd1/" }},
 		{ dev_flashLocation, { "VFS", "/dev_flash/"}},
@@ -191,5 +204,3 @@ private:
 	YAML::Node currentSettings; // The current settings as a YAML node.
 	fs::file config; //! File to read/write the config settings.
 };
-
-#endif

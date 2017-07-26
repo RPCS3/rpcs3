@@ -43,23 +43,27 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 
 	// Key for multimap
 	const u64 key = entry | u64{ ls[entry / 4] } << 32;
+	const be_t<u32>* base = ls + entry / 4;
+	const u32 block_sz = max_limit - entry;
 
 	{
 		reader_lock lock(m_mutex);
 
 		// Try to find existing function in the database
-		if (auto func = find(ls + entry / 4, key, max_limit - entry))
+		if (auto func = find(base, key, block_sz))
 		{
 			return func;
 		}
 	}
 
-	writer_lock lock(m_mutex);
-
-	// Double-check
-	if (auto func = find(ls + entry / 4, key, max_limit - entry))
 	{
-		return func;
+		writer_lock lock(m_mutex);
+
+		// Double-check
+		if (auto func = find(base, key, block_sz))
+		{
+			return func;
+		}
 	}
 
 	// Initialize block entries with the function entry point
@@ -81,11 +85,15 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 
 		const auto type = s_spu_itype.decode(op.opcode);
 
-		// Find existing function
-		if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
 		{
-			limit = pos;
-			break;
+			reader_lock lock(m_mutex);
+
+			// Find existing function
+			if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
+			{
+				limit = pos;
+				break;
+			}
 		}
 
 		// Additional analysis at the beginning of the block
@@ -311,10 +319,16 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	// Set whether the function can reset stack
 	func->does_reset_stack = ila_sp_pos < limit;
 
-	// Add function to the database
-	m_db.emplace(key, func);
+	// Lock here just before we write to the db
+	// Its is unlikely that the second check will pass anyway so we delay this step since compiling functions is very fast
+	{
+		writer_lock lock(m_mutex);
 
-	LOG_SUCCESS(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
+		// Add function to the database
+		m_db.emplace(key, func);
+	}
+
+	LOG_NOTICE(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
 
 	return func;
 }

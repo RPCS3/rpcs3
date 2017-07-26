@@ -123,8 +123,8 @@ s32 cellRescGetFlipStatus()
 
 s32 cellRescGetRegisterCount()
 {
-	UNIMPLEMENTED_FUNC(cellResc);
-	return CELL_OK;
+	cellResc.todo("cellRescGetRegisterCount()");
+	return 0;
 }
 
 u64 cellRescGetLastFlipTime()
@@ -134,10 +134,9 @@ u64 cellRescGetLastFlipTime()
 	return 0;
 }
 
-s32 cellRescSetRegisterCount()
+void cellRescSetRegisterCount(s32 regCount)
 {
-	UNIMPLEMENTED_FUNC(cellResc);
-	return CELL_OK;
+	cellResc.todo("cellRescSetRegisterCount(regCount=0x%x)", regCount);
 }
 
 void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)

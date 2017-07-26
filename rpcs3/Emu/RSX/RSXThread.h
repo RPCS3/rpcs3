@@ -4,6 +4,7 @@
 #include <deque>
 #include <set>
 #include <mutex>
+#include <atomic>
 #include "GCM.h"
 #include "rsx_cache.h"
 #include "RSXTexture.h"
@@ -148,6 +149,12 @@ namespace rsx
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
+		bool m_vertex_attribs_changed;
+		bool m_index_buffer_changed;
+
+	protected:
+		s32 m_skip_frame_ctr = 0;
+		bool skip_frame = false;
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
@@ -197,16 +204,16 @@ namespace rsx
 
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
-		virtual bool do_method(u32 cmd, u32 value) { return false; }
+		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
-		virtual bool on_access_violation(u32 address, bool is_writing) { return false; }
+		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;
 		
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
@@ -220,6 +227,49 @@ namespace rsx
 
 		void append_array_element(u32 index);
 		u32 get_push_buffer_index_count() const;
+
+	protected:
+		//Save draw call parameters to detect instanced renders
+		std::pair<u32, u32> m_last_first_count;
+		rsx::draw_command m_last_command;
+
+		bool is_probable_instanced_draw();
+
+	public:
+		//MT vertex streaming
+		struct upload_stream_packet
+		{
+			std::function<void(void *, rsx::vertex_base_type, u8, u32)> post_upload_func;
+			gsl::span<const gsl::byte> src_span;
+			gsl::span<gsl::byte> dst_span;
+			rsx::vertex_base_type type;
+			u32 vector_width;
+			u32 vertex_count;
+			u32 src_stride;
+			u8 dst_stride;
+		};
+
+		struct upload_stream_worker
+		{
+			std::shared_ptr<thread_ctrl> worker_thread;
+			std::vector<upload_stream_packet> packets;
+			std::atomic<int> thread_status = { 0 };
+		};
+
+		struct upload_stream_task
+		{
+			std::array<upload_stream_worker, 16> worker_threads;
+			int available_threads = 0;
+			std::atomic<int> remaining_tasks = {0};
+		};
+
+		upload_stream_task m_vertex_streaming_task;
+		void post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type,
+				u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, u32 vertex_count,
+			std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback);
+		void start_vertex_upload_task();
+		void wait_for_vertex_upload_task();
+		bool vertex_upload_task_ready();
 
 	private:
 		std::mutex m_mtx_task;
@@ -244,9 +294,9 @@ namespace rsx
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
 		 * Vertex shader's position is to be multiplied by this matrix.
-		 * if is_d3d is set, the matrix is modified to use d3d convention.
+		 * if flip_y is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool flip_y, bool symmetrical_z) const;
+		void fill_scale_offset_data(void *buffer, bool flip_y) const;
 
 		/**
 		 * Fill buffer with user clip information
@@ -291,7 +341,7 @@ namespace rsx
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
 
-		virtual bool scaled_image_from_memory(blit_src_info& src_info, blit_dst_info& dst_info, bool interpolate){ return false;  }
+		virtual bool scaled_image_from_memory(blit_src_info& /*src_info*/, blit_dst_info& /*dst_info*/, bool /*interpolate*/){ return false;  }
 
 	public:
 		void reset();

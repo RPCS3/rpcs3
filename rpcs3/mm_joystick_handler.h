@@ -1,5 +1,4 @@
-#ifndef MM_JOYSTICK_HANDLER_H
-#define MM_JOYSTICK_HANDLER_H
+#pragma once
 
 #include "Emu/Io/PadHandler.h"
 #include <Windows.h>
@@ -71,5 +70,3 @@ private:
 	JOYINFOEX    js_info;
 	JOYCAPS   js_caps;
 };
-
-#endif

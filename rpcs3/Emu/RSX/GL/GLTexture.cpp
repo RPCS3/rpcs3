@@ -162,20 +162,40 @@ namespace gl
 			}
 
 			glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, min_filter);
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_LOD_BIAS, 0.);
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_LOD, 0);
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_LOD, 0);
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_LOD_BIAS, 0.f);
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_MIN_LOD, -1000.f);
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_MAX_LOD, 1000.f);
 		}
 		else
 		{
 			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
-			glSamplerParameteri(samplerHandle,  GL_TEXTURE_LOD_BIAS, tex.bias());
+			glSamplerParameterf(samplerHandle,  GL_TEXTURE_LOD_BIAS, tex.bias());
 			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 		}
 
 		glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
-		glSamplerParameteri(samplerHandle,  GL_TEXTURE_MAX_ANISOTROPY_EXT, ::gl::max_aniso(tex.max_aniso()));
+		glSamplerParameterf(samplerHandle,  GL_TEXTURE_MAX_ANISOTROPY_EXT, ::gl::max_aniso(tex.max_aniso()));
+
+		const u32 texture_format = tex.format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+		if (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8)
+		{
+			//NOTE: The stored texture function is reversed wrt the textureProj compare function
+			GLenum compare_mode = (GLenum)tex.zfunc() | GL_NEVER;
+
+			switch (compare_mode)
+			{
+			case GL_GREATER: compare_mode = GL_LESS; break;
+			case GL_GEQUAL: compare_mode = GL_LEQUAL; break;
+			case GL_LESS: compare_mode = GL_GREATER; break;
+			case GL_LEQUAL: compare_mode = GL_GEQUAL; break;
+			}
+
+			glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_FUNC, compare_mode);
+		}
+		else
+			glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 }
 

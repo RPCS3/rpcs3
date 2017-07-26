@@ -1,12 +1,15 @@
 #include "debugger_frame.h"
 
-#include <QSplitter>
+#include <QScrollBar>
 #include <QApplication>
 #include <QFontDatabase>
+#include <QCompleter>
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+extern bool user_asked_for_frame_capture;
 
-debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), parent)
+debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
+	: QDockWidget(tr("Debugger"), parent), xgui_settings(settings)
 {
 	pSize = 10;
 
@@ -27,20 +30,29 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_choice_units->setSizeAdjustPolicy(QComboBox::AdjustToContents);
 	m_choice_units->setMaxVisibleItems(30);
 	m_choice_units->setMaximumWidth(500);
+	m_choice_units->setEditable(true);
+	m_choice_units->setInsertPolicy(QComboBox::NoInsert);
+	m_choice_units->lineEdit()->setPlaceholderText("Choose a thread");
+	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&] {
+		m_choice_units->clearFocus();
+	});
+	m_choice_units->completer()->setCompletionMode(QCompleter::PopupCompletion);
+	m_choice_units->completer()->setMaxVisibleItems(30);
+	m_choice_units->completer()->setFilterMode(Qt::MatchContains);
 
 	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
+	m_btn_capture = new QPushButton(tr("Capture"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
-	m_btn_run = new QPushButton(tr("Run"), this);
-	m_btn_pause = new QPushButton(tr("Pause"), this);
+	m_btn_run = new QPushButton(Run, this);
 
 	EnableButtons(!Emu.IsStopped());
 
 	hbox_b_main->addWidget(m_go_to_addr);
 	hbox_b_main->addWidget(m_go_to_pc);
+	hbox_b_main->addWidget(m_btn_capture);
 	hbox_b_main->addWidget(m_btn_step);
 	hbox_b_main->addWidget(m_btn_run);
-	hbox_b_main->addWidget(m_btn_pause);
 	hbox_b_main->addWidget(m_choice_units);
 	hbox_b_main->addStretch();
 
@@ -52,12 +64,12 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_list->setFont(mono);
 	m_regs->setFont(mono);
 
-	QSplitter* splitter = new QSplitter(this);
-	splitter->addWidget(m_list);
-	splitter->addWidget(m_regs);
+	m_splitter = new QSplitter(this);
+	m_splitter->addWidget(m_list);
+	m_splitter->addWidget(m_regs);
 
 	QHBoxLayout* hbox_w_list = new QHBoxLayout();
-	hbox_w_list->addWidget(splitter);
+	hbox_w_list->addWidget(m_splitter);
 
 	vbox_p_main->addLayout(hbox_b_main);
 	vbox_p_main->addLayout(hbox_w_list);
@@ -74,16 +86,23 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::Show_Val);
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::Show_PC);
+	connect(m_btn_capture, &QAbstractButton::clicked, [=]() { user_asked_for_frame_capture = true; });
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_run, &QAbstractButton::clicked, [=](){
-		const auto cpu = this->cpu.lock();
-		if (cpu && cpu->state.test_and_reset(cpu_flag::dbg_pause))
-			if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
-				cpu->notify();
-		UpdateUI();
-	});
-	connect(m_btn_pause, &QAbstractButton::clicked, [=](){
-		if (const auto cpu = this->cpu.lock()) cpu->state += cpu_flag::dbg_pause;
+		if (const auto cpu = this->cpu.lock())
+		{
+			if (m_btn_run->text() == Run && cpu->state.test_and_reset(cpu_flag::dbg_pause))
+			{
+				if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
+				{
+					cpu->notify();
+				}
+			}
+			else
+			{
+				cpu->state += cpu_flag::dbg_pause;
+			}
+		}
 		UpdateUI();
 	});
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &debugger_frame::UpdateUI);
@@ -94,13 +113,42 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	UpdateUnitList();
 }
 
+void debugger_frame::SaveSettings()
+{
+	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+}
+
 void debugger_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	emit DebugFrameClosed();
+	Q_EMIT DebugFrameClosed();
 }
 
-//static const int show_lines = 30;
+void debugger_frame::showEvent(QShowEvent * event)
+{
+	// resize splitter widgets
+	QByteArray state = xgui_settings->GetValue(GUI::d_splitterState).toByteArray();
+
+	if (state.isEmpty()) // resize 2:1
+	{
+		const int width_right = width() / 3;
+		const int width_left = width() - width_right;
+		m_splitter->setSizes({ width_left, width_right });
+	}
+	else
+	{
+		m_splitter->restoreState(state);
+	}
+	QDockWidget::showEvent(event);
+}
+
+void debugger_frame::hideEvent(QHideEvent * event)
+{
+	// save splitter state or it will resume its initial state on next show
+	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+	QDockWidget::hideEvent(event);
+}
+
 #include <map>
 
 std::map<u32, bool> g_breakpoints;
@@ -134,6 +182,8 @@ void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
+	if (m_noThreadSelected) return;
+
 	const auto cpu = this->cpu.lock();
 
 	if (!cpu)
@@ -146,7 +196,6 @@ void debugger_frame::UpdateUI()
 
 			m_btn_run->setEnabled(false);
 			m_btn_step->setEnabled(false);
-			m_btn_pause->setEnabled(false);
 		}
 	}
 	else
@@ -162,22 +211,15 @@ void debugger_frame::UpdateUI()
 
 			if (test(state & cpu_flag::dbg_pause))
 			{
-				m_btn_run->setEnabled(true);
+				m_btn_run->setText(Run);
 				m_btn_step->setEnabled(true);
-				m_btn_pause->setEnabled(false);
 			}
 			else
 			{
-				m_btn_run->setEnabled(false);
+				m_btn_run->setText(Pause);
 				m_btn_step->setEnabled(false);
-				m_btn_pause->setEnabled(true);
 			}
 		}
-	}
-
-	if (Emu.IsStopped())
-	{
-		g_breakpoints.clear();
 	}
 }
 
@@ -200,6 +242,7 @@ void debugger_frame::UpdateUnitList()
 	QVariant old_cpu = m_choice_units->currentData();
 
 	m_choice_units->clear();
+	m_choice_units->addItem(NoThread);
 
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
@@ -227,34 +270,40 @@ void debugger_frame::OnSelectUnit()
 	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
 
 	m_current_choice = m_choice_units->currentText();
+	m_noThreadSelected = m_current_choice == NoThread;
+	m_list->m_noThreadSelected = m_noThreadSelected;
 
 	m_disasm.reset();
+	cpu.reset();
 
-	const auto on_select = [&](u32, cpu_thread& cpu)
+	if (!m_noThreadSelected)
 	{
-		cpu_thread* data = (cpu_thread *)m_choice_units->currentData().value<void *>();
-		return data == &cpu;
-	};
+		const auto on_select = [&](u32, cpu_thread& cpu)
+		{
+			cpu_thread* data = (cpu_thread *)m_choice_units->currentData().value<void *>();
+			return data == &cpu;
+		};
 
-	if (auto ppu = idm::select<ppu_thread>(on_select))
-	{
-		m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = ppu.ptr;
-	}
-	else if (auto spu1 = idm::select<SPUThread>(on_select))
-	{
-		m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = spu1.ptr;
-	}
-	else if (auto rspu = idm::select<RawSPUThread>(on_select))
-	{
-		m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = rspu.ptr;
-	}
-	else if (auto arm = idm::select<ARMv7Thread>(on_select))
-	{
-		m_disasm = std::make_unique<ARMv7DisAsm>(CPUDisAsm_InterpreterMode);
-		cpu = arm.ptr;
+		if (auto ppu = idm::select<ppu_thread>(on_select))
+		{
+			m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = ppu.ptr;
+		}
+		else if (auto spu1 = idm::select<SPUThread>(on_select))
+		{
+			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = spu1.ptr;
+		}
+		else if (auto rspu = idm::select<RawSPUThread>(on_select))
+		{
+			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = rspu.ptr;
+		}
+		else if (auto arm = idm::select<ARMv7Thread>(on_select))
+		{
+			m_disasm = std::make_unique<ARMv7DisAsm>(CPUDisAsm_InterpreterMode);
+			cpu = arm.ptr;
+		}
 	}
 
 	DoUpdate();
@@ -275,9 +324,10 @@ void debugger_frame::WriteRegs()
 		m_regs->clear();
 		return;
 	}
-
+	int loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
 	m_regs->setText(qstr(cpu->dump()));
+	m_regs->verticalScrollBar()->setValue(loc);
 }
 
 void debugger_frame::OnUpdate()
@@ -365,11 +415,13 @@ void debugger_frame::Show_Val()
 		}
 		m_list->ShowAddr(CentrePc(pc));
 	}
+
+	diag->deleteLater();
 }
 
 void debugger_frame::Show_PC()
 {
-	if (const auto cpu = this->cpu.lock()) m_list->ShowAddr(CentrePc(GetPc()));
+	m_list->ShowAddr(CentrePc(GetPc()));
 }
 
 void debugger_frame::DoStep()
@@ -399,7 +451,11 @@ void debugger_frame::EnableButtons(bool enable)
 	m_go_to_pc->setEnabled(enable);
 	m_btn_step->setEnabled(enable);
 	m_btn_run->setEnabled(enable);
-	m_btn_pause->setEnabled(enable);
+}
+
+void debugger_frame::ClearBreakpoints()
+{
+	g_breakpoints.clear();
 }
 
 debugger_list::debugger_list(debugger_frame* parent) : QListWidget(parent)
@@ -525,7 +581,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton && !Emu.IsStopped())
+	if (event->button() == Qt::LeftButton && !Emu.IsStopped() && !m_noThreadSelected)
 	{
 		long i = currentRow();
 		if (i < 0) return;

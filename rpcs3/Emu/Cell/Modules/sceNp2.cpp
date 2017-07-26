@@ -445,6 +445,65 @@ s32 sceNpMatching2RegisterRoomMessageCallback()
 	return CELL_OK;
 }
 
+s32 sceNpMatching2SignalingCancelPeerNetInfo()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpMatching2SignalingGetLocalNetInfo()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpMatching2SignalingGetPeerNetInfo()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpMatching2SignalingGetPeerNetInfoResult()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpAuthOAuthInit()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpAuthOAuthTerm()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpAuthCreateOAuthRequest()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpAuthDeleteOAuthRequest()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpAuthAbortOAuthRequest()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
+s32 sceNpAuthGetAuthorizationCode()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
 
 DECLARE(ppu_module_manager::sceNp2)("sceNp2", []()
 {
@@ -517,4 +576,15 @@ DECLARE(ppu_module_manager::sceNp2)("sceNp2", []()
 	REG_FUNC(sceNp2, sceNpMatching2Init2);
 	REG_FUNC(sceNp2, sceNpMatching2SetLobbyMemberDataInternal);
 	REG_FUNC(sceNp2, sceNpMatching2RegisterRoomMessageCallback);
+	REG_FUNC(sceNp2, sceNpMatching2SignalingCancelPeerNetInfo);
+	REG_FUNC(sceNp2, sceNpMatching2SignalingGetLocalNetInfo);
+	REG_FUNC(sceNp2, sceNpMatching2SignalingGetPeerNetInfo);
+	REG_FUNC(sceNp2, sceNpMatching2SignalingGetPeerNetInfoResult);
+
+	REG_FUNC(sceNp2, sceNpAuthOAuthInit);
+	REG_FUNC(sceNp2, sceNpAuthOAuthTerm);
+	REG_FUNC(sceNp2, sceNpAuthCreateOAuthRequest);
+	REG_FUNC(sceNp2, sceNpAuthDeleteOAuthRequest);
+	REG_FUNC(sceNp2, sceNpAuthAbortOAuthRequest);
+	REG_FUNC(sceNp2, sceNpAuthGetAuthorizationCode);
 });

@@ -1,5 +1,4 @@
-#ifndef RPCS3_APP_H
-#define RPCS3_APP_H
+#pragma once
 
 #include "stdafx.h"
 
@@ -16,6 +15,7 @@
 
 #include "rpcs3qt/msg_dialog_frame.h"
 #include "rpcs3qt/main_window.h"
+#include "rpcs3qt/gui_settings.h"
 
 #include <QApplication>
 
@@ -31,14 +31,14 @@ public:
 	/** Call this method before calling app.exec
 	*/
 	void Init();
-signals:
+Q_SIGNALS:
 	void OnEmulatorRun();
 	void OnEmulatorPause();
 	void OnEmulatorResume();
 	void OnEmulatorStop();
 	void OnEmulatorReady();
 	void RequestCallAfter(const std::function<void()>& func);
-private slots:
+private Q_SLOTS:
 	void OnChangeStyleSheetRequest(const QString& path);
 	void HandleCallAfter(const std::function<void()>& func);
 	void ResetPads();
@@ -52,5 +52,6 @@ private:
 	std::shared_ptr<basic_mouse_handler> m_basicMouseHandler;
 
 	main_window* RPCS3MainWin;
+
+	std::shared_ptr<gui_settings> guiSettings;
 };
-#endif

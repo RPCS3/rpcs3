@@ -131,6 +131,7 @@ s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
 	for (int i = 0; i < CELL_GEM_MAX_NUM; i++)
 	{
 		info->status[i] = CELL_GEM_STATUS_DISCONNECTED;
+		info->port[i] = 0;
 	}
 
 	return CELL_OK;
@@ -160,10 +161,18 @@ s32 cellGemGetRumble()
 	return CELL_OK;
 }
 
-s32 cellGemGetState()
+s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemState> gem_state)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
-	return CELL_OK;
+	cellGem.todo("cellGemGetState(gem_num=%d, flag=0x%x, time=0x%llx, gem_state=*0x%x)", gem_num, flag, time_parameter, gem_state);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
+	// clear out gem_state so no games get any funny ideas about them being connected...
+	std::memset(gem_state.get_ptr(), 0, sizeof(CellGemState));
+
+	return CELL_GEM_NOT_CONNECTED;
 }
 
 s32 cellGemGetStatusFlags()

@@ -78,11 +78,14 @@ namespace gl
 		bool ARB_buffer_storage_supported = false;
 		bool ARB_texture_buffer_supported = false;
 		bool ARB_shader_draw_parameters_supported = false;
+		bool ARB_depth_buffer_float_supported = false;
+		bool ARB_texture_barrier_supported = false;
+		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
 
 		void initialize()
 		{
-			int find_count = 5;
+			int find_count = 8;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -125,6 +128,27 @@ namespace gl
 				{
 					ARB_texture_buffer_supported = true;
 					find_count --;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_depth_buffer_float")
+				{
+					ARB_depth_buffer_float_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (ext_name == "GL_ARB_texture_barrier")
+				{
+					ARB_texture_barrier_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (ext_name == "GL_NV_texture_barrier")
+				{
+					NV_texture_barrier_supported = true;
+					find_count--;
 					continue;
 				}
 			}
@@ -807,7 +831,7 @@ namespace gl
 
 			verify(HERE), m_memory_mapping != nullptr;
 			m_data_loc = 0;
-			m_limit = size;
+			m_limit = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -854,7 +878,7 @@ namespace gl
 			m_id = 0;
 		}
 
-		virtual void reserve_storage_on_heap(u32 alloc_size) {}
+		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
 
 		virtual void unmap() {}
 
@@ -875,6 +899,7 @@ namespace gl
 	{
 		u32 m_mapped_bytes = 0;
 		u32 m_mapping_offset = 0;
+		u32 m_alignment_offset = 0;
 
 	public:
 
@@ -888,7 +913,7 @@ namespace gl
 
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
-			m_limit = size;
+			m_limit = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -904,16 +929,33 @@ namespace gl
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, 256);
 
-			if ((offset + alloc_size) > m_limit)
+			const u32 block_size = align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
+
+			if ((offset + block_size) > m_limit)
 			{
 				buffer::data(m_limit, nullptr);
 				m_data_loc = 0;
 			}
 
 			glBindBuffer((GLenum)m_target, m_id);
-			m_memory_mapping = glMapBufferRange((GLenum)m_target, m_data_loc, align(alloc_size, 256), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
-			m_mapped_bytes = align(alloc_size, 256);
+			m_memory_mapping = glMapBufferRange((GLenum)m_target, m_data_loc, block_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+			m_mapped_bytes = block_size;
 			m_mapping_offset = m_data_loc;
+			m_alignment_offset = 0;
+
+			//When using debugging tools, the mapped base might not be aligned as expected
+			const u64 mapped_address_base = (u64)m_memory_mapping;
+			if (mapped_address_base & 0xF)
+			{
+				//Unaligned result was returned. We have to modify the base address a bit
+				//We lose some memory here, but the 16 byte overallocation above makes up for it
+				const u64 new_base = (mapped_address_base & ~0xF) + 16;
+				const u64 diff_bytes = new_base - mapped_address_base;
+
+				m_memory_mapping = (void *)new_base;
+				m_mapped_bytes -= ::narrow<u32>(diff_bytes);
+				m_alignment_offset = ::narrow<u32>(diff_bytes);
+			}
 
 			verify(HERE), m_mapped_bytes >= alloc_size;
 		}
@@ -924,7 +966,7 @@ namespace gl
 			if (m_data_loc) offset = align(offset, alignment);
 
 			u32 padding = (offset - m_data_loc);
-			u32 real_size = padding + alloc_size;
+			u32 real_size = align(padding + alloc_size, alignment);	//Ensures we leave the loc pointer aligned after we exit
 
 			if (real_size > m_mapped_bytes)
 			{
@@ -937,14 +979,14 @@ namespace gl
 				if (m_data_loc) offset = align(offset, alignment);
 
 				padding = (offset - m_data_loc);
-				real_size = padding + alloc_size;
+				real_size = align(padding + alloc_size, alignment);
 			}
 
-			m_data_loc = offset + alloc_size;
+			m_data_loc = offset + real_size;
 			m_mapped_bytes -= real_size;
 
 			u32 local_offset = (offset - m_mapping_offset);
-			return std::make_pair(((char*)m_memory_mapping) + local_offset, offset);
+			return std::make_pair(((char*)m_memory_mapping) + local_offset, offset + m_alignment_offset);
 		}
 
 		void remove() override
@@ -1137,6 +1179,7 @@ namespace gl
 			uint_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
 			uint_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV,
 			uint_24_8 = GL_UNSIGNED_INT_24_8,
+			float32_uint8 = GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
 
 			sbyte = GL_BYTE,
 			sshort = GL_SHORT,
@@ -1189,6 +1232,7 @@ namespace gl
 			depth16 = GL_DEPTH_COMPONENT16,
 			depth_stencil = GL_DEPTH_STENCIL,
 			depth24_stencil8 = GL_DEPTH24_STENCIL8,
+			depth32f_stencil8 = GL_DEPTH32F_STENCIL8,
 
 			compressed_rgb_s3tc_dxt1 = GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
 			compressed_rgba_s3tc_dxt1 = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
@@ -1990,6 +2034,12 @@ namespace gl
 
 	namespace glsl
 	{
+		enum program_domain
+		{
+			glsl_vertex_program = 0,
+			glsl_fragment_program = 1
+		};
+
 		class compilation_exception : public exception
 		{
 		public:

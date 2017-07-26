@@ -10,14 +10,21 @@
 
 
 using namespace Microsoft::WRL;
+extern ID3D12Device* g_d3d12_device;
 
 inline std::string get_hresult_message(HRESULT hr)
 {
+	if (hr == DXGI_ERROR_DEVICE_REMOVED)
+	{
+		hr = g_d3d12_device->GetDeviceRemovedReason();
+		return fmt::format("D3D12 device was removed with error status 0x%X", hr);
+	}
+
 	_com_error error(hr);
 #ifndef UNICODE
 	return error.ErrorMessage();
 #else
-	using convert_type = std::codecvt<wchar_t, char, mbstate_t>;
+	using convert_type = std::codecvt<wchar_t, char, std::mbstate_t>;
 	return std::wstring_convert<convert_type>().to_bytes(error.ErrorMessage());
 #endif
 }

@@ -2,9 +2,11 @@
 
 #include <stdafx.h>
 #include "rpcs3_version.h"
+#include "Utilities/sysinfo.h"
 
 #include <QMenu>
 #include <QActionGroup>
+#include <QScrollBar>
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
@@ -38,7 +40,7 @@ struct gui_listener : logs::listener
 		read = new packet;
 		last = new packet;
 		read->next = last.load();
-		last->msg = fmt::format("RPCS3 v%s\n", rpcs3::version.to_string());
+		last->msg = fmt::format("RPCS3 v%s\n%s\n", rpcs3::version.to_string(), utils::get_system_info());
 
 		// Self-registration
 		logs::listener::add(this);
@@ -65,7 +67,7 @@ struct gui_listener : logs::listener
 				_new->msg += "} ";
 			}
 
-			if (msg.ch->name)
+			if ('\0' != *msg.ch->name)
 			{
 				_new->msg += msg.ch->name;
 				_new->msg += msg.sev == logs::level::todo ? " TODO: " : ": ";
@@ -134,6 +136,8 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 		menu->addAction(clearAct);
 		menu->addSeparator();
 		menu->addActions({ nothingAct, fatalAct, errorAct, todoAct, successAct, warningAct, noticeAct, traceAct });
+		menu->addSeparator();
+		menu->addAction(stackAct);
 		menu->addSeparator();
 		menu->addAction(TTYAct);
 		menu->exec(mapToGlobal(pos));
@@ -231,6 +235,13 @@ void log_frame::CreateAndConnectActions()
 	noticeAct = new QAction(tr("Notice"), logLevels);
 	traceAct = new QAction(tr("Trace"), logLevels);
 
+	stackAct = new QAction(tr("Stack Mode"), this);
+	stackAct->setCheckable(true);
+	connect(stackAct, &QAction::toggled, xgui_settings.get(), [=](bool checked) {
+		xgui_settings->SetValue(GUI::l_stack, checked);
+		m_stack_log = checked;
+	});
+
 	TTYAct = new QAction(tr("TTY"), this);
 	TTYAct->setCheckable(true);
 	connect(TTYAct, &QAction::triggered, xgui_settings.get(), [=](bool checked){
@@ -253,6 +264,7 @@ void log_frame::LoadSettings()
 {
 	SetLogLevel(xgui_settings->GetLogLevel());
 	SetTTYLogging(xgui_settings->GetValue(GUI::l_tty).toBool());
+	stackAct->setChecked(xgui_settings->GetValue(GUI::l_stack).toBool());
 }
 
 void log_frame::UpdateUI()
@@ -324,10 +336,70 @@ void log_frame::UpdateUI()
 
 			// Print UTF-8 text.
 			text += qstr(packet->msg);
-			log->setTextColor(color);
+
+			// save old log state
+			QScrollBar *sb = log->verticalScrollBar();
+			bool isMax = sb->value() == sb->maximum();
+			int sb_pos = sb->value();
+			int sel_pos = log->textCursor().position();
+			int sel_start = log->textCursor().selectionStart();
+			int sel_end = log->textCursor().selectionEnd();
+
+			// clear selection or else it will get colorized as well
+			QTextCursor c = log->textCursor();
+			c.clearSelection();
+			log->setTextCursor(c);
+
 			// remove the new line because Qt's append adds a new line already.
 			text.chop(1);
+
+			QString suffix;
+			bool isSame = text == m_old_text;
+
+			// create counter suffix and remove recurring line if needed
+			if (m_stack_log)
+			{
+				if (isSame)
+				{
+					m_log_counter++;
+					suffix = QString(" x%1").arg(m_log_counter);
+					log->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+					log->moveCursor(QTextCursor::StartOfLine, QTextCursor::MoveAnchor);
+					log->moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
+					log->textCursor().removeSelectedText();
+					log->textCursor().deletePreviousChar();
+				}
+				else
+				{
+					m_log_counter = 1;
+					m_old_text = text;
+				}
+			}
+
+			// add actual log message
+			log->setTextColor(color);
 			log->append(text);
+
+			// add counter suffix if needed
+			if (m_stack_log && isSame)
+			{
+				log->setTextColor(Qt::white);
+				log->insertPlainText(suffix);
+			}
+
+			// if we mark text from right to left we need to swap sides (start is always smaller than end)
+			if (sel_pos < sel_end)
+			{
+				std::swap(sel_start, sel_end);
+			}
+
+			// reset old text cursor and selection
+			c.setPosition(sel_start);
+			c.setPosition(sel_end, QTextCursor::KeepAnchor);
+			log->setTextCursor(c);
+
+			// set scrollbar to max means auto-scroll
+			sb->setValue(isMax ? sb->maximum() : sb_pos);
 		}
 
 		// Drop packet
@@ -341,5 +413,5 @@ void log_frame::UpdateUI()
 void log_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	emit log_frameClosed();
+	Q_EMIT LogFrameClosed();
 }

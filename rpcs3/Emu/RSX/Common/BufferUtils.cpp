@@ -125,8 +125,13 @@ namespace
 		u32 min_block_size = std::min(src_stride, dst_stride);
 		if (min_block_size == 0) min_block_size = dst_stride;
 
-		const u32 remainder = is_128_aligned? 0:  (16 - min_block_size) / min_block_size;
-		const u32 iterations = is_128_aligned? vertex_count: vertex_count - remainder;
+		u32 iterations = 0;
+		u32 remainder = is_128_aligned ? 0 : 1 + ((16 - min_block_size) / min_block_size);
+
+		if (vertex_count > remainder)
+			iterations = vertex_count - remainder;
+		else
+			remainder = vertex_count;
 
 		for (u32 i = 0; i < iterations; ++i)
 		{
@@ -168,8 +173,13 @@ namespace
 		u32 min_block_size = std::min(src_stride, dst_stride);
 		if (min_block_size == 0) min_block_size = dst_stride;
 
-		const u32 remainder = is_128_aligned ? 0 : (16 - min_block_size) / min_block_size;
-		const u32 iterations = is_128_aligned ? vertex_count : vertex_count - remainder;
+		u32 iterations = 0;
+		u32 remainder = is_128_aligned ? 0 : 1 + ((16 - min_block_size) / min_block_size);
+
+		if (vertex_count > remainder)
+			iterations = vertex_count - remainder;
+		else
+			remainder = vertex_count;
 
 		for (u32 i = 0; i < iterations; ++i)
 		{
@@ -364,7 +374,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 	//Sometimes, we get a vertex attribute to be repeated. Just copy the supplied vertices only
 	//TODO: Stop these requests from getting here in the first place!
 	//TODO: Check if it is possible to have a repeating array with more than one attribute instance
-	const u32 real_count = src_ptr.size_bytes() / attribute_src_stride;
+	const u32 real_count = (u32)src_ptr.size_bytes() / attribute_src_stride;
 	if (real_count == 1) attribute_src_stride = 0;	//Always fetch src[0]
 
 	//TODO: Determine favourable vertex threshold where vector setup costs become negligible
@@ -465,6 +475,7 @@ std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> 
 			max_index = std::max(max_index, index);
 			min_index = std::min(min_index, index);
 		}
+
 		dst[dst_idx++] = index;
 	}
 	return std::make_tuple(min_index, max_index);
@@ -647,7 +658,7 @@ u32 get_index_type_size(rsx::index_array_type type)
 	fmt::throw_exception("Wrong index type" HERE);
 }
 
-void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned first, unsigned count)
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
 {
 	unsigned short *typedDst = (unsigned short *)(dst);
 	switch (draw_mode)
@@ -661,7 +672,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	case rsx::primitive_type::polygon:
 		for (unsigned i = 0; i < (count - 2); i++)
 		{
-			typedDst[3 * i] = first;
+			typedDst[3 * i] = 0;
 			typedDst[3 * i + 1] = i + 2 - 1;
 			typedDst[3 * i + 2] = i + 2;
 		}
@@ -670,26 +681,26 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 		for (unsigned i = 0; i < count / 4; i++)
 		{
 			// First triangle
-			typedDst[6 * i] = 4 * i + first;
-			typedDst[6 * i + 1] = 4 * i + 1 + first;
-			typedDst[6 * i + 2] = 4 * i + 2 + first;
+			typedDst[6 * i] = 4 * i;
+			typedDst[6 * i + 1] = 4 * i + 1;
+			typedDst[6 * i + 2] = 4 * i + 2;
 			// Second triangle
-			typedDst[6 * i + 3] = 4 * i + 2 + first;
-			typedDst[6 * i + 4] = 4 * i + 3 + first;
-			typedDst[6 * i + 5] = 4 * i + first;
+			typedDst[6 * i + 3] = 4 * i + 2;
+			typedDst[6 * i + 4] = 4 * i + 3;
+			typedDst[6 * i + 5] = 4 * i;
 		}
 		return;
 	case rsx::primitive_type::quad_strip:
 		for (unsigned i = 0; i < (count - 2) / 2; i++)
 		{
 			// First triangle
-			typedDst[6 * i] = 2 * i + first;
-			typedDst[6 * i + 1] = 2 * i + 1 + first;
-			typedDst[6 * i + 2] = 2 * i + 2 + first;
+			typedDst[6 * i] = 2 * i;
+			typedDst[6 * i + 1] = 2 * i + 1;
+			typedDst[6 * i + 2] = 2 * i + 2;
 			// Second triangle
-			typedDst[6 * i + 3] = 2 * i + 2 + first;
-			typedDst[6 * i + 4] = 2 * i + 1 + first;
-			typedDst[6 * i + 5] = 2 * i + 3 + first;
+			typedDst[6 * i + 3] = 2 * i + 2;
+			typedDst[6 * i + 4] = 2 * i + 1;
+			typedDst[6 * i + 5] = 2 * i + 3;
 		}
 		return;
 	case rsx::primitive_type::points:
@@ -726,21 +737,21 @@ namespace
 		u32 count;
 		std::tie(first, count) = get_first_count_from_draw_indexed_clause(first_count_arguments);
 
-		if (!expands(draw_mode)) return upload_untouched<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
+		if (!expands(draw_mode)) return upload_untouched<T>(src, dst, restart_index_enabled, restart_index);
 
 		switch (draw_mode)
 		{
 		case rsx::primitive_type::line_loop:
 		{
-			const auto &returnvalue = upload_untouched<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
-			dst[count] = src[first];
+			const auto &returnvalue = upload_untouched<T>(src, dst, restart_index_enabled, restart_index);
+			dst[count] = src[0];
 			return returnvalue;
 		}
 		case rsx::primitive_type::polygon:
 		case rsx::primitive_type::triangle_fan:
-			return expand_indexed_triangle_fan<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
+			return expand_indexed_triangle_fan<T>(src, dst, restart_index_enabled, restart_index);
 		case rsx::primitive_type::quads:
-			return expand_indexed_quads<T>(src.subspan(first), dst, restart_index_enabled, restart_index);
+			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index);
 		}
 		fmt::throw_exception("Unknown draw mode (0x%x)" HERE, (u32)draw_mode);
 	}

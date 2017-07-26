@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.0.2)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
 set(RES_FILES "")
 set(CMAKE_CXX_STANDARD 14)
+include(CheckCCompilerFlag)
 
 # Qt section
-find_package(Qt5 5.8 COMPONENTS Widgets)
+find_package(Qt5 5.7 COMPONENTS Widgets)
 if (WIN32)
     find_package(Qt5WinExtras REQUIRED)
     set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras)
@@ -17,15 +18,16 @@ endif()
 
 # Let's make sure we have Qt before we continue
 if (NOT Qt5Widgets_FOUND)
-	if (Qt5Widgets_VERSION VERSION_LESS 5.8.0)
-		message("Minimum supported Qt5 version is 5.8! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
+	if (Qt5Widgets_VERSION VERSION_LESS 5.7.0)
+		message("Minimum supported Qt5 version is 5.7! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
 		if ("${CMAKE_SYSTEM}" MATCHES "Linux")
-			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.\n
-					If you're on Ubuntu or Linux Mint, there is a PPA you can use to install an up-to-date qt5 version.\n
-					  https://launchpad.net/~beineri/+archive/ubuntu/opt-qt59-Xenial\n
-					just make sure to run \n
-					  source /opt/qt59/bin/qt59-env.sh\n
-					before re-running cmake")
+			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
+If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt59-xenial
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt59-trusty
+just make sure to run
+    source /opt/qt59/bin/qt59-env.sh
+before re-running cmake")
         elseif(WIN32)
 			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
 		else()
@@ -46,6 +48,11 @@ endif()
 
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+
+# To make UI files on cmake 3.7 or less work
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 if (Qt5_POSITION_INDEPENDENT_CODE)
     SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
     if(UNIX)
@@ -71,17 +78,16 @@ include(ConfigureCompiler)
 if(WIN32)
 	add_definitions(-DUNICODE)
 	add_definitions(-D_WIN32_WINNT=0x0601)
-	set(RES_FILES "rpcs3_.rc")
+	set(RES_FILES "rpcs3.rc")
 else()
 	add_definitions(-DGL_GLEXT_PROTOTYPES)
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 endif()
 
 if(NOT MSVC)
-	if($ENV{CI})
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O1") # fix for travis gcc OoM crash. Might be fixed with the move to containers.
-	endif()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
 	if(WIN32)
 		set(CMAKE_RC_COMPILER_INIT windres)
 		enable_language(RC)
@@ -91,7 +97,24 @@ if(NOT MSVC)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-multiple-definition")
 	endif()
 	
-	add_compile_options(-msse -msse2 -mcx16 -mssse3)
+	add_compile_options(-msse -msse2 -mcx16 -mssse3 -mrtm)
+	
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+		# This fixes 'some' of the st11range issues. See issue #2516
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -image-base=0x10000")
+	endif()
+	
+	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
+	CHECK_C_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
+	if(HAS_NO_PIE)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
+	endif()
+	CHECK_C_COMPILER_FLAG("-nopie" HAS_NOPIE)
+	if(HAS_NOPIE)
+		if (NOT HAS_NO_PIE)
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nopie")
+		endif()
+	endif()
 	
 	find_package(GLEW REQUIRED)
 	find_package(ZLIB REQUIRED)
@@ -105,7 +128,7 @@ endif()
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
 	set(ADDITIONAL_LIBS "rt" "X11" "asound")
-elseif(UNIX OR NOT MSVC)
+elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
 	set(ADDITIONAL_LIBS "iconv")
@@ -202,16 +225,10 @@ if(NOT LLVM_FOUND)
 else()
 	add_definitions(${LLVM_DEFINITIONS})
 	add_definitions(-DLLVM_AVAILABLE)
-	
-	#Use static linking for windows binary but always dynamic on *nix
-	if (WIN32)
-		if (CMAKE_BUILD_TYPE STREQUAL "Release")
-			llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler)
-		else()
-			llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
-		endif()
+	if (CMAKE_BUILD_TYPE STREQUAL "Release")
+		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler)
 	else()
-		set(LLVM_LIBS LLVM)
+		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
 	endif()
 
 	if (NOT MSVC)
@@ -268,12 +285,10 @@ if(NOT WIN32 AND NOT "${CMAKE_SYSTEM}" MATCHES "Linux")
 	set (EXCLUDE_FILES "/RSX/VK/")
 endif()
 
-# The Gui folder contains wxWidgets stuff, which we no longer want.
-set (EXCLUDE_FILES ${EXCLUDE_FILES} "/Gui/")
-
 # Ignore autogenerated moc_* files if present
 set (EXCLUDE_FILES ${EXCLUDE_FILES} "moc_")
 set (EXCLUDE_FILES ${EXCLUDE_FILES} "rpcs3_automoc")
+set (EXCLUDE_FILES ${EXCLUDE_FILES} "qrc_resources.cpp")
 
 foreach (TMP_PATH ${RPCS3_SRC})
 	foreach (EXCLUDE_PATH ${EXCLUDE_FILES})
@@ -285,7 +300,7 @@ foreach (TMP_PATH ${RPCS3_SRC})
 endforeach(TMP_PATH)
 
 # Remove the Qt moc files as part of clean, they are compiled when generating automoc
-file(GLOB_RECURSE TMP_MOC "${RPCS3_SRC_DIR}/moc_*.cpp" "${RPCS3_SRC_DIR}/rpcs3_automoc.cpp")
+file(GLOB_RECURSE TMP_MOC "${RPCS3_SRC_DIR}/moc_*.cpp" "${RPCS3_SRC_DIR}/rpcs3_automoc.cpp" "${RPCS3_SRC_DIR}/qrc_resources.cpp")
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${TMP_MOC}")
 
 if (WIN32)
@@ -293,6 +308,8 @@ if (WIN32)
 else()
     add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
 endif()
+
+add_dependencies(rpcs3 GitVersion)
 
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
@@ -303,8 +320,13 @@ if(WIN32)
 	endif()
 	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
-	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} hidapi-hidraw udev)
-	target_link_libraries(rpcs3 -ldl -lpthread -lvulkan ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
+	if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+		target_link_libraries(rpcs3 hidapi-hidraw udev vulkan)
+	else()
+		target_link_libraries(rpcs3 hidapi-libusb usb)
+	endif()
+	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
 	if (USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
 		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswresample.so libswscale.so)
@@ -332,3 +354,16 @@ target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 
 cotire(rpcs3)
+
+# Unix installation
+if(UNIX AND NOT APPLE)
+	# Install the binary
+	install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+	# Install the application icon and menu item
+	install(FILES rpcs3.svg
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
+	install(FILES rpcs3.png
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
+	install(FILES rpcs3.desktop
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+endif()

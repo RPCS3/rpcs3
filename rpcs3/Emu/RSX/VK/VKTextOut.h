@@ -198,7 +198,7 @@ namespace vk
 			m_program = std::make_unique<vk::glsl::program>((VkDevice)dev, pipeline, unused, unused);
 		}
 
-		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, float *offsets, int nb_offsets, std::array<float, 4> color)
+		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, float *offsets, size_t nb_offsets, std::array<float, 4> color)
 		{
 			verify(HERE), m_used_descriptors < 120;
 
@@ -216,7 +216,7 @@ namespace vk
 			float *dst = (float*)m_uniforms_buffer->map(m_uniform_buffer_offset, 8192);
 
 			//std140 spec demands that arrays be multiples of 16 bytes
-			for (int i = 0; i < nb_offsets; ++i)
+			for (size_t i = 0; i < nb_offsets; ++i)
 			{
 				dst[i * 4] = offsets[i * 2];
 				dst[i * 4 + 1] = offsets[i * 2 + 1];
@@ -265,7 +265,7 @@ namespace vk
 
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
-			const u32 buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 			
 			u8 *dst = (u8*)m_vertex_buffer->map(0, buffer_size);
 			memcpy(dst, points.data(), buffer_size);
@@ -329,8 +329,8 @@ namespace vk
 			}
 
 			VkViewport vp{};
-			vp.width = target_w;
-			vp.height = target_h;
+			vp.width = (f32)target_w;
+			vp.height = (f32)target_h;
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);

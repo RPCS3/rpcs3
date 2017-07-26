@@ -1,4 +1,4 @@
-version: '0.0.2-{build}'
+version: '0.0.3-{build}'
 
 os: Visual Studio 2015
 platform: x64
@@ -32,7 +32,7 @@ install:
 
 artifacts:
  - path: bin
-   name: 'rpcs3-v0.0.2-$(Date)-$(COMMIT_SHA)_win64'
+   name: 'rpcs3-v0.0.3-$(Date)-$(COMMIT_SHA)_win64'
    type: zip
 
 cache:

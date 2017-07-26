@@ -222,6 +222,7 @@ struct RSXFragmentProgram
 	u32 ctrl;
 	u16 unnormalized_coords;
 	u16 redirected_textures;
+	u16 shadow_textures;
 	rsx::comparison_function alpha_func;
 	bool front_back_color_enabled : 1;
 	bool back_color_diffuse_output : 1;
@@ -237,6 +238,8 @@ struct RSXFragmentProgram
 	float texture_pitch_scale[16];
 	u8 textures_alpha_kill[16];
 	u32 textures_zfunc[16];
+
+	bool valid;
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
@@ -262,6 +265,7 @@ struct RSXFragmentProgram
 		, ctrl(0)
 		, unnormalized_coords(0)
 		, texture_dimensions(0)
+		, valid(false)
 	{
 	}
 };

@@ -5,8 +5,31 @@
 
 logs::channel cellHttp("cellHttp");
 
+s32 cellHttpAuthCacheExport()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
 
 s32 cellHttpAuthCacheFlush()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpAuthCacheGetEntryMax()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpAuthCacheImport()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpAuthCacheSetEntryMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
@@ -289,6 +312,24 @@ s32 cellHttpClientSetConnectionStateCallback()
 }
 
 s32 cellHttpClientSetConnectionWaitStatus()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpClientGetConnectionWaitStatus()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpClientSetConnectionWaitTimeout()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpClientGetConnectionWaitTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
@@ -618,6 +659,18 @@ s32 cellHttpTransactionGetSslId()
 	return CELL_OK;
 }
 
+s32 cellHttpClientSetMinSslVersion()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpClientGetMinSslVersion()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
 s32 cellHttpClientSetSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
@@ -638,7 +691,11 @@ s32 cellHttpClientSetSslIdDestroyCallback()
 
 DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 {
+	REG_FUNC(cellHttp, cellHttpAuthCacheExport);
 	REG_FUNC(cellHttp, cellHttpAuthCacheFlush);
+	REG_FUNC(cellHttp, cellHttpAuthCacheGetEntryMax);
+	REG_FUNC(cellHttp, cellHttpAuthCacheImport);
+	REG_FUNC(cellHttp, cellHttpAuthCacheSetEntryMax);
 	REG_FUNC(cellHttp, cellHttpInit);
 	REG_FUNC(cellHttp, cellHttpEnd);
 	REG_FUNC(cellHttp, cellHttpsInit);
@@ -692,7 +749,10 @@ DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 	REG_FUNC(cellHttp, cellHttpClientPollConnections);
 
 	REG_FUNC(cellHttp, cellHttpClientSetConnectionStateCallback);
+	REG_FUNC(cellHttp, cellHttpClientGetConnectionWaitStatus);
 	REG_FUNC(cellHttp, cellHttpClientSetConnectionWaitStatus);
+	REG_FUNC(cellHttp, cellHttpClientGetConnectionWaitTimeout);
+	REG_FUNC(cellHttp, cellHttpClientSetConnectionWaitTimeout);
 	REG_FUNC(cellHttp, cellHttpClientSetRecvTimeout);
 	REG_FUNC(cellHttp, cellHttpClientGetRecvTimeout);
 	REG_FUNC(cellHttp, cellHttpClientSetSendTimeout);
@@ -754,6 +814,8 @@ DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 	REG_FUNC(cellHttp, cellHttpTransactionGetSslVersion);
 	REG_FUNC(cellHttp, cellHttpTransactionGetSslId);
 
+	REG_FUNC(cellHttp, cellHttpClientSetMinSslVersion);
+	REG_FUNC(cellHttp, cellHttpClientGetMinSslVersion);
 	REG_FUNC(cellHttp, cellHttpClientSetSslVersion);
 	REG_FUNC(cellHttp, cellHttpClientGetSslVersion);
 	REG_FUNC(cellHttp, cellHttpClientSetSslIdDestroyCallback);

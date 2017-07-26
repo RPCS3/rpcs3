@@ -30,13 +30,13 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 430" << std::endl << std::endl;
-	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	mat4 scaleOffsetMat;" << std::endl;
-	OS << "	ivec4 userClipEnabled[2];" << std::endl;
-	OS << "	vec4 userClipFactor[2];" << std::endl;
-	OS << "};" << std::endl;
+	OS << "#version 430\n\n";
+	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
+	OS << "{\n";
+	OS << "	mat4 scaleOffsetMat;\n";
+	OS << "	ivec4 userClipEnabled[2];\n";
+	OS << "	vec4 userClipFactor[2];\n";
+	OS << "};\n";
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
@@ -77,7 +77,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					}
 
 					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(location=" << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;" << std::endl;
+					OS << "layout(location=" << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
 				}
 			}
 		}
@@ -86,11 +86,11 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer" << std::endl;
-	OS << "{" << std::endl;
-	OS << "	vec4 vc[468];" << std::endl;
-	OS << "	uint transform_branch_bits;" << std::endl;
-	OS << "};" << std::endl << std::endl;
+	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer\n";
+	OS << "{\n";
+	OS << "	vec4 vc[468];\n";
+	OS << "	uint transform_branch_bits;\n";
+	OS << "};\n\n";
 
 	for (const ParamType &PT: constants)
 	{
@@ -99,7 +99,7 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			if (PI.name == "vc[468]")
 				continue;
 
-			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "uniform " << PT.type << " " << PI.name << ";\n";
 		}
 	}
 }
@@ -136,11 +136,11 @@ static const vertex_reg_info reg_table[] =
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
 
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
 	bool front_back_specular = (insert_back_specular && insert_front_specular);
@@ -166,7 +166,7 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			if (front_back_specular && name == "spec_color")
 				name = "back_spec_color";
 
-			OS << "out vec4 " << name << ";" << std::endl;
+			OS << "out vec4 " << name << ";\n";
 		}
 		else
 		{
@@ -174,68 +174,89 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			//Force some outputs to be declared even if unused
             if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
 			{
-                OS << "out vec4 " << i.name << ";" << std::endl;
+                OS << "out vec4 " << i.name << ";\n";
 			}
 		}
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		OS << "out vec4 front_diff_color;" << std::endl;
+		OS << "out vec4 front_diff_color;\n";
 
 	if (insert_back_specular && insert_front_specular)
-		OS << "out vec4 front_spec_color;" << std::endl;
+		OS << "out vec4 front_spec_color;\n";
 }
 
-void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+namespace
 {
-	for (const auto &real_input : inputs)
+	std::string expand_to_vec4(std::string value, u8 vector_size)
 	{
-		if (real_input.location != PI.location)
-			continue;
-
-		std::string vecType = "	vec4 ";
-		if (real_input.int_type)
-			vecType = "	ivec4 ";
-
-		std::string scale = "";
-		if (real_input.flags & GL_VP_SINT_MASK)
+		switch (vector_size)
 		{
-			if (real_input.flags & GL_VP_ATTRIB_S16_INT)
-				scale = " / 32767.";
-			else
-				scale = " / 2147483647.";
+		case 2:
+			return "vec4(" + value + ", " + value + ", 1., 1.)";
+		case 3:
+			return "vec4(" + value + ", " + value + ", " + value + ", 1.)";
+		default:
+			LOG_ERROR(RSX, "invalid vector size %d" HERE, vector_size);
+		case 1:
+		case 4:
+			//Expand not required
+			//In case its one component, read is swizzled as .xxxx (GOW1 loading screen)
+			return value;
 		}
+	}
 
-		if (!real_input.is_array)
+	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+	{
+		for (const auto &real_input : inputs)
 		{
-			OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";" << std::endl;
-			return;
-		}
+			if (real_input.location != PI.location)
+				continue;
 
-		if (real_input.frequency > 1)
-		{
-			if (real_input.is_modulo)
+			std::string vecType = "	vec4 ";
+			if (real_input.int_type)
+				vecType = "	ivec4 ";
+
+			std::string scale = "";
+			if (real_input.flags & GL_VP_SINT_MASK)
 			{
-				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";" << std::endl;
+				if (real_input.flags & GL_VP_ATTRIB_S16_INT)
+					scale = " / " + expand_to_vec4("32767.", real_input.size);
+				else
+					scale = " / " + expand_to_vec4("2147483647.", real_input.size);
+			}
+
+			if (!real_input.is_array)
+			{
+				OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";\n";
 				return;
 			}
 
-			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";" << std::endl;
+			if (real_input.frequency > 1)
+			{
+				if (real_input.is_modulo)
+				{
+					OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";\n";
+					return;
+				}
+
+				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";\n";
+				return;
+			}
+
+			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";\n";
 			return;
 		}
 
-		OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";" << std::endl;
-		return;
+		LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
+
+		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);\n";
 	}
-
-	LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
-
-	OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
 }
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS);
+	insert_glsl_legacy_function(OS, gl::glsl::glsl_vertex_program);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -250,8 +271,8 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	OS << "void vs_main(" << parameters << ")" << std::endl;
-	OS << "{" << std::endl;
+	OS << "void vs_main(" << parameters << ")\n";
+	OS << "{\n";
 
 	//Declare temporary registers, ignoring those mapped to outputs
 	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
@@ -265,7 +286,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
 
-			OS << ";" << std::endl;
+			OS << ";\n";
 		}
 	}
 
@@ -281,7 +302,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		{
 			for (const ParamItem &PI : PT.items)
 			{
-				OS << "	vec2 " << PI.name << "_coord_scale = vec2(1.);" << std::endl;
+				OS << "	vec2 " << PI.name << "_coord_scale = vec2(1.);\n";
 			}
 		}
 	}
@@ -289,10 +310,10 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
-	OS << "}" << std::endl << std::endl;
+	OS << "}\n\n";
 
-	OS << "void main ()" << std::endl;
-	OS << "{" << std::endl;
+	OS << "void main ()\n";
+	OS << "{\n";
 
 	std::string parameters = "";
 
@@ -314,19 +335,19 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 					if (!PI.value.empty())
 						OS << "= " << PI.value;
 
-					OS << ";" << std::endl;
+					OS << ";\n";
 				}
 			}
 		}
 	}
 
-	OS << std::endl << "	vs_main(" << parameters << ");" << std::endl << std::endl;
+	OS << "\n" << "	vs_main(" << parameters << ");\n\n";
 
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & 1);
-	bool insert_front_specular = (rsx_vertex_program.output_mask & 2);
+	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
+	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
 
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & 4);
-	bool insert_back_specular = (rsx_vertex_program.output_mask & 8);
+	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
+	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
 
 	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
 	bool front_back_specular = (insert_back_specular && insert_front_specular);
@@ -356,13 +377,19 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 			if (condition.empty() || i.default_val.empty())
 			{
 				if (!condition.empty()) condition = "if " + condition;
-				OS << "	" << condition << name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
+				OS << "	" << condition << name << " = " << i.src_reg << i.src_reg_mask << ";\n";
 			}
 			else
 			{
 				//Insert if-else condition
-				OS << "	" << name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";" << std::endl;
+				OS << "	" << name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";\n";
 			}
+		}
+		else if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
+		{
+			//An output was declared but nothing was written to it
+			//Set it to all ones (Atelier Escha)
+			OS << "	" << i.name << " = vec4(1.);\n";
 		}
 	}
 
@@ -374,8 +401,22 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
 			OS << "	front_spec_color = dst_reg2;\n";
 
-	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
-	OS << "}" << std::endl;
+	OS << "	gl_Position = gl_Position * scaleOffsetMat;\n";
+
+	//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:
+	//ln = (clip * 2) - 1 to fully utilize the 0-1 range of the depth buffer
+	//RSX matrices passed already map to the [0, 1] range but mapping to classic OGL requires that we undo this step
+	//This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).
+	//However, ClipControl only made it to opengl core in ver 4.5 though, so this is a workaround.
+	
+	//NOTE: It is completely valid for games to use very large w values, causing the post-multiplied z to be in the hundreds
+	//It is therefore critical that this step is done post-transform and the result re-scaled by w
+	//SEE Naruto: UNS
+	
+	OS << "	float ndc_z = gl_Position.z / gl_Position.w;\n";
+	OS << "	ndc_z = (ndc_z * 2.) - 1.;\n";
+	OS << "	gl_Position.z = ndc_z * gl_Position.w;\n";
+	OS << "}\n";
 }
 
 

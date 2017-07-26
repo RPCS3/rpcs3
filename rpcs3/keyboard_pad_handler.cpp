@@ -36,12 +36,26 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 
 void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 {
+	if (event->isAutoRepeat())
+	{
+		event->ignore();
+		return;
+	}
+
 	Key(event->key(), 1);
+	event->ignore();
 }
 
 void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)
 {
+	if (event->isAutoRepeat())
+	{
+		event->ignore();
+		return;
+	}
+
 	Key(event->key(), 0);
+	event->ignore();
 }
 
 void keyboard_pad_handler::LoadSettings()

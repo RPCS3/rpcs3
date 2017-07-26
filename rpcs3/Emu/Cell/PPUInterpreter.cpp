@@ -5,28 +5,7 @@
 
 #include <cmath>
 
-inline u64 dup32(const u32 x) { return x | static_cast<u64>(x) << 32; }
-
-#if defined(__GNUG__)
-inline u64 UMULH64(u64 a, u64 b)
-{
-	u64 result;
-	__asm__("mulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
-	return result;
-}
-
-inline s64 MULH64(s64 a, s64 b)
-{
-	s64 result;
-	__asm__("imulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
-	return result;
-}
-#endif
-
-#if defined(_MSC_VER)
-#define UMULH64 __umulh
-#define MULH64 __mulh
-#endif
+inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
 
 // Write values to CR field
 inline void ppu_cr_set(ppu_thread& ppu, u32 field, bool le, bool gt, bool eq, bool so)
@@ -261,7 +240,6 @@ static add_flags_result_t<u64> add64_flags(u64 a, u64 b, bool c)
 
 extern u64 get_timebased_time();
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
-extern void ppu_execute_function(ppu_thread& ppu, u32 index);
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr);
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr);
@@ -1743,7 +1721,7 @@ bool ppu_interpreter_precise::VPKUWUS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VREFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_rcp_ps(ppu.vr[op.vb].vf);
+	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), ppu.vr[op.vb].vf);
 	return true;
 }
 
@@ -1836,7 +1814,7 @@ bool ppu_interpreter::VRLW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VRSQRTEFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_rsqrt_ps(ppu.vr[op.vb].vf);
+	ppu.vr[op.vd].vf = _mm_div_ps(_mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f), _mm_sqrt_ps(ppu.vr[op.vb].vf));
 	return true;
 }
 
@@ -2875,7 +2853,7 @@ bool ppu_interpreter::SC(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	ppu_execute_syscall(ppu, ppu.gpr[11]);
-	return true;
+	return false;
 }
 
 bool ppu_interpreter::B(ppu_thread& ppu, ppu_opcode_t op)
@@ -3146,7 +3124,7 @@ bool ppu_interpreter::SUBFC(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MULHDU(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.rd] = UMULH64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
+	ppu.gpr[op.rd] = umulh64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
@@ -3344,7 +3322,7 @@ bool ppu_interpreter::LVEWX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MULHD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.gpr[op.rd] = MULH64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
+	ppu.gpr[op.rd] = mulh64(ppu.gpr[op.ra], ppu.gpr[op.rb]);
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	return true;
 }
@@ -3442,6 +3420,26 @@ bool ppu_interpreter::ADDE(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 {
+	static u8 s_table[16][4]
+	{
+		{0, 0, 0, 0},
+		{0, 0, 0, 1},
+		{0, 0, 1, 0},
+		{0, 0, 1, 1},
+		{0, 1, 0, 0},
+		{0, 1, 0, 1},
+		{0, 1, 1, 0},
+		{0, 1, 1, 1},
+		{1, 0, 0, 0},
+		{1, 0, 0, 1},
+		{1, 0, 1, 0},
+		{1, 0, 1, 1},
+		{1, 1, 0, 0},
+		{1, 1, 0, 1},
+		{1, 1, 1, 0},
+		{1, 1, 1, 1},
+	};
+
 	const u64 s = ppu.gpr[op.rs];
 
 	if (op.l11)
@@ -3450,11 +3448,8 @@ bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 
 		const u32 n = cntlz32(op.crm) & 7;
 		const u32 p = n * 4;
-		const u64 v = s >> (p ^ 0x1c);
-		ppu.cr[p + 0] = (v & 8) != 0;
-		ppu.cr[p + 1] = (v & 4) != 0;
-		ppu.cr[p + 2] = (v & 2) != 0;
-		ppu.cr[p + 3] = (v & 1) != 0;
+		const u64 v = (s >> (p ^ 0x1c)) & 0xf;
+		*(u32*)(u8*)(ppu.cr + p) = *(u32*)(s_table + v);
 	}
 	else
 	{
@@ -3462,15 +3457,11 @@ bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 
 		for (u32 i = 0; i < 8; i++)
 		{
-			const u32 p = i * 4;
-			const u64 v = s >> (p ^ 0x1c);
-
 			if (op.crm & (128 >> i))
 			{
-				ppu.cr[p + 0] = (v & 8) != 0;
-				ppu.cr[p + 1] = (v & 4) != 0;
-				ppu.cr[p + 2] = (v & 2) != 0;
-				ppu.cr[p + 3] = (v & 1) != 0;
+				const u32 p = i * 4;
+				const u64 v = (s >> (p ^ 0x1c)) & 0xf;
+				*(u32*)(u8*)(ppu.cr + p) = *(u32*)(s_table + v);
 			}
 		}
 	}
@@ -3580,7 +3571,7 @@ bool ppu_interpreter::MULLD(ppu_thread& ppu, ppu_opcode_t op)
 	ppu.gpr[op.rd] = (s64)(RA * RB);
 	if (UNLIKELY(op.oe))
 	{
-		const s64 high = MULH64(RA, RB);
+		const s64 high = mulh64(RA, RB);
 		ppu_ov_set(ppu, high != s64(ppu.gpr[op.rd]) >> 63);
 	}
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
