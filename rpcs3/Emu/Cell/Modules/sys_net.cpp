@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
+
 #include <fcntl.h>
 
 logs::channel libnet("libnet");
@@ -573,17 +574,36 @@ namespace sys_net
 
 		s32 ret;
 
-#ifdef _WIN32
 		if (level == PS3_SOL_SOCKET)
 		{
 			switch (optname)
 			{
+#ifdef _WIN32
 			case OP_SO_NBIO:
 			{
 				unsigned long mode = *(unsigned long*)optval.get_ptr();
 				ret = ioctlsocket(sock->s, FIONBIO, &mode);
 				break;
 			}
+#else
+			case OP_SO_NBIO:
+			{
+				// Obtain the flags
+				s32 flags = fcntl(s, F_GETFL, 0);
+
+				if (flags < 0)
+				{
+					fmt::throw_exception("Failed to obtain socket flags." HERE);
+				}
+
+				u32 mode = *(u32*)optval.get_ptr();
+				flags = mode ? (flags &~O_NONBLOCK) : (flags | O_NONBLOCK);
+
+				// Re-set the flags
+				ret = fcntl(sock->s, F_SETFL, flags);
+				break;
+			}
+#endif
 			case OP_SO_SNDBUF:
 			{
 				u32 sendbuff = *(u32*)optval.get_ptr();
@@ -645,7 +665,7 @@ namespace sys_net
 				break;
 			}
 			default:
-				libnet.error("Unknown socket option for Win32: 0x%x", optname);
+				libnet.error("Unknown socket option: 0x%x", optname);
 			}
 		}
 		else if (level == PROTO_IPPROTO_TCP)
@@ -654,89 +674,31 @@ namespace sys_net
 			{
 			case OP_TCP_NODELAY:
 			{
+#ifdef _WIN32
 				const char delay = *(char*)optval.get_ptr();
 				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, sizeof(delay));
-				break;
-			}
-
-			case OP_TCP_MAXSEG:
-			{
-				libnet.warning("TCP_MAXSEG can't be set on Windows.");
-				break;
-			}
-
-			default:
-				libnet.error("Unknown TCP option for Win32: 0x%x", optname);
-			}
-		}
 #else
-		if (level == PS3_SOL_SOCKET)
-		{
-			switch (optname)
-			{
-			case OP_SO_NBIO:
-			{
-				// Obtain the flags
-				s32 flags = fcntl(s, F_GETFL, 0);
-
-				if (flags < 0)
-				{
-					fmt::throw_exception("Failed to obtain socket flags." HERE);
-				}
-
-				u32 mode = *(u32*)optval.get_ptr();
-				flags = mode ? (flags &~O_NONBLOCK) : (flags | O_NONBLOCK);
-
-				// Re-set the flags
-				ret = fcntl(sock->s, F_SETFL, flags);
-				break;
-			}
-			case OP_SO_RCVBUF:
-			{
-				u32 recvbuff = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVBUF, (const char*)&recvbuff, sizeof(recvbuff));
-				break;
-			}
-			case  OP_SO_USECRYPTO:
-			{
-				libnet.warning("Socket option OP_SO_USECRYPTO is unimplemented");
-				ret = CELL_OK;
-				break;
-			}
-			case  OP_SO_USESIGNATURE:
-			{
-				libnet.warning("Socket option OP_SO_USESIGNATURE is unimplemented");
-				ret = CELL_OK;
-				break;
-			}
-
-			default:
-				libnet.error("Unknown socket option for Unix: 0x%x", optname);
-			}
-		}
-		else if (level == PROTO_IPPROTO_TCP)
-		{
-			switch (optname)
-			{
-			case OP_TCP_NODELAY:
-			{
 				u32 delay = *(u32*)optval.get_ptr();
 				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, optlen);
+#endif
 				break;
 			}
 
 			case OP_TCP_MAXSEG:
 			{
+#ifdef _WIN32
+				libnet.warning("TCP_MAXSEG can't be set on Windows.");
+#else
 				u32 maxseg = *(u32*)optval.get_ptr();
 				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_MAXSEG, &maxseg, optlen);
+#endif
 				break;
 			}
 
 			default:
-				libnet.error("Unknown TCP option for Unix: 0x%x", optname);
+				libnet.error("Unknown TCP option: 0x%x", optname);
 			}
 		}
-#endif
 
 		if (ret != 0)
 		{
