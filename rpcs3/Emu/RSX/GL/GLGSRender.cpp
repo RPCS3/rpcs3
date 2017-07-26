@@ -985,9 +985,9 @@ void GLGSRender::flip(int buffer)
 		return;
 	}
 
-	u32 buffer_width = gcm_buffers[buffer].width;
-	u32 buffer_height = gcm_buffers[buffer].height;
-	u32 buffer_pitch = gcm_buffers[buffer].pitch;
+	u32 buffer_width = display_buffers[buffer].width;
+	u32 buffer_height = display_buffers[buffer].height;
+	u32 buffer_pitch = display_buffers[buffer].pitch;
 
 	// Calculate blit coordinates
 	coordi aspect_ratio;
@@ -1016,7 +1016,7 @@ void GLGSRender::flip(int buffer)
 	aspect_ratio.size = new_size;
 
 	// Find the source image
-	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+	rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	u32 absolute_address = buffer_region.address + buffer_region.base;
 	gl::texture *render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address);
 

@@ -22,6 +22,8 @@
 #include "Utilities/variant.hpp"
 #include "define_new_memleakdetect.h"
 
+#include "Emu/Cell/lv2/sys_rsx.h"
+
 extern u64 get_system_time();
 
 extern bool user_asked_for_frame_capture;
@@ -113,7 +115,7 @@ namespace rsx
 		std::vector<u32> element_push_buffer;
 
 	public:
-		CellGcmControl* ctrl = nullptr;
+		RsxDmaControl* ctrl = nullptr;
 
 		Timer timer_sync;
 
@@ -131,20 +133,17 @@ namespace rsx
 
 		u32 ioAddress, ioSize;
 		u32 flip_status;
-		int flip_mode;
 		int debug_level;
-		int frequency_mode;
 
-		u32 tiles_addr;
-		u32 zculls_addr;
-		vm::ps3::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
-		u32 gcm_buffers_count;
-		u32 gcm_current_buffer;
+		atomic_t<bool> requested_vsync{false};
+
+		RsxDisplayInfo display_buffers[8];
+		u32 display_buffers_count{0};
+		u32 current_display_buffer{0};
 		u32 ctxt_addr;
 		u32 label_addr;
 
 		u32 local_mem_addr, main_mem_addr;
-		bool strict_ordering[0x1000];
 
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
@@ -345,7 +344,7 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
+		void init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress);
 
 		tiled_region get_tiled_address(u32 offset, u32 location);
 		GcmTileInfo *find_tile(u32 offset, u32 location);

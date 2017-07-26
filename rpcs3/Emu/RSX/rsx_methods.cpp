@@ -60,9 +60,13 @@ namespace rsx
 
 		void semaphore_acquire(thread* rsx, u32 _reg, u32 arg)
 		{
-			//TODO: dma
-			while (vm::ps3::read32(rsx->label_addr + method_registers.semaphore_offset_406e()) != arg)
+			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+			while (vm::ps3::read32(addr) != arg)
 			{
+				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
+				if (addr == 0x40000030)
+					break;
+
 				if (Emu.IsStopped())
 					break;
 
@@ -72,8 +76,8 @@ namespace rsx
 
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
-			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_406e(), arg);
+			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+			vm::ps3::write32(addr, arg);
 		}
 	}
 
@@ -100,8 +104,12 @@ namespace rsx
 				//
 			}
 
-			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(), arg);
+			const u32 index = method_registers.semaphore_offset_4097() >> 4;
+
+			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
+			sema.semaphore[index].val = arg;
+			sema.semaphore[index].pad = 0;
+			sema.semaphore[index].timestamp = rsx->timestamp();
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -111,9 +119,13 @@ namespace rsx
 				//
 			}
 
-			//TODO: dma
-			vm::ps3::write32(rsx->label_addr + method_registers.semaphore_offset_4097(),
-				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
+			const u32 index = method_registers.semaphore_offset_4097() >> 4;
+			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
+
+			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
+			sema.semaphore[index].val = val;
+			sema.semaphore[index].pad = 0;
+			sema.semaphore[index].timestamp = rsx->timestamp();
 		}
 
 		template<u32 id, u32 index, int count, typename type>
@@ -323,10 +335,9 @@ namespace rsx
 
 			switch (report_dma)
 			{
-			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_LOCATION_LOCAL; break;
-			case blit_engine::context_dma::report_location_main:
-			case blit_engine::context_dma::memory_host_buffer: 
-				location = CELL_GCM_LOCATION_MAIN; break;
+			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL; break;
+			case blit_engine::context_dma::report_location_main: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN; break;
+			case blit_engine::context_dma::memory_host_buffer: location = CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER; break;
 			default:
 				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", (u8)report_dma);
 				return;
@@ -339,12 +350,14 @@ namespace rsx
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
+				// todo: actual zculling, here we just report max, which seems to be enough for most games, but causes them to render *everything*
+				result->value = 0xFFFFFFFF;
+				break;
 			case CELL_GCM_ZCULL_STATS:
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS3:
 				result->value = 0;
-				LOG_WARNING(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
 				break;
 
 			default:
@@ -352,8 +365,8 @@ namespace rsx
 				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
 				break;
 			}
-
-			//result->padding = 0;
+			// This padding is needed to be set to 0, as games may use it for sync
+			result->padding = 0;
 		}
 
 		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
@@ -514,14 +527,14 @@ namespace rsx
 				//HACK: it's extension of the flip-hack. remove this when textures cache would be properly implemented
 				for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 				{
-					u32 begin = rsx->gcm_buffers[i].offset;
+					u32 begin = rsx->display_buffers[i].offset;
 
 					if (dst_offset < begin || !begin)
 					{
 						continue;
 					}
 
-					if (rsx->gcm_buffers[i].width < 720 || rsx->gcm_buffers[i].height < 480)
+					if (rsx->display_buffers[i].width < 720 || rsx->display_buffers[i].height < 480)
 					{
 						continue;
 					}
@@ -531,7 +544,7 @@ namespace rsx
 						return;
 					}
 
-					u32 end = begin + rsx->gcm_buffers[i].height * rsx->gcm_buffers[i].pitch;
+					u32 end = begin + rsx->display_buffers[i].height * rsx->display_buffers[i].pitch;
 
 					if (dst_offset < end)
 					{
@@ -862,14 +875,13 @@ namespace rsx
 			rsx->timer_sync.Start();
 		}
 		
-		rsx->gcm_current_buffer = arg;
+		rsx->current_display_buffer = arg;
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
 		rsx->reset();
 
 		rsx->last_flip_time = get_system_time() - 1000000;
-		rsx->gcm_current_buffer = arg;
 		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
 		if (rsx->flip_handler)
@@ -971,7 +983,7 @@ namespace rsx
 		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
 
 		// rsx dma initial values
-		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
+		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL;
 		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 		registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
 		registers[NV309E_SET_CONTEXT_DMA_IMAGE] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
