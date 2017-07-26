@@ -401,6 +401,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
 	ui->stretchToDisplayArea->setToolTip(json_gpu_main["stretchToDisplayArea"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
+	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
+	ui->disableVertexCache->setToolTip(json_gpu_main["disableVertexCache"].toString());
+
 	// Graphics Adapter
 	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
 	QStringList vulkanAdapters = r_Creator.vulkanAdapters;
@@ -818,9 +824,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	// Checkboxes: debug options
 	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
 	ui->glLegacyBuffers->setToolTip(json_debug["glLegacyBuffers"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
-	ui->scrictModeRendering->setToolTip(json_debug["scrictModeRendering"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->forceHighpZ, emu_settings::ForceHighpZ);
 	ui->forceHighpZ->setToolTip(json_debug["forceHighpZ"].toString());
