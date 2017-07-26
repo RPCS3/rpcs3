@@ -68,6 +68,7 @@ public:
 		ForceHighpZ,
 		AutoInvalidateCache,
 		StrictRenderingMode,
+		DisableVertexCache,
 
 		// Audio
 		AudioRenderer,
@@ -162,6 +163,7 @@ private:
 		{ ForceHighpZ,      { "Video", "Force High Precision Z buffer"}},
 		{ AutoInvalidateCache, { "Video", "Invalidate Cache Every Frame"}},
 		{ StrictRenderingMode, { "Video", "Strict Rendering Mode"}},
+		{ DisableVertexCache, { "Video", "Disable Vertex Cache"}},
 		{ D3D12Adapter,        { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,       { "Video", "Vulkan", "Adapter"}},
 
