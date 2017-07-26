@@ -137,4 +137,4 @@ error_code sys_event_port_create(vm::ps3::ptr<u32> eport_id, s32 port_type, u64 
 error_code sys_event_port_destroy(u32 eport_id);
 error_code sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 error_code sys_event_port_disconnect(u32 eport_id);
-error_code sys_event_port_send(ppu_thread& ppu, u32 event_port_id, u64 data1, u64 data2, u64 data3);
+error_code sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
