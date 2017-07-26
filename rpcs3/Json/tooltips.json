@@ -2,8 +2,8 @@
 	"audio": {
 		"audioOutBox": "Windows: Always use XAudio, no exceptions.\n\nLinux: ALSA uses the native Linux sound system to output sound.\nThis option has good compatibility and sound quality.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.\nIf unsure, use ALSA.",
 		"audioDump": "Saves all audio as a raw wave file. If unsure, leave this unchecked.",
-		"convert": "Use with buggy audio drivers if you have no sound or completely broken sound.",
-		"downmix": "Windows: Use with buggy audio drivers if you are only hearing parts of the game sound, for example music but not voices.\n\nLinux: Usually required with the ALSA audio backend unless you are actually using surround speakers.\nIf you are only hearing parts of the game sound, for example music but not voices, use this."
+		"convert": "Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.",
+		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\Use with stereo audio devices. Disable it only if you are using surround sound audio system."
 	},
 	"cpu": {
 		"PPU": {
@@ -24,7 +24,7 @@
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this. Usually safe to use, but if unsure, don't use this option and try auto first."
 		},
 		"checkboxes": {
-			"hookStFunc": "Placebo setting, this does nothing at all.",
+			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
 			"bindSPUThreads": "If your CPU has SMT (Hyper-Threading) SPU threads will run on these logical cores instead.\nUsually faster on an i3, possibly slower or no difference on an i7 or Ryzen.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
 			"spuLoopDetection": ""
