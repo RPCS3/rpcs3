@@ -26,8 +26,23 @@
 		"checkboxes": {
 			"hookStFunc": "Placebo setting, this does nothing at all.",
 			"bindSPUThreads": "If your CPU has SMT (Hyper-Threading) SPU threads will run on these logical cores instead.\nUsually faster on an i3, possibly slower or no difference on an i7 or Ryzen.",
-			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen."
+			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
+			"spuLoopDetection": ""
+		},
+		"comboboxes": {
+			"preferredSPUThreads": ""
 		}
+	},
+	"debug": {
+		"readColor": "Never use this.",
+		"dumpDepth": "Never use this.",
+		"readDepth": "Never use this.",
+		"glLegacyBuffers": "Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.",
+		"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
+		"forceHighpZ": "Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.",
+		"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful for developers.\nIf unsure, don't use this option.",
+		"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
+		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option."
 	},
 	"emulator": {
 		"gui": {
@@ -48,25 +63,14 @@
 			"resBox": "Leave this on 1280x720, every PS3 game is compatible with this resolution.\nSet it to 1920x1080 only if supported by the game. Lower resolutions may work but are not practical.\nHowever rarely due to emulation bugs some games will only render at low resolutions like 480p.",
 			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
 			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well especially if you use a resolution that is not 720p.",
-			"frameLimitBox": "Auto is the most compatible option.\nSome games can work with frame limit off, but it may cause bugs and crashes.\nSet to off if you get severe hitching and stuttering."
+			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the framerate is too high.\nIf that happens, set value to anything other than Off."
 		},
 		"main": {
 			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
-			"readColor": "Never use this.",
-			"dumpDepth": "Never use this.",
-			"readDepth": "Never use this.",
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
 			"autoInvalidateCache": "Enable this option if the game has broken shadows. May slightly degrade performance.",
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.\nOnly works with OpenGL for now.",
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
-		},
-		"debug": {
-			"glLegacyBuffers": "Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.",
-			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
-			"forceHighpZ": "Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.",
-			"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful for developers.\nIf unsure, don't use this option.",
-			"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
-			"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option."
 		}
 	},
 	"input": {

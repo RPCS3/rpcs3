@@ -187,8 +187,8 @@ public:
 	/** Saves settings. Public so that main frame can save this when a caching of column widths is needed for settings backup */
 	void SaveSettings();
 
-	/** Resize Gamelist Icons to size */
-	void ResizeIcons(const QString& sizeStr, const QSize& size, const int& index);
+	/** Resize Gamelist Icons to size given by slider position */
+	void ResizeIcons(const int& sliderPos);
 
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
@@ -218,6 +218,7 @@ protected:
 private:
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
+	void SortGameList();
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
@@ -277,7 +278,7 @@ private:
 	bool m_showToolBar = true;
 	std::vector<GUI_GameInfo> m_game_data;
 	QSize m_Icon_Size;
-	QString m_Icon_Size_Str;
+	int m_icon_size_index;
 	QColor m_Icon_Color;
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
