@@ -628,9 +628,9 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 
 	if (g_cfg.video.disable_vertex_cache)
-		m_vertex_cache.reset(new null_vertex_cache());
+		m_vertex_cache.reset(new vk::null_vertex_cache());
 	else
-		m_vertex_cache.reset(new vk::vertex_cache::weak_vertex_cache());
+		m_vertex_cache.reset(new vk::weak_vertex_cache());
 }
 
 VKGSRender::~VKGSRender()
@@ -1269,8 +1269,6 @@ void VKGSRender::on_init_thread()
 
 	GSRender::on_init_thread();
 	rsx_thread = std::this_thread::get_id();
-
-	thread_ctrl::set_native_priority(1);
 }
 
 void VKGSRender::on_exit()

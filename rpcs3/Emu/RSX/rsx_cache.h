@@ -195,12 +195,66 @@ namespace rsx
 		}
 	};
 
-	template <typename storage_type, typename upload_format>
-	class vertex_cache
+	namespace vertex_cache
 	{
-	public:
-		virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr;  }
-		virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
-		virtual void purge() {}
-	};
+		// A null vertex cache
+		template <typename storage_type, typename upload_format>
+		class default_vertex_cache
+		{
+		public:
+			virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
+			virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
+			virtual void purge() {}
+		};
+
+		// A weak vertex cache with no data checks or memory range locks
+		// Of limited use since contents are only guaranteed to be valid once per frame
+		// TODO: Strict vertex cache with range locks
+		template <typename upload_format>
+		struct uploaded_range
+		{
+			uintptr_t local_address;
+			upload_format buffer_format;
+			u32 offset_in_heap;
+			u32 data_length;
+		};
+
+		template <typename upload_format>
+		class weak_vertex_cache : public default_vertex_cache<uploaded_range<upload_format>, upload_format>
+		{
+			using storage_type = uploaded_range<upload_format>;
+
+		private:
+			std::unordered_map<uintptr_t, std::vector<storage_type>> vertex_ranges;
+
+		public:
+
+			storage_type* find_vertex_range(uintptr_t local_addr, upload_format fmt, u32 data_length) override
+			{
+				for (auto &v : vertex_ranges[local_addr])
+				{
+					if (v.buffer_format == fmt && v.data_length == data_length)
+						return &v;
+				}
+
+				return nullptr;
+			}
+
+			void store_range(uintptr_t local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
+			{
+				storage_type v = {};
+				v.buffer_format = fmt;
+				v.data_length = data_length;
+				v.local_address = local_addr;
+				v.offset_in_heap = offset_in_heap;
+
+				vertex_ranges[local_addr].push_back(v);
+			}
+
+			void purge() override
+			{
+				vertex_ranges.clear();
+			}
+		};
+	}
 }

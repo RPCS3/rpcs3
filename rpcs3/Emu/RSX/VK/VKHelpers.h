@@ -1457,54 +1457,6 @@ namespace vk
 		}
 	};
 
-	namespace vertex_cache
-	{
-		struct uploaded_range
-		{
-			uintptr_t local_address;
-			VkFormat buffer_format;
-			u32 offset_in_heap;
-			u32 data_length;
-		};
-
-		// A weak vertex cache with no data checks or memory range locks
-		// Of limited use since contents are only guaranteed to be valid once per frame
-		// TODO: Strict vertex cache with range locks
-		class weak_vertex_cache: public rsx::vertex_cache<uploaded_range, VkFormat>
-		{
-		private:
-			std::unordered_map<uintptr_t, std::vector<uploaded_range>> vertex_ranges;
-		public:
-
-			uploaded_range* find_vertex_range(uintptr_t local_addr, VkFormat fmt, u32 data_length) override
-			{
-				for (auto &v : vertex_ranges[local_addr])
-				{
-					if (v.buffer_format == fmt && v.data_length == data_length)
-						return &v;
-				}
-
-				return nullptr;
-			}
-
-			void store_range(uintptr_t local_addr, VkFormat fmt, u32 data_length, u32 offset_in_heap) override
-			{
-				uploaded_range v = {};
-				v.buffer_format = fmt;
-				v.data_length = data_length;
-				v.local_address = local_addr;
-				v.offset_in_heap = offset_in_heap;
-
-				vertex_ranges[local_addr].push_back(v);
-			}
-
-			void purge() override
-			{
-				vertex_ranges.clear();
-			}
-		};
-	}
-
 	/**
 	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
 	* Then copy all layers into dst_image.

@@ -406,6 +406,9 @@ namespace rsx
 			}
 		});
 
+		// Raise priority above other threads
+		thread_ctrl::set_native_priority(1);
+
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{

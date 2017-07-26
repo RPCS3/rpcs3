@@ -26,6 +26,11 @@ GLGSRender::GLGSRender() : GSRender()
 {
 	//TODO
 	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
+
+	if (g_cfg.video.disable_vertex_cache)
+		m_vertex_cache.reset(new gl::null_vertex_cache());
+	else
+		m_vertex_cache.reset(new gl::weak_vertex_cache());
 }
 
 u32 GLGSRender::enable(u32 condition, u32 cap)
@@ -1090,6 +1095,8 @@ void GLGSRender::flip(int buffer)
 
 	if (g_cfg.video.invalidate_surface_cache_every_frame)
 		m_rtts.invalidate_surface_cache_data(nullptr);
+
+	m_vertex_cache->purge();
 
 	//If we are skipping the next frame, fo not reset perf counters
 	if (skip_frame) return;
