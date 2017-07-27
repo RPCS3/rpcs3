@@ -328,7 +328,26 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	break;
 
 	case 0x301: // Depth-buffer (Z-cull)
-		break;
+	{
+		//a4 high = region = (1 << 0) | (zFormat << 4) | (aaFormat << 8);
+		//a4 low = size = ((width >> 6) << 22) | ((height >> 6) << 6);
+		//a5 high = start = cullStart&(~0xFFF);
+		//a5 low = offset = offset;
+		//a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
+		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
+
+		auto &zcull = render->zculls[a3];
+		zcull.zFormat = ((a4 >> 32) >> 4) & 0xF;
+		zcull.aaFormat = ((a4 >> 32) >> 8) & 0xF;
+		zcull.width = ((a4 & 0xFFFFFFFF) >> 22) << 6;
+		zcull.height = (((a4 & 0xFFFFFFFF) >> 6) & 0xFF) << 6;
+		zcull.cullStart = (a5 >> 32);
+		zcull.offset = (a5 & 0xFFFFFFFF);
+		zcull.binded = (a6 & 0xFFFFFFFF) != 0;
+		//TODO: Set zculldir, format, sfunc, sref, smask
+	}
+	break;
+
 	case 0x302: // something with zcull
 		break;
 	case 0x600: // Framebuffer setup

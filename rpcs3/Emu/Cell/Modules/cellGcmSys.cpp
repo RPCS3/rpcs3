@@ -484,7 +484,7 @@ s32 cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 height)
 	m_config->gcm_buffers[id].width = width;
 	m_config->gcm_buffers[id].height = height;
 
-	if (id + 1 > render->display_buffers_count)
+	if (id + 1u > render->display_buffers_count)
 	{
 		render->display_buffers_count = id + 1;
 	}
