@@ -154,6 +154,7 @@ typedef struct GUI_GameInfo
 	GameInfo info;
 	QImage icon;
 	QPixmap pxmap;
+	bool isVisible;
 	bool bootable;
 	bool hasCustomConfig;
 };

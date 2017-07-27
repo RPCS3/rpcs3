@@ -324,10 +324,10 @@ void game_list_frame::OnColClicked(int col)
 // Filter for Categories
 void game_list_frame::FilterData()
 {
-	for (int i = 0; i < gameList->rowCount(); ++i)
+	for (auto& game : m_game_data)
 	{
 		bool match = false;
-		const QString category = qstr(m_game_data[i].info.category);
+		const QString category = qstr(game.info.category);
 		for (const auto& filter : m_categoryFilters)
 		{
 			if (category.contains(filter))
@@ -336,7 +336,7 @@ void game_list_frame::FilterData()
 				break;
 			}
 		}
-		gameList->setRowHidden(i, !match || !SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial));
+		game.isVisible = match && SearchMatchesApp(game.info.name, game.info.serial);
 	}
 }
 
@@ -449,7 +449,7 @@ void game_list_frame::Refresh(bool fromDrive)
 
 			QPixmap pxmap = PaintedPixmap(img, hasCustomConfig);
 
-			m_game_data.push_back({ game, img, pxmap, bootable, hasCustomConfig });
+			m_game_data.push_back({ game, img, pxmap, true, bootable, hasCustomConfig });
 		}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
@@ -464,8 +464,8 @@ void game_list_frame::Refresh(bool fromDrive)
 
 	if (m_isListLayout)
 	{
-		int row = PopulateGameList();
 		FilterData();
+		int row = PopulateGameList();
 		gameList->selectRow(row);
 		SortGameList();
 		gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
@@ -853,8 +853,7 @@ int game_list_frame::PopulateGameList()
 	std::string selected_item = CurrentSelectionIconPath();
 
 	gameList->clearContents();
-
-	gameList->setRowCount(m_game_data.size());
+	gameList->setRowCount((int)m_game_data.size());
 
 	auto l_GetItem = [](const std::string& text)
 	{
@@ -865,35 +864,42 @@ int game_list_frame::PopulateGameList()
 	};
 
 	int row = 0;
-	for (const GUI_GameInfo& game : m_game_data)
+	for (size_t i = 0; i < m_game_data.size(); i++)
 	{
+		if (!m_game_data[i].isVisible)
+		{
+			continue;
+		}
+
 		// Icon
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
-		iconItem->setData(Qt::DecorationRole, game.pxmap);
-		iconItem->setData(Qt::UserRole, row);
+		iconItem->setData(Qt::DecorationRole, m_game_data[i].pxmap);
+		iconItem->setData(Qt::UserRole, i);
 
-		QTableWidgetItem* titleItem = l_GetItem(game.info.name);
-		if (game.hasCustomConfig)
+		QTableWidgetItem* titleItem = l_GetItem(m_game_data[i].info.name);
+		if (m_game_data[i].hasCustomConfig)
 		{
 			titleItem->setIcon(QIcon(":/Icons/cog_black.png"));
 		}
 
 		gameList->setItem(row, 0, iconItem);
 		gameList->setItem(row, 1, titleItem);
-		gameList->setItem(row, 2, l_GetItem(game.info.serial));
-		gameList->setItem(row, 3, l_GetItem(game.info.fw));
-		gameList->setItem(row, 4, l_GetItem(game.info.app_ver));
-		gameList->setItem(row, 5, l_GetItem(game.info.category));
-		gameList->setItem(row, 6, l_GetItem(game.info.path));
-		gameList->setItem(row, 7, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
-		gameList->setItem(row, 8, l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
-		gameList->setItem(row, 9, l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level)));
+		gameList->setItem(row, 2, l_GetItem(m_game_data[i].info.serial));
+		gameList->setItem(row, 3, l_GetItem(m_game_data[i].info.fw));
+		gameList->setItem(row, 4, l_GetItem(m_game_data[i].info.app_ver));
+		gameList->setItem(row, 5, l_GetItem(m_game_data[i].info.category));
+		gameList->setItem(row, 6, l_GetItem(m_game_data[i].info.path));
+		gameList->setItem(row, 7, l_GetItem(GetStringFromU32(m_game_data[i].info.resolution, resolution::mode, true)));
+		gameList->setItem(row, 8, l_GetItem(GetStringFromU32(m_game_data[i].info.sound_format, sound::format, true)));
+		gameList->setItem(row, 9, l_GetItem(GetStringFromU32(m_game_data[i].info.parental_lvl, parental::level)));
 
-		if (selected_item == game.info.icon_path) result = row;
+		if (selected_item == m_game_data[i].info.icon_path) result = row;
 
 		row++;
 	}
+
+	gameList->setRowCount(row);
 
 	return result;
 }
