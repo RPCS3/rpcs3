@@ -3,7 +3,7 @@
 		"audioOutBox": "Windows: Always use XAudio, no exceptions.\n\nLinux: ALSA uses the native Linux sound system to output sound.\nThis option has good compatibility and sound quality.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.\nIf unsure, use ALSA.",
 		"audioDump": "Saves all audio as a raw wave file. If unsure, leave this unchecked.",
 		"convert": "Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.",
-		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\Use with stereo audio devices. Disable it only if you are using surround sound audio system."
+		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\nUse with stereo audio devices. Disable it only if you are using surround sound audio system."
 	},
 	"cpu": {
 		"PPU": {
@@ -27,10 +27,10 @@
 			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
 			"bindSPUThreads": "If your CPU has SMT (Hyper-Threading) SPU threads will run on these logical cores instead.\nUsually faster on an i3, possibly slower or no difference on an i7 or Ryzen.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
-			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage"
+			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage."
 		},
 		"comboboxes": {
-			"preferredSPUThreads": "Preferred number of threads allowed to enter some sensitive SPU stages.\nSome SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value"
+			"preferredSPUThreads": "Preferred number of threads allowed to enter some sensitive SPU stages.\nSome SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value."
 		}
 	},
 	"debug": {
@@ -53,7 +53,8 @@
 			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",
 			"alwaysStart": "Leave this enabled unless you are a developer.",
 			"startGameFullscreen": "Automatically puts the game window in fullscreen.\nDouble click on the game window or press alt+enter to toggle fullscreen and windowed mode.",
-			"showFPSInTitle": "It can be useful to disable it with buggy screen recording software that fail to select a window with ever changing title."
+			"showFPSInTitle": "It can be useful to disable it with buggy screen recording software that fail to select a window with ever changing title.",
+			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution."
 		}
 	},
 	"gpu": {
