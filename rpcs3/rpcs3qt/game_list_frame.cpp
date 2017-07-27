@@ -432,27 +432,17 @@ void game_list_frame::Refresh(bool fromDrive)
 
 			// Load Image
 			QImage img;
-			QPixmap pxmap;
 
-			if (!game.icon_path.empty() && img.load(qstr(game.icon_path)))
+			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
 			{
-				QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-				scaled.fill(m_Icon_Color);
-				QPainter painter(&scaled);
-				painter.drawImage(QPoint(0,0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-				painter.end();
-				pxmap = QPixmap::fromImage(scaled);
-			}
-			else
-			{
-				img = QImage(m_Icon_Size, QImage::Format_ARGB32);
-				QString abspath = QDir(qstr(game.icon_path)).absolutePath();
-				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(abspath));
-				img.fill(QColor(0, 0, 0, 0));
-				pxmap = QPixmap::fromImage(img);
+				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
 
-			m_game_data.push_back({ game, img, pxmap, bootable });
+			bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
+
+			QPixmap pxmap = PaintedPixmap(img, hasCustomConfig);
+
+			m_game_data.push_back({ game, img, pxmap, bootable, hasCustomConfig });
 		}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
@@ -628,6 +618,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=]() {
 		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
+		Refresh(true);
 	});
 	connect(removeGame, &QAction::triggered, [=]()
 	{
@@ -638,7 +629,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			Refresh();
 		}
 	});
-	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
+	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
@@ -667,10 +658,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	}
 
 	// Disable removeconfig if no config exists.
-	if (fs::is_file(fs::get_config_dir() + "data/" + currGame.serial + "/config.yml") == false)
-	{
-		removeConfig->setEnabled(false);
-	}
+	removeConfig->setEnabled(m_game_data[row].hasCustomConfig);
 
 	myMenu.exec(globalPos);
 }
@@ -720,6 +708,30 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	}
 }
 
+QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)
+{
+	QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
+	scaled.fill(m_Icon_Color);
+
+	QPainter painter(&scaled);
+
+	if (!img.isNull())
+	{
+		painter.drawImage(QPoint(0, 0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	}
+
+	if (paintConfigIcon && !m_isListLayout)
+	{
+		int width = m_Icon_Size.width() * 0.2;
+		QPoint origin = QPoint(m_Icon_Size.width() - width, 0);
+		painter.drawImage(origin, QImage(":/Icons/cog_gray.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	}
+
+	painter.end();
+
+	return QPixmap::fromImage(scaled);
+}
+
 void game_list_frame::ResizeIcons(const int& sliderPos)
 {
 	m_icon_size_index = sliderPos;
@@ -732,14 +744,9 @@ void game_list_frame::ResizeIcons(const int& sliderPos)
 
 	xgui_settings->SetValue(GUI::gl_iconSize, sliderPos);
 
-	for (size_t i = 0; i < m_game_data.size(); i++)
+	for (auto& game : m_game_data)
 	{
-		QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-		scaled.fill(m_Icon_Color);
-		QPainter painter(&scaled);
-		painter.drawImage(QPoint(0, 0), m_game_data[i].icon.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-		painter.end();
-		m_game_data[i].pxmap = QPixmap::fromImage(scaled);
+		game.pxmap = PaintedPixmap(game.icon, game.hasCustomConfig);
 	}
 
 	Refresh();
@@ -756,7 +763,7 @@ void game_list_frame::SetListMode(const bool& isList)
 	m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 	m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 
-	Refresh();
+	Refresh(true);
 
 	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid);
 }
@@ -855,9 +862,15 @@ int game_list_frame::PopulateGameList()
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
 		iconItem->setData(Qt::DecorationRole, game.pxmap);
 		iconItem->setData(Qt::UserRole, row);
-		gameList->setItem(row, 0, iconItem);
 
-		gameList->setItem(row, 1, l_GetItem(game.info.name));
+		QTableWidgetItem* titleItem = l_GetItem(game.info.name);
+		if (game.hasCustomConfig)
+		{
+			titleItem->setIcon(QIcon(":/Icons/cog_black.png"));
+		}
+
+		gameList->setItem(row, 0, iconItem);
+		gameList->setItem(row, 1, titleItem);
 		gameList->setItem(row, 2, l_GetItem(game.info.serial));
 		gameList->setItem(row, 3, l_GetItem(game.info.fw));
 		gameList->setItem(row, 4, l_GetItem(game.info.app_ver));

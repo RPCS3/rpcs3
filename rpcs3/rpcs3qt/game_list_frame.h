@@ -155,6 +155,7 @@ typedef struct GUI_GameInfo
 	QImage icon;
 	QPixmap pxmap;
 	bool bootable;
+	bool hasCustomConfig;
 };
 
 typedef struct Tool_Bar_Button
@@ -216,6 +217,7 @@ protected:
 	void closeEvent(QCloseEvent* event);
 	void resizeEvent(QResizeEvent *event);
 private:
+	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 	void SortGameList();

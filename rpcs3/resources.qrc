@@ -43,5 +43,7 @@
         <file>Icons/play_blue.png</file>
         <file>Icons/restart_blue.png</file>
         <file>Icons/stop_blue.png</file>
+        <file>Icons/cog_black.png</file>
+        <file>Icons/cog_gray.png</file>
     </qresource>
 </RCC>
