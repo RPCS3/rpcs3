@@ -29,6 +29,7 @@ class main_window : public QMainWindow
 	Ui::main_window *ui;
 
 	bool m_sys_menu_opened;
+	bool m_save_slider_pos = false;
 
 	Render_Creator m_Render_Creator;
 

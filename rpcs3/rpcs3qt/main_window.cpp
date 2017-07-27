@@ -1154,6 +1154,11 @@ void main_window::CreateConnects()
 		}
 		if (val != gameListFrame->GetSliderValue())
 		{
+			if (m_save_slider_pos)
+			{
+				m_save_slider_pos = false;
+				guiSettings->SetValue(GUI::gl_iconSize, index);
+			}
 			gameListFrame->ResizeIcons(index);
 		}
 	};
@@ -1179,6 +1184,7 @@ void main_window::CreateConnects()
 
 		resizeIcons(idx);
 	});
+	connect(gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save){ m_save_slider_pos = true; });
 	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
 		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
@@ -1216,6 +1222,13 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
 	//connect(ui->toolbar_sort, &QAction::triggered, gameListFrame, sort);
 	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
+	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&] { guiSettings->SetValue(GUI::gl_iconSize, ui->sizeSlider->value()); });
+	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action) {
+		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
+		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
+			m_save_slider_pos = true; // actionTriggered happens before the value was changed
+		}
+	});
 	connect(ui->searchBar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
 }
 

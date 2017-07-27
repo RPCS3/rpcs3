@@ -213,6 +213,13 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 
 	connect(m_Slider_Size, &QSlider::valueChanged, this,  &game_list_frame::RequestIconSizeActSet);
+	connect(m_Slider_Size, &QSlider::sliderReleased, this, [&]{ xgui_settings->SetValue(GUI::gl_iconSize, m_Slider_Size->value()); });
+	connect(m_Slider_Size, &QSlider::actionTriggered, [&](int action){
+		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
+		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
+			Q_EMIT RequestSaveSliderPos(true); // actionTriggered happens before the value was changed
+		}
+	});
 
 	connect(m_modeActs, &QActionGroup::triggered, [=](QAction* act) {
 		Q_EMIT RequestListModeActSet(act == m_modeActList.action);
@@ -741,8 +748,6 @@ void game_list_frame::ResizeIcons(const int& sliderPos)
 	{
 		m_Slider_Size->setSliderPosition(sliderPos);
 	}
-
-	xgui_settings->SetValue(GUI::gl_iconSize, sliderPos);
 
 	for (auto& game : m_game_data)
 	{
