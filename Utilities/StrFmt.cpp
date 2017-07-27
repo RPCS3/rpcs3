@@ -257,8 +257,8 @@ struct fmt::cfmt_src
 
 	void skip(std::size_t extra)
 	{
-		++sup += extra;
-		++args += extra;
+		sup += extra + 1;
+		args += extra + 1;
 	}
 
 	std::size_t fmt_string(std::string& out, std::size_t extra) const
