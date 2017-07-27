@@ -752,6 +752,11 @@ void game_list_frame::ResizeIcons(const int& sliderPos)
 	Refresh();
 }
 
+int game_list_frame::GetSliderValue()
+{
+	return m_Slider_Size->value();
+}
+
 void game_list_frame::SetListMode(const bool& isList)
 {
 	m_oldLayoutIsList = m_isListLayout;

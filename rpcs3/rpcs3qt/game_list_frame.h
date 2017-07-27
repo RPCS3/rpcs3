@@ -191,6 +191,8 @@ public:
 	/** Resize Gamelist Icons to size given by slider position */
 	void ResizeIcons(const int& sliderPos);
 
+	int GetSliderValue();
+
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);

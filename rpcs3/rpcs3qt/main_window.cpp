@@ -1147,11 +1147,15 @@ void main_window::CreateConnects()
 	});
 	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
 	auto resizeIcons = [=](const int& index){
-		if (ui->sizeSlider->value() != index)
+		int val = ui->sizeSlider->value();
+		if (val != index)
 		{
 			ui->sizeSlider->setSliderPosition(index);
 		}
-		gameListFrame->ResizeIcons(index);
+		if (val != gameListFrame->GetSliderValue())
+		{
+			gameListFrame->ResizeIcons(index);
+		}
 	};
 	connect(iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
