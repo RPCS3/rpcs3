@@ -44,6 +44,8 @@ public:
 		HookStaticFuncs,
 		BindSPUThreads,
 		LowerSPUThreadPrio,
+		SPULoopDetection,
+		PreferredSPUThreads,
 
 		// Graphics
 		Renderer,
@@ -66,6 +68,7 @@ public:
 		ForceHighpZ,
 		AutoInvalidateCache,
 		StrictRenderingMode,
+		DisableVertexCache,
 
 		// Audio
 		AudioRenderer,
@@ -138,6 +141,8 @@ private:
 		{ HookStaticFuncs,	{ "Core", "Hook static functions"}},
 		{ BindSPUThreads,	{ "Core", "Bind SPU threads to secondary cores"}},
 		{ LowerSPUThreadPrio, { "Core", "Lower SPU thread priority"}},
+		{ SPULoopDetection, { "Core", "SPU loop detection"}},
+		{ PreferredSPUThreads, { "Core", "Preferred SPU Threads"}},
 
 		// Graphics Tab
 		{ Renderer,			{ "Video", "Renderer"}},
@@ -158,6 +163,7 @@ private:
 		{ ForceHighpZ,      { "Video", "Force High Precision Z buffer"}},
 		{ AutoInvalidateCache, { "Video", "Invalidate Cache Every Frame"}},
 		{ StrictRenderingMode, { "Video", "Strict Rendering Mode"}},
+		{ DisableVertexCache, { "Video", "Disable Vertex Cache"}},
 		{ D3D12Adapter,        { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,       { "Video", "Vulkan", "Adapter"}},
 

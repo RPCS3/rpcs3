@@ -17,6 +17,7 @@
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
+#include "../rsx_cache.h"
 
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
 

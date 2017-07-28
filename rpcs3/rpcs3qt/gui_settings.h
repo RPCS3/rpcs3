@@ -35,17 +35,10 @@ typedef QList<q_size_pair> q_size_list;
 
 namespace GUI
 {
-	const QString gl_icon_key_tiny   = "tiny";
-	const QString gl_icon_key_small  = "small";
-	const QString gl_icon_key_medium = "medium";
-	const QString gl_icon_key_large  = "large";
+	const QSize gl_icon_size_min = QSize(40, 22);
+	const QSize gl_icon_size_max = QSize(320, 176);
 
-	const q_size_list gl_icon_size = {
-		{ gl_icon_key_tiny,   QSize(40, 22) },
-		{ gl_icon_key_small,  QSize(80, 44) },
-		{ gl_icon_key_medium, QSize(160, 88) },
-		{ gl_icon_key_large,  QSize(320, 176) }
-	};
+	const int gl_max_slider_pos = 100;
 
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
@@ -95,7 +88,7 @@ namespace GUI
 	const GUI_SAVE gl_sortAsc        = GUI_SAVE( game_list, "sortAsc",        true );
 	const GUI_SAVE gl_sortCol        = GUI_SAVE( game_list, "sortCol",        1 );
 	const GUI_SAVE gl_state          = GUI_SAVE( game_list, "state",          QByteArray() );
-	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       gl_icon_key_small );
+	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       gl_max_slider_pos / 2);
 	const GUI_SAVE gl_iconColor      = GUI_SAVE( game_list, "iconColor",      gl_icon_color);
 	const GUI_SAVE gl_listMode       = GUI_SAVE( game_list, "listMode",       true );
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
@@ -117,11 +110,13 @@ namespace GUI
 
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
-	const GUI_SAVE m_saveNotes = GUI_SAVE(meta, "saveNotes", QVariantMap());
+	const GUI_SAVE m_saveNotes         = GUI_SAVE(meta, "saveNotes",         QVariantMap());
+	const GUI_SAVE m_showDebugTab      = GUI_SAVE(meta, "showDebugTab",      false);
 
-	const GUI_SAVE gs_resize = GUI_SAVE(gs_frame, "resize", false);
-	const GUI_SAVE gs_width  = GUI_SAVE(gs_frame, "width",  1280);
-	const GUI_SAVE gs_height = GUI_SAVE(gs_frame, "height", 720);
+	const GUI_SAVE gs_disableMouse = GUI_SAVE(gs_frame, "disableMouse", false);
+	const GUI_SAVE gs_resize       = GUI_SAVE(gs_frame, "resize",       false);
+	const GUI_SAVE gs_width        = GUI_SAVE(gs_frame, "width",        1280);
+	const GUI_SAVE gs_height       = GUI_SAVE(gs_frame, "height",       720);
 }
 
 /** Class for GUI settings..

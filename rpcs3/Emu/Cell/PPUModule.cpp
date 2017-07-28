@@ -505,7 +505,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 				// Static function
 				const auto _sf = _sm && _sm->functions.count(fnid) ? &_sm->functions.at(fnid) : nullptr;
 
-				if (_sf && (_sf->flags & MFF_FORCED_HLE))
+				if (_sf && (_sf->flags & MFF_FORCED_HLE) && g_cfg.core.hook_functions)
 				{
 					// Inject a branch to the HLE implementation
 					const u32 _entry = vm::read32(faddr);
@@ -933,11 +933,6 @@ void ppu_unload_prx(const lv2_prx& prx)
 
 void ppu_load_exec(const ppu_exec_object& elf)
 {
-	if (g_cfg.core.hook_functions)
-	{
-		LOG_TODO(LOADER, "'Hook static functions' option deactivated");
-	}
-
 	// Set for delayed initialization in ppu_initialize()
 	const auto _main = fxm::make<ppu_module>();
 

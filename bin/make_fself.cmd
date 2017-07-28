@@ -1,1 +1,0 @@
-make_fself compiled.elf EBOOT.BIN

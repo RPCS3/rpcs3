@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -10,6 +11,8 @@
 namespace vm { using namespace ps3; }
 
 logs::channel sys_semaphore("sys_semaphore");
+
+template<> DECLARE(ipc_manager<lv2_sema, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
@@ -39,19 +42,16 @@ error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attri
 		return CELL_EINVAL;
 	}
 
-	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
+	if (auto error = lv2_obj::create<lv2_sema>(attr->pshared, attr->ipc_key, attr->flags, [&]
 	{
-		sys_semaphore.error("sys_semaphore_create(): unknown attributes (pshared=0x%x, ipc_key=0x%x, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
-		return CELL_EINVAL;
+		return std::make_shared<lv2_sema>(protocol, attr->pshared, attr->ipc_key, attr->flags, attr->name_u64, max_val, initial_val);
+	}))
+	{
+		return error;
 	}
 
-	if (const u32 id = idm::make<lv2_obj, lv2_sema>(protocol, attr->name_u64, max_val, initial_val))
-	{
-		*sem_id = id;
-		return CELL_OK;
-	}
-
-	return CELL_EAGAIN;
+	*sem_id = idm::last_id();
+	return CELL_OK;
 }
 
 error_code sys_semaphore_destroy(u32 sem_id)
@@ -131,7 +131,13 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			{
 				semaphore_lock lock(sem->mutex);
 
-				const s32 val = sem->val.fetch_op([](s32& val)
+				if (!sem->unqueue(sem->sq, &ppu))
+				{
+					timeout = 0;
+					continue;
+				}
+
+				verify(HERE), 0 > sem->val.fetch_op([](s32& val)
 				{
 					if (val < 0)
 					{
@@ -139,13 +145,6 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 					}
 				});
 
-				if (val >= 0)
-				{
-					timeout = 0;
-					continue;
-				}
-
-				verify(HERE), sem->unqueue(sem->sq, &ppu);
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}

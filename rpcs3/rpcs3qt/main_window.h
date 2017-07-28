@@ -29,6 +29,7 @@ class main_window : public QMainWindow
 	Ui::main_window *ui;
 
 	bool m_sys_menu_opened;
+	bool m_save_slider_pos = false;
 
 	Render_Creator m_Render_Creator;
 
@@ -92,8 +93,8 @@ private:
 	void ConfigureGuiFromSettings(bool configureAll = false);
 	void EnableMenus(bool enabled);
 
-	void keyPressEvent(QKeyEvent *keyEvent);
-	void mouseDoubleClickEvent(QMouseEvent *event);
+	void keyPressEvent(QKeyEvent *keyEvent) override;
+	void mouseDoubleClickEvent(QMouseEvent *event) override;
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);

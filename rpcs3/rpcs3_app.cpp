@@ -27,6 +27,9 @@
 #ifdef _WIN32
 #include "mm_joystick_handler.h"
 #endif
+#ifdef HAVE_LIBEVDEV
+#include "evdev_joystick_handler.h"
+#endif
 
 
 #include "Emu/RSX/Null/NullGSRender.h"
@@ -138,6 +141,9 @@ void rpcs3_app::InitializeCallbacks()
 #ifdef _WIN32
 		case pad_handler::mm: return std::make_shared<mm_joystick_handler>();
 #endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev: return std::make_shared<evdev_joystick_handler>();
+#endif
 		default: fmt::throw_exception("Invalid pad handler: %s", type);
 		}
 	};
@@ -156,13 +162,15 @@ void rpcs3_app::InitializeCallbacks()
 			h = guiSettings->GetValue(GUI::gs_height).toInt();
 		}
 
+		bool disableMouse = guiSettings->GetValue(GUI::gs_disableMouse).toBool();
+
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
-		case video_renderer::null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon());
-		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon());
-		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
+		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
+		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 #ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 #endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}
