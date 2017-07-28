@@ -149,15 +149,17 @@ namespace sound
 }
 
 /* Having the icons associated with the game info simplifies logic internally */
-typedef struct GUI_GameInfo
+struct GUI_GameInfo
 {
 	GameInfo info;
 	QImage icon;
 	QPixmap pxmap;
+	bool isVisible;
 	bool bootable;
+	bool hasCustomConfig;
 };
 
-typedef struct Tool_Bar_Button
+struct Tool_Bar_Button
 {
 	QAction* action;
 	QIcon colored;
@@ -190,6 +192,8 @@ public:
 	/** Resize Gamelist Icons to size given by slider position */
 	void ResizeIcons(const int& sliderPos);
 
+	int GetSliderValue();
+
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
 	void SetToolBarVisible(const bool& showToolBar);
@@ -211,11 +215,13 @@ Q_SIGNALS:
 	void RequestIconSizeActSet(const int& idx);
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
+	void RequestSaveSliderPos(const bool& save);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
-	void closeEvent(QCloseEvent* event);
-	void resizeEvent(QResizeEvent *event);
+	void closeEvent(QCloseEvent* event) override;
+	void resizeEvent(QResizeEvent *event) override;
 private:
+	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 	void SortGameList();
