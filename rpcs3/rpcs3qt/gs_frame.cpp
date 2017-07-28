@@ -10,11 +10,9 @@
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 
-gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon)
-	: QWindow()
+gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
+	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
-	m_windowTitle = title;
-
 	if (!Emu.GetTitle().empty())
 	{
 		m_windowTitle += qstr(" | " + Emu.GetTitle());
@@ -201,6 +199,8 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
+	if (m_disable_mouse) return;
+
 	if (ev->button() == Qt::LeftButton)
 	{
 		OnFullScreen();
