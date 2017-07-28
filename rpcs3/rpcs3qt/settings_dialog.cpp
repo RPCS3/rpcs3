@@ -677,6 +677,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		
 	ui->gs_resizeOnBoot->setToolTip(json_emu_misc["gs_resizeOnBoot"].toString());
 		
+	ui->gs_disableMouse->setToolTip(json_emu_misc["gs_disableMouse"].toString());
+
 	ui->cb_show_welcome->setToolTip(json_emu_gui["show_welcome"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings::ExitRPCS3OnFinish);
@@ -778,6 +780,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
 		addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
 		addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(GUI::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color);
+
+		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(GUI::gs_disableMouse).toBool());
+		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val) { xgui_settings->SetValue(GUI::gs_disableMouse, val); });
 
 		bool enableButtons = xgui_settings->GetValue(GUI::gs_resize).toBool();
 		ui->gs_resizeOnBoot->setChecked(enableButtons);

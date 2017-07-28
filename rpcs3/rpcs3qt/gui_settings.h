@@ -113,9 +113,10 @@ namespace GUI
 	const GUI_SAVE m_saveNotes         = GUI_SAVE(meta, "saveNotes",         QVariantMap());
 	const GUI_SAVE m_showDebugTab      = GUI_SAVE(meta, "showDebugTab",      false);
 
-	const GUI_SAVE gs_resize = GUI_SAVE(gs_frame, "resize", false);
-	const GUI_SAVE gs_width  = GUI_SAVE(gs_frame, "width",  1280);
-	const GUI_SAVE gs_height = GUI_SAVE(gs_frame, "height", 720);
+	const GUI_SAVE gs_disableMouse = GUI_SAVE(gs_frame, "disableMouse", false);
+	const GUI_SAVE gs_resize       = GUI_SAVE(gs_frame, "resize",       false);
+	const GUI_SAVE gs_width        = GUI_SAVE(gs_frame, "width",        1280);
+	const GUI_SAVE gs_height       = GUI_SAVE(gs_frame, "height",       720);
 }
 
 /** Class for GUI settings..
