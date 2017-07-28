@@ -2829,8 +2829,8 @@ bool ppu_interpreter::BC(ppu_thread& ppu, ppu_opcode_t op)
 
 	ppu.ctr -= (bo2 ^ true);
 
-	const bool ctr_ok = bo2 || ((ppu.ctr != 0) ^ bo3);
-	const bool cond_ok = bo0 || (ppu.cr[op.bi] ^ (bo1 ^ true));
+	const bool ctr_ok = bo2 | ((ppu.ctr != 0) ^ bo3);
+	const bool cond_ok = bo0 | (ppu.cr[op.bi] ^ (bo1 ^ true));
 
 	if (ctr_ok && cond_ok)
 	{
@@ -2880,8 +2880,8 @@ bool ppu_interpreter::BCLR(ppu_thread& ppu, ppu_opcode_t op)
 
 	ppu.ctr -= (bo2 ^ true);
 
-	const bool ctr_ok = bo2 || ((ppu.ctr != 0) ^ bo3);
-	const bool cond_ok = bo0 || (ppu.cr[op.bi] ^ (bo1 ^ true));
+	const bool ctr_ok = bo2 | ((ppu.ctr != 0) ^ bo3);
+	const bool cond_ok = bo0 | (ppu.cr[op.bi] ^ (bo1 ^ true));
 
 	if (ctr_ok && cond_ok)
 	{
@@ -2904,7 +2904,7 @@ bool ppu_interpreter::CRNOR(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::CRANDC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.cr[op.crbd] = ppu.cr[op.crba] && (ppu.cr[op.crbb] ^ true);
+	ppu.cr[op.crbd] = ppu.cr[op.crba] & (ppu.cr[op.crbb] ^ true);
 	return true;
 }
 
@@ -2940,7 +2940,7 @@ bool ppu_interpreter::CREQV(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::CRORC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.cr[op.crbd] = ppu.cr[op.crba] || (ppu.cr[op.crbb] ^ true);
+	ppu.cr[op.crbd] = ppu.cr[op.crba] | (ppu.cr[op.crbb] ^ true);
 	return true;
 }
 
