@@ -674,7 +674,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->combo_stylesheets->setToolTip(json_emu_gui["stylesheets"].toString());
 
 	// Checkboxes
-
+		
+	ui->gs_resizeOnBoot->setToolTip(json_emu_misc["gs_resizeOnBoot"].toString());
+		
 	ui->cb_show_welcome->setToolTip(json_emu_gui["show_welcome"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings::ExitRPCS3OnFinish);
