@@ -875,7 +875,7 @@ int game_list_frame::PopulateGameList()
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
 		iconItem->setData(Qt::DecorationRole, m_game_data[i].pxmap);
-		iconItem->setData(Qt::UserRole, i);
+		iconItem->setData(Qt::UserRole, (int)i);
 
 		QTableWidgetItem* titleItem = l_GetItem(m_game_data[i].info.name);
 		if (m_game_data[i].hasCustomConfig)

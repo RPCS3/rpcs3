@@ -812,7 +812,7 @@ void main_window::BootRecentAction(const QAction* act)
 	}
 
 	// path is invalid: remove action from list return
-	if (containsPath && nam.isEmpty() || !QFileInfo(pth).isDir() && !QFileInfo(pth).isFile())
+	if ((containsPath && nam.isEmpty()) || (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile()))
 	{
 		if (containsPath)
 		{
@@ -867,7 +867,7 @@ void main_window::BootRecentAction(const QAction* act)
 QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint& sc_idx)
 {
 	// if path is not valid remove from list
-	if (entry.second.isEmpty() || !QFileInfo(entry.first).isDir() && !QFileInfo(entry.first).isFile())
+	if (entry.second.isEmpty() || (!QFileInfo(entry.first).isDir() && !QFileInfo(entry.first).isFile()))
 	{
 		if (m_rg_entries.contains(entry))
 		{
@@ -1376,7 +1376,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
 {
-	if ((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return || isFullScreen() && keyEvent->key() == Qt::Key_Escape)
+	if (((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return) || (isFullScreen() && keyEvent->key() == Qt::Key_Escape))
 	{
 		ui->toolbar_fullscreen->trigger();
 	}

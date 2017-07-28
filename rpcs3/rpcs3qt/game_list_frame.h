@@ -149,7 +149,7 @@ namespace sound
 }
 
 /* Having the icons associated with the game info simplifies logic internally */
-typedef struct GUI_GameInfo
+struct GUI_GameInfo
 {
 	GameInfo info;
 	QImage icon;
@@ -159,7 +159,7 @@ typedef struct GUI_GameInfo
 	bool hasCustomConfig;
 };
 
-typedef struct Tool_Bar_Button
+struct Tool_Bar_Button
 {
 	QAction* action;
 	QIcon colored;
@@ -218,8 +218,8 @@ Q_SIGNALS:
 	void RequestSaveSliderPos(const bool& save);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
-	void closeEvent(QCloseEvent* event);
-	void resizeEvent(QResizeEvent *event);
+	void closeEvent(QCloseEvent* event) override;
+	void resizeEvent(QResizeEvent *event) override;
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);

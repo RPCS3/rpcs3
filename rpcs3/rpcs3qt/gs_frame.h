@@ -19,7 +19,7 @@ public:
 protected:
 	virtual void paintEvent(QPaintEvent *event);
 
-	void keyPressEvent(QKeyEvent *keyEvent);
+	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void OnFullScreen();
 
 	void close() override;
