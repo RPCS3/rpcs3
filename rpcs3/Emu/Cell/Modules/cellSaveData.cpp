@@ -12,6 +12,7 @@
 
 #include <mutex>
 #include <algorithm>
+#include <regex>
 
 logs::channel cellSaveData("cellSaveData");
 
@@ -20,13 +21,13 @@ SaveDialogBase::~SaveDialogBase()
 }
 
 // cellSaveData aliases (only for cellSaveData.cpp)
-using PSetList = vm::ptr<CellSaveDataSetList>;
-using PSetBuf = vm::ptr<CellSaveDataSetBuf>;
+using PSetList   = vm::ptr<CellSaveDataSetList>;
+using PSetBuf    = vm::ptr<CellSaveDataSetBuf>;
 using PFuncFixed = vm::ptr<CellSaveDataFixedCallback>;
-using PFuncList = vm::ptr<CellSaveDataListCallback>;
-using PFuncStat = vm::ptr<CellSaveDataStatCallback>;
-using PFuncFile = vm::ptr<CellSaveDataFileCallback>;
-using PFuncDone = vm::ptr<CellSaveDataDoneCallback>;
+using PFuncList  = vm::ptr<CellSaveDataListCallback>;
+using PFuncStat  = vm::ptr<CellSaveDataStatCallback>;
+using PFuncFile  = vm::ptr<CellSaveDataFileCallback>;
+using PFuncDone  = vm::ptr<CellSaveDataDoneCallback>;
 
 enum : u32
 {
@@ -40,6 +41,7 @@ enum : u32
 	SAVEDATA_OP_FIXED_LOAD     = 7,
 
 	SAVEDATA_OP_FIXED_DELETE = 14,
+	SAVEDATA_OP_LIST_DELETE  = 15,
 };
 
 namespace
@@ -54,7 +56,7 @@ namespace
 		CellSaveDataStatSet  statSet;
 		CellSaveDataFileGet  fileGet;
 		CellSaveDataFileSet  fileSet;
-		CellSaveDataDoneGet doneGet;
+		CellSaveDataDoneGet  doneGet;
 	};
 }
 
@@ -128,7 +130,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	vm::ptr<CellSaveDataStatSet>  statSet  = g_savedata_context.ptr(&savedata_context::statSet);
 	vm::ptr<CellSaveDataFileGet>  fileGet  = g_savedata_context.ptr(&savedata_context::fileGet);
 	vm::ptr<CellSaveDataFileSet>  fileSet  = g_savedata_context.ptr(&savedata_context::fileSet);
-	vm::ptr<CellSaveDataDoneGet>  doneGet = g_savedata_context.ptr(&savedata_context::doneGet);
+	vm::ptr<CellSaveDataDoneGet>  doneGet  = g_savedata_context.ptr(&savedata_context::doneGet);
 
 	//TODO: get current user ID
 	// userId(0) = CELL_SYSUTIL_USERID_CURRENT
@@ -158,9 +160,13 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				continue;
 			}
 
-			for (const auto& prefix : prefix_list)
+			for (const auto& p : prefix_list)
 			{
-				if (entry.name.substr(0, prefix.size()) == prefix)
+				// replace any instances of '*' with '.*' for regex matching
+				std::string prefix = std::regex_replace(p, std::regex("\\*"), ".*");
+				std::regex e("^" + prefix + ".*$");
+				//if (entry.name.substr(0, prefix.size()) == prefix)
+				if(std::regex_match(entry.name,e))
 				{
 					// Count the amount of matches and the amount of listed directories
 					if (listGet->dirListNum++ < setBuf->dirListMax)
@@ -260,6 +266,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			// List Callback
 			funcList(ppu, result, listGet, listSet);
 
+			cellSaveData.error("funcList CBResult: %d", result->result);
 			if (result->result < 0)
 			{
 				//TODO: display dialog
@@ -267,10 +274,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
-			// if the callback has returned ok, lets return OK.
-			// typically used at game launch when no list is actually required.
-			// CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM is only valid for funcFile and funcDone
-			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			// CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM is only valid for funcFile and funcDone,
+			// however Disgea 4 returns CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM.
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 			{
 				return CELL_OK;
 			}
@@ -371,19 +377,95 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 
 			// Display Save Data List but do so asynchronously in the GUI thread.
-			bool hasNewData = (bool)listSet->newData; // newData
-			atomic_t<bool> dlg_result(false);
-
-			Emu.CallAfter([&]()
+			bool hasNewData = (bool)listSet->newData; // newData			
+			
+			switch (operation)
 			{
-				selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, hasNewData, listSet);
-				dlg_result = true;
-			});
+				case SAVEDATA_OP_LIST_DELETE:
+				{
+					do
+					{
+						atomic_t<bool> dlg_result(false);
+						Emu.CallAfter([&]()
+						{
+							selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, hasNewData, listSet);
+							dlg_result = true;
+						});
 
-			while (!dlg_result)
-			{
-				thread_ctrl::wait_for(1000);
-			}
+						while (!dlg_result)
+						{
+							thread_ctrl::wait_for(1000);
+						}
+
+						if(selected == -2)
+						{
+							return CELL_CANCEL;
+						}
+
+						// confrim deletion operation
+						s32 ret = showMsgDialog(SAVEDATA_MSG_DELETE_ASK, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO);
+						if (ret == CELL_MSGDIALOG_BUTTON_NO)
+						{
+							return CELL_CANCEL;
+						}
+
+						std::string del_path = base_dir + save_entries[selected].dirName;
+
+						// get savedata stats					
+						fs::stat_t dir_info{};
+						if (!fs::stat(del_path, dir_info))
+						{
+							return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
+						}
+
+						strcpy_trunc(doneGet->dirName, del_path);
+						doneGet->hddFreeSizeKB = statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
+						doneGet->sizeKB = dir_info.size;
+						doneGet->excResult = 0; // normal return. Other values are for copying, import etc.
+						memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
+
+						// delete the save data
+						try
+						{
+							fs::remove_all(del_path, true);
+						}
+						catch (std::exception)
+						{
+							return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
+						}
+						cellSaveData.error("savedata_op(): Deleted savedata directory %s", del_path);
+
+						// clean up the save_entries list in case the dialog should be displayed again
+						save_entries.erase(save_entries.begin() + selected);
+
+						funcDone(ppu, result, doneGet);
+					} while (result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT);
+
+					if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
+					{
+						return CELL_OK;
+					}
+					
+					return CELL_SAVEDATA_ERROR_CBRESULT;
+				}
+				case SAVEDATA_OP_LIST_LOAD:
+				case SAVEDATA_OP_LIST_SAVE:
+				{
+					atomic_t<bool> dlg_result(false);
+					Emu.CallAfter([&]()
+					{
+						selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, hasNewData, listSet);
+						dlg_result = true;
+					});
+
+					while (!dlg_result)
+					{
+						thread_ctrl::wait_for(1000);
+					}
+
+					break;
+				}
+			}			
 
 			// UI returns -1 for new save games
 			if (selected == -1)
@@ -434,36 +516,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 
 			// show confirmation dialog
-			if (fixedSet->option == 0)			
+			if (fixedSet->option == 0 && operation == SAVEDATA_OP_FIXED_DELETE)			
 			{
-				std::string msg;
-				switch (operation)
-				{
-				case SAVEDATA_OP_FIXED_DELETE:
-				{
-					msg = SAVEDATA_MSG_DELETE_ASK;
-					break;
-				}
-				case SAVEDATA_OP_FIXED_LOAD:
-				{
-					msg = SAVEDATA_MSG_LOAD_ASK;
-					break;
-				}
-				case SAVEDATA_OP_FIXED_SAVE:
-				{
-					msg = SAVEDATA_MSG_SAVE_ASK;
-					break;
-				}
-				default:
-				{
-					// there should be no other operations when funcFixed is specified.
-					// return param error
-					return CELL_SAVEDATA_ERROR_PARAM;
-				}
-				}
-
-				s32 ret = showMsgDialog(msg, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO);
-
+				s32 ret = showMsgDialog(SAVEDATA_MSG_DELETE_ASK , CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO);
 				if (ret == CELL_MSGDIALOG_BUTTON_NO)
 				{
 					return CELL_CANCEL;
@@ -500,18 +555,13 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 					{
 						return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
 					}
-					cellSaveData.error("savedata_op(): savedata directory %s deleted", del_path);	
+					cellSaveData.error("savedata_op(): Deleted savedata directory %s", del_path);	
 
 					funcDone(ppu, result, doneGet);
 						
 					if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST
 						|| result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT)
 					{
-						if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
-						{							
-							showMsgDialog(SAVEDATA_MSG_DELETED ,CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK);						
-						}
-
 						return CELL_OK;
 					}
 
@@ -868,7 +918,7 @@ s32 static NEVER_INLINE save_op_get_list_item(vm::cptr<char> dirName, vm::ptr<Ce
 
 
 	std::string save_path = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/%s/", userId, dirName.get_ptr()));
-	std::string sfo = save_path + "param.sfo";
+	std::string sfo = save_path + "PARAM.SFO";
 
 	if (!fs::is_dir(save_path) && !fs::is_file(sfo))
 	{
@@ -1143,9 +1193,10 @@ void cellSaveDataEnableOverlay(s32 enable)
 // Functions (Extensions) 
 s32 cellSaveDataListDelete(ppu_thread& ppu, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.warning("cellSaveDataListDelete(setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcDone=*0x%x, container=0x%x, userdata=0x%x)",
+		setList, setBuf, funcList, funcDone, container, userdata );
 
-	return CELL_OK;
+	return savedata_op(ppu, SAVEDATA_OP_LIST_DELETE, 0, vm::null, 1, setList, setBuf, funcList, vm::null, vm::null, vm::null, container, 2, userdata, 0, funcDone);
 }
 
 s32 cellSaveDataListImport(ppu_thread& ppu, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
@@ -1185,9 +1236,10 @@ s32 cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat>
 
 s32 cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.warning("cellSaveDataUserListDelete(userId=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcDone=*0x%x, container=0x%x, userdata=0x%x)",
+		userId, setList, setBuf, funcList, funcDone, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(ppu, SAVEDATA_OP_LIST_DELETE, 0, vm::null, 1, setList, setBuf, funcList, vm::null, vm::null, vm::null, container, 2, userdata, userId, funcDone);
 }
 
 s32 cellSaveDataUserListImport(ppu_thread& ppu, u32 userId, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
