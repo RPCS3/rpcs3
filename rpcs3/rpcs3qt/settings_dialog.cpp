@@ -958,7 +958,6 @@ void settings_dialog::OnApplyStylesheet()
 
 int settings_dialog::exec()
 {
-	show();
 	for (int i = 0; i < ui->tabWidget->count(); i++)
 	{
 		ui->tabWidget->setCurrentIndex(i);
