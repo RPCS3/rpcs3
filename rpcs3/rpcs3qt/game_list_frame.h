@@ -224,7 +224,7 @@ Q_SIGNALS:
 	void RequestIconSizeActSet(const int& idx);
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
-  void RequestSaveSliderPos(const bool& save);
+	void RequestSaveSliderPos(const bool& save);
 	void RequestPackageInstall(const QStringList& paths);
 	void RequestFirmwareInstall(const QString& path);
 protected:
@@ -236,7 +236,7 @@ protected:
 	void dragMoveEvent(QDragMoveEvent* event) override;
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
 private:
-  QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
+	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	bool Boot(const GameInfo& info);
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
@@ -244,8 +244,8 @@ private:
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
-	bool IsValidFile(const QMimeData& md, bool savePaths = false);
-	void AddGamesFromPath(const QString& path);
+	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
+	void AddGamesFromDir(const QString& path);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
@@ -308,8 +308,6 @@ private:
 	qreal m_Text_Factor;
 	QStringList m_categoryFilters;
 	QString m_searchText;
-	QStringList m_dropPaths;
-	int m_dropType;
 	Render_Creator m_Render_Creator;
 
 	uint m_games_per_row = 0;

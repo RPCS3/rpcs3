@@ -76,8 +76,6 @@ public Q_SLOTS:
 private Q_SLOTS:
 	void BootElf();
 	void BootGame();
-	void InstallPkg(const QString& dropPath = "");
-	void InstallPup(const QString& dropPath = "");
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();
@@ -85,6 +83,8 @@ private Q_SLOTS:
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
+	void keyPressEvent(QKeyEvent *keyEvent) override;
+	void mouseDoubleClickEvent(QMouseEvent *event) override;
 	void SetAppIconFromPath(const std::string path);
 private:
 	void CreateActions();
@@ -92,9 +92,8 @@ private:
 	void CreateDockWindows();
 	void ConfigureGuiFromSettings(bool configureAll = false);
 	void EnableMenus(bool enabled);
-
-	void keyPressEvent(QKeyEvent *keyEvent) override;
-	void mouseDoubleClickEvent(QMouseEvent *event) override;
+	void InstallPkg(const QString& dropPath = "");
+	void InstallPup(const QString& dropPath = "");
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);

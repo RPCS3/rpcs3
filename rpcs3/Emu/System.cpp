@@ -229,7 +229,7 @@ void Emulator::SetPath(const std::string& path, const std::string& elf_path)
 	m_elf_path = elf_path;
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct)
+bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 {
 	static const char* boot_list[] =
 	{
@@ -242,7 +242,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	if (direct && fs::is_file(path))
 	{
 		SetPath(path);
-		Load();
+		Load(add_only);
 
 		return true;
 	}
@@ -254,7 +254,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 		if (fs::is_file(elf))
 		{
 			SetPath(elf);
-			Load();
+			Load(add_only);
 
 			return true;
 		}
@@ -279,7 +279,7 @@ std::string Emulator::GetLibDir()
 	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
-void Emulator::Load()
+void Emulator::Load(bool add_only)
 {
 	Stop();
 
@@ -439,6 +439,12 @@ void Emulator::Load()
 		else if (_cat == "DG" || _cat == "GD")
 		{
 			LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
+			return;
+		}
+
+		if (add_only)
+		{
+			LOG_NOTICE(LOADER, "Finished to add data to games.yml by boot for: %s", m_path);
 			return;
 		}
 

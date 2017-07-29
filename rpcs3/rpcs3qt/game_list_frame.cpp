@@ -1061,69 +1061,33 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 }
 
 /**
-Add valid disc games to gamelist (games.yaml)
-@param path = path to scan for game
+Add valid disc games to gamelist (games.yml)
+@param path = dir path to scan for game
 */
-void game_list_frame::AddGamesFromPath(const QString& path)
+void game_list_frame::AddGamesFromDir(const QString& path)
 {
-	const QFileInfo pathInfo(path);
+	if (!QFileInfo(path).isDir()) return;
 
-	// create list with valid elf path endings (empty string in case the path is the elf)
-	const QStringList elf_list = QStringList() << "" << "/EBOOT.BIN" << "/USRDIR/EBOOT.BIN" << "/PS3_GAME/USRDIR/EBOOT.BIN";
-	QStringList path_list;
+	const std::string s_path = sstr(path);
 
-	if (pathInfo.isDir()) // create path list from contained files
+	// search dropped path first or else the direct parent to an elf is wrongly skipped
+	if (Emu.BootGame(s_path, false, true))
 	{
-		for (const auto& entry : fs::dir(sstr(path)))
-		{
-			if (entry.name != "." && entry.name != "..")
-			{
-				path_list << path + "/" + qstr(entry.name);
-			}
-		}
-	}
-	else if (pathInfo.isFile()) // path list only contains file path
-	{
-		path_list << path;
+		LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", s_path);
 	}
 
-	if (path_list.isEmpty()) return;
-
-	for (const auto& pth : path_list)
+	// search direct subdirectories, that way we can drop one folder containing all games
+	for (const auto& entry : fs::dir(s_path))
 	{
-		const bool pathIsDir = QFileInfo(pth).isDir(); // needed for cases like: bakuretsu/bakuretsu/lala.la/eboot.bin
+		if (entry.name == "." || entry.name == "..") continue;
 
-		for (auto elf : elf_list)
+		const std::string pth = s_path + "/" + entry.name;
+
+		if (!QFileInfo(qstr(pth)).isDir()) continue;
+
+		if (Emu.BootGame(pth, false, true))
 		{
-			elf = pathIsDir ? pth + elf : pth; // if pth is dir, add elf path ending, else assume path leads to elf
-
-			if (!QFileInfo(elf).isFile()) continue;
-
-			const std::string dir = sstr(elf.section("/", 0, -4)); // game's main dir (sth like BLES12345)
-
-			if (!fs::is_file(dir + "/PS3_DISC.SFB")) continue; // invalid without sfb file
-
-			const fs::file sfo_file(dir + "/PS3_GAME/PARAM.SFO");
-
-			if (!sfo_file) continue; // invalid without sfo file
-
-			const auto& psf = psf::load_object(sfo_file);
-
-			if (psf::get_string(psf, "CATEGORY") != "DG") continue; // only disc games allowed
-
-			// finally we can add the game to our list:
-
-			YAML::Node games = YAML::Load(fs::file{ fs::get_config_dir() + "/games.yml", fs::read + fs::create }.to_string());
-
-			if (!games.IsMap()) games.reset();
-
-			games[psf::get_string(psf, "TITLE_ID")] = dir;
-
-			YAML::Emitter out;
-			out << games;
-			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
-
-			LOG_SUCCESS(GENERAL, "Game addition to list by drop: %s", sstr(elf));
+			LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", pth);
 		}
 	}
 }
@@ -1134,13 +1098,9 @@ void game_list_frame::AddGamesFromPath(const QString& path)
 	@param savePaths = flag for path caching
 	@returns validity of file type
 */
-bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
+int game_list_frame::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 {
-	auto error = [&](bool val = false) // helps us setting the DROP_ERROR on return false
-	{
-		if (!val) m_dropType = DROP_ERROR;
-		return val;
-	};
+	int dropType = DROP_ERROR;
 
 	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
 
@@ -1151,13 +1111,13 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (QFileInfo(path).isDir())
 		{
-			if (i != 0 && m_dropType != DROP_DIR) return error();
+			if (i != 0 && dropType != DROP_DIR) return DROP_ERROR;
 
-			m_dropType = DROP_DIR;
+			dropType = DROP_DIR;
 
-			if (savePaths)
+			if (dropPaths)
 			{
-				m_dropPaths.append(path);
+				dropPaths->append(path);
 			}
 			continue;
 		}
@@ -1165,7 +1125,7 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
 		// now that we know it has to be a file we get the file ending
 		QString suffix = QFileInfo(list[i].fileName()).suffix().toLower();
 
-		if (suffix.isEmpty()) return error(); // NANI the heck would you want such a file?
+		if (suffix.isEmpty()) return DROP_ERROR; // NANI the heck would you want such a file?
 
 		QString last_suffix;
 
@@ -1173,96 +1133,93 @@ bool game_list_frame::IsValidFile(const QMimeData& md, bool savePaths)
 		{
 			last_suffix = suffix;
 		}
-		else if (last_suffix == "pup") // we only accept one firmware file
+		else if (last_suffix == "pup" || last_suffix == "bin") // we only accept one firmware or eboot file
 		{
-			return error(list.count() != 1);
+			return list.count() != 1 ? dropType : DROP_ERROR;
 		}
 		else if (last_suffix != suffix) // we don't accept multiple file types
 		{
-			return error();
+			return DROP_ERROR;
 		}
 
 		// set drop type by file ending
 		if (suffix == "pkg")
 		{
-			m_dropType = DROP_PKG;
+			dropType = DROP_PKG;
 		}
 		else if (suffix == "pup")
 		{
-			m_dropType = DROP_PUP;
+			dropType = DROP_PUP;
 		}
 		else if (suffix == "rap")
 		{
-			m_dropType = DROP_RAP;
+			dropType = DROP_RAP;
 		}
 		else if (suffix == "bin")
 		{
-			m_dropType = DROP_GAME;
+			dropType = DROP_GAME;
 		}
 		else // if (suffix == "kuso")
 		{
-			return error();
+			return DROP_ERROR;
 		}
 
-		if (savePaths) // we only need to know the paths on drop
+		if (dropPaths) // we only need to know the paths on drop
 		{
-			m_dropPaths.append(path);
+			dropPaths->append(path);
 		}
 	}
-	return true;
+	return dropType;
 }
 
 void game_list_frame::dropEvent(QDropEvent* event)
 {
-	if (IsValidFile(*event->mimeData(), true)) // get valid file paths and valid drop type
+	QStringList dropPaths;
+
+	switch (IsValidFile(*event->mimeData(), &dropPaths)) // get valid file paths and drop type
 	{
-		switch (m_dropType)
+	case DROP_ERROR:
+		break;
+	case DROP_PKG: // install the package
+		Q_EMIT RequestPackageInstall(dropPaths);
+		break;
+	case DROP_PUP: // install the firmware
+		Q_EMIT RequestFirmwareInstall(dropPaths.first());
+		break;
+	case DROP_RAP: // import rap files to exdata dir
+		for (const auto& rap : dropPaths)
 		{
-		case DROP_PKG: // install the package
-			Q_EMIT RequestPackageInstall(m_dropPaths);
-			break;
-		case DROP_PUP: // install the firmware
-			Q_EMIT RequestFirmwareInstall(m_dropPaths.first());
-			break;
-		case DROP_RAP: // import rap files to exdata dir
-			for (const auto& rap : m_dropPaths)
-			{
-				const std::string rapname = sstr(QFileInfo(rap).fileName());
+			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-				// TODO: use correct user ID once User Manager is implemented
-				if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
-				{
-					LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
-				}
-				else
-				{
-					LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
-				}
-			}
-			break;
-		case DROP_DIR: // import valid games to gamelist (games.yaml)
-			for (const auto& path : m_dropPaths)
+			// TODO: use correct user ID once User Manager is implemented
+			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
 			{
-				AddGamesFromPath(path);
+				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
 			}
-			Refresh(true);
-			break;
-		case DROP_GAME: // import valid games to gamelist (games.yaml)
-			for (const auto& path : m_dropPaths)
+			else
 			{
-				AddGamesFromPath(path);
+				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
 			}
-			Refresh(true);
-			break;
-		default: // DROP_ERROR
-			LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
-			break;
 		}
+		break;
+	case DROP_DIR: // import valid games to gamelist (games.yaml)
+		for (const auto& path : dropPaths)
+		{
+			AddGamesFromDir(path);
+		}
+		Refresh(true);
+		break;
+	case DROP_GAME: // import valid games to gamelist (games.yaml)
+		if (Emu.BootGame(sstr(dropPaths.first()), true))
+		{
+			LOG_SUCCESS(GENERAL, "Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
+		}
+		Refresh(true);
+		break;
+	default:
+		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
+		break;
 	}
-
-	// reset drop variables after each drop, no matter if successful or not
-	m_dropPaths.clear();
-	m_dropType = DROP_ERROR;
 }
 
 void game_list_frame::dragEnterEvent(QDragEnterEvent* event)
