@@ -1293,7 +1293,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (!fs::is_dir(lle_dir))
 		{
 			LOG_ERROR(GENERAL, "/dev_flash/sys/external/ directory does not exist!"
-				"\nYou should install the PS3 Firmware (Menu: Tools -> Install Firmware)."
+				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
 				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 		}
 
