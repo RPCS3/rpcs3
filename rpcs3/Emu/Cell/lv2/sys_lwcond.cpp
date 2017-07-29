@@ -24,7 +24,7 @@ error_code _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sy
 		return CELL_ESRCH;
 	}
 
-	if (const u32 id = idm::make<lv2_obj, lv2_lwcond>(name, lwmutex_id))
+	if (const u32 id = idm::make<lv2_obj, lv2_lwcond>(name, lwmutex_id, control))
 	{
 		*lwcond_id = id;
 		return CELL_OK;
@@ -79,9 +79,9 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 	{
 		mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
-		if (mutex && cond.waiters)
+		if (cond.waiters)
 		{
-			semaphore_lock lock(mutex->mutex);
+			semaphore_lock lock(cond.mutex);
 
 			cpu_thread* result = nullptr;
 
@@ -99,7 +99,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 			}
 			else
 			{
-				result = cond.schedule<ppu_thread>(cond.sq, mutex->protocol);
+				result = cond.schedule<ppu_thread>(cond.sq, cond.control->lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK);
 			}
 
 			if (result)
@@ -111,8 +111,10 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 					static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
 				}
 
-				if (mode != 2 && !mutex->signaled.fetch_op([](u32& v) { if (v) v--; }))
+				if (mode == 1)
 				{
+					verify(HERE), !mutex->signaled;
+					semaphore_lock lock(mutex->mutex);
 					mutex->sq.emplace_back(result);
 					result = nullptr;
 					mode = 2; // Enforce CELL_OK
@@ -170,13 +172,13 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	{
 		mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
-		if (mutex && cond.waiters)
+		if (cond.waiters)
 		{
-			semaphore_lock lock(mutex->mutex);
+			semaphore_lock lock(cond.mutex);
 
 			u32 result = 0;
 
-			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, mutex->protocol))
+			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.control->lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK))
 			{
 				cond.waiters--;
 
@@ -185,8 +187,10 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 					static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
 				}
 
-				if (mode != 2 && !mutex->signaled.fetch_op([](u32& v) { if (v) v--; }))
+				if (mode == 1)
 				{
+					verify(HERE), !mutex->signaled;
+					semaphore_lock lock(mutex->mutex);
 					mutex->sq.emplace_back(cpu);
 				}
 				else
@@ -237,12 +241,14 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			return nullptr;
 		}
 
-		semaphore_lock lock(mutex->mutex);
+		semaphore_lock lock(cond.mutex);
 
 		// Add a waiter
 		cond.waiters++;
 		cond.sq.emplace_back(&ppu);
 		cond.sleep(ppu, timeout);
+
+		semaphore_lock lock2(mutex->mutex);
 
 		// Process lwmutex sleep queue
 		if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
@@ -274,7 +280,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			if (passed >= timeout)
 			{
-				semaphore_lock lock(mutex->mutex);
+				semaphore_lock lock(cond->mutex);
 
 				if (!cond->unqueue(cond->sq, &ppu))
 				{
