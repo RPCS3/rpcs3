@@ -191,7 +191,15 @@ void Emulator::Init()
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Reload global configuration
-	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+	try
+	{
+		g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+	}
+	catch(...)
+	{
+		LOG_ERROR(GENERAL, "Failed to load config.yml.  Using default configuration!");
+		g_cfg.from_default();
+	}
 
 	// Create directories
 	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
