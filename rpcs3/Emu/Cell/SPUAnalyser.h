@@ -289,12 +289,12 @@ class SPUDatabase final : spu_itype
 	std::unordered_multimap<u64, std::shared_ptr<spu_function_t>> m_db;
 
 	// For internal use
-	std::shared_ptr<spu_function_t> find(const be_t<u32>* data, u64 key, u32 max_size);
+	spu_function_t* find(const be_t<u32>* data, u64 key, u32 max_size);
 
 public:
 	SPUDatabase();
 	~SPUDatabase();
 
 	// Try to retrieve SPU function information
-	std::shared_ptr<spu_function_t> analyse(const be_t<u32>* ls, u32 entry, u32 limit = 0x40000);
+	spu_function_t* analyse(const be_t<u32>* ls, u32 entry, u32 limit = 0x40000);
 };
