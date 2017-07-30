@@ -749,6 +749,16 @@ void game_list_frame::ResizeIcons(const int& sliderPos)
 		m_Slider_Size->setSliderPosition(sliderPos);
 	}
 
+	RepaintIcons();
+}
+
+void game_list_frame::RepaintIcons(const QColor& color)
+{
+	if (color.isValid())
+	{
+		m_Icon_Color = color;
+	}
+
 	for (auto& game : m_game_data)
 	{
 		game.pxmap = PaintedPixmap(game.icon, game.hasCustomConfig);
