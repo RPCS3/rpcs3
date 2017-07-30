@@ -309,6 +309,16 @@ void main_window::InstallPkg()
 		return;
 	}
 
+	//Check header
+	u32 pkg_signature;
+	pkg_f.seek(0);
+	pkg_f.read(pkg_signature);
+	if (pkg_signature != "\x7FPKG"_u32)
+	{
+		LOG_ERROR(LOADER, "PKG: %s is not a pkg file", fileName);
+		return;
+	}
+
 	// Get title ID
 	std::vector<char> title_id(9);
 	pkg_f.seek(55);
