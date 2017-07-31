@@ -105,6 +105,35 @@ namespace rsx
 		std::vector<u32> inline_vertex_array;
 	};
 
+	struct interleaved_range_info
+	{
+		bool interleaved = false;
+		bool all_modulus = false;
+		u32  base_offset = 0;
+		u32  real_offset_address = 0;
+		u8   memory_location = 0;
+		u8   attribute_stride = 0;
+		u16  min_divisor = 0;
+
+		std::vector<u8> locations;
+	};
+
+	enum attribute_buffer_placement : u8
+	{
+		none = 0,
+		persistent = 1,
+		transient = 2
+	};
+
+	struct vertex_input_layout
+	{
+		std::vector<interleaved_range_info> interleaved_blocks;  //Interleaved blocks to be uploaded as-is
+		std::vector<std::pair<u8, u32>> volatile_blocks;  //Volatile data blocks (immediate draw vertex data for example)
+		std::vector<u8> referenced_registers;  //Volatile register data
+
+		std::array<attribute_buffer_placement, 16> attribute_placement;
+	};
+
 	class thread : public named_thread
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
@@ -152,8 +181,6 @@ namespace rsx
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
-		bool m_vertex_attribs_changed;
-		bool m_index_buffer_changed;
 
 	protected:
 		s32 m_skip_frame_ctr = 0;
@@ -161,14 +188,23 @@ namespace rsx
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
-		RSXVertexProgram get_current_vertex_program() const;
+
+		/**
+		 * Analyze vertex inputs and group all interleaved blocks
+		 */
+		vertex_input_layout analyse_inputs_interleaved() const;
+
+		RSXVertexProgram current_vertex_program = {};
+		RSXFragmentProgram current_fragment_program = {};
+
+		void get_current_vertex_program();
 
 		/**
 		 * Gets current fragment program and associated fragment state
 		 * get_surface_info is a helper takes 2 parameters: rsx_texture_address and surface_is_depth
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
-		RSXFragmentProgram get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info) const;
+		void get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info);
 	public:
 		double fps_limit = 59.94;
 
@@ -232,7 +268,7 @@ namespace rsx
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
 
-		/*
+		/**
 		* Immediate mode rendering requires a temp push buffer to hold attrib values
 		* Appends a value to the push buffer (currently only supports 32-wide types)
 		*/
@@ -243,47 +279,24 @@ namespace rsx
 		u32 get_push_buffer_index_count() const;
 
 	protected:
-		//Save draw call parameters to detect instanced renders
-		std::pair<u32, u32> m_last_first_count;
-		rsx::draw_command m_last_command;
 
-		bool is_probable_instanced_draw();
+		/**
+		 * Computes VRAM requirements needed to upload raw vertex streams
+		 * result.first contains persistent memory requirements
+		 * result.second contains volatile memory requirements
+		 */
+		std::pair<u32, u32> calculate_memory_requirements(vertex_input_layout& layout, const u32 vertex_count);
 
-	public:
-		//MT vertex streaming
-		struct upload_stream_packet
-		{
-			std::function<void(void *, rsx::vertex_base_type, u8, u32)> post_upload_func;
-			gsl::span<const gsl::byte> src_span;
-			gsl::span<gsl::byte> dst_span;
-			rsx::vertex_base_type type;
-			u32 vector_width;
-			u32 vertex_count;
-			u32 src_stride;
-			u8 dst_stride;
-		};
+		/**
+		 * Generates vertex input descriptors as an array of 16x4 s32s
+		 */
+		void fill_vertex_layout_state(vertex_input_layout& layout, const u32 vertex_count, s32* buffer);
 
-		struct upload_stream_worker
-		{
-			std::shared_ptr<thread_ctrl> worker_thread;
-			std::vector<upload_stream_packet> packets;
-			std::atomic<int> thread_status = { 0 };
-		};
-
-		struct upload_stream_task
-		{
-			std::array<upload_stream_worker, 16> worker_threads;
-			int available_threads = 0;
-			std::atomic<int> remaining_tasks = {0};
-		};
-
-		upload_stream_task m_vertex_streaming_task;
-		void post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type,
-				u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, u32 vertex_count,
-			std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback);
-		void start_vertex_upload_task();
-		void wait_for_vertex_upload_task();
-		bool vertex_upload_task_ready();
+		/**
+		 * Uploads vertex data described in the layout descriptor
+		 * Copies from local memory to the write-only output buffers provided in a sequential manner
+		 */
+		void write_vertex_data_to_memory(vertex_input_layout &layout, const u32 first_vertex, const u32 vertex_count, void *persistent_data, void *volatile_data);
 
 	private:
 		std::mutex m_mtx_task;

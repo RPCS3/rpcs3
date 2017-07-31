@@ -200,14 +200,6 @@ private:
 
 	std::thread::id rsx_thread;
 
-	VkPrimitiveTopology m_last_primititve_type;
-	VkIndexType m_last_ib_type;
-	VkDescriptorSet m_last_descriptor_set;
-	size_t m_last_ib_offset;
-	u32 m_last_vertex_count;
-	bool m_last_draw_indexed;
-	u32 m_last_instanced_cb_index;
-
 	bool render_pass_open = false;
 	
 #ifdef __linux__
@@ -232,8 +224,6 @@ private:
 
 	void begin_render_pass();
 	void close_render_pass();
-
-	void emit_geometry_instance(u32 instance_count);
 
 	/// returns primitive topology, is_indexed, index_count, offset in index buffer, index type
 	std::tuple<VkPrimitiveTopology, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();

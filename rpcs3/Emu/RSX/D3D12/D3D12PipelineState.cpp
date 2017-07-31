@@ -53,10 +53,10 @@ void D3D12GSRender::load_program()
 		return std::make_tuple(true, native_pitch);
 	};
 
-	m_vertex_program = get_current_vertex_program();
-	m_fragment_program = get_current_fragment_program(rtt_lookup_func);
+	get_current_vertex_program();
+	get_current_fragment_program(rtt_lookup_func);
 
-	if (!m_fragment_program.valid)
+	if (!current_fragment_program.valid)
 		return;
 
 	D3D12PipelineProperties prop = {};
@@ -308,12 +308,12 @@ void D3D12GSRender::load_program()
 		}
 	}
 
-	m_current_pso = m_pso_cache.getGraphicPipelineState(m_vertex_program, m_fragment_program, prop, m_device.Get(), m_shared_root_signature.Get());
+	m_current_pso = m_pso_cache.getGraphicPipelineState(current_vertex_program, current_fragment_program, prop, m_device.Get(), m_shared_root_signature.Get());
 	return;
 }
 
 std::pair<std::string, std::string> D3D12GSRender::get_programs() const
 {
-	return std::make_pair(m_pso_cache.get_transform_program(m_vertex_program).content, m_pso_cache.get_shader_program(m_fragment_program).content);
+	return std::make_pair(m_pso_cache.get_transform_program(current_vertex_program).content, m_pso_cache.get_shader_program(current_fragment_program).content);
 }
 #endif

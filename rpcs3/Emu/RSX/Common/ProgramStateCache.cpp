@@ -28,7 +28,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 		return false;
 	if (binary1.data.size() != binary2.data.size())
 		return false;
-	if (binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
+	if (!binary1.skip_vertex_input_check && binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
 		return false;
 
 	const qword *instBuffer1 = (const qword*)binary1.data.data();

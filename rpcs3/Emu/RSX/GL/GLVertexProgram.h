@@ -30,6 +30,7 @@ protected:
 	virtual void insertMainEnd(std::stringstream &OS) override;
 
 	const RSXVertexProgram &rsx_vertex_program;
+	std::unordered_map<std::string, int> input_locations;
 public:
 	GLVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray&)
 		: VertexProgramDecompiler(prog)
@@ -50,6 +51,7 @@ public:
 	ParamArray parr;
 	u32 id = 0;
 	std::string shader;
+	bool interleaved;
 
 	void Decompile(const RSXVertexProgram& prog);
 	void Compile();
