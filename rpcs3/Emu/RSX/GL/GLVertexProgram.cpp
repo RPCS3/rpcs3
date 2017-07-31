@@ -31,57 +31,21 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
 	OS << "#version 430\n\n";
-	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
+	OS << "layout(std140, binding = 0) uniform VertexContextBuffer\n";
 	OS << "{\n";
-	OS << "	mat4 scaleOffsetMat;\n";
-	OS << "	ivec4 userClipEnabled[2];\n";
-	OS << "	vec4 userClipFactor[2];\n";
-	OS << "};\n";
+	OS << "	mat4 scale_offset_mat;\n";
+	OS << "	ivec4 user_clip_enabled[2];\n";
+	OS << "	vec4 user_clip_factor[2];\n";
+	OS << "	uint transform_branch_bits;\n";
+	OS << "	uint vertex_base_index;\n";
+	OS << "	ivec4 input_attributes[16];\n";
+	OS << "};\n\n";
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	std::vector<std::tuple<size_t, std::string>> input_data;
-	for (const ParamType &PT : inputs)
-	{
-		for (const ParamItem &PI : PT.items)
-		{
-			input_data.push_back(std::make_tuple(PI.location, PI.name));
-		}
-	}
-
-	/**
-	 * Its is important that the locations are in the order that vertex attributes are expected.
-	 * If order is not adhered to, channels may be swapped leading to corruption
-	*/
-
-	std::sort(input_data.begin(), input_data.end());
-
-	int location = 1;
-	for (const std::tuple<size_t, std::string>& item : input_data)
-	{
-		for (const ParamType &PT : inputs)
-		{
-			for (const ParamItem &PI : PT.items)
-			{
-				if (PI.name == std::get<1>(item))
-				{
-					bool is_int = false;
-					for (const auto &attrib : rsx_vertex_program.rsx_vertex_inputs)
-					{
-						if (attrib.location == std::get<0>(item))
-						{
-							if (attrib.int_type || attrib.flags & GL_VP_SINT_MASK) is_int = true;
-							break;
-						}
-					}
-
-					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(location=" << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
-				}
-			}
-		}
-	}
+	OS << "layout(location=0) uniform usamplerBuffer persistent_input_stream;\n";    //Data stream with persistent vertex data (cacheable)
+	OS << "layout(location=1) uniform usamplerBuffer volatile_input_stream;\n";      //Data stream with per-draw data (registers and immediate draw data)
 }
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
@@ -89,7 +53,6 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer\n";
 	OS << "{\n";
 	OS << "	vec4 vc[468];\n";
-	OS << "	uint transform_branch_bits;\n";
 	OS << "};\n\n";
 
 	for (const ParamType &PT: constants)
@@ -115,13 +78,13 @@ static const vertex_reg_info reg_table[] =
 	//Fog output shares a data source register with clip planes 0-2 so only declare when specified
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	//Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClipFactor[0].x", false, "userClipEnabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClipFactor[0].y", false, "userClipEnabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClipFactor[0].z", false, "userClipEnabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClipFactor[0].w", false, "userClipEnabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClipFactor[1].x", false, "userClipEnabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClipFactor[1].y", false, "userClipEnabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "tc0", true, "dst_reg7", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
 	{ "tc1", true, "dst_reg8", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
 	{ "tc2", true, "dst_reg9", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
@@ -206,57 +169,175 @@ namespace
 		}
 	}
 
-	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+	void insert_vertex_input_fetch(std::stringstream& OS)
 	{
-		for (const auto &real_input : inputs)
-		{
-			if (real_input.location != PI.location)
-				continue;
+		//Actually decode a vertex attribute from a raw byte stream
+		OS << "struct attribute_desc\n";
+		OS << "{\n";
+		OS << "	int type;\n";
+		OS << "	int attribute_size;\n";
+		OS << "	int starting_offset;\n";
+		OS << "	int stride;\n";
+		OS << "	int swap_bytes;\n";
+		OS << "	int is_volatile;\n";
+		OS << "	int frequency;\n";
+		OS << "	int divisor;\n";
+		OS << "	int modulo;\n";
+		OS << "};\n\n";
 
-			std::string vecType = "	vec4 ";
-			if (real_input.int_type)
-				vecType = "	ivec4 ";
+		OS << "uint get_bits(uvec4 v, int swap)\n";
+		OS << "{\n";
+		OS << "	if (swap != 0) return (v.w | v.z << 8 | v.y << 16 | v.x << 24);\n";
+		OS << "	return (v.x | v.y << 8 | v.z << 16 | v.w << 24);\n";
+		OS << "}\n\n";
 
-			std::string scale = "";
-			if (real_input.flags & GL_VP_SINT_MASK)
-			{
-				if (real_input.flags & GL_VP_ATTRIB_S16_INT)
-					scale = " / " + expand_to_vec4("32767.", real_input.size);
-				else
-					scale = " / " + expand_to_vec4("2147483647.", real_input.size);
-			}
+		OS << "uint get_bits(uvec2 v, int swap)\n";
+		OS << "{\n";
+		OS << "	if (swap != 0) return (v.y | v.x << 8);\n";
+		OS << "	return (v.x | v.y << 8);\n";
+		OS << "}\n\n";
 
-			if (!real_input.is_array)
-			{
-				OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";\n";
-				return;
-			}
+		OS << "int preserve_sign_s16(uint bits)\n";
+		OS << "{\n";
+		OS << "	//convert raw 16 bit value into signed 32-bit integer counterpart\n";
+		OS << "	uint sign = bits & 0x8000;\n";
+		OS << "	if (sign != 0) return int(bits | 0xFFFF0000);\n";
+		OS << "	return int(bits);\n";
+		OS << "}\n\n";
 
-			if (real_input.frequency > 1)
-			{
-				if (real_input.is_modulo)
-				{
-					OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";\n";
-					return;
-				}
+		OS << "float convert_to_f32(uint bits)\n";
+		OS << "{\n";
+		OS << "	uint sign = (bits >> 31) & 1;\n";
+		OS << "	uint exp = (bits >> 23) & 0xff;\n";
+		OS << "	uint mantissa = bits & 0x7fffff;\n";
+		OS << "	float base = (sign != 0)? -1.f: 1.f;\n";
+		OS << "	base *= exp2(exp - 127);\n";
+		OS << "	float scale = 0.f;\n\n";
+		OS << "	for (int x = 0; x < 23; x++)\n";
+		OS << "	{\n";
+		OS << "		int inv = (22 - x);\n";
+		OS << "		if ((mantissa & (1 << inv)) == 0) continue;\n";
+		OS << "		scale += 1.f / pow(2.f, float(inv));\n";
+		OS << "	}\n";
+		OS << "	return base * scale;\n";
+		OS << "}\n";
 
-				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";\n";
-				return;
-			}
+		OS << "#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
 
-			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";\n";
-			return;
-		}
+		OS << "vec4 fetch_attribute(attribute_desc desc, int vertex_id, usamplerBuffer input_stream)\n";
+		OS << "{\n";
+		OS << "	vec4 result = vec4(0., 0., 0., 1.);\n";
+		OS << "	vec4 scale = vec4(1.);\n";
+		OS << "	uvec4 tmp;\n";
+		OS << "	uint bits;\n";
+		OS << "	bool reverse_order = false;\n";
+		OS << "\n";
+		OS << "	int first_byte = (vertex_id * desc.stride) + desc.starting_offset;\n";
+		OS << "	for (int n = 0; n < desc.attribute_size; n++)\n";
+		OS << "	{\n";
+		OS << "		switch (desc.type)\n";
+		OS << "		{\n";
+		OS << "		case 0:\n";
+		OS << "			//signed normalized 16-bit\n";
+		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			result[n] = get_s16(tmp.xy, desc.swap_bytes);\n";
+		OS << "			scale[n] = 32767.;\n";
+		OS << "			break;\n";
+		OS << "		case 1:\n";
+		OS << "			//float\n";
+		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[2] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[3] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			result[n] = uintBitsToFloat(get_bits(tmp, desc.swap_bytes));\n";
+		OS << "			break;\n";
+		OS << "		case 2:\n";
+		OS << "			//half\n";
+		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			result[n] = unpackHalf2x16(uint(get_bits(tmp.xy, desc.swap_bytes))).x;\n";
+		OS << "			break;\n";
+		OS << "		case 3:\n";
+		OS << "			//unsigned byte\n";
+		OS << "			result[n] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			scale[n] = 255.;\n";
+		OS << "			reverse_order = (desc.swap_bytes != 0);\n";
+		OS << "			break;\n";
+		OS << "		case 4:\n";
+		OS << "			//signed word\n";
+		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			result[n] = get_s16(tmp.xy, desc.swap_bytes);\n";
+		OS << "			break;\n";
+		OS << "		case 5:\n";
+		OS << "			//cmp\n";
+		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[2] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp[3] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			bits = get_bits(tmp, desc.swap_bytes);\n";
+		OS << "			result.x = preserve_sign_s16((bits & 0x7FF) << 5);\n";
+		OS << "			result.y = preserve_sign_s16(((bits >> 11) & 0x7FF) << 5);\n";
+		OS << "			result.z = preserve_sign_s16(((bits >> 22) & 0x3FF) << 6);\n";
+		OS << "			result.w = 1.;\n";
+		OS << "			scale = vec4(32767., 32767., 32767., 1.);\n";
+		OS << "			break;\n";
+		OS << "		case 6:\n";
+		OS << "			//ub256\n";
+		OS << "			result[n] = float(texelFetch(input_stream, first_byte++).x);\n";
+		OS << "			reverse_order = (desc.swap_bytes != 0);\n";
+		OS << "			break;\n";
+		OS << "		}\n";
+		OS << "	}\n\n";
+		OS << "	result /= scale;\n";
+		OS << "	return (reverse_order)? result.wzyx: result;\n";
+		OS << "}\n\n";
 
-		LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
+		OS << "attribute_desc fetch_desc(int location)\n";
+		OS << "{\n";
+		OS << "	attribute_desc result;\n";
+		OS << "	int attribute_flags = input_attributes[location].w;\n";
+		OS << "	result.type = input_attributes[location].x;\n";
+		OS << "	result.attribute_size = input_attributes[location].y;\n";
+		OS << "	result.starting_offset = input_attributes[location].z;\n";
+		OS << "	result.stride = attribute_flags & 0xFF;\n";
+		OS << "	result.swap_bytes = (attribute_flags >> 8) & 0x1;\n";
+		OS << "	result.is_volatile = (attribute_flags >> 9) & 0x1;\n";
+		OS << "	result.frequency = (attribute_flags >> 10) & 0x3;\n";
+		OS << "	result.modulo = (attribute_flags >> 12) & 0x1;\n";
+		OS << "	result.divisor = (attribute_flags >> 13) & 0xFFFF;\n";
+		OS << "	return result;\n";
+		OS << "}\n\n";
 
-		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);\n";
+		OS << "vec4 read_location(int location)\n";
+		OS << "{\n";
+		OS << "	attribute_desc desc = fetch_desc(location);\n";
+		OS << "\n";
+		OS << "	int vertex_id = gl_VertexID - int(vertex_base_index);\n";
+		OS << "	if (desc.frequency == 0)\n";
+		OS << "		vertex_id = 0;\n";
+		OS << "	else if (desc.frequency > 1)\n";
+		OS << "	{\n";
+		OS << "		//if a vertex modifier is active; vertex_base must be 0 and is ignored\n";
+		OS << "		if (desc.modulo != 0)\n";
+		OS << "			vertex_id = gl_VertexID % desc.divisor;\n";
+		OS << "		else\n";
+		OS << "			vertex_id = gl_VertexID / desc.divisor;\n";
+		OS << "	}\n";
+		OS << "\n";
+		OS << "	if (desc.is_volatile != 0)\n";
+		OS << "		return fetch_attribute(desc, vertex_id, volatile_input_stream);\n";
+		OS << "	else\n";
+		OS << "		return fetch_attribute(desc, vertex_id, persistent_input_stream);\n";
+		OS << "}\n\n";
 	}
 }
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS, gl::glsl::glsl_vertex_program);
+	insert_vertex_input_fetch(OS);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -293,7 +374,9 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
-			add_input(OS, PI, rsx_vertex_program.rsx_vertex_inputs);
+		{
+			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
+		}
 	}
 
 	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
@@ -401,7 +484,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
 			OS << "	front_spec_color = dst_reg2;\n";
 
-	OS << "	gl_Position = gl_Position * scaleOffsetMat;\n";
+	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
 
 	//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:
 	//ln = (clip * 2) - 1 to fully utilize the 0-1 range of the depth buffer

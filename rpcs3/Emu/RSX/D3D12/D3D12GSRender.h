@@ -61,8 +61,6 @@ private:
 	data_cache m_texture_cache;
 	bool invalidate_address(u32 addr);
 
-	RSXVertexProgram m_vertex_program;
-	RSXFragmentProgram m_fragment_program;
 	PipelineStateObjectCache m_pso_cache;
 	std::tuple<ComPtr<ID3D12PipelineState>, size_t, size_t> m_current_pso;
 

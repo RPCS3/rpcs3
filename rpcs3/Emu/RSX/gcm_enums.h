@@ -9,7 +9,7 @@ namespace rsx
 		f, ///< float
 		sf, ///< half float
 		ub, ///< unsigned byte interpreted as 0.f and 1.f
-		s32k, ///< signed 32bits int
+		s32k, ///< signed 16bits int
 		cmp, ///< compressed aka X11G11Z10 and always 1. W.
 		ub256, ///< unsigned byte interpreted as between 0 and 255.
 	};

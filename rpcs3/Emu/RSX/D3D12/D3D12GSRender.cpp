@@ -329,7 +329,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<steady_clock> program_load_end = steady_clock::now();
 	m_timers.program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
-	if (!m_fragment_program.valid)
+	if (!current_fragment_program.valid)
 	{
 		rsx::thread::end();
 		return;

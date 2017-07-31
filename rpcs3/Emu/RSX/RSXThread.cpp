@@ -125,7 +125,7 @@ namespace rsx
 				return sizeof(u8) * 4;
 			}
 			fmt::throw_exception("Wrong vector size" HERE);
-		case vertex_base_type::cmp: return sizeof(u16) * 4;
+		case vertex_base_type::cmp: return 4;
 		case vertex_base_type::ub256: verify(HERE), (size == 4); return sizeof(u8) * 4;
 		}
 		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!" HERE, (u8)type);
@@ -309,32 +309,6 @@ namespace rsx
 		return (u32)element_push_buffer.size();
 	}
 
-	bool thread::is_probable_instanced_draw()
-	{
-		if (!g_cfg.video.batch_instanced_geometry)
-			return false;
-
-		//If the array registers have not been touched, the index array has also not been touched via notify or via register set, its likely an instanced draw
-		//gcm lib will set the registers once and then call the same draw command over and over with different transform params to achieve this
-		if (m_index_buffer_changed || m_vertex_attribs_changed)
-			return false;
-
-		auto& draw_clause = rsx::method_registers.current_draw_clause;
-		if (draw_clause.command != m_last_command)
-			return false;
-
-		if (draw_clause.command != rsx::draw_command::inlined_array)
-		{
-			if (draw_clause.first_count_commands.back().second != m_last_first_count.second ||
-				draw_clause.first_count_commands.front().first != m_last_first_count.first)
-				return false;
-		}
-		else if (m_last_first_count.second != draw_clause.inline_vertex_array.size())
-			return false;
-
-		return true;
-	}
-
 	void thread::end()
 	{
 		rsx::method_registers.transform_constants.clear();
@@ -355,17 +329,6 @@ namespace rsx
 			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			capture_frame("Draw " + rsx::to_string(rsx::method_registers.current_draw_clause.primitive) + std::to_string(element_count));
 		}
-
-		auto& clause = rsx::method_registers.current_draw_clause;
-		
-		m_last_command = clause.command;
-		if (m_last_command == rsx::draw_command::inlined_array)
-			m_last_first_count = std::make_pair(0, (u32)clause.inline_vertex_array.size());
-		else
-			m_last_first_count = std::make_pair(clause.first_count_commands.front().first, clause.first_count_commands.back().second);
-
-		m_index_buffer_changed = false;
-		m_vertex_attribs_changed = false;
 	}
 
 	void thread::on_task()
@@ -542,20 +505,6 @@ namespace rsx
 		{
 			m_vblank_thread->join();
 			m_vblank_thread.reset();
-		}
-
-		if (m_vertex_streaming_task.available_threads > 0)
-		{
-			for (auto &task : m_vertex_streaming_task.worker_threads)
-			{
-				if (!task.worker_thread)
-					break;
-
-				task.worker_thread->join();
-				task.worker_thread.reset();
-			}
-
-			m_vertex_streaming_task.available_threads = 0;
 		}
 	}
 
@@ -920,9 +869,10 @@ namespace rsx
 		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
-	RSXVertexProgram thread::get_current_vertex_program() const
+	void thread::get_current_vertex_program()
 	{
-		RSXVertexProgram result = {};
+		auto &result = current_vertex_program = {};
+
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		result.data.reserve((512 - transform_program_start) * 4);
 		result.rsx_vertex_inputs.reserve(rsx::limits::vertex_count);
@@ -980,16 +930,144 @@ namespace rsx
 						is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
 			}
 		}
+	}
+
+	vertex_input_layout thread::analyse_inputs_interleaved() const
+	{
+		const rsx_state& state = rsx::method_registers;
+		const u32 input_mask = state.vertex_attrib_input_mask();
+
+		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
+		{
+			vertex_input_layout result = {};
+
+			interleaved_range_info info = {};
+			info.interleaved = true;
+			info.locations.reserve(8);
+
+			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+			{
+				const u32 mask = (1u << index);
+				auto &vinfo = state.vertex_arrays_info[index];
+
+				if (vinfo.size() > 0)
+				{
+					info.locations.push_back(index);
+					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
+				}
+			}
+
+			result.interleaved_blocks.push_back(info);
+			return result;
+		}
+
+		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
+		vertex_input_layout result = {};
+
+		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		{
+			const bool enabled = !!(input_mask & (1 << index));
+			if (!enabled)
+				continue;
+
+			if (vertex_push_buffers[index].size > 0)
+			{
+				std::pair<u8, u32> volatile_range_info = std::make_pair(index, vertex_push_buffers[index].data.size() * (u32)sizeof(u32));
+				result.volatile_blocks.push_back(volatile_range_info);
+				result.attribute_placement[index] = attribute_buffer_placement::transient;
+				continue;
+			}
+
+			//Check for interleaving
+			auto &info = state.vertex_arrays_info[index];
+			if (info.size() == 0 && state.register_vertex_info[index].size > 0)
+			{
+				//Reads from register
+				result.referenced_registers.push_back(index);
+				result.attribute_placement[index] = attribute_buffer_placement::transient;
+				continue;
+			}
+
+			if (info.size() > 0)
+			{
+				result.attribute_placement[index] = attribute_buffer_placement::persistent;
+				const u32 base_address = info.offset() & 0x7fffffff;
+				bool alloc_new_block = true;
+
+				for (auto &block : result.interleaved_blocks)
+				{
+					if (block.attribute_stride != info.stride())
+					{
+						//Stride does not match, continue
+						continue;
+					}
+
+					if (base_address > block.base_offset)
+					{
+						const u32 diff = base_address - block.base_offset;
+						if (diff > info.stride())
+						{
+							//Not interleaved, continue
+							continue;
+						}
+					}
+					else
+					{
+						const u32 diff = block.base_offset - base_address;
+						if (diff > info.stride())
+						{
+							//Not interleaved, continue
+							continue;
+						}
+
+						//Matches, and this address is lower than existing
+						block.base_offset = base_address;
+					}
+
+					alloc_new_block = false;
+					block.locations.push_back(index);
+					block.interleaved = true;
+					block.min_divisor = std::min(block.min_divisor, info.frequency());
+
+					if (block.all_modulus)
+						block.all_modulus = !!(frequency_divider_mask & (1 << index));
+
+					break;
+				}
+
+				if (alloc_new_block)
+				{
+					interleaved_range_info block = {};
+					block.base_offset = base_address;
+					block.attribute_stride = info.stride();
+					block.memory_location = info.offset() >> 31;
+					block.locations.reserve(4);
+					block.locations.push_back(index);
+					block.min_divisor = info.frequency();
+					block.all_modulus = !!(frequency_divider_mask & (1 << index));
+
+					result.interleaved_blocks.push_back(block);
+				}
+			}
+		}
+
+		for (auto &info : result.interleaved_blocks)
+		{
+			//Calculate real data address to be used during upload
+			info.real_offset_address = state.vertex_data_base_offset() + rsx::get_address(info.base_offset, info.memory_location);
+		}
+
 		return result;
 	}
 
-	RSXFragmentProgram thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info) const
+	void thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info)
 	{
-		RSXFragmentProgram result = {};
+		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
 		if (shader_program == 0)
-			return result;
+			return;
 
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
@@ -1064,8 +1142,6 @@ namespace rsx
 		}
 
 		result.set_texture_dimension(texture_dimensions);
-
-		return result;
 	}
 
 	void thread::reset()
@@ -1141,119 +1217,280 @@ namespace rsx
 		}
 	}
 
-	void thread::post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type, u32 vector_element_count,
-			u32 attribute_src_stride, u8 dst_stride, u32 vertex_count, std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback)
+	std::pair<u32, u32> thread::calculate_memory_requirements(vertex_input_layout& layout, const u32 vertex_count)
 	{
-		upload_stream_packet packet;
-		packet.dst_span = dst;
-		packet.src_span = src;
-		packet.src_stride = attribute_src_stride;
-		packet.type = type;
-		packet.dst_stride = dst_stride;
-		packet.vector_width = vector_element_count;
-		packet.post_upload_func = callback;
-		packet.vertex_count = vertex_count;
+		u32 persistent_memory_size = 0;
+		u32 volatile_memory_size = 0;
 
-		if (m_vertex_streaming_task.available_threads == 0)
+		volatile_memory_size += (u32)layout.referenced_registers.size() * 16u;
+
+		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
 		{
-			const u32 streaming_thread_count = (u32)g_cfg.video.vertex_upload_threads;
-			m_vertex_streaming_task.available_threads = streaming_thread_count;
-
-			for (u32 n = 0; n < streaming_thread_count; ++n)
+			for (auto &info : layout.volatile_blocks)
 			{
-				thread_ctrl::spawn(m_vertex_streaming_task.worker_threads[n].worker_thread, "Vertex Stream " + std::to_string(n), [this, n]()
+				volatile_memory_size += info.second;
+			}
+		}
+		else if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		{
+			for (auto &block : layout.interleaved_blocks)
+			{
+				volatile_memory_size += block.attribute_stride * vertex_count;
+			}
+		}
+		else
+		{
+			for (auto &block : layout.interleaved_blocks)
+			{
+				u32 unique_verts;
+
+				if (block.min_divisor > 1)
 				{
-					auto &owner = m_vertex_streaming_task;
-					auto &task = m_vertex_streaming_task.worker_threads[n];
-					const u32 index = n;
-
-					while (!Emu.IsStopped())
+					if (block.all_modulus)
+						unique_verts = block.min_divisor;
+					else
 					{
-						if (task.thread_status.load(std::memory_order_consume) != 0)
-						{
-							for (auto &packet: task.packets)
-							{
-								write_vertex_array_data_to_buffer(packet.dst_span, packet.src_span, packet.vertex_count, packet.type, packet.vector_width, packet.src_stride, packet.dst_stride);
-
-								if (packet.post_upload_func)
-									packet.post_upload_func(packet.dst_span.data(), packet.type, (u8)packet.vector_width, packet.vertex_count);
-
-								owner.remaining_tasks--;
-							}
-
-							task.packets.resize(0);
-							task.thread_status.store(0);
-							_mm_sfence();
-						}
-
-						std::this_thread::yield();
+						unique_verts = vertex_count / block.min_divisor;
+						if (vertex_count % block.min_divisor) unique_verts++;
 					}
-				});
+				}
+				else
+					unique_verts = vertex_count;
+
+				persistent_memory_size += block.attribute_stride * unique_verts;
 			}
 		}
 
-		//Increment job counter..
-		m_vertex_streaming_task.remaining_tasks++;
+		return std::make_pair(persistent_memory_size, volatile_memory_size);
+	}
 
-		//Assign this packet to a thread
-		//Simple round robin based on first available thread
-		upload_stream_worker *best_fit = nullptr;
-		for (auto &worker : m_vertex_streaming_task.worker_threads)
+	void thread::fill_vertex_layout_state(vertex_input_layout& layout, const u32 vertex_count, s32* buffer)
+	{
+		std::array<u32, 16> offset_in_block = {};
+		u32 volatile_offset = 0;
+		u32 persistent_offset = 0;
+
+		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
 		{
-			if (!worker.worker_thread)
-				break;
-
-			if (worker.thread_status.load(std::memory_order_consume) == 0)
+			for (auto &info : layout.volatile_blocks)
 			{
-				if (worker.packets.size() == 0)
+				offset_in_block[info.first] = volatile_offset;
+				volatile_offset += info.second;
+			}
+		}
+
+		for (u8 index : layout.referenced_registers)
+		{
+			offset_in_block[index] = volatile_offset;
+			volatile_offset += 16;
+		}
+
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		{
+			auto &block = layout.interleaved_blocks[0];
+			for (u8 index : block.locations)
+			{
+				auto &info = rsx::method_registers.vertex_arrays_info[index];
+
+				offset_in_block[index] = persistent_offset; //just because this var is 0 when we enter here; inlined is transient memory
+				persistent_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
+			}
+		}
+		else
+		{
+			for (auto &block : layout.interleaved_blocks)
+			{
+				for (u8 index : block.locations)
 				{
-					worker.packets.push_back(packet);
-					return;
+					const u32 local_address = (rsx::method_registers.vertex_arrays_info[index].offset() & 0x7fffffff);
+					offset_in_block[index] = persistent_offset + (local_address - block.base_offset);
 				}
 
-				if (best_fit == nullptr)
-					best_fit = &worker;
-				else if (best_fit->packets.size() > worker.packets.size())
-					best_fit = &worker;
+				u32 unique_verts;
+
+				if (block.min_divisor > 1)
+				{
+					if (block.all_modulus)
+						unique_verts = block.min_divisor;
+					else
+					{
+						unique_verts = vertex_count / block.min_divisor;
+						if (vertex_count % block.min_divisor) unique_verts++;
+					}
+				}
+				else
+					unique_verts = vertex_count;
+
+				persistent_offset += block.attribute_stride * unique_verts;
 			}
 		}
 
-		best_fit->packets.push_back(packet);
-	}
+		//Fill the data
+		memset(buffer, 0, 256);
 
-	void thread::start_vertex_upload_task()
-	{
-		for (auto &worker : m_vertex_streaming_task.worker_threads)
+		const s32 swap_storage_mask = (1 << 8);
+		const s32 volatile_storage_mask = (1 << 9);
+		const s32 default_frequency_mask = (1 << 10);
+		const s32 repeating_frequency_mask = (3 << 10);
+		const s32 input_function_modulo_mask = (1 << 12);
+		const s32 input_divisor_mask = (0xFFFF << 13);
+
+		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+
+		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			if (!worker.worker_thread)
-				break;
+			if (layout.attribute_placement[index] == attribute_buffer_placement::none)
+				continue;
 
-			if (worker.thread_status.load(std::memory_order_consume) == 0 && worker.packets.size() > 0)
+			rsx::vertex_base_type type = {};
+			s32 size = 0;
+			s32 attributes = 0;
+
+			bool is_be_type = true;
+
+			if (layout.attribute_placement[index] == attribute_buffer_placement::transient)
 			{
-				worker.thread_status.store(1);
+				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+				{
+					auto &info = rsx::method_registers.vertex_arrays_info[index];
+					type = info.type();
+					size = (s32)info.size();
+
+					attributes = layout.interleaved_blocks[0].attribute_stride;
+					attributes |= default_frequency_mask | volatile_storage_mask;
+
+					is_be_type = false;
+				}
+				else if (rsx::method_registers.current_draw_clause.is_immediate_draw)
+				{
+					auto &info = rsx::method_registers.register_vertex_info[index];
+					type = info.type;
+					size = (s32)info.size;
+
+					attributes = rsx::get_vertex_type_size_on_host(type, size);
+					attributes |= default_frequency_mask | volatile_storage_mask;
+
+					is_be_type = true;
+				}
+				else
+				{
+					//Register
+					auto& info = rsx::method_registers.register_vertex_info[index];
+					type = info.type;
+					size = (s32)info.size;
+
+					attributes = rsx::get_vertex_type_size_on_host(type, size);
+					attributes |= volatile_storage_mask;
+
+					is_be_type = false;
+				}
+			}
+			else
+			{
+				auto &info = rsx::method_registers.vertex_arrays_info[index];
+				type = info.type();
+				size = info.size();
+
+				const u32 frequency = info.frequency();
+				switch (frequency)
+				{
+				case 0:
+				case 1:
+					attributes |= default_frequency_mask;
+					break;
+				default:
+				{
+					if (modulo_mask & (1 << index))
+						attributes |= input_function_modulo_mask;
+
+					attributes |= repeating_frequency_mask;
+					attributes |= (frequency << 13) & input_divisor_mask;
+				}
+				}
+
+				attributes |= info.stride();
+			} //end attribute placement check
+
+			switch (type)
+			{
+			case rsx::vertex_base_type::cmp:
+				size = 1;
+				//fall through
+			default:
+				if (is_be_type) attributes |= swap_storage_mask;
+				break;
+			case rsx::vertex_base_type::ub:
+			case rsx::vertex_base_type::ub256:
+				if (!is_be_type) attributes |= swap_storage_mask;
+				break;
+			}
+
+			buffer[index * 4 + 0] = (s32)type;
+			buffer[index * 4 + 1] = size;
+			buffer[index * 4 + 2] = (s32)offset_in_block[index];
+			buffer[index * 4 + 3] = attributes;
+		}
+	}
+
+	void thread::write_vertex_data_to_memory(vertex_input_layout &layout, const u32 first_vertex, const u32 vertex_count, void *persistent_data, void *volatile_data)
+	{
+		char *transient = (char *)volatile_data;
+		char *persistent = (char *)persistent_data;
+
+		auto &draw_call = rsx::method_registers.current_draw_clause;
+
+		if (transient != nullptr)
+		{
+			if (draw_call.command == rsx::draw_command::inlined_array)
+			{
+				memcpy(transient, draw_call.inline_vertex_array.data(), draw_call.inline_vertex_array.size() * sizeof(u32));
+				//Is it possible to reference data outside of the inlined array?
+				return;
+			}
+
+			for (u8 index : layout.referenced_registers)
+			{
+				memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+				transient += 16;
+			}
+
+			if (draw_call.is_immediate_draw)
+			{
+				for (auto &info : layout.volatile_blocks)
+				{
+					memcpy(transient, vertex_push_buffers[info.first].data.data(), info.second);
+					transient += info.second;
+				}
+
+				return;
 			}
 		}
-	}
 
-	void thread::wait_for_vertex_upload_task()
-	{
-		while (m_vertex_streaming_task.remaining_tasks.load(std::memory_order_consume) != 0 && !Emu.IsStopped())
+		if (persistent != nullptr)
 		{
-			_mm_pause();
+			for (auto &block : layout.interleaved_blocks)
+			{
+				u32 unique_verts;
+				u32 vertex_base = first_vertex * block.attribute_stride;
+
+				if (block.min_divisor > 1)
+				{
+					if (block.all_modulus)
+						unique_verts = block.min_divisor;
+					else
+					{
+						unique_verts = vertex_count / block.min_divisor;
+						if (vertex_count % block.min_divisor) unique_verts++;
+					}
+				}
+				else
+					unique_verts = vertex_count;
+
+				const u32 data_size = block.attribute_stride * unique_verts;
+				memcpy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
+				persistent += data_size;
+			}
 		}
-	}
-
-	bool thread::vertex_upload_task_ready()
-	{
-		if (g_cfg.video.vertex_upload_threads < 2)
-			return false;
-
-		//Not initialized
-		if (m_vertex_streaming_task.available_threads == 0)
-			return true;
-
-		//At least two threads are available
-		return (m_vertex_streaming_task.remaining_tasks < (m_vertex_streaming_task.available_threads - 1));
 	}
 
 	void thread::flip(int buffer)

@@ -736,6 +736,8 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			if (!flushable)
 				return false;
 
+			close_render_pass();
+
 			if (synchronized)
 			{
 				if (m_last_flushable_cb >= 0)
@@ -817,7 +819,6 @@ void VKGSRender::begin()
 		m_vertex_cache->purge();
 
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, descriptor_pool, 0));
-		m_last_descriptor_set = VK_NULL_HANDLE;
 		m_used_descriptors = 0;
 
 		m_uniform_buffer_ring_info.reset_allocation_stats();
@@ -858,20 +859,6 @@ void VKGSRender::begin()
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 }
 
-void VKGSRender::emit_geometry_instance(u32/* instance_count*/)
-{
-	begin_render_pass();
-
-	m_instanced_draws++;
-	//Repeat last command
-	if (!m_last_draw_indexed)
-		vkCmdDraw(*m_current_command_buffer, m_last_vertex_count, 1, 0, 0);
-	else
-	{
-		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, m_last_ib_offset, m_last_ib_type);
-		vkCmdDrawIndexed(*m_current_command_buffer, m_last_vertex_count, 1, 0, 0, 0);
-	}
-}
 
 void VKGSRender::begin_render_pass()
 {
@@ -916,39 +903,8 @@ void VKGSRender::end()
 
 	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
 
-	const bool is_instanced = is_probable_instanced_draw() && m_last_descriptor_set != VK_NULL_HANDLE && m_program != nullptr;
-
-	if (is_instanced)
-	{
-		//Copy descriptor set
-		VkCopyDescriptorSet copy_info[39];
-		u8 descriptors_count = 0;
-		
-		for (u8 i = 0; i < 39; ++i)
-		{
-			if ((m_program->attribute_location_mask & (1ull << i)) == 0)
-				continue;
-
-			const u8 n = descriptors_count;
-
-			copy_info[n] = {};
-			copy_info[n].sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
-			copy_info[n].srcSet = m_last_descriptor_set;
-			copy_info[n].dstSet = descriptor_sets;
-			copy_info[n].srcBinding = i;
-			copy_info[n].dstBinding = i;
-			copy_info[n].srcArrayElement = 0;
-			copy_info[n].dstArrayElement = 0;
-			copy_info[n].descriptorCount = 1;
-
-			descriptors_count++;
-		}
-
-		vkUpdateDescriptorSets(*m_device, 0, nullptr, descriptors_count, (const VkCopyDescriptorSet*)&copy_info);
-	}
-
 	//Load program here since it is dependent on vertex state
-	if (!load_program(is_instanced))
+	if (!load_program())
 	{
 		LOG_ERROR(RSX, "No valid program bound to pipeline. Skipping draw");
 		rsx::thread::end();
@@ -957,18 +913,6 @@ void VKGSRender::end()
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	//m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
-
-	if (is_instanced)
-	{
-		//Only the program constants descriptors should have changed
-		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-		vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets, 0, nullptr);
-
-		emit_geometry_instance(1);
-		m_last_instanced_cb_index = m_current_cb_index;
-		rsx::thread::end();
-		return;
-	}
 
 	close_render_pass();	//Texture upload stuff conflicts active RPs
 
@@ -1173,9 +1117,6 @@ void VKGSRender::end()
 	{
 		const auto vertex_count = std::get<1>(upload_info);
 		vkCmdDraw(*m_current_command_buffer, vertex_count, 1, 0, 0);
-
-		m_last_vertex_count = vertex_count;
-		m_last_draw_indexed = false;
 	}
 	else
 	{
@@ -1187,15 +1128,7 @@ void VKGSRender::end()
 
 		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 		vkCmdDrawIndexed(*m_current_command_buffer, index_count, 1, 0, 0, 0);
-
-		m_last_draw_indexed = false;
-		m_last_ib_type = index_type;
-		m_last_ib_offset = offset;
-		m_last_vertex_count = index_count;
 	}
-
-	m_last_instanced_cb_index = ~0;
-	m_last_descriptor_set = descriptor_sets;
 
 	vk::leave_uninterruptible();
 
@@ -1207,15 +1140,17 @@ void VKGSRender::end()
 
 	if (g_cfg.video.overlay)
 	{
-		if (m_last_vertex_count < 1024)
+		const auto vertex_count = std::get<1>(upload_info);
+
+		if (vertex_count < 1024)
 			m_uploads_small++;
-		else if (m_last_vertex_count < 2048)
+		else if (vertex_count < 2048)
 			m_uploads_1k++;
-		else if (m_last_vertex_count < 4096)
+		else if (vertex_count < 4096)
 			m_uploads_2k++;
-		else if (m_last_vertex_count < 8192)
+		else if (vertex_count < 8192)
 			m_uploads_4k++;
-		else if (m_last_vertex_count < 16384)
+		else if (vertex_count < 16384)
 			m_uploads_8k++;
 		else
 			m_uploads_16k++;
@@ -1433,12 +1368,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 void VKGSRender::flush_command_queue(bool hard_sync)
 {
-	if (m_attrib_ring_info.mapped)
-	{
-		wait_for_vertex_upload_task();
-		m_attrib_ring_info.unmap();
-	}
-
 	close_render_pass();
 	close_and_submit_command_buffer({}, m_current_command_buffer->submit_fence);
 
@@ -1580,187 +1509,182 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 	}
 }
 
-bool VKGSRender::load_program(bool fast_update)
+bool VKGSRender::load_program(bool)
 {
-	RSXVertexProgram vertex_program;
-	RSXFragmentProgram fragment_program;
+	auto &vertex_program = current_vertex_program;
+	auto &fragment_program = current_fragment_program;
 
-	if (!fast_update)
+	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture&, bool is_depth) -> std::tuple<bool, u16>
 	{
-		auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture&, bool is_depth) -> std::tuple<bool, u16>
-		{
-			vk::render_target *surface = nullptr;
-			if (!is_depth)
-				surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
-			else
-				surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
-
-			if (!surface) return std::make_tuple(false, 0);
-
-			return std::make_tuple(true, surface->native_pitch);
-		};
-
-		fragment_program = get_current_fragment_program(rtt_lookup_func);
-		if (!fragment_program.valid) return false;
-
-		vertex_program = get_current_vertex_program();
-
-		vk::pipeline_props properties = {};
-
-		properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		bool unused;
-		properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, unused);
-
-		if (rsx::method_registers.restart_index_enabled())
-		{
-			properties.ia.primitiveRestartEnable = VK_TRUE;
-		}
+		vk::render_target *surface = nullptr;
+		if (!is_depth)
+			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
 		else
-			properties.ia.primitiveRestartEnable = VK_FALSE;
+			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
+
+		if (!surface) return std::make_tuple(false, 0);
+
+		return std::make_tuple(true, surface->native_pitch);
+	};
+
+	get_current_fragment_program(rtt_lookup_func);
+	if (!fragment_program.valid) return false;
+
+	get_current_vertex_program();
+
+	vk::pipeline_props properties = {};
+
+	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	bool unused;
+	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, unused);
+
+	if (rsx::method_registers.restart_index_enabled())
+	{
+		properties.ia.primitiveRestartEnable = VK_TRUE;
+	}
+	else
+		properties.ia.primitiveRestartEnable = VK_FALSE;
 
 
-		for (int i = 0; i < 4; ++i)
-		{
-			properties.att_state[i].colorWriteMask = 0xf;
-			properties.att_state[i].blendEnable = VK_FALSE;
-		}
+	for (int i = 0; i < 4; ++i)
+	{
+		properties.att_state[i].colorWriteMask = 0xf;
+		properties.att_state[i].blendEnable = VK_FALSE;
+	}
 
-		VkColorComponentFlags mask = 0;
-		if (rsx::method_registers.color_mask_a()) mask |= VK_COLOR_COMPONENT_A_BIT;
-		if (rsx::method_registers.color_mask_b()) mask |= VK_COLOR_COMPONENT_B_BIT;
-		if (rsx::method_registers.color_mask_g()) mask |= VK_COLOR_COMPONENT_G_BIT;
-		if (rsx::method_registers.color_mask_r()) mask |= VK_COLOR_COMPONENT_R_BIT;
+	VkColorComponentFlags mask = 0;
+	if (rsx::method_registers.color_mask_a()) mask |= VK_COLOR_COMPONENT_A_BIT;
+	if (rsx::method_registers.color_mask_b()) mask |= VK_COLOR_COMPONENT_B_BIT;
+	if (rsx::method_registers.color_mask_g()) mask |= VK_COLOR_COMPONENT_G_BIT;
+	if (rsx::method_registers.color_mask_r()) mask |= VK_COLOR_COMPONENT_R_BIT;
 
-		VkColorComponentFlags color_masks[4] = { mask };
+	VkColorComponentFlags color_masks[4] = { mask };
 
-		u8 render_targets[] = { 0, 1, 2, 3 };
+	u8 render_targets[] = { 0, 1, 2, 3 };
+
+	for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
+	{
+		properties.att_state[render_targets[idx]].colorWriteMask = mask;
+	}
+
+	if (rsx::method_registers.blend_enabled())
+	{
+		VkBlendFactor sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
+		VkBlendFactor sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
+		VkBlendFactor dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
+		VkBlendFactor dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
+
+		VkBlendOp equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
+		VkBlendOp equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
 
 		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
 		{
-			properties.att_state[render_targets[idx]].colorWriteMask = mask;
+			properties.att_state[render_targets[idx]].blendEnable = VK_TRUE;
+			properties.att_state[render_targets[idx]].srcColorBlendFactor = sfactor_rgb;
+			properties.att_state[render_targets[idx]].dstColorBlendFactor = dfactor_rgb;
+			properties.att_state[render_targets[idx]].srcAlphaBlendFactor = sfactor_a;
+			properties.att_state[render_targets[idx]].dstAlphaBlendFactor = dfactor_a;
+			properties.att_state[render_targets[idx]].colorBlendOp = equation_rgb;
+			properties.att_state[render_targets[idx]].alphaBlendOp = equation_a;
 		}
 
-		if (rsx::method_registers.blend_enabled())
-		{
-			VkBlendFactor sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			VkBlendFactor sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-			VkBlendFactor dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			VkBlendFactor dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-
-			VkBlendOp equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-			VkBlendOp equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
-
-			for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
-			{
-				properties.att_state[render_targets[idx]].blendEnable = VK_TRUE;
-				properties.att_state[render_targets[idx]].srcColorBlendFactor = sfactor_rgb;
-				properties.att_state[render_targets[idx]].dstColorBlendFactor = dfactor_rgb;
-				properties.att_state[render_targets[idx]].srcAlphaBlendFactor = sfactor_a;
-				properties.att_state[render_targets[idx]].dstAlphaBlendFactor = dfactor_a;
-				properties.att_state[render_targets[idx]].colorBlendOp = equation_rgb;
-				properties.att_state[render_targets[idx]].alphaBlendOp = equation_a;
-			}
-
-			auto blend_colors = rsx::get_constant_blend_colors();
-			properties.cs.blendConstants[0] = blend_colors[0];
-			properties.cs.blendConstants[1] = blend_colors[1];
-			properties.cs.blendConstants[2] = blend_colors[2];
-			properties.cs.blendConstants[3] = blend_colors[3];
-		}
-		else
-		{
-			for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
-			{
-				properties.att_state[render_targets[idx]].blendEnable = VK_FALSE;
-			}
-		}
-
-		properties.cs.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		properties.cs.attachmentCount = m_draw_buffers_count;
-		properties.cs.pAttachments = properties.att_state;
-
-		if (rsx::method_registers.logic_op_enabled())
-		{
-			properties.cs.logicOpEnable = true;
-			properties.cs.logicOp = vk::get_logic_op(rsx::method_registers.logic_operation());
-		}
-
-		properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		properties.ds.depthWriteEnable = rsx::method_registers.depth_write_enabled() ? VK_TRUE : VK_FALSE;
-
-		if (rsx::method_registers.depth_bounds_test_enabled())
-		{
-			properties.ds.depthBoundsTestEnable = VK_TRUE;
-			properties.ds.minDepthBounds = rsx::method_registers.depth_bounds_min();
-			properties.ds.maxDepthBounds = rsx::method_registers.depth_bounds_max();
-		}
-		else
-			properties.ds.depthBoundsTestEnable = VK_FALSE;
-
-		if (rsx::method_registers.stencil_test_enabled())
-		{
-			properties.ds.stencilTestEnable = VK_TRUE;
-			properties.ds.front.writeMask = rsx::method_registers.stencil_mask();
-			properties.ds.front.compareMask = rsx::method_registers.stencil_func_mask();
-			properties.ds.front.reference = rsx::method_registers.stencil_func_ref();
-			properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers.stencil_op_fail());
-			properties.ds.front.passOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zpass());
-			properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zfail());
-			properties.ds.front.compareOp = vk::get_compare_func(rsx::method_registers.stencil_func());
-
-			if (rsx::method_registers.two_sided_stencil_test_enabled())
-			{
-				properties.ds.back.writeMask = rsx::method_registers.back_stencil_mask();
-				properties.ds.back.compareMask = rsx::method_registers.back_stencil_func_mask();
-				properties.ds.back.reference = rsx::method_registers.back_stencil_func_ref();
-				properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail());
-				properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
-				properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
-				properties.ds.back.compareOp = vk::get_compare_func(rsx::method_registers.back_stencil_func());
-			}
-			else
-				properties.ds.back = properties.ds.front;
-		}
-		else
-			properties.ds.stencilTestEnable = VK_FALSE;
-
-		if (rsx::method_registers.depth_test_enabled())
-		{
-			properties.ds.depthTestEnable = VK_TRUE;
-			properties.ds.depthCompareOp = vk::get_compare_func(rsx::method_registers.depth_func());
-		}
-		else
-			properties.ds.depthTestEnable = VK_FALSE;
-
-		properties.rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
-		properties.rs.depthClampEnable = VK_FALSE;
-		properties.rs.rasterizerDiscardEnable = VK_FALSE;
-		properties.rs.depthBiasEnable = VK_FALSE;
-
-		if (rsx::method_registers.cull_face_enabled())
-			properties.rs.cullMode = vk::get_cull_face(rsx::method_registers.cull_face_mode());
-		else
-			properties.rs.cullMode = VK_CULL_MODE_NONE;
-
-		properties.rs.frontFace = vk::get_front_face(rsx::method_registers.front_face_mode());
-
-		size_t idx = vk::get_render_pass_location(
-			vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
-			vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
-			(u8)m_draw_buffers_count);
-
-		properties.render_pass = m_render_passes[idx];
-
-		properties.num_targets = m_draw_buffers_count;
-
-		vk::enter_uninterruptible();
-
-		//Load current program from buffer
-		m_program = m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
+		auto blend_colors = rsx::get_constant_blend_colors();
+		properties.cs.blendConstants[0] = blend_colors[0];
+		properties.cs.blendConstants[1] = blend_colors[1];
+		properties.cs.blendConstants[2] = blend_colors[2];
+		properties.cs.blendConstants[3] = blend_colors[3];
 	}
 	else
-		vk::enter_uninterruptible();
+	{
+		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
+		{
+			properties.att_state[render_targets[idx]].blendEnable = VK_FALSE;
+		}
+	}
+
+	properties.cs.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	properties.cs.attachmentCount = m_draw_buffers_count;
+	properties.cs.pAttachments = properties.att_state;
+
+	if (rsx::method_registers.logic_op_enabled())
+	{
+		properties.cs.logicOpEnable = true;
+		properties.cs.logicOp = vk::get_logic_op(rsx::method_registers.logic_operation());
+	}
+
+	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	properties.ds.depthWriteEnable = rsx::method_registers.depth_write_enabled() ? VK_TRUE : VK_FALSE;
+
+	if (rsx::method_registers.depth_bounds_test_enabled())
+	{
+		properties.ds.depthBoundsTestEnable = VK_TRUE;
+		properties.ds.minDepthBounds = rsx::method_registers.depth_bounds_min();
+		properties.ds.maxDepthBounds = rsx::method_registers.depth_bounds_max();
+	}
+	else
+		properties.ds.depthBoundsTestEnable = VK_FALSE;
+
+	if (rsx::method_registers.stencil_test_enabled())
+	{
+		properties.ds.stencilTestEnable = VK_TRUE;
+		properties.ds.front.writeMask = rsx::method_registers.stencil_mask();
+		properties.ds.front.compareMask = rsx::method_registers.stencil_func_mask();
+		properties.ds.front.reference = rsx::method_registers.stencil_func_ref();
+		properties.ds.front.failOp = vk::get_stencil_op(rsx::method_registers.stencil_op_fail());
+		properties.ds.front.passOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zpass());
+		properties.ds.front.depthFailOp = vk::get_stencil_op(rsx::method_registers.stencil_op_zfail());
+		properties.ds.front.compareOp = vk::get_compare_func(rsx::method_registers.stencil_func());
+
+		if (rsx::method_registers.two_sided_stencil_test_enabled())
+		{
+			properties.ds.back.writeMask = rsx::method_registers.back_stencil_mask();
+			properties.ds.back.compareMask = rsx::method_registers.back_stencil_func_mask();
+			properties.ds.back.reference = rsx::method_registers.back_stencil_func_ref();
+			properties.ds.back.failOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail());
+			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
+			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
+			properties.ds.back.compareOp = vk::get_compare_func(rsx::method_registers.back_stencil_func());
+		}
+		else
+			properties.ds.back = properties.ds.front;
+	}
+	else
+		properties.ds.stencilTestEnable = VK_FALSE;
+
+	if (rsx::method_registers.depth_test_enabled())
+	{
+		properties.ds.depthTestEnable = VK_TRUE;
+		properties.ds.depthCompareOp = vk::get_compare_func(rsx::method_registers.depth_func());
+	}
+	else
+		properties.ds.depthTestEnable = VK_FALSE;
+
+	properties.rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
+	properties.rs.depthClampEnable = VK_FALSE;
+	properties.rs.rasterizerDiscardEnable = VK_FALSE;
+	properties.rs.depthBiasEnable = VK_FALSE;
+
+	if (rsx::method_registers.cull_face_enabled())
+		properties.rs.cullMode = vk::get_cull_face(rsx::method_registers.cull_face_mode());
+	else
+		properties.rs.cullMode = VK_CULL_MODE_NONE;
+
+	properties.rs.frontFace = vk::get_front_face(rsx::method_registers.front_face_mode());
+
+	size_t idx = vk::get_render_pass_location(
+		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
+		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
+		(u8)m_draw_buffers_count);
+
+	properties.render_pass = m_render_passes[idx];
+
+	properties.num_targets = m_draw_buffers_count;
+
+	vk::enter_uninterruptible();
+
+	//Load current program from buffer
+	m_program = m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
 
 	//TODO: Update constant buffers..
 	//1. Update scale-offset matrix
@@ -1781,7 +1705,7 @@ bool VKGSRender::load_program(bool fast_update)
 
 	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
 
-	if (!fast_update || m_transform_constants_dirty)
+	if (true)//m_transform_constants_dirty)
 	{
 		const size_t vertex_constants_offset = m_uniform_buffer_ring_info.alloc<256>(512 * 4 * sizeof(float));
 		buf = (u8*)m_uniform_buffer_ring_info.map(vertex_constants_offset, 512 * 4 * sizeof(float));
@@ -1793,21 +1717,18 @@ bool VKGSRender::load_program(bool fast_update)
 		m_transform_constants_dirty = false;
 	}
 
-	if (!fast_update)
-	{
-		const size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-		const size_t fragment_buffer_sz = fragment_constants_sz + (17 * 4 * sizeof(float));
-		const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(fragment_buffer_sz);
+	const size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const size_t fragment_buffer_sz = fragment_constants_sz + (17 * 4 * sizeof(float));
+	const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(fragment_buffer_sz);
 
-		buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_buffer_sz);
-		if (fragment_constants_sz)
-			m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
+	buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_buffer_sz);
+	if (fragment_constants_sz)
+		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
 
-		fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
-		m_uniform_buffer_ring_info.unmap();
+	fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
+	m_uniform_buffer_ring_info.unmap();
 
-		m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
-	}
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
 
 	vk::leave_uninterruptible();
 
