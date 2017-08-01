@@ -182,13 +182,30 @@ emu_settings::emu_settings(const std::string& path) : QObject()
 
 	// Add global config
 	config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	currentSettings += YAML::Load(config.to_string());
+	try
+	{
+		currentSettings += YAML::Load(config.to_string());
+	}
+	catch(...)
+	{
+		LOG_ERROR(GENERAL, "Failed to load global config.yml.  Using g_cfg!");
+		currentSettings += YAML::Load(g_cfg.to_string());
+	}
+
 
 	// Add game config
 	if (!path.empty())
 	{
 		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
-		currentSettings += YAML::Load(config.to_string());
+		try
+		{
+			currentSettings += YAML::Load(config.to_string());
+		}
+		catch (...)
+		{
+			LOG_ERROR(GENERAL, "Failed to load the game's custom config.yml.  Using g_cfg!");
+			currentSettings += YAML::Load(g_cfg.to_string());
+		}
 	}
 }
 
