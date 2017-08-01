@@ -166,7 +166,7 @@ void spu_recompiler::compile(spu_function_t& f)
 			dis_asm.dump_pc = m_pos;
 			dis_asm.disasm(m_pos);
 			compiler.comment(dis_asm.last_opcode.c_str());
-			log += dis_asm.last_opcode.c_str();
+			log += dis_asm.last_opcode;
 			log += '\n';
 		}
 

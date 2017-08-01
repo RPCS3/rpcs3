@@ -150,8 +150,8 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	const int metadata_section_size = ((edat->flags & EDAT_COMPRESSED_FLAG) != 0 || (edat->flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
 	const int metadata_offset = 0x100;
 
-	std::unique_ptr<u8> enc_data;
-	std::unique_ptr<u8> dec_data;
+	std::unique_ptr<u8[]> enc_data;
+	std::unique_ptr<u8[]> dec_data;
 	u8 hash[0x10] = { 0 };
 	u8 key_result[0x10] = { 0 };
 	u8 hash_result[0x14] = { 0 };
@@ -315,7 +315,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 {
 	const int total_blocks = (int)((edat->file_size + edat->block_size - 1) / edat->block_size);
 	u64 size_left = (int)edat->file_size;
-	std::unique_ptr<u8> data(new u8[edat->block_size]);
+	std::unique_ptr<u8[]> data(new u8[edat->block_size]);
 
 	for (int i = 0; i < total_blocks; i++)
 	{
@@ -427,8 +427,8 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 
 	long bytes_read = 0;
 	long bytes_to_read = metadata_size;
-	std::unique_ptr<u8> metadata(new u8[metadata_size]);
-	std::unique_ptr<u8> empty_metadata(new u8[metadata_size]);
+	std::unique_ptr<u8[]> metadata(new u8[metadata_size]);
+	std::unique_ptr<u8[]> empty_metadata(new u8[metadata_size]);
 
 	while (bytes_to_read > 0)
 	{
@@ -487,7 +487,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			if ((edat->flags & EDAT_FLAG_0x20) != 0) //Sony failed again, they used buffer from 0x100 with half size of real metadata.
 			{
 				int metadata_buf_size = block_num * 0x10;
-				std::unique_ptr<u8> metadata_buf(new u8[metadata_buf_size]);
+				std::unique_ptr<u8[]> metadata_buf(new u8[metadata_buf_size]);
 				f->seek(file_offset + metadata_offset);
 				f->read(metadata_buf.get(), metadata_buf_size);
 				sha1(metadata_buf.get(), metadata_buf_size, signature_hash);
@@ -516,7 +516,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		{
 			// Setup header signature hash.
 			memset(signature_hash, 0, 20);
-			std::unique_ptr<u8> header_buf(new u8[0xD8]);
+			std::unique_ptr<u8[]> header_buf(new u8[0xD8]);
 			f->seek(file_offset);
 			f->read(header_buf.get(), 0xD8);
 			sha1(header_buf.get(), 0xD8, signature_hash );
@@ -577,7 +577,7 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 	int dev_hash_result = 0;
 
 	const int file_name_length = (int) strlen(file_name);
-	std::unique_ptr<u8> buf(new u8[0x30 + file_name_length]);
+	std::unique_ptr<u8[]> buf(new u8[0x30 + file_name_length]);
 	
 	// Build the title buffer (content_id + file_name).
 	memcpy(buf.get(), npd->content_id, 0x30);
