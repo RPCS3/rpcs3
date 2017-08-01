@@ -82,6 +82,7 @@ before_script:
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       mkdir ./appdir/usr/plugins/xcbglintegrations/ ; 
       mkdir ./appdir/usr/plugins/imageformats/ ;
+      cp ~/Qt/5.9.1/gcc_64/lib/libQt5Svg.so.5 ./appdir/usr/lib/ ;
       cp ~/Qt/5.9.1/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
       cp ~/Qt/5.9.1/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
       cp ~/Qt/5.9.1/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;

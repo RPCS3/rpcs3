@@ -162,13 +162,15 @@ void rpcs3_app::InitializeCallbacks()
 			h = guiSettings->GetValue(GUI::gs_height).toInt();
 		}
 
+		bool disableMouse = guiSettings->GetValue(GUI::gs_disableMouse).toBool();
+
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
-		case video_renderer::null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon());
-		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon());
-		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
+		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
+		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 #ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon());
+		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 #endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}

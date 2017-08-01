@@ -213,6 +213,13 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 
 	connect(m_Slider_Size, &QSlider::valueChanged, this,  &game_list_frame::RequestIconSizeActSet);
+	connect(m_Slider_Size, &QSlider::sliderReleased, this, [&]{ xgui_settings->SetValue(GUI::gl_iconSize, m_Slider_Size->value()); });
+	connect(m_Slider_Size, &QSlider::actionTriggered, [&](int action){
+		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
+		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
+			Q_EMIT RequestSaveSliderPos(true); // actionTriggered happens before the value was changed
+		}
+	});
 
 	connect(m_modeActs, &QActionGroup::triggered, [=](QAction* act) {
 		Q_EMIT RequestListModeActSet(act == m_modeActList.action);
@@ -317,10 +324,10 @@ void game_list_frame::OnColClicked(int col)
 // Filter for Categories
 void game_list_frame::FilterData()
 {
-	for (int i = 0; i < gameList->rowCount(); ++i)
+	for (auto& game : m_game_data)
 	{
 		bool match = false;
-		const QString category = qstr(m_game_data[i].info.category);
+		const QString category = qstr(game.info.category);
 		for (const auto& filter : m_categoryFilters)
 		{
 			if (category.contains(filter))
@@ -329,7 +336,7 @@ void game_list_frame::FilterData()
 				break;
 			}
 		}
-		gameList->setRowHidden(i, !match || !SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial));
+		game.isVisible = match && SearchMatchesApp(game.info.name, game.info.serial);
 	}
 }
 
@@ -432,27 +439,17 @@ void game_list_frame::Refresh(bool fromDrive)
 
 			// Load Image
 			QImage img;
-			QPixmap pxmap;
 
-			if (!game.icon_path.empty() && img.load(qstr(game.icon_path)))
+			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
 			{
-				QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-				scaled.fill(m_Icon_Color);
-				QPainter painter(&scaled);
-				painter.drawImage(QPoint(0,0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-				painter.end();
-				pxmap = QPixmap::fromImage(scaled);
-			}
-			else
-			{
-				img = QImage(m_Icon_Size, QImage::Format_ARGB32);
-				QString abspath = QDir(qstr(game.icon_path)).absolutePath();
-				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(abspath));
-				img.fill(QColor(0, 0, 0, 0));
-				pxmap = QPixmap::fromImage(img);
+				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
 
-			m_game_data.push_back({ game, img, pxmap, bootable });
+			bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
+
+			QPixmap pxmap = PaintedPixmap(img, hasCustomConfig);
+
+			m_game_data.push_back({ game, img, pxmap, true, bootable, hasCustomConfig });
 		}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
@@ -467,8 +464,8 @@ void game_list_frame::Refresh(bool fromDrive)
 
 	if (m_isListLayout)
 	{
-		int row = PopulateGameList();
 		FilterData();
+		int row = PopulateGameList();
 		gameList->selectRow(row);
 		SortGameList();
 		gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
@@ -628,6 +625,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	connect(boot, &QAction::triggered, [=]() {Boot(row); });
 	connect(configure, &QAction::triggered, [=]() {
 		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
+		Refresh(true);
 	});
 	connect(removeGame, &QAction::triggered, [=]()
 	{
@@ -638,7 +636,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			Refresh();
 		}
 	});
-	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); });
+	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
@@ -667,10 +665,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	}
 
 	// Disable removeconfig if no config exists.
-	if (fs::is_file(fs::get_config_dir() + "data/" + currGame.serial + "/config.yml") == false)
-	{
-		removeConfig->setEnabled(false);
-	}
+	removeConfig->setEnabled(m_game_data[row].hasCustomConfig);
 
 	myMenu.exec(globalPos);
 }
@@ -720,6 +715,30 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	}
 }
 
+QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)
+{
+	QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
+	scaled.fill(m_Icon_Color);
+
+	QPainter painter(&scaled);
+
+	if (!img.isNull())
+	{
+		painter.drawImage(QPoint(0, 0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	}
+
+	if (paintConfigIcon && !m_isListLayout)
+	{
+		int width = m_Icon_Size.width() * 0.2;
+		QPoint origin = QPoint(m_Icon_Size.width() - width, 0);
+		painter.drawImage(origin, QImage(":/Icons/cog_gray.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	}
+
+	painter.end();
+
+	return QPixmap::fromImage(scaled);
+}
+
 void game_list_frame::ResizeIcons(const int& sliderPos)
 {
 	m_icon_size_index = sliderPos;
@@ -730,19 +749,17 @@ void game_list_frame::ResizeIcons(const int& sliderPos)
 		m_Slider_Size->setSliderPosition(sliderPos);
 	}
 
-	xgui_settings->SetValue(GUI::gl_iconSize, sliderPos);
-
-	for (size_t i = 0; i < m_game_data.size(); i++)
+	for (auto& game : m_game_data)
 	{
-		QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-		scaled.fill(m_Icon_Color);
-		QPainter painter(&scaled);
-		painter.drawImage(QPoint(0, 0), m_game_data[i].icon.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-		painter.end();
-		m_game_data[i].pxmap = QPixmap::fromImage(scaled);
+		game.pxmap = PaintedPixmap(game.icon, game.hasCustomConfig);
 	}
 
 	Refresh();
+}
+
+int game_list_frame::GetSliderValue()
+{
+	return m_Slider_Size->value();
 }
 
 void game_list_frame::SetListMode(const bool& isList)
@@ -756,7 +773,7 @@ void game_list_frame::SetListMode(const bool& isList)
 	m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 	m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 
-	Refresh();
+	Refresh(true);
 
 	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid);
 }
@@ -836,8 +853,7 @@ int game_list_frame::PopulateGameList()
 	std::string selected_item = CurrentSelectionIconPath();
 
 	gameList->clearContents();
-
-	gameList->setRowCount(m_game_data.size());
+	gameList->setRowCount((int)m_game_data.size());
 
 	auto l_GetItem = [](const std::string& text)
 	{
@@ -848,29 +864,42 @@ int game_list_frame::PopulateGameList()
 	};
 
 	int row = 0;
-	for (const GUI_GameInfo& game : m_game_data)
+	for (size_t i = 0; i < m_game_data.size(); i++)
 	{
+		if (!m_game_data[i].isVisible)
+		{
+			continue;
+		}
+
 		// Icon
 		QTableWidgetItem* iconItem = new QTableWidgetItem;
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
-		iconItem->setData(Qt::DecorationRole, game.pxmap);
-		iconItem->setData(Qt::UserRole, row);
+		iconItem->setData(Qt::DecorationRole, m_game_data[i].pxmap);
+		iconItem->setData(Qt::UserRole, (int)i);
+
+		QTableWidgetItem* titleItem = l_GetItem(m_game_data[i].info.name);
+		if (m_game_data[i].hasCustomConfig)
+		{
+			titleItem->setIcon(QIcon(":/Icons/cog_black.png"));
+		}
+
 		gameList->setItem(row, 0, iconItem);
+		gameList->setItem(row, 1, titleItem);
+		gameList->setItem(row, 2, l_GetItem(m_game_data[i].info.serial));
+		gameList->setItem(row, 3, l_GetItem(m_game_data[i].info.fw));
+		gameList->setItem(row, 4, l_GetItem(m_game_data[i].info.app_ver));
+		gameList->setItem(row, 5, l_GetItem(m_game_data[i].info.category));
+		gameList->setItem(row, 6, l_GetItem(m_game_data[i].info.path));
+		gameList->setItem(row, 7, l_GetItem(GetStringFromU32(m_game_data[i].info.resolution, resolution::mode, true)));
+		gameList->setItem(row, 8, l_GetItem(GetStringFromU32(m_game_data[i].info.sound_format, sound::format, true)));
+		gameList->setItem(row, 9, l_GetItem(GetStringFromU32(m_game_data[i].info.parental_lvl, parental::level)));
 
-		gameList->setItem(row, 1, l_GetItem(game.info.name));
-		gameList->setItem(row, 2, l_GetItem(game.info.serial));
-		gameList->setItem(row, 3, l_GetItem(game.info.fw));
-		gameList->setItem(row, 4, l_GetItem(game.info.app_ver));
-		gameList->setItem(row, 5, l_GetItem(game.info.category));
-		gameList->setItem(row, 6, l_GetItem(game.info.path));
-		gameList->setItem(row, 7, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
-		gameList->setItem(row, 8, l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
-		gameList->setItem(row, 9, l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level)));
-
-		if (selected_item == game.info.icon_path) result = row;
+		if (selected_item == m_game_data[i].info.icon_path) result = row;
 
 		row++;
 	}
+
+	gameList->setRowCount(row);
 
 	return result;
 }

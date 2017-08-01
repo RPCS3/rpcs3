@@ -54,7 +54,8 @@
 			"alwaysStart": "Leave this enabled unless you are a developer.",
 			"startGameFullscreen": "Automatically puts the game window in fullscreen.\nDouble click on the game window or press alt+enter to toggle fullscreen and windowed mode.",
 			"showFPSInTitle": "It can be useful to disable it with buggy screen recording software that fail to select a window with ever changing title.",
-			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution."
+			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution.",
+			"gs_disableMouse": "Disables the activation of fullscreen mode per doubleclick while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR)."
 		}
 	},
 	"gpu": {

@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -1102,6 +1102,13 @@
                <string>Viewport</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_50">
+               <item>
+                <widget class="QCheckBox" name="gs_disableMouse">
+                 <property name="text">
+                  <string>Don't use doubleclick for Fullscreen mode</string>
+                 </property>
+                </widget>
+               </item>
                <item>
                 <widget class="QCheckBox" name="gs_resizeOnBoot">
                  <property name="text">
