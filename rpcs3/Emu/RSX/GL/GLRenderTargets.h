@@ -382,7 +382,7 @@ private:
 	}
 
 public:
-	surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit =false, bool crop=false)
+	surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit=false, bool crop=false, bool ignore_depth_formats=false)
 	{
 		gl::render_target *surface = nullptr;
 		u16  x_offset = 0;
@@ -426,6 +426,9 @@ public:
 				}
 			}
 		}
+
+		if (ignore_depth_formats)
+			return{};
 
 		//Check depth surfaces for overlap
 		for (auto &tex_info : m_depth_stencil_storage)
