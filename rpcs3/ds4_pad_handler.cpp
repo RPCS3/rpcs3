@@ -593,6 +593,8 @@ void ds4_thread::CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevIn
 		serial = std::string(wSerial.begin(), wSerial.end());
 	}
 
+	ds4Dev.nextReport = std::chrono::system_clock::now();
+
 	if (!GetCalibrationData(&ds4Dev))
 	{
 		LOG_ERROR(HLE, "[DS4] Failed getting calibration data, ignoring controller!");
@@ -628,6 +630,8 @@ void ds4_thread::on_init(const std::shared_ptr<void>& _this)
 
 			devInfo = devInfo->next;
 		}
+
+		hid_free_enumeration(devInfo);
 	}
 
 	if (controllers.size() == 0)
@@ -698,6 +702,7 @@ void ds4_thread::on_task()
 			continue;
 		}
 
+		auto time = std::chrono::system_clock::now();
 		u32 online = 0;
 		u32 i = 0;
 
@@ -743,8 +748,22 @@ void ds4_thread::on_task()
 			}
 
 			// no data? keep going
+			// may also be a bluetooth controller that's turned off
 			if (res == 0)
+			{
+				// will cause hid_read to return -1 if the wireless controller is turned off
+				// which will allow the thread to receive inputs again once it's turned back on
+				if (controller.second.btCon && time > controller.second.nextReport)
+				{
+					std::array<u8, 64> buf{};
+					buf[0] = 0x2;
+					hid_get_feature_report(controller.second.hidDevice, buf.data(), buf.size());
+
+					controller.second.nextReport = time + std::chrono::seconds(5);
+				}
+
 				continue;
+			}
 
 			int offset = 0;
 			// check report and set offset
@@ -789,3 +808,4 @@ void ds4_thread::on_task()
 		std::this_thread::sleep_for((online > 0) ? THREAD_SLEEP : THREAD_SLEEP_INACTIVE);
 	}
 }
+

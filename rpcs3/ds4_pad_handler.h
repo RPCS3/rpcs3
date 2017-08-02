@@ -38,6 +38,7 @@ private:
 		hid_device* hidDevice{ nullptr };
 		std::string path{ "" };
 		bool btCon{ false };
+		std::chrono::time_point<std::chrono::system_clock> nextReport;
 		std::array<DS4CalibData, DS4CalibIndex::COUNT> calibData;
 		bool newVibrateData{true};
 		u8 largeVibrate{0};
