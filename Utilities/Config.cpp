@@ -276,10 +276,15 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value)
+bool cfg::node::from_string(const std::string& value) try
 {
 	cfg::decode(YAML::Load(value), *this);
 	return true;
+}
+catch (const std::exception& e)
+{
+	cfg.fatal("%s thrown: %s", typeid(e).name(), e.what());
+	return false;
 }
 
 void cfg::node::from_default()
