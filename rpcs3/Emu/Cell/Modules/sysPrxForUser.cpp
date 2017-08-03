@@ -53,12 +53,14 @@ s32 sys_get_random_number(vm::ptr<u8> addr, u64 size)
 {
 	sysPrxForUser.warning("sys_get_random_number(addr=*0x%x, size=%d)", addr, size);
 
-	if (size > 4096)
-		size = 4096;
-
-	for (u32 i = 0; i < (u32)size - 1; i++)
+	if (size > 0x1000)
 	{
-		addr[i] = rand() % 256;
+		return CELL_EINVAL;
+	}
+
+	for (u32 i = 0; i < (u32)size; i++)
+	{
+		addr[i] = rand() & 0xff;
 	}
 
 	return CELL_OK;
