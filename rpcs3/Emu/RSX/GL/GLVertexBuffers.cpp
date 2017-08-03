@@ -164,7 +164,7 @@ namespace
 		return std::make_tuple(element_count, mapping.second);
 	}
 
-	std::tuple<u32, u32, u32> upload_index_buffer(gsl::span<const gsl::byte> raw_index_buffer, void *ptr, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32>> first_count_commands, u32 initial_vertex_count)
+	std::tuple<u32, u32, u32> upload_index_buffer(gsl::span<const gsl::byte> raw_index_buffer, void *ptr, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32>>& first_count_commands, u32 initial_vertex_count)
 	{
 		u32 min_index, max_index, vertex_draw_count = initial_vertex_count;
 
@@ -198,12 +198,13 @@ namespace
 
 	struct vertex_buffer_visitor
 	{
-		vertex_buffer_visitor(u32 vtx_cnt, gl::ring_buffer& heap, gl::glsl::program* prog, gl::texture* attrib_buffer, u32 min_texbuffer_offset)
+		vertex_buffer_visitor(u32 vtx_cnt, gl::ring_buffer& heap, gl::glsl::program* prog, gl::texture* attrib_buffer, u32 min_texbuffer_offset, gl::vertex_cache* vertex_cache)
 		    : vertex_count(vtx_cnt)
 		    , m_attrib_ring_info(heap)
 		    , m_program(prog)
 		    , m_gl_attrib_buffers(attrib_buffer)
 		    , m_min_texbuffer_alignment(min_texbuffer_offset)
+			, m_vertex_cache(vertex_cache)
 		{
 		}
 
@@ -213,21 +214,30 @@ namespace
 			if (!m_program->uniforms.has_location(s_reg_table[vertex_array.index], &location))
 				return;
 
-			// Fill vertex_array
-			u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
-
-			u32 data_size = vertex_count * element_size;
-			u32 gl_type   = to_gl_internal_type(vertex_array.type, vertex_array.attribute_size);
+			GLenum gl_type = to_gl_internal_type(vertex_array.type, vertex_array.attribute_size);
 			auto& texture = m_gl_attrib_buffers[vertex_array.index];
+			const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size);
+			const u32 data_size = vertex_count * element_size;
 
+			const uintptr_t local_addr = (uintptr_t)vertex_array.data.data();
 			u32 buffer_offset = 0;
-			auto mapping      = m_attrib_ring_info.alloc_from_heap(data_size, m_min_texbuffer_alignment);
-			gsl::byte* dst    = static_cast<gsl::byte*>(mapping.first);
-			buffer_offset     = mapping.second;
-			gsl::span<gsl::byte> dest_span(dst, data_size);
 
-			write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size));
-			prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
+			if (auto uploaded = m_vertex_cache->find_vertex_range(local_addr, gl_type, data_size))
+			{
+				buffer_offset = uploaded->offset_in_heap;
+			}
+			else
+			{
+				// Fill vertex_array
+				auto mapping = m_attrib_ring_info.alloc_from_heap(data_size, m_min_texbuffer_alignment);
+				gsl::byte* dst = static_cast<gsl::byte*>(mapping.first);
+				buffer_offset = mapping.second;
+				gsl::span<gsl::byte> dest_span(dst, data_size);
+
+				m_vertex_cache->store_range(local_addr, gl_type, data_size, buffer_offset);
+				write_vertex_array_data_to_buffer(dest_span, vertex_array.data, vertex_count, vertex_array.type, vertex_array.attribute_size, vertex_array.stride, rsx::get_vertex_type_size_on_host(vertex_array.type, vertex_array.attribute_size));
+				prepare_buffer_for_writing(dst, vertex_array.type, vertex_array.attribute_size, vertex_count);
+			}
 
 			texture.copy_from(m_attrib_ring_info, gl_type, buffer_offset, data_size);
 		}
@@ -263,6 +273,7 @@ namespace
 		gl::glsl::program* m_program;
 		gl::texture* m_gl_attrib_buffers;
 		GLint m_min_texbuffer_alignment;
+		gl::vertex_cache* m_vertex_cache;
 	};
 
 	struct draw_command_visitor
@@ -272,6 +283,7 @@ namespace
 
 		draw_command_visitor(gl::ring_buffer& index_ring_buffer, gl::ring_buffer& attrib_ring_buffer,
 		    gl::texture* gl_attrib_buffers, gl::glsl::program* program, GLint min_texbuffer_alignment,
+			gl::vertex_cache* vertex_cache,
 		    std::function<attribute_storage(rsx::rsx_state, std::vector<std::pair<u32, u32>>)> gvb)
 		    : m_index_ring_buffer(index_ring_buffer)
 		    , m_attrib_ring_buffer(attrib_ring_buffer)
@@ -279,6 +291,7 @@ namespace
 		    , m_program(program)
 		    , m_min_texbuffer_alignment(min_texbuffer_alignment)
 		    , get_vertex_buffers(gvb)
+			, m_vertex_cache(vertex_cache)
 		{
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index) {
 				if (rsx::method_registers.vertex_arrays_info[index].size() ||
@@ -368,7 +381,7 @@ namespace
 		gl::ring_buffer& m_index_ring_buffer;
 		gl::ring_buffer& m_attrib_ring_buffer;
 		gl::texture* m_gl_attrib_buffers;
-
+		gl::vertex_cache* m_vertex_cache;
 		gl::glsl::program* m_program;
 		GLint m_min_texbuffer_alignment;
 		std::function<attribute_storage(rsx::rsx_state, std::vector<std::pair<u32, u32>>)>
@@ -379,7 +392,7 @@ namespace
 			u32 verts_allocated = max_index - min_index + 1;
 
 			vertex_buffer_visitor visitor(verts_allocated, m_attrib_ring_buffer,
-			    m_program, m_gl_attrib_buffers, m_min_texbuffer_alignment);
+			    m_program, m_gl_attrib_buffers, m_min_texbuffer_alignment, m_vertex_cache);
 			const auto& vertex_buffers =
 			    get_vertex_buffers(rsx::method_registers, {{min_index, verts_allocated}});
 			for (const auto& vbo : vertex_buffers) std::apply_visitor(visitor, vbo);
@@ -452,11 +465,12 @@ std::tuple<u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::set_vertex_b
 {
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
 	auto result = std::apply_visitor(draw_command_visitor(*m_index_ring_buffer, *m_attrib_ring_buffer,
-	                              m_gl_attrib_buffers, m_program, m_min_texbuffer_alignment,
-	                              [this](const auto& state, const auto& list) {
-		                              return this->get_vertex_buffers(state, list);
-		                             }),
-	    get_draw_command(rsx::method_registers));
+		m_gl_attrib_buffers, m_program, m_min_texbuffer_alignment,
+		m_vertex_cache.get(),
+		[this](const auto& state, const auto& list) {
+			return this->get_vertex_buffers(state, list, 0);
+		}),
+		get_draw_command(rsx::method_registers));
 
 	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();

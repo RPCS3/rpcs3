@@ -626,6 +626,11 @@ VKGSRender::VKGSRender() : GSRender()
 		m_text_writer.reset(new vk::text_writer());
 		m_text_writer->init(*m_device, m_memory_type_mapping, m_render_passes[idx]);
 	}
+
+	if (g_cfg.video.disable_vertex_cache)
+		m_vertex_cache.reset(new vk::null_vertex_cache());
+	else
+		m_vertex_cache.reset(new vk::weak_vertex_cache());
 }
 
 VKGSRender::~VKGSRender()
@@ -809,6 +814,7 @@ void VKGSRender::begin()
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
 		flush_command_queue(true);
+		m_vertex_cache->purge();
 
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, descriptor_pool, 0));
 		m_last_descriptor_set = VK_NULL_HANDLE;
@@ -1534,6 +1540,8 @@ void VKGSRender::process_swap_request()
 		m_text_writer->reset_descriptors();
 	}
 
+	m_vertex_cache->purge();
+
 	m_swap_command_buffer = nullptr;
 }
 
@@ -1950,8 +1958,19 @@ void VKGSRender::prepare_rtts()
 		(*m_device), &*m_current_command_buffer, m_optimal_tiling_supported_formats, m_memory_type_mapping);
 
 	//Reset framebuffer information
+	VkFormat old_format = VK_FORMAT_UNDEFINED;
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
+		//Flush old address if we keep missing it
+		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		{
+			if (old_format == VK_FORMAT_UNDEFINED)
+				old_format = vk::get_compatible_surface_format(m_surface_info[i].color_format).first;
+
+			m_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height,
+				*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+		}
+
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
 		m_surface_info[i].width = clip_width;
 		m_surface_info[i].height = clip_height;
@@ -2124,9 +2143,9 @@ void VKGSRender::flip(int buffer)
 
 	if (!resize_screen)
 	{
-		u32 buffer_width = gcm_buffers[buffer].width;
-		u32 buffer_height = gcm_buffers[buffer].height;
-		u32 buffer_pitch = gcm_buffers[buffer].pitch;
+		u32 buffer_width = display_buffers[buffer].width;
+		u32 buffer_height = display_buffers[buffer].height;
+		u32 buffer_pitch = display_buffers[buffer].pitch;
 
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 
@@ -2159,18 +2178,18 @@ void VKGSRender::flip(int buffer)
 		CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), 0, m_present_semaphore, VK_NULL_HANDLE, &m_current_present_image));
 
 		//Blit contents to screen..
-		VkImage image_to_flip = nullptr;
+		vk::image* image_to_flip = nullptr;
 
 		if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
-			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0])->value;
+			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0]);
 		else if (std::get<1>(m_rtts.m_bound_render_targets[1]) != nullptr)
-			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1])->value;
+			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1]);
 
 		VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
 		if (image_to_flip)
 		{
-			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				0, 0, buffer_width, buffer_height, aspect_ratio.x, aspect_ratio.y, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				0, 0, image_to_flip->width(), image_to_flip->height(), aspect_ratio.x, aspect_ratio.y, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 		}
 		else
 		{

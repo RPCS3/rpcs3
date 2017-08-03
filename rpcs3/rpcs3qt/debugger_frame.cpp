@@ -1,6 +1,6 @@
 #include "debugger_frame.h"
 
-#include <QSplitter>
+#include <QScrollBar>
 #include <QApplication>
 #include <QFontDatabase>
 #include <QCompleter>
@@ -8,7 +8,8 @@
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
 extern bool user_asked_for_frame_capture;
 
-debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), parent)
+debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
+	: QDockWidget(tr("Debugger"), parent), xgui_settings(settings)
 {
 	pSize = 10;
 
@@ -63,12 +64,12 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_list->setFont(mono);
 	m_regs->setFont(mono);
 
-	QSplitter* splitter = new QSplitter(this);
-	splitter->addWidget(m_list);
-	splitter->addWidget(m_regs);
+	m_splitter = new QSplitter(this);
+	m_splitter->addWidget(m_list);
+	m_splitter->addWidget(m_regs);
 
 	QHBoxLayout* hbox_w_list = new QHBoxLayout();
-	hbox_w_list->addWidget(splitter);
+	hbox_w_list->addWidget(m_splitter);
 
 	vbox_p_main->addLayout(hbox_b_main);
 	vbox_p_main->addLayout(hbox_w_list);
@@ -112,10 +113,40 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	UpdateUnitList();
 }
 
+void debugger_frame::SaveSettings()
+{
+	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+}
+
 void debugger_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	DebugFrameClosed();
+	Q_EMIT DebugFrameClosed();
+}
+
+void debugger_frame::showEvent(QShowEvent * event)
+{
+	// resize splitter widgets
+	QByteArray state = xgui_settings->GetValue(GUI::d_splitterState).toByteArray();
+
+	if (state.isEmpty()) // resize 2:1
+	{
+		const int width_right = width() / 3;
+		const int width_left = width() - width_right;
+		m_splitter->setSizes({ width_left, width_right });
+	}
+	else
+	{
+		m_splitter->restoreState(state);
+	}
+	QDockWidget::showEvent(event);
+}
+
+void debugger_frame::hideEvent(QHideEvent * event)
+{
+	// save splitter state or it will resume its initial state on next show
+	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+	QDockWidget::hideEvent(event);
 }
 
 #include <map>
@@ -293,9 +324,10 @@ void debugger_frame::WriteRegs()
 		m_regs->clear();
 		return;
 	}
-
+	int loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
 	m_regs->setText(qstr(cpu->dump()));
+	m_regs->verticalScrollBar()->setValue(loc);
 }
 
 void debugger_frame::OnUpdate()

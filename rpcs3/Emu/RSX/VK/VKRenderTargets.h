@@ -191,7 +191,7 @@ namespace rsx
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static void invalidate_rtt_surface_contents(vk::command_buffer* pcmd, vk::render_target *rtt, vk::render_target *old_surface, bool forced)
+		static void invalidate_rtt_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *rtt, vk::render_target *old_surface, bool forced)
 		{
 			if (forced)
 			{

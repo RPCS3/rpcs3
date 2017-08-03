@@ -129,11 +129,11 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 152: return "sys_raw_spu_get_int_mask";
 	case 153: return "sys_raw_spu_set_int_stat";
 	case 154: return "sys_raw_spu_get_int_stat";
-	case 155: return "sys_spu_image_get_information?";
+	case 155: return "_sys_spu_image_get_information";
 	case 156: return "sys_spu_image_open";
-	case 157: return "sys_spu_image_import";
-	case 158: return "sys_spu_image_close";
-	case 159: return "sys_raw_spu_load";
+	case 157: return "_sys_spu_image_import";
+	case 158: return "_sys_spu_image_close";
+	case 159: return "_sys_raw_spu_image_load";
 	case 160: return "sys_raw_spu_create";
 	case 161: return "sys_raw_spu_destroy";
 	case 163: return "sys_raw_spu_read_puint_mb";

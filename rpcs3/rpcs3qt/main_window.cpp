@@ -9,7 +9,7 @@
 #include <QDesktopWidget>
 
 #include "vfs_dialog.h"
-#include "save_data_utility.h"
+#include "save_data_list_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -75,29 +75,18 @@ void main_window::Init()
 	appIcon = QIcon(":/rpcs3.ico");
 
 	// add toolbar widgets (crappy Qt designer is not able to)
-	ui->sizeSlider->setRange(0, GUI::gl_icon_size.size() - 1);
-	// get icon size from list
-	int icon_size_index = 0;
-	QString icon_Size_Str = guiSettings->GetValue(GUI::gl_iconSize).toString();
-	for (int i = 0; i < GUI::gl_icon_size.count(); i++)
-	{
-		if (GUI::gl_icon_size.at(i).first == icon_Size_Str)
-		{
-			icon_size_index = i;
-			break;
-		}
-	}
-	ui->sizeSlider->setSliderPosition(icon_size_index);
+	ui->sizeSlider->setRange(0, GUI::gl_max_slider_pos);
+	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(GUI::gl_iconSize).toInt());
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->searchBar);
 
 	// for highdpi resize toolbar icons and height dynamically
 	// choose factors to mimic Gui-Design in main_window.ui
-	const int toolBarHeight = menuBar()->sizeHint().height() * 2;
+	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
 	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
 	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
-	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.625f);
+	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
 
 	CreateActions();
 	CreateDockWindows();
@@ -109,7 +98,7 @@ void main_window::Init()
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 	!appIcon.isNull() ? setWindowIcon(appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
-	RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
+	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 	
 	if (!utils::has_ssse3())
@@ -639,6 +628,8 @@ void main_window::SaveWindowState()
 
 	// Save column settings
 	gameListFrame->SaveSettings();
+	// Save splitter state
+	debuggerFrame->SaveSettings();
 }
 
 void main_window::RepaintToolBarIcons()
@@ -821,7 +812,7 @@ void main_window::BootRecentAction(const QAction* act)
 	}
 
 	// path is invalid: remove action from list return
-	if (containsPath && nam.isEmpty() || !QFileInfo(pth).isDir() && !QFileInfo(pth).isFile())
+	if ((containsPath && nam.isEmpty()) || (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile()))
 	{
 		if (containsPath)
 		{
@@ -876,7 +867,7 @@ void main_window::BootRecentAction(const QAction* act)
 QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint& sc_idx)
 {
 	// if path is not valid remove from list
-	if (entry.second.isEmpty() || !QFileInfo(entry.first).isDir() && !QFileInfo(entry.first).isFile())
+	if (entry.second.isEmpty() || (!QFileInfo(entry.first).isDir() && !QFileInfo(entry.first).isFile()))
 	{
 		if (m_rg_entries.contains(entry))
 		{
@@ -1053,7 +1044,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
-			gameListFrame->LoadSettings();
+			gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
 			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
 			ui->toolBar->setStyleSheet(QString(
 				"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
@@ -1156,27 +1147,44 @@ void main_window::CreateConnects()
 	});
 	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
 	auto resizeIcons = [=](const int& index){
-		if (ui->sizeSlider->value() != index)
+		int val = ui->sizeSlider->value();
+		if (val != index)
 		{
 			ui->sizeSlider->setSliderPosition(index);
 		}
-		gameListFrame->ResizeIcons(GUI::gl_icon_size.at(index).first, GUI::gl_icon_size.at(index).second, index);
+		if (val != gameListFrame->GetSliderValue())
+		{
+			if (m_save_slider_pos)
+			{
+				m_save_slider_pos = false;
+				guiSettings->SetValue(GUI::gl_iconSize, index);
+			}
+			gameListFrame->ResizeIcons(index);
+		}
 	};
 	connect(iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		int index;
 
 		if (act == ui->setIconSizeTinyAct) index = 0;
-		else if (act == ui->setIconSizeSmallAct) index = 1;
-		else if (act == ui->setIconSizeMediumAct) index = 2;
-		else index = 3;
+		else if (act == ui->setIconSizeSmallAct) index = GUI::get_Index(GUI::gl_icon_size_small);
+		else if (act == ui->setIconSizeMediumAct) index = GUI::get_Index(GUI::gl_icon_size_medium);
+		else index = GUI::gl_max_slider_pos;
 
 		resizeIcons(index);
 	});
 	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
-		iconSizeActGroup->actions().at(idx)->trigger();
+		int index = GUI::gl_max_slider_pos / 4;
+
+		if (idx < GUI::get_Index((GUI::gl_icon_size_small + GUI::gl_icon_size_min) / 2)) ui->setIconSizeTinyAct->setChecked(true);
+		else if (idx < GUI::get_Index((GUI::gl_icon_size_medium + GUI::gl_icon_size_small) / 2)) ui->setIconSizeSmallAct->setChecked(true);
+		else if (idx < GUI::get_Index((GUI::gl_icon_size_max + GUI::gl_icon_size_medium) / 2)) ui->setIconSizeMediumAct->setChecked(true);
+		else ui->setIconSizeLargeAct->setChecked(true);
+
+		resizeIcons(idx);
 	});
+	connect(gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save){ m_save_slider_pos = true; });
 	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
 		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
@@ -1214,6 +1222,13 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
 	//connect(ui->toolbar_sort, &QAction::triggered, gameListFrame, sort);
 	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
+	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&] { guiSettings->SetValue(GUI::gl_iconSize, ui->sizeSlider->value()); });
+	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action) {
+		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
+		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
+			m_save_slider_pos = true; // actionTriggered happens before the value was changed
+		}
+	});
 	connect(ui->searchBar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
 }
 
@@ -1224,7 +1239,7 @@ void main_window::CreateDockWindows()
 
 	gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
 	gameListFrame->setObjectName("gamelist");
-	debuggerFrame = new debugger_frame(m_mw);
+	debuggerFrame = new debugger_frame(guiSettings, m_mw);
 	debuggerFrame->setObjectName("debugger");
 	logFrame = new log_frame(guiSettings, m_mw);
 	logFrame->setObjectName("logger");
@@ -1235,7 +1250,7 @@ void main_window::CreateDockWindows()
 	m_mw->setDockNestingEnabled(true);
 	setCentralWidget(m_mw);
 
-	connect(logFrame, &log_frame::log_frameClosed, [=]()
+	connect(logFrame, &log_frame::LogFrameClosed, [=]()
 	{
 		if (ui->showLogAct->isChecked())
 		{
@@ -1250,7 +1265,7 @@ void main_window::CreateDockWindows()
 			guiSettings->SetValue(GUI::mw_debugger, false);
 		}
 	});
-	connect(gameListFrame, &game_list_frame::game_list_frameClosed, [=]()
+	connect(gameListFrame, &game_list_frame::GameListFrameClosed, [=]()
 	{
 		if (ui->showGameListAct->isChecked())
 		{
@@ -1337,11 +1352,12 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	ui->showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
 	ui->showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
-	QString key = guiSettings->GetValue(GUI::gl_iconSize).toString();
-	if (key == GUI::gl_icon_key_large) ui->setIconSizeLargeAct->setChecked(true);
-	else if (key == GUI::gl_icon_key_medium) ui->setIconSizeMediumAct->setChecked(true);
-	else if (key == GUI::gl_icon_key_small) ui->setIconSizeSmallAct->setChecked(true);
-	else ui->setIconSizeTinyAct->setChecked(true);
+	int idx = guiSettings->GetValue(GUI::gl_iconSize).toInt();
+	int index = GUI::gl_max_slider_pos / 4;
+	if (idx < index) ui->setIconSizeTinyAct->setChecked(true);
+	else if (idx < index * 2) ui->setIconSizeSmallAct->setChecked(true);
+	else if (idx < index * 3) ui->setIconSizeMediumAct->setChecked(true);
+	else ui->setIconSizeLargeAct->setChecked(true);
 
 	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();
 	if (isListMode) ui->setlistModeListAct->setChecked(true);
@@ -1360,7 +1376,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
 {
-	if ((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return || isFullScreen() && keyEvent->key() == Qt::Key_Escape)
+	if (((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return) || (isFullScreen() && keyEvent->key() == Qt::Key_Escape))
 	{
 		ui->toolbar_fullscreen->trigger();
 	}

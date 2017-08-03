@@ -2,8 +2,8 @@
 	"audio": {
 		"audioOutBox": "Windows: Always use XAudio, no exceptions.\n\nLinux: ALSA uses the native Linux sound system to output sound.\nThis option has good compatibility and sound quality.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.\nIf unsure, use ALSA.",
 		"audioDump": "Saves all audio as a raw wave file. If unsure, leave this unchecked.",
-		"convert": "Use with buggy audio drivers if you have no sound or completely broken sound.",
-		"downmix": "Windows: Use with buggy audio drivers if you are only hearing parts of the game sound, for example music but not voices.\n\nLinux: Usually required with the ALSA audio backend unless you are actually using surround speakers.\nIf you are only hearing parts of the game sound, for example music but not voices, use this."
+		"convert": "Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.",
+		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\nUse with stereo audio devices. Disable it only if you are using surround sound audio system."
 	},
 	"cpu": {
 		"PPU": {
@@ -24,10 +24,24 @@
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this. Usually safe to use, but if unsure, don't use this option and try auto first."
 		},
 		"checkboxes": {
-			"hookStFunc": "Placebo setting, this does nothing at all.",
+			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
 			"bindSPUThreads": "If your CPU has SMT (Hyper-Threading) SPU threads will run on these logical cores instead.\nUsually faster on an i3, possibly slower or no difference on an i7 or Ryzen.",
-			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen."
+			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
+			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage."
+		},
+		"comboboxes": {
+			"preferredSPUThreads": "Preferred number of threads allowed to enter some sensitive SPU stages.\nSome SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value."
 		}
+	},
+	"debug": {
+		"readColor": "Never use this.",
+		"dumpDepth": "Never use this.",
+		"readDepth": "Never use this.",
+		"glLegacyBuffers": "Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.",
+		"forceHighpZ": "Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.",
+		"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful for developers.\nIf unsure, don't use this option.",
+		"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
+		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option."
 	},
 	"emulator": {
 		"gui": {
@@ -39,7 +53,9 @@
 			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",
 			"alwaysStart": "Leave this enabled unless you are a developer.",
 			"startGameFullscreen": "Automatically puts the game window in fullscreen.\nDouble click on the game window or press alt+enter to toggle fullscreen and windowed mode.",
-			"showFPSInTitle": "It can be useful to disable it with buggy screen recording software that fail to select a window with ever changing title."
+			"showFPSInTitle": "It can be useful to disable it with buggy screen recording software that fail to select a window with ever changing title.",
+			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution.",
+			"gs_disableMouse": "Disables the activation of fullscreen mode per doubleclick while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR)."
 		}
 	},
 	"gpu": {
@@ -48,25 +64,16 @@
 			"resBox": "Leave this on 1280x720, every PS3 game is compatible with this resolution.\nSet it to 1920x1080 only if supported by the game. Lower resolutions may work but are not practical.\nHowever rarely due to emulation bugs some games will only render at low resolutions like 480p.",
 			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
 			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well especially if you use a resolution that is not 720p.",
-			"frameLimitBox": "Auto is the most compatible option.\nSome games can work with frame limit off, but it may cause bugs and crashes.\nSet to off if you get severe hitching and stuttering."
+			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the framerate is too high.\nIf that happens, set value to anything other than Off."
 		},
 		"main": {
 			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
-			"readColor": "Never use this.",
-			"dumpDepth": "Never use this.",
-			"readDepth": "Never use this.",
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
 			"autoInvalidateCache": "Enable this option if the game has broken shadows. May slightly degrade performance.",
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.\nOnly works with OpenGL for now.",
-			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
-		},
-		"debug": {
-			"glLegacyBuffers": "Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
-			"forceHighpZ": "Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.",
-			"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful for developers.\nIf unsure, don't use this option.",
-			"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
-			"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option."
+			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
+			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		}
 	},
 	"input": {

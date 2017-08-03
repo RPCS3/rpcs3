@@ -68,6 +68,9 @@ enum class pad_handler
 #ifdef _WIN32
 	mm,
 #endif
+#ifdef HAVE_LIBEVDEV
+	evdev,
+#endif
 };
 
 enum class video_renderer
@@ -261,7 +264,7 @@ struct cfg_root : cfg::node
 	{
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
 
-		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::fast};
+		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::llvm};
 		cfg::_int<1, 16> ppu_threads{this, "PPU Threads", 2}; // Amount of PPU threads running simultaneously (must be 2)
 		cfg::_bool ppu_debug{this, "PPU Debug"};
 		cfg::_bool llvm_logs{this, "Save LLVM logs"};
@@ -274,7 +277,7 @@ struct cfg_root : cfg::node
 		cfg::_int<32, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
 		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
-		cfg::_bool spu_loop_detection{this, "SPU loop detection", false}; //Try to detect wait loops and trigger thread yield
+		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::automatic};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -323,9 +326,10 @@ struct cfg_root : cfg::node
 		cfg::_bool invalidate_surface_cache_every_frame{this, "Invalidate Cache Every Frame", true};
 		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
 
+		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
 		cfg::_bool batch_instanced_geometry{this, "Batch Instanced Geometry", false}; //Avoid re-uploading geometry if the same draw command is repeated
 		cfg::_int<1, 16> vertex_upload_threads{ this, "Vertex Upload Threads", 1 }; //Max number of threads to use for parallel vertex processing
-		cfg::_int<32, 65536> mt_vertex_upload_threshold{ this, "Multithreaded Vertex Upload Threshold", 4096}; //Minimum vertex count to parallelize
+		cfg::_int<32, 65536> mt_vertex_upload_threshold{ this, "Multithreaded Vertex Upload Threshold", 512}; //Minimum vertex count to parallelize
 
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip"};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames Drawn", 1};

@@ -71,7 +71,7 @@ public:
 	virtual void Init(const u32 max_connect) override;
 	explicit pad_settings_dialog(QWidget *parent = 0);
 	~pad_settings_dialog();
-	void keyPressEvent(QKeyEvent *keyEvent);
+	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void UpdateLabel();
 	void UpdateTimerLabel(const u32 id);
 	void SwitchButtons(const bool IsEnabled);

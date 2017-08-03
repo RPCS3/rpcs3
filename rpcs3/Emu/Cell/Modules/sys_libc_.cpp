@@ -31,7 +31,7 @@ struct ps3_fmt_src
 
 	void skip(std::size_t extra)
 	{
-		++g_count += (u32)extra;
+		g_count += (u32)extra + 1;
 	}
 
 	std::size_t fmt_string(std::string& out, std::size_t extra) const

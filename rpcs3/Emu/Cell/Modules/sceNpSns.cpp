@@ -155,6 +155,11 @@ s32 sceNpSnsFbLoadThrottle()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 sceNpSnsFbGetLongAccessToken()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 
 DECLARE(ppu_module_manager::sceNpSns)("sceNpSns", []()
 {
@@ -164,7 +169,7 @@ DECLARE(ppu_module_manager::sceNpSns)("sceNpSns", []()
 	REG_FUNC(sceNpSns, sceNpSnsFbDestroyHandle);
 	REG_FUNC(sceNpSns, sceNpSnsFbAbortHandle);
 	REG_FUNC(sceNpSns, sceNpSnsFbGetAccessToken);
-
+	REG_FUNC(sceNpSns, sceNpSnsFbGetLongAccessToken);
 	REG_FUNC(sceNpSns, sceNpSnsFbStreamPublish);
 	REG_FUNC(sceNpSns, sceNpSnsFbCheckThrottle);
 	REG_FUNC(sceNpSns, sceNpSnsFbCheckConfig);

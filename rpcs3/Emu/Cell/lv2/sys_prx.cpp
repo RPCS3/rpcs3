@@ -25,7 +25,6 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libaudio.sprx", 0 },
 	{ "/dev_flash/sys/external/libbeisobmf.sprx", 0 },
 	{ "/dev_flash/sys/external/libcamera.sprx", 0 },
-	{ "/dev_flash/sys/external/libgcm_sys.sprx", 0 },
 	{ "/dev_flash/sys/external/libgem.sprx", 0 },
 	{ "/dev_flash/sys/external/libhttp.sprx", 0 },
 	{ "/dev_flash/sys/external/libio.sprx", 0 },
@@ -312,7 +311,7 @@ error_code _sys_prx_get_module_list(u64 flags, vm::ptr<sys_prx_get_module_list_o
 
 error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_info_option_t> pOpt)
 {
-	sys_prx.todo("_sys_prx_get_module_info(id=%d, flags=%d, pOpt=*0x%x)", id, flags, pOpt);
+	sys_prx.todo("_sys_prx_get_module_info(id=0x%x, flags=%d, pOpt=*0x%x)", id, flags, pOpt);
 	return CELL_OK;
 }
 

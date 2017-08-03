@@ -229,7 +229,7 @@ error_code sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<s
 	return _sys_prx_get_module_info(id, 0, opt);
 }
 
-error_code sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ps3::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
+error_code sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
 {
 	sysPrxForUser.trace("sys_prx_get_module_id_by_name(name=%s, flags=0x%x, pOpt=*0x%x)", name, flags, pOpt);
 

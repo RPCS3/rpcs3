@@ -61,7 +61,7 @@ struct VertexProgramDecompiler
 	const std::vector<u32>& m_data;
 	ParamArray m_parr;
 
-	std::string NotZeroPositive(const std::string code);
+	std::string NotZeroPositive(const std::string& code);
 	std::string GetMask(bool is_sca);
 	std::string GetVecMask();
 	std::string GetScaMask();

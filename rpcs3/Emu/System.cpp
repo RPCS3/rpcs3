@@ -75,6 +75,9 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 		case pad_handler::mm: return "MMJoystick";
 #endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev: return "Evdev";
+#endif
 		}
 
 		return unknown;
@@ -799,13 +802,15 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 			{
 			case CELL_ESRCH:
 			case CELL_EDEADLK:
+			case CELL_EPERM:
 			{
 				if (ppu.m_name == "_cellsurMixerMain" || ppu.m_name == "_sys_MixerChStripMain")
 				{
 					if (std::memcmp(ppu.last_function, "sys_mutex_lock", 15) == 0 ||
 						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0 ||
 						std::memcmp(ppu.last_function, "_sys_mutex_lock", 16) == 0 ||
-						std::memcmp(ppu.last_function, "_sys_lwmutex_lock", 18) == 0)
+						std::memcmp(ppu.last_function, "_sys_lwmutex_lock", 18) == 0 ||
+						std::memcmp(ppu.last_function, "sys_lwmutex_unlock", 19) == 0)
 					{
 						level = logs::level::trace;
 					}

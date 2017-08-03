@@ -22,6 +22,8 @@
 #include "Utilities/variant.hpp"
 #include "define_new_memleakdetect.h"
 
+#include "Emu/Cell/lv2/sys_rsx.h"
+
 extern u64 get_system_time();
 
 extern bool user_asked_for_frame_capture;
@@ -113,7 +115,7 @@ namespace rsx
 		std::vector<u32> element_push_buffer;
 
 	public:
-		CellGcmControl* ctrl = nullptr;
+		RsxDmaControl* ctrl = nullptr;
 
 		Timer timer_sync;
 
@@ -129,22 +131,23 @@ namespace rsx
 	public:
 		std::shared_ptr<class ppu_thread> intr_thread;
 
+		// I hate this flag, but until hle is closer to lle, its needed
+		bool isHLE{ false };
+
 		u32 ioAddress, ioSize;
 		u32 flip_status;
-		int flip_mode;
 		int debug_level;
-		int frequency_mode;
 
-		u32 tiles_addr;
-		u32 zculls_addr;
-		vm::ps3::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
-		u32 gcm_buffers_count;
-		u32 gcm_current_buffer;
+		atomic_t<bool> requested_vsync{false};
+		atomic_t<bool> enable_second_vhandler{false};
+
+		RsxDisplayInfo display_buffers[8];
+		u32 display_buffers_count{0};
+		u32 current_display_buffer{0};
 		u32 ctxt_addr;
 		u32 label_addr;
 
 		u32 local_mem_addr, main_mem_addr;
-		bool strict_ordering[0x1000];
 
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
@@ -213,7 +216,7 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;
 		
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
@@ -244,25 +247,30 @@ namespace rsx
 			gsl::span<gsl::byte> dst_span;
 			rsx::vertex_base_type type;
 			u32 vector_width;
+			u32 vertex_count;
 			u32 src_stride;
 			u8 dst_stride;
 		};
 
+		struct upload_stream_worker
+		{
+			std::shared_ptr<thread_ctrl> worker_thread;
+			std::vector<upload_stream_packet> packets;
+			std::atomic<int> thread_status = { 0 };
+		};
+
 		struct upload_stream_task
 		{
-			std::vector<upload_stream_packet> packets;
-			std::atomic<int> remaining_packets = { 0 };
-			std::atomic<int> ready_threads = { 0 };
-			std::atomic<u32> vertex_count;
-
-			std::vector<std::shared_ptr<thread_ctrl>> processing_threads;
+			std::array<upload_stream_worker, 16> worker_threads;
+			int available_threads = 0;
+			std::atomic<int> remaining_tasks = {0};
 		};
 
 		upload_stream_task m_vertex_streaming_task;
 		void post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type,
-				u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride,
+				u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, u32 vertex_count,
 			std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback);
-		void start_vertex_upload_task(u32 vertex_count);
+		void start_vertex_upload_task();
 		void wait_for_vertex_upload_task();
 		bool vertex_upload_task_ready();
 
@@ -340,7 +348,7 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
+		void init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress);
 
 		tiled_region get_tiled_address(u32 offset, u32 location);
 		GcmTileInfo *find_tile(u32 offset, u32 location);

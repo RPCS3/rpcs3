@@ -983,7 +983,7 @@ s32 sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 		return SCE_NP_ERROR_OFFLINE;
 	}
 
-	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
@@ -1005,7 +1005,7 @@ s32 sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 		return SCE_NP_ERROR_OFFLINE;
 	}
 
-	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
@@ -1093,7 +1093,7 @@ s32 sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, vm::ptr<
 		return SCE_NP_ERROR_OFFLINE;
 	}
 
-	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
@@ -1115,7 +1115,7 @@ s32 sceNpManagerGetAccountAge(vm::ptr<s32> age)
 		return SCE_NP_ERROR_OFFLINE;
 	}
 
-	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
@@ -1137,7 +1137,7 @@ s32 sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age
 		return SCE_NP_ERROR_OFFLINE;
 	}
 
-	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
@@ -1163,7 +1163,7 @@ s32 sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 		return SCE_NP_ERROR_OFFLINE;
 	}
 
-	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN || g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
@@ -1513,6 +1513,18 @@ s32 sceNpScoreGetRankingByRange()
 }
 
 s32 sceNpScoreGetRankingByRangeAsync()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpScoreGetFriendsRanking()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNpScoreGetFriendsRankingAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -2020,6 +2032,8 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, sceNpScoreGetRankingByNpIdAsync);
 	REG_FUNC(sceNp, sceNpScoreGetRankingByRange);
 	REG_FUNC(sceNp, sceNpScoreGetRankingByRangeAsync);
+	REG_FUNC(sceNp, sceNpScoreGetFriendsRanking);
+	REG_FUNC(sceNp, sceNpScoreGetFriendsRankingAsync);
 	REG_FUNC(sceNp, sceNpScoreCensorComment);
 	REG_FUNC(sceNp, sceNpScoreCensorCommentAsync);
 	REG_FUNC(sceNp, sceNpScoreSanitizeComment);

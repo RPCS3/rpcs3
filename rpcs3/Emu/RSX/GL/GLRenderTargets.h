@@ -340,7 +340,7 @@ private:
 			return false;
 
 		u32 offset = texaddr - surface_address;
-		if (offset >= 0)
+		if (texaddr >= surface_address)
 		{
 			std::tie(is_subslice, x_offset, y_offset) = surface->get_texture_subresource(offset, scale_to_fit);
 			if (is_subslice)

@@ -3,7 +3,7 @@
 # See the cotire manual for usage hints.
 #
 #=============================================================================
-# Copyright 2012-2016 Sascha Kratky
+# Copyright 2012-2017 Sascha Kratky
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -43,7 +43,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
 endif()
 
 set (COTIRE_CMAKE_MODULE_FILE "${CMAKE_CURRENT_LIST_FILE}")
-set (COTIRE_CMAKE_MODULE_VERSION "1.7.9")
+set (COTIRE_CMAKE_MODULE_VERSION "1.7.10")
 
 # activate select policies
 if (POLICY CMP0025)
@@ -104,6 +104,11 @@ endif()
 if (POLICY CMP0054)
 	# only interpret if() arguments as variables or keywords when unquoted
 	cmake_policy(SET CMP0054 NEW)
+endif()
+
+if (POLICY CMP0055)
+	# strict checking for break() command
+	cmake_policy(SET CMP0055 NEW)
 endif()
 
 include(CMakeParseArguments)
@@ -293,7 +298,7 @@ function (cotire_get_source_file_property_values _valuesVar _property)
 	set (${_valuesVar} ${_values} PARENT_SCOPE)
 endfunction()
 
-function (cotire_resolve_config_properites _configurations _propertiesVar)
+function (cotire_resolve_config_properties _configurations _propertiesVar)
 	set (_properties "")
 	foreach (_property ${ARGN})
 		if ("${_property}" MATCHES "<CONFIG>")
@@ -309,8 +314,8 @@ function (cotire_resolve_config_properites _configurations _propertiesVar)
 	set (${_propertiesVar} ${_properties} PARENT_SCOPE)
 endfunction()
 
-function (cotire_copy_set_properites _configurations _type _source _target)
-	cotire_resolve_config_properites("${_configurations}" _properties ${ARGN})
+function (cotire_copy_set_properties _configurations _type _source _target)
+	cotire_resolve_config_properties("${_configurations}" _properties ${ARGN})
 	foreach (_property ${_properties})
 		get_property(_isSet ${_type} ${_source} PROPERTY ${_property} SET)
 		if (_isSet)
@@ -320,13 +325,18 @@ function (cotire_copy_set_properites _configurations _type _source _target)
 	endforeach()
 endfunction()
 
-function (cotire_get_target_usage_requirements _target _targetRequirementsVar)
+function (cotire_get_target_usage_requirements _target _config _targetRequirementsVar)
 	set (_targetRequirements "")
 	get_target_property(_librariesToProcess ${_target} LINK_LIBRARIES)
 	while (_librariesToProcess)
 		# remove from head
 		list (GET _librariesToProcess 0 _library)
 		list (REMOVE_AT _librariesToProcess 0)
+		if (_library MATCHES "^\\$<\\$<CONFIG:${_config}>:([A-Za-z0-9_:-]+)>$")
+			set (_library "${CMAKE_MATCH_1}")
+		elseif (_config STREQUAL "None" AND _library MATCHES "^\\$<\\$<CONFIG:>:([A-Za-z0-9_:-]+)>$")
+			set (_library "${CMAKE_MATCH_1}")
+		endif()
 		if (TARGET ${_library})
 			list (FIND _targetRequirements ${_library} _index)
 			if (_index LESS 0)
@@ -441,7 +451,7 @@ function (cotire_get_target_compile_flags _config _language _target _flagsVar)
 	# interface compile options from linked library targets
 	if (_target)
 		set (_linkedTargets "")
-		cotire_get_target_usage_requirements(${_target} _linkedTargets)
+		cotire_get_target_usage_requirements(${_target} ${_config} _linkedTargets)
 		foreach (_linkedTarget ${_linkedTargets})
 			get_target_property(_targetOptions ${_linkedTarget} INTERFACE_COMPILE_OPTIONS)
 			if (_targetOptions)
@@ -573,7 +583,7 @@ function (cotire_get_target_include_directories _config _language _target _inclu
 	# interface include directories from linked library targets
 	if (_target)
 		set (_linkedTargets "")
-		cotire_get_target_usage_requirements(${_target} _linkedTargets)
+		cotire_get_target_usage_requirements(${_target} ${_config} _linkedTargets)
 		foreach (_linkedTarget ${_linkedTargets})
 			get_target_property(_linkedTargetType ${_linkedTarget} TYPE)
 			if (CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE AND NOT CMAKE_VERSION VERSION_LESS "3.4.0" AND
@@ -627,7 +637,7 @@ function (cotire_get_target_include_directories _config _language _target _inclu
 	if (CMAKE_${_language}_IMPLICIT_INCLUDE_DIRECTORIES)
 		list (REMOVE_ITEM _includeDirs ${CMAKE_${_language}_IMPLICIT_INCLUDE_DIRECTORIES})
 	endif()
-	if (WIN32)
+	if (WIN32 AND NOT MINGW)
 		# convert Windows paths in include directories to CMake paths
 		if (_includeDirs)
 			set (_paths "")
@@ -703,7 +713,7 @@ function (cotire_get_target_compile_definitions _config _language _target _defin
 	endif()
 	# interface compile definitions from linked library targets
 	set (_linkedTargets "")
-	cotire_get_target_usage_requirements(${_target} _linkedTargets)
+	cotire_get_target_usage_requirements(${_target} ${_config} _linkedTargets)
 	foreach (_linkedTarget ${_linkedTargets})
 		get_target_property(_definitions ${_linkedTarget} INTERFACE_COMPILE_DEFINITIONS)
 		if (_definitions)
@@ -859,6 +869,9 @@ macro (cotire_set_cmd_to_prologue _cmdVar)
 		list (APPEND ${_cmdVar} "--warn-uninitialized")
 	endif()
 	list (APPEND ${_cmdVar} "-DCOTIRE_BUILD_TYPE:STRING=$<CONFIGURATION>")
+	if (XCODE)
+		list (APPEND ${_cmdVar} "-DXCODE:BOOL=TRUE")
+	endif()
 	if (COTIRE_VERBOSE)
 		list (APPEND ${_cmdVar} "-DCOTIRE_VERBOSE:BOOL=ON")
 	elseif("${CMAKE_GENERATOR}" MATCHES "Makefiles")
@@ -902,16 +915,16 @@ function (cotire_add_includes_to_cmd _cmdVar _language _includesVar _systemInclu
 		foreach (_include ${_includeDirs})
 			if (WIN32 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
 				file (TO_NATIVE_PATH "${_include}" _include)
-				list (APPEND ${_cmdVar} "${CMAKE_INCLUDE_FLAG_${_language}}${CMAKE_INCLUDE_FLAG_${_language}_SEP}${_include}")
+				list (APPEND ${_cmdVar} "${CMAKE_INCLUDE_FLAG_${_language}}${CMAKE_INCLUDE_FLAG_SEP_${_language}}${_include}")
 			else()
 				set (_index -1)
 				if ("${CMAKE_INCLUDE_SYSTEM_FLAG_${_language}}" MATCHES ".+")
 					list (FIND ${_systemIncludesVar} "${_include}" _index)
 				endif()
 				if (_index GREATER -1)
-					list (APPEND ${_cmdVar} "${CMAKE_INCLUDE_SYSTEM_FLAG_${_language}}${_include}")
+					list (APPEND ${_cmdVar} "${CMAKE_INCLUDE_SYSTEM_FLAG_${_language}}${CMAKE_INCLUDE_FLAG_SEP_${_language}}${_include}")
 				else()
-					list (APPEND ${_cmdVar} "${CMAKE_INCLUDE_FLAG_${_language}}${CMAKE_INCLUDE_FLAG_${_language}_SEP}${_include}")
+					list (APPEND ${_cmdVar} "${CMAKE_INCLUDE_FLAG_${_language}}${CMAKE_INCLUDE_FLAG_SEP_${_language}}${_include}")
 				endif()
 			endif()
 		endforeach()
@@ -1657,6 +1670,10 @@ function (cotire_add_pch_compilation_flags _language _compilerID _compilerVersio
 			get_filename_component(_pchName "${_pchFile}" NAME)
 			set (_xLanguage_C "c-header")
 			set (_xLanguage_CXX "c++-header")
+			set (_pchSuppressMessages FALSE)
+			if ("${CMAKE_${_language}_FLAGS}" MATCHES ".*-Wno-pch-messages.*")
+				set(_pchSuppressMessages TRUE)
+			endif()
 			if (_flags)
 				# append to list
 				if ("${_language}" STREQUAL "CXX")
@@ -1664,13 +1681,17 @@ function (cotire_add_pch_compilation_flags _language _compilerID _compilerVersio
 				endif()
 				list (APPEND _flags "-include" "${_prefixFile}" "-pch-dir" "${_pchDir}" "-pch-create" "${_pchName}" "-fsyntax-only" "${_hostFile}")
 				if (NOT "${_compilerVersion}" VERSION_LESS "13.1.0")
-					list (APPEND _flags "-Wpch-messages")
+					if (NOT _pchSuppressMessages)
+						list (APPEND _flags "-Wpch-messages")
+					endif()
 				endif()
 			else()
 				# return as a flag string
 				set (_flags "-include \"${_prefixFile}\" -pch-dir \"${_pchDir}\" -pch-create \"${_pchName}\"")
 				if (NOT "${_compilerVersion}" VERSION_LESS "13.1.0")
-					set (_flags "${_flags} -Wpch-messages")
+					if (NOT _pchSuppressMessages)
+						set (_flags "${_flags} -Wpch-messages")
+					endif()
 				endif()
 			endif()
 		endif()
@@ -1781,17 +1802,25 @@ function (cotire_add_prefix_pch_inclusion_flags _language _compilerID _compilerV
 			if (_pchFile)
 				get_filename_component(_pchDir "${_pchFile}" DIRECTORY)
 				get_filename_component(_pchName "${_pchFile}" NAME)
+				set (_pchSuppressMessages FALSE)
+				if ("${CMAKE_${_language}_FLAGS}" MATCHES ".*-Wno-pch-messages.*")
+					set(_pchSuppressMessages TRUE)
+				endif()
 				if (_flags)
 					# append to list
 					list (APPEND _flags "-include" "${_prefixFile}" "-pch-dir" "${_pchDir}" "-pch-use" "${_pchName}")
 					if (NOT "${_compilerVersion}" VERSION_LESS "13.1.0")
-						list (APPEND _flags "-Wpch-messages")
+						if (NOT _pchSuppressMessages)
+							list (APPEND _flags "-Wpch-messages")
+						endif()
 					endif()
 				else()
 					# return as a flag string
 					set (_flags "-include \"${_prefixFile}\" -pch-dir \"${_pchDir}\" -pch-use \"${_pchName}\"")
 					if (NOT "${_compilerVersion}" VERSION_LESS "13.1.0")
-						set (_flags "${_flags} -Wpch-messages")
+						if (NOT _pchSuppressMessages)
+							set (_flags "${_flags} -Wpch-messages")
+						endif()
 					endif()
 				endif()
 			else()
@@ -1839,6 +1868,14 @@ function (cotire_precompile_prefix_header _prefixFile _pchFile _hostFile)
 	if (_option_COMPILER_ID MATCHES "MSVC")
 		# cl.exe messes with the output streams unless the environment variable VS_UNICODE_OUTPUT is cleared
 		unset (ENV{VS_UNICODE_OUTPUT})
+	elseif (_option_COMPILER_ID MATCHES "GNU|Clang")
+		if (_option_COMPILER_LAUNCHER MATCHES "ccache" OR
+			_option_COMPILER_EXECUTABLE MATCHES "ccache")
+			# Newer versions of Clang and GCC seem to embed a compilation timestamp into the precompiled header binary,
+			# which results in "file has been modified since the precompiled header was built" errors if ccache is used.
+			# We work around the problem by disabling ccache upon pre-compiling the prefix header.
+			set (ENV{CCACHE_DISABLE} "true")
+		endif()
 	endif()
 	execute_process(
 		COMMAND ${_cmd}
@@ -2191,7 +2228,7 @@ function (cotire_generate_target_script _language _configurations _target _targe
 		XCODE MSVC CMAKE_GENERATOR CMAKE_BUILD_TYPE CMAKE_CONFIGURATION_TYPES
 		CMAKE_${_language}_COMPILER_ID CMAKE_${_language}_COMPILER_VERSION
 		CMAKE_${_language}_COMPILER_LAUNCHER CMAKE_${_language}_COMPILER CMAKE_${_language}_COMPILER_ARG1
-		CMAKE_INCLUDE_FLAG_${_language} CMAKE_INCLUDE_FLAG_${_language}_SEP
+		CMAKE_INCLUDE_FLAG_${_language} CMAKE_INCLUDE_FLAG_SEP_${_language}
 		CMAKE_INCLUDE_SYSTEM_FLAG_${_language}
 		CMAKE_${_language}_FRAMEWORK_SEARCH_FLAG
 		CMAKE_${_language}_SYSTEM_FRAMEWORK_SEARCH_FLAG
@@ -3036,8 +3073,8 @@ function (cotire_setup_unity_build_target _languages _configurations _target)
 			set (_outputDir "${COTIRE_UNITY_OUTPUT_DIRECTORY}")
 		else()
 			# append relative COTIRE_UNITY_OUTPUT_DIRECTORY to target's actual output directory
-			cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName} ${_outputDirProperties})
-			cotire_resolve_config_properites("${_configurations}" _properties ${_outputDirProperties})
+			cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName} ${_outputDirProperties})
+			cotire_resolve_config_properties("${_configurations}" _properties ${_outputDirProperties})
 			foreach (_property ${_properties})
 				get_property(_outputDir TARGET ${_target} PROPERTY ${_property})
 				if (_outputDir)
@@ -3057,11 +3094,11 @@ function (cotire_setup_unity_build_target _languages _configurations _target)
 				RUNTIME_OUTPUT_DIRECTORY "${_outputDir}")
 		endif()
 	else()
-		cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+		cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 			${_outputDirProperties})
 	endif()
 	# copy output name
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		ARCHIVE_OUTPUT_NAME ARCHIVE_OUTPUT_NAME_<CONFIG>
 		LIBRARY_OUTPUT_NAME LIBRARY_OUTPUT_NAME_<CONFIG>
 		OUTPUT_NAME OUTPUT_NAME_<CONFIG>
@@ -3069,7 +3106,7 @@ function (cotire_setup_unity_build_target _languages _configurations _target)
 		PREFIX <CONFIG>_POSTFIX SUFFIX
 		IMPORT_PREFIX IMPORT_SUFFIX)
 	# copy compile stuff
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		COMPILE_DEFINITIONS COMPILE_DEFINITIONS_<CONFIG>
 		COMPILE_FLAGS COMPILE_OPTIONS
 		Fortran_FORMAT Fortran_MODULE_DIRECTORY
@@ -3081,12 +3118,12 @@ function (cotire_setup_unity_build_target _languages _configurations _target)
 		C_VISIBILITY_PRESET CXX_VISIBILITY_PRESET VISIBILITY_INLINES_HIDDEN
 		C_CLANG_TIDY CXX_CLANG_TIDY)
 	# copy compile features
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		C_EXTENSIONS C_STANDARD C_STANDARD_REQUIRED
 		CXX_EXTENSIONS CXX_STANDARD CXX_STANDARD_REQUIRED
 		COMPILE_FEATURES)
 	# copy interface stuff
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		COMPATIBLE_INTERFACE_BOOL COMPATIBLE_INTERFACE_NUMBER_MAX COMPATIBLE_INTERFACE_NUMBER_MIN
 		COMPATIBLE_INTERFACE_STRING
 		INTERFACE_COMPILE_DEFINITIONS INTERFACE_COMPILE_FEATURES INTERFACE_COMPILE_OPTIONS
@@ -3094,7 +3131,7 @@ function (cotire_setup_unity_build_target _languages _configurations _target)
 		INTERFACE_POSITION_INDEPENDENT_CODE INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
 		INTERFACE_AUTOUIC_OPTIONS NO_SYSTEM_FROM_IMPORTED)
 	# copy link stuff
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		BUILD_WITH_INSTALL_RPATH INSTALL_RPATH INSTALL_RPATH_USE_LINK_PATH SKIP_BUILD_RPATH
 		LINKER_LANGUAGE LINK_DEPENDS LINK_DEPENDS_NO_SHARED
 		LINK_FLAGS LINK_FLAGS_<CONFIG>
@@ -3103,18 +3140,18 @@ function (cotire_setup_unity_build_target _languages _configurations _target)
 		LINK_SEARCH_START_STATIC LINK_SEARCH_END_STATIC
 		STATIC_LIBRARY_FLAGS STATIC_LIBRARY_FLAGS_<CONFIG>
 		NO_SONAME SOVERSION VERSION
-		LINK_WHAT_YOU_USE)
+		LINK_WHAT_YOU_USE BUILD_RPATH)
 	# copy cmake stuff
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		IMPLICIT_DEPENDS_INCLUDE_TRANSFORM RULE_LAUNCH_COMPILE RULE_LAUNCH_CUSTOM RULE_LAUNCH_LINK)
 	# copy Apple platform specific stuff
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		BUNDLE BUNDLE_EXTENSION FRAMEWORK FRAMEWORK_VERSION INSTALL_NAME_DIR
 		MACOSX_BUNDLE MACOSX_BUNDLE_INFO_PLIST MACOSX_FRAMEWORK_INFO_PLIST MACOSX_RPATH
 		OSX_ARCHITECTURES OSX_ARCHITECTURES_<CONFIG> PRIVATE_HEADER PUBLIC_HEADER RESOURCE XCTEST
-		IOS_INSTALL_COMBINED)
+		IOS_INSTALL_COMBINED XCODE_EXPLICIT_FILE_TYPE XCODE_PRODUCT_TYPE)
 	# copy Windows platform specific stuff
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		GNUtoMS
 		COMPILE_PDB_NAME COMPILE_PDB_NAME_<CONFIG>
 		COMPILE_PDB_OUTPUT_DIRECTORY COMPILE_PDB_OUTPUT_DIRECTORY_<CONFIG>
@@ -3128,9 +3165,9 @@ function (cotire_setup_unity_build_target _languages _configurations _target)
 		VS_WINRT_COMPONENT VS_WINRT_EXTENSIONS VS_WINRT_REFERENCES
 		WIN32_EXECUTABLE WINDOWS_EXPORT_ALL_SYMBOLS
 		DEPLOYMENT_REMOTE_DIRECTORY VS_CONFIGURATION_TYPE
-		VS_SDK_REFERENCES)
+		VS_SDK_REFERENCES VS_USER_PROPS VS_DEBUGGER_WORKING_DIRECTORY)
 	# copy Android platform specific stuff
-	cotire_copy_set_properites("${_configurations}" TARGET ${_target} ${_unityTargetName}
+	cotire_copy_set_properties("${_configurations}" TARGET ${_target} ${_unityTargetName}
 		ANDROID_API ANDROID_API_MIN ANDROID_GUI
 		ANDROID_ANT_ADDITIONAL_OPTIONS ANDROID_ARCH ANDROID_ASSETS_DIRECTORIES
 		ANDROID_JAR_DEPENDENCIES ANDROID_JAR_DIRECTORIES ANDROID_JAVA_SOURCE_DIR

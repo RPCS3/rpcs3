@@ -16,6 +16,13 @@
 
 #pragma comment(lib, "VKstatic.1.lib")
 
+namespace vk
+{
+	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
+	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
+	using null_vertex_cache = vertex_cache;
+}
+
 //Heap allocation sizes in MB
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 256
 #define VK_UBO_RING_BUFFER_SIZE_M 32
@@ -114,6 +121,7 @@ private:
 
 public:
 	//vk::fbo draw_fbo;
+	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 
 private:
 	VKProgramBuffer m_prog_buffer;

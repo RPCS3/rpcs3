@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -10,6 +11,8 @@
 namespace vm { using namespace ps3; }
 
 logs::channel sys_rwlock("sys_rwlock");
+
+template<> DECLARE(ipc_manager<lv2_rwlock, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
@@ -33,19 +36,16 @@ error_code sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribu
 		return CELL_EINVAL;
 	}
 
-	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
+	if (auto error = lv2_obj::create<lv2_rwlock>(attr->pshared, attr->ipc_key, attr->flags, [&]
 	{
-		sys_rwlock.error("sys_rwlock_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
-		return CELL_EINVAL;
+		return std::make_shared<lv2_rwlock>(protocol, attr->pshared, attr->ipc_key, attr->flags, attr->name_u64);
+	}))
+	{
+		return error;
 	}
 
-	if (const u32 id = idm::make<lv2_obj, lv2_rwlock>(protocol, attr->name_u64))
-	{
-		*rw_lock_id = id;
-		return CELL_OK;
-	}
-
-	return CELL_EAGAIN;
+	*rw_lock_id = idm::last_id();
+	return CELL_OK;
 }
 
 error_code sys_rwlock_destroy(u32 rw_lock_id)
@@ -225,9 +225,9 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 		// Remove one reader
 		const s64 _old = rwlock->owner.fetch_op([](s64& val)
 		{
-			if (val < 0)
+			if (val < -1)
 			{
-				val++;
+				val += 2;
 			}
 		});
 
@@ -260,7 +260,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock) -> s64
 	{
 		const s64 val = rwlock.owner;
 
@@ -268,12 +268,12 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			if (rwlock.owner.compare_and_swap_test(0, ppu.id << 1))
 			{
-				return true;
+				return 0;
 			}
 		}
 		else if (val >> 1 == ppu.id)
 		{
-			return false;
+			return val;
 		}
 
 		semaphore_lock lock(rwlock.mutex);
@@ -294,10 +294,9 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			rwlock.wq.emplace_back(&ppu);
 			rwlock.sleep(ppu, timeout);
-			return false;
 		}
 
-		return true;
+		return _old;
 	});
 
 	if (!rwlock)
@@ -305,12 +304,12 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	if (rwlock.ret)
+	if (rwlock.ret == 0)
 	{
 		return CELL_OK;
 	}
 
-	if (rwlock->owner >> 1 == ppu.id)
+	if (rwlock.ret >> 1 == ppu.id)
 	{
 		return CELL_EDEADLK;
 	}
@@ -419,7 +418,7 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 
 		if (auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
 		{
-			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty();
+			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
 			rwlock->awake(*cpu);
 		}

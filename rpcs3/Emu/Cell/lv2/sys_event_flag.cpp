@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -12,6 +13,8 @@
 namespace vm { using namespace ps3; }
 
 logs::channel sys_event_flag("sys_event_flag");
+
+template<> DECLARE(ipc_manager<lv2_event_flag, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
@@ -37,12 +40,6 @@ error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribu
 		return CELL_EINVAL;
 	}
 
-	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
-	{
-		sys_event_flag.error("sys_event_flag_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
-		return CELL_EINVAL;
-	}
-
 	const u32 type = attr->type;
 
 	if (type != SYS_SYNC_WAITER_SINGLE && type != SYS_SYNC_WAITER_MULTIPLE)
@@ -51,13 +48,23 @@ error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribu
 		return CELL_EINVAL;
 	}
 
-	if (const u32 _id = idm::make<lv2_obj, lv2_event_flag>(protocol, type, attr->name_u64, init))
+	if (auto error = lv2_obj::create<lv2_event_flag>(attr->pshared, attr->ipc_key, attr->flags, [&]
 	{
-		*id = _id;
-		return CELL_OK;
+		return std::make_shared<lv2_event_flag>(
+			attr->protocol,
+			attr->pshared,
+			attr->ipc_key,
+			attr->flags,
+			attr->type,
+			attr->name_u64,
+			init);
+	}))
+	{
+		return error;
 	}
 
-	return CELL_EAGAIN;
+	*id = idm::last_id();
+	return CELL_OK;
 }
 
 error_code sys_event_flag_destroy(u32 id)
