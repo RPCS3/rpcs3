@@ -618,7 +618,7 @@ void ds4_thread::on_init(const std::shared_ptr<void>& _this)
 	for (auto pid : ds4Pids)
 	{
 		hid_device_info* devInfo = hid_enumerate(DS4_VID, pid);
-        hid_device_info* head = devInfo;
+		hid_device_info* head = devInfo;
 		while (devInfo)
 		{
 
