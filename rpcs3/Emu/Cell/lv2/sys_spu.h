@@ -112,7 +112,7 @@ struct sys_spu_image
 	vm::ps3::bptr<sys_spu_segment> segs;
 	be_t<s32> nsegs;
 
-	void load(const fs::file& stream);
+	void load(u32 data_addr, u32 type);
 	void free();
 	void deploy(u32 loc);
 };

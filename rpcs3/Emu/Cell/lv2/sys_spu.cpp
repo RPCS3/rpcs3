@@ -18,61 +18,110 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_spu("sys_spu");
 
-void sys_spu_image::load(const fs::file& stream)
+void sys_spu_image::load(u32 data_addr, u32 type)
 {
-	const spu_exec_object obj{stream};
+	auto stream = fs::file{ vm::base(data_addr), size_t(-1) };
+	if (type == SYS_SPU_IMAGE_PROTECT)
+	{
+		LOG_TODO(SPU, "TODO Loading SYS_SPU_IMAGE_PROTECT SPU as SYS_SPU_IMAGE_DIRECT");
+	}
+
+	const spu_exec_object obj{ stream };
 
 	if (obj != elf_error::ok)
 	{
 		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
 	}
 
-	this->type = SYS_SPU_IMAGE_TYPE_KERNEL;
+	int number_segs = obj.progs.size();
+	for (const auto& prog : obj.progs)
+	{
+		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY && prog.p_memsz != prog.p_filesz)
+		{
+			number_segs++;
+		}
+	}
+
+	this->type = SYS_SPU_IMAGE_TYPE_USER;
 	this->entry_point = obj.header.e_entry;
-	this->segs.set(vm::alloc(65 * 4096, vm::main));
+	this->segs.set(vm::alloc(number_segs * sizeof(sys_spu_segment), vm::main));
 	this->nsegs = 0;
 
-	const u32 addr = this->segs.addr() + 4096;
+	LOG_NOTICE(SPU, "Loading SPU program from memory 0x%x", data_addr);
+
+	sha1_context ctx;
+	u8 output[20];
+
+	sha1_starts(&ctx);
+	sha1_update(&ctx, reinterpret_cast<const u8*>(&obj.header), sizeof(obj.header));
 
 	for (const auto& shdr : obj.shdrs)
 	{
+		sha1_update(&ctx, reinterpret_cast<const u8*>(&shdr), sizeof(spu_exec_object::shdr_t));
+
 		LOG_NOTICE(SPU, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", shdr.sh_type, shdr.sh_addr, shdr.sh_size, shdr.sh_flags);
 	}
 
-	for (const auto& prog : obj.progs)
+	for (auto it_prog = obj.progs.begin(); it_prog < obj.progs.end(); it_prog++)
 	{
-		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+		auto& prog = *it_prog;
 
+		sha1_update(&ctx, reinterpret_cast<const u8*>(&prog), sizeof(spu_exec_object::phdr_t));
+		sha1_update(&ctx, reinterpret_cast<const u8*>(prog.bin.data()), prog.bin.size());
+
+		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_offset=0x%llx, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_offset, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY)
 		{
-			auto& seg = segs[nsegs++];
-			seg.type  = prog.p_type;
-			seg.ls    = prog.p_vaddr;
-			seg.addr  = addr + prog.p_vaddr;
-			seg.size  = std::min(prog.p_filesz, prog.p_memsz);
-			std::memcpy(vm::base(seg.addr), prog.bin.data(), seg.size);
-
-			if (prog.p_memsz > prog.p_filesz)
+			if (prog.p_filesz != 0)
 			{
-				auto& zero = segs[nsegs++];
-				zero.type  = SYS_SPU_SEGMENT_TYPE_FILL;
-				zero.ls    = prog.p_vaddr + prog.p_filesz;
-				zero.addr  = 0;
-				zero.size  = prog.p_memsz - seg.size;
+				auto& seg = segs[nsegs++];
+
+				seg.type = SYS_SPU_SEGMENT_TYPE_COPY;
+				seg.addr = data_addr + prog.p_offset;
+				seg.ls = prog.p_vaddr;
+				seg.size = prog.p_filesz;
 			}
+
+			// There's a mismatch between here and the seg counting. It seems that it exists in the real function, too.
+			if (prog.p_memsz <= prog.p_filesz || nsegs + 1 >= number_segs)
+			{
+				continue;
+			}
+
+			auto& zero = segs[nsegs++];
+			zero.type = SYS_SPU_SEGMENT_TYPE_FILL;
+			zero.addr = 0;
+			zero.ls = prog.p_vaddr + prog.p_filesz;
+			zero.size = prog.p_memsz - prog.p_filesz;
 		}
 		else if (prog.p_type == SYS_SPU_SEGMENT_TYPE_INFO)
 		{
 			auto& seg = segs[nsegs++];
 			seg.type = SYS_SPU_SEGMENT_TYPE_INFO;
-			seg.ls   = prog.p_vaddr;
-			seg.addr = 0;
-			seg.size = prog.p_filesz;
+			seg.addr = data_addr + prog.p_offset + 0x14;
+			seg.ls = 0; // TODO Verify - noone writes to it, so it includes whatever malloc set there originally
+			seg.size = 0x20;
 		}
 		else
 		{
 			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
 		}
+	}
+
+	sha1_finish(&ctx, output);
+
+	// Format patch name
+	std::string hash("spu-");
+	for (u8 x : output) fmt::append(hash, "%02x", x);
+	LOG_NOTICE(LOADER, "Loaded SPU image: %s", hash);
+
+	// Apply the patch
+	fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + data_addr);
+
+	if (!Emu.GetTitleID().empty())
+	{
+		// Alternative patch
+		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + data_addr);
 	}
 }
 
@@ -173,11 +222,38 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 
 	if (!elf_file)
 	{
-		sys_spu.error("sys_spu_image_open() error: %s not found!", path);
+		sys_spu.error("sys_spu_image_open: Failed creating given file");
 		return CELL_ENOENT;
 	}
 
-	img->load(elf_file);
+	u64 file_size = elf_file.size();
+	if (!file_size)
+	{
+		sys_spu.error("sys_spu_image_open: Given file is 0 sized");
+		return CELL_ENOENT;
+	}
+	else if (file_size > UINT_MAX)
+	{
+		sys_spu.error("sys_spu_image_open: File size too large");
+		return CELL_ENOMEM;
+	}
+
+	u32 elf_addr = vm::alloc((u32)file_size, vm::main);
+	if (!elf_addr)
+	{
+		sys_spu.error("sys_spu_image_open: Failed allocating elf");
+		return CELL_ENOMEM;
+	}
+
+	elf_file.seek(0);
+	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
+	if (!bytes_read)
+	{
+		sys_spu.error("sys_spu_image_open: Failed reading ELF into memory");
+		return CELL_ENOENT;
+	}
+
+	img->load(elf_addr, SYS_SPU_IMAGE_DIRECT);
 
 	return CELL_OK;
 }
