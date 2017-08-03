@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef __linux__
+#ifdef HAVE_ALSA
 
 #include "Emu/Audio/AudioThread.h"
 
