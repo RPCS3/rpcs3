@@ -136,7 +136,7 @@ namespace vk
 	}
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
-		const std::vector<rsx_subresource_layout> subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer)
 	{
 		u32 mipmap_level = 0;

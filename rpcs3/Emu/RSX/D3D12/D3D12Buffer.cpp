@@ -42,7 +42,7 @@ namespace
 		fmt::throw_exception("Wrong vector size %d" HERE, size);
 	}
 
-	u32 get_vertex_count(const std::vector<std::pair<u32, u32> > first_count_commands)
+	u32 get_vertex_count(const std::vector<std::pair<u32, u32> >& first_count_commands)
 	{
 		u32 vertex_count = 0;
 		for (const auto &pair : first_count_commands)
