@@ -45,7 +45,7 @@
 #ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #endif
-#ifdef __linux__
+#ifdef HAVE_ALSA
 #include "Emu/Audio/ALSA/ALSAThread.h"
 #endif
 
@@ -199,7 +199,7 @@ void rpcs3_app::InitializeCallbacks()
 		case audio_renderer::null: return std::make_shared<NullAudioThread>();
 #ifdef _WIN32
 		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
-#elif __linux__
+#elif defined(HAVE_ALSA)
 		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
 #endif
 		case audio_renderer::openal: return std::make_shared<OpenALThread>();
