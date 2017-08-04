@@ -96,7 +96,9 @@ enum
 // Dialog Messages
 namespace
 {
-	const std::string SAVEDATA_MSG_DELETE_ASK = "The saved data will be deleted. Are you sure you want to continue?";
+	const std::string SAVEDATA_MSG_DELETE_ASK	= "The saved data will be deleted. Are you sure you want to continue?";
+	const std::string SAVEDATA_MSG_DELETED		= "Delete completed.";
+	const std::string SAVEDATA_MSG_ERROR_DEL	= "An error occurred during the delete operation.";
 }
 
 // Datatypes

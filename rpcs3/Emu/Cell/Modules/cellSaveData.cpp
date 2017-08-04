@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
@@ -62,18 +62,19 @@ namespace
 
 namespace
 {
-	s32 showMsgDialog(std::string msg, u32 button_type)
+	s32 showMsgDialog(std::string msg, u32 button_type, u32 msg_type)
 	{
 
 		if (msg.size())
 		{
-			u32 dlg_type = { CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR
-				| CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_OFF
+			u32 dlg_type = {
+				 CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_OFF
 				| CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NONE
 				| CELL_MSGDIALOG_TYPE_BG_VISIBLE
 				| CELL_MSGDIALOG_TYPE_SE_MUTE_ON };
 
 			dlg_type = dlg_type | button_type;
+			dlg_type = dlg_type | msg_type;
 
 			MsgDialogType type = { dlg_type };
 
@@ -165,7 +166,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				// replace any instances of '*' with '.*' for regex matching
 				std::string prefix = std::regex_replace(p, std::regex("\\*"), ".*");
 				std::regex e("^" + prefix + ".*$");
-				//if (entry.name.substr(0, prefix.size()) == prefix)
+				
 				if(std::regex_match(entry.name,e))
 				{
 					// Count the amount of matches and the amount of listed directories
@@ -403,7 +404,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 						}
 
 						// confrim deletion operation
-						s32 ret = showMsgDialog(SAVEDATA_MSG_DELETE_ASK, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO);
+						s32 ret = showMsgDialog(SAVEDATA_MSG_DELETE_ASK, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL);
 						if (ret == CELL_MSGDIALOG_BUTTON_NO)
 						{
 							return CELL_CANCEL;
@@ -425,26 +426,39 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 						memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
 						// delete the save data
+						bool success = false;
 						try
 						{
 							fs::remove_all(del_path, true);
+							cellSaveData.warning("Deleted savedata directory %s", del_path);
+							success = true;
+							// clean up the save_entries list in case the dialog should be displayed again					
+							save_entries.erase(save_entries.begin() + selected);
 						}
-						catch (std::exception)
+						catch (std::exception e)
 						{
-							return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
-						}
-						cellSaveData.error("savedata_op(): Deleted savedata directory %s", del_path);
-
-						// clean up the save_entries list in case the dialog should be displayed again
-						save_entries.erase(save_entries.begin() + selected);
-
+							cellSaveData.error("Failed to delete save data. Path: %s. %s", del_path, e.what());
+							showMsgDialog(SAVEDATA_MSG_ERROR_DEL, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR);
+							doneGet->excResult = CELL_SAVEDATA_ERROR_FAILURE;							
+						}					
+												
 						funcDone(ppu, result, doneGet);
-					} while (result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT);
 
-					if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
-					{
-						return CELL_OK;
-					}
+						// The delete was successful, let the user know.
+						// the game should exit the callback with an error at this point. Using success flag in case they do not.
+						if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT &&
+							success)
+						{
+							showMsgDialog(SAVEDATA_MSG_DELETED, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL);
+						}
+
+						// if application has asked to exit the save data util
+						if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+						{							
+							return CELL_OK;
+						}
+
+					} while (result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT);
 					
 					return CELL_SAVEDATA_ERROR_CBRESULT;
 				}
@@ -487,9 +501,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			funcFixed(ppu, result, listGet, fixedSet);
 
 			// skip all following steps if OK_LAST
-			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 			{
-				// show confirmation dialog
 				return CELL_OK;
 			}
 
@@ -515,10 +528,10 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				}
 			}
 
-			// show confirmation dialog
+			// show confirmation dialog - allows user to cancel the operation
 			if (fixedSet->option == 0 && operation == SAVEDATA_OP_FIXED_DELETE)			
 			{
-				s32 ret = showMsgDialog(SAVEDATA_MSG_DELETE_ASK , CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO);
+				s32 ret = showMsgDialog(SAVEDATA_MSG_DELETE_ASK , CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL);
 				if (ret == CELL_MSGDIALOG_BUTTON_NO)
 				{
 					return CELL_CANCEL;
@@ -546,32 +559,28 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 					doneGet->excResult = 0; // normal return. Other values are for copying, import etc.
 					memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
-					// delete the save data
+					// delete the save data					
 					try
 					{
-						fs::remove_all(del_path,true);
+						fs::remove_all(del_path, true);
+						cellSaveData.warning("Deleted savedata directory %s", del_path);
 					}
-					catch (std::exception)
+					catch (std::exception e)
 					{
-						return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
+						cellSaveData.error("Failed to delete save data. Path: %s. %s", del_path, e.what());
+						doneGet->excResult = CELL_SAVEDATA_ERROR_FAILURE;
 					}
-					cellSaveData.error("savedata_op(): Deleted savedata directory %s", del_path);	
-
+									
 					funcDone(ppu, result, doneGet);
-						
+
+					// OK_NEXT shouldn't be used here, but games do weird stuff, so I'm leaving it in - Dangles.
 					if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST
-						|| result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT)
+						|| result->result == CELL_SAVEDATA_CBRESULT_OK_NEXT) 
 					{
 						return CELL_OK;
 					}
 
-					// this shouldn't occur.
-					if (result->result < 0)
-					{
-						//TODO: show dialog indicating an error occured
-					}
 					return CELL_SAVEDATA_ERROR_CBRESULT;
-
 				}
 				else
 				{
@@ -635,7 +644,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf.at("SAVEDATA_LIST_PARAM").as_string());
 		}
 
-		statGet->bind = 0;
+		// NOTE: Bind has other values for if the account is local only (0x400).
+		// this may be useful for emulating an offline user
+		statGet->bind = 0; 
 		statGet->sizeKB = save_entry.size / 1024;
 		statGet->sysSizeKB = 0; // This is the size of system files, but PARAM.SFO is very small and PARAM.PDF is not used
 
@@ -697,7 +708,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
-		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 		{
 			return CELL_OK;
 		}
@@ -761,8 +772,6 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			{
 				// Savedata deleted and setParam is NULL: delete directory and abort operation
 				if (fs::remove_dir(dir_path)) cellSaveData.error("savedata_op(): savedata directory %s deleted", save_entry.dirName);
-
-				//return CELL_OK;
 			}
 
 			break;
@@ -784,7 +793,6 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	}
 
 	// Enter the loop where the save files are read/created/deleted
-
 	fileGet->excSize = 0;
 	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 
@@ -800,7 +808,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 		{
-			//todo: display user prompt
+			//TODO: display save/load complete message
 			break;
 		}
 
