@@ -322,8 +322,13 @@ namespace vk
 		std::pair<u32, u32> read_only_range = std::make_pair(0xFFFFFFFF, 0);
 		std::pair<u32, u32> no_access_range = std::make_pair(0xFFFFFFFF, 0);
 		
+		//Stuff that has been dereferenced goes into these
 		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
 		std::vector<std::unique_ptr<vk::image>> m_dirty_textures;
+
+		//Stuff that has been dereferenced twice goes here. Contents are evicted before new ones are added
+		std::vector<std::unique_ptr<vk::image_view>> m_image_views_to_purge;
+		std::vector<std::unique_ptr<vk::image>> m_images_to_purge;
 
 		// Keep track of cache misses to pre-emptively flush some addresses
 		struct framebuffer_memory_characteristics
@@ -431,6 +436,9 @@ namespace vk
 
 			m_temporary_image_view.clear();
 			m_dirty_textures.clear();
+
+			m_image_views_to_purge.clear();
+			m_images_to_purge.clear();
 		}
 
 		//Helpers
@@ -544,7 +552,7 @@ namespace vk
 			}
 
 			//First check if it exists as an rtt...
-			vk::image *rtt_texture = nullptr;
+			vk::render_target *rtt_texture = nullptr;
 			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
 				if (g_cfg.video.strict_rendering_mode)
@@ -559,10 +567,7 @@ namespace vk
 					}
 				}
 
-				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
-					rtt_texture->native_component_map,
-					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT)));
-				return m_temporary_image_view.back().get();
+				return rtt_texture->get_view();
 			}
 
 			if (rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
@@ -576,10 +581,7 @@ namespace vk
 					}
 				}
 
-				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
-					rtt_texture->native_component_map,
-					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT)));
-				return m_temporary_image_view.back().get();
+				return rtt_texture->get_view();
 			}
 
 			u32 raw_format = tex.format();
@@ -912,8 +914,11 @@ namespace vk
 
 		void flush()
 		{
-			m_dirty_textures.clear();
-			m_temporary_image_view.clear();
+			m_image_views_to_purge.clear();
+			m_images_to_purge.clear();
+
+			m_image_views_to_purge = std::move(m_temporary_image_view);
+			m_images_to_purge = std::move(m_dirty_textures);
 		}
 
 		void record_cache_miss(cached_texture_section &tex)

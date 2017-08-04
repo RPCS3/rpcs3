@@ -11,6 +11,12 @@ namespace glsl
 		glsl_fragment_program = 1
 	};
 
+	enum glsl_rules
+	{
+		glsl_rules_opengl4,
+		glsl_rules_rpirv
+	};
+
 	static std::string getFloatTypeNameImpl(size_t elementCount)
 	{
 		switch (elementCount)
@@ -48,8 +54,10 @@ namespace glsl
 		fmt::throw_exception("Unknown compare function" HERE);
 	}
 
-	static void insert_vertex_input_fetch(std::stringstream& OS)
+	static void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules)
 	{
+		std::string vertex_id_name = (rules == glsl_rules_opengl4) ? "gl_VertexID" : "gl_VertexIndex";
+
 		//Actually decode a vertex attribute from a raw byte stream
 		OS << "struct attribute_desc\n";
 		OS << "{\n";
@@ -194,16 +202,16 @@ namespace glsl
 		OS << "{\n";
 		OS << "	attribute_desc desc = fetch_desc(location);\n";
 		OS << "\n";
-		OS << "	int vertex_id = gl_VertexID - int(vertex_base_index);\n";
+		OS << "	int vertex_id = " << vertex_id_name << " - int(vertex_base_index);\n";
 		OS << "	if (desc.frequency == 0)\n";
 		OS << "		vertex_id = 0;\n";
 		OS << "	else if (desc.frequency > 1)\n";
 		OS << "	{\n";
 		OS << "		//if a vertex modifier is active; vertex_base must be 0 and is ignored\n";
 		OS << "		if (desc.modulo != 0)\n";
-		OS << "			vertex_id = gl_VertexID % desc.divisor;\n";
+		OS << "			vertex_id = " << vertex_id_name << " % desc.divisor;\n";
 		OS << "		else\n";
-		OS << "			vertex_id = gl_VertexID / desc.divisor;\n";
+		OS << "			vertex_id = " << vertex_id_name << " / desc.divisor;\n";
 		OS << "	}\n";
 		OS << "\n";
 		OS << "	if (desc.is_volatile != 0)\n";

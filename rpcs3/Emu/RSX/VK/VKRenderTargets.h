@@ -21,6 +21,7 @@ namespace vk
 		bool dirty = false;
 		u16 native_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
+		std::unique_ptr<vk::image_view> view;
 
 		render_target *old_contents = nullptr; //Data occupying the memory location that this surface is replacing
 
@@ -40,6 +41,15 @@ namespace vk
 			:image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
 					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
 		{}
+
+		vk::image_view* get_view()
+		{
+			if (!view)
+				view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), value, VK_IMAGE_VIEW_TYPE_2D, info.format,
+						native_component_map, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
+
+			return view.get();
+		}
 	};
 
 	struct framebuffer_holder: public vk::framebuffer, public ref_counted

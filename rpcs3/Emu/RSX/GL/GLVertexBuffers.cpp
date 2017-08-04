@@ -92,9 +92,8 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_array_command& command)
 		{
-			u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			u32 min_index    = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
-			u32 max_index    = vertex_count - 1 + min_index;
+			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			const u32 min_index    = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			{
@@ -153,7 +152,7 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& command)
 		{
-			u32 vertex_count = (u32)command.inline_vertex_array.size() * sizeof(u32) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+			const u32 vertex_count = (u32)command.inline_vertex_array.size() * sizeof(u32) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			{
@@ -188,8 +187,7 @@ std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::se
 	auto &vertex_base = result.vertex_data_base;
 
 	//Do actual vertex upload
-	auto &required = calculate_memory_requirements(m_vertex_layout, vertex_count);
-
+	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
 
 	std::pair<void*, u32> persistent_mapping = {}, volatile_mapping = {};
 
