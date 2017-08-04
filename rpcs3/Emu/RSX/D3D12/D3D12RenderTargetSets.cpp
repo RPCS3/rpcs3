@@ -298,6 +298,9 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	int clip_w = rsx::method_registers.surface_clip_width();
 	int clip_h = rsx::method_registers.surface_clip_height();
 
+	if (clip_w == 0 || clip_h == 0)
+		return;
+
 	size_t depth_row_pitch = align(clip_w * 4, 256);
 	size_t depth_buffer_offset_in_heap = 0;
 
