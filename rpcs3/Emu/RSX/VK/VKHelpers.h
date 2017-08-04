@@ -17,6 +17,7 @@
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
+#include "../Common/GLSLCommon.h"
 #include "../rsx_cache.h"
 
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
@@ -1374,12 +1375,6 @@ namespace vk
 
 	namespace glsl
 	{
-		enum program_domain
-		{
-			glsl_vertex_program = 0,
-			glsl_fragment_program = 1
-		};
-
 		enum program_input_type
 		{
 			input_type_uniform_buffer = 0,
@@ -1404,7 +1399,7 @@ namespace vk
 
 		struct program_input
 		{
-			program_domain domain;
+			::glsl::program_domain domain;
 			program_input_type type;
 			
 			bound_buffer as_buffer;
@@ -1428,7 +1423,7 @@ namespace vk
 			program(program&& other) = delete;
 			~program();
 
-			program& load_uniforms(program_domain domain, const std::vector<program_input>& inputs);
+			program& load_uniforms(::glsl::program_domain domain, const std::vector<program_input>& inputs);
 
 			bool has_uniform(std::string uniform_name);
 			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);

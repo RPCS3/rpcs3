@@ -7,7 +7,7 @@
 
 std::string VKVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 {
-	return vk::getFloatTypeNameImpl(elementCount);
+	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
 std::string VKVertexDecompilerThread::getIntTypeName(size_t elementCount)
@@ -23,7 +23,7 @@ std::string VKVertexDecompilerThread::getFunction(FUNCTION f)
 
 std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
 {
-	return vk::compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
 
 void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
@@ -39,7 +39,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 
 	vk::glsl::program_input in;
 	in.location = SCALE_OFFSET_BIND_SLOT;
-	in.domain = vk::glsl::glsl_vertex_program;
+	in.domain = glsl::glsl_vertex_program;
 	in.name = "ScaleOffsetBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 
@@ -74,7 +74,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 				{
 					vk::glsl::program_input in;
 					in.location = (int)std::get<0>(item) + VERTEX_BUFFERS_FIRST_BIND_SLOT;
-					in.domain = vk::glsl::glsl_vertex_program;
+					in.domain = glsl::glsl_vertex_program;
 					in.name = PI.name + "_buffer";
 					in.type = vk::glsl::input_type_texel_buffer;
 
@@ -108,7 +108,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 
 	vk::glsl::program_input in;
 	in.location = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
-	in.domain = vk::glsl::glsl_vertex_program;
+	in.domain = glsl::glsl_vertex_program;
 	in.name = "VertexConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 
@@ -249,7 +249,7 @@ namespace vk
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	vk::insert_glsl_legacy_function(OS, vk::glsl::program_domain::glsl_vertex_program);
+	glsl::insert_glsl_legacy_function(OS, glsl::glsl_vertex_program);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -405,7 +405,7 @@ void VKVertexProgram::Compile()
 	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram.spirv", fs::rewrite).write(shader);
 
 	std::vector<u32> spir_v;
-	if (!vk::compile_glsl_to_spv(shader, vk::glsl::glsl_vertex_program, spir_v))
+	if (!vk::compile_glsl_to_spv(shader, glsl::glsl_vertex_program, spir_v))
 		fmt::throw_exception("Failed to compile vertex shader" HERE);
 
 	VkShaderModuleCreateInfo vs_info;
