@@ -362,6 +362,9 @@ namespace vk
 
 		void reset_descriptors()
 		{
+			if (m_used_descriptors == 0)
+				return;
+
 			vkResetDescriptorPool(device, m_descriptor_pool, 0);
 			m_used_descriptors = 0;
 		}

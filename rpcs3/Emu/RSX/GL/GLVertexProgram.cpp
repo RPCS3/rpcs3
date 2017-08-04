@@ -149,15 +149,10 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 		OS << "out vec4 front_spec_color;\n";
 }
 
-namespace
-{
-
-}
-
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS, glsl::glsl_vertex_program);
-	glsl::insert_vertex_input_fetch(OS);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)

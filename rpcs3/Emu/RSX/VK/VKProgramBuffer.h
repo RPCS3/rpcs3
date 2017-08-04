@@ -19,17 +19,22 @@ namespace vk
 
 		bool operator==(const pipeline_props& other) const
 		{
-			if (memcmp(&ia, &other.ia, sizeof(VkPipelineInputAssemblyStateCreateInfo)))
-				return false;
-			if (memcmp(&ds, &other.ds, sizeof(VkPipelineDepthStencilStateCreateInfo)))
-				return false;
 			if (memcmp(&att_state[0], &other.att_state[0], sizeof(VkPipelineColorBlendAttachmentState)))
 				return false;
-			if (memcmp(&cs, &other.cs, sizeof(VkPipelineColorBlendStateCreateInfo)))
+
+			if (render_pass != other.render_pass)
 				return false;
+
 			if (memcmp(&rs, &other.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
 				return false;
-			if (render_pass != other.render_pass)
+
+			if (memcmp(&cs, &other.cs, sizeof(VkPipelineColorBlendStateCreateInfo)))
+				return false;
+
+			if (memcmp(&ia, &other.ia, sizeof(VkPipelineInputAssemblyStateCreateInfo)))
+				return false;
+
+			if (memcmp(&ds, &other.ds, sizeof(VkPipelineDepthStencilStateCreateInfo)))
 				return false;
 
 			return num_targets == other.num_targets;
@@ -90,9 +95,6 @@ struct VKTraits
 	static
 	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const vk::pipeline_props &pipelineProperties, VkDevice dev, VkPipelineLayout common_pipeline_layout)
 	{
-//		pstate.dynamic_state.pDynamicStates = pstate.dynamic_state_descriptors;
-//		pstate.cb.pAttachments = pstate.att_state;
-//		pstate.cb.attachmentCount = pstate.num_targets;
 
 		VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 		shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -111,6 +113,11 @@ struct VKTraits
 		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
 		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_LINE_WIDTH;
+		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_BOUNDS;
+		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_BLEND_CONSTANTS;
+		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
+		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+		dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_REFERENCE;
 		dynamic_state_info.pDynamicStates = dynamic_state_descriptors;
 
 		VkPipelineVertexInputStateCreateInfo vi = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
@@ -144,7 +151,6 @@ struct VKTraits
 		info.renderPass = pipelineProperties.render_pass;
 
 		CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
-
 		pipeline_storage_type result = std::make_unique<vk::glsl::program>(dev, pipeline, vertexProgramData.uniforms, fragmentProgramData.uniforms);
 
 		return result;
