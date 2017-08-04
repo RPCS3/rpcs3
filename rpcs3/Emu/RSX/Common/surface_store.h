@@ -3,6 +3,7 @@
 #include "Utilities/GSL.h"
 #include "../GCM.h"
 #include <list>
+#include <unordered_set>
 
 namespace rsx
 {
@@ -114,6 +115,8 @@ namespace rsx
 		std::tuple<u32, surface_type> m_bound_depth_stencil = {};
 
 		std::list<surface_storage_type> invalidated_resources;
+
+        std::unordered_set<u32> m_prev_bound_targets = {};
 
 		surface_store() = default;
 		~surface_store() = default;
@@ -283,6 +286,7 @@ namespace rsx
 			// Create/Reuse requested rtts
 			for (u8 surface_index : utility::get_rtt_indexes(set_surface_target))
 			{
+                m_prev_bound_targets.insert(surface_addresses[surface_index]);
 				if (surface_addresses[surface_index] == 0)
 					continue;
 
@@ -477,6 +481,22 @@ namespace rsx
 
 			for (auto &ds : m_depth_stencil_storage)
 				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)), nullptr, true);
+
+            for (auto it = m_render_targets_storage.begin(); it != m_render_targets_storage.end();)
+            {
+                auto check = std::find(m_prev_bound_targets.cbegin(), m_prev_bound_targets.cend(), it->first);
+                if (check == m_prev_bound_targets.end())
+                {
+                    surface_storage_type &rtt = it->second;
+                    invalidated_resources.push_back(std::move(rtt));
+                    it = m_render_targets_storage.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            m_prev_bound_targets.clear();
 		}
 
 		/**
