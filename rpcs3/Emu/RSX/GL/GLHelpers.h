@@ -2043,12 +2043,6 @@ namespace gl
 
 	namespace glsl
 	{
-		enum program_domain
-		{
-			glsl_vertex_program = 0,
-			glsl_fragment_program = 1
-		};
-
 		class compilation_exception : public exception
 		{
 		public:

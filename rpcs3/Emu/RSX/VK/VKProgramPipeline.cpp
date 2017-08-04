@@ -5,11 +5,13 @@ namespace vk
 {
 	namespace glsl
 	{
+		using namespace ::glsl;
+
 		program::program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs)
 			: m_device(dev), pipeline(p)
 		{
-			load_uniforms(glsl::program_domain::glsl_vertex_program, vertex_input);
-			load_uniforms(glsl::program_domain::glsl_vertex_program, fragment_inputs);
+			load_uniforms(program_domain::glsl_vertex_program, vertex_input);
+			load_uniforms(program_domain::glsl_vertex_program, fragment_inputs);
 			attribute_location_mask = 0;
 			vertex_attributes_mask = 0;
 		}

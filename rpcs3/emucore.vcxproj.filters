@@ -1783,5 +1783,8 @@
     <ClInclude Include="..\Utilities\sysinfo.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\GLSLCommon.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
