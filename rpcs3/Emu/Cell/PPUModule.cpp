@@ -975,7 +975,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
 				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
-			if (!vm::falloc(addr, size, vm::main))
+			if (!vm::falloc(addr, size))
 				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 
 			// Copy segment data, hash it
