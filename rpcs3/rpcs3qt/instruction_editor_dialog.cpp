@@ -2,7 +2,7 @@
 #include "instruction_editor_dialog.h"
 #include <QFontDatabase>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
 instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: QDialog(parent)
@@ -84,7 +84,8 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 void instruction_editor_dialog::updatePreview()
 {
 	bool ok;
-	ulong opcode = t2_instr->text().toULong(&ok, 16);
+	//ulong opcode = t2_instr->text().toULong(&ok, 16);
+
 	if (ok)
 	{
 		if (g_system == system_type::psv)

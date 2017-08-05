@@ -6,6 +6,6 @@
 class table_item_delegate : public QItemDelegate
 {
 public:
-	explicit table_item_delegate(QObject *parent = 0) {}
+	explicit table_item_delegate(QObject *parent = 0) : QItemDelegate(parent) {}
 	virtual void drawFocus(QPainter * /*painter*/, const QStyleOptionViewItem & /*option*/, const QRect & /*rect*/) const {}
 };

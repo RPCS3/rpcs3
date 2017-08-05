@@ -16,10 +16,10 @@
 
 #include "Emu/RSX/CgBinaryProgram.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings, QWidget* parent): QWidget(), xgui_settings(xSettings)
+cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings, QWidget* parent): QWidget(parent), xgui_settings(xSettings)
 {
 	setWindowTitle(tr("Cg Disasm"));
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -76,7 +76,7 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 		ShowDisasm();
 	});
 
-	myMenu.exec(QCursor::pos());
+	myMenu.exec(mapToGlobal(pos));
 }
 
 void cg_disasm_window::ShowDisasm()

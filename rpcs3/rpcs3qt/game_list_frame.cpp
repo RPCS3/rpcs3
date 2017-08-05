@@ -991,7 +991,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	if (c != 0)
 	{ // if left over games exist -- if empty entries exist
-		for (int col = c; col < maxCols; ++col)
+		for (uint col = c; col < maxCols; ++col)
 		{
 			QTableWidgetItem* emptyItem = new QTableWidgetItem();
 			emptyItem->setFlags(Qt::NoItemFlags);
