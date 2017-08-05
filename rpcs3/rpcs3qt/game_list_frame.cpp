@@ -445,7 +445,7 @@ void game_list_frame::Refresh(bool fromDrive)
 
 			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
 			{
-				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
+				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
 
 			bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
