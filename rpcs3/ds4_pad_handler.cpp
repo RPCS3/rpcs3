@@ -701,7 +701,6 @@ void ds4_thread::on_task()
 			continue;
 		}
 
-		auto time = std::chrono::system_clock::now();
 		u32 online = 0;
 		u32 i = 0;
 
