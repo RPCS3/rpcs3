@@ -593,8 +593,6 @@ void ds4_thread::CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevIn
 		serial = std::string(wSerial.begin(), wSerial.end());
 	}
 
-	ds4Dev.nextReport = std::chrono::system_clock::now();
-
 	if (!GetCalibrationData(&ds4Dev))
 	{
 		LOG_ERROR(HLE, "[DS4] Failed getting calibration data, ignoring controller!");
@@ -721,13 +719,6 @@ void ds4_thread::on_task()
 				if (dev)
 				{
 					hid_set_nonblocking(dev, 1);
-					if (controller.second.btCon)
-					{
-						// We already have calibration data, but we still need this to kick BT into sending correct 0x11 reports
-						std::array<u8, 64> buf{};
-						buf[0] = 0x2;
-						hid_get_feature_report(dev, buf.data(), buf.size());
-					}
 					controller.second.hidDevice = dev;
 				}
 				else
@@ -749,20 +740,16 @@ void ds4_thread::on_task()
 			}
 
 			// no data? keep going
-			// may also be a bluetooth controller that's turned off
 			if (res == 0)
+				continue;
+
+			// bt controller sends this until 0x02 feature report is sent back (happens on controller init/restart)
+			if (controller.second.btCon && buf[0] == 0x1)
 			{
-				// will cause hid_read to return -1 if the wireless controller is turned off
-				// which will allow the thread to receive inputs again once it's turned back on
-				if (controller.second.btCon && time > controller.second.nextReport)
-				{
-					std::array<u8, 64> buf{};
-					buf[0] = 0x2;
-					hid_get_feature_report(controller.second.hidDevice, buf.data(), buf.size());
-
-					controller.second.nextReport = time + std::chrono::seconds(5);
-				}
-
+				// tells controller to send 0x11 reports
+				std::array<u8, 64> buf{};
+				buf[0] = 0x2;
+				hid_get_feature_report(controller.second.hidDevice, buf.data(), buf.size());
 				continue;
 			}
 
