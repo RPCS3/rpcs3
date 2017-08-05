@@ -84,7 +84,8 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 void instruction_editor_dialog::updatePreview()
 {
 	bool ok;
-	//ulong opcode = t2_instr->text().toULong(&ok, 16);
+	ulong opcode = t2_instr->text().toULong(&ok, 16);
+	Q_UNUSED(opcode);
 
 	if (ok)
 	{

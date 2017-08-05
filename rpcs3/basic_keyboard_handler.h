@@ -15,7 +15,7 @@ public:
 	explicit basic_keyboard_handler();
 
 	void SetTargetWindow(QWindow* target);
-	bool eventFilter(QObject* obj, QEvent* ev);
+	bool eventFilter(QObject* obj, QEvent* ev) override;
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();

@@ -21,7 +21,7 @@ public:
 	void MouseScroll(QWheelEvent* event);
 	void MouseMove(QMouseEvent* event);
 
-	bool eventFilter(QObject* obj, QEvent* ev);
+	bool eventFilter(QObject* obj, QEvent* ev) override;
 private:
 	QWindow* m_target = nullptr;
 };
