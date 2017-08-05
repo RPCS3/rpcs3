@@ -348,7 +348,7 @@ void debugger_frame::Show_Val()
 	QLineEdit* p_pc(new QLineEdit(diag));
 	p_pc->setFont(mono);
 	p_pc->setMaxLength(8);
-	p_pc->setFixedWidth(75);
+	p_pc->setFixedWidth(90);
 	QLabel* addr(new QLabel(diag));
 	addr->setFont(mono);
 	
