@@ -66,6 +66,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	connect(m_list, &QTableWidget::currentCellChanged, this, [&](int cr, int cc, int pr, int pc) {
 		m_selectedEntry = cr;
 		UpdateSelectionLabel();
+		Q_UNUSED(cr); Q_UNUSED(pr); Q_UNUSED(pc);
 	});
 
 	// TODO: Unstub functions inside of this context menu so it makes sense to show this menu

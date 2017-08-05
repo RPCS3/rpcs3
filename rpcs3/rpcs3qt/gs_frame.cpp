@@ -8,7 +8,7 @@
 #include <QTimer>
 #include <QThread>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
