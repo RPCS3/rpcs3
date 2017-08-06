@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/Memory.h"
@@ -71,7 +71,7 @@ namespace rsx
 				if (Emu.IsStopped())
 					break;
 
-				std::this_thread::sleep_for(1ms);
+				std::this_thread::yield();
 			}
 		}
 
