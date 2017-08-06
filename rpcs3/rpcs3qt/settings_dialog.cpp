@@ -123,27 +123,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	// Comboboxes
 
-	// TODO implement enhancement for combobox / spinbox with proper range
-	//xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads);
-	const QString Auto = tr("Auto");
+	xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads, true);
 	ui->preferredSPUThreads->setToolTip(json_cpu_cbo["preferredSPUThreads"].toString());
-	for (int i = 0; i <= 6; i++)
-	{
-		ui->preferredSPUThreads->addItem( i == 0 ? Auto : QString::number(i), QVariant(i) );
-	}
-	const QString valueOf_PreferredSPUThreads = qstr(xemu_settings->GetSetting(emu_settings::PreferredSPUThreads));
-	int index = ui->preferredSPUThreads->findData(valueOf_PreferredSPUThreads == "0" ? Auto : valueOf_PreferredSPUThreads);
-	if (index == -1)
-	{
-		LOG_WARNING(GENERAL, "Current setting not found while creating preferredSPUThreads");
-	}
-	else
-	{
-		ui->preferredSPUThreads->setCurrentIndex(index);
-	}
-	connect(ui->preferredSPUThreads, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
-		xemu_settings->SetSetting(emu_settings::PreferredSPUThreads, std::to_string(ui->preferredSPUThreads->itemData(index).toInt()));
-	});
+	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr("Auto"));
 
 	// PPU tool tips
 	ui->ppu_precise->setToolTip(json_cpu_ppu["precise"].toString());
