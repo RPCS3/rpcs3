@@ -228,6 +228,8 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 {
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
+	ppu.gpr[3] = CELL_OK;
+
 	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
 		if (queue.type != SYS_PPU_QUEUE)
@@ -267,8 +269,6 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	}
 
 	// If cancelled, gpr[3] will be non-zero. Other registers must contain event data.
-	ppu.gpr[3] = 0;
-
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		if (timeout)
@@ -418,7 +418,7 @@ error_code sys_event_port_disconnect(u32 eport_id)
 	return CELL_OK;
 }
 
-error_code sys_event_port_send(ppu_thread& ppu, u32 eport_id, u64 data1, u64 data2, u64 data3)
+error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 

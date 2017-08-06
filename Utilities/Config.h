@@ -12,6 +12,9 @@
 
 namespace cfg
 {
+	// Format min and max values
+	std::vector<std::string> make_int_range(s64 min, s64 max);
+
 	// Convert string to signed integer
 	bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max);
 
@@ -248,6 +251,11 @@ namespace cfg
 			}
 
 			return false;
+		}
+
+		std::vector<std::string> to_list() const override
+		{
+			return make_int_range(Min, Max);
 		}
 	};
 

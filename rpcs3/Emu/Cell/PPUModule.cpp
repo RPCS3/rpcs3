@@ -975,7 +975,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
 				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
-			if (!vm::falloc(addr, size, vm::main))
+			if (!vm::falloc(addr, size))
 				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 
 			// Copy segment data, hash it
@@ -1198,6 +1198,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellFont", "libfont.sprx" },
 			{ "cellFontFT", "libfontFT.sprx" },
 			{ "cellFontFT", "libfreetype.sprx" },
+			{ "cellGcmSys", "libgcm_sys.sprx" },
 			{ "cellGifDec", "libgifdec.sprx" },
 			{ "cellGifDec", "libsre.sprx" },
 			{ "cellJpgDec", "libjpgdec.sprx" },
@@ -1290,10 +1291,10 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
 
-		if (!fs::is_dir(lle_dir))
+		if (!fs::is_dir(lle_dir) || !fs::is_file(lle_dir + "libsysmodule.sprx"))
 		{
-			LOG_ERROR(GENERAL, "/dev_flash/sys/external/ directory does not exist!"
-				"\nYou should install the PS3 Firmware (Menu: Tools -> Install Firmware)."
+			LOG_ERROR(GENERAL, "PS3 firmware is not installed or the installed firmware is invalid."
+				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
 				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 		}
 

@@ -5,7 +5,7 @@
 
 const spu_decoder<spu_itype> s_spu_itype;
 
-std::shared_ptr<spu_function_t> SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size)
+spu_function_t* SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size)
 {
 	for (auto found = m_db.equal_range(key); found.first != found.second; found.first++)
 	{
@@ -14,7 +14,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::find(const be_t<u32>* data, u64 key
 		// Compare binary data explicitly (TODO: optimize)
 		if (LIKELY(func->size <= max_size) && std::memcmp(func->data.data(), data, func->size) == 0)
 		{
-			return func;
+			return func.get();
 		}
 	}
 
@@ -33,7 +33,7 @@ SPUDatabase::~SPUDatabase()
 	// TODO: serialize database
 }
 
-std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_limit)
+spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_limit)
 {
 	// Check arguments (bounds and alignment)
 	if (max_limit > 0x40000 || entry >= max_limit || entry % 4 || max_limit % 4)
@@ -330,5 +330,5 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 
 	LOG_NOTICE(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
 
-	return func;
+	return func.get();
 }

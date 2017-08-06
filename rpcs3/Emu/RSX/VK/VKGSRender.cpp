@@ -2143,9 +2143,9 @@ void VKGSRender::flip(int buffer)
 
 	if (!resize_screen)
 	{
-		u32 buffer_width = gcm_buffers[buffer].width;
-		u32 buffer_height = gcm_buffers[buffer].height;
-		u32 buffer_pitch = gcm_buffers[buffer].pitch;
+		u32 buffer_width = display_buffers[buffer].width;
+		u32 buffer_height = display_buffers[buffer].height;
+		u32 buffer_pitch = display_buffers[buffer].pitch;
 
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 

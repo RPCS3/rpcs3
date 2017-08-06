@@ -22,6 +22,8 @@
 #include "Utilities/variant.hpp"
 #include "define_new_memleakdetect.h"
 
+#include "Emu/Cell/lv2/sys_rsx.h"
+
 extern u64 get_system_time();
 
 extern bool user_asked_for_frame_capture;
@@ -113,7 +115,7 @@ namespace rsx
 		std::vector<u32> element_push_buffer;
 
 	public:
-		CellGcmControl* ctrl = nullptr;
+		RsxDmaControl* ctrl = nullptr;
 
 		Timer timer_sync;
 
@@ -129,22 +131,23 @@ namespace rsx
 	public:
 		std::shared_ptr<class ppu_thread> intr_thread;
 
+		// I hate this flag, but until hle is closer to lle, its needed
+		bool isHLE{ false };
+
 		u32 ioAddress, ioSize;
 		u32 flip_status;
-		int flip_mode;
 		int debug_level;
-		int frequency_mode;
 
-		u32 tiles_addr;
-		u32 zculls_addr;
-		vm::ps3::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
-		u32 gcm_buffers_count;
-		u32 gcm_current_buffer;
+		atomic_t<bool> requested_vsync{false};
+		atomic_t<bool> enable_second_vhandler{false};
+
+		RsxDisplayInfo display_buffers[8];
+		u32 display_buffers_count{0};
+		u32 current_display_buffer{0};
 		u32 ctxt_addr;
 		u32 label_addr;
 
 		u32 local_mem_addr, main_mem_addr;
-		bool strict_ordering[0x1000];
 
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
@@ -181,6 +184,12 @@ namespace rsx
 		bool invalid_command_interrupt_raised = false;
 		bool in_begin_end = false;
 
+		bool conditional_render_test_failed = false;
+		bool conditional_render_enabled = false;
+		bool zcull_stats_enabled = false;
+		bool zcull_rendering_enabled = false;
+		bool zcull_pixel_cnt_enabled = false;
+
 	protected:
 		thread();
 		virtual ~thread();
@@ -208,6 +217,11 @@ namespace rsx
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
+
+		//zcull
+		virtual void notify_zcull_info_changed() {}
+		virtual void clear_zcull_stats(u32 type) {}
+		virtual u32 get_zcull_stats(u32 type) { return UINT32_MAX; }
 
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
@@ -345,7 +359,7 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
+		void init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress);
 
 		tiled_region get_tiled_address(u32 offset, u32 location);
 		GcmTileInfo *find_tile(u32 offset, u32 location);

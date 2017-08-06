@@ -25,13 +25,16 @@ struct lv2_lwcond final : lv2_obj
 
 	const u64 name;
 	const u32 lwid;
+	vm::ps3::ptr<sys_lwcond_t> control;
 
+	semaphore<> mutex;
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_lwcond(u64 name, u32 lwid)
+	lv2_lwcond(u64 name, u32 lwid, vm::ps3::ptr<sys_lwcond_t> control)
 		: name(name)
 		, lwid(lwid)
+		, control(control)
 	{
 	}
 };

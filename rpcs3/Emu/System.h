@@ -88,7 +88,7 @@ enum class audio_renderer
 	null,
 #ifdef _WIN32
 	xaudio,
-#elif __linux__
+#elif defined(HAVE_ALSA)
 	alsa,
 #endif
 	openal,

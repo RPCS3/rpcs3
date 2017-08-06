@@ -1072,7 +1072,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
-			gameListFrame->LoadSettings();
+			gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
 			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
 			ui->toolBar->setStyleSheet(QString(
 				"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
@@ -1195,8 +1195,8 @@ void main_window::CreateConnects()
 		int index;
 
 		if (act == ui->setIconSizeTinyAct) index = 0;
-		else if (act == ui->setIconSizeSmallAct) index = GUI::gl_max_slider_pos / 3;
-		else if (act == ui->setIconSizeMediumAct) index = GUI::gl_max_slider_pos * 2 / 3;
+		else if (act == ui->setIconSizeSmallAct) index = GUI::get_Index(GUI::gl_icon_size_small);
+		else if (act == ui->setIconSizeMediumAct) index = GUI::get_Index(GUI::gl_icon_size_medium);
 		else index = GUI::gl_max_slider_pos;
 
 		resizeIcons(index);
@@ -1205,9 +1205,9 @@ void main_window::CreateConnects()
 	{
 		int index = GUI::gl_max_slider_pos / 4;
 
-		if (idx < index) ui->setIconSizeTinyAct->setChecked(true);
-		else if (idx < index * 2) ui->setIconSizeSmallAct->setChecked(true);
-		else if (idx < index * 3) ui->setIconSizeMediumAct->setChecked(true);
+		if (idx < GUI::get_Index((GUI::gl_icon_size_small + GUI::gl_icon_size_min) / 2)) ui->setIconSizeTinyAct->setChecked(true);
+		else if (idx < GUI::get_Index((GUI::gl_icon_size_medium + GUI::gl_icon_size_small) / 2)) ui->setIconSizeSmallAct->setChecked(true);
+		else if (idx < GUI::get_Index((GUI::gl_icon_size_max + GUI::gl_icon_size_medium) / 2)) ui->setIconSizeMediumAct->setChecked(true);
 		else ui->setIconSizeLargeAct->setChecked(true);
 
 		resizeIcons(idx);
