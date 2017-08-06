@@ -50,6 +50,7 @@ void idm::init()
 {
 	// Allocate
 	g_map.resize(id_manager::typeinfo::get_count());
+	idm::clear();
 }
 
 void idm::clear()
@@ -75,6 +76,7 @@ void fxm::init()
 {
 	// Allocate
 	g_vec.resize(id_manager::typeinfo::get_count());
+	fxm::clear();
 }
 
 void fxm::clear()
