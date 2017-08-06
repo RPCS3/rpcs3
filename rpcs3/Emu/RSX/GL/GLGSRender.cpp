@@ -1181,8 +1181,10 @@ bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	return m_gl_texture_cache.upload_scaled_image(src, dst, interpolate, m_rtts);
 }
 
-void GLGSRender::check_zcull_status(bool framebuffer_swap)
+void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
 {
+	bool testing_enabled = zcull_pixel_cnt_enabled || zcull_stats_enabled;
+
 	if (framebuffer_swap)
 	{
 		zcull_surface_active = false;
@@ -1206,7 +1208,6 @@ void GLGSRender::check_zcull_status(bool framebuffer_swap)
 		}
 	}
 
-	bool testing_enabled = zcull_pixel_cnt_enabled || zcull_stats_enabled;
 	occlusion_query_info* query = nullptr;
 
 	if (zcull_task_queue.task_stack.size() > 0)
@@ -1214,7 +1215,7 @@ void GLGSRender::check_zcull_status(bool framebuffer_swap)
 
 	if (query && query->active)
 	{
-		if (!zcull_rendering_enabled || !testing_enabled || !zcull_surface_active)
+		if (force_read || (!zcull_rendering_enabled || !testing_enabled || !zcull_surface_active))
 		{
 			glEndQuery(GL_ANY_SAMPLES_PASSED);
 			query->active = false;
@@ -1241,13 +1242,27 @@ void GLGSRender::clear_zcull_stats(u32 type)
 {
 	if (type == CELL_GCM_ZPASS_PIXEL_CNT)
 	{
-		//synchronize_zcull_stats(true);
+		if (zcull_task_queue.active_query &&
+			zcull_task_queue.active_query->active)
+		{
+			//discard active query if any
+			check_zcull_status(false, true);
+		}
+
 		current_zcull_stats.clear();
 	}
 }
 
 u32 GLGSRender::get_zcull_stats(u32 type)
 {
+	if (zcull_task_queue.active_query &&
+		zcull_task_queue.active_query->active &&
+		current_zcull_stats.zpass_pixel_cnt == 0)
+	{
+		//The zcull unit is still bound as the read is happening and there are no results ready
+		check_zcull_status(false, true);
+	}
+
 	switch (type)
 	{
 	case CELL_GCM_ZPASS_PIXEL_CNT:
@@ -1323,5 +1338,5 @@ u32 GLGSRender::synchronize_zcull_stats(bool hard_sync)
 
 void GLGSRender::notify_zcull_info_changed()
 {
-	check_zcull_status(false);
+	check_zcull_status(false, false);
 }
