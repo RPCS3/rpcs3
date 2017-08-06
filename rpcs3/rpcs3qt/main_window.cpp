@@ -285,10 +285,24 @@ void main_window::BootGame()
 	}
 }
 
-void main_window::InstallPkg()
+void main_window::InstallPkg(const QString& dropPath)
 {
-	QString path_last_PKG = guiSettings->GetValue(GUI::fd_install_pkg).toString();
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	QString filePath = dropPath;
+
+	if (filePath.isEmpty())
+	{
+		QString path_last_PKG = guiSettings->GetValue(GUI::fd_install_pkg).toString();
+		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	}
+	else
+	{
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+	}
 
 	if (filePath == NULL)
 	{
@@ -418,10 +432,24 @@ void main_window::InstallPkg()
 	}
 }
 
-void main_window::InstallPup()
+void main_window::InstallPup(const QString& dropPath)
 {
-	QString path_last_PUP = guiSettings->GetValue(GUI::fd_install_pup).toString();
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)"));
+	QString filePath = dropPath;
+
+	if (filePath.isEmpty())
+	{
+		QString path_last_PUP = guiSettings->GetValue(GUI::fd_install_pup).toString();
+		filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)"));
+	}
+	else
+	{
+		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		{
+			LOG_NOTICE(LOADER, "Firmware: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+	}
 
 	if (filePath == NULL)
 	{
@@ -1020,8 +1048,8 @@ void main_window::CreateConnects()
 	connect(ui->freezeRecentAct, &QAction::triggered, [=](bool checked) {
 		guiSettings->SetValue(GUI::rg_freeze, checked);
 	});
-	connect(ui->bootInstallPkgAct, &QAction::triggered, this, &main_window::InstallPkg);
-	connect(ui->bootInstallPupAct, &QAction::triggered, this, &main_window::InstallPup);
+	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPkg(); });
+	connect(ui->bootInstallPupAct, &QAction::triggered, [this] {InstallPup(); });
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
@@ -1275,6 +1303,13 @@ void main_window::CreateDockWindows()
 	});
 	connect(gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
 	connect(gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
+	connect(gameListFrame, &game_list_frame::RequestPackageInstall, [this](const QStringList& paths){
+		for (const auto& path : paths)
+		{
+			InstallPkg(path);
+		}
+	});
+	connect(gameListFrame, &game_list_frame::RequestFirmwareInstall, this, &main_window::InstallPup);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configureAll)
