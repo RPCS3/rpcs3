@@ -397,7 +397,7 @@ public:
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 	
-	void check_zcull_status(bool framebuffer_swap);
+	void check_zcull_status(bool framebuffer_swap, bool force_read);
 	u32 synchronize_zcull_stats(bool hard_sync = false);
 
 protected:
