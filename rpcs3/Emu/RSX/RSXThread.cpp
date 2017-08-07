@@ -830,7 +830,7 @@ namespace rsx
 	{
 		if (m_internal_tasks.empty())
 		{
-			std::this_thread::sleep_for(1ms);
+			std::this_thread::yield();
 		}
 		else
 		{

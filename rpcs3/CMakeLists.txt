@@ -127,7 +127,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
-	set(ADDITIONAL_LIBS "rt" "X11" "asound")
+	set(ADDITIONAL_LIBS "rt" "X11")
 elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
@@ -158,9 +158,19 @@ elseif(WIN32)
 	set(PLATFORM_ARCH "Windows/x86_64")
 else()
 	set(PLATFORM_ARCH "linux/x86_64")
+	option(USE_ALSA "ALSA audio backend" ON)
 	option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 endif()
 
+if(USE_ALSA)
+	find_package(PkgConfig)
+	pkg_check_modules(ALSA alsa)
+	if(ALSA_FOUND)
+		add_definitions(-DHAVE_ALSA)
+		include_directories(SYSTEM ${ALSA_INCLUDE_DIRS})
+		list(APPEND ADDITIONAL_LIBS ${ALSA_LDFLAGS})
+	endif()
+endif()
 if(USE_LIBEVDEV)
 	find_package(PkgConfig)
 	pkg_check_modules(LIBEVDEV libevdev)

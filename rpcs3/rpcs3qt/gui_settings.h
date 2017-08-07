@@ -35,10 +35,18 @@ typedef QList<q_size_pair> q_size_list;
 
 namespace GUI
 {
-	const QSize gl_icon_size_min = QSize(40, 22);
-	const QSize gl_icon_size_max = QSize(320, 176);
+	const QSize gl_icon_size_min    = QSize(40, 22);
+	const QSize gl_icon_size_small  = QSize(80, 44);
+	const QSize gl_icon_size_medium = QSize(160, 88);
+	const QSize gl_icon_size_max    = QSize(320, 176);
 
 	const int gl_max_slider_pos = 100;
+
+	inline int get_Index(const QSize& current) {
+		int size_delta = gl_icon_size_max.width() - gl_icon_size_min.width();
+		int current_delta = current.width() - gl_icon_size_min.width();
+		return gl_max_slider_pos * current_delta / size_delta;
+	};
 
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
@@ -88,7 +96,7 @@ namespace GUI
 	const GUI_SAVE gl_sortAsc        = GUI_SAVE( game_list, "sortAsc",        true );
 	const GUI_SAVE gl_sortCol        = GUI_SAVE( game_list, "sortCol",        1 );
 	const GUI_SAVE gl_state          = GUI_SAVE( game_list, "state",          QByteArray() );
-	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       gl_max_slider_pos / 2);
+	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       get_Index(gl_icon_size_small));
 	const GUI_SAVE gl_iconColor      = GUI_SAVE( game_list, "iconColor",      gl_icon_color);
 	const GUI_SAVE gl_listMode       = GUI_SAVE( game_list, "listMode",       true );
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
