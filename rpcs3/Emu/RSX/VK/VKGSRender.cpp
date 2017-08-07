@@ -578,6 +578,9 @@ VKGSRender::VKGSRender() : GSRender()
 	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
 	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
+	//Empty view to bind to buffer locations without data
+	m_null_buffer_view.reset(new vk::buffer_view(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, 0, 0));
+
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
 
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
@@ -658,6 +661,7 @@ VKGSRender::~VKGSRender()
 	vk::destroy_global_resources();
 
 	//Data heaps/buffers
+	m_null_buffer_view.reset();
 	m_index_buffer_ring_info.heap.reset();
 	m_uniform_buffer_ring_info.heap.reset();
 	m_attrib_ring_info.heap.reset();
@@ -789,6 +793,12 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	}
 
 	return false;
+}
+
+void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
+{
+	if (m_texture_cache.invalidate_range(address_base, size, false))
+		m_texture_cache.flush(true);
 }
 
 void VKGSRender::begin()

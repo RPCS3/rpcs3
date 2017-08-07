@@ -129,11 +129,12 @@ private:
 
 	vk::render_device *m_device;
 	vk::swap_chain* m_swap_chain;
-	//buffer
 
+	//buffer
 	vk::vk_data_heap m_uniform_buffer_ring_info;
 	vk::vk_data_heap m_index_buffer_ring_info;
 	vk::vk_data_heap m_texture_upload_buffer_ring_info;
+	std::unique_ptr<vk::buffer_view> m_null_buffer_view;
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
@@ -263,4 +264,5 @@ protected:
 	void do_local_task() override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
+	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
 };

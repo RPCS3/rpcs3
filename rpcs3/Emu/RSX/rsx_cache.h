@@ -115,6 +115,13 @@ namespace rsx
 			locked = false;
 		}
 
+		void discard()
+		{
+			protection = utils::protection::rw;
+			dirty = true;
+			locked = false;
+		}
+
 		bool overlaps(std::pair<u32, u32> range)
 		{
 			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);

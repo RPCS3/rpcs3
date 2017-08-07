@@ -973,7 +973,7 @@ namespace rsx
 
 			if (vertex_push_buffers[index].size > 0)
 			{
-				std::pair<u8, u32> volatile_range_info = std::make_pair(index, vertex_push_buffers[index].data.size() * (u32)sizeof(u32));
+				std::pair<u8, u32> volatile_range_info = std::make_pair(index, static_cast<u32>(vertex_push_buffers[index].data.size() * sizeof(u32)));
 				result.volatile_blocks.push_back(volatile_range_info);
 				result.attribute_placement[index] = attribute_buffer_placement::transient;
 				continue;
