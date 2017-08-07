@@ -108,6 +108,7 @@ private:
 	{
 		GLuint handle;
 		GLint result;
+		GLint num_draws;
 		bool pending;
 		bool active;
 	};
