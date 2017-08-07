@@ -221,9 +221,18 @@ private:
 			return !!test;
 		}
 
+		const bool test_property(GLenum property, u32 test) const
+		{
+			auto found = properties.find(property);
+			if (found == properties.end())
+				return false;
+
+			return (found->second == test);
+		}
+
 		void depth_func(GLenum func)
 		{
-			if (properties[GL_DEPTH_FUNC] != func)
+			if (!test_property(GL_DEPTH_FUNC, func))
 			{
 				glDepthFunc(func);
 				properties[GL_DEPTH_FUNC] = func;
@@ -232,7 +241,7 @@ private:
 
 		void depth_mask(GLboolean mask)
 		{
-			if (properties[GL_DEPTH_WRITEMASK] != mask)
+			if (!test_property(GL_DEPTH_WRITEMASK, mask))
 			{
 				glDepthMask(mask);
 				properties[GL_DEPTH_WRITEMASK] = mask;
@@ -242,7 +251,7 @@ private:
 		void clear_depth(GLfloat depth)
 		{
 			u32 value = (u32&)depth;
-			if (properties[GL_DEPTH_CLEAR_VALUE] != value)
+			if (!test_property(GL_DEPTH_CLEAR_VALUE, value))
 			{
 				glClearDepth(value);
 				properties[GL_DEPTH_CLEAR_VALUE] = value;
@@ -251,7 +260,7 @@ private:
 
 		void stencil_mask(GLuint mask)
 		{
-			if (properties[GL_STENCIL_WRITEMASK] != mask)
+			if (!test_property(GL_STENCIL_WRITEMASK, mask))
 			{
 				glStencilMask(mask);
 				properties[GL_STENCIL_WRITEMASK] = mask;
@@ -261,7 +270,7 @@ private:
 		void clear_stencil(GLint stencil)
 		{
 			u32 value = (u32&)stencil;
-			if (properties[GL_STENCIL_CLEAR_VALUE] != value)
+			if (!test_property(GL_STENCIL_CLEAR_VALUE, value))
 			{
 				glClearStencil(value);
 				properties[GL_STENCIL_CLEAR_VALUE] = value;
@@ -270,7 +279,7 @@ private:
 
 		void color_mask(u32 mask)
 		{
-			if (properties[GL_COLOR_WRITEMASK] != mask)
+			if (!test_property(GL_COLOR_WRITEMASK, mask))
 			{
 				glColorMask(((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0), ((mask & 0x10) ? 1 : 0));
 				properties[GL_COLOR_WRITEMASK] = mask;
@@ -291,7 +300,7 @@ private:
 		void clear_color(u8 r, u8 g, u8 b, u8 a)
 		{
 			u32 value = (u32)r | (u32)g << 8 | (u32)b << 16 | (u32)a << 24;
-			if (properties[GL_COLOR_CLEAR_VALUE] != value)
+			if (!test_property(GL_COLOR_CLEAR_VALUE, value))
 			{
 				glClearColor(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
 				properties[GL_COLOR_CLEAR_VALUE] = value;
@@ -303,7 +312,7 @@ private:
 			u32 depth_min = (u32&)min;
 			u32 depth_max = (u32&)max;
 
-			if (properties[DEPTH_BOUNDS_MIN] != depth_min || properties[DEPTH_BOUNDS_MAX] != depth_max)
+			if (!test_property(DEPTH_BOUNDS_MIN, depth_min) || !test_property(DEPTH_BOUNDS_MAX, depth_max))
 			{
 				glDepthBoundsEXT(min, max);
 
@@ -317,7 +326,7 @@ private:
 			u32 depth_min = (u32&)min;
 			u32 depth_max = (u32&)max;
 
-			if (properties[DEPTH_RANGE_MIN] != depth_min || properties[DEPTH_RANGE_MAX] != depth_max)
+			if (!test_property(DEPTH_RANGE_MIN, depth_min) || !test_property(DEPTH_RANGE_MAX, depth_max))
 			{
 				glDepthRange(min, max);
 
@@ -328,7 +337,7 @@ private:
 
 		void logic_op(GLenum op)
 		{
-			if (properties[GL_COLOR_LOGIC_OP] != op)
+			if (!test_property(GL_COLOR_LOGIC_OP, op))
 			{
 				glLogicOp(op);
 				properties[GL_COLOR_LOGIC_OP] = op;
@@ -339,7 +348,7 @@ private:
 		{
 			u32 value = (u32&)width;
 
-			if (properties[GL_LINE_WIDTH] != value)
+			if (!test_property(GL_LINE_WIDTH, value))
 			{
 				glLineWidth(width);
 				properties[GL_LINE_WIDTH] = value;
@@ -348,7 +357,7 @@ private:
 
 		void front_face(GLenum face)
 		{
-			if (properties[GL_FRONT_FACE] != face)
+			if (!test_property(GL_FRONT_FACE, face))
 			{
 				glFrontFace(face);
 				properties[GL_FRONT_FACE] = face;
@@ -357,7 +366,7 @@ private:
 
 		void cull_face(GLenum mode)
 		{
-			if (properties[GL_CULL_FACE_MODE] != mode)
+			if (!test_property(GL_CULL_FACE_MODE, mode))
 			{
 				glCullFace(mode);
 				properties[GL_CULL_FACE_MODE] = mode;
@@ -369,7 +378,7 @@ private:
 			u32 _units = (u32&)units;
 			u32 _factor = (u32&)factor;
 
-			if (properties[GL_POLYGON_OFFSET_UNITS] != _units || properties[GL_POLYGON_OFFSET_FACTOR] != _factor)
+			if (!test_property(GL_POLYGON_OFFSET_UNITS, _units) || !test_property(GL_POLYGON_OFFSET_FACTOR, _factor))
 			{
 				glPolygonOffset(factor, units);
 
