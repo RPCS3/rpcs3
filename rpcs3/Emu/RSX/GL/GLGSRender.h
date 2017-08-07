@@ -101,12 +101,284 @@ private:
 	//vaos are mandatory for core profile
 	gl::vao m_vao;
 
+	//occlusion query
+	bool zcull_surface_active = false;
+	
+	struct occlusion_query_info
+	{
+		GLuint handle;
+		GLint result;
+		bool pending;
+		bool active;
+	};
+
+	struct
+	{
+		u32 zpass_pixel_cnt;
+		u32 zcull_stats;
+		u32 zcull_stats1;
+		u32 zcull_stats2;
+		u32 zcull_stats3;
+
+		void clear()
+		{
+			zpass_pixel_cnt = zcull_stats = zcull_stats1 = zcull_stats2 = zcull_stats3 = 0;
+		}
+	}
+	current_zcull_stats;
+
+	struct occlusion_task
+	{
+		std::vector<occlusion_query_info*> task_stack;
+		occlusion_query_info* active_query = nullptr;
+		u32 pending = 0;
+
+		//Add one query to the task
+		void add(occlusion_query_info* query)
+		{
+			active_query = query;
+
+			if (task_stack.size() > 0 && pending == 0)
+				task_stack.resize(0);
+
+			const auto empty_slots = task_stack.size() - pending;
+			if (empty_slots >= 4)
+			{
+				for (auto &_query : task_stack)
+				{
+					if (_query == nullptr)
+					{
+						_query = query;
+						pending++;
+						return;
+					}
+				}
+			}
+
+			task_stack.push_back(query);
+			pending++;
+		}
+	}
+	zcull_task_queue = {};
+
+	const u32 occlusion_query_count = 128;
+	std::array<occlusion_query_info, 128> occlusion_query_data = {};
+
 public:
 	GLGSRender();
 
 private:
-	static u32 enable(u32 enable, u32 cap);
-	static u32 enable(u32 enable, u32 cap, u32 index);
+
+	struct
+	{
+		const u32 DEPTH_BOUNDS_MIN = 0xFFFF0001;
+		const u32 DEPTH_BOUNDS_MAX = 0xFFFF0002;
+		const u32 DEPTH_RANGE_MIN = 0xFFFF0003;
+		const u32 DEPTH_RANGE_MAX = 0xFFFF0004;
+
+		std::unordered_map<GLenum, u32> properties = {};
+		std::unordered_map<GLenum, std::array<u32, 4>> indexed_properties = {};
+
+		bool enable(u32 test, GLenum cap)
+		{
+			auto found = properties.find(cap);
+			if (found != properties.end() && found->second == test)
+				return !!test;
+
+			properties[cap] = test;
+
+			if (test)
+				glEnable(cap);
+			else
+				glDisable(cap);
+
+			return !!test;
+		}
+
+		bool enablei(u32 test, GLenum cap, u32 index)
+		{
+			auto found = indexed_properties.find(cap);
+			const bool exists = found != indexed_properties.end();
+
+			if (!exists)
+			{
+				indexed_properties[cap] = {};
+				indexed_properties[cap][index] = test;
+			}
+			else
+			{
+				if (found->second[index] == test)
+					return !!test;
+
+				found->second[index] = test;
+			}
+
+			if (test)
+				glEnablei(cap, index);
+			else
+				glDisablei(cap, index);
+
+			return !!test;
+		}
+
+		void depth_func(GLenum func)
+		{
+			if (properties[GL_DEPTH_FUNC] != func)
+			{
+				glDepthFunc(func);
+				properties[GL_DEPTH_FUNC] = func;
+			}
+		}
+
+		void depth_mask(GLboolean mask)
+		{
+			if (properties[GL_DEPTH_WRITEMASK] != mask)
+			{
+				glDepthMask(mask);
+				properties[GL_DEPTH_WRITEMASK] = mask;
+			}
+		}
+
+		void clear_depth(GLfloat depth)
+		{
+			u32 value = (u32&)depth;
+			if (properties[GL_DEPTH_CLEAR_VALUE] != value)
+			{
+				glClearDepth(value);
+				properties[GL_DEPTH_CLEAR_VALUE] = value;
+			}
+		}
+
+		void stencil_mask(GLuint mask)
+		{
+			if (properties[GL_STENCIL_WRITEMASK] != mask)
+			{
+				glStencilMask(mask);
+				properties[GL_STENCIL_WRITEMASK] = mask;
+			}
+		}
+
+		void clear_stencil(GLint stencil)
+		{
+			u32 value = (u32&)stencil;
+			if (properties[GL_STENCIL_CLEAR_VALUE] != value)
+			{
+				glClearStencil(value);
+				properties[GL_STENCIL_CLEAR_VALUE] = value;
+			}
+		}
+
+		void color_mask(u32 mask)
+		{
+			if (properties[GL_COLOR_WRITEMASK] != mask)
+			{
+				glColorMask(((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0), ((mask & 0x10) ? 1 : 0));
+				properties[GL_COLOR_WRITEMASK] = mask;
+			}
+		}
+
+		void color_mask(bool r, bool g, bool b, bool a)
+		{
+			u32 mask = 0;
+			if (r) mask |= 0x20;
+			if (g) mask |= 0x40;
+			if (b) mask |= 0x80;
+			if (a) mask |= 0x10;
+
+			color_mask(mask);
+		}
+
+		void clear_color(u8 r, u8 g, u8 b, u8 a)
+		{
+			u32 value = (u32)r | (u32)g << 8 | (u32)b << 16 | (u32)a << 24;
+			if (properties[GL_COLOR_CLEAR_VALUE] != value)
+			{
+				glClearColor(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
+				properties[GL_COLOR_CLEAR_VALUE] = value;
+			}
+		}
+
+		void depth_bounds(float min, float max)
+		{
+			u32 depth_min = (u32&)min;
+			u32 depth_max = (u32&)max;
+
+			if (properties[DEPTH_BOUNDS_MIN] != depth_min || properties[DEPTH_BOUNDS_MAX] != depth_max)
+			{
+				glDepthBoundsEXT(min, max);
+
+				properties[DEPTH_BOUNDS_MIN] = depth_min;
+				properties[DEPTH_BOUNDS_MAX] = depth_max;
+			}
+		}
+
+		void depth_range(float min, float max)
+		{
+			u32 depth_min = (u32&)min;
+			u32 depth_max = (u32&)max;
+
+			if (properties[DEPTH_RANGE_MIN] != depth_min || properties[DEPTH_RANGE_MAX] != depth_max)
+			{
+				glDepthRange(min, max);
+
+				properties[DEPTH_RANGE_MIN] = depth_min;
+				properties[DEPTH_RANGE_MAX] = depth_max;
+			}
+		}
+
+		void logic_op(GLenum op)
+		{
+			if (properties[GL_COLOR_LOGIC_OP] != op)
+			{
+				glLogicOp(op);
+				properties[GL_COLOR_LOGIC_OP] = op;
+			}
+		}
+
+		void line_width(GLfloat width)
+		{
+			u32 value = (u32&)width;
+
+			if (properties[GL_LINE_WIDTH] != value)
+			{
+				glLineWidth(width);
+				properties[GL_LINE_WIDTH] = value;
+			}
+		}
+
+		void front_face(GLenum face)
+		{
+			if (properties[GL_FRONT_FACE] != face)
+			{
+				glFrontFace(face);
+				properties[GL_FRONT_FACE] = face;
+			}
+		}
+
+		void cull_face(GLenum mode)
+		{
+			if (properties[GL_CULL_FACE_MODE] != mode)
+			{
+				glCullFace(mode);
+				properties[GL_CULL_FACE_MODE] = mode;
+			}
+		}
+
+		void polygon_offset(float factor, float units)
+		{
+			u32 _units = (u32&)units;
+			u32 _factor = (u32&)factor;
+
+			if (properties[GL_POLYGON_OFFSET_UNITS] != _units || properties[GL_POLYGON_OFFSET_FACTOR] != _factor)
+			{
+				glPolygonOffset(factor, units);
+
+				properties[GL_POLYGON_OFFSET_UNITS] = _units;
+				properties[GL_POLYGON_OFFSET_FACTOR] = _factor;
+			}
+		}
+	}
+	gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
 	std::tuple<u32, std::optional<std::tuple<GLenum, u32> > > set_vertex_buffer();
@@ -124,6 +396,9 @@ public:
 	work_item& post_flush_request(u32 address, gl::texture_cache::cached_texture_section *section);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
+	
+	void check_zcull_status(bool framebuffer_swap);
+	u32 synchronize_zcull_stats(bool hard_sync = false);
 
 protected:
 	void begin() override;
@@ -136,6 +411,10 @@ protected:
 	u64 timestamp() const override;
 
 	void do_local_task() override;
+
+	void notify_zcull_info_changed() override;
+	void clear_zcull_stats(u32 type) override;
+	u32 get_zcull_stats(u32 type) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 
