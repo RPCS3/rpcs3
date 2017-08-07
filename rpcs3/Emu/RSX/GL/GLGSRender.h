@@ -254,7 +254,7 @@ private:
 			u32 value = (u32&)depth;
 			if (!test_property(GL_DEPTH_CLEAR_VALUE, value))
 			{
-				glClearDepth(value);
+				glClearDepth(depth);
 				properties[GL_DEPTH_CLEAR_VALUE] = value;
 			}
 		}
@@ -273,7 +273,7 @@ private:
 			u32 value = (u32&)stencil;
 			if (!test_property(GL_STENCIL_CLEAR_VALUE, value))
 			{
-				glClearStencil(value);
+				glClearStencil(stencil);
 				properties[GL_STENCIL_CLEAR_VALUE] = value;
 			}
 		}
