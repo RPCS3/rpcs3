@@ -377,9 +377,9 @@ void GLGSRender::end()
 
 		if (clear_depth)
 		{
-			glDepthMask(GL_TRUE);
-			glClearDepth(1.0);
-			glClearStencil(255);
+			gl_state.depth_mask(GL_TRUE);
+			gl_state.clear_depth(1.0);
+			gl_state.clear_stencil(255);
 			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
 		}
 
@@ -397,7 +397,7 @@ void GLGSRender::end()
 		}
 
 		if (clear_depth)
-			glDepthMask(rsx::method_registers.depth_write_enabled());
+			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
 
 		ds->set_cleared();
 	}
