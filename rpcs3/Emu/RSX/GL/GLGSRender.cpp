@@ -532,6 +532,10 @@ void GLGSRender::end()
 
 	m_draw_calls++;
 
+	if (zcull_task_queue.active_query &&
+		zcull_task_queue.active_query->active)
+		zcull_task_queue.active_query->num_draws++;
+
 	synchronize_buffers();
 
 	rsx::thread::end();
@@ -1234,6 +1238,7 @@ void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
 			glBeginQuery(GL_ANY_SAMPLES_PASSED, query->handle);
 			query->active = true;
 			query->result = 0;
+			query->num_draws = 0;
 		}
 	}
 }
@@ -1243,10 +1248,15 @@ void GLGSRender::clear_zcull_stats(u32 type)
 	if (type == CELL_GCM_ZPASS_PIXEL_CNT)
 	{
 		if (zcull_task_queue.active_query &&
-			zcull_task_queue.active_query->active)
+			zcull_task_queue.active_query->active &&
+			zcull_task_queue.active_query->num_draws > 0)
 		{
-			//discard active query if any
+			//discard active query results
 			check_zcull_status(false, true);
+			zcull_task_queue.active_query->pending = false;
+
+			//re-enable cull stats if stats are enabled
+			check_zcull_status(false, false);
 		}
 
 		current_zcull_stats.clear();
