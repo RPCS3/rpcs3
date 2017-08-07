@@ -254,8 +254,7 @@ VKGSRender::upload_vertex_data()
 	}
 	else
 	{
-		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, 0, 0));
-		persistent_view = m_current_frame->buffer_views_to_clean.back()->value;
+		persistent_view = m_null_buffer_view->value;
 	}
 
 	if (required.second > 0)
@@ -267,8 +266,7 @@ VKGSRender::upload_vertex_data()
 	}
 	else
 	{
-		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, 0, 0));
-		volatile_view = m_current_frame->buffer_views_to_clean.back()->value;
+		volatile_view = m_null_buffer_view->value;
 	}
 
 	m_program->bind_uniform(persistent_view, "persistent_input_stream", m_current_frame->descriptor_set);

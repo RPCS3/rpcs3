@@ -286,6 +286,10 @@ namespace gl
 
 			void destroy()
 			{
+				if (!locked && pbo_id == 0 && vram_texture == 0 && m_fence.is_empty())
+					//Already destroyed
+					return;
+
 				if (locked)
 					unprotect();
 
@@ -939,15 +943,20 @@ namespace gl
 
 		bool mark_as_dirty(u32 address)
 		{
+			return invalidate_range(address, 4096 - (address & 4095));
+		}
+
+		bool invalidate_range(u32 address, u32 size, bool unprotect=true)
+		{
 			bool response = false;
-			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
+			std::pair<u32, u32> trampled_range = std::make_pair(address, address + size);
 
 			//TODO: Optimize this function!
 			//Multi-pass checking is slow. Pre-calculate dependency tree at section creation
 			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_section_mutex);
 
-			if (address >= read_only_range.first &&
-				address < read_only_range.second)
+			if (trampled_range.second >= read_only_range.first &&
+				trampled_range.first < read_only_range.second)
 			{
 				for (int i = 0; i < read_only_memory_sections.size(); ++i)
 				{
@@ -966,15 +975,24 @@ namespace gl
 							i = 0;
 						}
 
-						tex.unprotect();
-						tex.set_dirty(true);
+						if (unprotect)
+						{
+							tex.unprotect();
+							tex.set_dirty(true);
+						}
+						else
+						{
+							//abandon memory
+							tex.discard();
+						}
+
 						response = true;
 					}
 				}
 			}
 
-			if (address >= no_access_range.first &&
-				address < no_access_range.second)
+			if (trampled_range.second >= no_access_range.first &&
+				trampled_range.first < no_access_range.second)
 			{
 				rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_section_mutex);
 
@@ -995,8 +1013,16 @@ namespace gl
 							i = 0;
 						}
 
-						tex.unprotect();
-						tex.set_dirty(true);
+						if (unprotect)
+						{
+							tex.unprotect();
+							tex.set_dirty(true);
+						}
+						else
+						{
+							LOG_WARNING(RSX, "Framebuffer region 0x%X -> 0x%X is being discarded", tex.get_section_base(), tex.get_section_base() + tex.get_section_size());
+							tex.discard();
+						}
 
 						response = true;
 					}
@@ -1004,35 +1030,6 @@ namespace gl
 			}
 
 			return response;
-		}
-
-		void invalidate_range(u32 base, u32 size)
-		{
-			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_section_mutex);
-			std::pair<u32, u32> range = std::make_pair(base, size);
-
-			if (base < read_only_range.second &&
-				(base + size) >= read_only_range.first)
-			{
-				for (cached_texture_section &tex : read_only_memory_sections)
-				{
-					if (!tex.is_dirty() && tex.overlaps(range))
-						tex.destroy();
-				}
-			}
-
-			if (base < no_access_range.second &&
-				(base + size) >= no_access_range.first)
-			{
-				for (cached_texture_section &tex : no_access_memory_sections)
-				{
-					if (!tex.is_dirty() && tex.overlaps(range))
-					{
-						tex.unprotect();
-						tex.set_dirty(true);
-					}
-				}
-			}
 		}
 
 		bool flush_section(u32 address);
@@ -1045,6 +1042,19 @@ namespace gl
 			}
 
 			m_temporary_surfaces.clear();
+		}
+
+		void purge_dirty()
+		{
+			reader_lock lock(m_section_mutex);
+
+			for (cached_texture_section &tex : read_only_memory_sections)
+			{
+				if (tex.is_dirty())
+				{
+					tex.destroy();
+				}
+			}
 		}
 
 		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, gl_render_targets &m_rtts)

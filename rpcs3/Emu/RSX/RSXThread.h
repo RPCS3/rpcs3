@@ -253,6 +253,7 @@ namespace rsx
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
+		virtual void on_notify_memory_unmapped(u32 /*address_base*/, u32 /*size*/) {}
 
 		//zcull
 		virtual void notify_zcull_info_changed() {}

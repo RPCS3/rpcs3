@@ -426,6 +426,7 @@ protected:
 	u32 get_zcull_stats(u32 type) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
+	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
 
 	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;

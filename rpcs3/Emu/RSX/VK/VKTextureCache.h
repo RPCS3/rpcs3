@@ -837,17 +837,23 @@ namespace vk
 
 		bool invalidate_address(u32 address)
 		{
-			if (address < read_only_range.first ||
-				address > read_only_range.second)
+			return invalidate_range(address, 4096 - (address & 4095));
+		}
+
+		bool invalidate_range(u32 address, u32 range, bool unprotect=true)
+		{
+			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
+
+			if (trampled_range.second < read_only_range.first ||
+				trampled_range.first > read_only_range.second)
 			{
 				//Doesnt fall in the read_only textures range; check render targets
-				if (address < no_access_range.first ||
-					address > no_access_range.second)
+				if (trampled_range.second < no_access_range.first ||
+					trampled_range.first > no_access_range.second)
 					return false;
 			}
 
 			bool response = false;
-			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 			std::unordered_map<u32, bool> processed_ranges;
 
 			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
@@ -865,8 +871,7 @@ namespace vk
 				const u32 lock_base = base & ~0xfff;
 				const u32 lock_limit = align(range_data.max_range + base, 4096);
 
-				if ((trampled_range.first >= lock_limit || lock_base >= trampled_range.second) &&
-					(lock_base > address || lock_limit <= address))
+				if (trampled_range.first >= lock_limit || lock_base >= trampled_range.second)
 				{
 					processed_ranges[base] = true;
 					continue;
@@ -892,8 +897,15 @@ namespace vk
 							range_reset = true;
 						}
 
-						tex.set_dirty(true);
-						tex.unprotect();
+						if (unprotect)
+						{
+							tex.set_dirty(true);
+							tex.unprotect();
+						}
+						else
+						{
+							tex.discard();
+						}
 
 						range_data.valid_count--;
 						response = true;
@@ -912,8 +924,30 @@ namespace vk
 			return response;
 		}
 
-		void flush()
+		void flush(bool purge_dirty=false)
 		{
+			if (purge_dirty)
+			{
+				//Reclaims all graphics memory consumed by dirty textures
+				for (auto &address_range : m_cache)
+				{
+					auto &range_data = address_range.second;
+					for (auto &tex : range_data.data)
+					{
+						if (!tex.is_dirty())
+							continue;
+
+						if (tex.exists())
+						{
+							m_dirty_textures.push_back(std::move(tex.get_texture()));
+							m_temporary_image_view.push_back(std::move(tex.get_view()));
+						}
+
+						tex.release_dma_resources();
+					}
+				}
+			}
+
 			m_image_views_to_purge.clear();
 			m_images_to_purge.clear();
 

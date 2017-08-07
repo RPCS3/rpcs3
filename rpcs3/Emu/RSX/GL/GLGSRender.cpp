@@ -1133,6 +1133,12 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		return m_gl_texture_cache.flush_section(address);
 }
 
+void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
+{
+	if (m_gl_texture_cache.invalidate_range(address_base, size, false))
+		m_gl_texture_cache.purge_dirty();
+}
+
 void GLGSRender::do_local_task()
 {
 	std::lock_guard<std::mutex> lock(queue_guard);
