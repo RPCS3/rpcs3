@@ -90,13 +90,13 @@ extern void jit_finalize()
 // Helper class
 struct MemoryManager : llvm::RTDyldMemoryManager
 {
-	std::unordered_map<std::string, std::uintptr_t>& m_link;
+	std::unordered_map<std::string, u64>& m_link;
 
 	std::array<u8, 16>* m_tramps{};
 
 	u8* m_code_addr{}; // TODO
 
-	MemoryManager(std::unordered_map<std::string, std::uintptr_t>& table)
+	MemoryManager(std::unordered_map<std::string, u64>& table)
 		: m_link(table)
 	{
 	}
@@ -371,7 +371,7 @@ public:
 	}
 };
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, std::uintptr_t>& _link, std::string _cpu)
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu)
 	: m_link(std::move(_link))
 	, m_cpu(std::move(_cpu))
 {
