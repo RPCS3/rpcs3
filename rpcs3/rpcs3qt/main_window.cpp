@@ -899,12 +899,12 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	{
 		if (m_rg_entries.contains(entry))
 		{
+			LOG_ERROR(GENERAL, "Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
+
 			int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
 
 			guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(m_rg_entries));
-
-			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(entry.first));
 		}
 		return nullptr;
 	}
