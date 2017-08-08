@@ -675,10 +675,8 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::used()
+	u32 block_t::imp_used(const vm::writer_lock&)
 	{
-		reader_lock lock;
-
 		u32 result = 0;
 
 		for (auto& entry : m_map)
@@ -687,6 +685,13 @@ namespace vm
 		}
 
 		return result;
+	}
+
+	u32 block_t::used()
+	{
+		writer_lock lock(0);
+
+		return imp_used(lock);
 	}
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
@@ -734,7 +739,7 @@ namespace vm
 		{
 			if (*it && (*it)->addr == addr)
 			{
-				if (must_be_empty && (!it->unique() || (*it)->used()))
+				if (must_be_empty && (!it->unique() || (*it)->imp_used(lock)))
 				{
 					return *it;
 				}
