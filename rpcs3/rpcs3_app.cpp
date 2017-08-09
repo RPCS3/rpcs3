@@ -183,26 +183,26 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null:
 		{
-			gs_frame* ret = new gs_frame("Null", size.first, size.second, RPCS3MainWin->GetAppIcon(), disableMouse);
+			gs_frame* ret = new gs_frame("Null", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 			gameWindow = ret;
 			return std::unique_ptr<gs_frame>(ret);
 		}
 		case video_renderer::opengl: 
 		{
-			gl_gs_frame* ret = new gl_gs_frame(size.first, size.second, RPCS3MainWin->GetAppIcon(), disableMouse);
+			gl_gs_frame* ret = new gl_gs_frame(w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 			gameWindow = ret;
 			return std::unique_ptr<gl_gs_frame>(ret);
 		}
 		case video_renderer::vulkan:
 		{
-			gs_frame* ret = new gs_frame("Vulkan", size.first, size.second, RPCS3MainWin->GetAppIcon(), disableMouse);
+			gs_frame* ret = new gs_frame("Vulkan", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 			gameWindow = ret;
 			return std::unique_ptr<gs_frame>(ret);
 		}
 #ifdef _MSC_VER
 		case video_renderer::dx12:
 		{
-			gs_frame* ret = new gs_frame("DirectX 12", size.first, size.second, RPCS3MainWin->GetAppIcon(), disableMouse);
+			gs_frame* ret = new gs_frame("DirectX 12", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 			gameWindow = ret;
 			return std::unique_ptr<gs_frame>(ret);
 		}
