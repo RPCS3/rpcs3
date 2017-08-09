@@ -8,11 +8,33 @@
 #include <QTimer>
 #include <QThread>
 
+#include <string>
+
+#include "rpcs3_version.h"
+#include "git-version.h"
+
 constexpr auto qstr = QString::fromStdString;
 
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
+	#ifdef RPCS3_GIT_VERSION
+		//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+		std::string version = rpcs3::version.to_string();
+		version = version.substr(0 , version.find_last_of("-"));
+
+		//Attempts to get RPCS3_GIT_BRANCH from git-version.h
+		#ifdef RPCS3_GIT_BRANCH
+			if (RPCS3_GIT_BRANCH != "master")
+			{
+				version += "-";
+				version += RPCS3_GIT_BRANCH;
+			}
+		#endif
+
+		m_windowTitle += qstr(" | " + version);
+	#endif
+
 	if (!Emu.GetTitle().empty())
 	{
 		m_windowTitle += qstr(" | " + Emu.GetTitle());

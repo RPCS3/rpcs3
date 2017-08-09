@@ -1,4 +1,4 @@
-﻿#include "Log.h"
+#include "Log.h"
 #include "File.h"
 #include "StrFmt.h"
 #include "sema.h"
@@ -7,6 +7,7 @@
 #include "rpcs3_version.h"
 #include <string>
 #include <unordered_map>
+#include "git-version.h"
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -277,7 +278,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 			g_messages.emplace_back(stored_message{*this, stamp, std::move(prefix), text});
 		}
 	}
-	
+
 	// Send message to all listeners
 	while (lis)
 	{
@@ -393,7 +394,12 @@ logs::file_listener::file_listener(const std::string& name)
 	ver.m.ch  = nullptr;
 	ver.m.sev = level::always;
 	ver.stamp = 0;
-	ver.text  = fmt::format("RPCS3 v%s\n%s", rpcs3::version.to_string(), utils::get_system_info());
+    
+	#ifdef RPCS3_GIT_BRANCH
+		ver.text = fmt::format("RPCS3 v%s\nBranch: %s\n%s\n", rpcs3::version.to_string(), RPCS3_GIT_BRANCH, utils::get_system_info());
+	#else
+		ver.text = fmt::format("RPCS3 v%s\nBranch: %s\n%s\n", rpcs3::version.to_string(), "Unknown branch", utils::get_system_info());
+	#endif
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);
 	g_messages.emplace_back(std::move(ver));
@@ -429,7 +435,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 		text += prefix;
 		text += "} ";
 	}
-	
+
 	if (msg.ch && '\0' != *msg.ch->name)
 	{
 		text += msg.ch->name;
@@ -439,7 +445,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	{
 		text += "TODO: ";
 	}
-	
+
 	text += _text;
 	text += '\n';
 
