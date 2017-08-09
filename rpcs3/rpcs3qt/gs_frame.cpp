@@ -1,4 +1,4 @@
-#include "gs_frame.h"
+﻿#include "gs_frame.h"
 
 #include "Utilities/Config.h"
 #include "Utilities/Timer.h"
@@ -8,6 +8,8 @@
 #include <QTimer>
 #include <QThread>
 
+#include "rpcs3_version.h"
+
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
@@ -15,7 +17,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 {
 	if (!Emu.GetTitle().empty())
 	{
-		m_windowTitle += qstr(" | " + Emu.GetTitle());
+		m_windowTitle += qstr(" | RPCS3 v" + rpcs3::version.to_string() + " | " + Emu.GetTitle());
 	}
 
 	if (!Emu.GetTitleID().empty())
