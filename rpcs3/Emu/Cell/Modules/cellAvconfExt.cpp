@@ -143,6 +143,12 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 	return CELL_VIDEO_OUT_ERROR_VALUE_IS_NOT_SET;
 }
 
+s32 cellVideoOutSetCopyControl(u32 videoOut, u32 control)
+{
+	cellAvconfExt.todo("cellVideoOutSetCopyControl(videoOut=%d, control=0x%x)", videoOut, control);
+	return CELL_OK;
+}
+
 
 DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
 {
@@ -168,4 +174,5 @@ DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
 	REG_FUNC(cellSysutilAvconfExt, cellAudioInRegisterDevice);
 	REG_FUNC(cellSysutilAvconfExt, cellAudioInUnregisterDevice);
 	REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetScreenSize);
+	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetCopyControl);
 });
