@@ -34,7 +34,6 @@ void evdev_joystick_handler::Init(const u32 max_connect)
 
     g_evdev_joystick_config.load();
 
-    needscale = static_cast<bool>(g_evdev_joystick_config.needscale);
     axistrigger = static_cast<bool>(g_evdev_joystick_config.axistrigger);
 
     revaxis.emplace_back(g_evdev_joystick_config.lxreverse);
@@ -173,12 +172,16 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
     int axes=0;
     for (int i=ABS_X; i<=ABS_RZ; i++)
     {
-        // Skip ABS_Z and ABS_RZ on controllers where it's used for the triggers.
-        if (axistrigger && (i == ABS_Z || i == ABS_RZ)) continue;
 
         if (libevdev_has_event_code(dev, EV_ABS, i))
         {
             LOG_NOTICE(GENERAL, "Joystick #%d has axis %d as %d", index, i, axes);
+
+            axis_ranges[i].first = libevdev_get_abs_minimum(dev, i);
+            axis_ranges[i].second = libevdev_get_abs_maximum(dev, i);
+
+            // Skip ABS_Z and ABS_RZ on controllers where it's used for the triggers.
+            if (axistrigger && (i == ABS_Z || i == ABS_RZ)) continue;
             joy_axis_maps[index][i - ABS_X] = axes++;
         }
     }
@@ -217,6 +220,20 @@ void evdev_joystick_handler::Close()
             libevdev_free(dev);
             close(fd);
         }
+    }
+}
+
+int evdev_joystick_handler::scale_axis(int axis, int value)
+{
+    auto range = axis_ranges[axis];
+    // Check if scaling is needed.
+    if (range.first != 0 || range.second != 255)
+    {
+        return (static_cast<float>(value - range.first) / range.second) * 255;
+    }
+    else
+    {
+        return value;
     }
 }
 
@@ -356,8 +373,10 @@ void evdev_joystick_handler::thread_func()
                         LOG_ERROR(GENERAL, "Joystick #%d's pad has no trigger %d", i, which_trigger);
                         break;
                     }
-                    which_button->m_pressed = evt.value == 255;
-                    which_button->m_value = evt.value;
+
+                    int value = scale_axis(evt.code, evt.value);
+                    which_button->m_pressed = value == 255;
+                    which_button->m_value = value;
                 }
                 else if (evt.code >= ABS_X && evt.code <= ABS_RZ)
                 {
@@ -369,22 +388,7 @@ void evdev_joystick_handler::thread_func()
                         break;
                     }
 
-                    auto& stick = pad.m_sticks[axis];
-
-                    int value = evt.value;
-
-                    if (needscale)
-                    {
-                        // Scale from the -32768...32768 range to the 0...256 range.
-                        value = (value / 256) + 128;
-                    }
-
-                    if (revaxis[axis])
-                    {
-                        value = 256 - value;
-                    }
-
-                    stick.m_value = value;
+                    pad.m_sticks[axis].m_value = scale_axis(evt.code, evt.value);
                 }
                 break;
             default:
