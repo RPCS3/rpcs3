@@ -184,6 +184,12 @@ namespace rsx
 		bool invalid_command_interrupt_raised = false;
 		bool in_begin_end = false;
 
+		bool conditional_render_test_failed = false;
+		bool conditional_render_enabled = false;
+		bool zcull_stats_enabled = false;
+		bool zcull_rendering_enabled = false;
+		bool zcull_pixel_cnt_enabled = false;
+
 	protected:
 		thread();
 		virtual ~thread();
@@ -211,6 +217,11 @@ namespace rsx
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
+
+		//zcull
+		virtual void notify_zcull_info_changed() {}
+		virtual void clear_zcull_stats(u32 type) {}
+		virtual u32 get_zcull_stats(u32 type) { return UINT32_MAX; }
 
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;

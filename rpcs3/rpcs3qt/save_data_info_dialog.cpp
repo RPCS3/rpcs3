@@ -10,6 +10,7 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	: QDialog(parent), m_entry(save)
 {
 	setWindowTitle(tr("Save Data Information"));
+	setWindowIcon(QIcon(":/rpcs3.ico"));
 
 	// Table
 	m_list = new QTableWidget(this);

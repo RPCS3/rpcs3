@@ -9,7 +9,7 @@
 #include <QColor>
 #include <QBitmap>
 
-typedef struct GUI_SAVE
+struct GUI_SAVE
 {
 	QString key;
 	QString name;
