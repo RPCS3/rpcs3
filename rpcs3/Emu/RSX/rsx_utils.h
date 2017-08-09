@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gcm_enums.h"
+#include <atomic>
 
 extern "C"
 {
@@ -206,4 +207,35 @@ namespace rsx
 
 		return std::make_tuple(x, y, width, height);
 	}
+
+	// Conditional mutex lock for shared mutex types
+	// May silently fail to acquire the lock
+	template <typename lock_type>
+	struct conditional_lock
+	{
+		lock_type& _ref;
+		std::atomic_bool& _flag;
+		bool acquired = false;
+
+		conditional_lock(std::atomic_bool& flag, lock_type& mutex):
+			_ref(mutex), _flag(flag)
+		{
+			const bool _false = false;
+			if (flag.compare_exchange_weak(const_cast<bool&>(_false), true))
+			{
+				mutex.lock_shared();
+				acquired = true;
+			}
+		}
+
+		~conditional_lock()
+		{
+			if (acquired)
+			{
+				_ref.unlock_shared();
+				_flag.store(false);
+				acquired = false;
+			}
+		}
+	};
 }

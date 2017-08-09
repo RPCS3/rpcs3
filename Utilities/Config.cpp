@@ -48,6 +48,11 @@ namespace cfg
 	static void decode(const YAML::Node& data, class _base& rhs);
 }
 
+std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
+{
+	return {std::to_string(min), std::to_string(max)};
+}
+
 bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 {
 	// TODO: this could be rewritten without exceptions (but it should be as safe as possible and provide logs)
@@ -268,13 +273,18 @@ std::string cfg::node::to_string() const
 	YAML::Emitter out;
 	cfg::encode(out, *this);
 
-	return{ out.c_str(), out.size() };
+	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value)
+bool cfg::node::from_string(const std::string& value) try
 {
 	cfg::decode(YAML::Load(value), *this);
 	return true;
+}
+catch (const std::exception& e)
+{
+	cfg.fatal("%s thrown: %s", typeid(e).name(), e.what());
+	return false;
 }
 
 void cfg::node::from_default()

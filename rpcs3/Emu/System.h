@@ -88,7 +88,7 @@ enum class audio_renderer
 	null,
 #ifdef _WIN32
 	xaudio,
-#elif __linux__
+#elif defined(HAVE_ALSA)
 	alsa,
 #endif
 	openal,
@@ -238,12 +238,12 @@ public:
 		return m_pause_amend_time;
 	}
 
-	bool BootGame(const std::string& path, bool direct = false);
+	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
 
 	static std::string GetHddDir();
 	static std::string GetLibDir();
 
-	void Load();
+	void Load(bool add_only = false);
 	void Run();
 	bool Pause();
 	void Resume();

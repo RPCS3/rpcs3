@@ -13,6 +13,7 @@
 #include <QToolBar>
 #include <QLineEdit>
 #include <QStackedWidget>
+#include <QDropEvent>
 
 #include <memory>
 
@@ -167,6 +168,15 @@ struct Tool_Bar_Button
 	bool isActive;
 };
 
+enum {
+	DROP_ERROR,
+	DROP_PKG,
+	DROP_PUP,
+	DROP_RAP,
+	DROP_DIR,
+	DROP_GAME
+};
+
 class game_list_frame : public QDockWidget {
 	Q_OBJECT
 
@@ -205,7 +215,6 @@ public Q_SLOTS:
 	void RepaintToolBarIcons();
 
 private Q_SLOTS:
-	void Boot(int row);
 	void RemoveCustomConfiguration(int row);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
@@ -213,24 +222,33 @@ private Q_SLOTS:
 	void doubleClickedSlot(const QModelIndex& index);
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestIconPathSet(const std::string path);
+	void RequestIconPathSet(const std::string& path);
 	void RequestAddRecentGame(const q_string_pair& entry);
 	void RequestIconSizeActSet(const int& idx);
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
 	void RequestSaveSliderPos(const bool& save);
+	void RequestPackageInstall(const QStringList& paths);
+	void RequestFirmwareInstall(const QString& path);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
 	void resizeEvent(QResizeEvent *event) override;
+	void dropEvent(QDropEvent* event) override;
+	void dragEnterEvent(QDragEnterEvent* event) override;
+	void dragMoveEvent(QDragMoveEvent* event) override;
+	void dragLeaveEvent(QDragLeaveEvent* event) override;
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
+	bool Boot(const GameInfo& info);
 	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 	void SortGameList();
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
+	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
+	void AddGamesFromDir(const QString& path);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);

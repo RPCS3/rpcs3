@@ -919,7 +919,7 @@ struct error_code
 	error_code() = default;
 
 	// Implementation must be provided specially
-	static s32 error_report(const fmt_type_info* sup, u64 arg);
+	static s32 error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2);
 
 	// Helper type
 	enum class not_an_error : s32
@@ -940,7 +940,7 @@ struct error_code
 
 	// Not an error constructor
 	template<typename ET, typename = decltype(ET::__not_an_error)>
-	error_code(const ET& value, int = 0)
+	error_code(const ET& value, std::nullptr_t = nullptr)
 		: value(static_cast<s32>(value))
 	{
 	}
@@ -948,7 +948,14 @@ struct error_code
 	// Error constructor
 	template<typename ET, typename = std::enable_if_t<is_error<ET>::value>>
 	error_code(const ET& value)
-		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value)))
+		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0))
+	{
+	}
+
+	// Error constructor (2 args)
+	template<typename ET, typename T2, typename = std::enable_if_t<is_error<ET>::value>>
+	error_code(const ET& value, const T2& value2)
+		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
 	{
 	}
 

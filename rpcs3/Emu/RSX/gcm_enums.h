@@ -5,7 +5,7 @@ namespace rsx
 {
 	enum class vertex_base_type : u8
 	{
-		s1, ///< signed byte
+		s1, ///< signed normalized 16-bit int
 		f, ///< float
 		sf, ///< half float
 		ub, ///< unsigned byte interpreted as 0.f and 1.f

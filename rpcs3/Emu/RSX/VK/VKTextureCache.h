@@ -767,11 +767,7 @@ namespace vk
 			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 			std::unordered_map<u32, bool> processed_ranges;
 
-			const bool _false = false;
-			const bool acquire_lock = in_access_violation_handler.compare_exchange_weak(const_cast<bool&>(_false), true);
-
-			if (acquire_lock)
-				m_cache_mutex.lock_shared();
+			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
 			{
@@ -834,12 +830,6 @@ namespace vk
 				processed_ranges[base] = true;
 			}
 
-			if (acquire_lock)
-			{
-				in_access_violation_handler = false;
-				m_cache_mutex.unlock_shared();
-			}
-
 			return response;
 		}
 
@@ -858,11 +848,7 @@ namespace vk
 			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 			std::unordered_map<u32, bool> processed_ranges;
 
-			const bool _false = false;
-			const bool acquire_lock = in_access_violation_handler.compare_exchange_weak(const_cast<bool&>(_false), true);
-
-			if (acquire_lock)
-				m_cache_mutex.lock_shared();
+			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
 			{
@@ -919,12 +905,6 @@ namespace vk
 				}
 
 				processed_ranges[base] = true;
-			}
-
-			if (acquire_lock)
-			{
-				in_access_violation_handler = false;
-				m_cache_mutex.unlock_shared();
 			}
 
 			return response;
