@@ -21,6 +21,8 @@ namespace vk
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
 	using null_vertex_cache = vertex_cache;
+
+	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
 }
 
 //Heap allocation sizes in MB
@@ -123,9 +125,10 @@ private:
 public:
 	//vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
+	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
-	VKProgramBuffer m_prog_buffer;
+	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
 
 	vk::render_device *m_device;
 	vk::swap_chain* m_swap_chain;

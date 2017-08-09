@@ -614,10 +614,14 @@ VKGSRender::VKGSRender() : GSRender()
 		m_text_writer->init(*m_device, m_memory_type_mapping, m_render_passes[idx]);
 	}
 
+	m_prog_buffer.reset(new VKProgramBuffer(m_render_passes.data()));
+
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new vk::null_vertex_cache());
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
+
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "v1"));
 
 	open_command_buffer();
 
@@ -655,7 +659,7 @@ VKGSRender::~VKGSRender()
 
 	//Shaders
 	vk::finalize_compiler_context();
-	m_prog_buffer.clear();
+	m_prog_buffer->clear();
 
 	//Global resources
 	vk::destroy_global_resources();
@@ -1213,6 +1217,8 @@ void VKGSRender::on_init_thread()
 
 	GSRender::on_init_thread();
 	rsx_thread = std::this_thread::get_id();
+
+	m_shaders_cache->load(*m_device, pipeline_layout);
 }
 
 void VKGSRender::on_exit()
@@ -1732,6 +1738,7 @@ bool VKGSRender::check_program_status()
 		(u8)m_draw_buffers_count);
 
 	properties.render_pass = m_render_passes[idx];
+	properties.render_pass_location = (int)idx;
 
 	properties.num_targets = m_draw_buffers_count;
 
@@ -1739,7 +1746,10 @@ bool VKGSRender::check_program_status()
 
 	//Load current program from buffer
 	vertex_program.skip_vertex_input_check = true;
-	m_program = m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
+	m_program = m_prog_buffer->getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
+
+	if (m_prog_buffer->check_cache_missed())
+		m_shaders_cache->store(properties, vertex_program, fragment_program);
 
 	vk::leave_uninterruptible();
 
@@ -1781,7 +1791,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
 
-	const size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
 	const size_t fragment_buffer_sz = fragment_constants_sz + (17 * 4 * sizeof(float));
 	const size_t required_mem = 512 + 8192 + fragment_buffer_sz;
 
@@ -1807,7 +1817,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	//Fragment constants
 	buf = buf + 8192;
 	if (fragment_constants_sz)
-		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
+		m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
 
 	fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
 	

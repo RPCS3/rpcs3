@@ -110,6 +110,7 @@ class program_state_cache
 
 protected:
 	size_t m_next_id = 0;
+	bool m_cache_miss_flag;
 	binary_to_vertex_program m_vertex_shader_cache;
 	binary_to_fragment_program m_fragment_shader_cache;
 	std::unordered_map <pipeline_key, pipeline_storage_type, pipeline_key_hash, pipeline_key_compare> m_storage;
@@ -197,7 +198,10 @@ public:
 		{
 			const auto I = m_storage.find(key);
 			if (I != m_storage.end())
+			{
+				m_cache_miss_flag = false;
 				return I->second;
+			}
 		}
 
 		LOG_NOTICE(RSX, "Add program :");
@@ -205,6 +209,7 @@ public:
 		LOG_NOTICE(RSX, "*** fp id = %d", fragment_program.id);
 
 		m_storage[key] = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
+		m_cache_miss_flag = true;
 		return m_storage[key];
 	}
 

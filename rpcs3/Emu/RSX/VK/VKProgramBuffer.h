@@ -16,6 +16,7 @@ namespace vk
 		
 		VkRenderPass render_pass;
 		int num_targets;
+		int render_pass_location;
 
 		bool operator==(const pipeline_props& other) const
 		{
@@ -28,13 +29,22 @@ namespace vk
 			if (memcmp(&rs, &other.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
 				return false;
 
-			if (memcmp(&cs, &other.cs, sizeof(VkPipelineColorBlendStateCreateInfo)))
+			//Cannot memcmp cs due to pAttachments being a pointer to memory
+			if (cs.attachmentCount != other.cs.attachmentCount ||
+				cs.flags != other.cs.flags ||
+				cs.logicOp != other.cs.logicOp ||
+				cs.logicOpEnable != other.cs.logicOpEnable ||
+				cs.sType != other.cs.sType ||
+				memcmp(cs.blendConstants, other.cs.blendConstants, 4 * sizeof(f32)))
 				return false;
 
 			if (memcmp(&ia, &other.ia, sizeof(VkPipelineInputAssemblyStateCreateInfo)))
 				return false;
 
 			if (memcmp(&ds, &other.ds, sizeof(VkPipelineDepthStencilStateCreateInfo)))
+				return false;
+
+			if (num_targets != other.num_targets)
 				return false;
 
 			return num_targets == other.num_targets;
@@ -64,7 +74,12 @@ namespace std
 			seed ^= hash_struct(pipelineProperties.ia);
 			seed ^= hash_struct(pipelineProperties.ds);
 			seed ^= hash_struct(pipelineProperties.rs);
-			seed ^= hash_struct(pipelineProperties.cs);
+
+			//Do not compare pointers to memory!
+			auto tmp = pipelineProperties.cs;
+			tmp.pAttachments = nullptr;
+			seed ^= hash_struct(tmp);
+
 			seed ^= hash_struct(pipelineProperties.att_state[0]);
 			return hash<size_t>()(seed);
 		}
@@ -93,7 +108,8 @@ struct VKTraits
 	}
 
 	static
-	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const vk::pipeline_props &pipelineProperties, VkDevice dev, VkPipelineLayout common_pipeline_layout)
+	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData,
+			const vk::pipeline_props &pipelineProperties, VkDevice dev, VkPipelineLayout common_pipeline_layout)
 	{
 
 		VkPipelineShaderStageCreateInfo shader_stages[2] = {};
@@ -159,11 +175,47 @@ struct VKTraits
 
 class VKProgramBuffer : public program_state_cache<VKTraits>
 {
+	const VkRenderPass *m_render_pass_data;
+
 public:
+	VKProgramBuffer(VkRenderPass *renderpass_list)
+		: m_render_pass_data(renderpass_list)
+	{}
+
 	void clear()
 	{
 		program_state_cache<VKTraits>::clear();
 		m_vertex_shader_cache.clear();
 		m_fragment_shader_cache.clear();
+	}
+
+	u64 get_hash(vk::pipeline_props &props)
+	{
+		return std::hash<vk::pipeline_props>()(props);
+	}
+
+	u64 get_hash(RSXVertexProgram &prog)
+	{
+		return program_hash_util::vertex_program_hash()(prog);
+	}
+
+	u64 get_hash(RSXFragmentProgram &prog)
+	{
+		return program_hash_util::fragment_program_hash()(prog);
+	}
+
+	template <typename... Args>
+	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, vk::pipeline_props &props, Args&& ...args)
+	{
+		//Extract pointers from pipeline props
+		props.render_pass = m_render_pass_data[props.render_pass_location];
+		props.cs.pAttachments = props.att_state;
+		vp.skip_vertex_input_check = true;
+		getGraphicPipelineState(vp, fp, props, std::forward<Args>(args)...);
+	}
+
+	bool check_cache_missed() const
+	{
+		return m_cache_miss_flag;
 	}
 };
