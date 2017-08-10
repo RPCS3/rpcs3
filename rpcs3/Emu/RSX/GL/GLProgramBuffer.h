@@ -73,4 +73,32 @@ struct GLTraits
 
 class GLProgramBuffer : public program_state_cache<GLTraits>
 {
+public:
+
+	u64 get_hash(void*&)
+	{
+		return 0;
+	}
+
+	u64 get_hash(RSXVertexProgram &prog)
+	{
+		return program_hash_util::vertex_program_hash()(prog);
+	}
+
+	u64 get_hash(RSXFragmentProgram &prog)
+	{
+		return program_hash_util::fragment_program_hash()(prog);
+	}
+
+	template <typename... Args>
+	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, void* &props, Args&& ...args)
+	{
+		vp.skip_vertex_input_check = true;
+		getGraphicPipelineState(vp, fp, props, std::forward<Args>(args)...);
+	}
+
+	bool check_cache_missed() const
+	{
+		return m_cache_miss_flag;
+	}
 };

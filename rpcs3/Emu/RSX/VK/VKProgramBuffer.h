@@ -2,7 +2,7 @@
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "../Common/ProgramStateCache.h"
-
+#include "Utilities/hash.h"
 
 namespace vk
 {
@@ -52,38 +52,24 @@ namespace vk
 	};
 }
 
-namespace
-{
-	template<typename T>
-	size_t hash_struct(const T& structure)
-	{
-		char *data = (char*)(&structure);
-		size_t result = 0;
-		for (unsigned i = 0; i < sizeof(T); i++)
-			result ^= std::hash<char>()(data[i]);
-		return result;
-	}
-}
-
-namespace std
+namespace rpcs3
 {
 	template <>
-	struct hash<vk::pipeline_props> {
-		size_t operator()(const vk::pipeline_props &pipelineProperties) const {
-			size_t seed = hash<unsigned>()(pipelineProperties.num_targets);
-			seed ^= hash_struct(pipelineProperties.ia);
-			seed ^= hash_struct(pipelineProperties.ds);
-			seed ^= hash_struct(pipelineProperties.rs);
+	size_t hash_struct<vk::pipeline_props>(const vk::pipeline_props &pipelineProperties)
+	{
+		size_t seed = hash_base<int>(pipelineProperties.num_targets);
+		seed ^= hash_struct(pipelineProperties.ia);
+		seed ^= hash_struct(pipelineProperties.ds);
+		seed ^= hash_struct(pipelineProperties.rs);
 
-			//Do not compare pointers to memory!
-			auto tmp = pipelineProperties.cs;
-			tmp.pAttachments = nullptr;
-			seed ^= hash_struct(tmp);
+		//Do not compare pointers to memory!
+		auto tmp = pipelineProperties.cs;
+		tmp.pAttachments = nullptr;
+		seed ^= hash_struct(tmp);
 
-			seed ^= hash_struct(pipelineProperties.att_state[0]);
-			return hash<size_t>()(seed);
-		}
-	};
+		seed ^= hash_struct(pipelineProperties.att_state[0]);
+		return hash_base<size_t>(seed);
+	}
 }
 
 struct VKTraits
@@ -94,17 +80,19 @@ struct VKTraits
 	using pipeline_properties = vk::pipeline_props;
 
 	static
-	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t /*ID*/)
+	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t ID)
 	{
 		fragmentProgramData.Decompile(RSXFP);
 		fragmentProgramData.Compile();
+		fragmentProgramData.id = static_cast<u32>(ID);
 	}
 
 	static
-	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t /*ID*/)
+	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t ID)
 	{
 		vertexProgramData.Decompile(RSXVP);
 		vertexProgramData.Compile();
+		vertexProgramData.id = static_cast<u32>(ID);
 	}
 
 	static
@@ -191,7 +179,7 @@ public:
 
 	u64 get_hash(vk::pipeline_props &props)
 	{
-		return std::hash<vk::pipeline_props>()(props);
+		return rpcs3::hash_struct<vk::pipeline_props>(props);
 	}
 
 	u64 get_hash(RSXVertexProgram &prog)

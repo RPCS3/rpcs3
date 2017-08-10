@@ -24,8 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	//TODO
-	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -699,6 +698,8 @@ void GLGSRender::on_init_thread()
 	glEnable(GL_CLIP_DISTANCE0 + 5);
 
 	m_gl_texture_cache.initialize(this);
+
+	m_shaders_cache->load();
 }
 
 void GLGSRender::on_exit()
@@ -911,9 +912,13 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	}
 
 	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
-	auto old_program = m_program;
-	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
+	void* pipeline_properties = nullptr;
+
+	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
 	m_program->use();
+
+	if (m_prog_buffer.check_cache_missed())
+		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
 
 	u8 *buf;
 	u32 vertex_state_offset;
