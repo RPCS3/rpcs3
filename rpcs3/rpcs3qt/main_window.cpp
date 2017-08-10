@@ -615,7 +615,6 @@ void main_window::DecryptSPRXLibraries()
 		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
-			const std::string& prx_ext = fmt::to_upper(prx_path.substr(prx_ext_pos != -1 ? prx_ext_pos : prx_path.size()));
 			const std::string& prx_name = prx_path.substr(prx_dir.size());
 
 			elf_file = decrypt_self(std::move(elf_file));
@@ -899,12 +898,12 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	{
 		if (m_rg_entries.contains(entry))
 		{
+			LOG_ERROR(GENERAL, "Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
+
 			int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
 
 			guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(m_rg_entries));
-
-			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(entry.first));
 		}
 		return nullptr;
 	}
@@ -1203,8 +1202,6 @@ void main_window::CreateConnects()
 	});
 	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
-		int index = GUI::gl_max_slider_pos / 4;
-
 		if (idx < GUI::get_Index((GUI::gl_icon_size_small + GUI::gl_icon_size_min) / 2)) ui->setIconSizeTinyAct->setChecked(true);
 		else if (idx < GUI::get_Index((GUI::gl_icon_size_medium + GUI::gl_icon_size_small) / 2)) ui->setIconSizeSmallAct->setChecked(true);
 		else if (idx < GUI::get_Index((GUI::gl_icon_size_max + GUI::gl_icon_size_medium) / 2)) ui->setIconSizeMediumAct->setChecked(true);

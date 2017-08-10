@@ -207,11 +207,23 @@ void emu_settings::SaveSettings()
 	config.write(out.c_str(), out.size());
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged)
 {
-	for (QString setting : GetSettingOptions(type))
+	if (is_ranged)
 	{
-		combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
+		QStringList range = GetSettingOptions(type);
+
+		for (int i = range.first().toInt(); i <= range.last().toInt(); i++)
+		{
+			combobox->addItem(QString::number(i), QVariant(QString::number(i)));
+		}
+	}
+	else
+	{
+		for (QString setting : GetSettingOptions(type))
+		{
+			combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
+		}
 	}
 
 	QString selected = qstr(GetSetting(type));

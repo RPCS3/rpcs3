@@ -445,7 +445,7 @@ void game_list_frame::Refresh(bool fromDrive)
 
 			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
 			{
-				LOG_ERROR(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
+				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
 
 			bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
@@ -991,7 +991,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	if (c != 0)
 	{ // if left over games exist -- if empty entries exist
-		for (int col = c; col < maxCols; ++col)
+		for (uint col = c; col < maxCols; ++col)
 		{
 			QTableWidgetItem* emptyItem = new QTableWidgetItem();
 			emptyItem->setFlags(Qt::NoItemFlags);

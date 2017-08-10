@@ -246,7 +246,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	framebuffer_status_valid = draw_fbo.check();
 	if (!framebuffer_status_valid) return;
 
-	check_zcull_status(true);
+	check_zcull_status(true, false);
 
 	draw_fbo.bind();
 	set_viewport();

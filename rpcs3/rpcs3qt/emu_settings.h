@@ -11,7 +11,7 @@
 #include <QObject>
 #include <QComboBox>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
 struct Render_Creator
 {
@@ -112,7 +112,7 @@ public:
 	~emu_settings();
 
 	/** Connects a combo box with the target settings type*/
-	void EnhanceComboBox(QComboBox* combobox, SettingsType type);
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false);
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);

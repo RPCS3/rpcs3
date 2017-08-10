@@ -1,5 +1,6 @@
 #include "basic_keyboard_handler.h"
 
+#include <QApplication>
 #include <QKeyEvent>
 
 void basic_keyboard_handler::Init(const u32 max_connect)
@@ -17,16 +18,33 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	m_info.status[0] = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }
 
-basic_keyboard_handler::basic_keyboard_handler(QObject* target, QObject* parent) : QObject(parent), m_target(target)
+basic_keyboard_handler::basic_keyboard_handler() : QObject()
 {
-	// Adds event filter to the target to filter keyevents.
-	target->installEventFilter(this);
 }
+
+/* Sets the target window for the event handler, and also installs an event filter on the target. */
+void basic_keyboard_handler::SetTargetWindow(QWindow* target)
+{
+	if (target != nullptr)
+	{
+		m_target = target;
+		target->installEventFilter(this);
+	}
+	else
+	{
+		// If this is hit, it probably means that some refactoring occurs because currently a gsframe is created in Load.
+		// We still want events so filter from application instead since target is null.
+		QApplication::instance()->installEventFilter(this);
+		LOG_ERROR(GENERAL, "Trying to set keyboard handler to a null target window.");
+	}
+}
+
 
 bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 {
-	// Commenting target since I don't know how to target game window yet.
-	//if (target == m_target)
+	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
+	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
+	if (!m_target || !m_target->isVisible() || target == m_target)
 	{
 		if (ev->type() == QEvent::KeyPress)
 		{
