@@ -621,7 +621,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "v1"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1"));
 
 	open_command_buffer();
 

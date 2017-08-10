@@ -19,6 +19,8 @@ namespace gl
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<GLenum>, GLenum>;
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<GLenum>;
 	using null_vertex_cache = vertex_cache;
+
+	using shader_cache = rsx::shaders_cache<void*, GLProgramBuffer>;
 }
 
 struct work_item
@@ -66,6 +68,7 @@ private:
 	s64 m_textures_upload_time = 0;
 
 	std::unique_ptr<gl::vertex_cache> m_vertex_cache;
+	std::unique_ptr<gl::shader_cache> m_shaders_cache;
 
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;

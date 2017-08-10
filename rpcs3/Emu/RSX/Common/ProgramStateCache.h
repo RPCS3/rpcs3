@@ -5,6 +5,7 @@
 #include "Emu/Memory/vm.h"
 
 #include "Utilities/GSL.h"
+#include "Utilities/hash.h"
 
 enum class SHADER_TYPE
 {
@@ -93,9 +94,9 @@ class program_state_cache
 		size_t operator()(const pipeline_key &key) const
 		{
 			size_t hashValue = 0;
-			hashValue ^= std::hash<unsigned>()(key.vertex_program_id);
-			hashValue ^= std::hash<unsigned>()(key.fragment_program_id);
-			hashValue ^= std::hash<pipeline_properties>()(key.properties);
+			hashValue ^= rpcs3::hash_base<unsigned>(key.vertex_program_id);
+			hashValue ^= rpcs3::hash_base<unsigned>(key.fragment_program_id);
+			hashValue ^= rpcs3::hash_struct<pipeline_properties>(key.properties);
 			return hashValue;
 		}
 	};
