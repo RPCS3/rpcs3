@@ -3,7 +3,7 @@
 namespace vm { using namespace ps3; }
 
 // Error codes
-enum
+enum CellSysutilAvc2Error : u32
 {
 	CELL_AVC2_ERROR_UNKNOWN = 0x8002b701,
 	CELL_AVC2_ERROR_NOT_SUPPORTED = 0x8002b702,
@@ -113,6 +113,14 @@ enum
 	CELL_AVC2_CAMERA_STATUS_UNKNOWN = 3,
 };
 
+enum
+{
+	CELL_AVC2_MIC_STATUS_DETACHED = 0,
+	CELL_AVC2_MIC_STATUS_ATTACHED_OFF = 1,
+	CELL_AVC2_MIC_STATUS_ATTACHED_ON = 2,
+	CELL_AVC2_MIC_STATUS_UNKNOWN = 3,
+};
+
 typedef u32 CellSysutilAvc2AttributeId;
 typedef u32 CellSysutilAvc2WindowAttributeId;
 
@@ -143,7 +151,7 @@ struct CellSysutilAvc2VideoInitParam
 	be_t<u16> max_video_windows;
 	be_t<u16> max_video_framerate;
 	be_t<u32> max_video_bitrate;
-	CellSysutilAvc2CoordinatesForm coordinates_form;
+	be_t<CellSysutilAvc2CoordinatesForm> coordinates_form;
 	u8 video_stream_sharing;
 };
 
@@ -166,15 +174,15 @@ struct CellSysutilAvc2InitParam
 
 struct CellSysutilAvc2RoomMemberList
 {
-	vm::ptr<SceNpMatching2RoomMemberId> member_id;
+	vm::bptr<SceNpMatching2RoomMemberId> member_id;
 	u8 member_num;
 };
 
 struct CellSysutilAvc2MemberIpAndPortList
 {
-	vm::ptr<SceNpMatching2RoomMemberId> member_id;
-	vm::ptr<u32> dst_addr; // in_addr
-	vm::ptr<u16> dst_port;
+	vm::bptr<SceNpMatching2RoomMemberId> member_id;
+	vm::bptr<u32> dst_addr; // in_addr
+	vm::bptr<u16> dst_port; // in_port_t
 	be_t<SceNpMatching2RoomMemberId> my_member_id;
 	u8 member_num;
 };
@@ -183,7 +191,7 @@ union CellSysutilAvc2AttributeParam
 {
 	be_t<u64> int_param;
 	be_t<f32> float_param;
-	vm::ptr<void> ptr_param;
+	vm::bptr<void> ptr_param;
 };
 
 struct CellSysutilAvc2Attribute
@@ -196,11 +204,20 @@ union CellSysutilAvc2WindowAttributeParam
 {
 	be_t<s32> int_vector[4];
 	be_t<f32> float_vector[4];
-	vm::ptr<void> ptr_vector[4];
+	vm::bptr<void> ptr_vector[4];
 };
 
 struct CellSysutilAvc2WindowAttribute
 {
 	be_t<CellSysutilAvc2WindowAttributeId> attr_id;
 	CellSysutilAvc2WindowAttributeParam attr_param;
+};
+
+struct CellSysutilAvc2PlayerInfo
+{
+	be_t<SceNpMatching2RoomMemberId> member_id;
+	u8 joined;
+	u8 connected;
+	u8 mic_attached;
+	u8 reserved[11];
 };

@@ -11,39 +11,39 @@ logs::channel cellAvconfExt("cellAvconfExt");
 
 vm::gvar<f32> g_gamma; // TODO
 
-s32 cellAudioOutUnregisterDevice()
+s32 cellAudioOutUnregisterDevice(u32 deviceNumber)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.todo("cellAudioOutUnregisterDevice(deviceNumber=0x%x)", deviceNumber);
 	return CELL_OK;
 }
 
-s32 cellAudioOutGetDeviceInfo2()
+s32 cellAudioOutGetDeviceInfo2(u32 deviceNumber, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo2> info)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.todo("cellAudioOutGetDeviceInfo2(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
 	return CELL_OK;
 }
 
 s32 cellVideoOutSetXVColor()
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	UNIMPLEMENTED_FUNC(cellAvconfExt);
 	return CELL_OK;
 }
 
 s32 cellVideoOutSetupDisplay()
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	UNIMPLEMENTED_FUNC(cellAvconfExt);
 	return CELL_OK;
 }
 
-s32 cellAudioInGetDeviceInfo()
+s32 cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<CellAudioInDeviceInfo> info)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.todo("cellAudioInGetDeviceInfo(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
 	return CELL_OK;
 }
 
-s32 cellVideoOutConvertCursorColor()
+s32 cellVideoOutConvertCursorColor(u32 videoOut, s32 displaybuffer_format, f32 gamma, s32 source_buffer_format, vm::ptr<void> src_addr, vm::ptr<u32> dest_addr, s32 num)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.todo("cellVideoOutConvertCursorColor(videoOut=%d, displaybuffer_format=0x%x, gamma=0x%x, source_buffer_format=0x%x, src_addr=*0x%x, dest_addr=*0x%x, num=0x%x)", videoOut, displaybuffer_format, gamma, source_buffer_format, src_addr, dest_addr, num);
 	return CELL_OK;
 }
 
@@ -61,16 +61,16 @@ s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 	return CELL_OK;
 }
 
-s32 cellAudioInGetAvailableDeviceInfo()
+s32 cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDeviceInfo> info)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
-	return CELL_OK;
+	cellAvconfExt.todo("cellAudioInGetAvailableDeviceInfo(count=0x%x, info=*0x%x)", count, info);
+	return 0; // number of available devices
 }
 
-s32 cellAudioOutGetAvailableDeviceInfo()
+s32 cellAudioOutGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioOutDeviceInfo2> info)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
-	return CELL_OK;
+	cellAvconfExt.todo("cellAudioOutGetAvailableDeviceInfo(count=0x%x, info=*0x%x)", count, info);
+	return 0; // number of available devices
 }
 
 s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
@@ -92,37 +92,37 @@ s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 	return CELL_OK;
 }
 
-s32 cellAudioOutRegisterDevice()
+s32 cellAudioOutRegisterDevice(u64 deviceType, vm::cptr<char> name, vm::ptr<CellAudioOutRegistrationOption> option, vm::ptr<CellAudioOutDeviceConfiguration> config)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.todo("cellAudioOutRegisterDevice(deviceType=0x%llx, name=%s, option=*0x%x, config=*0x%x)", deviceType, name, option, config);
+	return 0; // device number
+}
+
+s32 cellAudioOutSetDeviceMode(u32 deviceMode)
+{
+	cellAvconfExt.todo("cellAudioOutSetDeviceMode(deviceMode=0x%x)", deviceMode);
 	return CELL_OK;
 }
 
-s32 cellAudioOutSetDeviceMode()
+s32 cellAudioInSetDeviceMode(u32 deviceMode)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.todo("cellAudioInSetDeviceMode(deviceMode=0x%x)", deviceMode);
 	return CELL_OK;
 }
 
-s32 cellAudioInSetDeviceMode()
+s32 cellAudioInRegisterDevice(u64 deviceType, vm::cptr<char> name, vm::ptr<CellAudioInRegistrationOption> option, vm::ptr<CellAudioInDeviceConfiguration> config)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
+	cellAvconfExt.todo("cellAudioInRegisterDevice(deviceType=0x%llx, name=%s, option=*0x%x, config=*0x%x)", deviceType, name, option, config);
+	return 0; // device number
+}
+
+s32 cellAudioInUnregisterDevice(u32 deviceNumber)
+{
+	cellAvconfExt.todo("cellAudioInUnregisterDevice(deviceNumber=0x%x)", deviceNumber);
 	return CELL_OK;
 }
 
-s32 cellAudioInRegisterDevice()
-{
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
-	return CELL_OK;
-}
-
-s32 cellAudioInUnregisterDevice()
-{
-	UNIMPLEMENTED_FUNC(cellAvconfExt); 
-	return CELL_OK;
-}
-
-s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
+s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 {
 	cellAvconfExt.warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
 
@@ -141,6 +141,12 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 #endif
 
 	return CELL_VIDEO_OUT_ERROR_VALUE_IS_NOT_SET;
+}
+
+s32 cellVideoOutSetCopyControl(u32 videoOut, u32 control)
+{
+	cellAvconfExt.todo("cellVideoOutSetCopyControl(videoOut=%d, control=0x%x)", videoOut, control);
+	return CELL_OK;
 }
 
 
@@ -168,4 +174,5 @@ DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
 	REG_FUNC(cellSysutilAvconfExt, cellAudioInRegisterDevice);
 	REG_FUNC(cellSysutilAvconfExt, cellAudioInUnregisterDevice);
 	REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetScreenSize);
+	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetCopyControl);
 });
