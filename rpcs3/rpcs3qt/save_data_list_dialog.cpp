@@ -22,7 +22,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	// Table
 	m_list = new QTableWidget(this);
 
-	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
+	//m_list->setFocusPolicy(Qt::NoFocus); // to get rid of cell selection rectangles
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
