@@ -1211,6 +1211,12 @@ namespace sys_net
 		return CELL_OK;
 	}
 
+	s32 _sce_net_add_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
 	s32 _sce_net_add_name_server_with_char()
 	{
 		UNIMPLEMENTED_FUNC(libnet);
@@ -1342,6 +1348,7 @@ DECLARE(ppu_module_manager::libnet)("sys_net", []()
 	REG_FUNC_(sys_netset_if_up);
 	REG_FUNC_(sys_netset_open);
 
+	REG_FUNC_(_sce_net_add_name_server);
 	REG_FUNC_(_sce_net_add_name_server_with_char);
 	REG_FUNC_(_sce_net_flush_route);
 
