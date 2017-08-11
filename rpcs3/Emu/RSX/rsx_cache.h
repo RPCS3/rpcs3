@@ -453,8 +453,8 @@ namespace rsx
 
 			for (u8 index = 0; index < 16; ++index)
 			{
-				data_block.fp_alphakill_mask |= (fp.textures_alpha_kill[index] & 0x1) << index;
-				data_block.fp_zfunc_mask |= (fp.textures_zfunc[index] & 0xF) << (index << 2);
+				data_block.fp_alphakill_mask |= (u32)(fp.textures_alpha_kill[index] & 0x1) << index;
+				data_block.fp_zfunc_mask |= (u32)(fp.textures_zfunc[index] & 0xF) << (index << 2);
 			}
 
 			return data_block;

@@ -1098,18 +1098,27 @@ namespace rsx
 		{
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			result.texture_pitch_scale[i] = 1.f;
+			result.textures_alpha_kill[i] = 0;
+			result.textures_zfunc[i] = 0;
 
 			if (!tex.enabled())
 			{
 				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
-				result.textures_alpha_kill[i] = 0;
-				result.textures_zfunc[i] = 0;
 			}
 			else
 			{
 				texture_dimensions[i] = tex.get_extended_texture_dimension();
-				result.textures_alpha_kill[i] = tex.alpha_kill_enabled() ? 1 : 0;
-				result.textures_zfunc[i] = tex.zfunc();
+
+				if (tex.alpha_kill_enabled())
+				{
+					//alphakill can be ignored unless a valid comparison function is set
+					const rsx::comparison_function func = (rsx::comparison_function)tex.zfunc();
+					if (func < rsx::comparison_function::always && func > rsx::comparison_function::never)
+					{
+						result.textures_alpha_kill[i] = 1;
+						result.textures_zfunc[i] = (u8)func;
+					}
+				}
 
 				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 				const u32 raw_format = tex.format();
