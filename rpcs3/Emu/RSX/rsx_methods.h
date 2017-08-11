@@ -376,12 +376,24 @@ namespace rsx
 
 		f32 clip_min() const
 		{
-			return decode<NV4097_SET_CLIP_MIN>().clip_min();
+			f32 depth_min = decode<NV4097_SET_CLIP_MIN>().clip_min();
+
+			//Clamp to [0, 1]
+			if (depth_min < 0.f) return 0.f;
+			if (depth_min > 1.f) return 1.f;
+
+			return depth_min;
 		}
 
 		f32 clip_max() const
 		{
-			return decode<NV4097_SET_CLIP_MAX>().clip_max();
+			f32 depth_max = decode<NV4097_SET_CLIP_MAX>().clip_max();
+
+			//Clamp to [0, 1]
+			if (depth_max < 0.f) return 0.f;
+			if (depth_max > 1.f) return 1.f;
+
+			return depth_max;
 		}
 
 		bool logic_op_enabled() const
