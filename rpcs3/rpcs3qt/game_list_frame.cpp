@@ -617,6 +617,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	myMenu.addSeparator();
 	QAction* removeGame = myMenu.addAction(tr("&Remove"));
 	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
+	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
 	myMenu.addSeparator();
 	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
@@ -642,7 +643,9 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			Refresh();
 		}
 	});
+
 	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true, false); });
+	connect(deleteShadersCache, &QAction::triggered, [=]() { DeleteShadersCache(row); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
@@ -719,6 +722,32 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 	{
 		QMessageBox::warning(this, tr("Warning!"), tr("No custom configuration found!"));
 		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
+	}
+}
+
+void game_list_frame::DeleteShadersCache(int row)
+{
+	if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
+		return;
+
+	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
+
+	if (fs::is_dir(config_base_dir))
+	{
+		fs::dir root = fs::dir(config_base_dir);
+		fs::dir_entry tmp;
+
+		while (root.read(tmp))
+		{
+			if (!fs::is_dir(config_base_dir + "/" + tmp.name))
+				continue;
+
+			const std::string shader_cache_name = config_base_dir + "/" + tmp.name + "/shaders_cache";
+			if (fs::is_dir(shader_cache_name))
+			{
+				fs::remove_all(shader_cache_name, true);
+			}
+		}
 	}
 }
 

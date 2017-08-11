@@ -216,6 +216,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void RemoveCustomConfiguration(int row);
+	void DeleteShadersCache(int row);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
