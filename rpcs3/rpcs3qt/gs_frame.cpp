@@ -32,6 +32,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 
 	resize(w, h);
 
+	setTitle(m_windowTitle);
 	setVisibility(Hidden);
 	create();
 
@@ -186,13 +187,6 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 			m_frames = 0;
 			fps_t.Start();
-		}
-	}
-	else
-	{
-		if (this->title() != m_windowTitle)
-		{
-			Emu.CallAfter([this, title = std::move(m_windowTitle)]() {setTitle(m_windowTitle); });
 		}
 	}
 }
