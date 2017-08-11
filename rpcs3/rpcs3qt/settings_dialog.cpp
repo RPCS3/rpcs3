@@ -715,6 +715,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showFPSInTitle, emu_settings::ShowFPSInTitle);
 	SubscribeTooltip(ui->showFPSInTitle, json_emu_misc["showFPSInTitle"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->showTrophyPopups, emu_settings::ShowTrophyPopups);
+	SubscribeTooltip(ui->showTrophyPopups, json_emu_misc["showTrophyPopups"].toString());
+
 	if (game)
 	{
 		ui->gb_stylesheets->setEnabled(false);

@@ -165,6 +165,7 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class AudioThread>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
+	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
 };
 
 class Emulator final
@@ -402,6 +403,7 @@ struct cfg_root : cfg::node
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
+		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};

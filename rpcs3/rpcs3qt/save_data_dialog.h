@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 class save_data_dialog : public SaveDialogBase

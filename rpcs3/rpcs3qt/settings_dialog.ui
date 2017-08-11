@@ -1161,6 +1161,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="showTrophyPopups">
+              <property name="text">
+               <string>Show trophy popups</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>

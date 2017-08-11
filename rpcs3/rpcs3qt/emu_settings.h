@@ -82,6 +82,7 @@ public:
 		StartOnBoot,
 		StartGameFullscreen,
 		ShowFPSInTitle,
+		ShowTrophyPopups,
 		ShowWelcomeScreen,
 
 		// Network
@@ -236,6 +237,7 @@ private:
 		{StartOnBoot,         { "Miscellaneous", "Automatically start games after boot" }},
 		{StartGameFullscreen, { "Miscellaneous", "Start games in fullscreen mode"}},
 		{ShowFPSInTitle,      { "Miscellaneous", "Show FPS counter in window title"}},
+		{ShowTrophyPopups,    { "Miscellaneous", "Show trophy popups"}},
 		{ShowWelcomeScreen,   { "Miscellaneous", "Show Welcome Screen"}},
 
 		// Networking

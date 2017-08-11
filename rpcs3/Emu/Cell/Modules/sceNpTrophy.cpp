@@ -16,6 +16,10 @@
 
 logs::channel sceNpTrophy("sceNpTrophy");
 
+TrophyNotificationBase::~TrophyNotificationBase()
+{
+}
+
 struct trophy_context_t
 {
 	static const u32 id_base = 1;
@@ -488,6 +492,40 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	if (platinumId)
 	{
 		*platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
+	}
+
+	if (g_cfg.misc.show_trophy_popups)
+	{
+		// Figure out how many zeros are needed for padding.  (either 0, 1, or 2)
+		std::string padding = "";
+		if (trophyId < 10)
+		{
+			padding = "00";
+		}
+		else if (trophyId < 100)
+		{
+			padding = "0";
+		}
+
+		// Get icon for the notification.
+		std::string trophyIconPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROP" + padding + std::to_string(trophyId) + ".PNG";
+		fs::file trophyIconFile = fs::file(vfs::get(trophyIconPath));
+		u32 iconSize = trophyIconFile.size();
+		std::vector<uchar> trophyIconData;
+		trophyIconFile.read(trophyIconData, iconSize);
+
+		vm::ptr<SceNpTrophyDetails> details = vm::make_var(SceNpTrophyDetails());
+		vm::ptr<SceNpTrophyData> _ = vm::make_var(SceNpTrophyData());
+
+		s32 ret = sceNpTrophyGetTrophyInfo(context, handle, trophyId, details, _);
+		if (ret != CELL_OK)
+		{
+			sceNpTrophy.error("Failed to get info for trophy dialog. Error code %x", ret);
+			*details = SceNpTrophyDetails();
+		}
+		Emu.CallAfter([det = *details, trophyIconData]() {
+			Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(det, trophyIconData);
+		});
 	}
 
 	return CELL_OK;
