@@ -13,7 +13,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	//pauseList->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	pauseList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	pauseList->setContextMenuPolicy(Qt::CustomContextMenu);
-	pauseList->setItemDelegate(new table_item_delegate(this));
+	pauseList->setFocusPolicy(Qt::NoFocus);
 	pauseList->setShowGrid(false);
 
 	QPushButton *clearButton = new QPushButton(tr("Clear"), this);

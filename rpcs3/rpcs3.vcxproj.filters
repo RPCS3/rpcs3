@@ -487,9 +487,6 @@
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\table_item_delegate.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
     <ClInclude Include="keyboard_pad_handler.h">
       <Filter>Io\Basic</Filter>
     </ClInclude>

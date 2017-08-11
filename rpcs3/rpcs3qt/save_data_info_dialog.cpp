@@ -15,7 +15,7 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	// Table
 	m_list = new QTableWidget(this);
 
-	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
+	//m_list->setFocusPolicy(Qt::NoFocus); // to get rid of item selection rectangles
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setColumnCount(2);

@@ -11,7 +11,6 @@
 #include "Utilities/GSL.h"
 
 #include "memory_viewer_panel.h"
-#include "table_item_delegate.h"
 
 #include <QDialog>
 #include <QLabel>

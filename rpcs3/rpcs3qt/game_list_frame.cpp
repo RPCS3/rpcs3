@@ -1,7 +1,6 @@
 #include "game_list_frame.h"
 
 #include "settings_dialog.h"
-#include "table_item_delegate.h"
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -146,7 +145,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 
 	gameList = new game_list();
 	gameList->setShowGrid(false);
-	gameList->setItemDelegate(new table_item_delegate(this));
+	gameList->setFocusPolicy(Qt::NoFocus);
 	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);

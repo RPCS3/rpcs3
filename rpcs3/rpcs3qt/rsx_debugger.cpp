@@ -100,7 +100,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 		QWidget* tab = new QWidget(tw_rsx);
 		tw_rsx->addTab(tab, tabname);
 		table = new QTableWidget(tab);
-		table->setItemDelegate(new table_item_delegate(this));
+		table->setFocusPolicy(Qt::NoFocus);
 		table->setFixedSize(QSize(720, 634));
 		table->setFont(mono);
 		table->setGridStyle(Qt::NoPen);
