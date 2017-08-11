@@ -356,7 +356,7 @@ void evdev_joystick_handler::thread_func()
                 }
                 else if (axistrigger && (evt.code == ABS_Z || evt.code == ABS_RZ))
                 {
-                    // For Xbox 360 controllers, a third axis represent the left/right triggers.
+                    // For Xbox controllers, a third axis represent the left/right triggers.
                     int which_trigger=0;
 
                     if (evt.code == ABS_Z)
@@ -383,7 +383,7 @@ void evdev_joystick_handler::thread_func()
                     }
 
                     int value = scale_axis(evt.code, evt.value);
-                    which_button->m_pressed = value == 255;
+                    which_button->m_pressed = value > 0;
                     which_button->m_value = value;
                 }
                 else if (evt.code >= ABS_X && evt.code <= ABS_RZ)
