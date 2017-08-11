@@ -7,7 +7,7 @@ enum GCMEnumTypes
 	CELL_GCM_PRIMITIVE_ENUM,
 };
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
+constexpr auto qstr = QString::fromStdString;
 
 rsx_debugger::rsx_debugger(QWidget* parent)
 	: QDialog(parent)

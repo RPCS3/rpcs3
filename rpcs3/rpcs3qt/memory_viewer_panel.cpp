@@ -3,7 +3,7 @@
 
 #include "memory_viewer_panel.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
+constexpr auto qstr = QString::fromStdString;
 
 memory_viewer_panel::memory_viewer_panel(QWidget* parent) 
 	: QDialog(parent)
