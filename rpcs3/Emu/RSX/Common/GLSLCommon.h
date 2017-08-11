@@ -121,8 +121,10 @@ namespace glsl
 		OS << "	bool reverse_order = false;\n";
 		OS << "\n";
 		OS << "	int first_byte = (vertex_id * desc.stride) + desc.starting_offset;\n";
-		OS << "	for (int n = 0; n < desc.attribute_size; n++)\n";
+		OS << "	for (int n = 0; n < 4; n++)\n";
 		OS << "	{\n";
+		OS << "		if (n == desc.attribute_size) break;\n";
+		OS << "\n";
 		OS << "		switch (desc.type)\n";
 		OS << "		{\n";
 		OS << "		case 0:\n";
