@@ -41,7 +41,9 @@
 		"forceHighpZ": "Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.",
 		"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful for developers.\nIf unsure, don't use this option.",
 		"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
-		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option."
+		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.",
+		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
+		"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance."
 	},
 	"emulator": {
 		"gui": {
@@ -72,7 +74,6 @@
 			"autoInvalidateCache": "Enable this option if the game has broken shadows. May slightly degrade performance.",
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.\nOnly works with OpenGL for now.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
-			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		}
 	},

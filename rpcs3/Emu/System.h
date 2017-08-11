@@ -325,15 +325,11 @@ struct cfg_root : cfg::node
 		cfg::_bool force_high_precision_z_buffer{this, "Force High Precision Z buffer"};
 		cfg::_bool invalidate_surface_cache_every_frame{this, "Invalidate Cache Every Frame", true};
 		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
-
+		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false};
 		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
-		cfg::_bool batch_instanced_geometry{this, "Batch Instanced Geometry", false}; //Avoid re-uploading geometry if the same draw command is repeated
-		cfg::_int<1, 16> vertex_upload_threads{ this, "Vertex Upload Threads", 1 }; //Max number of threads to use for parallel vertex processing
-		cfg::_int<32, 65536> mt_vertex_upload_threshold{ this, "Multithreaded Vertex Upload Threshold", 512}; //Minimum vertex count to parallelize
-
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip"};
-		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames Drawn", 1};
-		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames Skept", 1};
+		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
+		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 
 		struct node_d3d12 : cfg::node
 		{

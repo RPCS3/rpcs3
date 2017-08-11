@@ -69,6 +69,7 @@ public:
 		AutoInvalidateCache,
 		StrictRenderingMode,
 		DisableVertexCache,
+		DisableOcclusionQueries,
 
 		// Audio
 		AudioRenderer,
@@ -164,6 +165,7 @@ private:
 		{ AutoInvalidateCache, { "Video", "Invalidate Cache Every Frame"}},
 		{ StrictRenderingMode, { "Video", "Strict Rendering Mode"}},
 		{ DisableVertexCache, { "Video", "Disable Vertex Cache"}},
+		{ DisableOcclusionQueries,{ "Video", "Disable ZCull Occlusion Queries" }},
 		{ D3D12Adapter,        { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,       { "Video", "Vulkan", "Adapter"}},
 
