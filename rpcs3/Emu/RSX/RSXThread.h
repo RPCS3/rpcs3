@@ -257,8 +257,8 @@ namespace rsx
 
 		//zcull
 		virtual void notify_zcull_info_changed() {}
-		virtual void clear_zcull_stats(u32 type) {}
-		virtual u32 get_zcull_stats(u32 type) { return UINT32_MAX; }
+		virtual void clear_zcull_stats(u32 /*type*/) {}
+		virtual u32 get_zcull_stats(u32 /*type*/) { return UINT32_MAX; }
 
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
