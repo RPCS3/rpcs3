@@ -1204,6 +1204,9 @@ bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 
 void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
 {
+	if (g_cfg.video.disable_zcull_queries)
+		return;
+
 	bool testing_enabled = zcull_pixel_cnt_enabled || zcull_stats_enabled;
 
 	if (framebuffer_swap)
@@ -1262,6 +1265,9 @@ void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
 
 void GLGSRender::clear_zcull_stats(u32 type)
 {
+	if (g_cfg.video.disable_zcull_queries)
+		return;
+
 	if (type == CELL_GCM_ZPASS_PIXEL_CNT)
 	{
 		if (zcull_task_queue.active_query &&
@@ -1282,6 +1288,9 @@ void GLGSRender::clear_zcull_stats(u32 type)
 
 u32 GLGSRender::get_zcull_stats(u32 type)
 {
+	if (g_cfg.video.disable_zcull_queries)
+		return 0u;
+
 	if (zcull_task_queue.active_query &&
 		zcull_task_queue.active_query->active &&
 		current_zcull_stats.zpass_pixel_cnt == 0)

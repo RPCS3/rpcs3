@@ -395,9 +395,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
 
-	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
-	ui->disableVertexCache->setToolTip(json_gpu_main["disableVertexCache"].toString());
-
 	// Graphics Adapter
 	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
 	QStringList vulkanAdapters = r_Creator.vulkanAdapters;
@@ -844,6 +841,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
 	ui->readDepth->setToolTip(json_debug["readDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
+	ui->disableVertexCache->setToolTip(json_debug["disableVertexCache"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
+	ui->disableHwOcclusionQueries->setToolTip(json_debug["disableOcclusionQueries"].toString());
 
 	//
 	// Layout fix for High Dpi
