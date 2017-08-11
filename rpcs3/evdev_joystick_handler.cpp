@@ -229,6 +229,14 @@ int evdev_joystick_handler::scale_axis(int axis, int value)
     // Check if scaling is needed.
     if (range.first != 0 || range.second != 255)
     {
+        if (range.first < 0)
+        {
+            // Move the ranges up to make the following calculation actually *work*
+            value += -range.first;
+            range.second += -range.first;
+            range.first = 0;
+        }
+
         return (static_cast<float>(value - range.first) / range.second) * 255;
     }
     else
