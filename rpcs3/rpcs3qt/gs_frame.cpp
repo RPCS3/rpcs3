@@ -28,7 +28,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 		setIcon(appIcon);
 	}
 
-	g_cfg.misc.show_fps_in_title ? m_show_fps = true : m_show_fps = false;
+	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
 
 	resize(w, h);
 
