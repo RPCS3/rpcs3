@@ -11,7 +11,7 @@
 #include <QObject>
 #include <QComboBox>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
+constexpr auto qstr = QString::fromStdString;
 
 struct Render_Creator
 {

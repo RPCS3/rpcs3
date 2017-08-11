@@ -5,7 +5,7 @@
 #include <QScreen>
 #include <QThread>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 void msg_dialog_frame::Create(const std::string& msg)
 {
