@@ -587,6 +587,9 @@ namespace rsx
 	*/
 	void thread::fill_vertex_program_constants_data(void *buffer)
 	{
+		//Some games dont initialize some registers that they use in the vertex stage
+		memset(buffer, 0, 512 * 4 * sizeof(float));
+
 		for (const auto &entry : rsx::method_registers.transform_constants)
 			local_transform_constants[entry.first] = entry.second;
 		for (const auto &entry : local_transform_constants)
