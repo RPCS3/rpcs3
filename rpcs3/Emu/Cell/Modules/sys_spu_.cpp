@@ -411,6 +411,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
 	if (!bytes_read)
 	{
+		vm::dealloc(elf_addr);
 		return CELL_ENOENT;
 	}
 
@@ -418,8 +419,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	img.load(elf_file);
 	img.deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, img.segs.get_ptr(), img.nsegs);
 	img.free();
-
-	*entry = img.entry_point;
+	vm::dealloc(elf_addr);
 
 	return CELL_OK;
 }
