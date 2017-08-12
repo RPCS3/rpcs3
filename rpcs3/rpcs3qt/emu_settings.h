@@ -205,4 +205,5 @@ private:
 
 	YAML::Node currentSettings; // The current settings as a YAML node.
 	fs::file config; //! File to read/write the config settings.
+	std::string m_path;
 };
