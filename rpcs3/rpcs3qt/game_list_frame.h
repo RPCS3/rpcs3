@@ -185,7 +185,7 @@ public:
 	~game_list_frame();
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
-	void Refresh(const bool fromDrive = false);
+	void Refresh(const bool fromDrive = false, const bool scrollAfter = true);
 
 	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);

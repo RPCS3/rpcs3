@@ -352,7 +352,7 @@ void game_list_frame::SortGameList()
 	gameList->resizeColumnToContents(0);
 }
 
-void game_list_frame::Refresh(bool fromDrive)
+void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 {
 	if (fromDrive)
 	{
@@ -471,7 +471,11 @@ void game_list_frame::Refresh(bool fromDrive)
 		int row = PopulateGameList();
 		gameList->selectRow(row);
 		SortGameList();
-		gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
+
+		if (scrollAfter)
+		{
+			gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
+		}
 	}
 	else
 	{
@@ -489,7 +493,11 @@ void game_list_frame::Refresh(bool fromDrive)
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 		m_Central_Widget->addWidget(m_xgrid);
 		m_Central_Widget->setCurrentWidget(m_xgrid);
-		m_xgrid->scrollTo(m_xgrid->currentIndex());
+
+		if (scrollAfter)
+		{
+			m_xgrid->scrollTo(m_xgrid->currentIndex());
+		}
 	}
 }
 
@@ -623,7 +631,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(configure, &QAction::triggered, [=]() {
 		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
-		Refresh(true);
+		Refresh(true, false);
 	});
 	connect(removeGame, &QAction::triggered, [=]()
 	{
@@ -634,7 +642,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			Refresh();
 		}
 	});
-	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true); });
+	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true, false); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
