@@ -2080,10 +2080,12 @@ void VKGSRender::prepare_rtts()
 
 	for (u8 index : draw_buffers)
 	{
-		bound_images.push_back(std::get<1>(m_rtts.m_bound_render_targets[index]));
+		auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]);
+		bound_images.push_back(surface);
 
 		m_surface_info[index].address = surface_addresses[index];
 		m_surface_info[index].pitch = surface_pitchs[index];
+		surface->rsx_pitch = surface_pitchs[index];
 
 		if (surface_pitchs[index] <= 64)
 		{
@@ -2095,10 +2097,12 @@ void VKGSRender::prepare_rtts()
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
-		bound_images.push_back(std::get<1>(m_rtts.m_bound_depth_stencil));
+		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		bound_images.push_back(ds);
 
 		m_depth_surface_info.address = zeta_address;
 		m_depth_surface_info.pitch = rsx::method_registers.surface_z_pitch();
+		ds->rsx_pitch = m_depth_surface_info.pitch;
 
 		if (m_depth_surface_info.pitch <= 64 && clip_width > m_depth_surface_info.pitch)
 			m_depth_surface_info.pitch = 0;
@@ -2518,4 +2522,10 @@ void VKGSRender::flip(int buffer)
 	m_uploads_4k = 0;
 	m_uploads_8k = 0;
 	m_uploads_16k = 0;
+}
+
+bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
+{
+	return m_texture_cache.upload_scaled_image(src, dst, interpolate, (*m_device), *m_current_command_buffer, m_memory_type_mapping,
+			m_swap_chain->get_present_queue(), m_rtts, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 }

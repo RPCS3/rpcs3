@@ -580,37 +580,6 @@ namespace rsx
 				return;
 			}
 
-			if (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
-			{
-				//HACK: it's extension of the flip-hack. remove this when textures cache would be properly implemented
-				for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
-				{
-					u32 begin = rsx->display_buffers[i].offset;
-
-					if (dst_offset < begin || !begin)
-					{
-						continue;
-					}
-
-					if (rsx->display_buffers[i].width < 720 || rsx->display_buffers[i].height < 480)
-					{
-						continue;
-					}
-
-					if (begin == dst_offset)
-					{
-						return;
-					}
-
-					u32 end = begin + rsx->display_buffers[i].height * rsx->display_buffers[i].pitch;
-
-					if (dst_offset < end)
-					{
-						return;
-					}
-				}
-			}
-
 			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
 			const u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
 
