@@ -1953,6 +1953,12 @@ namespace gl
 				case texture::target::texture3D: glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0); break;
 				}
 			}
+
+			void operator = (const GLuint rhs)
+			{
+				save_binding_state save(m_parent);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs, 0);
+			}
 		};
 
 		class indexed_attachment : public attachment

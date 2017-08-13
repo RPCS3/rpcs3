@@ -94,7 +94,16 @@ namespace vk
 				if (!width && !height && !mipmaps)
 					return true;
 
-				return (width == this->width && height == this->height && mipmaps == this->mipmaps);
+				if (width && width != this->width)
+					return false;
+
+				if (height && height != this->height)
+					return false;
+
+				if (mipmaps && mipmaps != this->mipmaps)
+					return false;
+
+				return true;
 			}
 
 			return false;
@@ -361,6 +370,40 @@ namespace vk
 		const s32 m_max_zombie_objects = 32; //Limit on how many texture objects to keep around for reuse after they are invalidated
 		s32 m_unreleased_texture_objects = 0; //Number of invalidated objects not yet freed from memory
 
+		cached_texture_section *find_texture_from_range(u32 rsx_address, u32 range)
+		{
+			auto test = std::make_pair(rsx_address, range);
+			for (auto &address_range : m_cache)
+			{
+				auto &range_data = address_range.second;
+				for (auto &tex : range_data.data)
+				{
+					if (!tex.is_dirty() && tex.overlaps(test, true))
+						return &tex;
+				}
+			}
+
+			return nullptr;
+		}
+
+		cached_texture_section *find_texture_from_dimensions(u32 rsx_address, u32 rsx_size, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
+		{
+			auto found = m_cache.find(rsx_address);
+			if (found != m_cache.end())
+			{
+				auto &range_data = found->second;
+				for (auto &tex : range_data.data)
+				{
+					if (tex.matches(rsx_address, width, height, mipmaps) && !tex.is_dirty())
+					{
+						return &tex;
+					}
+				}
+			}
+
+			return nullptr;
+		}
+
 		cached_texture_section& find_cached_texture(u32 rsx_address, u32 rsx_size, bool confirm_dimensions = false, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
 		{
 			{
@@ -565,7 +608,7 @@ namespace vk
 		}
 
 		template <typename RsxTextureType>
-		vk::image_view* upload_texture(command_buffer cmd, RsxTextureType &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
+		vk::image_view* upload_texture(command_buffer &cmd, RsxTextureType &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
@@ -1047,6 +1090,271 @@ namespace vk
 				if (!flush_memory_to_cache(memory_address, memory_size, cmd, memory_types, submit_queue, true))
 					value.misses --;
 			}
+		}
+
+		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate,
+				vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue,
+				rsx::vk_render_targets &m_rtts, vk_data_heap &upload_heap, vk::buffer* upload_buffer)
+		{
+			//Since we will have dst in vram, we can 'safely' ignore the swizzle flag
+			//TODO: Verify correct behavior
+
+			bool src_is_render_target = false;
+			bool dst_is_render_target = false;
+			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
+			bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
+
+			VkFormat src_vk_format = src_is_argb8 ? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R5G6B5_UNORM_PACK16;
+
+			vk::image* vram_texture = nullptr;
+			vk::image* dest_texture = nullptr;
+
+			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
+			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
+
+			//Check if src/dst are parts of render targets
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, true);
+			dst_is_render_target = dst_subres.surface != nullptr;
+
+			u16 max_dst_width = dst.width;
+			u16 max_dst_height = dst.height;
+
+			//Prepare areas and offsets
+			//Copy from [src.offset_x, src.offset_y] a region of [clip.width, clip.height]
+			//Stretch onto [dst.offset_x, y] with clipping performed on the source region
+			//The implementation here adds the inverse scaled clip dimensions onto the source to completely bypass final clipping step
+
+			float scale_x = (f32)dst.width / src.width;
+			float scale_y = (f32)dst.height / src.height;
+
+			//Clip offset is unused if the clip offsets are reprojected onto the source
+			position2i clip_offset = { 0, 0 };//{ dst.clip_x, dst.clip_y };
+			position2i dst_offset = { dst.offset_x, dst.offset_y };
+
+			size2i clip_dimensions = { dst.clip_width, dst.clip_height };
+			//Dimensions passed are restricted to powers of 2; get real height from clip_height and width from pitch
+			const size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.clip_height };
+
+			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
+			//Reproject final clip onto source...
+			const u16 src_w = (const u16)((f32)clip_dimensions.width / scale_x);
+			const u16 src_h = (const u16)((f32)clip_dimensions.height / scale_y);
+
+			areai src_area = { 0, 0, src_w, src_h };
+			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
+
+			//If destination is neither a render target nor an existing texture in VRAM
+			//its possible that this method is being used to perform a memcpy into RSX memory, so we check
+			//parameters. Whenever a simple memcpy can get the job done, use it instead.
+			//Dai-3-ji Super Robot Taisen for example uses this to copy program code to GPU RAM
+
+			bool is_memcpy = false;
+			u32 memcpy_bytes_length = 0;
+			if (dst_is_argb8 == src_is_argb8 && !dst.swizzled)
+			{
+				if ((src.slice_h == 1 && dst.clip_height == 1) ||
+					(dst.clip_width == src.width && dst.clip_height == src.slice_h && src.pitch == dst.pitch))
+				{
+					const u8 bpp = dst_is_argb8 ? 4 : 2;
+					is_memcpy = true;
+					memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
+				}
+			}
+
+			if (!dst_is_render_target)
+			{
+				//First check if this surface exists in VRAM with exact dimensions
+				//Since scaled GPU resources are not invalidated by the CPU, we need to reuse older surfaces if possible
+				auto cached_dest = find_texture_from_dimensions(dst.rsx_address, dst.pitch * dst.clip_height, dst_dimensions.width, dst_dimensions.height);
+
+				//Check for any available region that will fit this one
+				if (!cached_dest) cached_dest = find_texture_from_range(dst.rsx_address, dst.pitch * dst.clip_height);
+
+				if (cached_dest)
+				{
+					//TODO: Verify that the new surface will fit
+					dest_texture = cached_dest->get_texture().get();
+
+					//TODO: Move this code into utils since it is used alot
+					const u32 address_offset = dst.rsx_address - cached_dest->get_section_base();
+
+					const u16 bpp = dst_is_argb8 ? 4 : 2;
+					const u16 offset_y = address_offset / dst.pitch;
+					const u16 offset_x = address_offset % dst.pitch;
+
+					dst_offset.x += offset_x / bpp;
+					dst_offset.y += offset_y;
+
+					max_dst_width = cached_dest->get_width();
+					max_dst_height = cached_dest->get_height();
+				}
+				else if (is_memcpy)
+				{
+					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
+					return true;
+				}
+			}
+			else
+			{
+				dst_offset.x = dst_subres.x;
+				dst_offset.y = dst_subres.y;
+
+				dest_texture = dst_subres.surface;
+
+				max_dst_width = dst_subres.surface->width();
+				max_dst_height = dst_subres.surface->height();
+
+				if (is_memcpy)
+				{
+					//Some render target descriptions are actually invalid
+					//Confirm this is a flushable RTT
+					const auto rsx_pitch = dst_subres.surface->rsx_pitch;
+					const auto native_pitch = dst_subres.surface->native_pitch;
+
+					if (rsx_pitch <= 64 && native_pitch != rsx_pitch)
+					{
+						memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
+						return true;
+					}
+				}
+			}
+
+			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, true);
+			src_is_render_target = src_subres.surface != nullptr;
+
+			//Create source texture if does not exist
+			if (!src_is_render_target)
+			{
+				auto preloaded_texture = find_texture_from_dimensions(src_address, src.pitch * src.slice_h, src.width, src.slice_h);
+
+				if (preloaded_texture != nullptr)
+				{
+					vram_texture = preloaded_texture->get_texture().get();
+				}
+				else
+				{
+					flush_address(src_address, dev, cmd, memory_types, submit_queue);
+					writer_lock lock(m_cache_mutex);
+
+					//Upload texture from CPU
+					vk::image *image = new vk::image(*vk::get_current_renderer(), memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						VK_IMAGE_TYPE_2D,
+						src_vk_format,
+						src.width, src.slice_h, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+						VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+
+					vk::image_view *view = new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_2D, src_vk_format,
+						{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+					cached_texture_section& region = find_cached_texture(dst.rsx_address, src.pitch * src.slice_h, true, src.width, src.slice_h, 1);
+					region.reset(src.rsx_address, src.pitch * src.slice_h);
+					region.create(src.width, src.slice_h, 1, 1, view, dest_texture);
+					region.protect(utils::protection::ro);
+					region.set_dirty(false);
+
+					read_only_range = region.get_min_max(read_only_range);
+
+					vk::enter_uninterruptible();
+
+					std::vector<rsx_subresource_layout> layout(1);
+					auto &subres = layout.back();
+					subres.width_in_block = src.width;
+					subres.height_in_block = src.slice_h;
+					subres.pitch_in_bytes = src.pitch;
+					subres.depth = 1;
+					subres.data = {(const gsl::byte*)src.pixels, src.pitch * src.slice_h};
+
+					copy_mipmaped_image_using_buffer(cmd, image->value, layout, src_vk_format, false, 1,
+						upload_heap, upload_buffer);
+
+					vk::leave_uninterruptible();
+				}
+			}
+			else
+			{
+				if (src_subres.w != clip_dimensions.width ||
+					src_subres.h != clip_dimensions.height)
+				{
+					f32 subres_scaling_x = (f32)src.pitch / src_subres.surface->native_pitch;
+
+					dst_area.x2 = (int)(src_subres.w * scale_x * subres_scaling_x);
+					dst_area.y2 = (int)(src_subres.h * scale_y);
+				}
+
+				src_area.x2 = src_subres.w;
+				src_area.y2 = src_subres.h;
+
+				src_area.x1 += src_subres.x;
+				src_area.x2 += src_subres.x;
+				src_area.y1 += src_subres.y;
+				src_area.y2 += src_subres.y;
+
+				vram_texture = src_subres.surface;
+			}
+
+			//Validate clip offsets (Persona 4 Arena at 720p)
+			//Check if can fit
+			//NOTE: It is possible that the check is simpler (if (clip_x >= clip_width))
+			//Needs verification
+			if ((dst.offset_x + dst.clip_x + dst.clip_width) > max_dst_width) dst.clip_x = 0;
+			if ((dst.offset_y + dst.clip_y + dst.clip_height) > max_dst_height) dst.clip_y = 0;
+
+			if (dst.clip_x || dst.clip_y)
+			{
+				//Reproject clip offsets onto source
+				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / scale_x);
+				const u16 scaled_clip_offset_y = (const u16)((f32)dst.clip_y / scale_y);
+
+				src_area.x1 += scaled_clip_offset_x;
+				src_area.x2 += scaled_clip_offset_x;
+				src_area.y1 += scaled_clip_offset_y;
+				src_area.y2 += scaled_clip_offset_y;
+			}
+
+			bool dest_exists = dest_texture != nullptr;
+			const VkFormat dst_vk_format = dst_is_argb8 ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_R5G6B5_UNORM_PACK16;
+			const u8 bpp = dst_is_argb8 ? 4 : 2;
+			const u32 real_width = dst.pitch / bpp;
+
+			if (!dest_exists)
+			{
+				dest_texture = new vk::image(*vk::get_current_renderer(), memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					VK_IMAGE_TYPE_2D,
+					dst_vk_format,
+					real_width, dst.clip_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+			}
+
+			//Copy data
+			copy_scaled_image(cmd, vram_texture->value, dest_texture->value, vram_texture->current_layout, dest_texture->current_layout,
+					src_area.x1, src_area.y1, src_w, src_h, dst_area.x1, dst_area.y1, dst.clip_width, dst.clip_height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+
+			if (dest_exists)
+				return true;
+
+			//TODO: Verify if any titles ever scale into CPU memory. It defeats the purpose of uploading data to the GPU, but it could happen
+			//If so, add this texture to the no_access queue not the read_only queue
+			cached_texture_section& region = find_cached_texture(dst.rsx_address, dst.pitch * dst.clip_height, true, real_width, dst.clip_height, 1);
+			writer_lock lock(m_cache_mutex);
+
+			//These textures are completely GPU resident so we dont watch for CPU access
+			//There's no data to be fetched from the CPU
+			//Its is possible for a title to attempt to read from the region, but the CPU path should be used in such cases
+
+			vk::image_view *view = new vk::image_view(*vk::get_current_renderer(), dest_texture->value, VK_IMAGE_VIEW_TYPE_2D, dst_vk_format,
+					{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+			region.reset(dst.rsx_address, dst.pitch * dst.clip_height);
+			region.create(real_width, dst.clip_height, 1, 1, view, dest_texture);
+			region.protect(utils::protection::rw);
+			region.set_dirty(false);
+
+			read_only_range = region.get_min_max(read_only_range);
+
+			return true;
 		}
 	};
 }
