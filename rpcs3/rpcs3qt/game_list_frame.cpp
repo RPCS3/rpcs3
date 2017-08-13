@@ -104,10 +104,11 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 
 	// Search Bar
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
+	m_Search_Bar->setObjectName("tb_searchbar");
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
 	m_Search_Bar->setMinimumWidth(m_Tool_Bar->height() * 5);
 	m_Search_Bar->setFrame(false);
-	m_Search_Bar->setStyleSheet("background:transparent;");
+	m_Search_Bar->setStyleSheet("QLineEdit#tb_searchbar { background: transparent }");
 	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text) {
 		m_searchText = text;
 		Refresh();
