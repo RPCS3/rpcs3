@@ -1,5 +1,6 @@
 set(GIT_VERSION_FILE "${SOURCE_DIR}/git-version.h")
 set(GIT_VERSION "unknown")
+set(GIT_BRANCH "unknown")
 set(GIT_VERSION_UPDATE "1")
 
 find_package(Git)

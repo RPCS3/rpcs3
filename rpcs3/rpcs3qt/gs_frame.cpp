@@ -11,6 +11,7 @@
 #include <string>
 
 #include "rpcs3_version.h"
+#include "git-version.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
@@ -20,7 +21,13 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 	//Get version by substringing v0.0.3-5632-b2007e73 Alpha so that we get just the parts between the last - and Alpha
 	std::string version = rpcs3::version.to_string();
 	version = version.substr(version.find_last_of('-') + 1, version.length());
-	version = version.substr(0 , version.find_last_of(' ') + 1);
+	version = version.substr(0 , version.find_last_of(' '));
+
+	if (GIT_BRANCH != "master")
+	{
+		version += "-";
+		version += GIT_BRANCH;
+	}
 
 	//Add the branch name (Unless it's master)
 
