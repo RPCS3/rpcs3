@@ -566,6 +566,9 @@ void GLGSRender::on_init_thread()
 
 	gl::init();
 
+	//Enable adaptive vsync if vsync is requested
+	gl::set_swapinterval(g_cfg.video.vsync ? -1 : 0);
+
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
