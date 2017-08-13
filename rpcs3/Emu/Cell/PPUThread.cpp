@@ -280,15 +280,16 @@ void ppu_thread::on_init(const std::shared_ptr<void>& _this)
 	if (!stack_addr)
 	{
 		// Allocate stack + gap between stacks
-		const_cast<u32&>(stack_addr) = vm::alloc(stack_size + 4096, vm::stack) + 4096;
-
-		if (!stack_addr)
+		auto new_stack_base = vm::alloc(stack_size + 4096, vm::stack);
+		if (!new_stack_base)
 		{
 			fmt::throw_exception("Out of stack memory (size=0x%x)" HERE, stack_size);
 		}
 
+		const_cast<u32&>(stack_addr) = new_stack_base + 4096;
+
 		// Make the gap inaccessible
-		vm::page_protect(stack_addr - 4096, 4096, 0, 0, vm::page_readable + vm::page_writable);
+		vm::page_protect(new_stack_base, 4096, 0, 0, vm::page_readable + vm::page_writable);
 
 		gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
 

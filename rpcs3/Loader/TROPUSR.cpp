@@ -147,7 +147,13 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	m_table4.clear();
 	m_table6.clear();
 
-	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
+	auto trophy_base = doc.GetRoot();
+	if (trophy_base->GetChildren()->GetName() == "trophyconf")
+	{
+		trophy_base = trophy_base->GetChildren();
+	}
+
+	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
 		if (n->GetName() == "trophy")
 		{
