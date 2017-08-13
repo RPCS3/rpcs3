@@ -109,6 +109,7 @@ namespace rsx
 	{
 		bool interleaved = false;
 		bool all_modulus = false;
+		bool single_vertex = false;
 		u32  base_offset = 0;
 		u32  real_offset_address = 0;
 		u8   memory_location = 0;

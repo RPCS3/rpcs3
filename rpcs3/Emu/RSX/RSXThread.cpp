@@ -1000,6 +1000,12 @@ namespace rsx
 
 				for (auto &block : result.interleaved_blocks)
 				{
+					if (block.single_vertex)
+					{
+						//Single vertex definition, continue
+						continue;
+					}
+
 					if (block.attribute_stride != info.stride())
 					{
 						//Stride does not match, continue
@@ -1049,6 +1055,12 @@ namespace rsx
 					block.locations.push_back(index);
 					block.min_divisor = info.frequency();
 					block.all_modulus = !!(frequency_divider_mask & (1 << index));
+
+					if (block.attribute_stride == 0)
+					{
+						block.single_vertex = true;
+						block.attribute_stride = rsx::get_vertex_type_size_on_host(info.type(), info.size());
+					}
 
 					result.interleaved_blocks.push_back(block);
 				}
@@ -1266,7 +1278,11 @@ namespace rsx
 			{
 				u32 unique_verts;
 
-				if (block.min_divisor > 1)
+				if (block.single_vertex)
+				{
+					unique_verts = 1;
+				}
+				else if (block.min_divisor > 1)
 				{
 					if (block.all_modulus)
 						unique_verts = block.min_divisor;
@@ -1277,7 +1293,9 @@ namespace rsx
 					}
 				}
 				else
+				{
 					unique_verts = vertex_count;
+				}
 
 				persistent_memory_size += block.attribute_stride * unique_verts;
 			}
@@ -1330,7 +1348,11 @@ namespace rsx
 
 				u32 unique_verts;
 
-				if (block.min_divisor > 1)
+				if (block.single_vertex)
+				{
+					unique_verts = 1;
+				}
+				else if (block.min_divisor > 1)
 				{
 					if (block.all_modulus)
 						unique_verts = block.min_divisor;
@@ -1341,7 +1363,9 @@ namespace rsx
 					}
 				}
 				else
+				{
 					unique_verts = vertex_count;
+				}
 
 				persistent_offset += block.attribute_stride * unique_verts;
 			}
@@ -1413,24 +1437,28 @@ namespace rsx
 				type = info.type();
 				size = info.size();
 
-				const u32 frequency = info.frequency();
-				switch (frequency)
-				{
-				case 0:
-				case 1:
-					attributes |= default_frequency_mask;
-					break;
-				default:
-				{
-					if (modulo_mask & (1 << index))
-						attributes |= input_function_modulo_mask;
+				auto stride = info.stride();
+				attributes |= stride;
 
-					attributes |= repeating_frequency_mask;
-					attributes |= (frequency << 13) & input_divisor_mask;
-				}
-				}
+				if (stride > 0) //when stride is 0, input is not an array but a single element
+				{
+					const u32 frequency = info.frequency();
+					switch (frequency)
+					{
+					case 0:
+					case 1:
+						attributes |= default_frequency_mask;
+						break;
+					default:
+					{
+						if (modulo_mask & (1 << index))
+							attributes |= input_function_modulo_mask;
 
-				attributes |= info.stride();
+						attributes |= repeating_frequency_mask;
+						attributes |= (frequency << 13) & input_divisor_mask;
+					}
+					}
+				}
 			} //end attribute placement check
 
 			switch (type)
@@ -1495,7 +1523,11 @@ namespace rsx
 				u32 unique_verts;
 				u32 vertex_base = first_vertex * block.attribute_stride;
 
-				if (block.min_divisor > 1)
+				if (block.single_vertex)
+				{
+					unique_verts = 1;
+				}
+				else if (block.min_divisor > 1)
 				{
 					if (block.all_modulus)
 						unique_verts = block.min_divisor;
@@ -1506,7 +1538,9 @@ namespace rsx
 					}
 				}
 				else
+				{
 					unique_verts = vertex_count;
+				}
 
 				const u32 data_size = block.attribute_stride * unique_verts;
 				memcpy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
