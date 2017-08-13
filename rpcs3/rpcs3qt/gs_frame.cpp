@@ -24,7 +24,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 
 	//Add the branch name (Unless it's master)
 
-	m_windowTitle += qstr(" | RPCS3 " + version +  + " | ");
+	m_windowTitle += qstr(" | RPCS3 " + version + " | ");
 
 	if (!Emu.GetTitle().empty())
 	{
