@@ -388,7 +388,7 @@ void Emulator::Load(bool add_only)
 		if (_cat == "DG" && bdvd_dir.empty())
 		{
 			// Mount /dev_bdvd/ if necessary
-			if (auto pos = elf_dir.rfind("/PS3_GAME") + 1)
+			if (auto pos = elf_dir.rfind("/PS3_GAME/") + 1)
 			{
 				bdvd_dir = elf_dir.substr(0, pos);
 			}
