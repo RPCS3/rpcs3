@@ -8,6 +8,8 @@
 #include <QTimer>
 #include <QThread>
 
+#include <string>
+
 #include "rpcs3_version.h"
 
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
@@ -15,9 +17,18 @@ inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
+	//Get version by substringing v0.0.3-5632-b2007e73 Alpha so that we get just the parts between the last - and Alpha
+	std::string version = rpcs3::version.to_string();
+	version = version.substr(version.find_last_of('-') + 1, version.length());
+	version = version.substr(0 , version.find_last_of(' ') + 1);
+
+	//Add the branch name (Unless it's master)
+
+	m_windowTitle += qstr(" | RPCS3 " + version +  + " | ");
+
 	if (!Emu.GetTitle().empty())
 	{
-		m_windowTitle += qstr(" | RPCS3 v" + rpcs3::version.to_string() + " | " + Emu.GetTitle());
+		m_windowTitle += qstr(Emu.GetTitle());
 	}
 
 	if (!Emu.GetTitleID().empty())
