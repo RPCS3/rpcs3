@@ -1097,7 +1097,8 @@ namespace gl
 			position2i dst_offset = { dst.offset_x, dst.offset_y };
 
 			size2i clip_dimensions = { dst.clip_width, dst.clip_height };
-			const size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
+			//Dimensions passed are restricted to powers of 2; get real height from clip_height and width from pitch
+			const size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.clip_height };
 
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
