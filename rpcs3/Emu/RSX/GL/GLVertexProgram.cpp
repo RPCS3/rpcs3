@@ -3,6 +3,7 @@
 
 #include "GLVertexProgram.h"
 #include "GLCommonDecompiler.h"
+#include "GLHelpers.h"
 #include "../GCM.h"
 
 #include <algorithm>
@@ -152,7 +153,7 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS, glsl::glsl_vertex_program);
-	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, gl::get_driver_caps().vendor_INTEL==false);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)

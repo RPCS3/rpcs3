@@ -54,7 +54,7 @@ namespace glsl
 		fmt::throw_exception("Unknown compare function" HERE);
 	}
 
-	static void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules)
+	static void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true)
 	{
 		std::string vertex_id_name = (rules == glsl_rules_opengl4) ? "gl_VertexID" : "gl_VertexIndex";
 
@@ -92,23 +92,24 @@ namespace glsl
 		OS << "	return int(bits);\n";
 		OS << "}\n\n";
 
-		/* TODO: For intel GPUs that seemingly cannot generate fp32 values from raw bits
-		OS << "float convert_to_f32(uint bits)\n";
-		OS << "{\n";
-		OS << "	uint sign = (bits >> 31) & 1;\n";
-		OS << "	uint exp = (bits >> 23) & 0xff;\n";
-		OS << "	uint mantissa = bits & 0x7fffff;\n";
-		OS << "	float base = (sign != 0)? -1.f: 1.f;\n";
-		OS << "	base *= exp2(exp - 127);\n";
-		OS << "	float scale = 0.f;\n\n";
-		OS << "	for (int x = 0; x < 23; x++)\n";
-		OS << "	{\n";
-		OS << "		int inv = (22 - x);\n";
-		OS << "		if ((mantissa & (1 << inv)) == 0) continue;\n";
-		OS << "		scale += 1.f / pow(2.f, float(inv));\n";
-		OS << "	}\n";
-		OS << "	return base * scale;\n";
-		OS << "}\n";*/
+		//For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
+		if (!glsl4_compliant)
+		{
+			OS << "void mov(inout vec4 vector, in int index, in float scalar)\n";
+			OS << "{\n";
+			OS << "	switch(index)\n";
+			OS << "	{\n";
+			OS << "		case 0: vector.x = scalar; return;\n";
+			OS << "		case 1: vector.y = scalar; return;\n";
+			OS << "		case 2: vector.z = scalar; return;\n";
+			OS << "		case 3: vector.w = scalar; return;\n";
+			OS << "	}\n";
+			OS << "}\n";
+		}
+		else
+		{
+			OS << "#define mov(v, i, s) v[i] = s\n";
+		}
 
 		OS << "#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
 
@@ -129,43 +130,43 @@ namespace glsl
 		OS << "		{\n";
 		OS << "		case 0:\n";
 		OS << "			//signed normalized 16-bit\n";
-		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			result[n] = get_s16(tmp.xy, desc.swap_bytes);\n";
-		OS << "			scale[n] = 32767.;\n";
+		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			mov(result, n, get_s16(tmp.xy, desc.swap_bytes));\n";
+		OS << "			mov(scale, n, 32767.);\n";
 		OS << "			break;\n";
 		OS << "		case 1:\n";
 		OS << "			//float\n";
-		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[2] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[3] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			result[n] = uintBitsToFloat(get_bits(tmp, desc.swap_bytes));\n";
+		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.z = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.w = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			mov(result, n, uintBitsToFloat(get_bits(tmp, desc.swap_bytes)));\n";
 		OS << "			break;\n";
 		OS << "		case 2:\n";
 		OS << "			//half\n";
-		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			result[n] = unpackHalf2x16(uint(get_bits(tmp.xy, desc.swap_bytes))).x;\n";
+		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			mov(result, n, unpackHalf2x16(uint(get_bits(tmp.xy, desc.swap_bytes))).x);\n";
 		OS << "			break;\n";
 		OS << "		case 3:\n";
 		OS << "			//unsigned byte\n";
-		OS << "			result[n] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			scale[n] = 255.;\n";
+		OS << "			mov(result, n, texelFetch(input_stream, first_byte++).x);\n";
+		OS << "			mov(scale, n, 255.);\n";
 		OS << "			reverse_order = (desc.swap_bytes != 0);\n";
 		OS << "			break;\n";
 		OS << "		case 4:\n";
 		OS << "			//signed word\n";
-		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			result[n] = get_s16(tmp.xy, desc.swap_bytes);\n";
+		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			mov(result, n, get_s16(tmp.xy, desc.swap_bytes));\n";
 		OS << "			break;\n";
 		OS << "		case 5:\n";
 		OS << "			//cmp\n";
-		OS << "			tmp[0] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[1] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[2] = texelFetch(input_stream, first_byte++).x;\n";
-		OS << "			tmp[3] = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.z = texelFetch(input_stream, first_byte++).x;\n";
+		OS << "			tmp.w = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			bits = get_bits(tmp, desc.swap_bytes);\n";
 		OS << "			result.x = preserve_sign_s16((bits & 0x7FF) << 5);\n";
 		OS << "			result.y = preserve_sign_s16(((bits >> 11) & 0x7FF) << 5);\n";
@@ -175,7 +176,7 @@ namespace glsl
 		OS << "			break;\n";
 		OS << "		case 6:\n";
 		OS << "			//ub256\n";
-		OS << "			result[n] = float(texelFetch(input_stream, first_byte++).x);\n";
+		OS << "			mov(result, n, float(texelFetch(input_stream, first_byte++).x));\n";
 		OS << "			reverse_order = (desc.swap_bytes != 0);\n";
 		OS << "			break;\n";
 		OS << "		}\n";
