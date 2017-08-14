@@ -34,12 +34,15 @@ namespace vk
 #define VK_MAX_ASYNC_CB_COUNT 64
 #define VK_MAX_ASYNC_FRAMES 2
 
+extern u64 get_system_time();
+
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
 	VkDevice m_device = VK_NULL_HANDLE;
 
-	bool pending = false;
+	std::atomic_bool pending = { false };
+	std::atomic<u64> last_sync = { 0 };
 
 	command_buffer_chunk()
 	{}
@@ -59,6 +62,11 @@ struct command_buffer_chunk: public vk::command_buffer
 
 		if (submit_fence != VK_NULL_HANDLE)
 			vkDestroyFence(m_device, submit_fence, nullptr);
+	}
+
+	void tag()
+	{
+		last_sync = get_system_time();
 	}
 
 	void reset()
@@ -227,13 +235,14 @@ private:
 	rsx::gcm_framebuffer_info m_depth_surface_info;
 
 	bool m_flush_draw_buffers = false;
-	s32  m_last_flushable_cb = -1;
+	std::atomic<int> m_last_flushable_cb = {-1 };
 	
 	std::mutex m_flush_queue_mutex;
 	std::atomic<bool> m_flush_commands = { false };
 	std::atomic<int> m_queued_threads = { 0 };
 
 	std::thread::id rsx_thread;
+	std::atomic<u64> m_last_sync_event = { 0 };
 
 	bool render_pass_open = false;
 

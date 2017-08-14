@@ -7,6 +7,8 @@
 #include "../rsx_utils.h"
 #include "Utilities/mutex.h"
 
+extern u64 get_system_time();
+
 namespace vk
 {
 	class cached_texture_section : public rsx::buffered_section
@@ -24,6 +26,8 @@ namespace vk
 		u16 native_pitch;
 		VkFence dma_fence = VK_NULL_HANDLE;
 		bool synchronized = false;
+		u64 sync_timestamp = 0;
+		u64 last_use_timestamp = 0;
 		vk::render_device* m_device = nullptr;
 		vk::image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
@@ -60,6 +64,8 @@ namespace vk
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new mangaged session is required
 			synchronized = false;
+			sync_timestamp = 0ull;
+			last_use_timestamp = get_system_time();
 		}
 
 		void release_dma_resources()
@@ -208,6 +214,7 @@ namespace vk
 			}
 
 			synchronized = true;
+			sync_timestamp = get_system_time();
 		}
 
 		template<typename T>
@@ -288,6 +295,16 @@ namespace vk
 		bool is_synchronized() const
 		{
 			return synchronized;
+		}
+
+		bool sync_valid() const
+		{
+			return (sync_timestamp > last_use_timestamp);
+		}
+
+		u64 get_sync_timestamp() const
+		{
+			return sync_timestamp;
 		}
 	};
 
@@ -710,11 +727,11 @@ namespace vk
 			return true;
 		}
 
-		std::tuple<bool, bool> address_is_flushable(u32 address)
+		std::tuple<bool, bool, u64> address_is_flushable(u32 address)
 		{
 			if (address < no_access_range.first ||
 				address > no_access_range.second)
-				return std::make_tuple(false, false);
+				return std::make_tuple(false, false, 0ull);
 
 			reader_lock lock(m_cache_mutex);
 
@@ -728,7 +745,7 @@ namespace vk
 					if (!tex.is_flushable()) continue;
 
 					if (tex.overlaps(address))
-						return std::make_tuple(true, tex.is_synchronized());
+						return std::make_tuple(true, tex.is_synchronized(), tex.get_sync_timestamp());
 				}
 			}
 
@@ -752,11 +769,11 @@ namespace vk
 					if (!tex.is_flushable()) continue;
 
 					if (tex.overlaps(address))
-						return std::make_tuple(true, tex.is_synchronized());
+						return std::make_tuple(true, tex.is_synchronized(), tex.get_sync_timestamp());
 				}
 			}
 
-			return std::make_tuple(false, false);
+			return std::make_tuple(false, false, 0ull);
 		}
 
 		bool flush_address(u32 address, vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
