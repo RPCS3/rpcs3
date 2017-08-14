@@ -23,10 +23,10 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 	version = version.substr(version.find_last_of('-') + 1, version.length());
 	version = version.substr(0 , version.find_last_of(' '));
 
-	if (GIT_BRANCH != "master")
+	if (RPCS3_GIT_BRANCH != "master")
 	{
 		version += "-";
-		version += GIT_BRANCH;
+		version += RPCS3_GIT_BRANCH;
 	}
 
 	//Add the branch name (Unless it's master)

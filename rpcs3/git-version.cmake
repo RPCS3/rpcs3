@@ -56,7 +56,6 @@ set(code_string "// This is a generated file.\n\n"
 	"#define RPCS3_GIT_VERSION \"${GIT_VERSION}\"\n"
 	"#define RPCS3_GIT_BRANCH \"${GIT_BRANCH}\"\n\n"
 	"// If you don't want this file to update/recompile, change to 1.\n"
-	"// This is a test line.\n"
 	"#define RPCS3_GIT_VERSION_NO_UPDATE 0\n")
 
 if ("${GIT_VERSION_UPDATE}" EQUAL "1")
