@@ -242,11 +242,11 @@ void save_manager_dialog::OnEntryRemove()
 	int idx = m_list->currentRow();
 	if (idx != -1)
 	{
-		idx = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
-		if (QMessageBox::question(this, "Delete Confirmation", "Are you sure you want to delete:\n" + qstr(m_save_entries[idx].title) + "?", QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+		int idx_real = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
+		if (QMessageBox::question(this, "Delete Confirmation", "Are you sure you want to delete:\n" + qstr(m_save_entries[idx_real].title) + "?", QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 		{
-			fs::remove_all(m_dir + m_save_entries[idx].dirName + "/");
-			UpdateList();
+			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
+			m_list->removeRow(idx);
 		}
 	}
 }
