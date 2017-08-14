@@ -156,6 +156,9 @@ namespace vm
 		// Unmap memory at specified location previously returned by alloc(), return size
 		u32 dealloc(u32 addr, u32* sup_out = nullptr);
 
+		// Internal
+		u32 imp_used(const vm::writer_lock&);
+
 		// Get allocated memory count
 		u32 used();
 	};

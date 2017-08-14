@@ -15,6 +15,9 @@ before_build:
  - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp 3rdparty/cereal 3rdparty/zlib 3rdparty/hidapi
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - 7z x vulkan.7z -aos -oC:\rpcs3\Vulkan > null
+ - set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
+ - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
+ - set CXXFLAGS=-DBRANCH=%BRANCH%
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
    else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/lib/cmake/llvm -DZLIB_ROOT=C:/rpcs3/zlib/ -DVULKAN_PREBUILT=ON)
 

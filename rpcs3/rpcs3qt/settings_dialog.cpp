@@ -357,6 +357,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
 	ui->renderBox->setToolTip(json_gpu_cbo["renderBox"].toString());
+	//Change D3D12 to D3D12[DO NOT USE]
+	for (int i = 0; i < ui->renderBox->count(); i++)
+	{
+		if (ui->renderBox->itemText(i) == "D3D12")
+		{
+			ui->renderBox->setItemText(i, r_Creator.render_D3D12);
+			break;
+		}
+	}
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());

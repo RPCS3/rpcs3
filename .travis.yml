@@ -68,6 +68,11 @@ before_script:
   - mkdir build
   - cd build
   - export CMAKE_PREFIX_PATH=~/Qt/5.9.1/gcc_64/lib/cmake
+  - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
+      export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
+    else
+      export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/#$TRAVIS_PULL_REQUEST";
+    fi;
   - cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
   - make -j 3
   - # AppImage generation
