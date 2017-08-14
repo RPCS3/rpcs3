@@ -147,7 +147,6 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 	for (auto &i : reg_table)
 	{
-		bool declared = true;
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
 		{
 			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
@@ -162,23 +161,14 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			std::string name = i.name;
 
 			if (front_back_diffuse && name == "diff_color")
-			{
-				declared = false;
 				name = "back_diff_color";
-			}
 
 			if (front_back_specular && name == "spec_color")
-			{
-				declared = false;
 				name = "back_spec_color";
-			}
 
 			OS << "out vec4 " << name << ";\n";
 		}
 		else
-			declared = false;
-
-		if (!declared)
 		{
 			//Mesa drivers are very strict on shader-stage matching
 			//Force some outputs to be declared even if unused
