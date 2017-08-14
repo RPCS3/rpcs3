@@ -1062,7 +1062,7 @@ void GLGSRender::flip(int buffer)
 	//Check the texture cache for a blitted copy
 	const u32 size = buffer_pitch * buffer_height;
 	auto surface = m_gl_texture_cache.find_texture_from_range(absolute_address, size);
-	bool from_cpu = false;
+	bool ignore_scaling = false;
 
 	if (surface != nullptr)
 	{
@@ -1080,6 +1080,7 @@ void GLGSRender::flip(int buffer)
 
 		m_flip_fbo.color = *render_target_texture;
 		m_flip_fbo.read_buffer(m_flip_fbo.color);
+		ignore_scaling = true;
 	}
 	else
 	{
@@ -1110,10 +1111,10 @@ void GLGSRender::flip(int buffer)
 
 		m_flip_fbo.color = m_flip_tex_color;
 		m_flip_fbo.read_buffer(m_flip_fbo.color);
-		from_cpu = true;
+		ignore_scaling = true;
 	}
 
-	if (!from_cpu && buffer_region.tile && buffer_region.tile->comp != CELL_GCM_COMPMODE_DISABLED)
+	if (!ignore_scaling && buffer_region.tile && buffer_region.tile->comp != CELL_GCM_COMPMODE_DISABLED)
 	{
 		LOG_ERROR(RSX, "Output buffer compression mode = 0x%X", buffer_region.tile->comp);
 
