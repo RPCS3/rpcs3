@@ -737,26 +737,55 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
 		{
 			bool flushable, synchronized;
-			std::tie(flushable, synchronized) = m_texture_cache.address_is_flushable(address);
+			u64 sync_timestamp;
+			std::tie(flushable, synchronized, sync_timestamp) = m_texture_cache.address_is_flushable(address);
 			
 			if (!flushable)
 				return false;
 
+			const bool is_rsxthr = std::this_thread::get_id() == rsx_thread;
+
 			if (synchronized)
 			{
-				if (m_last_flushable_cb >= 0)
+				//Wait for any cb submitted after the sync timestamp to finish
+				while (true)
 				{
-					if (m_primary_cb_list[m_last_flushable_cb].pending)
-						m_primary_cb_list[m_last_flushable_cb].wait();
+					u32 pending = 0;
+
+					if (m_last_flushable_cb < 0)
+						break;
+
+					for (auto &cb : m_primary_cb_list)
+					{
+						if (!cb.pending && cb.last_sync >= sync_timestamp)
+						{
+							pending = 0;
+							break;
+						}
+
+						if (cb.pending)
+						{
+							pending++;
+
+							if (is_rsxthr)
+								cb.poke();
+						}
+					}
+
+					if (!pending)
+						break;
+
+					std::this_thread::yield();
 				}
 
-				m_last_flushable_cb = -1;
+				if (is_rsxthr)
+					m_last_flushable_cb = -1;
 			}
 			else
 			{
 				//This region is buffered, but no previous sync point has been put in place to start sync efforts
 				//Just stall and get what we have at this point
-				if (std::this_thread::get_id() != rsx_thread)
+				if (!is_rsxthr)
 				{
 					{
 						std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
@@ -765,7 +794,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 						m_queued_threads++;
 					}
 
-					//This is awful!
+					//Wait for the RSX thread to process
 					while (m_flush_commands)
 					{
 						_mm_lfence();
@@ -1430,6 +1459,9 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		}
 
 		m_current_command_buffer->reset();
+
+		if (m_last_flushable_cb == m_current_cb_index)
+			m_last_flushable_cb = -1;
 	}
 
 	open_command_buffer();
@@ -1563,6 +1595,15 @@ void VKGSRender::do_local_task()
 			_mm_lfence();
 			_mm_pause();
 		}
+	}
+
+	if (m_last_flushable_cb > -1)
+	{
+		auto cb = &m_primary_cb_list[m_last_flushable_cb];
+		cb->poke();
+
+		if (!cb->pending)
+			m_last_flushable_cb = -1;
 	}
 }
 
@@ -1919,6 +1960,7 @@ void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> 
 	infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
 	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
+	m_current_command_buffer->tag();
 	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, fence));
 }
 
