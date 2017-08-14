@@ -1,4 +1,4 @@
-#include "gs_frame.h"
+﻿#include "gs_frame.h"
 
 #include "Utilities/Config.h"
 #include "Utilities/Timer.h"
@@ -8,14 +8,33 @@
 #include <QTimer>
 #include <QThread>
 
+#include <string>
+
+#include "rpcs3_version.h"
+#include "git-version.h"
+
 inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
+	//Get version by substringing 5632-b2007e73 to get just the part after the dash
+	std::string version = RPCS3_GIT_VERSION;
+	version = version.substr(version.find_last_of('-') + 1, version.length());
+
+	/*if (RPCS3_GIT_BRANCH != "master")
+	{
+		version += "-";
+		version += RPCS3_GIT_BRANCH;
+	}*/
+
+	//Add the branch name (Unless it's master)
+
+	m_windowTitle += qstr(" | " + version + " | ");
+
 	if (!Emu.GetTitle().empty())
 	{
-		m_windowTitle += qstr(" | " + Emu.GetTitle());
+		m_windowTitle += qstr(Emu.GetTitle());
 	}
 
 	if (!Emu.GetTitleID().empty())
