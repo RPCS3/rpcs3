@@ -82,6 +82,7 @@ namespace gl
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
+		bool vendor_INTEL = false;
 
 		void initialize()
 		{
@@ -173,6 +174,8 @@ namespace gl
 
 				glGetIntegerv(GL_MAJOR_VERSION, &version_major);
 				glGetIntegerv(GL_MINOR_VERSION, &version_minor);
+
+				vendor_INTEL = true;
 
 				//Texture buffers moved into core at GL 3.3
 				if (version_major > 3 || (version_major == 3 && version_minor >= 3))
