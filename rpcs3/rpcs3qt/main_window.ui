@@ -145,7 +145,7 @@ margin-left:14px;</string>
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -485,7 +485,7 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
   </action>
   <action name="confSavedataManagerAct">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Save Data</string>

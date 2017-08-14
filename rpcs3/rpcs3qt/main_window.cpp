@@ -9,7 +9,7 @@
 #include <QDesktopWidget>
 
 #include "vfs_dialog.h"
-#include "save_data_list_dialog.h"
+#include "save_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -1103,7 +1103,8 @@ void main_window::CreateConnects()
 		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
 	connect(ui->confSavedataManagerAct, &QAction::triggered, [=](){
-		save_data_list_dialog* sdid = new save_data_list_dialog({}, 0, false, this);
+
+		save_manager_dialog* sdid = new save_manager_dialog();
 		sdid->show();
 	});
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=](){
