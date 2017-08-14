@@ -20,6 +20,7 @@ class settings_dialog : public QDialog
 
 public:
 	explicit settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex = 0, QWidget *parent = 0, const GameInfo *game = nullptr);
+	int exec();
 Q_SIGNALS:
 	void GuiSettingsSyncRequest();
 	void GuiStylesheetRequest(const QString& path);
@@ -40,6 +41,7 @@ private:
 	bool m_isD3D12 = false;
 	bool m_isVulkan = false;
 
+	int m_tab_Index;
 	Ui::settings_dialog *ui;
 	std::shared_ptr<gui_settings> xgui_settings;
 };

@@ -34,53 +34,55 @@ namespace rsx
 
 		switch (location)
 		{
-			case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
-			case CELL_GCM_LOCATION_LOCAL:
+		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
+		case CELL_GCM_LOCATION_LOCAL:
+		{
+			// TODO: Don't use unnamed constants like 0xC0000000
+			return 0xC0000000 + offset;
+		}
+
+		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
+		case CELL_GCM_LOCATION_MAIN:
+		{
+			if (u32 result = RSXIOMem.RealAddr(offset))
 			{
-				// TODO: Don't use unnamed constants like 0xC0000000
-				return 0xC0000000 + offset;
+				return result;
 			}
 
-			case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
-			case CELL_GCM_LOCATION_MAIN:
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+		}
+
+		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
+			return 0x40301400 + offset;
+
+		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
+		{
+			if (u32 result = RSXIOMem.RealAddr(0x0e000000 + offset))
 			{
-				if (u32 result = RSXIOMem.RealAddr(offset))
-				{
-					return result;
-				}
-
-				fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
-
-				//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
-				//{
-				//	_mm_mfence(); // probably doesn't have any effect on current implementation
-				//}
+				return result;
 			}
 
-			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT:
-				return 0x100000 + offset; // TODO: Properly implement
+			fmt::throw_exception("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped" HERE, offset, location);
+		}
 
-			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
-				return 0x800 + offset;	// TODO: Properly implement
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
+			fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 (offset=0x%x, location=0x%x)" HERE, offset, location);
 
-			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
-				return 0x40 + offset; // TODO: Properly implement
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
+			fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
 
-			case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
-				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 (offset=0x%x, location=0x%x)" HERE, offset, location);
+		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
+		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
+			return 0x40300000 + offset;
 
-			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
-			case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-				return 0x100 + offset; // TODO: Properly implement
+		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
+			return 0x40000000 + offset;
 
-			case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_RW (offset=0x%x, location=0x%x)" HERE, offset, location);
+		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
+			return 0x40000000 + offset;
 
-			case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-				fmt::throw_exception("Unimplemented CELL_GCM_CONTEXT_DMA_DEVICE_R (offset=0x%x, location=0x%x)" HERE, offset, location);
-
-			default:
-				fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
+		default:
+			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
 		}
 	}
 
@@ -386,7 +388,7 @@ namespace rsx
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
-
+					sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
 					if (vblank_handler)
 					{
 						intr_thread->cmd_list
@@ -401,10 +403,15 @@ namespace rsx
 
 					continue;
 				}
+				while (Emu.IsPaused())
+					std::this_thread::sleep_for(10ms);
 
 				std::this_thread::sleep_for(1ms); // hack
 			}
 		});
+
+		// Raise priority above other threads
+		thread_ctrl::set_native_priority(1);
 
 		// TODO: exit condition
 		while (!Emu.IsStopped())
@@ -537,15 +544,18 @@ namespace rsx
 			m_vblank_thread.reset();
 		}
 
-		if (m_vertex_streaming_task.processing_threads.size() > 0)
+		if (m_vertex_streaming_task.available_threads > 0)
 		{
-			for (auto &thr : m_vertex_streaming_task.processing_threads)
+			for (auto &task : m_vertex_streaming_task.worker_threads)
 			{
-				thr->join();
-				thr.reset();
+				if (!task.worker_thread)
+					break;
+
+				task.worker_thread->join();
+				task.worker_thread.reset();
 			}
 
-			m_vertex_streaming_task.processing_threads.resize(0);
+			m_vertex_streaming_task.available_threads = 0;
 		}
 	}
 
@@ -748,7 +758,7 @@ namespace rsx
 	}
 
 	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
 		result.reserve(rsx::limits::vertex_count);
@@ -756,8 +766,10 @@ namespace rsx
 		u32 input_mask = state.vertex_attrib_input_mask();
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			bool enabled = !!(input_mask & (1 << index));
-			if (!enabled)
+			const bool enabled = !!(input_mask & (1 << index));
+			const bool consumed = !!(consumed_attrib_mask & (1ull << index));
+
+			if (!enabled && !consumed)
 				continue;
 
 			if (state.vertex_arrays_info[index].size() > 0)
@@ -818,7 +830,7 @@ namespace rsx
 	{
 		if (m_internal_tasks.empty())
 		{
-			std::this_thread::sleep_for(1ms);
+			std::this_thread::yield();
 		}
 		else
 		{
@@ -1061,9 +1073,9 @@ namespace rsx
 		rsx::method_registers.reset();
 	}
 
-	void thread::init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
+	void thread::init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress)
 	{
-		ctrl = vm::_ptr<CellGcmControl>(ctrlAddress);
+		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
 		this->ioAddress = ioAddress;
 		this->ioSize = ioSize;
 		local_mem_addr = localAddress;
@@ -1129,7 +1141,8 @@ namespace rsx
 		}
 	}
 
-	void thread::post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback)
+	void thread::post_vertex_stream_to_upload(gsl::span<const gsl::byte> src, gsl::span<gsl::byte> dst, rsx::vertex_base_type type, u32 vector_element_count,
+			u32 attribute_src_stride, u8 dst_stride, u32 vertex_count, std::function<void(void *, rsx::vertex_base_type, u8, u32)> callback)
 	{
 		upload_stream_packet packet;
 		packet.dst_span = dst;
@@ -1139,92 +1152,95 @@ namespace rsx
 		packet.dst_stride = dst_stride;
 		packet.vector_width = vector_element_count;
 		packet.post_upload_func = callback;
+		packet.vertex_count = vertex_count;
 
-		m_vertex_streaming_task.packets.push_back(packet);
-	}
-
-	void thread::start_vertex_upload_task(u32 vertex_count)
-	{
-		if (m_vertex_streaming_task.processing_threads.size() == 0)
+		if (m_vertex_streaming_task.available_threads == 0)
 		{
 			const u32 streaming_thread_count = (u32)g_cfg.video.vertex_upload_threads;
-			m_vertex_streaming_task.processing_threads.resize(streaming_thread_count);
+			m_vertex_streaming_task.available_threads = streaming_thread_count;
 
 			for (u32 n = 0; n < streaming_thread_count; ++n)
 			{
-				thread_ctrl::spawn(m_vertex_streaming_task.processing_threads[n], "Vertex Stream " + std::to_string(n), [this, n]()
+				thread_ctrl::spawn(m_vertex_streaming_task.worker_threads[n].worker_thread, "Vertex Stream " + std::to_string(n), [this, n]()
 				{
-					auto &task = m_vertex_streaming_task;
+					auto &owner = m_vertex_streaming_task;
+					auto &task = m_vertex_streaming_task.worker_threads[n];
 					const u32 index = n;
 
 					while (!Emu.IsStopped())
 					{
-						if (task.remaining_packets != 0)
+						if (task.thread_status.load(std::memory_order_consume) != 0)
 						{
-							//Wait for me!
-							task.ready_threads--;
-
-							const size_t step = task.processing_threads.size();
-							const size_t job_count = task.packets.size();
-							//Process every nth packet
-
-							size_t current_job = index;
-
-							while (true)
+							for (auto &packet: task.packets)
 							{
-								if (current_job >= job_count)
-									break;
-
-								auto &packet = task.packets[current_job];
-
-								write_vertex_array_data_to_buffer(packet.dst_span, packet.src_span, task.vertex_count, packet.type, packet.vector_width, packet.src_stride, packet.dst_stride);
+								write_vertex_array_data_to_buffer(packet.dst_span, packet.src_span, packet.vertex_count, packet.type, packet.vector_width, packet.src_stride, packet.dst_stride);
 
 								if (packet.post_upload_func)
-									packet.post_upload_func(packet.dst_span.data(), packet.type, (u8)packet.vector_width, task.vertex_count);
+									packet.post_upload_func(packet.dst_span.data(), packet.type, (u8)packet.vector_width, packet.vertex_count);
 
-								task.remaining_packets--;
-								current_job += step;
-								_mm_sfence();
+								owner.remaining_tasks--;
 							}
 
-							_mm_mfence();
-
-							while (task.remaining_packets > 0 && !Emu.IsStopped())
-							{
-								std::this_thread::yield();
-								_mm_lfence();
-							}
-							
-							task.ready_threads++;
+							task.packets.resize(0);
+							task.thread_status.store(0);
 							_mm_sfence();
 						}
-						else
-						{
-							std::this_thread::yield();
-						}
+
+						std::this_thread::yield();
 					}
 				});
 			}
 		}
 
-		while (m_vertex_streaming_task.ready_threads != 0 && !Emu.IsStopped())
+		//Increment job counter..
+		m_vertex_streaming_task.remaining_tasks++;
+
+		//Assign this packet to a thread
+		//Simple round robin based on first available thread
+		upload_stream_worker *best_fit = nullptr;
+		for (auto &worker : m_vertex_streaming_task.worker_threads)
 		{
-			_mm_pause();
+			if (!worker.worker_thread)
+				break;
+
+			if (worker.thread_status.load(std::memory_order_consume) == 0)
+			{
+				if (worker.packets.size() == 0)
+				{
+					worker.packets.push_back(packet);
+					return;
+				}
+
+				if (best_fit == nullptr)
+					best_fit = &worker;
+				else if (best_fit->packets.size() > worker.packets.size())
+					best_fit = &worker;
+			}
 		}
 
-		m_vertex_streaming_task.vertex_count = vertex_count;
-		m_vertex_streaming_task.ready_threads = 0;
-		m_vertex_streaming_task.remaining_packets = (int)m_vertex_streaming_task.packets.size();
+		best_fit->packets.push_back(packet);
+	}
+
+	void thread::start_vertex_upload_task()
+	{
+		for (auto &worker : m_vertex_streaming_task.worker_threads)
+		{
+			if (!worker.worker_thread)
+				break;
+
+			if (worker.thread_status.load(std::memory_order_consume) == 0 && worker.packets.size() > 0)
+			{
+				worker.thread_status.store(1);
+			}
+		}
 	}
 
 	void thread::wait_for_vertex_upload_task()
 	{
-		while (m_vertex_streaming_task.remaining_packets > 0 && !Emu.IsStopped())
+		while (m_vertex_streaming_task.remaining_tasks.load(std::memory_order_consume) != 0 && !Emu.IsStopped())
 		{
 			_mm_pause();
 		}
-
-		m_vertex_streaming_task.packets.resize(0);
 	}
 
 	bool thread::vertex_upload_task_ready()
@@ -1232,7 +1248,12 @@ namespace rsx
 		if (g_cfg.video.vertex_upload_threads < 2)
 			return false;
 
-		return (m_vertex_streaming_task.remaining_packets == 0 && m_vertex_streaming_task.ready_threads == 0);
+		//Not initialized
+		if (m_vertex_streaming_task.available_threads == 0)
+			return true;
+
+		//At least two threads are available
+		return (m_vertex_streaming_task.remaining_tasks < (m_vertex_streaming_task.available_threads - 1));
 	}
 
 	void thread::flip(int buffer)

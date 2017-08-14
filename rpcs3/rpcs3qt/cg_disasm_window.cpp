@@ -16,10 +16,10 @@
 
 #include "Emu/RSX/CgBinaryProgram.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings, QWidget* parent): QWidget(), xgui_settings(xSettings)
+cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings, QWidget* parent): QWidget(parent), xgui_settings(xSettings)
 {
 	setWindowTitle(tr("Cg Disasm"));
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -71,16 +71,18 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 	connect(open, &QAction::triggered, [=] {
 		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
 		if (filePath == NULL) return;
-		m_path_last = QFileInfo(filePath).path();
+		m_path_last = filePath;
 		
 		ShowDisasm();
 	});
 
-	myMenu.exec(QCursor::pos());
+	myMenu.exec(mapToGlobal(pos));
 }
 
 void cg_disasm_window::ShowDisasm()
 {
+	xgui_settings->SetValue(GUI::fd_cg_disasm, m_path_last);
+
 	if (QFileInfo(m_path_last).isFile())
 	{
 		CgBinaryDisasm disasm(sstr(m_path_last));
@@ -96,21 +98,22 @@ void cg_disasm_window::ShowDisasm()
 
 bool cg_disasm_window::IsValidFile(const QMimeData& md, bool save)
 {
-	for (auto url : md.urls())
-	{
-		for (QString suff : {"fpo", "vpo"})
-		{
-			if (QFileInfo(url.fileName()).suffix().toLower() == suff)
-			{
-				if (save)
-				{
-					m_path_last = url.toLocalFile();
-					xgui_settings->SetValue(GUI::fd_cg_disasm, m_path_last);
-				}
+	const QList<QUrl> urls = md.urls();
 
-				return true;
-			}
+	if (urls.count() > 1)
+	{
+		return false;
+	}
+
+	const QString suff = QFileInfo(urls[0].fileName()).suffix().toLower();
+
+	if (suff == "fpo" || suff == "vpo")
+	{
+		if (save)
+		{
+			m_path_last = urls[0].toLocalFile();
 		}
+		return true;
 	}
 	return false;
 }

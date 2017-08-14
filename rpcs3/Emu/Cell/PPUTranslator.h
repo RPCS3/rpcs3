@@ -41,7 +41,7 @@ struct TypeGen<T, std::enable_if_t<std::is_void<T>::value>>
 };
 
 template<typename T>
-struct TypeGen<T, std::enable_if_t<std::is_same<T, s64>::value || std::is_same<T, u64>::value>>
+struct TypeGen<T, std::enable_if_t<std::is_same<T, s64>::value || std::is_same<T, u64>::value || std::is_same<T, uptr>::value>>
 {
 	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getInt64Ty(context); }
 };

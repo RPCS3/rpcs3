@@ -75,6 +75,9 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 		case pad_handler::mm: return "MMJoystick";
 #endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev: return "Evdev";
+#endif
 		}
 
 		return unknown;
@@ -163,7 +166,7 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 		case audio_renderer::null: return "Null";
 #ifdef _WIN32
 		case audio_renderer::xaudio: return "XAudio2";
-#elif __linux__
+#elif defined(HAVE_ALSA)
 		case audio_renderer::alsa: return "ALSA";
 #endif
 		case audio_renderer::openal: return "OpenAL";
@@ -226,7 +229,7 @@ void Emulator::SetPath(const std::string& path, const std::string& elf_path)
 	m_elf_path = elf_path;
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct)
+bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 {
 	static const char* boot_list[] =
 	{
@@ -239,7 +242,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	if (direct && fs::is_file(path))
 	{
 		SetPath(path);
-		Load();
+		Load(add_only);
 
 		return true;
 	}
@@ -251,7 +254,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 		if (fs::is_file(elf))
 		{
 			SetPath(elf);
-			Load();
+			Load(add_only);
 
 			return true;
 		}
@@ -276,7 +279,7 @@ std::string Emulator::GetLibDir()
 	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
-void Emulator::Load()
+void Emulator::Load(bool add_only)
 {
 	Stop();
 
@@ -436,6 +439,12 @@ void Emulator::Load()
 		else if (_cat == "DG" || _cat == "GD")
 		{
 			LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
+			return;
+		}
+
+		if (add_only)
+		{
+			LOG_NOTICE(LOADER, "Finished to add data to games.yml by boot for: %s", m_path);
 			return;
 		}
 
@@ -782,8 +791,31 @@ void Emulator::Stop()
 #endif
 }
 
-s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
+s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
 {
+	static thread_local std::unordered_map<std::string, std::size_t>* g_tls_error_stats{};
+	static thread_local std::string* g_tls_error_str{};
+
+	if (!g_tls_error_stats)
+	{
+		g_tls_error_stats = new std::unordered_map<std::string, std::size_t>;
+		g_tls_error_str   = new std::string;
+
+		thread_ctrl::atexit([]
+		{
+			for (auto&& pair : *g_tls_error_stats)
+			{
+				if (pair.second > 3)
+				{
+					LOG_ERROR(GENERAL, "Stat: %s [x%u]", pair.first, pair.second);
+				}
+			}
+
+			delete g_tls_error_stats;
+			delete g_tls_error_str;
+		});
+	}
+
 	logs::channel* channel = &logs::GENERAL;
 	logs::level level = logs::level::error;
 	const char* func = "Unknown function";
@@ -793,27 +825,6 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 		if (g_system == system_type::ps3 && thread->id_type() == 1)
 		{
 			auto& ppu = static_cast<ppu_thread&>(*thread);
-
-			// Filter some annoying reports
-			switch (arg)
-			{
-			case CELL_ESRCH:
-			case CELL_EDEADLK:
-			{
-				if (ppu.m_name == "_cellsurMixerMain" || ppu.m_name == "_sys_MixerChStripMain")
-				{
-					if (std::memcmp(ppu.last_function, "sys_mutex_lock", 15) == 0 ||
-						std::memcmp(ppu.last_function, "sys_lwmutex_lock", 17) == 0 ||
-						std::memcmp(ppu.last_function, "_sys_mutex_lock", 16) == 0 ||
-						std::memcmp(ppu.last_function, "_sys_lwmutex_lock", 18) == 0)
-					{
-						level = logs::level::trace;
-					}
-				}
-
-				break;
-			}
-			}
 
 			if (ppu.last_function)
 			{
@@ -830,7 +841,18 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg)
 		}
 	}
 
-	channel->format(level, "'%s' failed with 0x%08x%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg));
+	// Format log message (use preallocated buffer)
+	g_tls_error_str->clear();
+	fmt::append(*g_tls_error_str, "'%s' failed with 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
+
+	// Update stats and check log threshold
+	const auto stat = ++(*g_tls_error_stats)[*g_tls_error_str];
+
+	if (stat <= 3)
+	{
+		channel->format(level, "%s [%u]", *g_tls_error_str, stat);
+	}
+
 	return static_cast<s32>(arg);
 }
 

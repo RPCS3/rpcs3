@@ -1,14 +1,15 @@
 #include "debugger_frame.h"
 
-#include <QSplitter>
+#include <QScrollBar>
 #include <QApplication>
 #include <QFontDatabase>
 #include <QCompleter>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 extern bool user_asked_for_frame_capture;
 
-debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), parent)
+debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
+	: QDockWidget(tr("Debugger"), parent), xgui_settings(settings)
 {
 	pSize = 10;
 
@@ -19,7 +20,6 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	body = new QWidget(this);
 	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(pSize);
-	QFontMetrics* fontMetrics = new QFontMetrics(mono);
 
 	QVBoxLayout* vbox_p_main = new QVBoxLayout();
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
@@ -63,12 +63,12 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	m_list->setFont(mono);
 	m_regs->setFont(mono);
 
-	QSplitter* splitter = new QSplitter(this);
-	splitter->addWidget(m_list);
-	splitter->addWidget(m_regs);
+	m_splitter = new QSplitter(this);
+	m_splitter->addWidget(m_list);
+	m_splitter->addWidget(m_regs);
 
 	QHBoxLayout* hbox_w_list = new QHBoxLayout();
-	hbox_w_list->addWidget(splitter);
+	hbox_w_list->addWidget(m_splitter);
 
 	vbox_p_main->addLayout(hbox_b_main);
 	vbox_p_main->addLayout(hbox_w_list);
@@ -112,10 +112,40 @@ debugger_frame::debugger_frame(QWidget *parent) : QDockWidget(tr("Debugger"), pa
 	UpdateUnitList();
 }
 
+void debugger_frame::SaveSettings()
+{
+	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+}
+
 void debugger_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	DebugFrameClosed();
+	Q_EMIT DebugFrameClosed();
+}
+
+void debugger_frame::showEvent(QShowEvent * event)
+{
+	// resize splitter widgets
+	QByteArray state = xgui_settings->GetValue(GUI::d_splitterState).toByteArray();
+
+	if (state.isEmpty()) // resize 2:1
+	{
+		const int width_right = width() / 3;
+		const int width_left = width() - width_right;
+		m_splitter->setSizes({ width_left, width_right });
+	}
+	else
+	{
+		m_splitter->restoreState(state);
+	}
+	QDockWidget::showEvent(event);
+}
+
+void debugger_frame::hideEvent(QHideEvent * event)
+{
+	// save splitter state or it will resume its initial state on next show
+	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+	QDockWidget::hideEvent(event);
 }
 
 #include <map>
@@ -293,9 +323,10 @@ void debugger_frame::WriteRegs()
 		m_regs->clear();
 		return;
 	}
-
+	int loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
 	m_regs->setText(qstr(cpu->dump()));
+	m_regs->verticalScrollBar()->setValue(loc);
 }
 
 void debugger_frame::OnUpdate()
@@ -317,7 +348,7 @@ void debugger_frame::Show_Val()
 	QLineEdit* p_pc(new QLineEdit(diag));
 	p_pc->setFont(mono);
 	p_pc->setMaxLength(8);
-	p_pc->setFixedWidth(75);
+	p_pc->setFixedWidth(90);
 	QLabel* addr(new QLabel(diag));
 	addr->setFont(mono);
 	
@@ -338,7 +369,6 @@ void debugger_frame::Show_Val()
 	if (cpu) 
 	{
 		unsigned long pc = cpu ? GetPc() : 0x0;
-		bool ok;
 		addr->setText("Address: " + QString("%1").arg(pc, 8, 16, QChar('0')));	// set address input line to 8 digits
 		p_pc->setPlaceholderText(QString("%1").arg(pc, 8, 16, QChar('0')));
 	}
@@ -586,6 +616,8 @@ void debugger_list::wheelEvent(QWheelEvent* event)
 
 void debugger_list::resizeEvent(QResizeEvent* event)
 {
+	Q_UNUSED(event);
+
 	if (count() < 1 || visualItemRect(item(0)).height() < 1)
 	{
 		return;

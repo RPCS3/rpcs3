@@ -11,7 +11,7 @@
 #include <QObject>
 #include <QComboBox>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
 struct Render_Creator
 {
@@ -20,7 +20,7 @@ struct Render_Creator
 	QStringList D3D12Adapters;
 	QStringList vulkanAdapters;
 	QString render_Vulkan = QObject::tr("Vulkan");
-	QString render_D3D12 = QObject::tr("D3D12");
+	QString render_D3D12 = QObject::tr("D3D12[DO NOT USE]");
 	QString render_OpenGL = QObject::tr("OpenGL");
 
 	Render_Creator();
@@ -44,6 +44,8 @@ public:
 		HookStaticFuncs,
 		BindSPUThreads,
 		LowerSPUThreadPrio,
+		SPULoopDetection,
+		PreferredSPUThreads,
 
 		// Graphics
 		Renderer,
@@ -66,6 +68,7 @@ public:
 		ForceHighpZ,
 		AutoInvalidateCache,
 		StrictRenderingMode,
+		DisableVertexCache,
 
 		// Audio
 		AudioRenderer,
@@ -109,7 +112,7 @@ public:
 	~emu_settings();
 
 	/** Connects a combo box with the target settings type*/
-	void EnhanceComboBox(QComboBox* combobox, SettingsType type);
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false);
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
@@ -138,6 +141,8 @@ private:
 		{ HookStaticFuncs,	{ "Core", "Hook static functions"}},
 		{ BindSPUThreads,	{ "Core", "Bind SPU threads to secondary cores"}},
 		{ LowerSPUThreadPrio, { "Core", "Lower SPU thread priority"}},
+		{ SPULoopDetection, { "Core", "SPU loop detection"}},
+		{ PreferredSPUThreads, { "Core", "Preferred SPU Threads"}},
 
 		// Graphics Tab
 		{ Renderer,			{ "Video", "Renderer"}},
@@ -158,6 +163,7 @@ private:
 		{ ForceHighpZ,      { "Video", "Force High Precision Z buffer"}},
 		{ AutoInvalidateCache, { "Video", "Invalidate Cache Every Frame"}},
 		{ StrictRenderingMode, { "Video", "Strict Rendering Mode"}},
+		{ DisableVertexCache, { "Video", "Disable Vertex Cache"}},
 		{ D3D12Adapter,        { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,       { "Video", "Vulkan", "Adapter"}},
 
@@ -199,4 +205,5 @@ private:
 
 	YAML::Node currentSettings; // The current settings as a YAML node.
 	fs::file config; //! File to read/write the config settings.
+	std::string m_path;
 };

@@ -29,7 +29,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	// Check shared db if we dont have a match
 	if (!func || !std::equal(func->data.begin(), func->data.end(), _ls + spu.pc / 4, [](const be_t<u32>& l, const be_t<u32>& r) { return *(u32*)(u8*)&l == *(u32*)(u8*)&r; }))
 	{
-		func = spu.spu_db->analyse(_ls, spu.pc).get();
+		func = spu.spu_db->analyse(_ls, spu.pc);
 		spu.compiled_cache[spu.pc / 4] = func;
 	}
 

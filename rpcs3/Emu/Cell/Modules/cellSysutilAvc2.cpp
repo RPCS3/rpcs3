@@ -7,166 +7,226 @@
 
 logs::channel cellSysutilAvc2("cellSysutilAvc2");
 
-s32 cellSysutilAvc2GetPlayerInfo()
+template<>
+void fmt_class_string<CellSysutilAvc2Error>::format(std::string& out, u64 arg)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_AVC2_ERROR_UNKNOWN);
+			STR_CASE(CELL_AVC2_ERROR_NOT_SUPPORTED);
+			STR_CASE(CELL_AVC2_ERROR_NOT_INITIALIZED);
+			STR_CASE(CELL_AVC2_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(CELL_AVC2_ERROR_INVALID_ARGUMENT);
+			STR_CASE(CELL_AVC2_ERROR_OUT_OF_MEMORY);
+			STR_CASE(CELL_AVC2_ERROR_ERROR_BAD_ID);
+			STR_CASE(CELL_AVC2_ERROR_INVALID_STATUS);
+			STR_CASE(CELL_AVC2_ERROR_TIMEOUT);
+			STR_CASE(CELL_AVC2_ERROR_NO_SESSION);
+			STR_CASE(CELL_AVC2_ERROR_WINDOW_ALREADY_EXISTS);
+			STR_CASE(CELL_AVC2_ERROR_TOO_MANY_WINDOWS);
+			STR_CASE(CELL_AVC2_ERROR_TOO_MANY_PEER_WINDOWS);
+			STR_CASE(CELL_AVC2_ERROR_WINDOW_NOT_FOUND);
+		}
+
+		return unknown;
+	});
 }
 
-s32 cellSysutilAvc2JoinChat()
+error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
 {
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2StopStreaming()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2ChangeVideoResolution()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2ShowScreen()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2GetVideoMuting()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2GetWindowAttribute()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2StopStreaming2()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2SetVoiceMuting()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2StartVoiceDetection()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2UnloadAsync()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2StopVoiceDetection()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2GetAttribute()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2LoadAsync()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2SetSpeakerVolumeLevel()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2SetWindowString()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2EstimateMemoryContainerSize()
-{
-	UNIMPLEMENTED_FUNC(cellSysutilAvc2); 
-  	return CELL_OK;
-}
-
-s32 cellSysutilAvc2SetVideoMuting()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2SetPlayerVoiceMuting()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2SetStreamingTarget()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2Unload()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2DestroyWindow()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2SetWindowPosition()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2GetSpeakerVolumeLevel()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvc2IsCameraAttached(vm::ptr<u8> status)
-{
-	cellSysutilAvc2.todo("cellSysutilAvc2IsCameraAttached()");
-
-	*status = CELL_AVC2_CAMERA_STATUS_DETACHED;
+	cellSysutilAvc2.todo("cellSysutilAvc2GetPlayerInfo(player_id=*0x%x, player_info=*0x%x)", player_id, player_info);
 	return CELL_OK;
 }
 
-s32 cellSysutilAvc2MicRead()
+error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2JoinChat(room_id=*0x%x)", room_id);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetPlayerVoiceMuting()
+error_code cellSysutilAvc2StopStreaming()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2StopStreaming()");
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2JoinChatRequest()
+error_code cellSysutilAvc2ChangeVideoResolution(CellSysutilAvc2VideoResolution resolution)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2ChangeVideoResolution(resolution=0x%x)", resolution);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2StartStreaming()
+error_code cellSysutilAvc2ShowScreen()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2ShowScreen()");
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2SetWindowAttribute()
+error_code cellSysutilAvc2GetVideoMuting(vm::ptr<u8> muting)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2GetVideoMuting(muting=*0x%x)", muting);
+
+	*muting = 1;
+
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetWindowShowStatus()
+error_code cellSysutilAvc2GetWindowAttribute(SceNpMatching2RoomMemberId member_id, vm::ptr<CellSysutilAvc2WindowAttribute> attr)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowAttribute(member_id=0x%x, attr=*0x%x)", member_id, attr);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> option)
+error_code cellSysutilAvc2StopStreaming2(CellSysutilAvc2MediaType mediaType)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2StopStreaming2(mediaType=0x%x)", mediaType);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetVoiceMuting(u8 muting)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2SetVoiceMuting(muting=0x%x)", muting);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2StartVoiceDetection()
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2StartVoiceDetection()");
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2UnloadAsync()
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync()");
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2StopVoiceDetection()
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2StopVoiceDetection()");
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2GetAttribute(vm::ptr<CellSysutilAvc2Attribute> attr)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2GetAttribute(attr=*0x%x)", attr);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2LoadAsync(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetSpeakerVolumeLevel(f32 level)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2SetSpeakerVolumeLevel(level=0x%x)", level);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetWindowString(SceNpMatching2RoomMemberId member_id, vm::cptr<char> string)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2SetWindowString(member_id=0x%x, string=%s)", member_id, string);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2EstimateMemoryContainerSize(vm::cptr<CellSysutilAvc2InitParam> initparam, vm::ptr<u32> size)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2EstimateMemoryContainerSize(initparam=*0x%x, size=*0x%x)", initparam, size);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetVideoMuting(u8 muting)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2SetVideoMuting(muting=0x%x)", muting);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetPlayerVoiceMuting(SceNpMatching2RoomMemberId member_id, u8 muting)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2SetPlayerVoiceMuting(member_id=0x%x, muting=0x%x)", member_id, muting);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetStreamingTarget()
+{
+	UNIMPLEMENTED_FUNC(cellSysutilAvc2);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2Unload()
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2Unload()");
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2DestroyWindow(SceNpMatching2RoomMemberId member_id)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2DestroyWindow(member_id=0x%x)", member_id);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetWindowPosition(SceNpMatching2RoomMemberId member_id, f32 x, f32 y, f32 z)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2SetWindowPosition(member_id=0x%x, x=0x%x, y=0x%x, z=0x%x)", member_id, x, y, z);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2GetSpeakerVolumeLevel(vm::ptr<f32> level)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2GetSpeakerVolumeLevel(level=*0x%x)", level);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2IsCameraAttached(vm::ptr<u8> status)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2IsCameraAttached(status=*0x%x)", status);
+
+	*status = CELL_AVC2_CAMERA_STATUS_DETACHED;
+
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2MicRead(vm::ptr<void> ptr, vm::ptr<u32> pSize)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2MicRead(ptr=*0x%x, pSize=*0x%x)", ptr, pSize);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2GetPlayerVoiceMuting(SceNpMatching2RoomMemberId member_id, vm::ptr<u8> muting)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2GetPlayerVoiceMuting(member_id=0x%x, muting=*0x%x)", member_id, muting);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2JoinChatRequest(room_id=*0x%x)", room_id);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2StartStreaming()
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2StartStreaming()");
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2SetWindowAttribute(SceNpMatching2RoomMemberId member_id, vm::cptr<CellSysutilAvc2WindowAttribute> attr)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2SetWindowAttribute(member_id=0x%x, attr=*0x%x)", member_id, attr);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2GetWindowShowStatus(SceNpMatching2RoomMemberId member_id, vm::ptr<u8> visible)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowShowStatus(member_id=0x%x, visible=*0x%x)", member_id, visible);
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> option)
 {
 	cellSysutilAvc2.warning("cellSysutilAvc2InitParam(version=%d, option=*0x%x)", version, option);
 
@@ -213,115 +273,142 @@ s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> opti
 	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetWindowSize()
+error_code cellSysutilAvc2GetWindowSize(SceNpMatching2RoomMemberId member_id, vm::ptr<f32> width, vm::ptr<f32> height)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowSize(member_id=0x%x, width=*0x%x, height=*0x%x)", member_id, width, height);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2SetStreamPriority()
+error_code cellSysutilAvc2SetStreamPriority(u8 priority)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2SetStreamPriority(priority=0x%x)", priority);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2LeaveChatRequest()
+error_code cellSysutilAvc2LeaveChatRequest()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2LeaveChatRequest()");
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2IsMicAttached()
+error_code cellSysutilAvc2IsMicAttached(vm::ptr<u8> status)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2IsMicAttached(status=*0x%x)", status);
+
+	*status = CELL_AVC2_MIC_STATUS_DETACHED;
+
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2CreateWindow()
+error_code cellSysutilAvc2CreateWindow(SceNpMatching2RoomMemberId member_id)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2CreateWindow(member_id=0x%x)", member_id);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetSpeakerMuting()
+error_code cellSysutilAvc2GetSpeakerMuting(vm::ptr<u8> muting)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2GetSpeakerMuting(muting=*0x%x)", muting);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2ShowWindow()
+error_code cellSysutilAvc2ShowWindow(SceNpMatching2RoomMemberId member_id)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2ShowWindow(member_id=0x%x)", member_id);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2SetWindowSize()
+error_code cellSysutilAvc2SetWindowSize(SceNpMatching2RoomMemberId member_id, f32 width, f32 height)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2SetWindowSize(member_id=0x%x, width=0x%x, height=0x%x)", member_id, width, height);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2EnumPlayers()
+error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::ptr<SceNpMatching2RoomMemberId> players_id)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2EnumPlayers(players_num=*0x%x, players_id=*0x%x)", players_num, players_id);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetWindowString()
+error_code cellSysutilAvc2GetWindowString(SceNpMatching2RoomMemberId member_id, vm::ptr<char> string, vm::ptr<u8> len)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowString(member_id=0x%x, string=*0x%x, len=*0x%x)", member_id, string, len);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2LeaveChat()
+error_code cellSysutilAvc2LeaveChat()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2LeaveChat()");
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2SetSpeakerMuting()
+error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2SetSpeakerMuting(muting=0x%x)", muting);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2Load()
+error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2SetAttribute()
+error_code cellSysutilAvc2SetAttribute(vm::cptr<CellSysutilAvc2Attribute> attr)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2SetAttribute(attr=*0x%x)", attr);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2UnloadAsync2()
+error_code cellSysutilAvc2UnloadAsync2(CellSysutilAvc2MediaType mediaType)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync2(mediaType=0x%x)", mediaType);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2StartStreaming2()
+error_code cellSysutilAvc2StartStreaming2(CellSysutilAvc2MediaType mediaType)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2StartStreaming2(mediaType=0x%x)", mediaType);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2HideScreen()
+error_code cellSysutilAvc2HideScreen()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2HideScreen()");
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2HideWindow()
+error_code cellSysutilAvc2HideWindow(SceNpMatching2RoomMemberId member_id)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2HideWindow(member_id=0x%x)", member_id);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetVoiceMuting()
+error_code cellSysutilAvc2GetVoiceMuting(vm::ptr<u8> muting)
 {
-	UNIMPLEMENTED_FUNC(cellSysutilAvc2); 
-  	return CELL_OK;
+	cellSysutilAvc2.todo("cellSysutilAvc2GetVoiceMuting(muting=*0x%x)", muting);
+
+	*muting = 1;
+
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetScreenShowStatus()
+error_code cellSysutilAvc2GetScreenShowStatus(vm::ptr<u8> visible)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2GetScreenShowStatus(visible=*0x%x)", visible);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2Unload2()
+error_code cellSysutilAvc2Unload2(CellSysutilAvc2MediaType mediaType)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2Unload2(mediaType=0x%x)", mediaType);
+	return CELL_OK;
 }
 
-s32 cellSysutilAvc2GetWindowPosition()
+error_code cellSysutilAvc2GetWindowPosition(SceNpMatching2RoomMemberId member_id, vm::ptr<f32> x, vm::ptr<f32> y, vm::ptr<f32> z)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowPosition(member_id=0x%x, x=*0x%x, y=*0x%x, z=*0x%x)", member_id, x, y, z);
+	return CELL_OK;
 }
 
 

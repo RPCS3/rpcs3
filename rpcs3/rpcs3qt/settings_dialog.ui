@@ -118,18 +118,23 @@
             </widget>
            </item>
            <item>
+            <widget class="QGroupBox" name="groupBox_6">
+             <property name="title">
+              <string>Preferred SPU Threads</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_51">
+              <item>
+               <widget class="QComboBox" name="preferredSPUThreads"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <widget class="QGroupBox" name="checkboxes">
              <property name="title">
               <string>Additional Settings</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_4">
-              <item>
-               <widget class="QCheckBox" name="hookStFunc">
-                <property name="text">
-                 <string>Hook Static Functions</string>
-                </property>
-               </widget>
-              </item>
               <item>
                <widget class="QCheckBox" name="bindSPUThreads">
                 <property name="text">
@@ -145,17 +150,18 @@
                </widget>
               </item>
               <item>
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
+               <widget class="QCheckBox" name="spuLoopDetection">
+                <property name="text">
+                 <string>Enable SPU loop detection</string>
                 </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="hookStFunc">
+                <property name="text">
+                 <string>Hook static functions</string>
                 </property>
-               </spacer>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -163,11 +169,11 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_9">
+          <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0,1,0">
            <item>
             <widget class="QGroupBox" name="lib_settings">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -234,7 +240,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_28">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -245,6 +251,12 @@
              <layout class="QVBoxLayout" name="verticalLayout_12">
               <item>
                <widget class="QListWidget" name="lleList">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="selectionMode">
                  <enum>QAbstractItemView::ExtendedSelection</enum>
                 </property>
@@ -263,7 +275,14 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_11">
               <item>
-               <widget class="QLineEdit" name="searchBox"/>
+               <widget class="QLineEdit" name="searchBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -437,27 +456,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="dumpDepth">
-              <property name="text">
-               <string>Write Depth Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="readColor">
-              <property name="text">
-               <string>Read Color Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="readDepth">
-              <property name="text">
-               <string>Read Depth Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QCheckBox" name="autoInvalidateCache">
               <property name="text">
                <string>Invalidate Cache Every Frame</string>
@@ -472,9 +470,16 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="scrictModeRendering">
+              <property name="text">
+               <string>Strict Rendering Mode</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="vsync">
               <property name="text">
-               <string>Use Vertical Sync</string>
+               <string>VSync</string>
               </property>
              </widget>
             </item>
@@ -485,68 +490,18 @@
               </property>
              </widget>
             </item>
-           </layout>
-          </widget>
-         </item>
-         <item alignment="Qt::AlignTop">
-          <widget class="QGroupBox" name="groupBox_48">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="title">
-            <string>Debugging Settings</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_17">
-            <item alignment="Qt::AlignTop">
-             <widget class="QCheckBox" name="glLegacyBuffers">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>Use Legacy OpenGL Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item alignment="Qt::AlignTop">
-             <widget class="QCheckBox" name="debugOutput">
-              <property name="text">
-               <string>Debug Output</string>
-              </property>
-             </widget>
-            </item>
             <item>
-             <widget class="QCheckBox" name="debugOverlay">
+             <widget class="QCheckBox" name="disableVertexCache">
               <property name="text">
-               <string>Debug Overlay</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="scrictModeRendering">
-              <property name="text">
-               <string>Strict Rendering Mode</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="logProg">
-              <property name="text">
-               <string>Log Shader Programs</string>
-              </property>
-             </widget>
-            </item>
-            <item alignment="Qt::AlignTop">
-             <widget class="QCheckBox" name="forceHighpZ">
-              <property name="text">
-               <string>Use High Precision Z-buffer</string>
+               <string>Disable Vertex Cache</string>
               </property>
              </widget>
             </item>
            </layout>
           </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_8" native="true"/>
          </item>
         </layout>
        </item>
@@ -926,8 +881,6 @@
         </widget>
        </item>
       </layout>
-      <zorder>groupBox_61</zorder>
-      <zorder>verticalSpacer_8</zorder>
      </widget>
      <widget class="QWidget" name="networkTab">
       <attribute name="title">
@@ -1150,6 +1103,13 @@
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_50">
                <item>
+                <widget class="QCheckBox" name="gs_disableMouse">
+                 <property name="text">
+                  <string>Don't use doubleclick for Fullscreen mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="gs_resizeOnBoot">
                  <property name="text">
                   <string>Resize game window on boot</string>
@@ -1306,6 +1266,135 @@
            <widget class="QLabel" name="label_8">
             <property name="text">
              <string>Emulator settings allow you to set personal preferences within the emulator such as automatic exit when a process is finished, starting games after boot and allowing games to automatically boot into fullscreen mode. You can also create your own stylesheets which can be used as themes for a more personal experience. </string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::PlainText</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="debugTab">
+      <attribute name="title">
+       <string>Debug</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_53">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_21">
+         <item>
+          <widget class="QGroupBox" name="groupBox_48">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="title">
+            <string>GPU</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_17">
+            <item alignment="Qt::AlignTop">
+             <widget class="QCheckBox" name="glLegacyBuffers">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Use Legacy OpenGL Buffers</string>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignTop">
+             <widget class="QCheckBox" name="debugOutput">
+              <property name="text">
+               <string>Debug Output</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="debugOverlay">
+              <property name="text">
+               <string>Debug Overlay</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="logProg">
+              <property name="text">
+               <string>Log Shader Programs</string>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignTop">
+             <widget class="QCheckBox" name="forceHighpZ">
+              <property name="text">
+               <string>Use High Precision Z-buffer</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="dumpDepth">
+              <property name="text">
+               <string>Write Depth Buffers</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="readDepth">
+              <property name="text">
+               <string>Read Depth Buffers</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="readColor">
+              <property name="text">
+               <string>Read Color Buffers</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_7" native="true"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_10">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_63">
+         <property name="title">
+          <string>Description</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_52">
+          <item>
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>These options are only needed for development.
+
+
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>

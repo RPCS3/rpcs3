@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -10,6 +11,8 @@
 namespace vm { using namespace ps3; }
 
 logs::channel sys_mutex("sys_mutex");
+
+template<> DECLARE(ipc_manager<lv2_mutex, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
@@ -22,48 +25,53 @@ error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t
 		return CELL_EFAULT;
 	}
 
-	const u32 protocol = attr->protocol;
-
-	switch (protocol)
+	switch (attr->protocol)
 	{
 	case SYS_SYNC_FIFO: break;
 	case SYS_SYNC_PRIORITY: break;
 	case SYS_SYNC_PRIORITY_INHERIT:
-		sys_mutex.todo("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT");
+		sys_mutex.fatal("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT");
 		break;
 	default:
 	{
-		sys_mutex.error("sys_mutex_create(): unknown protocol (0x%x)", protocol);
+		sys_mutex.error("sys_mutex_create(): unknown protocol (0x%x)", attr->protocol);
 		return CELL_EINVAL;
 	}
 	}
 
-	const u32 recursive = attr->recursive;
-
-	switch (recursive)
+	switch (attr->recursive)
 	{
 	case SYS_SYNC_RECURSIVE: break;
 	case SYS_SYNC_NOT_RECURSIVE: break;	
 	default:
 	{
-		sys_mutex.error("sys_mutex_create(): unknown recursive (0x%x)", recursive);
+		sys_mutex.error("sys_mutex_create(): unknown recursive (0x%x)", attr->recursive);
 		return CELL_EINVAL;
 	}
 	}
 
-	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->adaptive != SYS_SYNC_NOT_ADAPTIVE || attr->ipc_key || attr->flags)
+	if (attr->adaptive != SYS_SYNC_NOT_ADAPTIVE)
 	{
-		sys_mutex.error("sys_mutex_create(): unknown attributes (pshared=0x%x, adaptive=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->adaptive, attr->ipc_key, attr->flags);
-		return CELL_EINVAL;
+		sys_mutex.todo("sys_mutex_create(): unexpected adaptive (0x%x)", attr->adaptive);
 	}
 
-	if (const u32 id = idm::make<lv2_obj, lv2_mutex>(protocol, recursive, attr->name_u64))
+	if (auto error = lv2_obj::create<lv2_mutex>(attr->pshared, attr->ipc_key, attr->flags, [&]()
 	{
-		*mutex_id = id;
-		return CELL_OK;
+		return std::make_shared<lv2_mutex>(
+			attr->protocol,
+			attr->recursive,
+			attr->pshared,
+			attr->adaptive,
+			attr->ipc_key,
+			attr->flags,
+			attr->name_u64);
+	}))
+	{
+		return error;
 	}
 
-	return CELL_EAGAIN;
+	*mutex_id = idm::last_id();
+	return CELL_OK;
 }
 
 error_code sys_mutex_destroy(u32 mutex_id)

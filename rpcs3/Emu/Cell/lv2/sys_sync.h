@@ -7,46 +7,52 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/IdManager.h"
+#include "Emu/IPC.h"
 
 #include <deque>
 
 // attr_protocol (waiting scheduling policy)
 enum
 {
-	// First In, First Out
-	SYS_SYNC_FIFO = 1,
-	// Priority Order
-	SYS_SYNC_PRIORITY = 2,
-	// Basic Priority Inheritance Protocol (probably not implemented)
-	SYS_SYNC_PRIORITY_INHERIT = 3,
-	// Not selected while unlocking
-	SYS_SYNC_RETRY = 4,
-	//
-	SYS_SYNC_ATTR_PROTOCOL_MASK = 0xF,
+	SYS_SYNC_FIFO                = 0x1, // First In, First Out Order
+	SYS_SYNC_PRIORITY            = 0x2, // Priority Order
+	SYS_SYNC_PRIORITY_INHERIT    = 0x3, // Basic Priority Inheritance Protocol
+	SYS_SYNC_RETRY               = 0x4, // Not selected while unlocking
+	SYS_SYNC_ATTR_PROTOCOL_MASK  = 0xf,
 };
 
 // attr_recursive (recursive locks policy)
 enum
 {
-	// Recursive locks are allowed
-	SYS_SYNC_RECURSIVE = 0x10,
-	// Recursive locks are NOT allowed
-	SYS_SYNC_NOT_RECURSIVE = 0x20,
-	//
-	SYS_SYNC_ATTR_RECURSIVE_MASK = 0xF0, //???
+	SYS_SYNC_RECURSIVE           = 0x10,
+	SYS_SYNC_NOT_RECURSIVE       = 0x20,
+	SYS_SYNC_ATTR_RECURSIVE_MASK = 0xf0,
 };
 
-// attr_pshared
+// attr_pshared (sharing among processes policy)
 enum
 {
-	SYS_SYNC_NOT_PROCESS_SHARED = 0x200,
+	SYS_SYNC_PROCESS_SHARED      = 0x100,
+	SYS_SYNC_NOT_PROCESS_SHARED  = 0x200,
+	SYS_SYNC_ATTR_PSHARED_MASK   = 0xf00,
+};
+
+// attr_flags (creation policy)
+enum
+{
+	SYS_SYNC_NEWLY_CREATED       = 0x1, // Create new object, fails if specified IPC key exists
+	SYS_SYNC_NOT_CREATE          = 0x2, // Reference existing object, fails if IPC key not found
+	SYS_SYNC_NOT_CARE            = 0x3, // Reference existing object, create new one if IPC key not found
+	SYS_SYNC_ATTR_FLAGS_MASK     = 0xf,
 };
 
 // attr_adaptive
 enum
 {
-	SYS_SYNC_ADAPTIVE     = 0x1000,
-	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
+	SYS_SYNC_ADAPTIVE            = 0x1000,
+	SYS_SYNC_NOT_ADAPTIVE        = 0x2000,
+	SYS_SYNC_ATTR_ADAPTIVE_MASK  = 0xf000,
 };
 
 // Base class for some kernel objects (shared set of 8192 objects).
@@ -125,6 +131,81 @@ struct lv2_obj
 	}
 
 	static void cleanup();
+
+	template <typename T, typename F>
+	static error_code create(u32 pshared, u64 ipc_key, s32 flags, F&& make)
+	{
+		switch (pshared)
+		{
+		case SYS_SYNC_PROCESS_SHARED:
+		{
+			switch (flags)
+			{
+			case SYS_SYNC_NEWLY_CREATED:
+			case SYS_SYNC_NOT_CARE:
+			{
+				std::shared_ptr<T> result = make();
+
+				if (!ipc_manager<T, u64>::add(ipc_key, [&] { if (!idm::import_existing<lv2_obj, T>(result)) result.reset(); return result; }, &result))
+				{
+					if (flags == SYS_SYNC_NEWLY_CREATED)
+					{
+						return CELL_EEXIST;
+					}
+
+					if (!idm::import_existing<lv2_obj, T>(result))
+					{
+						return CELL_EAGAIN;
+					}
+
+					return CELL_OK;
+				}
+				else if (!result)
+				{
+					return CELL_EAGAIN;
+				}
+				else
+				{
+					return CELL_OK;
+				}
+			}
+			case SYS_SYNC_NOT_CREATE:
+			{
+				auto result = ipc_manager<T, u64>::get(ipc_key);
+
+				if (!result)
+				{
+					return CELL_ESRCH;
+				}
+
+				if (!idm::import_existing<lv2_obj, T>(result))
+				{
+					return CELL_EAGAIN;
+				}
+
+				return CELL_OK;
+			}
+			default:
+			{
+				return CELL_EINVAL;
+			}
+			}
+		}
+		case SYS_SYNC_NOT_PROCESS_SHARED:
+		{
+			if (!idm::import<lv2_obj, T>(std::forward<F>(make)))
+			{
+				return CELL_EAGAIN;
+			}
+
+			return CELL_OK;
+		}
+		default:
+		{
+			return CELL_EINVAL;
+		}
+		}
+	}
 
 private:
 	// Scheduler mutex

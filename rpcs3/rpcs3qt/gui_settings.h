@@ -9,7 +9,7 @@
 #include <QColor>
 #include <QBitmap>
 
-typedef struct GUI_SAVE
+struct GUI_SAVE
 {
 	QString key;
 	QString name;
@@ -35,21 +35,23 @@ typedef QList<q_size_pair> q_size_list;
 
 namespace GUI
 {
-	const QString gl_icon_key_tiny   = "tiny";
-	const QString gl_icon_key_small  = "small";
-	const QString gl_icon_key_medium = "medium";
-	const QString gl_icon_key_large  = "large";
+	const QSize gl_icon_size_min    = QSize(40, 22);
+	const QSize gl_icon_size_small  = QSize(80, 44);
+	const QSize gl_icon_size_medium = QSize(160, 88);
+	const QSize gl_icon_size_max    = QSize(320, 176);
 
-	const q_size_list gl_icon_size = {
-		{ gl_icon_key_tiny,   QSize(40, 22) },
-		{ gl_icon_key_small,  QSize(80, 44) },
-		{ gl_icon_key_medium, QSize(160, 88) },
-		{ gl_icon_key_large,  QSize(320, 176) }
+	const int gl_max_slider_pos = 100;
+
+	inline int get_Index(const QSize& current) {
+		int size_delta = gl_icon_size_max.width() - gl_icon_size_min.width();
+		int current_delta = current.width() - gl_icon_size_min.width();
+		return gl_max_slider_pos * current_delta / size_delta;
 	};
 
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
+	const QString debugger    = "Debugger";
 	const QString meta        = "Meta";
 	const QString fs          = "FileSystem";
 	const QString gs_frame    = "GSFrame";
@@ -94,7 +96,7 @@ namespace GUI
 	const GUI_SAVE gl_sortAsc        = GUI_SAVE( game_list, "sortAsc",        true );
 	const GUI_SAVE gl_sortCol        = GUI_SAVE( game_list, "sortCol",        1 );
 	const GUI_SAVE gl_state          = GUI_SAVE( game_list, "state",          QByteArray() );
-	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       gl_icon_key_small );
+	const GUI_SAVE gl_iconSize       = GUI_SAVE( game_list, "iconSize",       get_Index(gl_icon_size_small));
 	const GUI_SAVE gl_iconColor      = GUI_SAVE( game_list, "iconColor",      gl_icon_color);
 	const GUI_SAVE gl_listMode       = GUI_SAVE( game_list, "listMode",       true );
 	const GUI_SAVE gl_textFactor     = GUI_SAVE( game_list, "textFactor",     (qreal) 2.0 );
@@ -103,21 +105,26 @@ namespace GUI
 	const GUI_SAVE gl_toolIconColor  = GUI_SAVE( game_list, "toolIconColor",  gl_tool_icon_color);
 
 	const GUI_SAVE fs_emulator_dir_list = GUI_SAVE(fs, "emulator_dir_list", QStringList());
-	const GUI_SAVE fs_dev_hdd0_list = GUI_SAVE(fs, "dev_hdd0_list", QStringList());
-	const GUI_SAVE fs_dev_hdd1_list = GUI_SAVE(fs, "dev_hdd1_list", QStringList());
-	const GUI_SAVE fs_dev_flash_list = GUI_SAVE(fs, "dev_flash_list", QStringList());
-	const GUI_SAVE fs_dev_usb000_list = GUI_SAVE(fs, "dev_usb000_list", QStringList());
+	const GUI_SAVE fs_dev_hdd0_list     = GUI_SAVE(fs, "dev_hdd0_list",     QStringList());
+	const GUI_SAVE fs_dev_hdd1_list     = GUI_SAVE(fs, "dev_hdd1_list",     QStringList());
+	const GUI_SAVE fs_dev_flash_list    = GUI_SAVE(fs, "dev_flash_list",    QStringList());
+	const GUI_SAVE fs_dev_usb000_list   = GUI_SAVE(fs, "dev_usb000_list",   QStringList());
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );
 	const GUI_SAVE l_stack = GUI_SAVE( logger, "stack", false );
 
+	const GUI_SAVE d_splitterState = GUI_SAVE( debugger, "splitterState", QByteArray());
+
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
+	const GUI_SAVE m_saveNotes         = GUI_SAVE(meta, "saveNotes",         QVariantMap());
+	const GUI_SAVE m_showDebugTab      = GUI_SAVE(meta, "showDebugTab",      false);
 
-	const GUI_SAVE gs_resize = GUI_SAVE(gs_frame, "resize", false);
-	const GUI_SAVE gs_width = GUI_SAVE(gs_frame, "width", 1280);
-	const GUI_SAVE gs_height = GUI_SAVE(gs_frame, "height", 720);
+	const GUI_SAVE gs_disableMouse = GUI_SAVE(gs_frame, "disableMouse", false);
+	const GUI_SAVE gs_resize       = GUI_SAVE(gs_frame, "resize",       false);
+	const GUI_SAVE gs_width        = GUI_SAVE(gs_frame, "width",        1280);
+	const GUI_SAVE gs_height       = GUI_SAVE(gs_frame, "height",       720);
 }
 
 /** Class for GUI settings..

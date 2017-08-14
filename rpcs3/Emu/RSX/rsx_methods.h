@@ -889,6 +889,11 @@ namespace rsx
 			return decode<NV4097_SET_BEGIN_END>().primitive();
 		}
 
+		u32 semaphore_context_dma_406e() const
+		{
+			return decode<NV406E_SET_CONTEXT_DMA_SEMAPHORE>().context_dma();
+		}
+
 		u32 semaphore_offset_406e() const
 		{
 			return decode<NV406E_SEMAPHORE_OFFSET>().semaphore_offset();

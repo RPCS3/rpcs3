@@ -295,7 +295,6 @@ Value* PPUTranslator::RegLoad(Value*& local)
 	if (local)
 	{
 		// Simple load
-		assert(!m_globals[index] || m_globals[index]->getType() == local->getType()->getPointerTo());
 		return local;
 	}
 
@@ -307,7 +306,6 @@ Value* PPUTranslator::RegLoad(Value*& local)
 void PPUTranslator::RegStore(llvm::Value* value, llvm::Value*& local)
 {
 	const auto glb = RegInit(local);
-	assert(glb->getType() == value->getType()->getPointerTo());
 	local = value;
 }
 
@@ -331,7 +329,7 @@ void PPUTranslator::FlushRegisters()
 				m_ir->SetInsertPoint(block);
 			}
 
-			m_ir->CreateStore(local, m_globals[index]);
+			m_ir->CreateStore(local, m_ir->CreateBitCast(m_globals[index], local->getType()->getPointerTo()));
 			m_globals[index] = nullptr;
 		}
 	}
@@ -4269,7 +4267,7 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 
 	switch (type)
 	{
-	case VrType::vi32: return value;
+	case VrType::vi32: return m_ir->CreateBitCast(value, GetType<u32[4]>());
 	case VrType::vi8: return m_ir->CreateBitCast(value, GetType<u8[16]>());
 	case VrType::vi16: return m_ir->CreateBitCast(value, GetType<u16[8]>());
 	case VrType::vf: return m_ir->CreateBitCast(value, GetType<f32[4]>());
@@ -4298,7 +4296,7 @@ void PPUTranslator::SetVr(u32 vr, Value* value)
 		}
 	}
 
-	RegStore(m_ir->CreateBitCast(value, GetType<u32[4]>()), m_vr[vr]);
+	RegStore(value, m_vr[vr]);
 }
 
 Value* PPUTranslator::GetCrb(u32 crb)

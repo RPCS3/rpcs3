@@ -37,13 +37,13 @@ struct lv2_mutex final : lv2_obj
 	atomic_t<u32> cond_count{0}; // Condition Variables
 	std::deque<cpu_thread*> sq;
 
-	lv2_mutex(u32 protocol, u32 recursive, u64 name)
+	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, s32 flags, u64 name)
 		: protocol(protocol)
 		, recursive(recursive)
-		, shared(0)
-		, adaptive(0)
-		, key(0)
-		, flags(0)
+		, shared(shared)
+		, adaptive(adaptive)
+		, key(key)
+		, flags(flags)
 		, name(name)
 	{
 	}

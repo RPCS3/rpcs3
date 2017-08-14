@@ -12,13 +12,14 @@ class gs_frame : public QWindow, public GSFrameBase
 	u64 m_frames = 0;
 	QString m_windowTitle;
 	bool m_show_fps;
+	bool m_disable_mouse;
 
 public:
-	gs_frame(const QString& title, int w, int h, QIcon appIcon);
+	gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse);
 protected:
 	virtual void paintEvent(QPaintEvent *event);
 
-	void keyPressEvent(QKeyEvent *keyEvent);
+	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void OnFullScreen();
 
 	void close() override;
@@ -39,7 +40,7 @@ protected:
 	int client_width() override;
 	int client_height() override;
 
-	void hideEvent(QHideEvent* ev) override;
+	bool event(QEvent* ev) override;
 private Q_SLOTS:
 	void HandleCursor(QWindow::Visibility visibility);
 };

@@ -161,6 +161,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	synchronize_buffers();
 
 	m_rtts_dirty = false;
+	zcull_surface_active = false;
 
 	const u16 clip_horizontal = rsx::method_registers.surface_clip_width();
 	const u16 clip_vertical = rsx::method_registers.surface_clip_height();
@@ -169,6 +170,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	{
 		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_horizontal, clip_vertical);
 		framebuffer_status_valid = false;
+		return;
 	}
 
 	const auto pitchs = get_pitchs();
@@ -243,6 +245,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	framebuffer_status_valid = draw_fbo.check();
 	if (!framebuffer_status_valid) return;
+
+	check_zcull_status(true, false);
 
 	draw_fbo.bind();
 	set_viewport();

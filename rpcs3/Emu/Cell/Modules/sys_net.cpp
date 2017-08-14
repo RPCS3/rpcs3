@@ -567,24 +567,43 @@ namespace sys_net
 			return -1;
 		}
 
-		if (level != SOL_SOCKET && level != IPPROTO_TCP)
+		if (level != PS3_SOL_SOCKET && level != IPPROTO_TCP)
 		{
 			fmt::throw_exception("Invalid socket option level!" HERE);
 		}
 
 		s32 ret;
 
-#ifdef _WIN32
-		if (level == SOL_SOCKET)
+		if (level == PS3_SOL_SOCKET)
 		{
 			switch (optname)
 			{
+#ifdef _WIN32
 			case OP_SO_NBIO:
 			{
 				unsigned long mode = *(unsigned long*)optval.get_ptr();
 				ret = ioctlsocket(sock->s, FIONBIO, &mode);
 				break;
 			}
+#else
+			case OP_SO_NBIO:
+			{
+				// Obtain the flags
+				s32 flags = fcntl(s, F_GETFL, 0);
+
+				if (flags < 0)
+				{
+					fmt::throw_exception("Failed to obtain socket flags." HERE);
+				}
+
+				u32 mode = *(u32*)optval.get_ptr();
+				flags = mode ? (flags &~O_NONBLOCK) : (flags | O_NONBLOCK);
+
+				// Re-set the flags
+				ret = fcntl(sock->s, F_SETFL, flags);
+				break;
+			}
+#endif
 			case OP_SO_SNDBUF:
 			{
 				u32 sendbuff = *(u32*)optval.get_ptr();
@@ -623,12 +642,14 @@ namespace sys_net
 			}
 			case  OP_SO_USECRYPTO:
 			{
-				libnet.warning("Socket option OP_SO_USECRYPTO is unimplemented");
+				libnet.todo("Socket option OP_SO_USECRYPTO is unimplemented");
+				ret = CELL_OK;
 				break;
 			}
 			case  OP_SO_USESIGNATURE:
 			{
-				libnet.warning("Socket option OP_SO_USESIGNATURE is unimplemented");
+				libnet.todo("Socket option OP_SO_USESIGNATURE is unimplemented");
+				ret = CELL_OK;
 				break;
 			}
 			case OP_SO_BROADCAST:
@@ -644,7 +665,7 @@ namespace sys_net
 				break;
 			}
 			default:
-				libnet.error("Unknown socket option for Win32: 0x%x", optname);
+				libnet.error("Unknown socket option: 0x%x", optname);
 			}
 		}
 		else if (level == PROTO_IPPROTO_TCP)
@@ -653,71 +674,31 @@ namespace sys_net
 			{
 			case OP_TCP_NODELAY:
 			{
+#ifdef _WIN32
 				const char delay = *(char*)optval.get_ptr();
 				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, sizeof(delay));
-				break;
-			}
-
-			case OP_TCP_MAXSEG:
-			{
-				libnet.warning("TCP_MAXSEG can't be set on Windows.");
-				break;
-			}
-
-			default:
-				libnet.error("Unknown TCP option for Win32: 0x%x", optname);
-			}
-		}
 #else
-		if (level == SOL_SOCKET)
-		{
-			switch (optname)
-			{
-			case OP_SO_NBIO:
-			{
-				// Obtain the flags
-				s32 flags = fcntl(s, F_GETFL, 0);
-
-				if (flags < 0)
-				{
-					fmt::throw_exception("Failed to obtain socket flags." HERE);
-				}
-
-				u32 mode = *(u32*)optval.get_ptr();
-				flags = mode ? (flags &~O_NONBLOCK) : (flags | O_NONBLOCK);
-
-				// Re-set the flags
-				ret = fcntl(sock->s, F_SETFL, flags);
-				break;
-			}
-
-			default:
-				libnet.error("Unknown socket option for Unix: 0x%x", optname);
-			}
-		}
-		else if (level == PROTO_IPPROTO_TCP)
-		{
-			switch (optname)
-			{
-			case OP_TCP_NODELAY:
-			{
 				u32 delay = *(u32*)optval.get_ptr();
 				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, optlen);
+#endif
 				break;
 			}
 
 			case OP_TCP_MAXSEG:
 			{
+#ifdef _WIN32
+				libnet.warning("TCP_MAXSEG can't be set on Windows.");
+#else
 				u32 maxseg = *(u32*)optval.get_ptr();
 				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_MAXSEG, &maxseg, optlen);
+#endif
 				break;
 			}
 
 			default:
-				libnet.error("Unknown TCP option for Unix: 0x%x", optname);
+				libnet.error("Unknown TCP option: 0x%x", optname);
 			}
 		}
-#endif
 
 		if (ret != 0)
 		{
@@ -821,8 +802,8 @@ namespace sys_net
 
 	s32 socketselect(s32 nfds, vm::ptr<fd_set> readfds, vm::ptr<fd_set> writefds, vm::ptr<fd_set> exceptfds, vm::ptr<timeval> timeout)
 	{
-		libnet.warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, timeout);
-
+		libnet.warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout.tv_sec=%d, timeout.tv_usec=%d)", 
+					   nfds, readfds, writefds, exceptfds, timeout->tv_sec, timeout->tv_usec);
 		::timeval _timeout;
 
 		if (timeout)
@@ -830,8 +811,12 @@ namespace sys_net
 			_timeout.tv_sec = timeout->tv_sec;
 			_timeout.tv_usec = timeout->tv_usec;
 		}
-
-		//libnet.error("timeval: %d . %d", _timeout.tv_sec, _timeout.tv_usec);
+		
+		if (_timeout.tv_usec >= 1000000)
+		{
+			_timeout.tv_sec = _timeout.tv_sec ? _timeout.tv_sec - 1 : _timeout.tv_sec + 1;
+			_timeout.tv_usec = 0;
+		}
 
 		::fd_set _readfds;
 		::fd_set _writefds;
@@ -1226,6 +1211,12 @@ namespace sys_net
 		return CELL_OK;
 	}
 
+	s32 _sce_net_add_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
 	s32 _sce_net_add_name_server_with_char()
 	{
 		UNIMPLEMENTED_FUNC(libnet);
@@ -1357,6 +1348,7 @@ DECLARE(ppu_module_manager::libnet)("sys_net", []()
 	REG_FUNC_(sys_netset_if_up);
 	REG_FUNC_(sys_netset_open);
 
+	REG_FUNC_(_sce_net_add_name_server);
 	REG_FUNC_(_sce_net_add_name_server_with_char);
 	REG_FUNC_(_sce_net_flush_route);
 

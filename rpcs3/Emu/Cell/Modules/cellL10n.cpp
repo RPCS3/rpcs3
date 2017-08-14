@@ -161,7 +161,7 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 #ifdef _MSC_VER
 
 // Use code page to transform std::string to std::wstring.
-s32 _OEM2Wide(HostCode oem_code, const std::string src, std::wstring& dst)
+s32 _OEM2Wide(HostCode oem_code, const std::string& src, std::wstring& dst)
 {
 	//Such length returned should include the '\0' character.
 	s32 length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
@@ -178,7 +178,7 @@ s32 _OEM2Wide(HostCode oem_code, const std::string src, std::wstring& dst)
 }
 
 // Use Code page to transform std::wstring to std::string.
-s32 _Wide2OEM(HostCode oem_code, const std::wstring src, std::string& dst)
+s32 _Wide2OEM(HostCode oem_code, const std::wstring& src, std::string& dst)
 {
 	//Such length returned should include the '\0' character.
 	s32 length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
@@ -195,7 +195,7 @@ s32 _Wide2OEM(HostCode oem_code, const std::wstring src, std::string& dst)
 }
 
 // Convert Codepage to Codepage (all char*)
-std::string _OemToOem(HostCode src_code, HostCode dst_code, const std::string str)
+std::string _OemToOem(HostCode src_code, HostCode dst_code, const std::string& str)
 {
 	std::wstring wide; std::string result;
 	_OEM2Wide(src_code, str, wide);
