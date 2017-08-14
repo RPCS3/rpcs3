@@ -57,7 +57,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 	std::sort(input_data.begin(), input_data.end());
 
-	int location = 1;
+	int location = 3;
 	for (const std::tuple<size_t, std::string>& item : input_data)
 	{
 		for (const ParamType &PT : inputs)
