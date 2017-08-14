@@ -262,7 +262,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 			return CELL_GAME_ERROR_BUSY;
 		}
 	}
-	else if (category == "AP" || category == "AV" || category == "HG")
+	else if (category == "AP" || category == "AV" || category == "HG" || category == "AT" || category == "AM")
 	{
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
