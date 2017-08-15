@@ -749,6 +749,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		// colorize preview icons
 		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor()){
 			QLabel* text = new QLabel(button->text());
+			text->setObjectName("color_button");
 			text->setAlignment(Qt::AlignCenter);
 			text->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 			if (icon.isNull())
@@ -762,7 +763,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				button->setIcon(gui_settings::colorizedIcon(icon, iconColor, color));
 			}
 			button->setText("");
-			button->setStyleSheet("text-align:left;");
+			button->setStyleSheet(styleSheet().append("text-align:left;"));
 			button->setLayout(new QGridLayout);
 			button->layout()->setContentsMargins(0, 0, 0, 0);
 			button->layout()->addWidget(text);
