@@ -585,9 +585,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	// Comboboxes
 
-	xemu_settings->EnhanceComboBox(ui->padHandlerBox, emu_settings::PadHandler);
-	ui->padHandlerBox->setToolTip(json_input["padHandlerBox"].toString());
-
 	xemu_settings->EnhanceComboBox(ui->keyboardHandlerBox, emu_settings::KeyboardHandler);
 	ui->keyboardHandlerBox->setToolTip(json_input["keyboardHandlerBox"].toString());
 

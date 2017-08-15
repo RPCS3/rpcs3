@@ -3,6 +3,7 @@
 
 #include "Utilities/Config.h"
 #include "Emu/Io/PadHandler.h"
+#define NOMINMAX
 #include <Windows.h>
 #include <Xinput.h>
 
@@ -41,9 +42,12 @@ public:
 	xinput_pad_handler();
 	~xinput_pad_handler();
 
-	void Init(const u32 max_connect) override;
-	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor) override;
+	bool Init() override;
 	void Close();
+
+	std::vector<std::string> ListDevices() override;
+	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
+	void ThreadProc() override;
 
 private:
 	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
@@ -52,19 +56,23 @@ private:
 
 private:
 	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY);
-	DWORD ThreadProcedure();
-	static DWORD WINAPI ThreadProcProxy(LPVOID parameter);
 
 private:
-	mutable bool active;
+	bool is_init;
 	float squircle_factor;
 	u32 left_stick_deadzone, right_stick_deadzone;
-	HANDLE thread;
 	HMODULE library;
 	PFN_XINPUTGETSTATE xinputGetState;
 	PFN_XINPUTSETSTATE xinputSetState;
 	PFN_XINPUTENABLE xinputEnable;
 
+	std::vector<std::pair<u32, std::shared_ptr<Pad>>> bindings;
+	std::array<bool, 7> last_connection_status = {};
+
+	// holds internal controller state change
+	XINPUT_STATE state;
+	DWORD result;
+	DWORD online = 0;
 };
 
 extern xinput_config xinput_cfg;

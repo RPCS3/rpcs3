@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -192,7 +192,7 @@
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
-    <addaction name="confPadAct"/>
+    <addaction name="confPadsAct"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
@@ -419,9 +419,12 @@
     <string>Configure Graphics</string>
    </property>
   </action>
-  <action name="confPadAct">
+  <action name="confPadsAct">
    <property name="text">
-    <string>Keyboard</string>
+    <string>Pads</string>
+   </property>
+   <property name="iconText">
+    <string>Pads</string>
    </property>
    <property name="toolTip">
     <string>Configure Controls</string>
@@ -803,10 +806,13 @@
      <normaloff>:/Icons/controls.png</normaloff>:/Icons/controls.png</iconset>
    </property>
    <property name="text">
-    <string>Keyboard</string>
+    <string>Controls</string>
+   </property>
+   <property name="iconText">
+    <string>Controls</string>
    </property>
    <property name="toolTip">
-    <string>Configure keyboard</string>
+    <string>Configure controls</string>
    </property>
   </action>
   <action name="toolbar_snap">

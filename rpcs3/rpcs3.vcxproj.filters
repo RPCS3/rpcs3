@@ -494,6 +494,12 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_manager_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="pad_thread.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gamepads_settings_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -549,6 +555,12 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\save_data_dialog.h">
       <Filter>Gui\saves</Filter>
+    </ClInclude>
+    <ClInclude Include="pad_thread.h">
+      <Filter>Io</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\gamepads_settings_dialog.h">
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
