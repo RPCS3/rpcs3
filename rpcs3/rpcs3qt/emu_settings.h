@@ -20,7 +20,7 @@ struct Render_Creator
 	QStringList D3D12Adapters;
 	QStringList vulkanAdapters;
 	QString render_Vulkan = QObject::tr("Vulkan");
-	QString render_D3D12 = QObject::tr("D3D12");
+	QString render_D3D12 = QObject::tr("D3D12[DO NOT USE]");
 	QString render_OpenGL = QObject::tr("OpenGL");
 
 	Render_Creator();
@@ -205,4 +205,5 @@ private:
 
 	YAML::Node currentSettings; // The current settings as a YAML node.
 	fs::file config; //! File to read/write the config settings.
+	std::string m_path;
 };

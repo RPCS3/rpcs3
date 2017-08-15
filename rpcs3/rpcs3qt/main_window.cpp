@@ -1,4 +1,4 @@
-﻿
+
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -108,6 +108,29 @@ void main_window::Init()
 			"Your CPU does not support SSSE3 (with three S, not two).\n");
 
 		std::exit(EXIT_FAILURE);
+	}
+
+#ifdef BRANCH
+	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH))
+#elif _MSC_VER
+	fs::stat_t st;
+	if (!fs::stat(fs::get_config_dir() + "rpcs3.pdb", st) || st.is_directory || st.size < 1024 * 1024 * 100)
+#else
+	if (true)
+#endif
+	{
+		QMessageBox msg;
+		msg.setWindowTitle("Experimental Build Warning");
+		msg.setIcon(QMessageBox::Critical);
+		msg.setTextFormat(Qt::RichText);
+		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
+		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msg.setDefaultButton(QMessageBox::No);
+		
+		if (msg.exec() == QMessageBox::No)
+		{
+			std::exit(EXIT_SUCCESS);
+		}
 	}
 }
 
@@ -323,6 +346,16 @@ void main_window::InstallPkg(const QString& dropPath)
 		return;
 	}
 
+	//Check header
+	u32 pkg_signature;
+	pkg_f.seek(0);
+	pkg_f.read(pkg_signature);
+	if (pkg_signature != "\x7FPKG"_u32)
+	{
+		LOG_ERROR(LOADER, "PKG: %s is not a pkg file", fileName);
+		return;
+	}
+
 	// Get title ID
 	std::vector<char> title_id(9);
 	pkg_f.seek(55);
@@ -372,7 +405,7 @@ void main_window::InstallPkg(const QString& dropPath)
 		// Run PKG unpacking asynchronously
 		scope_thread worker("PKG Installer", [&]
 		{
-			if (pkg_install(pkg_f, local_path + '/', progress))
+			if (pkg_install(pkg_f, local_path + '/', progress, path))
 			{
 				progress = 1.;
 				return;

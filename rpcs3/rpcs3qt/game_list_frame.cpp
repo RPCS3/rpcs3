@@ -104,10 +104,11 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 
 	// Search Bar
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
+	m_Search_Bar->setObjectName("tb_searchbar");
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
 	m_Search_Bar->setMinimumWidth(m_Tool_Bar->height() * 5);
 	m_Search_Bar->setFrame(false);
-	m_Search_Bar->setStyleSheet("background:transparent;");
+	m_Search_Bar->setStyleSheet("QLineEdit#tb_searchbar { background: transparent }");
 	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text) {
 		m_searchText = text;
 		Refresh();
@@ -352,7 +353,7 @@ void game_list_frame::SortGameList()
 	gameList->resizeColumnToContents(0);
 }
 
-void game_list_frame::Refresh(bool fromDrive)
+void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 {
 	if (fromDrive)
 	{
@@ -471,7 +472,11 @@ void game_list_frame::Refresh(bool fromDrive)
 		int row = PopulateGameList();
 		gameList->selectRow(row);
 		SortGameList();
-		gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
+
+		if (scrollAfter)
+		{
+			gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
+		}
 	}
 	else
 	{
@@ -489,7 +494,11 @@ void game_list_frame::Refresh(bool fromDrive)
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 		m_Central_Widget->addWidget(m_xgrid);
 		m_Central_Widget->setCurrentWidget(m_xgrid);
-		m_xgrid->scrollTo(m_xgrid->currentIndex());
+
+		if (scrollAfter)
+		{
+			m_xgrid->scrollTo(m_xgrid->currentIndex());
+		}
 	}
 }
 
@@ -623,7 +632,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(configure, &QAction::triggered, [=]() {
 		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
-		Refresh(true);
+		Refresh(true, false);
 	});
 	connect(removeGame, &QAction::triggered, [=]()
 	{
@@ -634,7 +643,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			Refresh();
 		}
 	});
-	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true); });
+	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true, false); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
 	connect(checkCompat, &QAction::triggered, [=]() {
@@ -1114,62 +1123,54 @@ int game_list_frame::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 
 	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
 
-	for (int i = 0; i < list.count(); i++) // check each file in url list for valid type
+	for (auto&& url : list) // check each file in url list for valid type
 	{
-		const QString path = list[i].toLocalFile(); // convert url to filepath
+		const QString path = url.toLocalFile(); // convert url to filepath
+
+		const QFileInfo info = path;
 
 		// check for directories first, only valid if all other paths led to directories until now.
-		if (QFileInfo(path).isDir())
+		if (info.isDir())
 		{
-			if (i != 0 && dropType != DROP_DIR) return DROP_ERROR;
+			if (dropType != DROP_DIR && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
 
 			dropType = DROP_DIR;
-
-			if (dropPaths)
+		}
+		else if (info.fileName() == "PS3UPDAT.PUP")
+		{
+			if (list.size() != 1)
 			{
-				dropPaths->append(path);
+				return DROP_ERROR;
 			}
-			continue;
-		}
 
-		// now that we know it has to be a file we get the file ending
-		QString suffix = QFileInfo(list[i].fileName()).suffix().toLower();
-
-		if (suffix.isEmpty()) return DROP_ERROR; // NANI the heck would you want such a file?
-
-		QString last_suffix;
-
-		if (i == 0) // the first item defines our file type
-		{
-			last_suffix = suffix;
-		}
-		else if (last_suffix == "pup" || last_suffix == "bin") // we only accept one firmware or eboot file
-		{
-			return list.count() != 1 ? dropType : DROP_ERROR;
-		}
-		else if (last_suffix != suffix) // we don't accept multiple file types
-		{
-			return DROP_ERROR;
-		}
-
-		// set drop type by file ending
-		if (suffix == "pkg")
-		{
-			dropType = DROP_PKG;
-		}
-		else if (suffix == "pup")
-		{
 			dropType = DROP_PUP;
 		}
-		else if (suffix == "rap")
+		else if (info.suffix().toLower() == "pkg")
 		{
+			if (dropType != DROP_PKG && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_PKG;
+		}
+		else if (info.suffix() == "rap")
+		{
+			if (dropType != DROP_RAP && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
 			dropType = DROP_RAP;
 		}
-		else if (suffix == "bin")
+		else if (list.size() == 1)
 		{
 			dropType = DROP_GAME;
 		}
-		else // if (suffix == "kuso")
+		else
 		{
 			return DROP_ERROR;
 		}
@@ -1179,6 +1180,7 @@ int game_list_frame::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 			dropPaths->append(path);
 		}
 	}
+
 	return dropType;
 }
 
