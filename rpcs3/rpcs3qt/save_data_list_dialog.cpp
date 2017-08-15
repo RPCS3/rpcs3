@@ -8,7 +8,7 @@
 #include <QHeaderView>
 #include <QMenu>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
@@ -16,6 +16,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	: QDialog(parent), m_save_entries(entries), m_selectedEntry(-1), selectedEntryLabel(nullptr)
 {
 	setWindowTitle(tr("Save Data Interface"));
+	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setMinimumSize(QSize(400, 400));
 
 	// Table
@@ -65,6 +66,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	connect(m_list, &QTableWidget::currentCellChanged, this, [&](int cr, int cc, int pr, int pc) {
 		m_selectedEntry = cr;
 		UpdateSelectionLabel();
+		Q_UNUSED(cr); Q_UNUSED(pr); Q_UNUSED(pc);
 	});
 
 	// TODO: Unstub functions inside of this context menu so it makes sense to show this menu

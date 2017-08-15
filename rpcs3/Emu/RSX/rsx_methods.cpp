@@ -406,6 +406,7 @@ namespace rsx
 				return;
 			case 2:
 				rsx->conditional_render_enabled = true;
+				LOG_WARNING(RSX, "Conditional rendering mode enabled (mode 2)");
 				break;
 			default:
 				rsx->conditional_render_enabled = false;

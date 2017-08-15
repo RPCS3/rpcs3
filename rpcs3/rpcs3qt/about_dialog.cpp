@@ -6,7 +6,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_dialog)
 {

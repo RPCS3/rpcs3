@@ -1,7 +1,7 @@
 
 #include "auto_pause_settings_dialog.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
 {

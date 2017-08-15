@@ -103,7 +103,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//     _____ _____  _    _   _______    _     
 	//    / ____|  __ \| |  | | |__   __|  | |    
 	//   | |    | |__) | |  | |    | | __ _| |__  
-	//   | |    |  ___/| |  | |    | |/ _` | '_ \ 
+	//   | |    |  ___/| |  | |    | |/ _` | '_ \
 	//   | |____| |    | |__| |    | | (_| | |_) |
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
@@ -123,27 +123,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	// Comboboxes
 
-	// TODO implement enhancement for combobox / spinbox with proper range
-	//xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads);
-	const QString Auto = tr("Auto");
+	xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads, true);
 	ui->preferredSPUThreads->setToolTip(json_cpu_cbo["preferredSPUThreads"].toString());
-	for (int i = 0; i <= 6; i++)
-	{
-		ui->preferredSPUThreads->addItem( i == 0 ? Auto : QString::number(i), QVariant(i) );
-	}
-	const QString valueOf_PreferredSPUThreads = qstr(xemu_settings->GetSetting(emu_settings::PreferredSPUThreads));
-	int index = ui->preferredSPUThreads->findData(valueOf_PreferredSPUThreads == "0" ? Auto : valueOf_PreferredSPUThreads);
-	if (index == -1)
-	{
-		LOG_WARNING(GENERAL, "Current setting not found while creating preferredSPUThreads");
-	}
-	else
-	{
-		ui->preferredSPUThreads->setCurrentIndex(index);
-	}
-	connect(ui->preferredSPUThreads, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
-		xemu_settings->SetSetting(emu_settings::PreferredSPUThreads, std::to_string(ui->preferredSPUThreads->itemData(index).toInt()));
-	});
+	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr("Auto"));
 
 	// PPU tool tips
 	ui->ppu_precise->setToolTip(json_cpu_ppu["precise"].toString());
@@ -366,7 +348,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//     _____ _____  _    _   _______    _     
 	//    / ____|  __ \| |  | | |__   __|  | |    
 	//   | |  __| |__) | |  | |    | | __ _| |__  
-	//   | | |_ |  ___/| |  | |    | |/ _` | '_ \ 
+	//   | | |_ |  ___/| |  | |    | |/ _` | '_ \
 	//   | |__| | |    | |__| |    | | (_| | |_) |
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
@@ -375,6 +357,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
 	ui->renderBox->setToolTip(json_gpu_cbo["renderBox"].toString());
+	//Change D3D12 to D3D12[DO NOT USE]
+	for (int i = 0; i < ui->renderBox->count(); i++)
+	{
+		if (ui->renderBox->itemText(i) == "D3D12")
+		{
+			ui->renderBox->setItemText(i, r_Creator.render_D3D12);
+			break;
+		}
+	}
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
@@ -586,7 +577,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//                      _ _         _______    _     
 	//       /\            | (_)       |__   __|  | |    
 	//      /  \  _   _  __| |_  ___      | | __ _| |__  
-	//     / /\ \| | | |/ _` | |/ _ \     | |/ _` | '_ \ 
+	//     / /\ \| | | |/ _` | |/ _ \     | |/ _` | '_ \
 	//    / ____ \ |_| | (_| | | (_) |    | | (_| | |_) |
 	//   /_/    \_\__,_|\__,_|_|\___/     |_|\__,_|_.__/ 
 
@@ -609,7 +600,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    _____       __   ____    _______    _     
 	//   |_   _|     / /  / __ \  |__   __|  | |    
 	//     | |      / /  | |  | |    | | __ _| |__  
-	//     | |     / /   | |  | |    | |/ _` | '_ \ 
+	//     | |     / /   | |  | |    | |/ _` | '_ \
 	//    _| |_   / /    | |__| |    | | (_| | |_) |
 	//   |_____| /_/      \____/     |_|\__,_|_.__/ 
 
@@ -633,7 +624,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//     _____           _                   _______    _     
 	//    / ____|         | |                 |__   __|  | |    
 	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__  
-	//    \___ \| | | / __| __/ _ \ '_ ` _ \     | |/ _` | '_ \ 
+	//    \___ \| | | / __| __/ _ \ '_ ` _ \     | |/ _` | '_ \
 	//    ____) | |_| \__ \ ||  __/ | | | | |    | | (_| | |_) |
 	//   |_____/ \__, |___/\__\___|_| |_| |_|    |_|\__,_|_.__/ 
 	//            __/ |                                         
@@ -652,7 +643,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    _   _      _                      _      _______    _     
 	//   | \ | |    | |                    | |    |__   __|  | |    
 	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__  
-	//   | . ` |/ _ \ __\ \ /\ / / _ \| '__| |/ /    | |/ _` | '_ \ 
+	//   | . ` |/ _ \ __\ \ /\ / / _ \| '__| |/ /    | |/ _` | '_ \
 	//   | |\  |  __/ |_ \ V  V / (_) | |  |   <     | | (_| | |_) |
 	//   |_| \_|\___|\__| \_/\_/ \___/|_|  |_|\_\    |_|\__,_|_.__/ 
 
@@ -664,7 +655,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    ______                 _       _               _______    _     
 	//   |  ____|               | |     | |             |__   __|  | |    
 	//   | |__   _ __ ___  _   _| | __ _| |_ ___  _ __     | | __ _| |__  
-	//   |  __| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|    | |/ _` | '_ \ 
+	//   |  __| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|    | |/ _` | '_ \
 	//   | |____| | | | | | |_| | | (_| | || (_) | |       | | (_| | |_) |
 	//   |______|_| |_| |_|\__,_|_|\__,_|\__\___/|_|       |_|\__,_|_.__/ 
 
@@ -822,7 +813,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//    _____       _                   _______    _     
 	//   |  __ \     | |                 |__   __|  | |    
 	//   | |  | | ___| |__  _   _  __ _     | | __ _| |__  
-	//   | |  | |/ _ \ '_ \| | | |/ _` |    | |/ _` | '_ \ 
+	//   | |  | |/ _ \ '_ \| | | |/ _` |    | |/ _` | '_ \
 	//   | |__| |  __/ |_) | |_| | (_| |    | | (_| | |_) |
 	//   |_____/ \___|_.__/ \__,_|\__, |    |_|\__,_|_.__/ 
 	//                             __/ |                   

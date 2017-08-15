@@ -3,19 +3,77 @@
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
+#include "Utilities/StrFmt.h"
 #include "unpkg.h"
 
-bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>& sync)
+bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>& sync, const std::string& pkg_filepath)
 {
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
+	std::vector<fs::file> filelist;
+	u32 cur_file=0;
+
+	fs::file original_file(pkg_filepath);
+	original_file.seek(pkg_f.pos());
+
+	filelist.push_back(std::move(original_file));
 
 	// Save current file offset (probably zero)
 	const u64 start_offset = pkg_f.pos();
+	u64 cur_offset = start_offset;
+	u64 cur_file_offset = start_offset;
 
 	// Get basic PKG information
 	PKGHeader header;
 
-	if (!pkg_f.read(header))
+	auto archive_seek = [&](const s64 new_offset, const fs::seek_mode damode = fs::seek_set)
+	{
+		if(damode == fs::seek_set) cur_offset = new_offset;
+		else if (damode == fs::seek_cur) cur_offset += new_offset;
+
+		u64 _offset = 0;
+		for (u32 i = 0; i < filelist.size(); i++)
+		{
+			if (cur_offset < (_offset + filelist[i].size()))
+			{
+				cur_file = i;
+				cur_file_offset = cur_offset - _offset;
+				filelist[i].seek(cur_file_offset);
+				break;
+			}
+			_offset += filelist[i].size();
+		}
+	};
+
+	auto archive_read = [&](const void *data_ptr, const u64 num_bytes)
+	{
+		u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
+		//check if it continues in another file
+		if (num_bytes > num_bytes_left)
+		{
+			filelist[cur_file].read((u8 *)data_ptr, num_bytes_left);
+			if ((cur_file + 1) < filelist.size()) cur_file++;
+			else
+			{
+				cur_offset += num_bytes_left;
+				cur_file_offset = filelist[cur_file].size();
+				return num_bytes_left;
+			}
+			u64 num_read = filelist[cur_file].read((u8 *)data_ptr + num_bytes_left, num_bytes - num_bytes_left);
+			cur_offset += (num_read + num_bytes_left);
+			cur_file_offset = num_read;
+			return (num_read+num_bytes_left);
+		}
+
+		u64 num_read = filelist[cur_file].read((u8 *)data_ptr, num_bytes);
+
+		cur_offset += num_read;
+		cur_file_offset += num_read;
+
+		return num_read;
+	};
+
+
+	if (archive_read(&header, sizeof(header)) != sizeof(header))
 	{
 		LOG_ERROR(LOADER, "PKG file is too short!");
 		return false;
@@ -51,8 +109,29 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 
 	if (header.pkg_size > pkg_f.size())
 	{
-		LOG_ERROR(LOADER, "PKG file size mismatch (pkg_size=0x%llx)", header.pkg_size);
-		return false;
+		//Check if multi-files pkg
+		if (pkg_filepath.length() < 7 || pkg_filepath.substr(pkg_filepath.length() - 7).compare("_00.pkg") != 0)
+		{
+			LOG_ERROR(LOADER, "PKG file size mismatch (pkg_size=0x%llx)", header.pkg_size);
+			return false;
+		}
+
+		std::string name_wo_number = pkg_filepath.substr(0, pkg_filepath.length() - 7);
+		u64 cursize = pkg_f.size();
+		while (cursize != header.pkg_size)
+		{
+			std::string archive_filename = fmt::format("%s_%2d.pkg", name_wo_number, filelist.size());
+
+			fs::file archive_file(archive_filename);
+			if (!archive_file)
+			{
+				LOG_ERROR(LOADER, "Missing part of the multi-files pkg: %s", archive_filename);
+				return false;
+			}
+
+			cursize += archive_file.size();
+			filelist.push_back(std::move(archive_file));
+		}
 	}
 
 	if (header.data_size + header.data_offset > header.pkg_size)
@@ -64,7 +143,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 	be_t<u32> drm_type{0};
 	be_t<u32> content_type{0};
 
-	pkg_f.seek(header.pkg_info_off);
+	archive_seek(header.pkg_info_off);
 
 	for (u32 i = 0; i < header.pkg_info_num; i++)
 	{
@@ -74,7 +153,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 			be_t<u32> size;
 		} packet;
 		
-		pkg_f.read(packet);
+		archive_read(&packet, sizeof(packet));
 
 		// TODO
 		switch (+packet.id)
@@ -83,7 +162,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		{
 			if (packet.size == sizeof(drm_type))
 			{
-				pkg_f.read(drm_type);
+				archive_read(&drm_type, sizeof(drm_type));
 				continue;
 			}
 
@@ -93,7 +172,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		{
 			if (packet.size == sizeof(content_type))
 			{
-				pkg_f.read(content_type);
+				archive_read(&content_type, sizeof(content_type));
 				continue;
 			}
 
@@ -101,7 +180,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		}
 		}
 
-		pkg_f.seek(packet.size, fs::seek_cur);
+		archive_seek(packet.size, fs::seek_cur);
 	}
 
 	// Allocate buffer with BUF_SIZE size or more if required
@@ -110,10 +189,10 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 	// Define decryption subfunction (`psp` arg selects the key for specific block)
 	auto decrypt = [&](u64 offset, u64 size, const uchar* key) -> u64
 	{
-		pkg_f.seek(start_offset + header.data_offset + offset);
+		archive_seek(start_offset + header.data_offset + offset);
 
 		// Read the data and set available size
-		const u64 read = pkg_f.read(buf.get(), size);
+		const u64 read = archive_read(buf.get(), size);
 
 		// Get block count
 		const u64 blocks = (read + 15) / 16;

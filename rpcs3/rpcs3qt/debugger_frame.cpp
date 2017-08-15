@@ -5,7 +5,7 @@
 #include <QFontDatabase>
 #include <QCompleter>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 extern bool user_asked_for_frame_capture;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
@@ -20,7 +20,6 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	body = new QWidget(this);
 	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(pSize);
-	QFontMetrics* fontMetrics = new QFontMetrics(mono);
 
 	QVBoxLayout* vbox_p_main = new QVBoxLayout();
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
@@ -349,7 +348,7 @@ void debugger_frame::Show_Val()
 	QLineEdit* p_pc(new QLineEdit(diag));
 	p_pc->setFont(mono);
 	p_pc->setMaxLength(8);
-	p_pc->setFixedWidth(75);
+	p_pc->setFixedWidth(90);
 	QLabel* addr(new QLabel(diag));
 	addr->setFont(mono);
 	
@@ -370,7 +369,6 @@ void debugger_frame::Show_Val()
 	if (cpu) 
 	{
 		unsigned long pc = cpu ? GetPc() : 0x0;
-		bool ok;
 		addr->setText("Address: " + QString("%1").arg(pc, 8, 16, QChar('0')));	// set address input line to 8 digits
 		p_pc->setPlaceholderText(QString("%1").arg(pc, 8, 16, QChar('0')));
 	}
@@ -618,6 +616,8 @@ void debugger_list::wheelEvent(QWheelEvent* event)
 
 void debugger_list::resizeEvent(QResizeEvent* event)
 {
+	Q_UNUSED(event);
+
 	if (count() < 1 || visualItemRect(item(0)).height() < 1)
 	{
 		return;

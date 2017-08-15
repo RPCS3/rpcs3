@@ -60,7 +60,7 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	Update();
 };
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 void kernel_explorer::Update()
 {
@@ -144,7 +144,7 @@ void kernel_explorer::Update()
 		{
 		case SYS_MEM_OBJECT:
 		{
-			auto& mem = static_cast<lv2_memory&>(obj);
+			// auto& mem = static_cast<lv2_memory&>(obj);
 			l_addTreeChild(node, qstr(fmt::format("Memory: ID = 0x%08x", id)));
 			break;
 		}
@@ -171,13 +171,13 @@ void kernel_explorer::Update()
 		}
 		case SYS_INTR_TAG_OBJECT:
 		{
-			auto& tag = static_cast<lv2_int_tag&>(obj);
+			// auto& tag = static_cast<lv2_int_tag&>(obj);
 			l_addTreeChild(node, qstr(fmt::format("Intr Tag: ID = 0x%08x", id)));
 			break;
 		}
 		case SYS_INTR_SERVICE_HANDLE_OBJECT:
 		{
-			auto& serv = static_cast<lv2_int_serv&>(obj);
+			// auto& serv = static_cast<lv2_int_serv&>(obj);
 			l_addTreeChild(node, qstr(fmt::format("Intr Svc: ID = 0x%08x", id)));
 			break;
 		}
@@ -223,7 +223,7 @@ void kernel_explorer::Update()
 		}
 		case SYS_TIMER_OBJECT:
 		{
-			auto& timer = static_cast<lv2_timer&>(obj);
+			// auto& timer = static_cast<lv2_timer&>(obj);
 			l_addTreeChild(node, qstr(fmt::format("Timer: ID = 0x%08x", id)));
 			break;
 		}

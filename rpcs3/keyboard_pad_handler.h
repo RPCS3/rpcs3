@@ -5,8 +5,8 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 
+#include <QWindow>
 #include <QKeyEvent>
-#include <QObject>
 
 struct keyboard_pad_config final : cfg::node
 {
@@ -58,13 +58,14 @@ class keyboard_pad_handler final : public QObject, public PadHandlerBase
 public:
 	virtual void Init(const u32 max_connect) override;
 
-	keyboard_pad_handler(QObject* target, QObject* parent);
+	keyboard_pad_handler();
 
+	void SetTargetWindow(QWindow* target);
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
 	void LoadSettings();
 
-	bool eventFilter(QObject* obj, QEvent* ev);
+	bool eventFilter(QObject* obj, QEvent* ev) override;
 private:
-	QObject* m_target;
+	QWindow* m_target = nullptr;
 };

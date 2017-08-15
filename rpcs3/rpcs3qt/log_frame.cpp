@@ -8,7 +8,7 @@
 #include <QActionGroup>
 #include <QScrollBar>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 struct gui_listener : logs::listener
 {

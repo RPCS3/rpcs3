@@ -7,14 +7,15 @@ enum GCMEnumTypes
 	CELL_GCM_PRIMITIVE_ENUM,
 };
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
-rsx_debugger::rsx_debugger(QWidget* parent) 
+rsx_debugger::rsx_debugger(QWidget* parent)
 	: QDialog(parent)
 	, m_item_count(37)
 	, m_addr(0x0)
 	, m_cur_texture(0)
 	, exit(false)
+	, palette_bg()
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -24,8 +25,8 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(pSize);
 	fontMetrics = new QFontMetrics(mono);
-	palette_bg = new QPalette();
-	palette_bg->setColor(backgroundRole(), QColor(240, 240, 240));
+
+	palette_bg.setColor(backgroundRole(), QColor(240, 240, 240));
 	QHBoxLayout* hbox_panel = new QHBoxLayout();
 
 	//Tools
@@ -377,9 +378,9 @@ namespace
 		if (img.isNull()) return;
 		//QString title = qstr(fmt::format("Raw Image @ 0x%x", addr));
 		QLabel* canvas = new QLabel();
-		QPalette* pal_bg = new QPalette();
-		pal_bg->setColor(canvas->backgroundRole(), QColor(240, 240, 240));
-		canvas->setPalette(*pal_bg); //This fix the ugly background color under Windows
+		QPalette pal_bg;
+		pal_bg.setColor(canvas->backgroundRole(), QColor(240, 240, 240));
+		canvas->setPalette(pal_bg); //This fix the ugly background color under Windows
 		canvas->setPixmap(QPixmap::fromImage(img));
 		canvas->setFixedSize(img.size());
 		canvas->show();
@@ -411,7 +412,7 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 			return;
 		}
 
-		const auto buffers = render->display_buffers;
+		const auto buffers = render->display_buffers; 
 
 		// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \

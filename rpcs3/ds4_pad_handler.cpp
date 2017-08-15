@@ -5,6 +5,10 @@
 #include <thread>
 #include <cmath>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace
 {
 	const auto THREAD_SLEEP = 1ms; //ds4 has new data every ~4ms, 
@@ -394,6 +398,17 @@ void ds4_pad_handler::ProcessData()
 			pad.m_buttons[12 + i - 4].m_value = pressed ? 255 : 0;
 		}
 
+#ifdef _WIN32
+		for (int i = 6; i < 16; i++)
+		{
+			if (pad.m_buttons[i].m_pressed)
+			{
+				SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+				break;
+			}
+		}
+#endif
+
 		// these values come already calibrated from our ds4Thread,
 		// all we need to do is convert to ds3 range
 
@@ -616,6 +631,7 @@ void ds4_thread::on_init(const std::shared_ptr<void>& _this)
 	for (auto pid : ds4Pids)
 	{
 		hid_device_info* devInfo = hid_enumerate(DS4_VID, pid);
+		hid_device_info* head = devInfo;
 		while (devInfo)
 		{
 
@@ -628,6 +644,8 @@ void ds4_thread::on_init(const std::shared_ptr<void>& _this)
 
 			devInfo = devInfo->next;
 		}
+
+		hid_free_enumeration(head);
 	}
 
 	if (controllers.size() == 0)
@@ -715,13 +733,6 @@ void ds4_thread::on_task()
 				if (dev)
 				{
 					hid_set_nonblocking(dev, 1);
-					if (controller.second.btCon)
-					{
-						// We already have calibration data, but we still need this to kick BT into sending correct 0x11 reports
-						std::array<u8, 64> buf{};
-						buf[0] = 0x2;
-						hid_get_feature_report(dev, buf.data(), buf.size());
-					}
 					controller.second.hidDevice = dev;
 				}
 				else
@@ -745,6 +756,16 @@ void ds4_thread::on_task()
 			// no data? keep going
 			if (res == 0)
 				continue;
+
+			// bt controller sends this until 0x02 feature report is sent back (happens on controller init/restart)
+			if (controller.second.btCon && buf[0] == 0x1)
+			{
+				// tells controller to send 0x11 reports
+				std::array<u8, 64> buf{};
+				buf[0] = 0x2;
+				hid_get_feature_report(controller.second.hidDevice, buf.data(), buf.size());
+				continue;
+			}
 
 			int offset = 0;
 			// check report and set offset
@@ -789,3 +810,4 @@ void ds4_thread::on_task()
 		std::this_thread::sleep_for((online > 0) ? THREAD_SLEEP : THREAD_SLEEP_INACTIVE);
 	}
 }
+

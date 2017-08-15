@@ -3,7 +3,7 @@
 
 #include "memory_viewer_panel.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 memory_viewer_panel::memory_viewer_panel(QWidget* parent) 
 	: QDialog(parent)
@@ -219,7 +219,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	connect(b_fprev, &QAbstractButton::clicked, [=]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
 	connect(b_fnext, &QAbstractButton::clicked, [=]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
 	connect(b_img, &QAbstractButton::clicked, [=]() {
-		u32 addr = m_addr;
 		int mode = cbox_img_mode->currentIndex();
 		int sizex = sb_img_size_x->value();
 		int sizey = sb_img_size_y->value();
@@ -301,7 +300,6 @@ void memory_viewer_panel::ShowMemory()
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
-	QImage::Format format;
 	unsigned char* originalBuffer  = (unsigned char*)vm::base(addr);
 	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 4);
 	switch(mode)
