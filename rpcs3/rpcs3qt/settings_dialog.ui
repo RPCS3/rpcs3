@@ -655,13 +655,13 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_10">
          <item>
-          <widget class="QGroupBox" name="groupBox_52">
+          <widget class="QGroupBox" name="groupBox_51">
            <property name="title">
-            <string>Controller Handler</string>
+            <string>Keyboard Handler</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_29">
+           <layout class="QVBoxLayout" name="verticalLayout_27">
             <item>
-             <widget class="QComboBox" name="padHandlerBox"/>
+             <widget class="QComboBox" name="keyboardHandlerBox"/>
             </item>
            </layout>
           </widget>
@@ -683,13 +683,13 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_11">
          <item>
-          <widget class="QGroupBox" name="groupBox_51">
+          <widget class="QGroupBox" name="groupBox_53">
            <property name="title">
-            <string>Keyboard Handler</string>
+            <string>Mouse Handler</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_27">
+           <layout class="QVBoxLayout" name="verticalLayout_28">
             <item>
-             <widget class="QComboBox" name="keyboardHandlerBox"/>
+             <widget class="QComboBox" name="mouseHandlerBox"/>
             </item>
            </layout>
           </widget>
@@ -710,18 +710,6 @@
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_12">
-         <item>
-          <widget class="QGroupBox" name="groupBox_53">
-           <property name="title">
-            <string>Mouse Handler</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_28">
-            <item>
-             <widget class="QComboBox" name="mouseHandlerBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
          <item>
           <widget class="QWidget" name="widget_3" native="true"/>
          </item>

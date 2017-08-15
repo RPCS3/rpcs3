@@ -31,6 +31,8 @@
 #include "evdev_joystick_handler.h"
 #endif
 
+#include "pad_thread.h"
+
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
@@ -140,30 +142,9 @@ void rpcs3_app::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_pad_handler = [this]() -> std::shared_ptr<PadHandlerBase>
+	callbacks.get_pad_handler = [this]() -> std::shared_ptr<pad_thread>
 	{
-		switch (pad_handler type = g_cfg.io.pad)
-		{
-		case pad_handler::null: return std::make_shared<NullPadHandler>();
-		case pad_handler::keyboard:
-		{
-			keyboard_pad_handler* ret = new keyboard_pad_handler();
-			ret->moveToThread(thread());
-			ret->SetTargetWindow(gameWindow);
-			return std::shared_ptr<PadHandlerBase>(ret);
-		}
-		case pad_handler::ds4: return std::make_shared<ds4_pad_handler>();
-#ifdef _MSC_VER
-		case pad_handler::xinput: return std::make_shared<xinput_pad_handler>();
-#endif
-#ifdef _WIN32
-		case pad_handler::mm: return std::make_shared<mm_joystick_handler>();
-#endif
-#ifdef HAVE_LIBEVDEV
-		case pad_handler::evdev: return std::make_shared<evdev_joystick_handler>();
-#endif
-		default: fmt::throw_exception("Invalid pad handler: %s", type);
-		}
+		return std::make_shared<pad_thread>(thread(), gameWindow);
 	};
 
 	callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
