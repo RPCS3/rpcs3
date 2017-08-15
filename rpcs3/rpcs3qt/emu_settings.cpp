@@ -174,6 +174,8 @@ Render_Creator::Render_Creator()
 
 emu_settings::emu_settings(const std::string& path) : QObject()
 {
+	m_path = path;
+
 	// Create config path if necessary
 	fs::create_path(fs::get_config_dir() + path);
 
@@ -185,9 +187,9 @@ emu_settings::emu_settings(const std::string& path) : QObject()
 	currentSettings += YAML::Load(config.to_string());
 
 	// Add game config
-	if (!path.empty())
+	if (!path.empty() && fs::is_file(fs::get_config_dir() + path + "/config.yml"))
 	{
-		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write + fs::create);
+		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
 		currentSettings += YAML::Load(config.to_string());
 	}
 }
@@ -200,18 +202,35 @@ void emu_settings::SaveSettings()
  {
 	YAML::Emitter out;
 	emitData(out, currentSettings);
-	
+
+	if (!m_path.empty())
+	{
+		config = fs::file(fs::get_config_dir() + m_path + "/config.yml", fs::read + fs::write + fs::create);
+	}
+
 	// Save config
 	config.seek(0);
 	config.trunc(0);
 	config.write(out.c_str(), out.size());
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged)
 {
-	for (QString setting : GetSettingOptions(type))
+	if (is_ranged)
 	{
-		combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
+		QStringList range = GetSettingOptions(type);
+
+		for (int i = range.first().toInt(); i <= range.last().toInt(); i++)
+		{
+			combobox->addItem(QString::number(i), QVariant(QString::number(i)));
+		}
+	}
+	else
+	{
+		for (QString setting : GetSettingOptions(type))
+		{
+			combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
+		}
 	}
 
 	QString selected = qstr(GetSetting(type));

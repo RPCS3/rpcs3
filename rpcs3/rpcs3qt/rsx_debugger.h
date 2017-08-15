@@ -60,7 +60,7 @@ class rsx_debugger : public QDialog
 	u32 pSize;
 
 	QLineEdit* t_addr;
-	QPalette* palette_bg;
+	QPalette palette_bg;
 	QFont mono;
 	QFontMetrics* fontMetrics;
 
