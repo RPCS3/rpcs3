@@ -60,10 +60,16 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 			}
 			u64 num_read = filelist[cur_file].read((u8 *)data_ptr + num_bytes_left, num_bytes - num_bytes_left);
 			cur_offset += (num_read + num_bytes_left);
-			cur_file_offset = num_bytes - num_bytes_left;
-			return num_read;
+			cur_file_offset = num_read;
+			return (num_read+num_bytes_left);
 		}
-		return filelist[cur_file].read((u8 *)data_ptr, num_bytes);
+
+		u64 num_read = filelist[cur_file].read((u8 *)data_ptr, num_bytes);
+
+		cur_offset += num_read;
+		cur_file_offset += num_read;
+
+		return num_read;
 	};
 
 
