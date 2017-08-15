@@ -4,7 +4,7 @@
 
 #include "ALSAThread.h"
 
-#ifdef __linux__
+#ifdef HAVE_ALSA
 
 #include <alsa/asoundlib.h>
 

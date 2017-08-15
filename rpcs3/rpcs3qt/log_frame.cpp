@@ -8,7 +8,7 @@
 #include <QActionGroup>
 #include <QScrollBar>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
 
 struct gui_listener : logs::listener
 {
@@ -264,7 +264,8 @@ void log_frame::LoadSettings()
 {
 	SetLogLevel(xgui_settings->GetLogLevel());
 	SetTTYLogging(xgui_settings->GetValue(GUI::l_tty).toBool());
-	stackAct->setChecked(xgui_settings->GetValue(GUI::l_stack).toBool());
+	m_stack_log = xgui_settings->GetValue(GUI::l_stack).toBool();
+	stackAct->setChecked(m_stack_log);
 }
 
 void log_frame::UpdateUI()

@@ -48,6 +48,11 @@ namespace cfg
 	static void decode(const YAML::Node& data, class _base& rhs);
 }
 
+std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
+{
+	return {std::to_string(min), std::to_string(max)};
+}
+
 bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 {
 	// TODO: this could be rewritten without exceptions (but it should be as safe as possible and provide logs)
@@ -82,6 +87,8 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string& value)
 {
+	u64 max = -1;
+
 	for (u64 i = 0;; i++)
 	{
 		std::string var;
@@ -99,6 +106,8 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 		{
 			break;
 		}
+
+		max = i;
 	}
 
 	try
@@ -108,14 +117,22 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 		if (pos != value.size())
 		{
+			if (out) cfg.error("cfg::try_to_enum_value('%s'): unexpected characters (pos=%zu)", value, pos);
+			return false;
+		}
+
+		if (val > max)
+		{
+			if (out) cfg.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
 			return false;
 		}
 
 		if (out) *out = val;
 		return true;
 	}
-	catch (...)
+	catch (const std::exception& e)
 	{
+		if (out) cfg.error("cfg::try_to_enum_value('%s'): invalid enum value: %s", value, e.what());
 		return false;
 	}
 }
@@ -268,13 +285,18 @@ std::string cfg::node::to_string() const
 	YAML::Emitter out;
 	cfg::encode(out, *this);
 
-	return{ out.c_str(), out.size() };
+	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value)
+bool cfg::node::from_string(const std::string& value) try
 {
 	cfg::decode(YAML::Load(value), *this);
 	return true;
+}
+catch (const std::exception& e)
+{
+	cfg.fatal("%s thrown: %s", typeid(e).name(), e.what());
+	return false;
 }
 
 void cfg::node::from_default()

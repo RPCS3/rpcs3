@@ -163,7 +163,7 @@ namespace vk
 		rsc.maxFragmentUniformVectors = 16;
 		rsc.maxVertexOutputVectors = 16;
 		rsc.maxFragmentInputVectors = 15;
-		rsc.maxProgramTexelOffset = -8;
+		rsc.minProgramTexelOffset = -8;
 		rsc.maxProgramTexelOffset = 7;
 		rsc.maxClipDistances = 8;
 		rsc.maxComputeWorkGroupCountX = 65535;

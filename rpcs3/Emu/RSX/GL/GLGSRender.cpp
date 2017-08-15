@@ -33,34 +33,6 @@ GLGSRender::GLGSRender() : GSRender()
 		m_vertex_cache.reset(new gl::weak_vertex_cache());
 }
 
-u32 GLGSRender::enable(u32 condition, u32 cap)
-{
-	if (condition)
-	{
-		glEnable(cap);
-	}
-	else
-	{
-		glDisable(cap);
-	}
-
-	return condition;
-}
-
-u32 GLGSRender::enable(u32 condition, u32 cap, u32 index)
-{
-	if (condition)
-	{
-		glEnablei(cap, index);
-	}
-	else
-	{
-		glDisablei(cap, index);
-	}
-
-	return condition;
-}
-
 extern CellGcmContextData current_context;
 
 namespace
@@ -194,6 +166,9 @@ void GLGSRender::begin()
 	if (skip_frame)
 		return;
 
+	if (conditional_render_enabled && conditional_render_test_failed)
+		return;
+
 	init_buffers();
 
 	if (!framebuffer_status_valid)
@@ -206,87 +181,91 @@ void GLGSRender::begin()
 	bool color_mask_r = rsx::method_registers.color_mask_r();
 	bool color_mask_a = rsx::method_registers.color_mask_a();
 
-	__glcheck glColorMask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-	__glcheck glDepthMask(rsx::method_registers.depth_write_enabled());
-	__glcheck glStencilMask(rsx::method_registers.stencil_mask());
+	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
 
-	if (__glcheck enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
+	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
-		__glcheck glDepthFunc(comparison_op(rsx::method_registers.depth_func()));
+		gl_state.depth_func(comparison_op(rsx::method_registers.depth_func()));
 	}
 
-	if (glDepthBoundsEXT && (__glcheck enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
+	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
 	{
-		__glcheck glDepthBoundsEXT(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
-	//__glcheck glDepthRange(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
-	__glcheck enable(rsx::method_registers.dither_enabled(), GL_DITHER);
+	gl_state.depth_range(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
+	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
-	if (__glcheck enable(rsx::method_registers.blend_enabled(), GL_BLEND))
+	if (gl_state.enable(rsx::method_registers.blend_enabled(), GL_BLEND))
 	{
-		__glcheck glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
+		glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
 			blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
 			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
 			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
 
 		auto blend_colors = rsx::get_constant_blend_colors();
-		__glcheck glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
+		glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
 
-		__glcheck glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
+		glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
 			blend_equation(rsx::method_registers.blend_equation_a()));
 	}
 
-	if (__glcheck enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
+	if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
 	{
-		__glcheck glStencilFunc(comparison_op(rsx::method_registers.stencil_func()), rsx::method_registers.stencil_func_ref(),
+		glStencilFunc(comparison_op(rsx::method_registers.stencil_func()),
+			rsx::method_registers.stencil_func_ref(),
 			rsx::method_registers.stencil_func_mask());
-		__glcheck glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
+
+		glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
 			stencil_op(rsx::method_registers.stencil_op_zpass()));
 
 		if (rsx::method_registers.two_sided_stencil_test_enabled())
 		{
-			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
-			__glcheck glStencilFuncSeparate(GL_BACK, comparison_op(rsx::method_registers.back_stencil_func()),
+			glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
+
+			glStencilFuncSeparate(GL_BACK, comparison_op(rsx::method_registers.back_stencil_func()),
 				rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
-			__glcheck glStencilOpSeparate(GL_BACK, stencil_op(rsx::method_registers.back_stencil_op_fail()),
+
+			glStencilOpSeparate(GL_BACK, stencil_op(rsx::method_registers.back_stencil_op_fail()),
 				stencil_op(rsx::method_registers.back_stencil_op_zfail()), stencil_op(rsx::method_registers.back_stencil_op_zpass()));
 		}
 	}
 
-	__glcheck enable(rsx::method_registers.blend_enabled_surface_1(), GL_BLEND, 1);
-	__glcheck enable(rsx::method_registers.blend_enabled_surface_2(), GL_BLEND, 2);
-	__glcheck enable(rsx::method_registers.blend_enabled_surface_3(), GL_BLEND, 3);
+	gl_state.enablei(rsx::method_registers.blend_enabled_surface_1(), GL_BLEND, 1);
+	gl_state.enablei(rsx::method_registers.blend_enabled_surface_2(), GL_BLEND, 2);
+	gl_state.enablei(rsx::method_registers.blend_enabled_surface_3(), GL_BLEND, 3);
 
-	if (__glcheck enable(rsx::method_registers.logic_op_enabled(), GL_COLOR_LOGIC_OP))
+	if (gl_state.enable(rsx::method_registers.logic_op_enabled(), GL_COLOR_LOGIC_OP))
 	{
-		__glcheck glLogicOp(logic_op(rsx::method_registers.logic_operation()));
+		gl_state.logic_op(logic_op(rsx::method_registers.logic_operation()));
 	}
 
-	__glcheck glLineWidth(rsx::method_registers.line_width());
-	__glcheck enable(rsx::method_registers.line_smooth_enabled(), GL_LINE_SMOOTH);
+	gl_state.line_width(rsx::method_registers.line_width());
+	gl_state.enable(rsx::method_registers.line_smooth_enabled(), GL_LINE_SMOOTH);
+
+	gl_state.enable(rsx::method_registers.poly_offset_point_enabled(), GL_POLYGON_OFFSET_POINT);
+	gl_state.enable(rsx::method_registers.poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
+	gl_state.enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
+
+	gl_state.polygon_offset(rsx::method_registers.poly_offset_scale(), rsx::method_registers.poly_offset_bias());
+
+	if (gl_state.enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
+	{
+		gl_state.cull_face(cull_face(rsx::method_registers.cull_face_mode()));
+	}
+
+	gl_state.front_face(front_face(rsx::method_registers.front_face_mode()));
 
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
-
-	__glcheck enable(rsx::method_registers.poly_offset_point_enabled(), GL_POLYGON_OFFSET_POINT);
-	__glcheck enable(rsx::method_registers.poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
-	__glcheck enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
-
-	__glcheck glPolygonOffset(rsx::method_registers.poly_offset_scale(),
-		rsx::method_registers.poly_offset_bias());
-
 	//NV4097_SET_SPECULAR_ENABLE
 	//NV4097_SET_TWO_SIDE_LIGHT_EN
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
 
-	if (__glcheck enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
-	{
-		__glcheck glCullFace(cull_face(rsx::method_registers.cull_face_mode()));
-	}
 
-	__glcheck glFrontFace(front_face(rsx::method_registers.front_face_mode()));
 
 	//NV4097_SET_COLOR_KEY_COLOR
 	//NV4097_SET_SHADER_CONTROL
@@ -330,7 +309,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
 	//Load program here since it is dependent on vertex state
 
-	if (skip_frame || !framebuffer_status_valid || !load_program())
+	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !load_program())
 	{
 		rsx::thread::end();
 		return;
@@ -398,9 +377,9 @@ void GLGSRender::end()
 
 		if (clear_depth)
 		{
-			glDepthMask(GL_TRUE);
-			glClearDepth(1.0);
-			glClearStencil(255);
+			gl_state.depth_mask(GL_TRUE);
+			gl_state.clear_depth(1.0);
+			gl_state.clear_stencil(255);
 			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
 		}
 
@@ -418,7 +397,7 @@ void GLGSRender::end()
 		}
 
 		if (clear_depth)
-			glDepthMask(rsx::method_registers.depth_write_enabled());
+			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
 
 		ds->set_cleared();
 	}
@@ -474,12 +453,12 @@ void GLGSRender::end()
 		int texture_index = i + rsx::limits::fragment_textures_count;
 		int location;
 
-/*		if (!rsx::method_registers.vertex_textures[i].enabled())
+		if (!rsx::method_registers.vertex_textures[i].enabled())
 		{
-			glActiveTexture(GL_TEXTURE0 + texture_index);
-			glBindTexture(GL_TEXTURE_2D, 0);
+			//glActiveTexture(GL_TEXTURE0 + texture_index);
+			//glBindTexture(GL_TEXTURE_2D, 0);
 			continue;
-		} */
+		}
 
 		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &location))
 		{
@@ -520,7 +499,7 @@ void GLGSRender::end()
 
 	if (indexed_draw_info || (skip_upload && m_last_draw_indexed == true))
 	{
-		if (__glcheck enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		if (__glcheck gl_state.enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 		{
 			GLenum index_type = (skip_upload)? m_last_ib_type: std::get<0>(indexed_draw_info.value());
 			__glcheck glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
@@ -552,6 +531,10 @@ void GLGSRender::end()
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 
 	m_draw_calls++;
+
+	if (zcull_task_queue.active_query &&
+		zcull_task_queue.active_query->active)
+		zcull_task_queue.active_query->num_draws++;
 
 	synchronize_buffers();
 
@@ -697,6 +680,17 @@ void GLGSRender::on_init_thread()
 		m_gl_sampler_states[i].bind(i);
 	}
 
+	//Occlusion query
+	for (u32 i = 0; i < occlusion_query_count; ++i)
+	{
+		auto &query = occlusion_query_data[i];
+		glGenQueries(1, &query.handle);
+		
+		query.pending = false;
+		query.active = false;
+		query.result = 0;
+	}
+
 	//Clip planes are shader controlled; enable all planes driver-side
 	glEnable(GL_CLIP_DISTANCE0 + 0);
 	glEnable(GL_CLIP_DISTANCE0 + 1);
@@ -772,6 +766,15 @@ void GLGSRender::on_exit()
 	m_text_printer.close();
 	m_gl_texture_cache.close();
 
+	for (u32 i = 0; i < occlusion_query_count; ++i)
+	{
+		auto &query = occlusion_query_data[i];
+		query.active = false;
+		query.pending = false;
+
+		glDeleteQueries(1, &query.handle);
+	}
+
 	return GSRender::on_exit();
 }
 
@@ -790,8 +793,8 @@ void GLGSRender::clear_surface(u32 arg)
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
 		u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
 
-		glDepthMask(GL_TRUE);
-		glClearDepth(double(clear_depth) / max_depth_value);
+		gl_state.depth_mask(GL_TRUE);
+		gl_state.clear_depth(f32(clear_depth) / max_depth_value);
 		mask |= GLenum(gl::buffers::depth);
 
 		gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
@@ -806,8 +809,8 @@ void GLGSRender::clear_surface(u32 arg)
 	{
 		u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 
-		__glcheck glStencilMask(rsx::method_registers.stencil_mask());
-		glClearStencil(clear_stencil);
+		gl_state.stencil_mask(rsx::method_registers.stencil_mask());
+		gl_state.clear_stencil(clear_stencil);
 
 		mask |= GLenum(gl::buffers::stencil);
 	}
@@ -819,8 +822,8 @@ void GLGSRender::clear_surface(u32 arg)
 		u8 clear_g = rsx::method_registers.clear_color_g();
 		u8 clear_b = rsx::method_registers.clear_color_b();
 
-		glColorMask(((arg & 0x20) ? 1 : 0), ((arg & 0x40) ? 1 : 0), ((arg & 0x80) ? 1 : 0), ((arg & 0x10) ? 1 : 0));
-		glClearColor(clear_r / 255.f, clear_g / 255.f, clear_b / 255.f, clear_a / 255.f);
+		gl_state.color_mask(arg & 0xf0);
+		gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
 
 		mask |= GLenum(gl::buffers::color);
 
@@ -985,9 +988,9 @@ void GLGSRender::flip(int buffer)
 		return;
 	}
 
-	u32 buffer_width = gcm_buffers[buffer].width;
-	u32 buffer_height = gcm_buffers[buffer].height;
-	u32 buffer_pitch = gcm_buffers[buffer].pitch;
+	u32 buffer_width = display_buffers[buffer].width;
+	u32 buffer_height = display_buffers[buffer].height;
+	u32 buffer_pitch = display_buffers[buffer].pitch;
 
 	// Calculate blit coordinates
 	coordi aspect_ratio;
@@ -1016,7 +1019,7 @@ void GLGSRender::flip(int buffer)
 	aspect_ratio.size = new_size;
 
 	// Find the source image
-	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+	rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	u32 absolute_address = buffer_region.address + buffer_region.base;
 	gl::texture *render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address);
 
@@ -1064,10 +1067,8 @@ void GLGSRender::flip(int buffer)
 	}
 
 	// Blit source image to the screen
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	// Disable scissor test (affects blit)
 	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_STENCIL_TEST);
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);
 	__glcheck m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
@@ -1182,4 +1183,170 @@ void GLGSRender::synchronize_buffers()
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
 	return m_gl_texture_cache.upload_scaled_image(src, dst, interpolate, m_rtts);
+}
+
+void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
+{
+	bool testing_enabled = zcull_pixel_cnt_enabled || zcull_stats_enabled;
+
+	if (framebuffer_swap)
+	{
+		zcull_surface_active = false;
+		const u32 zeta_address = depth_surface_info.address;
+
+		if (zeta_address)
+		{
+			//Find zeta address in bound zculls
+			for (int i = 0; i < rsx::limits::zculls_count; i++)
+			{
+				if (zculls[i].binded)
+				{
+					const u32 rsx_address = rsx::get_address(zculls[i].offset, CELL_GCM_LOCATION_LOCAL);
+					if (rsx_address == zeta_address)
+					{
+						zcull_surface_active = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	occlusion_query_info* query = nullptr;
+
+	if (zcull_task_queue.task_stack.size() > 0)
+		query = zcull_task_queue.active_query;
+
+	if (query && query->active)
+	{
+		if (force_read || (!zcull_rendering_enabled || !testing_enabled || !zcull_surface_active))
+		{
+			glEndQuery(GL_ANY_SAMPLES_PASSED);
+			query->active = false;
+			query->pending = true;
+		}
+	}
+	else
+	{
+		if (zcull_rendering_enabled && testing_enabled && zcull_surface_active)
+		{
+			//Find query
+			u32 free_index = synchronize_zcull_stats();
+			query = &occlusion_query_data[free_index];
+			zcull_task_queue.add(query);
+
+			glBeginQuery(GL_ANY_SAMPLES_PASSED, query->handle);
+			query->active = true;
+			query->result = 0;
+			query->num_draws = 0;
+		}
+	}
+}
+
+void GLGSRender::clear_zcull_stats(u32 type)
+{
+	if (type == CELL_GCM_ZPASS_PIXEL_CNT)
+	{
+		if (zcull_task_queue.active_query &&
+			zcull_task_queue.active_query->active &&
+			zcull_task_queue.active_query->num_draws > 0)
+		{
+			//discard active query results
+			check_zcull_status(false, true);
+			zcull_task_queue.active_query->pending = false;
+
+			//re-enable cull stats if stats are enabled
+			check_zcull_status(false, false);
+		}
+
+		current_zcull_stats.clear();
+	}
+}
+
+u32 GLGSRender::get_zcull_stats(u32 type)
+{
+	if (zcull_task_queue.active_query &&
+		zcull_task_queue.active_query->active &&
+		current_zcull_stats.zpass_pixel_cnt == 0)
+	{
+		//The zcull unit is still bound as the read is happening and there are no results ready
+		check_zcull_status(false, true);
+	}
+
+	switch (type)
+	{
+	case CELL_GCM_ZPASS_PIXEL_CNT:
+	{
+		if (current_zcull_stats.zpass_pixel_cnt > 0)
+			return UINT32_MAX;
+
+		//If we have no results, we might as well synchronize here and wait for results to become available
+		synchronize_zcull_stats(true);
+		return (current_zcull_stats.zpass_pixel_cnt > 0)? UINT32_MAX: 0;
+	}
+	case CELL_GCM_ZCULL_STATS:
+	case CELL_GCM_ZCULL_STATS1:
+	case CELL_GCM_ZCULL_STATS2:
+		//TODO
+		return UINT32_MAX;
+	case CELL_GCM_ZCULL_STATS3:
+	{
+		//Some kind of inverse value
+		if (current_zcull_stats.zpass_pixel_cnt > 0)
+			return 0;
+		
+		synchronize_zcull_stats(true);
+		return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT32_MAX;
+	}
+	default:
+		LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
+		return 0;
+	}
+}
+
+u32 GLGSRender::synchronize_zcull_stats(bool hard_sync)
+{
+	if (!zcull_rendering_enabled || zcull_task_queue.pending == 0)
+		return 0;
+
+	u32 result = UINT16_MAX;
+	GLint count, status;
+
+	for (auto &query : zcull_task_queue.task_stack)
+	{
+		if (query == nullptr || query->active)
+			continue;
+
+		glGetQueryObjectiv(query->handle, GL_QUERY_RESULT_AVAILABLE, &status);
+
+		if (status == GL_FALSE && !hard_sync)
+			continue;
+
+		glGetQueryObjectiv(query->handle, GL_QUERY_RESULT, &count);
+		query->pending = false;
+		query = nullptr;
+
+		current_zcull_stats.zpass_pixel_cnt += count;
+		zcull_task_queue.pending--;
+	}
+
+	for (u32 i = 0; i < occlusion_query_count; ++i)
+	{
+		auto &query = occlusion_query_data[i];
+		if (!query.pending && !query.active)
+		{
+			result = i;
+			break;
+		}
+	}
+
+	if (result == UINT16_MAX && !hard_sync)
+		return synchronize_zcull_stats(true);
+
+	return result;
+}
+
+void GLGSRender::notify_zcull_info_changed()
+{
+	check_zcull_status(false, false);
 }

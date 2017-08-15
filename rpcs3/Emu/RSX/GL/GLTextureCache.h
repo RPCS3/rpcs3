@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <chrono>
 
+#include "Utilities/mutex.h"
 #include "Emu/System.h"
 #include "GLRenderTargets.h"
 #include "../Common/TextureUtils.h"
@@ -449,14 +450,15 @@ namespace gl
 
 		blitter m_hw_blitter;
 
-		std::mutex m_section_mutex;
+		std::atomic_bool in_access_violation_handler = { false };
+		shared_mutex m_section_mutex;
 
 		GLGSRender *m_renderer;
 		std::thread::id m_renderer_thread;
 
 		cached_texture_section *find_texture_from_dimensions(u32 texaddr, u32 w, u32 h)
 		{
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			reader_lock lock(m_section_mutex);
 
 			for (cached_texture_section &tex : read_only_memory_sections)
 			{
@@ -473,7 +475,7 @@ namespace gl
 		 */
 		cached_texture_section *find_texture_from_range(u32 texaddr, u32 range)
 		{
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			reader_lock lock(m_section_mutex);
 
 			auto test = std::make_pair(texaddr, range);
 			for (cached_texture_section &tex : read_only_memory_sections)
@@ -860,7 +862,7 @@ namespace gl
 
 			gl_texture.init(index, tex);
 
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			writer_lock lock(m_section_mutex);
 
 			cached_texture_section &cached = create_texture(gl_texture.id(), texaddr, (const u32)get_texture_size(tex), tex_width, tex_height);
 			cached.protect(utils::protection::ro);
@@ -872,7 +874,7 @@ namespace gl
 
 		void save_rtt(u32 base, u32 size)
 		{
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			writer_lock lock(m_section_mutex);
 
 			cached_texture_section *region = find_cached_rtt_section(base, size);
 
@@ -896,7 +898,7 @@ namespace gl
 
 		void lock_rtt_region(const u32 base, const u32 size, const u16 width, const u16 height, const u16 pitch, const texture::format format, const texture::type type, const bool swap_bytes, gl::texture &source)
 		{
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			writer_lock lock(m_section_mutex);
 
 			cached_texture_section *region = create_locked_view_of_section(base, size);
 
@@ -942,12 +944,11 @@ namespace gl
 
 			//TODO: Optimize this function!
 			//Multi-pass checking is slow. Pre-calculate dependency tree at section creation
+			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_section_mutex);
 
 			if (address >= read_only_range.first &&
 				address < read_only_range.second)
 			{
-				std::lock_guard<std::mutex> lock(m_section_mutex);
-
 				for (int i = 0; i < read_only_memory_sections.size(); ++i)
 				{
 					auto &tex = read_only_memory_sections[i];
@@ -975,7 +976,7 @@ namespace gl
 			if (address >= no_access_range.first &&
 				address < no_access_range.second)
 			{
-				std::lock_guard<std::mutex> lock(m_section_mutex);
+				rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_section_mutex);
 
 				for (int i = 0; i < no_access_memory_sections.size(); ++i)
 				{
@@ -1007,7 +1008,7 @@ namespace gl
 
 		void invalidate_range(u32 base, u32 size)
 		{
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_section_mutex);
 			std::pair<u32, u32> range = std::make_pair(base, size);
 
 			if (base < read_only_range.second &&
@@ -1213,7 +1214,7 @@ namespace gl
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, src.width, src.slice_h, src_gl_format, src_gl_type, src.pixels);
 
-					std::lock_guard<std::mutex> lock(m_section_mutex);
+					writer_lock lock(m_section_mutex);
 					
 					auto &section = create_texture(vram_texture, src_address, src.pitch * src.slice_h, src.width, src.slice_h);
 					section.protect(utils::protection::ro);
@@ -1269,7 +1270,7 @@ namespace gl
 
 			//TODO: Verify if any titles ever scale into CPU memory. It defeats the purpose of uploading data to the GPU, but it could happen
 			//If so, add this texture to the no_access queue not the read_only queue
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			writer_lock lock(m_section_mutex);
 
 			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.clip_height, dst.width, dst.clip_height);
 			//These textures are completely GPU resident so we dont watch for CPU access

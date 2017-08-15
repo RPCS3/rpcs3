@@ -14,7 +14,7 @@ namespace gl
 		cached_texture_section* section_to_post = nullptr;
 
 		{
-			std::lock_guard<std::mutex> lock(m_section_mutex);
+			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_section_mutex);
 
 			for (cached_texture_section &tex : no_access_memory_sections)
 			{

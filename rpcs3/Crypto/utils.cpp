@@ -118,7 +118,7 @@ void aesecb128_encrypt(unsigned char *key, unsigned char *in, unsigned char *out
 
 bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len)
 {
-	std::unique_ptr<u8> out(new u8[key_len]);
+	std::unique_ptr<u8[]> out(new u8[key_len]);
 
 	sha1_hmac(key, key_len, in, in_len, out.get());
 
@@ -132,7 +132,7 @@ void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_
 
 bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len)
 {
-	std::unique_ptr<u8> out(new u8[key_len]);
+	std::unique_ptr<u8[]> out(new u8[key_len]);
 
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);

@@ -523,10 +523,9 @@ void D3D12GSRender::flip(int buffer)
 		size_t offset = 0;
 		if (false)
 		{
-			CellGcmDisplayInfo* buffers = nullptr;// = vm::ps3::_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-			u32 addr = rsx::get_address(gcm_buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-			w = gcm_buffers[gcm_current_buffer].width;
-			h = gcm_buffers[gcm_current_buffer].height;
+			u32 addr = rsx::get_address(display_buffers[current_display_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+			w = display_buffers[current_display_buffer].width;
+			h = display_buffers[current_display_buffer].height;
 			u8 *src_buffer = vm::ps3::_ptr<u8>(addr);
 
 			row_pitch = align(w * 4, 256);

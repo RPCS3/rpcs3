@@ -88,12 +88,26 @@ void ppu_module_manager::register_module(ppu_static_module* module)
 
 ppu_static_function& ppu_module_manager::access_static_function(const char* module, u32 fnid)
 {
-	return access().at(module)->functions[fnid];
+	auto& res = access().at(module)->functions[fnid];
+
+	if (res.name)
+	{
+		fmt::throw_exception("PPU FNID duplication in module %s (%s, 0x%x)", module, res.name, fnid);
+	}
+
+	return res;
 }
 
 ppu_static_variable& ppu_module_manager::access_static_variable(const char* module, u32 vnid)
 {
-	return access().at(module)->variables[vnid];
+	auto& res = access().at(module)->variables[vnid];
+
+	if (res.name)
+	{
+		fmt::throw_exception("PPU VNID duplication in module %s (%s, 0x%x)", module, res.name, vnid);
+	}
+
+	return res;
 }
 
 const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
@@ -975,7 +989,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
 				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
-			if (!vm::falloc(addr, size, vm::main))
+			if (!vm::falloc(addr, size))
 				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 
 			// Copy segment data, hash it
@@ -1198,6 +1212,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ "cellFont", "libfont.sprx" },
 			{ "cellFontFT", "libfontFT.sprx" },
 			{ "cellFontFT", "libfreetype.sprx" },
+			{ "cellGcmSys", "libgcm_sys.sprx" },
 			{ "cellGifDec", "libgifdec.sprx" },
 			{ "cellGifDec", "libsre.sprx" },
 			{ "cellJpgDec", "libjpgdec.sprx" },
@@ -1290,9 +1305,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
 
-		if (!fs::is_dir(lle_dir))
+		if (!fs::is_dir(lle_dir) || !fs::is_file(lle_dir + "libsysmodule.sprx"))
 		{
-			LOG_ERROR(GENERAL, "/dev_flash/sys/external/ directory does not exist!"
+			LOG_ERROR(GENERAL, "PS3 firmware is not installed or the installed firmware is invalid."
 				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
 				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 		}

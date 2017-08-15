@@ -50,5 +50,7 @@ void game_list_grid_delegate::paint(QPainter * painter, const QStyleOptionViewIt
 
 QSize game_list_grid_delegate::sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const
 {
+	Q_UNUSED(option);
+	Q_UNUSED(index);
 	return m_size;
 }

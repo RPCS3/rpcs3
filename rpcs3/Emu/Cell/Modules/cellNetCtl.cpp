@@ -202,6 +202,54 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 	return CELL_OK;
 }
 
+error_code cellNetCtlAddHandlerGameInt()
+{
+	cellNetCtl.todo("cellNetCtlAddHandlerGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlConnectGameInt()
+{
+	cellNetCtl.todo("cellNetCtlConnectGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlDelHandlerGameInt()
+{
+	cellNetCtl.todo("cellNetCtlDelHandlerGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlDisconnectGameInt()
+{
+	cellNetCtl.todo("cellNetCtlDisconnectGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlGetInfoGameInt()
+{
+	cellNetCtl.todo("cellNetCtlGetInfoGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlGetScanInfoGameInt()
+{
+	cellNetCtl.todo("cellNetCtlGetScanInfoGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlGetStateGameInt()
+{
+	cellNetCtl.todo("cellNetCtlGetStateGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlScanGameInt()
+{
+	cellNetCtl.todo("cellNetCtlScanGameInt()");
+	return CELL_OK;
+}
+
 error_code cellGameUpdateInit()
 {
 	cellNetCtl.todo("cellGameUpdateInit()");
@@ -273,6 +321,15 @@ DECLARE(ppu_module_manager::cellNetCtl)("cellNetCtl", []()
 	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogUnloadAsync);
 
 	REG_FUNC(cellNetCtl, cellNetCtlGetNatInfo);
+
+	REG_FUNC(cellNetCtl, cellNetCtlAddHandlerGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlConnectGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlDelHandlerGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlDisconnectGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlGetInfoGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlGetScanInfoGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlGetStateGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlScanGameInt);
 
 	REG_FUNC(cellNetCtl, cellGameUpdateInit);
 	REG_FUNC(cellNetCtl, cellGameUpdateTerm);

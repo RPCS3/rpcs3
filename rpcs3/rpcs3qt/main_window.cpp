@@ -109,6 +109,29 @@ void main_window::Init()
 
 		std::exit(EXIT_FAILURE);
 	}
+
+#ifdef BRANCH
+	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH))
+#elif _MSC_VER
+	fs::stat_t st;
+	if (!fs::stat(fs::get_config_dir() + "rpcs3.pdb", st) || st.is_directory || st.size < 1024 * 1024 * 100)
+#else
+	if (true)
+#endif
+	{
+		QMessageBox msg;
+		msg.setWindowTitle("Experimental Build Warning");
+		msg.setIcon(QMessageBox::Critical);
+		msg.setTextFormat(Qt::RichText);
+		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
+		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msg.setDefaultButton(QMessageBox::No);
+		
+		if (msg.exec() == QMessageBox::No)
+		{
+			std::exit(EXIT_SUCCESS);
+		}
+	}
 }
 
 void main_window::CreateThumbnailToolbar()
@@ -285,10 +308,24 @@ void main_window::BootGame()
 	}
 }
 
-void main_window::InstallPkg()
+void main_window::InstallPkg(const QString& dropPath)
 {
-	QString path_last_PKG = guiSettings->GetValue(GUI::fd_install_pkg).toString();
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	QString filePath = dropPath;
+
+	if (filePath.isEmpty())
+	{
+		QString path_last_PKG = guiSettings->GetValue(GUI::fd_install_pkg).toString();
+		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	}
+	else
+	{
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+	}
 
 	if (filePath == NULL)
 	{
@@ -428,10 +465,24 @@ void main_window::InstallPkg()
 	}
 }
 
-void main_window::InstallPup()
+void main_window::InstallPup(const QString& dropPath)
 {
-	QString path_last_PUP = guiSettings->GetValue(GUI::fd_install_pup).toString();
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)"));
+	QString filePath = dropPath;
+
+	if (filePath.isEmpty())
+	{
+		QString path_last_PUP = guiSettings->GetValue(GUI::fd_install_pup).toString();
+		filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)"));
+	}
+	else
+	{
+		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		{
+			LOG_NOTICE(LOADER, "Firmware: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+	}
 
 	if (filePath == NULL)
 	{
@@ -597,7 +648,6 @@ void main_window::DecryptSPRXLibraries()
 		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
-			const std::string& prx_ext = fmt::to_upper(prx_path.substr(prx_ext_pos != -1 ? prx_ext_pos : prx_path.size()));
 			const std::string& prx_name = prx_path.substr(prx_dir.size());
 
 			elf_file = decrypt_self(std::move(elf_file));
@@ -881,12 +931,12 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	{
 		if (m_rg_entries.contains(entry))
 		{
+			LOG_ERROR(GENERAL, "Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
+
 			int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
 
 			guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(m_rg_entries));
-
-			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(entry.first));
 		}
 		return nullptr;
 	}
@@ -1030,8 +1080,8 @@ void main_window::CreateConnects()
 	connect(ui->freezeRecentAct, &QAction::triggered, [=](bool checked) {
 		guiSettings->SetValue(GUI::rg_freeze, checked);
 	});
-	connect(ui->bootInstallPkgAct, &QAction::triggered, this, &main_window::InstallPkg);
-	connect(ui->bootInstallPupAct, &QAction::triggered, this, &main_window::InstallPup);
+	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPkg(); });
+	connect(ui->bootInstallPupAct, &QAction::triggered, [this] {InstallPup(); });
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
@@ -1054,7 +1104,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
-			gameListFrame->LoadSettings();
+			gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
 			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
 			ui->toolBar->setStyleSheet(QString(
 				"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
@@ -1177,19 +1227,17 @@ void main_window::CreateConnects()
 		int index;
 
 		if (act == ui->setIconSizeTinyAct) index = 0;
-		else if (act == ui->setIconSizeSmallAct) index = GUI::gl_max_slider_pos / 3;
-		else if (act == ui->setIconSizeMediumAct) index = GUI::gl_max_slider_pos * 2 / 3;
+		else if (act == ui->setIconSizeSmallAct) index = GUI::get_Index(GUI::gl_icon_size_small);
+		else if (act == ui->setIconSizeMediumAct) index = GUI::get_Index(GUI::gl_icon_size_medium);
 		else index = GUI::gl_max_slider_pos;
 
 		resizeIcons(index);
 	});
 	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
-		int index = GUI::gl_max_slider_pos / 4;
-
-		if (idx < index) ui->setIconSizeTinyAct->setChecked(true);
-		else if (idx < index * 2) ui->setIconSizeSmallAct->setChecked(true);
-		else if (idx < index * 3) ui->setIconSizeMediumAct->setChecked(true);
+		if (idx < GUI::get_Index((GUI::gl_icon_size_small + GUI::gl_icon_size_min) / 2)) ui->setIconSizeTinyAct->setChecked(true);
+		else if (idx < GUI::get_Index((GUI::gl_icon_size_medium + GUI::gl_icon_size_small) / 2)) ui->setIconSizeSmallAct->setChecked(true);
+		else if (idx < GUI::get_Index((GUI::gl_icon_size_max + GUI::gl_icon_size_medium) / 2)) ui->setIconSizeMediumAct->setChecked(true);
 		else ui->setIconSizeLargeAct->setChecked(true);
 
 		resizeIcons(idx);
@@ -1285,6 +1333,13 @@ void main_window::CreateDockWindows()
 	});
 	connect(gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
 	connect(gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
+	connect(gameListFrame, &game_list_frame::RequestPackageInstall, [this](const QStringList& paths){
+		for (const auto& path : paths)
+		{
+			InstallPkg(path);
+		}
+	});
+	connect(gameListFrame, &game_list_frame::RequestFirmwareInstall, this, &main_window::InstallPup);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configureAll)
