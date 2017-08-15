@@ -5,6 +5,10 @@
 #include <thread>
 #include <cmath>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace
 {
 	const auto THREAD_SLEEP = 1ms; //ds4 has new data every ~4ms, 
@@ -393,6 +397,17 @@ void ds4_pad_handler::ProcessData()
 			pad.m_buttons[12 + i - 4].m_pressed = pressed;
 			pad.m_buttons[12 + i - 4].m_value = pressed ? 255 : 0;
 		}
+
+#ifdef _WIN32
+		for (int i = 6; i < 16; i++)
+		{
+			if (pad.m_buttons[i].m_pressed)
+			{
+				SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+				break;
+			}
+		}
+#endif
 
 		// these values come already calibrated from our ds4Thread,
 		// all we need to do is convert to ds3 range
