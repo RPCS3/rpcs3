@@ -215,6 +215,15 @@ DWORD xinput_pad_handler::ThreadProcedure()
 					pad.m_buttons[j].m_value = pressed ? 255 : 0;
 				}
 
+				for (int i = 6; i < 16; i++)
+				{
+					if (pad.m_buttons[i].m_pressed)
+					{
+						SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+						break;
+					}
+				}
+
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS].m_pressed = state.Gamepad.bLeftTrigger > 0;
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS].m_value = state.Gamepad.bLeftTrigger;
 				pad.m_buttons[XINPUT_GAMEPAD_BUTTONS + 1].m_pressed = state.Gamepad.bRightTrigger > 0;
