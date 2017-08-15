@@ -287,7 +287,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	QFile file(sheetFilePath);
 	if (sheetFilePath == "")
 	{
-		setStyleSheet("");
+		setStyleSheet("QWidget#header_section {background-color: #ffffff}");
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
