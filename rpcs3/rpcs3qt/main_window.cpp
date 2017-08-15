@@ -79,7 +79,7 @@ void main_window::Init()
 	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(GUI::gl_iconSize).toInt());
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
-	ui->toolBar->addWidget(ui->searchBar);
+	ui->toolBar->addWidget(ui->mw_searchbar);
 
 	// for highdpi resize toolbar icons and height dynamically
 	// choose factors to mimic Gui-Design in main_window.ui
@@ -735,7 +735,7 @@ void main_window::RepaintToolBarIcons()
 		ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
 	}
 
-	ui->sizeSlider->setStyleSheet(QString("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
+	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
 }
 
@@ -1024,6 +1024,18 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(m_rg_entries));
 }
 
+void main_window::RepaintToolbar()
+{
+	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+	ui->toolBar->setStyleSheet(styleSheet().append(
+		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+}
+
 void main_window::CreateActions()
 {
 	ui->exitAct->setShortcuts(QKeySequence::Quit);
@@ -1105,14 +1117,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
 			gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
-			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-			ui->toolBar->setStyleSheet(QString(
-				"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-				"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-				"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-				"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-				.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-				.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+			RepaintToolbar();
 		});
 		dlg.exec();
 	};
@@ -1287,7 +1292,7 @@ void main_window::CreateConnects()
 			m_save_slider_pos = true; // actionTriggered happens before the value was changed
 		}
 	});
-	connect(ui->searchBar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
+	connect(ui->mw_searchbar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
 }
 
 void main_window::CreateDockWindows()
@@ -1400,14 +1405,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
-	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-	ui->toolBar->setStyleSheet(QString(
-		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+	RepaintToolbar();
 
 	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));

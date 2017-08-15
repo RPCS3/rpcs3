@@ -112,9 +112,6 @@
             <bold>false</bold>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
           <property name="text">
            <string>RPCS3 PlayStation 3 Emulator</string>
           </property>
@@ -130,9 +127,6 @@
             <family>Arial</family>
             <kerning>true</kerning>
            </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
           </property>
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.&lt;br/&gt;It is written in C++ for Windows and Linux funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Our developers and contributors are always working hard to ensure this project can be the best that it can be.&lt;br/&gt;There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -158,9 +152,6 @@
             <family>Arial</family>
             <kerning>true</kerning>
            </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
           </property>
           <property name="text">
            <string/>

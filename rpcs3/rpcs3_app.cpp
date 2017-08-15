@@ -287,7 +287,11 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	QFile file(sheetFilePath);
 	if (sheetFilePath == "")
 	{
-		setStyleSheet("QWidget#header_section {background-color: #ffffff}");
+		setStyleSheet(
+			"QWidget#header_section { background-color: #ffffff; }"
+			"QLineEdit#mw_searchbar { margin-left:14px; }"
+			"QLineEdit#tb_searchbar { background: transparent; }"
+		);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
