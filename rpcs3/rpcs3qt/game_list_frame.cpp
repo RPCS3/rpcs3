@@ -104,11 +104,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 
 	// Search Bar
 	m_Search_Bar = new QLineEdit(m_Tool_Bar);
-	m_Search_Bar->setObjectName("tb_searchbar");
+	m_Search_Bar->setObjectName("tb_searchbar"); // used in default stylesheet
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
 	m_Search_Bar->setMinimumWidth(m_Tool_Bar->height() * 5);
 	m_Search_Bar->setFrame(false);
-	m_Search_Bar->setStyleSheet("QLineEdit#tb_searchbar { background: transparent }");
 	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text) {
 		m_searchText = text;
 		Refresh();
@@ -842,7 +841,7 @@ void game_list_frame::RepaintToolBarIcons()
 	m_modeActGrid.colored = gui_settings::colorizedIcon(QIcon(":/Icons/grid_blue.png"), GUI::gl_tool_icon_color, newColor);
 	m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 
-	m_Slider_Size->setStyleSheet(QString("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
+	m_Slider_Size->setStyleSheet(m_Slider_Size->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
 }
 

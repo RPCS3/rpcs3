@@ -87,6 +87,7 @@ protected:
 	void mouseDoubleClickEvent(QMouseEvent *event) override;
 	void SetAppIconFromPath(const std::string path);
 private:
+	void RepaintToolbar();
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
