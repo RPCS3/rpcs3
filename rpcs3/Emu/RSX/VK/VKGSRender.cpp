@@ -595,7 +595,7 @@ VKGSRender::VKGSRender() : GSRender()
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	for (auto &ctx : frame_context)
+	for (auto &ctx : frame_context_storage)
 	{
 		ctx = {};
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_semaphore);
@@ -640,7 +640,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	}
 
-	m_current_frame = &frame_context[0];
+	m_current_frame = &frame_context_storage[0];
 }
 
 VKGSRender::~VKGSRender()
@@ -676,14 +676,18 @@ VKGSRender::~VKGSRender()
 	null_buffer_view.reset();
 
 	//Frame context
-	for (auto &ctx : frame_context)
+	m_framebuffers_to_clean.clear();
+	m_aux_frame_context.buffer_views_to_clean.clear();
+	m_aux_frame_context.samplers_to_clean.clear();
+
+	//NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
+	for (auto &ctx : frame_context_storage)
 	{
 		vkDestroySemaphore((*m_device), ctx.present_semaphore, nullptr);
 		ctx.descriptor_pool.destroy();
 
 		ctx.buffer_views_to_clean.clear();
 		ctx.samplers_to_clean.clear();
-		ctx.framebuffers_to_clean.clear();
 	}
 
 	m_draw_fbo.reset();
@@ -812,6 +816,11 @@ void VKGSRender::begin()
 	if (skip_frame)
 		return;
 
+	init_buffers();
+
+	if (!framebuffer_status_valid)
+		return;
+
 	//Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
 	if (m_current_frame->used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS)
 	{
@@ -840,11 +849,6 @@ void VKGSRender::begin()
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
 	}
-
-	init_buffers();
-
-	if (!framebuffer_status_valid)
-		return;
 
 	VkDescriptorSetAllocateInfo alloc_info = {};
 	alloc_info.descriptorPool = m_current_frame->descriptor_pool;
@@ -1233,8 +1237,11 @@ void VKGSRender::clear_surface(u32 mask)
 	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
 	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 
+	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
-	if (m_current_frame->present_image == UINT32_MAX) return;
+
+	// Note: m_current_frame may point to aux storage where present image is always UINT32_MAX
+	if (frame_context_storage[m_current_queue_index].present_image == UINT32_MAX) return;
 
 	init_buffers();
 
@@ -1397,7 +1404,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 		//wait for the latest intruction to execute
 		m_current_command_buffer->pending = true;
-		m_current_command_buffer->wait();
+		m_current_command_buffer->reset();
 
 		//Clear all command buffer statuses
 		for (auto &cb : m_primary_cb_list)
@@ -1416,7 +1423,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
 
 		//Soft sync if a present has not yet occured before consuming the wait event
-		for (auto &ctx : frame_context)
+		for (auto &ctx : frame_context_storage)
 		{
 			if (ctx.swap_command_buffer == m_current_command_buffer)
 				process_swap_request(&ctx, true);
@@ -1431,7 +1438,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 void VKGSRender::advance_queued_frames()
 {
 	//Check all other frames for completion and clear resources
-	for (auto &ctx : frame_context)
+	for (auto &ctx : frame_context_storage)
 	{
 		if (&ctx == m_current_frame)
 			continue;
@@ -1457,10 +1464,18 @@ void VKGSRender::advance_queued_frames()
 	//texture cache is also double buffered to prevent use-after-free
 	m_texture_cache.flush();
 
+	//Remove stale framebuffers. Ref counted to prevent use-after-free
+	m_framebuffers_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
+	{
+		if (fbo->deref_count >= 2) return true;
+		fbo->deref_count++;
+		return false;
+	});
+
 	m_vertex_cache->purge();
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
-	m_current_frame = &frame_context[m_current_queue_index];
+	m_current_frame = &frame_context_storage[m_current_queue_index];
 }
 
 void VKGSRender::present(frame_context_t *ctx)
@@ -1526,13 +1541,6 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		ctx->buffer_views_to_clean.clear();
 		ctx->samplers_to_clean.clear();
-
-		ctx->framebuffers_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
-		{
-			if (fbo->deref_count >= 2) return true;
-			fbo->deref_count++;
-			return false;
-		});
 	}
 
 	ctx->swap_command_buffer = nullptr;
@@ -1855,12 +1863,23 @@ static const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
 void VKGSRender::init_buffers(bool skip_reading)
 {
 	//Clear any pending swap requests
-	for (auto &ctx : frame_context)
+	//TODO: Decide on what to do if we circle back to a new frame before the previous frame waiting on it is still pending
+	//Dropping the frame would in theory allow the thread to advance faster
+	for (auto &ctx : frame_context_storage)
 	{
 		if (ctx.swap_command_buffer)
 		{
 			if (ctx.swap_command_buffer->pending)
+			{
 				ctx.swap_command_buffer->poke();
+
+				if (&ctx == m_current_frame && ctx.swap_command_buffer->pending)
+				{
+					//Instead of stoppiing to wait, use the aux storage to ease pressure
+					m_aux_frame_context.grab_resources(*m_current_frame);
+					m_current_frame = &m_aux_frame_context;
+				}
+			}
 
 			if (!ctx.swap_command_buffer->pending)
 			{
@@ -1918,7 +1937,7 @@ void VKGSRender::open_command_buffer()
 
 void VKGSRender::prepare_rtts()
 {
-	if (!m_rtts_dirty)
+	if (m_draw_fbo && !m_rtts_dirty)
 		return;
 
 	close_render_pass();
@@ -2069,7 +2088,7 @@ void VKGSRender::prepare_rtts()
 		}
 	}
 
-	for (auto &fbo : m_current_frame->framebuffers_to_clean)
+	for (auto &fbo : m_framebuffers_to_clean)
 	{
 		if (fbo->matches(bound_images, clip_width, clip_height))
 		{
@@ -2117,7 +2136,7 @@ void VKGSRender::prepare_rtts()
 		VkRenderPass current_render_pass = m_render_passes[idx];
 
 		if (m_draw_fbo)
-			m_current_frame->framebuffers_to_clean.push_back(std::move(m_draw_fbo));
+			m_framebuffers_to_clean.push_back(std::move(m_draw_fbo));
 
 		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
 	}
@@ -2163,7 +2182,26 @@ void VKGSRender::flip(int buffer)
 	std::chrono::time_point<steady_clock> flip_start = steady_clock::now();
 
 	close_render_pass();
-	process_swap_request(m_current_frame, true);
+
+	if (m_current_frame == &m_aux_frame_context)
+	{
+		m_current_frame = &frame_context_storage[m_current_queue_index];
+		if (m_current_frame->swap_command_buffer && m_current_frame->swap_command_buffer->pending)
+		{
+			//No choice but to wait for the last frame on the dst swapchain image to complete
+			m_current_frame->swap_command_buffer->wait();
+			process_swap_request(m_current_frame, true);
+		}
+
+		//swap aux storage and current frame; aux storage should always be ready for use at all times
+		m_current_frame->swap_storage(m_aux_frame_context);
+		m_current_frame->grab_resources(m_aux_frame_context);
+	}
+	else if (m_current_frame->swap_command_buffer)
+	{
+		//Unreachable
+		fmt::throw_exception("Possible data corruption on frame context storage detected");
+	}
 
 	if (!resize_screen)
 	{
@@ -2247,14 +2285,14 @@ void VKGSRender::flip(int buffer)
 			size_t idx = vk::get_render_pass_location(m_swap_chain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
 			VkRenderPass single_target_pass = m_render_passes[idx];
 
-			for (auto It = m_current_frame->framebuffers_to_clean.begin(); It != m_current_frame->framebuffers_to_clean.end(); It++)
+			for (auto It = m_framebuffers_to_clean.begin(); It != m_framebuffers_to_clean.end(); It++)
 			{
 				auto &fbo = *It;
 				if (fbo->attachments[0]->info.image == target_image)
 				{
 					direct_fbo.swap(fbo);
 					direct_fbo->reset_refs();
-					m_current_frame->framebuffers_to_clean.erase(It);
+					m_framebuffers_to_clean.erase(It);
 					break;
 				}
 			}
@@ -2292,7 +2330,7 @@ void VKGSRender::flip(int buffer)
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), message);
 
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
-			m_current_frame->framebuffers_to_clean.push_back(std::move(direct_fbo));
+			m_framebuffers_to_clean.push_back(std::move(direct_fbo));
 		}
 
 		queue_swap_request();
@@ -2313,9 +2351,6 @@ void VKGSRender::flip(int buffer)
 		VkFenceCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
-		vkQueueWaitIdle(m_swap_chain->get_present_queue());
-		vkDeviceWaitIdle(*m_device);
-
 		vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
 
 		//Wait for all grpahics tasks to complete
@@ -2332,16 +2367,20 @@ void VKGSRender::flip(int buffer)
 		vkWaitForFences((*m_device), 1, &resize_fence, VK_TRUE, UINT64_MAX);
 		vkResetFences((*m_device), 1, &resize_fence);
 
+		vkQueueWaitIdle(m_swap_chain->get_present_queue());
 		vkDeviceWaitIdle(*m_device);
+
+		//Remove any old refs to the old images as they are about to be destroyed
+		m_framebuffers_to_clean.clear();
+
+		//Prepare new swapchain images for use
+		m_current_command_buffer->reset();
+		open_command_buffer();
 
 		//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 		m_client_width = m_frame->client_width();
 		m_client_height = m_frame->client_height();
 		m_swap_chain->init_swapchain(m_client_width, m_client_height);
-
-		//Prepare new swapchain images for use
-		m_current_command_buffer->reset();
-		open_command_buffer();
 
 		for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
 		{
@@ -2364,14 +2403,6 @@ void VKGSRender::flip(int buffer)
 
 		m_current_command_buffer->reset();
 		open_command_buffer();
-
-		//Do cleanup; also present the previous frame for this frame if available
-		//Don't bother scheduling a swap event if the frame context is still uninitialized (no previous frame)
-		if (m_current_frame->present_image != UINT32_MAX)
-		{
-			m_current_frame->swap_command_buffer = m_current_command_buffer;
-			process_swap_request(m_current_frame);
-		}
 	}
 
 	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
