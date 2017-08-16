@@ -70,8 +70,6 @@ void main_window::Init()
 {
 	ui->setupUi(this);
 
-	// Load Icons: This needs to happen before any actions or buttons are created
-	RepaintToolBarIcons();
 	appIcon = QIcon(":/rpcs3.ico");
 
 	// add toolbar widgets (crappy Qt designer is not able to)
@@ -100,6 +98,8 @@ void main_window::Init()
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
+	RepaintToolBarIcons();
+	gameListFrame->RepaintToolBarIcons();
 	
 	if (!utils::has_ssse3())
 	{
@@ -694,7 +694,16 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintToolBarIcons()
 {
-	QColor newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+	QColor newColor;
+
+	if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
+	{
+		newColor = GUI::get_Label_Color("toolbar_icon_color");
+	}
+	else
+	{
+		newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+	}
 
 	icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
 	icon_pause = gui_settings::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
@@ -1026,14 +1035,23 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 
 void main_window::RepaintToolbar()
 {
-	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-	ui->toolBar->setStyleSheet(styleSheet().append(
-		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+	if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
+	{
+		ui->toolBar->setStyleSheet(GUI::stylesheet);
+	}
+	else
+	{
+		QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+
+		ui->toolBar->setStyleSheet(GUI::stylesheet + QString(
+			"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+			"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+			"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+			"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+			.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+			.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20)
+		);
+	}
 }
 
 void main_window::CreateActions()
@@ -1116,7 +1134,14 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
-			gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
+			if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
+			{
+				gameListFrame->RepaintIcons(GUI::get_Label_Color("gamelist_icon_background_color"));
+			}
+			else
+			{
+				gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
+			}
 			RepaintToolbar();
 		});
 		dlg.exec();

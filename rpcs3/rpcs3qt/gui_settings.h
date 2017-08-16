@@ -8,6 +8,7 @@
 #include <QSize>
 #include <QColor>
 #include <QBitmap>
+#include <QLabel>
 
 struct GUI_SAVE
 {
@@ -35,6 +36,8 @@ typedef QList<q_size_pair> q_size_list;
 
 namespace GUI
 {
+	static QString stylesheet;
+
 	const QSize gl_icon_size_min    = QSize(40, 22);
 	const QSize gl_icon_size_small  = QSize(80, 44);
 	const QSize gl_icon_size_medium = QSize(160, 88);
@@ -42,12 +45,22 @@ namespace GUI
 
 	const int gl_max_slider_pos = 100;
 
-	inline int get_Index(const QSize& current) {
+	inline int get_Index(const QSize& current)
+	{
 		int size_delta = gl_icon_size_max.width() - gl_icon_size_min.width();
 		int current_delta = current.width() - gl_icon_size_min.width();
 		return gl_max_slider_pos * current_delta / size_delta;
 	};
 
+	inline QColor get_Label_Color(const QString& objectName, QPalette::ColorRole colorRole = QPalette::Foreground)
+	{
+		QLabel dummy_color;
+		dummy_color.setObjectName(objectName);
+		dummy_color.ensurePolished();
+		return dummy_color.palette().color(colorRole);
+	};
+
+	const QString Default     = QObject::tr("default");
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
@@ -117,9 +130,10 @@ namespace GUI
 	const GUI_SAVE d_splitterState = GUI_SAVE( debugger, "splitterState", QByteArray());
 
 	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
-	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", QObject::tr("default"));
+	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", Default);
 	const GUI_SAVE m_saveNotes         = GUI_SAVE(meta, "saveNotes",         QVariantMap());
 	const GUI_SAVE m_showDebugTab      = GUI_SAVE(meta, "showDebugTab",      false);
+	const GUI_SAVE m_enableUIColors    = GUI_SAVE(meta, "enableUIColors",    false);
 
 	const GUI_SAVE gs_disableMouse = GUI_SAVE(gs_frame, "disableMouse", false);
 	const GUI_SAVE gs_resize       = GUI_SAVE(gs_frame, "resize",       false);

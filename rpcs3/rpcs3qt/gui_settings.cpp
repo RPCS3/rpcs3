@@ -299,7 +299,7 @@ QString gui_settings::GetCurrentStylesheetPath()
 {
 	QString stylesheet = GetValue(GUI::m_currentStylesheet).toString();
 
-	if (stylesheet == "default")
+	if (stylesheet == GUI::Default)
 	{
 		return "";
 	}

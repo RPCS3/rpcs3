@@ -1200,9 +1200,16 @@
          <item>
           <widget class="QGroupBox" name="groupBox_2">
            <property name="title">
-            <string>UI Colors (difficult in stylesheets)</string>
+            <string>UI Colors</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_13">
+            <item>
+             <widget class="QCheckBox" name="cb_custom_colors">
+              <property name="text">
+               <string>Use custom UI Colors</string>
+              </property>
+             </widget>
+            </item>
             <item>
              <widget class="QPushButton" name="pb_tool_bar_color">
               <property name="text">
