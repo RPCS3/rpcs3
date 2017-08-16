@@ -853,12 +853,12 @@ namespace vk
 		{
 			VkSwapchainKHR old_swapchain = m_vk_swapchain;
 			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
-			
+
 			VkSurfaceCapabilitiesKHR surface_descriptors = {};
 			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
 
 			VkExtent2D swapchainExtent;
-			
+
 			if (surface_descriptors.currentExtent.width == (uint32_t)-1)
 			{
 				swapchainExtent.width = width;
@@ -878,7 +878,7 @@ namespace vk
 			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
 
 			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-			
+
 			for (VkPresentModeKHR mode : present_modes)
 			{
 				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
@@ -893,7 +893,7 @@ namespace vk
 					(mode == VK_PRESENT_MODE_IMMEDIATE_KHR || mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR))
 					swapchain_present_mode = mode;
 			}
-			
+
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 
 			if ((surface_descriptors.maxImageCount > 0) && (nb_swap_images > surface_descriptors.maxImageCount))
@@ -913,7 +913,7 @@ namespace vk
 			swap_info.imageFormat = m_surface_format;
 			swap_info.imageColorSpace = m_color_space;
 
-			swap_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			swap_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			swap_info.preTransform = pre_transform;
 			swap_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 			swap_info.imageArrayLayers = 1;
@@ -928,7 +928,17 @@ namespace vk
 			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
 
 			if (old_swapchain)
+			{
+				if (m_swap_images.size())
+				{
+					for (auto &img : m_swap_images)
+						img.discard(dev);
+
+					m_swap_images.resize(0);
+				}
+
 				destroySwapchainKHR(dev, old_swapchain, nullptr);
+			}
 
 			nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
