@@ -30,7 +30,7 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 430\n\n";
+	OS << "#version 420\n\n";
 	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
 	OS << "{\n";
 	OS << "	mat4 scaleOffsetMat;\n";
@@ -57,7 +57,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 	std::sort(input_data.begin(), input_data.end());
 
-	int location = 1;
+	int location = 3;
 	for (const std::tuple<size_t, std::string>& item : input_data)
 	{
 		for (const ParamType &PT : inputs)
@@ -77,7 +77,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 					}
 
 					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(location=" << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
+					OS << "layout(binding = " << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
 				}
 			}
 		}
@@ -408,11 +408,11 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	//RSX matrices passed already map to the [0, 1] range but mapping to classic OGL requires that we undo this step
 	//This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).
 	//However, ClipControl only made it to opengl core in ver 4.5 though, so this is a workaround.
-	
+
 	//NOTE: It is completely valid for games to use very large w values, causing the post-multiplied z to be in the hundreds
 	//It is therefore critical that this step is done post-transform and the result re-scaled by w
 	//SEE Naruto: UNS
-	
+
 	OS << "	float ndc_z = gl_Position.z / gl_Position.w;\n";
 	OS << "	ndc_z = (ndc_z * 2.) - 1.;\n";
 	OS << "	gl_Position.z = ndc_z * gl_Position.w;\n";
