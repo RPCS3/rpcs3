@@ -116,7 +116,7 @@ void main_window::Init()
 	fs::stat_t st;
 	if (!fs::stat(fs::get_config_dir() + "rpcs3.pdb", st) || st.is_directory || st.size < 1024 * 1024 * 100)
 #else
-	if (true)
+	if (false)
 #endif
 	{
 		QMessageBox msg;
