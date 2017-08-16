@@ -672,7 +672,7 @@ namespace gl
 			 * Check for sampleable rtts from previous render passes
 			 */
 			gl::render_target *texptr = nullptr;
-			if (texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+			if ((texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr)))
 			{
 				for (const auto& tex : m_rtts.m_bound_render_targets)
 				{
@@ -703,7 +703,7 @@ namespace gl
 				return;
 			}
 
-			if (texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+			if ((texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr)))
 			{
 				if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 				{
