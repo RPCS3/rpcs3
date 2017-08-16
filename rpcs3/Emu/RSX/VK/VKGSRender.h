@@ -166,13 +166,33 @@ private:
 
 		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
 		std::vector<std::unique_ptr<vk::sampler>> samplers_to_clean;
-		std::list<std::unique_ptr<vk::framebuffer_holder>> framebuffers_to_clean;
 
 		u32 present_image = UINT32_MAX;
 		command_buffer_chunk* swap_command_buffer = nullptr;
+
+		//Copy shareable information
+		void grab_resources(frame_context_t &other)
+		{
+			present_semaphore = other.present_semaphore;
+			descriptor_set = other.descriptor_set;
+			descriptor_pool = other.descriptor_pool;
+			used_descriptors = other.used_descriptors;
+		}
+
+		//Exchange storage (non-copyable)
+		void swap_storage(frame_context_t &other)
+		{
+			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
+			std::swap(samplers_to_clean, other.samplers_to_clean);
+		}
 	};
 
-	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context;
+	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
+	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
+	frame_context_t m_aux_frame_context;
+
+	//framebuffers are shared between frame contexts
+	std::list<std::unique_ptr<vk::framebuffer_holder>> m_framebuffers_to_clean;
 
 	u32 m_current_queue_index = 0;
 	frame_context_t* m_current_frame = nullptr;
