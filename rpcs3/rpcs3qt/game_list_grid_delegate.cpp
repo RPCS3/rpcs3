@@ -1,7 +1,7 @@
 #include "game_list_grid_delegate.h"
 
-game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal& margin_factor, const qreal& text_factor, QObject *parent)
-	 : QAbstractItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor)
+game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal& margin_factor, const qreal& text_factor, const QFont& font, const QColor& font_color, QObject *parent)
+	 : QAbstractItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor), m_font(font), m_font_color(font_color)
 {
 }
 
@@ -14,9 +14,6 @@ void game_list_grid_delegate::paint(QPainter * painter, const QStyleOptionViewIt
 	QRect r = option.rect;
 
 	painter->eraseRect(r);
-
-	//Color: #333
-	QPen fontPen(QColor::fromRgb(51, 51, 51), 1, Qt::SolidLine);
 
 	//Get title and image
 	QPixmap image = (qvariant_cast<QPixmap>(index.data(Qt::DecorationRole)));
@@ -43,8 +40,8 @@ void game_list_grid_delegate::paint(QPainter * painter, const QStyleOptionViewIt
 	int top = r.bottom() - height;
 
 	// title
-	painter->setPen(fontPen);
-	painter->setFont(QFont("Lucida Grande", 8, QFont::DemiBold));
+	painter->setPen(QPen(m_font_color, 1, Qt::SolidLine));
+	painter->setFont(m_font);
 	painter->drawText(QRect(r.left(), top, r.width(), height), Qt::TextWordWrap | Qt::AlignCenter, title);
 }
 
