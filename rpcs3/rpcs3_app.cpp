@@ -299,6 +299,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		setStyleSheet(file.readAll());
 		file.close();
 	}
+	GUI::stylesheet = styleSheet();
 }
 
 /**
