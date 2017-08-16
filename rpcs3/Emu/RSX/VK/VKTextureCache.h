@@ -570,7 +570,7 @@ namespace vk
 
 			//First check if it exists as an rtt...
 			vk::render_target *rtt_texture = nullptr;
-			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+			if ((rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr)))
 			{
 				if (g_cfg.video.strict_rendering_mode)
 				{
@@ -587,7 +587,7 @@ namespace vk
 				return rtt_texture->get_view();
 			}
 
-			if (rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+			if ((rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr)))
 			{
 				if (g_cfg.video.strict_rendering_mode)
 				{

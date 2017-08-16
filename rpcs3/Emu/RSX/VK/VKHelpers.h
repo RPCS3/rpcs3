@@ -1085,7 +1085,7 @@ namespace vk
 			m_instance = nullptr;
 
 			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
-			loader_exists = (vkCreateInstance != nullptr);
+			loader_exists = (&vkCreateInstance != nullptr);
 		}
 
 		~context()
