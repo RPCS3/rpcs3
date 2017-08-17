@@ -50,25 +50,14 @@ void sys_spu_image::load(u32 data_addr, u32 type)
 
 	LOG_NOTICE(SPU, "Loading SPU program from memory 0x%x", data_addr);
 
-	sha1_context ctx;
-	u8 output[20];
-
-	sha1_starts(&ctx);
-	sha1_update(&ctx, reinterpret_cast<const u8*>(&obj.header), sizeof(obj.header));
-
 	for (const auto& shdr : obj.shdrs)
 	{
-		sha1_update(&ctx, reinterpret_cast<const u8*>(&shdr), sizeof(spu_exec_object::shdr_t));
-
 		LOG_NOTICE(SPU, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", shdr.sh_type, shdr.sh_addr, shdr.sh_size, shdr.sh_flags);
 	}
 
 	for (auto it_prog = obj.progs.begin(); it_prog < obj.progs.end(); it_prog++)
 	{
 		auto& prog = *it_prog;
-
-		sha1_update(&ctx, reinterpret_cast<const u8*>(&prog), sizeof(spu_exec_object::phdr_t));
-		sha1_update(&ctx, reinterpret_cast<const u8*>(prog.bin.data()), prog.bin.size());
 
 		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_offset=0x%llx, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_offset, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY)
@@ -107,22 +96,6 @@ void sys_spu_image::load(u32 data_addr, u32 type)
 		{
 			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
 		}
-	}
-
-	sha1_finish(&ctx, output);
-
-	// Format patch name
-	std::string hash("spu-");
-	for (u8 x : output) fmt::append(hash, "%02x", x);
-	LOG_NOTICE(LOADER, "Loaded SPU image: %s", hash);
-
-	// Apply the patch
-	fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + data_addr);
-
-	if (!Emu.GetTitleID().empty())
-	{
-		// Alternative patch
-		fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + data_addr);
 	}
 }
 
