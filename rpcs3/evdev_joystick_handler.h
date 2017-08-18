@@ -8,8 +8,6 @@
 #include <vector>
 #include <thread>
 
-#define JOYSTICK_BUSTYPE 3
-
 enum { EVDEV_DPAD_HAT_AXIS_X = -1, EVDEV_DPAD_HAT_AXIS_Y = -2 };
 
 struct evdev_joystick_config final : cfg::node

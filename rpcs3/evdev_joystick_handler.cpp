@@ -59,8 +59,11 @@ void evdev_joystick_handler::Init(const u32 max_connect)
                     LOG_WARNING(GENERAL, "Failed to connect to device at %s, the error was: %s", "/dev/input/" + et.name, strerror(-rc));
                 continue;
             }
-            if (libevdev_get_id_bustype(dev) == JOYSTICK_BUSTYPE)
+            if (libevdev_has_event_type(dev, EV_KEY) &&
+                libevdev_has_event_code(dev, EV_ABS, ABS_X) &&
+                libevdev_has_event_code(dev, EV_ABS, ABS_Y))
             {
+                // It's a joystick.
                 joy_paths.emplace_back(fmt::format("/dev/input/%s", et.name));
             }
         }
