@@ -891,7 +891,7 @@ void main_window::BootRecentAction(const QAction* act)
 			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(pth));
 
 			// refill menu with actions
-			for (uint i = 0; i < m_recentGameActs.count(); i++)
+			for (int i = 0; i < m_recentGameActs.count(); i++)
 			{
 				m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
 				m_recentGameActs[i]->setToolTip(m_rg_entries.at(i).second);
@@ -1014,7 +1014,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	}
 	
 	// refill menu with actions
-	for (uint i = 0; i < m_recentGameActs.count(); i++)
+	for (int i = 0; i < m_recentGameActs.count(); i++)
 	{
 		m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i+1));
 		m_recentGameActs[i]->setToolTip(m_rg_entries.at(i).second);
@@ -1247,7 +1247,7 @@ void main_window::CreateConnects()
 
 		resizeIcons(idx);
 	});
-	connect(gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save){ m_save_slider_pos = true; });
+	connect(gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save){ Q_UNUSED(save); m_save_slider_pos = true; });
 	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
 		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
@@ -1376,7 +1376,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	}
 	m_recentGameActs.clear();
 	// Fill the recent games menu
-	for (uint i = 0; i < m_rg_entries.count(); i++)
+	for (int i = 0; i < m_rg_entries.count(); i++)
 	{
 		// create new action
 		QAction* act = CreateRecentAction(m_rg_entries[i], i + 1);

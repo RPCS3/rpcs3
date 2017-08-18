@@ -40,7 +40,7 @@ public:
 
 	Buffer(QWidget* parent, bool isTex, u32 id = 4)
 		: QWidget(parent), m_isTex(isTex), m_id(id){};
-	void showImage(QImage image = QImage());
+	void showImage(const QImage& image = QImage());
 
 private:
 	void mouseDoubleClickEvent(QMouseEvent* event);

@@ -274,7 +274,7 @@ void pad_settings_dialog::Init(const u32 max_connect)
 	memset(&m_info, 0, sizeof(PadInfo));
 	m_info.max_connect = max_connect;
 	LoadSettings();
-	m_info.now_connect = std::min(m_pads.size(), (size_t)max_connect);
+	m_info.now_connect = std::min((u32)m_pads.size(), max_connect);
 }
 
 void pad_settings_dialog::LoadSettings()
