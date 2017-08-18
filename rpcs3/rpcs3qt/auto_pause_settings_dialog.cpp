@@ -102,9 +102,10 @@ void auto_pause_settings_dialog::SaveEntries(void)
 
 void auto_pause_settings_dialog::UpdateList(void)
 {
+	const int entries_size = static_cast<int>(m_entries.size());
 	pauseList->clearContents();
-	pauseList->setRowCount(m_entries.size());
-	for (size_t i = 0; i < m_entries.size(); ++i)
+	pauseList->setRowCount(entries_size);
+	for (int i = 0; i < entries_size; ++i)
 	{
 		QTableWidgetItem* callItem = new QTableWidgetItem;
 		QTableWidgetItem* typeItem = new QTableWidgetItem;
@@ -163,7 +164,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 	connect(add, &QAction::triggered, [=]() {
 		m_entries.emplace_back(0xFFFFFFFF);
 		UpdateList();
-		u32 idx = m_entries.size() - 1;
+		int idx = static_cast<int>(m_entries.size()) - 1;
 		pauseList->selectRow(idx);
 		OnEntryConfig(idx, true);
 	});

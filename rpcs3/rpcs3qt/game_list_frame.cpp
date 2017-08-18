@@ -980,7 +980,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 	}
 
 	// Get number of things that'll be in grid and precompute grid size.
-	int entries = 0;
+	uint entries = 0;
 	for (const GUI_GameInfo& game : m_game_data)
 	{
 		if (qstr(game.info.category) == category::disc_Game || qstr(game.info.category) == category::hdd_Game)
