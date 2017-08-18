@@ -357,6 +357,10 @@ namespace vk
 
 		std::unordered_map<u32, framebuffer_memory_characteristics> m_cache_miss_statistics_table;
 
+		//Memory usage
+		const s32 m_max_zombie_objects = 32; //Limit on how many texture objects to keep around for reuse after they are invalidated
+		s32 m_unreleased_texture_objects = 0; //Number of invalidated objects not yet freed from memory
+
 		cached_texture_section& find_cached_texture(u32 rsx_address, u32 rsx_size, bool confirm_dimensions = false, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
 		{
 			{
@@ -389,6 +393,8 @@ namespace vk
 						{
 							if (tex.exists())
 							{
+								m_unreleased_texture_objects--;
+
 								m_dirty_textures.push_back(std::move(tex.get_texture()));
 								m_temporary_image_view.push_back(std::move(tex.get_view()));
 							}
@@ -456,6 +462,8 @@ namespace vk
 
 			m_image_views_to_purge.clear();
 			m_images_to_purge.clear();
+
+			m_unreleased_texture_objects = 0;
 		}
 
 		//Helpers
@@ -916,6 +924,8 @@ namespace vk
 
 						if (unprotect)
 						{
+							m_unreleased_texture_objects++;
+
 							tex.set_dirty(true);
 							tex.unprotect();
 						}
@@ -943,12 +953,19 @@ namespace vk
 
 		void flush(bool purge_dirty=false)
 		{
-			if (purge_dirty)
+			if (purge_dirty || m_unreleased_texture_objects >= m_max_zombie_objects)
 			{
 				//Reclaims all graphics memory consumed by dirty textures
+				std::vector<u32> empty_addresses;
+				empty_addresses.resize(32);
+
 				for (auto &address_range : m_cache)
 				{
 					auto &range_data = address_range.second;
+
+					if (range_data.valid_count == 0)
+						empty_addresses.push_back(address_range.first);
+
 					for (auto &tex : range_data.data)
 					{
 						if (!tex.is_dirty())
@@ -962,6 +979,12 @@ namespace vk
 
 						tex.release_dma_resources();
 					}
+				}
+
+				//Free descriptor objects as well
+				for (const auto &address : empty_addresses)
+				{
+					m_cache.erase(address);
 				}
 			}
 
