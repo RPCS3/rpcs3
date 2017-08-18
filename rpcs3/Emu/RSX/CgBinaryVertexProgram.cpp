@@ -51,21 +51,22 @@ std::string CgBinaryDisasm::GetScaMaskDisasm()
 std::string CgBinaryDisasm::GetDSTDisasm(bool isSca)
 {
 	std::string ret;
+	std::string mask = GetMaskDisasm(isSca);
 
-	switch (isSca ? 0x1f : d3.dst)
+	switch ((isSca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
 	{
 	case 0x1f:
-		ret += isSca ? fmt::format("R%d", d3.sca_dst_tmp) + GetScaMaskDisasm() : fmt::format("R%d", d0.dst_tmp) + GetVecMaskDisasm();
+		ret += (isSca ? fmt::format("R%d", d3.sca_dst_tmp) : fmt::format("R%d", d0.dst_tmp)) + mask;
 		break;
 
 	default:
 		if (d3.dst > 15)
 			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
 
-		ret += fmt::format("o[%d]", d3.dst) + GetVecMaskDisasm();
+		ret += fmt::format("o[%d]", d3.dst) + mask;
 		// Vertex Program supports double destinations, notably in MOV
 		if (d0.dst_tmp != 0x3f)
-			ret += fmt::format(" R%d", d0.dst_tmp) + GetVecMaskDisasm();
+			ret += fmt::format(" R%d", d0.dst_tmp) + mask;
 		break;
 	}
 

@@ -43,7 +43,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 
 	std::string mask = GetMask(isSca);
 
-	switch (isSca ? 0x1f : d3.dst)
+	switch ((isSca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
 	{
 	case 0x1f:
 		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp)) + mask;
