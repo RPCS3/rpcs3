@@ -857,6 +857,14 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 
 		return true;
 	}
+	case NV4097_CLEAR_ZCULL_SURFACE:
+	{
+		//TODO
+		init_buffers(true);
+		clear_surface(0x3);
+
+		return true;
+	}
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
 		flush_draw_buffers = true;
@@ -1283,6 +1291,7 @@ void GLGSRender::clear_zcull_stats(u32 type)
 
 			//re-enable cull stats if stats are enabled
 			check_zcull_status(false, false);
+			zcull_task_queue.active_query->num_draws = 0;
 		}
 
 		current_zcull_stats.clear();
@@ -1296,10 +1305,12 @@ u32 GLGSRender::get_zcull_stats(u32 type)
 
 	if (zcull_task_queue.active_query &&
 		zcull_task_queue.active_query->active &&
-		current_zcull_stats.zpass_pixel_cnt == 0)
+		current_zcull_stats.zpass_pixel_cnt == 0 &&
+		type == CELL_GCM_ZPASS_PIXEL_CNT)
 	{
 		//The zcull unit is still bound as the read is happening and there are no results ready
-		check_zcull_status(false, true);
+		check_zcull_status(false, true);  //close current query
+		check_zcull_status(false, false); //start new query since stat counting is still active
 	}
 
 	switch (type)
@@ -1307,17 +1318,16 @@ u32 GLGSRender::get_zcull_stats(u32 type)
 	case CELL_GCM_ZPASS_PIXEL_CNT:
 	{
 		if (current_zcull_stats.zpass_pixel_cnt > 0)
-			return UINT32_MAX;
+			return UINT16_MAX;
 
-		//If we have no results, we might as well synchronize here and wait for results to become available
 		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0)? UINT32_MAX: 0;
+		return (current_zcull_stats.zpass_pixel_cnt > 0)? UINT16_MAX : 0;
 	}
 	case CELL_GCM_ZCULL_STATS:
 	case CELL_GCM_ZCULL_STATS1:
 	case CELL_GCM_ZCULL_STATS2:
 		//TODO
-		return UINT32_MAX;
+		return UINT16_MAX;
 	case CELL_GCM_ZCULL_STATS3:
 	{
 		//Some kind of inverse value
@@ -1325,7 +1335,7 @@ u32 GLGSRender::get_zcull_stats(u32 type)
 			return 0;
 		
 		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT32_MAX;
+		return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT16_MAX;
 	}
 	default:
 		LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
