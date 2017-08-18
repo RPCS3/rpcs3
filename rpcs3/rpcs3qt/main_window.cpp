@@ -119,14 +119,17 @@ void main_window::Init()
 	if (false)
 #endif
 	{
+		LOG_WARNING(GENERAL, "Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
+
 		QMessageBox msg;
 		msg.setWindowTitle("Experimental Build Warning");
+		msg.setWindowIcon(appIcon);
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
 		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msg.setDefaultButton(QMessageBox::No);
-		
+
 		if (msg.exec() == QMessageBox::No)
 		{
 			std::exit(EXIT_SUCCESS);
