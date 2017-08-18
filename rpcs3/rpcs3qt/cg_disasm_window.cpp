@@ -19,7 +19,7 @@
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings, QWidget* parent): QWidget(parent), xgui_settings(xSettings)
+cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgui_settings(xSettings)
 {
 	setWindowTitle(tr("Cg Disasm"));
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -72,7 +72,6 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
 		if (filePath == NULL) return;
 		m_path_last = filePath;
-		
 		ShowDisasm();
 	});
 
@@ -81,14 +80,13 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 
 void cg_disasm_window::ShowDisasm()
 {
-	xgui_settings->SetValue(GUI::fd_cg_disasm, m_path_last);
-
 	if (QFileInfo(m_path_last).isFile())
 	{
 		CgBinaryDisasm disasm(sstr(m_path_last));
 		disasm.BuildShaderBody();
 		m_disasm_text->setText(qstr(disasm.GetArbShader()));
 		m_glsl_text->setText(qstr(disasm.GetGlslShader()));
+		xgui_settings->SetValue(GUI::fd_cg_disasm, m_path_last);
 	}
 	else if (!m_path_last.isEmpty())
 	{
