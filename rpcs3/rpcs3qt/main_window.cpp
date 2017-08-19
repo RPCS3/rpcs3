@@ -74,6 +74,9 @@ void main_window::Init()
 	RepaintToolBarIcons();
 	appIcon = QIcon(":/rpcs3.ico");
 
+	// hide utilities from the average user
+	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(GUI::m_showDebugTab).toBool());
+
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->sizeSlider->setRange(0, GUI::gl_max_slider_pos);
 	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(GUI::gl_iconSize).toInt());
