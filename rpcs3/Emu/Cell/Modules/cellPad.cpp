@@ -248,7 +248,7 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	}
 	data->button[0] = 0x0; // always 0
 	// bits 15-8 reserved, 7-4 = 0x7, 3-0: data->len/2;
-	data->button[1] = (0x7 << 4) | std::min(data->len / 2, 15) & 0xF;
+	data->button[1] = (0x7 << 4) | std::min(data->len / 2, 15);
 	//lets still send new data anyway, not sure whats expected still
 	data->button[CELL_PAD_BTN_OFFSET_DIGITAL1]       = pad.m_digital_1;
 	data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]       = pad.m_digital_2;
