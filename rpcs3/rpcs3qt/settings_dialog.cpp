@@ -357,6 +357,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
 	ui->renderBox->setToolTip(json_gpu_cbo["renderBox"].toString());
+	//Change D3D12 to D3D12[DO NOT USE]
+	for (int i = 0; i < ui->renderBox->count(); i++)
+	{
+		if (ui->renderBox->itemText(i) == "D3D12")
+		{
+			ui->renderBox->setItemText(i, r_Creator.render_D3D12);
+			break;
+		}
+	}
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
@@ -385,9 +394,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
-	ui->disableVertexCache->setToolTip(json_gpu_main["disableVertexCache"].toString());
 
 	// Graphics Adapter
 	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
@@ -740,6 +746,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		// colorize preview icons
 		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor()){
 			QLabel* text = new QLabel(button->text());
+			text->setObjectName("color_button");
 			text->setAlignment(Qt::AlignCenter);
 			text->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 			if (icon.isNull())
@@ -753,7 +760,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				button->setIcon(gui_settings::colorizedIcon(icon, iconColor, color));
 			}
 			button->setText("");
-			button->setStyleSheet("text-align:left;");
+			button->setStyleSheet(styleSheet().append("text-align:left;"));
 			button->setLayout(new QGridLayout);
 			button->layout()->setContentsMargins(0, 0, 0, 0);
 			button->layout()->addWidget(text);
@@ -834,6 +841,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
 	ui->readDepth->setToolTip(json_debug["readDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
+	ui->disableVertexCache->setToolTip(json_debug["disableVertexCache"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
+	ui->disableHwOcclusionQueries->setToolTip(json_debug["disableOcclusionQueries"].toString());
 
 	//
 	// Layout fix for High Dpi

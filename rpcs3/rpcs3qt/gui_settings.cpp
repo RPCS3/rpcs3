@@ -297,5 +297,12 @@ QStringList gui_settings::GetStylesheetEntries()
 
 QString gui_settings::GetCurrentStylesheetPath()
 {
-	return settingsDir.absoluteFilePath(GetValue(GUI::m_currentStylesheet).toString() + ".qss");
+	QString stylesheet = GetValue(GUI::m_currentStylesheet).toString();
+
+	if (stylesheet == "default")
+	{
+		return "";
+	}
+
+	return settingsDir.absoluteFilePath(stylesheet + ".qss");
 }

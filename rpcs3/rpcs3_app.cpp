@@ -287,7 +287,12 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	QFile file(sheetFilePath);
 	if (sheetFilePath == "")
 	{
-		setStyleSheet("");
+		setStyleSheet(
+			"QWidget#header_section { background-color: #ffffff; }"
+			"QLineEdit#mw_searchbar { margin-left:14px; }"
+			"QLineEdit#tb_searchbar { background: transparent; }"
+			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
+		);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{

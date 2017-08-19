@@ -57,4 +57,4 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
-bool pkg_install(const class fs::file& pkg_f, const std::string& dir, atomic_t<double>&);
+bool pkg_install(const class fs::file& pkg_f, const std::string& dir, atomic_t<double>&, const std::string& pkg_filepath);

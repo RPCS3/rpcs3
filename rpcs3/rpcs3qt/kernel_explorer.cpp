@@ -60,7 +60,7 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	Update();
 };
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
+constexpr auto qstr = QString::fromStdString;
 
 void kernel_explorer::Update()
 {

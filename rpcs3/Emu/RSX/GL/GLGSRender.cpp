@@ -24,8 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	//TODO
-	//shaders_cache.load(rsx::old_shaders_cache::shader_language::glsl);
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -306,17 +305,11 @@ namespace
 
 void GLGSRender::end()
 {
-	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
-	//Load program here since it is dependent on vertex state
-
-	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !load_program())
+	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !check_program_state())
 	{
 		rsx::thread::end();
 		return;
 	}
-
-	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
-	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
 
 	if (manually_flush_ring_buffers)
 	{
@@ -327,6 +320,32 @@ void GLGSRender::end()
 		//Allocate 256K heap if we have no approximation at this time (inlined array)
 		m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
 		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
+	}
+
+	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
+	u32 vertex_draw_count;
+	u32 actual_vertex_count;
+	u32 vertex_base;
+	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
+	std::tie(vertex_draw_count, actual_vertex_count, vertex_base, indexed_draw_info) = set_vertex_buffer();
+
+	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
+	//Load program here since it is dependent on vertex state
+
+	load_program(vertex_base, actual_vertex_count);
+
+	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
+	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
+
+	if (manually_flush_ring_buffers)
+	{
+		m_attrib_ring_buffer->unmap();
+		m_index_ring_buffer->unmap();
+	}
+	else
+	{
+		//DMA push; not needed with MAP_COHERENT
+		//glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
 	}
 
 	//Check if depth buffer is bound and valid
@@ -470,20 +489,6 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
-	u32 vertex_draw_count = m_last_vertex_count;
-	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
-	bool skip_upload = false;
-
-	if (!is_probable_instanced_draw())
-	{
-		std::tie(vertex_draw_count, indexed_draw_info) = set_vertex_buffer();
-		m_last_vertex_count = vertex_draw_count;
-	}
-	else
-	{
-		skip_upload = true;
-	}
-
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
 	if (g_cfg.video.debug_output)
@@ -491,45 +496,31 @@ void GLGSRender::end()
 		m_program->validate();
 	}
 
-	if (manually_flush_ring_buffers)
+	if (indexed_draw_info)
 	{
-		m_attrib_ring_buffer->unmap();
-		m_index_ring_buffer->unmap();
-	}
+		const GLenum index_type = std::get<0>(indexed_draw_info.value());
+		const u32 index_offset = std::get<1>(indexed_draw_info.value());
 
-	if (indexed_draw_info || (skip_upload && m_last_draw_indexed == true))
-	{
 		if (__glcheck gl_state.enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 		{
-			GLenum index_type = (skip_upload)? m_last_ib_type: std::get<0>(indexed_draw_info.value());
 			__glcheck glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}
 
-		m_last_draw_indexed = true;
-
-		if (!skip_upload)
-		{
-			m_last_ib_type = std::get<0>(indexed_draw_info.value());
-			m_last_index_offset = std::get<1>(indexed_draw_info.value());
-		}
-
-		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, m_last_ib_type, (GLvoid *)(std::ptrdiff_t)m_last_index_offset);
+		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
 	}
 	else
 	{
-		draw_fbo.draw_arrays(rsx::method_registers.current_draw_clause.primitive, vertex_draw_count);
-		m_last_draw_indexed = false;
+		glDrawArrays(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), 0, vertex_draw_count);
 	}
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
-	m_scale_offset_buffer->notify();
+	m_vertex_state_buffer->notify();
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
 
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
-
 	m_draw_calls++;
 
 	if (zcull_task_queue.active_query &&
@@ -537,7 +528,6 @@ void GLGSRender::end()
 		zcull_task_queue.active_query->num_draws++;
 
 	synchronize_buffers();
-
 	rsx::thread::end();
 }
 
@@ -575,6 +565,9 @@ void GLGSRender::on_init_thread()
 	GSRender::on_init_thread();
 
 	gl::init();
+
+	//Enable adaptive vsync if vsync is requested
+	gl::set_swapinterval(g_cfg.video.vsync ? -1 : 0);
 
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
@@ -620,13 +613,21 @@ void GLGSRender::on_init_thread()
 
 	const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
-	for (int index = 0; index < rsx::limits::vertex_count; ++index)
+	//Array stream buffer
 	{
-		auto &tex = m_gl_attrib_buffers[index];
+		auto &tex = m_gl_persistent_stream_buffer;
 		tex.create();
 		tex.set_target(gl::texture::target::textureBuffer);
+		glActiveTexture(GL_TEXTURE0 + texture_index_offset);
+		tex.bind();
+	}
 
-		glActiveTexture(GL_TEXTURE0 + texture_index_offset + index);
+	//Register stream buffer
+	{
+		auto &tex = m_gl_volatile_stream_buffer;
+		tex.create();
+		tex.set_target(gl::texture::target::textureBuffer);
+		glActiveTexture(GL_TEXTURE0 + texture_index_offset + 1);
 		tex.bind();
 	}
 
@@ -645,7 +646,7 @@ void GLGSRender::on_init_thread()
 		m_attrib_ring_buffer.reset(new gl::legacy_ring_buffer());
 		m_transform_constants_buffer.reset(new gl::legacy_ring_buffer());
 		m_fragment_constants_buffer.reset(new gl::legacy_ring_buffer());
-		m_scale_offset_buffer.reset(new gl::legacy_ring_buffer());
+		m_vertex_state_buffer.reset(new gl::legacy_ring_buffer());
 		m_index_ring_buffer.reset(new gl::legacy_ring_buffer());
 	}
 	else
@@ -653,7 +654,7 @@ void GLGSRender::on_init_thread()
 		m_attrib_ring_buffer.reset(new gl::ring_buffer());
 		m_transform_constants_buffer.reset(new gl::ring_buffer());
 		m_fragment_constants_buffer.reset(new gl::ring_buffer());
-		m_scale_offset_buffer.reset(new gl::ring_buffer());
+		m_vertex_state_buffer.reset(new gl::ring_buffer());
 		m_index_ring_buffer.reset(new gl::ring_buffer());
 	}
 
@@ -661,7 +662,7 @@ void GLGSRender::on_init_thread()
 	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
 	m_transform_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_scale_offset_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
@@ -700,11 +701,13 @@ void GLGSRender::on_init_thread()
 	glEnable(GL_CLIP_DISTANCE0 + 5);
 
 	m_gl_texture_cache.initialize(this);
+
+	m_shaders_cache->load();
 }
 
 void GLGSRender::on_exit()
 {
-	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glFinish();
 
 	m_prog_buffer.clear();
 
@@ -728,10 +731,8 @@ void GLGSRender::on_exit()
 		m_vao.remove();
 	}
 
-	for (gl::texture &tex : m_gl_attrib_buffers)
-	{
-		tex.remove();
-	}
+	m_gl_persistent_stream_buffer.remove();
+	m_gl_volatile_stream_buffer.remove();
 
 	for (auto &sampler : m_gl_sampler_states)
 	{
@@ -753,9 +754,9 @@ void GLGSRender::on_exit()
 		m_fragment_constants_buffer->remove();
 	}
 
-	if (m_scale_offset_buffer)
+	if (m_vertex_state_buffer)
 	{
-		m_scale_offset_buffer->remove();
+		m_vertex_state_buffer->remove();
 	}
 
 	if (m_index_ring_buffer)
@@ -865,7 +866,7 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 	return false;
 }
 
-bool GLGSRender::load_program()
+bool GLGSRender::check_program_state()
 {
 	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture &tex, bool is_depth) -> std::tuple<bool, u16>
 	{
@@ -887,12 +888,19 @@ bool GLGSRender::load_program()
 		return std::make_tuple(true, surface->get_native_pitch());
 	};
 
-	RSXFragmentProgram fragment_program = get_current_fragment_program(rtt_lookup_func);
-	if (!fragment_program.valid) return false;
+	get_current_fragment_program(rtt_lookup_func);
 
-	RSXVertexProgram vertex_program = get_current_vertex_program();
+	if (current_fragment_program.valid == false)
+		return false;
 
-	u32 unnormalized_rtts = 0;
+	get_current_vertex_program();
+	return true;
+}
+
+void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
+{
+	auto &fragment_program = current_fragment_program;
+	auto &vertex_program = current_vertex_program;
 
 	for (auto &vtx : vertex_program.rsx_vertex_inputs)
 	{
@@ -906,12 +914,17 @@ bool GLGSRender::load_program()
 		}
 	}
 
-	auto old_program = m_program;
-	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
+	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
+	void* pipeline_properties = nullptr;
+
+	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
 	m_program->use();
 
+	if (m_prog_buffer.check_cache_missed())
+		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
+
 	u8 *buf;
-	u32 scale_offset_offset;
+	u32 vertex_state_offset;
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
@@ -920,17 +933,20 @@ bool GLGSRender::load_program()
 
 	if (manually_flush_ring_buffers)
 	{
-		m_scale_offset_buffer->reserve_storage_on_heap(512);
+		m_vertex_state_buffer->reserve_storage_on_heap(512);
 		m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_buffer_size, 256));
 		if (m_transform_constants_dirty) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 	}
 
-	// Scale offset
-	auto mapping = m_scale_offset_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
+	// Vertex state
+	auto mapping = m_vertex_state_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 	buf = static_cast<u8*>(mapping.first);
-	scale_offset_offset = mapping.second;
+	vertex_state_offset = mapping.second;
 	fill_scale_offset_data(buf, false);
-	fill_user_clip_data((char *)buf + 64);
+	fill_user_clip_data(buf + 64);
+	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
+	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
+	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 144));
 
 	if (m_transform_constants_dirty)
 	{
@@ -939,7 +955,6 @@ bool GLGSRender::load_program()
 		buf = static_cast<u8*>(mapping.first);
 		vertex_constants_offset = mapping.second;
 		fill_vertex_program_constants_data(buf);
-		*(reinterpret_cast<u32*>(buf + (468 * 4 * sizeof(float)))) = rsx::method_registers.transform_branch_bits();
 	}
 
 	// Fragment constants
@@ -952,21 +967,20 @@ bool GLGSRender::load_program()
 	// Fragment state
 	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);
 
-	m_scale_offset_buffer->bind_range(0, scale_offset_offset, 512);
+	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
 	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
 
 	if (m_transform_constants_dirty) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
 
 	if (manually_flush_ring_buffers)
 	{
-		m_scale_offset_buffer->unmap();
+		m_vertex_state_buffer->unmap();
 		m_fragment_constants_buffer->unmap();
 
 		if (m_transform_constants_dirty) m_transform_constants_buffer->unmap();
 	}
 
 	m_transform_constants_dirty = false;
-	return true;
 }
 
 void GLGSRender::flip(int buffer)
@@ -1127,6 +1141,12 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		return m_gl_texture_cache.flush_section(address);
 }
 
+void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
+{
+	if (m_gl_texture_cache.invalidate_range(address_base, size, false))
+		m_gl_texture_cache.purge_dirty();
+}
+
 void GLGSRender::do_local_task()
 {
 	std::lock_guard<std::mutex> lock(queue_guard);
@@ -1187,6 +1207,9 @@ bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 
 void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
 {
+	if (g_cfg.video.disable_zcull_queries)
+		return;
+
 	bool testing_enabled = zcull_pixel_cnt_enabled || zcull_stats_enabled;
 
 	if (framebuffer_swap)
@@ -1245,6 +1268,9 @@ void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
 
 void GLGSRender::clear_zcull_stats(u32 type)
 {
+	if (g_cfg.video.disable_zcull_queries)
+		return;
+
 	if (type == CELL_GCM_ZPASS_PIXEL_CNT)
 	{
 		if (zcull_task_queue.active_query &&
@@ -1265,6 +1291,9 @@ void GLGSRender::clear_zcull_stats(u32 type)
 
 u32 GLGSRender::get_zcull_stats(u32 type)
 {
+	if (g_cfg.video.disable_zcull_queries)
+		return 0u;
+
 	if (zcull_task_queue.active_query &&
 		zcull_task_queue.active_query->active &&
 		current_zcull_stats.zpass_pixel_cnt == 0)

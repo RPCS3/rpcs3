@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>7</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -487,13 +487,6 @@
              <widget class="QCheckBox" name="stretchToDisplayArea">
               <property name="text">
                <string>Stretch To Display Area</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="disableVertexCache">
-              <property name="text">
-               <string>Disable Vertex Cache</string>
               </property>
              </widget>
             </item>
@@ -1358,6 +1351,20 @@
              <widget class="QCheckBox" name="readColor">
               <property name="text">
                <string>Read Color Buffers</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="disableVertexCache">
+              <property name="text">
+               <string>Disable Vertex Cache</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="disableHwOcclusionQueries">
+              <property name="text">
+               <string>Disable ZCull Occlusion Queries</string>
               </property>
              </widget>
             </item>

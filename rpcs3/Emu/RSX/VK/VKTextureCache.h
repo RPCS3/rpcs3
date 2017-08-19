@@ -7,6 +7,8 @@
 #include "../rsx_utils.h"
 #include "Utilities/mutex.h"
 
+extern u64 get_system_time();
+
 namespace vk
 {
 	class cached_texture_section : public rsx::buffered_section
@@ -24,6 +26,8 @@ namespace vk
 		u16 native_pitch;
 		VkFence dma_fence = VK_NULL_HANDLE;
 		bool synchronized = false;
+		u64 sync_timestamp = 0;
+		u64 last_use_timestamp = 0;
 		vk::render_device* m_device = nullptr;
 		vk::image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
@@ -60,6 +64,8 @@ namespace vk
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new mangaged session is required
 			synchronized = false;
+			sync_timestamp = 0ull;
+			last_use_timestamp = get_system_time();
 		}
 
 		void release_dma_resources()
@@ -208,6 +214,7 @@ namespace vk
 			}
 
 			synchronized = true;
+			sync_timestamp = get_system_time();
 		}
 
 		template<typename T>
@@ -289,6 +296,16 @@ namespace vk
 		{
 			return synchronized;
 		}
+
+		bool sync_valid() const
+		{
+			return (sync_timestamp > last_use_timestamp);
+		}
+
+		u64 get_sync_timestamp() const
+		{
+			return sync_timestamp;
+		}
 	};
 
 	class texture_cache
@@ -322,8 +339,13 @@ namespace vk
 		std::pair<u32, u32> read_only_range = std::make_pair(0xFFFFFFFF, 0);
 		std::pair<u32, u32> no_access_range = std::make_pair(0xFFFFFFFF, 0);
 		
+		//Stuff that has been dereferenced goes into these
 		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
 		std::vector<std::unique_ptr<vk::image>> m_dirty_textures;
+
+		//Stuff that has been dereferenced twice goes here. Contents are evicted before new ones are added
+		std::vector<std::unique_ptr<vk::image_view>> m_image_views_to_purge;
+		std::vector<std::unique_ptr<vk::image>> m_images_to_purge;
 
 		// Keep track of cache misses to pre-emptively flush some addresses
 		struct framebuffer_memory_characteristics
@@ -334,6 +356,10 @@ namespace vk
 		};
 
 		std::unordered_map<u32, framebuffer_memory_characteristics> m_cache_miss_statistics_table;
+
+		//Memory usage
+		const s32 m_max_zombie_objects = 32; //Limit on how many texture objects to keep around for reuse after they are invalidated
+		s32 m_unreleased_texture_objects = 0; //Number of invalidated objects not yet freed from memory
 
 		cached_texture_section& find_cached_texture(u32 rsx_address, u32 rsx_size, bool confirm_dimensions = false, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
 		{
@@ -367,6 +393,8 @@ namespace vk
 						{
 							if (tex.exists())
 							{
+								m_unreleased_texture_objects--;
+
 								m_dirty_textures.push_back(std::move(tex.get_texture()));
 								m_temporary_image_view.push_back(std::move(tex.get_view()));
 							}
@@ -431,6 +459,11 @@ namespace vk
 
 			m_temporary_image_view.clear();
 			m_dirty_textures.clear();
+
+			m_image_views_to_purge.clear();
+			m_images_to_purge.clear();
+
+			m_unreleased_texture_objects = 0;
 		}
 
 		//Helpers
@@ -544,8 +577,8 @@ namespace vk
 			}
 
 			//First check if it exists as an rtt...
-			vk::image *rtt_texture = nullptr;
-			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+			vk::render_target *rtt_texture = nullptr;
+			if ((rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr)))
 			{
 				if (g_cfg.video.strict_rendering_mode)
 				{
@@ -559,13 +592,10 @@ namespace vk
 					}
 				}
 
-				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
-					rtt_texture->native_component_map,
-					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT)));
-				return m_temporary_image_view.back().get();
+				return rtt_texture->get_view();
 			}
 
-			if (rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+			if ((rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr)))
 			{
 				if (g_cfg.video.strict_rendering_mode)
 				{
@@ -576,10 +606,7 @@ namespace vk
 					}
 				}
 
-				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
-					rtt_texture->native_component_map,
-					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT)));
-				return m_temporary_image_view.back().get();
+				return rtt_texture->get_view();
 			}
 
 			u32 raw_format = tex.format();
@@ -708,11 +735,11 @@ namespace vk
 			return true;
 		}
 
-		std::tuple<bool, bool> address_is_flushable(u32 address)
+		std::tuple<bool, bool, u64> address_is_flushable(u32 address)
 		{
 			if (address < no_access_range.first ||
 				address > no_access_range.second)
-				return std::make_tuple(false, false);
+				return std::make_tuple(false, false, 0ull);
 
 			reader_lock lock(m_cache_mutex);
 
@@ -726,7 +753,7 @@ namespace vk
 					if (!tex.is_flushable()) continue;
 
 					if (tex.overlaps(address))
-						return std::make_tuple(true, tex.is_synchronized());
+						return std::make_tuple(true, tex.is_synchronized(), tex.get_sync_timestamp());
 				}
 			}
 
@@ -750,11 +777,11 @@ namespace vk
 					if (!tex.is_flushable()) continue;
 
 					if (tex.overlaps(address))
-						return std::make_tuple(true, tex.is_synchronized());
+						return std::make_tuple(true, tex.is_synchronized(), tex.get_sync_timestamp());
 				}
 			}
 
-			return std::make_tuple(false, false);
+			return std::make_tuple(false, false, 0ull);
 		}
 
 		bool flush_address(u32 address, vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
@@ -835,17 +862,23 @@ namespace vk
 
 		bool invalidate_address(u32 address)
 		{
-			if (address < read_only_range.first ||
-				address > read_only_range.second)
+			return invalidate_range(address, 4096 - (address & 4095));
+		}
+
+		bool invalidate_range(u32 address, u32 range, bool unprotect=true)
+		{
+			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
+
+			if (trampled_range.second < read_only_range.first ||
+				trampled_range.first > read_only_range.second)
 			{
 				//Doesnt fall in the read_only textures range; check render targets
-				if (address < no_access_range.first ||
-					address > no_access_range.second)
+				if (trampled_range.second < no_access_range.first ||
+					trampled_range.first > no_access_range.second)
 					return false;
 			}
 
 			bool response = false;
-			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 			std::unordered_map<u32, bool> processed_ranges;
 
 			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
@@ -863,8 +896,7 @@ namespace vk
 				const u32 lock_base = base & ~0xfff;
 				const u32 lock_limit = align(range_data.max_range + base, 4096);
 
-				if ((trampled_range.first >= lock_limit || lock_base >= trampled_range.second) &&
-					(lock_base > address || lock_limit <= address))
+				if (trampled_range.first >= lock_limit || lock_base >= trampled_range.second)
 				{
 					processed_ranges[base] = true;
 					continue;
@@ -890,8 +922,17 @@ namespace vk
 							range_reset = true;
 						}
 
-						tex.set_dirty(true);
-						tex.unprotect();
+						if (unprotect)
+						{
+							m_unreleased_texture_objects++;
+
+							tex.set_dirty(true);
+							tex.unprotect();
+						}
+						else
+						{
+							tex.discard();
+						}
 
 						range_data.valid_count--;
 						response = true;
@@ -910,10 +951,48 @@ namespace vk
 			return response;
 		}
 
-		void flush()
+		void flush(bool purge_dirty=false)
 		{
-			m_dirty_textures.clear();
-			m_temporary_image_view.clear();
+			if (purge_dirty || m_unreleased_texture_objects >= m_max_zombie_objects)
+			{
+				//Reclaims all graphics memory consumed by dirty textures
+				std::vector<u32> empty_addresses;
+				empty_addresses.resize(32);
+
+				for (auto &address_range : m_cache)
+				{
+					auto &range_data = address_range.second;
+
+					if (range_data.valid_count == 0)
+						empty_addresses.push_back(address_range.first);
+
+					for (auto &tex : range_data.data)
+					{
+						if (!tex.is_dirty())
+							continue;
+
+						if (tex.exists())
+						{
+							m_dirty_textures.push_back(std::move(tex.get_texture()));
+							m_temporary_image_view.push_back(std::move(tex.get_view()));
+						}
+
+						tex.release_dma_resources();
+					}
+				}
+
+				//Free descriptor objects as well
+				for (const auto &address : empty_addresses)
+				{
+					m_cache.erase(address);
+				}
+			}
+
+			m_image_views_to_purge.clear();
+			m_images_to_purge.clear();
+
+			m_image_views_to_purge = std::move(m_temporary_image_view);
+			m_images_to_purge = std::move(m_dirty_textures);
 		}
 
 		void record_cache_miss(cached_texture_section &tex)

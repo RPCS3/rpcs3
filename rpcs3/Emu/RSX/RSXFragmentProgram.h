@@ -237,7 +237,7 @@ struct RSXFragmentProgram
 
 	float texture_pitch_scale[16];
 	u8 textures_alpha_kill[16];
-	u32 textures_zfunc[16];
+	u8 textures_zfunc[16];
 
 	bool valid;
 
@@ -259,13 +259,7 @@ struct RSXFragmentProgram
 	}
 
 	RSXFragmentProgram()
-		: size(0)
-		, addr(0)
-		, offset(0)
-		, ctrl(0)
-		, unnormalized_coords(0)
-		, texture_dimensions(0)
-		, valid(false)
 	{
+		memset(this, 0, sizeof(RSXFragmentProgram));
 	}
 };

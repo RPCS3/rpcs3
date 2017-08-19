@@ -6,6 +6,7 @@
 #include "Utilities/VirtualMemory.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
+#include "Emu/RSX/GSRender.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -656,12 +657,16 @@ namespace vm
 		if (found != m_map.end())
 		{
 			const u32 size = found->second;
+			const auto rsxthr = fxm::get<GSRender>();
 
 			// Remove entry
 			m_map.erase(found);
 
 			// Unmap "real" memory pages
 			_page_unmap(addr, size);
+
+			// Notify rsx to invalidate range
+			if (rsxthr != nullptr) rsxthr->on_notify_memory_unmapped(addr, size);
 
 			// Write supplementary info if necessary
 			if (sup_out) *sup_out = m_sup[addr];
@@ -675,10 +680,8 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::used()
+	u32 block_t::imp_used(const vm::writer_lock&)
 	{
-		reader_lock lock;
-
 		u32 result = 0;
 
 		for (auto& entry : m_map)
@@ -687,6 +690,13 @@ namespace vm
 		}
 
 		return result;
+	}
+
+	u32 block_t::used()
+	{
+		writer_lock lock(0);
+
+		return imp_used(lock);
 	}
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
@@ -734,7 +744,7 @@ namespace vm
 		{
 			if (*it && (*it)->addr == addr)
 			{
-				if (must_be_empty && (!it->unique() || (*it)->used()))
+				if (must_be_empty && (!it->unique() || (*it)->imp_used(lock)))
 				{
 					return *it;
 				}

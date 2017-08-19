@@ -21,22 +21,28 @@ namespace vk
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
 	using null_vertex_cache = vertex_cache;
+
+	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
 }
 
 //Heap allocation sizes in MB
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 256
-#define VK_UBO_RING_BUFFER_SIZE_M 32
+#define VK_UBO_RING_BUFFER_SIZE_M 64
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
 #define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 128
 
 #define VK_MAX_ASYNC_CB_COUNT 64
+#define VK_MAX_ASYNC_FRAMES 2
+
+extern u64 get_system_time();
 
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
 	VkDevice m_device = VK_NULL_HANDLE;
 
-	bool pending = false;
+	std::atomic_bool pending = { false };
+	std::atomic<u64> last_sync = { 0 };
 
 	command_buffer_chunk()
 	{}
@@ -56,6 +62,11 @@ struct command_buffer_chunk: public vk::command_buffer
 
 		if (submit_fence != VK_NULL_HANDLE)
 			vkDestroyFence(m_device, submit_fence, nullptr);
+	}
+
+	void tag()
+	{
+		last_sync = get_system_time();
 	}
 
 	void reset()
@@ -122,44 +133,77 @@ private:
 public:
 	//vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
+	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
-	VKProgramBuffer m_prog_buffer;
+	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
 
 	vk::render_device *m_device;
 	vk::swap_chain* m_swap_chain;
-	//buffer
 
+	//buffer
 	vk::vk_data_heap m_uniform_buffer_ring_info;
 	vk::vk_data_heap m_index_buffer_ring_info;
 	vk::vk_data_heap m_texture_upload_buffer_ring_info;
+	std::unique_ptr<vk::buffer_view> m_null_buffer_view;
 
 	//Vulkan internals
-	u32 m_current_present_image = 0xFFFF;
-	VkSemaphore m_present_semaphore = nullptr;
-
 	vk::command_pool m_command_buffer_pool;
-	std::array<command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
-
-	command_buffer_chunk* m_current_command_buffer = nullptr;
-	command_buffer_chunk* m_swap_command_buffer = nullptr;
-
-	u32 m_current_cb_index = 0;
 
 	std::mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
 	vk::command_buffer m_secondary_command_buffer;
 
-	std::array<VkRenderPass, 120> m_render_passes;
-	VkDescriptorSetLayout descriptor_layouts;
-	VkDescriptorSet descriptor_sets;
-	VkPipelineLayout pipeline_layout;
-	vk::descriptor_pool descriptor_pool;
+	u32 m_current_cb_index = 0;
+	std::array<command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
+	command_buffer_chunk* m_current_command_buffer = nullptr;
 
-	std::vector<std::unique_ptr<vk::buffer_view> > m_buffer_view_to_clean;
-	std::vector<std::unique_ptr<vk::sampler> > m_sampler_to_clean;
-	std::list<std::unique_ptr<vk::framebuffer_holder> > m_framebuffer_to_clean;
+	std::array<VkRenderPass, 120> m_render_passes;
+
+	VkDescriptorSetLayout descriptor_layouts;
+	VkPipelineLayout pipeline_layout;
+
 	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
+
+	struct frame_context_t
+	{
+		VkSemaphore present_semaphore = VK_NULL_HANDLE;
+		VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+		vk::descriptor_pool descriptor_pool;
+		u32 used_descriptors = 0;
+
+		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
+		std::vector<std::unique_ptr<vk::sampler>> samplers_to_clean;
+
+		u32 present_image = UINT32_MAX;
+		command_buffer_chunk* swap_command_buffer = nullptr;
+
+		//Copy shareable information
+		void grab_resources(frame_context_t &other)
+		{
+			present_semaphore = other.present_semaphore;
+			descriptor_set = other.descriptor_set;
+			descriptor_pool = other.descriptor_pool;
+			used_descriptors = other.used_descriptors;
+		}
+
+		//Exchange storage (non-copyable)
+		void swap_storage(frame_context_t &other)
+		{
+			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
+			std::swap(samplers_to_clean, other.samplers_to_clean);
+		}
+	};
+
+	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
+	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
+	frame_context_t m_aux_frame_context;
+
+	//framebuffers are shared between frame contexts
+	std::list<std::unique_ptr<vk::framebuffer_holder>> m_framebuffers_to_clean;
+
+	u32 m_current_queue_index = 0;
+	frame_context_t* m_current_frame = nullptr;
 
 	u32 m_client_width = 0;
 	u32 m_client_height = 0;
@@ -183,7 +227,6 @@ private:
 	s64 m_draw_time = 0;
 	s64 m_flip_time = 0;
 
-	u32 m_used_descriptors = 0;
 	u8 m_draw_buffers_count = 0;
 
 	bool framebuffer_status_valid = false;
@@ -192,23 +235,19 @@ private:
 	rsx::gcm_framebuffer_info m_depth_surface_info;
 
 	bool m_flush_draw_buffers = false;
-	s32  m_last_flushable_cb = -1;
+	std::atomic<int> m_last_flushable_cb = {-1 };
 	
 	std::mutex m_flush_queue_mutex;
 	std::atomic<bool> m_flush_commands = { false };
 	std::atomic<int> m_queued_threads = { 0 };
 
 	std::thread::id rsx_thread;
-
-	VkPrimitiveTopology m_last_primititve_type;
-	VkIndexType m_last_ib_type;
-	VkDescriptorSet m_last_descriptor_set;
-	size_t m_last_ib_offset;
-	u32 m_last_vertex_count;
-	bool m_last_draw_indexed;
-	u32 m_last_instanced_cb_index;
+	std::atomic<u64> m_last_sync_event = { 0 };
 
 	bool render_pass_open = false;
+
+	//Vertex layout
+	rsx::vertex_input_layout m_vertex_layout;
 	
 #ifdef __linux__
 	Display *m_display_handle = nullptr;
@@ -228,17 +267,18 @@ private:
 
 	void flush_command_queue(bool hard_sync = false);
 	void queue_swap_request();
-	void process_swap_request();
+	void process_swap_request(frame_context_t *ctx, bool free_resources = false);
+	void advance_queued_frames();
+	void present(frame_context_t *ctx);
 
 	void begin_render_pass();
 	void close_render_pass();
 
-	void emit_geometry_instance(u32 instance_count);
-
-	/// returns primitive topology, is_indexed, index_count, offset in index buffer, index type
-	std::tuple<VkPrimitiveTopology, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
+	/// returns primitive topology, index_count, allocated_verts, vertex_base_index, (offset in index buffer, index type)
+	std::tuple<VkPrimitiveTopology, u32, u32, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
 public:
-	bool load_program(bool fast_update = false);
+	bool check_program_status();
+	void load_program(u32 vertex_count, u32 vertex_base);
 	void init_buffers(bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
@@ -256,4 +296,5 @@ protected:
 	void do_local_task() override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
+	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
 };

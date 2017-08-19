@@ -1,4 +1,4 @@
-﻿
+
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -79,7 +79,7 @@ void main_window::Init()
 	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(GUI::gl_iconSize).toInt());
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
-	ui->toolBar->addWidget(ui->searchBar);
+	ui->toolBar->addWidget(ui->mw_searchbar);
 
 	// for highdpi resize toolbar icons and height dynamically
 	// choose factors to mimic Gui-Design in main_window.ui
@@ -108,6 +108,29 @@ void main_window::Init()
 			"Your CPU does not support SSSE3 (with three S, not two).\n");
 
 		std::exit(EXIT_FAILURE);
+	}
+
+#ifdef BRANCH
+	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH))
+#elif _MSC_VER
+	fs::stat_t st;
+	if (!fs::stat(fs::get_config_dir() + "rpcs3.pdb", st) || st.is_directory || st.size < 1024 * 1024 * 100)
+#else
+	if (true)
+#endif
+	{
+		QMessageBox msg;
+		msg.setWindowTitle("Experimental Build Warning");
+		msg.setIcon(QMessageBox::Critical);
+		msg.setTextFormat(Qt::RichText);
+		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
+		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msg.setDefaultButton(QMessageBox::No);
+		
+		if (msg.exec() == QMessageBox::No)
+		{
+			std::exit(EXIT_SUCCESS);
+		}
 	}
 }
 
@@ -323,6 +346,16 @@ void main_window::InstallPkg(const QString& dropPath)
 		return;
 	}
 
+	//Check header
+	u32 pkg_signature;
+	pkg_f.seek(0);
+	pkg_f.read(pkg_signature);
+	if (pkg_signature != "\x7FPKG"_u32)
+	{
+		LOG_ERROR(LOADER, "PKG: %s is not a pkg file", fileName);
+		return;
+	}
+
 	// Get title ID
 	std::vector<char> title_id(9);
 	pkg_f.seek(55);
@@ -372,7 +405,7 @@ void main_window::InstallPkg(const QString& dropPath)
 		// Run PKG unpacking asynchronously
 		scope_thread worker("PKG Installer", [&]
 		{
-			if (pkg_install(pkg_f, local_path + '/', progress))
+			if (pkg_install(pkg_f, local_path + '/', progress, path))
 			{
 				progress = 1.;
 				return;
@@ -702,7 +735,7 @@ void main_window::RepaintToolBarIcons()
 		ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
 	}
 
-	ui->sizeSlider->setStyleSheet(QString("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
+	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
 }
 
@@ -991,6 +1024,18 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(m_rg_entries));
 }
 
+void main_window::RepaintToolbar()
+{
+	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+	ui->toolBar->setStyleSheet(styleSheet().append(
+		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+}
+
 void main_window::CreateActions()
 {
 	ui->exitAct->setShortcuts(QKeySequence::Quit);
@@ -1072,14 +1117,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
 			gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
-			QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-			ui->toolBar->setStyleSheet(QString(
-				"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-				"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-				"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-				"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-				.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-				.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+			RepaintToolbar();
 		});
 		dlg.exec();
 	};
@@ -1255,7 +1293,7 @@ void main_window::CreateConnects()
 			m_save_slider_pos = true; // actionTriggered happens before the value was changed
 		}
 	});
-	connect(ui->searchBar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
+	connect(ui->mw_searchbar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
 }
 
 void main_window::CreateDockWindows()
@@ -1368,14 +1406,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
-	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-	ui->toolBar->setStyleSheet(QString(
-		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+	RepaintToolbar();
 
 	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));

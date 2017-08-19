@@ -87,6 +87,8 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string& value)
 {
+	u64 max = -1;
+
 	for (u64 i = 0;; i++)
 	{
 		std::string var;
@@ -104,6 +106,8 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 		{
 			break;
 		}
+
+		max = i;
 	}
 
 	try
@@ -113,14 +117,22 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 		if (pos != value.size())
 		{
+			if (out) cfg.error("cfg::try_to_enum_value('%s'): unexpected characters (pos=%zu)", value, pos);
+			return false;
+		}
+
+		if (val > max)
+		{
+			if (out) cfg.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
 			return false;
 		}
 
 		if (out) *out = val;
 		return true;
 	}
-	catch (...)
+	catch (const std::exception& e)
 	{
+		if (out) cfg.error("cfg::try_to_enum_value('%s'): invalid enum value: %s", value, e.what());
 		return false;
 	}
 }

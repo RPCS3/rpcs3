@@ -8,7 +8,7 @@
 #include <QTimer>
 #include <QThread>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
+constexpr auto qstr = QString::fromStdString;
 
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
@@ -28,10 +28,11 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 		setIcon(appIcon);
 	}
 
-	g_cfg.misc.show_fps_in_title ? m_show_fps = true : m_show_fps = false;
+	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
 
 	resize(w, h);
 
+	setTitle(m_windowTitle);
 	setVisibility(Hidden);
 	create();
 
@@ -186,13 +187,6 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 			m_frames = 0;
 			fps_t.Start();
-		}
-	}
-	else
-	{
-		if (this->title() != m_windowTitle)
-		{
-			Emu.CallAfter([this, title = std::move(m_windowTitle)]() {setTitle(m_windowTitle); });
 		}
 	}
 }

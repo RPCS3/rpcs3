@@ -9,7 +9,7 @@
 
 std::string VKFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
-	return vk::getFloatTypeNameImpl(elementCount);
+	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
 std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
@@ -24,7 +24,7 @@ std::string VKFragmentDecompilerThread::saturate(const std::string & code)
 
 std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
 {
-	return vk::compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
@@ -135,7 +135,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			vk::glsl::program_input in;
 			in.location = location;
-			in.domain = vk::glsl::glsl_fragment_program;
+			in.domain = glsl::glsl_fragment_program;
 			in.name = PI.name;
 			in.type = vk::glsl::input_type_texture;
 
@@ -169,7 +169,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	vk::glsl::program_input in;
 	in.location = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
-	in.domain = vk::glsl::glsl_fragment_program;
+	in.domain = glsl::glsl_fragment_program;
 	in.name = "FragmentConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 
@@ -229,7 +229,7 @@ namespace vk
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	vk::insert_glsl_legacy_function(OS, vk::glsl::program_domain::glsl_fragment_program);
+	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program);
 
 	const std::set<std::string> output_values =
 	{
@@ -481,7 +481,7 @@ void VKFragmentProgram::Compile()
 	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram.spirv", fs::rewrite).write(shader);
 
 	std::vector<u32> spir_v;
-	if (!vk::compile_glsl_to_spv(shader, vk::glsl::glsl_fragment_program, spir_v))
+	if (!vk::compile_glsl_to_spv(shader, glsl::glsl_fragment_program, spir_v))
 		fmt::throw_exception("Failed to compile fragment shader" HERE);
 
 	//Create the object and compile
@@ -495,7 +495,7 @@ void VKFragmentProgram::Compile()
 	VkDevice dev = (VkDevice)*vk::get_current_renderer();
 	vkCreateShaderModule(dev, &fs_info, nullptr, &handle);
 
-	id = (u32)((u64)handle);
+	id = UINT32_MAX;
 }
 
 void VKFragmentProgram::Delete()

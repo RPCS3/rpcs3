@@ -2,7 +2,7 @@
 #include "instruction_editor_dialog.h"
 #include <QFontDatabase>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), static_cast<int>(_in.size())); }
+constexpr auto qstr = QString::fromStdString;
 
 instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: QDialog(parent)

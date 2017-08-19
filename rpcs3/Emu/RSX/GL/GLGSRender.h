@@ -19,6 +19,8 @@ namespace gl
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<GLenum>, GLenum>;
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<GLenum>;
 	using null_vertex_cache = vertex_cache;
+
+	using shader_cache = rsx::shaders_cache<void*, GLProgramBuffer>;
 }
 
 struct work_item
@@ -50,12 +52,13 @@ private:
 
 	gl::texture_cache m_gl_texture_cache;
 
-	gl::texture m_gl_attrib_buffers[rsx::limits::vertex_count];
+	gl::texture m_gl_persistent_stream_buffer;
+	gl::texture m_gl_volatile_stream_buffer;
 
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
 	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
 	std::unique_ptr<gl::ring_buffer> m_transform_constants_buffer;
-	std::unique_ptr<gl::ring_buffer> m_scale_offset_buffer;
+	std::unique_ptr<gl::ring_buffer> m_vertex_state_buffer;
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
 
 	u32 m_draw_calls = 0;
@@ -65,6 +68,7 @@ private:
 	s64 m_textures_upload_time = 0;
 
 	std::unique_ptr<gl::vertex_cache> m_vertex_cache;
+	std::unique_ptr<gl::shader_cache> m_shaders_cache;
 
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
@@ -82,11 +86,6 @@ private:
 	rsx::gcm_framebuffer_info depth_surface_info;
 
 	bool flush_draw_buffers = false;
-
-	bool m_last_draw_indexed;
-	GLenum m_last_ib_type;
-	size_t m_last_index_offset;
-	u32 m_last_vertex_count;
 
 public:
 	gl::fbo draw_fbo;
@@ -391,13 +390,16 @@ private:
 	gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
-	std::tuple<u32, std::optional<std::tuple<GLenum, u32> > > set_vertex_buffer();
+	std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32> > > set_vertex_buffer();
+	rsx::vertex_input_layout m_vertex_layout = {};
 
 	void clear_surface(u32 arg);
+	void init_buffers(bool skip_reading = false);
+
+	bool check_program_state();
+	void load_program(u32 vertex_base, u32 vertex_count);
 
 public:
-	bool load_program();
-	void init_buffers(bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
@@ -427,6 +429,7 @@ protected:
 	u32 get_zcull_stats(u32 type) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
+	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
 
 	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;

@@ -100,13 +100,14 @@ namespace rsx
 
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
-			if (!rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
+			const u32 index = method_registers.semaphore_offset_4097() >> 4;
+			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
+			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
+
+			if (index > 63 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
 			{
 				//
 			}
-
-			const u32 index = method_registers.semaphore_offset_4097() >> 4;
-
 			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = arg;
 			sema.semaphore[index].pad = 0;
@@ -115,12 +116,11 @@ namespace rsx
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
-			if (!rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
+			const u32 index = method_registers.semaphore_offset_4097() >> 4;
+			if (index > 63 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
 			{
 				//
 			}
-
-			const u32 index = method_registers.semaphore_offset_4097() >> 4;
 			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 
 			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
@@ -459,20 +459,6 @@ namespace rsx
 				rsx->m_textures_dirty[index] = true;
 			}
 		};
-
-		template<u32 index>
-		struct set_vertex_array_dirty_bit
-		{
-			static void impl(thread* rsx, u32, u32)
-			{
-				rsx->m_vertex_attribs_changed = true;
-			}
-		};
-
-		void set_idbuf_dirty_bit(thread* rsx, u32, u32)
-		{
-			rsx->m_index_buffer_changed = true;
-		}
 	}
 
 	namespace nv308a
@@ -1544,8 +1530,6 @@ namespace rsx
 		bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_BORDER_COLOR, 8, 16, nv4097::set_texture_dirty_bit>();
-		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nv4097::set_vertex_array_dirty_bit>();
-		bind<NV4097_SET_INDEX_ARRAY_ADDRESS, nv4097::set_idbuf_dirty_bit>();
 		bind<NV4097_SET_RENDER_ENABLE, nv4097::set_render_mode>();
 		bind<NV4097_SET_ZCULL_EN, nv4097::set_zcull_render_enable>();
 		bind<NV4097_SET_ZCULL_STATS_ENABLE, nv4097::set_zcull_stats_enable>();

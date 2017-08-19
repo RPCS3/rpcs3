@@ -126,6 +126,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_event.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_event_flag.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_fs.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_gamepad.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_interrupt.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_lwcond.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_lwmutex.cpp" />
@@ -403,7 +404,6 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="sys_gamepad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
@@ -422,6 +422,7 @@
     <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
+    <ClInclude Include="..\Utilities\hash.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
     <ClInclude Include="..\Utilities\mutex.h" />
@@ -531,6 +532,7 @@
     <ClInclude Include="Emu\Cell\lv2\sys_event.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_event_flag.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_fs.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_gamepad.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_interrupt.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_lwcond.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_lwmutex.h" />
@@ -638,6 +640,7 @@
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
     <ClInclude Include="Emu\Memory\wait_engine.h" />
+    <ClInclude Include="Emu\RSX\Common\GLSLCommon.h" />
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\gcm_enums.h" />
     <ClInclude Include="Emu\RSX\gcm_printing.h" />
@@ -690,7 +693,6 @@
     <ClInclude Include="restore_new.h" />
     <ClInclude Include="rpcs3_version.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="sys_gamepad.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\3rdparty\libpng\projects\vstudio\libpng\libpng.vcxproj">

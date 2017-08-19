@@ -82,6 +82,7 @@ namespace gl
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
+		bool vendor_INTEL = false;
 
 		void initialize()
 		{
@@ -154,8 +155,17 @@ namespace gl
 			}
 
 			//Workaround for intel drivers which have terrible capability reporting
-			std::string vendor_string = (const char*)glGetString(GL_VENDOR);
-			std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
+			std::string vendor_string;
+			if (const char* raw_string = (const char*)glGetString(GL_VENDOR))
+			{
+				vendor_string = raw_string;
+				std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
+			}
+			else
+			{
+				LOG_ERROR(RSX, "Failed to get vendor string from driver. Are we missing a context?");
+				vendor_string = "intel"; //lowest acceptable value
+			}
 
 			if (vendor_string.find("intel") != std::string::npos)
 			{
@@ -164,6 +174,8 @@ namespace gl
 
 				glGetIntegerv(GL_MAJOR_VERSION, &version_major);
 				glGetIntegerv(GL_MINOR_VERSION, &version_minor);
+
+				vendor_INTEL = true;
 
 				//Texture buffers moved into core at GL 3.3
 				if (version_major > 3 || (version_major == 3 && version_minor >= 3))
@@ -826,7 +838,7 @@ namespace gl
 			buffer::create();
 
 			glBindBuffer((GLenum)m_target, m_id);
-			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_CLIENT_STORAGE_BIT | GL_MAP_COHERENT_BIT);
 			m_memory_mapping = glMapBufferRange((GLenum)m_target, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 			verify(HERE), m_memory_mapping != nullptr;
@@ -2034,12 +2046,6 @@ namespace gl
 
 	namespace glsl
 	{
-		enum program_domain
-		{
-			glsl_vertex_program = 0,
-			glsl_fragment_program = 1
-		};
-
 		class compilation_exception : public exception
 		{
 		public:
@@ -2538,7 +2544,7 @@ namespace gl
 						error_msg = buf.get();
 					}
 
-					throw validation_exception(error_msg);
+					LOG_ERROR(RSX, "Validation failed: %s", error_msg.c_str());
 				}
 			}
 

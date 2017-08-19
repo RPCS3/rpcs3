@@ -44,7 +44,7 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <widget class="QLineEdit" name="searchBar">
+   <widget class="QLineEdit" name="mw_searchbar">
     <property name="geometry">
      <rect>
       <x>480</x>
@@ -68,10 +68,6 @@
     </property>
     <property name="focusPolicy">
      <enum>Qt::ClickFocus</enum>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color:#5e5e5e;
-margin-left:14px;</string>
     </property>
     <property name="frame">
      <bool>false</bool>
@@ -294,12 +290,6 @@ margin-left:14px;</string>
    </property>
    <property name="windowTitle">
     <string>Show tool bar</string>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QToolBar { background-color: rgba(227, 227, 227, 255); }
-QToolBar::separator {background-color: #D1D1D1; width: 1px; margin-top: 2px; margin-bottom: 2px;}
-QSlider { background-color: rgba(227, 227, 227, 255); }
-QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
    </property>
    <property name="movable">
     <bool>false</bool>

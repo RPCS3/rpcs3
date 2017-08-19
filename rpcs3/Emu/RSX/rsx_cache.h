@@ -1,7 +1,11 @@
 #pragma once
 #include "Utilities/VirtualMemory.h"
+#include "Utilities/hash.h"
 #include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
+#include "Common/ProgramStateCache.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/System.h"
 
 namespace rsx
 {
@@ -115,6 +119,13 @@ namespace rsx
 			locked = false;
 		}
 
+		void discard()
+		{
+			protection = utils::protection::rw;
+			dirty = true;
+			locked = false;
+		}
+
 		bool overlaps(std::pair<u32, u32> range)
 		{
 			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
@@ -192,6 +203,261 @@ namespace rsx
 			u32 max = std::max(current_min_max.second, locked_address_base + locked_address_range);
 
 			return std::make_pair(min, max);
+		}
+	};
+
+	template <typename pipeline_storage_type, typename backend_storage>
+	class shaders_cache
+	{
+		struct pipeline_data
+		{
+			u64 vertex_program_hash;
+			u64 fragment_program_hash;
+			u64 pipeline_storage_hash;
+
+			u32 vp_ctrl;
+
+			u32 fp_ctrl;
+			u32 fp_texture_dimensions;
+			u16 fp_unnormalized_coords;
+			u16 fp_height;
+			u16 fp_pixel_layout;
+			u16 fp_lighting_flags;
+			u16 fp_shadow_textures;
+			u16 fp_redirected_textures;
+			u16 fp_alphakill_mask;
+			u64 fp_zfunc_mask;
+
+			pipeline_storage_type pipeline_properties;
+		};
+
+		std::string version_prefix;
+		std::string root_path;
+		std::string pipeline_class_name;
+		std::unordered_map<u64, std::vector<u8>> fragment_program_data;
+
+		backend_storage& m_storage;
+
+	public:
+
+		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
+			: version_prefix(version_prefix_str)
+			, pipeline_class_name(pipeline_class)
+			, m_storage(storage)
+		{
+			root_path = Emu.GetCachePath() + "/shaders_cache";
+		}
+
+		template <typename... Args>
+		void load(Args&& ...args)
+		{
+			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name;
+
+			if (!fs::is_dir(directory_path))
+			{
+				fs::create_path(directory_path);
+				fs::create_path(root_path + "/raw");
+
+				return;
+			}
+
+			fs::dir root = fs::dir(directory_path);
+			fs::dir_entry tmp;
+
+			u32 entry_count = 0;
+			for (auto It = root.begin(); It != root.end(); ++It, entry_count++);
+
+			if (entry_count <= 2)
+				return;
+
+			entry_count -= 2;
+			f32 delta = 100.f / entry_count;
+			f32 tally = 0.f;
+
+			root.rewind();
+
+			// Progress dialog
+			auto dlg = Emu.GetCallbacks().get_msg_dialog();
+			dlg->type.se_normal = true;
+			dlg->type.bg_invisible = true;
+			dlg->type.progress_bar_count = 1;
+			dlg->on_close = [](s32 status)
+			{
+				Emu.CallAfter([]()
+				{
+					Emu.Stop();
+				});
+			};
+
+			Emu.CallAfter([=]()
+			{
+				dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
+			});
+
+			u32 processed = 0;
+			while (root.read(tmp))
+			{
+				if (tmp.name == "." || tmp.name == "..")
+					continue;
+
+				std::vector<u8> bytes;
+				fs::file f(directory_path + "/" + tmp.name);
+
+				processed++;
+				Emu.CallAfter([=]()
+				{
+					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+				});
+
+				if (f.size() != sizeof(pipeline_data))
+				{
+					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
+					continue;
+				}
+
+				f.read<u8>(bytes, f.size());
+				auto unpacked = unpack(*(pipeline_data*)bytes.data());
+				m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
+
+				tally += delta;
+				if (tally > 1.f)
+				{
+					u32 value = (u32)tally;
+					Emu.CallAfter([=]()
+					{
+						dlg->ProgressBarInc(0, value);
+					});
+
+					tally -= (f32)value;
+				}
+			}
+		}
+
+		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
+		{
+			pipeline_data data = pack(pipeline, vp, fp);
+			std::string fp_name = root_path + "/raw/" + fmt::format("%llX.fp", data.fragment_program_hash);
+			std::string vp_name = root_path + "/raw/" + fmt::format("%llX.vp", data.vertex_program_hash);
+
+			if (!fs::is_file(fp_name))
+			{
+				const auto size = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(fp.addr);
+				fs::file(fp_name, fs::rewrite).write(fp.addr, size);
+			}
+
+			if (!fs::is_file(vp_name))
+			{
+				fs::file(vp_name, fs::rewrite).write<u32>(vp.data);
+			}
+
+			u64 state_hash = 0;
+			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl);
+			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
+			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_unnormalized_coords);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_pixel_layout);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_lighting_flags);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_shadow_textures);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_redirected_textures);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_alphakill_mask);
+			state_hash ^= rpcs3::hash_base<u64>(data.fp_zfunc_mask);
+
+			std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
+			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "-" + pipeline_file_name;
+			fs::file(pipeline_path, fs::rewrite).write(&data, sizeof(pipeline_data));
+		}
+
+		RSXVertexProgram load_vp_raw(u64 program_hash)
+		{
+			std::vector<u32> data;
+			std::string filename = fmt::format("%llX.vp", program_hash);
+
+			fs::file f(root_path + "/raw/" + filename);
+			f.read<u32>(data, f.size() / sizeof(u32));
+
+			RSXVertexProgram vp = {};
+			vp.data = data;
+			vp.skip_vertex_input_check = true;
+
+			return vp;
+		}
+
+		RSXFragmentProgram load_fp_raw(u64 program_hash)
+		{
+			std::vector<u8> data;
+			std::string filename = fmt::format("%llX.fp", program_hash);
+
+			fs::file f(root_path + "/raw/" + filename);
+			f.read<u8>(data, f.size());
+
+			RSXFragmentProgram fp = {};
+			fragment_program_data[program_hash] = data;
+			fp.addr = fragment_program_data[program_hash].data();
+
+			return fp;
+		}
+
+		std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> unpack(pipeline_data &data)
+		{
+			RSXVertexProgram vp = load_vp_raw(data.vertex_program_hash);
+			RSXFragmentProgram fp = load_fp_raw(data.fragment_program_hash);
+			pipeline_storage_type pipeline = data.pipeline_properties;
+
+			vp.output_mask = data.vp_ctrl;
+
+			fp.ctrl = data.fp_ctrl;
+			fp.texture_dimensions = data.fp_texture_dimensions;
+			fp.unnormalized_coords = data.fp_unnormalized_coords;
+			fp.height = data.fp_height;
+			fp.pixel_center_mode = (rsx::window_pixel_center)(data.fp_pixel_layout & 0x3);
+			fp.origin_mode = (rsx::window_origin)((data.fp_pixel_layout >> 2) & 0x1);
+			fp.alpha_func = (rsx::comparison_function)((data.fp_pixel_layout >> 3) & 0xF);
+			fp.fog_equation = (rsx::fog_mode)((data.fp_pixel_layout >> 7) & 0xF);
+			fp.front_back_color_enabled = (data.fp_lighting_flags & 0x1) != 0;
+			fp.back_color_diffuse_output = ((data.fp_lighting_flags >> 1) & 0x1) != 0;
+			fp.back_color_specular_output = ((data.fp_lighting_flags >> 2) & 0x1) != 0;
+			fp.front_color_diffuse_output = ((data.fp_lighting_flags >> 3) & 0x1) != 0;
+			fp.front_color_specular_output = ((data.fp_lighting_flags >> 4) & 0x1) != 0;
+			fp.shadow_textures = data.fp_shadow_textures;
+			fp.redirected_textures = data.fp_redirected_textures;
+
+			for (u8 index = 0; index < 16; ++index)
+			{
+				fp.textures_alpha_kill[index] = (data.fp_alphakill_mask & (1 << index))? 1: 0;
+				fp.textures_zfunc[index] = (data.fp_zfunc_mask >> (index << 2)) & 0xF;
+			}
+
+			return std::make_tuple(pipeline, vp, fp);
+		}
+
+		pipeline_data pack(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
+		{
+			pipeline_data data_block = {};
+			data_block.pipeline_properties = pipeline;
+			data_block.vertex_program_hash = m_storage.get_hash(vp);
+			data_block.fragment_program_hash = m_storage.get_hash(fp);
+			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
+
+			data_block.vp_ctrl = vp.output_mask;
+
+			data_block.fp_ctrl = fp.ctrl;
+			data_block.fp_texture_dimensions = fp.texture_dimensions;
+			data_block.fp_unnormalized_coords = fp.unnormalized_coords;
+			data_block.fp_height = fp.height;
+			data_block.fp_pixel_layout = (u16)fp.pixel_center_mode | (u16)fp.origin_mode << 2 | (u16)fp.alpha_func << 3;
+			data_block.fp_lighting_flags = (u16)fp.front_back_color_enabled | (u16)fp.back_color_diffuse_output << 1 |
+				(u16)fp.back_color_specular_output << 2 | (u16)fp.front_color_diffuse_output << 3 | (u16)fp.front_color_specular_output << 4;
+			data_block.fp_shadow_textures = fp.shadow_textures;
+			data_block.fp_redirected_textures = fp.redirected_textures;
+
+			for (u8 index = 0; index < 16; ++index)
+			{
+				data_block.fp_alphakill_mask |= (u32)(fp.textures_alpha_kill[index] & 0x1) << index;
+				data_block.fp_zfunc_mask |= (u32)(fp.textures_zfunc[index] & 0xF) << (index << 2);
+			}
+
+			return data_block;
 		}
 	};
 

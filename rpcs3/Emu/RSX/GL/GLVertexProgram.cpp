@@ -3,13 +3,14 @@
 
 #include "GLVertexProgram.h"
 #include "GLCommonDecompiler.h"
+#include "GLHelpers.h"
 #include "../GCM.h"
 
 #include <algorithm>
 
 std::string GLVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 {
-	return getFloatTypeNameImpl(elementCount);
+	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
 std::string GLVertexDecompilerThread::getIntTypeName(size_t elementCount)
@@ -25,63 +26,27 @@ std::string GLVertexDecompilerThread::getFunction(FUNCTION f)
 
 std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
 {
-	return compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
 	OS << "#version 430\n\n";
-	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
+	OS << "layout(std140, binding = 0) uniform VertexContextBuffer\n";
 	OS << "{\n";
-	OS << "	mat4 scaleOffsetMat;\n";
-	OS << "	ivec4 userClipEnabled[2];\n";
-	OS << "	vec4 userClipFactor[2];\n";
-	OS << "};\n";
+	OS << "	mat4 scale_offset_mat;\n";
+	OS << "	ivec4 user_clip_enabled[2];\n";
+	OS << "	vec4 user_clip_factor[2];\n";
+	OS << "	uint transform_branch_bits;\n";
+	OS << "	uint vertex_base_index;\n";
+	OS << "	ivec4 input_attributes[16];\n";
+	OS << "};\n\n";
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	std::vector<std::tuple<size_t, std::string>> input_data;
-	for (const ParamType &PT : inputs)
-	{
-		for (const ParamItem &PI : PT.items)
-		{
-			input_data.push_back(std::make_tuple(PI.location, PI.name));
-		}
-	}
-
-	/**
-	 * Its is important that the locations are in the order that vertex attributes are expected.
-	 * If order is not adhered to, channels may be swapped leading to corruption
-	*/
-
-	std::sort(input_data.begin(), input_data.end());
-
-	int location = 1;
-	for (const std::tuple<size_t, std::string>& item : input_data)
-	{
-		for (const ParamType &PT : inputs)
-		{
-			for (const ParamItem &PI : PT.items)
-			{
-				if (PI.name == std::get<1>(item))
-				{
-					bool is_int = false;
-					for (const auto &attrib : rsx_vertex_program.rsx_vertex_inputs)
-					{
-						if (attrib.location == std::get<0>(item))
-						{
-							if (attrib.int_type || attrib.flags & GL_VP_SINT_MASK) is_int = true;
-							break;
-						}
-					}
-
-					std::string samplerType = is_int ? "isamplerBuffer" : "samplerBuffer";
-					OS << "layout(location=" << location++ << ")" << "	uniform " << samplerType << " " << PI.name << "_buffer;\n";
-				}
-			}
-		}
-	}
+	OS << "layout(location=0) uniform usamplerBuffer persistent_input_stream;\n";    //Data stream with persistent vertex data (cacheable)
+	OS << "layout(location=1) uniform usamplerBuffer volatile_input_stream;\n";      //Data stream with per-draw data (registers and immediate draw data)
 }
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
@@ -89,7 +54,6 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer\n";
 	OS << "{\n";
 	OS << "	vec4 vc[468];\n";
-	OS << "	uint transform_branch_bits;\n";
 	OS << "};\n\n";
 
 	for (const ParamType &PT: constants)
@@ -115,13 +79,13 @@ static const vertex_reg_info reg_table[] =
 	//Fog output shares a data source register with clip planes 0-2 so only declare when specified
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	//Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * userClipFactor[0].x", false, "userClipEnabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * userClipFactor[0].y", false, "userClipEnabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * userClipFactor[0].z", false, "userClipEnabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * userClipFactor[0].w", false, "userClipEnabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * userClipFactor[1].x", false, "userClipEnabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * userClipFactor[1].y", false, "userClipEnabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "tc0", true, "dst_reg7", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
 	{ "tc1", true, "dst_reg8", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
 	{ "tc2", true, "dst_reg9", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
@@ -186,77 +150,10 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 		OS << "out vec4 front_spec_color;\n";
 }
 
-namespace
-{
-	std::string expand_to_vec4(std::string value, u8 vector_size)
-	{
-		switch (vector_size)
-		{
-		case 2:
-			return "vec4(" + value + ", " + value + ", 1., 1.)";
-		case 3:
-			return "vec4(" + value + ", " + value + ", " + value + ", 1.)";
-		default:
-			LOG_ERROR(RSX, "invalid vector size %d" HERE, vector_size);
-		case 1:
-		case 4:
-			//Expand not required
-			//In case its one component, read is swizzled as .xxxx (GOW1 loading screen)
-			return value;
-		}
-	}
-
-	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
-	{
-		for (const auto &real_input : inputs)
-		{
-			if (real_input.location != PI.location)
-				continue;
-
-			std::string vecType = "	vec4 ";
-			if (real_input.int_type)
-				vecType = "	ivec4 ";
-
-			std::string scale = "";
-			if (real_input.flags & GL_VP_SINT_MASK)
-			{
-				if (real_input.flags & GL_VP_ATTRIB_S16_INT)
-					scale = " / " + expand_to_vec4("32767.", real_input.size);
-				else
-					scale = " / " + expand_to_vec4("2147483647.", real_input.size);
-			}
-
-			if (!real_input.is_array)
-			{
-				OS << vecType << PI.name << " = texelFetch(" << PI.name << "_buffer, 0)" << scale << ";\n";
-				return;
-			}
-
-			if (real_input.frequency > 1)
-			{
-				if (real_input.is_modulo)
-				{
-					OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ")" << scale << ";\n";
-					return;
-				}
-
-				OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ")" << scale << ";\n";
-				return;
-			}
-
-			OS << vecType << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID)" << scale << ";\n";
-			return;
-		}
-
-		LOG_WARNING(RSX, "Vertex input %s does not have a matching vertex_input declaration", PI.name.c_str());
-
-		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);\n";
-	}
-}
-
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS, gl::glsl::glsl_vertex_program);
+	insert_glsl_legacy_function(OS, glsl::glsl_vertex_program);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, gl::get_driver_caps().vendor_INTEL==false);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -293,7 +190,9 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
-			add_input(OS, PI, rsx_vertex_program.rsx_vertex_inputs);
+		{
+			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
+		}
 	}
 
 	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
@@ -401,7 +300,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
 			OS << "	front_spec_color = dst_reg2;\n";
 
-	OS << "	gl_Position = gl_Position * scaleOffsetMat;\n";
+	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
 
 	//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:
 	//ln = (clip * 2) - 1 to fully utilize the 0-1 range of the depth buffer

@@ -23,12 +23,6 @@
    <iconset resource="../resources.qrc">
     <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
   </property>
-  <property name="autoFillBackground">
-   <bool>false</bool>
-  </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <property name="leftMargin">
     <number>0</number>
@@ -43,10 +37,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget_3" native="true">
-     <property name="styleSheet">
-      <string notr="true">background-color: rgb(255, 255, 255);</string>
-     </property>
+    <widget class="QWidget" name="header_section" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_5">
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -123,9 +114,6 @@
               <bold>false</bold>
              </font>
             </property>
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
             <property name="text">
              <string>RPCS3 PlayStation 3 Emulator</string>
             </property>
@@ -188,9 +176,6 @@
          <kerning>true</kerning>
         </font>
        </property>
-       <property name="styleSheet">
-        <string notr="true"/>
-       </property>
        <property name="text">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;To get started, you must first install the &lt;span style=&quot; font-weight:600;&quot;&gt;PlayStation 3 firmware&lt;/span&gt;.&lt;br/&gt;Please refer to the &lt;a href=&quot;https://rpcs3.net/quickstart&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Quickstart&lt;/span&gt;&lt;/a&gt; guide found on the official website for further information.&lt;br/&gt;If you have any further questions, please refer to the &lt;a href=&quot;https://rpcs3.net/faq&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;FAQ&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Otherwise, further discussion and support can be found on the &lt;a href=&quot;http://www.emunewz.net/forum/forumdisplay.php?fid=172&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Forums&lt;/span&gt;&lt;/a&gt; or on our &lt;a href=&quot;https://discord.me/RPCS3&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Discord&lt;/span&gt;&lt;/a&gt; server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
@@ -217,9 +202,6 @@
          <italic>false</italic>
          <bold>false</bold>
         </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true"/>
        </property>
        <property name="text">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600; color:#ff0000;&quot;&gt;RPCS3 does not condone piracy. You must dump your own games.&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -268,9 +250,6 @@
        </item>
        <item alignment="Qt::AlignLeft">
         <widget class="QCheckBox" name="i_have_read">
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
          <property name="text">
           <string>I have read the Quickstart guide</string>
          </property>
@@ -291,9 +270,6 @@
        </item>
        <item alignment="Qt::AlignLeft">
         <widget class="QCheckBox" name="do_not_show">
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
          <property name="text">
           <string>Do not show again</string>
          </property>

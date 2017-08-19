@@ -17,6 +17,7 @@
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
+#include "../Common/GLSLCommon.h"
 #include "../rsx_cache.h"
 
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
@@ -852,12 +853,12 @@ namespace vk
 		{
 			VkSwapchainKHR old_swapchain = m_vk_swapchain;
 			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
-			
+
 			VkSurfaceCapabilitiesKHR surface_descriptors = {};
 			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
 
 			VkExtent2D swapchainExtent;
-			
+
 			if (surface_descriptors.currentExtent.width == (uint32_t)-1)
 			{
 				swapchainExtent.width = width;
@@ -877,7 +878,7 @@ namespace vk
 			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
 
 			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-			
+
 			for (VkPresentModeKHR mode : present_modes)
 			{
 				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
@@ -892,13 +893,19 @@ namespace vk
 					(mode == VK_PRESENT_MODE_IMMEDIATE_KHR || mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR))
 					swapchain_present_mode = mode;
 			}
-			
-			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 
-			if ((surface_descriptors.maxImageCount > 0) && (nb_swap_images > surface_descriptors.maxImageCount))
+			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
+			if (surface_descriptors.maxImageCount > 0)
 			{
-				// Application must settle for fewer images than desired:
-				nb_swap_images = surface_descriptors.maxImageCount;
+				//Try to negotiate for a triple buffer setup
+				//In cases where the front-buffer isnt available for present, its better to have a spare surface
+				nb_swap_images = std::max(surface_descriptors.minImageCount + 2u, 3u);
+
+				if (nb_swap_images > surface_descriptors.maxImageCount)
+				{
+					// Application must settle for fewer images than desired:
+					nb_swap_images = surface_descriptors.maxImageCount;
+				}
 			}
 
 			VkSurfaceTransformFlagBitsKHR pre_transform = surface_descriptors.currentTransform;
@@ -912,7 +919,7 @@ namespace vk
 			swap_info.imageFormat = m_surface_format;
 			swap_info.imageColorSpace = m_color_space;
 
-			swap_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			swap_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			swap_info.preTransform = pre_transform;
 			swap_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 			swap_info.imageArrayLayers = 1;
@@ -927,7 +934,17 @@ namespace vk
 			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
 
 			if (old_swapchain)
+			{
+				if (m_swap_images.size())
+				{
+					for (auto &img : m_swap_images)
+						img.discard(dev);
+
+					m_swap_images.resize(0);
+				}
+
 				destroySwapchainKHR(dev, old_swapchain, nullptr);
+			}
 
 			nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
@@ -1074,7 +1091,7 @@ namespace vk
 			m_instance = nullptr;
 
 			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
-			loader_exists = (vkCreateInstance != nullptr);
+			loader_exists = (&vkCreateInstance != nullptr);
 		}
 
 		~context()
@@ -1374,12 +1391,6 @@ namespace vk
 
 	namespace glsl
 	{
-		enum program_domain
-		{
-			glsl_vertex_program = 0,
-			glsl_fragment_program = 1
-		};
-
 		enum program_input_type
 		{
 			input_type_uniform_buffer = 0,
@@ -1404,7 +1415,7 @@ namespace vk
 
 		struct program_input
 		{
-			program_domain domain;
+			::glsl::program_domain domain;
 			program_input_type type;
 			
 			bound_buffer as_buffer;
@@ -1428,7 +1439,7 @@ namespace vk
 			program(program&& other) = delete;
 			~program();
 
-			program& load_uniforms(program_domain domain, const std::vector<program_input>& inputs);
+			program& load_uniforms(::glsl::program_domain domain, const std::vector<program_input>& inputs);
 
 			bool has_uniform(std::string uniform_name);
 			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);

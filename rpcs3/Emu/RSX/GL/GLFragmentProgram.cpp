@@ -9,7 +9,7 @@
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
-	return getFloatTypeNameImpl(elementCount);
+	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
 std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
@@ -24,7 +24,7 @@ std::string GLFragmentDecompilerThread::saturate(const std::string & code)
 
 std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
 {
-	return compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
@@ -221,7 +221,7 @@ namespace
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS, gl::glsl::glsl_fragment_program);
+	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program);
 
 	const std::set<std::string> output_values =
 	{

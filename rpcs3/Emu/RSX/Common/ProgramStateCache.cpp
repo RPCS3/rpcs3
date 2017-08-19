@@ -28,7 +28,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 		return false;
 	if (binary1.data.size() != binary2.data.size())
 		return false;
-	if (binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
+	if (!binary1.skip_vertex_input_check && !binary2.skip_vertex_input_check && binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
 		return false;
 
 	const qword *instBuffer1 = (const qword*)binary1.data.data();
@@ -109,9 +109,18 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 	if (binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
 		binary1.height != binary2.height || binary1.origin_mode != binary2.origin_mode || binary1.pixel_center_mode != binary2.pixel_center_mode ||
 		binary1.back_color_diffuse_output != binary2.back_color_diffuse_output || binary1.back_color_specular_output != binary2.back_color_specular_output ||
-		binary1.front_back_color_enabled != binary2.front_back_color_enabled || binary1.alpha_func != binary2.alpha_func || 
+		binary1.front_back_color_enabled != binary2.front_back_color_enabled || binary1.alpha_func != binary2.alpha_func || binary1.fog_equation != binary2.fog_equation ||
 		binary1.shadow_textures != binary2.shadow_textures || binary1.redirected_textures != binary2.redirected_textures)
 		return false;
+
+	for (u8 index = 0; index < 16; ++index)
+	{
+		if (binary1.textures_alpha_kill[index] != binary2.textures_alpha_kill[index])
+			return false;
+
+		if (binary1.textures_zfunc[index] != binary2.textures_zfunc[index])
+			return false;
+	}
 
 	const qword *instBuffer1 = (const qword*)binary1.addr;
 	const qword *instBuffer2 = (const qword*)binary2.addr;
