@@ -9,7 +9,7 @@
 #include <QDesktopWidget>
 
 #include "vfs_dialog.h"
-#include "save_data_list_dialog.h"
+#include "save_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -70,8 +70,6 @@ void main_window::Init()
 {
 	ui->setupUi(this);
 
-	// Load Icons: This needs to happen before any actions or buttons are created
-	RepaintToolBarIcons();
 	appIcon = QIcon(":/rpcs3.ico");
 
 	// hide utilities from the average user
@@ -103,6 +101,8 @@ void main_window::Init()
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
+	RepaintToolBarIcons();
+	gameListFrame->RepaintToolBarIcons();
 	
 	if (!utils::has_ssse3())
 	{
@@ -119,7 +119,7 @@ void main_window::Init()
 	fs::stat_t st;
 	if (!fs::stat(fs::get_config_dir() + "rpcs3.pdb", st) || st.is_directory || st.size < 1024 * 1024 * 100)
 #else
-	if (true)
+	if (false)
 #endif
 	{
 		LOG_WARNING(GENERAL, "Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
@@ -700,7 +700,16 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintToolBarIcons()
 {
-	QColor newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+	QColor newColor;
+
+	if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
+	{
+		newColor = GUI::get_Label_Color("toolbar_icon_color");
+	}
+	else
+	{
+		newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+	}
 
 	icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
 	icon_pause = gui_settings::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
@@ -1032,14 +1041,23 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 
 void main_window::RepaintToolbar()
 {
-	QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
-	ui->toolBar->setStyleSheet(styleSheet().append(
-		"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-		"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-		"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-		"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-		.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-		.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20));
+	if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
+	{
+		ui->toolBar->setStyleSheet(GUI::stylesheet);
+	}
+	else
+	{
+		QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+
+		ui->toolBar->setStyleSheet(GUI::stylesheet + QString(
+			"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
+			"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+			"QSlider { background-color: rgba(%1, %2, %3, %4); }"
+			"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
+			.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+			.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20)
+		);
+	}
 }
 
 void main_window::CreateActions()
@@ -1122,7 +1140,14 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
 		connect(&dlg, &settings_dialog::accepted, [this](){
-			gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
+			if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
+			{
+				gameListFrame->RepaintIcons(GUI::get_Label_Color("gamelist_icon_background_color"));
+			}
+			else
+			{
+				gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
+			}
 			RepaintToolbar();
 		});
 		dlg.exec();
@@ -1147,7 +1172,8 @@ void main_window::CreateConnects()
 		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
 	connect(ui->confSavedataManagerAct, &QAction::triggered, [=](){
-		save_data_list_dialog* sdid = new save_data_list_dialog({}, 0, false, this);
+
+		save_manager_dialog* sdid = new save_manager_dialog();
 		sdid->show();
 	});
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=](){

@@ -1269,9 +1269,6 @@ void VKGSRender::clear_surface(u32 mask)
 	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
 
-	// Note: m_current_frame may point to aux storage where present image is always UINT32_MAX
-	if (frame_context_storage[m_current_queue_index].present_image == UINT32_MAX) return;
-
 	init_buffers();
 
 	if (!framebuffer_status_valid) return;
@@ -1512,6 +1509,7 @@ void VKGSRender::advance_queued_frames()
 
 void VKGSRender::present(frame_context_t *ctx)
 {
+	verify(HERE), ctx->present_image != UINT32_MAX;
 	VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);
 
 	VkPresentInfoKHR present = {};
@@ -1521,6 +1519,9 @@ void VKGSRender::present(frame_context_t *ctx)
 	present.pSwapchains = &swap_chain;
 	present.pImageIndices = &ctx->present_image;
 	CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
+
+	//Presentation image released; reset value
+	ctx->present_image = UINT32_MAX;
 }
 
 void VKGSRender::queue_swap_request()
@@ -2279,7 +2280,45 @@ void VKGSRender::flip(int buffer)
 		aspect_ratio.size = new_size;
 
 		//Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
-		CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), UINT64_MAX, m_current_frame->present_semaphore, VK_NULL_HANDLE, &m_current_frame->present_image));
+		verify(HERE), m_current_frame->present_image == UINT32_MAX;
+		u64 timeout = m_swap_chain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
+		while (VkResult status = vkAcquireNextImageKHR((*m_device), (*m_swap_chain), timeout, m_current_frame->present_semaphore, VK_NULL_HANDLE, &m_current_frame->present_image))
+		{
+			switch (status)
+			{
+			case VK_TIMEOUT:
+			case VK_NOT_READY:
+			{
+				//In some cases, after a fullscreen switch, the driver only allows N-1 images to be acquirable, where N = number of available swap images.
+				//This means that any acquired images have to be released
+				//before acquireNextImage can return successfully. This is despite the driver reporting 2 swap chain images available
+				//This makes fullscreen performance slower than windowed performance as throughput is lowered due to losing one presentable image
+				//Found on AMD Crimson 17.7.2
+
+				//Whatever returned from status, this is now a spin
+				timeout = 0ull;
+				for (auto &ctx : frame_context_storage)
+				{
+					if (ctx.swap_command_buffer)
+					{
+						ctx.swap_command_buffer->poke();
+						if (!ctx.swap_command_buffer->pending)
+						{
+							//Release in case there is competition for frame resources
+							process_swap_request(&ctx, true);
+						}
+					}
+				}
+
+				continue;
+			}
+			default:
+				fmt::throw_exception("vkAcquireNextImageKHR failed with status 0x%X" HERE, (u32)status);
+			}
+		}
+
+		//Confirm that the driver did not silently fail
+		verify(HERE), m_current_frame->present_image != UINT32_MAX;
 
 		//Blit contents to screen..
 		vk::image* image_to_flip = nullptr;
@@ -2380,13 +2419,14 @@ void VKGSRender::flip(int buffer)
 	else
 	{
 		/**
-		* Since we are about to destroy the old swapchain and its images, we just discard the commandbuffer.
 		* Waiting for the commands to process does not work reliably as the fence can be signaled before swap images are released
 		* and there are no explicit methods to ensure that the presentation engine is not using the images at all.
 		*/
 
 		//NOTE: This operation will create a hard sync point
-		CHECK_RESULT(vkEndCommandBuffer(*m_current_command_buffer));
+		close_and_submit_command_buffer({}, m_current_command_buffer->submit_fence);
+		m_current_command_buffer->pending = true;
+		m_current_command_buffer->reset();
 
 		//Will have to block until rendering is completed
 		VkFence resize_fence = VK_NULL_HANDLE;
@@ -2395,19 +2435,16 @@ void VKGSRender::flip(int buffer)
 
 		vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
 
-		//Wait for all grpahics tasks to complete
-		VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-		VkSubmitInfo submit_infos = {};
-		submit_infos.commandBufferCount = 0;
-		submit_infos.pCommandBuffers = nullptr;
-		submit_infos.pWaitDstStageMask = &pipe_stage_flags;
-		submit_infos.pWaitSemaphores = nullptr;
-		submit_infos.waitSemaphoreCount = 0;
-		submit_infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &submit_infos, resize_fence));
+		for (auto &ctx : frame_context_storage)
+		{
+			if (ctx.present_image == UINT32_MAX)
+				continue;
 
-		vkWaitForFences((*m_device), 1, &resize_fence, VK_TRUE, UINT64_MAX);
-		vkResetFences((*m_device), 1, &resize_fence);
+			//Release present image by presenting it
+			ctx.swap_command_buffer->wait();
+			ctx.swap_command_buffer = nullptr;
+			present(&ctx);
+		}
 
 		vkQueueWaitIdle(m_swap_chain->get_present_queue());
 		vkDeviceWaitIdle(*m_device);
@@ -2415,14 +2452,13 @@ void VKGSRender::flip(int buffer)
 		//Remove any old refs to the old images as they are about to be destroyed
 		m_framebuffers_to_clean.clear();
 
-		//Prepare new swapchain images for use
-		m_current_command_buffer->reset();
-		open_command_buffer();
-
 		//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 		m_client_width = m_frame->client_width();
 		m_client_height = m_frame->client_height();
 		m_swap_chain->init_swapchain(m_client_width, m_client_height);
+
+		//Prepare new swapchain images for use
+		open_command_buffer();
 
 		for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
 		{

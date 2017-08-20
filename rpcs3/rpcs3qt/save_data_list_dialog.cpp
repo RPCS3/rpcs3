@@ -69,8 +69,6 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		Q_UNUSED(cr); Q_UNUSED(pr); Q_UNUSED(pc);
 	});
 
-	// TODO: Unstub functions inside of this context menu so it makes sense to show this menu
-	//connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_data_list_dialog::ShowContextMenu);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col) {
 		OnSort(col);
 	});
@@ -86,7 +84,6 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	vbox_main->addLayout(hbox_action);
 	setLayout(vbox_main);
 
-	LoadEntries();
 	UpdateList();
 
 	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col) {
@@ -152,30 +149,6 @@ void save_data_list_dialog::OnSort(int idx)
 	}
 }
 
-//Copy a existing save, need to get more arguments. maybe a new dialog.
-void save_data_list_dialog::OnEntryCopy()
-{
-	int idx = m_list->currentRow();
-	if (idx != -1)
-	{
-		LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnEntryCopy called.");
-		//Some Operations?
-		UpdateList();
-	}
-}
-
-//Remove a save file, need to be confirmed.
-void save_data_list_dialog::OnEntryRemove()
-{
-	int idx = m_list->currentRow();
-	if (idx != -1)
-	{
-		LOG_WARNING(HLE, "Stub - save_data_utility: save_data_list_dialog: OnEntryRemove called.");
-		//Some Operations?
-		UpdateList();
-	}
-}
-
 //Display info dialog directly.
 void save_data_list_dialog::OnEntryInfo()
 {
@@ -188,55 +161,7 @@ void save_data_list_dialog::OnEntryInfo()
 	}
 }
 
-//Pop-up a small context-menu, being a replacement for save_data_manage_dialog
-void save_data_list_dialog::ShowContextMenu(const QPoint &pos)
-{
-	QPoint globalPos = m_list->mapToGlobal(pos);
-	QMenu* menu = new QMenu();
-	int idx = m_list->currentRow();
-
-	saveIDAct = new QAction(tr("SaveID"), this);
-	titleAct = new QAction(tr("Title"), this);
-	subtitleAct = new QAction(tr("Subtitle"), this);
-	copyAct = new QAction(tr("&Copy"), this);
-	removeAct = new QAction(tr("&Remove"), this);
-	infoAct = new QAction(tr("&Info"), this);
-
-	//This is also a stub for the sort setting. Ids is set according to their sort-type integer.
-	m_sort_options = new QMenu(tr("&Sort"));
-	m_sort_options->addAction(titleAct);
-	m_sort_options->addAction(subtitleAct);
-	m_sort_options->addAction(saveIDAct);
-
-	menu->addMenu(m_sort_options);
-	menu->addSeparator();
-	menu->addAction(copyAct);
-	menu->addAction(removeAct);
-	menu->addSeparator();
-	menu->addAction(infoAct);
-
-	copyAct->setEnabled(idx != -1);
-	removeAct->setEnabled(idx != -1);
-
-	//Events
-	connect(copyAct, &QAction::triggered, this, &save_data_list_dialog::OnEntryCopy);
-	connect(removeAct, &QAction::triggered, this, &save_data_list_dialog::OnEntryRemove);
-	connect(infoAct, &QAction::triggered, this, &save_data_list_dialog::OnEntryInfo);
-
-	connect(titleAct, &QAction::triggered, this, [=] {OnSort(0); });
-	connect(subtitleAct, &QAction::triggered, this, [=] {OnSort(1); });
-	connect(saveIDAct, &QAction::triggered, this, [=] {OnSort(2); });
-
-	menu->exec(globalPos);
-}
-
-//This is intended to load the save data list from a way. However that is not certain for a stub. Does nothing now.
-void save_data_list_dialog::LoadEntries(void)
-{
-
-}
-
-void save_data_list_dialog::UpdateList(void)
+void save_data_list_dialog::UpdateList()
 {
 	m_list->clearContents();
 	m_list->setRowCount((int)m_save_entries.size());

@@ -49,7 +49,8 @@
 		"gui": {
 			"configs": "Only useful to developers.\nIf unsure, don't use this option.",
 			"stylesheets": "Only useful to developers.\nIf unsure, don't use this option.",
-			"show_welcome": "Shows the initial welcome screen upon starting RPCS3."
+			"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
+			"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
 		},
 		"misc": {
 			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",

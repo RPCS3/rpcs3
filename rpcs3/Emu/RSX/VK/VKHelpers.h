@@ -895,11 +895,17 @@ namespace vk
 			}
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
-
-			if ((surface_descriptors.maxImageCount > 0) && (nb_swap_images > surface_descriptors.maxImageCount))
+			if (surface_descriptors.maxImageCount > 0)
 			{
-				// Application must settle for fewer images than desired:
-				nb_swap_images = surface_descriptors.maxImageCount;
+				//Try to negotiate for a triple buffer setup
+				//In cases where the front-buffer isnt available for present, its better to have a spare surface
+				nb_swap_images = std::max(surface_descriptors.minImageCount + 2u, 3u);
+
+				if (nb_swap_images > surface_descriptors.maxImageCount)
+				{
+					// Application must settle for fewer images than desired:
+					nb_swap_images = surface_descriptors.maxImageCount;
+				}
 			}
 
 			VkSurfaceTransformFlagBitsKHR pre_transform = surface_descriptors.currentTransform;
@@ -1085,7 +1091,7 @@ namespace vk
 			m_instance = nullptr;
 
 			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
-			loader_exists = (vkCreateInstance != nullptr);
+			loader_exists = (&vkCreateInstance != nullptr);
 		}
 
 		~context()

@@ -849,7 +849,16 @@ void game_list_frame::SetSearchText(const QString& text)
 
 void game_list_frame::RepaintToolBarIcons()
 {
-	QColor newColor = xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>();
+	QColor newColor;
+
+	if (xgui_settings->GetValue(GUI::m_enableUIColors).toBool())
+	{
+		newColor = GUI::get_Label_Color("gamelist_toolbar_icon_color");
+	}
+	else
+	{
+		newColor = xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>();
+	}
 
 	m_catActHDD.colored = gui_settings::colorizedIcon(QIcon(":/Icons/hdd_blue.png"), GUI::gl_tool_icon_color, newColor, true);
 	m_catActDisc.colored = gui_settings::colorizedIcon(QIcon(":/Icons/disc_blue.png"), GUI::gl_tool_icon_color, newColor, true);

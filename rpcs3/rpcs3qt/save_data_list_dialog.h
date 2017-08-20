@@ -2,6 +2,7 @@
 
 // I just want the struct for the save data.
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
@@ -20,13 +21,9 @@ public:
 
 	s32 GetSelection();
 private Q_SLOTS:
-	void OnEntryCopy();
-	void OnEntryRemove();
 	void OnEntryInfo();
-	void ShowContextMenu(const QPoint &pos);
 private:
 	void UpdateSelectionLabel(void);
-	void LoadEntries(void);
 	void UpdateList(void);
 	void OnSort(int id);
 
@@ -36,15 +33,6 @@ private:
 	QTableWidget* m_list;
 	std::vector<SaveDataEntry> m_save_entries;
 
-	QMenu* m_sort_options;
-
 	int m_sortColumn;
 	bool m_sortAscending;
-
-	QAction* saveIDAct;
-	QAction* titleAct;
-	QAction* subtitleAct;
-	QAction* copyAct;
-	QAction* removeAct;
-	QAction* infoAct;
 };
