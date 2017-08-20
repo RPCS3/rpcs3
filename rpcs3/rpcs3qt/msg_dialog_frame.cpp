@@ -199,7 +199,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 #endif
 }
 
-void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
+void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit)
 {
 	static const auto& lineEditWidth = []() {return QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width(); };
 
@@ -220,6 +220,8 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 	//Text Input
 	QLineEdit* input = new QLineEdit(osk_dialog);
 	input->setFixedWidth(lineEditWidth());
+	input->setMaxLength(charlimit);
+	input->setText(QString::fromStdU16String(std::u16string(osk_text_return)));
 	input->setFocus();
 
 	//Ok Button
@@ -239,14 +241,14 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 	osk_dialog->setLayout(layout);
 
 	//Events
-	connect(input, &QLineEdit::textChanged, [=] {
-		std::memset(osk_text_return, 0, 512 * sizeof(char16_t)); // TODO: use max length instead of default 512
-		std::memcpy(osk_text_return, reinterpret_cast<const char16_t*>(input->text().constData()), input->text().size() * sizeof(char16_t));
-		on_osk_input_entered();
-	});
-	connect(input, &QLineEdit::returnPressed, [=] { on_close(CELL_MSGDIALOG_BUTTON_OK); osk_dialog->accept(); });
-	connect(button_ok, &QAbstractButton::clicked, [=] { on_close(CELL_MSGDIALOG_BUTTON_OK); osk_dialog->accept(); });
+	connect(input, &QLineEdit::textChanged, [=] { on_osk_input_entered(); });
+	connect(input, &QLineEdit::returnPressed, osk_dialog, &QDialog::accept);
+	connect(button_ok, &QAbstractButton::clicked, osk_dialog, &QDialog::accept);
 	connect(osk_dialog, &QDialog::rejected, [=] {if (!type.disable_cancel) { on_close(CELL_MSGDIALOG_BUTTON_ESCAPE); }});
+	connect(osk_dialog, &QDialog::accepted, [=] {
+		std::memcpy(osk_text_return, reinterpret_cast<const char16_t*>(input->text().constData()), ((input->text()).size() + 1) * sizeof(char16_t));
+		on_close(CELL_MSGDIALOG_BUTTON_OK);
+	});
 
 	//Fix size
 	osk_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
