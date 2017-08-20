@@ -373,7 +373,7 @@ void rsx_debugger::wheelEvent(QWheelEvent* event)
 namespace
 {
 	// Opens an image in a new window with original size
-	void display_buffer(QWidget *parent, const QImage img)
+	void display_buffer(const QImage& img)
 	{
 		if (img.isNull()) return;
 		//QString title = qstr(fmt::format("Raw Image @ 0x%x", addr));
@@ -388,7 +388,7 @@ namespace
 }
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
-void Buffer::showImage(QImage image)
+void Buffer::showImage(const QImage& image)
 {
 	if (image.isNull()) return;
 	m_image = image;
@@ -425,7 +425,7 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 
 	//if (0 <= m_id && m_id < 4) SHOW_BUFFER(m_id);
 
-		display_buffer(this, m_image);
+		display_buffer(m_image);
 
 		if (m_isTex)
 		{
@@ -495,6 +495,7 @@ namespace
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
 		case rsx::surface_color_format::w32z32y32x32:
+		default:
 			fmt::throw_exception("Unsupported format for display" HERE);
 		}
 	}
@@ -532,15 +533,15 @@ void rsx_debugger::OnClickDrawCalls()
 		m_buffer_colorD,
 	};
 
-	size_t width = draw_call.state.surface_clip_width();
-	size_t height = draw_call.state.surface_clip_height();
+	u32 width = draw_call.state.surface_clip_width();
+	u32 height = draw_call.state.surface_clip_height();
 
 	for (size_t i = 0; i < 4; i++)
 	{
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
 			unsigned char* buffer = convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height);
-			buffers[i]->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
+			buffers[i]->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
 		}
 	}
 
@@ -581,7 +582,7 @@ void rsx_debugger::OnClickDrawCalls()
 					}
 				}
 			}
-			m_buffer_depth->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
+			m_buffer_depth->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
 		}
 	}
 
@@ -603,7 +604,7 @@ void rsx_debugger::OnClickDrawCalls()
 					buffer[4 * col + 3 + width * row * 4] = 255;
 				}
 			}
-			m_buffer_stencil->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
+			m_buffer_stencil->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
 		}
 	}
 

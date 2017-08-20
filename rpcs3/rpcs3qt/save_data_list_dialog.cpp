@@ -164,7 +164,7 @@ void save_data_list_dialog::OnEntryInfo()
 void save_data_list_dialog::UpdateList()
 {
 	m_list->clearContents();
-	m_list->setRowCount(m_save_entries.size());
+	m_list->setRowCount((int)m_save_entries.size());
 	gui_settings settings(this);
 
 	int row = 0;

@@ -240,7 +240,8 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text)
 
 	//Events
 	connect(input, &QLineEdit::textChanged, [=] {
-		std::memcpy(osk_text_return, reinterpret_cast<const char16_t*>(input->text().constData()), input->text().size() * 2);
+		std::memset(osk_text_return, 0, 512 * sizeof(char16_t)); // TODO: use max length instead of default 512
+		std::memcpy(osk_text_return, reinterpret_cast<const char16_t*>(input->text().constData()), input->text().size() * sizeof(char16_t));
 		on_osk_input_entered();
 	});
 	connect(input, &QLineEdit::returnPressed, [=] { on_close(CELL_MSGDIALOG_BUTTON_OK); osk_dialog->accept(); });
@@ -268,6 +269,10 @@ msg_dialog_frame::~msg_dialog_frame() {
 	if (m_dialog)
 	{
 		m_dialog->deleteLater();
+	}
+	if (osk_dialog)
+	{
+		osk_dialog->deleteLater();
 	}
 }
 

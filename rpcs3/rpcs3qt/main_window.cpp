@@ -72,6 +72,9 @@ void main_window::Init()
 
 	appIcon = QIcon(":/rpcs3.ico");
 
+	// hide utilities from the average user
+	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(GUI::m_showDebugTab).toBool());
+
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, GUI::gl_max_slider_pos);
@@ -120,14 +123,17 @@ void main_window::Init()
 	if (false)
 #endif
 	{
+		LOG_WARNING(GENERAL, "Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
+
 		QMessageBox msg;
 		msg.setWindowTitle("Experimental Build Warning");
+		msg.setWindowIcon(appIcon);
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
 		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msg.setDefaultButton(QMessageBox::No);
-		
+
 		if (msg.exec() == QMessageBox::No)
 		{
 			std::exit(EXIT_SUCCESS);
@@ -901,7 +907,7 @@ void main_window::BootRecentAction(const QAction* act)
 			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(pth));
 
 			// refill menu with actions
-			for (uint i = 0; i < m_recentGameActs.count(); i++)
+			for (int i = 0; i < m_recentGameActs.count(); i++)
 			{
 				m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
 				m_recentGameActs[i]->setToolTip(m_rg_entries.at(i).second);
@@ -1024,7 +1030,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	}
 	
 	// refill menu with actions
-	for (uint i = 0; i < m_recentGameActs.count(); i++)
+	for (int i = 0; i < m_recentGameActs.count(); i++)
 	{
 		m_recentGameActs[i]->setShortcut(tr("Ctrl+%1").arg(i+1));
 		m_recentGameActs[i]->setToolTip(m_rg_entries.at(i).second);
@@ -1172,7 +1178,7 @@ void main_window::CreateConnects()
 		sdid->show();
 	});
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=](){
-		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings, this);
+		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings);
 		cgdw->show();
 	});
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, [=](){
@@ -1274,7 +1280,7 @@ void main_window::CreateConnects()
 
 		resizeIcons(idx);
 	});
-	connect(gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save){ m_save_slider_pos = true; });
+	connect(gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save){ Q_UNUSED(save); m_save_slider_pos = true; });
 	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
 		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
@@ -1403,7 +1409,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	}
 	m_recentGameActs.clear();
 	// Fill the recent games menu
-	for (uint i = 0; i < m_rg_entries.count(); i++)
+	for (int i = 0; i < m_rg_entries.count(); i++)
 	{
 		// create new action
 		QAction* act = CreateRecentAction(m_rg_entries[i], i + 1);
