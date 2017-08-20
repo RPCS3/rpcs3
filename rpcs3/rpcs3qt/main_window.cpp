@@ -1138,18 +1138,11 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
-		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, this, &main_window::RepaintToolBarIcons);
-		connect(&dlg, &settings_dialog::ToolBarRepaintRequest, gameListFrame, &game_list_frame::RepaintToolBarIcons);
-		connect(&dlg, &settings_dialog::accepted, [this](){
-			if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
-			{
-				gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
-			}
-			else
-			{
-				gameListFrame->RepaintIcons(GUI::get_Label_Color("gamelist_icon_background_color"));
-			}
+		connect(&dlg, &settings_dialog::GuiRepaintRequest, [this](){
+			gameListFrame->RepaintIcons(true);
+			gameListFrame->RepaintToolBarIcons();
 			RepaintToolbar();
+			RepaintToolBarIcons();
 		});
 		dlg.exec();
 	};

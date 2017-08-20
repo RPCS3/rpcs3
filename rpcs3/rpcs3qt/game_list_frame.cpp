@@ -788,11 +788,18 @@ void game_list_frame::ResizeIcons(const int& sliderPos)
 	RepaintIcons();
 }
 
-void game_list_frame::RepaintIcons(const QColor& color)
+void game_list_frame::RepaintIcons(const bool& fromSettings)
 {
-	if (color.isValid())
+	if (fromSettings)
 	{
-		m_Icon_Color = color;
+		if (xgui_settings->GetValue(GUI::m_enableUIColors).toBool())
+		{
+			m_Icon_Color = xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>();
+		}
+		else
+		{
+			m_Icon_Color = GUI::get_Label_Color("gamelist_icon_background_color");
+		}
 	}
 
 	for (auto& game : m_game_data)

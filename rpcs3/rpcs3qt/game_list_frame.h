@@ -203,7 +203,7 @@ public:
 	void ResizeIcons(const int& sliderPos);
 
 	/** Repaint Gamelist Icons with new background color */
-	void RepaintIcons(const QColor& color = QColor());
+	void RepaintIcons(const bool& fromSettings = false);
 
 	int GetSliderValue();
 
