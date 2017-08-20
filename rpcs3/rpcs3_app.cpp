@@ -287,12 +287,35 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	QFile file(sheetFilePath);
 	if (sheetFilePath == "")
 	{
-		setStyleSheet(
-			"QWidget#header_section { background-color: #ffffff; }"
-			"QLineEdit#mw_searchbar { margin-left:14px; }"
+		// toolbar color stylesheet
+		QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
+		QString style_toolbar = QString(
+			"QLineEdit#mw_searchbar { margin-left:14px; background-color: rgba(%1, %2, %3, %4); }"
+			"QToolBar#mw_toolbar { background-color: rgba(%1, %2, %3, %4); }"
+			"QToolBar#mw_toolbar QSlider { background-color: rgba(%1, %2, %3, %4); }"
+			"QToolBar#mw_toolbar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}")
+			.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
+			.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20);
+
+		// toolbar icon color stylesheet
+		QColor tic = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+		QString style_toolbar_icons = QString(
+			"QLabel#toolbar_icon_color { color: rgba(%1, %2, %3, %4); }")
+			.arg(tic.red()).arg(tic.green()).arg(tic.blue()).arg(tic.alpha());
+
+		// gamelist toolbar stylesheet
+		QColor gltic = guiSettings->GetValue(GUI::gl_toolIconColor).value<QColor>();
+		QString style_gamelist_toolbar = QString(
 			"QLineEdit#tb_searchbar { background: transparent; }"
-			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
-		);
+			"QLabel#gamelist_toolbar_icon_color { color: rgba(%1, %2, %3, %4); }")
+			.arg(gltic.red()).arg(gltic.green()).arg(gltic.blue()).arg(gltic.alpha());
+
+		// other objects' stylesheet
+		QString style_rest = QString(
+			"QWidget#header_section { background-color: #ffffff; }"
+			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }");
+
+		setStyleSheet(style_toolbar + style_toolbar_icons + style_gamelist_toolbar + style_rest);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
