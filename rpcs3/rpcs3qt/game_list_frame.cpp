@@ -853,11 +853,11 @@ void game_list_frame::RepaintToolBarIcons()
 
 	if (xgui_settings->GetValue(GUI::m_enableUIColors).toBool())
 	{
-		newColor = GUI::get_Label_Color("gamelist_toolbar_icon_color");
+		newColor = xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>();
 	}
 	else
 	{
-		newColor = xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>();
+		newColor = GUI::get_Label_Color("gamelist_toolbar_icon_color");
 	}
 
 	m_catActHDD.colored = gui_settings::colorizedIcon(QIcon(":/Icons/hdd_blue.png"), GUI::gl_tool_icon_color, newColor, true);

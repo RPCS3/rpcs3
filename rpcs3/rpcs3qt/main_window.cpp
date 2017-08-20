@@ -76,6 +76,7 @@ void main_window::Init()
 	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(GUI::m_showDebugTab).toBool());
 
 	// add toolbar widgets (crappy Qt designer is not able to)
+	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, GUI::gl_max_slider_pos);
 	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(GUI::gl_iconSize).toInt());
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
@@ -704,11 +705,11 @@ void main_window::RepaintToolBarIcons()
 
 	if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
 	{
-		newColor = GUI::get_Label_Color("toolbar_icon_color");
+		newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
 	}
 	else
 	{
-		newColor = guiSettings->GetValue(GUI::mw_toolIconColor).value<QColor>();
+		newColor = GUI::get_Label_Color("toolbar_icon_color");
 	}
 
 	icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
@@ -1043,10 +1044,6 @@ void main_window::RepaintToolbar()
 {
 	if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
 	{
-		ui->toolBar->setStyleSheet(GUI::stylesheet);
-	}
-	else
-	{
 		QColor tbc = guiSettings->GetValue(GUI::mw_toolBarColor).value<QColor>();
 
 		ui->toolBar->setStyleSheet(GUI::stylesheet + QString(
@@ -1057,6 +1054,10 @@ void main_window::RepaintToolbar()
 			.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
 			.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20)
 		);
+	}
+	else
+	{
+		ui->toolBar->setStyleSheet(GUI::stylesheet);
 	}
 }
 
@@ -1142,11 +1143,11 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::accepted, [this](){
 			if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
 			{
-				gameListFrame->RepaintIcons(GUI::get_Label_Color("gamelist_icon_background_color"));
+				gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
 			}
 			else
 			{
-				gameListFrame->RepaintIcons(guiSettings->GetValue(GUI::gl_iconColor).value<QColor>());
+				gameListFrame->RepaintIcons(GUI::get_Label_Color("gamelist_icon_background_color"));
 			}
 			RepaintToolbar();
 		});
