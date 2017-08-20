@@ -93,7 +93,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
-		Q_EMIT ToolBarRepaintRequest();
+		Q_EMIT GuiRepaintRequest();
 	});
 	connect(ui->okButton, &QAbstractButton::clicked, xemu_settings.get(), &emu_settings::SaveSettings);
 	connect(ui->okButton, &QAbstractButton::clicked, this, &QDialog::accept);
@@ -688,6 +688,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		ui->gb_stylesheets->setEnabled(false);
 		ui->gb_configs->setEnabled(false);
 		ui->gb_settings->setEnabled(false);
+		ui->gb_colors->setEnabled(false);
 	}
 	else
 	{
@@ -734,6 +735,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			ui->pb_gl_tool_icon_color->setEnabled(val);
 			ui->pb_tool_bar_color->setEnabled(val);
 			ui->pb_tool_icon_color->setEnabled(val);
+			Q_EMIT GuiRepaintRequest();
 		});
 		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button){
 			QColor oldColor = xgui_settings->GetValue(color).value<QColor>();
@@ -752,6 +754,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				}
 				xgui_settings->SetValue(color, dlg.selectedColor());
 				button->setIcon(gui_settings::colorizedIcon(button->icon(), oldColor, dlg.selectedColor(), true));
+				Q_EMIT GuiRepaintRequest();
 			}
 		};
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color); });
