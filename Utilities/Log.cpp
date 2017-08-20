@@ -61,13 +61,7 @@ namespace logs
 
 	struct file_listener : public file_writer, public listener
 	{
-		file_listener(const std::string& name)
-			: file_writer(name)
-			, listener()
-		{
-			const std::string& start = fmt::format("\xEF\xBB\xBF" "RPCS3 v%s\n%s\n", rpcs3::version.to_string(), utils::get_system_info());
-			file_writer::log(start.data(), start.size());
-		}
+		file_listener(const std::string& name);
 
 		// Encode level, current thread name, channel name and write log message
 		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
@@ -138,11 +132,25 @@ namespace logs
 		}
 	};
 
+	struct stored_message
+	{
+		message m;
+		u64 stamp;
+		std::string prefix;
+		std::string text;
+	};
+
 	// Channel registry mutex
 	semaphore<> g_mutex;
 
 	// Channel registry
 	std::unordered_map<std::string, channel_info> g_channels;
+
+	// Messages for delayed listener initialization
+	std::vector<stored_message> g_messages;
+
+	// Must be set to true in main()
+	atomic_t<bool> g_init{false};
 
 	void reset()
 	{
@@ -160,6 +168,17 @@ namespace logs
 
 		g_channels[ch_name].set_level(value);
 	}
+
+	// Must be called in main() to stop accumulating messages in g_messages
+	void set_init()
+	{
+		if (!g_init)
+		{
+			semaphore_lock lock(g_mutex);
+			g_messages.clear();
+			g_init = true;
+		}
+	}
 }
 
 logs::listener::~listener()
@@ -171,10 +190,18 @@ void logs::listener::add(logs::listener* _new)
 	// Get first (main) listener
 	listener* lis = get_logger();
 
+	semaphore_lock lock(g_mutex);
+
 	// Install new listener at the end of linked list
 	while (lis->m_next || !lis->m_next.compare_and_swap_test(nullptr, _new))
 	{
 		lis = lis->m_next;
+	}
+
+	// Send initial messages
+	for (const auto& msg : g_messages)
+	{
+		_new->log(msg.stamp, msg.m, msg.prefix, msg.text);
 	}
 }
 
@@ -214,6 +241,23 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 
 	// Get first (main) listener
 	listener* lis = get_logger();
+
+	if (!g_init)
+	{
+		semaphore_lock lock(g_mutex);
+
+		if (!g_init)
+		{
+			while (lis)
+			{
+				lis->log(stamp, *this, prefix, text);
+				lis = lis->m_next;
+			}
+
+			// Store message additionally
+			g_messages.emplace_back(stored_message{*this, stamp, std::move(prefix), std::move(text)});
+		}
+	}
 	
 	// Send message to all listeners
 	while (lis)
@@ -243,6 +287,24 @@ logs::file_writer::file_writer(const std::string& name)
 void logs::file_writer::log(const char* text, std::size_t size)
 {
 	m_file.write(text, size);
+}
+
+logs::file_listener::file_listener(const std::string& name)
+	: file_writer(name)
+	, listener()
+{
+	// Write UTF-8 BOM
+	file_writer::log("\xEF\xBB\xBF", 3);
+
+	// Write initial message
+	stored_message ver;
+	ver.m.ch  = nullptr;
+	ver.m.sev = level::always;
+	ver.stamp = 0;
+	ver.text  = fmt::format("RPCS3 v%s\n%s", rpcs3::version.to_string(), utils::get_system_info());
+	file_writer::log(ver.text.data(), ver.text.size());
+	file_writer::log("\n", 1);
+	g_messages.emplace_back(std::move(ver));
 }
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
@@ -276,7 +338,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 		text += "} ";
 	}
 	
-	if ('\0' != *msg.ch->name)
+	if (msg.ch && '\0' != *msg.ch->name)
 	{
 		text += msg.ch->name;
 		text += msg.sev == level::todo ? " TODO: " : ": ";
