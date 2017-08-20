@@ -128,26 +128,24 @@ error_code cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResol
 
 error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.warning("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
+	cellSysutil.todo("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
 
-	switch (videoOut)
+	if (!config)
 	{
-	case CELL_VIDEO_OUT_PRIMARY:
-		if (config->resolutionId != g_video_out_resolution_id.at(g_cfg.video.resolution)
-			|| (config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8 &&
-				config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8 &&
-				config->format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT) 
-			|| (config->aspect != CELL_VIDEO_OUT_ASPECT_AUTO && config->aspect != g_video_out_aspect_id.at(g_cfg.video.aspect_ratio)))
-		{
-			return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;
-		}
-		return CELL_OK;
-
-	case CELL_VIDEO_OUT_SECONDARY:
-		return CELL_OK;
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	if (!config->pitch)
+	{
+		return CELL_VIDEO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
+	}
+
+	if (config->resolutionId == 0x92 || config->resolutionId == 0xa1)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+	}
+
+	return CELL_OK;
 }
 
 error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option)

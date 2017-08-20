@@ -479,6 +479,21 @@
     <ClCompile Include="rpcs3qt\save_data_list_dialog.cpp">
       <Filter>Gui\saves</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\save_manager_dialog.cpp">
+      <Filter>Gui\saves</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_manager_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_save_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_manager_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -637,6 +652,9 @@
       <Filter>Gui\saves</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_data_list_dialog.h">
+      <Filter>Gui\saves</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\saves</Filter>
     </CustomBuild>
   </ItemGroup>

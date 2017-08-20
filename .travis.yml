@@ -62,6 +62,13 @@ before_install:
       brew update; brew update;
       brew install ccache glew llvm40;
     fi;
+  # We need to update binutils to a newer version to link against the ffmpeg libs on.
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      sudo add-apt-repository ppa:jonathonf/binutils -y ;
+      sudo apt-get update ; 
+      sudo apt-get install binutils -y;
+      ld --version ;
+    fi;
 
 before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
