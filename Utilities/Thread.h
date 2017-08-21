@@ -115,6 +115,9 @@ class thread_ctrl final
 	// Fixed name
 	std::string m_name;
 
+	// Condition variable to wait on work
+	cond_variable m_task_cond;
+
 	// Start thread
 	static void start(const std::shared_ptr<thread_ctrl>&, task_stack);
 

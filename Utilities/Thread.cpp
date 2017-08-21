@@ -22,6 +22,8 @@
 #include <sys/resource.h>
 #endif
 
+#include <queue>
+
 #include "sync.h"
 
 thread_local u64 g_tls_fault_all = 0;
@@ -1505,6 +1507,9 @@ extern atomic_t<u32> g_thread_count(0);
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 extern thread_local std::string(*g_tls_log_prefix)();
+
+static std::queue<thread_ctrl*> g_available_threads;
+static semaphore<> g_queue_mutex;
 
 void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
 {
