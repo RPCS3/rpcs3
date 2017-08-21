@@ -1509,9 +1509,9 @@ thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 extern thread_local std::string(*g_tls_log_prefix)();
 
 static std::queue<thread_ctrl*> g_available_threads;
-static semaphore<> g_queue_mutex;
+semaphore<> g_queue_mutex;
 
-void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
+void thread_ctrl::start(std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
 {
 #ifdef _WIN32
 	using thread_result = uint;
@@ -1561,20 +1561,35 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 		return 0;
 	};
 
-	ctrl->m_self = ctrl;
-	ctrl->m_task = std::move(task);
+	semaphore_lock{g_queue_mutex};
+	if (!g_available_threads.empty())
+	{
+		thread_ctrl* worker = g_available_threads.front();
+		ctrl = worker->m_self;
+		ctrl->m_task = std::move(task);
 
-	// TODO: implement simple thread pool
+		// Restore state from previous job to default
+		ctrl->m_signal = 0;
+		ctrl->m_exception = nullptr;
+
+		ctrl->m_task_cond.notify_one();
+	}
+	else
+	{
+		ctrl->m_self = ctrl;
+		ctrl->m_task = std::move(task);
+
 #ifdef _WIN32
-	std::uintptr_t thread = _beginthreadex(nullptr, 0, entry, ctrl.get(), 0, nullptr);
-	verify("thread_ctrl::start" HERE), thread != 0;
+		std::uintptr_t thread = _beginthreadex(nullptr, 0, entry, ctrl.get(), 0, nullptr);
+		verify("thread_ctrl::start" HERE), thread != 0;
 #else
-	pthread_t thread;
-	verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get()) == 0;
+		pthread_t thread;
+		verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get()) == 0;
 #endif
 
-	// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize
-	ctrl->m_thread = (uintptr_t)thread;
+		// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize
+		ctrl->m_thread = (uintptr_t)thread;
+	}
 }
 
 void thread_ctrl::initialize()

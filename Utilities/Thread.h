@@ -121,7 +121,7 @@ class thread_ctrl final
 	cond_variable m_task_cond;
 
 	// Start thread
-	static void start(const std::shared_ptr<thread_ctrl>&, task_stack);
+	static void start(std::shared_ptr<thread_ctrl>&, task_stack);
 
 	// Called at the thread start
 	void initialize();
@@ -215,6 +215,8 @@ public:
 	template<typename F>
 	static inline void atexit(F&& func)
 	{
+		extern semaphore<> g_queue_mutex;
+		semaphore_lock{g_queue_mutex};
 		_push(std::forward<F>(func));
 	}
 
