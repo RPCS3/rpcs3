@@ -598,17 +598,22 @@ namespace rsx
 
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
-		u32 *dst = static_cast<u32*>(buffer);
-
 		const u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
 		const float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		const f32 fog0 = rsx::method_registers.fog_params_0();
 		const f32 fog1 = rsx::method_registers.fog_params_1();
+		const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
+		const u32 window_origin = static_cast<u32>(rsx::method_registers.shader_window_origin());
+		const u32 window_height = rsx::method_registers.shader_window_height();
 		const float one = 1.f;
 
-		stream_vector(dst, (u32&)fog0, (u32&)fog1, is_alpha_tested, (u32&)alpha_ref);
+		u32 *dst = static_cast<u32*>(buffer);
 
-		size_t offset = 4;
+		stream_vector(dst, (u32&)fog0, (u32&)fog1, is_alpha_tested, (u32&)alpha_ref);
+		stream_vector(dst + 4, alpha_func, fog_mode, window_origin, window_height);
+
+		size_t offset = 8;
 		for (int index = 0; index < 16; ++index)
 		{
 			stream_vector(&dst[offset], (u32&)fragment_program.texture_pitch_scale[index], (u32&)one, 0U, 0U);
@@ -1097,11 +1102,6 @@ namespace rsx
 		result.back_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
 		result.front_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE);
 		result.front_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR);
-		result.alpha_func = rsx::method_registers.alpha_func();
-		result.fog_equation = rsx::method_registers.fog_equation();
-		result.origin_mode = rsx::method_registers.shader_window_origin();
-		result.pixel_center_mode = rsx::method_registers.shader_window_pixel();
-		result.height = rsx::method_registers.shader_window_height();
 		result.redirected_textures = 0;
 		result.shadow_textures = 0;
 

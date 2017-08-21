@@ -124,6 +124,8 @@ void insert_d3d12_legacy_function(std::ostream& OS, bool is_fragment_program)
 	if (!is_fragment_program)
 		return;
 
+	program_common::insert_compare_op(OS);
+
 	OS << "uint packSnorm2x16(float2 val)";
 	OS << "{\n";
 	OS << "	uint high_bits = round(clamp(val.x, -1., 1.) * 32767.);\n";
