@@ -3,6 +3,80 @@
 
 #include "ShaderParam.h"
 
+namespace program_common
+{
+	static void insert_compare_op(std::ostream& OS)
+	{
+		OS << "bool comparison_passes(float a, float b, uint func)\n";
+		OS << "{\n";
+		OS << "	switch (func)\n";
+		OS << "	{\n";
+		OS << "		default:\n";
+		OS << "		case 0: return false; //never\n";
+		OS << "		case 1: return (a < b); //less\n";
+		OS << "		case 2: return (a == b); //equal\n";
+		OS << "		case 3: return (a <= b); //lequal\n";
+		OS << "		case 4: return (a > b); //greater\n";
+		OS << "		case 5: return (a != b); //nequal\n";
+		OS << "		case 6: return (a >= b); //gequal\n";
+		OS << "		case 7: return true; //always\n";
+		OS << "	}\n";
+		OS << "}\n\n";
+	}
+
+	static void insert_fog_declaration(std::ostream& OS, const std::string wide_vector_type, const std::string input_coord, bool declare = false)
+	{
+		std::string template_body;
+
+		if (!declare)
+			template_body += "$T fetch_fog_value(uint mode)\n";
+		else
+			template_body += "$T fetch_fog_value(uint mode, $T $I)\n";
+
+		template_body += "{\n";
+		template_body += "	$T result = $T(0., 0., 0., 0.);\n";
+		template_body += "	switch(mode)\n";
+		template_body += "	{\n";
+		template_body += "	default:\n";
+		template_body += "		return result;\n";
+		template_body += "	case 0:\n";
+		template_body += "		//linear\n";
+		template_body += "		result = $T(fog_param1 * $I.x + (fog_param0 - 1.), fog_param1 * $I.x + (fog_param0 - 1.), 0., 0.);\n";
+		template_body += "		break;\n";
+		template_body += "	case 1:\n";
+		template_body += "		//exponential\n";
+		template_body += "		result = $T(11.084 * (fog_param1 * $I.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * $I.x + fog_param0 - 1.5)), 0., 0.);\n";
+		template_body += "		break;\n";
+		template_body += "	case 2:\n";
+		template_body += "		//exponential2\n";
+		template_body += "		result = $T(4.709 * (fog_param1 * $I.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * $I.x + fog_param0 - 1.5), 2.)), 0., 0.);\n";
+		template_body += "		break;\n";
+		template_body += "	case 3:\n";
+		template_body += "		//exponential_abs\n";
+		template_body += "		result = $T(11.084 * (fog_param1 * abs($I.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs($I.x) + fog_param0 - 1.5)), 0., 0.);\n";
+		template_body += "		break;\n";
+		template_body += "	case 4:\n";
+		template_body += "		//exponential2_abs\n";
+		template_body += "		result = $T(4.709 * (fog_param1 * abs($I.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs($I.x) + fog_param0 - 1.5), 2.)), 0., 0.);\n";
+		template_body += "		break;\n";
+		template_body += " case 5:\n";
+		template_body += "		//linear_abs\n";
+		template_body += "		result = $T(fog_param1 * abs($I.x) + (fog_param0 - 1.), fog_param1 * abs($I.x) + (fog_param0 - 1.), 0., 0.);\n";
+		template_body += "		break;\n";
+		template_body += "	}\n";
+		template_body += "\n";
+		template_body += "	result.y = clamp(result.y, 0., 1.);\n";
+		template_body += "	return result;\n";
+		template_body += "}\n\n";
+
+		std::pair<std::string, std::string> replacements[] =
+			{std::make_pair("$T", wide_vector_type),
+			 std::make_pair("$I", input_coord)};
+
+		OS << fmt::replace_all(template_body, replacements);
+	}
+}
+
 namespace glsl
 {
 	enum program_domain
@@ -242,6 +316,8 @@ namespace glsl
 		if (domain == glsl::program_domain::glsl_vertex_program)
 			return;
 
+		program_common::insert_compare_op(OS);
+
 		//NOTE: After testing with GOW, the w component is either the original depth or wraps around to the x component
 		//Since component.r == depth_value with some precision loss, just use the precise depth value for now (further testing needed)
 		OS << "vec4 decodeLinearDepth(float depth_value)\n";
@@ -262,5 +338,10 @@ namespace glsl
 		OS << "{\n";
 		OS << "	return decodeLinearDepth(texture(tex, coord.xy).r);\n";
 		OS << "}\n\n";
+	}
+
+	static void insert_fog_declaration(std::ostream& OS)
+	{
+		program_common::insert_fog_declaration(OS, "vec4", "fog_c");
 	}
 }
