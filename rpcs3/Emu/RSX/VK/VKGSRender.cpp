@@ -2242,8 +2242,14 @@ void VKGSRender::flip(int buffer)
 	}
 	else if (m_current_frame->swap_command_buffer)
 	{
-		//Unreachable
-		fmt::throw_exception("Possible data corruption on frame context storage detected");
+		if (m_draw_calls > 0)
+		{
+			//Unreachable
+			fmt::throw_exception("Possible data corruption on frame context storage detected");
+		}
+
+		//There were no draws and back-to-back flips happened
+		process_swap_request(m_current_frame, true);
 	}
 
 	if (!resize_screen)
