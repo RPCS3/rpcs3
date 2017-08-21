@@ -1535,11 +1535,11 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 		catch (...)
 		{
 			// Capture exception
-			ctrl->finalize(std::current_exception());
+			ctrl->finalize(std::current_exception(), true);
 			return 0;
 		}
 
-		ctrl->finalize(nullptr);
+		ctrl->finalize(nullptr, true);
 		return 0;
 	};
 
@@ -1600,7 +1600,7 @@ void thread_ctrl::initialize()
 #endif
 }
 
-void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
+void thread_ctrl::finalize(std::exception_ptr eptr, bool die) noexcept
 {
 	// Run atexit functions
 	m_task.invoke();
@@ -1634,10 +1634,22 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 		g_tls_fault_rsx,
 		g_tls_fault_spu);
 
-	--g_thread_count;
+	// Restore thread locals to default values
+	if (!die)
+	{
+		g_tls_fault_all = 0;
+		g_tls_fault_rsx = 0;
+		g_tls_fault_spu = 0;
+	}
+	else
+	{
+		--g_thread_count;
+	}
 
 	// Untangle circular reference, set exception
-	semaphore_lock{m_mutex}, m_self.reset(), m_exception = eptr;
+	semaphore_lock{m_mutex}, m_exception = eptr;
+	if (die)
+		m_self.reset();
 
 	// Signal joining waiters
 	m_jcv.notify_all();

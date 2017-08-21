@@ -125,7 +125,7 @@ class thread_ctrl final
 	void initialize();
 
 	// Called at the thread end
-	void finalize(std::exception_ptr) noexcept;
+	void finalize(std::exception_ptr, bool) noexcept;
 
 	// Add task (atexit)
 	static void _push(task_stack);
