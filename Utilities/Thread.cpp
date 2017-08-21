@@ -1526,20 +1526,38 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 	{
 		// Recover shared_ptr from short-circuited thread_ctrl object pointer
 		const std::shared_ptr<thread_ctrl> ctrl = static_cast<thread_ctrl*>(arg)->m_self;
+		std::exception_ptr exception = nullptr;
 
 		try
 		{
 			ctrl->initialize();
-			task_stack{std::move(ctrl->m_task)}.invoke();
+
+			while (true)
+			{
+				if (ctrl->m_task.value().empty())
+					break;
+
+				task_stack{std::move(ctrl->m_task.value())}.invoke();
+				ctrl->finalize(nullptr, false);
+
+				semaphore_lock lock(g_queue_mutex);
+				g_available_threads.push(ctrl.get());
+
+				while (!ctrl->m_task) // Protect against spurious wakeups
+				{
+					ctrl->m_task_cond.wait(lock);
+				}
+
+				g_available_threads.pop();
+			}
 		}
 		catch (...)
 		{
 			// Capture exception
-			ctrl->finalize(std::current_exception(), true);
-			return 0;
+			exception = std::current_exception();
 		}
 
-		ctrl->finalize(nullptr, true);
+		ctrl->finalize(exception, true);
 		return 0;
 	};
 
@@ -1603,8 +1621,8 @@ void thread_ctrl::initialize()
 void thread_ctrl::finalize(std::exception_ptr eptr, bool die) noexcept
 {
 	// Run atexit functions
-	m_task.invoke();
-	m_task.reset();
+	m_task.value().invoke();
+	m_task = std::optional<task_stack>();
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1657,7 +1675,10 @@ void thread_ctrl::finalize(std::exception_ptr eptr, bool die) noexcept
 
 void thread_ctrl::_push(task_stack task)
 {
-	g_tls_this_thread->m_task.push(std::move(task));
+	if (g_tls_this_thread->m_task)
+		g_tls_this_thread->m_task.value().push(std::move(task));
+	else
+		g_tls_this_thread->m_task = std::move(task);
 }
 
 bool thread_ctrl::_wait_for(u64 usec)

@@ -10,6 +10,8 @@
 #include "sema.h"
 #include "cond.h"
 
+#include "optional.hpp"
+
 // Will report exception and call std::abort() if put in catch(...)
 [[noreturn]] void catch_all_exceptions();
 
@@ -68,9 +70,9 @@ public:
 		_top->next.reset(_next);
 	}
 
-	void reset()
+	bool empty()
 	{
-		m_stack.reset();
+		return !m_stack;
 	}
 
 	void invoke() const
@@ -110,7 +112,7 @@ class thread_ctrl final
 	std::exception_ptr m_exception;
 
 	// Thread initial task or atexit task
-	task_stack m_task;
+	std::optional<task_stack> m_task;
 
 	// Fixed name
 	std::string m_name;
