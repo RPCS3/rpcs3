@@ -319,6 +319,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		// other objects' stylesheet
 		QString style_rest = QString(
 			"QWidget#header_section { background-color: #ffffff; }"
+			"QLabel#l_controller { color: #434343; }"
 			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }");
 
 		setStyleSheet(style_toolbar + style_toolbar_icons + style_gamelist_toolbar + style_gamelist_icons  + style_rest);

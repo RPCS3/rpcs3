@@ -18,7 +18,7 @@ static const int PadButtonWidth = 60;
 
 extern keyboard_pad_config g_kbpad_config;
 
-pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(new Ui::pad_settings_dialog)
+pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent) : QDialog(parent), ui(new Ui::pad_settings_dialog)
 {
 	ui->setupUi(this);
 
@@ -67,6 +67,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(
 	g_kbpad_config.load();
 	UpdateLabel();
 
+	ui->l_controller->setPixmap(gui_settings->colorizedPixmap(*ui->l_controller->pixmap(), QColor(), GUI::get_Label_Color("l_controller"), false, true));
 	ui->l_controller->setMaximumSize(ui->gb_description->sizeHint().width(), ui->l_controller->maximumHeight() * ui->gb_description->sizeHint().width() / ui->l_controller->maximumWidth());
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
