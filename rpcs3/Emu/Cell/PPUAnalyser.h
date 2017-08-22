@@ -50,6 +50,7 @@ struct ppu_segment
 	u32 size;
 	u32 type;
 	u32 flags;
+	u32 filesz;
 };
 
 // PPU Module Information
