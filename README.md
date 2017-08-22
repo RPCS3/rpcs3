@@ -8,9 +8,9 @@ RPCS3
 The world's first open-source PlayStation 3 emulator/debugger written in C++ for Windows and Linux.
 
 You can find some basic information in our [**website**](https://rpcs3.net/). 
-For discussion about this emulator and PS3 emulation please visit our [**forums**](http://www.emunewz.net/forum/forumdisplay.php?fid=172) and our [**Discord server**](https://discord.me/RPCS3).
+For discussion about this emulator and PS3 emulation please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.me/RPCS3).
 
-[**Support Lead Developer Nekotekina on Patreon**](https://www.patreon.com/Nekotekina)
+[**Support Lead Developers Nekotekina and kd-11 on Patreon**](https://www.patreon.com/Nekotekina)
 
 
 ## Development
