@@ -180,7 +180,8 @@ public:
 		@param newColor the desired color for the new icon
 		@param useSpecialMasks only used for icons with white parts and disc game icon
 	*/
-	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false);
+	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
+	static QPixmap colorizedPixmap(const QPixmap& old_pixmap, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
 
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);

@@ -9,6 +9,7 @@
 #include "Emu/Io/PadHandler.h"
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "gui_settings.h"
 
 enum button_ids
 {
@@ -69,7 +70,7 @@ private:
 public:
 	// TODO get Init to work
 	virtual void Init(const u32 max_connect) override;
-	explicit pad_settings_dialog(QWidget *parent = 0);
+	explicit pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent = 0);
 	~pad_settings_dialog();
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void UpdateLabel();
