@@ -3,6 +3,8 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include "Emu/Cell/lv2/sys_mmapper.h"
+#include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
 
 #ifdef _WIN32
@@ -1258,9 +1260,42 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		return true;
 	}
 
-	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
 	if (cpu)
 	{
+		if (fxm::check<page_fault_notification_entries>())
+		{
+			for (const auto& entry : fxm::get<page_fault_notification_entries>()->entries)
+			{
+				auto mem = vm::get(vm::any, entry.start_addr);
+				if (!mem)
+				{
+					continue;
+				}
+				if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
+				{
+					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs] 
+					// know that this thread is page faulted and where.
+					auto pf_entries = fxm::get_always<page_fault_event_entries>();
+					page_fault_event pf_event{ cpu->id, addr };
+					pf_entries->events.emplace_back(pf_event);
+
+					// Now, we notify the game that a page fault occurred so it can rectify it.
+					// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
+					be_t<u64> data1 = addr;
+					be_t<u64> data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id; // TODO: fix hack for now that assumes PPU thread always.
+					be_t<u64> data3 = vm::check_addr(addr, a_size, vm::page_readable) ? SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY : SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
+
+					LOG_ERROR(MEMORY, "Page fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading", 
+						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only": "using unmapped");
+
+					sys_event_port_send(entry.port_id, data1, data2, data3);
+					vm::temporary_unlock(*cpu);
+					thread_ctrl::wait();
+					return true;
+				}
+			}
+		}
+
 		LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 		cpu->state += cpu_flag::dbg_pause;
 		cpu->check_state();

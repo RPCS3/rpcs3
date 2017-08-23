@@ -1,5 +1,8 @@
 #include "stdafx.h"
 #include "sys_mmapper.h"
+#include "Emu/Cell/PPUThread.h"
+#include "sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_event.h"
 
 namespace vm { using namespace ps3; }
 
@@ -179,6 +182,17 @@ error_code sys_mmapper_free_address(u32 addr)
 {
 	sys_mmapper.error("sys_mmapper_free_address(addr=0x%x)", addr);
 
+	// If page fault notify exists and an address in this area is faulted, we can't free the memory.
+	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	for (const auto& ev : pf_events->events)
+	{
+		auto mem = vm::get(vm::any, addr);
+		if (mem && addr <= ev.fault_addr && ev.fault_addr <= addr + mem->size - 1)
+		{
+			return CELL_EBUSY;
+		}
+	}
+
 	// Try to unmap area
 	const auto area = vm::unmap(addr, true);
 
@@ -190,6 +204,21 @@ error_code sys_mmapper_free_address(u32 addr)
 	if (!area.unique())
 	{
 		return CELL_EBUSY;
+	}
+
+	// If a memory block is freed, remove it from page notification table.
+	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	auto ind_to_remove = pf_entries->entries.begin();
+	for (; ind_to_remove != pf_entries->entries.end(); ++ind_to_remove)
+	{
+		if (addr == ind_to_remove->start_addr)
+		{
+			break;
+		}
+	}
+	if (ind_to_remove != pf_entries->entries.end())
+	{
+		pf_entries->entries.erase(ind_to_remove);
 	}
 
 	return CELL_OK;
@@ -332,9 +361,47 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 	return CELL_OK;
 }
 
-error_code sys_mmapper_enable_page_fault_notification(u32 addr, u32 eq)
+error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_queue_id)
 {
-	sys_mmapper.todo("sys_mmapper_enable_page_fault_notification(addr=0x%x, eq=0x%x)", addr, eq);
+	sys_mmapper.warning("sys_mmapper_enable_page_fault_notification(start_addr=0x%x, event_queue_id=0x%x)", start_addr, event_queue_id);
+
+	auto mem = vm::get(vm::any, start_addr);
+	if (!mem)
+	{
+		return CELL_EINVAL;
+	}
+
+	// TODO: Check memory region's flags to make sure the memory can be used for page faults.
+
+	auto queue = idm::get<lv2_obj, lv2_event_queue>(event_queue_id);
+
+	if (!queue)
+	{ // Can't connect the queue if it doesn't exist.
+		return CELL_ESRCH;
+	}
+
+	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+
+	// We're not allowed to have the same queue registered more than once for page faults.
+	for (const auto& entry : pf_entries->entries)
+	{
+		if (entry.event_queue_id == event_queue_id)
+		{
+			return CELL_ESRCH;
+		}
+	}
+
+	vm::ptr<u32> port_id = vm::make_var<u32>(0);
+	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
+	sys_event_port_connect_local(port_id->value(), event_queue_id);
+
+	if (res == CELL_EAGAIN)
+	{ // Not enough system resources.
+		return CELL_EAGAIN;
+	}
+
+	page_fault_notification_entry entry{ start_addr, event_queue_id, port_id->value() };
+	pf_entries->entries.emplace_back(entry);
 
 	return CELL_OK;
 }

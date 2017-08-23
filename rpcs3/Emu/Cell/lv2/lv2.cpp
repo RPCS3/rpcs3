@@ -105,8 +105,8 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_ppu_...),                     //54  (0x036)  ROOT
 	null_func,//BIND_FUNC(sys_ppu_...),                     //55  (0x037)  ROOT
 	BIND_FUNC(sys_ppu_thread_rename),                       //56  (0x038)
-	null_func,//BIND_FUNC(sys_ppu_thread_recover_page_fault)//57  (0x039)
-	null_func,//BIND_FUNC(sys_ppu_thread_get_page_fault_context),//58 (0x03A)
+	BIND_FUNC(sys_ppu_thread_recover_page_fault),           //57  (0x039)
+	BIND_FUNC(sys_ppu_thread_get_page_fault_context),       //58  (0x03A)
 	null_func,                                              //59  (0x03B)  UNS
 	BIND_FUNC(sys_trace_create),                            //60  (0x03C)
 	BIND_FUNC(sys_trace_start),                             //61  (0x03D)

@@ -29,6 +29,17 @@ struct ppu_thread_param_t
 	be_t<u32> tls; // vm::ps3::bptr<void>
 };
 
+struct sys_ppu_thread_icontext_t
+{
+	be_t<u64> gpr[32];
+	be_t<u32> cr;
+	be_t<u32> rsv1;
+	be_t<u64> xer;
+	be_t<u64> lr;
+	be_t<u64> ctr;
+	be_t<u64> pc;
+};
+
 enum : u32
 {
 	PPU_THREAD_STATUS_IDLE,
@@ -56,3 +67,5 @@ error_code sys_ppu_thread_restart(u32 thread_id);
 error_code _sys_ppu_thread_create(vm::ps3::ptr<u64> thread_id, vm::ps3::ptr<ppu_thread_param_t> param, u64 arg, u64 arg4, s32 prio, u32 stacksize, u64 flags, vm::ps3::cptr<char> threadname);
 error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id);
 error_code sys_ppu_thread_rename(u32 thread_id, vm::ps3::cptr<char> name);
+error_code sys_ppu_thread_recover_page_fault(u32 thread_id);
+error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ps3::ptr<sys_ppu_thread_icontext_t> ctxt);
