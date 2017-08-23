@@ -366,20 +366,20 @@ void Emulator::Load(bool add_only)
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 
-		if (_cat == "DG" && m_path.find(hdd0_game + m_title_id + '/') != -1)
+		if (_cat == "DG" && m_path.find(hdd0_game) != -1)
 		{
 			// Booting disc game from wrong location
-			LOG_ERROR(LOADER, "Disc game found at invalid location: /dev_hdd0/game/%s/", m_title_id);
+			LOG_ERROR(LOADER, "Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
 			// Move and retry from correct location
-			if (fs::rename(hdd0_game + m_title_id, hdd0_disc + m_title_id))
+			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../"))
 			{
-				LOG_SUCCESS(LOADER, "Disc game moved to special location: /dev_hdd0/disc/%s/", m_title_id);
+				LOG_SUCCESS(LOADER, "Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
 				return SetPath(hdd0_disc + m_path.substr(hdd0_game.size())), Load();
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "Failed to move disc game to /dev_hdd0/disc/%s/ (%s)", m_title_id, fs::g_tls_error);
+				LOG_ERROR(LOADER, "Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
 				return;
 			}
 		}
