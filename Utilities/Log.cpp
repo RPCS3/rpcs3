@@ -9,9 +9,11 @@
 #include <unordered_map>
 
 #ifdef _WIN32
+#define NOMINMAX
 #include <Windows.h>
 #else
 #include <chrono>
+#include <sys/mman.h>
 #endif
 
 static std::string empty_string()
@@ -45,15 +47,22 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 
 namespace logs
 {
+	constexpr std::size_t s_log_size = 64 * 1024 * 1024;
+
 	class file_writer
 	{
-		// Could be memory-mapped file
 		fs::file m_file;
+
+#ifdef _WIN32
+		::HANDLE m_fmap;
+#endif
+		atomic_t<std::size_t> m_pos{0};
+		uchar* m_fptr;
 
 	public:
 		file_writer(const std::string& name);
 
-		virtual ~file_writer() = default;
+		virtual ~file_writer();
 
 		// Append raw data
 		void log(const char* text, std::size_t size);
@@ -62,6 +71,8 @@ namespace logs
 	struct file_listener : public file_writer, public listener
 	{
 		file_listener(const std::string& name);
+
+		virtual ~file_listener() = default;
 
 		// Encode level, current thread name, channel name and write log message
 		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
@@ -273,10 +284,17 @@ logs::file_writer::file_writer(const std::string& name)
 {
 	try
 	{
-		if (!m_file.open(fs::get_config_dir() + name, fs::rewrite + fs::append))
+		if (!m_file.open(fs::get_config_dir() + name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
 		{
 			fmt::throw_exception("Can't create log file %s (error %s)", name, fs::g_tls_error);
 		}
+
+#ifdef _WIN32
+		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
+		m_fptr = (uchar*)MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0);
+#else
+		m_fptr = (uchar*)::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0);
+#endif
 	}
 	catch (...)
 	{
@@ -284,9 +302,29 @@ logs::file_writer::file_writer(const std::string& name)
 	}
 }
 
+logs::file_writer::~file_writer()
+{
+#ifdef _WIN32
+	UnmapViewOfFile(m_fptr);
+	CloseHandle(m_fmap);
+	m_file.seek(std::min(+m_pos, s_log_size));
+	SetEndOfFile(m_file.get_handle());
+#else
+	::munmap(m_fptr, s_log_size);
+	m_file.trunc(std::min(+m_pos, s_log_size));
+#endif
+}
+
 void logs::file_writer::log(const char* text, std::size_t size)
 {
-	m_file.write(text, size);
+	// Acquire memory
+	const auto pos = m_pos.fetch_add(size);
+
+	// Write if possible
+	if (pos + size <= s_log_size)
+	{
+		std::memcpy(m_fptr + pos, text, size);
+	}
 }
 
 logs::file_listener::file_listener(const std::string& name)

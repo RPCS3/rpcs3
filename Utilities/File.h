@@ -25,6 +25,7 @@ namespace fs
 		create,
 		trunc,
 		excl,
+		unshare,
 
 		__bitset_enum_max
 	};
@@ -35,6 +36,7 @@ namespace fs
 	constexpr auto create  = +open_mode::create; // Create file if it doesn't exist
 	constexpr auto trunc   = +open_mode::trunc; // Clear opened file if it's not empty
 	constexpr auto excl    = +open_mode::excl; // Failure if the file already exists (used with `create`)
+	constexpr auto unshare = +open_mode::unshare; // Prevent opening the file twice
 
 	constexpr auto rewrite = open_mode::write + open_mode::create + open_mode::trunc;
 
