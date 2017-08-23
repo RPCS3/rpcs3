@@ -793,26 +793,20 @@ void Emulator::Stop()
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
 {
-	static thread_local std::unordered_map<std::string, std::size_t>* g_tls_error_stats{};
-	static thread_local std::string* g_tls_error_str{};
+	static thread_local std::unordered_map<std::string, std::size_t> g_tls_error_stats;
+	static thread_local std::string g_tls_error_str;
 
-	if (!g_tls_error_stats)
+	if (g_tls_error_stats.empty())
 	{
-		g_tls_error_stats = new std::unordered_map<std::string, std::size_t>;
-		g_tls_error_str   = new std::string;
-
 		thread_ctrl::atexit([]
 		{
-			for (auto&& pair : *g_tls_error_stats)
+			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
 				{
 					LOG_ERROR(GENERAL, "Stat: %s [x%u]", pair.first, pair.second);
 				}
 			}
-
-			delete g_tls_error_stats;
-			delete g_tls_error_str;
 		});
 	}
 
@@ -842,15 +836,15 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	}
 
 	// Format log message (use preallocated buffer)
-	g_tls_error_str->clear();
-	fmt::append(*g_tls_error_str, "'%s' failed with 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
+	g_tls_error_str.clear();
+	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
 
 	// Update stats and check log threshold
-	const auto stat = ++(*g_tls_error_stats)[*g_tls_error_str];
+	const auto stat = ++g_tls_error_stats[g_tls_error_str];
 
 	if (stat <= 3)
 	{
-		channel->format(level, "%s [%u]", *g_tls_error_str, stat);
+		channel->format(level, "%s [%u]", g_tls_error_str, stat);
 	}
 
 	return static_cast<s32>(arg);

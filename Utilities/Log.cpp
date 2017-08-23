@@ -246,7 +246,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 	}
 
 	// Get text
-	std::string text;
+	thread_local std::string text; text.clear();
 	fmt::raw_append(text, fmt, sup, args);
 	std::string prefix = g_tls_log_prefix();
 
@@ -266,7 +266,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 			}
 
 			// Store message additionally
-			g_messages.emplace_back(stored_message{*this, stamp, std::move(prefix), std::move(text)});
+			g_messages.emplace_back(stored_message{*this, stamp, std::move(prefix), text});
 		}
 	}
 	
@@ -347,7 +347,7 @@ logs::file_listener::file_listener(const std::string& name)
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
 {
-	std::string text; text.reserve(prefix.size() + _text.size() + 200);
+	thread_local std::string text;
 
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg.sev)
