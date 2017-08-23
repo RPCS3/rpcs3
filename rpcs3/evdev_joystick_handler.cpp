@@ -149,7 +149,7 @@ std::tuple<u16, u16> evdev_joystick_handler::ConvertToSquirclePoint(u16 inX, u16
     // https://thatsmaths.com/2016/07/14/squircles/
     const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (g_evdev_joystick_config.squirclefactor / 1000.f)) * r;
 
-    // we now have len and angle, convert to cartisian 
+    // we now have len and angle, convert to cartisian
 
     const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127);
     const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127);
@@ -440,18 +440,25 @@ void evdev_joystick_handler::thread_func()
                         LOG_ERROR(GENERAL, "Joystick #%d sent axis event for invalid axis %d", i, axis);
                         break;
                     }
-                    
+
+                    int value = evt.value;
+                    if (revaxis[axis])
+                    {
+                        // Reverse the value in the range.
+                        value = (axis_ranges[evt.code].second + axis_ranges[evt.code].first) - value;
+                    }
+
                     if (g_evdev_joystick_config.squirclejoysticks)
-                    {   
-                        joy_axis[i][axis] = evt.value;
+                    {
+                        joy_axis[i][axis] = value;
                         if (evt.code == ABS_X || evt.code == ABS_Y)
                         {
                             int Xaxis = joy_axis_maps[i][ABS_X];
                             int Yaxis = joy_axis_maps[i][ABS_Y];
                             pad.m_sticks[Xaxis].m_value = scale_axis(ABS_X, joy_axis[i][Xaxis]);
                             pad.m_sticks[Yaxis].m_value = scale_axis(ABS_Y, joy_axis[i][Yaxis]);
-                            
-                            std::tie(pad.m_sticks[Xaxis].m_value, pad.m_sticks[Yaxis].m_value) = 
+
+                            std::tie(pad.m_sticks[Xaxis].m_value, pad.m_sticks[Yaxis].m_value) =
                                 ConvertToSquirclePoint(pad.m_sticks[Xaxis].m_value, pad.m_sticks[Yaxis].m_value);
                         }
                         else
@@ -460,13 +467,15 @@ void evdev_joystick_handler::thread_func()
                             int Yaxis = joy_axis_maps[i][ABS_RY];
                             pad.m_sticks[Xaxis].m_value = scale_axis(ABS_RX, joy_axis[i][Xaxis]);
                             pad.m_sticks[Yaxis].m_value = scale_axis(ABS_RY, joy_axis[i][Yaxis]);
-                            
-                            std::tie(pad.m_sticks[Xaxis].m_value, pad.m_sticks[Yaxis].m_value) = 
+
+                            std::tie(pad.m_sticks[Xaxis].m_value, pad.m_sticks[Yaxis].m_value) =
                                 ConvertToSquirclePoint(pad.m_sticks[Xaxis].m_value, pad.m_sticks[Yaxis].m_value);
                         }
                     }
                     else
-                        pad.m_sticks[axis].m_value = scale_axis(evt.code, evt.value);
+                    {
+                        pad.m_sticks[axis].m_value = scale_axis(evt.code, value);
+                    }
                 }
                 break;
             default:
