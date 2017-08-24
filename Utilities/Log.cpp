@@ -293,6 +293,7 @@ logs::file_writer::file_writer(const std::string& name)
 		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
 		m_fptr = (uchar*)MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0);
 #else
+		m_file.trunc(s_log_size);
 		m_fptr = (uchar*)::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0);
 #endif
 	}
