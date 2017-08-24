@@ -166,8 +166,12 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 		case audio_renderer::null: return "Null";
 #ifdef _WIN32
 		case audio_renderer::xaudio: return "XAudio2";
-#elif defined(HAVE_ALSA)
+#endif
+#ifdef HAVE_ALSA
 		case audio_renderer::alsa: return "ALSA";
+#endif
+#ifdef HAVE_PULSE
+		case audio_renderer::pulse: return "PulseAudio";
 #endif
 		case audio_renderer::openal: return "OpenAL";
 		}

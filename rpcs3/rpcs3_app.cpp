@@ -48,6 +48,9 @@
 #ifdef HAVE_ALSA
 #include "Emu/Audio/ALSA/ALSAThread.h"
 #endif
+#ifdef HAVE_PULSE
+#include "Emu/Audio/Pulse/PulseThread.h"
+#endif
 
 // For now, a trivial constructor/destructor.  May add command line usage later.
 rpcs3_app::rpcs3_app(int& argc, char** argv) : QApplication(argc, argv)
@@ -234,9 +237,14 @@ void rpcs3_app::InitializeCallbacks()
 		case audio_renderer::null: return std::make_shared<NullAudioThread>();
 #ifdef _WIN32
 		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
-#elif defined(HAVE_ALSA)
+#endif
+#ifdef HAVE_ALSA
 		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
 #endif
+#ifdef HAVE_PULSE
+		case audio_renderer::pulse: return std::make_shared<PulseThread>();
+#endif
+
 		case audio_renderer::openal: return std::make_shared<OpenALThread>();
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
