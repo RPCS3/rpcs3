@@ -52,7 +52,7 @@ void PulseThread::AddData(const void* src, int size)
 	if(this->connection) {
 		int err;
 		if(pa_simple_write(this->connection, src, size, &err) < 0) {
-			fprintf(stderr, "PulseAusio: Failed to write audio stream: %s\n", pa_strerror(err));
+			fprintf(stderr, "PulseAudio: Failed to write audio stream: %s\n", pa_strerror(err));
 		}
 	}
 }
