@@ -9,9 +9,11 @@
 #include <unordered_map>
 
 #ifdef _WIN32
+#define NOMINMAX
 #include <Windows.h>
 #else
 #include <chrono>
+#include <sys/mman.h>
 #endif
 
 static std::string empty_string()
@@ -45,15 +47,22 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 
 namespace logs
 {
+	constexpr std::size_t s_log_size = 64 * 1024 * 1024;
+
 	class file_writer
 	{
-		// Could be memory-mapped file
 		fs::file m_file;
+
+#ifdef _WIN32
+		::HANDLE m_fmap;
+#endif
+		atomic_t<std::size_t> m_pos{0};
+		uchar* m_fptr;
 
 	public:
 		file_writer(const std::string& name);
 
-		virtual ~file_writer() = default;
+		virtual ~file_writer();
 
 		// Append raw data
 		void log(const char* text, std::size_t size);
@@ -61,13 +70,9 @@ namespace logs
 
 	struct file_listener : public file_writer, public listener
 	{
-		file_listener(const std::string& name)
-			: file_writer(name)
-			, listener()
-		{
-			const std::string& start = fmt::format("\xEF\xBB\xBF" "RPCS3 v%s\n%s\n", rpcs3::version.to_string(), utils::get_system_info());
-			file_writer::log(start.data(), start.size());
-		}
+		file_listener(const std::string& name);
+
+		virtual ~file_listener() = default;
 
 		// Encode level, current thread name, channel name and write log message
 		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
@@ -138,11 +143,25 @@ namespace logs
 		}
 	};
 
+	struct stored_message
+	{
+		message m;
+		u64 stamp;
+		std::string prefix;
+		std::string text;
+	};
+
 	// Channel registry mutex
 	semaphore<> g_mutex;
 
 	// Channel registry
 	std::unordered_map<std::string, channel_info> g_channels;
+
+	// Messages for delayed listener initialization
+	std::vector<stored_message> g_messages;
+
+	// Must be set to true in main()
+	atomic_t<bool> g_init{false};
 
 	void reset()
 	{
@@ -160,6 +179,17 @@ namespace logs
 
 		g_channels[ch_name].set_level(value);
 	}
+
+	// Must be called in main() to stop accumulating messages in g_messages
+	void set_init()
+	{
+		if (!g_init)
+		{
+			semaphore_lock lock(g_mutex);
+			g_messages.clear();
+			g_init = true;
+		}
+	}
 }
 
 logs::listener::~listener()
@@ -171,10 +201,18 @@ void logs::listener::add(logs::listener* _new)
 	// Get first (main) listener
 	listener* lis = get_logger();
 
+	semaphore_lock lock(g_mutex);
+
 	// Install new listener at the end of linked list
 	while (lis->m_next || !lis->m_next.compare_and_swap_test(nullptr, _new))
 	{
 		lis = lis->m_next;
+	}
+
+	// Send initial messages
+	for (const auto& msg : g_messages)
+	{
+		_new->log(msg.stamp, msg.m, msg.prefix, msg.text);
 	}
 }
 
@@ -208,12 +246,29 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 	}
 
 	// Get text
-	std::string text;
+	thread_local std::string text; text.clear();
 	fmt::raw_append(text, fmt, sup, args);
 	std::string prefix = g_tls_log_prefix();
 
 	// Get first (main) listener
 	listener* lis = get_logger();
+
+	if (!g_init)
+	{
+		semaphore_lock lock(g_mutex);
+
+		if (!g_init)
+		{
+			while (lis)
+			{
+				lis->log(stamp, *this, prefix, text);
+				lis = lis->m_next;
+			}
+
+			// Store message additionally
+			g_messages.emplace_back(stored_message{*this, stamp, std::move(prefix), text});
+		}
+	}
 	
 	// Send message to all listeners
 	while (lis)
@@ -229,10 +284,17 @@ logs::file_writer::file_writer(const std::string& name)
 {
 	try
 	{
-		if (!m_file.open(fs::get_config_dir() + name, fs::rewrite + fs::append))
+		if (!m_file.open(fs::get_config_dir() + name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
 		{
 			fmt::throw_exception("Can't create log file %s (error %s)", name, fs::g_tls_error);
 		}
+
+#ifdef _WIN32
+		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
+		m_fptr = (uchar*)MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0);
+#else
+		m_fptr = (uchar*)::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0);
+#endif
 	}
 	catch (...)
 	{
@@ -240,14 +302,52 @@ logs::file_writer::file_writer(const std::string& name)
 	}
 }
 
+logs::file_writer::~file_writer()
+{
+#ifdef _WIN32
+	UnmapViewOfFile(m_fptr);
+	CloseHandle(m_fmap);
+	m_file.seek(std::min(+m_pos, s_log_size));
+	SetEndOfFile(m_file.get_handle());
+#else
+	::munmap(m_fptr, s_log_size);
+	m_file.trunc(std::min(+m_pos, s_log_size));
+#endif
+}
+
 void logs::file_writer::log(const char* text, std::size_t size)
 {
-	m_file.write(text, size);
+	// Acquire memory
+	const auto pos = m_pos.fetch_add(size);
+
+	// Write if possible
+	if (pos + size <= s_log_size)
+	{
+		std::memcpy(m_fptr + pos, text, size);
+	}
+}
+
+logs::file_listener::file_listener(const std::string& name)
+	: file_writer(name)
+	, listener()
+{
+	// Write UTF-8 BOM
+	file_writer::log("\xEF\xBB\xBF", 3);
+
+	// Write initial message
+	stored_message ver;
+	ver.m.ch  = nullptr;
+	ver.m.sev = level::always;
+	ver.stamp = 0;
+	ver.text  = fmt::format("RPCS3 v%s\n%s", rpcs3::version.to_string(), utils::get_system_info());
+	file_writer::log(ver.text.data(), ver.text.size());
+	file_writer::log("\n", 1);
+	g_messages.emplace_back(std::move(ver));
 }
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
 {
-	std::string text; text.reserve(prefix.size() + _text.size() + 200);
+	thread_local std::string text;
 
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg.sev)
@@ -276,7 +376,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 		text += "} ";
 	}
 	
-	if ('\0' != *msg.ch->name)
+	if (msg.ch && '\0' != *msg.ch->name)
 	{
 		text += msg.ch->name;
 		text += msg.sev == level::todo ? " TODO: " : ": ";

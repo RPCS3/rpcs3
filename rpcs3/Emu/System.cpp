@@ -370,20 +370,20 @@ void Emulator::Load(bool add_only)
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 
-		if (_cat == "DG" && m_path.find(hdd0_game + m_title_id + '/') != -1)
+		if (_cat == "DG" && m_path.find(hdd0_game) != -1)
 		{
 			// Booting disc game from wrong location
-			LOG_ERROR(LOADER, "Disc game found at invalid location: /dev_hdd0/game/%s/", m_title_id);
+			LOG_ERROR(LOADER, "Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
 			// Move and retry from correct location
-			if (fs::rename(hdd0_game + m_title_id, hdd0_disc + m_title_id))
+			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../"))
 			{
-				LOG_SUCCESS(LOADER, "Disc game moved to special location: /dev_hdd0/disc/%s/", m_title_id);
+				LOG_SUCCESS(LOADER, "Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
 				return SetPath(hdd0_disc + m_path.substr(hdd0_game.size())), Load();
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "Failed to move disc game to /dev_hdd0/disc/%s/ (%s)", m_title_id, fs::g_tls_error);
+				LOG_ERROR(LOADER, "Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
 				return;
 			}
 		}
@@ -797,26 +797,20 @@ void Emulator::Stop()
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
 {
-	static thread_local std::unordered_map<std::string, std::size_t>* g_tls_error_stats{};
-	static thread_local std::string* g_tls_error_str{};
+	static thread_local std::unordered_map<std::string, std::size_t> g_tls_error_stats;
+	static thread_local std::string g_tls_error_str;
 
-	if (!g_tls_error_stats)
+	if (g_tls_error_stats.empty())
 	{
-		g_tls_error_stats = new std::unordered_map<std::string, std::size_t>;
-		g_tls_error_str   = new std::string;
-
 		thread_ctrl::atexit([]
 		{
-			for (auto&& pair : *g_tls_error_stats)
+			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
 				{
 					LOG_ERROR(GENERAL, "Stat: %s [x%u]", pair.first, pair.second);
 				}
 			}
-
-			delete g_tls_error_stats;
-			delete g_tls_error_str;
 		});
 	}
 
@@ -846,15 +840,15 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	}
 
 	// Format log message (use preallocated buffer)
-	g_tls_error_str->clear();
-	fmt::append(*g_tls_error_str, "'%s' failed with 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
+	g_tls_error_str.clear();
+	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
 
 	// Update stats and check log threshold
-	const auto stat = ++(*g_tls_error_stats)[*g_tls_error_str];
+	const auto stat = ++g_tls_error_stats[g_tls_error_str];
 
 	if (stat <= 3)
 	{
-		channel->format(level, "%s [%u]", *g_tls_error_str, stat);
+		channel->format(level, "%s [%u]", g_tls_error_str, stat);
 	}
 
 	return static_cast<s32>(arg);

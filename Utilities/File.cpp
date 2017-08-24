@@ -764,7 +764,13 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		disp = test(mode & fs::trunc) ? TRUNCATE_EXISTING : OPEN_EXISTING;
 	}
 
-	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD share = 0;
+	if (!test(mode & fs::unshare))
+	{
+		share |= FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	}
+
+	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -772,7 +778,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class windows_file final : public file_base
+	class windows_file final : public file_base, public get_native_handle
 	{
 		const HANDLE m_handle;
 
@@ -879,6 +885,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 			return size.QuadPart;
 		}
+
+		native_handle get() override
+		{
+			return m_handle;
+		}
 	};
 
 	m_file = std::make_unique<windows_file>(handle);
@@ -902,7 +913,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class unix_file final : public file_base
+	class unix_file final : public file_base, public get_native_handle
 	{
 		const int m_fd;
 
@@ -991,6 +1002,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 			return file_info.st_size;
 		}
+
+		native_handle get() override
+		{
+			return m_fd;
+		}
 	};
 
 	m_file = std::make_unique<unix_file>(fd);
@@ -1064,6 +1080,20 @@ fs::file::file(const void* ptr, std::size_t size)
 	};
 
 	m_file = std::make_unique<memory_stream>(ptr, size);
+}
+
+fs::native_handle fs::file::get_handle() const
+{
+	if (auto getter = dynamic_cast<get_native_handle*>(m_file.get()))
+	{
+		return getter->get();
+	}
+
+#ifdef _WIN32
+	return INVALID_HANDLE_VALUE;
+#else
+	return -1;
+#endif
 }
 
 void fs::dir::xnull() const

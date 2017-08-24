@@ -13,8 +13,15 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
+namespace logs
+{
+	void set_init();
+}
+
 int main(int argc, char** argv)
 {
+	logs::set_init();
+
 #ifdef _WIN32
 	SetProcessDPIAware();
 	WSADATA wsa_data;
