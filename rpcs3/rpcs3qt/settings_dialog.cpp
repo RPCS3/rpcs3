@@ -280,50 +280,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	auto l_OnSearchBoxTextChanged = [=](QString text)
 	{
 		QString searchTerm = text.toLower();
-		QList<QListWidgetItem*> checked_Libs;
-		QList<QListWidgetItem*> unchecked_Libs;
+		QList<QListWidgetItem*> list;
 
-		// create sublists. we need clones to preserve checkstates
-		for (int i = 0; i < ui->lleList->count(); ++i)
+		// create list. we need clones to preserve checkstates
+		for (int i = 0; i < ui->lleList->count(); i++)
 		{
-			if (ui->lleList->item(i)->checkState() == Qt::Checked)
-			{
-				checked_Libs.append(ui->lleList->item(i)->clone());
-			}
-			else
-			{
-				unchecked_Libs.append(ui->lleList->item(i)->clone());
-			}
+			list.append(ui->lleList->item(i)->clone());
 		}
 
-		// sort sublists
-		auto qLessThan = [](QListWidgetItem *i1, QListWidgetItem *i2) { return i1->text() < i2->text(); };
-		qSort(checked_Libs.begin(), checked_Libs.end(), qLessThan);
-		qSort(unchecked_Libs.begin(), unchecked_Libs.end(), qLessThan);
+		// sort list
+		qSort(list.begin(), list.end(), [](QListWidgetItem *i1, QListWidgetItem *i2) {
+			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
+		});
 
 		// refill library list
 		ui->lleList->clear();
 
-		for (const auto& lib : checked_Libs)
+		for (int i = 0; i < list.count(); i++)
 		{
-			ui->lleList->addItem(lib);
-		}
-		for (const auto& lib : unchecked_Libs)
-		{
-			ui->lleList->addItem(lib);
-		}
+			ui->lleList->addItem(list.at(i));
 
-		// only show items filtered for search text
-		for (int i = 0; i < ui->lleList->count(); i++)
-		{
-			if (ui->lleList->item(i)->text().contains(searchTerm))
-			{
-				ui->lleList->setRowHidden(i, false);
-			}
-			else
-			{
-				ui->lleList->setRowHidden(i, true);
-			}
+			// only show items filtered for search text
+			ui->lleList->setRowHidden(i, !list.at(i)->text().contains(searchTerm));
 		}
 	};
 
