@@ -35,6 +35,9 @@ error_code cellKbInit(u32 max_connect)
 {
 	sys_io.warning("cellKbInit(max_connect=%d)", max_connect);
 
+	if (g_cfg.io.keyboard == keyboard_handler::null)
+		return CELL_KB_ERROR_NO_DEVICE;
+
 	const auto handler = fxm::import<KeyboardHandlerBase>(Emu.GetCallbacks().get_kb_handler);
 
 	if (!handler)
