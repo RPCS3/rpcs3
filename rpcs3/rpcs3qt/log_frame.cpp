@@ -12,7 +12,7 @@ constexpr auto qstr = QString::fromStdString;
 
 struct gui_listener : logs::listener
 {
-	atomic_t<logs::level> enabled{};
+	atomic_t<logs::level> enabled{logs::level::_uninit};
 
 	struct packet
 	{
@@ -35,13 +35,9 @@ struct gui_listener : logs::listener
 
 	gui_listener()
 		: logs::listener()
+		, last(new packet)
+		, read(+last)
 	{
-		// Initialize packets
-		read = new packet;
-		last = new packet;
-		read->next = last.load();
-		last->msg = fmt::format("RPCS3 v%s\n%s\n", rpcs3::version.to_string(), utils::get_system_info());
-
 		// Self-registration
 		logs::listener::add(this);
 	}
@@ -67,7 +63,7 @@ struct gui_listener : logs::listener
 				_new->msg += "} ";
 			}
 
-			if ('\0' != *msg.ch->name)
+			if (msg.ch && '\0' != *msg.ch->name)
 			{
 				_new->msg += msg.ch->name;
 				_new->msg += msg.sev == logs::level::todo ? " TODO: " : ": ";

@@ -76,9 +76,23 @@ q_pair_list gui_settings::Var2List(const QVariant& var)
 	return list;
 }
 
-QIcon gui_settings::colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks)
+QIcon gui_settings::colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks, bool colorizeAll)
 {
-	QPixmap pixmap = icon.pixmap(icon.availableSizes().at(0));
+	return QIcon(colorizedPixmap(icon.pixmap(icon.availableSizes().at(0)), oldColor, newColor, useSpecialMasks, colorizeAll));
+}
+
+QPixmap gui_settings::colorizedPixmap(const QPixmap& old_pixmap, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks, bool colorizeAll)
+{
+	QPixmap pixmap = old_pixmap;
+
+	if (colorizeAll)
+	{
+		QBitmap mask = pixmap.createMaskFromColor(Qt::transparent, Qt::MaskInColor);
+		pixmap.fill(newColor);
+		pixmap.setMask(mask);
+		return pixmap;
+	}
+
 	QBitmap mask = pixmap.createMaskFromColor(oldColor, Qt::MaskOutColor);
 	pixmap.fill(newColor);
 	pixmap.setMask(mask);
@@ -96,19 +110,19 @@ QIcon gui_settings::colorizedIcon(const QIcon& icon, const QColor& oldColor, con
 		};
 
 		QColor colorS1(Qt::white);
-		QPixmap pixmapS1 = icon.pixmap(icon.availableSizes().at(0));
+		QPixmap pixmapS1 = old_pixmap;
 		QBitmap maskS1 = pixmapS1.createMaskFromColor(colorS1, Qt::MaskOutColor);
 		pixmapS1.fill(colorS1);
 		pixmapS1.setMask(maskS1);
 
 		QColor colorS2(0, 173, 246, 255);
-		QPixmap pixmapS2 = icon.pixmap(icon.availableSizes().at(0));
+		QPixmap pixmapS2 = old_pixmap;
 		QBitmap maskS2 = pixmapS2.createMaskFromColor(colorS2, Qt::MaskOutColor);
 		pixmapS2.fill(saturatedColor(newColor, 0.6f));
 		pixmapS2.setMask(maskS2);
 
 		QColor colorS3(0, 132, 244, 255);
-		QPixmap pixmapS3 = icon.pixmap(icon.availableSizes().at(0));
+		QPixmap pixmapS3 = old_pixmap;
 		QBitmap maskS3 = pixmapS3.createMaskFromColor(colorS3, Qt::MaskOutColor);
 		pixmapS3.fill(saturatedColor(newColor, 0.3f));
 		pixmapS3.setMask(maskS3);
@@ -119,8 +133,7 @@ QIcon gui_settings::colorizedIcon(const QIcon& icon, const QColor& oldColor, con
 		painter.drawPixmap(QPoint(0, 0), pixmapS3);
 		painter.end();
 	}
-
-	return QIcon(pixmap);
+	return pixmap;
 }
 
 void gui_settings::SetValue(const GUI_SAVE& entry, const QVariant& value)

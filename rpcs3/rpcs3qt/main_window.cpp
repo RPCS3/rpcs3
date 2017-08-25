@@ -1153,7 +1153,7 @@ void main_window::CreateConnects()
 	connect(ui->confSystemAct, &QAction::triggered, [=]() { openSettings(4); });
 
 	connect(ui->confPadAct, &QAction::triggered, this, [=](){
-		pad_settings_dialog dlg(this);
+		pad_settings_dialog dlg(guiSettings, this);
 		dlg.exec();
 	});
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=](){
@@ -1305,7 +1305,7 @@ void main_window::CreateConnects()
 			ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
 		}
 	});
-	connect(ui->toolbar_controls, &QAction::triggered, [=]() { pad_settings_dialog dlg(this); dlg.exec(); });
+	connect(ui->toolbar_controls, &QAction::triggered, [=]() { pad_settings_dialog dlg(guiSettings, this); dlg.exec(); });
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });

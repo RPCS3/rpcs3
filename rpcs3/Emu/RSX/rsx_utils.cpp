@@ -179,6 +179,9 @@ namespace rsx
 		case 8:
 			scale_image_fallback_impl<u64, u64>((u64*)dst, (const u64*)src, src_width, src_height, dst_pitch, src_pitch, pixel_size, samples);
 			break;
+		case 16:
+			scale_image_fallback_impl<u128, u128>((u128*)dst, (const u128*)src, src_width, src_height, dst_pitch, src_pitch, pixel_size, samples);
+			break;
 		default:
 			fmt::throw_exception("unsupported pixel size %d" HERE, pixel_size);
 		}
@@ -199,6 +202,9 @@ namespace rsx
 			break;
 		case 8:
 			scale_image_fallback_impl<u64, be_t<u64>>((u64*)dst, (const be_t<u64>*)src, src_width, src_height, dst_pitch, src_pitch, pixel_size, samples);
+			break;
+		case 16:
+			scale_image_fallback_impl<u128, be_t<u128>>((u128*)dst, (const be_t<u128>*)src, src_width, src_height, dst_pitch, src_pitch, pixel_size, samples);
 			break;
 		default:
 			fmt::throw_exception("unsupported pixel size %d" HERE, pixel_size);
