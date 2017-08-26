@@ -25,11 +25,11 @@ namespace vk
 		case rsx::primitive_type::triangles:
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		case rsx::primitive_type::triangle_strip:
+		case rsx::primitive_type::quad_strip:
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		case rsx::primitive_type::triangle_fan:
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
 		case rsx::primitive_type::quads:
-		case rsx::primitive_type::quad_strip:
 		case rsx::primitive_type::polygon:
 			requires_modification = true;
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;

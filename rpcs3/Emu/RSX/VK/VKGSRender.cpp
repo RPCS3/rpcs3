@@ -1842,7 +1842,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	auto &fragment_program = current_fragment_program;
 
 	const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
-	const size_t fragment_buffer_sz = fragment_constants_sz + (17 * 4 * sizeof(float));
+	const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
 	const size_t required_mem = 512 + 8192 + fragment_buffer_sz;
 
 	const size_t vertex_state_offset = m_uniform_buffer_ring_info.alloc<256>(required_mem);
@@ -2242,8 +2242,14 @@ void VKGSRender::flip(int buffer)
 	}
 	else if (m_current_frame->swap_command_buffer)
 	{
-		//Unreachable
-		fmt::throw_exception("Possible data corruption on frame context storage detected");
+		if (m_draw_calls > 0)
+		{
+			//Unreachable
+			fmt::throw_exception("Possible data corruption on frame context storage detected");
+		}
+
+		//There were no draws and back-to-back flips happened
+		process_swap_request(m_current_frame, true);
 	}
 
 	if (!resize_screen)
