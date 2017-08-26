@@ -112,6 +112,74 @@ struct sys_spu_image
 	vm::ps3::bptr<sys_spu_segment> segs;
 	be_t<s32> nsegs;
 
+	template <typename Phdrs>
+	static s32 get_nsegs(const Phdrs& phdrs)
+	{
+		s32 num_segs = 0;
+
+		for (const auto& phdr : phdrs)
+		{
+			if (phdr.p_type != 1 && phdr.p_type != 4)
+			{
+				return -1;
+			}
+
+			if (phdr.p_type == 1 && phdr.p_filesz != phdr.p_memsz && phdr.p_filesz)
+			{
+				num_segs += 2;
+			}
+			else
+			{
+				num_segs += 1;
+			}
+		}
+
+		return num_segs;
+	}
+
+	template <typename Phdrs>
+	static s32 fill(vm::ps3::ptr<sys_spu_segment> segs, const Phdrs& phdrs, u32 src)
+	{
+		s32 num_segs = 0;
+
+		for (const auto& phdr : phdrs)
+		{
+			if (phdr.p_type == 1)
+			{
+				if (phdr.p_filesz)
+				{
+					auto* seg = &segs[num_segs++];
+					seg->type = SYS_SPU_SEGMENT_TYPE_COPY;
+					seg->ls   = static_cast<u32>(phdr.p_vaddr);
+					seg->size = static_cast<u32>(phdr.p_filesz);
+					seg->addr = static_cast<u32>(phdr.p_offset + src);
+				}
+
+				if (phdr.p_memsz > phdr.p_filesz)
+				{
+					auto* seg = &segs[num_segs++];
+					seg->type = SYS_SPU_SEGMENT_TYPE_FILL;
+					seg->ls   = static_cast<u32>(phdr.p_vaddr + phdr.p_filesz);
+					seg->size = static_cast<u32>(phdr.p_memsz - phdr.p_filesz);
+					seg->addr = 0;
+				}
+			}
+			else if (phdr.p_type == 4)
+			{
+				auto* seg = &segs[num_segs++];
+				seg->type = SYS_SPU_SEGMENT_TYPE_INFO;
+				seg->size = 0x20;
+				seg->addr = static_cast<u32>(phdr.p_offset + 0x14 + src);
+			}
+			else
+			{
+				return -1;
+			}
+		}
+
+		return num_segs;
+	}
+
 	void load(const fs::file& stream);
 	void free();
 	void deploy(u32 loc);
@@ -205,7 +273,7 @@ class ppu_thread;
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 error_code _sys_spu_image_get_information(vm::ps3::ptr<sys_spu_image> img, u32 ptr1, u32 ptr2);
 error_code sys_spu_image_open(vm::ps3::ptr<sys_spu_image> img, vm::ps3::cptr<char> path);
-error_code _sys_spu_image_import(vm::ps3::ptr<sys_spu_image> img, u32 src, u32 arg3, u32 arg4);
+error_code _sys_spu_image_import(vm::ps3::ptr<sys_spu_image> img, u32 src, u32 size, u32 arg4);
 error_code _sys_spu_image_close(vm::ps3::ptr<sys_spu_image> img);
 error_code _sys_raw_spu_image_load(vm::ps3::ptr<sys_spu_image> img, u32 ptr, u32 arg3);
 error_code sys_spu_thread_initialize(vm::ps3::ptr<u32> thread, u32 group, u32 spu_num, vm::ps3::ptr<sys_spu_image>, vm::ps3::ptr<sys_spu_thread_attribute>, vm::ps3::ptr<sys_spu_thread_argument>);
