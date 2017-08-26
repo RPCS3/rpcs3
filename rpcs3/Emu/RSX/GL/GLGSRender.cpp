@@ -873,10 +873,8 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 	}
 	case NV4097_CLEAR_ZCULL_SURFACE:
 	{
-		//TODO
-		init_buffers(true);
-		clear_surface(0x3);
-
+		// NOP
+		// Clearing zcull memory does not modify depth/stencil buffers 'bound' to the zcull region
 		return true;
 	}
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
