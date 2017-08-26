@@ -187,6 +187,21 @@ void GLGSRender::begin()
 	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
 		gl_state.depth_func(comparison_op(rsx::method_registers.depth_func()));
+
+		float range_near = rsx::method_registers.clip_min();
+		float range_far = rsx::method_registers.clip_max();
+
+		if (g_cfg.video.strict_rendering_mode)
+			gl_state.depth_range(range_near, range_far);
+		else
+		{
+			//Workaround to preserve depth precision but respect z direction
+			//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
+			if (range_near <= range_far)
+				gl_state.depth_range(0.f, 1.f);
+			else
+				gl_state.depth_range(1.f, 0.f);
+		}
 	}
 
 	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
@@ -194,7 +209,6 @@ void GLGSRender::begin()
 		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
-	gl_state.depth_range(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
 	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
 	if (gl_state.enable(rsx::method_registers.blend_enabled(), GL_BLEND))
