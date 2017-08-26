@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Common/ShaderParam.h"
+#include "../Common/GLSLCommon.h"
 
 std::string getFloatTypeNameImp(size_t elementCount);
 std::string getFunctionImp(FUNCTION f);

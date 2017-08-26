@@ -164,6 +164,10 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float fog_param1;\n";
 	OS << "	uint alpha_test;\n";
 	OS << "	float alpha_ref;\n";
+	OS << "	uint alpha_func;\n";
+	OS << "	uint fog_mode;\n";
+	OS << "	uint window_origin;\n";
+	OS << "	uint window_height;\n";
 	OS << "	vec4 texture_parameters[16];\n";
 	OS << "};\n";
 
@@ -178,38 +182,6 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 namespace vk
 {
-	// Note: It's not clear whether fog is computed per pixel or per vertex.
-	// But it makes more sense to compute exp of interpoled value than to interpolate exp values.
-	void insert_fog_declaration(std::stringstream & OS, rsx::fog_mode mode)
-	{
-		switch (mode)
-		{
-		case rsx::fog_mode::linear:
-			OS << "	vec4 fogc = vec4(fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential:
-			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential2:
-			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), 2.)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::linear_abs:
-			OS << "	vec4 fogc = vec4(fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential_abs:
-			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential2_abs:
-			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), 2.)), 0., 0.);\n";
-			break;
-		default:
-			OS << "	vec4 fogc = vec4(0.);\n";
-			return;
-		}
-
-		OS << "	fogc.y = clamp(fogc.y, 0., 1.);\n";
-	}
-
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
 	{
 		std::string tex_name = "tex" + std::to_string(index);
@@ -230,6 +202,19 @@ namespace vk
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program);
+
+	//TODO: Generate input mask during parse stage to avoid this
+	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
+	{
+		for (const ParamItem& PI : PT.items)
+		{
+			if (PI.name == "fogc")
+			{
+				glsl::insert_fog_declaration(OS);
+				break;
+			}
+		}
+	}
 
 	const std::set<std::string> output_values =
 	{
@@ -269,11 +254,7 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
 	OS << "	vec4 wpos = gl_FragCoord;\n";
-
-	//Flip wpos in Y
-	//We could optionally export wpos from the VS, but this is so much easier
-	if (m_prog.origin_mode == rsx::window_origin::bottom)
-		OS << "	wpos.y = " << std::to_string(m_prog.height) << " - wpos.y;\n";
+	OS << "	if (window_origin != 0) wpos.y = window_height - wpos.y;\n";
 
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
 
@@ -323,7 +304,7 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 			if (PI.name == "fogc")
 			{
-				vk::insert_fog_declaration(OS, m_prog.fog_equation);
+				OS << "	vec4 fogc = fetch_fog_value(fog_mode);\n";
 				continue;
 			}
 		}
@@ -391,7 +372,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			}
 		}
 
-		OS << make_comparison_test(m_prog.alpha_func, "bool(alpha_test) && ", first_output_name + ".a", "alpha_ref");
+		OS << "	if (alpha_test != 0 && !comparison_passes(" << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n";
 	}
 
 	OS << "}\n\n";

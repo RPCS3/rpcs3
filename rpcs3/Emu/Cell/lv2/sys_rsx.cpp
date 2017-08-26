@@ -343,8 +343,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		zcull.height = (((a4 & 0xFFFFFFFF) >> 6) & 0xFF) << 6;
 		zcull.cullStart = (a5 >> 32);
 		zcull.offset = (a5 & 0xFFFFFFFF);
+		zcull.zcullDir = ((a6 >> 32) >> 1) & 0x1;
+		zcull.zcullFormat = ((a6 >> 32) >> 2) & 0x3FF;
+		zcull.sFunc = ((a6 >> 32) >> 12) & 0xF;
+		zcull.sRef = ((a6 >> 32) >> 16) & 0xFF;
+		zcull.sMask = ((a6 >> 32) >> 24) & 0xFF;
 		zcull.binded = (a6 & 0xFFFFFFFF) != 0;
-		//TODO: Set zculldir, format, sfunc, sref, smask
 	}
 	break;
 
