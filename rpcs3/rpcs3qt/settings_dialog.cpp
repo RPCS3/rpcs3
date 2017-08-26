@@ -280,28 +280,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	auto l_OnSearchBoxTextChanged = [=](QString text)
 	{
 		QString searchTerm = text.toLower();
-		QList<QListWidgetItem*> list;
+		std::vector<QListWidgetItem*> items;
 
-		// create list. we need clones to preserve checkstates
+		// duplicate current items, we need clones to preserve checkstates
 		for (int i = 0; i < ui->lleList->count(); i++)
 		{
-			list.append(ui->lleList->item(i)->clone());
+			items.push_back(ui->lleList->item(i)->clone());
 		}
 
-		// sort list
-		qSort(list.begin(), list.end(), [](QListWidgetItem *i1, QListWidgetItem *i2) {
+		// sort items: checked items first then alphabetical order
+		std::sort(items.begin(), items.end(), [](QListWidgetItem *i1, QListWidgetItem *i2) {
 			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
 		});
 
 		// refill library list
 		ui->lleList->clear();
 
-		for (int i = 0; i < list.count(); i++)
+		for (uint i = 0; i < items.size(); i++)
 		{
-			ui->lleList->addItem(list.at(i));
+			ui->lleList->addItem(items[i]);
 
 			// only show items filtered for search text
-			ui->lleList->setRowHidden(i, !list.at(i)->text().contains(searchTerm));
+			ui->lleList->setRowHidden(i, !items[i]->text().contains(searchTerm));
 		}
 	};
 

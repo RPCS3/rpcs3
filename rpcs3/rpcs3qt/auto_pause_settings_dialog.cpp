@@ -177,7 +177,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 void auto_pause_settings_dialog::OnRemove()
 {
 	QModelIndexList selection = pauseList->selectionModel()->selectedRows();
-	qSort(selection.begin(), selection.end()); // crash on unordered
+	std::sort(selection.begin(), selection.end());
 	for (int i = selection.count() - 1; i >= 0; i--)
 	{
 		m_entries.erase(m_entries.begin() + selection.at(i).row());
