@@ -66,7 +66,7 @@ void sys_spu_image::free()
 	}
 }
 
-void sys_spu_image::deploy(u32 loc)
+void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 {
 	// Segment info dump
 	std::string dump;
@@ -76,7 +76,7 @@ void sys_spu_image::deploy(u32 loc)
 	sha1_starts(&sha);
 	u8 sha1_hash[20];
 
-	for (int i = 0; i < nsegs; i++)
+	for (u32 i = 0; i < nsegs; i++)
 	{
 		auto& seg = segs[i];
 
@@ -232,7 +232,8 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	group->threads[spu_num] = std::move(spu);
 	group->args[spu_num] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
-	group->imgs[spu_num] = *img;
+	group->imgs[spu_num] = std::make_pair(*img, std::vector<sys_spu_segment>());
+	group->imgs[spu_num].second.assign(img->segs.get_ptr(), img->segs.get_ptr() + img->nsegs);
 
 	if (++group->init == group->num)
 	{
@@ -374,9 +375,9 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->index];
 			auto& img = group->imgs[thread->index];
 
-			img.deploy(thread->offset);
+			sys_spu_image::deploy(thread->offset, img.second.data(), img.first.nsegs);
 
-			thread->pc = img.entry_point;
+			thread->pc = img.first.entry_point;
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
 			thread->gpr[4] = v128::from64(0, args[1]);
