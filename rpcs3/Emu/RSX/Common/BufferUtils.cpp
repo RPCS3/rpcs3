@@ -610,12 +610,12 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
+	case rsx::primitive_type::quad_strip:
 		return true;
 	case rsx::primitive_type::line_loop:
 	case rsx::primitive_type::polygon:
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::quads:
-	case rsx::primitive_type::quad_strip:
 		return false;
 	}
 	fmt::throw_exception("Wrong primitive type" HERE);
