@@ -20,6 +20,7 @@ namespace vk
 	{
 		bool dirty = false;
 		u16 native_pitch = 0;
+		u16 rsx_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 		std::unique_ptr<vk::image_view> view;
 
@@ -169,6 +170,16 @@ namespace rsx
 			}
 
 			return ds;
+		}
+
+		static
+		void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
+		{
+			info->rsx_pitch = surface->rsx_pitch;
+			info->native_pitch = surface->native_pitch;
+			info->surface_width = surface->info.extent.width;
+			info->surface_height = surface->info.extent.height;
+			info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
 		}
 
 		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
