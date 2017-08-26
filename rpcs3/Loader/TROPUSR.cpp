@@ -9,9 +9,9 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 {
 	const std::string& path = vfs::get(filepath);
 
-	if (!fs::is_file(path))
+	if (!Generate(filepath, configpath))
 	{
-		Generate(filepath, configpath);
+		return false;
 	}
 
 	if (!m_file.open(path, fs::read))

@@ -22,7 +22,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 		return false;
 	}
 
-	std::vector<char> buffer; buffer.reserve(65536);
+	std::vector<char> buffer(65536);
 
 	for (const TRPEntry& entry : m_entries)
 	{
