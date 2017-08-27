@@ -97,27 +97,47 @@ namespace vk
 		a_dst = a_src;
 
 		//TODO: Use an array of offsets/dimensions for mipmapped blits (mipmap count > 1) since subimages will have different dimensions
-
-		VkImageBlit rgn = {};
-		rgn.srcOffsets[0] = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
-		rgn.srcOffsets[1] = { (int32_t)src_width, (int32_t)src_height, 1 };
-		rgn.dstOffsets[0] = { (int32_t)dst_x_offset, (int32_t)dst_y_offset, 0 };
-		rgn.dstOffsets[1] = { (int32_t)(dst_width + dst_x_offset), (int32_t)(dst_height + dst_y_offset), 1 };
-		rgn.dstSubresource = a_dst;
-		rgn.srcSubresource = a_src;
-
 		if (srcLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
 			change_image_layout(cmd, src, srcLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
 		if (dstLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 			change_image_layout(cmd, dst, dstLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
+		if (src_width != dst_width || src_height != dst_height || mipmaps > 1)
 		{
-			vkCmdBlitImage(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rgn, VK_FILTER_LINEAR);
+			if ((aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0)
+			{
+				//Most depth/stencil formats cannot be scaled using hw blit
+				LOG_ERROR(RSX, "Cannot perform scaled blit for depth/stencil images");
+				return;
+			}
 
-			rgn.srcSubresource.mipLevel++;
-			rgn.dstSubresource.mipLevel++;
+			VkImageBlit rgn = {};
+			rgn.srcOffsets[0] = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
+			rgn.srcOffsets[1] = { (int32_t)(src_width + src_x_offset), (int32_t)(src_height + src_y_offset), 1 };
+			rgn.dstOffsets[0] = { (int32_t)dst_x_offset, (int32_t)dst_y_offset, 0 };
+			rgn.dstOffsets[1] = { (int32_t)(dst_width + dst_x_offset), (int32_t)(dst_height + dst_y_offset), 1 };
+			rgn.dstSubresource = a_dst;
+			rgn.srcSubresource = a_src;
+
+			for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
+			{
+				vkCmdBlitImage(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rgn, VK_FILTER_LINEAR);
+
+				rgn.srcSubresource.mipLevel++;
+				rgn.dstSubresource.mipLevel++;
+			}
+		}
+		else
+		{
+			VkImageCopy copy_rgn;
+			copy_rgn.srcOffset = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
+			copy_rgn.dstOffset = { (int32_t)dst_x_offset, (int32_t)dst_y_offset, 0 };
+			copy_rgn.dstSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
+			copy_rgn.srcSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
+			copy_rgn.extent = { src_width, src_height, 1 };
+
+			vkCmdCopyImage(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_rgn);
 		}
 
 		if (srcLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
