@@ -26,7 +26,7 @@ namespace vk
 }
 
 //Heap allocation sizes in MB - each 'frame' owns a private heap, one of each kind
-#define VK_ATTRIB_RING_BUFFER_SIZE_M 144
+#define VK_ATTRIB_RING_BUFFER_SIZE_M 196
 #define VK_UBO_RING_BUFFER_SIZE_M 64
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
 #define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 64
