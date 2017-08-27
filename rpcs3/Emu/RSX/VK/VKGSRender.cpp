@@ -666,6 +666,15 @@ VKGSRender::~VKGSRender()
 
 	//Frame context
 	m_framebuffers_to_clean.clear();
+
+	if (m_current_frame == &m_aux_frame_context)
+	{
+		//Return resources back to the owner
+		m_current_frame = &frame_context_storage[m_current_queue_index];
+		m_current_frame->swap_storage(m_aux_frame_context);
+		m_current_frame->grab_resources(m_aux_frame_context);
+	}
+
 	m_aux_frame_context.buffer_views_to_clean.clear();
 	m_aux_frame_context.samplers_to_clean.clear();
 
@@ -863,9 +872,7 @@ void VKGSRender::begin()
 
 		flush_command_queue(true);
 		m_vertex_cache->purge();
-
-		for (auto &ctx : frame_context_storage)
-			ctx.reset_heap_ptrs();
+		m_current_frame->reset_heap_ptrs();
 
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
@@ -1496,7 +1503,6 @@ void VKGSRender::advance_queued_frames()
 	});
 
 	m_vertex_cache->purge();
-	m_current_frame->reset_heap_ptrs();
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
@@ -1569,6 +1575,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		ctx->buffer_views_to_clean.clear();
 		ctx->samplers_to_clean.clear();
+		ctx->reset_heap_ptrs();
 	}
 
 	ctx->swap_command_buffer = nullptr;
