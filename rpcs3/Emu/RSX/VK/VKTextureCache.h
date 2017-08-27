@@ -696,7 +696,8 @@ namespace vk
 				break;
 			}
 
-			cached_texture_section& region = find_cached_texture(texaddr, range, true, tex.width(), height, tex.get_exact_mipmap_count());
+			//Ignoring the mipmaps count is intentional - its common for games to pass in incorrect values as mipmap count
+			cached_texture_section& region = find_cached_texture(texaddr, range, true, tex.width(), height, 0);
 			if (region.exists() && !region.is_dirty())
 			{
 				return region.get_view().get();
@@ -1235,7 +1236,12 @@ namespace vk
 				else
 				{
 					flush_address(src_address, dev, cmd, memory_types, submit_queue);
-					writer_lock lock(m_cache_mutex);
+
+					if (dst.swizzled && src_is_argb8)
+					{
+						//Only ARGB8 textures are swizzled. Swizzled data is byte-swapped
+						src_vk_format = VK_FORMAT_R8G8B8A8_UNORM;
+					}
 
 					//Upload texture from CPU
 					vk::image *image = new vk::image(*vk::get_current_renderer(), memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1248,9 +1254,13 @@ namespace vk
 						{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
 						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-					cached_texture_section& region = find_cached_texture(dst.rsx_address, src.pitch * src.slice_h, true, src.width, src.slice_h, 1);
-					region.reset(src.rsx_address, src.pitch * src.slice_h);
-					region.create(src.width, src.slice_h, 1, 1, view, dest_texture);
+					change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+					cached_texture_section& region = find_cached_texture(src_address, src.pitch * src.slice_h, true, src.width, src.slice_h, 1);
+
+					writer_lock lock(m_cache_mutex);
+					region.reset(src_address, src.pitch * src.slice_h);
+					region.create(src.width, src.slice_h, 1, 1, view, image);
 					region.protect(utils::protection::ro);
 					region.set_dirty(false);
 
@@ -1262,14 +1272,16 @@ namespace vk
 					auto &subres = layout.back();
 					subres.width_in_block = src.width;
 					subres.height_in_block = src.slice_h;
-					subres.pitch_in_bytes = src.pitch;
+					subres.pitch_in_bytes = src.width; //Seems to be a typo - should be pitch_in_block
 					subres.depth = 1;
-					subres.data = {(const gsl::byte*)src.pixels, src.pitch * src.slice_h};
+					subres.data = {(const gsl::byte*)src.pixels, align(src.pitch, 256) * src.slice_h};
 
-					copy_mipmaped_image_using_buffer(cmd, image->value, layout, src_vk_format, false, 1,
-						upload_heap, upload_buffer);
+					copy_mipmaped_image_using_buffer(cmd, image->value, layout, src_is_argb8? CELL_GCM_TEXTURE_A8R8G8B8: CELL_GCM_TEXTURE_R5G6B5,
+						false, 1, upload_heap, upload_buffer);
 
 					vk::leave_uninterruptible();
+
+					vram_texture = image;
 				}
 			}
 			else
@@ -1325,11 +1337,26 @@ namespace vk
 					dst_vk_format,
 					real_width, dst.clip_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+
+				change_image_layout(cmd, dest_texture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 			}
 
 			//Copy data
+			u32 src_width = src_area.x2 - src_area.x1;
+			u32 src_height = src_area.y2 - src_area.y1;
+			u32 dst_width = dst_area.x2 - dst_area.x1;
+			u32 dst_height = dst_area.y2 - dst_area.y1;
+
+			if (dst.clip_width != dst_width ||
+				dst.clip_height != dst_height)
+			{
+				//clip reproject
+				src_width = (src_width * dst.clip_width) / dst_width;
+				src_height = (src_height * dst.clip_height) / dst_height;
+			}
+
 			copy_scaled_image(cmd, vram_texture->value, dest_texture->value, vram_texture->current_layout, dest_texture->current_layout,
-					src_area.x1, src_area.y1, src_w, src_h, dst_area.x1, dst_area.y1, dst.clip_width, dst.clip_height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+					src_area.x1, src_area.y1, src_width, src_height, dst_offset.x, dst_offset.y, dst.clip_width, dst.clip_height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 
 			if (dest_exists)
 				return true;
@@ -1349,7 +1376,7 @@ namespace vk
 
 			region.reset(dst.rsx_address, dst.pitch * dst.clip_height);
 			region.create(real_width, dst.clip_height, 1, 1, view, dest_texture);
-			region.protect(utils::protection::rw);
+			region.protect(utils::protection::ro);
 			region.set_dirty(false);
 
 			read_only_range = region.get_min_max(read_only_range);

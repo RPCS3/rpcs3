@@ -59,10 +59,10 @@ struct render_target_traits
 	{
 		//TODO
 		auto desc = surface->GetDesc();
-		info->rsx_pitch = desc.Width;
-		info->native_pitch = desc.Width;
-		info->surface_width = desc.Width;
-		info->surface_height = desc.Height;
+		info->rsx_pitch = static_cast<u16>(desc.Width);
+		info->native_pitch = static_cast<u16>(desc.Width);
+		info->surface_width = static_cast<u32>(desc.Width);
+		info->surface_height = static_cast<u32>(desc.Height);
 		info->bpp = 1;
 	}
 

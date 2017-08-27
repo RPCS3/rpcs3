@@ -25,11 +25,11 @@ namespace vk
 	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
 }
 
-//Heap allocation sizes in MB
-#define VK_ATTRIB_RING_BUFFER_SIZE_M 256
-#define VK_UBO_RING_BUFFER_SIZE_M 64
-#define VK_INDEX_RING_BUFFER_SIZE_M 64
-#define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 128
+//Heap allocation sizes in MB - each 'frame' owns a private heap, one of each kind
+#define VK_ATTRIB_RING_BUFFER_SIZE_M 128
+#define VK_UBO_RING_BUFFER_SIZE_M 32
+#define VK_INDEX_RING_BUFFER_SIZE_M 32
+#define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 64
 
 #define VK_MAX_ASYNC_CB_COUNT 64
 #define VK_MAX_ASYNC_FRAMES 2
@@ -117,8 +117,6 @@ private:
 	vk::glsl::program *m_program;
 	vk::context m_thread_context;
 
-	vk::vk_data_heap m_attrib_ring_info;
-	
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
 
@@ -140,12 +138,6 @@ private:
 
 	vk::render_device *m_device;
 	vk::swap_chain* m_swap_chain;
-
-	//buffer
-	vk::vk_data_heap m_uniform_buffer_ring_info;
-	vk::vk_data_heap m_index_buffer_ring_info;
-	vk::vk_data_heap m_texture_upload_buffer_ring_info;
-	std::unique_ptr<vk::buffer_view> m_null_buffer_view;
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
@@ -178,6 +170,12 @@ private:
 		u32 present_image = UINT32_MAX;
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
+		//Heap pointers
+		vk::vk_data_heap attrib_ring_info;
+		vk::vk_data_heap uniform_buffer_ring_info;
+		vk::vk_data_heap index_buffer_ring_info;
+		vk::vk_data_heap texture_upload_buffer_ring_info;
+
 		//Copy shareable information
 		void grab_resources(frame_context_t &other)
 		{
@@ -185,6 +183,11 @@ private:
 			descriptor_set = other.descriptor_set;
 			descriptor_pool = other.descriptor_pool;
 			used_descriptors = other.used_descriptors;
+
+			attrib_ring_info.swap(other.attrib_ring_info);
+			uniform_buffer_ring_info.swap(other.uniform_buffer_ring_info);
+			index_buffer_ring_info.swap(other.index_buffer_ring_info);
+			texture_upload_buffer_ring_info.swap(other.texture_upload_buffer_ring_info);
 		}
 
 		//Exchange storage (non-copyable)
@@ -192,6 +195,14 @@ private:
 		{
 			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
 			std::swap(samplers_to_clean, other.samplers_to_clean);
+		}
+
+		void reset_heap_ptrs()
+		{
+			attrib_ring_info.reset_allocation_stats();
+			uniform_buffer_ring_info.reset_allocation_stats();
+			index_buffer_ring_info.reset_allocation_stats();
+			texture_upload_buffer_ring_info.reset_allocation_stats();
 		}
 	};
 

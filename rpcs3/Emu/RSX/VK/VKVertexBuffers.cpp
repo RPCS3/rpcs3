@@ -202,7 +202,7 @@ VKGSRender::upload_vertex_data()
 {
 	m_vertex_layout = analyse_inputs_interleaved();
 
-	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
+	draw_command_visitor visitor(m_current_frame->index_buffer_ring_info, m_vertex_layout);
 	auto result = std::apply_visitor(visitor, get_draw_command(rsx::method_registers));
 
 	auto &vertex_count = result.allocated_vertex_count;
@@ -230,7 +230,8 @@ VKGSRender::upload_vertex_data()
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
 				in_cache = true;
-				m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, cached->offset_in_heap, required.first));
+				m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
+					m_current_frame->attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, cached->offset_in_heap, required.first));
 			}
 			else
 			{
@@ -240,8 +241,9 @@ VKGSRender::upload_vertex_data()
 
 		if (!in_cache)
 		{
-			persistent_offset = (u32)m_attrib_ring_info.alloc<256>(required.first);
-			m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_offset, required.first));
+			persistent_offset = (u32)m_current_frame->attrib_ring_info.alloc<256>(required.first);
+			m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
+				m_current_frame->attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_offset, required.first));
 
 			if (to_store)
 			{
@@ -254,19 +256,20 @@ VKGSRender::upload_vertex_data()
 	}
 	else
 	{
-		persistent_view = m_null_buffer_view->value;
+		persistent_view = null_buffer_view->value;
 	}
 
 	if (required.second > 0)
 	{
-		volatile_offset = (u32)m_attrib_ring_info.alloc<256>(required.second);
-		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_offset, required.second));
+		volatile_offset = (u32)m_current_frame->attrib_ring_info.alloc<256>(required.second);
+		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
+			m_current_frame->attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_offset, required.second));
 
 		volatile_view = m_current_frame->buffer_views_to_clean.back()->value;
 	}
 	else
 	{
-		volatile_view = m_null_buffer_view->value;
+		volatile_view = null_buffer_view->value;
 	}
 
 	m_program->bind_uniform(persistent_view, "persistent_input_stream", m_current_frame->descriptor_set);
@@ -280,24 +283,24 @@ VKGSRender::upload_vertex_data()
 		const size_t block_size = block_end - persistent_offset;
 		const size_t volatile_offset_in_block = volatile_offset - persistent_offset;
 
-		void *block_mapping = m_attrib_ring_info.map(persistent_offset, block_size);
+		void *block_mapping = m_current_frame->attrib_ring_info.map(persistent_offset, block_size);
 		write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, (char*)block_mapping + volatile_offset_in_block);
-		m_attrib_ring_info.unmap();
+		m_current_frame->attrib_ring_info.unmap();
 	}
 	else
 	{
 		if (required.first > 0 && persistent_offset != UINT64_MAX)
 		{
-			void *persistent_mapping = m_attrib_ring_info.map(persistent_offset, required.first);
+			void *persistent_mapping = m_current_frame->attrib_ring_info.map(persistent_offset, required.first);
 			write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping, nullptr);
-			m_attrib_ring_info.unmap();
+			m_current_frame->attrib_ring_info.unmap();
 		}
 
 		if (required.second > 0)
 		{
-			void *volatile_mapping = m_attrib_ring_info.map(volatile_offset, required.second);
+			void *volatile_mapping = m_current_frame->attrib_ring_info.map(volatile_offset, required.second);
 			write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, nullptr, volatile_mapping);
-			m_attrib_ring_info.unmap();
+			m_current_frame->attrib_ring_info.unmap();
 		}
 	}
 

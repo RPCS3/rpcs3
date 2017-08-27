@@ -1290,7 +1290,7 @@ namespace gl
 			//These textures are completely GPU resident so we dont watch for CPU access
 			//There's no data to be fetched from the CPU
 			//Its is possible for a title to attempt to read from the region, but the CPU path should be used in such cases
-			cached.protect(utils::protection::rw);
+			cached.protect(utils::protection::ro);
 			cached.set_dirty(false);
 
 			return true;

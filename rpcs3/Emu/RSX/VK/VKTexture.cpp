@@ -100,7 +100,7 @@ namespace vk
 
 		VkImageBlit rgn = {};
 		rgn.srcOffsets[0] = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
-		rgn.srcOffsets[1] = { (int32_t)src_width, (int32_t)src_height, 1 };
+		rgn.srcOffsets[1] = { (int32_t)(src_width + src_x_offset), (int32_t)(src_height + src_y_offset), 1 };
 		rgn.dstOffsets[0] = { (int32_t)dst_x_offset, (int32_t)dst_y_offset, 0 };
 		rgn.dstOffsets[1] = { (int32_t)(dst_width + dst_x_offset), (int32_t)(dst_height + dst_y_offset), 1 };
 		rgn.dstSubresource = a_dst;

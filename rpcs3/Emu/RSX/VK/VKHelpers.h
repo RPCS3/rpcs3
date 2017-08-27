@@ -1466,6 +1466,18 @@ namespace vk
 			mapped = false;
 			heap->unmap();
 		}
+
+		void swap(vk_data_heap &other)
+		{
+			std::swap(heap, other.heap);
+			std::swap(mapped, other.mapped);
+			std::swap(m_size, other.m_size);
+			std::swap(m_put_pos, other.m_put_pos);
+			std::swap(m_get_pos, other.m_get_pos);
+			std::swap(m_min_guard_size, other.m_min_guard_size);
+			std::swap(m_current_allocated_size, other.m_current_allocated_size);
+			std::swap(m_largest_allocated_pool, other.m_largest_allocated_pool);
+		}
 	};
 
 	/**
