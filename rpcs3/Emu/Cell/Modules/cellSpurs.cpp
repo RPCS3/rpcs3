@@ -17,7 +17,7 @@
 
 logs::channel cellSpurs("cellSpurs");
 
-s32 sys_spu_image_close(vm::ptr<sys_spu_image> img);
+error_code sys_spu_image_close(vm::ptr<sys_spu_image> img);
 
 // TODO
 struct cell_error_t

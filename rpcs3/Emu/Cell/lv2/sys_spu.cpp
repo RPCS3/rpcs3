@@ -20,19 +20,12 @@ logs::channel sys_spu("sys_spu");
 
 void sys_spu_image::load(const fs::file& stream)
 {
-	const spu_exec_object obj{stream};
+	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};
 
 	if (obj != elf_error::ok)
 	{
 		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
 	}
-
-	this->type = SYS_SPU_IMAGE_TYPE_KERNEL;
-	this->entry_point = obj.header.e_entry;
-	this->segs.set(vm::alloc(65 * 4096, vm::main));
-	this->nsegs = 0;
-
-	const u32 addr = this->segs.addr() + 4096;
 
 	for (const auto& shdr : obj.shdrs)
 	{
@@ -43,36 +36,25 @@ void sys_spu_image::load(const fs::file& stream)
 	{
 		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
-		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY)
-		{
-			auto& seg = segs[nsegs++];
-			seg.type  = prog.p_type;
-			seg.ls    = prog.p_vaddr;
-			seg.addr  = addr + prog.p_vaddr;
-			seg.size  = std::min(prog.p_filesz, prog.p_memsz);
-			std::memcpy(vm::base(seg.addr), prog.bin.data(), seg.size);
-
-			if (prog.p_memsz > prog.p_filesz)
-			{
-				auto& zero = segs[nsegs++];
-				zero.type  = SYS_SPU_SEGMENT_TYPE_FILL;
-				zero.ls    = prog.p_vaddr + prog.p_filesz;
-				zero.addr  = 0;
-				zero.size  = prog.p_memsz - seg.size;
-			}
-		}
-		else if (prog.p_type == SYS_SPU_SEGMENT_TYPE_INFO)
-		{
-			auto& seg = segs[nsegs++];
-			seg.type = SYS_SPU_SEGMENT_TYPE_INFO;
-			seg.ls   = prog.p_vaddr;
-			seg.addr = 0;
-			seg.size = prog.p_filesz;
-		}
-		else
+		if (prog.p_type != SYS_SPU_SEGMENT_TYPE_COPY && prog.p_type != SYS_SPU_SEGMENT_TYPE_INFO)
 		{
 			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
 		}
+	}
+
+	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
+	entry_point = obj.header.e_entry;
+	nsegs       = sys_spu_image::get_nsegs(obj.progs);
+	segs        = vm::cast(vm::alloc(nsegs * sizeof(sys_spu_segment) + ::size32(stream), vm::main));
+
+	const u32 src = segs.addr() + nsegs * sizeof(sys_spu_segment);
+
+	stream.seek(0);
+	stream.read(vm::base(src), stream.size());
+
+	if (nsegs < 0 || sys_spu_image::fill(segs, obj.progs, src) != nsegs)
+	{
+		fmt::throw_exception("Failed to load SPU segments (%d)" HERE, nsegs);
 	}
 }
 
@@ -84,7 +66,7 @@ void sys_spu_image::free()
 	}
 }
 
-void sys_spu_image::deploy(u32 loc)
+void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 {
 	// Segment info dump
 	std::string dump;
@@ -94,19 +76,19 @@ void sys_spu_image::deploy(u32 loc)
 	sha1_starts(&sha);
 	u8 sha1_hash[20];
 
-	for (int i = 0; i < nsegs; i++)
+	for (u32 i = 0; i < nsegs; i++)
 	{
 		auto& seg = segs[i];
 
 		fmt::append(dump, "\n\t[%d] t=0x%x, ls=0x%x, size=0x%x, addr=0x%x", i, seg.type, seg.ls, seg.size, seg.addr);
 
-		// Hash big-endian values
 		sha1_update(&sha, (uchar*)&seg.type, sizeof(seg.type));
-		sha1_update(&sha, (uchar*)&seg.size, sizeof(seg.size));
 
+		// Hash big-endian values
 		if (seg.type == SYS_SPU_SEGMENT_TYPE_COPY)
 		{
 			std::memcpy(vm::base(loc + seg.ls), vm::base(seg.addr), seg.size);
+			sha1_update(&sha, (uchar*)&seg.size, sizeof(seg.size));
 			sha1_update(&sha, (uchar*)&seg.ls, sizeof(seg.ls));
 			sha1_update(&sha, vm::g_base_addr + seg.addr, seg.size);
 		}
@@ -118,8 +100,14 @@ void sys_spu_image::deploy(u32 loc)
 			}
 
 			std::fill_n(vm::_ptr<u32>(loc + seg.ls), seg.size / 4, seg.addr);
+			sha1_update(&sha, (uchar*)&seg.size, sizeof(seg.size));
 			sha1_update(&sha, (uchar*)&seg.ls, sizeof(seg.ls));
 			sha1_update(&sha, (uchar*)&seg.addr, sizeof(seg.addr));
+		}
+		else if (seg.type == SYS_SPU_SEGMENT_TYPE_INFO)
+		{
+			const be_t<u32> size = seg.size + 0x14; // Workaround
+			sha1_update(&sha, (uchar*)&size, sizeof(size));
 		}
 	}
 
@@ -182,18 +170,20 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 	return CELL_OK;
 }
 
-error_code _sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 arg3, u32 arg4)
+error_code _sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 size, u32 arg4)
 {
-	sys_spu.todo("_sys_spu_image_import(img=*0x%x, src=*0x%x, arg3=0x%x, arg4=0x%x)", img, src, arg3, arg4);
+	sys_spu.warning("_sys_spu_image_import(img=*0x%x, src=*0x%x, size=0x%x, arg4=0x%x)", img, src, size, arg4);
 
-	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_import");
+	img->load(fs::file{vm::base(src), size});
+	return CELL_OK;
 }
 
 error_code _sys_spu_image_close(vm::ptr<sys_spu_image> img)
 {
-	sys_spu.todo("_sys_spu_image_close(img=*0x%x)", img);
+	sys_spu.warning("_sys_spu_image_close(img=*0x%x)", img);
 
-	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_close");
+	vm::dealloc(img->segs.addr(), vm::main);
+	return CELL_OK;
 }
 
 error_code _sys_raw_spu_image_load(vm::ptr<sys_spu_image> img, u32 ptr, u32 arg3)
@@ -242,7 +232,8 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	group->threads[spu_num] = std::move(spu);
 	group->args[spu_num] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
-	group->imgs[spu_num] = *img;
+	group->imgs[spu_num] = std::make_pair(*img, std::vector<sys_spu_segment>());
+	group->imgs[spu_num].second.assign(img->segs.get_ptr(), img->segs.get_ptr() + img->nsegs);
 
 	if (++group->init == group->num)
 	{
@@ -384,9 +375,9 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->index];
 			auto& img = group->imgs[thread->index];
 
-			img.deploy(thread->offset);
+			sys_spu_image::deploy(thread->offset, img.second.data(), img.first.nsegs);
 
-			thread->pc = img.entry_point;
+			thread->pc = img.first.entry_point;
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
 			thread->gpr[4] = v128::from64(0, args[1]);

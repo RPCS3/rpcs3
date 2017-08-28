@@ -47,7 +47,11 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 
 namespace logs
 {
-	constexpr std::size_t s_log_size = 64 * 1024 * 1024;
+	constexpr std::size_t s_log_size = 128 * 1024 * 1024;
+	constexpr std::size_t s_log_size_s = s_log_size / 2;
+	constexpr std::size_t s_log_size_t = s_log_size / 4 + s_log_size_s;
+	constexpr std::size_t s_log_size_e = s_log_size / 8 + s_log_size_t;
+	constexpr std::size_t s_log_size_f = s_log_size / 16 + s_log_size_e;
 
 	class file_writer
 	{
@@ -57,7 +61,8 @@ namespace logs
 		::HANDLE m_fmap;
 #endif
 		atomic_t<std::size_t> m_pos{0};
-		uchar* m_fptr;
+		std::size_t m_size{0};
+		uchar* m_fptr{};
 
 	public:
 		file_writer(const std::string& name);
@@ -65,7 +70,7 @@ namespace logs
 		virtual ~file_writer();
 
 		// Append raw data
-		void log(const char* text, std::size_t size);
+		void log(logs::level sev, const char* text, std::size_t size);
 	};
 
 	struct file_listener : public file_writer, public listener
@@ -305,19 +310,35 @@ logs::file_writer::file_writer(const std::string& name)
 
 logs::file_writer::~file_writer()
 {
+	if (m_size == 0)
+	{
+		m_size = std::min<std::size_t>(+m_pos, s_log_size);
+	}
+
 #ifdef _WIN32
 	UnmapViewOfFile(m_fptr);
 	CloseHandle(m_fmap);
-	m_file.seek(std::min(+m_pos, s_log_size));
+	m_file.seek(m_size);
 	SetEndOfFile(m_file.get_handle());
 #else
 	::munmap(m_fptr, s_log_size);
-	m_file.trunc(std::min(+m_pos, s_log_size));
+	m_file.trunc(m_size);
 #endif
 }
 
-void logs::file_writer::log(const char* text, std::size_t size)
+void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 {
+	// Adaptive log limit
+	const auto lim =
+		sev >= logs::level::success ? s_log_size_s :
+		sev == logs::level::todo ? s_log_size_t :
+		sev == logs::level::error ? s_log_size_e : s_log_size_f;
+
+	if (m_pos >= lim)
+	{
+		return;
+	}
+
 	// Acquire memory
 	const auto pos = m_pos.fetch_add(size);
 
@@ -326,6 +347,10 @@ void logs::file_writer::log(const char* text, std::size_t size)
 	{
 		std::memcpy(m_fptr + pos, text, size);
 	}
+	else if (pos <= s_log_size)
+	{
+		m_size = pos;
+	}
 }
 
 logs::file_listener::file_listener(const std::string& name)
@@ -333,7 +358,7 @@ logs::file_listener::file_listener(const std::string& name)
 	, listener()
 {
 	// Write UTF-8 BOM
-	file_writer::log("\xEF\xBB\xBF", 3);
+	file_writer::log(logs::level::always, "\xEF\xBB\xBF", 3);
 
 	// Write initial message
 	stored_message ver;
@@ -341,8 +366,8 @@ logs::file_listener::file_listener(const std::string& name)
 	ver.m.sev = level::always;
 	ver.stamp = 0;
 	ver.text  = fmt::format("RPCS3 v%s\n%s", rpcs3::version.to_string(), utils::get_system_info());
-	file_writer::log(ver.text.data(), ver.text.size());
-	file_writer::log("\n", 1);
+	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
+	file_writer::log(logs::level::always, "\n", 1);
 	g_messages.emplace_back(std::move(ver));
 }
 
@@ -390,5 +415,5 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	text += _text;
 	text += '\n';
 
-	file_writer::log(text.data(), text.size());
+	file_writer::log(msg.sev, text.data(), text.size());
 }
