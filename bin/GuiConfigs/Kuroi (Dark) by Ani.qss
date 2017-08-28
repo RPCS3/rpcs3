@@ -1,0 +1,248 @@
+/* 
+Kuroi (Dark) Theme for RPCS3 
+by Ani @ https://github.com/AniLeo
+r1 (2017.08.15)
+*/
+
+/* 
+Color Scheme
+(Darker to Lighter)
+  
+  Black 
+   > 292929
+   > 323232
+   > 333333
+   > 3d3d3d
+   > 404040
+   > 444444
+   
+  Light Grey
+   > 828790
+   > bdc3c7
+   > ecf0f1
+   
+   > b1b1b1
+   > 7f8c8d
+   
+  Green
+   > 2ecc71
+   
+  Red
+   > e74c3c
+*/
+
+/* Every widget */
+QWidget {
+	background-color: #323232;
+	color: #bdc3c7;
+	alternate-background-color: #3d3d3d;
+}
+
+/* Mouse tooltips */
+QToolTip {
+	border: 1px solid #323232;
+	background-color: #323232;
+	color: #ecf0f1;
+}
+
+/* Table headers */
+QHeaderView::section {
+	background-color: #323232;
+	color: #ecf0f1;
+	padding-left: 4px;
+	border: 1px solid #323232;
+}
+
+/* Settings Dialog: Tabs */
+QTabBar::tab {
+	color: #ecf0f1;
+	border: 1px solid #444;
+	border-bottom-style: none;
+	background-color: #333333;
+	padding-left: 16px;
+	padding-right: 16px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	margin-right: -2px;
+}
+QTabBar::tab:last {
+	margin-right: 0px;
+}
+QTabBar::tab:!selected {
+	color: #b1b1b1;
+	border-bottom-style: solid;
+	margin-top: 3px;
+	background-color: #292929;
+}
+QTabBar::tab:hover {
+	background-color: #333333;
+	color: #ecf0f1;
+}
+
+/* Checkboxes */
+QCheckBox::indicator {
+	border-radius: 2px;
+	border: 1px solid #ecf0f1;
+	width: 10px;
+	height: 10px;
+	margin-top: 1px;
+}
+QCheckBox::indicator:checked {
+	background-color: #2ecc71; /* Green */
+}
+QCheckBox::indicator:unchecked {
+	background-color: #e74c3c; /* Red */
+}
+QCheckBox::indicator::disabled {
+	background-color: #7f8c8d; /* Gray */
+}
+
+/* Radio Buttons */
+QRadioButton::indicator {
+	border-radius: 6px;
+	border: 1px solid #ecf0f1;
+	width: 10px;
+	height: 10px;
+	margin-top: 1px;
+}
+QRadioButton::indicator:checked {
+	background-color: #2ecc71; /* Green */
+}
+QRadioButton::indicator:unchecked {
+	background-color: #e74c3c; /* Red */
+}
+QRadioButton::indicator::disabled {
+	background-color: #7f8c8d; /* Gray */
+}
+
+/* Combo Boxes */
+QComboBox {
+	background-color: #404040;
+	color: #fff;
+	border: 1px solid #1e1e1e;
+	border-radius: 3px;
+	padding-bottom: 2px;
+	padding-left: 4px;
+}
+QComboBox::disabled {
+	background-color: #828790;
+	color: #fff;
+}
+
+/* Group Boxes (Settings Dialog) */
+QGroupBox {
+	margin-top: 17px;
+	font-size: 13px;
+	border: 1px solid #bdc3c7;
+	border-radius: 4px;
+}
+QGroupBox::title {
+	subcontrol-origin: margin;
+	subcontrol-position: top center;
+	padding: 5px 10px 5px 10px;
+	color: #fff;
+}
+
+/* Buttons */
+QPushButton {
+	background-color: #404040;
+}
+QPushButton::disabled {
+	background-color: #444444;
+	color: #828790;
+}
+
+/* Log and Debugger borders */
+QTextEdit {
+	border: 1px solid #828790;
+}
+
+/* For dock buttons to be visible */
+QDockWidget::close-button, QDockWidget::float-button {
+	background-color: #bdc3c7;
+	border: 1px solid #000;
+	border-radius: 4px;
+}
+
+/* Disable ugly borders */
+QTabWidget::pane {
+	border: 0px solid #828790;
+}
+
+/* Top menu bar */
+QMenuBar::item:selected {
+	background: #444444;
+}
+QMenu::item {
+	padding-left: 20px;
+	padding-right: 15px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+QMenu::item:selected {
+	background: #444444;
+	border: 1px solid #bdc3c7;
+}
+QMenu::item:disabled {
+	background-color: #444444;
+	color: #828790;
+}
+
+/* Libraries list */
+QListWidget::item:selected {
+	background-color: #3d3d3d;
+	color: #ecf0f1;
+}
+QListWidget::item:hover {
+	background-color: #4c4b4b;
+	color: #ecf0f1;
+}
+
+/* Pad Settings: Controller Image */
+QLabel#l_controller { 
+	color: #bdc3c7;
+}
+
+/* Game Grid Font */
+QLabel#gamegrid_font {
+	font-weight: 600;
+	font-size: 8pt;
+	font-family: Lucida Grande;
+	color: #ecf0f1;
+}
+
+/* Slider on toolbar */
+QWidget#sizeSliderContainer {
+	background: transparent;
+}
+
+/* Debug UI Settings buttons */
+QLabel#color_button {
+	background: transparent;
+}
+
+/* Seachbar on main toolbar */
+QLineEdit#mw_searchbar { 
+	margin-left:14px; 
+	color: #ecf0f1;
+}
+
+/* Uniform colors in Toolbar */
+QToolButton {
+	background: transparent;
+	color: transparent;
+}
+QToolButton::disabled {
+	background-color: #828790;
+}
+QToolButton::hover {
+	background-color: #444444;
+}
+
+/* Set Theme UI colors */
+QLabel#gamelist_icon_background_color {
+	background-color: #323232;
+}
+QLabel#gamelist_toolbar_icon_color {
+	background-color: #e3e3e3;
+}

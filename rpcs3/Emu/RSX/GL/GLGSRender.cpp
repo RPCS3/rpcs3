@@ -187,6 +187,21 @@ void GLGSRender::begin()
 	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
 		gl_state.depth_func(comparison_op(rsx::method_registers.depth_func()));
+
+		float range_near = rsx::method_registers.clip_min();
+		float range_far = rsx::method_registers.clip_max();
+
+		if (g_cfg.video.strict_rendering_mode)
+			gl_state.depth_range(range_near, range_far);
+		else
+		{
+			//Workaround to preserve depth precision but respect z direction
+			//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
+			if (range_near <= range_far)
+				gl_state.depth_range(0.f, 1.f);
+			else
+				gl_state.depth_range(1.f, 0.f);
+		}
 	}
 
 	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
@@ -194,7 +209,6 @@ void GLGSRender::begin()
 		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
 
-	gl_state.depth_range(rsx::method_registers.clip_min(), rsx::method_registers.clip_max());
 	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
 	if (gl_state.enable(rsx::method_registers.blend_enabled(), GL_BLEND))
@@ -857,6 +871,12 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 
 		return true;
 	}
+	case NV4097_CLEAR_ZCULL_SURFACE:
+	{
+		// NOP
+		// Clearing zcull memory does not modify depth/stencil buffers 'bound' to the zcull region
+		return true;
+	}
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
 		flush_draw_buffers = true;
@@ -929,7 +949,7 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	u32 fragment_constants_offset;
 
 	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	const u32 fragment_buffer_size = fragment_constants_size + (17 * 4 * sizeof(float));
+	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
 
 	if (manually_flush_ring_buffers)
 	{
@@ -1283,6 +1303,7 @@ void GLGSRender::clear_zcull_stats(u32 type)
 
 			//re-enable cull stats if stats are enabled
 			check_zcull_status(false, false);
+			zcull_task_queue.active_query->num_draws = 0;
 		}
 
 		current_zcull_stats.clear();
@@ -1296,10 +1317,12 @@ u32 GLGSRender::get_zcull_stats(u32 type)
 
 	if (zcull_task_queue.active_query &&
 		zcull_task_queue.active_query->active &&
-		current_zcull_stats.zpass_pixel_cnt == 0)
+		current_zcull_stats.zpass_pixel_cnt == 0 &&
+		type == CELL_GCM_ZPASS_PIXEL_CNT)
 	{
 		//The zcull unit is still bound as the read is happening and there are no results ready
-		check_zcull_status(false, true);
+		check_zcull_status(false, true);  //close current query
+		check_zcull_status(false, false); //start new query since stat counting is still active
 	}
 
 	switch (type)
@@ -1307,17 +1330,16 @@ u32 GLGSRender::get_zcull_stats(u32 type)
 	case CELL_GCM_ZPASS_PIXEL_CNT:
 	{
 		if (current_zcull_stats.zpass_pixel_cnt > 0)
-			return UINT32_MAX;
+			return UINT16_MAX;
 
-		//If we have no results, we might as well synchronize here and wait for results to become available
 		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0)? UINT32_MAX: 0;
+		return (current_zcull_stats.zpass_pixel_cnt > 0)? UINT16_MAX : 0;
 	}
 	case CELL_GCM_ZCULL_STATS:
 	case CELL_GCM_ZCULL_STATS1:
 	case CELL_GCM_ZCULL_STATS2:
 		//TODO
-		return UINT32_MAX;
+		return UINT16_MAX;
 	case CELL_GCM_ZCULL_STATS3:
 	{
 		//Some kind of inverse value
@@ -1325,7 +1347,7 @@ u32 GLGSRender::get_zcull_stats(u32 type)
 			return 0;
 		
 		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT32_MAX;
+		return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT16_MAX;
 	}
 	default:
 		LOG_ERROR(RSX, "Unknown zcull stat type %d", type);

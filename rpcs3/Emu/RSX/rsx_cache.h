@@ -409,11 +409,6 @@ namespace rsx
 			fp.ctrl = data.fp_ctrl;
 			fp.texture_dimensions = data.fp_texture_dimensions;
 			fp.unnormalized_coords = data.fp_unnormalized_coords;
-			fp.height = data.fp_height;
-			fp.pixel_center_mode = (rsx::window_pixel_center)(data.fp_pixel_layout & 0x3);
-			fp.origin_mode = (rsx::window_origin)((data.fp_pixel_layout >> 2) & 0x1);
-			fp.alpha_func = (rsx::comparison_function)((data.fp_pixel_layout >> 3) & 0xF);
-			fp.fog_equation = (rsx::fog_mode)((data.fp_pixel_layout >> 7) & 0xF);
 			fp.front_back_color_enabled = (data.fp_lighting_flags & 0x1) != 0;
 			fp.back_color_diffuse_output = ((data.fp_lighting_flags >> 1) & 0x1) != 0;
 			fp.back_color_specular_output = ((data.fp_lighting_flags >> 2) & 0x1) != 0;
@@ -444,8 +439,6 @@ namespace rsx
 			data_block.fp_ctrl = fp.ctrl;
 			data_block.fp_texture_dimensions = fp.texture_dimensions;
 			data_block.fp_unnormalized_coords = fp.unnormalized_coords;
-			data_block.fp_height = fp.height;
-			data_block.fp_pixel_layout = (u16)fp.pixel_center_mode | (u16)fp.origin_mode << 2 | (u16)fp.alpha_func << 3;
 			data_block.fp_lighting_flags = (u16)fp.front_back_color_enabled | (u16)fp.back_color_diffuse_output << 1 |
 				(u16)fp.back_color_specular_output << 2 | (u16)fp.front_color_diffuse_output << 3 | (u16)fp.front_color_specular_output << 4;
 			data_block.fp_shadow_textures = fp.shadow_textures;

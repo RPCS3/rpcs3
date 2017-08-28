@@ -98,6 +98,16 @@ namespace rsx
 			}
 		}
 
+		void clear_zcull(thread* rsx, u32 _reg, u32 arg)
+		{
+			rsx->do_method(NV4097_CLEAR_ZCULL_SURFACE, arg);
+
+			if (rsx->capture_current_frame)
+			{
+				rsx->capture_frame("clear zcull memory");
+			}
+		}
+
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			const u32 index = method_registers.semaphore_offset_4097() >> 4;
@@ -1534,6 +1544,7 @@ namespace rsx
 		bind<NV4097_SET_ZCULL_EN, nv4097::set_zcull_render_enable>();
 		bind<NV4097_SET_ZCULL_STATS_ENABLE, nv4097::set_zcull_stats_enable>();
 		bind<NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE, nv4097::set_zcull_pixel_count_enable>();
+		bind<NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

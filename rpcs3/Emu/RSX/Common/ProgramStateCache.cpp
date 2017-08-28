@@ -107,9 +107,8 @@ size_t fragment_program_hash::operator()(const RSXFragmentProgram& program) cons
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
 	if (binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
-		binary1.height != binary2.height || binary1.origin_mode != binary2.origin_mode || binary1.pixel_center_mode != binary2.pixel_center_mode ||
 		binary1.back_color_diffuse_output != binary2.back_color_diffuse_output || binary1.back_color_specular_output != binary2.back_color_specular_output ||
-		binary1.front_back_color_enabled != binary2.front_back_color_enabled || binary1.alpha_func != binary2.alpha_func || binary1.fog_equation != binary2.fog_equation ||
+		binary1.front_back_color_enabled != binary2.front_back_color_enabled ||
 		binary1.shadow_textures != binary2.shadow_textures || binary1.redirected_textures != binary2.redirected_textures)
 		return false;
 
