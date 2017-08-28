@@ -856,7 +856,7 @@
           <item>
            <widget class="QLabel" name="label_7">
             <property name="text">
-             <string>System settings allow you change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.
+             <string>System settings allow you to change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.
 </string>
             </property>
             <property name="textFormat">
