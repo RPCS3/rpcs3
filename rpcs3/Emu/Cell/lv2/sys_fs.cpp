@@ -197,11 +197,6 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 
 	const std::string& local_path = vfs::get(path.get_ptr());
 
-	if (local_path.empty())
-	{
-		return {CELL_ENOENT, path};
-	}
-
 	// TODO: other checks for path
 
 	if (fs::is_dir(local_path))
@@ -419,11 +414,6 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 
 	const std::string& local_path = vfs::get(path.get_ptr());
 
-	if (local_path.empty())
-	{
-		return {CELL_ENOENT, path};
-	}
-
 	// TODO: other checks for path
 
 	if (fs::is_file(local_path))
@@ -497,11 +487,6 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	sys_fs.warning("sys_fs_stat(path=%s, sb=*0x%x)", path, sb);
 
 	const std::string& local_path = vfs::get(path.get_ptr());
-
-	if (local_path.empty())
-	{
-		return {CELL_ENOENT, path};
-	}
 
 	fs::stat_t info;
 
