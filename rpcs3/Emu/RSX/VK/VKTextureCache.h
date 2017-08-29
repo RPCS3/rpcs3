@@ -652,12 +652,6 @@ namespace vk
 				return rtt_texture->get_view();
 			}
 
-			u32 raw_format = tex.format();
-			u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-
-			VkComponentMapping mapping = get_component_map(tex, format);
-			VkFormat vk_format = get_compatible_sampler_format(format);
-
 			VkImageType image_type;
 			VkImageViewType image_view_type;
 			u16 height = 0;
@@ -712,6 +706,12 @@ namespace vk
 				LOG_ERROR(RSX, "Texture upload requested but invalid texture dimensions passed");
 				return nullptr;
 			}
+
+			u32 raw_format = tex.format();
+			u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+
+			VkComponentMapping mapping = get_component_map(tex, format);
+			VkFormat vk_format = get_compatible_sampler_format(format);
 
 			vk::image *image = new vk::image(*vk::get_current_renderer(), memory_type_mapping.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				image_type,
@@ -1105,7 +1105,8 @@ namespace vk
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
 			bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
 
-			VkFormat src_vk_format = src_is_argb8 ? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R5G6B5_UNORM_PACK16;
+			const VkComponentMapping rgba_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+			const VkComponentMapping bgra_map = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
 
 			vk::image* vram_texture = nullptr;
 			vk::image* dest_texture = nullptr;
@@ -1237,11 +1238,8 @@ namespace vk
 				{
 					flush_address(src_address, dev, cmd, memory_types, submit_queue);
 
-					if (dst.swizzled && src_is_argb8)
-					{
-						//Only ARGB8 textures are swizzled. Swizzled data is byte-swapped
-						src_vk_format = VK_FORMAT_R8G8B8A8_UNORM;
-					}
+					const VkFormat src_vk_format = src_is_argb8 ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_R5G6B5_UNORM_PACK16;
+					const VkComponentMapping component_mapping = (!src_is_argb8 || dst.swizzled) ? bgra_map : rgba_map;
 
 					//Upload texture from CPU
 					vk::image *image = new vk::image(*vk::get_current_renderer(), memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1251,8 +1249,7 @@ namespace vk
 						VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
 					vk::image_view *view = new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_2D, src_vk_format,
-						{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
-						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+						component_mapping, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
 					change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
@@ -1371,8 +1368,7 @@ namespace vk
 			//Its is possible for a title to attempt to read from the region, but the CPU path should be used in such cases
 
 			vk::image_view *view = new vk::image_view(*vk::get_current_renderer(), dest_texture->value, VK_IMAGE_VIEW_TYPE_2D, dst_vk_format,
-					{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+					(dst_is_argb8 && !dst.swizzled)? rgba_map: bgra_map, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
 			region.reset(dst.rsx_address, dst.pitch * dst.clip_height);
 			region.create(real_width, dst.clip_height, 1, 1, view, dest_texture);
