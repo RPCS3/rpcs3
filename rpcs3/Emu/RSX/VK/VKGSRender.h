@@ -26,7 +26,7 @@ namespace vk
 }
 
 //Heap allocation sizes in MB - each 'frame' owns a private heap, one of each kind
-#define VK_ATTRIB_RING_BUFFER_SIZE_M 196
+#define VK_ATTRIB_RING_BUFFER_SIZE_M 256
 #define VK_UBO_RING_BUFFER_SIZE_M 64
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
 #define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 64
@@ -157,6 +157,12 @@ private:
 
 	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
+	u64 m_last_heap_sync_time = 0;
+	vk::vk_data_heap m_attrib_ring_info;
+	vk::vk_data_heap m_uniform_buffer_ring_info;
+	vk::vk_data_heap m_index_buffer_ring_info;
+	vk::vk_data_heap m_texture_upload_buffer_ring_info;
+
 	struct frame_context_t
 	{
 		VkSemaphore present_semaphore = VK_NULL_HANDLE;
@@ -171,10 +177,12 @@ private:
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
 		//Heap pointers
-		vk::vk_data_heap attrib_ring_info;
-		vk::vk_data_heap uniform_buffer_ring_info;
-		vk::vk_data_heap index_buffer_ring_info;
-		vk::vk_data_heap texture_upload_buffer_ring_info;
+		s64 attrib_heap_ptr = 0;
+		s64 ubo_heap_ptr = 0;
+		s64 index_heap_ptr = 0;
+		s64 texture_upload_heap_ptr = 0;
+
+		u64 last_frame_sync_time = 0;
 
 		//Copy shareable information
 		void grab_resources(frame_context_t &other)
@@ -184,10 +192,10 @@ private:
 			descriptor_pool = other.descriptor_pool;
 			used_descriptors = other.used_descriptors;
 
-			attrib_ring_info.swap(other.attrib_ring_info);
-			uniform_buffer_ring_info.swap(other.uniform_buffer_ring_info);
-			index_buffer_ring_info.swap(other.index_buffer_ring_info);
-			texture_upload_buffer_ring_info.swap(other.texture_upload_buffer_ring_info);
+			attrib_heap_ptr = other.attrib_heap_ptr;
+			ubo_heap_ptr = other.attrib_heap_ptr;
+			index_heap_ptr = other.attrib_heap_ptr;
+			texture_upload_heap_ptr = other.texture_upload_heap_ptr;
 		}
 
 		//Exchange storage (non-copyable)
@@ -197,12 +205,19 @@ private:
 			std::swap(samplers_to_clean, other.samplers_to_clean);
 		}
 
+		void tag_frame_end(s64 attrib_loc, s64 ubo_loc, s64 index_loc, s64 texture_loc)
+		{
+			attrib_heap_ptr = attrib_loc;
+			ubo_heap_ptr = ubo_loc;
+			index_heap_ptr = index_loc;
+			texture_upload_heap_ptr = texture_loc;
+
+			last_frame_sync_time = get_system_time();
+		}
+
 		void reset_heap_ptrs()
 		{
-			attrib_ring_info.reset_allocation_stats();
-			uniform_buffer_ring_info.reset_allocation_stats();
-			index_buffer_ring_info.reset_allocation_stats();
-			texture_upload_buffer_ring_info.reset_allocation_stats();
+			last_frame_sync_time = 0;
 		}
 	};
 

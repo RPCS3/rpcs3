@@ -582,20 +582,20 @@ VKGSRender::VKGSRender() : GSRender()
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
+	//VRAM allocation
+	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, 0x400000);
+	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000);
+	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000);
+	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
+	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+
 	for (auto &ctx : frame_context_storage)
 	{
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_semaphore);
 		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
-
-		//VRAM allocation
-		ctx.attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, 0x400000);
-		ctx.attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
-		ctx.uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000);
-		ctx.uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
-		ctx.index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000);
-		ctx.index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
-		ctx.texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
-		ctx.texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 	}
 
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
@@ -660,6 +660,12 @@ VKGSRender::~VKGSRender()
 	//Global resources
 	vk::destroy_global_resources();
 
+	//Heaps
+	m_index_buffer_ring_info.heap.reset();
+	m_uniform_buffer_ring_info.heap.reset();
+	m_attrib_ring_info.heap.reset();
+	m_texture_upload_buffer_ring_info.heap.reset();
+
 	//Fallback bindables
 	null_buffer.reset();
 	null_buffer_view.reset();
@@ -686,11 +692,6 @@ VKGSRender::~VKGSRender()
 
 		ctx.buffer_views_to_clean.clear();
 		ctx.samplers_to_clean.clear();
-
-		ctx.index_buffer_ring_info.heap.reset();
-		ctx.uniform_buffer_ring_info.heap.reset();
-		ctx.attrib_ring_info.heap.reset();
-		ctx.texture_upload_buffer_ring_info.heap.reset();
 	}
 
 	m_draw_fbo.reset();
@@ -863,15 +864,20 @@ void VKGSRender::begin()
 		m_current_frame->used_descriptors = 0;
 	}
 
-	if (m_current_frame->attrib_ring_info.is_critical() ||
-		m_current_frame->texture_upload_buffer_ring_info.is_critical() ||
-		m_current_frame->uniform_buffer_ring_info.is_critical() ||
-		m_current_frame->index_buffer_ring_info.is_critical())
+	if (m_attrib_ring_info.is_critical() ||
+		m_texture_upload_buffer_ring_info.is_critical() ||
+		m_uniform_buffer_ring_info.is_critical() ||
+		m_index_buffer_ring_info.is_critical())
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
 		flush_command_queue(true);
 		m_vertex_cache->purge();
+
+		m_index_buffer_ring_info.reset_allocation_stats();
+		m_uniform_buffer_ring_info.reset_allocation_stats();
+		m_attrib_ring_info.reset_allocation_stats();
+		m_texture_upload_buffer_ring_info.reset_allocation_stats();
 		m_current_frame->reset_heap_ptrs();
 
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
@@ -1031,7 +1037,7 @@ void VKGSRender::end()
 			}
 
 			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts, m_memory_type_mapping,
-				m_current_frame->texture_upload_buffer_ring_info, m_current_frame->texture_upload_buffer_ring_info.heap.get());
+				m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
 			if (!texture0)
 			{
@@ -1086,7 +1092,7 @@ void VKGSRender::end()
 			}
 
 			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts, m_memory_type_mapping,
-				m_current_frame->texture_upload_buffer_ring_info, m_current_frame->texture_upload_buffer_ring_info.heap.get());
+				m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
 			if (!texture0)
 			{
@@ -1173,7 +1179,7 @@ void VKGSRender::end()
 
 		std::tie(offset, index_type) = index_info.value();
 
-		vkCmdBindIndexBuffer(*m_current_command_buffer, m_current_frame->index_buffer_ring_info.heap->value, offset, index_type);
+		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 		vkCmdDrawIndexed(*m_current_command_buffer, index_count, 1, 0, 0, 0);
 	}
 
@@ -1503,6 +1509,10 @@ void VKGSRender::advance_queued_frames()
 	});
 
 	m_vertex_cache->purge();
+	m_current_frame->tag_frame_end(m_attrib_ring_info.get_current_put_pos_minus_one(),
+		m_uniform_buffer_ring_info.get_current_put_pos_minus_one(),
+		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
+		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one());
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
@@ -1575,7 +1585,17 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		ctx->buffer_views_to_clean.clear();
 		ctx->samplers_to_clean.clear();
-		ctx->reset_heap_ptrs();
+
+		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
+		{
+			m_last_heap_sync_time = ctx->last_frame_sync_time;
+
+			//Heap cleanup; deallocates memory consumed by the frame if it is still held
+			m_attrib_ring_info.m_get_pos = ctx->attrib_heap_ptr;
+			m_uniform_buffer_ring_info.m_get_pos = ctx->ubo_heap_ptr;
+			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
+			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
+		}
 	}
 
 	ctx->swap_command_buffer = nullptr;
@@ -1847,12 +1867,12 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
 	const size_t required_mem = 512 + 8192 + fragment_buffer_sz;
 
-	const size_t vertex_state_offset = m_current_frame->uniform_buffer_ring_info.alloc<256>(required_mem);
+	const size_t vertex_state_offset = m_uniform_buffer_ring_info.alloc<256>(required_mem);
 	const size_t vertex_constants_offset = vertex_state_offset + 512;
 	const size_t fragment_constants_offset = vertex_constants_offset + 8192;
 
 	//We do this in one go
-	u8 *buf = (u8*)m_current_frame->uniform_buffer_ring_info.map(vertex_state_offset, required_mem);
+	u8 *buf = (u8*)m_uniform_buffer_ring_info.map(vertex_state_offset, required_mem);
 
 	//Vertex state
 	fill_scale_offset_data(buf, false);
@@ -1873,11 +1893,11 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 
 	fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
 	
-	m_current_frame->uniform_buffer_ring_info.unmap();
+	m_uniform_buffer_ring_info.unmap();
 
-	m_program->bind_uniform({ m_current_frame->uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 }, SCALE_OFFSET_BIND_SLOT, m_current_frame->descriptor_set);
-	m_program->bind_uniform({ m_current_frame->uniform_buffer_ring_info.heap->value, vertex_constants_offset, 8192 }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
-	m_program->bind_uniform({ m_current_frame->uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 }, SCALE_OFFSET_BIND_SLOT, m_current_frame->descriptor_set);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 8192 }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
@@ -2526,5 +2546,5 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	close_render_pass();
 
 	return m_texture_cache.upload_scaled_image(src, dst, interpolate, (*m_device), *m_current_command_buffer, m_memory_type_mapping,
-			m_swap_chain->get_present_queue(), m_rtts, m_current_frame->texture_upload_buffer_ring_info, m_current_frame->texture_upload_buffer_ring_info.heap.get());
+			m_swap_chain->get_present_queue(), m_rtts, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 }
