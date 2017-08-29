@@ -16,6 +16,8 @@
 #include <sys/mman.h>
 #endif
 
+#include <zlib.h>
+
 static std::string empty_string()
 {
 	return {};
@@ -317,6 +319,26 @@ logs::file_writer::~file_writer()
 	if (m_size == 0)
 	{
 		m_size = std::min<std::size_t>(+m_pos, s_log_size);
+	}
+
+	// Compress
+	z_stream zs{};
+	if (deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK)
+	{
+		auto buf = std::make_unique<uchar[]>(s_log_size);
+		zs.avail_in  = ::narrow<u32>(m_size);
+		zs.avail_out = s_log_size;
+		zs.next_in   = m_fptr;
+		zs.next_out  = buf.get();
+
+		if (deflate(&zs, Z_FINISH) != Z_STREAM_ERROR)
+		{
+			fs::file(m_name + ".gz", fs::rewrite).write(buf.get(), zs.total_out);
+		}
+
+		if (deflateEnd(&zs) != Z_OK)
+		{
+		}
 	}
 
 #ifdef _WIN32
