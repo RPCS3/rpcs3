@@ -26,7 +26,9 @@ public:
 		// Get object location
 		std::weak_ptr<T>& wptr = g_ipc.m_map[ipc_key];
 
-		if ((out && !(*out = wptr.lock())) || wptr.expired())
+		std::shared_ptr<T> old;
+
+		if ((out && !(old = wptr.lock())) || wptr.expired())
 		{
 			// Call a function which must return the object
 			if (out)
@@ -40,6 +42,11 @@ public:
 			}
 
 			return true;
+		}
+
+		if (out)
+		{
+			*out = std::move(old);
 		}
 
 		return false;
