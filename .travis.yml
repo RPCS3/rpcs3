@@ -138,6 +138,7 @@ addons:
       #- qtbase5-dev
       - libudev-dev
       - libevdev-dev
+      - libpulse-dev
   coverity_scan:
     project:
       name: $TRAVIS_REPO_SLUG
