@@ -56,6 +56,7 @@ namespace logs
 	class file_writer
 	{
 		fs::file m_file;
+		std::string m_name;
 
 #ifdef _WIN32
 		::HANDLE m_fmap;
@@ -286,12 +287,13 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 [[noreturn]] extern void catch_all_exceptions();
 
 logs::file_writer::file_writer(const std::string& name)
+	: m_name(fs::get_config_dir() + name)
 {
 	try
 	{
-		if (!m_file.open(fs::get_config_dir() + name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
+		if (!m_file.open(m_name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
 		{
-			fmt::throw_exception("Can't create log file %s (error %s)", name, fs::g_tls_error);
+			fmt::throw_exception("Can't create file %s (error %s)", name, fs::g_tls_error);
 		}
 
 #ifdef _WIN32
@@ -301,6 +303,8 @@ logs::file_writer::file_writer(const std::string& name)
 		m_file.trunc(s_log_size);
 		m_fptr = (uchar*)::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0);
 #endif
+
+		std::memset(m_fptr, '\n', s_log_size);
 	}
 	catch (...)
 	{
