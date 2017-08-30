@@ -580,9 +580,16 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 {
 	sys_fs.warning("sys_fs_rename(from=%s, to=%s)", from, to);
 
-	if (!fs::rename(vfs::get(from.get_ptr()), vfs::get(to.get_ptr())))
+	if (!fs::rename(vfs::get(from.get_ptr()), vfs::get(to.get_ptr()), false))
 	{
-		return {CELL_ENOENT, from}; // ???
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent: return {CELL_ENOENT, from};
+		case fs::error::exist: return {CELL_EEXIST, to};
+		default: sys_fs.error("sys_fs_rename(): unknown error %s", error);
+		}
+
+		return {CELL_EIO, from}; // ???
 	}
 
 	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
