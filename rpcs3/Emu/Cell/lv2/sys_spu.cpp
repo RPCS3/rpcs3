@@ -146,11 +146,13 @@ error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	return CELL_OK;
 }
 
-error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, u32 ptr1, u32 ptr2)
+error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, vm::ptr<u32> entry_point, vm::ptr<s32> nsegs)
 {
-	sys_spu.todo("_sys_spu_image_get_information(img=*0x%x, 1=*0x%x, 2=*0x%x)", img, ptr1, ptr2);
+	sys_spu.warning("_sys_spu_image_get_information(img=*0x%x, entry_point=*0x%x, nsegs=*0x%x)", img, entry_point, nsegs);
 
-	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_get_information");
+	*entry_point = img->entry_point;
+	*nsegs       = img->nsegs;
+	return CELL_OK;
 }
 
 error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)

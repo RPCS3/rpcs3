@@ -286,7 +286,7 @@ class ppu_thread;
 // Syscalls
 
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
-error_code _sys_spu_image_get_information(vm::ps3::ptr<sys_spu_image> img, u32 ptr1, u32 ptr2);
+error_code _sys_spu_image_get_information(vm::ps3::ptr<sys_spu_image> img, vm::ps3::ptr<u32> entry_point, vm::ps3::ptr<s32> nsegs);
 error_code sys_spu_image_open(vm::ps3::ptr<sys_spu_image> img, vm::ps3::cptr<char> path);
 error_code _sys_spu_image_import(vm::ps3::ptr<sys_spu_image> img, u32 src, u32 size, u32 arg4);
 error_code _sys_spu_image_close(vm::ps3::ptr<sys_spu_image> img);
