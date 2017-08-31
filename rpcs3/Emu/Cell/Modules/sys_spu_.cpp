@@ -396,7 +396,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	img.deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, img.segs.get_ptr(), img.nsegs);
 	img.free();
 
-	*entry = img.entry_point | 1;
+	*entry = img.entry_point;
 
 	return CELL_OK;
 }
