@@ -229,9 +229,45 @@ error_code sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<
 	return CELL_OK;
 }
 
-s32 sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, s32 nseg)
+error_code sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, s32 nseg)
 {
-	sysPrxForUser.todo("sys_spu_elf_get_segments(elf_img=0x%x, segments=*0x%x, nseg=0x%x)", elf_img, segments, nseg);
+	sysPrxForUser.warning("sys_spu_elf_get_segments(elf_img=0x%x, segments=*0x%x, nseg=0x%x)", elf_img, segments, nseg);
+
+	// Initialize ELF loader
+	vm::var<spu_elf_info> info(spu_elf_info{});
+
+	if (auto res = info->init(vm::cast(elf_img)))
+	{
+		return res;
+	}
+
+	// Load ELF header
+	vm::var<elf_ehdr<elf_be, u64>> ehdr(elf_ehdr<elf_be, u64>{});
+
+	if (info->ldr->get_ehdr(ehdr) || ehdr->e_machine != elf_machine::spu || !ehdr->e_phnum)
+	{
+		return CELL_ENOEXEC;
+	}
+
+	// Load program headers
+	vm::var<elf_phdr<elf_be, u64>[]> phdr(ehdr->e_phnum);
+
+	if (info->ldr->get_phdr(phdr, ehdr->e_phnum))
+	{
+		return CELL_ENOEXEC;
+	}
+
+	const s32 num_segs = sys_spu_image::fill<false>(segments, nseg, phdr, elf_img);
+
+	if (num_segs == -2)
+	{
+		return CELL_ENOMEM;
+	}
+	else if (num_segs < 0)
+	{
+		return CELL_ENOEXEC;
+	}
+
 	return CELL_OK;
 }
 
