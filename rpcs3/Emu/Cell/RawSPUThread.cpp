@@ -90,6 +90,12 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		value = npc;
 		return true;
 	}
+
+	case SPU_RunCntl_offs:
+	{
+		value = run_ctrl;
+		return true;
+	}
 	}
 
 	LOG_ERROR(SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
