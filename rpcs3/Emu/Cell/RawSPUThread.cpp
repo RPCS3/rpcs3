@@ -83,6 +83,13 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		value = mfc_proxy.size() ? 0 : +mfc_prxy_mask;
 		return true;
 	}
+
+	case SPU_NPC_offs:
+	{
+		//npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
+		value = npc;
+		return true;
+	}
 	}
 
 	LOG_ERROR(SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
