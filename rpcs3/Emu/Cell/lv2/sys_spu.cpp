@@ -42,10 +42,12 @@ void sys_spu_image::load(const fs::file& stream)
 		}
 	}
 
+	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
+
 	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
 	entry_point = obj.header.e_entry;
 	nsegs       = sys_spu_image::get_nsegs(obj.progs);
-	segs        = vm::cast(vm::alloc(nsegs * sizeof(sys_spu_segment) + ::size32(stream), vm::main));
+	segs        = vm::cast(vm::alloc(mem_size, vm::main));
 
 	const u32 src = segs.addr() + nsegs * sizeof(sys_spu_segment);
 
@@ -56,6 +58,8 @@ void sys_spu_image::load(const fs::file& stream)
 	{
 		fmt::throw_exception("Failed to load SPU segments (%d)" HERE, nsegs);
 	}
+
+	vm::page_protect(segs.addr(), ::align(mem_size, 4096), 0, 0, vm::page_writable);
 }
 
 void sys_spu_image::free()
