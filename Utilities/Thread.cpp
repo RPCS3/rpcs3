@@ -30,13 +30,25 @@ thread_local u64 g_tls_fault_spu = 0;
 
 static void report_fatal_error(const std::string& msg)
 {
+	static semaphore<> g_report_only_once;
+
+	g_report_only_once.wait();
+
 	std::string _msg = msg + "\n"
-		"HOW TO REPORT ERRORS: Check the FAQ, README, other sources.\n"
+		"HOW TO REPORT ERRORS: https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support\n"
 		"Please, don't send incorrect reports. Thanks for understanding.\n";
 
 #ifdef _WIN32
-	_msg += "Press (Ctrl+C) to copy this message.";
-	MessageBoxA(0, _msg.c_str(), "Fatal error", MB_ICONERROR); // TODO: unicode message
+	_msg += "\nPress Yes or Enter to visit the URL above immediately.";
+	const std::size_t buf_size = _msg.size() + 1;
+	const int size = static_cast<int>(buf_size);
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]);
+	MultiByteToWideChar(CP_UTF8, 0, _msg.c_str(), size, buffer.get(), size);
+
+	if (MessageBoxW(0, buffer.get(), L"Fatal error", MB_ICONERROR | MB_YESNO) == IDYES)
+	{
+		ShellExecuteW(0, L"open", L"https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support", 0, 0, SW_SHOWNORMAL);
+	}
 #else
 	std::printf("Fatal error: \n%s", _msg.c_str());
 #endif
