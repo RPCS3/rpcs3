@@ -409,7 +409,7 @@ s32 sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 	img->deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, img->segs.get_ptr(), img->nsegs);
 
 	// Use MMIO
-	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point | 1);
+	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point);
 
 	return CELL_OK;
 }
