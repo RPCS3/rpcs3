@@ -77,6 +77,12 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		value = status;
 		return true;
 	}
+
+	case Prxy_TagStatus_offs:
+	{
+		value = mfc_proxy.size() ? 0 : +mfc_prxy_mask;
+		return true;
+	}
 	}
 
 	LOG_ERROR(SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
@@ -130,23 +136,15 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 	case MFC_Class_CMD_offs:
 	{
 		g_tls_mfc[index].cmd = MFC(value & 0xff);
-		if (mfc_proxy.try_push(g_tls_mfc[index]))
-		{
-			auto mfc = fxm::check_unlocked<mfc_thread>();
+		do_dma_transfer(g_tls_mfc[index]);
+		g_tls_mfc[index] = {};
+		g_tls_mfc[index].cmd = MFC(MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL);
 
-			if (test(mfc->state, cpu_flag::stop) && mfc->state.test_and_reset(cpu_flag::stop))
-			{
-				mfc->notify();
-			}
-
-			g_tls_mfc[index] = {};
-			g_tls_mfc[index].cmd = MFC(MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL);
-		}
-		else
+		if (value & MFC_START_MASK)
 		{
-			g_tls_mfc[index] = {};
-			g_tls_mfc[index].cmd = MFC(MFC_PPU_DMA_QUEUE_FULL);
+			try_start();
 		}
+
 		return true;
 	}
 		
@@ -172,6 +170,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case Prxy_QueryMask_offs:
 	{
+		mfc_prxy_mask = value;
 		return true;
 	}
 
