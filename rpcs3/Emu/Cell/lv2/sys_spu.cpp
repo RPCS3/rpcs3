@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
+#include "Crypto/unedat.h"
 #include "Crypto/sha1.h"
 #include "Loader/ELF.h"
 #include "Utilities/bin_patch.h"
@@ -163,11 +164,11 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (!elf_file)
 	{
-		sys_spu.error("sys_spu_image_open() error: %s not found!", path);
+		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
 		return CELL_ENOENT;
 	}
 

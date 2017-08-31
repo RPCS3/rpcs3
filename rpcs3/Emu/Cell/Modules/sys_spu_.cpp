@@ -383,7 +383,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
 
 	if (!elf_file)
 	{
