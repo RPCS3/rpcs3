@@ -1248,7 +1248,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		return true;
 	}
 
-	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size)))
+	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
 	{
 		if (cpu)
 		{
