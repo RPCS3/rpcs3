@@ -187,7 +187,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_event_port_disconnect),                   //137 (0x089)
 	BIND_FUNC(sys_event_port_send),                         //138 (0x08A)
 	BIND_FUNC(sys_event_flag_get),                          //139 (0x08B)
-	null_func,//BIND_FUNC(sys_event_port_connect_ipc)       //140 (0x08C)
+	BIND_FUNC(sys_event_port_connect_ipc),                  //140 (0x08C)
 	BIND_FUNC(sys_timer_usleep),                            //141 (0x08D)
 	BIND_FUNC(sys_timer_sleep),                             //142 (0x08E)
 	null_func,//BIND_FUNC(sys_time_set_timezone)            //143 (0x08F)  ROOT
