@@ -99,7 +99,7 @@ struct spu_elf_info
 {
 	u8 e_class;
 	vm::bptr<spu_elf_ldr> ldr;
-	
+
 	struct sce_hdr
 	{
 		be_t<u32> se_magic;
@@ -170,7 +170,7 @@ struct spu_elf_info
 		{
 			return CELL_ENOEXEC;
 		}
-		
+
 		e_class       = ehdr->e_class;
 		ldr           = vm::get_addr(&_overlay);
 		ldr->_vtable  = vm::cast(u32{e_class}); // TODO
@@ -212,6 +212,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 		return res;
 	}
 
+	// Reject SCE header
 	if (info->sce0.se_magic == 0x53434500)
 	{
 		return CELL_ENOEXEC;
@@ -249,7 +250,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 
 		return _sys_spu_image_import(img, src, img_size, 0);
 	}
-	else if (type == SYS_SPU_IMAGE_DIRECT)
+	else
 	{
 		s32 num_segs = sys_spu_image::get_nsegs(phdr);
 
@@ -268,22 +269,16 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 			return CELL_ENOMEM;
 		}
 
-		if (sys_spu_image::fill(segs, phdr, src) != num_segs)
+		if (sys_spu_image::fill(segs, num_segs, phdr, src) != num_segs)
 		{
 			vm::dealloc(segs.addr());
 			return CELL_ENOEXEC;
 		}
 
-		img->type = SYS_SPU_IMAGE_TYPE_USER;		
+		img->type = SYS_SPU_IMAGE_TYPE_USER;
 		img->segs = segs;
 		return CELL_OK;
 	}
-	else
-	{
-		return CELL_EINVAL;
-	}
-
-	return CELL_OK;
 }
 
 error_code sys_spu_image_close(vm::ptr<sys_spu_image> img)

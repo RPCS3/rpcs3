@@ -52,7 +52,7 @@ void sys_spu_image::load(const fs::file& stream)
 	stream.seek(0);
 	stream.read(vm::base(src), stream.size());
 
-	if (nsegs < 0 || sys_spu_image::fill(segs, obj.progs, src) != nsegs)
+	if (nsegs < 0 || sys_spu_image::fill(segs, nsegs, obj.progs, src) != nsegs)
 	{
 		fmt::throw_exception("Failed to load SPU segments (%d)" HERE, nsegs);
 	}

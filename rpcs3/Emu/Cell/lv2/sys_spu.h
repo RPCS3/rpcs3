@@ -112,7 +112,7 @@ struct sys_spu_image
 	vm::ps3::bptr<sys_spu_segment> segs;
 	be_t<s32> nsegs;
 
-	template <typename Phdrs>
+	template <bool CountInfo = true, typename Phdrs>
 	static s32 get_nsegs(const Phdrs& phdrs)
 	{
 		s32 num_segs = 0;
@@ -128,7 +128,7 @@ struct sys_spu_image
 			{
 				num_segs += 2;
 			}
-			else
+			else if (phdr.p_type == 1 || CountInfo)
 			{
 				num_segs += 1;
 			}
@@ -137,8 +137,8 @@ struct sys_spu_image
 		return num_segs;
 	}
 
-	template <typename Phdrs>
-	static s32 fill(vm::ps3::ptr<sys_spu_segment> segs, const Phdrs& phdrs, u32 src)
+	template <bool WriteInfo = true, typename Phdrs>
+	static s32 fill(vm::ps3::ptr<sys_spu_segment> segs, s32 nsegs, const Phdrs& phdrs, u32 src)
 	{
 		s32 num_segs = 0;
 
@@ -148,6 +148,11 @@ struct sys_spu_image
 			{
 				if (phdr.p_filesz)
 				{
+					if (num_segs >= nsegs)
+					{
+						return -2;
+					}
+
 					auto* seg = &segs[num_segs++];
 					seg->type = SYS_SPU_SEGMENT_TYPE_COPY;
 					seg->ls   = static_cast<u32>(phdr.p_vaddr);
@@ -157,6 +162,11 @@ struct sys_spu_image
 
 				if (phdr.p_memsz > phdr.p_filesz)
 				{
+					if (num_segs >= nsegs)
+					{
+						return -2;
+					}
+
 					auto* seg = &segs[num_segs++];
 					seg->type = SYS_SPU_SEGMENT_TYPE_FILL;
 					seg->ls   = static_cast<u32>(phdr.p_vaddr + phdr.p_filesz);
@@ -164,14 +174,19 @@ struct sys_spu_image
 					seg->addr = 0;
 				}
 			}
-			else if (phdr.p_type == 4)
+			else if (WriteInfo && phdr.p_type == 4)
 			{
+				if (num_segs >= nsegs)
+				{
+					return -2;
+				}
+
 				auto* seg = &segs[num_segs++];
 				seg->type = SYS_SPU_SEGMENT_TYPE_INFO;
 				seg->size = 0x20;
 				seg->addr = static_cast<u32>(phdr.p_offset + 0x14 + src);
 			}
-			else
+			else if (phdr.p_type != 4)
 			{
 				return -1;
 			}
@@ -283,7 +298,7 @@ error_code sys_spu_thread_group_destroy(u32 id);
 error_code sys_spu_thread_group_start(ppu_thread&, u32 id);
 error_code sys_spu_thread_group_suspend(u32 id);
 error_code sys_spu_thread_group_resume(u32 id);
-error_code sys_spu_thread_group_yield(u32 id);	
+error_code sys_spu_thread_group_yield(u32 id);
 error_code sys_spu_thread_group_terminate(u32 id, s32 value);
 error_code sys_spu_thread_group_join(ppu_thread&, u32 id, vm::ps3::ptr<u32> cause, vm::ps3::ptr<u32> status);
 error_code sys_spu_thread_group_set_priority(u32 id, s32 priority);
