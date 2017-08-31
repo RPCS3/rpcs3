@@ -188,11 +188,13 @@ error_code _sys_spu_image_close(vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-error_code _sys_raw_spu_image_load(vm::ptr<sys_spu_image> img, u32 ptr, u32 arg3)
+error_code _sys_spu_image_get_segments(vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_segment> segments, s32 nseg)
 {
-	sys_spu.todo("_sys_raw_spu_image_load(img=*0x%x, ptr=*0x%x, arg3=0x%x)", img, ptr, arg3);
+	sys_spu.error("_sys_spu_image_get_segments(img=*0x%x, segments=*0x%x, nseg=%d)", img, segments, nseg);
 
-	fmt::throw_exception("Unimlemented syscall: _sys_raw_spu_image_load");
+	// TODO: apply SPU patches
+	std::memcpy(segments.get_ptr(), img->segs.get_ptr(), sizeof(sys_spu_segment) * nseg);
+	return CELL_OK;
 }
 
 error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)

@@ -206,7 +206,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_spu_image_open),                          //156 (0x09C)
 	BIND_FUNC(_sys_spu_image_import),                       //157 (0x09D)
 	BIND_FUNC(_sys_spu_image_close),                        //158 (0x09E)
-	BIND_FUNC(_sys_raw_spu_image_load),                     //159 (0x09F)
+	BIND_FUNC(_sys_spu_image_get_segments),                 //159 (0x09F)
 	BIND_FUNC(sys_raw_spu_create),                          //160 (0x0A0)
 	BIND_FUNC(sys_raw_spu_destroy),                         //161 (0x0A1)
 	null_func,                                              //162 (0x0A2)  UNS
