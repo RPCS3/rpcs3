@@ -393,7 +393,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 			fmt::throw_exception("cellGameContentPermit(): epic fail: directory '%s' already exists", dir);
 		}
 
-		if (fs::rename(prm->temp, vdir))
+		if (fs::rename(prm->temp, vdir, false))
 		{
 			cellGame.success("cellGameContentPermit(): directory '%s' has been created", dir);
 		}

@@ -16,6 +16,8 @@
 #include <sys/mman.h>
 #endif
 
+#include <zlib.h>
+
 static std::string empty_string()
 {
 	return {};
@@ -56,6 +58,7 @@ namespace logs
 	class file_writer
 	{
 		fs::file m_file;
+		std::string m_name;
 
 #ifdef _WIN32
 		::HANDLE m_fmap;
@@ -286,21 +289,28 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 [[noreturn]] extern void catch_all_exceptions();
 
 logs::file_writer::file_writer(const std::string& name)
+	: m_name(fs::get_config_dir() + name)
 {
 	try
 	{
-		if (!m_file.open(fs::get_config_dir() + name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
+		if (!m_file.open(m_name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
 		{
-			fmt::throw_exception("Can't create log file %s (error %s)", name, fs::g_tls_error);
+			fmt::throw_exception("Can't create file %s (error %s)", name, fs::g_tls_error);
 		}
 
 #ifdef _WIN32
 		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
-		m_fptr = (uchar*)MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0);
+		m_fptr = m_fmap ? (uchar*)MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0) : nullptr;
 #else
 		m_file.trunc(s_log_size);
 		m_fptr = (uchar*)::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0);
 #endif
+
+		verify(m_name.c_str()), m_fptr;
+		std::memset(m_fptr, '\n', s_log_size);
+
+		// Rotate backups (TODO)
+		fs::rename(m_name + ".gz", m_name + "1.gz", true);
 	}
 	catch (...)
 	{
@@ -313,6 +323,26 @@ logs::file_writer::~file_writer()
 	if (m_size == 0)
 	{
 		m_size = std::min<std::size_t>(+m_pos, s_log_size);
+	}
+
+	// Compress
+	z_stream zs{};
+	if (deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK)
+	{
+		auto buf = std::make_unique<uchar[]>(s_log_size);
+		zs.avail_in  = ::narrow<u32>(m_size);
+		zs.avail_out = s_log_size;
+		zs.next_in   = m_fptr;
+		zs.next_out  = buf.get();
+
+		if (deflate(&zs, Z_FINISH) != Z_STREAM_ERROR)
+		{
+			fs::file(m_name + ".gz", fs::rewrite).write(buf.get(), zs.total_out);
+		}
+
+		if (deflateEnd(&zs) != Z_OK)
+		{
+		}
 	}
 
 #ifdef _WIN32

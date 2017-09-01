@@ -133,7 +133,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 156: return "sys_spu_image_open";
 	case 157: return "_sys_spu_image_import";
 	case 158: return "_sys_spu_image_close";
-	case 159: return "_sys_raw_spu_image_load";
+	case 159: return "_sys_spu_image_get_segments";
 	case 160: return "sys_raw_spu_create";
 	case 161: return "sys_raw_spu_destroy";
 	case 163: return "sys_raw_spu_read_puint_mb";
