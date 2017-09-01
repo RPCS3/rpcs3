@@ -159,7 +159,7 @@ namespace fs
 	bool create_path(const std::string& path);
 
 	// Rename (move) file or directory
-	bool rename(const std::string& from, const std::string& to);
+	bool rename(const std::string& from, const std::string& to, bool overwrite);
 
 	// Copy file contents
 	bool copy_file(const std::string& from, const std::string& to, bool overwrite);

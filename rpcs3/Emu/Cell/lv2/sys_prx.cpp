@@ -118,9 +118,7 @@ error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_mod
 		return not_an_error(idm::last_id());
 	}
 
-	const auto loadedkeys = fxm::get_always<LoadedNpdrmKeys_t>();
-
-	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)), loadedkeys->devKlic.data());
+	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{

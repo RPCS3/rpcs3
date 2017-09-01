@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
+#include "Crypto/unedat.h"
 #include "Crypto/sha1.h"
 #include "Loader/ELF.h"
 #include "Utilities/bin_patch.h"
@@ -42,20 +43,24 @@ void sys_spu_image::load(const fs::file& stream)
 		}
 	}
 
+	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
+
 	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
 	entry_point = obj.header.e_entry;
 	nsegs       = sys_spu_image::get_nsegs(obj.progs);
-	segs        = vm::cast(vm::alloc(nsegs * sizeof(sys_spu_segment) + ::size32(stream), vm::main));
+	segs        = vm::cast(vm::alloc(mem_size, vm::main));
 
 	const u32 src = segs.addr() + nsegs * sizeof(sys_spu_segment);
 
 	stream.seek(0);
 	stream.read(vm::base(src), stream.size());
 
-	if (nsegs < 0 || sys_spu_image::fill(segs, obj.progs, src) != nsegs)
+	if (nsegs < 0 || sys_spu_image::fill(segs, nsegs, obj.progs, src) != nsegs)
 	{
 		fmt::throw_exception("Failed to load SPU segments (%d)" HERE, nsegs);
 	}
+
+	vm::page_protect(segs.addr(), ::align(mem_size, 4096), 0, 0, vm::page_writable);
 }
 
 void sys_spu_image::free()
@@ -146,22 +151,24 @@ error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	return CELL_OK;
 }
 
-error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, u32 ptr1, u32 ptr2)
+error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, vm::ptr<u32> entry_point, vm::ptr<s32> nsegs)
 {
-	sys_spu.todo("_sys_spu_image_get_information(img=*0x%x, 1=*0x%x, 2=*0x%x)", img, ptr1, ptr2);
+	sys_spu.warning("_sys_spu_image_get_information(img=*0x%x, entry_point=*0x%x, nsegs=*0x%x)", img, entry_point, nsegs);
 
-	fmt::throw_exception("Unimplemented syscall: _sys_spu_image_get_information");
+	*entry_point = img->entry_point;
+	*nsegs       = img->nsegs;
+	return CELL_OK;
 }
 
 error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (!elf_file)
 	{
-		sys_spu.error("sys_spu_image_open() error: %s not found!", path);
+		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
 		return CELL_ENOENT;
 	}
 
@@ -186,11 +193,13 @@ error_code _sys_spu_image_close(vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-error_code _sys_raw_spu_image_load(vm::ptr<sys_spu_image> img, u32 ptr, u32 arg3)
+error_code _sys_spu_image_get_segments(vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_segment> segments, s32 nseg)
 {
-	sys_spu.todo("_sys_raw_spu_image_load(img=*0x%x, ptr=*0x%x, arg3=0x%x)", img, ptr, arg3);
+	sys_spu.error("_sys_spu_image_get_segments(img=*0x%x, segments=*0x%x, nseg=%d)", img, segments, nseg);
 
-	fmt::throw_exception("Unimlemented syscall: _sys_raw_spu_image_load");
+	// TODO: apply SPU patches
+	std::memcpy(segments.get_ptr(), img->segs.get_ptr(), sizeof(sys_spu_segment) * nseg);
+	return CELL_OK;
 }
 
 error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
