@@ -99,7 +99,7 @@ struct spu_elf_info
 {
 	u8 e_class;
 	vm::bptr<spu_elf_ldr> ldr;
-	
+
 	struct sce_hdr
 	{
 		be_t<u32> se_magic;
@@ -170,7 +170,7 @@ struct spu_elf_info
 		{
 			return CELL_ENOEXEC;
 		}
-		
+
 		e_class       = ehdr->e_class;
 		ldr           = vm::get_addr(&_overlay);
 		ldr->_vtable  = vm::cast(u32{e_class}); // TODO
@@ -183,15 +183,91 @@ struct spu_elf_info
 	}
 };
 
-s32 sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<s32> nseg)
+error_code sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<s32> nseg)
 {
-	sysPrxForUser.todo("sys_spu_elf_get_information(elf_img=0x%x, entry=*0x%x, nseg=*0x%x)", elf_img, entry, nseg);
+	sysPrxForUser.warning("sys_spu_elf_get_information(elf_img=0x%x, entry=*0x%x, nseg=*0x%x)", elf_img, entry, nseg);
+
+	// Initialize ELF loader
+	vm::var<spu_elf_info> info(spu_elf_info{});
+
+	if (auto res = info->init(vm::cast(elf_img)))
+	{
+		return res;
+	}
+
+	// Reject SCE header
+	if (info->sce0.se_magic == 0x53434500)
+	{
+		return CELL_ENOEXEC;
+	}
+
+	// Load ELF header
+	vm::var<elf_ehdr<elf_be, u64>> ehdr(elf_ehdr<elf_be, u64>{});
+
+	if (info->ldr->get_ehdr(ehdr) || ehdr->e_machine != elf_machine::spu || !ehdr->e_phnum)
+	{
+		return CELL_ENOEXEC;
+	}
+
+	// Load program headers
+	vm::var<elf_phdr<elf_be, u64>[]> phdr(ehdr->e_phnum);
+
+	if (info->ldr->get_phdr(phdr, ehdr->e_phnum))
+	{
+		return CELL_ENOEXEC;
+	}
+
+	const s32 num_segs = sys_spu_image::get_nsegs<false>(phdr);
+
+	if (num_segs < 0)
+	{
+		return CELL_ENOEXEC;
+	}
+
+	*entry = static_cast<u32>(ehdr->e_entry);
+	*nseg  = num_segs;
 	return CELL_OK;
 }
 
-s32 sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, s32 nseg)
+error_code sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, s32 nseg)
 {
-	sysPrxForUser.todo("sys_spu_elf_get_segments(elf_img=0x%x, segments=*0x%x, nseg=0x%x)", elf_img, segments, nseg);
+	sysPrxForUser.warning("sys_spu_elf_get_segments(elf_img=0x%x, segments=*0x%x, nseg=0x%x)", elf_img, segments, nseg);
+
+	// Initialize ELF loader
+	vm::var<spu_elf_info> info(spu_elf_info{});
+
+	if (auto res = info->init(vm::cast(elf_img)))
+	{
+		return res;
+	}
+
+	// Load ELF header
+	vm::var<elf_ehdr<elf_be, u64>> ehdr(elf_ehdr<elf_be, u64>{});
+
+	if (info->ldr->get_ehdr(ehdr) || ehdr->e_machine != elf_machine::spu || !ehdr->e_phnum)
+	{
+		return CELL_ENOEXEC;
+	}
+
+	// Load program headers
+	vm::var<elf_phdr<elf_be, u64>[]> phdr(ehdr->e_phnum);
+
+	if (info->ldr->get_phdr(phdr, ehdr->e_phnum))
+	{
+		return CELL_ENOEXEC;
+	}
+
+	const s32 num_segs = sys_spu_image::fill<false>(segments, nseg, phdr, elf_img);
+
+	if (num_segs == -2)
+	{
+		return CELL_ENOMEM;
+	}
+	else if (num_segs < 0)
+	{
+		return CELL_ENOEXEC;
+	}
+
 	return CELL_OK;
 }
 
@@ -212,6 +288,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 		return res;
 	}
 
+	// Reject SCE header
 	if (info->sce0.se_magic == 0x53434500)
 	{
 		return CELL_ENOEXEC;
@@ -249,7 +326,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 
 		return _sys_spu_image_import(img, src, img_size, 0);
 	}
-	else if (type == SYS_SPU_IMAGE_DIRECT)
+	else
 	{
 		s32 num_segs = sys_spu_image::get_nsegs(phdr);
 
@@ -268,22 +345,16 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 			return CELL_ENOMEM;
 		}
 
-		if (sys_spu_image::fill(segs, phdr, src) != num_segs)
+		if (sys_spu_image::fill(segs, num_segs, phdr, src) != num_segs)
 		{
 			vm::dealloc(segs.addr());
 			return CELL_ENOEXEC;
 		}
 
-		img->type = SYS_SPU_IMAGE_TYPE_USER;		
+		img->type = SYS_SPU_IMAGE_TYPE_USER;
 		img->segs = segs;
 		return CELL_OK;
 	}
-	else
-	{
-		return CELL_EINVAL;
-	}
-
-	return CELL_OK;
 }
 
 error_code sys_spu_image_close(vm::ptr<sys_spu_image> img)
@@ -312,7 +383,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())));
+	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
 
 	if (!elf_file)
 	{
@@ -325,7 +396,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	img.deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, img.segs.get_ptr(), img.nsegs);
 	img.free();
 
-	*entry = img.entry_point | 1;
+	*entry = img.entry_point;
 
 	return CELL_OK;
 }
@@ -338,7 +409,7 @@ s32 sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 	img->deploy(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id, img->segs.get_ptr(), img->nsegs);
 
 	// Use MMIO
-	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point | 1);
+	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point);
 
 	return CELL_OK;
 }

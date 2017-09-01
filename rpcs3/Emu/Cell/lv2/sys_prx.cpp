@@ -19,9 +19,6 @@ logs::channel sys_prx("sys_prx");
 
 static const std::unordered_map<std::string, int> s_prx_ignore
 {
-	{ "/dev_flash/sys/external/libad_async.sprx", 0 },
-	{ "/dev_flash/sys/external/libad_billboard_util.sprx", 0 },
-	{ "/dev_flash/sys/external/libad_core.sprx", 0 },
 	{ "/dev_flash/sys/external/libaudio.sprx", 0 },
 	{ "/dev_flash/sys/external/libbeisobmf.sprx", 0 },
 	{ "/dev_flash/sys/external/libcamera.sprx", 0 },
@@ -121,9 +118,7 @@ error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_mod
 		return not_an_error(idm::last_id());
 	}
 
-	const auto loadedkeys = fxm::get_always<LoadedNpdrmKeys_t>();
-
-	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)), loadedkeys->devKlic.data());
+	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{
