@@ -293,6 +293,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_tty.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_usbd.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -1238,6 +1241,9 @@
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_tty.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_usbd.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_vm.h">
