@@ -8,6 +8,7 @@
 #include "Crypto/unself.h"
 #include "cellRtc.h"
 #include "sceNp.h"
+#include "cellSysutil.h"
 
 logs::channel sceNp("sceNp");
 
@@ -905,12 +906,22 @@ s32 sceNpLookupTitleSmallStorageAsync()
 
 s32 sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
+	sceNp.warning("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
 
 	if (!callback)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
+
+	sysutil_register_cb([=](ppu_thread& ppu)->s32
+	{
+		callback(ppu, SCE_NP_MANAGER_STATUS_OFFLINE, CELL_OK, arg.addr());
+		return CELL_OK;
+	});
+
+	// TODO:
+	// * Save the callback somewhere for future updates once network is implemented
+	// * If register is called again, created cb needs to be canceled
 
 	return CELL_OK;
 }
