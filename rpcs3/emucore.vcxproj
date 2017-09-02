@@ -144,6 +144,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_timer.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_trace.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_tty.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_usbd.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp" />
@@ -551,6 +552,7 @@
     <ClInclude Include="Emu\Cell\lv2\sys_timer.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_trace.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_tty.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_usbd.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_vm.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_ss.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />

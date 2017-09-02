@@ -25,6 +25,7 @@
 #include "sys_timer.h"
 #include "sys_trace.h"
 #include "sys_tty.h"
+#include "sys_usbd.h"
 #include "sys_vm.h"
 #include "sys_fs.h"
 #include "sys_dbg.h"
@@ -500,36 +501,36 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,                                              //527 (0x20F)  UNS
 	null_func,                                              //528 (0x210)  UNS
 	null_func,                                              //529 (0x211)  UNS
-	null_func,//BIND_FUNC(sys_usbd_initialize)              //530 (0x212)
-	null_func,//BIND_FUNC(sys_usbd_finalize)                //531 (0x213)
-	null_func,//BIND_FUNC(sys_usbd_get_device_list)         //532 (0x214)
-	null_func,//BIND_FUNC(sys_usbd_get_descriptor_size)     //533 (0x215)
-	null_func,//BIND_FUNC(sys_usbd_get_descriptor)          //534 (0x216)
-	null_func,//BIND_FUNC(sys_usbd_register_ldd)            //535 (0x217)
-	null_func,//BIND_FUNC(sys_usbd_unregister_ldd)          //536 (0x218)
-	null_func,//BIND_FUNC(sys_usbd_open_pipe)               //537 (0x219)
-	null_func,//BIND_FUNC(sys_usbd_open_default_pipe)       //538 (0x21A)
-	null_func,//BIND_FUNC(sys_usbd_close_pipe)              //539 (0x21B)
-	null_func,//BIND_FUNC(sys_usbd_receive_event)           //540 (0x21C)
-	null_func,//BIND_FUNC(sys_usbd_detect_event)            //541 (0x21D)
-	null_func,//BIND_FUNC(sys_usbd_attach)                  //542 (0x21E)
-	null_func,//BIND_FUNC(sys_usbd_transfer_data)           //543 (0x21F)
-	null_func,//BIND_FUNC(sys_usbd_isochronous_transfer_data) //544 (0x220)
-	null_func,//BIND_FUNC(sys_usbd_get_transfer_status)     //545 (0x221)
-	null_func,//BIND_FUNC(sys_usbd_get_isochronous_transfer_status) //546 (0x222)
-	null_func,//BIND_FUNC(sys_usbd_get_device_location)     //547 (0x223)
-	null_func,//BIND_FUNC(sys_usbd_send_event)              //548 (0x224)
+	BIND_FUNC(sys_usbd_initialize),                         //530 (0x212)
+	BIND_FUNC(sys_usbd_finalize),                           //531 (0x213)
+	BIND_FUNC(sys_usbd_get_device_list),                    //532 (0x214)
+	BIND_FUNC(sys_usbd_get_descriptor_size),                //533 (0x215)
+	BIND_FUNC(sys_usbd_get_descriptor),                     //534 (0x216)
+	BIND_FUNC(sys_usbd_register_ldd),                       //535 (0x217)
+	BIND_FUNC(sys_usbd_unregister_ldd),                     //536 (0x218)
+	BIND_FUNC(sys_usbd_open_pipe),                          //537 (0x219)
+	BIND_FUNC(sys_usbd_open_default_pipe),                  //538 (0x21A)
+	BIND_FUNC(sys_usbd_close_pipe),                         //539 (0x21B)
+	BIND_FUNC(sys_usbd_receive_event),                      //540 (0x21C)
+	BIND_FUNC(sys_usbd_detect_event),                       //541 (0x21D)
+	BIND_FUNC(sys_usbd_attach),                             //542 (0x21E)
+	BIND_FUNC(sys_usbd_transfer_data),                      //543 (0x21F)
+	BIND_FUNC(sys_usbd_isochronous_transfer_data),          //544 (0x220)
+	BIND_FUNC(sys_usbd_get_transfer_status),                //545 (0x221)
+	BIND_FUNC(sys_usbd_get_isochronous_transfer_status),    //546 (0x222)
+	BIND_FUNC(sys_usbd_get_device_location),                //547 (0x223)
+	BIND_FUNC(sys_usbd_send_event),                         //548 (0x224)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //549 (0x225)
-	null_func,//BIND_FUNC(sys_usbd_allocate_memory)         //550 (0x226)
-	null_func,//BIND_FUNC(sys_usbd_free_memory)             //551 (0x227)
+	BIND_FUNC(sys_usbd_allocate_memory),                    //550 (0x226)
+	BIND_FUNC(sys_usbd_free_memory),                        //551 (0x227)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //552 (0x228)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //553 (0x229)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //554 (0x22A)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //555 (0x22B)
-	null_func,//BIND_FUNC(sys_usbd_get_device_speed)        //556 (0x22C)
+	BIND_FUNC(sys_usbd_get_device_speed),                   //556 (0x22C)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //557 (0x22D)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //558 (0x22E)
-	null_func,//BIND_FUNC(sys_usbd_register_extra_ldd)      //559 (0x22F)
+	BIND_FUNC(sys_usbd_register_extra_ldd),                 //559 (0x22F)
 	null_func,//BIND_FUNC(sys_...)                          //560 (0x230)  ROOT
 	null_func,//BIND_FUNC(sys_...)                          //561 (0x231)  ROOT
 	null_func,//BIND_FUNC(sys_...)                          //562 (0x232)  ROOT
