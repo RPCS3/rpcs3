@@ -81,7 +81,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	}
 
 	// Various connects
-	connect(ui->okButton, &QAbstractButton::clicked, ui->coreTab, [=]() {
+	connect(ui->okButton, &QAbstractButton::clicked, [=]() {
 		std::set<std::string> selectedlle;
 		for (int i = 0; i<ui->lleList->count(); ++i)
 		{
@@ -93,10 +93,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
+		xemu_settings->SaveSettings();
 		Q_EMIT GuiRepaintRequest();
+		accept();
 	});
-	connect(ui->okButton, &QAbstractButton::clicked, xemu_settings.get(), &emu_settings::SaveSettings);
-	connect(ui->okButton, &QAbstractButton::clicked, this, &QDialog::accept);
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]() {ui->cancelButton->setFocus(); });
 

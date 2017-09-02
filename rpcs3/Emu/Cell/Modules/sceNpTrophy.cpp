@@ -557,9 +557,14 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 	verify(HERE), !fs::get_virtual_device(path);
 	rXmlDocument doc;
 	doc.Load(path);
+	auto trophy_base = doc.GetRoot();
+	if (trophy_base->GetChildren()->GetName() == "trophyconf")
+	{
+		trophy_base = trophy_base->GetChildren();
+	}
 
 	bool found = false;
-	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext()) {
+	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext()) {
 		if (n->GetName() == "trophy" && (trophyId == atoi(n->GetAttribute("id").c_str())))
 		{
 			found = true;

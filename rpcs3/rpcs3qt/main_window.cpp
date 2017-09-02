@@ -1040,6 +1040,14 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(m_rg_entries));
 }
 
+void main_window::RepaintGui()
+{
+	gameListFrame->RepaintIcons(true);
+	gameListFrame->RepaintToolBarIcons();
+	RepaintToolbar();
+	RepaintToolBarIcons();
+}
+
 void main_window::RepaintToolbar()
 {
 	if (guiSettings->GetValue(GUI::m_enableUIColors).toBool())
@@ -1138,12 +1146,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
-		connect(&dlg, &settings_dialog::GuiRepaintRequest, [this](){
-			gameListFrame->RepaintIcons(true);
-			gameListFrame->RepaintToolBarIcons();
-			RepaintToolbar();
-			RepaintToolBarIcons();
-		});
+		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		dlg.exec();
 	};
 	connect(ui->confCPUAct,    &QAction::triggered, [=]() { openSettings(0); });
