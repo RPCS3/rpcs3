@@ -338,6 +338,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		file.close();
 	}
 	GUI::stylesheet = styleSheet();
+	RPCS3MainWin->RepaintGui();
 }
 
 /**
