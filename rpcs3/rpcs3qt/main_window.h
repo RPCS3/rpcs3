@@ -73,6 +73,8 @@ public Q_SLOTS:
 	void OnEmuPause();
 	void OnEmuReady();
 
+	void RepaintGui();
+
 private Q_SLOTS:
 	void BootElf();
 	void BootGame();
