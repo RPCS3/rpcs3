@@ -19,86 +19,6 @@ namespace vm { using namespace ps3; }
 
 logs::channel sys_spu("sys_spu");
 
-void sys_spu_image::load(u32 data_addr, u32 type)
-{
-	auto stream = fs::file{ vm::base(data_addr), size_t(-1) };
-	if (type == SYS_SPU_IMAGE_PROTECT)
-	{
-		LOG_TODO(SPU, "TODO Loading SYS_SPU_IMAGE_PROTECT SPU as SYS_SPU_IMAGE_DIRECT");
-	}
-
-	const spu_exec_object obj{ stream };
-
-	if (obj != elf_error::ok)
-	{
-		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
-	}
-
-	int number_segs = obj.progs.size();
-	for (const auto& prog : obj.progs)
-	{
-		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY && prog.p_memsz != prog.p_filesz)
-		{
-			number_segs++;
-		}
-	}
-
-	this->type = SYS_SPU_IMAGE_TYPE_USER;
-	this->entry_point = obj.header.e_entry;
-	this->segs.set(vm::alloc(number_segs * sizeof(sys_spu_segment), vm::main));
-	this->nsegs = 0;
-
-	LOG_NOTICE(SPU, "Loading SPU program from memory 0x%x", data_addr);
-
-	for (const auto& shdr : obj.shdrs)
-	{
-		LOG_NOTICE(SPU, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", shdr.sh_type, shdr.sh_addr, shdr.sh_size, shdr.sh_flags);
-	}
-
-	for (auto it_prog = obj.progs.begin(); it_prog < obj.progs.end(); it_prog++)
-	{
-		auto& prog = *it_prog;
-
-		LOG_NOTICE(SPU, "** Segment: p_type=0x%x, p_offset=0x%llx, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_offset, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
-		if (prog.p_type == SYS_SPU_SEGMENT_TYPE_COPY)
-		{
-			if (prog.p_filesz != 0)
-			{
-				auto& seg = segs[nsegs++];
-
-				seg.type = SYS_SPU_SEGMENT_TYPE_COPY;
-				seg.addr = data_addr + prog.p_offset;
-				seg.ls = prog.p_vaddr;
-				seg.size = prog.p_filesz;
-			}
-
-			// There's a mismatch between here and the seg counting. It seems that it exists in the real function, too.
-			if (prog.p_memsz <= prog.p_filesz || nsegs + 1 >= number_segs)
-			{
-				continue;
-			}
-
-			auto& zero = segs[nsegs++];
-			zero.type = SYS_SPU_SEGMENT_TYPE_FILL;
-			zero.addr = 0;
-			zero.ls = prog.p_vaddr + prog.p_filesz;
-			zero.size = prog.p_memsz - prog.p_filesz;
-		}
-		else if (prog.p_type == SYS_SPU_SEGMENT_TYPE_INFO)
-		{
-			auto& seg = segs[nsegs++];
-			seg.type = SYS_SPU_SEGMENT_TYPE_INFO;
-			seg.addr = data_addr + prog.p_offset + 0x14;
-			seg.ls = 0; // TODO Verify - noone writes to it, so it includes whatever malloc set there originally
-			seg.size = 0x20;
-		}
-		else
-		{
-			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
-		}
-	}
-}
-
 void sys_spu_image::load(const fs::file& stream)
 {
 	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};
@@ -252,34 +172,7 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 		return CELL_ENOENT;
 	}
 
-	u64 file_size = elf_file.size();
-	if (!file_size)
-	{
-		sys_spu.error("sys_spu_image_open: Given file is 0 sized");
-		return CELL_ENOENT;
-	}
-	else if (file_size > UINT_MAX)
-	{
-		sys_spu.error("sys_spu_image_open: File size too large");
-		return CELL_ENOMEM;
-	}
-
-	u32 elf_addr = vm::alloc((u32)file_size, vm::main);
-	if (!elf_addr)
-	{
-		sys_spu.error("sys_spu_image_open: Failed allocating elf");
-		return CELL_ENOMEM;
-	}
-
-	elf_file.seek(0);
-	u64 bytes_read = elf_file.read(vm::base(elf_addr), (u32)file_size);
-	if (!bytes_read)
-	{
-		sys_spu.error("sys_spu_image_open: Failed reading ELF into memory");
-		return CELL_ENOENT;
-	}
-
-	img->load(elf_addr, SYS_SPU_IMAGE_DIRECT);
+	img->load(elf_file);
 
 	return CELL_OK;
 }
