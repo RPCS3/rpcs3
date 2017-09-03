@@ -91,6 +91,9 @@
     <ClCompile Include="..\Utilities\File.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\Utilities\LUrlParser.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\Config.cpp" />
     <ClCompile Include="..\Utilities\mutex.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
