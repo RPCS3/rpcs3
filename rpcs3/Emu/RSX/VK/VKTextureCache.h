@@ -636,6 +636,9 @@ namespace vk
 					return false;
 				}
 			}
+
+			//Unreachable; silence compiler warning anyway
+			return false;
 		}
 
 		template <typename RsxTextureType>
