@@ -772,7 +772,18 @@ void spu_interpreter_fast::FS(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter_fast::FM(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vf = _mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf);
+	const u32 test_bits = 0x7f800000;
+	auto mask = _mm_set1_ps((f32&)test_bits);
+
+	auto test_a = _mm_and_ps(spu.gpr[op.ra].vf, mask);
+	auto mask_a = _mm_cmpneq_ps(test_a, mask);
+	auto test_b = _mm_and_ps(spu.gpr[op.rb].vf, mask);
+	auto mask_b = _mm_cmpneq_ps(test_b, mask);
+
+	auto a = _mm_and_ps(spu.gpr[op.ra].vf, mask_a);
+	auto b = _mm_and_ps(spu.gpr[op.rb].vf, mask_b);
+
+	spu.gpr[op.rt].vf = _mm_mul_ps(a, b);
 }
 
 void spu_interpreter::CLGTH(SPUThread& spu, spu_opcode_t op)

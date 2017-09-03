@@ -1744,9 +1744,19 @@ void spu_recompiler::FS(spu_opcode_t op)
 
 void spu_recompiler::FM(spu_opcode_t op)
 {
-	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
-	c->mulps(va, SPU_OFF_128(gpr, op.rb));
-	c->movaps(SPU_OFF_128(gpr, op.rt), va);
+	const XmmLink& tmp_a = XmmAlloc();
+	const XmmLink& tmp_b = XmmAlloc();
+
+	c->pxor(tmp_a, tmp_a);                       //tmp_a = 0
+	c->cmpps(tmp_a, SPU_OFF_128(gpr, op.ra), 3); //tmp_a = ra == extended
+	c->pandn(tmp_a, SPU_OFF_128(gpr, op.ra));    //tmp_a = mask_a & ~ra_extended
+
+	c->pxor(tmp_b, tmp_b);                       //tmp_b = 0
+	c->cmpps(tmp_b, SPU_OFF_128(gpr, op.rb), 3); //tmp_b = rb == extended
+	c->pandn(tmp_b, SPU_OFF_128(gpr, op.rb));    //tmp_b = mask_b & ~rb_extended
+
+	c->mulps(tmp_a, tmp_b);
+	c->movaps(SPU_OFF_128(gpr, op.rt), tmp_a);
 }
 
 void spu_recompiler::CLGTH(spu_opcode_t op)
