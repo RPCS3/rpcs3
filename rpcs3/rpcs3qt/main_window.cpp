@@ -54,6 +54,7 @@ main_window::main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *par
 
 main_window::~main_window()
 {
+	delete ui;
 }
 
 auto Pause = []()

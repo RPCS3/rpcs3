@@ -21,6 +21,7 @@ class settings_dialog : public QDialog
 
 public:
 	explicit settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex = 0, QWidget *parent = 0, const GameInfo *game = nullptr);
+	~settings_dialog();
 	int exec();
 Q_SIGNALS:
 	void GuiSettingsSyncRequest();

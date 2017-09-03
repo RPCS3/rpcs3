@@ -878,6 +878,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
+settings_dialog::~settings_dialog()
+{
+	delete ui;
+}
+
 void settings_dialog::AddConfigs()
 {
 	ui->combo_configs->clear();
