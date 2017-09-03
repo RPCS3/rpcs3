@@ -607,6 +607,37 @@ namespace vk
 			purge_cache();
 		}
 
+		bool is_depth_texture(const u32 texaddr, rsx::vk_render_targets &m_rtts)
+		{
+			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+				return true;
+
+			reader_lock lock(m_cache_mutex);
+
+			auto found = m_cache.find(texaddr);
+			if (found == m_cache.end())
+				return false;
+
+			if (found->second.valid_count == 0)
+				return false;
+
+			for (auto& tex : found->second.data)
+			{
+				if (tex.is_dirty())
+					continue;
+
+				switch (tex.get_format())
+				{
+				case VK_FORMAT_D16_UNORM:
+				case VK_FORMAT_D32_SFLOAT_S8_UINT:
+				case VK_FORMAT_D24_UNORM_S8_UINT:
+					return true;
+				default:
+					return false;
+				}
+			}
+		}
+
 		template <typename RsxTextureType>
 		vk::image_view* upload_texture(command_buffer &cmd, RsxTextureType &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
 		{
@@ -1108,14 +1139,17 @@ namespace vk
 			const VkComponentMapping rgba_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 			const VkComponentMapping bgra_map = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
 
+			auto dest_mapping = (!dst_is_argb8 || dst.swizzled) ? bgra_map : rgba_map;
+
 			vk::image* vram_texture = nullptr;
 			vk::image* dest_texture = nullptr;
+			cached_texture_section* cached_dest = nullptr;
 
 			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
 			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, true);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			u16 max_dst_width = dst.width;
@@ -1167,7 +1201,7 @@ namespace vk
 			{
 				//First check if this surface exists in VRAM with exact dimensions
 				//Since scaled GPU resources are not invalidated by the CPU, we need to reuse older surfaces if possible
-				auto cached_dest = find_texture_from_dimensions(dst.rsx_address, dst.pitch * dst.clip_height, dst_dimensions.width, dst_dimensions.height);
+				cached_dest = find_texture_from_dimensions(dst.rsx_address, dst.pitch * dst.clip_height, dst_dimensions.width, dst_dimensions.height);
 
 				//Check for any available region that will fit this one
 				if (!cached_dest) cached_dest = find_texture_from_range(dst.rsx_address, dst.pitch * dst.clip_height);
@@ -1189,6 +1223,21 @@ namespace vk
 
 					max_dst_width = cached_dest->get_width();
 					max_dst_height = cached_dest->get_height();
+
+					//If dest has a component swizzle (usually caused by ARGB->BGRA compatibility when uploading from cpu) remove it
+					auto& image_view = cached_dest->get_view();
+
+					if (image_view->info.components.a != dest_mapping.a ||
+						image_view->info.components.r != dest_mapping.r ||
+						image_view->info.components.g != dest_mapping.g ||
+						image_view->info.components.b != dest_mapping.b)
+					{
+						auto create_info = image_view->info;
+						create_info.components = dest_mapping;
+
+						m_temporary_image_view.push_back(std::move(image_view));
+						image_view.reset(new vk::image_view(dev, create_info));
+					}
 				}
 				else if (is_memcpy)
 				{
@@ -1222,7 +1271,7 @@ namespace vk
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, true);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, false);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			//Create source texture if does not exist
@@ -1303,6 +1352,54 @@ namespace vk
 				vram_texture = src_subres.surface;
 			}
 
+			VkImageAspectFlags aspect_to_copy = VK_IMAGE_ASPECT_COLOR_BIT;
+			bool dest_exists = dest_texture != nullptr;
+			VkFormat dst_vk_format = dst_is_argb8 ? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R5G6B5_UNORM_PACK16;
+			const u8 bpp = dst_is_argb8 ? 4 : 2;
+			const u32 real_width = dst.pitch / bpp;
+
+			//If src is depth, dest has to be depth as well
+			if (src_subres.is_depth_surface)
+			{
+				if (dest_exists)
+				{
+					if (dst_is_render_target && !dst_subres.is_depth_surface)
+					{
+						LOG_ERROR(RSX, "Depth->RGBA blit requested but not supported");
+						return true;
+					}
+
+					if (!dst_is_render_target)
+					{
+						if (dest_texture->info.format != src_subres.surface->info.format)
+						{
+							cached_dest->unprotect();
+							cached_dest->set_dirty(true);
+							
+							dest_exists = false;
+							cached_dest = nullptr;
+						}
+					}
+					else
+					{
+						if (dst_subres.surface->info.format != src_subres.surface->info.format)
+						{
+							LOG_ERROR(RSX, "Depth blit requested, but formats do not match (0x%X vs 0x%X)",
+								(u32)dst_subres.surface->info.format, (u32)src_subres.surface->info.format);
+							return true;
+						}
+					}
+				}
+				
+				dst_vk_format = src_subres.surface->info.format;
+				dest_mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
+
+				if (dst_vk_format == VK_FORMAT_D16_UNORM)
+					aspect_to_copy = VK_IMAGE_ASPECT_DEPTH_BIT;
+				else
+					aspect_to_copy = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
 			//Validate clip offsets (Persona 4 Arena at 720p)
 			//Check if can fit
 			//NOTE: It is possible that the check is simpler (if (clip_x >= clip_width))
@@ -1322,11 +1419,6 @@ namespace vk
 				src_area.y2 += scaled_clip_offset_y;
 			}
 
-			bool dest_exists = dest_texture != nullptr;
-			const VkFormat dst_vk_format = dst_is_argb8 ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_R5G6B5_UNORM_PACK16;
-			const u8 bpp = dst_is_argb8 ? 4 : 2;
-			const u32 real_width = dst.pitch / bpp;
-
 			if (!dest_exists)
 			{
 				dest_texture = new vk::image(*vk::get_current_renderer(), memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1335,7 +1427,7 @@ namespace vk
 					real_width, dst.clip_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
-				change_image_layout(cmd, dest_texture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+				change_image_layout(cmd, dest_texture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_to_copy, 0, 1, 0, 1});
 			}
 
 			//Copy data
@@ -1353,10 +1445,12 @@ namespace vk
 			}
 
 			copy_scaled_image(cmd, vram_texture->value, dest_texture->value, vram_texture->current_layout, dest_texture->current_layout,
-					src_area.x1, src_area.y1, src_width, src_height, dst_offset.x, dst_offset.y, dst.clip_width, dst.clip_height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+					src_area.x1, src_area.y1, src_width, src_height, dst_offset.x, dst_offset.y, dst.clip_width, dst.clip_height, 1, (VkImageAspectFlagBits)aspect_to_copy);
 
 			if (dest_exists)
 				return true;
+
+			change_image_layout(cmd, dest_texture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, { aspect_to_copy, 0, 1, 0, 1 });
 
 			//TODO: Verify if any titles ever scale into CPU memory. It defeats the purpose of uploading data to the GPU, but it could happen
 			//If so, add this texture to the no_access queue not the read_only queue
@@ -1368,7 +1462,7 @@ namespace vk
 			//Its is possible for a title to attempt to read from the region, but the CPU path should be used in such cases
 
 			vk::image_view *view = new vk::image_view(*vk::get_current_renderer(), dest_texture->value, VK_IMAGE_VIEW_TYPE_2D, dst_vk_format,
-					(dst_is_argb8 && !dst.swizzled)? rgba_map: bgra_map, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+					dest_mapping, { aspect_to_copy & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 });
 
 			region.reset(dst.rsx_address, dst.pitch * dst.clip_height);
 			region.create(real_width, dst.clip_height, 1, 1, view, dest_texture);
