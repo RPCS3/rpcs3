@@ -1376,8 +1376,7 @@ namespace vk
 					{
 						if (dest_texture->info.format != src_subres.surface->info.format)
 						{
-							cached_dest->unprotect();
-							cached_dest->set_dirty(true);
+							invalidate_range(cached_dest->get_section_base(), cached_dest->get_section_size());
 							
 							dest_exists = false;
 							cached_dest = nullptr;
