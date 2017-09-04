@@ -470,6 +470,44 @@ namespace rsx
 		}
 
 		/**
+		 * Moves a single surface from surface storage to invalidated surface store.
+		 * Can be triggered by the texture cache's blit functionality when formats do not match
+		 */
+		void invalidate_single_surface(surface_type surface, bool depth)
+		{
+			if (!depth)
+			{
+				for (auto It = m_render_targets_storage.begin(); It != m_render_targets_storage.end(); It++)
+				{
+					const auto address = It->first;
+					const auto ref = Traits::get(It->second);
+
+					if (surface == ref)
+					{
+						invalidated_resources.push_back(std::move(It->second));
+						m_render_targets_storage.erase(It);
+						return;
+					}
+				}
+			}
+			else
+			{
+				for (auto It = m_depth_stencil_storage.begin(); It != m_depth_stencil_storage.end(); It++)
+				{
+					const auto address = It->first;
+					const auto ref = Traits::get(It->second);
+
+					if (surface == ref)
+					{
+						invalidated_resources.push_back(std::move(It->second));
+						m_depth_stencil_storage.erase(It);
+						return;
+					}
+				}
+			}
+		}
+
+		/**
 		 * Clipping and fitting lookup funcrions
 		 * surface_overlaps - returns true if surface overlaps a given surface address and returns the relative x and y position of the surface address within the surface
 		 * address_is_bound - returns true if the surface at a given address is actively bound

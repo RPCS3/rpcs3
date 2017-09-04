@@ -1658,7 +1658,7 @@ bool VKGSRender::check_program_status()
 		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-			if (!surface && m_texture_cache.is_depth_texture(texaddr, m_rtts))
+			if (!surface && m_texture_cache.is_depth_texture(texaddr))
 				return std::make_tuple(true, 0);
 		}
 

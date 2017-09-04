@@ -1916,7 +1916,7 @@ namespace gl
 			};
 
 		protected:
-			GLuint m_id;
+			GLuint m_id = GL_NONE;
 			fbo &m_parent;
 
 		public:
