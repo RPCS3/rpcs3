@@ -68,8 +68,8 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 			break;
 		case Qt::Key_Return:
 			if (!(event->modifiers() == Qt::AltModifier)) { Key(event->key(), 1); }
-			break;
 			event->ignore();
+			break;
 		case Qt::Key_Escape:
 			event->ignore();
 			break;
