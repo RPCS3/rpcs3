@@ -919,9 +919,13 @@ int game_list_frame::PopulateGameList()
 
 	auto l_GetItem = [](const std::string& text)
 	{
+		// force single line text ("hack" used instead of Qt shenanigans like Qt::TextSingleLine)
+		QString formattedText = qstr(text);
+		formattedText.replace("\n", " - ");
+
 		QTableWidgetItem* curr = new QTableWidgetItem;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
-		curr->setText(qstr(text));
+		curr->setText(formattedText);
 		return curr;
 	};
 
@@ -1030,7 +1034,10 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 		if (category == category::hdd_Game || category == category::disc_Game)
 		{
-			m_xgrid->addItem(m_game_data[i].pxmap, qstr(m_game_data[i].info.name), i, r, c);
+			QString title = qstr(m_game_data[i].info.name);
+			title.replace("\n", " - ");
+
+			m_xgrid->addItem(m_game_data[i].pxmap, title, i, r, c);
 
 			if (selected_item == m_game_data[i].info.icon_path) m_xgrid->setCurrentItem(m_xgrid->item(r, c));;
 
