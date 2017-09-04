@@ -894,7 +894,12 @@ bool GLGSRender::check_program_state()
 		if (!is_depth)
 			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
 		else
+		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
+
+			if (!surface && m_gl_texture_cache.is_depth_texture(texaddr))
+				return std::make_tuple(true, 0);
+		}
 
 		if (!surface)
 		{
@@ -921,18 +926,6 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 {
 	auto &fragment_program = current_fragment_program;
 	auto &vertex_program = current_vertex_program;
-
-	for (auto &vtx : vertex_program.rsx_vertex_inputs)
-	{
-		auto &array_info = rsx::method_registers.vertex_arrays_info[vtx.location];
-		if (array_info.type() == rsx::vertex_base_type::s1 ||
-			array_info.type() == rsx::vertex_base_type::cmp)
-		{
-			//Some vendors do not support GL_x_SNORM buffer textures
-			verify(HERE), vtx.flags == 0;
-			vtx.flags |= GL_VP_FORCE_ATTRIB_SCALING | GL_VP_ATTRIB_S16_INT;
-		}
-	}
 
 	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 	void* pipeline_properties = nullptr;

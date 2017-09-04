@@ -142,6 +142,7 @@ namespace gl
 				
 				flushed = false;
 				copied = false;
+				is_depth = false;
 
 				vram_texture = 0;
 			}
@@ -192,6 +193,11 @@ namespace gl
 				pack_unpack_swap_bytes = swap_bytes;
 
 				real_pitch = current_width * get_pixel_size(format, type);
+			}
+
+			void set_depth_flag(bool is_depth_fmt)
+			{
+				is_depth = is_depth_fmt;
 			}
 
 			void set_source(gl::texture &source)
@@ -339,69 +345,38 @@ namespace gl
 			{
 				return std::make_tuple(current_width, current_height);
 			}
+
+			bool is_depth_texture() const
+			{
+				return is_depth;
+			}
 		};
 
 		class blitter
 		{
-			fbo fbo_argb8;
-			fbo fbo_rgb565;
 			fbo blit_src;
-
-			u32 argb8_surface = 0;
-			u32 rgb565_surface = 0;
+			fbo blit_dst;
 
 		public:
 
 			void init()
 			{
-				fbo_argb8.create();
-				fbo_rgb565.create();
 				blit_src.create();
-
-				glGenTextures(1, &argb8_surface);
-				glBindTexture(GL_TEXTURE_2D, argb8_surface);
-				glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 4096, 4096);
-
-				glGenTextures(1, &rgb565_surface);
-				glBindTexture(GL_TEXTURE_2D, rgb565_surface);
-				glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, 4096, 4096);
-
-				s32 old_fbo = 0;
-				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
-
-				fbo_argb8.bind();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, argb8_surface, 0);
-				
-				fbo_rgb565.bind();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rgb565_surface, 0);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
-
-				fbo_argb8.check();
-				fbo_rgb565.check();
+				blit_dst.create();
 			}
 
 			void destroy()
 			{
-				fbo_argb8.remove();
-				fbo_rgb565.remove();
+				blit_dst.remove();
 				blit_src.remove();
-
-				glDeleteTextures(1, &argb8_surface);
-				glDeleteTextures(1, &rgb565_surface);
 			}
 
-			u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, const position2i dst_offset, const position2i clip_offset,
-					const size2i dst_dims, const size2i clip_dims, bool is_argb8, bool linear_interpolation)
+			u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, const GLenum dst_format, const position2i dst_offset, const position2i /*clip_offset*/,
+					const size2i dst_dims, const size2i clip_dims, bool /*is_argb8*/, bool is_depth_copy, bool linear_interpolation)
 			{
 				s32 old_fbo = 0;
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
 				
-				blit_src.bind();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, src, 0);
-				blit_src.check();
-
-				u32 src_surface = 0;
 				u32 dst_tex = dst;
 				filter interp = linear_interpolation ? filter::linear : filter::nearest;
 
@@ -411,30 +386,43 @@ namespace gl
 					glBindTexture(GL_TEXTURE_2D, dst_tex);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glTexStorage2D(GL_TEXTURE_2D, 1, dst_format, dst_dims.width, dst_dims.height);
+				}
 
-					if (is_argb8)
-						glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, dst_dims.width, dst_dims.height);
-					else
-						glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB565, dst_dims.width, dst_dims.height);
+				GLenum attachment = is_depth_copy ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0;
+
+				blit_src.bind();
+				glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src, 0);
+				blit_src.check();
+
+				blit_dst.bind();
+				glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_tex, 0);
+				blit_dst.check();
+
+				u32 src_width = src_rect.x2 - src_rect.x1;
+				u32 src_height = src_rect.y2 - src_rect.y1;
+				u32 dst_width = dst_rect.x2 - dst_rect.x1;
+				u32 dst_height = dst_rect.y2 - dst_rect.y1;
+
+				if (clip_dims.width != dst_width ||
+					clip_dims.height != dst_height)
+				{
+					//clip reproject
+					src_width = (src_width * clip_dims.width) / dst_width;
+					src_height = (src_height * clip_dims.height) / dst_height;
 				}
 
 				GLboolean scissor_test_enabled = glIsEnabled(GL_SCISSOR_TEST);
 				if (scissor_test_enabled)
 					glDisable(GL_SCISSOR_TEST);
 
-				if (is_argb8)
-				{
-					blit_src.blit(fbo_argb8, src_rect, dst_rect, buffers::color, interp);
-					src_surface = argb8_surface;
-				}
-				else
-				{
-					blit_src.blit(fbo_rgb565, src_rect, dst_rect, buffers::color, interp);
-					src_surface = rgb565_surface;
-				}
+				areai dst_area = dst_rect;
+				dst_area.x1 += dst_offset.x;
+				dst_area.x2 += dst_offset.x;
+				dst_area.y1 += dst_offset.y;
+				dst_area.y2 += dst_offset.y;
 
-				glCopyImageSubData(src_surface, GL_TEXTURE_2D, 0, clip_offset.x, clip_offset.y, 0,
-					dst_tex, GL_TEXTURE_2D, 0, dst_offset.x, dst_offset.y, 0, clip_dims.width, clip_dims.height, 1);
+				blit_src.blit(blit_dst, src_rect, dst_area, is_depth_copy ? buffers::depth : buffers::color, interp);
 
 				if (scissor_test_enabled)
 					glEnable(GL_SCISSOR_TEST);
@@ -1057,11 +1045,19 @@ namespace gl
 			}
 		}
 
+		bool is_depth_texture(const u32 rsx_address)
+		{
+			auto section = find_texture_from_range(rsx_address, 64u);
+			if (section != nullptr) return section->is_depth_texture();
+
+			return false;
+		}
+
 		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, gl_render_targets &m_rtts)
 		{
 			//Since we will have dst in vram, we can 'safely' ignore the swizzle flag
 			//TODO: Verify correct behavior
-
+			bool is_depth_blit = false;
 			bool src_is_render_target = false;
 			bool dst_is_render_target = false;
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
@@ -1078,8 +1074,16 @@ namespace gl
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
 			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, true);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
+
+			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, false);
+			src_is_render_target = src_subres.surface != nullptr;
+
+			//Always use GPU blit if src or dst is in the surface store
+			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
+				return false;
 
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
@@ -1115,6 +1119,7 @@ namespace gl
 			
 			bool is_memcpy = false;
 			u32 memcpy_bytes_length = 0;
+			
 			if (dst_is_argb8 == src_is_argb8 && !dst.swizzled)
 			{
 				if ((src.slice_h == 1 && dst.clip_height == 1) ||
@@ -1126,11 +1131,12 @@ namespace gl
 				}
 			}
 
+			cached_texture_section* cached_dest = nullptr;
 			if (!dst_is_render_target)
 			{
 				//First check if this surface exists in VRAM with exact dimensions
 				//Since scaled GPU resources are not invalidated by the CPU, we need to reuse older surfaces if possible
-				auto cached_dest = find_texture_from_dimensions(dst.rsx_address, dst_dimensions.width, dst_dimensions.height);
+				cached_dest = find_texture_from_dimensions(dst.rsx_address, dst_dimensions.width, dst_dimensions.height);
 
 				//Check for any available region that will fit this one
 				if (!cached_dest) cached_dest = find_texture_from_range(dst.rsx_address, dst.pitch * dst.clip_height);
@@ -1183,10 +1189,6 @@ namespace gl
 					}
 				}
 			}
-
-			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, true);
-			src_is_render_target = src_subres.surface != nullptr;
 
 			//Create source texture if does not exist
 			if (!src_is_render_target)
@@ -1255,6 +1257,38 @@ namespace gl
 				vram_texture = src_subres.surface->id();
 			}
 
+			bool format_mismatch = false;
+
+			if (src_subres.is_depth_surface)
+			{
+				if (dest_texture)
+				{
+					if (dst_is_render_target && !dst_subres.is_depth_surface)
+					{
+						LOG_ERROR(RSX, "Depth->RGBA blit requested but not supported");
+						return true;
+					}
+
+					GLenum internal_fmt;
+					glBindTexture(GL_TEXTURE_2D, dest_texture);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, (GLint*)&internal_fmt);
+
+					if (internal_fmt != (GLenum)src_subres.surface->get_compatible_internal_format())
+						format_mismatch = true;
+				}
+
+				is_depth_blit = true;
+			}
+			
+			//TODO: Check for other types of format mismatch
+			if (format_mismatch)
+			{
+				invalidate_range(cached_dest->get_section_base(), cached_dest->get_section_size());
+				
+				dest_texture = 0;
+				cached_dest = nullptr;
+			}
+
 			//Validate clip offsets (Persona 4 Arena at 720p)
 			//Check if can fit
 			//NOTE: It is possible that the check is simpler (if (clip_x >= clip_width))
@@ -1274,8 +1308,9 @@ namespace gl
 				src_area.y2 += scaled_clip_offset_y;
 			}
 
-			u32 texture_id = m_hw_blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, dst_offset, clip_offset,
-					dst_dimensions, clip_dimensions, dst_is_argb8, interpolate);
+			GLenum dst_format = (is_depth_blit) ? (GLenum)src_subres.surface->get_compatible_internal_format() : (dst_is_argb8) ? GL_RGBA8 : GL_RGB565;
+			u32 texture_id = m_hw_blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, dst_format, dst_offset, clip_offset,
+					dst_dimensions, clip_dimensions, dst_is_argb8, is_depth_blit, interpolate);
 
 			if (dest_texture)
 				return true;
@@ -1292,6 +1327,7 @@ namespace gl
 			//Its is possible for a title to attempt to read from the region, but the CPU path should be used in such cases
 			cached.protect(utils::protection::ro);
 			cached.set_dirty(false);
+			cached.set_depth_flag(is_depth_blit);
 
 			return true;
 		}

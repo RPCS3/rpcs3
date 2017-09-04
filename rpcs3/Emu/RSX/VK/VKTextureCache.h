@@ -386,7 +386,7 @@ namespace vk
 			return nullptr;
 		}
 
-		cached_texture_section *find_texture_from_dimensions(u32 rsx_address, u32 rsx_size, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
+		cached_texture_section *find_texture_from_dimensions(u32 rsx_address, u32 /*rsx_size*/, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
 		{
 			auto found = m_cache.find(rsx_address);
 			if (found != m_cache.end())
@@ -607,11 +607,8 @@ namespace vk
 			purge_cache();
 		}
 
-		bool is_depth_texture(const u32 texaddr, rsx::vk_render_targets &m_rtts)
+		bool is_depth_texture(const u32 texaddr)
 		{
-			if (m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
-				return true;
-
 			reader_lock lock(m_cache_mutex);
 
 			auto found = m_cache.find(texaddr);
@@ -1127,7 +1124,7 @@ namespace vk
 			}
 		}
 
-		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate,
+		bool upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool /*interpolate*/,
 				vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue,
 				rsx::vk_render_targets &m_rtts, vk_data_heap &upload_heap, vk::buffer* upload_buffer)
 		{
@@ -1154,6 +1151,14 @@ namespace vk
 			//Check if src/dst are parts of render targets
 			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
+
+			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, false);
+			src_is_render_target = src_subres.surface != nullptr;
+
+			//Always use GPU blit if src or dst is in the surface store
+			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
+				return false;
 
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
@@ -1273,10 +1278,6 @@ namespace vk
 				}
 			}
 
-			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, false);
-			src_is_render_target = src_subres.surface != nullptr;
-
 			//Create source texture if does not exist
 			if (!src_is_render_target)
 			{
@@ -1362,6 +1363,8 @@ namespace vk
 			const u32 real_width = dst.pitch / bpp;
 
 			//If src is depth, dest has to be depth as well
+			bool format_mismatch = false;
+
 			if (src_subres.is_depth_surface)
 			{
 				if (dest_exists)
@@ -1376,11 +1379,7 @@ namespace vk
 					{
 						if (dest_texture->info.format != src_subres.surface->info.format)
 						{
-							cached_dest->unprotect();
-							cached_dest->set_dirty(true);
-							
-							dest_exists = false;
-							cached_dest = nullptr;
+							format_mismatch = true;
 						}
 					}
 					else
@@ -1401,6 +1400,33 @@ namespace vk
 					aspect_to_copy = VK_IMAGE_ASPECT_DEPTH_BIT;
 				else
 					aspect_to_copy = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+			else
+			{
+				if (dest_exists && dest_texture->info.format != dst_vk_format)
+				{
+					LOG_ERROR(RSX, "Format mismatch - expected VkFormat 0x%X but found 0x%X instead", (u32)dst_vk_format, (u32)dest_texture->info.format);
+					format_mismatch = true;
+
+					if (dst_is_render_target)
+					{
+						if (dst_subres.is_bound)
+						{
+							LOG_ERROR(RSX, "Blit destination is an active render target but format does not match. Blit operation ignored.");
+							return true;
+						}
+
+						m_rtts.invalidate_single_surface(dst_subres.surface, dst_subres.is_depth_surface);
+					}
+				}
+			}
+
+			if (format_mismatch)
+			{
+				invalidate_range(cached_dest->get_section_base(), cached_dest->get_section_size());
+
+				dest_exists = false;
+				cached_dest = nullptr;
 			}
 
 			//Validate clip offsets (Persona 4 Arena at 720p)
