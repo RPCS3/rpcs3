@@ -33,9 +33,10 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 * Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake llvm qt5-base`
 * Fedora: `sudo dnf install cmake qt5-devel vulkan-devel glew glew-devel`
+**If you have a NVIDIA GPU, you may need to install the libglvnd package.**
 
-### Mac OSX 
-Mac OSX is not supported at this moment because it doesn't meet system requirements (OpenGL 4.3)
+### MacOS
+MacOS is not supported at this moment because it doesn't meet system requirements (OpenGL 4.3)
 * Xcode 6+ (tested with Xcode 6.4)
 * Install with Homebrew: `brew install glew llvm qt cmake`
 
@@ -57,7 +58,7 @@ To initialize the repository don't forget to execute `git submodule update --ini
 2) Press *BUILD* > *Build Solution* or *Rebuild Solution*. </br>
 
 
-## Building on Linux & Mac OSX:
+## Building on Linux & Mac OS:
 
 1) `git clone https://github.com/RPCS3/rpcs3.git` </br>
 2) `cd rpcs3/` </br>
@@ -65,7 +66,7 @@ To initialize the repository don't forget to execute `git submodule update --ini
 4) `cmake CMakeLists.txt && make GitVersion && make` </br>
 5) Run RPCS3 with `./bin/rpcs3` </br>
 
-If you are on OSX and want to build with brew llvm and qt don't forget to add the following environment variables
+If you are on MacOS and want to build with brew llvm and qt don't forget to add the following environment variables
 
  * `LLVM_DIR=/usr/local/opt/llvm/` (or wherever llvm was installed).
  * `Qt5_DIR=/usr/local/opt/qt/lib/cmake/Qt5` (or wherever qt was installed).
@@ -73,7 +74,7 @@ If you are on OSX and want to build with brew llvm and qt don't forget to add th
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
 
 
-## CMake Build Options (Linux & Mac OSX)
+## CMake Build Options (Linux & Mac OS)
 
 - ```-DUSE_SYSTEM_LIBPNG=ON/OFF``` (default = *OFF*) </br>
 Build against the shared libpng instead of using the builtin one. libpng 1.6+ highly recommended. Try this option if you get version conflict errors or only see black game icons.
