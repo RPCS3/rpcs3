@@ -25,7 +25,7 @@ namespace vk
 	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
 }
 
-//Heap allocation sizes in MB
+//Heap allocation sizes in MB - each 'frame' owns a private heap, one of each kind
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 256
 #define VK_UBO_RING_BUFFER_SIZE_M 64
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
@@ -117,8 +117,6 @@ private:
 	vk::glsl::program *m_program;
 	vk::context m_thread_context;
 
-	vk::vk_data_heap m_attrib_ring_info;
-	
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
 
@@ -141,12 +139,6 @@ private:
 	vk::render_device *m_device;
 	vk::swap_chain* m_swap_chain;
 
-	//buffer
-	vk::vk_data_heap m_uniform_buffer_ring_info;
-	vk::vk_data_heap m_index_buffer_ring_info;
-	vk::vk_data_heap m_texture_upload_buffer_ring_info;
-	std::unique_ptr<vk::buffer_view> m_null_buffer_view;
-
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
 
@@ -165,6 +157,12 @@ private:
 
 	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
+	u64 m_last_heap_sync_time = 0;
+	vk::vk_data_heap m_attrib_ring_info;
+	vk::vk_data_heap m_uniform_buffer_ring_info;
+	vk::vk_data_heap m_index_buffer_ring_info;
+	vk::vk_data_heap m_texture_upload_buffer_ring_info;
+
 	struct frame_context_t
 	{
 		VkSemaphore present_semaphore = VK_NULL_HANDLE;
@@ -178,6 +176,14 @@ private:
 		u32 present_image = UINT32_MAX;
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
+		//Heap pointers
+		s64 attrib_heap_ptr = 0;
+		s64 ubo_heap_ptr = 0;
+		s64 index_heap_ptr = 0;
+		s64 texture_upload_heap_ptr = 0;
+
+		u64 last_frame_sync_time = 0;
+
 		//Copy shareable information
 		void grab_resources(frame_context_t &other)
 		{
@@ -185,6 +191,11 @@ private:
 			descriptor_set = other.descriptor_set;
 			descriptor_pool = other.descriptor_pool;
 			used_descriptors = other.used_descriptors;
+
+			attrib_heap_ptr = other.attrib_heap_ptr;
+			ubo_heap_ptr = other.attrib_heap_ptr;
+			index_heap_ptr = other.attrib_heap_ptr;
+			texture_upload_heap_ptr = other.texture_upload_heap_ptr;
 		}
 
 		//Exchange storage (non-copyable)
@@ -192,6 +203,21 @@ private:
 		{
 			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
 			std::swap(samplers_to_clean, other.samplers_to_clean);
+		}
+
+		void tag_frame_end(s64 attrib_loc, s64 ubo_loc, s64 index_loc, s64 texture_loc)
+		{
+			attrib_heap_ptr = attrib_loc;
+			ubo_heap_ptr = ubo_loc;
+			index_heap_ptr = index_loc;
+			texture_upload_heap_ptr = texture_loc;
+
+			last_frame_sync_time = get_system_time();
+		}
+
+		void reset_heap_ptrs()
+		{
+			last_frame_sync_time = 0;
 		}
 	};
 
@@ -294,6 +320,7 @@ protected:
 	void flip(int buffer) override;
 
 	void do_local_task() override;
+	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_notify_memory_unmapped(u32 address_base, u32 size) override;

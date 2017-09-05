@@ -458,6 +458,12 @@ namespace vk
 			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
 		}
 
+		image_view(VkDevice dev, VkImageViewCreateInfo create_info)
+			: m_device(dev), info(create_info)
+		{
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+		}
+
 		~image_view()
 		{
 			vkDestroyImageView(m_device, value, nullptr);

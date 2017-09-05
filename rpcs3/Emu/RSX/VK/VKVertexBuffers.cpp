@@ -230,7 +230,8 @@ VKGSRender::upload_vertex_data()
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
 				in_cache = true;
-				m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, cached->offset_in_heap, required.first));
+				m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
+					m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, cached->offset_in_heap, required.first));
 			}
 			else
 			{
@@ -241,7 +242,8 @@ VKGSRender::upload_vertex_data()
 		if (!in_cache)
 		{
 			persistent_offset = (u32)m_attrib_ring_info.alloc<256>(required.first);
-			m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_offset, required.first));
+			m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
+				m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_offset, required.first));
 
 			if (to_store)
 			{
@@ -254,19 +256,20 @@ VKGSRender::upload_vertex_data()
 	}
 	else
 	{
-		persistent_view = m_null_buffer_view->value;
+		persistent_view = null_buffer_view->value;
 	}
 
 	if (required.second > 0)
 	{
 		volatile_offset = (u32)m_attrib_ring_info.alloc<256>(required.second);
-		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_offset, required.second));
+		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
+			m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_offset, required.second));
 
 		volatile_view = m_current_frame->buffer_views_to_clean.back()->value;
 	}
 	else
 	{
-		volatile_view = m_null_buffer_view->value;
+		volatile_view = null_buffer_view->value;
 	}
 
 	m_program->bind_uniform(persistent_view, "persistent_input_stream", m_current_frame->descriptor_set);

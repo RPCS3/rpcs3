@@ -460,40 +460,6 @@ namespace gl
 		GLGSRender *m_renderer;
 		std::thread::id m_renderer_thread;
 
-		cached_texture_section *find_texture_from_dimensions(u32 texaddr, u32 w, u32 h)
-		{
-			reader_lock lock(m_section_mutex);
-
-			for (cached_texture_section &tex : read_only_memory_sections)
-			{
-				if (tex.matches(texaddr, w, h) && !tex.is_dirty())
-					return &tex;
-			}
-
-			return nullptr;
-		}
-
-		/**
-		 * Searches for a texture from read_only memory sections
-		 * Texture origin + size must be a subsection of the existing texture
-		 */
-		cached_texture_section *find_texture_from_range(u32 texaddr, u32 range)
-		{
-			reader_lock lock(m_section_mutex);
-
-			auto test = std::make_pair(texaddr, range);
-			for (cached_texture_section &tex : read_only_memory_sections)
-			{
-				if (tex.get_section_base() > texaddr)
-					continue;
-
-				if (tex.overlaps(test, true) && !tex.is_dirty())
-					return &tex;
-			}
-
-			return nullptr;
-		}
-
 		cached_texture_section& create_texture(u32 id, u32 texaddr, u32 texsize, u32 w, u32 h)
 		{
 			for (cached_texture_section &tex : read_only_memory_sections)
@@ -534,19 +500,6 @@ namespace gl
 			no_access_memory_sections.resize(0);
 
 			clear_temporary_surfaces();
-		}
-
-		cached_texture_section* find_cached_rtt_section(u32 base, u32 size)
-		{
-			for (cached_texture_section &rtt : no_access_memory_sections)
-			{
-				if (rtt.matches(base, size))
-				{
-					return &rtt;
-				}
-			}
-
-			return nullptr;
 		}
 
 		cached_texture_section *create_locked_view_of_section(u32 base, u32 size)
@@ -647,6 +600,53 @@ namespace gl
 			m_hw_blitter.destroy();
 		}
 
+		cached_texture_section *find_texture_from_dimensions(u32 texaddr, u32 w, u32 h)
+		{
+			reader_lock lock(m_section_mutex);
+
+			for (cached_texture_section &tex : read_only_memory_sections)
+			{
+				if (tex.matches(texaddr, w, h) && !tex.is_dirty())
+					return &tex;
+			}
+
+			return nullptr;
+		}
+
+		/**
+		* Searches for a texture from read_only memory sections
+		* Texture origin + size must be a subsection of the existing texture
+		*/
+		cached_texture_section *find_texture_from_range(u32 texaddr, u32 range)
+		{
+			reader_lock lock(m_section_mutex);
+
+			auto test = std::make_pair(texaddr, range);
+			for (cached_texture_section &tex : read_only_memory_sections)
+			{
+				if (tex.get_section_base() > texaddr)
+					continue;
+
+				if (tex.overlaps(test, true) && !tex.is_dirty())
+					return &tex;
+			}
+
+			return nullptr;
+		}
+
+		cached_texture_section* find_cached_rtt_section(u32 base, u32 size)
+		{
+			for (cached_texture_section &rtt : no_access_memory_sections)
+			{
+				if (rtt.matches(base, size))
+				{
+					return &rtt;
+				}
+			}
+
+			return nullptr;
+		}
+
 		template<typename RsxTextureType>
 		void upload_texture(int index, RsxTextureType &tex, rsx::gl::texture &gl_texture, gl_render_targets &m_rtts)
 		{
@@ -739,7 +739,7 @@ namespace gl
 			const f32 internal_scale = (f32)tex_pitch / native_pitch;
 			const u32 internal_width = (const u32)(tex_width * internal_scale);
 
-			const surface_subresource rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
+			const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
 			if (rsc.surface)
 			{
 				//Check that this region is not cpu-dirty before doing a copy
@@ -1078,7 +1078,7 @@ namespace gl
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
 			//Check if src/dst are parts of render targets
-			surface_subresource dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, true);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, true);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			u16 max_dst_width = dst.width;
@@ -1097,7 +1097,8 @@ namespace gl
 			position2i dst_offset = { dst.offset_x, dst.offset_y };
 
 			size2i clip_dimensions = { dst.clip_width, dst.clip_height };
-			const size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
+			//Dimensions passed are restricted to powers of 2; get real height from clip_height and width from pitch
+			const size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.clip_height };
 
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
@@ -1184,7 +1185,7 @@ namespace gl
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			surface_subresource src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, true);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src.width, src.height, src.pitch, true, true, true);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			//Create source texture if does not exist
@@ -1283,11 +1284,13 @@ namespace gl
 			//If so, add this texture to the no_access queue not the read_only queue
 			writer_lock lock(m_section_mutex);
 
-			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.clip_height, dst.width, dst.clip_height);
+			const u8 bpp = dst_is_argb8 ? 4 : 2;
+			const u32 real_width = dst.pitch / bpp;
+			cached_texture_section &cached = create_texture(texture_id, dst.rsx_address, dst.pitch * dst.clip_height, real_width, dst.clip_height);
 			//These textures are completely GPU resident so we dont watch for CPU access
 			//There's no data to be fetched from the CPU
 			//Its is possible for a title to attempt to read from the region, but the CPU path should be used in such cases
-			cached.protect(utils::protection::rw);
+			cached.protect(utils::protection::ro);
 			cached.set_dirty(false);
 
 			return true;

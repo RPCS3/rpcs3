@@ -12,6 +12,7 @@ namespace rsx
 	struct blit_src_info
 	{
 		blit_engine::transfer_source_format format;
+		blit_engine::transfer_origin origin;
 		u16 offset_x;
 		u16 offset_y;
 		u16 width;

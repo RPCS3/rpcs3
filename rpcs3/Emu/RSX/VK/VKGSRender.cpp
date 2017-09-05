@@ -568,21 +568,8 @@ VKGSRender::VKGSRender() : GSRender()
 	m_secondary_command_buffer_pool.create((*m_device));
 	m_secondary_command_buffer.create(m_secondary_command_buffer_pool);
 	
-	//VRAM allocation
-	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000);
-	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
-	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000);
-	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
-	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000);
-	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
-	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
-	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
-
-	//Empty view to bind to buffer locations without data
-	m_null_buffer_view.reset(new vk::buffer_view(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, 0, 0));
-
+	//Precalculated stuff
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
-
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Generate frame contexts
@@ -595,15 +582,24 @@ VKGSRender::VKGSRender() : GSRender()
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
+	//VRAM allocation
+	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, 0x400000);
+	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000);
+	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000);
+	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
+	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+
 	for (auto &ctx : frame_context_storage)
 	{
-		ctx = {};
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_semaphore);
 		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
 	}
 
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
-	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R32_SFLOAT, 0, 32);
+	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
 	vk::initialize_compiler_context();
 
@@ -664,8 +660,7 @@ VKGSRender::~VKGSRender()
 	//Global resources
 	vk::destroy_global_resources();
 
-	//Data heaps/buffers
-	m_null_buffer_view.reset();
+	//Heaps
 	m_index_buffer_ring_info.heap.reset();
 	m_uniform_buffer_ring_info.heap.reset();
 	m_attrib_ring_info.heap.reset();
@@ -677,6 +672,15 @@ VKGSRender::~VKGSRender()
 
 	//Frame context
 	m_framebuffers_to_clean.clear();
+
+	if (m_current_frame == &m_aux_frame_context)
+	{
+		//Return resources back to the owner
+		m_current_frame = &frame_context_storage[m_current_queue_index];
+		m_current_frame->swap_storage(m_aux_frame_context);
+		m_current_frame->grab_resources(m_aux_frame_context);
+	}
+
 	m_aux_frame_context.buffer_views_to_clean.clear();
 	m_aux_frame_context.samplers_to_clean.clear();
 
@@ -858,11 +862,6 @@ void VKGSRender::begin()
 		
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
 		m_current_frame->used_descriptors = 0;
-
-		m_uniform_buffer_ring_info.reset_allocation_stats();
-		m_index_buffer_ring_info.reset_allocation_stats();
-		m_attrib_ring_info.reset_allocation_stats();
-		m_texture_upload_buffer_ring_info.reset_allocation_stats();
 	}
 
 	if (m_attrib_ring_info.is_critical() ||
@@ -874,6 +873,12 @@ void VKGSRender::begin()
 
 		flush_command_queue(true);
 		m_vertex_cache->purge();
+
+		m_index_buffer_ring_info.reset_allocation_stats();
+		m_uniform_buffer_ring_info.reset_allocation_stats();
+		m_attrib_ring_info.reset_allocation_stats();
+		m_texture_upload_buffer_ring_info.reset_allocation_stats();
+		m_current_frame->reset_heap_ptrs();
 
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
@@ -1031,7 +1036,8 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts, m_memory_type_mapping,
+				m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
 			if (!texture0)
 			{
@@ -1085,7 +1091,8 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts, m_memory_type_mapping,
+				m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
 			if (!texture0)
 			{
@@ -1502,6 +1509,10 @@ void VKGSRender::advance_queued_frames()
 	});
 
 	m_vertex_cache->purge();
+	m_current_frame->tag_frame_end(m_attrib_ring_info.get_current_put_pos_minus_one(),
+		m_uniform_buffer_ring_info.get_current_put_pos_minus_one(),
+		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
+		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one());
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
@@ -1574,6 +1585,17 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		ctx->buffer_views_to_clean.clear();
 		ctx->samplers_to_clean.clear();
+
+		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
+		{
+			m_last_heap_sync_time = ctx->last_frame_sync_time;
+
+			//Heap cleanup; deallocates memory consumed by the frame if it is still held
+			m_attrib_ring_info.m_get_pos = ctx->attrib_heap_ptr;
+			m_uniform_buffer_ring_info.m_get_pos = ctx->ubo_heap_ptr;
+			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
+			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
+		}
 	}
 
 	ctx->swap_command_buffer = nullptr;
@@ -1629,10 +1651,16 @@ bool VKGSRender::check_program_status()
 	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture&, bool is_depth) -> std::tuple<bool, u16>
 	{
 		vk::render_target *surface = nullptr;
+
 		if (!is_depth)
 			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
 		else
+		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
+
+			if (!surface && m_texture_cache.is_depth_texture(texaddr, m_rtts))
+				return std::make_tuple(true, 0);
+		}
 
 		if (!surface) return std::make_tuple(false, 0);
 
@@ -2080,10 +2108,12 @@ void VKGSRender::prepare_rtts()
 
 	for (u8 index : draw_buffers)
 	{
-		bound_images.push_back(std::get<1>(m_rtts.m_bound_render_targets[index]));
+		auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]);
+		bound_images.push_back(surface);
 
 		m_surface_info[index].address = surface_addresses[index];
 		m_surface_info[index].pitch = surface_pitchs[index];
+		surface->rsx_pitch = surface_pitchs[index];
 
 		if (surface_pitchs[index] <= 64)
 		{
@@ -2095,10 +2125,12 @@ void VKGSRender::prepare_rtts()
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
-		bound_images.push_back(std::get<1>(m_rtts.m_bound_depth_stencil));
+		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		bound_images.push_back(ds);
 
 		m_depth_surface_info.address = zeta_address;
 		m_depth_surface_info.pitch = rsx::method_registers.surface_z_pitch();
+		ds->rsx_pitch = m_depth_surface_info.pitch;
 
 		if (m_depth_surface_info.pitch <= 64 && clip_width > m_depth_surface_info.pitch)
 			m_depth_surface_info.pitch = 0;
@@ -2362,7 +2394,7 @@ void VKGSRender::flip(int buffer)
 			barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			barrier.image = target_image;
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.subresourceRange = subres;
@@ -2492,11 +2524,6 @@ void VKGSRender::flip(int buffer)
 	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
 	m_flip_time = std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
 
-	m_uniform_buffer_ring_info.reset_allocation_stats();
-	m_index_buffer_ring_info.reset_allocation_stats();
-	m_attrib_ring_info.reset_allocation_stats();
-	m_texture_upload_buffer_ring_info.reset_allocation_stats();
-
 	//NOTE:Resource destruction is handled within the real swap handler
 
 	m_frame->flip(m_context);
@@ -2518,4 +2545,12 @@ void VKGSRender::flip(int buffer)
 	m_uploads_4k = 0;
 	m_uploads_8k = 0;
 	m_uploads_16k = 0;
+}
+
+bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
+{
+	close_render_pass();
+
+	return m_texture_cache.upload_scaled_image(src, dst, interpolate, (*m_device), *m_current_command_buffer, m_memory_type_mapping,
+			m_swap_chain->get_present_queue(), m_rtts, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 }

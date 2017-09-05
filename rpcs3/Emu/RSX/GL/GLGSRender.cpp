@@ -1028,7 +1028,6 @@ void GLGSRender::flip(int buffer)
 
 	// Calculate blit coordinates
 	coordi aspect_ratio;
-	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 	sizei csize(m_frame->client_width(), m_frame->client_height());
 	sizei new_size = csize;
 
@@ -1055,19 +1054,33 @@ void GLGSRender::flip(int buffer)
 	// Find the source image
 	rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	u32 absolute_address = buffer_region.address + buffer_region.base;
-	gl::texture *render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address);
 
 	m_flip_fbo.recreate();
 	m_flip_fbo.bind();
 
-	if (render_target_texture)
+	//The render might have been done offscreen and a blit used to display
+	//Check the texture cache for a blitted copy
+	const u32 size = buffer_pitch * buffer_height;
+	auto surface = m_gl_texture_cache.find_texture_from_range(absolute_address, size);
+	bool ignore_scaling = false;
+
+	if (surface != nullptr)
+	{
+		auto dims = surface->get_dimensions();
+		buffer_width = std::get<0>(dims);
+		buffer_height = std::get<1>(dims);
+
+		m_flip_fbo.color = surface->id();
+		m_flip_fbo.read_buffer(m_flip_fbo.color);
+	}
+	else if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 	{
 		buffer_width = render_target_texture->width();
 		buffer_height = render_target_texture->height();
 
-		__glcheck m_flip_fbo.color = *render_target_texture;
-		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
-
+		m_flip_fbo.color = *render_target_texture;
+		m_flip_fbo.read_buffer(m_flip_fbo.color);
+		ignore_scaling = true;
 	}
 	else
 	{
@@ -1077,7 +1090,7 @@ void GLGSRender::flip(int buffer)
 		{
 			m_flip_tex_color.recreate(gl::texture::target::texture2D);
 
-			__glcheck m_flip_tex_color.config()
+			m_flip_tex_color.config()
 				.size({ (int)buffer_width, (int)buffer_height })
 				.type(gl::texture::type::uint_8_8_8_8)
 				.format(gl::texture::format::bgra);
@@ -1089,23 +1102,38 @@ void GLGSRender::flip(int buffer)
 		{
 			std::unique_ptr<u8[]> temp(new u8[buffer_height * buffer_pitch]);
 			buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
-			__glcheck m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+			m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		}
 		else
 		{
-			__glcheck m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+			m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		}
 
 		m_flip_fbo.color = m_flip_tex_color;
-		__glcheck m_flip_fbo.read_buffer(m_flip_fbo.color);
+		m_flip_fbo.read_buffer(m_flip_fbo.color);
+		ignore_scaling = true;
+	}
+
+	if (!ignore_scaling && buffer_region.tile && buffer_region.tile->comp != CELL_GCM_COMPMODE_DISABLED)
+	{
+		LOG_ERROR(RSX, "Output buffer compression mode = 0x%X", buffer_region.tile->comp);
+
+		switch (buffer_region.tile->comp)
+		{
+		case CELL_GCM_COMPMODE_C32_2X2:
+		case CELL_GCM_COMPMODE_C32_2X1:
+			buffer_height = display_buffers[buffer].height / 2;
+			break;
+		}
 	}
 
 	// Blit source image to the screen
 	// Disable scissor test (affects blit)
 	glDisable(GL_SCISSOR_TEST);
 
-	gl::screen.clear(gl::buffers::color_depth_stencil);
-	__glcheck m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
+	gl::screen.clear(gl::buffers::color);
+	m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
 	if (g_cfg.video.overlay)
 	{
