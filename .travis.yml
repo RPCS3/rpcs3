@@ -1,6 +1,5 @@
 language: cpp
 sudo: required
-dist: trusty
 
 os:
   - linux
@@ -17,19 +16,10 @@ cache:
   directories:
     - $HOME/hombebrew_cache
 
-env:
-  global:
-    - secure: BXyNziNYFLqLtY6Q58BDEUpRJr81HUtHpxf2Sr646bDcbG0Rf2rb2utqHZJ1Om926WdH7RqHuoVti4dr2X1lh4nHMkLD7MrIrfIkNN5T9aZdk19uw9IyMtz/cXon7/wqVo24tVqtBI0UghFxKii/GTDJEvRKgfpPp1e1vKSNGa4=
-    # Which Travis environment to run Coverity on
-    - coverity_scan_run_condition='"$TRAVIS_OS_NAME" = linux -a "$CC" = gcc'
-    # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
-    - coverity_scan_script_test_mode=false
-
 matrix:
   exclude:
     - os: osx
       compiler: gcc
-  
 
 git:
   submodules: false
@@ -40,7 +30,6 @@ before_install:
     fi;    
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
-      export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       wget http://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run ;
@@ -48,26 +37,17 @@ before_install:
       export QT_QPA_PLATFORM=minimal ;
       ./qt-unified-linux-x64-online.run --script qt-installer-noninteractive.qs --no-force-installations ;
     fi;
-  
-  # Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
+
   # Install updated libglew-dev since the version provided by trusty is outdated
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      pip install --user cpp-coveralls requests[security];
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew-dev_1.13.0-2_amd64.deb;
       wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew1.13_1.13.0-2_amd64.deb;
       wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb;
       wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb;
       sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb libvulkan1_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb;
     else
-      brew update; brew update;
+      brew update;
       brew install ccache glew llvm40;
-    fi;
-  # We need to update binutils to a newer version to link against the ffmpeg libs on.
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      sudo add-apt-repository ppa:jonathonf/binutils -y ;
-      sudo apt-get update ; 
-      sudo apt-get install binutils -y;
-      ld --version ;
     fi;
 
 before_script:
@@ -109,14 +89,15 @@ script:
   #- echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
   # And to ensure the versions of toolchain
   - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
-  #- if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 3; fi
 
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-trusty-4.0
+      - sourceline: 'ppa:jonathonf/binutils' # We need to update binutils to a newer version to link against the ffmpeg libs on.
     packages:
+      - binutils
       - cmake
       - libasound2-dev
       - libopenal-dev
@@ -139,13 +120,3 @@ addons:
       - libudev-dev
       - libevdev-dev
       - libpulse-dev
-  coverity_scan:
-    project:
-      name: $TRAVIS_REPO_SLUG
-      description: "PS3 emulator/debugger"
-    notification_email: nekotekina@gmail.com
-    build_command: "make -j 3"
-    branch_pattern: coverity_scan
-
-after_success:
-  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
