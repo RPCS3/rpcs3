@@ -86,7 +86,8 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	UpdateList();
 
-	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col) {
+	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
+	{
 		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
 		SaveDataEntry originalEntry = m_save_entries[originalIndex];
 		QString originalDirName = qstr(originalEntry.dirName);
@@ -206,9 +207,11 @@ void save_data_list_dialog::UpdateList()
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
 
-	QSize tableSize = QSize(
+	QSize tableSize = QSize
+	(
 		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
-		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
+		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2
+	);
 
 	resize(minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize));
 
