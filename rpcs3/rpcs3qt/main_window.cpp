@@ -562,7 +562,8 @@ void main_window::InstallPup(const QString& dropPath)
 				self_dec.DecryptData();
 
 				auto dev_flash_tar_f = self_dec.MakeFile();
-				if (dev_flash_tar_f.size() < 3) {
+				if (dev_flash_tar_f.size() < 3)
+				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."));
 					progress = -1;
@@ -1101,7 +1102,9 @@ void main_window::CreateConnects()
 {
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
-	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]() {
+
+	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
+	{
 		// Enable/Disable Recent Games List
 		const bool stopped = Emu.IsStopped();
 		for (auto act : ui->bootRecentMenu->actions())
@@ -1112,7 +1115,9 @@ void main_window::CreateConnects()
 			}
 		}
 	});
-	connect(ui->clearRecentAct, &QAction::triggered, [this](){
+
+	connect(ui->clearRecentAct, &QAction::triggered, [this]
+	{
 		if (ui->freezeRecentAct->isChecked()) { return; }
 		m_rg_entries.clear();
 		for (auto act : m_recentGameActs)
@@ -1122,21 +1127,28 @@ void main_window::CreateConnects()
 		m_recentGameActs.clear();
 		guiSettings->SetValue(GUI::rg_entries, guiSettings->List2Var(q_pair_list()));
 	});
-	connect(ui->freezeRecentAct, &QAction::triggered, [=](bool checked) {
+
+	connect(ui->freezeRecentAct, &QAction::triggered, [=](bool checked)
+	{
 		guiSettings->SetValue(GUI::rg_freeze, checked);
 	});
+
 	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPkg(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, [this] {InstallPup(); });
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Stop();	Emu.Load();	});
-	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=](){
+
+	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=]
+	{
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 		m_sys_menu_opened = !m_sys_menu_opened;
 		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 	});
-	connect(ui->sysSendExitAct, &QAction::triggered, [=](){
+
+	connect(ui->sysSendExitAct, &QAction::triggered, [=]
+	{
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 
@@ -1149,50 +1161,68 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		dlg.exec();
 	};
+
 	connect(ui->confCPUAct,    &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->confGPUAct,    &QAction::triggered, [=]() { openSettings(1); });
 	connect(ui->confAudioAct,  &QAction::triggered, [=]() { openSettings(2); });
 	connect(ui->confIOAct,     &QAction::triggered, [=]() { openSettings(3); });
 	connect(ui->confSystemAct, &QAction::triggered, [=]() { openSettings(4); });
 
-	connect(ui->confPadAct, &QAction::triggered, this, [=](){
+	connect(ui->confPadAct, &QAction::triggered, this, [=]
+	{
 		pad_settings_dialog dlg(guiSettings, this);
 		dlg.exec();
 	});
-	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=](){
+
+	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=]
+	{
 		auto_pause_settings_dialog dlg(this);
 		dlg.exec();
 	});
-	connect(ui->confVFSDialogAct, &QAction::triggered, [=]() {
+
+	connect(ui->confVFSDialogAct, &QAction::triggered, [=]
+	{
 		vfs_dialog dlg(this);
 		dlg.exec();
 		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
-	connect(ui->confSavedataManagerAct, &QAction::triggered, [=](){
 
+	connect(ui->confSavedataManagerAct, &QAction::triggered, [=]
+	{
 		save_manager_dialog* sdid = new save_manager_dialog();
 		sdid->show();
 	});
-	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=](){
+
+	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
+	{
 		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings);
 		cgdw->show();
 	});
-	connect(ui->toolskernel_explorerAct, &QAction::triggered, [=](){
+
+	connect(ui->toolskernel_explorerAct, &QAction::triggered, [=]
+	{
 		kernel_explorer* kernelExplorer = new kernel_explorer(this);
 		kernelExplorer->show();
 	});
-	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [=](){
+
+	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [=]
+	{
 		memory_viewer_panel* mvp = new memory_viewer_panel(this);
 		mvp->show();
 	});
-	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [=](){
+
+	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [=]
+	{
 		rsx_debugger* rsx = new rsx_debugger(this);
 		rsx->show();
 	});
-	connect(ui->toolsStringSearchAct, &QAction::triggered, [=](){
+
+	connect(ui->toolsStringSearchAct, &QAction::triggered, [=]
+	{
 		memory_string_searcher* mss = new memory_string_searcher(this);
 		mss->show();
 	});
+
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
 	connect(ui->showDebuggerAct, &QAction::triggered, [=](bool checked){
 		checked ? debuggerFrame->show() : debuggerFrame->hide();
@@ -1206,7 +1236,9 @@ void main_window::CreateConnects()
 		checked ? gameListFrame->show() : gameListFrame->hide();
 		guiSettings->SetValue(GUI::mw_gamelist, checked);
 	});
-	connect(ui->showToolBarAct, &QAction::triggered, [=](bool checked) {
+
+	connect(ui->showToolBarAct, &QAction::triggered, [=](bool checked)
+	{
 		ui->toolBar->setVisible(checked);
 		guiSettings->SetValue(GUI::mw_toolBarVisible, checked);
 	});
@@ -1235,12 +1267,17 @@ void main_window::CreateConnects()
 		gameListFrame->ToggleCategoryFilter(categories, checked);
 		guiSettings->SetCategoryVisibility(id, checked);
 	});
-	connect(ui->aboutAct, &QAction::triggered, [this]() {
+
+	connect(ui->aboutAct, &QAction::triggered, [this]
+	{
 		about_dialog dlg(this);
 		dlg.exec();
 	});
+
 	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
-	auto resizeIcons = [=](const int& index){
+
+	auto resizeIcons = [=](const int& index)
+	{
 		int val = ui->sizeSlider->value();
 		if (val != index)
 		{
@@ -1291,12 +1328,14 @@ void main_window::CreateConnects()
 		gameListFrame->SetListMode(isList);
 		categoryVisibleActGroup->setEnabled(isList);
 	});
+
 	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, Pause);
-	//connect(ui->toolbar_snap, &QAction::triggered, [=]() {});
-	connect(ui->toolbar_fullscreen, &QAction::triggered, [=]() {
+
+	connect(ui->toolbar_fullscreen, &QAction::triggered, [=]
+	{
 		if (isFullScreen())
 		{
 			showNormal();
@@ -1312,10 +1351,11 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
-	//connect(ui->toolbar_sort, &QAction::triggered, gameListFrame, sort);
 	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&] { guiSettings->SetValue(GUI::gl_iconSize, ui->sizeSlider->value()); });
-	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action) {
+
+	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action)
+	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
 		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
 			m_save_slider_pos = true; // actionTriggered happens before the value was changed

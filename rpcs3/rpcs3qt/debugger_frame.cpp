@@ -32,9 +32,6 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_choice_units->setEditable(true);
 	m_choice_units->setInsertPolicy(QComboBox::NoInsert);
 	m_choice_units->lineEdit()->setPlaceholderText("Choose a thread");
-	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&] {
-		m_choice_units->clearFocus();
-	});
 	m_choice_units->completer()->setCompletionMode(QCompleter::PopupCompletion);
 	m_choice_units->completer()->setMaxVisibleItems(30);
 	m_choice_units->completer()->setFilterMode(Qt::MatchContains);
@@ -85,9 +82,16 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::Show_Val);
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::Show_PC);
-	connect(m_btn_capture, &QAbstractButton::clicked, [=]() { user_asked_for_frame_capture = true; });
+
+	connect(m_btn_capture, &QAbstractButton::clicked, [=]()
+	{
+		user_asked_for_frame_capture = true;
+	});
+
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
-	connect(m_btn_run, &QAbstractButton::clicked, [=](){
+
+	connect(m_btn_run, &QAbstractButton::clicked, [=]()
+	{
 		if (const auto cpu = this->cpu.lock())
 		{
 			if (m_btn_run->text() == Run && cpu->state.test_and_reset(cpu_flag::dbg_pause))
@@ -104,6 +108,12 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 		}
 		UpdateUI();
 	});
+
+	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&]
+	{
+		m_choice_units->clearFocus();
+	});
+
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &debugger_frame::UpdateUI);
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &debugger_frame::OnSelectUnit);
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);

@@ -81,7 +81,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	}
 
 	// Various connects
-	connect(ui->okButton, &QAbstractButton::clicked, [=]() {
+	connect(ui->okButton, &QAbstractButton::clicked, [=]
+	{
 		std::set<std::string> selectedlle;
 		for (int i = 0; i<ui->lleList->count(); ++i)
 		{
@@ -289,7 +290,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 
 		// sort items: checked items first then alphabetical order
-		std::sort(items.begin(), items.end(), [](QListWidgetItem *i1, QListWidgetItem *i2) {
+		std::sort(items.begin(), items.end(), [](QListWidgetItem *i1, QListWidgetItem *i2)
+		{
 			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
 		});
 
@@ -310,7 +312,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	connect(ui->searchBox, &QLineEdit::textChanged, l_OnSearchBoxTextChanged);
 
 	// enable multiselection (there must be a better way)
-	connect(ui->lleList, &QListWidget::itemChanged, [&](QListWidgetItem* item){
+	connect(ui->lleList, &QListWidget::itemChanged, [&](QListWidgetItem* item)
+	{
 		for (auto cb : ui->lleList->selectedItems())
 		{
 			cb->setCheckState(item->checkState());
@@ -541,7 +544,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, setAdapter);
 	connect(ui->renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), switchGraphicsAdapter);
 
-	auto fixGLLegacy = [=](const QString& text) {
+	auto fixGLLegacy = [=](const QString& text)
+	{
 		ui->glLegacyBuffers->setEnabled(text == r_OpenGL);
 	};
 
@@ -671,7 +675,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	else
 	{
 		// colorize preview icons
-		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor()) {
+		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
+		{
 			QLabel* text = new QLabel(button->text());
 			text->setObjectName("color_button");
 			text->setAlignment(Qt::AlignCenter);
@@ -694,7 +699,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			button->layout()->addWidget(text);
 		};
 
-		auto AddColoredIcons = [=]() {
+		auto AddColoredIcons = [=]()
+		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>());
 			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
 			addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
@@ -711,7 +717,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		ui->pb_tool_bar_color->setEnabled(enableUIColors);
 		ui->pb_tool_icon_color->setEnabled(enableUIColors);
 
-		auto ApplyGuiOptions = [&](bool reset = false) {
+		auto ApplyGuiOptions = [&](bool reset = false)
+		{
 			if (reset)
 			{
 				m_currentConfig = GUI::Default;
@@ -731,7 +738,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		};
 
 		connect(ui->okButton, &QAbstractButton::clicked, [=]() { ApplyGuiOptions(); });
-		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]() {
+		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
+		{
 			if (QMessageBox::question(this, tr("Reset GUI to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"),
 				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 			{
@@ -751,7 +759,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
-		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val) {
+		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
+		{
 			xgui_settings->SetValue(GUI::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
 			ui->pb_gl_tool_icon_color->setEnabled(val);
@@ -759,7 +768,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			ui->pb_tool_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
 		});
-		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button){
+		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button)
+		{
 			QColor oldColor = xgui_settings->GetValue(color).value<QColor>();
 			QColorDialog dlg(oldColor, this);
 			dlg.setWindowTitle(title);
@@ -800,18 +810,21 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		ui->gs_width->setValue(width < max_width ? width : max_width);
 		ui->gs_height->setValue(height < max_height ? height : max_height);
 
-		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val) {
+		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val)
+		{
 			xgui_settings->SetValue(GUI::gs_resize, val);
 			ui->gs_width->setEnabled(val);
 			ui->gs_height->setEnabled(val);
 		});
-		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w) {
+		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w)
+		{
 			int width = QApplication::desktop()->screenGeometry().width();
 			w = w > width ? width : w;
 			ui->gs_width->setValue(w);
 			xgui_settings->SetValue(GUI::gs_width, w);
 		});
-		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h) {
+		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h)
+		{
 			int height = QApplication::desktop()->screenGeometry().height();
 			h = h > height ? height : h;
 			ui->gs_height->setValue(h);

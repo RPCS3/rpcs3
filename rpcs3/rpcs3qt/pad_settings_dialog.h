@@ -49,7 +49,8 @@ enum button_ids
 	id_cancel
 };
 
-namespace Ui {
+namespace Ui
+{
 	class pad_settings_dialog;
 }
 
