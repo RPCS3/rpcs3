@@ -181,9 +181,8 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	sceNpTrophy.warning("sceNpTrophyCreateContext term=%s data=%s num=%d", commId->term, commId->data, commId->num);
 	if (commId->term)
 	{
-		char trimchar[9];
-		memcpy(trimchar, commId->data, sizeof(trimchar));
-		trimchar[8] = 0;
+		char trimchar[10] = { 0 };
+		memcpy(trimchar, commId->data, sizeof(trimchar) - 1);
 		deleteTerminateChar(trimchar, commId->term);
 		name = fmt::format("%s_%02d", trimchar, commId->num);
 	}
@@ -477,7 +476,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	if (trophyId >= (s32)ctxt->tropusr->GetTrophiesCount())
+	if (trophyId < 0 || trophyId >= (s32)ctxt->tropusr->GetTrophiesCount())
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
 	if (ctxt->tropusr->GetTrophyUnlockState(trophyId))
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
