@@ -1129,7 +1129,21 @@ error_code sys_fs_ftruncate(u32 fd, u64 size)
 
 	std::lock_guard<std::mutex> lock(file->mp->mutex);
 
-	if (!file->file.trunc(size))
+	if (file->lock)
+	{
+		return CELL_EBUSY;
+	}
+
+	if (file->flags & CELL_FS_O_APPEND)
+	{
+		const u64 fsize = file->file.size();
+
+		if (size > fsize && !file->file.write(std::vector<u8>(size - fsize)))
+		{
+			return CELL_ENOSPC;
+		}
+	}
+	else if (!file->file.trunc(size))
 	{
 		switch (auto error = fs::g_tls_error)
 		{

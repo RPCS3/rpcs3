@@ -420,7 +420,7 @@ error_code sys_event_port_connect_ipc(u32 eport_id, u64 ipc_key)
 
 	port->queue = std::move(queue);
 
-	return CELL_ESRCH;
+	return CELL_OK;
 }
 
 error_code sys_event_port_disconnect(u32 eport_id)
