@@ -218,7 +218,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	connect(b_next, &QAbstractButton::clicked, [=]() { m_addr += m_colcount; ShowMemory(); });
 	connect(b_fprev, &QAbstractButton::clicked, [=]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
 	connect(b_fnext, &QAbstractButton::clicked, [=]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_img, &QAbstractButton::clicked, [=]() {
+	connect(b_img, &QAbstractButton::clicked, [=]
+	{
 		int mode = cbox_img_mode->currentIndex();
 		int sizex = sb_img_size_x->value();
 		int sizey = sb_img_size_y->value();
@@ -228,7 +229,12 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	//Fill the QTextEdits
 	ShowMemory();
 	setFixedSize(sizeHint());
-};
+}
+
+memory_viewer_panel::~memory_viewer_panel()
+{
+	exit = true;
+}
 
 void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 {
@@ -298,6 +304,11 @@ void memory_viewer_panel::ShowMemory()
 	t_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height() + 10);
 }
 
+void memory_viewer_panel::SetPC(const uint pc)
+{
+	m_addr = pc;
+}
+
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
 	unsigned char* originalBuffer  = (unsigned char*)vm::base(addr);
@@ -305,8 +316,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	switch(mode)
 	{
 	case(0): // RGB
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 3];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 3];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 3];
@@ -316,8 +329,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	break;
 	
 	case(1): // ARGB
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
@@ -327,8 +342,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	break;
 	
 	case(2): // RGBA
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
@@ -338,8 +355,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	break;
 	
 	case(3): // ABGR
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
@@ -350,9 +369,12 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	}
 	
 	// Flip vertically
-	if (flipv) {
-		for (u32 y = 0; y < height / 2; y++) {
-			for (u32 x = 0; x < width * 4; x++) {
+	if (flipv)
+	{
+		for (u32 y = 0; y < height / 2; y++)
+		{
+			for (u32 x = 0; x < width * 4; x++)
+			{
 				const u8 t = convertedBuffer[x + y * width * 4];
 				convertedBuffer[x + y * width * 4] = convertedBuffer[x + (height - y - 1) * width * 4];
 				convertedBuffer[x + (height - y - 1) * width * 4] = t;

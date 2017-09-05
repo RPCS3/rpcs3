@@ -10,7 +10,7 @@ public:
 
 	void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const;
 	QSize sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const;
-	void setItemSize(const QSize& size) { m_size = size; };
+	void setItemSize(const QSize& size);
 	virtual ~game_list_grid_delegate();
 private:
 	QSize m_size;

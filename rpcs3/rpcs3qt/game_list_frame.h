@@ -168,7 +168,8 @@ struct Tool_Bar_Button
 	bool isActive;
 };
 
-enum {
+enum
+{
 	DROP_ERROR,
 	DROP_PKG,
 	DROP_PUP,
@@ -177,7 +178,8 @@ enum {
 	DROP_GAME
 };
 
-class game_list_frame : public QDockWidget {
+class game_list_frame : public QDockWidget
+{
 	Q_OBJECT
 
 public:

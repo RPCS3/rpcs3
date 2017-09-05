@@ -4,7 +4,8 @@
 #include <QKeyEvent>
 #include <QCloseEvent>
 
-namespace Ui {
+namespace Ui
+{
 	class welcome_dialog;
 }
 

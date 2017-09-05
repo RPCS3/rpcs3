@@ -16,12 +16,15 @@ struct GUI_SAVE
 	QString name;
 	QVariant def;
 
-	GUI_SAVE() {
+	GUI_SAVE()
+	{
 		key = "";
 		name = "";
 		def = QVariant();
 	};
-	GUI_SAVE(const QString& k, const QString& n, const QVariant& d) {
+
+	GUI_SAVE(const QString& k, const QString& n, const QVariant& d)
+	{
 		key = k;
 		name = n;
 		def = d;

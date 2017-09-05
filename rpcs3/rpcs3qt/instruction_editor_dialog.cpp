@@ -66,7 +66,8 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::pressed, [=]() {
+	connect(button_ok, &QAbstractButton::pressed, [=]()
+	{
 		bool ok;
 		ulong opcode = t2_instr->text().toULong(&ok, 16);
 		if (!ok)

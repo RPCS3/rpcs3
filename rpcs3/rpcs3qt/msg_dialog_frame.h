@@ -47,6 +47,7 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 
 	custom_dialog* osk_dialog = nullptr;
 	char16_t* osk_text_return;
+	QWindow* m_taskbarTarget;	// Window which will be targeted by custom taskbars.
 
 	const int m_gauge_max = 100;
 
@@ -58,8 +59,6 @@ public:
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
-private:
-	QWindow* m_taskbarTarget;	// Window which will be targeted by custom taskbars.
 };
 
 class custom_dialog : public QDialog

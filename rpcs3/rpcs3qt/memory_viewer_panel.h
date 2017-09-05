@@ -41,15 +41,12 @@ class memory_viewer_panel : public QDialog
 public:
 	bool exit;
 	memory_viewer_panel(QWidget* parent);
-	~memory_viewer_panel()
-	{
-		exit = true;
-	}
+	~memory_viewer_panel();
 
 	virtual void wheelEvent(QWheelEvent *event);
 
 	virtual void ShowMemory();
-	void SetPC(const uint pc) { m_addr = pc; }
+	void SetPC(const uint pc);
 
 	//Static methods
 	static void ShowImage(QWidget* parent, u32 addr, int mode, u32 sizex, u32 sizey, bool flipv);
