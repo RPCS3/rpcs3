@@ -90,10 +90,7 @@ class rsx_debugger : public QDialog
 public:
 	bool exit;
 	rsx_debugger(QWidget* parent);
-	~rsx_debugger()
-	{
-		exit = true;
-	}
+	~rsx_debugger();
 
 	virtual void UpdateInformation();
 	virtual void GetMemory();
