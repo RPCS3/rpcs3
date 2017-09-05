@@ -378,6 +378,9 @@ namespace vk
 				auto &range_data = address_range.second;
 				for (auto &tex : range_data.data)
 				{
+					if (tex.get_section_base() > rsx_address)
+						continue;
+
 					if (!tex.is_dirty() && tex.overlaps(test, true))
 						return &tex;
 				}

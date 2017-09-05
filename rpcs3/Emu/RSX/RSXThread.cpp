@@ -457,12 +457,14 @@ namespace rsx
 
 			auto args = vm::ptr<u32>::make(args_address);
 			invalid_command_interrupt_raised = false;
+			bool unaligned_command = false;
 
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
 			if (cmd & 0x3)
 			{
 				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
+				unaligned_command = true;
 			}
 
 			for (u32 i = 0; i < count; i++)
@@ -471,7 +473,6 @@ namespace rsx
 				u32 value = args[i];
 
 				//LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
-
 				method_registers.decode(reg, value);
 
 				if (capture_current_frame)
@@ -486,14 +487,18 @@ namespace rsx
 
 				if (invalid_command_interrupt_raised)
 				{
-					//Ignore processing the rest of the chain
-					ctrl->get = put;
+					//Skip the rest of this command
 					break;
 				}
 			}
 
-			if (invalid_command_interrupt_raised)
+			if (unaligned_command && invalid_command_interrupt_raised)
+			{
+				//This is almost guaranteed to be heap corruption at this point
+				//Ignore the rest of the chain
+				ctrl->get = put;
 				continue;
+			}
 
 			ctrl->get = get + (count + 1) * 4;
 		}
