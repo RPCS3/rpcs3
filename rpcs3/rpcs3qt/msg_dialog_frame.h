@@ -23,6 +23,9 @@
 #include <QWinTaskbarButton>
 #include <QWinTHumbnailToolbar>
 #include <QWinTHumbnailToolbutton>
+#elif HAVE_QTDBUS
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusConnection>
 #endif
 
 class custom_dialog;
@@ -34,6 +37,9 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 #ifdef _WIN32
 	QWinTaskbarButton* m_tb_button = nullptr;
 	QWinTaskbarProgress* m_tb_progress = nullptr;
+
+#elif HAVE_QTDBUS
+	int* progressValue = nullptr;
 #endif
 	custom_dialog* m_dialog =nullptr;
 	QLabel* m_text = nullptr;
@@ -59,6 +65,10 @@ public:
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
+#ifdef HAVE_QTDBUS
+private:
+	void UpdateProgress(int progress, bool disable = false);
+#endif
 };
 
 class custom_dialog : public QDialog
