@@ -166,9 +166,7 @@ public:
 	explicit gui_settings(QObject* parent = nullptr);
 	~gui_settings();
 
-	QString GetSettingsDir() {
-		return settingsDir.absolutePath();
-	}
+	QString GetSettingsDir();
 
 	/** Changes the settings file to the destination preset*/
 	void ChangeToConfig(const QString& destination);
@@ -217,6 +215,6 @@ private:
 	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& destination);
 
-	QSettings settings;
-	QDir settingsDir;
+	QSettings m_settings;
+	QDir m_settingsDir;
 };
