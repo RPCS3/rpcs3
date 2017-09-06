@@ -206,7 +206,7 @@ private:
 		{ dev_usb000Location, { "VFS", "/dev_usb000/"}},
 	};
 
-	YAML::Node currentSettings; // The current settings as a YAML node.
-	fs::file config; //! File to read/write the config settings.
+	YAML::Node m_currentSettings; // The current settings as a YAML node.
+	fs::file m_config; //! File to read/write the config settings.
 	std::string m_path;
 };

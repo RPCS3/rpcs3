@@ -97,8 +97,18 @@ void msg_dialog_frame::Create(const std::string& msg)
 		{
 			m_button_yes->setFocus();
 		}
-		connect(m_button_yes, &QAbstractButton::clicked, [=] {on_close(CELL_MSGDIALOG_BUTTON_YES); m_dialog->accept(); });
-		connect(m_button_no, &QAbstractButton::clicked, [=] {on_close(CELL_MSGDIALOG_BUTTON_NO); m_dialog->accept(); });
+
+		connect(m_button_yes, &QAbstractButton::clicked, [=]
+		{
+			on_close(CELL_MSGDIALOG_BUTTON_YES);
+			m_dialog->accept();
+		});
+
+		connect(m_button_no, &QAbstractButton::clicked, [=]
+		{
+			on_close(CELL_MSGDIALOG_BUTTON_NO);
+			m_dialog->accept();
+		});
 	}
 
 	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK)
@@ -117,13 +127,31 @@ void msg_dialog_frame::Create(const std::string& msg)
 		{
 			m_button_ok->setFocus();
 		}
-		connect(m_button_ok, &QAbstractButton::clicked, [=] { on_close(CELL_MSGDIALOG_BUTTON_OK); m_dialog->accept(); });
+
+		connect(m_button_ok, &QAbstractButton::clicked, [=]
+		{
+			on_close(CELL_MSGDIALOG_BUTTON_OK);
+			m_dialog->accept();
+		});
 	}
 
 	m_dialog->setLayout(layout);
 
-	connect(m_dialog, &QDialog::rejected, [=] {if (!type.disable_cancel) { on_close(CELL_MSGDIALOG_BUTTON_ESCAPE); }});
-	connect(m_dialog, &QDialog::destroyed, [=] {if (--dialog_count <= 0) dialog_nr = 0;});
+	connect(m_dialog, &QDialog::rejected, [=]
+	{
+		if (!type.disable_cancel)
+		{
+			on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+		}
+	});
+
+	connect(m_dialog, &QDialog::destroyed, [=]
+	{
+		if (--dialog_count <= 0)
+		{
+			dialog_nr = 0;
+		}
+	});
 
 	//Fix size
 	m_dialog->setFixedSize(m_dialog->sizeHint());
@@ -206,29 +234,29 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 {
 	static const auto& lineEditWidth = []() {return QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width(); };
 
-	if (osk_dialog)
+	if (m_osk_dialog)
 	{
-		osk_dialog->close();
-		delete osk_dialog;
+		m_osk_dialog->close();
+		delete m_osk_dialog;
 	}
 
-	osk_dialog = new custom_dialog(type.disable_cancel);
-	osk_dialog->setModal(true);
-	osk_text_return = osk_text;
+	m_osk_dialog = new custom_dialog(type.disable_cancel);
+	m_osk_dialog->setModal(true);
+	m_osk_text_return = osk_text;
 
 	//Title
-	osk_dialog->setWindowTitle(qstr(msg));
-	osk_dialog->setWindowFlags(osk_dialog->windowFlags() & ~Qt::WindowContextHelpButtonHint);
+	m_osk_dialog->setWindowTitle(qstr(msg));
+	m_osk_dialog->setWindowFlags(m_osk_dialog->windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	//Text Input
-	QLineEdit* input = new QLineEdit(osk_dialog);
+	QLineEdit* input = new QLineEdit(m_osk_dialog);
 	input->setFixedWidth(lineEditWidth());
 	input->setMaxLength(charlimit);
-	input->setText(QString::fromStdU16String(std::u16string(osk_text_return)));
+	input->setText(QString::fromStdU16String(std::u16string(m_osk_text_return)));
 	input->setFocus();
 
 	//Ok Button
-	QPushButton* button_ok = new QPushButton("Ok", osk_dialog);
+	QPushButton* button_ok = new QPushButton("Ok", m_osk_dialog);
 
 	//Layout
 	QHBoxLayout* buttonsLayout = new QHBoxLayout;
@@ -237,25 +265,38 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 	buttonsLayout->addWidget(button_ok);
 	buttonsLayout->addStretch();
 
-	QFormLayout* layout = new QFormLayout(osk_dialog);
+	QFormLayout* layout = new QFormLayout(m_osk_dialog);
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(input);
 	layout->addRow(buttonsLayout);
-	osk_dialog->setLayout(layout);
+	m_osk_dialog->setLayout(layout);
 
 	//Events
-	connect(input, &QLineEdit::textChanged, [=] { on_osk_input_entered(); });
-	connect(input, &QLineEdit::returnPressed, osk_dialog, &QDialog::accept);
-	connect(button_ok, &QAbstractButton::clicked, osk_dialog, &QDialog::accept);
-	connect(osk_dialog, &QDialog::rejected, [=] {if (!type.disable_cancel) { on_close(CELL_MSGDIALOG_BUTTON_ESCAPE); }});
-	connect(osk_dialog, &QDialog::accepted, [=] {
-		std::memcpy(osk_text_return, reinterpret_cast<const char16_t*>(input->text().constData()), ((input->text()).size() + 1) * sizeof(char16_t));
+	connect(input, &QLineEdit::textChanged, [=]
+	{
+		on_osk_input_entered();
+	});
+
+	connect(input, &QLineEdit::returnPressed, m_osk_dialog, &QDialog::accept);
+	connect(button_ok, &QAbstractButton::clicked, m_osk_dialog, &QDialog::accept);
+
+	connect(m_osk_dialog, &QDialog::rejected, [=]
+	{
+		if (!type.disable_cancel)
+		{
+			on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+		}
+	});
+
+	connect(m_osk_dialog, &QDialog::accepted, [=]
+	{
+		std::memcpy(m_osk_text_return, reinterpret_cast<const char16_t*>(input->text().constData()), ((input->text()).size() + 1) * sizeof(char16_t));
 		on_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 
 	//Fix size
-	osk_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
-	osk_dialog->show();
+	m_osk_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
+	m_osk_dialog->show();
 }
 
 msg_dialog_frame::msg_dialog_frame(QWindow* taskbarTarget) : m_taskbarTarget(taskbarTarget) {}
@@ -282,9 +323,9 @@ msg_dialog_frame::~msg_dialog_frame()
 	{
 		m_dialog->deleteLater();
 	}
-	if (osk_dialog)
+	if (m_osk_dialog)
 	{
-		osk_dialog->deleteLater();
+		m_osk_dialog->deleteLater();
 	}
 }
 
