@@ -85,7 +85,11 @@ void main_window::Init()
 
 	// for highdpi resize toolbar icons and height dynamically
 	// choose factors to mimic Gui-Design in main_window.ui
-	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
+	int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
+	if (toolBarHeight <= 0)
+	{
+		toolBarHeight = menuBar()->height() * 1.5;
+	}
 	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
 	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
 	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
