@@ -13,7 +13,7 @@ constexpr auto qstr = QString::fromStdString;
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
-	: QDialog(parent), m_save_entries(entries), m_selectedEntry(-1), selectedEntryLabel(nullptr)
+	: QDialog(parent), m_save_entries(entries), m_entry(-1), m_entry_label(nullptr)
 {
 	setWindowTitle(tr("Save Data Interface"));
 	setWindowIcon(QIcon(":/rpcs3.ico"));
@@ -40,15 +40,16 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		push_select->setDefault(true);
 		hbox_action->addWidget(push_select);
 
-		selectedEntryLabel = new QLabel(this);
+		m_entry_label = new QLabel(this);
 		UpdateSelectionLabel();
 	}
 
 	if (is_saving)
 	{
 		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
-		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]() {
-			m_selectedEntry = -1; // Set the return properly.
+		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()
+		{
+			m_entry = -1; // Set the return properly.
 			accept();
 		});
 		hbox_action->addWidget(saveNewEntry);
@@ -63,23 +64,22 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	// events
 	connect(push_cancel, &QAbstractButton::clicked, this, &save_data_list_dialog::close);
 	connect(m_list, &QTableWidget::itemDoubleClicked, this, &save_data_list_dialog::OnEntryInfo);
-	connect(m_list, &QTableWidget::currentCellChanged, this, [&](int cr, int cc, int pr, int pc) {
-		m_selectedEntry = cr;
+	connect(m_list, &QTableWidget::currentCellChanged, this, [&](int cr, int cc, int pr, int pc)
+	{
+		m_entry = cr;
 		UpdateSelectionLabel();
 		Q_UNUSED(cr); Q_UNUSED(pr); Q_UNUSED(pc);
 	});
 
-	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col) {
-		OnSort(col);
-	});
+	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_data_list_dialog::OnSort);
 
 	// main layout
 	QVBoxLayout* vbox_main = new QVBoxLayout();
 	vbox_main->setAlignment(Qt::AlignCenter);
 	vbox_main->addWidget(m_list);
-	if (selectedEntryLabel != nullptr)
+	if (m_entry_label != nullptr)
 	{
-		vbox_main->addWidget(selectedEntryLabel);
+		vbox_main->addWidget(m_entry_label);
 	}
 	vbox_main->addLayout(hbox_action);
 	setLayout(vbox_main);
@@ -102,16 +102,16 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 void save_data_list_dialog::UpdateSelectionLabel()
 {
-	if (selectedEntryLabel != nullptr)
+	if (m_entry_label != nullptr)
 	{
 		if (m_list->currentRow() == -1)
 		{
-			selectedEntryLabel->setText(tr("Currently Selected: None"));
+			m_entry_label->setText(tr("Currently Selected: None"));
 		}
 		else
 		{
 			int entry = m_list->item(m_list->currentRow(), 0)->data(Qt::UserRole).toInt();
-			selectedEntryLabel->setText(tr("Currently Selected: ") + qstr(m_save_entries[entry].dirName));
+			m_entry_label->setText(tr("Currently Selected: ") + qstr(m_save_entries[entry].dirName));
 		}
 	}
 }
@@ -121,32 +121,32 @@ s32 save_data_list_dialog::GetSelection()
 	int res = result();
 	if (res == QDialog::Accepted)
 	{
-		if (m_selectedEntry == -1)
+		if (m_entry == -1)
 		{ // Save new entry
 			return -1;
 		}
-		return m_list->item(m_selectedEntry, 0)->data(Qt::UserRole).toInt();
+		return m_list->item(m_entry, 0)->data(Qt::UserRole).toInt();
 	}
 
 	// Cancel is pressed. May promote to enum or figure out proper cellsavedata code to use later.
 	return -2;
 }
 
-void save_data_list_dialog::OnSort(int idx)
+void save_data_list_dialog::OnSort(int logicalIndex)
 {
-	if (idx >= 0)
+	if (logicalIndex >= 0)
 	{
-		if (idx == m_sortColumn)
+		if (logicalIndex == m_sort_column)
 		{
-			m_sortAscending ^= true;
+			m_sort_ascending ^= true;
 		}
 		else
 		{
-			m_sortAscending = true;
+			m_sort_ascending = true;
 		}
-		Qt::SortOrder colSortOrder = m_sortAscending ? Qt::AscendingOrder : Qt::DescendingOrder;
-		m_list->sortByColumn(m_sortColumn, colSortOrder);
-		m_sortColumn = idx;
+		Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
+		m_list->sortByColumn(m_sort_column, sort_order);
+		m_sort_column = logicalIndex;
 	}
 }
 

@@ -77,7 +77,7 @@ namespace
 }
 
 save_manager_dialog::save_manager_dialog(std::string dir, QWidget* parent) : QDialog(parent),
-	m_save_entries(), m_dir(dir), m_sortColumn(1), m_sortAscending(true)
+	m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true)
 {
 	setWindowTitle(tr("Save Manager"));
 	setWindowIcon(QIcon(":/rpcs3.ico"));
@@ -121,13 +121,10 @@ void save_manager_dialog::Init(std::string dir)
 
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
+
+	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_manager_dialog::OnSort);
 	connect(m_list, &QTableWidget::itemDoubleClicked, this, &save_manager_dialog::OnEntryInfo);
-
 	connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_manager_dialog::ShowContextMenu);
-	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, [=](int col) {
-		OnSort(col);
-	});
-
 	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
 	{
 		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
@@ -203,21 +200,21 @@ void save_manager_dialog::UpdateList()
 /**
 * Copied method to do sort from save_data_list_dialog
 */
-void save_manager_dialog::OnSort(int idx)
+void save_manager_dialog::OnSort(int logicalIndex)
 {
-	if (idx >= 0)
+	if (logicalIndex >= 0)
 	{
-		if (idx == m_sortColumn)
+		if (logicalIndex == m_sort_column)
 		{
-			m_sortAscending ^= true;
+			m_sort_ascending ^= true;
 		}
 		else
 		{
-			m_sortAscending = true;
+			m_sort_ascending = true;
 		}
-		Qt::SortOrder colSortOrder = m_sortAscending ? Qt::AscendingOrder : Qt::DescendingOrder;
-		m_list->sortByColumn(m_sortColumn, colSortOrder);
-		m_sortColumn = idx;
+		Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
+		m_list->sortByColumn(m_sort_column, sort_order);
+		m_sort_column = logicalIndex;
 	}
 }
 
@@ -258,11 +255,11 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	QMenu* menu = new QMenu();
 	int idx = m_list->currentRow();
 
-	saveIDAct = new QAction(tr("SaveID"), this);
-	titleAct = new QAction(tr("Title"), this);
-	subtitleAct = new QAction(tr("Subtitle"), this);
-	removeAct = new QAction(tr("&Remove"), this);
-	infoAct = new QAction(tr("&Info"), this);
+	QAction* saveIDAct = new QAction(tr("SaveID"), this);
+	QAction* titleAct = new QAction(tr("Title"), this);
+	QAction* subtitleAct = new QAction(tr("Subtitle"), this);
+	QAction* removeAct = new QAction(tr("&Remove"), this);
+	QAction* infoAct = new QAction(tr("&Info"), this);
 
 	//This is also a stub for the sort setting. Ids is set according to their sort-type integer.
 	m_sort_options = new QMenu(tr("&Sort"));

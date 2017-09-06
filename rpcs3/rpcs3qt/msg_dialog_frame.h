@@ -51,9 +51,10 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 	QProgressBar* m_gauge1 = nullptr;
 	QProgressBar* m_gauge2 = nullptr;
 
-	custom_dialog* osk_dialog = nullptr;
-	char16_t* osk_text_return;
 	QWindow* m_taskbarTarget;	// Window which will be targeted by custom taskbars.
+
+	custom_dialog* m_osk_dialog = nullptr;
+	char16_t* m_osk_text_return;
 
 	const int m_gauge_max = 100;
 

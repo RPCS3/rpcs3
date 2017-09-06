@@ -175,17 +175,17 @@ emu_settings::emu_settings(const std::string& path) : QObject()
 	fs::create_path(fs::get_config_dir() + path);
 
 	// Load default config
-	currentSettings = YAML::Load(g_cfg_defaults);
+	m_currentSettings = YAML::Load(g_cfg_defaults);
 
 	// Add global config
-	config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	currentSettings += YAML::Load(config.to_string());
+	m_config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+	m_currentSettings += YAML::Load(m_config.to_string());
 
 	// Add game config
 	if (!path.empty() && fs::is_file(fs::get_config_dir() + path + "/config.yml"))
 	{
-		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
-		currentSettings += YAML::Load(config.to_string());
+		m_config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
+		m_currentSettings += YAML::Load(m_config.to_string());
 	}
 }
 
@@ -196,17 +196,17 @@ emu_settings::~emu_settings()
 void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
-	emitData(out, currentSettings);
+	emitData(out, m_currentSettings);
 
 	if (!m_path.empty())
 	{
-		config = fs::file(fs::get_config_dir() + m_path + "/config.yml", fs::read + fs::write + fs::create);
+		m_config = fs::file(fs::get_config_dir() + m_path + "/config.yml", fs::read + fs::write + fs::create);
 	}
 
 	// Save config
-	config.seek(0);
-	config.trunc(0);
-	config.write(out.c_str(), out.size());
+	m_config.seek(0);
+	m_config.trunc(0);
+	m_config.write(out.c_str(), out.size());
 }
 
 void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged)
@@ -269,12 +269,12 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 
 std::vector<std::string> emu_settings::GetLoadedLibraries()
 {
-	return currentSettings["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
+	return m_currentSettings["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
 }
 
 void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 {
-	currentSettings["Core"]["Load libraries"] = libs;
+	m_currentSettings["Core"]["Load libraries"] = libs;
 }
 
 QStringList emu_settings::GetSettingOptions(SettingsType type) const
@@ -284,10 +284,10 @@ QStringList emu_settings::GetSettingOptions(SettingsType type) const
 
 std::string emu_settings::GetSetting(SettingsType type) const
 {
-	return cfg_adapter::get_node(currentSettings, SettingsLoc[type]).Scalar();
+	return cfg_adapter::get_node(m_currentSettings, SettingsLoc[type]).Scalar();
 }
 
 void emu_settings::SetSetting(SettingsType type, const std::string& val)
 {
-	cfg_adapter::get_node(currentSettings, SettingsLoc[type]) = val;
+	cfg_adapter::get_node(m_currentSettings, SettingsLoc[type]) = val;
 }
