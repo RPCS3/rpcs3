@@ -36,15 +36,19 @@ void memory_string_searcher::OnSearch()
 	u32 strIndex = 0;
 	u32 numFound = 0;
 	const auto area = vm::get(vm::main);
-	for (u32 addr = area->addr; addr < area->addr + area->size; addr++) {
-		if (!vm::check_addr(addr)) {
+	for (u32 addr = area->addr; addr < area->addr + area->size; addr++)
+	{
+		if (!vm::check_addr(addr))
+		{
 			strIndex = 0;
 			continue;
 		}
 
 		u8 byte = vm::read8(addr);
-		if (byte == str[strIndex]) {
-			if (strIndex == len) {
+		if (byte == str[strIndex])
+		{
+			if (strIndex == len)
+			{
 				// Found it
 				LOG_NOTICE(GENERAL, "Found @ %04x", addr - len);
 				numFound++;
@@ -55,9 +59,12 @@ void memory_string_searcher::OnSearch()
 			strIndex++;
 		}
 		else
+		{
 			strIndex = 0;
+		}
 
-		if (addr % (1024 * 1024 * 64) == 0) { // Log every 64mb
+		if (addr % (1024 * 1024 * 64) == 0) // Log every 64mb
+		{
 			LOG_NOTICE(GENERAL, "Searching %04x ...", addr);
 		}
 	}

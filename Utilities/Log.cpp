@@ -348,12 +348,10 @@ logs::file_writer::~file_writer()
 #ifdef _WIN32
 	UnmapViewOfFile(m_fptr);
 	CloseHandle(m_fmap);
-	m_file.seek(m_size);
-	SetEndOfFile(m_file.get_handle());
 #else
 	::munmap(m_fptr, s_log_size);
-	m_file.trunc(m_size);
 #endif
+	m_file.trunc(m_size);
 }
 
 void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)

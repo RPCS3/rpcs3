@@ -61,10 +61,9 @@ rXmlDocument::rXmlDocument() : handle()
 {
 }
 
-void rXmlDocument::Load(const std::string & path)
+void rXmlDocument::Read(const std::string& data)
 {
-	// TODO: Unsure of use of c_str.
-	handle.load_file(path.c_str());
+	handle.load_buffer(data.data(), data.size());
 }
 
 std::shared_ptr<rXmlNode> rXmlDocument::GetRoot()

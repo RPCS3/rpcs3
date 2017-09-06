@@ -115,7 +115,8 @@ void gs_frame::hide()
 
 void gs_frame::show()
 {
-	Emu.CallAfter([=]() {
+	Emu.CallAfter([=]()
+	{
 		QWindow::show(); 
 		if (g_cfg.misc.start_fullscreen)
 		{

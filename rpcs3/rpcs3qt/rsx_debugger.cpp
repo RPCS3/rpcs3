@@ -294,7 +294,8 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	connect(b_goto_put, &QAbstractButton::clicked, [=](){
 		if (const auto render = fxm::get<GSRender>()){
 			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr)){
+			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
+			{
 				m_addr = realAddr;
 				UpdateInformation();
 			}
@@ -306,7 +307,8 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 		UpdateInformation();
 	});
 	connect(m_list_flags, &QTableWidget::itemClicked, this, &rsx_debugger::SetFlags);
-	connect(m_list_texture, &QTableWidget::itemClicked, [=](){
+	connect(m_list_texture, &QTableWidget::itemClicked, [=]
+	{
 		int index = m_list_texture->currentRow();
 		if (index >= 0) m_cur_texture = index;
 		UpdateInformation();
@@ -318,6 +320,11 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	setFixedSize(sizeHint());
 	setFocusProxy(t_addr);
 };
+
+rsx_debugger::~rsx_debugger()
+{
+	exit = true;
+}
 
 void rsx_debugger::keyPressEvent(QKeyEvent* event)
 {
@@ -720,7 +727,8 @@ void rsx_debugger::GetBuffers()
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 4);
 
 		// ABGR to ARGB and flip vertically
-		for (u32 y=0; y<height; y++){
+		for (u32 y=0; y<height; y++)
+		{
 			for (u32 i=0, j=0; j<width*4; i+=4, j+=4)
 			{
 				buffer[i+0 + y*width*4] = RSXbuffer[j+1 + (height-y-1)*width*4];	//B

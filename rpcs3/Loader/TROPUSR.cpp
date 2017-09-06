@@ -137,12 +137,15 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 
 bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& configpath)
 {
-	const std::string& path = vfs::get(configpath);
+	fs::file config(vfs::get(configpath));
 
-	// TODO: rXmlDocument can open only real file
-	verify(HERE), !fs::get_virtual_device(path);
+	if (!config)
+	{
+		return false;
+	}
+
 	rXmlDocument doc;
-	doc.Load(path);
+	doc.Read(config.to_string());
 
 	m_table4.clear();
 	m_table6.clear();

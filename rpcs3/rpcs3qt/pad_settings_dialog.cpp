@@ -169,7 +169,8 @@ void pad_settings_dialog::UpdateLabel()
 void pad_settings_dialog::UpdateTimerLabel(const u32 id)
 {
 	// Lambda used to update label. The 47 is magical.
-	auto UpdateLabel = [=](QPushButton* target) {
+	auto UpdateLabel = [=](QPushButton* target)
+	{
 		target->setText(QString::number(m_seconds + 47));
 	};
 

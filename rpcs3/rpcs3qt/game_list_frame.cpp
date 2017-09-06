@@ -108,7 +108,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_Search_Bar->setPlaceholderText(tr("Search games ..."));
 	m_Search_Bar->setMinimumWidth(m_Tool_Bar->height() * 5);
 	m_Search_Bar->setFrame(false);
-	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text) {
+
+	connect(m_Search_Bar, &QLineEdit::textChanged, [this](const QString& text)
+	{
 		m_searchText = text;
 		Refresh();
 	});
@@ -217,20 +219,23 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 
 	connect(m_Slider_Size, &QSlider::valueChanged, this,  &game_list_frame::RequestIconSizeActSet);
 	connect(m_Slider_Size, &QSlider::sliderReleased, this, [&]{ xgui_settings->SetValue(GUI::gl_iconSize, m_Slider_Size->value()); });
-	connect(m_Slider_Size, &QSlider::actionTriggered, [&](int action){
+	connect(m_Slider_Size, &QSlider::actionTriggered, [&](int action)
+	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
 		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
 			Q_EMIT RequestSaveSliderPos(true); // actionTriggered happens before the value was changed
 		}
 	});
 
-	connect(m_modeActs, &QActionGroup::triggered, [=](QAction* act) {
+	connect(m_modeActs, &QActionGroup::triggered, [=](QAction* act)
+	{
 		Q_EMIT RequestListModeActSet(act == m_modeActList.action);
 		m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 		m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 	});
 
-	connect(m_categoryActs, &QActionGroup::triggered, [=](QAction* act) {
+	connect(m_categoryActs, &QActionGroup::triggered, [=](QAction* act)
+	{
 		Q_EMIT RequestCategoryActSet(m_categoryActs->actions().indexOf(act));
 	});
 
@@ -455,7 +460,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			m_game_data.push_back({ game, img, pxmap, true, bootable, hasCustomConfig });
 		}
 
-		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2) {
+		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2)
+		{
 			return game1.info.name < game2.info.name;
 		};
 
@@ -503,8 +509,18 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool show)
 {
-	if (show) { m_categoryFilters.append(categories); }
-	else { for (const auto& cat : categories) m_categoryFilters.removeAll(cat); }
+	if (show)
+	{
+		m_categoryFilters.append(categories);
+	}
+	else
+	{
+		for (const auto& cat : categories)
+		{
+			m_categoryFilters.removeAll(cat);
+		}
+	}
+
 	Refresh();
 }
 
@@ -624,17 +640,19 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	myMenu.addSeparator();
 	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
 
-	connect(boot, &QAction::triggered, [=]() {
+	connect(boot, &QAction::triggered, [=]
+	{
 		if (Boot(m_game_data[row].info))
 		{
 			LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
 		}
 	});
-	connect(configure, &QAction::triggered, [=]() {
+	connect(configure, &QAction::triggered, [=]
+	{
 		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
 		Refresh(true, false);
 	});
-	connect(removeGame, &QAction::triggered, [=]()
+	connect(removeGame, &QAction::triggered, [=]
 	{
 		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
 		{
@@ -648,7 +666,8 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	connect(deleteShadersCache, &QAction::triggered, [=]() { DeleteShadersCache(row); });
 	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
 	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
-	connect(checkCompat, &QAction::triggered, [=]() {
+	connect(checkCompat, &QAction::triggered, [=]
+	{
 		QString link = "https://rpcs3.net/compatibility?g=" + qstr(currGame.serial);
 		QDesktopServices::openUrl(QUrl(link));
 	});
@@ -919,9 +938,13 @@ int game_list_frame::PopulateGameList()
 
 	auto l_GetItem = [](const std::string& text)
 	{
+		// force single line text ("hack" used instead of Qt shenanigans like Qt::TextSingleLine)
+		QString formattedText = qstr(text);
+		formattedText.replace("\n", " - ");
+
 		QTableWidgetItem* curr = new QTableWidgetItem;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
-		curr->setText(qstr(text));
+		curr->setText(formattedText);
 		return curr;
 	};
 
@@ -1030,9 +1053,15 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 		if (category == category::hdd_Game || category == category::disc_Game)
 		{
-			m_xgrid->addItem(m_game_data[i].pxmap, qstr(m_game_data[i].info.name), i, r, c);
+			QString title = qstr(m_game_data[i].info.name);
+			title.replace("\n", " - ");
 
-			if (selected_item == m_game_data[i].info.icon_path) m_xgrid->setCurrentItem(m_xgrid->item(r, c));;
+			m_xgrid->addItem(m_game_data[i].pxmap, title, i, r, c);
+
+			if (selected_item == m_game_data[i].info.icon_path)
+			{
+				m_xgrid->setCurrentItem(m_xgrid->item(r, c));
+			}
 
 			if (++c >= maxCols)
 			{

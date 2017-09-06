@@ -29,8 +29,6 @@ protected:
 	void show() override;
 	void mouseDoubleClickEvent(QMouseEvent* ev) override;
 
-	//void SetSize(int width, int height);
-
 	void* handle() const override;
 
 	void* make_context() override;
