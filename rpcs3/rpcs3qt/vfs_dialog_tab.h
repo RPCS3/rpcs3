@@ -38,6 +38,6 @@ private:
 	emu_settings* m_emu_settings;
 
 	// UI variables needed in higher scope
-	QListWidget* dirList;
-	QLabel*		 selectedConfigLabel;
+	QListWidget* m_dirList;
+	QLabel* m_selectedConfigLabel;
 };

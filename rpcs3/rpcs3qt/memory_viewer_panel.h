@@ -20,23 +20,14 @@ class memory_viewer_panel : public QDialog
 	u32 m_addr;
 	u32 m_colcount;
 	u32 m_rowcount;
-	u32 pSize;
 
-	QLineEdit* t_addr;
-	QSpinBox* sb_bytes;
+	QLineEdit* m_addr_line;
 
-	QSpinBox* sb_img_size_x;
-	QSpinBox* sb_img_size_y;
-	QComboBox* cbox_img_mode;
+	QLabel* m_mem_addr;
+	QLabel* m_mem_hex;
+	QLabel* m_mem_ascii;
 
-	QLabel* t_mem_addr;
-	QLabel* t_mem_hex;
-	QLabel* t_mem_ascii;
-	QFont mono;
-	QFontMetrics* fontMetrics;
-	QSize textSize;
-	QPalette pal_bg;
-	QPalette pal_fg;
+	QFontMetrics* m_fontMetrics;
 
 public:
 	bool exit;
