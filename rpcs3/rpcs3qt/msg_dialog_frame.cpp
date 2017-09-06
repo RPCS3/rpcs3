@@ -65,6 +65,9 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_tb_progress = m_tb_button->progress();
 		m_tb_progress->setRange(0, m_gauge_max);
 		m_tb_progress->setVisible(true);
+#elif HAVE_QTDBUS
+		UpdateProgress(0);
+		progressValue = new int(0);
 #endif
 	}
 
@@ -268,6 +271,12 @@ msg_dialog_frame::~msg_dialog_frame()
 	{
 		m_tb_button->deleteLater();
 	}
+#elif HAVE_QTDBUS
+	if (progressValue)
+	{
+		UpdateProgress(0, false);
+		delete progressValue;
+	}
 #endif
 	if (m_dialog)
 	{
@@ -295,6 +304,8 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 		m_gauge1->reset();
 #ifdef _WIN32
 		m_tb_progress->reset();
+#elif HAVE_QTDBUS
+		UpdateProgress(0);
 #endif
 	}
 
@@ -313,6 +324,9 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 			m_gauge1->setValue(m_gauge1->value() + delta);
 #ifdef _WIN32
 			m_tb_progress->setValue(m_tb_progress->value() + delta);
+#elif HAVE_QTDBUS
+			*progressValue += delta;
+			UpdateProgress(*progressValue);
 #endif
 		}
 
@@ -322,3 +336,21 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 		}
 	}
 }
+
+#ifdef HAVE_QTDBUS
+void msg_dialog_frame::UpdateProgress(int progress, bool disable)
+{
+	QDBusMessage message = QDBusMessage::createSignal(QStringLiteral("/"),
+										QStringLiteral("com.canonical.Unity.LauncherEntry"),
+										QStringLiteral("Update"));
+	QVariantMap properties;
+	if (disable)
+		properties.insert(QStringLiteral("progress-visible"), false);
+	else
+		properties.insert(QStringLiteral("progress-visible"), true);
+	//Progress takes a value from 0.0 to 0.1
+	properties.insert(QStringLiteral("progress"), (double)progress/(double)m_gauge_max);
+	message << QStringLiteral("application://rpcs3.desktop") << properties;
+	QDBusConnection::sessionBus().send(message);
+}
+#endif
