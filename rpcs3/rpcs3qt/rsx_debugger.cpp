@@ -15,18 +15,14 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	, m_addr(0x0)
 	, m_cur_texture(0)
 	, exit(false)
-	, palette_bg()
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	//Fonts and Colors
-	pSize = 8;
-	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-	mono.setPointSize(pSize);
-	fontMetrics = new QFontMetrics(mono);
+	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+	mono.setPointSize(8);
 
-	palette_bg.setColor(backgroundRole(), QColor(240, 240, 240));
 	QHBoxLayout* hbox_panel = new QHBoxLayout();
 
 	//Tools
@@ -39,12 +35,12 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	// Controls: Address
 	QGroupBox* gb_controls_addr = new QGroupBox(tr("Address:"), this);
 	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
-	t_addr = new QLineEdit();
-	t_addr->setFont(mono);
-	t_addr->setPlaceholderText("00000000");
-	t_addr->setMaxLength(8);
-	t_addr->setMaximumWidth(65);
-	hbox_controls_addr->addWidget(t_addr);
+	m_addr_line = new QLineEdit();
+	m_addr_line->setFont(mono);
+	m_addr_line->setPlaceholderText("00000000");
+	m_addr_line->setMaxLength(8);
+	m_addr_line->setMaximumWidth(65);
+	hbox_controls_addr->addWidget(m_addr_line);
 	gb_controls_addr->setLayout(hbox_controls_addr);
 
 	// Controls: Go to
@@ -220,10 +216,10 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	gb_buffers_text		->setLayout(hbox_buffers_text);
 	
 	//Buffers and textures
-	m_panel_width = 108;
-	m_panel_height = 108;
-	m_text_width = 108;
-	m_text_height = 108;
+	int m_panel_width = 108;
+	int m_panel_height = 108;
+	int m_text_width = 108;
+	int m_text_height = 108;
 
 	//Panels for displaying the buffers
 	m_buffer_colorA  = new Buffer(p_buffers, false, 0);
@@ -282,17 +278,22 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	setLayout(hbox_panel);
 
 	//Events
-	connect(b_goto_get, &QAbstractButton::clicked, [=](){
-		if (const auto render = fxm::get<GSRender>()){
+	connect(b_goto_get, &QAbstractButton::clicked, [=]
+	{
+		if (const auto render = fxm::get<GSRender>())
+		{
 			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr)){
+			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
+			{
 				m_addr = realAddr;
 				UpdateInformation();
 			}
 		}
 	});
-	connect(b_goto_put, &QAbstractButton::clicked, [=](){
-		if (const auto render = fxm::get<GSRender>()){
+	connect(b_goto_put, &QAbstractButton::clicked, [=]
+	{
+		if (const auto render = fxm::get<GSRender>())
+		{
 			u32 realAddr;
 			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
 			{
@@ -301,9 +302,10 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 			}
 		}
 	});
-	connect(t_addr, &QLineEdit::returnPressed, [=](){
+	connect(m_addr_line, &QLineEdit::returnPressed, [=]
+	{
 		bool ok;
-		m_addr = t_addr->text().toULong(&ok, 16);
+		m_addr = m_addr_line->text().toULong(&ok, 16);
 		UpdateInformation();
 	});
 	connect(m_list_flags, &QTableWidget::itemClicked, this, &rsx_debugger::SetFlags);
@@ -318,8 +320,8 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	//Fill the frame
 	UpdateInformation();
 	setFixedSize(sizeHint());
-	setFocusProxy(t_addr);
-};
+	setFocusProxy(m_addr_line);
+}
 
 rsx_debugger::~rsx_debugger()
 {
@@ -399,14 +401,14 @@ void Buffer::showImage(const QImage& image)
 {
 	if (image.isNull()) return;
 	m_image = image;
-	m_scaled = m_image.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-	m_canvas = new QLabel();
+	QImage scaled = m_image.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+	QLabel* m_canvas = new QLabel();
 	m_canvas->setFixedSize(size());
-	m_canvas->setPixmap(QPixmap::fromImage(m_scaled));
-	m_layout = new QHBoxLayout();
-	m_layout->setContentsMargins(0, 0, 0, 0);
-	m_layout->addWidget(m_canvas);
-	setLayout(m_layout);
+	m_canvas->setPixmap(QPixmap::fromImage(scaled));
+	QHBoxLayout* layout = new QHBoxLayout();
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->addWidget(m_canvas);
+	setLayout(layout);
 }
 
 void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
@@ -643,7 +645,7 @@ void rsx_debugger::OnClickDrawCalls()
 
 void rsx_debugger::UpdateInformation()
 {
-	t_addr->setText(QString("%1").arg(m_addr, 8, 16, QChar('0'))); // get 8 digits in input line
+	m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0'))); // get 8 digits in input line
 	GetMemory();
 	GetBuffers();
 	GetFlags();
@@ -1191,4 +1193,9 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 #undef DISASM
 
 	return qstr(disasm);
+}
+
+void rsx_debugger::SetPC(const uint pc)
+{
+	m_addr = pc;
 }

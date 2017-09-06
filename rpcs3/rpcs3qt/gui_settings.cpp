@@ -8,14 +8,19 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-gui_settings::gui_settings(QObject* parent) : QObject(parent), settings(ComputeSettingsDir() + tr("CurrentSettings") + ".ini", QSettings::Format::IniFormat, parent),
-	settingsDir(ComputeSettingsDir())
+gui_settings::gui_settings(QObject* parent) : QObject(parent), m_settings(ComputeSettingsDir() + tr("CurrentSettings") + ".ini", QSettings::Format::IniFormat, parent),
+	m_settingsDir(ComputeSettingsDir())
 {
 }
 
 gui_settings::~gui_settings()
 {
-	settings.sync();
+	m_settings.sync();
+}
+
+QString gui_settings::GetSettingsDir()
+{
+	return m_settingsDir.absolutePath();
 }
 
 QString gui_settings::ComputeSettingsDir()
@@ -29,14 +34,14 @@ void gui_settings::ChangeToConfig(const QString& name)
 	{ // don't try to change to yourself.
 		Reset(false);
 
-		QSettings other(settingsDir.absoluteFilePath(name + ".ini"), QSettings::IniFormat);
+		QSettings other(m_settingsDir.absoluteFilePath(name + ".ini"), QSettings::IniFormat);
 
 		QStringList keys = other.allKeys();
 		for (QStringList::iterator i = keys.begin(); i != keys.end(); i++)
 		{
-			settings.setValue(*i, other.value(*i));
+			m_settings.setValue(*i, other.value(*i));
 		}
-		settings.sync();
+		m_settings.sync();
 	}
 }
 
@@ -44,19 +49,19 @@ void gui_settings::Reset(bool removeMeta)
 {
 	if (removeMeta)
 	{
-		settings.clear();
+		m_settings.clear();
 	}
 	else
 	{
-		settings.remove(GUI::logger);
-		settings.remove(GUI::main_window);
-		settings.remove(GUI::game_list);
+		m_settings.remove(GUI::logger);
+		m_settings.remove(GUI::main_window);
+		m_settings.remove(GUI::game_list);
 	}
 }
 
 QVariant gui_settings::GetValue(const GUI_SAVE& entry)
 {
-	return settings.value(entry.key + "/" + entry.name, entry.def);
+	return m_settings.value(entry.key + "/" + entry.name, entry.def);
 }
 
 QVariant gui_settings::List2Var(const q_pair_list& list)
@@ -138,9 +143,9 @@ QPixmap gui_settings::colorizedPixmap(const QPixmap& old_pixmap, const QColor& o
 
 void gui_settings::SetValue(const GUI_SAVE& entry, const QVariant& value)
 {
-	settings.beginGroup(entry.key);
-	settings.setValue(entry.name, value);
-	settings.endGroup();
+	m_settings.beginGroup(entry.key);
+	m_settings.setValue(entry.name, value);
+	m_settings.endGroup();
 }
 
 QStringList gui_settings::GetGameListCategoryFilters()
@@ -269,7 +274,7 @@ QStringList gui_settings::GetConfigEntries()
 {
 	QStringList nameFilter;
 	nameFilter << "*.ini";
-	QFileInfoList entries = settingsDir.entryInfoList(nameFilter, QDir::Files);
+	QFileInfoList entries = m_settingsDir.entryInfoList(nameFilter, QDir::Files);
 	QStringList res;
 	for (QFileInfo entry : entries)
 	{
@@ -282,12 +287,12 @@ QStringList gui_settings::GetConfigEntries()
 void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 {	
 	QSettings target(ComputeSettingsDir() + friendlyName + ".ini", QSettings::Format::IniFormat);
-	QStringList keys = settings.allKeys();
+	QStringList keys = m_settings.allKeys();
 	for (QStringList::iterator i = keys.begin(); i != keys.end(); i++)
 	{
 		if (!i->startsWith(GUI::meta))
 		{
-			target.setValue(*i, settings.value(*i));
+			target.setValue(*i, m_settings.value(*i));
 		}
 	}
 	target.sync();
@@ -297,8 +302,8 @@ QStringList gui_settings::GetStylesheetEntries()
 {
 	QStringList nameFilter;
 	nameFilter << "*.qss";
-	QString path = settingsDir.absolutePath();
-	QFileInfoList entries = settingsDir.entryInfoList(nameFilter, QDir::Files);
+	QString path = m_settingsDir.absolutePath();
+	QFileInfoList entries = m_settingsDir.entryInfoList(nameFilter, QDir::Files);
 	QStringList res;
 	for (QFileInfo entry : entries)
 	{
@@ -317,5 +322,5 @@ QString gui_settings::GetCurrentStylesheetPath()
 		return "";
 	}
 
-	return settingsDir.absoluteFilePath(stylesheet + ".qss");
+	return m_settingsDir.absoluteFilePath(stylesheet + ".qss");
 }
