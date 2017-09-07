@@ -30,6 +30,8 @@ GLGSRender::GLGSRender() : GSRender()
 		m_vertex_cache.reset(new gl::null_vertex_cache());
 	else
 		m_vertex_cache.reset(new gl::weak_vertex_cache());
+
+	supports_multidraw = true;
 }
 
 extern CellGcmContextData current_context;
@@ -510,21 +512,85 @@ void GLGSRender::end()
 		m_program->validate();
 	}
 
+	const GLenum draw_mode = gl::draw_mode(rsx::method_registers.current_draw_clause.primitive);
+	bool single_draw = rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+
 	if (indexed_draw_info)
 	{
 		const GLenum index_type = std::get<0>(indexed_draw_info.value());
 		const u32 index_offset = std::get<1>(indexed_draw_info.value());
 
-		if (__glcheck gl_state.enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		if (gl_state.enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 		{
-			__glcheck glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
+			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}
 
-		__glcheck glDrawElements(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+		if (single_draw)
+		{
+			glDrawElements(draw_mode, vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+		}
+		else
+		{
+			std::vector<GLsizei> counts;
+			std::vector<const GLvoid*> offsets;
+
+			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
+			uintptr_t index_ptr = index_offset;
+
+			counts.reserve(draw_count);
+			offsets.reserve(draw_count);
+
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			{
+				const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+				counts.push_back(index_size);
+				offsets.push_back((const GLvoid*)index_ptr);
+
+				index_ptr += (index_size << type_scale);
+			}
+
+			for (int i = 0; i < draw_count; ++i)
+			{
+				if (counts[i] > 0)
+					glDrawElements(draw_mode, counts[i], index_type, offsets[i]);
+			}
+
+			//glMultiDrawElements(draw_mode, counts.data(), index_type, offsets.data(), (GLsizei)draw_count);
+		}
 	}
 	else
 	{
-		glDrawArrays(gl::draw_mode(rsx::method_registers.current_draw_clause.primitive), 0, vertex_draw_count);
+		if (single_draw)
+		{
+			glDrawArrays(draw_mode, 0, vertex_draw_count);
+		}
+		else
+		{
+			std::vector<GLint> firsts;
+			std::vector<GLsizei> counts;
+			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+
+			firsts.reserve(draw_count);
+			counts.reserve(draw_count);
+
+			u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			{
+				firsts.push_back(range.first - base_index);
+				counts.push_back(range.second);
+			}
+
+			///*
+			// TEST FOR DRIVER BUGS - AMD: SHAME, SHAME, SHAME
+			for (int i = 0; i < draw_count; i++)
+			{
+				if (counts[i] > 0)
+					glDrawArrays(draw_mode, firsts[i], counts[i]);
+			}//*/
+
+			//glMultiDrawArrays(draw_mode, firsts.data(), counts.data(), (GLsizei)draw_count);
+		}
 	}
 
 	m_attrib_ring_buffer->notify();
@@ -570,7 +636,7 @@ void GLGSRender::set_viewport()
 
 	//NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
 	//See LIMBO [NPUB-30373] which uses shader window origin = top
-	__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
+	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
 	glEnable(GL_SCISSOR_TEST);
 }
 

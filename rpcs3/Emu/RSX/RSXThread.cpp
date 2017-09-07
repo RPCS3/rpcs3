@@ -277,6 +277,21 @@ namespace rsx
 	{
 		rsx::method_registers.current_draw_clause.inline_vertex_array.resize(0);
 		in_begin_end = true;
+
+		switch (rsx::method_registers.current_draw_clause.primitive)
+		{
+		case rsx::primitive_type::line_loop:
+		case rsx::primitive_type::line_strip:
+		case rsx::primitive_type::polygon:
+		case rsx::primitive_type::quad_strip:
+		case rsx::primitive_type::triangle_fan:
+		case rsx::primitive_type::triangle_strip:
+			// Adjacency matters for these types
+			rsx::method_registers.current_draw_clause.is_disjoint_primitive = false;
+			break;
+		default:
+			rsx::method_registers.current_draw_clause.is_disjoint_primitive = true;
+		}
 	}
 
 	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
@@ -376,6 +391,65 @@ namespace rsx
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
 
+		// Deferred calls are used to batch draws together
+		u32 deferred_primitive_type = 0;
+		u32 deferred_call_size = 0;
+		bool has_deferred_call = false;
+
+		auto flush_command_queue = [&]()
+		{
+			//TODO: Split first-count pairs if not consecutive
+			bool split_command = false;
+			std::vector <std::pair<u32, u32>> split_ranges;
+			auto first_count_cmds = method_registers.current_draw_clause.first_count_commands;
+
+			if (method_registers.current_draw_clause.first_count_commands.size() > 1)
+			{
+				u32 next = method_registers.current_draw_clause.first_count_commands.front().first;
+				u32 last_head = 0;
+
+				for (int n = 0; n < first_count_cmds.size(); ++n)
+				{
+					const auto &v = first_count_cmds[n];
+					if (v.first != next)
+					{
+						split_command = true;
+						split_ranges.push_back(std::make_pair(last_head, n));
+						last_head = n + 1;
+					}
+
+					next = v.first + v.second;
+				}
+
+				if (split_command)
+					split_ranges.push_back(std::make_pair(last_head, first_count_cmds.size() - 1));
+			}
+
+			if (!split_command)
+			{
+				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+			}
+			else
+			{
+				std::vector<std::pair<u32, u32>> tmp;
+				auto list_head = first_count_cmds.begin();
+
+				for (auto &range : split_ranges)
+				{
+					tmp.resize(range.second - range.first + 1);
+					std::copy(list_head + range.first, list_head + range.second, tmp.begin());
+
+					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
+					method_registers.current_draw_clause.first_count_commands = tmp;
+					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+				}
+			}
+
+			deferred_primitive_type = 0;
+			deferred_call_size = 0;
+			has_deferred_call = false;
+		};
+
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{
@@ -387,6 +461,9 @@ namespace rsx
 
 			if (put == get || !Emu.IsRunning())
 			{
+				if (has_deferred_call)
+					flush_command_queue();
+
 				do_internal_task();
 				continue;
 			}
@@ -472,7 +549,92 @@ namespace rsx
 				u32 reg = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? first_cmd : first_cmd + i;
 				u32 value = args[i];
 
-				//LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+				bool execute_method_call = true;
+
+				if (supports_multidraw)
+				{
+					//TODO: Make this cleaner
+					bool flush_commands_flag = has_deferred_call;
+
+					switch (reg)
+					{
+					case NV4097_SET_BEGIN_END:
+					{
+						// Hook; Allows begin to go through, but ignores end
+						if (value && value != deferred_primitive_type)
+							deferred_primitive_type = value;
+						else
+						{
+							deferred_call_size++;
+
+							// Combine all calls since the last one
+							auto &first_count = method_registers.current_draw_clause.first_count_commands;
+							if (first_count.size() > deferred_call_size)
+							{
+								const auto &batch_first_count = first_count[deferred_call_size - 1];
+								u32 count = batch_first_count.second;
+								u32 next = batch_first_count.first + count;
+
+								for (int n = deferred_call_size; n < first_count.size(); n++)
+								{
+									if (first_count[n].first != next)
+									{
+										LOG_ERROR(RSX, "Non-continous first-count range passed as one draw; will be split.");
+
+										first_count[deferred_call_size - 1].second = count;
+										deferred_call_size++;
+
+										count = first_count[deferred_call_size - 1].second;
+										next = first_count[deferred_call_size - 1].first + count;
+										continue;
+									}
+
+									count += first_count[n].second;
+									next += first_count[n].second;
+								}
+
+								first_count[deferred_call_size - 1].second = count;
+								first_count.resize(deferred_call_size);
+							}
+
+							has_deferred_call = true;
+							flush_commands_flag = false;
+							execute_method_call = false;
+						}
+
+						break;
+					}
+					// These commands do not alter the pipeline state and deferred calls can still be active
+					// TODO: Add more commands here
+					case NV4097_INVALIDATE_VERTEX_FILE:
+						flush_commands_flag = false;
+						break;
+					case NV4097_DRAW_ARRAYS:
+					{
+						const auto cmd = method_registers.current_draw_clause.command;
+						if (cmd != rsx::draw_command::array && cmd != rsx::draw_command::none)
+							break;
+
+						flush_commands_flag = false;
+						break;
+					}
+					case NV4097_DRAW_INDEX_ARRAY:
+					{
+						const auto cmd = method_registers.current_draw_clause.command;
+						if (cmd != rsx::draw_command::indexed && cmd != rsx::draw_command::none)
+							break;
+
+						flush_commands_flag = false;
+						break;
+					}
+					}
+
+					if (flush_commands_flag)
+					{
+						flush_command_queue();
+					}
+				}
+
 				method_registers.decode(reg, value);
 
 				if (capture_current_frame)
@@ -480,9 +642,12 @@ namespace rsx
 					frame_debug.command_queue.push_back(std::make_pair(reg, value));
 				}
 
-				if (auto method = methods[reg])
+				if (execute_method_call)
 				{
-					method(this, reg, value);
+					if (auto method = methods[reg])
+					{
+						method(this, reg, value);
+					}
 				}
 
 				if (invalid_command_interrupt_raised)
@@ -1534,7 +1699,7 @@ namespace rsx
 			for (const auto &block : layout.interleaved_blocks)
 			{
 				u32 unique_verts;
-				u32 vertex_base = first_vertex * block.attribute_stride;
+				u32 vertex_base = 0;
 
 				if (block.single_vertex)
 				{
@@ -1553,6 +1718,7 @@ namespace rsx
 				else
 				{
 					unique_verts = vertex_count;
+					vertex_base = first_vertex * block.attribute_stride;
 				}
 
 				const u32 data_size = block.attribute_stride * unique_verts;

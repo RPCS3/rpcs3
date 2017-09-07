@@ -300,7 +300,7 @@ namespace rsx
 		{
 			if (arg)
 			{
-				rsx::method_registers.current_draw_clause.first_count_commands.clear();
+				rsx::method_registers.current_draw_clause.first_count_commands.resize(0);
 				rsx::method_registers.current_draw_clause.command = draw_command::none;
 				rsx::method_registers.current_draw_clause.primitive = rsx::method_registers.primitive_mode();
 				rsxthr->begin();

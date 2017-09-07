@@ -637,6 +637,8 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 
 	m_current_frame = &frame_context_storage[0];
+
+	supports_multidraw = true;
 }
 
 VKGSRender::~VKGSRender()
@@ -1166,10 +1168,23 @@ void VKGSRender::end()
 	}
 
 	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<4>(upload_info);
+	bool single_draw = rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+
 	if (!index_info)
 	{
-		const auto vertex_count = std::get<1>(upload_info);
-		vkCmdDraw(*m_current_command_buffer, vertex_count, 1, 0, 0);
+		if (single_draw)
+		{
+			const auto vertex_count = std::get<1>(upload_info);
+			vkCmdDraw(*m_current_command_buffer, vertex_count, 1, 0, 0);
+		}
+		else
+		{
+			const auto base_vertex = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			{
+				vkCmdDraw(*m_current_command_buffer, range.second, 1, range.first - base_vertex, 0);
+			}
+		}
 	}
 	else
 	{
@@ -1178,9 +1193,22 @@ void VKGSRender::end()
 		VkDeviceSize offset;
 
 		std::tie(offset, index_type) = index_info.value();
-
 		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
-		vkCmdDrawIndexed(*m_current_command_buffer, index_count, 1, 0, 0, 0);
+
+		if (single_draw)
+		{
+			vkCmdDrawIndexed(*m_current_command_buffer, index_count, 1, 0, 0, 0);
+		}
+		else
+		{
+			u32 first_vertex = 0;
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			{
+				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, 0, first_vertex, 0);
+				first_vertex += verts;
+			}
+		}
 	}
 
 	vk::leave_uninterruptible();
@@ -1441,7 +1469,10 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 		//Clear all command buffer statuses
 		for (auto &cb : m_primary_cb_list)
-			cb.poke();
+		{
+			if (cb.pending)
+				cb.poke();
+		}
 
 		m_last_flushable_cb = -1;
 		m_flush_commands = false;
@@ -1623,7 +1654,9 @@ void VKGSRender::do_local_task()
 	if (m_last_flushable_cb > -1)
 	{
 		auto cb = &m_primary_cb_list[m_last_flushable_cb];
-		cb->poke();
+
+		if (cb->pending)
+			cb->poke();
 
 		if (!cb->pending)
 			m_last_flushable_cb = -1;
