@@ -273,7 +273,7 @@ void main_window::BootElf()
 		LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		AddRecentAction(GUI::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
 		gameListFrame->Refresh(true);
 	}
 }
@@ -310,7 +310,7 @@ void main_window::BootGame()
 		LOG_SUCCESS(LOADER, "Boot Game: boot done.");
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		AddRecentAction(GUI::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
 		gameListFrame->Refresh(true);
 	}
 }
@@ -936,7 +936,7 @@ void main_window::BootRecentAction(const QAction* act)
 	else
 	{
 		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
-		AddRecentAction(q_string_pair(qstr(Emu.GetBoot()), nam));
+		AddRecentAction(GUI::Recent_Game(qstr(Emu.GetBoot()), nam));
 		gameListFrame->Refresh(true);
 	}
 };
@@ -1447,6 +1447,9 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	// Fill the recent games menu
 	for (int i = 0; i < m_rg_entries.count(); i++)
 	{
+		// adjust old unformatted entries (avoid duplication)
+		m_rg_entries[i] = GUI::Recent_Game(m_rg_entries[i].first, m_rg_entries[i].second);
+
 		// create new action
 		QAction* act = CreateRecentAction(m_rg_entries[i], i + 1);
 

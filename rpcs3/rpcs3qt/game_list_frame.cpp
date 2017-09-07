@@ -712,7 +712,7 @@ bool game_list_frame::Boot(const GameInfo& game)
 	}
 	else
 	{
-		Q_EMIT RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
+		Q_EMIT RequestAddRecentGame(GUI::Recent_Game(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
 		Refresh(true);
 		return true;
 	}
@@ -939,8 +939,7 @@ int game_list_frame::PopulateGameList()
 	auto l_GetItem = [](const std::string& text)
 	{
 		// force single line text ("hack" used instead of Qt shenanigans like Qt::TextSingleLine)
-		QString formattedText = qstr(text);
-		formattedText.replace("\n", " - ");
+		QString formattedText = GUI::get_Single_Line(qstr(text));
 
 		QTableWidgetItem* curr = new QTableWidgetItem;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
@@ -1053,8 +1052,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 		if (category == category::hdd_Game || category == category::disc_Game)
 		{
-			QString title = qstr(m_game_data[i].info.name);
-			title.replace("\n", " - ");
+			QString title = GUI::get_Single_Line(qstr(m_game_data[i].info.name));
 
 			m_xgrid->addItem(m_game_data[i].pxmap, title, i, r, c);
 
