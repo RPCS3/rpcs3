@@ -550,13 +550,7 @@ void GLGSRender::end()
 				index_ptr += (index_size << type_scale);
 			}
 
-			for (int i = 0; i < draw_count; ++i)
-			{
-				if (counts[i] > 0)
-					glDrawElements(draw_mode, counts[i], index_type, offsets[i]);
-			}
-
-			//glMultiDrawElements(draw_mode, counts.data(), index_type, offsets.data(), (GLsizei)draw_count);
+			glMultiDrawElements(draw_mode, counts.data(), index_type, offsets.data(), (GLsizei)draw_count);
 		}
 	}
 	else
@@ -581,15 +575,7 @@ void GLGSRender::end()
 				counts.push_back(range.second);
 			}
 
-			///*
-			// TEST FOR DRIVER BUGS - AMD: SHAME, SHAME, SHAME
-			for (int i = 0; i < draw_count; i++)
-			{
-				if (counts[i] > 0)
-					glDrawArrays(draw_mode, firsts[i], counts[i]);
-			}//*/
-
-			//glMultiDrawArrays(draw_mode, firsts.data(), counts.data(), (GLsizei)draw_count);
+			glMultiDrawArrays(draw_mode, firsts.data(), counts.data(), (GLsizei)draw_count);
 		}
 	}
 

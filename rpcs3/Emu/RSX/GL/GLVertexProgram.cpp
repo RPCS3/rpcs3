@@ -21,7 +21,7 @@ std::string GLVertexDecompilerThread::getIntTypeName(size_t elementCount)
 
 std::string GLVertexDecompilerThread::getFunction(FUNCTION f)
 {
-	return getFunctionImpl(f);
+	return gl::getFunctionImpl(f);
 }
 
 std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
@@ -31,7 +31,8 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 430\n\n";
+	OS << "#version 430\n";
+	OS << "#extension GL_ARB_separate_program_objects: enable\n\n";
 	OS << "layout(std140, binding = 0) uniform VertexContextBuffer\n";
 	OS << "{\n";
 	OS << "	mat4 scale_offset_mat;\n";
@@ -109,13 +110,12 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
 	bool front_back_specular = (insert_back_specular && insert_front_specular);
 
+	std::vector<std::string> outputs_to_declare;
+
 	for (auto &i : reg_table)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
+		if (i.need_declare)
 		{
-			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
-				continue;
-
 			if (i.name == "front_diff_color")
 				insert_front_diffuse = false;
 
@@ -130,24 +130,20 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			if (front_back_specular && name == "spec_color")
 				name = "back_spec_color";
 
-			OS << "out vec4 " << name << ";\n";
-		}
-		else
-		{
-			//Mesa drivers are very strict on shader-stage matching
-			//Force some outputs to be declared even if unused
-            if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
-			{
-                OS << "out vec4 " << i.name << ";\n";
-			}
+			outputs_to_declare.push_back(name);
 		}
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		OS << "out vec4 front_diff_color;\n";
+		outputs_to_declare.push_back("front_diff_color");
 
 	if (insert_back_specular && insert_front_specular)
-		OS << "out vec4 front_spec_color;\n";
+		outputs_to_declare.push_back("front_spec_color");
+
+	for (auto &name: outputs_to_declare)
+	{
+		OS << "layout(location=" << gl::get_varying_register_location(name) << ") out vec4 " << name << ";\n";
+	}
 }
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
